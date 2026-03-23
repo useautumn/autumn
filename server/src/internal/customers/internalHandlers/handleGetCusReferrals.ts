@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
-import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
+import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 import { CusReadService } from "../CusReadService.js";
 import { CusService } from "../CusService.js";
 export const handleGetCusReferrals = createRoute({
@@ -25,16 +25,14 @@ export const handleGetCusReferrals = createRoute({
 
 		// Get all redemptions for this customer
 		const [referred, redeemed, stripeCus] = await Promise.all([
-			RewardRedemptionService.getByReferrer({
+			redemptionRepo.getByReferrer({
 				db,
 				internalCustomerId: internalCustomer.internal_id,
-				withCustomer: true,
 				limit: 100,
 			}),
-			RewardRedemptionService.getByCustomer({
+			redemptionRepo.getByCustomer({
 				db,
 				internalCustomerId: internalCustomer.internal_id,
-				withReferralCode: true,
 				limit: 100,
 			}),
 			(async () => {
@@ -60,7 +58,7 @@ export const handleGetCusReferrals = createRoute({
 
 		for (const redemption of redeemed) {
 			if (redemption.referral_code) {
-				redemption.referral_code.customer = redeemedCustomers.find(
+				(redemption.referral_code as any).customer = redeemedCustomers.find(
 					(customer: any) =>
 						customer.internal_id ===
 						redemption.referral_code!.internal_customer_id,

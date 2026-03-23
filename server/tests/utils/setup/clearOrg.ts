@@ -6,7 +6,7 @@ import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
+import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
 import { CacheType } from "@/utils/cacheUtils/CacheType.js";
 
@@ -79,7 +79,7 @@ export const clearOrg = async ({
 	console.log("   ✅ Deleted products");
 
 	// Delete all rewards from our database
-	await RewardService.deleteByOrgId({ db, orgId, env });
+	await rewardRepo.deleteByOrgId({ db, orgId, env });
 	console.log("   ✅ Deleted rewards");
 
 	// Delete all features from our database

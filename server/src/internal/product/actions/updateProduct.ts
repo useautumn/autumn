@@ -22,7 +22,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
+import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
@@ -60,7 +60,7 @@ export const updateProduct = async ({
 
 	const [fullProduct, rewardPrograms, _defaultProds] = await Promise.all([
 		getFullProduct(),
-		RewardProgramService.getByProductId({
+		rewardProgramRepo.getByProductId({
 			db,
 			productIds: [productId],
 			orgId: org.id,

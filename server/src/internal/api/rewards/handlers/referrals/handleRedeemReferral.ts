@@ -9,9 +9,7 @@ import {
 	RewardTriggerEvent,
 } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
-import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
+import { redemptionRepo, rewardRepo, referralCodeRepo } from "@/internal/rewards/repos/index.js";
 import { triggerFreeProduct } from "@/internal/rewards/referralUtils/triggerFreeProduct.js";
 import { triggerRedemption } from "@/internal/rewards/referralUtils.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
@@ -33,7 +31,7 @@ export const handleRedeemReferral = createRoute({
 				env,
 				idOrInternalId: customerId,
 			}),
-			RewardProgramService.getReferralCode({
+			referralCodeRepo.get({
 				db,
 				orgId: org.id,
 				env,
@@ -45,7 +43,7 @@ export const handleRedeemReferral = createRoute({
 		if (!customer) throw new CustomerNotFoundError({ customerId });
 
 		// 2. Check that code has not reached max redemptions
-		const redemptionCount = await RewardProgramService.getCodeRedemptionCount({
+		const redemptionCount = await referralCodeRepo.getRedemptionCount({
 			db,
 			referralCodeId: referralCode.id,
 		});
@@ -62,7 +60,7 @@ export const handleRedeemReferral = createRoute({
 		}
 
 		// 3. Check that customer has not already redeemed a code in this referral program
-		const existingRedemptions = await RewardRedemptionService.getByCustomer({
+		const existingRedemptions = await redemptionRepo.getByCustomer({
 			db,
 			internalCustomerId: customer.internal_id,
 			internalRewardProgramId: referralCode.internal_reward_program_id,
@@ -115,7 +113,7 @@ export const handleRedeemReferral = createRoute({
 			redeemer_applied: false,
 		};
 
-		redemption = await RewardRedemptionService.insert({
+		redemption = await redemptionRepo.insert({
 			db,
 			rewardRedemption: redemption,
 		});
@@ -126,7 +124,7 @@ export const handleRedeemReferral = createRoute({
 			referralCode.reward_program.when === RewardTriggerEvent.CustomerCreation;
 
 		if (redeemRewardNow) {
-			const reward = await RewardService.get({
+			const reward = await rewardRepo.get({
 				db,
 				orgId: org.id,
 				env,
