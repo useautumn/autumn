@@ -8,7 +8,7 @@ import {
 	rewardRedemptions,
 	rewards,
 } from "@autumn/shared";
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import RecaseError from "@/utils/errorUtils.js";
 
@@ -95,7 +95,7 @@ export class RewardRedemptionService {
 			)
 			.innerJoin(
 				customers,
-				eq(rewardRedemptions.internal_customer_id, customers.internal_id),
+				sql`${rewardRedemptions.internal_customer_id} COLLATE "C" = ${customers.internal_id}`,
 			);
 
 		if (withRewardProgram) {
@@ -108,7 +108,9 @@ export class RewardRedemptionService {
 			);
 		}
 		const data = await query
-			.where(eq(referralCodes.internal_customer_id, internalCustomerId))
+			.where(
+				sql`${referralCodes.internal_customer_id} COLLATE "C" = ${internalCustomerId}`,
+			)
 			.limit(limit);
 
 		const processed = data.map((d) => ({
@@ -187,7 +189,7 @@ export class RewardRedemptionService {
 			)
 			.innerJoin(
 				customers,
-				eq(rewardRedemptions.internal_customer_id, customers.internal_id),
+				sql`${rewardRedemptions.internal_customer_id} COLLATE "C" = ${customers.internal_id}`,
 			)
 			.innerJoin(
 				rewardPrograms,
@@ -203,12 +205,12 @@ export class RewardRedemptionService {
 			.where(
 				or(
 					and(
-						eq(referralCodes.internal_customer_id, internalCustomerId),
+						sql`${referralCodes.internal_customer_id} COLLATE "C" = ${internalCustomerId}`,
 						eq(rewardRedemptions.triggered, true),
 						eq(rewardRedemptions.applied, false),
 					),
 					and(
-						eq(rewardRedemptions.internal_customer_id, internalCustomerId),
+						sql`${rewardRedemptions.internal_customer_id} COLLATE "C" = ${internalCustomerId}`,
 						eq(rewardRedemptions.triggered, true),
 						eq(rewardRedemptions.redeemer_applied, false),
 					),
@@ -241,7 +243,7 @@ export class RewardRedemptionService {
 		return await db
 			.delete(rewardRedemptions)
 			.where(
-				inArray(rewardRedemptions.internal_customer_id, internalCustomerId),
+				sql`${rewardRedemptions.internal_customer_id} COLLATE "C" = ANY(${internalCustomerId})`,
 			);
 	}
 }

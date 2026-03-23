@@ -61,6 +61,7 @@ export const customers = pgTable(
 		index("idx_customers_org_env_fingerprint")
 			.on(table.org_id, table.env, table.fingerprint)
 			.where(sql`${table.fingerprint} IS NOT NULL`),
+		index("idx_customers_processor_id").on(sql`(${table.processor} ->> 'id')`),
 	],
 ).enableRLS();
 

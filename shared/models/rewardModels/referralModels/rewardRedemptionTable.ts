@@ -1,10 +1,12 @@
 import {
 	boolean,
 	foreignKey,
+	index,
 	numeric,
 	pgTable,
 	text,
 } from "drizzle-orm/pg-core";
+import { collatePgColumn } from "../../../db/utils.js";
 import { customers } from "../../cusModels/cusTable";
 import { rewardPrograms } from "../rewardProgramModels/rewardProgramTable";
 import { referralCodes } from "./referralCodeTable";
@@ -38,5 +40,8 @@ export const rewardRedemptions = pgTable(
 			foreignColumns: [referralCodes.id],
 			name: "reward_redemptions_referral_code_id_fkey",
 		}).onDelete("cascade"),
+		index("idx_reward_redemptions_referral_code_id").on(table.referral_code_id),
 	],
 );
+
+collatePgColumn(rewardRedemptions.internal_customer_id, "C");
