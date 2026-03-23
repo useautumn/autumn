@@ -225,3 +225,25 @@ debugRouter.post("/pg-health", async (c) => {
 
 	return c.json({ error: "Unknown action" }, 400);
 });
+
+/** Write a V8 heap snapshot to disk. Requires secret key auth + dev-only. */
+// debugRouter.get("/heap-snapshot", async (c) => {
+// 	if (process.env.NODE_ENV === "production") {
+// 		return c.json({ error: "Not available in production" }, 403);
+// 	}
+
+// 	const ctx = c.get("ctx");
+// 	if (!ALLOWED_ORG_IDS.has(ctx.org?.id)) {
+// 		return c.json({ error: "Forbidden" }, 403);
+// 	}
+
+// 	const snapshotDir = new URL("../../../perf/snapshots/", import.meta.url)
+// 		.pathname;
+// 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+// 	const filename = `heap-${timestamp}-pid${process.pid}.heapsnapshot`;
+// 	const filepath = `${snapshotDir}${filename}`;
+
+// 	writeHeapSnapshot(filepath);
+
+// 	return c.json({ ok: true, file: filename, path: filepath });
+// });

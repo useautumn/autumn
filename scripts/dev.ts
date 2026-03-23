@@ -13,6 +13,7 @@ const VITE_PORT = 3000 + portOffset;
 const SERVER_PORT = 8080 + portOffset;
 const CHECKOUT_PORT = 3001 + portOffset;
 const skipWorkers = worktreeNum > 1;
+const isProductionMode = process.argv.includes("--production");
 
 /**
  * Read environment variable from .env file
@@ -110,6 +111,8 @@ async function startDev() {
 
 		if (worktreeNum > 1) {
 			console.log(`Starting worktree ${worktreeNum} (no workers)...\n`);
+		} else if (isProductionMode) {
+			console.log("Starting local servers with NODE_ENV=production...\n");
 		} else {
 			console.log("Starting development servers...\n");
 		}
@@ -142,10 +145,12 @@ async function startDev() {
 		} else {
 			const names = ["server"];
 			const colors = ["green"];
+			const serverScript = isProductionMode ? "dev:prod" : "dev";
+			const workersScript = isProductionMode ? "workers:prod" : "workers:dev";
 			const cmds = [
 				isWindows
-					? `"cd server && set SERVER_PORT=${SERVER_PORT} && bun dev"`
-					: `"cd server && SERVER_PORT=${SERVER_PORT} bun dev"`,
+					? `"cd server && set SERVER_PORT=${SERVER_PORT} && bun ${serverScript}"`
+					: `"cd server && SERVER_PORT=${SERVER_PORT} bun ${serverScript}"`,
 			];
 
 			if (!skipWorkers) {
@@ -153,8 +158,8 @@ async function startDev() {
 				colors.push("yellow");
 				cmds.push(
 					isWindows
-						? `"cd server && bun workers:dev"`
-						: `"cd server && bun workers:dev"`,
+						? `"cd server && bun ${workersScript}"`
+						: `"cd server && bun ${workersScript}"`,
 				);
 			}
 
@@ -192,7 +197,12 @@ async function startDev() {
 			},
 			stdout: "inherit",
 			stderr: "inherit",
-			onExit(proc, exitCode, signalCode, error) {
+			onExit(
+				_proc: unknown,
+				exitCode: number | null,
+				_signalCode: number | null,
+				error: Error | null,
+			) {
 				if (error) {
 					console.error("Failed to start development servers:", error);
 					process.exit(1);
