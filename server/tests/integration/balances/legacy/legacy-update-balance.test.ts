@@ -22,11 +22,9 @@ test.concurrent(`${chalk.yellowBright("legacy-update-balance1: V1 API setBalance
 		setup: [
 			s.customer({ testClock: true, paymentMethod: "success" }),
 			s.products({ list: [pro] }),
-			s.entities({ count: 1, featureId: TestFeature.Credits }),
+			s.entities({ count: 1, featureId: TestFeature.Workflows }),
 		],
-		actions: [
-			s.attach({ productId: pro.id, entityIndex: 0 }),
-		],
+		actions: [s.attach({ productId: pro.id, entityIndex: 0 })],
 	});
 
 	const entityId = entities[0].id;

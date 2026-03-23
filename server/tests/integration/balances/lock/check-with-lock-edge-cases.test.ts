@@ -208,6 +208,8 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-1: lock crosses monthly→li
 		lock: { enabled: true, lock_id: lockKey },
 	});
 
+	await timeout(3000);
+
 	// Verify state after check: total=90 (lifetime=90, monthly=0)
 	const afterCheck = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
@@ -302,6 +304,8 @@ test.concurrent(`${chalk.yellowBright("lock-edge EC-2: lock crosses monthly→li
 		required_balance: 60,
 		lock: { enabled: true, lock_id: lockKey },
 	});
+
+	await timeout(3000);
 
 	// Verify state after check: total=90
 	const afterCheck = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
