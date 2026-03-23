@@ -37,7 +37,7 @@ export const sendProductsUpdated = async ({
 	ctx: AutumnContext;
 	payload: SendProductsUpdatedPayload;
 }) => {
-	const { db, org, env, features, logger } = ctx;
+	const { features, logger } = ctx;
 	const { customerProductId, scenario, customerId } = payload;
 
 	// Fetch FullCustomer
@@ -139,8 +139,7 @@ export const sendProductsUpdated = async ({
 	);
 
 	await sendSvixEvent({
-		org,
-		env,
+		ctx,
 		eventType: "customer.products.updated",
 		data: {
 			scenario,

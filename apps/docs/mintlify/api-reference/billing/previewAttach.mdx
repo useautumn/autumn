@@ -796,6 +796,14 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
     </DynamicResponseField>
 
+    <DynamicResponseField name="canceled_at" type="number | null">
+      When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+    </DynamicResponseField>
+
   </Expandable>
 </DynamicResponseField>
 
@@ -1097,6 +1105,14 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
     <DynamicResponseField name="effective_at" type="number | null">
       When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="canceled_at" type="number | null">
+      When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
     </DynamicResponseField>
 
   </Expandable>

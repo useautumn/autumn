@@ -138,6 +138,32 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           </Expandable>
         </DynamicResponseField>
 
+        <DynamicResponseField name="usage_alerts" type="object[]">
+          List of usage alert configurations per feature.
+          <Expandable title="properties">
+            <DynamicResponseField name="feature_id" type="string">
+              The feature ID this alert applies to. If omitted, the alert applies globally.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="enabled" type="boolean">
+              Whether this usage alert is enabled.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="threshold" type="number">
+              The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+            </DynamicResponseField>
+
+            <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage'">
+              Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="name" type="string">
+              Optional user-defined label to distinguish multiple alerts on the same feature.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
       </Expandable>
     </DynamicResponseField>
 

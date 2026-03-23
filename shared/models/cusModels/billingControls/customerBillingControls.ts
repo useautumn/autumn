@@ -6,6 +6,7 @@ import {
 } from "./entityBillingControls.js";
 import { PurchaseLimitIntervalEnum } from "./purchaseLimitInterval.js";
 import { type DbSpendLimit, DbSpendLimitSchema } from "./spendLimit.js";
+import { type DbUsageAlert, DbUsageAlertSchema } from "./usageAlert.js";
 
 export const AutoTopupPurchaseLimitSchema = z.object({
 	interval: PurchaseLimitIntervalEnum.meta({
@@ -44,6 +45,9 @@ export const CustomerBillingControlsSchema = z.object({
 	}),
 	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
 		description: "List of overage spend limits per feature.",
+	}),
+	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
+		description: "List of usage alert configurations per feature.",
 	}),
 });
 
@@ -85,9 +89,10 @@ export type CustomerBillingControlsParams = z.input<
 	typeof CustomerBillingControlsParamsSchema
 >;
 
-export { EntityBillingControlsSchema, DbSpendLimitSchema };
+export { EntityBillingControlsSchema, DbSpendLimitSchema, DbUsageAlertSchema };
 export type {
 	EntityBillingControls,
 	EntityBillingControlsParams,
 	DbSpendLimit,
+	DbUsageAlert,
 };
