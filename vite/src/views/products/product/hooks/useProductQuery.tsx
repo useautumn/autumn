@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { parseAsInteger, parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 import { useParams } from "react-router";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 import { throwBackendError } from "@/utils/genUtils";
@@ -33,6 +34,7 @@ export const useProductQuery = () => {
 
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
+	const buildKey = useQueryKeyFactory();
 	const { getCachedProduct } = useCachedProduct({ productId: productId });
 
 	const cachedProduct = useMemo(getCachedProduct, []);
@@ -62,7 +64,7 @@ export const useProductQuery = () => {
 	};
 
 	const { data, isLoading, refetch, error } = useQuery({
-		queryKey: ["product", productId, queryStates.version],
+		queryKey: buildKey(["product", productId, queryStates.version]),
 		queryFn: fetcher,
 		retry: false, // Don't retry on error (e.g., product not found)
 		enabled: !!productId, // Only run query if productId exists

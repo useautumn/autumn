@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 interface RevenueCatConfig {
@@ -13,6 +14,7 @@ interface RevenueCatConfig {
 
 export const useRevenueCatQuery = () => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const fetcher = async () => {
 		try {
 			const { data }: { data: RevenueCatConfig } = await axiosInstance.get(
@@ -24,7 +26,7 @@ export const useRevenueCatQuery = () => {
 		}
 	};
 	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: ["revenuecat"],
+		queryKey: buildKey(["revenuecat"]),
 		queryFn: fetcher,
 	});
 

@@ -1,6 +1,7 @@
 import type { InvoiceLineItem } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 interface UseInvoiceLineItemsQueryParams {
@@ -17,6 +18,7 @@ export const useInvoiceLineItemsQuery = ({
 	enabled = true,
 }: UseInvoiceLineItemsQueryParams) => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
 	const fetcher = async (): Promise<InvoiceLineItem[]> => {
 		if (invoiceIds.length === 0) {
@@ -31,7 +33,7 @@ export const useInvoiceLineItemsQuery = ({
 	};
 
 	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: ["invoice-line-items", invoiceIds],
+		queryKey: buildKey(["invoice-line-items", invoiceIds]),
 		queryFn: fetcher,
 		enabled: enabled && invoiceIds.length > 0,
 		staleTime: 5 * 60 * 1000, // 5 minutes
