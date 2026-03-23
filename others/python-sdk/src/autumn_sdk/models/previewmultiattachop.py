@@ -9,6 +9,7 @@ from autumn_sdk.types import (
     OptionalNullable,
     UNSET,
     UNSET_SENTINEL,
+    UnrecognizedStr,
 )
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
@@ -1455,13 +1456,21 @@ class PreviewMultiAttachOutgoing(BaseModel):
         return m
 
 
+PreviewMultiAttachCheckoutType = Union[
+    Literal[
+        "stripe_checkout",
+        "autumn_checkout",
+    ],
+    UnrecognizedStr,
+]
+
+
 class PreviewMultiAttachResponseTypedDict(TypedDict):
     r"""OK"""
 
     customer_id: str
     r"""The ID of the customer."""
     line_items: List[PreviewMultiAttachLineItemTypedDict]
-    r"""List of line items for the current billing period."""
     subtotal: float
     r"""The total amount in cents before discounts for the current billing period."""
     total: float
@@ -1472,6 +1481,10 @@ class PreviewMultiAttachResponseTypedDict(TypedDict):
     r"""Products or subscription changes being added or updated."""
     outgoing: List[PreviewMultiAttachOutgoingTypedDict]
     r"""Products or subscription changes being removed or ended."""
+    redirect_to_checkout: bool
+    r"""Whether the customer will be redirected to a checkout page if attach is called."""
+    checkout_type: Nullable[PreviewMultiAttachCheckoutType]
+    r"""The type of checkout that will be used if the customer is redirected to a checkout page."""
     next_cycle: NotRequired[PreviewMultiAttachNextCycleTypedDict]
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
     expand: NotRequired[List[str]]
@@ -1485,7 +1498,6 @@ class PreviewMultiAttachResponse(BaseModel):
     r"""The ID of the customer."""
 
     line_items: List[PreviewMultiAttachLineItem]
-    r"""List of line items for the current billing period."""
 
     subtotal: float
     r"""The total amount in cents before discounts for the current billing period."""
@@ -1502,6 +1514,12 @@ class PreviewMultiAttachResponse(BaseModel):
     outgoing: List[PreviewMultiAttachOutgoing]
     r"""Products or subscription changes being removed or ended."""
 
+    redirect_to_checkout: bool
+    r"""Whether the customer will be redirected to a checkout page if attach is called."""
+
+    checkout_type: Nullable[PreviewMultiAttachCheckoutType]
+    r"""The type of checkout that will be used if the customer is redirected to a checkout page."""
+
     next_cycle: Optional[PreviewMultiAttachNextCycle] = None
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
 
@@ -1511,15 +1529,24 @@ class PreviewMultiAttachResponse(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["next_cycle", "expand"])
+        nullable_fields = set(["checkout_type"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
