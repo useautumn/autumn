@@ -1,4 +1,3 @@
-import { writeHeapSnapshot } from "node:v8";
 import { sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { dbCritical, dbGeneral } from "@/db/initDrizzle.js";
@@ -228,26 +227,23 @@ debugRouter.post("/pg-health", async (c) => {
 });
 
 /** Write a V8 heap snapshot to disk. Requires secret key auth + dev-only. */
-export const heapSnapshotRouter = new Hono<HonoEnv>();
-heapSnapshotRouter.use("*", secretKeyMiddleware);
-heapSnapshotRouter.use("*", orgConfigMiddleware);
-heapSnapshotRouter.get("/heap-snapshot", async (c) => {
-	if (process.env.NODE_ENV === "production") {
-		return c.json({ error: "Not available in production" }, 403);
-	}
+// debugRouter.get("/heap-snapshot", async (c) => {
+// 	if (process.env.NODE_ENV === "production") {
+// 		return c.json({ error: "Not available in production" }, 403);
+// 	}
 
-	const ctx = c.get("ctx");
-	if (!ALLOWED_ORG_IDS.has(ctx.org?.id)) {
-		return c.json({ error: "Forbidden" }, 403);
-	}
+// 	const ctx = c.get("ctx");
+// 	if (!ALLOWED_ORG_IDS.has(ctx.org?.id)) {
+// 		return c.json({ error: "Forbidden" }, 403);
+// 	}
 
-	const snapshotDir = new URL("../../../perf/snapshots/", import.meta.url)
-		.pathname;
-	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
-	const filename = `heap-${timestamp}-pid${process.pid}.heapsnapshot`;
-	const filepath = `${snapshotDir}${filename}`;
+// 	const snapshotDir = new URL("../../../perf/snapshots/", import.meta.url)
+// 		.pathname;
+// 	const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+// 	const filename = `heap-${timestamp}-pid${process.pid}.heapsnapshot`;
+// 	const filepath = `${snapshotDir}${filename}`;
 
-	writeHeapSnapshot(filepath);
+// 	writeHeapSnapshot(filepath);
 
-	return c.json({ ok: true, file: filename, path: filepath });
-});
+// 	return c.json({ ok: true, file: filename, path: filepath });
+// });

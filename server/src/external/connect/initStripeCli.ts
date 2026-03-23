@@ -43,6 +43,7 @@ export const initMasterStripe = (params?: {
 		env: params?.env,
 		accountId: params?.accountId,
 		legacyVersion: params?.legacyVersion,
+		secretKey,
 	});
 
 	return getOrCreateStripeClient({
