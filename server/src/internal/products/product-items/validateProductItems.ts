@@ -1,6 +1,5 @@
 import {
 	type AppEnv,
-	EntInterval,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -326,20 +325,6 @@ export const validateProductItems = ({
 		const item = newItems[index];
 		const entInterval = itemToEntInterval({ item });
 		const intervalCount = item.interval_count || 1;
-
-		if (isFeaturePriceItem(item) && entInterval === EntInterval.Lifetime) {
-			const otherItem = newItems.find((i: any, index2: any) => {
-				return i.feature_id === item.feature_id && index2 !== index;
-			});
-
-			if (otherItem && isFeaturePriceItem(otherItem)) {
-				throw new RecaseError({
-					message: `If feature is lifetime and paid, can't have any other features`,
-					code: ErrCode.InvalidInputs,
-					statusCode: StatusCodes.BAD_REQUEST,
-				});
-			}
-		}
 
 		// Boolean duplicate
 		if (isBooleanFeatureItem(item)) {
