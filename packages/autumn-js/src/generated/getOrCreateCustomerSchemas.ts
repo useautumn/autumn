@@ -33,6 +33,14 @@ export const getOrCreateCustomerSpendLimitOutboundSchema = z.object({
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const getOrCreateCustomerUsageAlertOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	threshold_type: z.string(),
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
 export const getOrCreateCustomerBillingControlsOutboundSchema = z.object({
 	auto_topups: z
 		.union([z.array(getOrCreateCustomerAutoTopupOutboundSchema), z.undefined()])
@@ -40,6 +48,12 @@ export const getOrCreateCustomerBillingControlsOutboundSchema = z.object({
 	spend_limits: z
 		.union([
 			z.array(getOrCreateCustomerSpendLimitOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	usage_alerts: z
+		.union([
+			z.array(getOrCreateCustomerUsageAlertOutboundSchema),
 			z.undefined(),
 		])
 		.optional(),
@@ -84,12 +98,25 @@ export const getOrCreateCustomerAutoTopupSchema = z.object({
 		.optional(),
 });
 
+export const getOrCreateCustomerThresholdTypeSchema = closedEnumSchema;
+
+export const getOrCreateCustomerUsageAlertSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	thresholdType: getOrCreateCustomerThresholdTypeSchema,
+	name: z.union([z.string(), z.undefined()]).optional(),
+});
+
 export const getOrCreateCustomerBillingControlsSchema = z.object({
 	autoTopups: z
 		.union([z.array(getOrCreateCustomerAutoTopupSchema), z.undefined()])
 		.optional(),
 	spendLimits: z
 		.union([z.array(getOrCreateCustomerSpendLimitSchema), z.undefined()])
+		.optional(),
+	usageAlerts: z
+		.union([z.array(getOrCreateCustomerUsageAlertSchema), z.undefined()])
 		.optional(),
 });
 

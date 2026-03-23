@@ -13,10 +13,15 @@ export const handleListEntities = createRoute({
 		});
 
 		return c.json({
-			list: fullCus.entities.map(({ spend_limits, ...entity }) => ({
-				...entity,
-				billing_controls: { spend_limits: spend_limits ?? undefined },
-			})),
+			list: fullCus.entities.map(
+				({ spend_limits, usage_alerts, ...entity }) => ({
+					...entity,
+					billing_controls: {
+						spend_limits: spend_limits ?? undefined,
+						usage_alerts: usage_alerts ?? undefined,
+					},
+				}),
+			),
 		});
 	},
 });

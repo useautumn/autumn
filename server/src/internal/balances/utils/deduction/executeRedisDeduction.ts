@@ -10,7 +10,7 @@ import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocat
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
-import { handleThresholdReached } from "../handleThresholdReached.js";
+import { fireTrackWebhooks } from "../../trackWebhooks/fireTrackWebhooks.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -235,15 +235,12 @@ export const executeRedisDeduction = async ({
 			throw error;
 		}
 
-		handleThresholdReached({
+		fireTrackWebhooks({
 			ctx,
 			oldFullCus,
 			newFullCus: fullCustomer,
 			feature: deduction.feature,
-		}).catch((error) => {
-			ctx.logger.error(
-				`[executeRedisDeduction] Failed to handle threshold reached: ${error}`,
-			);
+			entityId,
 		});
 
 		if (options.triggerAutoTopUp) {

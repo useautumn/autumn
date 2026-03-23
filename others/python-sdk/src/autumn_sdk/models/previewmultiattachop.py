@@ -36,7 +36,7 @@ class PreviewMultiAttachGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -87,7 +87,7 @@ class PreviewMultiAttachBasePrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -136,7 +136,7 @@ class PreviewMultiAttachReset(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -174,7 +174,7 @@ class PreviewMultiAttachTier(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -270,7 +270,7 @@ class PreviewMultiAttachPrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -355,7 +355,7 @@ class PreviewMultiAttachRollover(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -417,7 +417,7 @@ class PreviewMultiAttachPlanItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -453,7 +453,7 @@ class PreviewMultiAttachCustomize(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -501,7 +501,7 @@ class PreviewMultiAttachPlanFeatureQuantity(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -551,7 +551,7 @@ class PreviewMultiAttachPlan(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -599,7 +599,7 @@ class PreviewMultiAttachFreeTrialParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -639,7 +639,7 @@ class PreviewMultiAttachInvoiceMode(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -674,7 +674,7 @@ class PreviewMultiAttachAttachDiscount(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -718,7 +718,60 @@ class PreviewMultiAttachSpendLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewMultiAttachThresholdType = Literal[
+    "usage",
+    "usage_percentage",
+]
+r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+
+
+class PreviewMultiAttachUsageAlertTypedDict(TypedDict):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    threshold_type: PreviewMultiAttachThresholdType
+    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    feature_id: NotRequired[str]
+    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage alert is enabled."""
+    name: NotRequired[str]
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+
+class PreviewMultiAttachUsageAlert(BaseModel):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+
+    threshold_type: PreviewMultiAttachThresholdType
+    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+
+    feature_id: Optional[str] = None
+    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage alert is enabled."""
+
+    name: Optional[str] = None
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -732,6 +785,8 @@ class PreviewMultiAttachBillingControlsTypedDict(TypedDict):
 
     spend_limits: NotRequired[List[PreviewMultiAttachSpendLimitTypedDict]]
     r"""List of overage spend limits per feature."""
+    usage_alerts: NotRequired[List[PreviewMultiAttachUsageAlertTypedDict]]
+    r"""List of usage alert configurations per feature."""
 
 
 class PreviewMultiAttachBillingControls(BaseModel):
@@ -740,15 +795,18 @@ class PreviewMultiAttachBillingControls(BaseModel):
     spend_limits: Optional[List[PreviewMultiAttachSpendLimit]] = None
     r"""List of overage spend limits per feature."""
 
+    usage_alerts: Optional[List[PreviewMultiAttachUsageAlert]] = None
+    r"""List of usage alert configurations per feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["spend_limits"])
+        optional_fields = set(["spend_limits", "usage_alerts"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -784,7 +842,7 @@ class PreviewMultiAttachEntityData(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -877,7 +935,7 @@ class PreviewMultiAttachParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -918,7 +976,7 @@ class PreviewMultiAttachDiscount(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -1004,7 +1062,7 @@ class PreviewMultiAttachLineItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1045,7 +1103,7 @@ class PreviewMultiAttachNextCycleDiscount(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -1131,7 +1189,7 @@ class PreviewMultiAttachNextCycleLineItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1200,7 +1258,7 @@ class PreviewMultiAttachUsageLineItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1273,6 +1331,10 @@ class PreviewMultiAttachIncomingTypedDict(TypedDict):
     r"""The feature quantity selections associated with this plan change."""
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
     plan: NotRequired[PlanTypedDict]
 
 
@@ -1286,18 +1348,24 @@ class PreviewMultiAttachIncoming(BaseModel):
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
 
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
+
     plan: Optional[Plan] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["plan"])
-        nullable_fields = set(["effective_at"])
+        nullable_fields = set(["effective_at", "canceled_at", "expires_at"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1336,6 +1404,10 @@ class PreviewMultiAttachOutgoingTypedDict(TypedDict):
     r"""The feature quantity selections associated with this plan change."""
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
     plan: NotRequired[PlanTypedDict]
 
 
@@ -1349,18 +1421,24 @@ class PreviewMultiAttachOutgoing(BaseModel):
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
 
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
+
     plan: Optional[Plan] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["plan"])
-        nullable_fields = set(["effective_at"])
+        nullable_fields = set(["effective_at", "canceled_at", "expires_at"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1438,7 +1516,7 @@ class PreviewMultiAttachResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:

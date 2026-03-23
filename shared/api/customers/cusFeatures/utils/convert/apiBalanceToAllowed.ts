@@ -5,58 +5,53 @@ import type { Feature } from "@models/featureModels/featureModels";
 import { isBooleanFeature, notNullish } from "@utils/index";
 import { Decimal } from "decimal.js";
 
+export type AllowedResult = {
+	allowed: boolean;
+	limitType?: "included" | "max_purchase" | "spend_limit";
+};
+
+export type ApiBalanceInput = {
+	apiBalance: ApiBalanceV1;
+	apiSubject: ApiSubjectV0;
+	feature: Feature;
+	requiredBalance: number;
+};
+
 export const apiBalanceToAllowed = ({
 	apiBalance,
 	apiSubject,
 	feature,
 	requiredBalance,
-}: {
-	apiBalance: ApiBalanceV1;
-	apiSubject: ApiSubjectV0;
-	feature: Feature;
-	requiredBalance: number;
-}) => {
-	if (!apiBalance) {
-		return false;
-	}
+}: ApiBalanceInput): AllowedResult => {
+	if (!apiBalance) return { allowed: false };
 
-	// 1. Boolean
-	if (isBooleanFeature({ feature })) {
-		return true;
-	}
+	if (isBooleanFeature({ feature })) return { allowed: true };
 
-	// 2. Unlimited
-	if (apiBalance.unlimited) {
-		return true;
-	}
+	if (apiBalance.unlimited) return { allowed: true };
 
-	// 2. Required balance is negative
-	if (requiredBalance < 0) {
-		return true;
-	}
+	if (requiredBalance < 0) return { allowed: true };
 
-	// 3. Overage allowed
 	if (apiBalance.overage_allowed) {
-		// 1. Available overage
-		const availableOverage = apiBalanceV1ToAvailableOverage({
+		const { availableOverage, reason } = apiBalanceV1ToAvailableOverage({
 			apiBalance,
 			apiSubject,
 			feature,
 		});
 
 		if (notNullish(availableOverage)) {
-			return new Decimal(availableOverage)
+			const allowed = new Decimal(availableOverage)
 				.add(apiBalance.remaining)
 				.gte(requiredBalance);
+
+			if (!allowed) return { allowed: false, limitType: reason };
+			return { allowed: true };
 		}
 
-		return true;
+		return { allowed: true };
 	}
 
-	// 4. Balance >= required balance (V1 uses 'remaining' instead of 'current_balance')
-	if (new Decimal(apiBalance.remaining).gte(requiredBalance)) {
-		return true;
-	}
+	if (new Decimal(apiBalance.remaining).gte(requiredBalance))
+		return { allowed: true };
 
-	return false;
+	return { allowed: false, limitType: "included" };
 };

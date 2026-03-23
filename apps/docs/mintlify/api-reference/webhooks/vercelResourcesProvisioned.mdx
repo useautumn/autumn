@@ -1,0 +1,28 @@
+---
+title: "Resource Provisioned"
+openapi: "api/openapi.yml webhook vercel.resources.provisioned"
+---
+
+### Payload Fields
+
+<ParamField body="resource" type="object" required>
+  The resource that was provisioned.
+  <Expandable title="properties">
+    <ParamField body="id" type="string" required>
+      The unique identifier of the provisioned resource.
+    </ParamField>
+
+    <ParamField body="name" type="string" required>
+      The display name of the provisioned resource.
+    </ParamField>
+
+  </Expandable>
+</ParamField>
+
+<ParamField body="installation_id" type="string" required>
+  The Vercel integration configuration ID.
+</ParamField>
+
+<ParamField body="access_token" type="string" required>
+  An access token that can be used to patch the resource's secrets.
+</ParamField>

@@ -435,6 +435,43 @@ export type MultiAttachSpendLimit = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const MultiAttachThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type MultiAttachThresholdType = ClosedEnum<
+  typeof MultiAttachThresholdType
+>;
+
+export type MultiAttachUsageAlert = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: MultiAttachThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+/**
  * Billing controls for the entity.
  */
 export type MultiAttachBillingControls = {
@@ -442,6 +479,10 @@ export type MultiAttachBillingControls = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<MultiAttachSpendLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<MultiAttachUsageAlert> | undefined;
 };
 
 export type MultiAttachEntityData = {
@@ -1117,8 +1158,51 @@ export function multiAttachSpendLimitToJSON(
 }
 
 /** @internal */
+export const MultiAttachThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachThresholdType
+> = z.enum(MultiAttachThresholdType);
+
+/** @internal */
+export type MultiAttachUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const MultiAttachUsageAlert$outboundSchema: z.ZodMiniType<
+  MultiAttachUsageAlert$Outbound,
+  MultiAttachUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: MultiAttachThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function multiAttachUsageAlertToJSON(
+  multiAttachUsageAlert: MultiAttachUsageAlert,
+): string {
+  return JSON.stringify(
+    MultiAttachUsageAlert$outboundSchema.parse(multiAttachUsageAlert),
+  );
+}
+
+/** @internal */
 export type MultiAttachBillingControls$Outbound = {
   spend_limits?: Array<MultiAttachSpendLimit$Outbound> | undefined;
+  usage_alerts?: Array<MultiAttachUsageAlert$Outbound> | undefined;
 };
 
 /** @internal */
@@ -1130,10 +1214,14 @@ export const MultiAttachBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => MultiAttachSpendLimit$outboundSchema)),
     ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => MultiAttachUsageAlert$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       spendLimits: "spend_limits",
+      usageAlerts: "usage_alerts",
     });
   }),
 );
