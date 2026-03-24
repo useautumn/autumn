@@ -12,6 +12,7 @@ import {
 	SheetContent,
 	SheetTrigger,
 } from "@/components/v2/sheets/Sheet";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useRewardStore } from "@/hooks/stores/useRewardStore";
 import { RewardService } from "@/services/products/RewardService";
@@ -19,6 +20,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { mapFrontendToApiReward } from "../../utils/rewardMappers";
 import { DiscountRewardConfig } from "./DiscountRewardConfig";
+import { FeatureGrantRewardConfig } from "./FeatureGrantRewardConfig";
 import { FreeProductRewardConfig } from "./FreeProductRewardConfig";
 import { RewardDetails } from "./RewardDetails";
 import { SelectRewardType } from "./SelectRewardType";
@@ -34,6 +36,7 @@ export function CreateRewardSheet({
 }: CreateRewardSheetProps = {}) {
 	const axiosInstance = useAxiosInstance();
 	const { refetch } = useRewardsQuery();
+	const { features } = useFeaturesQuery();
 
 	const [loading, setLoading] = useState(false);
 	const [internalOpen, setInternalOpen] = useState(false);
@@ -86,9 +89,31 @@ export function CreateRewardSheet({
 			return;
 		}
 
+		if (reward.rewardCategory === "feature_grant") {
+			const validEntitlements = reward.featureGrantEntitlements.filter(
+				(e) => e.feature_id && e.allowance > 0,
+			);
+			if (validEntitlements.length === 0) {
+				toast.error(
+					"Please add at least one entitlement with a feature and balance",
+				);
+				return;
+			}
+			if (
+				!reward.promo_codes?.length ||
+				!reward.promo_codes.some((pc) => pc.code)
+			) {
+				toast.error("Please add at least one promo code");
+				return;
+			}
+		}
+
 		setLoading(true);
 		try {
-			const apiReward = mapFrontendToApiReward(reward);
+			const apiReward = mapFrontendToApiReward({
+				frontendReward: reward,
+				features,
+			});
 
 			await RewardService.createReward({
 				axiosInstance,
@@ -134,6 +159,10 @@ export function CreateRewardSheet({
 
 					{reward.rewardCategory === "free_product" && (
 						<FreeProductRewardConfig reward={reward} setReward={setReward} />
+					)}
+
+					{reward.rewardCategory === "feature_grant" && (
+						<FeatureGrantRewardConfig reward={reward} setReward={setReward} />
 					)}
 				</div>
 
