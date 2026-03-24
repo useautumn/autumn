@@ -71,6 +71,11 @@ const coreUrls = [
 		url: "/cancel",
 		type: "delete",
 	},
+	{
+		method: "POST",
+		url: "/rewards.redeem",
+		type: "delete",
+	},
 ];
 
 const handleRefreshCache = async (req: any, res: any) => {

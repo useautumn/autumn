@@ -19,18 +19,16 @@ const RewardRedemptionSchema = z.object({
 	created_at: z.number(),
 	updated_at: z.number(),
 
-	// Customer who signed up / paid
-	internal_customer_id: z.string(), // customer who redeemed the code...
-	internal_reward_program_id: z.string(), // reward scheme that was redeemed
+	internal_customer_id: z.string(),
 
-	// Referral code used
-	// code: z.string(),
-	referral_code_id: z.string(),
+	// Referral redemptions: these are set, reward_internal_id may be null
+	internal_reward_program_id: z.string().nullable(),
+	referral_code_id: z.string().nullable(),
 
-	// Whether the reward was triggered
+	// Promo code redemptions: this is set, referral fields are null
+	reward_internal_id: z.string().nullable(),
+
 	triggered: z.boolean(),
-
-	// Whether the (coupon) was applied
 	applied: z.boolean(),
 	redeemer_applied: z.boolean(),
 });
