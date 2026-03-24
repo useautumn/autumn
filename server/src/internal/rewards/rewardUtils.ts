@@ -46,6 +46,29 @@ export const constructReward = ({
 		});
 	}
 
+	if (reward.type === RewardType.FeatureGrant) {
+		if (!reward.entitlements?.length) {
+			throw new RecaseError({
+				message: "Feature grant reward requires at least one entitlement",
+				code: ErrCode.InvalidReward,
+			});
+		}
+		for (const ent of reward.entitlements) {
+			if (!ent.internal_feature_id) {
+				throw new RecaseError({
+					message: "Each entitlement must have a feature",
+					code: ErrCode.InvalidReward,
+				});
+			}
+			if (!ent.allowance || ent.allowance <= 0) {
+				throw new RecaseError({
+					message: "Each entitlement must have a positive allowance",
+					code: ErrCode.InvalidReward,
+				});
+			}
+		}
+	}
+
 	if (getRewardCat(reward as Reward) === RewardCategory.Discount) {
 		DiscountConfigSchema.parse(reward.discount_config);
 	}
@@ -76,11 +99,20 @@ export const constructReward = ({
 		configData = {
 			free_product_id: reward.free_product_id,
 			discount_config: null,
+			entitlements: null,
+		};
+	} else if (reward.type === RewardType.FeatureGrant) {
+		configData = {
+			entitlements: reward.entitlements,
+			discount_config: null,
+			free_product_id: null,
+			free_product_config: null,
 		};
 	} else if (reward.type === RewardType.PercentageDiscount) {
 		configData = {
 			discount_config: reward.discount_config,
 			free_product_id: null,
+			entitlements: null,
 		};
 	}
 
@@ -98,7 +130,10 @@ export const constructReward = ({
 };
 
 export const getRewardCat = (reward: Reward) => {
-	if (reward.type === RewardType.FreeProduct) {
+	if (
+		reward.type === RewardType.FreeProduct ||
+		reward.type === RewardType.FeatureGrant
+	) {
 		return RewardCategory.FreeProduct;
 	}
 	return RewardCategory.Discount;

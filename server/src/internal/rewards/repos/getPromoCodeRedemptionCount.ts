@@ -2,13 +2,15 @@ import { rewardRedemptions } from "@autumn/shared";
 import { and, count, eq, isNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
-/** Count promo code redemptions for a reward (excludes referral redemptions) */
+/** Count redemptions for a specific promo code on a reward */
 export const getPromoCodeRedemptionCount = async ({
 	db,
 	rewardInternalId,
+	promoCode,
 }: {
 	db: DrizzleCli;
 	rewardInternalId: string;
+	promoCode: string;
 }) => {
 	const result = await db
 		.select({ count: count() })
@@ -16,6 +18,7 @@ export const getPromoCodeRedemptionCount = async ({
 		.where(
 			and(
 				eq(rewardRedemptions.reward_internal_id, rewardInternalId),
+				eq(rewardRedemptions.promo_code, promoCode),
 				isNull(rewardRedemptions.referral_code_id),
 			),
 		);
