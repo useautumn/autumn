@@ -1,8 +1,6 @@
 --[[
   Shared key builder functions for FullCustomer cache keys.
-  
-  NOTE: FULL_CUSTOMER_CACHE_VERSION is injected by luaScriptsV2.ts at load time
-  (the __FULL_CUSTOMER_CACHE_VERSION__ placeholder is replaced with the real value).
+  FULL_CUSTOMER_CACHE_VERSION is injected by luaScriptsV2.ts at load time.
 ]]
 
 local FULL_CUSTOMER_CACHE_VERSION = "__FULL_CUSTOMER_CACHE_VERSION__"

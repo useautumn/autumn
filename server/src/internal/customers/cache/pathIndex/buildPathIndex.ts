@@ -1,8 +1,13 @@
 import type { FullCustomer } from "@autumn/shared";
 
 /**
- * Builds a Record mapping entitlement IDs to their JSON paths within
+ * Builds a Record mapping entitlement IDs to their array indices within
  * the FullCustomer cache value, ready for HSET into the path index.
+ *
+ * Entry format for product entitlements: { cp, ce, ef }
+ * Entry format for extra (loose) entitlements: { ece, ef }
+ *
+ * The Lua script constructs the JSON path at read time from these indices.
  */
 export const buildPathIndex = ({
 	fullCustomer,
@@ -19,12 +24,12 @@ export const buildPathIndex = ({
 			ceIdx++
 		) {
 			const customerEntitlement = customerProduct.customer_entitlements[ceIdx];
-			const path = `$.customer_products[${cpIdx}].customer_entitlements[${ceIdx}]`;
 			const entityFeatureId =
 				customerEntitlement.entitlement?.entity_feature_id ?? null;
 
-			entries[`ent:${customerEntitlement.id}`] = JSON.stringify({
-				p: path,
+			entries[`cus_ent:${customerEntitlement.id}`] = JSON.stringify({
+				cp: cpIdx,
+				ce: ceIdx,
 				ef: entityFeatureId,
 			});
 		}
@@ -38,12 +43,11 @@ export const buildPathIndex = ({
 		) {
 			const extraCustomerEntitlement =
 				fullCustomer.extra_customer_entitlements[eceIdx];
-			const path = `$.extra_customer_entitlements[${eceIdx}]`;
 			const entityFeatureId =
 				extraCustomerEntitlement.entitlement?.entity_feature_id ?? null;
 
-			entries[`ent:${extraCustomerEntitlement.id}`] = JSON.stringify({
-				p: path,
+			entries[`cus_ent:${extraCustomerEntitlement.id}`] = JSON.stringify({
+				ece: eceIdx,
 				ef: entityFeatureId,
 			});
 		}
