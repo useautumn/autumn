@@ -8,6 +8,7 @@ import {
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useRewardStore } from "@/hooks/stores/useRewardStore";
 import { RewardService } from "@/services/products/RewardService";
@@ -18,6 +19,7 @@ import {
 	mapFrontendToApiReward,
 } from "../../utils/rewardMappers";
 import { DiscountRewardConfig } from "./DiscountRewardConfig";
+import { FeatureGrantRewardConfig } from "./FeatureGrantRewardConfig";
 import { FreeProductRewardConfig } from "./FreeProductRewardConfig";
 import { RewardDetails } from "./RewardDetails";
 import { SelectRewardType } from "./SelectRewardType";
@@ -35,6 +37,7 @@ export function UpdateRewardSheet({
 }: UpdateRewardSheetProps) {
 	const axiosInstance = useAxiosInstance();
 	const { refetch } = useRewardsQuery();
+	const { features } = useFeaturesQuery();
 
 	const [loading, setLoading] = useState(false);
 
@@ -45,7 +48,10 @@ export function UpdateRewardSheet({
 	// Initialize reward store when selectedReward changes
 	useEffect(() => {
 		if (open && selectedReward) {
-			const frontendReward = mapApiToFrontendReward(selectedReward);
+			const frontendReward = mapApiToFrontendReward({
+				apiReward: selectedReward,
+				features,
+			});
 
 			setReward(frontendReward);
 			setBaseReward(frontendReward);
@@ -89,7 +95,10 @@ export function UpdateRewardSheet({
 
 		setLoading(true);
 		try {
-			const apiReward = mapFrontendToApiReward(reward);
+			const apiReward = mapFrontendToApiReward({
+				frontendReward: reward,
+				features,
+			});
 
 			await RewardService.updateReward({
 				axiosInstance,
@@ -131,6 +140,10 @@ export function UpdateRewardSheet({
 
 					{reward.rewardCategory === "free_product" && (
 						<FreeProductRewardConfig reward={reward} setReward={setReward} />
+					)}
+
+					{reward.rewardCategory === "feature_grant" && (
+						<FeatureGrantRewardConfig reward={reward} setReward={setReward} />
 					)}
 				</div>
 
