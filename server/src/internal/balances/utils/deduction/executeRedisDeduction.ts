@@ -120,6 +120,9 @@ export const executeRedisDeduction = async ({
 
 		// Call Lua script to deduct from FullCustomer in Redis
 		const luaParams = {
+			org_id: org.id,
+			env,
+			customer_id: customerId,
 			sorted_entitlements: customerEntitlementDeductions,
 			spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 			usage_based_cus_ent_ids_by_feature_id:
