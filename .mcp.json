@@ -1,6 +1,7 @@
 {
   "mcpServers": {
     "autumn-docs": {
+      "type": "sse",
       "url": "https://docs.useautumn.com/mcp"
     }
   }
