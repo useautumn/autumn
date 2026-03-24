@@ -14,7 +14,7 @@ local function build_ent_data_from_full_customer(params)
   end
 
   -- Fast path: single JSON.GET on the sub-object via path index
-  if not is_nil(pathidx_key) then
+  if params.has_pathidx then
     local result = get_customer_entitlement_via_index({
       pathidx_key = pathidx_key,
       cache_key = cache_key,
@@ -79,6 +79,7 @@ local function get_available_overage_from_spend_limit(params)
         cus_ent_id = cus_ent_id,
         cache_key = context.cache_key,
         pathidx_key = context.pathidx_key,
+        has_pathidx = context.has_pathidx,
       })
     end
 
