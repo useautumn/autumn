@@ -1,4 +1,4 @@
-import type { CreateReward, FeatureGrantDuration } from "@autumn/shared";
+import type { CreateReward, EntitlementDuration } from "@autumn/shared";
 
 /**
  * Frontend-only reward category to separate UI concerns from API types
@@ -23,7 +23,7 @@ export interface FrontendRewardEntitlement {
 	feature_id: string;
 	allowance: number;
 	expiry?: {
-		duration: FeatureGrantDuration;
+		duration: EntitlementDuration;
 		length: number;
 	};
 }
