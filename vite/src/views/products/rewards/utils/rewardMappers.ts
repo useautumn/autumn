@@ -46,16 +46,14 @@ export function mapFrontendToApiReward({
 
 	// Map frontend feature_id → internal_feature_id for feature grant entitlements
 	if (rewardCategory === "feature_grant" && featureGrantEntitlements?.length) {
-		result.entitlements = featureGrantEntitlements
-			.filter((e) => e.feature_id && e.allowance > 0)
-			.map((e) => {
-				const feature = features?.find((f) => f.id === e.feature_id);
-				return {
-					internal_feature_id: feature?.internal_id ?? e.feature_id,
-					allowance: e.allowance,
-					expiry: e.expiry,
-				};
-			});
+		result.entitlements = featureGrantEntitlements.map((e) => {
+			const feature = features?.find((f) => f.id === e.feature_id);
+			return {
+				internal_feature_id: feature?.internal_id ?? e.feature_id,
+				allowance: e.allowance,
+				expiry: e.expiry,
+			};
+		});
 	}
 
 	return result;

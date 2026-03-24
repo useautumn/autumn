@@ -61,7 +61,10 @@ export const handleCreateCoupon = createRoute({
 			});
 		}
 
-		if (getRewardCat(newReward) === RewardCategory.FreeProduct) {
+		if (
+			getRewardCat(newReward) === RewardCategory.FreeProduct &&
+			newReward.free_product_id
+		) {
 			const fullProduct = await ProductService.getFull({
 				db,
 				idOrInternalId: newReward.free_product_id!,

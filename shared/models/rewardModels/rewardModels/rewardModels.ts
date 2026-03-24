@@ -7,17 +7,17 @@ import {
 
 const PromoCodeSchema = z.object({
 	code: z.string(),
-	max_redemptions: z.number().optional(),
+	max_redemptions: z.number().positive().optional(),
 });
 
 const RewardEntitlementExpirySchema = z.object({
 	duration: z.nativeEnum(FeatureGrantDuration),
-	length: z.number(),
+	length: z.number().positive(),
 });
 
 const RewardEntitlementSchema = z.object({
-	internal_feature_id: z.string(),
-	allowance: z.number(),
+	internal_feature_id: z.string().min(1),
+	allowance: z.number().positive(),
 	expiry: RewardEntitlementExpirySchema.optional(),
 });
 
@@ -53,16 +53,31 @@ const RewardSchema = z.object({
 	created_at: z.number(),
 });
 
-export const CreateRewardSchema = z.object({
-	name: z.string(),
-	promo_codes: z.array(PromoCodeSchema),
-	id: z.string(),
-	type: z.nativeEnum(RewardType).nullish(),
-	discount_config: DiscountConfigSchema.nullish(),
-	free_product_config: FreeProductConfigSchema.nullish(),
-	free_product_id: z.string().nullish(),
-	entitlements: z.array(RewardEntitlementSchema).nullish(),
-});
+export const CreateRewardSchema = z
+	.object({
+		name: z.string(),
+		promo_codes: z.array(PromoCodeSchema),
+		id: z.string(),
+		type: z.nativeEnum(RewardType).nullish(),
+		discount_config: DiscountConfigSchema.nullish(),
+		free_product_config: FreeProductConfigSchema.nullish(),
+		free_product_id: z.string().nullish(),
+		entitlements: z.array(RewardEntitlementSchema).nullish(),
+	})
+	.refine(
+		(data) => {
+			if (data.type !== RewardType.FeatureGrant) return true;
+			return data.entitlements && data.entitlements.length > 0;
+		},
+		{ message: "Feature grant rewards require at least one entitlement" },
+	)
+	.refine(
+		(data) => {
+			if (data.type !== RewardType.FeatureGrant) return true;
+			return data.promo_codes.some((pc) => pc.code.length > 0);
+		},
+		{ message: "Feature grant rewards require at least one promo code" },
+	);
 
 export type PromoCode = z.infer<typeof PromoCodeSchema>;
 export type CreateReward = z.infer<typeof CreateRewardSchema>;

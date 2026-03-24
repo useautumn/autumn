@@ -327,9 +327,9 @@ export function FeatureGrantRewardConfig({
 												},
 											})
 										}
-									className="text-xs text-t4 hover:text-t1 transition-colors cursor-pointer"
-								>
-									No expiry (permanent). Click to set one.
+										className="text-xs text-t4 hover:text-t1 transition-colors cursor-pointer"
+									>
+										No expiry (permanent). Click to set one.
 									</button>
 								)}
 							</div>
@@ -338,7 +338,7 @@ export function FeatureGrantRewardConfig({
 
 					<Button variant="secondary" size="sm" onClick={addEntitlement}>
 						<PlusIcon size={12} className="mr-1" />
-						Add Entitlement
+						Add Grant
 					</Button>
 				</div>
 			</SheetSection>

@@ -109,6 +109,7 @@ export const handleRedeemReferral = createRoute({
 			internal_customer_id: customer.internal_id, // redeemed by customer
 			internal_reward_program_id: referralCode.internal_reward_program_id,
 			reward_internal_id: null,
+			promo_code: null,
 			created_at: Date.now(),
 			triggered:
 				referralCode.reward_program.when ===
