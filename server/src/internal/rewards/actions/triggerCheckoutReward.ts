@@ -10,11 +10,15 @@ import {
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { redemptionRepo, referralCodeRepo } from "./repos/index.js";
-import { triggerFreeProduct } from "./referralUtils/triggerFreeProduct.js";
-import { triggerRedemption } from "./referralUtils.js";
-import { getRewardCat } from "./rewardUtils.js";
+import {
+	redemptionRepo,
+	referralCodeRepo,
+} from "@/internal/rewards/repos/index.js";
+import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
+import { triggerDiscount } from "./triggerDiscount.js";
+import { triggerFreeProduct } from "./triggerFreeProduct.js";
 
+/** Process checkout-triggered reward redemptions (called from job queue) */
 export const runTriggerCheckoutReward = async ({
 	ctx,
 	payload,
@@ -29,17 +33,16 @@ export const runTriggerCheckoutReward = async ({
 	const { db, org, env, logger } = ctx;
 
 	try {
-		// Customer redeeming code, product they're buying
 		const { customer, product, subId } = payload;
 		const stripeCli = createStripeCli({
 			org,
 			env,
 		});
 
-		// 1. Check if redemption exists
+		// Check if redemption exists
 		const redemptions = await redemptionRepo.getByCustomer({
 			db,
-			internalCustomerId: customer.internal_id, // customer that redeemed code
+			internalCustomerId: customer.internal_id,
 			triggered: false,
 		});
 
@@ -48,10 +51,11 @@ export const runTriggerCheckoutReward = async ({
 				!redemption ||
 				redemption.reward_program.when !== RewardTriggerEvent.Checkout
 			) {
-				console.info(
+				logger.info(
 					"No redemption found or reward program not set to checkout, skipping",
 				);
-				return;
+				// BUG FIX: was `return` which exited the entire function — should be `continue`
+				continue;
 			}
 
 			const { reward_program, referral_code: referralCode } =
@@ -76,7 +80,8 @@ export const runTriggerCheckoutReward = async ({
 					`Product ${product.name} (${product.id}) not included in referral program, skipping`,
 				);
 				if (reward_program.reward.free_product_id !== product.id) {
-					return;
+					// BUG FIX: was `return` which exited the entire function — should be `continue`
+					continue;
 				}
 			}
 
@@ -84,28 +89,27 @@ export const runTriggerCheckoutReward = async ({
 			let hasTrial = false;
 			if (subId) {
 				const sub = await stripeCli.subscriptions.retrieve(subId);
-				// hasTrial = Boolean(sub.trial_end && sub.trial_end > Date.now());
 				hasTrial = sub.status === "trialing";
 			}
 
 			if (hasTrial) {
 				logger.info(`Subscription is on trial, not triggering reward`);
-				return;
+				// BUG FIX: was `return` which exited the entire function — should be `continue`
+				continue;
 			}
 
 			// Get redemption count
-		const redemptionCount = await referralCodeRepo.getRedemptionCount(
-			{
+			const redemptionCount = await referralCodeRepo.getRedemptionCount({
 				db,
 				referralCodeId: referralCode.id,
-			},
-		);
+			});
 
 			if (redemptionCount >= reward_program.max_redemptions!) {
 				logger.info(
 					`Max redemptions reached, not triggering latest redemption`,
 				);
-				return;
+				// BUG FIX: was `return` which exited the entire function — should be `continue`
+				continue;
 			}
 
 			const rewardCat = getRewardCat(reward);
@@ -118,7 +122,7 @@ export const runTriggerCheckoutReward = async ({
 					redemption,
 				});
 			} else {
-				await triggerRedemption({
+				await triggerDiscount({
 					ctx,
 					referralCode: {
 						...referralCode,
@@ -130,7 +134,6 @@ export const runTriggerCheckoutReward = async ({
 			}
 		}
 	} catch (error) {
-		console.error("Failed to trigger checkout reward");
-		console.error(error);
+		logger.error(`Failed to trigger checkout reward: ${error}`);
 	}
 };
