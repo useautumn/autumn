@@ -10,8 +10,8 @@ import {
 } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { redemptionRepo, rewardRepo, referralCodeRepo } from "@/internal/rewards/repos/index.js";
-import { triggerFreeProduct } from "@/internal/rewards/referralUtils/triggerFreeProduct.js";
-import { triggerRedemption } from "@/internal/rewards/referralUtils.js";
+import { triggerFreeProduct } from "@/internal/rewards/actions/triggerFreeProduct.js";
+import { triggerDiscount } from "@/internal/rewards/actions/triggerDiscount.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
@@ -149,7 +149,7 @@ export const handleRedeemReferral = createRoute({
 					redemption,
 				});
 			} else {
-				await triggerRedemption({
+				await triggerDiscount({
 					ctx,
 					referralCode,
 					reward,

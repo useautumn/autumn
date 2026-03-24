@@ -10,6 +10,7 @@ import {
 	type Reward,
 	RewardCategory,
 	type RewardProgram,
+	RewardReceivedBy,
 	RewardType,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
@@ -355,4 +356,41 @@ export const constructRewardProgram = ({
 	};
 
 	return rewardProgram;
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// Referral helpers (moved from referralUtils.ts)
+// ═══════════════════════════════════════════════════════════════════
+
+export const ReferralResponseCodes = {
+	OwnsProduct: "has_product_already",
+	Success: "success",
+	Unknown: "unknown",
+	NotConfigured: "not_configured",
+	InternalError: "internal_error",
+};
+
+/** Generate a random 6-character alphanumeric referral code */
+export const generateReferralCode = () => {
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	const codeLength = 6;
+
+	let code = "";
+	for (let i = 0; i < codeLength; i++) {
+		code += chars.charAt(Math.floor(Math.random() * chars.length));
+	}
+	return code;
+};
+
+/** Whether the referrer receives the reward */
+export const receivedByReferrer = (receivedBy: RewardReceivedBy) => {
+	return (
+		receivedBy === RewardReceivedBy.Referrer ||
+		receivedBy === RewardReceivedBy.All
+	);
+};
+
+/** Whether the redeemer receives the reward */
+export const receivedByRedeemer = (receivedBy: RewardReceivedBy) => {
+	return receivedBy === RewardReceivedBy.All;
 };
