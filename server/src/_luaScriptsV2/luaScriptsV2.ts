@@ -165,15 +165,6 @@ const setFullCustomerCacheScript = readFileSync(
 export const SET_FULL_CUSTOMER_CACHE_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
 ${setFullCustomerCacheScript}`;
 
-/**
- * Lua script for batch deleting multiple FullCustomer caches from Redis.
- * For each customer: checks test guard, sets stale-write guard, deletes cache.
- */
-export const BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
-	join(DELETE_CACHE_DIR, "batchDeleteFullCustomerCache.lua"),
-	"utf-8",
-);
-
 // ============================================================================
 // RESET CUSTOMER ENTITLEMENTS SCRIPT (deprecated — kept for backward compat)
 // ============================================================================
