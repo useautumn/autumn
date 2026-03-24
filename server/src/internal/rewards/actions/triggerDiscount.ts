@@ -1,5 +1,6 @@
 import {
 	ErrCode,
+	RecaseError,
 	type ReferralCode,
 	type Reward,
 	type RewardProgram,
@@ -10,37 +11,15 @@ import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import RecaseError from "@/utils/errorUtils.js";
-import { CusService } from "../customers/CusService.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 import {
 	receivedByRedeemer,
 	receivedByReferrer,
-} from "./referralUtils/triggerFreePaidProduct.js";
+} from "@/internal/rewards/rewardUtils.js";
 
-export const ReferralResponseCodes = {
-	OwnsProduct: "has_product_already",
-	Success: "success",
-	Unknown: "unknown",
-	NotConfigured: "not_configured",
-	InternalError: "internal_error",
-};
-
-export const generateReferralCode = () => {
-	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-	const codeLength = 6;
-
-	let code = "";
-
-	for (let i = 0; i < codeLength; i++) {
-		code += chars.charAt(Math.floor(Math.random() * chars.length));
-	}
-
-	return code;
-};
-
-// Trigger reward
-export const triggerRedemption = async ({
+/** Apply a Stripe coupon discount to referrer/redeemer */
+export const triggerDiscount = async ({
 	ctx,
 	referralCode,
 	reward,
@@ -114,7 +93,8 @@ export const triggerRedemption = async ({
 
 		if (!stripeCus.discount) {
 			await stripeCli.customers.update(stripeCusId, {
-				// @ts-expect-error
+				// Stripe legacy API accepts coupon as string but types don't reflect this
+				// @ts-expect-error — legacy Stripe API accepts coupon ID as string
 				coupon: reward.id,
 			});
 
