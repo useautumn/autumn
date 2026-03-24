@@ -62,7 +62,7 @@ test(`${chalk.yellowBright("usage-alert credit system: track action1 triggers al
 	const { customerId, autumnV2_1 } = await initScenario({
 		customerId: "usage-alert-credit-action1",
 		setup: [
-			s.customer({ testClock: false }),
+			s.customer({ testClock: false, paymentMethod: "success" }),
 			s.products({ list: [creditSystemProduct] }),
 		],
 		actions: [s.attach({ productId: creditSystemProduct.id })],
@@ -107,7 +107,7 @@ test(`${chalk.yellowBright("usage-alert credit system: track action2 triggers al
 	const { customerId, autumnV2_1 } = await initScenario({
 		customerId: "usage-alert-credit-action2",
 		setup: [
-			s.customer({ testClock: false }),
+			s.customer({ testClock: false, paymentMethod: "success" }),
 			s.products({ list: [creditSystemProduct] }),
 		],
 		actions: [s.attach({ productId: creditSystemProduct.id })],
