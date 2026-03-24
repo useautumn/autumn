@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { FULL_CUSTOMER_CACHE_VERSION } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -119,26 +120,41 @@ ${LOCK_STATE_UTILS}
 ${claimLockReceiptMainScript}`;
 
 // ============================================================================
+// FULL CUSTOMER KEY BUILDER LUA (version interpolated from TS config)
+// ============================================================================
+
+const FULL_CUSTOMER_KEY_BUILDERS = readFileSync(
+	join(__dirname, "fullCustomerKeyBuilders.lua"),
+	"utf-8",
+).replace("__FULL_CUSTOMER_CACHE_VERSION__", FULL_CUSTOMER_CACHE_VERSION);
+
+// ============================================================================
 // DELETE FULL CUSTOMER CACHE SCRIPTS
 // ============================================================================
 
-/**
- * Lua script for deleting a single FullCustomer cache from Redis.
- * Checks test guard, sets stale-write guard, and deletes cache atomically.
- */
-export const DELETE_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
+const deleteFullCustomerCacheScript = readFileSync(
 	join(DELETE_CACHE_DIR, "deleteFullCustomerCache.lua"),
 	"utf-8",
 );
 
 /**
- * Lua script for setting a FullCustomer cache in Redis.
- * Checks stale-write guard, checks if cache exists, and sets cache atomically.
+ * Lua script for deleting a single FullCustomer cache from Redis.
+ * Builds all keys internally from orgId/env/customerId.
  */
-export const SET_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
+export const DELETE_FULL_CUSTOMER_CACHE_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
+${deleteFullCustomerCacheScript}`;
+
+const setFullCustomerCacheScript = readFileSync(
 	join(DELETE_CACHE_DIR, "setFullCustomerCache.lua"),
 	"utf-8",
 );
+
+/**
+ * Lua script for setting a FullCustomer cache in Redis.
+ * Builds all keys internally from orgId/env/customerId.
+ */
+export const SET_FULL_CUSTOMER_CACHE_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
+${setFullCustomerCacheScript}`;
 
 /**
  * Lua script for batch deleting multiple FullCustomer caches from Redis.
