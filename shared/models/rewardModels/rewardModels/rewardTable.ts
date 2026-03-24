@@ -5,6 +5,7 @@ import type {
 	DiscountConfig,
 	FreeProductConfig,
 	PromoCode,
+	RewardEntitlement,
 } from "./rewardModels";
 
 export const rewards = pgTable(
@@ -22,6 +23,7 @@ export const rewards = pgTable(
 		).$type<FreeProductConfig>(),
 		free_product_id: text("free_product_id"),
 		promo_codes: jsonb("promo_codes").$type<PromoCode[]>().array(),
+		entitlements: jsonb("entitlements").$type<RewardEntitlement[]>(),
 		type: text(),
 	},
 	(table) => [
