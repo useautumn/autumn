@@ -1,4 +1,4 @@
-import { LightningIcon, PercentIcon } from "@phosphor-icons/react";
+import { GiftIcon, LightningIcon, PercentIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import {
@@ -19,7 +19,9 @@ export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
 			<div className="space-y-4">
 				<div className="flex w-full items-center gap-4">
 					<PanelButton
-						isSelected={reward.rewardCategory === "discount"}
+						isSelected={
+							reward.rewardCategory === FrontendRewardCategory.Discount
+						}
 						onClick={() =>
 							setReward({
 								...reward,
@@ -44,7 +46,35 @@ export function SelectRewardType({ reward, setReward }: SelectRewardTypeProps) {
 
 				<div className="flex w-full items-center gap-4">
 					<PanelButton
-						isSelected={reward.rewardCategory === "feature_grant"}
+						isSelected={
+							reward.rewardCategory === FrontendRewardCategory.FreeProduct
+						}
+						onClick={() =>
+							setReward({
+								...reward,
+								rewardCategory: FrontendRewardCategory.FreeProduct,
+								discountType: null,
+								discount_config: null,
+								free_product_id: null,
+								free_product_config: null,
+								featureGrantEntitlements: [],
+							})
+						}
+						icon={<GiftIcon size={16} color="currentColor" />}
+					/>
+					<div className="flex-1">
+						<div className="text-body-highlight mb-1">Free Product</div>
+						<div className="text-body-secondary leading-tight">
+							Used to give away products in a referral program
+						</div>
+					</div>
+				</div>
+
+				<div className="flex w-full items-center gap-4">
+					<PanelButton
+						isSelected={
+							reward.rewardCategory === FrontendRewardCategory.FeatureGrant
+						}
 						onClick={() =>
 							setReward({
 								...reward,
