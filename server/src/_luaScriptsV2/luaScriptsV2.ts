@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { FULL_CUSTOMER_CACHE_VERSION } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,7 +18,14 @@ const UPDATE_DIR = join(__dirname, "updateCustomerEntitlements");
 // HELPER MODULES
 // ============================================================================
 
+const FULL_CUSTOMER_DIR = join(__dirname, "fullCustomer");
+
 const LUA_UTILS = readFileSync(join(DEDUCT_DIR, "luaUtils.lua"), "utf-8");
+
+const FULL_CUSTOMER_UTILS = readFileSync(
+	join(FULL_CUSTOMER_DIR, "fullCustomerUtils.lua"),
+	"utf-8",
+);
 
 const READ_BALANCES = readFileSync(
 	join(DEDUCT_DIR, "readBalances.lua"),
@@ -75,6 +83,15 @@ const LOCK_UNWIND_UTILS = readFileSync(
 );
 
 // ============================================================================
+// FULL CUSTOMER KEY BUILDER LUA (version interpolated from TS config)
+// ============================================================================
+
+const FULL_CUSTOMER_KEY_BUILDERS = readFileSync(
+	join(__dirname, "fullCustomerKeyBuilders.lua"),
+	"utf-8",
+).replaceAll("__FULL_CUSTOMER_CACHE_VERSION__", FULL_CUSTOMER_CACHE_VERSION);
+
+// ============================================================================
 // MAIN SCRIPT
 // ============================================================================
 
@@ -89,7 +106,9 @@ const mainScript = readFileSync(
  * Composed from helper modules via string interpolation.
  * Supports both positive deductions and negative refunds.
  */
-export const DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
+export const DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
+${LUA_UTILS}
+${FULL_CUSTOMER_UTILS}
 ${READ_BALANCES}
 ${CONTEXT_UTILS}
 ${GET_TOTAL_BALANCE}
@@ -122,23 +141,29 @@ ${claimLockReceiptMainScript}`;
 // DELETE FULL CUSTOMER CACHE SCRIPTS
 // ============================================================================
 
-/**
- * Lua script for deleting a single FullCustomer cache from Redis.
- * Checks test guard, sets stale-write guard, and deletes cache atomically.
- */
-export const DELETE_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
+const deleteFullCustomerCacheScript = readFileSync(
 	join(DELETE_CACHE_DIR, "deleteFullCustomerCache.lua"),
 	"utf-8",
 );
 
 /**
- * Lua script for setting a FullCustomer cache in Redis.
- * Checks stale-write guard, checks if cache exists, and sets cache atomically.
+ * Lua script for deleting a single FullCustomer cache from Redis.
+ * Builds all keys internally from orgId/env/customerId.
  */
-export const SET_FULL_CUSTOMER_CACHE_SCRIPT = readFileSync(
+export const DELETE_FULL_CUSTOMER_CACHE_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
+${deleteFullCustomerCacheScript}`;
+
+const setFullCustomerCacheScript = readFileSync(
 	join(DELETE_CACHE_DIR, "setFullCustomerCache.lua"),
 	"utf-8",
 );
+
+/**
+ * Lua script for setting a FullCustomer cache in Redis.
+ * Builds all keys internally from orgId/env/customerId.
+ */
+export const SET_FULL_CUSTOMER_CACHE_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
+${setFullCustomerCacheScript}`;
 
 /**
  * Lua script for batch deleting multiple FullCustomer caches from Redis.
@@ -162,6 +187,7 @@ const resetMainScript = readFileSync(
  * @deprecated Use UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT instead.
  */
 export const RESET_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
+${FULL_CUSTOMER_UTILS}
 ${resetMainScript}`;
 
 // ============================================================================
@@ -179,6 +205,7 @@ const updateMainScript = readFileSync(
  * "apply absolute values to customer entitlements in the Redis cache."
  */
 export const UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT = `${LUA_UTILS}
+${FULL_CUSTOMER_UTILS}
 ${updateMainScript}`;
 
 // ============================================================================
@@ -197,6 +224,7 @@ const adjustBalanceMainScript = readFileSync(
  * FullCustomer via JSON.NUMINCRBY. Safe with concurrent deductions.
  */
 export const ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT = `${LUA_UTILS}
+${FULL_CUSTOMER_UTILS}
 ${adjustBalanceMainScript}`;
 
 // ============================================================================
