@@ -43,11 +43,18 @@ const ALL_REGIONS = [REGION_US_EAST_2, REGION_US_WEST_2] as const;
 // Current region this instance is running in
 export const currentRegion = process.env.AWS_REGION || REGION_US_WEST_2;
 
-// Map of region to cache URL
-const regionToCacheUrl: Record<string, string | undefined> = {
-	[REGION_US_EAST_2]: process.env.CACHE_URL_US_EAST,
-	[REGION_US_WEST_2]: process.env.CACHE_URL, // Default/us-west-2 URL
-};
+const cacheBackupUrl = process.env.CACHE_BACKUP_URL?.trim();
+
+// Map of region to cache URL. When CACHE_BACKUP_URL is set, all regions use it (failover / single backup endpoint).
+const regionToCacheUrl: Record<string, string | undefined> = cacheBackupUrl
+	? {
+			[REGION_US_EAST_2]: cacheBackupUrl,
+			[REGION_US_WEST_2]: cacheBackupUrl,
+		}
+	: {
+			[REGION_US_EAST_2]: process.env.CACHE_URL_US_EAST,
+			[REGION_US_WEST_2]: process.env.CACHE_URL,
+		};
 
 /** Get all regions that have configured cache URLs */
 export const getConfiguredRegions = (): string[] => {
@@ -244,7 +251,10 @@ const createRedisConnection = ({
 	region: string;
 }): Redis => {
 	const instance = new Redis(cacheUrl, {
-		tls: process.env.CACHE_CERT ? { ca: process.env.CACHE_CERT } : undefined,
+		tls:
+			process.env.CACHE_CERT && !process.env.CACHE_BACKUP_URL
+				? { ca: process.env.CACHE_CERT }
+				: undefined,
 		family: 4,
 		keepAlive: 10000,
 	});
@@ -257,9 +267,13 @@ const createRedisConnection = ({
 
 // Primary Redis instance (current region or default)
 const primaryCacheUrl =
-	regionToCacheUrl[currentRegion] || process.env.CACHE_URL;
+	regionToCacheUrl[currentRegion] || process.env.CACHE_URL || cacheBackupUrl;
 
-if (primaryCacheUrl && regionToCacheUrl[currentRegion]) {
+if (cacheBackupUrl) {
+	console.log(
+		`[Redis] Using CACHE_BACKUP_URL for all regions (primary region: ${currentRegion})`,
+	);
+} else if (primaryCacheUrl && regionToCacheUrl[currentRegion]) {
 	console.log(`Using regional cache: ${currentRegion}`);
 }
 
