@@ -248,7 +248,11 @@ export class ClientSDK {
 
     return retry(
       async () => {
-        const req = await this.#hooks.beforeRequest(context, request.clone());
+        let req = await this.#hooks.beforeRequest(
+          context,
+          request.clone(),
+        );
+        req = new Request(req, { signal: request.signal });
         await logRequest(this.#logger, req).catch((e) =>
           this.#logger?.log("Failed to log request:", e)
         );
