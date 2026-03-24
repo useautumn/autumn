@@ -95,6 +95,7 @@ export const redeemPromoCode = async ({
 		const redemptionCount = await redemptionRepo.getPromoCodeRedemptionCount({
 			db,
 			rewardInternalId: reward.internal_id,
+			promoCode: code,
 		});
 
 		if (redemptionCount >= promoCode.max_redemptions) {
@@ -202,6 +203,7 @@ export const redeemPromoCode = async ({
 			id: generateId("rr"),
 			internal_customer_id: fullCustomer.internal_id,
 			reward_internal_id: reward.internal_id,
+			promo_code: code,
 			referral_code_id: null,
 			internal_reward_program_id: null,
 			triggered: true,

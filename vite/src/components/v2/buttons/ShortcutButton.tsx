@@ -30,6 +30,7 @@ export const ShortcutButton = ({
 				? [singleShortcut]
 				: [],
 		(e) => {
+			if (props.disabled || isLoading) return;
 			e.preventDefault();
 			props?.onClick?.(e as unknown as React.MouseEvent<HTMLButtonElement>);
 		},

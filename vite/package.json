@@ -19,7 +19,6 @@
 	"dependencies": {
 		"@ai-sdk/react": "^3.0.25",
 		"@autumn/shared": "workspace:*",
-		"atmn": "workspace:*",
 		"@better-auth/dash": "catalog:",
 		"@fortawesome/free-brands-svg-icons": "^6.7.2",
 		"@fortawesome/react-fontawesome": "^0.2.2",
@@ -53,6 +52,7 @@
 		"ag-grid-community": "^34.0.2",
 		"ag-grid-react": "^34.0.2",
 		"ai": "^6.0.5",
+		"atmn": "workspace:*",
 		"autumn-js": "workspace:*",
 		"axios": "^1.8.3",
 		"better-auth": "catalog:",
@@ -72,6 +72,7 @@
 		"react": "^18.2.0",
 		"react-day-picker": "^8.10.1",
 		"react-dom": "^18.2.0",
+		"react-grab": "^0.1.29",
 		"react-hotkeys-hook": "^4.6.1",
 		"react-router": "^7.3.0",
 		"react-router-dom": "^7.6.2",
