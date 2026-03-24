@@ -1,6 +1,8 @@
 import { deleteReward } from "./deleteReward.js";
 import { deleteRewardProgram } from "./deleteRewardProgram.js";
 import { deleteRewardsByOrgId } from "./deleteRewardsByOrgId.js";
+import { getCustomerRewardRedemption } from "./getCustomerRewardRedemption.js";
+import { getPromoCodeRedemptionCount } from "./getPromoCodeRedemptionCount.js";
 import { getRedemptionById } from "./getRedemptionById.js";
 import { getRedemptionsByCustomer } from "./getRedemptionsByCustomer.js";
 import { getRedemptionsByReferrer } from "./getRedemptionsByReferrer.js";
@@ -55,6 +57,8 @@ export const redemptionRepo = {
 	getById: getRedemptionById,
 	getByCustomer: getRedemptionsByCustomer,
 	getByReferrer: getRedemptionsByReferrer,
+	getByCustomerAndReward: getCustomerRewardRedemption,
+	getPromoCodeRedemptionCount: getPromoCodeRedemptionCount,
 	insert: insertRedemption,
 	update: updateRedemption,
 	getUnapplied: getUnappliedRedemptions,

@@ -5,7 +5,10 @@ import {
 	RewardTriggerEvent,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { rewardRepo, rewardProgramRepo } from "@/internal/rewards/repos/index.js";
+import {
+	rewardProgramRepo,
+	rewardRepo,
+} from "@/internal/rewards/repos/index.js";
 import { constructRewardProgram } from "@/internal/rewards/rewardUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 

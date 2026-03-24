@@ -9,9 +9,13 @@ import {
 	RewardTriggerEvent,
 } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
-import { redemptionRepo, rewardRepo, referralCodeRepo } from "@/internal/rewards/repos/index.js";
-import { triggerFreeProduct } from "@/internal/rewards/actions/triggerFreeProduct.js";
 import { triggerDiscount } from "@/internal/rewards/actions/triggerDiscount.js";
+import { triggerFreeProduct } from "@/internal/rewards/actions/triggerFreeProduct.js";
+import {
+	redemptionRepo,
+	referralCodeRepo,
+	rewardRepo,
+} from "@/internal/rewards/repos/index.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
@@ -104,6 +108,7 @@ export const handleRedeemReferral = createRoute({
 			referral_code_id: referralCode.id,
 			internal_customer_id: customer.internal_id, // redeemed by customer
 			internal_reward_program_id: referralCode.internal_reward_program_id,
+			reward_internal_id: null,
 			created_at: Date.now(),
 			triggered:
 				referralCode.reward_program.when ===

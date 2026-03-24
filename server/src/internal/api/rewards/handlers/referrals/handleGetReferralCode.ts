@@ -5,7 +5,10 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
-import { rewardProgramRepo, referralCodeRepo } from "@/internal/rewards/repos/index.js";
+import {
+	referralCodeRepo,
+	rewardProgramRepo,
+} from "@/internal/rewards/repos/index.js";
 import { generateReferralCode } from "@/internal/rewards/rewardUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
@@ -47,14 +50,13 @@ export const handleGetReferralCode = createRoute({
 		}
 
 		// Get referral code by customer and reward trigger
-		let referralCode =
-			await referralCodeRepo.getByCustomerAndProgram({
-				db,
-				orgId: org.id,
-				env,
-				internalCustomerId: customer.internal_id,
-				internalRewardProgramId: rewardProgram.internal_id,
-			});
+		let referralCode = await referralCodeRepo.getByCustomerAndProgram({
+			db,
+			orgId: org.id,
+			env,
+			internalCustomerId: customer.internal_id,
+			internalRewardProgramId: rewardProgram.internal_id,
+		});
 
 		if (!referralCode) {
 			const code = generateReferralCode();
