@@ -24,6 +24,7 @@ import type { RolloverUpdate } from "../types/rolloverUpdate.js";
 import { applyDeductionUpdateToFullCustomer } from "./applyDeductionUpdateToFullCustomer.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
+import { mutationLogsToFeatures } from "./mutationLogsToFeatures.js";
 import { prepareDeductionOptions } from "./prepareDeductionOptions.js";
 import { prepareFeatureDeduction } from "./prepareFeatureDeduction.js";
 
@@ -235,12 +236,18 @@ export const executeRedisDeduction = async ({
 			throw error;
 		}
 
+		const featuresFromMutationLogs = mutationLogsToFeatures({
+			fullCustomer,
+			mutationLogs: mutation_logs,
+		});
+
 		fireTrackWebhooks({
 			ctx,
 			oldFullCus,
 			newFullCus: fullCustomer,
 			feature: deduction.feature,
 			entityId,
+			featuresFromMutationLogs,
 		});
 
 		if (options.triggerAutoTopUp) {
