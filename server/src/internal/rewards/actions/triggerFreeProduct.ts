@@ -3,23 +3,23 @@ import {
 	ErrCode,
 	type FullRewardProgram,
 	ProductNotFoundError,
+	RecaseError,
 	type ReferralCode,
 	type Reward,
 	RewardReceivedBy,
 	type RewardRedemption,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { InsertCusProductParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { redemptionRepo } from "@/internal/rewards/repos/index.js";
-import { ReferralResponseCodes } from "../referralUtils.js";
+import { ReferralResponseCodes } from "@/internal/rewards/rewardUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 import { triggerFreePaidProduct } from "./triggerFreePaidProduct.js";
 
 export const triggerFreeProduct = async ({
@@ -55,6 +55,11 @@ export const triggerFreeProduct = async ({
 		env,
 	});
 
+	// BUG FIX: moved null check before first use (was unreachable at line 74 in original)
+	if (!fullProduct) {
+		throw new ProductNotFoundError({ productId });
+	}
+
 	if (!isFreeProduct(fullProduct.prices) && !isOneOff(fullProduct.prices)) {
 		return await triggerFreePaidProduct({
 			ctx,
@@ -65,14 +70,6 @@ export const triggerFreeProduct = async ({
 			fullProduct,
 			redemption,
 		});
-	}
-
-	// const isPaidProduct = !isFreeProduct(fullProduct.prices);
-	// const isRecurring =
-	//   !isOneOff(fullProduct.prices) && !itemsAreOneOff(fullProduct.entitlements);
-
-	if (!fullProduct) {
-		throw new ProductNotFoundError({ productId: productId });
 	}
 
 	const [fullReferrer, fullRedeemer] = await Promise.all([
@@ -122,7 +119,7 @@ export const triggerFreeProduct = async ({
 			attachParams: redeemerAttachParams,
 			logger,
 		});
-		logger.info(`✅ Added ${fullProduct.name} to redeemer`);
+		logger.info(`Added ${fullProduct.name} to redeemer`);
 
 		await deleteCachedApiCustomer({
 			customerId: fullRedeemer.id!,
@@ -147,7 +144,7 @@ export const triggerFreeProduct = async ({
 			ctx,
 			source: `triggerFreeProduct, deleting referrer cache`,
 		});
-		logger.info(`✅ Added ${fullProduct.name} to referrer`);
+		logger.info(`Added ${fullProduct.name} to referrer`);
 	}
 
 	await redemptionRepo.update({
