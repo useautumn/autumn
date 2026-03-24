@@ -175,7 +175,7 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	});
 
 	redisInstance.defineCommand("deleteFullCustomerCache", {
-		numberOfKeys: 3,
+		numberOfKeys: 1,
 		lua: DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
@@ -185,7 +185,7 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	});
 
 	redisInstance.defineCommand("setFullCustomerCache", {
-		numberOfKeys: 2,
+		numberOfKeys: 1,
 		lua: SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
@@ -409,9 +409,10 @@ declare module "ioredis" {
 			paramsJson: string,
 		): Promise<string>;
 		deleteFullCustomerCache(
-			testGuardKey: string,
-			guardKey: string,
 			cacheKey: string,
+			orgId: string,
+			env: string,
+			customerId: string,
 			guardTimestamp: string,
 			guardTtl: string,
 			skipGuard: string,
@@ -422,12 +423,15 @@ declare module "ioredis" {
 			customersJson: string,
 		): Promise<string>;
 		setFullCustomerCache(
-			guardKey: string,
 			cacheKey: string,
+			orgId: string,
+			env: string,
+			customerId: string,
 			fetchTimeMs: string,
 			cacheTtl: string,
 			serializedData: string,
 			overwrite: string,
+			pathIndexJson: string,
 		): Promise<"STALE_WRITE" | "CACHE_EXISTS" | "OK">;
 		resetCustomerEntitlements(
 			cacheKey: string,
