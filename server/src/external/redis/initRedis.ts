@@ -252,7 +252,7 @@ const createRedisConnection = ({
 }): Redis => {
 	const instance = new Redis(cacheUrl, {
 		tls:
-			process.env.CACHE_CERT && !process.env.CACHE_BACKUP_URL
+			process.env.CACHE_CERT && !cacheBackupUrl
 				? { ca: process.env.CACHE_CERT }
 				: undefined,
 		family: 4,
