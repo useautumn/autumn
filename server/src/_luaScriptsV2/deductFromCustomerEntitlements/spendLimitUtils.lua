@@ -6,8 +6,39 @@
 local function build_ent_data_from_full_customer(params)
   local full_customer = params.full_customer
   local cus_ent_id = params.cus_ent_id
+  local cache_key = params.cache_key
+  local pathidx_key = params.pathidx_key
 
-  if is_nil(full_customer) or is_nil(cus_ent_id) then
+  if is_nil(cus_ent_id) then
+    return nil
+  end
+
+  -- Fast path: single JSON.GET on the sub-object via path index
+  if not is_nil(pathidx_key) then
+    local result = get_customer_entitlement_via_index({
+      pathidx_key = pathidx_key,
+      cache_key = cache_key,
+      cus_ent_id = cus_ent_id,
+    })
+    if is_nil(result) then return nil end
+
+    if result.has_entity_scope then
+      return {
+        has_entity_scope = true,
+        balance = 0,
+        entities = safe_table(result.sub.entities),
+      }
+    else
+      return {
+        has_entity_scope = false,
+        balance = safe_number(result.sub.balance or 0),
+        entities = {},
+      }
+    end
+  end
+
+  -- Fallback path: decode from full customer
+  if is_nil(full_customer) then
     return nil
   end
 
@@ -46,6 +77,8 @@ local function get_available_overage_from_spend_limit(params)
       ent_data = build_ent_data_from_full_customer({
         full_customer = context.full_customer,
         cus_ent_id = cus_ent_id,
+        cache_key = context.cache_key,
+        pathidx_key = context.pathidx_key,
       })
     end
 
