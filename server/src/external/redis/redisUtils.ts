@@ -53,8 +53,8 @@ export const acquireLock = async ({
 
 			throw new RecaseError({
 				message: parsed?.errorMessage || DEFAULT_ERROR_MESSAGE,
-				code: ErrCode.InvalidRequest,
-				statusCode: 429,
+				code: ErrCode.LockAlreadyExists,
+				statusCode: 423,
 			});
 		}
 
