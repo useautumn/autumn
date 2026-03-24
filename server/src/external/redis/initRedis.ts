@@ -16,7 +16,6 @@ import {
 import {
 	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
-	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	CLAIM_LOCK_RECEIPT_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
@@ -177,11 +176,6 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("deleteFullCustomerCache", {
 		numberOfKeys: 1,
 		lua: DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
-	});
-
-	redisInstance.defineCommand("batchDeleteFullCustomerCache", {
-		numberOfKeys: 0,
-		lua: BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
 	redisInstance.defineCommand("setFullCustomerCache", {
@@ -417,11 +411,6 @@ declare module "ioredis" {
 			guardTtl: string,
 			skipGuard: string,
 		): Promise<"SKIPPED" | "DELETED" | "NOT_FOUND">;
-		batchDeleteFullCustomerCache(
-			guardTimestamp: string,
-			guardTtl: string,
-			customersJson: string,
-		): Promise<string>;
 		setFullCustomerCache(
 			cacheKey: string,
 			orgId: string,
