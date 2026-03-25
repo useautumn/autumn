@@ -33,6 +33,18 @@ export const getRateLimitType = (c: Context<HonoEnv>) => {
 			method: "POST",
 			url: "/v1/balances.finalize",
 		},
+		{
+			method: "POST",
+			url: "/v1/usage",
+		},
+		{
+			method: "POST",
+			url: "/v1/balances/update",
+		},
+		{
+			method: "POST",
+			url: "/v1/balances.update",
+		},
 	];
 
 	// Patterns for check endpoints (including dynamic customer_id)
