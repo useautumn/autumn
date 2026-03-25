@@ -4,7 +4,6 @@
 
 import { SDKOptions } from "../lib/config.js";
 import { RequestInput } from "../lib/http.js";
-import { initHooks } from "./registration.js";
 import {
   AfterErrorContext,
   AfterErrorHook,
@@ -27,8 +26,6 @@ export class SDKHooks implements Hooks {
   afterErrorHooks: AfterErrorHook[] = [];
 
   constructor() {
-    initHooks(this);
-
     const presetHooks: Array<Hook> = [];
 
     for (const hook of presetHooks) {
