@@ -67,6 +67,7 @@ export * from "./models/cusModels/invoiceModels/invoiceLineItemModels";
 export * from "./models/cusModels/invoiceModels/invoiceLineItemTable";
 export * from "./models/cusModels/invoiceModels/invoiceModels";
 export * from "./models/cusModels/invoiceModels/invoiceTable";
+export * from "./models/cusProductModels/cusEntModels/aggregatedCusEnt";
 export * from "./models/cusProductModels/cusEntModels/cusEntModels";
 export * from "./models/cusProductModels/cusEntModels/cusEntTable";
 export * from "./models/cusProductModels/cusEntModels/cusEntWithProduct";
