@@ -1,13 +1,11 @@
 import { expect, test } from "bun:test";
-import { type CheckResponseV2, customerEntitlements } from "@autumn/shared";
+import type { CheckResponseV2 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 
 // ═══════════════════════════════════════════════════════════════════
 // DELETE-BALANCE-1: Basic delete of a loose balance removes it from
@@ -293,7 +291,7 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2c: recalculate_balances r
 // ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("delete-balance-2d: recalculate_balances skips non-positive deleted balances")}`, async () => {
-	const { customerId, autumnV2, ctx } = await initScenario({
+	const { customerId, autumnV2 } = await initScenario({
 		customerId: "del-bal-2d",
 		setup: [s.customer({ testClock: false })],
 		actions: [],
@@ -313,16 +311,11 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2d: recalculate_balances s
 		balance_id: "balance-b",
 	});
 
-	await ctx.db
-		.update(customerEntitlements)
-		.set({
-			balance: -20,
-		})
-		.where(eq(customerEntitlements.external_id, "balance-a"));
-
-	await deleteCachedFullCustomer({
-		ctx,
-		customerId,
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		usage: 130,
+		balance_id: "balance-a",
 	});
 
 	await autumnV2.balances.delete({
