@@ -125,13 +125,14 @@
 						]
 					},
 					{
-						"group": "Additional Resources",
-						"pages": [
-							"documentation/webhooks",
-							"documentation/external-providers/convex",
-							"documentation/external-providers/revenuecat",
-							"documentation/external-providers/vercel-marketplace"
-						]
+					"group": "Additional Resources",
+					"pages": [
+						"documentation/webhooks",
+						"documentation/fail-open",
+						"documentation/external-providers/convex",
+						"documentation/external-providers/revenuecat",
+						"documentation/external-providers/vercel-marketplace"
+					]
 					}
 				]
 			},
