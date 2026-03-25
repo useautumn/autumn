@@ -4,6 +4,7 @@ import {
 	AtIcon,
 	FingerprintIcon,
 	GearIcon,
+	TerminalWindowIcon,
 } from "@phosphor-icons/react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
@@ -29,6 +30,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
+import { useTerminalStore } from "@/hooks/stores/useTerminalStore";
 import { useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -81,6 +83,7 @@ const CommandBar = () => {
 	const { isAdmin } = useAdmin();
 	const { org } = useOrg();
 	const { theme, setTheme } = useTheme();
+	const toggleTerminal = useTerminalStore((s) => s.toggleTerminal);
 
 	const cycleTheme = useCallback(() => {
 		const themeOrder = ["light", "dark", "system"] as const;
@@ -218,6 +221,18 @@ const CommandBar = () => {
 
 	useHotkeys("meta+k", () => {
 		setOpen(true);
+	});
+
+	useHotkeys("`", (e) => {
+		// Don't toggle terminal if command bar is open or user is typing in an input
+		const target = e.target as HTMLElement;
+		const isInput =
+			target.tagName === "INPUT" ||
+			target.tagName === "TEXTAREA" ||
+			target.isContentEditable;
+		if (open || isInput) return;
+		e.preventDefault();
+		toggleTerminal();
 	});
 
 	useHotkeys(
@@ -381,6 +396,15 @@ const CommandBar = () => {
 				cycleTheme();
 			},
 		},
+		{
+			title: "Toggle Terminal",
+			icon: <TerminalWindowIcon />,
+			customShortcuts: ["`"],
+			onSelect: () => {
+				toggleTerminal();
+				closeDialog();
+			},
+		},
 		...(!isLoadingOrgs && orgs && orgs.length > 1
 			? [
 					{
@@ -413,6 +437,7 @@ const CommandBar = () => {
 							icon={item.icon}
 							title={item.title}
 							shortcutKey={item.shortcutKey}
+							customShortcuts={item.customShortcuts}
 							onSelect={item.onSelect}
 						/>
 					))}
