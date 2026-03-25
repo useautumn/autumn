@@ -40,6 +40,7 @@ export function autumn(options: AutumnOptions = {}): AutumnPlugin {
 			"getOrCreateCustomer",
 			handleRoute,
 		),
+		getEntity: createAutumnEndpoint("getEntity", handleRoute),
 		attach: createAutumnEndpoint("attach", handleRoute),
 		previewAttach: createAutumnEndpoint("previewAttach", handleRoute),
 		updateSubscription: createAutumnEndpoint("updateSubscription", handleRoute),

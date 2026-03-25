@@ -4,6 +4,7 @@ import type {
 	BillingUpdateResponse,
 	CreateReferralCodeResponse,
 	Customer,
+	GetEntityResponse,
 	ListEventsResponse,
 	ListPlansResponse,
 	MultiAttachResponse,
@@ -103,6 +104,11 @@ export const createAutumnClient = (
 		aggregateEvents: (params) =>
 			http.request<AggregateEventsResponse>({
 				route: "aggregateEvents",
+				body: params,
+			}),
+		getEntity: (params) =>
+			http.request<GetEntityResponse>({
+				route: "getEntity",
 				body: params,
 			}),
 	};
