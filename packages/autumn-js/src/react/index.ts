@@ -5,6 +5,7 @@ export type {
 	ClientAggregateEventsParams,
 	ClientAttachParams,
 	ClientCreateReferralCodeParams,
+	ClientGetEntityParams,
 	ClientGetOrCreateCustomerParams,
 	ClientListEventsParams,
 	ClientMultiAttachParams,
@@ -38,6 +39,11 @@ export {
 	type UseCustomerResult,
 	useCustomer,
 } from "./hooks/useCustomer";
+export {
+	type UseEntityParams,
+	type UseEntityResult,
+	useEntity,
+} from "./hooks/useEntity";
 export { type UseListEventsParams, useListEvents } from "./hooks/useListEvents";
 export { type UseListPlansParams, useListPlans } from "./hooks/useListPlans";
 export {
