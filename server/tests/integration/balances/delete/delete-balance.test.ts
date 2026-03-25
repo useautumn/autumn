@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
-import type { CheckResponseV2 } from "@autumn/shared";
+import { type CheckResponseV2, customerEntitlements } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 
 // ═══════════════════════════════════════════════════════════════════
 // DELETE-BALANCE-1: Basic delete of a loose balance removes it from
@@ -107,6 +109,249 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2: balance_id targets only
 	});
 	expect(checkDb.balance?.breakdown).toHaveLength(1);
 	expect(checkDb.balance?.breakdown?.[0].id).toBe("balance-b");
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// DELETE-BALANCE-2A: deleting a partially-used balance without
+// recalculate_balances leaves other balances unchanged.
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2a: default delete does not deduct deleted remaining amount")}`, async () => {
+	const { customerId, autumnV2 } = await initScenario({
+		customerId: "del-bal-2a",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "balance-a",
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 200,
+		balance_id: "balance-b",
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		remaining: 60,
+		balance_id: "balance-a",
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "balance-a",
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+	});
+
+	expect(check.balance?.breakdown).toHaveLength(1);
+	expect(check.balance?.breakdown?.[0].id).toBe("balance-b");
+	expect(check.balance?.current_balance).toBe(200);
+	expect(check.balance?.granted_balance).toBe(200);
+	expect(check.balance?.usage).toBe(0);
+	expect(check.balance?.breakdown?.[0].current_balance).toBe(200);
+	expect(check.balance?.breakdown?.[0].granted_balance).toBe(200);
+	expect(check.balance?.breakdown?.[0].usage).toBe(0);
+
+	const checkDb = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(checkDb.balance?.breakdown).toHaveLength(1);
+	expect(checkDb.balance?.breakdown?.[0].id).toBe("balance-b");
+	expect(checkDb.balance?.current_balance).toBe(200);
+	expect(checkDb.balance?.granted_balance).toBe(200);
+	expect(checkDb.balance?.usage).toBe(0);
+	expect(checkDb.balance?.breakdown?.[0].current_balance).toBe(200);
+	expect(checkDb.balance?.breakdown?.[0].granted_balance).toBe(200);
+	expect(checkDb.balance?.breakdown?.[0].usage).toBe(0);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// DELETE-BALANCE-2B: recalculate_balances deducts the deleted balance's
+// current remaining amount from the surviving balances for the feature.
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2b: recalculate_balances deducts deleted remaining amount")}`, async () => {
+	const { customerId, autumnV2 } = await initScenario({
+		customerId: "del-bal-2b",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "balance-a",
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 200,
+		balance_id: "balance-b",
+	});
+
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		remaining: 60,
+		balance_id: "balance-a",
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "balance-a",
+		recalculate_balances: true,
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+	});
+
+	expect(check.balance?.breakdown).toHaveLength(1);
+	expect(check.balance?.breakdown?.[0].id).toBe("balance-b");
+	expect(check.balance?.current_balance).toBe(140);
+	expect(check.balance?.granted_balance).toBe(200);
+	expect(check.balance?.usage).toBe(60);
+	expect(check.balance?.breakdown?.[0].current_balance).toBe(140);
+	expect(check.balance?.breakdown?.[0].granted_balance).toBe(200);
+	expect(check.balance?.breakdown?.[0].usage).toBe(60);
+
+	const checkDb = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(checkDb.balance?.breakdown).toHaveLength(1);
+	expect(checkDb.balance?.breakdown?.[0].id).toBe("balance-b");
+	expect(checkDb.balance?.current_balance).toBe(140);
+	expect(checkDb.balance?.granted_balance).toBe(200);
+	expect(checkDb.balance?.usage).toBe(60);
+	expect(checkDb.balance?.breakdown?.[0].current_balance).toBe(140);
+	expect(checkDb.balance?.breakdown?.[0].granted_balance).toBe(200);
+	expect(checkDb.balance?.breakdown?.[0].usage).toBe(60);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// DELETE-BALANCE-2C: recalculate_balances requires feature_id so we do
+// not delete across multiple features and recalculate the wrong one.
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2c: recalculate_balances requires feature_id")}`, async () => {
+	const { customerId, autumnV2 } = await initScenario({
+		customerId: "del-bal-2c",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "balance-a",
+	});
+
+	await expectAutumnError({
+		errMessage: "feature_id is required when recalculate_balances is true",
+		func: async () => {
+			await autumnV2.balances.delete({
+				customer_id: customerId,
+				balance_id: "balance-a",
+				recalculate_balances: true,
+			});
+		},
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+	});
+	expect(check.balance?.breakdown).toHaveLength(1);
+	expect(check.balance?.breakdown?.[0].id).toBe("balance-a");
+	expect(check.balance?.current_balance).toBe(100);
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// DELETE-BALANCE-2D: non-positive deleted balances should not trigger
+// recalculation, otherwise surviving balances can be credited.
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("delete-balance-2d: recalculate_balances skips non-positive deleted balances")}`, async () => {
+	const { customerId, autumnV2, ctx } = await initScenario({
+		customerId: "del-bal-2d",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 100,
+		balance_id: "balance-a",
+	});
+
+	await autumnV2.balances.create({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		included_grant: 200,
+		balance_id: "balance-b",
+	});
+
+	await ctx.db
+		.update(customerEntitlements)
+		.set({
+			balance: -20,
+		})
+		.where(eq(customerEntitlements.external_id, "balance-a"));
+
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId,
+	});
+
+	await autumnV2.balances.delete({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		balance_id: "balance-a",
+		recalculate_balances: true,
+	});
+
+	const check = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+	});
+	expect(check.balance?.breakdown).toHaveLength(1);
+	expect(check.balance?.breakdown?.[0].id).toBe("balance-b");
+	expect(check.balance?.current_balance).toBe(200);
+	expect(check.balance?.granted_balance).toBe(200);
+	expect(check.balance?.usage).toBe(0);
+
+	const checkDb = await autumnV2.check<CheckResponseV2>({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		skip_cache: true,
+	});
+	expect(checkDb.balance?.breakdown).toHaveLength(1);
+	expect(checkDb.balance?.breakdown?.[0].id).toBe("balance-b");
+	expect(checkDb.balance?.current_balance).toBe(200);
+	expect(checkDb.balance?.granted_balance).toBe(200);
+	expect(checkDb.balance?.usage).toBe(0);
 });
 
 // ═══════════════════════════════════════════════════════════════════

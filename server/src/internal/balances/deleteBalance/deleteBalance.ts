@@ -1,10 +1,13 @@
 import {
+	cusEntsToBalance,
 	type DeleteBalanceParamsV0,
+	findFeatureById,
 	fullCustomerToCustomerEntitlements,
 	isPaidCustomerEntitlement,
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { executePostgresDeduction } from "@/internal/balances/utils/deduction/executePostgresDeduction";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
@@ -18,7 +21,13 @@ export const deleteBalance = async ({
 	ctx: AutumnContext;
 	params: DeleteBalanceParamsV0;
 }) => {
-	const { customer_id, entity_id, feature_id } = params;
+	const { customer_id, entity_id, feature_id, recalculate_balances } = params;
+
+	if (recalculate_balances && !feature_id) {
+		throw new RecaseError({
+			message: "feature_id is required when recalculate_balances is true",
+		});
+	}
 
 	// 1. Get full customer
 	const fullCustomer = await CusService.getFull({
@@ -51,6 +60,14 @@ export const deleteBalance = async ({
 		}
 	}
 
+	const remainingBalanceToRecalculate = recalculate_balances
+		? cusEntsToBalance({
+				cusEnts: customerEntitlements,
+				entityId: fullCustomer.entity?.id ?? undefined,
+				withRollovers: true,
+			})
+		: 0;
+
 	for (const cusEnt of customerEntitlements) {
 		await CusEntService.delete({
 			db: ctx.db,
@@ -71,5 +88,45 @@ export const deleteBalance = async ({
 	await deleteCachedFullCustomer({
 		ctx,
 		customerId: fullCustomer.id ?? "",
+	});
+
+	if (!recalculate_balances || remainingBalanceToRecalculate <= 0) {
+		return;
+	}
+
+	const survivingFullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customer_id,
+		entityId: entity_id,
+		withEntities: true,
+		withSubs: true,
+	});
+
+	const targetFeatureId = feature_id ?? customerEntitlements[0]?.feature_id;
+	if (!targetFeatureId) {
+		return;
+	}
+
+	const feature = findFeatureById({
+		features: ctx.features,
+		featureId: targetFeatureId,
+		errorOnNotFound: true,
+	});
+
+	await executePostgresDeduction({
+		ctx,
+		fullCustomer: survivingFullCustomer,
+		customerId: survivingFullCustomer.id ?? customer_id,
+		entityId: entity_id,
+		deductions: [
+			{
+				feature,
+				deduction: remainingBalanceToRecalculate,
+			},
+		],
+		options: {
+			alterGrantedBalance: false,
+			overageBehaviour: "allow",
+		},
 	});
 };
