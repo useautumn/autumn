@@ -1,5 +1,5 @@
 import {
-	cusEntsToBalance,
+	cusEntsToUsage,
 	type DeleteBalanceParamsV0,
 	findFeatureById,
 	fullCustomerToCustomerEntitlements,
@@ -60,11 +60,10 @@ export const deleteBalance = async ({
 		}
 	}
 
-	const remainingBalanceToRecalculate = recalculate_balances
-		? cusEntsToBalance({
+	const usageToRecalculate = recalculate_balances
+		? cusEntsToUsage({
 				cusEnts: customerEntitlements,
 				entityId: fullCustomer.entity?.id ?? undefined,
-				withRollovers: true,
 			})
 		: 0;
 
@@ -90,7 +89,7 @@ export const deleteBalance = async ({
 		customerId: fullCustomer.id ?? "",
 	});
 
-	if (!recalculate_balances || remainingBalanceToRecalculate <= 0) {
+	if (!recalculate_balances || usageToRecalculate === 0) {
 		return;
 	}
 
@@ -121,7 +120,7 @@ export const deleteBalance = async ({
 		deductions: [
 			{
 				feature,
-				deduction: remainingBalanceToRecalculate,
+				deduction: usageToRecalculate,
 			},
 		],
 		options: {
