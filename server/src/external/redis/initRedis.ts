@@ -16,7 +16,6 @@ import {
 import {
 	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
-	BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	CLAIM_LOCK_RECEIPT_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
@@ -44,11 +43,18 @@ const ALL_REGIONS = [REGION_US_EAST_2, REGION_US_WEST_2] as const;
 // Current region this instance is running in
 export const currentRegion = process.env.AWS_REGION || REGION_US_WEST_2;
 
-// Map of region to cache URL
-const regionToCacheUrl: Record<string, string | undefined> = {
-	[REGION_US_EAST_2]: process.env.CACHE_URL_US_EAST,
-	[REGION_US_WEST_2]: process.env.CACHE_URL, // Default/us-west-2 URL
-};
+const cacheBackupUrl = process.env.CACHE_BACKUP_URL?.trim();
+
+// Map of region to cache URL. When CACHE_BACKUP_URL is set, all regions use it (failover / single backup endpoint).
+const regionToCacheUrl: Record<string, string | undefined> = cacheBackupUrl
+	? {
+			[REGION_US_EAST_2]: cacheBackupUrl,
+			[REGION_US_WEST_2]: cacheBackupUrl,
+		}
+	: {
+			[REGION_US_EAST_2]: process.env.CACHE_URL_US_EAST,
+			[REGION_US_WEST_2]: process.env.CACHE_URL,
+		};
 
 /** Get all regions that have configured cache URLs */
 export const getConfiguredRegions = (): string[] => {
@@ -175,17 +181,12 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	});
 
 	redisInstance.defineCommand("deleteFullCustomerCache", {
-		numberOfKeys: 3,
+		numberOfKeys: 1,
 		lua: DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
-	redisInstance.defineCommand("batchDeleteFullCustomerCache", {
-		numberOfKeys: 0,
-		lua: BATCH_DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
-	});
-
 	redisInstance.defineCommand("setFullCustomerCache", {
-		numberOfKeys: 2,
+		numberOfKeys: 1,
 		lua: SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
@@ -250,7 +251,10 @@ const createRedisConnection = ({
 	region: string;
 }): Redis => {
 	const instance = new Redis(cacheUrl, {
-		tls: process.env.CACHE_CERT ? { ca: process.env.CACHE_CERT } : undefined,
+		tls:
+			process.env.CACHE_CERT && !cacheBackupUrl
+				? { ca: process.env.CACHE_CERT }
+				: undefined,
 		family: 4,
 		keepAlive: 10000,
 	});
@@ -263,9 +267,13 @@ const createRedisConnection = ({
 
 // Primary Redis instance (current region or default)
 const primaryCacheUrl =
-	regionToCacheUrl[currentRegion] || process.env.CACHE_URL;
+	regionToCacheUrl[currentRegion] || process.env.CACHE_URL || cacheBackupUrl;
 
-if (primaryCacheUrl && regionToCacheUrl[currentRegion]) {
+if (cacheBackupUrl) {
+	console.log(
+		`[Redis] Using CACHE_BACKUP_URL for all regions (primary region: ${currentRegion})`,
+	);
+} else if (primaryCacheUrl && regionToCacheUrl[currentRegion]) {
 	console.log(`Using regional cache: ${currentRegion}`);
 }
 
@@ -409,25 +417,24 @@ declare module "ioredis" {
 			paramsJson: string,
 		): Promise<string>;
 		deleteFullCustomerCache(
-			testGuardKey: string,
-			guardKey: string,
 			cacheKey: string,
+			orgId: string,
+			env: string,
+			customerId: string,
 			guardTimestamp: string,
 			guardTtl: string,
 			skipGuard: string,
 		): Promise<"SKIPPED" | "DELETED" | "NOT_FOUND">;
-		batchDeleteFullCustomerCache(
-			guardTimestamp: string,
-			guardTtl: string,
-			customersJson: string,
-		): Promise<string>;
 		setFullCustomerCache(
-			guardKey: string,
 			cacheKey: string,
+			orgId: string,
+			env: string,
+			customerId: string,
 			fetchTimeMs: string,
 			cacheTtl: string,
 			serializedData: string,
 			overwrite: string,
+			pathIndexJson: string,
 		): Promise<"STALE_WRITE" | "CACHE_EXISTS" | "OK">;
 		resetCustomerEntitlements(
 			cacheKey: string,

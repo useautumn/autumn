@@ -1,6 +1,9 @@
 import { z } from "zod/v4";
 import type { Feature } from "../../featureModels/featureModels.js";
-import { DbSpendLimitSchema } from "../billingControls/customerBillingControls.js";
+import {
+	DbSpendLimitSchema,
+	DbUsageAlertSchema,
+} from "../billingControls/customerBillingControls.js";
 
 export const EntitySchema = z.object({
 	id: z.string().nullable(),
@@ -14,6 +17,7 @@ export const EntitySchema = z.object({
 	feature_id: z.string(),
 	internal_feature_id: z.string(),
 	spend_limits: z.array(DbSpendLimitSchema).nullish(),
+	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
 });
 
 // export const CreateEntitySchema = z.object({

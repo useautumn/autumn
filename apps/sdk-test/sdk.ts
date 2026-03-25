@@ -10,5 +10,3 @@ const res = await autumn.customers.getOrCreate({
 });
 
 console.log("Res:", res);
-
-// console.log(JSON.stringify(entity.billingControls, null, 2));

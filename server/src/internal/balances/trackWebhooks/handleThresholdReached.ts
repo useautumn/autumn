@@ -68,24 +68,23 @@ const handleAllowanceUsed = async ({
 	const prevCusFeature = prevApiCustomer.balances[feature.id];
 	const newCusFeature = newApiCustomer.balances[feature.id];
 
-	const oldAllowed = apiBalanceToAllowed({
+	const { allowed: oldAllowed } = apiBalanceToAllowed({
 		apiBalance: prevCusFeature,
 		apiSubject: prevApiCustomer,
 		feature,
 		requiredBalance: 1,
 	});
 
-	const newAllowed = apiBalanceToAllowed({
+	const { allowed: newAllowed } = apiBalanceToAllowed({
 		apiBalance: newCusFeature,
 		apiSubject: newApiCustomer,
 		feature,
 		requiredBalance: 1,
 	});
 
-	if (oldAllowed === true && newAllowed === false) {
+	if (oldAllowed && !newAllowed) {
 		await sendSvixEvent({
-			org: ctx.org,
-			env: ctx.env,
+			ctx,
 			eventType: WebhookEventType.CustomerThresholdReached,
 			data: {
 				threshold_type: "allowance_used",
@@ -104,6 +103,7 @@ const handleAllowanceUsed = async ({
 	}
 };
 
+/** @deprecated Use checkUsageAlerts / checkLimitReached instead */
 export const handleThresholdReached = async ({
 	ctx,
 	oldFullCus,
@@ -139,24 +139,23 @@ export const handleThresholdReached = async ({
 				fullCus: newFullCus,
 			});
 
-		const oldAllowed = apiBalanceToAllowed({
+		const { allowed: oldAllowed } = apiBalanceToAllowed({
 			apiBalance: prevApiCustomer.balances[feature.id],
 			apiSubject: prevApiCustomer,
 			feature,
 			requiredBalance: 1,
 		});
 
-		const newAllowed = apiBalanceToAllowed({
+		const { allowed: newAllowed } = apiBalanceToAllowed({
 			apiBalance: newApiCustomer.balances[feature.id],
 			apiSubject: newApiCustomer,
 			feature,
 			requiredBalance: 1,
 		});
 
-		if (oldAllowed === true && newAllowed === false) {
+		if (oldAllowed && !newAllowed) {
 			await sendSvixEvent({
-				org: ctx.org,
-				env: ctx.env,
+				ctx,
 				eventType: WebhookEventType.CustomerThresholdReached,
 				data: {
 					threshold_type: "limit_reached",
@@ -172,7 +171,6 @@ export const handleThresholdReached = async ({
 					}),
 				},
 			});
-
 			ctx.logger.info(
 				"Sent Svix event for threshold reached (type: limit_reached)",
 			);
@@ -184,10 +182,9 @@ export const handleThresholdReached = async ({
 			oldFullCus,
 			newFullCus,
 		});
-	} catch (error: any) {
-		ctx.logger.error("Failed to handle threshold reached", {
+	} catch (error) {
+		ctx.logger.error(`Failed to handle threshold reached, error: ${error}`, {
 			error,
-			message: error?.message,
 		});
 	}
 };

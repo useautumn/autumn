@@ -1,0 +1,14 @@
+---
+title: "Webhook Event"
+openapi: "api/openapi.yml webhook vercel.webhooks.event"
+---
+
+### Payload Fields
+
+<ParamField body="installation_id" type="string" required>
+  The Vercel integration configuration ID.
+</ParamField>
+
+<ParamField body="event" type="any" required>
+  The raw Vercel webhook event payload.
+</ParamField>

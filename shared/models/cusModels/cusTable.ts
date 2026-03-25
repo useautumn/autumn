@@ -16,6 +16,7 @@ import { organizations } from "../orgModels/orgTable.js";
 import type {
 	AutoTopup,
 	DbSpendLimit,
+	DbUsageAlert,
 } from "./billingControls/customerBillingControls.js";
 
 export type CustomerProcessor = {
@@ -42,6 +43,7 @@ export const customers = pgTable(
 		send_email_receipts: boolean("send_email_receipts").default(false),
 		auto_topups: jsonb().$type<AutoTopup[]>(),
 		spend_limits: jsonb().$type<DbSpendLimit[]>(),
+		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),
@@ -59,6 +61,7 @@ export const customers = pgTable(
 		index("idx_customers_org_env_fingerprint")
 			.on(table.org_id, table.env, table.fingerprint)
 			.where(sql`${table.fingerprint} IS NOT NULL`),
+		index("idx_customers_processor_id").on(sql`(${table.processor} ->> 'id')`),
 	],
 ).enableRLS();
 

@@ -25,6 +25,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   The ID of the balance to delete.
 </DynamicParamField>
 
+<DynamicParamField body="recalculate_balances" type="boolean">
+  If true, deduct the deleted balance's remaining amount from the customer's other balances for the same feature after deletion.
+</DynamicParamField>
+
 <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
   Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
 </DynamicParamField>

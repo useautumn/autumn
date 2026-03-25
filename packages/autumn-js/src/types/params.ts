@@ -5,6 +5,7 @@ import type {
 	// CustomerExpand,
 	EventsAggregateParams,
 	EventsListParams,
+	GetEntityParams,
 	MultiAttachParams,
 	OpenCustomerPortalParams,
 	PreviewAttachParams,
@@ -117,3 +118,8 @@ export type ClientSetupPaymentParams = Omit<
 > & {
 	openInNewTab?: boolean;
 };
+
+/** Get entity params without protected fields (for frontend use) */
+export type ClientGetEntityParams = Prettify<
+	Omit<GetEntityParams, ProtectedFields>
+>;

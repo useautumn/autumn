@@ -8,6 +8,7 @@ from autumn_sdk.types import (
     OptionalNullable,
     UNSET,
     UNSET_SENTINEL,
+    UnrecognizedStr,
 )
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
@@ -1257,6 +1258,10 @@ class PreviewAttachIncomingTypedDict(TypedDict):
     r"""The feature quantity selections associated with this plan change."""
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
     plan: NotRequired[PlanTypedDict]
 
 
@@ -1270,12 +1275,18 @@ class PreviewAttachIncoming(BaseModel):
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
 
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
+
     plan: Optional[Plan] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["plan"])
-        nullable_fields = set(["effective_at"])
+        nullable_fields = set(["effective_at", "canceled_at", "expires_at"])
         serialized = handler(self)
         m = {}
 
@@ -1320,6 +1331,10 @@ class PreviewAttachOutgoingTypedDict(TypedDict):
     r"""The feature quantity selections associated with this plan change."""
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
     plan: NotRequired[PlanTypedDict]
 
 
@@ -1333,12 +1348,18 @@ class PreviewAttachOutgoing(BaseModel):
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
 
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
+
     plan: Optional[Plan] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["plan"])
-        nullable_fields = set(["effective_at"])
+        nullable_fields = set(["effective_at", "canceled_at", "expires_at"])
         serialized = handler(self)
         m = {}
 
@@ -1361,13 +1382,21 @@ class PreviewAttachOutgoing(BaseModel):
         return m
 
 
+PreviewAttachCheckoutType = Union[
+    Literal[
+        "stripe_checkout",
+        "autumn_checkout",
+    ],
+    UnrecognizedStr,
+]
+
+
 class PreviewAttachResponseTypedDict(TypedDict):
     r"""OK"""
 
     customer_id: str
     r"""The ID of the customer."""
     line_items: List[PreviewAttachLineItemTypedDict]
-    r"""List of line items for the current billing period."""
     subtotal: float
     r"""The total amount in cents before discounts for the current billing period."""
     total: float
@@ -1378,6 +1407,10 @@ class PreviewAttachResponseTypedDict(TypedDict):
     r"""Products or subscription changes being added or updated."""
     outgoing: List[PreviewAttachOutgoingTypedDict]
     r"""Products or subscription changes being removed or ended."""
+    redirect_to_checkout: bool
+    r"""Whether the customer will be redirected to a checkout page if attach is called."""
+    checkout_type: Nullable[PreviewAttachCheckoutType]
+    r"""The type of checkout that will be used if the customer is redirected to a checkout page."""
     next_cycle: NotRequired[PreviewAttachNextCycleTypedDict]
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
     expand: NotRequired[List[str]]
@@ -1391,7 +1424,6 @@ class PreviewAttachResponse(BaseModel):
     r"""The ID of the customer."""
 
     line_items: List[PreviewAttachLineItem]
-    r"""List of line items for the current billing period."""
 
     subtotal: float
     r"""The total amount in cents before discounts for the current billing period."""
@@ -1408,6 +1440,12 @@ class PreviewAttachResponse(BaseModel):
     outgoing: List[PreviewAttachOutgoing]
     r"""Products or subscription changes being removed or ended."""
 
+    redirect_to_checkout: bool
+    r"""Whether the customer will be redirected to a checkout page if attach is called."""
+
+    checkout_type: Nullable[PreviewAttachCheckoutType]
+    r"""The type of checkout that will be used if the customer is redirected to a checkout page."""
+
     next_cycle: Optional[PreviewAttachNextCycle] = None
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
 
@@ -1417,15 +1455,24 @@ class PreviewAttachResponse(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["next_cycle", "expand"])
+        nullable_fields = set(["checkout_type"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m

@@ -33,21 +33,24 @@ function logMemoryUsage(label: string) {
 	const lagP99Ms = Math.round((lagHistogram.percentile(99) / 1e6) * 10) / 10;
 	lagHistogram.reset();
 
-	logger.info("memory_log", {
-		type: "memory_log",
-		data: {
-			label,
-			pid: process.pid,
-			rssMB: toMB(mem.rss),
-			heapUsedMB: toMB(mem.heapUsed),
-			heapTotalMB: toMB(mem.heapTotal),
-			externalMB: toMB(mem.external),
-			arrayBuffersMB: toMB(mem.arrayBuffers),
-			nativeGapMB: toMB(mem.rss - mem.heapTotal - mem.external),
-			eventLoopLagMeanMs: lagMeanMs,
-			eventLoopLagP99Ms: lagP99Ms,
+	logger.info(
+		`memory_log, rss: ${toMB(mem.rss)}MB, heapUsed: ${toMB(mem.heapUsed)}MB, eventLoopLagP99: ${lagP99Ms}ms`,
+		{
+			type: "memory_log",
+			data: {
+				label,
+				pid: process.pid,
+				rssMB: toMB(mem.rss),
+				heapUsedMB: toMB(mem.heapUsed),
+				heapTotalMB: toMB(mem.heapTotal),
+				externalMB: toMB(mem.external),
+				arrayBuffersMB: toMB(mem.arrayBuffers),
+				nativeGapMB: toMB(mem.rss - mem.heapTotal - mem.external),
+				eventLoopLagMeanMs: lagMeanMs,
+				eventLoopLagP99Ms: lagP99Ms,
+			},
 		},
-	});
+	);
 }
 
 /**
