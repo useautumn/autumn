@@ -174,6 +174,7 @@ export default function UseEventsScenarioPage() {
             <Button
               size="sm"
               variant="outline"
+              // @ts-expect-error
               onClick={() => listEvents.refetch()}
               disabled={listEvents.isFetching}
             >
