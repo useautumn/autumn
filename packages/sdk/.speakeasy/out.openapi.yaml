@@ -2099,12 +2099,16 @@ paths:
                   total:
                     type: number
                     description: Total number of items returned in the current page
+                  total_customer_count:
+                    type: number
+                    description: Total number of customers available in the current organization and environment
                 required:
                   - list
                   - has_more
                   - offset
                   - limit
                   - total
+                  - total_customer_count
                 examples:
                   - list:
                       - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
@@ -2165,6 +2169,7 @@ paths:
                     offset: 0
                     total: 1
                     limit: 10
+                    total_customer_count: 100
       x-speakeasy-name-override: list
       parameters:
         - *a1
@@ -10114,6 +10119,9 @@ paths:
                 balance_id:
                   type: string
                   description: The ID of the balance to delete.
+                recalculate_balances:
+                  type: boolean
+                  description: If true, deduct the deleted balance's remaining amount from the customer's other balances for the same feature after deletion.
                 interval:
                   enum:
                     - one_off
