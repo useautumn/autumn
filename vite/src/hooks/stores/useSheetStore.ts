@@ -17,6 +17,7 @@ export type SheetType =
 	| "subscription-cancel"
 	| "subscription-uncancel"
 	| "balance-edit"
+	| "balance-delete"
 	| "invoice-detail"
 	| null;
 

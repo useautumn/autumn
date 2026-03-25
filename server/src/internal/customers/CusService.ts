@@ -126,6 +126,17 @@ export class CusService {
 
 				const fullCus = data as FullCustomer;
 
+				if (orgId === "org_2x5sJDcxhpVDjyUSqs4khaaNnxq") {
+					fullCus.customer_products = (
+						fullCus.customer_products as FullCusProduct[]
+					)
+						.sort(
+							(a, b) =>
+								b.customer_prices.length - a.customer_prices.length,
+						)
+						.slice(0, 5);
+				}
+
 				// Skip reset when reading from replica — it writes to primary,
 				// and replica data is stale anyway. When degraded WITHOUT a replica
 				// (falls back to primary), the reset should still run.
