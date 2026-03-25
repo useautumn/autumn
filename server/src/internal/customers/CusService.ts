@@ -15,6 +15,7 @@ import {
 } from "@autumn/shared";
 import {
 	and,
+	count,
 	eq,
 	getTableColumns,
 	ilike,
@@ -130,10 +131,7 @@ export class CusService {
 					fullCus.customer_products = (
 						fullCus.customer_products as FullCusProduct[]
 					)
-						.sort(
-							(a, b) =>
-								b.customer_prices.length - a.customer_prices.length,
-						)
+						.sort((a, b) => b.customer_prices.length - a.customer_prices.length)
 						.slice(0, 5);
 				}
 
@@ -276,6 +274,19 @@ export class CusService {
 
 		// Should never reach here, but handle gracefully
 		return null;
+	}
+
+	static async countByOrgIdAndEnv({
+		ctx,
+	}: {
+		ctx: AutumnContext;
+	}): Promise<{ total_customer_count: number }> {
+		const { db } = ctx;
+		const [result] = await db
+			.select({ total_customer_count: count() })
+			.from(customers)
+			.where(and(eq(customers.org_id, ctx.org.id), eq(customers.env, ctx.env)));
+		return { total_customer_count: result?.total_customer_count ?? 0 };
 	}
 
 	/**
