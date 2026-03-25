@@ -464,6 +464,10 @@ export type ListCustomersResponse = {
    * Total number of items returned in the current page
    */
   total: number;
+  /**
+   * Total number of customers available in the current organization and environment
+   */
+  totalCustomerCount: number;
 };
 
 /** @internal */
@@ -956,10 +960,12 @@ export const ListCustomersResponse$inboundSchema: z.ZodMiniType<
     offset: types.number(),
     limit: types.number(),
     total: types.number(),
+    total_customer_count: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "has_more": "hasMore",
+      "total_customer_count": "totalCustomerCount",
     });
   }),
 );

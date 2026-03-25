@@ -476,6 +476,7 @@ class Balances(BaseSDK):
         entity_id: Optional[str] = None,
         feature_id: Optional[str] = None,
         balance_id: Optional[str] = None,
+        recalculate_balances: Optional[bool] = None,
         interval: Optional[models.DeleteBalanceInterval] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -488,6 +489,7 @@ class Balances(BaseSDK):
         :param entity_id: The ID of the entity.
         :param feature_id: The ID of the feature.
         :param balance_id: The ID of the balance to delete.
+        :param recalculate_balances: If true, deduct the deleted balance's remaining amount from the customer's other balances for the same feature after deletion.
         :param interval: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -509,6 +511,7 @@ class Balances(BaseSDK):
             entity_id=entity_id,
             feature_id=feature_id,
             balance_id=balance_id,
+            recalculate_balances=recalculate_balances,
             interval=interval,
         )
 
@@ -578,6 +581,7 @@ class Balances(BaseSDK):
         entity_id: Optional[str] = None,
         feature_id: Optional[str] = None,
         balance_id: Optional[str] = None,
+        recalculate_balances: Optional[bool] = None,
         interval: Optional[models.DeleteBalanceInterval] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -590,6 +594,7 @@ class Balances(BaseSDK):
         :param entity_id: The ID of the entity.
         :param feature_id: The ID of the feature.
         :param balance_id: The ID of the balance to delete.
+        :param recalculate_balances: If true, deduct the deleted balance's remaining amount from the customer's other balances for the same feature after deletion.
         :param interval: Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -611,6 +616,7 @@ class Balances(BaseSDK):
             entity_id=entity_id,
             feature_id=feature_id,
             balance_id=balance_id,
+            recalculate_balances=recalculate_balances,
             interval=interval,
         )
 

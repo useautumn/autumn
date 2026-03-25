@@ -2197,12 +2197,17 @@ paths:
                   total:
                     type: number
                     description: Total number of items returned in the current page
+                  total_customer_count:
+                    type: number
+                    description: Total number of customers available in the current organization and
+                      environment
                 required:
                   - list
                   - has_more
                   - offset
                   - limit
                   - total
+                  - total_customer_count
                 examples:
                   - &a4
                     list:
@@ -2264,6 +2269,7 @@ paths:
                     offset: 0
                     total: 1
                     limit: 10
+                    total_customer_count: 100
               example: *a4
       x-speakeasy-name-override: list
       parameters:
@@ -10344,6 +10350,11 @@ paths:
                 balance_id:
                   type: string
                   description: The ID of the balance to delete.
+                recalculate_balances:
+                  type: boolean
+                  description: If true, deduct the deleted balance's remaining amount from the
+                    customer's other balances for the same feature after
+                    deletion.
                 interval:
                   enum:
                     - one_off
@@ -13148,6 +13159,13 @@ x-speakeasy-globals:
       schema:
         type: string
         default: 2.2.0
+      x-speakeasy-globals-hidden: true
+    - name: fail-open
+      in: header
+      required: false
+      schema:
+        type: boolean
+        default: true
       x-speakeasy-globals-hidden: true
 webhooks:
   balances.usage_alert_triggered:

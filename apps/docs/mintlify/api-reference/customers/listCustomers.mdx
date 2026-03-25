@@ -1092,6 +1092,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   Total number of items returned in the current page
 </DynamicResponseField>
 
+<DynamicResponseField name="total_customer_count" type="number">
+  Total number of customers available in the current organization and environment
+</DynamicResponseField>
+
 
 <ResponseExample>
 ```json 200
@@ -1169,7 +1173,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   "has_more": false,
   "offset": 0,
   "total": 1,
-  "limit": 10
+  "limit": 10,
+  "total_customer_count": 100
 }
 ```
 </ResponseExample>

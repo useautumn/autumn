@@ -28,7 +28,7 @@ class DeleteBalanceGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -60,6 +60,8 @@ class DeleteBalanceParamsTypedDict(TypedDict):
     r"""The ID of the feature."""
     balance_id: NotRequired[str]
     r"""The ID of the balance to delete."""
+    recalculate_balances: NotRequired[bool]
+    r"""If true, deduct the deleted balance's remaining amount from the customer's other balances for the same feature after deletion."""
     interval: NotRequired[DeleteBalanceInterval]
     r"""Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals."""
 
@@ -77,18 +79,29 @@ class DeleteBalanceParams(BaseModel):
     balance_id: Optional[str] = None
     r"""The ID of the balance to delete."""
 
+    recalculate_balances: Optional[bool] = None
+    r"""If true, deduct the deleted balance's remaining amount from the customer's other balances for the same feature after deletion."""
+
     interval: Optional[DeleteBalanceInterval] = None
     r"""Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["entity_id", "feature_id", "balance_id", "interval"])
+        optional_fields = set(
+            [
+                "entity_id",
+                "feature_id",
+                "balance_id",
+                "recalculate_balances",
+                "interval",
+            ]
+        )
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
