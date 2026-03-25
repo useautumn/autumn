@@ -28,8 +28,15 @@ export const createPaginationParamsSchema = ({
 			),
 	});
 
+/**
+ * Creates a page pagination response schema.
+ * @param itemSchema - The schema for the items in the list.
+ * @param includeCustomerTotal - Whether to include the total number of customers available in the current organization and environment.
+ * @returns The page pagination response schema.
+ */
 export const createPagePaginatedResponseSchema = <T extends z.ZodType>(
 	itemSchema: T,
+	includeCustomerTotal = false,
 ) =>
 	z.object({
 		list: z.array(itemSchema).meta({
@@ -43,6 +50,15 @@ export const createPagePaginatedResponseSchema = <T extends z.ZodType>(
 		total: z
 			.number()
 			.describe("Total number of items returned in the current page"),
+		...(!includeCustomerTotal
+			? {}
+			: {
+					total_customer_count: z
+						.number()
+						.describe(
+							"Total number of customers available in the current organization and environment",
+						),
+				}),
 	});
 
 export type PagePaginatedResponse<T> = {
