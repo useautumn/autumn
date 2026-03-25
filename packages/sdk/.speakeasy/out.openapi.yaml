@@ -12914,6 +12914,13 @@ x-speakeasy-globals:
         type: string
         default: 2.2.0
       x-speakeasy-globals-hidden: true
+    - name: fail-open
+      in: header
+      required: false
+      schema:
+        type: boolean
+        default: true
+      x-speakeasy-globals-hidden: true
 webhooks:
   balances.usage_alert_triggered:
     post:
