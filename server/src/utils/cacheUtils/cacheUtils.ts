@@ -3,6 +3,22 @@ import { redis } from "@/external/redis/initRedis.js";
 import { logger } from "../../external/logtail/logtailUtils.js";
 
 /**
+ * Only bail when the connection is permanently dead (`end`).
+ * Transient states like `reconnecting` / `connecting` / `close` are handled
+ * by ioredis's offline queue + commandTimeout, so commands still land.
+ */
+export const isRedisDown = (instance: Redis): boolean => {
+	if (instance.status === "end") {
+		logger.error(
+			"[Redis] Connection permanently ended — all operations will be skipped until restart",
+			{ type: "redis_down", status: instance.status },
+		);
+		return true;
+	}
+	return false;
+};
+
+/**
  * Executes a Redis SET ... NX and routes the three possible outcomes to callbacks:
  * - `"OK"` (key was set) → `onSuccess`
  * - `null` (key already exists) → `onKeyAlreadyExists`
@@ -24,8 +40,8 @@ export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
 	const targetRedis = redisInstance ?? redis;
 
 	try {
-		if (targetRedis.status !== "ready") {
-			logger.error("Redis not ready, skipping NX write");
+		if (isRedisDown(targetRedis)) {
+			logger.error("Redis connection ended, skipping NX write");
 			return await onRedisUnavailable();
 		}
 
@@ -42,10 +58,6 @@ export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
  * Executes a Redis write operation with automatic fallback handling.
  * Returns the result of the operation if successful, null if Redis is unavailable or operation fails.
  * If the operation returns void/undefined, returns true instead.
- *
- * @param operation - The Redis write operation to execute
- * @param redisInstance - Optional Redis instance to use (defaults to local region instance)
- * @returns Promise<T | null | true> - The result if successful, null otherwise. Returns true if operation returns void/undefined.
  */
 export const tryRedisWrite = async <T>(
 	operation: () => Promise<T>,
@@ -54,8 +66,8 @@ export const tryRedisWrite = async <T>(
 	const targetRedis = redisInstance ?? redis;
 
 	try {
-		if (targetRedis.status !== "ready") {
-			logger.error("Redis not ready, skipping write");
+		if (isRedisDown(targetRedis)) {
+			logger.error("Redis connection ended, skipping write");
 			return null as T extends void ? true : T | null;
 		}
 
@@ -72,10 +84,6 @@ export const tryRedisWrite = async <T>(
 /**
  * Executes a Redis read operation with automatic fallback handling.
  * Returns the data if successful, null if Redis is unavailable or operation fails.
- *
- * @param operation - The Redis read operation to execute
- * @param redisInstance - Optional Redis instance to use (defaults to local region instance)
- * @returns Promise<T | null> - The data if successful, null otherwise
  */
 export const tryRedisRead = async <T>(
 	operation: () => Promise<T>,
@@ -84,8 +92,8 @@ export const tryRedisRead = async <T>(
 	const targetRedis = redisInstance ?? redis;
 
 	try {
-		if (targetRedis.status !== "ready") {
-			logger.error("Redis not ready, skipping read");
+		if (isRedisDown(targetRedis)) {
+			logger.error("Redis connection ended, skipping read");
 			return null;
 		}
 

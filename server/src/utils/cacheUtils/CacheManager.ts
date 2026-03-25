@@ -1,18 +1,13 @@
 import { getPrimaryRedis } from "../../external/redis/initRedis.js";
+import { isRedisDown } from "./cacheUtils.js";
 
 export class CacheManager {
 	public static async getJson<T>(key: string): Promise<T | null> {
 		const redis = getPrimaryRedis();
-		if (redis.status !== "ready") {
-			console.warn("Cache client is not in ready state");
-			return null;
-		}
+		if (isRedisDown(redis)) return null;
 
 		const res = await redis.get(key);
-
-		if (!res) {
-			return null;
-		}
+		if (!res) return null;
 
 		return JSON.parse(res);
 	}
@@ -23,10 +18,7 @@ export class CacheManager {
 		ttl: number | string = 3600,
 	) {
 		const redis = getPrimaryRedis();
-		if (redis.status !== "ready") {
-			console.warn("Cache client is not in ready state");
-			return;
-		}
+		if (isRedisDown(redis)) return;
 
 		if (typeof ttl === "number") {
 			await redis.set(key, JSON.stringify(value), "EX", ttl);
@@ -37,10 +29,7 @@ export class CacheManager {
 
 	public static async del(key: string) {
 		const redis = getPrimaryRedis();
-		if (redis.status !== "ready") {
-			console.warn("Cache client is not in ready state");
-			return;
-		}
+		if (isRedisDown(redis)) return;
 
 		await redis.del(key);
 	}
@@ -53,20 +42,14 @@ export class CacheManager {
 		value: string;
 	}) {
 		const redis = getPrimaryRedis();
-		if (redis.status !== "ready") {
-			console.warn("Cache client is not in ready state");
-			return;
-		}
+		if (isRedisDown(redis)) return;
 
 		await redis.del(`${action}:${value}`);
 	}
 
 	static async disconnect() {
 		const redis = getPrimaryRedis();
-		if (redis.status !== "ready") {
-			console.warn("Cache client is not in ready state");
-			return;
-		}
+		if (isRedisDown(redis)) return;
 
 		await redis.quit();
 	}

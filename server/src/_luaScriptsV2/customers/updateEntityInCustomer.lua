@@ -31,12 +31,15 @@ if not updates then
   return cjson.encode({ ok = false, error = "missing_updates" })
 end
 
-local raw = redis.call('JSON.GET', cache_key, '.')
+local raw = redis.call('JSON.GET', cache_key, '$')
 if not raw then
   return cjson.encode({ ok = false, error = "cache_miss" })
 end
 
 local full_customer = cjson.decode(raw)
+if type(full_customer) == 'table' and full_customer[1] ~= nil then
+  full_customer = full_customer[1]
+end
 
 if full_customer.entities == nil then
   return cjson.encode({ ok = false, error = "no_entities" })
