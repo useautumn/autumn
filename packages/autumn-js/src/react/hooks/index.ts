@@ -9,6 +9,11 @@ export {
 	type UseCustomerResult,
 	useCustomer,
 } from "./useCustomer";
+export {
+	type UseEntityParams,
+	type UseEntityResult,
+	useEntity,
+} from "./useEntity";
 export { type UseListEventsParams, useListEvents } from "./useListEvents";
 export { type UseListPlansParams, useListPlans } from "./useListPlans";
 export {

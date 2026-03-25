@@ -8,8 +8,14 @@ import { HookStatePanel } from "@/components/debug/HookStatePanel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { authClient, useSession } from "@/lib/auth-client";
+import { AuthControls, OrgControls } from "../use-customer/components";
 
-export default function UseEntityScenarioPage() {
+export default function BetterAuthUseEntityPage() {
+  const { data: session } = useSession();
+  const activeOrg = authClient.useActiveOrganization();
+  const [error, setError] = useState<unknown>(null);
+
   const entityIdInputId = useId();
   const [entityId, setEntityId] = useState("test-entity");
   const [submittedEntityId, setSubmittedEntityId] = useState("test-entity");
@@ -19,7 +25,12 @@ export default function UseEntityScenarioPage() {
     [submittedEntityId],
   );
 
-  const { data: entity, isLoading, error, refetch } = useEntity(params);
+  const {
+    data: entity,
+    isLoading,
+    error: hookError,
+    refetch,
+  } = useEntity(params);
 
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
 
@@ -32,8 +43,17 @@ export default function UseEntityScenarioPage() {
     setSubmittedEntityId(entityId);
   };
 
+  const handleSignOut = () => {
+    setError(null);
+  };
+
   return (
     <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <AuthControls onError={setError} onSignOut={handleSignOut} />
+        {session && <OrgControls onError={setError} />}
+      </div>
+
       <DebugCard title="Entity Lookup">
         <div className="flex items-end gap-2">
           <div className="flex-1 space-y-1.5">
@@ -53,7 +73,7 @@ export default function UseEntityScenarioPage() {
       </DebugCard>
 
       <DebugCard
-        title="Hook State"
+        title="Hook: useEntity"
         actions={
           <Button variant="outline" size="sm" onClick={onRefetch}>
             Refetch
@@ -62,26 +82,36 @@ export default function UseEntityScenarioPage() {
       >
         <HookStatePanel
           isLoading={isLoading}
-          error={error}
+          error={hookError}
           lastUpdatedAt={lastUpdatedAt}
         />
       </DebugCard>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <DataViewer title="params" value={params} defaultExpandedDepth={3} />
-        <DataViewer title="entity" value={entity} defaultExpandedDepth={2} />
+        <DataViewer title="Entity" value={entity} defaultExpandedDepth={2} />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DataViewer title="Session" value={session} defaultExpandedDepth={2} />
+        <DataViewer
+          title="Active Organization"
+          value={activeOrg.data}
+          defaultExpandedDepth={2}
+        />
       </div>
 
       <DataViewer
-        title="error"
+        title="Error"
         value={
-          error
+          error ||
+          (hookError
             ? {
-                message: error.message,
-                code: error.code,
-                statusCode: error.statusCode,
+                message: hookError.message,
+                code: hookError.code,
+                statusCode: hookError.statusCode,
               }
-            : null
+            : null)
         }
         defaultExpandedDepth={2}
       />
