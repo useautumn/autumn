@@ -1,6 +1,11 @@
 import { ProductSchema } from "@models/productModels/productModels.js";
 import { z } from "zod/v4";
+import {
+	type AggregatedCustomerEntitlement,
+	FullAggregatedCustomerEntitlementSchema,
+} from "../cusProductModels/cusEntModels/aggregatedCusEnt.js";
 import type { FullCustomerEntitlement } from "../cusProductModels/cusEntModels/cusEntModels.js";
+import type { CustomerPrice } from "../cusProductModels/cusPriceModels/cusPriceModels.js";
 import {
 	CusProductSchema,
 	type FullCusProduct,
@@ -31,6 +36,11 @@ export const FullCustomerSchema = CustomerSchema.extend({
 		)
 		.optional(),
 	invoices: z.array(InvoiceSchema).optional(),
+
+	aggregated_customer_products: z.array(FullCusProductSchema).optional(),
+	aggregated_customer_entitlements: z
+		.array(FullAggregatedCustomerEntitlementSchema)
+		.optional(),
 });
 
 export type FullCustomer = Customer & {
@@ -46,6 +56,10 @@ export type FullCustomer = Customer & {
 	subscriptions?: Subscription[];
 	events?: Event[];
 	extra_customer_entitlements: FullCustomerEntitlement[];
+
+	aggregated_customer_products?: FullCusProduct[];
+	aggregated_customer_entitlements?: AggregatedCustomerEntitlement[];
+	aggregated_customer_prices?: CustomerPrice[];
 };
 
 export const CustomerWithProductsSchema = CustomerSchema.extend({
