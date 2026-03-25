@@ -95,6 +95,8 @@ export function BalanceDeleteSheet() {
 	const handleDelete = async () => {
 		const customerId = customer.id || customer.internal_id;
 		if (!customerId) return;
+		const recalculateBalances =
+			canDeductFromOtherBalances && deleteMode === "deduct";
 
 		setIsDeleting(true);
 		try {
@@ -103,9 +105,8 @@ export function BalanceDeleteSheet() {
 					balance,
 					customerId,
 					entityId,
+					recalculateBalances,
 				}),
-				recalculate_balances:
-					canDeductFromOtherBalances && deleteMode === "deduct",
 			});
 
 			if (selectedCusEntId === balance.id) {
