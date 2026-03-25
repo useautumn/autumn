@@ -8,11 +8,13 @@ export class TimeoutFixHook implements BeforeRequestHook {
       return request;
     }
 
+    const signal =
+      typeof AbortSignal.any === "function"
+        ? AbortSignal.any([request.signal, AbortSignal.timeout(timeoutMs)])
+        : AbortSignal.timeout(timeoutMs);
+
     return new Request(request, {
-      signal: AbortSignal.any([
-        request.signal,
-        AbortSignal.timeout(timeoutMs),
-      ]),
+      signal,
     });
   }
 }
