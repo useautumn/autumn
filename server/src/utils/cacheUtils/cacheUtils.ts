@@ -76,7 +76,19 @@ export const tryRedisWrite = async <T>(
 			? true
 			: T | null;
 	} catch (error) {
-		logger.error(`Redis write failed: ${error}`);
+		const errMsg =
+			error instanceof Error
+				? `${error.name}: ${error.message}`
+				: String(error);
+		logger.error(
+			`[tryRedisWrite] Redis write FAILED (returning null): ${errMsg}`,
+			{
+				type: "redis_write_error",
+				errorName: error instanceof Error ? error.name : "unknown",
+				errorMessage: errMsg,
+				redisStatus: targetRedis.status,
+			},
+		);
 		return null as T extends void ? true : T | null;
 	}
 };
