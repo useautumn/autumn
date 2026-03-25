@@ -124,32 +124,6 @@ app.use(
 );
 ```
 
-```typescript Elysia
-import { autumnHandler } from "autumn-js/webStandard";
-import { Elysia } from "elysia";
-
-const app = new Elysia()
-  .mount(
-    autumnHandler({
-      identify: async (request) => {
-        // get the user from your auth provider (example: better-auth)
-        const session = await auth.api.getSession({
-          headers: request.headers,
-        });
-
-        return {
-          customerId: session?.user.id,
-          customerData: {
-            name: session?.user.name,
-            email: session?.user.email,
-          },
-        };
-      },
-    }),
-  )
-  .listen(3002);
-```
-
 ```typescript Express
 import express from "express";
 import { autumnHandler } from "autumn-js/express";
@@ -177,6 +151,33 @@ app.use(
     },
   }),
 );
+```
+
+```typescript Web Standard (Elysia, CF Workers, etc...)
+// Works with any fetch()-compatible WinterTC environment
+import { autumnHandler } from "autumn-js/fetch";
+import { Elysia } from "elysia";
+
+const app = new Elysia()
+  .mount(
+    autumnHandler({
+      identify: async (request) => {
+        // get the user from your auth provider (example: better-auth)
+        const session = await auth.api.getSession({
+          headers: request.headers,
+        });
+
+        return {
+          customerId: session?.user.id,
+          customerData: {
+            name: session?.user.name,
+            email: session?.user.email,
+          },
+        };
+      },
+    }),
+  )
+  .listen(3002);
 ```
 
 ```typescript General (framework-agnostic)

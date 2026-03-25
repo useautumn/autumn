@@ -5,11 +5,9 @@ import {
 } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import {
-	buildFullCustomerCacheGuardKey,
 	buildFullCustomerCacheKey,
 	FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
 } from "./fullCustomerCacheConfig.js";
-import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard.js";
 
 /**
  * Delete FullCustomer from Redis cache across ALL regions.
@@ -30,22 +28,7 @@ export const deleteCachedFullCustomer = async ({
 
 	if (redis.status !== "ready" || !customerId) return;
 
-	const testGuardKey = buildTestFullCustomerCacheGuardKey({
-		orgId: org.id,
-		env,
-		customerId,
-	});
-	const cacheKey = buildFullCustomerCacheKey({
-		orgId: org.id,
-		env,
-		customerId,
-	});
-	const guardKey = buildFullCustomerCacheGuardKey({
-		orgId: org.id,
-		env,
-		customerId,
-	});
-
+	const cacheKey = buildFullCustomerCacheKey({ orgId: org.id, env, customerId });
 	const regions = getConfiguredRegions();
 	const guardTimestamp = Date.now().toString();
 
@@ -60,9 +43,10 @@ export const deleteCachedFullCustomer = async ({
 			}
 
 			const result = await regionalRedis.deleteFullCustomerCache(
-				testGuardKey,
-				guardKey,
 				cacheKey,
+				org.id,
+				env,
+				customerId,
 				guardTimestamp,
 				FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS.toString(),
 				skipGuard.toString(),

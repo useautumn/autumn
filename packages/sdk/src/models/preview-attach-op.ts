@@ -5,7 +5,8 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
-import { ClosedEnum } from "../types/enums.js";
+import * as openEnums from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -749,6 +750,14 @@ export type PreviewAttachIncoming = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
 
 export type PreviewAttachOutgoingFeatureQuantity = {
@@ -776,7 +785,23 @@ export type PreviewAttachOutgoing = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
+
+export const PreviewAttachCheckoutType = {
+  StripeCheckout: "stripe_checkout",
+  AutumnCheckout: "autumn_checkout",
+} as const;
+export type PreviewAttachCheckoutType = OpenEnum<
+  typeof PreviewAttachCheckoutType
+>;
 
 /**
  * OK
@@ -786,9 +811,6 @@ export type PreviewAttachResponse = {
    * The ID of the customer.
    */
   customerId: string;
-  /**
-   * List of line items for the current billing period.
-   */
   lineItems: Array<PreviewAttachLineItem>;
   /**
    * The total amount in cents before discounts for the current billing period.
@@ -818,6 +840,14 @@ export type PreviewAttachResponse = {
    * Products or subscription changes being removed or ended.
    */
   outgoing: Array<PreviewAttachOutgoing>;
+  /**
+   * Whether the customer will be redirected to a checkout page if attach is called.
+   */
+  redirectToCheckout: boolean;
+  /**
+   * The type of checkout that will be used if the customer is redirected to a checkout page.
+   */
+  checkoutType: PreviewAttachCheckoutType | null;
 };
 
 /** @internal */
@@ -1803,12 +1833,16 @@ export const PreviewAttachIncoming$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewAttachIncomingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );
@@ -1862,12 +1896,16 @@ export const PreviewAttachOutgoing$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewAttachOutgoingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );
@@ -1881,6 +1919,12 @@ export function previewAttachOutgoingFromJSON(
     `Failed to parse 'PreviewAttachOutgoing' from JSON`,
   );
 }
+
+/** @internal */
+export const PreviewAttachCheckoutType$inboundSchema: z.ZodMiniType<
+  PreviewAttachCheckoutType,
+  unknown
+> = openEnums.inboundSchema(PreviewAttachCheckoutType);
 
 /** @internal */
 export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
@@ -1899,12 +1943,16 @@ export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
     expand: types.optional(z.array(types.string())),
     incoming: z.array(z.lazy(() => PreviewAttachIncoming$inboundSchema)),
     outgoing: z.array(z.lazy(() => PreviewAttachOutgoing$inboundSchema)),
+    redirect_to_checkout: types.boolean(),
+    checkout_type: types.nullable(PreviewAttachCheckoutType$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       "customer_id": "customerId",
       "line_items": "lineItems",
       "next_cycle": "nextCycle",
+      "redirect_to_checkout": "redirectToCheckout",
+      "checkout_type": "checkoutType",
     });
   }),
 );

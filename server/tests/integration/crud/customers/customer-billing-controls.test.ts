@@ -27,6 +27,17 @@ const autoTopupControls: CustomerBillingControls = {
 	],
 };
 
+const usageAlertControls: CustomerBillingControls = {
+	usage_alerts: [
+		{
+			feature_id: TestFeature.Messages,
+			threshold: 90,
+			threshold_type: "usage_percentage",
+			enabled: true,
+		},
+	],
+};
+
 test.concurrent(`${chalk.yellowBright("customer billing controls: create customer with spend limits")}`, async () => {
 	const customerId = "customer-billing-controls-1";
 	const { autumnV2_1, ctx } = await initScenario({
@@ -169,4 +180,158 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: reject duplica
 				},
 			}),
 	});
+});
+
+test.concurrent(`${chalk.yellowBright("customer billing controls: create customer with usage alerts")}`, async () => {
+	const customerId = "customer-billing-controls-4";
+	const { autumnV2_1, ctx } = await initScenario({
+		setup: [s.deleteCustomer({ customerId })],
+		actions: [],
+	});
+
+	await autumnV2_1.customers.create({
+		id: customerId,
+		name: "Usage Alert Customer",
+		email: `${customerId}@example.com`,
+		billing_controls: usageAlertControls,
+	});
+
+	const cachedCustomer =
+		await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expect(cachedCustomer.billing_controls?.usage_alerts).toEqual(
+		usageAlertControls.usage_alerts,
+	);
+
+	const uncachedCustomer = await autumnV2_1.customers.get<ApiCustomerV5>(
+		customerId,
+		{ skip_cache: "true" },
+	);
+	expect(uncachedCustomer.billing_controls?.usage_alerts).toEqual(
+		usageAlertControls.usage_alerts,
+	);
+
+	const fromDb = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	expect(fromDb.usage_alerts).toEqual(usageAlertControls.usage_alerts);
+});
+
+test.concurrent(`${chalk.yellowBright("customer billing controls: updating usage alerts does not unset spend limits or auto topups")}`, async () => {
+	const customerId = "customer-billing-controls-5";
+	const { autumnV2_1 } = await initScenario({
+		customerId,
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	// Set spend limits and auto topups first
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: spendLimitControls,
+	});
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: autoTopupControls,
+	});
+
+	// Now update only usage_alerts
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: usageAlertControls,
+	});
+
+	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expect(cached.billing_controls?.spend_limits).toEqual(
+		spendLimitControls.spend_limits,
+	);
+	expect(cached.billing_controls?.auto_topups).toEqual(
+		autoTopupControls.auto_topups,
+	);
+	expect(cached.billing_controls?.usage_alerts).toEqual(
+		usageAlertControls.usage_alerts,
+	);
+
+	const uncached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expect(uncached.billing_controls?.spend_limits).toEqual(
+		spendLimitControls.spend_limits,
+	);
+	expect(uncached.billing_controls?.auto_topups).toEqual(
+		autoTopupControls.auto_topups,
+	);
+	expect(uncached.billing_controls?.usage_alerts).toEqual(
+		usageAlertControls.usage_alerts,
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("customer billing controls: updating spend limits does not unset usage alerts")}`, async () => {
+	const customerId = "customer-billing-controls-6";
+	const { autumnV2_1 } = await initScenario({
+		customerId,
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	// Set usage alerts first
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: usageAlertControls,
+	});
+
+	// Now update only spend_limits
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: spendLimitControls,
+	});
+
+	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expect(cached.billing_controls?.usage_alerts).toEqual(
+		usageAlertControls.usage_alerts,
+	);
+	expect(cached.billing_controls?.spend_limits).toEqual(
+		spendLimitControls.spend_limits,
+	);
+
+	const uncached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expect(uncached.billing_controls?.usage_alerts).toEqual(
+		usageAlertControls.usage_alerts,
+	);
+	expect(uncached.billing_controls?.spend_limits).toEqual(
+		spendLimitControls.spend_limits,
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("customer billing controls: clearing usage alerts with empty array")}`, async () => {
+	const customerId = "customer-billing-controls-7";
+	const { autumnV2_1 } = await initScenario({
+		customerId,
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	// Set both spend limits and usage alerts
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: {
+			...spendLimitControls,
+			...usageAlertControls,
+		},
+	});
+
+	// Clear only usage_alerts
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: { usage_alerts: [] },
+	});
+
+	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expect(cached.billing_controls?.usage_alerts).toEqual([]);
+	expect(cached.billing_controls?.spend_limits).toEqual(
+		spendLimitControls.spend_limits,
+	);
+
+	const uncached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expect(uncached.billing_controls?.usage_alerts).toEqual([]);
+	expect(uncached.billing_controls?.spend_limits).toEqual(
+		spendLimitControls.spend_limits,
+	);
 });

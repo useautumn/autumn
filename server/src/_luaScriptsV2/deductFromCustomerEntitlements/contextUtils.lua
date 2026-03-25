@@ -13,7 +13,9 @@
   params:
     cache_key: string
     customer_entitlement_ids: array of customer_entitlement IDs
-    full_customer: decoded FullCustomer object
+    full_customer: decoded FullCustomer object (nil when path index is available)
+    pathidx_key: string (path index Redis Hash key)
+    has_pathidx: boolean (true when path index exists)
 
   Returns: context table with:
     customer_entitlements: { [cus_ent_id]: { base_path, balance, adjustment, entities } }
@@ -25,11 +27,16 @@
 ]]
 local function init_context(params)
   local logs = {}
+  local has_pathidx = params.has_pathidx
+  local pathidx_key = params.pathidx_key
 
   local context = {
     customer_entitlements = {},
     rollovers = {},
+    cache_key = params.cache_key,
     full_customer = params.full_customer,
+    pathidx_key = pathidx_key,
+    has_pathidx = has_pathidx,
     mutation_logs = {},
     pending_writes = {},
     logs = logs,
@@ -41,65 +48,90 @@ local function init_context(params)
   }
 
   for _, ent_id in ipairs(params.customer_entitlement_ids or {}) do
-    local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(params.full_customer, ent_id)
+    local base_path
+    local has_entity_scope
+    local is_loose
+    local adjustment
+    local unlimited
+    local cus_ent_rollovers
+    local cus_ent_balance
+    local cus_ent_entities
 
-    if cus_ent then
-      local base_path
-      local is_loose = (cp_idx == nil) -- Loose entitlement if no customer_product index
-
-      if is_loose then
-        -- Loose entitlement: path is $.extra_customer_entitlements[idx]
-        local ece_idx_0 = ce_idx - 1
-        base_path = '$.extra_customer_entitlements[' .. ece_idx_0 .. ']'
-      else
-        -- Product entitlement: path is $.customer_products[cp_idx].customer_entitlements[ce_idx]
-        local cp_idx_0 = cp_idx - 1
-        local ce_idx_0 = ce_idx - 1
-        base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
+    if has_pathidx then
+      local result = get_customer_entitlement_via_index({
+        pathidx_key = pathidx_key,
+        cache_key = params.cache_key,
+        cus_ent_id = ent_id,
+      })
+      if result then
+        base_path = result.base_path
+        has_entity_scope = result.has_entity_scope
+        is_loose = result.is_loose
+        local sub = result.sub
+        adjustment = safe_number(sub.adjustment or 0)
+        unlimited = sub.unlimited
+        cus_ent_rollovers = sub.rollovers
+        cus_ent_balance = safe_number(sub.balance or 0)
+        cus_ent_entities = safe_table(sub.entities)
       end
+    else
+      -- Fallback path: decode full customer + nested loop search
+      local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(params.full_customer, ent_id)
 
-      local entitlement = cus_ent.entitlement
-      local has_entity_scope = not is_nil(entitlement)
-          and not is_nil(entitlement.entity_feature_id)
+      if cus_ent then
+        is_loose = (cp_idx == nil)
 
+        if is_loose then
+          local ece_idx_0 = ce_idx - 1
+          base_path = '$.extra_customer_entitlements[' .. ece_idx_0 .. ']'
+        else
+          local cp_idx_0 = cp_idx - 1
+          local ce_idx_0 = ce_idx - 1
+          base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
+        end
+
+        local entitlement = cus_ent.entitlement
+        has_entity_scope = not is_nil(entitlement) and not is_nil(entitlement.entity_feature_id)
+        adjustment = cus_ent.adjustment or 0
+        unlimited = cus_ent.unlimited
+        cus_ent_rollovers = cus_ent.rollovers
+        cus_ent_balance = safe_number(cus_ent.balance or 0)
+        cus_ent_entities = safe_table(cus_ent.entities)
+      end
+    end
+
+    if base_path then
       local ent_data = {
         base_path = base_path,
         has_entity_scope = has_entity_scope,
-        adjustment = cus_ent.adjustment or 0,
-        unlimited = cus_ent.unlimited,
+        adjustment = adjustment,
+        unlimited = unlimited,
         is_loose = is_loose,
       }
 
       if has_entity_scope then
-        ent_data.balance = 0 -- Not used for entity-scoped
-        ent_data.entities = read_current_entities(params.cache_key, base_path)
+        ent_data.balance = 0
+        ent_data.entities = cus_ent_entities or {}
       else
-        ent_data.balance = read_current_balance(params.cache_key, base_path)
+        ent_data.balance = cus_ent_balance or 0
         ent_data.entities = nil
       end
 
       context.customer_entitlements[ent_id] = ent_data
 
-      -- Build rollover index for this customer_entitlement
-      local cus_ent_rollovers = cus_ent.rollovers
       if cus_ent_rollovers and type(cus_ent_rollovers) == 'table' then
         for r_idx, rollover in ipairs(cus_ent_rollovers) do
           if rollover and rollover.id then
             local r_idx_0 = r_idx - 1
             local rollover_path = base_path .. '.rollovers[' .. r_idx_0 .. ']'
 
-            -- Read fresh rollover data from Redis
-            local rollover_data = read_rollover_data(params.cache_key, rollover_path)
-
-            if rollover_data then
-              context.rollovers[rollover.id] = {
-                base_path = rollover_path,
-                cus_ent_id = ent_id,
-                balance = rollover_data.balance,
-                usage = rollover_data.usage,
-                entities = rollover_data.entities,
-              }
-            end
+            context.rollovers[rollover.id] = {
+              base_path = rollover_path,
+              cus_ent_id = ent_id,
+              balance = safe_number(rollover.balance or 0),
+              usage = safe_number(rollover.usage or 0),
+              entities = safe_table(rollover.entities),
+            }
           end
         end
       end

@@ -10,17 +10,22 @@
     3. Pass 2: Allow negative if usage_allowed
 
   Helper functions are prepended via string interpolation from:
-    - luaUtils.lua (safe_table, safe_number, find_entitlement, build_entity_path, sorted_keys, is_nil)
+    - fullCustomerKeyBuilders.lua (build_path_index_key, etc.)
+    - luaUtils.lua (safe_table, safe_number, sorted_keys, is_nil)
+    - fullCustomerUtils.lua (find_entitlement, find_entitlement_from_index, build_entity_path, etc.)
     - readBalances.lua (read_current_balance, read_current_entity_balance, read_current_entities, read_rollover_data)
-    - contextUtils.lua (init_context, update_in_memory_customer_entitlement, queue_balance_update, apply_pending_writes)
+    - contextUtils.lua (init_context, queue_balance_update, apply_pending_writes)
     - deductFromRollovers.lua (deduct_from_rollovers)
     - deductFromMainBalance.lua (calculate_change, deduct_from_main_balance)
     - getTotalBalance.lua (get_total_balance)
 
-  KEYS[1] = FullCustomer cache key
+  KEYS[1] = FullCustomer cache key (used for cluster slot routing)
 
   ARGV[1] = JSON params:
     {
+      org_id: string,
+      env: string,
+      customer_id: string,
       sorted_entitlements: [{ customer_entitlement_id, credit_cost, feature_id, entity_feature_id, usage_allowed, min_balance, max_balance }],
       spend_limit_by_feature_id: { [feature_id]: { feature_id, enabled, overage_limit } } | null,
       usage_based_cus_ent_ids_by_feature_id: { [feature_id]: string[] } | null,
@@ -51,6 +56,11 @@
 local cache_key = KEYS[1]
 local params = cjson.decode(ARGV[1])
 
+-- Extract org/env/customer for path index key construction
+local org_id = params.org_id
+local env = params.env
+local customer_id = params.customer_id
+
 -- Extract parameters
 local sorted_entitlements = params.sorted_entitlements or {}
 local spend_limit_by_feature_id = params.spend_limit_by_feature_id
@@ -70,33 +80,39 @@ local lock_receipt_key = params.lock_receipt_key
 -- Compute overage_behavior_is_allow once
 local overage_behavior_is_allow = alter_granted_balance or overage_behaviour == 'allow'
 
--- Check if customer exists (just check the key exists)
 local empty_logs = cjson.decode('[]')
 
+-- Check if customer exists
 local key_exists = redis.call('EXISTS', cache_key)
 if key_exists == 0 then
   return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
 end
 
--- Get FullCustomer structure (for finding entitlement indices only)
-local full_customer_json = redis.call('JSON.GET', cache_key, '.')
-if not full_customer_json then
-  return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
+-- Build path index key and check existence (fast path vs fallback)
+local pathidx_key = build_path_index_key(org_id, env, customer_id)
+local has_pathidx = redis.call('EXISTS', pathidx_key) == 1
+
+-- Only decode full customer if path index is NOT available (fallback)
+local full_customer = nil
+if not has_pathidx then
+  local full_customer_json = redis.call('JSON.GET', cache_key, '.')
+  if not full_customer_json then
+    return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
+  end
+
+  full_customer = cjson.decode(full_customer_json)
+
+  if not full_customer.customer_products then
+    return cjson.encode({
+      error = 'NO_CUSTOMER_PRODUCTS',
+      updates = {},
+      rollover_updates = {},
+      mutation_logs = empty_logs,
+      remaining = 0
+    })
+  end
 end
 
-local full_customer = cjson.decode(full_customer_json)
-
-if not full_customer.customer_products then
-  return cjson.encode({
-    error = 'NO_CUSTOMER_PRODUCTS',
-    updates = {},
-    rollover_updates = {},
-    mutation_logs = empty_logs,
-    remaining = 0
-  })
-end
-
--- Track updates for return value
 -- Initialize context with in-memory state from Redis
 local customer_entitlement_ids = {}
 for _, ent_obj in ipairs(sorted_entitlements) do
@@ -107,6 +123,8 @@ local context = init_context({
   cache_key = cache_key,
   customer_entitlement_ids = customer_entitlement_ids,
   full_customer = full_customer,
+  pathidx_key = pathidx_key,
+  has_pathidx = has_pathidx,
 })
 
 local unwind_modified_cus_ent_ids = {}
@@ -229,7 +247,7 @@ then
       hashed_key = lock.hashed_key or cjson.null,
       status = 'pending',
       region = lock.region or cjson.null,
-      customer_id = full_customer.id or cjson.null,
+      customer_id = customer_id or cjson.null,
       feature_id = feature_id or cjson.null,
       entity_id = target_entity_id or cjson.null,
       expires_at = lock.expires_at or cjson.null,

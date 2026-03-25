@@ -45,6 +45,6 @@
 			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"]
 		}
 	},
-	"include": ["src", "tests", "scripts", "experiments"],
+	"include": ["src", "tests", "scripts", "experiments", "perf"],
 	"exclude": ["node_modules", "dist", "tests/archives"]
 }

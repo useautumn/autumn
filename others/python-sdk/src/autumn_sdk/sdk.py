@@ -51,6 +51,7 @@ class Autumn(BaseSDK):
         self,
         secret_key: Union[str, Callable[[], str]],
         x_api_version: Optional[str] = None,
+        fail_open: Optional[bool] = None,
         server_idx: Optional[int] = None,
         url_params: Optional[Dict[str, str]] = None,
         server_url: Optional[str] = None,
@@ -64,6 +65,7 @@ class Autumn(BaseSDK):
 
         :param secret_key: The secret_key required for authentication
         :param x_api_version: Configures the x_api_version parameter for all supported operations
+        :param fail_open: Configures the fail_open parameter for all supported operations
         :param server_idx: The index of the server to use for all methods
         :param server_url: The server URL to use for all methods
         :param url_params: Parameters to optionally template the server URL with
@@ -104,8 +106,12 @@ class Autumn(BaseSDK):
             if url_params is not None:
                 server_url = utils.template_url(server_url, url_params)
 
-        _x_api_version = utils.get_global_from_env(x_api_version, "X_API_VERSION", str)
-        _globals = internal.Globals() if _x_api_version is None else internal.Globals(x_api_version=_x_api_version)
+        _globals = internal.Globals(
+            x_api_version=utils.get_global_from_env(
+                x_api_version, "X_API_VERSION", str
+            ),
+            fail_open=utils.get_global_from_env(fail_open, "FAIL_OPEN", bool),
+        )
 
         BaseSDK.__init__(
             self,

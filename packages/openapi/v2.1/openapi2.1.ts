@@ -36,6 +36,7 @@ import {
 } from "../utils/openapiTransform/index.js";
 import { registerInternalSchemas } from "../utils/registerInternalSchemas.js";
 import { v2_1ContractRouter } from "./contracts/index.js";
+import { injectWebhooks } from "./webhooks/injectWebhooks.js";
 
 const generator = new OpenAPIGenerator({
 	schemaConverters: [new ZodToJsonSchemaConverter()],
@@ -120,6 +121,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 		version: OPENAPI_DOC_VERSION,
 	});
 	removeInternalFields({ openApiDocument });
+	injectWebhooks({ openApiDocument });
 
 	return openApiDocument;
 }

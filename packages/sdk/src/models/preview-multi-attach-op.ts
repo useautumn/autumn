@@ -5,7 +5,8 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
-import { ClosedEnum } from "../types/enums.js";
+import * as openEnums from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -439,6 +440,43 @@ export type PreviewMultiAttachSpendLimit = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const PreviewMultiAttachThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type PreviewMultiAttachThresholdType = ClosedEnum<
+  typeof PreviewMultiAttachThresholdType
+>;
+
+export type PreviewMultiAttachUsageAlert = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: PreviewMultiAttachThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+/**
  * Billing controls for the entity.
  */
 export type PreviewMultiAttachBillingControls = {
@@ -446,6 +484,10 @@ export type PreviewMultiAttachBillingControls = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<PreviewMultiAttachSpendLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<PreviewMultiAttachUsageAlert> | undefined;
 };
 
 export type PreviewMultiAttachEntityData = {
@@ -715,6 +757,14 @@ export type PreviewMultiAttachIncoming = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
 
 export type PreviewMultiAttachOutgoingFeatureQuantity = {
@@ -742,7 +792,23 @@ export type PreviewMultiAttachOutgoing = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
+
+export const PreviewMultiAttachCheckoutType = {
+  StripeCheckout: "stripe_checkout",
+  AutumnCheckout: "autumn_checkout",
+} as const;
+export type PreviewMultiAttachCheckoutType = OpenEnum<
+  typeof PreviewMultiAttachCheckoutType
+>;
 
 /**
  * OK
@@ -752,9 +818,6 @@ export type PreviewMultiAttachResponse = {
    * The ID of the customer.
    */
   customerId: string;
-  /**
-   * List of line items for the current billing period.
-   */
   lineItems: Array<PreviewMultiAttachLineItem>;
   /**
    * The total amount in cents before discounts for the current billing period.
@@ -784,6 +847,14 @@ export type PreviewMultiAttachResponse = {
    * Products or subscription changes being removed or ended.
    */
   outgoing: Array<PreviewMultiAttachOutgoing>;
+  /**
+   * Whether the customer will be redirected to a checkout page if attach is called.
+   */
+  redirectToCheckout: boolean;
+  /**
+   * The type of checkout that will be used if the customer is redirected to a checkout page.
+   */
+  checkoutType: PreviewMultiAttachCheckoutType | null;
 };
 
 /** @internal */
@@ -1359,8 +1430,53 @@ export function previewMultiAttachSpendLimitToJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachThresholdType
+> = z.enum(PreviewMultiAttachThresholdType);
+
+/** @internal */
+export type PreviewMultiAttachUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const PreviewMultiAttachUsageAlert$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachUsageAlert$Outbound,
+  PreviewMultiAttachUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: PreviewMultiAttachThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function previewMultiAttachUsageAlertToJSON(
+  previewMultiAttachUsageAlert: PreviewMultiAttachUsageAlert,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachUsageAlert$outboundSchema.parse(
+      previewMultiAttachUsageAlert,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachBillingControls$Outbound = {
   spend_limits?: Array<PreviewMultiAttachSpendLimit$Outbound> | undefined;
+  usage_alerts?: Array<PreviewMultiAttachUsageAlert$Outbound> | undefined;
 };
 
 /** @internal */
@@ -1372,10 +1488,14 @@ export const PreviewMultiAttachBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => PreviewMultiAttachSpendLimit$outboundSchema)),
     ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => PreviewMultiAttachUsageAlert$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       spendLimits: "spend_limits",
+      usageAlerts: "usage_alerts",
     });
   }),
 );
@@ -1812,12 +1932,16 @@ export const PreviewMultiAttachIncoming$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewMultiAttachIncomingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );
@@ -1874,12 +1998,16 @@ export const PreviewMultiAttachOutgoing$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewMultiAttachOutgoingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );
@@ -1893,6 +2021,12 @@ export function previewMultiAttachOutgoingFromJSON(
     `Failed to parse 'PreviewMultiAttachOutgoing' from JSON`,
   );
 }
+
+/** @internal */
+export const PreviewMultiAttachCheckoutType$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachCheckoutType,
+  unknown
+> = openEnums.inboundSchema(PreviewMultiAttachCheckoutType);
 
 /** @internal */
 export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
@@ -1911,12 +2045,16 @@ export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
     expand: types.optional(z.array(types.string())),
     incoming: z.array(z.lazy(() => PreviewMultiAttachIncoming$inboundSchema)),
     outgoing: z.array(z.lazy(() => PreviewMultiAttachOutgoing$inboundSchema)),
+    redirect_to_checkout: types.boolean(),
+    checkout_type: types.nullable(PreviewMultiAttachCheckoutType$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       "customer_id": "customerId",
       "line_items": "lineItems",
       "next_cycle": "nextCycle",
+      "redirect_to_checkout": "redirectToCheckout",
+      "checkout_type": "checkoutType",
     });
   }),
 );

@@ -482,11 +482,69 @@ class GetEntitySpendLimit(BaseModel):
         return m
 
 
+GetEntityThresholdType = Union[
+    Literal[
+        "usage",
+        "usage_percentage",
+    ],
+    UnrecognizedStr,
+]
+r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+
+
+class GetEntityUsageAlertTypedDict(TypedDict):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    threshold_type: GetEntityThresholdType
+    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    feature_id: NotRequired[str]
+    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage alert is enabled."""
+    name: NotRequired[str]
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+
+class GetEntityUsageAlert(BaseModel):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+
+    threshold_type: GetEntityThresholdType
+    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+
+    feature_id: Optional[str] = None
+    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage alert is enabled."""
+
+    name: Optional[str] = None
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class GetEntityBillingControlsTypedDict(TypedDict):
     r"""Billing controls for the entity."""
 
     spend_limits: NotRequired[List[GetEntitySpendLimitTypedDict]]
     r"""List of overage spend limits per feature."""
+    usage_alerts: NotRequired[List[GetEntityUsageAlertTypedDict]]
+    r"""List of usage alert configurations per feature."""
 
 
 class GetEntityBillingControls(BaseModel):
@@ -495,9 +553,12 @@ class GetEntityBillingControls(BaseModel):
     spend_limits: Optional[List[GetEntitySpendLimit]] = None
     r"""List of overage spend limits per feature."""
 
+    usage_alerts: Optional[List[GetEntityUsageAlert]] = None
+    r"""List of usage alert configurations per feature."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["spend_limits"])
+        optional_fields = set(["spend_limits", "usage_alerts"])
         serialized = handler(self)
         m = {}
 

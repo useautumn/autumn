@@ -265,6 +265,16 @@ const response = await autumn.billing.update({
   If true, the subscription is updated internally without applying billing changes in Stripe.
 </DynamicParamField>
 
+<DynamicParamField body="recalculate_balances" type="object">
+  Controls whether balances should be recalculated during the subscription update.
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required>
+      If true, recalculates balances during the subscription update. Only applicable when updating feature quantities.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 
 ### Response
 

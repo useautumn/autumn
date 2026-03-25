@@ -1,0 +1,36 @@
+---
+title: "Usage Alert Triggered"
+openapi: "api/openapi.yml webhook balances.usage_alert_triggered"
+---
+
+### Payload Fields
+
+<ParamField body="customer_id" type="string" required>
+  The ID of the customer whose usage alert was triggered.
+</ParamField>
+
+<ParamField body="feature_id" type="string" required>
+  The feature ID the alert applies to.
+</ParamField>
+
+<ParamField body="entity_id" type="string">
+  The entity ID the alert applies to, if the usage was entity-scoped.
+</ParamField>
+
+<ParamField body="usage_alert" type="object" required>
+  Details of the usage alert that was triggered.
+  <Expandable title="properties">
+    <ParamField body="name" type="string">
+      User-defined label for the alert, if provided.
+    </ParamField>
+
+    <ParamField body="threshold" type="number" required>
+      The threshold value that was crossed.
+    </ParamField>
+
+    <ParamField body="threshold_type" type="'usage' | 'usage_percentage'" required>
+      Whether the threshold is an absolute usage count or a percentage.
+    </ParamField>
+
+  </Expandable>
+</ParamField>

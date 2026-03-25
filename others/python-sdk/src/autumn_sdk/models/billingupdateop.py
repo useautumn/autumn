@@ -623,6 +623,20 @@ BillingUpdateCancelAction = Literal[
 r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
 
+class BillingUpdateRecalculateBalancesTypedDict(TypedDict):
+    r"""Controls whether balances should be recalculated during the subscription update."""
+
+    enabled: bool
+    r"""If true, recalculates balances during the subscription update. Only applicable when updating feature quantities."""
+
+
+class BillingUpdateRecalculateBalances(BaseModel):
+    r"""Controls whether balances should be recalculated during the subscription update."""
+
+    enabled: bool
+    r"""If true, recalculates balances during the subscription update. Only applicable when updating feature quantities."""
+
+
 class UpdateSubscriptionParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -648,6 +662,8 @@ class UpdateSubscriptionParamsTypedDict(TypedDict):
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
     no_billing_changes: NotRequired[bool]
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
+    recalculate_balances: NotRequired[BillingUpdateRecalculateBalancesTypedDict]
+    r"""Controls whether balances should be recalculated during the subscription update."""
 
 
 class UpdateSubscriptionParams(BaseModel):
@@ -687,6 +703,9 @@ class UpdateSubscriptionParams(BaseModel):
     no_billing_changes: Optional[bool] = None
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
 
+    recalculate_balances: Optional[BillingUpdateRecalculateBalances] = None
+    r"""Controls whether balances should be recalculated during the subscription update."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -702,6 +721,7 @@ class UpdateSubscriptionParams(BaseModel):
                 "subscription_id",
                 "cancel_action",
                 "no_billing_changes",
+                "recalculate_balances",
             ]
         )
         serialized = handler(self)

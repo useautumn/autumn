@@ -415,6 +415,16 @@ export type PreviewUpdateCancelAction = ClosedEnum<
   typeof PreviewUpdateCancelAction
 >;
 
+/**
+ * Controls whether balances should be recalculated during the subscription update.
+ */
+export type PreviewUpdateRecalculateBalances = {
+  /**
+   * If true, recalculates balances during the subscription update. Only applicable when updating feature quantities.
+   */
+  enabled: boolean;
+};
+
 export type PreviewUpdateParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -464,6 +474,10 @@ export type PreviewUpdateParams = {
    * If true, the subscription is updated internally without applying billing changes in Stripe.
    */
   noBillingChanges?: boolean | undefined;
+  /**
+   * Controls whether balances should be recalculated during the subscription update.
+   */
+  recalculateBalances?: PreviewUpdateRecalculateBalances | undefined;
 };
 
 export type PreviewUpdateDiscount = {
@@ -670,6 +684,14 @@ export type PreviewUpdateIncoming = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
 
 export type PreviewUpdateOutgoingFeatureQuantity = {
@@ -697,6 +719,14 @@ export type PreviewUpdateOutgoing = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
 
 export const Intent = {
@@ -1212,6 +1242,29 @@ export const PreviewUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewUpdateCancelAction);
 
 /** @internal */
+export type PreviewUpdateRecalculateBalances$Outbound = {
+  enabled: boolean;
+};
+
+/** @internal */
+export const PreviewUpdateRecalculateBalances$outboundSchema: z.ZodMiniType<
+  PreviewUpdateRecalculateBalances$Outbound,
+  PreviewUpdateRecalculateBalances
+> = z.object({
+  enabled: z.boolean(),
+});
+
+export function previewUpdateRecalculateBalancesToJSON(
+  previewUpdateRecalculateBalances: PreviewUpdateRecalculateBalances,
+): string {
+  return JSON.stringify(
+    PreviewUpdateRecalculateBalances$outboundSchema.parse(
+      previewUpdateRecalculateBalances,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewUpdateParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -1227,6 +1280,7 @@ export type PreviewUpdateParams$Outbound = {
   subscription_id?: string | undefined;
   cancel_action?: string | undefined;
   no_billing_changes?: boolean | undefined;
+  recalculate_balances?: PreviewUpdateRecalculateBalances$Outbound | undefined;
 };
 
 /** @internal */
@@ -1256,6 +1310,9 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(PreviewUpdateCancelAction$outboundSchema),
     noBillingChanges: z.optional(z.boolean()),
+    recalculateBalances: z.optional(
+      z.lazy(() => PreviewUpdateRecalculateBalances$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1269,6 +1326,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
       noBillingChanges: "no_billing_changes",
+      recalculateBalances: "recalculate_balances",
     });
   }),
 );
@@ -1585,12 +1643,16 @@ export const PreviewUpdateIncoming$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewUpdateIncomingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );
@@ -1644,12 +1706,16 @@ export const PreviewUpdateOutgoing$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewUpdateOutgoingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );

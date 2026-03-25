@@ -1,7 +1,7 @@
 {
 	"name": "autumn-js",
 	"description": "Autumn JS Library",
-	"version": "1.0.7",
+	"version": "1.1.5",
 	"repository": "github:useautumn/autumn",
 	"homepage": "https://docs.useautumn.com",
 	"main": "./dist/sdk/index.js",
@@ -38,10 +38,10 @@
 			"require": "./dist/backend/adapters/express.js",
 			"import": "./dist/backend/adapters/express.mjs"
 		},
-		"./webStandard": {
-			"types": "./dist/backend/adapters/webStandard.d.ts",
-			"require": "./dist/backend/adapters/webStandard.js",
-			"import": "./dist/backend/adapters/webStandard.mjs"
+		"./fetch": {
+			"types": "./dist/backend/adapters/fetch.d.ts",
+			"require": "./dist/backend/adapters/fetch.js",
+			"import": "./dist/backend/adapters/fetch.mjs"
 		},
 		"./hono": {
 			"types": "./dist/backend/adapters/hono.d.ts",
@@ -79,8 +79,8 @@
 			"express": [
 				"./dist/backend/adapters/express.d.ts"
 			],
-			"webStandard": [
-				"./dist/backend/adapters/webStandard.d.ts"
+			"fetch": [
+				"./dist/backend/adapters/fetch.d.ts"
 			]
 		}
 	},

@@ -17,7 +17,8 @@
         processor?: object | null,
         processors?: object | null,
         auto_topups?: array | null,
-        spend_limits?: array | null
+        spend_limits?: array | null,
+        usage_alerts?: array | null
       }
     }
 
@@ -109,6 +110,15 @@ if updates.spend_limits ~= nil then
     redis.call('JSON.SET', cache_key, '$.spend_limits', cjson.encode(updates.spend_limits))
   end
   table.insert(updated_fields, 'spend_limits')
+end
+
+if updates.usage_alerts ~= nil then
+  if is_nil(updates.usage_alerts) then
+    redis.call('JSON.SET', cache_key, '$.usage_alerts', 'null')
+  else
+    redis.call('JSON.SET', cache_key, '$.usage_alerts', cjson.encode(updates.usage_alerts))
+  end
+  table.insert(updated_fields, 'usage_alerts')
 end
 
 return cjson.encode({ success = true, updated_fields = updated_fields })

@@ -54,7 +54,7 @@ export const getV2CheckResponse = async ({
 					apiSubject,
 					feature: featureToUse,
 					requiredBalance,
-				})
+				}).allowed
 			: false;
 
 	return CheckResponseV3Schema.parse({

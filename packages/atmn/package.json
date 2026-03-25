@@ -1,6 +1,6 @@
 {
 	"name": "atmn",
-	"version": "1.1.5",
+	"version": "1.1.7",
 	"license": "MIT",
 	"bin": {
 		"atmn": "dist/cli.js"
@@ -44,7 +44,6 @@
 		"README.md"
 	],
 	"dependencies": {
-		"@inkjs/ui": "^2.0.0",
 		"@inquirer/prompts": "^7.6.0",
 		"@mishieck/ink-titled-box": "^0.3.0",
 		"@tanstack/react-query": "^5.90.17",

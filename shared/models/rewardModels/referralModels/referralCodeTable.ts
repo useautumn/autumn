@@ -1,11 +1,13 @@
 import {
 	foreignKey,
+	index,
 	numeric,
 	pgTable,
 	primaryKey,
 	text,
 	unique,
 } from "drizzle-orm/pg-core";
+import { collatePgColumn } from "../../../db/utils.js";
 import { customers } from "../../cusModels/cusTable";
 import { organizations } from "../../orgModels/orgTable";
 import { rewardPrograms } from "../rewardProgramModels/rewardProgramTable";
@@ -43,5 +45,10 @@ export const referralCodes = pgTable(
 			name: "referral_codes_pkey",
 		}),
 		unique("referral_codes_id_key").on(table.id),
+		index("idx_referral_codes_internal_customer_id").on(
+			table.internal_customer_id,
+		),
 	],
 );
+
+collatePgColumn(referralCodes.internal_customer_id, "C");

@@ -287,6 +287,8 @@ const closedEnumSchema = z.any();
 
 const planSchema = z.any();
 
+const openEnumSchema = z.any();
+
 export const previewAttachPriceIntervalSchema = closedEnumSchema;
 
 export const previewAttachBasePriceSchema = z.object({
@@ -425,6 +427,8 @@ export const previewAttachIncomingSchema = z.object({
 	plan: z.union([planSchema, z.undefined()]).optional(),
 	featureQuantities: z.array(previewAttachIncomingFeatureQuantitySchema),
 	effectiveAt: z.number().nullable(),
+	canceledAt: z.number().nullable(),
+	expiresAt: z.number().nullable(),
 });
 
 export const previewAttachOutgoingSchema = z.object({
@@ -432,7 +436,11 @@ export const previewAttachOutgoingSchema = z.object({
 	plan: z.union([planSchema, z.undefined()]).optional(),
 	featureQuantities: z.array(previewAttachOutgoingFeatureQuantitySchema),
 	effectiveAt: z.number().nullable(),
+	canceledAt: z.number().nullable(),
+	expiresAt: z.number().nullable(),
 });
+
+export const previewAttachCheckoutTypeSchema = openEnumSchema;
 
 export const previewAttachResponseSchema = z.object({
 	customerId: z.string(),
@@ -444,4 +452,6 @@ export const previewAttachResponseSchema = z.object({
 	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 	incoming: z.array(previewAttachIncomingSchema),
 	outgoing: z.array(previewAttachOutgoingSchema),
+	redirectToCheckout: z.boolean(),
+	checkoutType: previewAttachCheckoutTypeSchema.nullable(),
 });

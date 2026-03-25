@@ -10,13 +10,13 @@ import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeatur
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
 import type { EventInfo } from "../../events/initEvent.js";
+import { fireTrackWebhooks } from "../../trackWebhooks/fireTrackWebhooks.js";
 import { applyDeductionUpdateToFullCustomer } from "../../utils/deduction/applyDeductionUpdateToFullCustomer.js";
 import { saveLockReceipt } from "../../utils/lock/saveLockReceipt.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { MutationLogItem } from "../../utils/types/mutationLogItem.js";
 import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoice.js";
-import { handleThresholdReached } from "../handleThresholdReached.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
 import {
@@ -24,6 +24,7 @@ import {
 	syncCustomerEntitlementUpdatesToCache,
 } from "./executeDeductionCache.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
+import { mutationLogsToFeatures } from "./mutationLogsToFeatures.js";
 import { prepareDeductionOptions } from "./prepareDeductionOptions.js";
 import { prepareFeatureDeduction } from "./prepareFeatureDeduction.js";
 
@@ -228,15 +229,18 @@ export const executePostgresDeduction = async ({
 				throw error;
 			}
 
-			handleThresholdReached({
+			const featuresFromMutationLogs = mutationLogsToFeatures({
+				fullCustomer,
+				mutationLogs: mutation_logs ?? [],
+			});
+
+			fireTrackWebhooks({
 				ctx,
 				oldFullCus,
 				newFullCus: fullCustomer,
 				feature: deduction.feature,
-			}).catch((error) => {
-				ctx.logger.error(
-					`[executePostgresDeduction] Failed to handle threshold reached: ${error}`,
-				);
+				entityId,
+				featuresFromMutationLogs,
 			});
 
 			if (resolvedOptions.triggerAutoTopUp) {

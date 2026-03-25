@@ -1,0 +1,102 @@
+---
+title: "Fail-Open Defaults"
+description: "Keep your app running even when Autumn is unreachable"
+---
+
+Autumn's SDKs include a **fail-open** mechanism that prevents your application from going down if Autumn is temporarily unreachable. When enabled, critical SDK methods return safe default responses instead of throwing errors.
+
+## Why fail-open?
+
+As a billing engine, Autumn sits in the critical path of your application. If your app calls `check()` to gate access to a feature, and Autumn is unreachable, that call would throw an error -- effectively blocking your users from accessing your product.
+
+Fail-open ensures your users are never blocked by an Autumn outage. Usage events may be lost during the outage, but your customers stay unaffected.
+
+## Behavior
+
+Fail-open is **enabled by default**. When Autumn is unreachable (network errors, timeouts, or server errors returning 5XX status codes), the SDK returns safe defaults:
+
+| Method | Default response | Effect |
+|--------|-----------------|--------|
+| `check()` | `{ allowed: true }` | Users retain access to features |
+| `track()` | `{ value: 0, balance: null }` | Usage event is silently dropped |
+| `customers.getOrCreate()` | Sentinel customer with `id: null` | Returns a valid but empty customer object |
+
+<Warning>
+When fail-open triggers, the SDK logs a prominent error to your console so you're immediately aware of the issue.
+</Warning>
+
+## When fail-open triggers
+
+Fail-open activates when the SDK encounters:
+
+- **Server errors** -- Autumn returns a 5XX status code (500, 502, 503, etc.)
+- **Network failures** -- DNS resolution failure, connection refused, connection reset
+- **Timeouts** -- The request to Autumn times out
+
+Fail-open does **not** activate for client errors (4XX). If you receive a 400 (bad request), 401 (unauthorized), or 404 (not found), those errors propagate normally since they indicate a problem with your integration, not an Autumn outage.
+
+## Configuration
+
+### Disabling fail-open
+
+If you prefer strict error handling and want all Autumn errors to propagate:
+
+<CodeGroup>
+```typescript TypeScript
+import { Autumn } from "@useautumn/sdk";
+
+const autumn = new Autumn({
+  secretKey: "sk_...",
+  failOpen: false,
+});
+```
+
+```python Python
+# Coming soon
+```
+</CodeGroup>
+
+### Detecting fail-open responses
+
+When `check()` fails open, the response will have `allowed: true` with empty values:
+
+```typescript
+const result = await autumn.check({
+  customerId: "cus_123",
+  featureId: "messages",
+});
+
+// Normal response: allowed is based on actual balance
+// Fail-open response: allowed is always true, customerId is ""
+```
+
+When `customers.getOrCreate()` fails open, the returned customer will have `id: null`:
+
+```typescript
+const customer = await autumn.customers.getOrCreate({
+  customerId: "cus_123",
+});
+
+if (customer.id === null) {
+  // Autumn was unreachable, handle gracefully
+}
+```
+
+## Console output
+
+When fail-open triggers, you'll see this in your server logs:
+
+```
+FATAL AUTUMN ERROR DETECTED; FAILING OPEN; LEARN MORE: https://docs.useautumn.com/docs/fail-open; STATUS PAGE: status.useautumn.com
+  Operation: check | Status: 503 | Error: Server error
+```
+
+Monitor your logs for this message. If you see it, check [status.useautumn.com](https://status.useautumn.com) for ongoing incidents.
+
+## SDK support
+
+| SDK | Fail-open support |
+|-----|------------------|
+| `@useautumn/sdk` (TypeScript) | Supported |
+| `autumn-python` (Python) | Coming soon |
+| `autumn-js` (framework SDK) | Coming soon |

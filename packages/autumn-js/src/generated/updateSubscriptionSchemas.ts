@@ -25,6 +25,10 @@ export const billingUpdateInvoiceModeSchema = z.object({
 	finalize: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const billingUpdateRecalculateBalancesSchema = z.object({
+	enabled: z.boolean(),
+});
+
 export const billingUpdateInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -122,6 +126,10 @@ export const billingUpdateInvoiceModeOutboundSchema = z.object({
 	finalize: z.boolean(),
 });
 
+export const billingUpdateRecalculateBalancesOutboundSchema = z.object({
+	enabled: z.boolean(),
+});
+
 export const updateSubscriptionParamsOutboundSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -141,6 +149,9 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	cancel_action: z.union([z.string(), z.undefined()]).optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
+	recalculate_balances: z
+		.union([billingUpdateRecalculateBalancesOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -261,6 +272,9 @@ export const updateSubscriptionParamsSchema = z.object({
 		.union([billingUpdateCancelActionSchema, z.undefined()])
 		.optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
+	recalculateBalances: z
+		.union([billingUpdateRecalculateBalancesSchema, z.undefined()])
+		.optional(),
 });
 
 export const billingUpdateCodeSchema = openEnumSchema;
