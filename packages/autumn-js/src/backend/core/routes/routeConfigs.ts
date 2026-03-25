@@ -18,6 +18,10 @@ import {
 import type { RouteDefinition, RouteName } from "../types";
 import { backendError, backendSuccess, sanitizeBody } from "../utils";
 
+const getEntityBodySchema = z.object({
+	entityId: z.string(),
+});
+
 /** Route configurations for autumn-js backend */
 export const routeConfigs: RouteDefinition<RouteName>[] = [
 	{
@@ -58,6 +62,11 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 			};
 			return autumn.customers.getOrCreate(args);
 		},
+	},
+	{
+		route: "getEntity",
+		sdkMethod: (autumn, args) => autumn.entities.get(args),
+		bodySchema: getEntityBodySchema,
 	},
 	{
 		route: "attach",
