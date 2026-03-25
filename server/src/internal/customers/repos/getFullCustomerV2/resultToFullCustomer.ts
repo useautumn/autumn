@@ -244,8 +244,6 @@ export const resultToFullCustomer = ({
 				} as FullAggregatedCustomerEntitlement;
 			})
 			.filter((e): e is FullAggregatedCustomerEntitlement => e !== null);
-
-		aggregatedCustomerPrices = entityAgg.aggregated_customer_prices ?? [];
 	}
 
 	return {
