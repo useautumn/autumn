@@ -43,6 +43,10 @@ export const ListCustomersResponseSchema = z.object({
 	total: z.number().int().meta({
 		description: "Total number of customers available",
 	}),
+	total_customer_count: z.number().int().meta({
+		description:
+			"Total number of customers available in the current organization and environment",
+	}),
 	limit: z.number().int().meta({
 		description: "Maximum number of customers returned",
 	}),
