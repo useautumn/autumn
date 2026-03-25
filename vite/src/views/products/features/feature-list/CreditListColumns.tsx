@@ -1,8 +1,8 @@
-import type { Feature } from "@autumn/shared";
-import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
+import type { Feature } from "@autumn/shared";
+import type { ColumnDef, Row } from "@tanstack/react-table";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 
 export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
@@ -43,13 +43,20 @@ export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
 		accessorKey: "features",
 		cell: ({ row }: { row: Row<Feature> }) => {
 			const creditSystem = row.original;
+			const modelMarkupEntries = creditSystem.model_markups
+				? Object.entries(creditSystem.model_markups)
+				: null;
 			const featureIds =
-				creditSystem.config?.schema
-					?.map(
-						(schema: { metered_feature_id: string }) =>
-							schema.metered_feature_id,
-					)
-					.join(", ") || "—";
+				modelMarkupEntries && modelMarkupEntries.length > 0
+					? modelMarkupEntries
+							.map(([key, value]) => value.humanModelName ?? key)
+							.join(", ")
+					: creditSystem.config?.schema
+							?.map(
+								(schema: { metered_feature_id: string }) =>
+									schema.metered_feature_id,
+							)
+							.join(", ") || "—";
 			return (
 				<div className="text-t2 truncate font-mono text-xs">{featureIds}</div>
 			);

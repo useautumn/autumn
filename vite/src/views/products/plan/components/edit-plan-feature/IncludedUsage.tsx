@@ -1,3 +1,13 @@
+import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
+import { Input } from "@/components/v2/inputs/Input";
+import {
+	InputGroup,
+	InputGroupInput,
+	InputGroupText,
+} from "@/components/v2/inputs/InputGroup";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
+import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import {
 	BillingInterval,
 	billingToItemInterval,
@@ -8,11 +18,6 @@ import {
 	isContUseItem,
 } from "@autumn/shared";
 import { InfinityIcon } from "@phosphor-icons/react";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
-import { Input } from "@/components/v2/inputs/Input";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { isFeaturePriceItem } from "@/utils/product/getItemType";
-import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { UsageReset } from "./UsageReset";
 
 export function IncludedUsage() {
@@ -24,6 +29,8 @@ export function IncludedUsage() {
 	const includedUsage = item.included_usage;
 
 	const isFeaturePrice = isFeaturePriceItem(item);
+	const feature = features.find((f) => f.id === item.feature_id);
+	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
 
 	// Helper function to get the display value for the input
 	const getInputValue = () => {
@@ -41,35 +48,71 @@ export function IncludedUsage() {
 			<div className="w-full h-auto flex items-end gap-2">
 				<div className="flex-1">
 					<div className="text-t3 text-sm block mb-2">
-						Quantity of&nbsp;
-						<span className="font-medium text-t1">
-							{getFeatureName({
-								feature: features.find((f) => f.id === item.feature_id),
-								plural: true,
-							})}{" "}
-						</span>
-						{!isFeaturePrice ? " that can be used" : " granted before billing"}
+						{isAiCreditSystem ? (
+							<>
+								USD budget{" "}
+								{!isFeaturePrice
+									? "allocated to this plan"
+									: "granted before billing"}
+							</>
+						) : (
+							<>
+								Quantity of&nbsp;
+								<span className="font-medium text-t1">
+									{getFeatureName({ feature, plural: true })}{" "}
+								</span>
+								{!isFeaturePrice
+									? " that can be used"
+									: " granted before billing"}
+							</>
+						)}
 					</div>
 					<div className="flex items-center gap-2">
-						<Input
-							key={`included-usage-${item.feature_id || item.price_id || "default"}`}
-							placeholder="eg, 100"
-							value={getInputValue()}
-							onChange={(e) => {
-								const value = e.target.value.trim();
+						{isAiCreditSystem ? (
+							// Couldn't find a disabled property but data-disabled is accounted for in CSS
+							<InputGroup data-disabled={includedUsage === Infinite}>
+								<InputGroupText>$</InputGroupText>
+								<InputGroupInput
+									key={`included-usage-${item.feature_id || item.price_id || "default"}`}
+									placeholder="eg. 10.00"
+									value={getInputValue()}
+									onChange={(e) => {
+										const value = e.target.value.trim();
 
-								if (value === "") {
-									setItem({ ...item, included_usage: null });
-								} else {
-									const numValue = value;
-									if (!Number.isNaN(numValue)) {
-										setItem({ ...item, included_usage: Number(numValue) });
+										if (value === "") {
+											setItem({ ...item, included_usage: null });
+										} else {
+											const numValue = Number(value);
+											if (!Number.isNaN(numValue)) {
+												setItem({ ...item, included_usage: numValue });
+											}
+										}
+									}}
+									disabled={includedUsage === Infinite}
+									type="number"
+								/>
+							</InputGroup>
+						) : (
+							<Input
+								key={`included-usage-${item.feature_id || item.price_id || "default"}`}
+								placeholder="eg, 100"
+								value={getInputValue()}
+								onChange={(e) => {
+									const value = e.target.value.trim();
+
+									if (value === "") {
+										setItem({ ...item, included_usage: null });
+									} else {
+										const numValue = Number(value);
+										if (!Number.isNaN(numValue)) {
+											setItem({ ...item, included_usage: numValue });
+										}
 									}
-								}
-							}}
-							disabled={includedUsage === Infinite}
-							type="number"
-						/>
+								}}
+								disabled={includedUsage === Infinite}
+								type="number"
+							/>
+						)}
 						<IconCheckbox
 							hide={isFeaturePrice}
 							icon={<InfinityIcon />}

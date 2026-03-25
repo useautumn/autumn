@@ -71,7 +71,7 @@ describe(`${chalk.yellowBright("credit-systems1: test /check on action that uses
 				required_balance: requiredActionUnits,
 			})) as unknown as CheckResponseV2;
 
-			const creditCost = getCreditCost({
+			const creditCost = await getCreditCost({
 				featureId: action,
 				creditSystem: creditFeature!,
 				amount: requiredActionUnits,
@@ -172,7 +172,7 @@ describe(`${chalk.yellowBright("credit-systems1: test /check on action that uses
 			required_balance: requiredAction1Units,
 		})) as unknown as CheckResponseV0;
 
-		const meteredCost = getCreditCost({
+		const meteredCost = await getCreditCost({
 			featureId: TestFeature.Action1,
 			creditSystem: creditFeature!,
 			amount: requiredAction1Units,
@@ -196,7 +196,7 @@ describe(`${chalk.yellowBright("credit-systems1: test /check on action that uses
 			required_balance: requiredAction2Units,
 		})) as unknown as CheckResponseV0;
 
-		const meteredCost = getCreditCost({
+		const meteredCost = await getCreditCost({
 			featureId: TestFeature.Action2,
 			creditSystem: creditFeature!,
 			amount: requiredAction2Units,

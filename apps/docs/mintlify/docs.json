@@ -128,6 +128,7 @@
 						"group": "Additional Resources",
 						"pages": [
 							"documentation/webhooks",
+							"documentation/external-providers/ai-sdk",
 							"documentation/external-providers/convex",
 							"documentation/external-providers/revenuecat",
 							"documentation/external-providers/vercel-marketplace"
@@ -199,6 +200,7 @@
 						"pages": [
 							"api-reference/core/check",
 							"api-reference/core/track",
+							"api-reference/balances/trackTokens",
 							"api-reference/balances/createBalance",
 							"api-reference/balances/updateBalance",
 							"api-reference/balances/deleteBalance",

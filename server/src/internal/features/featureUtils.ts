@@ -41,9 +41,13 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 	return newConfig as MeteredConfig;
 };
 
-export const validateCreditSystem = (config: CreditSystemConfig) => {
+export const validateCreditSystem = (
+	config: CreditSystemConfig,
+	{ isAiCreditSystem = false }: { isAiCreditSystem?: boolean } = {},
+) => {
 	const schema = config.schema;
-	if (!schema || schema.length === 0) {
+
+	if (!isAiCreditSystem && (!schema || schema.length === 0)) {
 		throw new RecaseError({
 			message: `At least one metered feature is required for credit system`,
 			code: ErrCode.InvalidFeature,
@@ -51,11 +55,14 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 		});
 	}
 
+	if (isAiCreditSystem) {
+		return { ...config, usage_type: FeatureUsageType.Single };
+	}
+
 	// Check if multiple of the same feature
 	const meteredFeatureIds = schema.map(
 		(schemaItem) => schemaItem.metered_feature_id,
 	);
-	// console.log("Metered feature ids:", meteredFeatureIds);
 	const uniqueMeteredFeatureIds = Array.from(new Set(meteredFeatureIds));
 	if (meteredFeatureIds.length !== uniqueMeteredFeatureIds.length) {
 		throw new RecaseError({

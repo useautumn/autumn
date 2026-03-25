@@ -72,6 +72,8 @@ export const apiFeatureToDbFeature = ({
 		config: newConfig,
 		archived: apiFeature.archived ?? originalFeature?.archived ?? false,
 		event_names: [],
+		model_markups: null,
+		is_ai_credit_system: false,
 	} satisfies Feature;
 };
 
@@ -150,6 +152,9 @@ export const featureV1ToDbFeature = ({
 		);
 	}
 
+	const modelMarkups =
+		apiFeature.model_markups ?? originalFeature?.model_markups ?? null;
+
 	return {
 		internal_id: originalFeature?.internal_id ?? "",
 		org_id: originalFeature?.org_id ?? "",
@@ -165,6 +170,8 @@ export const featureV1ToDbFeature = ({
 				? apiFeature.archived
 				: (originalFeature?.archived ?? false),
 		event_names: eventNames ?? [],
+		model_markups: modelMarkups,
+		is_ai_credit_system: modelMarkups != null,
 	} satisfies Feature;
 };
 
@@ -200,6 +207,7 @@ export const dbToApiFeatureV1 = ({
 				credit_cost: schema.credit_amount,
 			}),
 		),
+		model_markups: dbFeature.model_markups ?? undefined,
 		event_names: dbFeature.event_names,
 		archived: dbFeature.archived,
 

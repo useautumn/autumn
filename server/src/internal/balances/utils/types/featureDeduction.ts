@@ -4,8 +4,14 @@ export type FeatureDeduction = {
 	feature: Feature;
 	deduction: number;
 	targetBalance?: number;
-	lock?: LockParams;
 
+	tokenUsage?: {
+		modelName: string;
+		inputTokens: number;
+		outputTokens: number;
+	};
+
+	lock?: LockParams;
 	lockReceipt?: LockReceipt;
 	lockReceiptKey?: string;
 	unwindValue?: number;
