@@ -1,5 +1,6 @@
 import {
 	cusEntsToBalance,
+	cusEntsToUsage,
 	type Entity,
 	type FullCusEntWithFullCusProduct,
 	fullCustomerToCustomerEntitlements,
@@ -67,6 +68,10 @@ export function BalanceDeleteSheet() {
 		balance,
 		entityId,
 	});
+	const deletedUsage = cusEntsToUsage({
+		cusEnts: [balance],
+		entityId: entityId ?? undefined,
+	});
 	const balanceId = balance.external_id ?? null;
 
 	const selectedEntity =
@@ -85,7 +90,7 @@ export function BalanceDeleteSheet() {
 		withRollovers: true,
 	});
 	const canDeductFromOtherBalances =
-		otherRemainingBalance > 0 && remainingBalance > 0;
+		otherRemainingBalance > 0 && deletedUsage > 0;
 
 	const handleClose = () => {
 		setDeleteMode("keep");
@@ -145,9 +150,17 @@ export function BalanceDeleteSheet() {
 							) : (
 								"Deleting this balance"
 							)}
-							{" with "}
-							{numberWithCommas(remainingBalance)} remaining{" "}
-							{balance.entitlement.feature.name}.
+							{deletedUsage === 0 ? (
+								" has no usage to deduct from other balances."
+							) : (
+								<>
+									{" has "}
+									{numberWithCommas(remainingBalance)} remaining, but there are
+									no other balances with remaining{" "}
+									{balance.entitlement.feature.name} to deduct{" "}
+									{numberWithCommas(deletedUsage)} from.
+								</>
+							)}
 						</p>
 					</SheetSection>
 				)}
@@ -169,7 +182,8 @@ export function BalanceDeleteSheet() {
 									"Deleting this balance"
 								)}
 								{" with "}
-								{numberWithCommas(remainingBalance)} remaining{" "}
+								{numberWithCommas(remainingBalance)} remaining and{" "}
+								{numberWithCommas(deletedUsage)} already used{" "}
 								{balance.entitlement.feature.name}.
 							</>
 						}
@@ -187,9 +201,9 @@ export function BalanceDeleteSheet() {
 										Keep other balances unchanged
 									</div>
 									<div className="text-body-secondary leading-tight">
-										Delete this balance only. The remaining{" "}
-										{numberWithCommas(remainingBalance)} will not be deducted
-										elsewhere.
+										Delete this balance only. The{" "}
+										{numberWithCommas(deletedUsage)} already used will not be
+										deducted elsewhere.
 									</div>
 								</div>
 							</div>
@@ -206,8 +220,8 @@ export function BalanceDeleteSheet() {
 									</div>
 									<div className="text-body-secondary leading-tight">
 										Delete this balance and remove{" "}
-										{numberWithCommas(remainingBalance)} from the customer's
-										other balances for this feature.
+										{numberWithCommas(deletedUsage)} from the customer's other
+										balances for this feature.
 									</div>
 								</div>
 							</div>

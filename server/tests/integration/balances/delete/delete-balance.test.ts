@@ -179,10 +179,10 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2a: default delete does no
 
 // ═══════════════════════════════════════════════════════════════════
 // DELETE-BALANCE-2B: recalculate_balances deducts the deleted balance's
-// current remaining amount from the surviving balances for the feature.
+// used amount from the surviving balances for the feature.
 // ═══════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("delete-balance-2b: recalculate_balances deducts deleted remaining amount")}`, async () => {
+test.concurrent(`${chalk.yellowBright("delete-balance-2b: recalculate_balances deducts deleted usage amount")}`, async () => {
 	const { customerId, autumnV2 } = await initScenario({
 		customerId: "del-bal-2b",
 		setup: [s.customer({ testClock: false })],
@@ -224,12 +224,12 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2b: recalculate_balances d
 
 	expect(check.balance?.breakdown).toHaveLength(1);
 	expect(check.balance?.breakdown?.[0].id).toBe("balance-b");
-	expect(check.balance?.current_balance).toBe(140);
+	expect(check.balance?.current_balance).toBe(160);
 	expect(check.balance?.granted_balance).toBe(200);
-	expect(check.balance?.usage).toBe(60);
-	expect(check.balance?.breakdown?.[0].current_balance).toBe(140);
+	expect(check.balance?.usage).toBe(40);
+	expect(check.balance?.breakdown?.[0].current_balance).toBe(160);
 	expect(check.balance?.breakdown?.[0].granted_balance).toBe(200);
-	expect(check.balance?.breakdown?.[0].usage).toBe(60);
+	expect(check.balance?.breakdown?.[0].usage).toBe(40);
 
 	const checkDb = await autumnV2.check<CheckResponseV2>({
 		customer_id: customerId,
@@ -238,12 +238,12 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2b: recalculate_balances d
 	});
 	expect(checkDb.balance?.breakdown).toHaveLength(1);
 	expect(checkDb.balance?.breakdown?.[0].id).toBe("balance-b");
-	expect(checkDb.balance?.current_balance).toBe(140);
+	expect(checkDb.balance?.current_balance).toBe(160);
 	expect(checkDb.balance?.granted_balance).toBe(200);
-	expect(checkDb.balance?.usage).toBe(60);
-	expect(checkDb.balance?.breakdown?.[0].current_balance).toBe(140);
+	expect(checkDb.balance?.usage).toBe(40);
+	expect(checkDb.balance?.breakdown?.[0].current_balance).toBe(160);
 	expect(checkDb.balance?.breakdown?.[0].granted_balance).toBe(200);
-	expect(checkDb.balance?.breakdown?.[0].usage).toBe(60);
+	expect(checkDb.balance?.breakdown?.[0].usage).toBe(40);
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -286,11 +286,11 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2c: recalculate_balances r
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// DELETE-BALANCE-2D: non-positive deleted balances should not trigger
-// recalculation, otherwise surviving balances can be credited.
+// DELETE-BALANCE-2D: overused deleted balances should still transfer
+// their usage to surviving balances.
 // ═══════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("delete-balance-2d: recalculate_balances skips non-positive deleted balances")}`, async () => {
+test.concurrent(`${chalk.yellowBright("delete-balance-2d: recalculate_balances deducts deleted overage usage")}`, async () => {
 	const { customerId, autumnV2 } = await initScenario({
 		customerId: "del-bal-2d",
 		setup: [s.customer({ testClock: false })],
@@ -331,9 +331,9 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2d: recalculate_balances s
 	});
 	expect(check.balance?.breakdown).toHaveLength(1);
 	expect(check.balance?.breakdown?.[0].id).toBe("balance-b");
-	expect(check.balance?.current_balance).toBe(200);
+	expect(check.balance?.current_balance).toBe(70);
 	expect(check.balance?.granted_balance).toBe(200);
-	expect(check.balance?.usage).toBe(0);
+	expect(check.balance?.usage).toBe(130);
 
 	const checkDb = await autumnV2.check<CheckResponseV2>({
 		customer_id: customerId,
@@ -342,9 +342,9 @@ test.concurrent(`${chalk.yellowBright("delete-balance-2d: recalculate_balances s
 	});
 	expect(checkDb.balance?.breakdown).toHaveLength(1);
 	expect(checkDb.balance?.breakdown?.[0].id).toBe("balance-b");
-	expect(checkDb.balance?.current_balance).toBe(200);
+	expect(checkDb.balance?.current_balance).toBe(70);
 	expect(checkDb.balance?.granted_balance).toBe(200);
-	expect(checkDb.balance?.usage).toBe(0);
+	expect(checkDb.balance?.usage).toBe(130);
 });
 
 // ═══════════════════════════════════════════════════════════════════
