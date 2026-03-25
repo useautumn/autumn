@@ -54,6 +54,16 @@ export function applySpeakeasySettings({
 				},
 				"x-speakeasy-globals-hidden": true,
 			},
+			{
+				name: "fail-open",
+				in: "header",
+				required: false,
+				schema: {
+					type: "boolean",
+					default: true,
+				},
+				"x-speakeasy-globals-hidden": true,
+			},
 		],
 	};
 }
