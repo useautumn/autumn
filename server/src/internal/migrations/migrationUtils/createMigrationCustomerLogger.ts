@@ -1,5 +1,6 @@
 import { AuthType } from "@autumn/shared";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { getRedisUrlForCustomer } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
 
@@ -21,6 +22,7 @@ export const createMigrationCustomerLogger = ({
 			env: env,
 			auth_type: AuthType.Worker,
 			api_version: ctx.apiVersion?.semver,
+			redis_url: getRedisUrlForCustomer({ org: ctx.org, customerId }),
 		},
 	});
 };

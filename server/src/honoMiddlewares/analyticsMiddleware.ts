@@ -1,74 +1,12 @@
 import chalk from "chalk";
 import type { Context, Next } from "hono";
+import { getRedisUrlForCustomer } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
 	addAppContextToLogs,
 	addExtrasToLogs,
 } from "@/utils/logging/addContextToLogs";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
-
-export const parseCustomerIdFromUrl = ({
-	url,
-}: {
-	url: string;
-}): string | undefined => {
-	if (!url.startsWith("/v1")) {
-		return undefined;
-	}
-
-	const cleanUrl = url.split("?")[0].replace(/^\/+|\/+$/g, "");
-	const segments = cleanUrl.split("/");
-	const customersIndex = segments.indexOf("customers");
-
-	if (customersIndex !== -1 && segments[customersIndex + 1]) {
-		return segments[customersIndex + 1];
-	}
-
-	return undefined;
-};
-
-const extractCustomerIdFromBody = ({
-	body,
-	path,
-	method,
-}: {
-	body: Record<string, unknown>;
-	path: string;
-	method: string;
-}): string | undefined => {
-	const isCreateCustomerPath =
-		(path.startsWith("/v1/customers") && method === "POST" && !path.includes("customers.get_or_create"));
-	return (isCreateCustomerPath ? body?.id : body?.customer_id) as
-		| string
-		| undefined;
-};
-
-export const parseCustomerIdFromBody = async (
-	c: Context<HonoEnv>,
-): Promise<
-	{ customerId: string | undefined; sendEvent: boolean | undefined } | undefined
-> => {
-	const method = c.req.method;
-	if (method === "POST" || method === "PUT" || method === "PATCH") {
-		try {
-			const body = await c.req.json();
-
-			return {
-				customerId: extractCustomerIdFromBody({
-					body,
-					path: c.req.path,
-					method,
-				}),
-				sendEvent: body?.send_event,
-			};
-		} catch (_error) {
-			// Body might not be JSON, that's okay
-			return undefined;
-		}
-	}
-
-	return undefined;
-};
 
 /**
  * Logs response details asynchronously without blocking
@@ -144,14 +82,8 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 	const skipUrls = ["/v1/customers/all/search"];
 
-	let { customerId } = (await parseCustomerIdFromBody(c)) || {};
-	if (!customerId) {
-		customerId = parseCustomerIdFromUrl({ url: c.req.path });
-	}
+	const customerId = ctx.customerId;
 
-	ctx.customerId = customerId;
-
-	// Update logger with enriched context
 	ctx.logger = addAppContextToLogs({
 		logger: ctx.logger,
 		appContext: {
@@ -163,6 +95,7 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			user_id: ctx.userId || undefined,
 			user_email: ctx.user?.email || undefined,
 			api_version: ctx.apiVersion?.semver,
+			redis_url: getRedisUrlForCustomer({ org: ctx.org, customerId }),
 		},
 	});
 

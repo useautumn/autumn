@@ -95,12 +95,15 @@ local has_pathidx = redis.call('EXISTS', pathidx_key) == 1
 -- Only decode full customer if path index is NOT available (fallback)
 local full_customer = nil
 if not has_pathidx then
-  local full_customer_json = redis.call('JSON.GET', cache_key, '.')
+  local full_customer_json = redis.call('JSON.GET', cache_key, '$')
   if not full_customer_json then
     return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
   end
 
   full_customer = cjson.decode(full_customer_json)
+  if type(full_customer) == 'table' and full_customer[1] ~= nil then
+    full_customer = full_customer[1]
+  end
 
   if not full_customer.customer_products then
     return cjson.encode({

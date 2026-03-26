@@ -21,7 +21,7 @@ import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext";
-import { redis } from "@/external/redis/initRedis.js";
+
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -291,12 +291,14 @@ export class CusEntService {
 			},
 		];
 
-		await tryRedisWrite(() =>
-			redis.updateCustomerEntitlements(
-				cacheKey,
-				JSON.stringify({ updates: cacheUpdates }),
-			),
-		);
+		if (ctx.redis) {
+			await tryRedisWrite(() =>
+				ctx.redis!.updateCustomerEntitlements(
+					cacheKey,
+					JSON.stringify({ updates: cacheUpdates }),
+				),
+			);
+		}
 	}
 
 	static async batchUpdate({

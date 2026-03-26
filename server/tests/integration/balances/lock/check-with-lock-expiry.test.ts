@@ -10,7 +10,6 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { addSeconds } from "date-fns";
-import { redis } from "@/external/redis/initRedis";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey";
 import { timeout } from "@/utils/genUtils";
@@ -206,7 +205,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-4: no expires_at sets T
 		lockKey: Bun.hash(customerId).toString(),
 	});
 
-	const expireAt = await redis.expiretime(lockReceiptKey);
+	const expireAt = await ctx.redis.expiretime(lockReceiptKey);
 	const expectedTtl = beforeCheck + 24 * 60 * 60;
 
 	// TTL should be within 5s of now + 1 day
@@ -246,7 +245,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-5: expires_at set, TTL 
 		lockKey: Bun.hash(customerId).toString(),
 	});
 
-	const expireAt = await redis.expiretime(lockReceiptKey);
+	const expireAt = await ctx.redis.expiretime(lockReceiptKey);
 	const expectedTtl = Math.ceil(expiresAt / 1000) + 60 * 60;
 
 	// TTL should be within 5s of expires_at + 1 hour

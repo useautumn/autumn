@@ -1,19 +1,20 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ApiCustomer, ApiVersion } from "@autumn/shared";
+import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
+import { resolveTestRedis } from "@tests/utils/testInitUtils/resolveTestRedis.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import { executeRedisDeduction } from "@/internal/balances/utils/deduction/executeRedisDeduction.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
 import { timeout } from "../../../utils/genUtils.js";
 
 const pro = constructProduct({
@@ -33,6 +34,7 @@ describe(`${chalk.yellowBright("track-race-condition3: track runs when credits a
 	const autumnV2 = new AutumnInt({
 		version: ApiVersion.V2_0,
 	});
+	const ctx = resolveTestRedis({ ctx: defaultCtx, customerId });
 
 	beforeAll(async () => {
 		await initCustomerV3({

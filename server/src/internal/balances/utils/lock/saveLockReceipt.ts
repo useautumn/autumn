@@ -1,15 +1,18 @@
 import { ErrCode, InternalError, RecaseError } from "@autumn/shared";
-import { currentRegion, redis } from "@/external/redis/initRedis.js";
+import type { Redis } from "ioredis";
+import { currentRegion } from "@/external/redis/initRedis.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
 export const saveLockReceipt = async ({
+	redisInstance,
 	lock,
 	customerId,
 	featureId,
 	entityId,
 	items,
 }: {
+	redisInstance: Redis;
 	lock: {
 		lock_id?: string;
 		hashed_key?: string;
@@ -23,8 +26,7 @@ export const saveLockReceipt = async ({
 	entityId?: string;
 	items: MutationLogItem[];
 }) => {
-	// Check if a lock receipt already exists before writing
-	const existing = await redis.call("EXISTS", lock.redis_receipt_key);
+	const existing = await redisInstance.call("EXISTS", lock.redis_receipt_key);
 	if (existing === 1) {
 		throw new RecaseError({
 			message: "A lock with this ID already exists",
@@ -35,7 +37,7 @@ export const saveLockReceipt = async ({
 
 	const result = await tryRedisWrite(
 		() =>
-			redis.call(
+			redisInstance.call(
 				"JSON.SET",
 				lock.redis_receipt_key,
 				"$",
@@ -52,10 +54,11 @@ export const saveLockReceipt = async ({
 					items,
 				}),
 			) as Promise<"OK" | null>,
+		redisInstance,
 	);
 
 	if (result === "OK") {
-		await redis.expireat(lock.redis_receipt_key, lock.ttl_at);
+		await redisInstance.expireat(lock.redis_receipt_key, lock.ttl_at);
 		return;
 	}
 

@@ -208,6 +208,7 @@ export const executePostgresDeduction = async ({
 
 				if (preparedLock?.enabled) {
 					await saveLockReceipt({
+						redisInstance: ctx.redis,
 						lock: preparedLock,
 						customerId: fullCustomer.id || customerId,
 						featureId: feature.id,

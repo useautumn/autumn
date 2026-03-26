@@ -43,12 +43,15 @@ if key_exists == 0 then
 end
 
 -- Read the full customer structure for entitlement path lookups
-local full_customer_json = redis.call('JSON.GET', cache_key, '.')
+local full_customer_json = redis.call('JSON.GET', cache_key, '$')
 if not full_customer_json then
   return cjson.encode({ applied = {}, skipped = {}, cache_miss = true })
 end
 
 local full_customer = cjson.decode(full_customer_json)
+if type(full_customer) == 'table' and full_customer[1] ~= nil then
+  full_customer = full_customer[1]
+end
 
 local applied = {}
 local skipped = {}

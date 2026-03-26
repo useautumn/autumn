@@ -1,4 +1,5 @@
 import { Redis } from "ioredis";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import {
 	BATCH_DELETE_CUSTOMERS_SCRIPT,
 	DELETE_CUSTOMER_SCRIPT,
@@ -111,8 +112,8 @@ export const warmupRegionalRedis = async (): Promise<void> => {
 	console.log(`[Redis] Warmup complete`);
 };
 
-/** Configure a Redis instance with custom commands */
-const configureRedisInstance = (redisInstance: Redis): Redis => {
+/** Configure a Redis instance with all custom Lua commands */
+export const configureRedisInstance = (redisInstance: Redis): Redis => {
 	const batchDeductionScript = getBatchDeductionScript();
 
 	redisInstance.defineCommand("batchDeduction", {
@@ -235,10 +236,6 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: CLAIM_LOCK_RECEIPT_SCRIPT,
 	});
 
-	redisInstance.on("error", (error) => {
-		console.error(`[Redis] Connection error:`, error.message);
-	});
-
 	return redisInstance;
 };
 
@@ -257,11 +254,55 @@ const createRedisConnection = ({
 				: undefined,
 		family: 4,
 		keepAlive: 10000,
+		enableOfflineQueue: true,
+		maxRetriesPerRequest: null,
+		commandTimeout: 5000,
+		retryStrategy(times) {
+			return Math.min(times * 200, 5000);
+		},
 	});
 	// instrumentRedis must run first so its defineCommand patch
 	// is in place when configureRedisInstance registers Lua commands.
 	instrumentRedis({ redis: instance, region });
 	configureRedisInstance(instance);
+
+	instance.on("error", (error) => {
+		logger.error(`[Redis] ${region}: connection error`, {
+			type: "redis_error",
+			region,
+			errorMessage: error.message,
+		});
+	});
+
+	instance.on("close", () => {
+		logger.warn(`[Redis] ${region}: connection closed`, {
+			type: "redis_close",
+			region,
+		});
+	});
+
+	instance.on("reconnecting", (delayMs: number) => {
+		logger.warn(`[Redis] ${region}: reconnecting in ${delayMs}ms`, {
+			type: "redis_reconnecting",
+			region,
+			delayMs,
+		});
+	});
+
+	instance.on("end", () => {
+		logger.error(`[Redis] ${region}: connection ended (no more reconnects)`, {
+			type: "redis_end",
+			region,
+		});
+	});
+
+	instance.on("ready", () => {
+		logger.info(`[Redis] ${region}: ready`, {
+			type: "redis_ready",
+			region,
+		});
+	});
+
 	return instance;
 };
 

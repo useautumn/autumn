@@ -1,6 +1,6 @@
 import type { InsertCustomerProduct } from "@autumn/shared";
 import type { RepoContext } from "@/db/repoContext.js";
-import { redis } from "@/external/redis/initRedis.js";
+
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
@@ -27,14 +27,14 @@ export const updateCachedCustomerProduct = async ({
 	updates: Partial<InsertCustomerProduct>;
 }): Promise<UpdateCachedCustomerProductResult | null> => {
 	try {
-		if (!customerId) {
+		if (!customerId || !ctx.redis) {
 			ctx.logger.warn(
-				`[updateCachedCustomerProduct] Skipping cache update for cusProduct ${cusProductId} because customerId is missing`,
+				`[updateCachedCustomerProduct] Skipping cache update for cusProduct ${cusProductId} because customerId or redis is missing`,
 			);
 			return null;
 		}
 
-		const { org, env, logger } = ctx;
+		const { org, env, logger, redis } = ctx;
 
 		const cacheKey = buildFullCustomerCacheKey({
 			orgId: org.id,
@@ -43,7 +43,7 @@ export const updateCachedCustomerProduct = async ({
 		});
 
 		const result = await tryRedisWrite(async () => {
-			return await redis.updateCustomerProduct(
+			return await redis!.updateCustomerProduct(
 				cacheKey,
 				JSON.stringify({
 					cus_product_id: cusProductId,

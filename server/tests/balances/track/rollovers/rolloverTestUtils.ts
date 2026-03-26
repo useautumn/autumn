@@ -39,6 +39,7 @@ export const resetAndGetCusEnt = async ({
 
 	const updatedCusEnt = await resetCustomerEntitlement({
 		ctx,
+		orgRedisMap: new Map([[ctx.org.id, ctx.org]]),
 		cusEnt: resetCusEnt,
 		updatedCusEnts: [],
 	});

@@ -1,11 +1,13 @@
 import {
 	type CustomerEntitlement,
 	notNullish,
+	type Organization,
 	type ResetCusEnt,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { format } from "date-fns";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import type { CronContext } from "../utils/CronContext";
 import { clearCusEntsFromCache } from "./clearCusEntsFromCache";
 import { resetCustomerEntitlement } from "./resetCustomerEntitlement";
@@ -18,6 +20,11 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 	const startTime = Date.now();
 
 	try {
+		const orgsWithRedis = await OrgService.listWithRedisConfig({ db });
+		const orgRedisMap = new Map<string, Organization>(
+			orgsWithRedis.map((org) => [org.id, org]),
+		);
+
 		let iteration = 0;
 
 		while (iteration < maxIterations && Date.now() - startTime < timeoutMs) {
@@ -51,6 +58,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 							ctx,
 							cusEnt: cusEnt,
 							updatedCusEnts,
+							orgRedisMap,
 						}),
 					);
 				}

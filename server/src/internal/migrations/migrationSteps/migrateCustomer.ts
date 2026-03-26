@@ -5,6 +5,7 @@ import {
 	type MigrationJob,
 	ProcessorType,
 } from "@autumn/shared";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -34,7 +35,12 @@ export const migrateCustomer = async ({
 		customerId,
 	});
 
-	const customerCtx: AutumnContext = { ...ctx, logger: customerLogger };
+	const customerCtx: AutumnContext = {
+		...ctx,
+		logger: customerLogger,
+		customerId,
+		redis: resolveRedisForCustomer({ org: ctx.org, customerId }),
+	};
 
 	try {
 		const fullCus = await CusService.getFull({

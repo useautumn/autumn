@@ -45,6 +45,7 @@ export const revenuecatSeederMiddleware = async (
 			env: ctx.env,
 			auth_type: AuthType.Revenuecat,
 			api_version: ctx.apiVersion?.semver,
+			redis_url: ctx.org?.redis_config?.url,
 		},
 	});
 

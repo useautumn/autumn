@@ -1,6 +1,6 @@
 import type { InsertCustomerEntitlement } from "@autumn/shared";
 import type { RepoContext } from "@/db/repoContext.js";
-import { redis } from "@/external/redis/initRedis.js";
+
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { CusEntService } from "../CusEntitlementService.js";
@@ -51,10 +51,12 @@ export const updateCusEntDbAndCache = async ({
 		},
 	];
 
-	await tryRedisWrite(() =>
-		redis.updateCustomerEntitlements(
-			cacheKey,
-			JSON.stringify({ updates: cacheUpdates }),
-		),
-	);
+	if (ctx.redis) {
+		await tryRedisWrite(() =>
+			ctx.redis!.updateCustomerEntitlements(
+				cacheKey,
+				JSON.stringify({ updates: cacheUpdates }),
+			),
+		);
+	}
 };

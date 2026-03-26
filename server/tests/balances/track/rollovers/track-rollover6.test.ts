@@ -6,7 +6,8 @@ import {
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
+import { resolveTestRedis } from "@tests/utils/testInitUtils/resolveTestRedis.js";
 import chalk from "chalk";
 import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -60,6 +61,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for upgrade`)}`, 
 	let customer: Customer;
 	let stripeCli: Stripe;
 	const curUnix = Date.now();
+	const ctx = resolveTestRedis({ ctx: defaultCtx, customerId });
 
 	beforeAll(async () => {
 		stripeCli = ctx.stripeCli;

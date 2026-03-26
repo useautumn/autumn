@@ -1,5 +1,5 @@
 import type { Entity } from "@autumn/shared";
-import { redis } from "@/external/redis/initRedis.js";
+
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullCustomerCacheKey } from "./fullCustomerCacheConfig.js";
@@ -42,7 +42,7 @@ export const upsertEntityInCache = async ({
 		const entityJson = JSON.stringify(entity);
 
 		const result = await tryRedisWrite(async () => {
-			return await redis.appendEntityToCustomer(cacheKey, entityJson);
+			return await ctx.redis.appendEntityToCustomer(cacheKey, entityJson);
 		});
 
 		if (result === null) {

@@ -19,12 +19,15 @@ if not cus_ent_id or not delta then
 end
 
 -- Read the full customer to find the entitlement indices
-local raw = redis.call('JSON.GET', cache_key, '.')
+local raw = redis.call('JSON.GET', cache_key, '$')
 if not raw then
   return cjson.encode({ ok = false, error = "cache_miss" })
 end
 
 local full_customer = cjson.decode(raw)
+if type(full_customer) == 'table' and full_customer[1] ~= nil then
+  full_customer = full_customer[1]
+end
 local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(full_customer, cus_ent_id)
 
 if not cus_ent then

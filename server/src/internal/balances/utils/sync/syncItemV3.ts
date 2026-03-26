@@ -7,7 +7,7 @@ import {
 	tryCatch,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import { getRegionalRedis } from "@/external/redis/initRedis.js";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getCachedFullCustomer.js";
@@ -199,7 +199,11 @@ export const syncItemV3 = async ({
 	const { customerId, region, cusEntIds, rolloverIds } = payload;
 	const { db, logger } = ctx;
 
-	const redisInstance = region ? getRegionalRedis(region) : undefined;
+	const redisInstance = resolveRedisForCustomer({
+		org: ctx.org,
+		customerId,
+		region,
+	});
 
 	const fullCustomer = await getCachedFullCustomer({
 		ctx,

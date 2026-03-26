@@ -7,6 +7,7 @@ dotenv.config();
 import { AppEnv } from "@autumn/shared";
 
 import chalk from "chalk";
+import { Redis } from "ioredis";
 import { redis } from "@/external/redis/initRedis.js";
 import { clearOrg } from "./utils/setup/clearOrg.js";
 import { setupOrg } from "./utils/setup/setupOrg.js";
@@ -47,6 +48,28 @@ export const clearMasterOrg = async () => {
 					"\n⚠️  Skipping redis flush (regional Redis URL detected).\n",
 				),
 			);
+
+		const testOrgRedisUrl = process.env.TEST_ORG_REDIS_URL;
+		if (testOrgRedisUrl) {
+			const testOrgRedis = new Redis(testOrgRedisUrl, {
+				family: 4,
+				lazyConnect: true,
+			});
+			try {
+				await testOrgRedis.connect();
+				await testOrgRedis.flushall();
+				console.log(
+					chalk.green("✅ Test org Redis flushed (TEST_ORG_REDIS_URL)"),
+				);
+			} catch (error) {
+				console.warn(
+					chalk.yellow(`⚠️  Failed to flush test org Redis: ${error}`),
+				);
+			} finally {
+				testOrgRedis.disconnect();
+			}
+		}
+
 		console.log(chalk.green("\n✅ Master org setup complete!\n"));
 	} catch (error) {
 		console.error(chalk.red("\n❌ Error:"), error);

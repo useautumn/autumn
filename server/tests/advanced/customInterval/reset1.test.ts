@@ -9,7 +9,8 @@ import {
 } from "@autumn/shared";
 import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
+import { resolveTestRedis } from "@tests/utils/testInitUtils/resolveTestRedis.js";
 import chalk from "chalk";
 import { addDays, addMonths } from "date-fns";
 import type Stripe from "stripe";
@@ -51,6 +52,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing custom reset intervals`)}`,
 	let customer: Customer;
 	let stripeCli: Stripe;
 	const curUnix = new Date().getTime();
+	const ctx = resolveTestRedis({ ctx: defaultCtx, customerId });
 
 	beforeAll(async () => {
 		db = ctx.db;

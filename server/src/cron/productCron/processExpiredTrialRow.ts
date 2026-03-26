@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { customerProductToDefaultProduct } from "@utils/cusProductUtils/convertCusProduct/customerProductToDefaultProduct";
 import type { InferSelectModel } from "drizzle-orm";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
@@ -23,6 +24,15 @@ export const processExpiredTrialRow = async ({
 	customer: InferSelectModel<typeof customers>;
 	defaultProducts: FullProduct[];
 }) => {
+	// Re-resolve Redis for this specific customer (the shared ctx from groupByOrgEnv
+	// doesn't have a customerId, so partial migrations fall back to master)
+	if (customer.id) {
+		ctx.redis = resolveRedisForCustomer({
+			org: ctx.org,
+			customerId: customer.id,
+		});
+	}
+
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customer.internal_id,

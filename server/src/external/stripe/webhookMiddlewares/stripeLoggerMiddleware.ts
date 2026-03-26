@@ -1,6 +1,7 @@
 import { type AppEnv, AuthType } from "@autumn/shared";
 import chalk from "chalk";
 import type { Context, Next } from "hono";
+import { getRedisUrlForCustomer } from "@/external/redis/customerRedisRouting.js";
 import {
 	addAppContextToLogs,
 	addStripeEventToLogs,
@@ -54,6 +55,7 @@ export const stripeLoggerMiddleware = async (
 			env: env as AppEnv,
 			customer_id: fullCustomer?.id || undefined,
 			api_version: ctx.apiVersion?.semver,
+			redis_url: getRedisUrlForCustomer({ org: ctx.org, customerId: ctx.customerId }),
 		},
 	});
 

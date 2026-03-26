@@ -107,13 +107,7 @@ export const handleDeleteEntity = createRoute({
 				}
 
 				await CusEntService.update({
-					ctx: {
-						db,
-						logger,
-						org,
-						env,
-						customerId: customer_id,
-					},
+					ctx,
 					id: linkedCusEnt.id,
 					updates: {
 						entities: newEntities,
@@ -123,13 +117,7 @@ export const handleDeleteEntity = createRoute({
 
 			if (!replaceable) {
 				await CusEntService.increment({
-					ctx: {
-						db,
-						logger,
-						org,
-						env,
-						customerId: customer_id,
-					},
+					ctx,
 					id: mainCusEnt.id,
 					amount: 1,
 				});

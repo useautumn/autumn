@@ -1,5 +1,5 @@
 import type { RepoContext } from "@/db/repoContext.js";
-import { redis } from "@/external/redis/initRedis.js";
+
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
@@ -25,7 +25,8 @@ export const incrementCachedCusEntBalance = async ({
 	delta: number;
 }): Promise<IncrementCachedCusEntBalanceResult | null> => {
 	try {
-		const { org, env, logger } = ctx;
+		const { org, env, logger, redis } = ctx;
+		if (!redis) return null;
 
 		const cacheKey = buildFullCustomerCacheKey({
 			orgId: org.id,

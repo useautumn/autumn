@@ -1,3 +1,4 @@
+import { getRedisUrlForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
 
 const handleResFinish = (req: any, res: any) => {
@@ -65,6 +66,7 @@ export const analyticsMiddleware = async (req: any, res: any, next: any) => {
 			user_id: req.userId || null,
 			user_email: req.user?.email || null,
 			api_version: req.apiVersion?.semver,
+			redis_url: getRedisUrlForCustomer({ org: req.org, customerId }),
 		},
 	});
 

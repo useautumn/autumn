@@ -8,11 +8,10 @@ import {
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type { Stripe } from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCustomer } from "@/external/stripe/customers";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService.js";
-
 import type { TestContext } from "../../../tests/utils/testInitUtils/createTestContext";
 import { logger } from "../logtail/logtailUtils";
 
@@ -120,17 +119,13 @@ export const getCusPaymentMethod = async ({
 
 // 2. Create a payment method and attach to customer
 export const attachPmToCus = async ({
-	db,
+	ctx,
 	customer,
-	org,
-	env,
 	willFail = false,
 	testClockId,
 }: {
-	db: DrizzleCli;
+	ctx: AutumnContext;
 	customer: Customer;
-	org: Organization;
-	env: AppEnv;
 	willFail?: boolean;
 	testClockId?: string;
 }) => {
@@ -139,16 +134,17 @@ export const attachPmToCus = async ({
 	let stripeCusId = customer.processor?.id;
 	if (!stripeCusId) {
 		const stripeCustomer = await createStripeCustomer({
-			ctx: { org, env, db } as any,
+			ctx,
 			customer,
 			options: { testClockId },
 		});
 
 		const repoContext = {
-			db,
-			org,
-			env,
+			db: ctx.db,
+			org: ctx.org,
+			env: ctx.env,
 			logger: logger,
+			redis: ctx.redis,
 		};
 
 		await CusService.update({
@@ -169,7 +165,7 @@ export const attachPmToCus = async ({
 		};
 	}
 
-	const stripeCli = createStripeCli({ org, env });
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	try {
 		const token = willFail ? "tok_chargeCustomerFail" : "tok_visa";

@@ -1,10 +1,6 @@
 import crypto from "node:crypto";
 import type { AppEnv } from "@autumn/shared";
-import {
-	getConfiguredRegions,
-	getRegionalRedis,
-	redis,
-} from "@/external/redis/initRedis";
+import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
 
 const PRODUCTS_CACHE_PREFIX = "products_full";
 
@@ -60,7 +56,9 @@ export const buildProductsCacheKey = ({
 /** All possible archived query param values that can be cached */
 const ARCHIVED_VARIANTS = [undefined, false, true] as const;
 
-/** Invalidates all products cache entries for an org/env across ALL regions */
+/** Invalidates all products cache entries for an org/env.
+ *  Products are cached on master Redis via CacheManager, NOT on per-org Redis.
+ */
 export const invalidateProductsCache = async ({
 	orgId,
 	env,
@@ -68,9 +66,6 @@ export const invalidateProductsCache = async ({
 	orgId: string;
 	env: AppEnv;
 }): Promise<void> => {
-	if (redis.status !== "ready") return;
-
-	// Build all possible cache keys (deterministic based on archived param variants)
 	const keysToDelete = ARCHIVED_VARIANTS.map((archived) =>
 		buildProductsCacheKey({
 			orgId,
@@ -79,32 +74,5 @@ export const invalidateProductsCache = async ({
 		}),
 	);
 
-	const regions = getConfiguredRegions();
-
-	// Delete from all regions in parallel
-	const deletePromises = regions.map(async (region) => {
-		try {
-			const regionalRedis = getRegionalRedis(region);
-
-			if (regionalRedis.status !== "ready") {
-				console.warn(`[invalidateProductsCache] ${region}: not_ready`);
-				return { region, deleted: 0 };
-			}
-
-			const deleted = await regionalRedis.del(...keysToDelete);
-
-			console.info(
-				`[invalidateProductsCache] ${region}: deleted ${deleted} keys, org: ${orgId}, env: ${env}`,
-			);
-
-			return { region, deleted };
-		} catch (error) {
-			console.error(
-				`[invalidateProductsCache] ${region}: error, org: ${orgId}, env: ${env}, error: ${error}`,
-			);
-			return { region, deleted: 0 };
-		}
-	});
-
-	await Promise.all(deletePromises);
+	await Promise.all(keysToDelete.map((key) => CacheManager.del(key)));
 };

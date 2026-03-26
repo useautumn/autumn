@@ -1,4 +1,3 @@
-import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { workflows } from "@/queue/workflows.js";
 import { tryRedisNx, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -28,7 +27,7 @@ export const clearAutoTopupPendingKey = async ({
 	featureId: string;
 }) => {
 	const pendingKey = buildAutoTopupPendingKey({ ctx, customerId, featureId });
-	await tryRedisWrite(() => redis.del(pendingKey));
+	await tryRedisWrite(() => ctx.redis.del(pendingKey), ctx.redis);
 };
 
 export const enqueueAutoTopupWithBurstSuppression = async ({
@@ -45,7 +44,14 @@ export const enqueueAutoTopupWithBurstSuppression = async ({
 
 	return await tryRedisNx({
 		operation: () =>
-			redis.set(pendingKey, "1", "EX", AUTO_TOPUP_PENDING_TTL_SECONDS, "NX"),
+			ctx.redis.set(
+				pendingKey,
+				"1",
+				"EX",
+				AUTO_TOPUP_PENDING_TTL_SECONDS,
+				"NX",
+			),
+		redisInstance: ctx.redis,
 
 		onSuccess: async () => {
 			await workflows.triggerAutoTopUp({

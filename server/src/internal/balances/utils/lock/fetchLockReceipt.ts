@@ -1,5 +1,6 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
-import { redis } from "@/external/redis/initRedis.js";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
+import { getOrgRedis } from "@/external/redis/orgRedisPool.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
@@ -50,9 +51,26 @@ export const fetchLockReceipt = async ({
 		lockKey: hashedKey,
 	});
 
-	const rawReceipt = await tryRedisRead(
-		() => redis.call("JSON.GET", lockReceiptKey, "$") as Promise<string | null>,
-	);
+	let rawReceipt: string | null = null;
+
+	if (ctx.org.redis_config) {
+		const orgRedis = getOrgRedis({ org: ctx.org });
+		rawReceipt = await tryRedisRead(
+			() =>
+				orgRedis.call("JSON.GET", lockReceiptKey, "$") as Promise<
+					string | null
+				>,
+		);
+	}
+
+	if (!rawReceipt) {
+		rawReceipt = await tryRedisRead(
+			() =>
+				ctx.redis.call("JSON.GET", lockReceiptKey, "$") as Promise<
+					string | null
+				>,
+		);
+	}
 
 	if (!rawReceipt) {
 		throw new RecaseError({
@@ -87,6 +105,14 @@ export const fetchLockReceipt = async ({
 		items: receipt.items,
 		lockId,
 	});
+
+	if (!ctx.customerId && receipt.customer_id) {
+		ctx.customerId = receipt.customer_id;
+		ctx.redis = resolveRedisForCustomer({
+			org: ctx.org,
+			customerId: receipt.customer_id,
+		});
+	}
 
 	return {
 		receipt,

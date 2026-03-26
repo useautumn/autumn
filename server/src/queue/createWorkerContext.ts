@@ -2,6 +2,7 @@ import { type AppEnv, AuthType, createdAtToVersion } from "@autumn/shared";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { DrizzleCli } from "../db/initDrizzle.js";
 import type { Logger } from "../external/logtail/logtailUtils.js";
+import { getRedisUrlForCustomer, resolveRedisForCustomer } from "../external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "../honoUtils/HonoEnv.js";
 import { OrgService } from "../internal/orgs/OrgService.js";
 import { generateId } from "../utils/genUtils.js";
@@ -47,6 +48,7 @@ export const createWorkerContext = async ({
 			env: env,
 			auth_type: AuthType.Worker,
 			api_version: apiVersion.semver,
+			redis_url: getRedisUrlForCustomer({ org, customerId }),
 		},
 	});
 
@@ -68,6 +70,7 @@ export const createWorkerContext = async ({
 		expand: [],
 		skipCache: true,
 		extraLogs: {},
+		redis: resolveRedisForCustomer({ org, customerId }),
 	};
 
 	return ctx;

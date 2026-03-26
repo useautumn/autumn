@@ -193,6 +193,12 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 export const initWorkers = async () => {
 	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
 	await warmupRegionalRedis();
+	const { preWarmOrgRedisConnections } = await import(
+		"@/external/redis/orgRedisPool.js"
+	);
+	preWarmOrgRedisConnections({ db }).catch((error) =>
+		console.error("[OrgRedis] BullMQ worker pre-warm failed:", error),
+	);
 
 	const workers = [];
 
