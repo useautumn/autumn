@@ -31,6 +31,7 @@ export const handleExternalAggregateEvents = createRoute({
 			range,
 			bin_size,
 			custom_range,
+			max_groups,
 		} = c.req.valid("json");
 
 		console.log("handleAggregateEvents", {
@@ -85,6 +86,7 @@ export const handleExternalAggregateEvents = createRoute({
 					bin_size: bin_size ?? "day",
 					custom_range,
 					enforceGroupLimit: true,
+					max_groups,
 				},
 			}),
 			eventActions.getCountAndSum({
