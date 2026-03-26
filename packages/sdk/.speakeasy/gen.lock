@@ -8,9 +8,9 @@ management:
   releaseVersion: 0.10.17
   configChecksum: c6b2bd1231da8dc3af5be7430f3cfbac
 persistentEdits:
-  generation_id: d3f7f839-578c-44c5-8431-837eb6dbb093
-  pristine_commit_hash: 7da5a42ce21251494f9bd33debee37fc12bc0a84
-  pristine_tree_hash: ed5ed78779031856781e2ddc6affb6881d13d270
+  generation_id: 35a71dbb-8f28-4430-b0d4-7616330c99be
+  pristine_commit_hash: ab7b376580c16dc39d6888568023f63daedbf421
+  pristine_tree_hash: e3b67520290188188b51b23f4b2ff0f34ae9ed6d
 features:
   typescript:
     additionalDependencies: 0.1.0
