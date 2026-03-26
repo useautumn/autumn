@@ -71,13 +71,14 @@
 						]
 					},
 					{
-						"group": "Getting Started",
-						"pages": [
-							"documentation/getting-started/setup",
-							"documentation/getting-started/gating",
-							"documentation/getting-started/display-billing"
-						]
-					},
+					"group": "Getting Started",
+					"pages": [
+						"documentation/getting-started/setup",
+						"documentation/getting-started/gating",
+						"documentation/getting-started/display-billing",
+						"documentation/getting-started/deploy"
+					]
+				},
 					{
 						"group": "Configure Pricing",
 						"pages": [
