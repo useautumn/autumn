@@ -89,6 +89,7 @@ export const runOneOffCleanup = async ({ ctx }: { ctx: CronContext }) => {
 		if (customersToInvalidate.length > 0) {
 			await batchDeleteCachedFullCustomers({
 				customers: customersToInvalidate,
+				logger,
 			});
 		}
 

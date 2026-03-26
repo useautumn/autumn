@@ -64,6 +64,7 @@ export const runProductCron = async ({
 							customerId: row.customer.id ?? "",
 							redisConfig: ctx.org.redis_config,
 						})),
+						logger: ctx.logger,
 					});
 					console.log(`Expired ${rows.length} customer products`);
 					continue;

@@ -1,5 +1,6 @@
 import type { OrgRedisConfig } from "@autumn/shared";
 import type { Redis } from "ioredis";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { invalidateCache } from "@/external/redis/orgRedisPool.js";
 import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
 import {
@@ -78,10 +79,14 @@ const deleteFullCustomerCacheRowsForOrg = async ({
  */
 export const batchDeleteCachedFullCustomers = async ({
 	customers,
+	logger,
 }: {
 	customers: CustomerToDelete[];
+	logger?: Logger;
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
+
+	const log = logger ?? console;
 
 	const customersByOrg = new Map<string, CustomerToDelete[]>();
 	for (const customer of customers) {
@@ -92,26 +97,46 @@ export const batchDeleteCachedFullCustomers = async ({
 
 	const guardTimestamp = Date.now().toString();
 
+	log.info(
+		`[batchDeleteCachedFullCustomers] starting: ${customers.length} customers across ${customersByOrg.size} orgs`,
+	);
+	console.log(
+		`[batchDeleteCachedFullCustomers] starting: ${customers.length} customers across ${customersByOrg.size} orgs`,
+	);
+
 	const orgPromises = Array.from(customersByOrg.entries()).map(
 		async ([orgId, orgCustomers]) => {
 			let totalDeleted = 0;
 
 			await invalidateCache({
 				org: { id: orgId, redis_config: orgCustomers[0]?.redisConfig },
-				fn: async (instance) => {
+				fn: async (instance, label) => {
 					const deleted = await deleteFullCustomerCacheRowsForOrg({
 						redisInstance: instance,
 						orgCustomers,
 						guardTimestamp,
 					});
 					totalDeleted += deleted;
+					log.info(
+						`[batchDeleteCachedFullCustomers] ${label}: ${deleted}/${orgCustomers.length} cache hits for org ${orgId}`,
+					);
 				},
 			});
+
+			console.log(
+				`[batchDeleteCachedFullCustomers] ${orgId}: ${totalDeleted}/${customers.length} cache hits across ${customersByOrg.size} orgs`,
+			);
 
 			return totalDeleted;
 		},
 	);
 
 	const deletedCounts = await Promise.all(orgPromises);
-	return deletedCounts.reduce((sum, count) => sum + count, 0);
+	const totalDeleted = deletedCounts.reduce((sum, count) => sum + count, 0);
+
+	log.info(
+		`[batchDeleteCachedFullCustomers] done: ${totalDeleted}/${customers.length} cache hits across ${customersByOrg.size} orgs`,
+	);
+
+	return totalDeleted;
 };
