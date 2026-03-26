@@ -55,6 +55,10 @@ export const ExtEventsAggregateParamsSchema = z.object({
 			description:
 				"Custom time range to aggregate events for. If provided, range must not be provided",
 		}),
+	max_groups: z.number().int().min(1).max(250).optional().meta({
+		description:
+			"Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9",
+	}),
 });
 
 export const EventsAggregateParamsSchema =
