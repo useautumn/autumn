@@ -41,11 +41,15 @@ export const ListCustomersResponseSchema = z.object({
 		description: "List of customers",
 	}),
 	total: z.number().int().meta({
-		description: "Total number of customers available",
+		description: "Total number of customers returned in the current page",
 	}),
-	total_customer_count: z.number().int().meta({
+	total_count: z.number().int().meta({
 		description:
 			"Total number of customers available in the current organization and environment",
+	}),
+	total_filtered_count: z.number().int().meta({
+		description:
+			"Total number of customers matching the current filter before pagination is applied",
 	}),
 	limit: z.number().int().meta({
 		description: "Maximum number of customers returned",
