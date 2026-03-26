@@ -11416,13 +11416,6 @@ paths:
                     - end
                   description: Custom time range to aggregate events for. If provided, range must
                     not be provided
-                max_groups:
-                  type: integer
-                  minimum: 1
-                  maximum: 250
-                  description: Maximum number of distinct group values to return per time bin when
-                    using group_by. Remaining values are bundled into an 'Other'
-                    bucket. Defaults to 9
               required:
                 - feature_id
               title: EventsAggregateParams

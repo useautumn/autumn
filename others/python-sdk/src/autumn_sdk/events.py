@@ -248,7 +248,6 @@ class Events(BaseSDK):
                 models.AggregateEventsCustomRangeTypedDict,
             ]
         ] = None,
-        max_groups: Optional[int] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -263,7 +262,6 @@ class Events(BaseSDK):
         :param range: Time range to aggregate events for. Either range or custom_range must be provided
         :param bin_size: Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
         :param custom_range: Custom time range to aggregate events for. If provided, range must not be provided
-        :param max_groups: Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -289,7 +287,6 @@ class Events(BaseSDK):
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.AggregateEventsCustomRange]
             ),
-            max_groups=max_groups,
         )
 
         req = self._build_request(
@@ -368,7 +365,6 @@ class Events(BaseSDK):
                 models.AggregateEventsCustomRangeTypedDict,
             ]
         ] = None,
-        max_groups: Optional[int] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -383,7 +379,6 @@ class Events(BaseSDK):
         :param range: Time range to aggregate events for. Either range or custom_range must be provided
         :param bin_size: Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
         :param custom_range: Custom time range to aggregate events for. If provided, range must not be provided
-        :param max_groups: Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -409,7 +404,6 @@ class Events(BaseSDK):
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.AggregateEventsCustomRange]
             ),
-            max_groups=max_groups,
         )
 
         req = self._build_request_async(

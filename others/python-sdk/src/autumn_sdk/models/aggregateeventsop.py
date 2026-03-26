@@ -28,7 +28,7 @@ class AggregateEventsGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -99,8 +99,6 @@ class EventsAggregateParamsTypedDict(TypedDict):
     r"""Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day"""
     custom_range: NotRequired[AggregateEventsCustomRangeTypedDict]
     r"""Custom time range to aggregate events for. If provided, range must not be provided"""
-    max_groups: NotRequired[int]
-    r"""Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9"""
 
 
 class EventsAggregateParams(BaseModel):
@@ -125,9 +123,6 @@ class EventsAggregateParams(BaseModel):
     custom_range: Optional[AggregateEventsCustomRange] = None
     r"""Custom time range to aggregate events for. If provided, range must not be provided"""
 
-    max_groups: Optional[int] = None
-    r"""Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9"""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -138,7 +133,6 @@ class EventsAggregateParams(BaseModel):
                 "range",
                 "bin_size",
                 "custom_range",
-                "max_groups",
             ]
         )
         serialized = handler(self)
@@ -146,7 +140,7 @@ class EventsAggregateParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -182,7 +176,7 @@ class AggregateEventsList(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:

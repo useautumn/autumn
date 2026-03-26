@@ -32,7 +32,6 @@ export const aggregateGroupablePipeParamsSchema = z.object({
 		.enum(["property", "customer_id", "entity_id"])
 		.default("property"),
 	property_key: z.string().optional(), // the property name without 'properties.' prefix (not needed when group_column is "customer_id" or "entity_id")
-	max_groups: z.number().int().min(1).max(250).optional(),
 });
 
 export type AggregateGroupablePipeParams = z.infer<
