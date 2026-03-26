@@ -10,9 +10,9 @@ import {
 import { addDays, addMonths, addWeeks, addYears } from "date-fns";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { prepareNewBalanceForInsertion } from "@/internal/balances/createBalance/prepareNewBalanceForInsertion.js";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
+import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { redemptionRepo, rewardRepo } from "@/internal/rewards/repos/index.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -158,6 +158,7 @@ export const redeemPromoCode = async ({
 					feature_id: feature.id,
 					included_grant: rewardEnt.allowance,
 					expires_at: expiresAt,
+					balance_id: `reward_${code}_${new Date().toISOString().slice(0, 10).replace(/-/g, "_")}`,
 				},
 			});
 
