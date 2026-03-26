@@ -71,13 +71,14 @@
 						]
 					},
 					{
-						"group": "Getting Started",
-						"pages": [
-							"documentation/getting-started/setup",
-							"documentation/getting-started/gating",
-							"documentation/getting-started/display-billing"
-						]
-					},
+					"group": "Getting Started",
+					"pages": [
+						"documentation/getting-started/setup",
+						"documentation/getting-started/gating",
+						"documentation/getting-started/display-billing",
+						"documentation/getting-started/deploy"
+					]
+				},
 					{
 						"group": "Configure Pricing",
 						"pages": [
@@ -128,6 +129,7 @@
 						"group": "Additional Resources",
 						"pages": [
 							"documentation/webhooks",
+							"documentation/fail-open",
 							"documentation/external-providers/convex",
 							"documentation/external-providers/revenuecat",
 							"documentation/external-providers/vercel-marketplace"

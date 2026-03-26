@@ -46,6 +46,17 @@ export const customersOpenApi = {
 										payment_method: true,
 									}),
 								),
+							}).meta({
+								examples: [
+									{
+										list: [API_CUSTOMER_V3_EXAMPLE],
+										total: 1,
+										total_count: 100,
+										total_filtered_count: 100,
+										limit: 10,
+										offset: 0,
+									},
+								],
 							}),
 						},
 					},

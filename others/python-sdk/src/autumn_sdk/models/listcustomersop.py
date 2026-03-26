@@ -829,6 +829,10 @@ class ListCustomersResponseTypedDict(TypedDict):
     r"""Limit passed in the request"""
     total: float
     r"""Total number of items returned in the current page"""
+    total_count: float
+    r"""Total number of customers available in the current organization and environment"""
+    total_filtered_count: float
+    r"""Total number of customers matching the current filter before pagination is applied"""
 
 
 class ListCustomersResponse(BaseModel):
@@ -848,3 +852,9 @@ class ListCustomersResponse(BaseModel):
 
     total: float
     r"""Total number of items returned in the current page"""
+
+    total_count: float
+    r"""Total number of customers available in the current organization and environment"""
+
+    total_filtered_count: float
+    r"""Total number of customers matching the current filter before pagination is applied"""

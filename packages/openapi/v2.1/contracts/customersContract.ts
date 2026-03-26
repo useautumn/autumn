@@ -64,7 +64,7 @@ export const listCustomersContract = oc
 		}),
 	)
 	.output(
-		createPagePaginatedResponseSchema(BaseApiCustomerV5Schema).meta({
+		createPagePaginatedResponseSchema(BaseApiCustomerV5Schema, true).meta({
 			examples: [
 				{
 					list: [API_CUSTOMER_V5_EXAMPLE],
@@ -72,6 +72,8 @@ export const listCustomersContract = oc
 					offset: 0,
 					total: 1,
 					limit: 10,
+					total_count: 100,
+					total_filtered_count: 42,
 				},
 			],
 		}),

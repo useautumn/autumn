@@ -25,6 +25,11 @@ export type SDKOptions = {
    */
   xApiVersion?: string | undefined;
 
+  /**
+   * Allows setting the failOpen parameter for all supported operations
+   */
+  failOpen?: boolean | undefined;
+
   httpClient?: HTTPClient;
   /**
    * Allows overriding the default server used by the SDK

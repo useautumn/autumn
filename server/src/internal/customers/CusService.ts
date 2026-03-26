@@ -4,17 +4,22 @@ import {
 	type Customer,
 	CustomerExpand,
 	CustomerNotFoundError,
+	customerProducts,
 	customers,
 	type EntityExpand,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
 	InternalError,
+	type ListCustomersV2Params,
 	type Organization,
+	products,
 	RecaseError,
 } from "@autumn/shared";
 import {
 	and,
+	count,
+	countDistinct,
 	eq,
 	getTableColumns,
 	ilike,
@@ -29,8 +34,11 @@ import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
-import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
-import { getFullCusQuery } from "./getFullCusQuery.js";
+import {
+	ACTIVE_STATUSES,
+	RELEVANT_STATUSES,
+} from "./cusProducts/CusProductService.js";
+import { getFullCusQuery, hasCustomerListFilters } from "./getFullCusQuery.js";
 
 // const tracer = trace.getTracer("express");
 
@@ -130,10 +138,7 @@ export class CusService {
 					fullCus.customer_products = (
 						fullCus.customer_products as FullCusProduct[]
 					)
-						.sort(
-							(a, b) =>
-								b.customer_prices.length - a.customer_prices.length,
-						)
+						.sort((a, b) => b.customer_prices.length - a.customer_prices.length)
 						.slice(0, 5);
 				}
 
@@ -276,6 +281,125 @@ export class CusService {
 
 		// Should never reach here, but handle gracefully
 		return null;
+	}
+
+	static async countByOrgIdAndEnv({
+		ctx,
+	}: {
+		ctx: AutumnContext;
+	}): Promise<{ total_count: number }> {
+		const { db } = ctx;
+		const [result] = await db
+			.select({ total_count: count() })
+			.from(customers)
+			.where(and(eq(customers.org_id, ctx.org.id), eq(customers.env, ctx.env)));
+		return { total_count: result?.total_count ?? 0 };
+	}
+
+	static async countFilteredByOrgIdAndEnv({
+		ctx,
+		query,
+	}: {
+		ctx: AutumnContext;
+		query?: Pick<
+			ListCustomersV2Params,
+			"plans" | "search" | "subscription_status"
+		>;
+	}): Promise<{ total_filtered_count: number }> {
+		if (!hasCustomerListFilters(query ?? {})) {
+			const { total_count } = await CusService.countByOrgIdAndEnv({ ctx });
+			return { total_filtered_count: total_count };
+		}
+
+		const search = query?.search?.trim();
+		const inStatuses = query?.subscription_status
+			? [query.subscription_status as CusProductStatus]
+			: ACTIVE_STATUSES;
+
+		if (!query?.plans?.length) {
+			const [result] = await ctx.db
+				.select({ total_filtered_count: count() })
+				.from(customers)
+				.where(
+					and(
+						eq(customers.org_id, ctx.org.id),
+						eq(customers.env, ctx.env),
+						search
+							? or(
+									ilike(customers.id, `%${search}%`),
+									ilike(customers.name, `%${search}%`),
+									ilike(customers.email, `%${search}%`),
+								)
+							: undefined,
+					),
+				);
+
+			return {
+				total_filtered_count: result?.total_filtered_count ?? 0,
+			};
+		}
+
+		const productConditions = query.plans.map((plan) => {
+			if (plan.versions?.length) {
+				return and(
+					eq(products.id, plan.id),
+					inArray(products.version, plan.versions),
+				);
+			}
+
+			return eq(products.id, plan.id);
+		});
+
+		const matchingProducts = await ctx.db
+			.select({ internal_id: products.internal_id })
+			.from(products)
+			.where(
+				and(
+					eq(products.org_id, ctx.org.id),
+					eq(products.env, ctx.env),
+					or(...productConditions),
+				),
+			);
+
+		const internalProductIds = matchingProducts.map(
+			(product) => product.internal_id,
+		);
+
+		if (internalProductIds.length === 0) {
+			return { total_filtered_count: 0 };
+		}
+
+		const [result] = await ctx.db
+			.select({
+				total_filtered_count: countDistinct(
+					sql`CASE WHEN ${inArray(customerProducts.status, inStatuses)} THEN ${customerProducts.internal_customer_id} END`,
+				),
+			})
+			.from(customerProducts)
+			.innerJoin(
+				customers,
+				eq(customerProducts.internal_customer_id, customers.internal_id),
+			)
+			.where(
+				and(
+					inArray(customerProducts.internal_product_id, internalProductIds),
+					search
+						? and(
+								eq(customers.org_id, ctx.org.id),
+								eq(customers.env, ctx.env),
+								or(
+									ilike(customers.id, `%${search}%`),
+									ilike(customers.name, `%${search}%`),
+									ilike(customers.email, `%${search}%`),
+								),
+							)
+						: undefined,
+				),
+			);
+
+		return {
+			total_filtered_count: result?.total_filtered_count ?? 0,
+		};
 	}
 
 	/**

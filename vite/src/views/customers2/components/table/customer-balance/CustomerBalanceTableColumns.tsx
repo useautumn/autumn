@@ -8,12 +8,19 @@ import {
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
 	cusEntToPrepaidQuantity,
-	EntInterval,
 	nullish,
 } from "@autumn/shared";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
+import { Trash } from "lucide-react";
 import { AdminHover } from "@/components/general/AdminHover";
+import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
 import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
@@ -21,43 +28,10 @@ import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsage
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
 import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceDisplay";
 import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
-
-/** Builds a descriptive label for a sub-row (plan + interval + entity) */
-function getSubRowLabel({
-	ent,
-	entities,
-}: {
-	ent: FullCusEntWithFullCusProduct;
-	entities: Entity[];
-}) {
-	const parts: string[] = [];
-
-	// Plan name
-	parts.push(ent.customer_product?.product.name || "No plan");
-
-	// Interval
-	const { interval, interval_count } = ent.entitlement;
-	if (!interval || interval === EntInterval.Lifetime) {
-		parts.push("Lifetime");
-	} else {
-		const count = interval_count || 1;
-		parts.push(count > 1 ? `${count} ${interval}s` : interval);
-	}
-
-	// Entity (if scoped)
-	const entity = entities.find((e) => {
-		if (ent.internal_entity_id) return e.internal_id === ent.internal_entity_id;
-		return (
-			e.internal_id === ent.customer_product?.internal_entity_id ||
-			e.id === ent.customer_product?.entity_id
-		);
-	});
-	if (entity) {
-		parts.push(entity.name || entity.id);
-	}
-
-	return parts.join(" · ");
-}
+import {
+	canDeleteCustomerBalance,
+	getCustomerBalanceSourceLabel,
+} from "./customerBalanceUtils";
 
 /** Computes balance values from a single entitlement (for sub-rows) */
 function getIndividualEntValues({
@@ -313,16 +287,61 @@ function BarCell({
 	);
 }
 
+function BalanceActionsCell({
+	row,
+	onDeleteClick,
+}: {
+	row: Row<CustomerBalanceRowData>;
+	onDeleteClick?: (balance: FullCusEntWithFullCusProduct) => void;
+}) {
+	const canDelete =
+		!row.getCanExpand() &&
+		canDeleteCustomerBalance({
+			balance: row.original,
+		});
+
+	if (!canDelete || !onDeleteClick) return null;
+
+	return (
+		<div className="flex justify-end">
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<ToolbarButton onClick={(event) => event.stopPropagation()} />
+				</DropdownMenuTrigger>
+				<DropdownMenuContent
+					className="text-t2"
+					align="end"
+					onClick={(event) => event.stopPropagation()}
+				>
+					<DropdownMenuItem
+						onClick={(event) => {
+							event.stopPropagation();
+							onDeleteClick(row.original);
+						}}
+					>
+						<div className="flex w-full items-center justify-between gap-2 text-sm">
+							Delete
+							<Trash size={12} className="text-t3" />
+						</div>
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		</div>
+	);
+}
+
 // --- Column definitions ---
 
 export const CustomerBalanceTableColumns = ({
 	fullCustomer,
 	entityId,
 	entities = [],
+	onDeleteClick,
 }: {
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
-	entities?: unknown[];
+	entities?: Entity[];
+	onDeleteClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) => [
 	{
 		header: "Feature",
@@ -339,11 +358,11 @@ export const CustomerBalanceTableColumns = ({
 						<AdminHover
 							texts={getCusEntHoverTexts({
 								cusEnt: ent,
-								entities: entities as Entity[],
+								entities,
 							})}
 						>
 							<span className="text-t2 truncate">
-								{getSubRowLabel({ ent, entities: entities as Entity[] })}
+								{getCustomerBalanceSourceLabel({ balance: ent, entities })}
 							</span>
 						</AdminHover>
 					</div>
@@ -368,7 +387,7 @@ export const CustomerBalanceTableColumns = ({
 					<AdminHover
 						texts={getCusEntHoverTexts({
 							cusEnt: ent,
-							entities: entities as Entity[],
+							entities,
 						})}
 					>
 						<span className="font-medium text-t1 truncate">
@@ -406,6 +425,14 @@ export const CustomerBalanceTableColumns = ({
 					row.original.subRows?.length ? row.original.subRows : [row.original]
 				}
 			/>
+		),
+	},
+	{
+		id: "actions",
+		header: "",
+		size: 44,
+		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
+			<BalanceActionsCell row={row} onDeleteClick={onDeleteClick} />
 		),
 	},
 ];
