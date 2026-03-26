@@ -34,8 +34,7 @@ export const deleteCachedFullCustomer = async ({
 	const guardTimestamp = Date.now().toString();
 
 	await invalidateCache({
-		orgId: org.id,
-		migrationPercent: org.redis_config?.migrationPercent,
+		org: { id: org.id, redis_config: org.redis_config },
 		fn: async (instance, label) => {
 			const result = await instance.deleteFullCustomerCache(
 				cacheKey,

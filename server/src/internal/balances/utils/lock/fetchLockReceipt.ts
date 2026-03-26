@@ -60,6 +60,7 @@ export const fetchLockReceipt = async ({
 				orgRedis.call("JSON.GET", lockReceiptKey, "$") as Promise<
 					string | null
 				>,
+			orgRedis,
 		);
 	}
 

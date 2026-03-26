@@ -24,17 +24,16 @@ export const processExpiredTrialRow = async ({
 	customer: InferSelectModel<typeof customers>;
 	defaultProducts: FullProduct[];
 }) => {
-	// Re-resolve Redis for this specific customer (the shared ctx from groupByOrgEnv
-	// doesn't have a customerId, so partial migrations fall back to master)
-	if (customer.id) {
-		ctx.redis = resolveRedisForCustomer({
-			org: ctx.org,
-			customerId: customer.id,
-		});
-	}
+	// Shallow-copy ctx so concurrent Promise.all callers don't stomp each other's redis
+	const customerCtx: AutumnContext = {
+		...ctx,
+		redis: customer.id
+			? resolveRedisForCustomer({ org: ctx.org, customerId: customer.id })
+			: ctx.redis,
+	};
 
 	const fullCustomer = await CusService.getFull({
-		ctx,
+		ctx: customerCtx,
 		idOrInternalId: customer.internal_id,
 		withEntities: true,
 		withSubs: true,
@@ -47,21 +46,21 @@ export const processExpiredTrialRow = async ({
 	if (!fullCustomerProduct) return;
 
 	const defaultProduct = customerProductToDefaultProduct({
-		ctx,
+		ctx: customerCtx,
 		customerProduct: fullCustomerProduct,
 		defaultProducts,
 	});
 
 	if (defaultProduct) {
 		await activateFreeDefaultProduct({
-			ctx,
+			ctx: customerCtx,
 			customerProduct: fullCustomerProduct,
 			fullCustomer,
 			defaultProduct,
 		});
 	}
 	await CusProductService.update({
-		ctx,
+		ctx: customerCtx,
 		cusProductId: fullCustomerProduct.id,
 		updates: {
 			status: CusProductStatus.Expired,
@@ -69,7 +68,7 @@ export const processExpiredTrialRow = async ({
 	});
 
 	await deleteCachedFullCustomer({
-		ctx,
+		ctx: customerCtx,
 		customerId: fullCustomer.id ?? "",
 		source: "productCron",
 	});

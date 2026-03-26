@@ -83,6 +83,7 @@ export const runOneOffCleanup = async ({ ctx }: { ctx: CronContext }) => {
 				orgId: result.org.id,
 				env: result.customer.env,
 				customerId: result.customer.id!,
+				redisConfig: result.org.redis_config,
 			}));
 
 		if (customersToInvalidate.length > 0) {

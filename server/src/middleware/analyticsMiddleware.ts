@@ -66,7 +66,9 @@ export const analyticsMiddleware = async (req: any, res: any, next: any) => {
 			user_id: req.userId || null,
 			user_email: req.user?.email || null,
 			api_version: req.apiVersion?.semver,
-			redis_url: getRedisUrlForCustomer({ org: req.org, customerId }),
+			redis_url: req.org
+				? getRedisUrlForCustomer({ org: req.org, customerId })
+				: undefined,
 		},
 	});
 

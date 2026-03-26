@@ -1,6 +1,6 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { z } from "zod/v4";
-import { getOrgRedis } from "@/external/redis/orgRedisPool.js";
+import { getOrgRedis, removeOrgRedis } from "@/external/redis/orgRedisPool.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import { OrgService } from "../OrgService.js";
@@ -123,6 +123,8 @@ export const handleDeleteRedisConfig = createRoute({
 			orgId: org.id,
 			updates: { redis_config: null },
 		});
+
+		removeOrgRedis({ orgId: org.id });
 
 		logger.info(
 			`[handleDeleteRedisConfig] org=${org.id}: redis_config removed`,

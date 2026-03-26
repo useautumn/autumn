@@ -24,6 +24,16 @@ const productRoutes = [
 	{ method: "POST", url: "/plans.create" },
 	{ method: "POST", url: "/plans.update" },
 	{ method: "POST", url: "/plans.delete" },
+
+	// Feature routes
+	{ method: "POST", url: "/features" },
+	{ method: "POST", url: "/features/:feature_id" },
+	{ method: "DELETE", url: "/features/:feature_id" },
+
+	// RPC feature routes
+	{ method: "POST", url: "/features.create" },
+	{ method: "POST", url: "/features.update" },
+	{ method: "POST", url: "/features.delete" },
 ];
 
 /**

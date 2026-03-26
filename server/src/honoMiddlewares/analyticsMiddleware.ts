@@ -95,7 +95,9 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			user_id: ctx.userId || undefined,
 			user_email: ctx.user?.email || undefined,
 			api_version: ctx.apiVersion?.semver,
-			redis_url: getRedisUrlForCustomer({ org: ctx.org, customerId }),
+			redis_url: ctx.org
+				? getRedisUrlForCustomer({ org: ctx.org, customerId })
+				: undefined,
 		},
 	});
 

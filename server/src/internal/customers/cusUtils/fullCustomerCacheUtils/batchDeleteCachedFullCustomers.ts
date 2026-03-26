@@ -1,3 +1,4 @@
+import type { OrgRedisConfig } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { invalidateCache } from "@/external/redis/orgRedisPool.js";
 import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
@@ -7,10 +8,11 @@ import {
 	FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
 } from "./fullCustomerCacheConfig.js";
 
-type CustomerToDelete = {
+export type CustomerToDelete = {
 	orgId: string;
 	env: string;
 	customerId: string;
+	redisConfig?: OrgRedisConfig | null;
 };
 
 /**
@@ -95,7 +97,7 @@ export const batchDeleteCachedFullCustomers = async ({
 			let totalDeleted = 0;
 
 			await invalidateCache({
-				orgId,
+				org: { id: orgId, redis_config: orgCustomers[0]?.redisConfig },
 				fn: async (instance) => {
 					const deleted = await deleteFullCustomerCacheRowsForOrg({
 						redisInstance: instance,

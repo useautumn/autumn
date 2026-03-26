@@ -109,30 +109,29 @@ export const removeOrgRedis = ({ orgId }: { orgId: string }): void => {
 };
 
 /** Runs a cache invalidation operation across all relevant Redis instances for an org.
- *  When migrationPercent is provided, only hits the instances that actually hold data:
- *  - > 0: org's dedicated Redis has some customers
- *  - < 100: master Redis regions still have some customers
- *  Without migrationPercent, hits both sides (safe default for callers without org context).
+ *  Uses getOrgRedis to create/heal connections on-demand instead of relying on the pool.
+ *  Migration percent is read directly from org.redis_config (single source of truth).
  */
 export const invalidateCache = async ({
-	orgId,
+	org,
 	fn,
-	migrationPercent,
 }: {
-	orgId: string;
+	org: OrgWithRedisConfig;
 	fn: (instance: Redis, label: string) => Promise<void>;
-	migrationPercent?: number;
 }): Promise<void> => {
-	const promises: Promise<void>[] = [];
-
-	const shouldHitOrg = migrationPercent === undefined || migrationPercent > 0;
+	const migrationPercent = org.redis_config?.migrationPercent;
+	const shouldHitOrg =
+		org.redis_config &&
+		(migrationPercent === undefined || migrationPercent > 0);
 	const shouldHitMaster =
 		migrationPercent === undefined || migrationPercent < 100;
 
+	const promises: Promise<void>[] = [];
+
 	if (shouldHitOrg) {
-		const orgRedis = getPooledOrgRedis({ orgId });
-		if (orgRedis?.status === "ready") {
-			promises.push(fn(orgRedis, `org:${orgId}`));
+		const orgRedis = getOrgRedis({ org });
+		if (orgRedis !== redis && orgRedis.status === "ready") {
+			promises.push(fn(orgRedis, `org:${org.id}`));
 		}
 	}
 
@@ -145,7 +144,14 @@ export const invalidateCache = async ({
 		}
 	}
 
-	await Promise.all(promises);
+	const results = await Promise.allSettled(promises);
+	for (const result of results) {
+		if (result.status === "rejected") {
+			console.error(
+				`[invalidateCache] org=${org.id}: ${result.reason instanceof Error ? result.reason.message : result.reason}`,
+			);
+		}
+	}
 };
 
 /** Pre-warms Redis connections for all orgs that have redis_config set.
