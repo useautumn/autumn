@@ -60,13 +60,16 @@ export class CusService {
 		axios,
 		customer_id,
 		coupon_id,
+		promo_code,
 	}: {
 		axios: AxiosInstance;
 		customer_id: string;
 		coupon_id: string;
+		promo_code?: string;
 	}) {
 		return await axios.post(
 			`/v1/customers/${customer_id}/coupons/${coupon_id}`,
+			promo_code ? { promo_code } : {},
 		);
 	}
 
