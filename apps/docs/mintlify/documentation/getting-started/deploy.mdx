@@ -93,19 +93,6 @@ While the SDK gracefully handles outages for read-path calls, write operations l
 </Step>
 
 <Step>
-### Test a real purchase
-
-Make a real purchase using a small-amount plan or Stripe's [test clocks](https://docs.stripe.com/billing/testing/test-clocks):
-
-1. Create a customer with a real email
-2. Attach a plan and complete Stripe checkout
-3. Verify the subscription appears in both Autumn and your Stripe dashboard
-4. Check that `check` and `track` calls work correctly for this customer
-5. Cancel the subscription and confirm the customer loses access
-
-</Step>
-
-<Step>
 ### Set up webhooks (if applicable)
 
 If you're listening for Autumn [webhook events](/documentation/webhooks) (e.g. `customer.products.updated`), make sure your production webhook endpoint is configured in the dashboard. Verify you can receive a test event.
