@@ -3121,13 +3121,8 @@ trackedFiles:
     pristine_git_object: be7d7aff3edd79d2dbd3711603c524b5c30191be
   src/autumn_sdk/models/listcustomersop.py:
     id: d7074740b8b0
-<<<<<<< HEAD
     last_write_checksum: sha1:ea4a0aab8bb50b6fdf272046be8d3c86f912b667
     pristine_git_object: c4a0ca97eedf23a046a6353d91c2537aa8c0e74c
-=======
-    last_write_checksum: sha1:62ae8f9901eb13e470841f15b064c53907932942
-    pristine_git_object: 97d04c327704a990cb85e9a52631e9c78322ff87
->>>>>>> 2e7ca864c541b51aba31e35752cdef8000ecb944
   src/autumn_sdk/models/listeventsop.py:
     id: 751b0200d91d
     last_write_checksum: sha1:b858631e46a26812ce801465327c2c1c13ba5cf3
