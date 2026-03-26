@@ -1,4 +1,4 @@
-import { formatMs, type OrgRedisConfig } from "@autumn/shared";
+import type { OrgRedisConfig } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { getRegionalRedis, redis } from "./initRedis.js";
 import { getOrgRedis, type OrgWithRedisConfig } from "./orgRedisPool.js";
@@ -71,11 +71,6 @@ export const isCacheStale = ({
 	customerId?: string;
 	redisConfig?: OrgRedisConfig | null;
 }): boolean => {
-	console.log("Checking if cache is stale:", {
-		cachedAt: cachedAt ? formatMs(cachedAt) : "undefined",
-		customerId,
-		redisConfig,
-	});
 	if (!redisConfig?.migrationChangedAt) return false;
 
 	if (!customerId) return false;
