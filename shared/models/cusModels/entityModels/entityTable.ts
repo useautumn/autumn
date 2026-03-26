@@ -58,10 +58,7 @@ export const entities = pgTable(
 			table.internal_customer_id,
 			table.id,
 		),
-		index("idx_entities_internal_customer_id").using(
-			"hash",
-			table.internal_customer_id,
-		),
+		index("idx_entities_internal_customer_id").on(table.internal_customer_id),
 		index("idx_entities_customer_internal_desc").on(
 			table.internal_customer_id,
 			sql`${table.internal_id} DESC`,
