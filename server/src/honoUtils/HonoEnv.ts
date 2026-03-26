@@ -3,6 +3,7 @@ import type {
 	AppEnv,
 	AuthType,
 	Feature,
+	FullCustomer,
 	Organization,
 } from "@autumn/shared";
 import type { User } from "better-auth";
@@ -36,6 +37,8 @@ export type RequestContext = {
 	skipCache: boolean;
 
 	extraLogs: Record<string, unknown>;
+
+	fullCustomer?: FullCustomer;
 
 	testOptions?: {
 		skipCacheDeletion?: boolean;

@@ -3,7 +3,6 @@ import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import {
 	type VercelResourceDeletedEvent,
 	VercelWebhooks,
@@ -13,7 +12,7 @@ export const handleDeleteInstallation = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { integrationConfigurationId, orgId } = c.req.param();
-		const { db, org, logger } = ctx;
+		const { db, org, logger, fullCustomer: customer } = ctx;
 
 		try {
 			const resources = await VercelResourceService.listByInstallation({
@@ -49,13 +48,7 @@ export const handleDeleteInstallation = createRoute({
 				]),
 			);
 
-			// 2. Get customer by Vercel installation ID (customer.id may differ from installation_id)
-			const customer = await CusService.getByVercelId({
-				ctx,
-				vercelInstallationId: integrationConfigurationId,
-			});
-
-			// 3. Delete the customer/installation using the actual customer ID
+			// 2. Delete the customer/installation using the actual customer ID
 			if (customer) {
 				await customerActions.delete({
 					ctx,
