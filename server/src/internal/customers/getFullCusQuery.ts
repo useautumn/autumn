@@ -442,6 +442,7 @@ export const getPaginatedFullCusQuery = ({
 
 	const customerListFilterSql = getCustomerListFilterSql({
 		internalCustomerIds,
+		inStatuses,
 		plans,
 		search,
 	});
