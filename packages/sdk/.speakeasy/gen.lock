@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: 80b4c2f1108d05ededd752fc0be66086
+  docChecksum: cdf6bf5ac65e68bff7f5674356c2d49a
   docVersion: 2.2.0
   speakeasyVersion: 1.719.0
   generationVersion: 2.824.1
   releaseVersion: 0.10.17
   configChecksum: c6b2bd1231da8dc3af5be7430f3cfbac
 persistentEdits:
-  generation_id: d183f691-3841-4119-8595-699496339363
-  pristine_commit_hash: 1a96b7629886ff616cf9adf98d820772da6581a4
-  pristine_tree_hash: 835c7965d9cfe08b7493a1d561bc513f2f3f5f8e
+  generation_id: d3f7f839-578c-44c5-8431-837eb6dbb093
+  pristine_commit_hash: 7da5a42ce21251494f9bd33debee37fc12bc0a84
+  pristine_tree_hash: ed5ed78779031856781e2ddc6affb6881d13d270
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -1332,8 +1332,8 @@ trackedFiles:
     pristine_git_object: fe03aa7b5c0cfbff67fb4d0885225349b46eaced
   docs/models/list-customers-response.md:
     id: a8afc03241c9
-    last_write_checksum: sha1:2c68d05bb0ab330b5a5da2edc590a7634603faa1
-    pristine_git_object: adc2c5ec54db2c55355f90c1d7869763f6f44773
+    last_write_checksum: sha1:18b7dc79a3b55f05d582c23b648570e1878a5f4c
+    pristine_git_object: c68a9e147d18111c05c5c13c447cc5383ae305d7
   docs/models/list-customers-spend-limit.md:
     id: 917aab033487
     last_write_checksum: sha1:fa144d1c65fd5e282ce0d96f0de1d759c404577b
@@ -3308,8 +3308,8 @@ trackedFiles:
     pristine_git_object: 4a4d15fbe91ea4e8d6b053f6b2874f2bb272ee08
   src/models/list-customers-op.ts:
     id: b391692c8429
-    last_write_checksum: sha1:4350f43fe967605e4fdf057040355d3dcf1768dc
-    pristine_git_object: 155e604c6a8bf931f75393f2a792992fc9278d30
+    last_write_checksum: sha1:12fb43498dd50040b55c79efb39f1eac3cc4d6fd
+    pristine_git_object: fa6018780710bdeeb770c3b785e1f84832515c12
   src/models/list-events-op.ts:
     id: 82a9f364bb21
     last_write_checksum: sha1:2d409806ca68c98d4a9a5a1031d591f831065c75
@@ -3807,7 +3807,7 @@ examples:
         application/json: {"offset": 0, "limit": 10}
       responses:
         "200":
-          application/json: {"list": [{"id": "2ee25a41-0d81-4ad2-8451-ec1aadaefe58", "name": "Patrick", "email": "patrick@useautumn.com", "created_at": 2358.1, "fingerprint": null, "stripe_id": null, "env": "sandbox", "metadata": {}, "send_email_receipts": false, "billing_controls": {}, "subscriptions": [{"id": "<id>", "plan_id": "<id>", "auto_enable": true, "add_on": false, "status": "active", "past_due": true, "canceled_at": 1145.98, "expires_at": 4027.68, "trial_ends_at": 910.35, "started_at": 7325.71, "current_period_start": 406.39, "current_period_end": 2629.33, "quantity": 1}], "purchases": [], "balances": {"messages": {"feature_id": "<id>", "granted": 100, "remaining": 0, "usage": 100, "unlimited": false, "overage_allowed": false, "max_purchase": 4531.44, "next_reset_at": 1010.14, "breakdown": [{"id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV", "plan_id": "<id>", "included_grant": 4967.46, "prepaid_grant": 6928.7, "remaining": 0, "usage": 100, "unlimited": false, "reset": {"interval": "month", "resets_at": 7938.58}, "price": null, "expires_at": 7264.51}]}}, "flags": {"advanced_workflows": {"id": "cus_ent_abc123", "plan_id": "pro_plan", "expires_at": null, "feature_id": "advanced_workflows"}}}], "has_more": false, "offset": 0, "limit": 10, "total": 1, "total_customer_count": 100}
+          application/json: {"list": [{"id": "2ee25a41-0d81-4ad2-8451-ec1aadaefe58", "name": "Patrick", "email": "patrick@useautumn.com", "created_at": 2358.1, "fingerprint": null, "stripe_id": null, "env": "sandbox", "metadata": {}, "send_email_receipts": false, "billing_controls": {}, "subscriptions": [{"id": "<id>", "plan_id": "<id>", "auto_enable": true, "add_on": false, "status": "active", "past_due": true, "canceled_at": 1145.98, "expires_at": 4027.68, "trial_ends_at": 910.35, "started_at": 7325.71, "current_period_start": 406.39, "current_period_end": 2629.33, "quantity": 1}], "purchases": [], "balances": {"messages": {"feature_id": "<id>", "granted": 100, "remaining": 0, "usage": 100, "unlimited": false, "overage_allowed": false, "max_purchase": 4531.44, "next_reset_at": 1010.14, "breakdown": [{"id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV", "plan_id": "<id>", "included_grant": 4967.46, "prepaid_grant": 6928.7, "remaining": 0, "usage": 100, "unlimited": false, "reset": {"interval": "month", "resets_at": 7938.58}, "price": null, "expires_at": 7264.51}]}}, "flags": {"advanced_workflows": {"id": "cus_ent_abc123", "plan_id": "pro_plan", "expires_at": null, "feature_id": "advanced_workflows"}}}], "has_more": false, "offset": 0, "limit": 10, "total": 1, "total_count": 100, "total_filtered_count": 42}
   updateCustomer:
     speakeasy-default-update-customer:
       parameters:

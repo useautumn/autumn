@@ -17,13 +17,16 @@ export const handleListCustomers = createRoute({
 		const ctx = c.get("ctx");
 		const query = c.req.valid("query");
 
-		const customers = await CusBatchService.getPage({ ctx, query });
-		const totalCustomerCount = await CusService.countByOrgIdAndEnv({ ctx });
+		const [customers, totalCount] = await Promise.all([
+			CusBatchService.getPage({ ctx, query }),
+			CusService.countByOrgIdAndEnv({ ctx }),
+		]);
 
 		return c.json({
 			list: customers,
 			total: customers.length,
-			total_customer_count: totalCustomerCount.total_customer_count,
+			total_count: totalCount.total_count,
+			total_filtered_count: totalCount.total_count,
 			limit: query.limit,
 			offset: query.offset,
 		});

@@ -467,7 +467,11 @@ export type ListCustomersResponse = {
   /**
    * Total number of customers available in the current organization and environment
    */
-  totalCustomerCount: number;
+  totalCount: number;
+  /**
+   * Total number of customers matching the current filter before pagination is applied
+   */
+  totalFilteredCount: number;
 };
 
 /** @internal */
@@ -960,12 +964,14 @@ export const ListCustomersResponse$inboundSchema: z.ZodMiniType<
     offset: types.number(),
     limit: types.number(),
     total: types.number(),
-    total_customer_count: types.number(),
+    total_count: types.number(),
+    total_filtered_count: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "has_more": "hasMore",
-      "total_customer_count": "totalCustomerCount",
+      "total_count": "totalCount",
+      "total_filtered_count": "totalFilteredCount",
     });
   }),
 );
