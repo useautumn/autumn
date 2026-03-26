@@ -5,9 +5,16 @@ const autumn = new Autumn({
   serverURL: "http://localhost:8080",
 });
 
-const res = await autumn.check({
-  customerId: "john",
-  featureId: "messages",
+const res = await autumn.entities.update({
+  entityId: "seat_1",
+  billingControls: {
+    spendLimits: [
+      {
+        featureId: "messages",
+        enabled: true,
+      },
+    ],
+  },
 });
 
 console.log("Res:", res);
