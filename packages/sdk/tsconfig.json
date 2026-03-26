@@ -13,7 +13,6 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "rootDir": "src",
     "outDir": ".",
     
 
@@ -37,5 +36,5 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": ["src"],
-  "exclude": ["node_modules", "src/__tests__"]
+  "exclude": ["node_modules"]
 }

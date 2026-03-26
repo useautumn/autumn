@@ -5,8 +5,9 @@ const autumn = new Autumn({
   serverURL: "http://localhost:8080",
 });
 
-const res = await autumn.customers.getOrCreate({
+const res = await autumn.check({
   customerId: "john",
+  featureId: "messages",
 });
 
 console.log("Res:", res);

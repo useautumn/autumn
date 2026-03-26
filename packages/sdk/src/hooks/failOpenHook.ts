@@ -14,7 +14,7 @@ const FAIL_OPEN_OPERATION_IDS = new Set([
 ]);
 
 const FAIL_OPEN_LOG_MESSAGE =
-	"\x1b[1;97;41m FATAL AUTUMN ERROR DETECTED; FAILING OPEN; LEARN MORE: https://docs.useautumn.com/documentation/fail-open; STATUS PAGE: https://status.useautumn.com \x1b[0m";
+	"[Autumn] Request failed — failing open. Learn more: https://docs.useautumn.com/documentation/fail-open";
 
 const FAIL_OPEN_BODIES: Record<string, object> = {
 	check: {
