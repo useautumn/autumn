@@ -34,10 +34,7 @@ import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
-import {
-	ACTIVE_STATUSES,
-	RELEVANT_STATUSES,
-} from "./cusProducts/CusProductService.js";
+import { RELEVANT_STATUSES } from "./cusProducts/CusProductService.js";
 import { getFullCusQuery, hasCustomerListFilters } from "./getFullCusQuery.js";
 
 // const tracer = trace.getTracer("express");
@@ -314,7 +311,7 @@ export class CusService {
 		const search = query?.search?.trim();
 		const inStatuses = query?.subscription_status
 			? [query.subscription_status as CusProductStatus]
-			: ACTIVE_STATUSES;
+			: RELEVANT_STATUSES;
 
 		if (!query?.plans?.length) {
 			const [result] = await ctx.db
