@@ -37,7 +37,7 @@ class GetEntityGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -68,7 +68,7 @@ class GetEntityParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -186,7 +186,7 @@ class GetEntitySubscription(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -239,7 +239,7 @@ class GetEntityPurchase(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -309,7 +309,7 @@ class GetEntityDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -382,7 +382,7 @@ class GetEntityFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -429,7 +429,7 @@ class GetEntityFlags(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -473,7 +473,7 @@ class GetEntitySpendLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -529,7 +529,7 @@ class GetEntityUsageAlert(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -564,7 +564,7 @@ class GetEntityBillingControls(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -621,7 +621,7 @@ class GetEntityInvoice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -709,7 +709,7 @@ class GetEntityResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
