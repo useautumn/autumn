@@ -2207,17 +2207,22 @@ paths:
                   total:
                     type: number
                     description: Total number of items returned in the current page
-                  total_customer_count:
+                  total_count:
                     type: number
                     description: Total number of customers available in the current organization and
                       environment
+                  total_filtered_count:
+                    type: number
+                    description: Total number of customers matching the current filter before
+                      pagination is applied
                 required:
                   - list
                   - has_more
                   - offset
                   - limit
                   - total
-                  - total_customer_count
+                  - total_count
+                  - total_filtered_count
                 examples:
                   - &a4
                     list:
@@ -2279,7 +2284,8 @@ paths:
                     offset: 0
                     total: 1
                     limit: 10
-                    total_customer_count: 100
+                    total_count: 100
+                    total_filtered_count: 42
               example: *a4
       x-speakeasy-name-override: list
       parameters:
