@@ -5,20 +5,13 @@ import {
 	productV2ToBasePrice,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import type { VercelBillingPlan } from "../../misc/vercelTypes.js";
 import { productToBillingPlan } from "../handleListBillingPlans.js";
 
 export const handleGetInstallation = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { integrationConfigurationId } = c.req.param();
-		const { org } = ctx;
-
-		const customer = await CusService.getByVercelId({
-			ctx,
-			vercelInstallationId: integrationConfigurationId,
-		});
+		const { org, fullCustomer: customer } = ctx;
 
 		if (!customer) {
 			return c.json(
