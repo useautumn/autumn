@@ -220,7 +220,6 @@ const formatGroupableResults = ({
 	startDate,
 	endDate,
 	binSize,
-	maxGroups = 9,
 }: {
 	rows: AggregateGroupablePipeRow[];
 	eventNames: string[];
@@ -229,48 +228,18 @@ const formatGroupableResults = ({
 	startDate: string;
 	endDate: string;
 	binSize: string;
-	maxGroups?: number;
 }): ClickHouseResult => {
 	const allPeriods = generateAllPeriods({ startDate, endDate, binSize });
 	// groupBy already comes with "properties." prefix from frontend
 	const groupByColumn = groupBy;
 
-	// Compute global totals per group value across all bins,
-	// then keep only the top maxGroups. This prevents the union
-	// of per-bin top-N from exceeding the intended group limit.
-	const globalTotals = new Map<string, number>();
+	// Collect all unique group values from the results
+	const allGroupValues = new Set<string>();
 	for (const row of rows) {
-		if (!row.group_value || row.group_value === "AUTUMN_RESERVED") continue;
-		globalTotals.set(
-			row.group_value,
-			(globalTotals.get(row.group_value) ?? 0) + row.total_value,
-		);
+		if (row.group_value) {
+			allGroupValues.add(row.group_value);
+		}
 	}
-
-	const sortedGroups = Array.from(globalTotals.entries()).sort(
-		(a, b) => b[1] - a[1],
-	);
-
-	const topGroupValues = new Set(
-		sortedGroups.slice(0, maxGroups).map(([gv]) => gv),
-	);
-
-	// If there are overflow groups, fold them into AUTUMN_RESERVED
-	const hasOverflow =
-		sortedGroups.length > maxGroups ||
-		rows.some((r) => r.group_value === "AUTUMN_RESERVED");
-
-	if (hasOverflow) {
-		topGroupValues.add("AUTUMN_RESERVED");
-	}
-
-	// Re-bucket: rows whose group_value isn't in topGroupValues become AUTUMN_RESERVED
-	const rebucketed: AggregateGroupablePipeRow[] = rows.map((row) => {
-		if (!row.group_value || topGroupValues.has(row.group_value)) return row;
-		return { ...row, group_value: "AUTUMN_RESERVED" };
-	});
-
-	const allGroupValues = topGroupValues;
 
 	// Build a map of (period, groupValue) -> { event_name: value }
 	const dataMap = new Map<string, Map<string, Record<string, number>>>();
@@ -288,8 +257,8 @@ const formatGroupableResults = ({
 		dataMap.set(period, groupMap);
 	}
 
-	// Fill in actual data (use rebucketed rows so overflow groups are merged)
-	for (const row of rebucketed) {
+	// Fill in actual data
+	for (const row of rows) {
 		if (!row.group_value) continue;
 
 		const groupMap = dataMap.get(row.period);
@@ -303,9 +272,7 @@ const formatGroupableResults = ({
 				eventName: row.event_name,
 				noCount,
 			});
-			// Use += to aggregate multiple rebucketed rows into AUTUMN_RESERVED
-			record[columnName] = new Decimal(record[columnName] ?? 0)
-				.plus(new Decimal(row.total_value))
+			record[columnName] = new Decimal(row.total_value)
 				.toDecimalPlaces(10)
 				.toNumber();
 		}
@@ -409,7 +376,6 @@ export const aggregate = async ({
 			entity_id: params.entity_id,
 			group_column: groupColumn,
 			property_key: propertyKey,
-			max_groups: params.max_groups,
 		};
 
 		// ctx.logger.debug("Calling Tinybird aggregate_groupable pipe", {
@@ -432,7 +398,6 @@ export const aggregate = async ({
 			startDate,
 			endDate,
 			binSize,
-			maxGroups: params.max_groups,
 		});
 	} else {
 		// Use aggregate_simple pipe for ungrouped queries
