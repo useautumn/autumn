@@ -173,12 +173,12 @@ export function CustomerUsageAnalyticsTable() {
 						</>
 					) : (
 						<>
-							<div className="w-full lg:max-w-1/2 h-[250px]">
-								<EmptyState
-									className="h-full"
-									text={
-										<>
-											Track an event to display feature usage
+						<div className="w-full lg:max-w-1/2 min-w-0 h-[250px]">
+							<EmptyState
+								className="h-full"
+								text={
+									<>
+										Track an event to display feature usage
 											{env === AppEnv.Sandbox && (
 												<IconButton
 													variant="muted"
