@@ -10,8 +10,8 @@ export const LogOutItem = () => {
 			<DropdownMenuItem
 				onClick={async () => {
 					try {
-						clearOrgCache();
 						await authClient.signOut();
+						clearOrgCache();
 						window.location.href = "/sign-in";
 					} catch (error) {
 						console.error("Error signing out:", error);
