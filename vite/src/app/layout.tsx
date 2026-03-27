@@ -3,7 +3,7 @@ import { ArrowRightIcon } from "@phosphor-icons/react";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect, useRef, useState } from "react";
-import { Outlet, useNavigate } from "react-router";
+import { Navigate, Outlet, useNavigate } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { SandboxBanner } from "@/components/general/SandboxBanner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -91,7 +91,9 @@ export function MainLayout() {
 		);
 	}
 
-	if (!data) return null;
+	if (!data) {
+		return <Navigate to="/sign-in" replace={true} />;
+	}
 
 	return (
 		<AutumnProvider
