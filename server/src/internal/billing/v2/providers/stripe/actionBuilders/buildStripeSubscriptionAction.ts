@@ -40,8 +40,11 @@ export const buildStripeSubscriptionAction = ({
 	});
 
 	const addInvoiceItems = oneOffItemSpecs.map((item) => ({
-		price: item.stripePriceId,
+		...(item.stripeInlinePrice
+			? { price_data: item.stripeInlinePrice }
+			: { price: item.stripePriceId }),
 		quantity: item.quantity,
+		...(item.metadata && { metadata: item.metadata }),
 	}));
 
 	// Case 1: No subscription and sub items update is empty -> no action
