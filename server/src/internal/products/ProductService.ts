@@ -63,16 +63,19 @@ export class ProductService {
 		internalFeatureId: string;
 	}) {
 		const fullProducts = (await db.query.products.findMany({
-			where: exists(
-				db
-					.select()
-					.from(entitlements)
-					.where(
-						and(
-							eq(entitlements.internal_product_id, products.internal_id),
-							eq(entitlements.internal_feature_id, internalFeatureId),
+			where: and(
+				ne(products.archived, true),
+				exists(
+					db
+						.select()
+						.from(entitlements)
+						.where(
+							and(
+								eq(entitlements.internal_product_id, products.internal_id),
+								eq(entitlements.internal_feature_id, internalFeatureId),
+							),
 						),
-					),
+				),
 			),
 			with: {
 				entitlements: {
