@@ -87,6 +87,10 @@ export type EventsAggregateParams = {
    * Custom time range to aggregate events for. If provided, range must not be provided
    */
   customRange?: AggregateEventsCustomRange | undefined;
+  /**
+   * Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
+   */
+  maxGroups?: number | undefined;
 };
 
 export type AggregateEventsList = {
@@ -186,6 +190,7 @@ export type EventsAggregateParams$Outbound = {
   range?: string | undefined;
   bin_size: string;
   custom_range?: AggregateEventsCustomRange$Outbound | undefined;
+  max_groups?: number | undefined;
 };
 
 /** @internal */
@@ -203,6 +208,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
     customRange: z.optional(
       z.lazy(() => AggregateEventsCustomRange$outboundSchema),
     ),
+    maxGroups: z.optional(z.int()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -212,6 +218,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
       groupBy: "group_by",
       binSize: "bin_size",
       customRange: "custom_range",
+      maxGroups: "max_groups",
     });
   }),
 );
