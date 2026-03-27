@@ -32,6 +32,7 @@ export const useAnalyticsData = ({
 	const interval = searchParams.get("interval");
 	const groupBy = searchParams.get("group_by");
 	const binSize = searchParams.get("bin_size");
+	const maxGroups = Number(searchParams.get("max_groups")) || 10;
 
 	const { eventNames: cachedEventNames } = useEventNames();
 
@@ -59,6 +60,7 @@ export const useAnalyticsData = ({
 		group_by: formattedGroupBy,
 		bin_size: binSize || undefined,
 		timezone,
+		max_groups: formattedGroupBy ? maxGroups : undefined,
 	};
 
 	const {
@@ -75,6 +77,7 @@ export const useAnalyticsData = ({
 			...selectedEventNames.sort(),
 			groupBy,
 			timezone,
+			String(maxGroups),
 		]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.post("/query/events", postBody);
@@ -88,12 +91,14 @@ export const useAnalyticsData = ({
 		featuresLoading,
 		queryLoading,
 		events: data?.events,
-		error: error && (error as any)?.code === ErrCode.ClickHouseDisabled
-			? null
-			: error,
+		error:
+			error && (error as any)?.code === ErrCode.ClickHouseDisabled
+				? null
+				: error,
 		bcExclusionFlag: data?.bcExclusionFlag ?? false,
 		groupBy,
 		truncated: data?.truncated ?? false,
+		entityNames: (data?.entityNames as Record<string, string>) ?? undefined,
 	};
 };
 
@@ -138,8 +143,9 @@ export const useRawAnalyticsData = () => {
 		featuresLoading,
 		queryLoading,
 		rawEvents: data?.rawEvents,
-		error: error && (error as any)?.code === ErrCode.ClickHouseDisabled
-			? null
-			: error,
+		error:
+			error && (error as any)?.code === ErrCode.ClickHouseDisabled
+				? null
+				: error,
 	};
 };
