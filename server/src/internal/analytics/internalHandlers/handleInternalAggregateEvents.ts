@@ -9,6 +9,7 @@ import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { eventActions } from "../actions/eventActions.js";
 
@@ -99,6 +100,28 @@ export const handleInternalAggregateEvents = createRoute({
 			},
 		});
 
+		// When grouping by entity_id, resolve entity names from ClickHouse
+		let entityNames: Record<string, string> | undefined;
+		if (group_by === "entity_id" && events?.data) {
+			const entityIds = [
+				...new Set(
+					events.data
+						.map((row: Record<string, unknown>) => row.entity_id as string)
+						.filter(
+							(id: string) => id && id !== "AUTUMN_RESERVED" && id !== "",
+						),
+				),
+			];
+
+			if (entityIds.length > 0) {
+				entityNames = await getEntityNames({
+					entityIds,
+					orgId: org.id,
+					env,
+				});
+			}
+		}
+
 		return c.json({
 			customer,
 			events,
@@ -106,6 +129,7 @@ export const handleInternalAggregateEvents = createRoute({
 			eventNames: event_names,
 			bcExclusionFlag,
 			truncated,
+			entityNames,
 		});
 	},
 });

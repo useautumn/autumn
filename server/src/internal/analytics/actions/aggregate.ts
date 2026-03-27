@@ -211,7 +211,12 @@ const formatSimpleResults = ({
 	return { meta, rows: data.length, data };
 };
 
-/** Formats groupable pipe results (with grouping) into unpivoted format */
+/**
+ * Formats groupable pipe results using per-bin ranking.
+ * The Tinybird pipe already ranks per-bin and buckets overflow into AUTUMN_RESERVED.
+ * This function trusts that ranking — each bin keeps its own top N groups,
+ * so different bins can show different entities.
+ */
 const formatGroupableResults = ({
 	rows,
 	eventNames,
@@ -220,7 +225,6 @@ const formatGroupableResults = ({
 	startDate,
 	endDate,
 	binSize,
-	maxGroups = 9,
 }: {
 	rows: AggregateGroupablePipeRow[];
 	eventNames: string[];
@@ -232,45 +236,16 @@ const formatGroupableResults = ({
 	maxGroups?: number;
 }): ClickHouseResult => {
 	const allPeriods = generateAllPeriods({ startDate, endDate, binSize });
-	// groupBy already comes with "properties." prefix from frontend
 	const groupByColumn = groupBy;
 
-	// Compute global totals per group value across all bins,
-	// then keep only the top maxGroups. This prevents the union
-	// of per-bin top-N from exceeding the intended group limit.
-	const globalTotals = new Map<string, number>();
+	// Collect all unique group values across all bins (for backfilling zeros).
+	// Each bin may have a different set of top-N groups, so the union can exceed N.
+	const allGroupValues = new Set<string>();
 	for (const row of rows) {
-		if (!row.group_value || row.group_value === "AUTUMN_RESERVED") continue;
-		globalTotals.set(
-			row.group_value,
-			(globalTotals.get(row.group_value) ?? 0) + row.total_value,
-		);
+		if (row.group_value) {
+			allGroupValues.add(row.group_value);
+		}
 	}
-
-	const sortedGroups = Array.from(globalTotals.entries()).sort(
-		(a, b) => b[1] - a[1],
-	);
-
-	const topGroupValues = new Set(
-		sortedGroups.slice(0, maxGroups).map(([gv]) => gv),
-	);
-
-	// If there are overflow groups, fold them into AUTUMN_RESERVED
-	const hasOverflow =
-		sortedGroups.length > maxGroups ||
-		rows.some((r) => r.group_value === "AUTUMN_RESERVED");
-
-	if (hasOverflow) {
-		topGroupValues.add("AUTUMN_RESERVED");
-	}
-
-	// Re-bucket: rows whose group_value isn't in topGroupValues become AUTUMN_RESERVED
-	const rebucketed: AggregateGroupablePipeRow[] = rows.map((row) => {
-		if (!row.group_value || topGroupValues.has(row.group_value)) return row;
-		return { ...row, group_value: "AUTUMN_RESERVED" };
-	});
-
-	const allGroupValues = topGroupValues;
 
 	// Build a map of (period, groupValue) -> { event_name: value }
 	const dataMap = new Map<string, Map<string, Record<string, number>>>();
@@ -288,8 +263,8 @@ const formatGroupableResults = ({
 		dataMap.set(period, groupMap);
 	}
 
-	// Fill in actual data (use rebucketed rows so overflow groups are merged)
-	for (const row of rebucketed) {
+	// Fill in actual data directly from the pipe output
+	for (const row of rows) {
 		if (!row.group_value) continue;
 
 		const groupMap = dataMap.get(row.period);
@@ -303,7 +278,6 @@ const formatGroupableResults = ({
 				eventName: row.event_name,
 				noCount,
 			});
-			// Use += to aggregate multiple rebucketed rows into AUTUMN_RESERVED
 			record[columnName] = new Decimal(record[columnName] ?? 0)
 				.plus(new Decimal(row.total_value))
 				.toDecimalPlaces(10)
@@ -323,13 +297,14 @@ const formatGroupableResults = ({
 		}
 	}
 
-	// Sort by period then group value (but put "Other" last within each period)
+	// Sort by period then group value (put AUTUMN_RESERVED last within each period)
 	data.sort((a, b) => {
 		const periodCompare = String(a.period).localeCompare(String(b.period));
 		if (periodCompare !== 0) return periodCompare;
-		// Put "Other" last
-		const aIsOther = a[groupByColumn] === "Other";
-		const bIsOther = b[groupByColumn] === "Other";
+		const aIsOther =
+			a[groupByColumn] === "AUTUMN_RESERVED" || a[groupByColumn] === "Other";
+		const bIsOther =
+			b[groupByColumn] === "AUTUMN_RESERVED" || b[groupByColumn] === "Other";
 		if (aIsOther && !bIsOther) return 1;
 		if (!aIsOther && bIsOther) return -1;
 		return String(a[groupByColumn]).localeCompare(String(b[groupByColumn]));
