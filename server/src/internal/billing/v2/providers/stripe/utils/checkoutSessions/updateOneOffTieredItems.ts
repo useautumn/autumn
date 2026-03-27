@@ -9,6 +9,7 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type Stripe from "stripe";
+import { stripeItemSpecToCheckoutLineItem } from "../stripeItemSpec/stripeItemSpecToStripeParam";
 
 /**
  * Update one-off items to use inline price_data if they're tiered.
@@ -33,10 +34,7 @@ export const updateOneOffTieredItems = ({
 			!autumnProduct ||
 			!priceIsTieredOneOff({ price: autumnPrice, product: autumnProduct })
 		) {
-			return {
-				price: item.stripePriceId,
-				quantity: item.quantity ?? 1,
-			};
+			return stripeItemSpecToCheckoutLineItem({ spec: item });
 		}
 
 		if (!autumnCusEnt) {
