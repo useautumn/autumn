@@ -10,7 +10,6 @@ import type {
 	Rollover,
 } from "@autumn/shared";
 import { toast } from "sonner";
-import { clearOrgCache } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
 
@@ -66,7 +65,6 @@ export const impersonateUser = async ({
 		await authClient.organization.setActive({ organizationId });
 	}
 
-	clearOrgCache();
 	window.location.reload();
 };
 
