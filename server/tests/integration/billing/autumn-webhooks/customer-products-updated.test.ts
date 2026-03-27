@@ -16,7 +16,9 @@ import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/e
 import {
 	expectProductActive,
 	expectProductCanceling,
+	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId";
 import {
 	getTestSvixAppId,
 	setupWebhookTest,
@@ -29,6 +31,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { timeout } from "@/utils/genUtils";
 
 type CustomerProductsUpdatedPayload = {
 	type: string;
@@ -222,6 +225,92 @@ test.concurrent(`${chalk.yellowBright("webhook: cancel end of cycle (with free d
 	expect(data.customer).toBeDefined();
 	expect(data.customer.id).toBe(customerId);
 	expect(data.entity).toBeUndefined();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WEBHOOK TESTS - STRIPE-INITIATED CANCEL (default scheduled before webhook)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("webhook: Stripe-initiated cancel fires after default product scheduled")}`, async () => {
+	const customerId = "webhook-stripe-cancel-default";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const pro = products.pro({ id: "pro", items: [messagesItem] });
+	const freeDefault = products.base({
+		id: "free-default",
+		items: [messagesItem],
+		isDefault: true,
+	});
+
+	const { autumnV1, ctx: testCtx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [pro, freeDefault] }),
+		],
+		actions: [s.attach({ productId: pro.id })],
+	});
+
+	// Verify pro is active
+	const customerAfterAttach =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({
+		customer: customerAfterAttach,
+		productId: pro.id,
+	});
+
+	// Get Stripe subscription ID and cancel externally via Stripe CLI
+	const subscriptionId = await getSubscriptionId({
+		ctx: testCtx,
+		customerId,
+		productId: pro.id,
+	});
+
+	await testCtx.stripeCli.subscriptions.update(subscriptionId, {
+		cancel_at_period_end: true,
+	});
+
+	// Wait for webhook triggered by the Stripe-initiated cancellation
+	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "customer.products.updated" &&
+			payload.data?.customer?.id === customerId &&
+			payload.data?.scenario === "cancel",
+		timeoutMs: 20000,
+	});
+
+	expect(result).not.toBeNull();
+	expect(result?.payload.type).toBe("customer.products.updated");
+
+	const { data } = result!.payload;
+
+	expect(data.scenario).toBe("cancel");
+	expect(data.updated_product).toBeDefined();
+	expect(data.updated_product.id).toBe(pro.id);
+	expect(data.customer).toBeDefined();
+	expect(data.customer.id).toBe(customerId);
+
+	// The webhook customer should include the scheduled default product
+	// because webhooks now fire AFTER defaults are scheduled
+	const scheduledProduct = data.customer.products.find(
+		(p) => p.id === freeDefault.id,
+	);
+	expect(scheduledProduct).toBeDefined();
+	expect(scheduledProduct!.status).toBe("scheduled");
+
+	// Also verify via API that the state is correct
+	await timeout(2000);
+	const customerAfterCancel =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer: customerAfterCancel,
+		productId: pro.id,
+	});
+	await expectProductScheduled({
+		customer: customerAfterCancel,
+		productId: freeDefault.id,
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

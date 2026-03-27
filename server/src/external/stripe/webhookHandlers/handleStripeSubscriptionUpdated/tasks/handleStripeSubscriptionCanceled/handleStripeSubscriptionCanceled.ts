@@ -1,4 +1,4 @@
-import { AttachScenario, cp } from "@autumn/shared";
+import { AttachScenario, cp, type FullCusProduct } from "@autumn/shared";
 import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
@@ -16,7 +16,7 @@ import { scheduleDefaultProducts } from "./scheduleDefaultProducts";
  * 2. Skips if Autumn initiated the cancellation (via lock)
  * 3. Marks active customer products as canceled
  * 4. Schedules default products for non-add-on groups
- * 5. Sends cancel webhooks
+ * 5. Sends cancel webhooks (after defaults are scheduled)
  */
 export const handleStripeSubscriptionCanceled = async ({
 	ctx,
@@ -25,7 +25,7 @@ export const handleStripeSubscriptionCanceled = async ({
 	ctx: StripeWebhookContext;
 	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
 }): Promise<void> => {
-	const { db, org, env, logger } = ctx;
+	const { org, env, logger } = ctx;
 	const {
 		stripeSubscription,
 		previousAttributes,
@@ -56,10 +56,11 @@ export const handleStripeSubscriptionCanceled = async ({
 		return;
 	}
 
-	// PASS 1: Update cancellation status and send webhooks
-	const canceledCustomerProducts = [];
+	// PASS 1: Update cancellation status
+	const allCanceledProducts: FullCusProduct[] = [];
+	const canceledNonAddonProducts: FullCusProduct[] = [];
+
 	for (const customerProduct of customerProducts) {
-		// Skip if not active or not on this subscription
 		const { valid: isActiveRecurringAndOnSub } = cp(customerProduct)
 			.recurring()
 			.hasActiveStatus()
@@ -67,7 +68,6 @@ export const handleStripeSubscriptionCanceled = async ({
 
 		if (!isActiveRecurringAndOnSub) continue;
 
-		// Update cancellation status
 		const updates = {
 			canceled_at: canceledAtMs ?? Date.now(),
 			canceled: true,
@@ -90,6 +90,29 @@ export const handleStripeSubscriptionCanceled = async ({
 			`[handleStripeSubscriptionCanceled] Marked ${customerProduct.product.name} as canceled`,
 		);
 
+		allCanceledProducts.push(customerProduct);
+
+		if (!customerProduct.product.is_add_on) {
+			canceledNonAddonProducts.push(customerProduct);
+		}
+	}
+
+	// PASS 2: Schedule default products
+	let scheduledByGroup = new Map<string, FullCusProduct>();
+	if (org.config.sync_status && canceledNonAddonProducts.length > 0) {
+		scheduledByGroup = await scheduleDefaultProducts({
+			ctx,
+			subscriptionUpdatedContext,
+			canceledCustomerProducts: canceledNonAddonProducts,
+		});
+	}
+
+	// PASS 3: Send cancel webhooks (after defaults are scheduled)
+	for (const customerProduct of allCanceledProducts) {
+		const scheduledCusProduct = scheduledByGroup.get(
+			customerProduct.product.group,
+		);
+
 		await addProductsUpdatedWebhookTask({
 			ctx,
 			internalCustomerId: fullCustomer.internal_id,
@@ -98,20 +121,7 @@ export const handleStripeSubscriptionCanceled = async ({
 			customerId: fullCustomer.id ?? null,
 			scenario: AttachScenario.Cancel,
 			cusProduct: customerProduct,
-		});
-
-		// Track for default product scheduling
-		if (!customerProduct.product.is_add_on) {
-			canceledCustomerProducts.push(customerProduct);
-		}
-	}
-
-	// PASS 2: Schedule default products
-	if (org.config.sync_status && canceledCustomerProducts.length > 0) {
-		await scheduleDefaultProducts({
-			ctx,
-			subscriptionUpdatedContext,
-			canceledCustomerProducts,
+			scheduledCusProduct,
 		});
 	}
 };
