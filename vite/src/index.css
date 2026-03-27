@@ -132,7 +132,7 @@ html {
 	--chart-9: #349eff;
 	--chart-10: #27a7ff;
 
-	--chart-grid-stroke: #d1d1d1;
+	--chart-grid-stroke: #d1d1d190;
 
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.141 0.005 285.823);

@@ -89,7 +89,7 @@ export function TableContentVirtualized({
 		<TableContext.Provider value={contextWithRef}>
 			<div
 				className={cn(
-					"rounded-lg shadow-[0_0_8px_rgba(0,0,0,0.04)] border relative z-50 min-w-0 overflow-hidden",
+					"rounded-lg border relative z-50 min-w-0 overflow-hidden",
 					!rows.length &&
 						"border-dashed bg-interactive-secondary dark:bg-transparent",
 					className,
@@ -138,7 +138,7 @@ export function TableContentVirtualized({
 					key={visibleColumnKey}
 					ref={setScrollContainer}
 					onScroll={handleScroll}
-					className="rounded-b-lg w-full overflow-auto"
+					className="w-full overflow-auto"
 					style={{
 						minHeight,
 						maxHeight: virtualization?.containerHeight

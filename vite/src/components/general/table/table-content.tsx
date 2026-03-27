@@ -21,7 +21,7 @@ export function TableContent({
 			className={cn(
 				"rounded-lg shadow-card border relative z-50 min-w-0",
 				!rows.length &&
-					"border-dashed bg-interactive-secondary dark:bg-transparent",
+					"border-dashed shadow-none",
 				className,
 			)}
 		>
