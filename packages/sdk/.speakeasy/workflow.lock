@@ -1,4 +1,4 @@
-speakeasyVersion: 1.719.0
+speakeasyVersion: 1.759.2
 sources:
     Autumn API:
         sourceNamespace: autumn-api
@@ -21,7 +21,7 @@ targets:
         sourceRevisionDigest: sha256:2a2c04e00bbcfebdd9c499e969261c9782e0cbb8f3f3304754b7bfa98f798459
         sourceBlobDigest: sha256:7a5e815400ea55cb9b4fc81ed0c1408e01009b8845f6b7705a0398ca3ee3153a
         codeSamplesNamespace: autumn-api-typescript-code-samples
-        codeSamplesRevisionDigest: sha256:ed725e6d550745811ba55b8f9abcfd47782d47cfe73d09757a4bbf56b240b6a4
+        codeSamplesRevisionDigest: sha256:c8f360da4a5ffafb4a7f984e1b110c28d8058c6a15fe4c91b58313e802641d77
     autumn-python:
         source: Autumn API Stripped
         sourceNamespace: autumn-api-stripped
