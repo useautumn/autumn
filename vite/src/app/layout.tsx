@@ -50,6 +50,13 @@ export function MainLayout() {
 		return () => window.removeEventListener("error", handleGlobalError);
 	}, [handleApiError]);
 
+	// Redirect to sign in if no session
+	useEffect(() => {
+		if (!isPending && !data) {
+			navigate("/sign-in");
+		}
+	}, [isPending, data, navigate]);
+
 	// Redirect to sandbox if not deployed
 	useEffect(() => {
 		if (!orgLoading && org && !org.deployed && env !== AppEnv.Sandbox) {
@@ -84,11 +91,7 @@ export function MainLayout() {
 		);
 	}
 
-	// 2. If no user, redirect to sign in
-	if (!data) {
-		navigate("/sign-in");
-		return;
-	}
+	if (!data) return null;
 
 	return (
 		<AutumnProvider
