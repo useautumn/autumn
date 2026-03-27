@@ -10,11 +10,11 @@ export const EmptyState = ({
 	return (
 		<div
 			className={cn(
-				"flex justify-center items-center py-4 border-dashed border rounded-lg h-13 w-full",
+				"flex justify-center items-center py-4 border-dashed border rounded-lg h-13 w-full min-w-0 overflow-hidden px-4",
 				className,
 			)}
 		>
-			<span className="text-xs text-t4">{text}</span>
+			<span className="text-xs text-t4 truncate">{text}</span>
 		</div>
 	);
 };

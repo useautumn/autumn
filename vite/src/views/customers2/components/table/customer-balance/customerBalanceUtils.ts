@@ -19,23 +19,22 @@ export const canDeleteCustomerBalance = ({
 	balance: FullCusEntWithFullCusProduct;
 }) => !isPaidCustomerEntitlement(balance);
 
-export function getCustomerBalanceSourceLabel({
+export function getCustomerBalanceSourceParts({
 	balance,
 	entities,
 }: {
 	balance: FullCusEntWithFullCusProduct;
 	entities: Entity[];
 }) {
-	const parts: string[] = [];
-
-	parts.push(balance.customer_product?.product.name || "No plan");
+	const productName = balance.customer_product?.product.name || "No plan";
 
 	const { interval, interval_count } = balance.entitlement;
+	let intervalLabel: string;
 	if (!interval || interval === EntInterval.Lifetime) {
-		parts.push("Lifetime");
+		intervalLabel = "Lifetime";
 	} else {
 		const count = interval_count || 1;
-		parts.push(count > 1 ? `${count} ${interval}s` : interval);
+		intervalLabel = count > 1 ? `${count} ${interval}s` : interval;
 	}
 
 	const entity = entities.find((candidate) => {
@@ -49,10 +48,22 @@ export function getCustomerBalanceSourceLabel({
 		);
 	});
 
-	if (entity) {
-		parts.push(entity.name || entity.id);
-	}
+	const entityName = entity ? entity.name || entity.id : undefined;
 
+	return { productName, intervalLabel, entityName };
+}
+
+export function getCustomerBalanceSourceLabel({
+	balance,
+	entities,
+}: {
+	balance: FullCusEntWithFullCusProduct;
+	entities: Entity[];
+}) {
+	const { productName, intervalLabel, entityName } =
+		getCustomerBalanceSourceParts({ balance, entities });
+	const parts = [productName, intervalLabel];
+	if (entityName) parts.push(entityName);
 	return parts.join(" · ");
 }
 
