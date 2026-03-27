@@ -258,12 +258,82 @@ test.concurrent(`${chalk.yellowBright("recurring-oneoff 2: attach with only one-
 	});
 });
 
-test.concurrent(`${chalk.yellowBright("recurring-oneoff 3: attach one off base price with consumable messages")}`, async () => {
-	const customerId = "recurring-oneoff-attach-both-invoice-mode-false";
+test.concurrent(`${chalk.yellowBright("recurring-oneoff 3: attach with tiered one-off inline price")}`, async () => {
+	const customerId = "recurring-oneoff-tiered-inline";
 	const basePrice = 20;
-	const wordsPricePerPack = 15;
-	const messagesPricePerPack = 10;
+	const quantity = 800;
 	const billingUnits = 100;
+	const includedUsage = 100;
+	const expectedOneOffTotal = 5 * 10 + 2 * 5;
+	const expectedTotal = basePrice + expectedOneOffTotal;
+
+	const tieredOneOffMessagesItem = items.tieredOneOffMessages({
+		includedUsage,
+		billingUnits,
+		tiers: [
+			{ to: 500, amount: 10 },
+			{ to: "inf", amount: 5 },
+		],
+	});
+
+	const product = products.pro({
+		id: "pro-recurring-tiered-oneoff",
+		items: [tieredOneOffMessagesItem],
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [],
+	});
+
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [{ feature_id: TestFeature.Messages, quantity }],
+	});
+	expect(preview.total).toBe(expectedTotal);
+
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: product.id,
+		options: [{ feature_id: TestFeature.Messages, quantity }],
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	await expectProductActive({
+		customer,
+		productId: product.id,
+	});
+
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: quantity,
+		usage: 0,
+	});
+
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: expectedTotal,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("recurring-oneoff 4: attach one off base price with consumable messages")}`, async () => {
+	const customerId = "recurring-oneoff-attach-both-invoice-mode-false";
+	const messagesPricePerPack = 10;
 
 	const consumableMessagesItem = items.consumableMessages({
 		includedUsage: 0,
