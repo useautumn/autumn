@@ -64,6 +64,8 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		queryFn: fetcher,
 		initialData: initialDataValue,
 		placeholderData: keepPreviousData,
+		refetchOnWindowFocus: true,
+		staleTime: 30_000,
 	});
 
 	useEffect(() => {
