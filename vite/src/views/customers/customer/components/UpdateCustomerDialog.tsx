@@ -48,6 +48,7 @@ const UpdateCustomerDialog = ({
 					name: customer.name || null,
 					email: customer.email || null,
 					fingerprint: customer.fingerprint || null,
+					stripe_id: customer.stripe_id || undefined,
 				},
 			});
 
