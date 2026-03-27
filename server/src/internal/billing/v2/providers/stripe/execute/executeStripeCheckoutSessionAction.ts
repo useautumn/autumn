@@ -52,6 +52,7 @@ export const executeStripeCheckoutSessionAction = async ({
 				? { enabled: true }
 				: undefined,
 		autumnMetadataId: metadata.id,
+		userMetadata: billingContext.userMetadata,
 	});
 
 	// 3. Create checkout session with card-type fallback

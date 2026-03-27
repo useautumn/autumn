@@ -229,6 +229,7 @@ export const setupAttachBillingContext = async ({
 		successUrl:
 			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
 		checkoutSessionParams: params.checkout_session_params,
+		userMetadata: params.metadata,
 
 		externalId: params.subscription_id,
 
