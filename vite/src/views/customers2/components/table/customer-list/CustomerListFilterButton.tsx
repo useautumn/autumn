@@ -15,11 +15,11 @@ import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdow
 import { ProductsSubMenu } from "@/views/customers/components/filter-dropdown/ProductsSubMenu";
 import { SaveViewPopover } from "@/views/customers/components/filter-dropdown/SavedViewPopover";
 import { SavedViews } from "@/views/customers/components/filter-dropdown/SavedViews";
-import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
+import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 
 export function CustomerListFilterButton() {
-	const { queryStates, setFilters } = useCustomersQueryStates();
+	const { queryStates, setFilters } = useCustomerFilters();
 	const [open, setOpen] = useState(false);
 
 	const hasActiveFilters =

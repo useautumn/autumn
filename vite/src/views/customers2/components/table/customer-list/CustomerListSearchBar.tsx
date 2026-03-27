@@ -4,10 +4,10 @@ import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Input } from "@/components/v2/inputs/Input";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
-import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
+import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 
 export function CustomerListSearchBar() {
-	const { queryStates, setFilters } = useCustomersQueryStates();
+	const { queryStates, setFilters } = useCustomerFilters();
 
 	const { totalCount } = useCusSearchQuery();
 	const navigate = useNavigate();
