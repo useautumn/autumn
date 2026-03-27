@@ -36,6 +36,9 @@ export const prices = pgTable(
 		proration_config: jsonb("proration_config")
 			.$type<ProrationConfig>()
 			.default(sql`null`),
+
+		variant_action: text("variant_action"),
+		base_price_id: text("base_price_id"),
 	},
 	(table) => [
 		foreignKey({

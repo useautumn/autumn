@@ -19,8 +19,6 @@ import {
 	constructProduct,
 	initProductInStripe,
 } from "@/internal/products/productUtils.js";
-import { JobName } from "@/queue/JobName.js";
-import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
 export const createProduct = async ({
@@ -108,13 +106,6 @@ export const createProduct = async ({
 	await initProductInStripe({
 		ctx,
 		product: newFullProduct,
-	});
-
-	await addTaskToQueue({
-		jobName: JobName.DetectBaseVariant,
-		payload: {
-			curProduct: newFullProduct,
-		},
 	});
 
 	const productResponse = await getProductResponse({
