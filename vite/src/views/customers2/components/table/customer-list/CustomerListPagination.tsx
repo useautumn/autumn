@@ -14,13 +14,13 @@ import {
 	SelectValue,
 } from "@/components/v2/selects/Select";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
-import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
+import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 
 const PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 
 export function CustomerListPagination() {
 	const { isLoading, totalCount } = useCusSearchQuery();
-	const { queryStates, setQueryStates } = useCustomersQueryStates();
+	const { queryStates, setQueryStates } = useCustomerFilters();
 
 	const pageSize = queryStates.pageSize || 50;
 	const totalPages = Math.ceil((totalCount || 0) / pageSize);
@@ -80,7 +80,7 @@ export function CustomerListPagination() {
 }
 
 export function CustomerListPageSizeSelector() {
-	const { queryStates, setQueryStates } = useCustomersQueryStates();
+	const { queryStates, setQueryStates } = useCustomerFilters();
 	const pageSize = queryStates.pageSize || 50;
 
 	return (
