@@ -9,11 +9,11 @@ import {
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
 import { getVersionCounts } from "@/utils/productUtils";
-import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
+import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 
 export const ProductsSubMenu = () => {
 	const { products } = useProductsQuery();
-	const { queryStates, setFilters } = useCustomersQueryStates();
+	const { queryStates, setFilters } = useCustomerFilters();
 	const versionCounts = getVersionCounts(products);
 
 	const selectedVersions = queryStates.version;

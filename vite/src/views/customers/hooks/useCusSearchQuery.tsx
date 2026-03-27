@@ -3,10 +3,10 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useCustomersQueryStates } from "./useCustomersQueryStates";
+import { useCustomerFilters } from "./useCustomerFilters";
 
 export const useCusSearchQuery = () => {
-	const { queryStates } = useCustomersQueryStates();
+	const { queryStates, isInitialized } = useCustomerFilters();
 	const trimmedSearch = queryStates.q.trim();
 
 	const axiosInstance = useAxiosInstance();
@@ -48,6 +48,7 @@ export const useCusSearchQuery = () => {
 			trimmedSearch,
 		]),
 		queryFn: fetcher,
+		enabled: isInitialized,
 		placeholderData: keepPreviousData,
 	});
 
