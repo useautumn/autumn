@@ -4,7 +4,8 @@ import type {
 	FullCustomerEntitlement,
 } from "@autumn/shared";
 import { FeatureType, type FullCusProduct } from "@autumn/shared";
-import { BatteryHighIcon } from "@phosphor-icons/react";
+import { CubeIcon } from "@phosphor-icons/react";
+import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
@@ -12,9 +13,9 @@ import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { CustomerBalanceTable } from "../customer-balance/CustomerBalanceTable";
-import { CustomerBooleanBalanceTable } from "../customer-boolean-balance/CustomerBooleanBalanceTable";
 import { EmptyState } from "../EmptyState";
 import { CustomerFeatureUsageColumns } from "./CustomerFeatureUsageColumns";
+import { CustomerFlagsSection } from "./CustomerFlagsSection";
 import { filterCustomerFeatureUsage } from "./customerFeatureUsageTableFilters";
 import type { CustomerFeatureUsageRowData } from "./customerFeatureUsageTypes";
 import {
@@ -107,32 +108,13 @@ export function CustomerFeatureUsageTable() {
 				entitlements: deduplicatedCusEnts,
 				cusEnts: deduplicatedCusEnts,
 				featuresMap,
-			})
-				.concat(
-					deduplicatedCusEnts.filter(
-						(ent) => ent.entitlement.feature.type === FeatureType.Boolean,
-					),
-				)
-				.sort((a, b) => {
-					const aIsBoolean = a.entitlement.feature.type === FeatureType.Boolean;
-					const bIsBoolean = b.entitlement.feature.type === FeatureType.Boolean;
-					const aAllowance = a.entitlement.allowance ?? 0;
-					const bAllowance = b.entitlement.allowance ?? 0;
-					const aHasAllowance = aAllowance > 0;
-					const bHasAllowance = bAllowance > 0;
-
-					// Non-boolean items with allowance > 0 come first
-					if (!aIsBoolean && aHasAllowance && (bIsBoolean || !bHasAllowance))
-						return -1;
-					if (!bIsBoolean && bHasAllowance && (aIsBoolean || !aHasAllowance))
-						return 1;
-					// Then non-boolean items without allowance
-					if (!aIsBoolean && !bIsBoolean) return 0;
-					// Boolean items come last
-					if (aIsBoolean && !bIsBoolean) return 1;
-					if (!aIsBoolean && bIsBoolean) return -1;
-					return 0;
-				}),
+			}).sort((a, b) => {
+				const aAllowance = a.entitlement.allowance ?? 0;
+				const bAllowance = b.entitlement.allowance ?? 0;
+				if (aAllowance > 0 && bAllowance <= 0) return -1;
+				if (bAllowance > 0 && aAllowance <= 0) return 1;
+				return 0;
+			}),
 		[deduplicatedCusEnts, featuresMap],
 	);
 
@@ -169,17 +151,17 @@ export function CustomerFeatureUsageTable() {
 
 	const booleanEnts = useMemo(
 		() =>
-			allEnts.filter(
+			deduplicatedCusEnts.filter(
 				(ent) => ent.entitlement.feature.type === FeatureType.Boolean,
 			),
-		[allEnts],
+		[deduplicatedCusEnts],
 	);
 
 	const hasMeteredBalances = balanceEnts.length > 0;
-	const hasBooleanBalances = booleanEnts.length > 0;
+	const hasBooleanFlags = booleanEnts.length > 0;
 
 	return (
-		<div className="flex flex-col gap-8">
+		<div className="flex flex-col gap-6">
 			<Table.Provider
 				config={{
 					table,
@@ -191,49 +173,32 @@ export function CustomerFeatureUsageTable() {
 				<Table.Container>
 					<Table.Toolbar>
 						<Table.Heading>
-							<BatteryHighIcon
+							<CubeIcon
 								size={16}
 								weight="fill"
 								className="text-subtle"
 							/>
-							Balances
+							Features
 						</Table.Heading>
-						{/* <Table.Actions>
-							<ShowExpiredActionButton
-								showExpired={showExpired}
-								setShowExpired={setShowExpired}
-							/>
-						</Table.Actions> */}
 					</Table.Toolbar>
-					{hasMeteredBalances || hasBooleanBalances ? (
-						<div className="flex flex-col gap-3">
-							{hasMeteredBalances && (
-								<CustomerBalanceTable
-									allEnts={balanceEnts}
-									entityId={entityId ?? null}
-									aggregatedMap={aggregatedMap}
-									isLoading={isLoading}
-								/>
-							)}
-							{hasBooleanBalances && (
-								<CustomerBooleanBalanceTable
-									allEnts={booleanEnts}
-									aggregatedMap={aggregatedMap}
-									isLoading={isLoading}
-								/>
-							)}
-						</div>
+					{hasBooleanFlags && <SectionTag>Balances</SectionTag>}
+					{hasMeteredBalances ? (
+						<CustomerBalanceTable
+							allEnts={balanceEnts}
+							entityId={entityId ?? null}
+							aggregatedMap={aggregatedMap}
+							isLoading={isLoading}
+						/>
 					) : (
-						!isLoading && (
+						!isLoading && !hasBooleanFlags && (
 							<EmptyState text="Enable a plan to grant access to features" />
 						)
 					)}
-					{/* <Table.Content>
-						<Table.Header />
-						<Table.Body />
-					</Table.Content> */}
 				</Table.Container>
 			</Table.Provider>
+			{!isLoading && hasBooleanFlags && (
+				<CustomerFlagsSection booleanEnts={booleanEnts} />
+			)}
 		</div>
 	);
 }
