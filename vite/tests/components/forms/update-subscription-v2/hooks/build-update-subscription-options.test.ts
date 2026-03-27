@@ -7,7 +7,6 @@ describe("buildUpdateSubscriptionOptions — billing_units handling", () => {
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [{ feature_id: "messages", included_usage: 0 }],
 			prepaidOptions: { messages: 5000 },
-			initialPrepaidOptions: { messages: 1000 },
 		});
 
 		expect(result).toEqual([{ feature_id: "messages", quantity: 5000 }]);
@@ -17,7 +16,6 @@ describe("buildUpdateSubscriptionOptions — billing_units handling", () => {
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [{ feature_id: "messages", included_usage: 0 }],
 			prepaidOptions: { messages: 5000 },
-			initialPrepaidOptions: { messages: 1000 },
 		});
 
 		// Must NOT be 5,000,000 (5000 * 1000) or 5 (5000 / 1000)
@@ -28,20 +26,18 @@ describe("buildUpdateSubscriptionOptions — billing_units handling", () => {
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [{ feature_id: "messages", included_usage: 200 }],
 			prepaidOptions: { messages: 5000 },
-			initialPrepaidOptions: { messages: 1000 },
 		});
 
 		expect(result).toEqual([{ feature_id: "messages", quantity: 5200 }]);
 	});
 
-	test("should skip items where quantity has not changed", () => {
+	test("should include existing prepaid quantities even when unchanged", () => {
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [{ feature_id: "messages", included_usage: 0 }],
 			prepaidOptions: { messages: 1000 },
-			initialPrepaidOptions: { messages: 1000 },
 		});
 
-		expect(result).toEqual([]);
+		expect(result).toEqual([{ feature_id: "messages", quantity: 1000 }]);
 	});
 
 	test("should handle multiple features with different billing_units", () => {
@@ -51,7 +47,6 @@ describe("buildUpdateSubscriptionOptions — billing_units handling", () => {
 				{ feature_id: "tokens", included_usage: 100 },
 			],
 			prepaidOptions: { messages: 10000, tokens: 2500 },
-			initialPrepaidOptions: { messages: 5000, tokens: 1000 },
 		});
 
 		expect(result).toEqual([
@@ -64,7 +59,6 @@ describe("buildUpdateSubscriptionOptions — billing_units handling", () => {
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [{ feature_id: "messages", included_usage: 0 }],
 			prepaidOptions: { messages: 5000, tokens: 3000 },
-			initialPrepaidOptions: { messages: 1000 },
 			items: [
 				{
 					feature_id: "tokens",
@@ -84,7 +78,6 @@ describe("buildUpdateSubscriptionOptions — billing_units handling", () => {
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [{ feature_id: "messages", included_usage: 0 }],
 			prepaidOptions: { messages: 5000 },
-			initialPrepaidOptions: { messages: 1000 },
 			items: [
 				{
 					feature_id: "messages",
@@ -97,11 +90,26 @@ describe("buildUpdateSubscriptionOptions — billing_units handling", () => {
 		expect(result).toEqual([{ feature_id: "messages", quantity: 5000 }]);
 	});
 
+	test("should skip quantities for features changed from prepaid to non-prepaid", () => {
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [{ feature_id: "ai_credits", included_usage: 0 }],
+			prepaidOptions: { ai_credits: 200 },
+			items: [
+				{
+					feature_id: "ai_credits",
+					usage_model: undefined,
+					included_usage: "inf",
+				},
+			],
+		});
+
+		expect(result).toEqual([]);
+	});
+
 	test("should skip non-prepaid items from items array", () => {
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [],
 			prepaidOptions: { storage: 100 },
-			initialPrepaidOptions: {},
 			items: [
 				{
 					feature_id: "storage",
@@ -114,24 +122,25 @@ describe("buildUpdateSubscriptionOptions — billing_units handling", () => {
 		expect(result).toEqual([]);
 	});
 
-	test("should return empty array when no quantities changed", () => {
+	test("should return all existing quantities when no values changed", () => {
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [
 				{ feature_id: "messages", included_usage: 0 },
 				{ feature_id: "tokens", included_usage: 0 },
 			],
 			prepaidOptions: { messages: 1000, tokens: 500 },
-			initialPrepaidOptions: { messages: 1000, tokens: 500 },
 		});
 
-		expect(result).toEqual([]);
+		expect(result).toEqual([
+			{ feature_id: "messages", quantity: 1000 },
+			{ feature_id: "tokens", quantity: 500 },
+		]);
 	});
 
 	test("should handle included_usage as 'inf' by treating as 0", () => {
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [{ feature_id: "messages", included_usage: "inf" }],
 			prepaidOptions: { messages: 5000 },
-			initialPrepaidOptions: { messages: 1000 },
 		});
 
 		// typeof "inf" !== "number", so includedUsage defaults to 0
@@ -148,9 +157,23 @@ describe("buildUpdateSubscriptionOptions — billing_units handling", () => {
 				},
 			],
 			prepaidOptions: { int_messages: 3000 },
-			initialPrepaidOptions: { int_messages: 1000 },
 		});
 
 		expect(result).toEqual([{ feature_id: "int_messages", quantity: 3000 }]);
+	});
+
+	test("should preserve renamed prepaid quantities via internal feature identity", () => {
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [
+				{
+					feature_id: "messages_v2",
+					feature: { internal_id: "int_messages" },
+					included_usage: 100,
+				},
+			],
+			prepaidOptions: { int_messages: 5000 },
+		});
+
+		expect(result).toEqual([{ feature_id: "messages_v2", quantity: 5100 }]);
 	});
 });

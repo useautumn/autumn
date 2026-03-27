@@ -14,6 +14,7 @@ import {
 	useCallback,
 	useContext,
 	useMemo,
+	useRef,
 	useState,
 } from "react";
 import { applyDefinedFormPatchFields } from "@/components/forms/shared/utils/formPatchUtils";
@@ -25,6 +26,8 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { useHasBillingChanges } from "@/hooks/stores/useProductStore";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getPrepaidItems } from "@/utils/product/productItemUtils";
 import { useHasSubscriptionChanges } from "../hooks/useHasSubscriptionChanges";
 import {
 	type UseTrialStateReturn,
@@ -37,6 +40,7 @@ import {
 import { useUpdateSubscriptionMutation } from "../hooks/useUpdateSubscriptionMutation";
 import { useUpdateSubscriptionRequestBody } from "../hooks/useUpdateSubscriptionRequestBody";
 import type { UpdateSubscriptionForm } from "../updateSubscriptionFormSchema";
+import { mergePrepaidOptionsByFeatureIdentity } from "../utils/prepaidOptionUtils";
 import {
 	getProductWithSupportedFormValues,
 	getSupportedFormPatchFromDraftProduct,
@@ -68,6 +72,7 @@ interface UpdateSubscriptionFormContextValue {
 	changedPrepaidOptions: Record<string, number> | undefined;
 	productWithFormItems: FrontendProduct | undefined;
 	isVersionReady: boolean;
+	isVersionLoading: boolean;
 	hasChanges: boolean;
 	hasNoBillingChanges: boolean;
 
@@ -76,6 +81,7 @@ interface UpdateSubscriptionFormContextValue {
 
 	// Plan editor state
 	showPlanEditor: boolean;
+	handleVersionChange: (params: { version: number }) => Promise<void>;
 	handleEditPlan: () => void;
 	handlePlanEditorSave: (product: FrontendProduct) => void;
 	handlePlanEditorCancel: () => void;
@@ -135,8 +141,10 @@ export function UpdateSubscriptionFormProvider({
 }: UpdateSubscriptionFormProviderProps) {
 	const { customerProduct, prepaidItems, currentVersion, product } =
 		formContext;
+	const axiosInstance = useAxiosInstance();
 
 	const [showPlanEditor, setShowPlanEditor] = useState(false);
+	const requestedVersionRef = useRef(currentVersion);
 
 	const form = useUpdateSubscriptionForm({
 		updateSubscriptionFormContext: formContext,
@@ -145,7 +153,9 @@ export function UpdateSubscriptionFormProvider({
 	const { features } = useFeaturesQuery();
 	const trialState = useTrialState({ form, customerProduct });
 
-	const formValues = useStore(form.store, (state) => state.values);
+	const formValues = useStore(form.store, (state) =>
+		structuredClone(state.values),
+	);
 	const { prepaidOptions } = formValues;
 
 	// Fetch the target version's product data when version differs from current
@@ -164,7 +174,6 @@ export function UpdateSubscriptionFormProvider({
 		}
 		return product;
 	}, [product, isVersionReady, versionProductQuery.data]);
-
 	const defaultValues = form.options.defaultValues;
 	const initialPrepaidOptions = defaultValues?.prepaidOptions ?? {};
 	const initialBillingBehavior = defaultValues?.billingBehavior ?? null;
@@ -226,8 +235,8 @@ export function UpdateSubscriptionFormProvider({
 		newProduct: newProduct as FrontendProduct,
 	});
 
-	const hasPrepaidQuantityChanges = changedPrepaidOptions !== undefined;
 	const isVersionLoading = isVersionChanged && !isVersionReady;
+	const hasPrepaidQuantityChanges = changedPrepaidOptions !== undefined;
 	const hasNoBillingChanges =
 		hasChanges &&
 		!hasBillingChanges &&
@@ -237,6 +246,7 @@ export function UpdateSubscriptionFormProvider({
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext: formContext,
 		form,
+		effectiveProduct,
 	});
 
 	// Build the preview body reactively — formValues triggers recomputation,
@@ -248,7 +258,8 @@ export function UpdateSubscriptionFormProvider({
 
 	const previewQuery = useUpdateSubscriptionPreview({
 		body: previewBody,
-		enabled: !!(formContext.customerId && formContext.product),
+		enabled:
+			!!(formContext.customerId && formContext.product) && !isVersionLoading,
 	});
 
 	const { handleConfirm, handleInvoiceUpdate, isPending } =
@@ -265,6 +276,49 @@ export function UpdateSubscriptionFormProvider({
 		setShowPlanEditor(true);
 		onPlanEditorOpen?.();
 	}, [productWithFormItems, onPlanEditorOpen]);
+
+	const getMergedPrepaidOptions = useCallback(
+		({
+			nextItems,
+		}: {
+			nextItems: {
+				feature_id?: string | null;
+				feature?: { internal_id?: string | null } | null;
+			}[];
+		}) =>
+			mergePrepaidOptionsByFeatureIdentity({
+				currentItems: getPrepaidItems(effectiveProduct),
+				currentPrepaidOptions: prepaidOptions,
+				nextItems,
+			}),
+		[effectiveProduct, prepaidOptions],
+	);
+
+	const handleVersionChange = useCallback(
+		async ({ version }: { version: number }) => {
+			requestedVersionRef.current = version;
+			form.setFieldValue("version", version);
+
+			const targetProduct =
+				version === currentVersion
+					? product
+					: (
+							await axiosInstance.get<{ product: ProductV2 }>(
+								`/products/${product?.id}/data`,
+								{ params: { version } },
+							)
+						).data.product;
+
+			if (requestedVersionRef.current !== version) return;
+
+			const { nextPrepaidOptions } = getMergedPrepaidOptions({
+				nextItems: getPrepaidItems(targetProduct),
+			});
+
+			form.setFieldValue("prepaidOptions", nextPrepaidOptions);
+		},
+		[axiosInstance, currentVersion, form, getMergedPrepaidOptions, product],
+	);
 
 	const handlePlanEditorSave = useCallback(
 		(draftProduct: FrontendProduct) => {
@@ -301,23 +355,14 @@ export function UpdateSubscriptionFormProvider({
 				},
 			});
 
-			const currentPrepaidOptions = form.store.state.values.prepaidOptions;
-			const updatedPrepaidOptions = { ...currentPrepaidOptions };
-			let hasNewPrepaidItems = false;
+			const { nextPrepaidOptions, didChange } = getMergedPrepaidOptions({
+				nextItems: draftProduct.items.filter(
+					(item) => item.usage_model === "prepaid",
+				),
+			});
 
-			for (const item of draftProduct.items) {
-				if (
-					item.usage_model === "prepaid" &&
-					item.feature_id &&
-					updatedPrepaidOptions[item.feature_id] === undefined
-				) {
-					updatedPrepaidOptions[item.feature_id] = 0;
-					hasNewPrepaidItems = true;
-				}
-			}
-
-			if (hasNewPrepaidItems) {
-				form.setFieldValue("prepaidOptions", updatedPrepaidOptions);
+			if (didChange) {
+				form.setFieldValue("prepaidOptions", nextPrepaidOptions);
 			}
 
 			setShowPlanEditor(false);
@@ -325,6 +370,7 @@ export function UpdateSubscriptionFormProvider({
 		},
 		[
 			form,
+			getMergedPrepaidOptions,
 			onPlanEditorClose,
 			productWithFormItems,
 			trialState.isCurrentlyTrialing,
@@ -348,10 +394,12 @@ export function UpdateSubscriptionFormProvider({
 			changedPrepaidOptions,
 			productWithFormItems,
 			isVersionReady,
+			isVersionLoading,
 			hasChanges,
 			hasNoBillingChanges,
 			previewQuery,
 			showPlanEditor,
+			handleVersionChange,
 			handleEditPlan,
 			handlePlanEditorSave,
 			handlePlanEditorCancel,
@@ -370,10 +418,12 @@ export function UpdateSubscriptionFormProvider({
 			changedPrepaidOptions,
 			productWithFormItems,
 			isVersionReady,
+			isVersionLoading,
 			hasChanges,
 			hasNoBillingChanges,
 			previewQuery,
 			showPlanEditor,
+			handleVersionChange,
 			handleEditPlan,
 			handlePlanEditorSave,
 			handlePlanEditorCancel,

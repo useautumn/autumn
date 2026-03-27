@@ -7,6 +7,7 @@ import {
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
+import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import type { UseTrialStateReturn } from "../hooks/useTrialState";
 import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionForm";
 
@@ -25,6 +26,7 @@ export function SectionTitle({
 	currentVersion,
 	trialState,
 }: SectionTitleProps) {
+	const { handleVersionChange } = useUpdateSubscriptionFormContext();
 	const showTrialToggle = !trialState.isCurrentlyTrialing;
 	const trialIsActive =
 		(trialState.isCurrentlyTrialing || trialState.isTrialExpanded) &&
@@ -70,7 +72,7 @@ export function SectionTitle({
 					hasCustomizations={hasCustomizations}
 					numVersions={numVersions}
 					selectedVersion={field.state.value ?? currentVersion}
-					onVersionChange={(v) => field.handleChange(v)}
+					onVersionChange={(v) => void handleVersionChange({ version: v })}
 					trialAction={trialAction}
 				/>
 			)}
