@@ -9,6 +9,7 @@ import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { eventActions } from "../actions/eventActions.js";
 
@@ -20,6 +21,7 @@ const InternalAggregateEventsSchema = z.object({
 	group_by: z.string().optional(),
 	bin_size: z.enum(["day", "hour", "month"]).optional(),
 	timezone: z.string().optional(),
+	max_groups: z.number().int().min(1).max(250).optional(),
 });
 
 /**
@@ -31,8 +33,15 @@ export const handleInternalAggregateEvents = createRoute({
 		assertTinybirdAvailable();
 		const ctx = c.get("ctx");
 		const { db, org, env, features } = ctx;
-		const { interval, customer_id, entity_id, group_by, bin_size, timezone } =
-			c.req.valid("json");
+		const {
+			interval,
+			customer_id,
+			entity_id,
+			group_by,
+			bin_size,
+			timezone,
+			max_groups,
+		} = c.req.valid("json");
 		let { event_names } = c.req.valid("json");
 
 		let aggregateAll = false;
@@ -87,8 +96,31 @@ export const handleInternalAggregateEvents = createRoute({
 				group_by: group_by,
 				customer,
 				timezone: timezone,
+				max_groups,
 			},
 		});
+
+		// When grouping by entity_id, resolve entity names from ClickHouse
+		let entityNames: Record<string, string> | undefined;
+		if (group_by === "entity_id" && events?.data) {
+			const entityIds = [
+				...new Set(
+					events.data
+						.map((row: Record<string, unknown>) => row.entity_id as string)
+						.filter(
+							(id: string) => id && id !== "AUTUMN_RESERVED" && id !== "",
+						),
+				),
+			];
+
+			if (entityIds.length > 0) {
+				entityNames = await getEntityNames({
+					entityIds,
+					orgId: org.id,
+					env,
+				});
+			}
+		}
 
 		return c.json({
 			customer,
@@ -97,6 +129,7 @@ export const handleInternalAggregateEvents = createRoute({
 			eventNames: event_names,
 			bcExclusionFlag,
 			truncated,
+			entityNames,
 		});
 	},
 });

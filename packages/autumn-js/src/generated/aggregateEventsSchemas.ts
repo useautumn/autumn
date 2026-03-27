@@ -56,6 +56,7 @@ export const eventsAggregateParamsOutboundSchema = z.object({
 	custom_range: z
 		.union([aggregateEventsCustomRangeOutboundSchema, z.undefined()])
 		.optional(),
+	max_groups: z.union([z.number(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -74,4 +75,5 @@ export const eventsAggregateParamsSchema = z.object({
 	customRange: z
 		.union([aggregateEventsCustomRangeSchema, z.undefined()])
 		.optional(),
+	maxGroups: z.union([z.number(), z.undefined()]).optional(),
 });
