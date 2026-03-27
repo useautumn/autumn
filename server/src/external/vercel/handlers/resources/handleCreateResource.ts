@@ -1,9 +1,4 @@
-import {
-	AppEnv,
-	CustomerExpand,
-	type FullProduct,
-	RecaseError,
-} from "@autumn/shared";
+import { AppEnv, type FullProduct, RecaseError } from "@autumn/shared";
 import { ErrCode } from "@shared/enums/ErrCode.js";
 import { DrizzleError } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
@@ -14,7 +9,6 @@ import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { createVercelSubscription } from "@/external/vercel/misc/vercelSubscriptions.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { generateId } from "@/utils/genUtils.js";
 import {
 	type VercelResourceCreatedEvent,
@@ -42,15 +36,8 @@ export const handleCreateResource = createRoute({
 	handler: async (c) => {
 		const { orgId, env, integrationConfigurationId } = c.req.param();
 		const ctx = c.get("ctx");
-		const { db, org } = ctx;
+		const { db, org, fullCustomer: customer } = ctx;
 		const { productId, name, metadata, billingPlanId } = c.req.valid("json");
-
-		// 1. Get customer by Vercel installation ID (not by customer.id which may differ)
-		const customer = await CusService.getByVercelId({
-			ctx,
-			vercelInstallationId: integrationConfigurationId,
-			expand: [CustomerExpand.Entities],
-		});
 
 		if (!customer) {
 			throw new RecaseError({
