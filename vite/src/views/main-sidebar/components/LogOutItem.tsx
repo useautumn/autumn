@@ -1,25 +1,20 @@
-import { LogOut, Trash } from "lucide-react";
-import React, { useState } from "react";
-import { useNavigate } from "react-router";
+import { LogOut } from "lucide-react";
+import React from "react";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { clearOrgCache } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 
 export const LogOutItem = () => {
-	const [loading, setLoading] = useState(false);
-	const navigate = useNavigate();
-
 	return (
 		<React.Fragment>
 			<DropdownMenuItem
 				onClick={async () => {
 					try {
-						setLoading(true);
 						await authClient.signOut();
-						await navigate("/sign-in");
+						clearOrgCache();
+						window.location.href = "/sign-in";
 					} catch (error) {
 						console.error("Error signing out:", error);
-					} finally {
-						setLoading(false);
 					}
 				}}
 			>
