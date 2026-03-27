@@ -5967,6 +5967,8 @@ paths:
 
         @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
+        @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
       tags:
@@ -6319,6 +6321,13 @@ paths:
                   required:
                     - enabled
                   description: Whether to carry over usages from the previous plan.
+                metadata:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
               required:
                 - customer_id
                 - plan_id
@@ -6953,6 +6962,8 @@ paths:
 
         @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
+        @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
+
 
         @returns A preview response with line items, totals, and effective dates for the proposed changes.
       tags:
@@ -7305,6 +7316,13 @@ paths:
                   required:
                     - enabled
                   description: Whether to carry over usages from the previous plan.
+                metadata:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
               required:
                 - customer_id
                 - plan_id
@@ -9909,6 +9927,13 @@ paths:
                   required:
                     - enabled
                   description: Whether to carry over usages from the previous plan.
+                metadata:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
               required:
                 - customer_id
               title: SetupPaymentParams

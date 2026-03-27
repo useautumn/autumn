@@ -6816,6 +6816,15 @@ paths:
                   required:
                     - enabled
                   description: Whether to carry over usages from the previous plan.
+                metadata:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: Key-value metadata to attach to the Stripe subscription, invoice,
+                    and checkout session created during this attach flow. Keys
+                    prefixed with 'autumn_' are reserved and will be stripped.
               required:
                 - customer_id
                 - plan_id
@@ -7902,6 +7911,15 @@ paths:
                   required:
                     - enabled
                   description: Whether to carry over usages from the previous plan.
+                metadata:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: Key-value metadata to attach to the Stripe subscription, invoice,
+                    and checkout session created during this attach flow. Keys
+                    prefixed with 'autumn_' are reserved and will be stripped.
               required:
                 - customer_id
                 - plan_id
@@ -10802,6 +10820,15 @@ paths:
                   required:
                     - enabled
                   description: Whether to carry over usages from the previous plan.
+                metadata:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: Key-value metadata to attach to the Stripe subscription, invoice,
+                    and checkout session created during this attach flow. Keys
+                    prefixed with 'autumn_' are reserved and will be stripped.
               required:
                 - customer_id
               title: SetupPaymentParams

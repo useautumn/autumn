@@ -55,6 +55,7 @@ import { Result } from "../types/fp.js";
  * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
  * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
  * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+ * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
  *
  * @returns A preview response with line items, totals, and effective dates for the proposed changes.
  */
