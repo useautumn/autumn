@@ -183,9 +183,7 @@ export const QueryTopbar = () => {
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<SelectFeatureDropdown />
-			{propertyKeys && propertyKeys.length > 0 && (
-				<SelectGroupByDropdown propertyKeys={propertyKeys} />
-			)}
+			<SelectGroupByDropdown propertyKeys={propertyKeys ?? []} />
 		</div>
 	);
 };
