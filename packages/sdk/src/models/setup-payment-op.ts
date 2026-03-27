@@ -475,6 +475,10 @@ export type SetupPaymentParams = {
    * Whether to carry over usages from the previous plan.
    */
   carryOverUsages?: SetupPaymentCarryOverUsages | undefined;
+  /**
+   * Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+   */
+  metadata?: { [k: string]: string } | undefined;
 };
 
 /**
@@ -1045,6 +1049,7 @@ export type SetupPaymentParams$Outbound = {
   processor_subscription_id?: string | undefined;
   carry_over_balances?: SetupPaymentCarryOverBalances$Outbound | undefined;
   carry_over_usages?: SetupPaymentCarryOverUsages$Outbound | undefined;
+  metadata?: { [k: string]: string } | undefined;
 };
 
 /** @internal */
@@ -1078,6 +1083,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     carryOverUsages: z.optional(
       z.lazy(() => SetupPaymentCarryOverUsages$outboundSchema),
     ),
+    metadata: z.optional(z.record(z.string(), z.string())),
   }),
   z.transform((v) => {
     return remap$(v, {
