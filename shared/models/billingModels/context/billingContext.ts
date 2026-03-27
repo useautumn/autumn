@@ -70,6 +70,7 @@ export interface BillingContext {
 	billingVersion: BillingVersion;
 	successUrl?: string;
 	checkoutSessionParams?: Record<string, unknown>;
+	userMetadata?: Record<string, string>;
 
 	skipBillingChanges?: boolean;
 
