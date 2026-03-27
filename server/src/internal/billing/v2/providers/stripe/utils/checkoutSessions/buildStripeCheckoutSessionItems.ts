@@ -4,6 +4,7 @@ import {
 	filterCustomerProductsByActiveStatuses,
 	isPrepaidPrice,
 	priceUtils,
+	type StripeItemSpec,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -12,6 +13,77 @@ import { customerProductsToRecurringStripeItemSpecs } from "@/internal/billing/v
 import { filterStripeItemSpecsByLargestInterval } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/filterStripeItemSpecsByLargestInterval";
 import { stripeItemSpecToCheckoutLineItem } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/stripeItemSpecToStripeParam";
 import { updateOneOffTieredItems } from "./updateOneOffTieredItems";
+
+const isZeroAmountInlineLineItem = ({
+	lineItem,
+}: {
+	lineItem: Stripe.Checkout.SessionCreateParams.LineItem;
+}) => {
+	if (!("price_data" in lineItem) || !lineItem.price_data) return false;
+
+	return (
+		lineItem.price_data.unit_amount === 0 ||
+		lineItem.price_data.unit_amount_decimal === "0"
+	);
+};
+
+const isZeroAmountInlineRecurringStripeItemSpec = ({
+	stripeItemSpec,
+}: {
+	stripeItemSpec: StripeItemSpec;
+}) => {
+	if (!stripeItemSpec.stripeInlinePrice?.recurring) return false;
+
+	return stripeItemSpec.stripeInlinePrice.unit_amount_decimal === "0";
+};
+
+const getRecurringCadenceKey = ({
+	stripeItemSpec,
+}: {
+	stripeItemSpec: StripeItemSpec;
+}) => {
+	const recurring = stripeItemSpec.stripeInlinePrice?.recurring;
+	if (recurring) {
+		return JSON.stringify({
+			interval: recurring.interval,
+			intervalCount: recurring.interval_count ?? 1,
+		});
+	}
+
+	const price = stripeItemSpec.autumnPrice;
+	if (!price) return "unknown";
+
+	return JSON.stringify({
+		interval: price.config.interval,
+		intervalCount: price.config.interval_count ?? 1,
+	});
+};
+
+const filterRecurringStripeItemSpecsForCheckout = ({
+	stripeItemSpecs,
+}: {
+	stripeItemSpecs: StripeItemSpec[];
+}) => {
+	return stripeItemSpecs.filter((stripeItemSpec, index) => {
+		if (!isZeroAmountInlineRecurringStripeItemSpec({ stripeItemSpec })) {
+			return true;
+		}
+
+		const recurringCadenceKey = getRecurringCadenceKey({ stripeItemSpec });
+
+		const hasNonZeroSiblingWithSameRecurring = stripeItemSpecs.some(
+			(otherStripeItemSpec, otherIndex) =>
+				otherIndex !== index &&
+				getRecurringCadenceKey({ stripeItemSpec: otherStripeItemSpec }) ===
+					recurringCadenceKey &&
+				!isZeroAmountInlineRecurringStripeItemSpec({
+					stripeItemSpec: otherStripeItemSpec,
+				}),
+		);
+
+		return !hasNonZeroSiblingWithSameRecurring;
+	});
+};
 
 export const buildStripeCheckoutSessionItems = ({
 	ctx,
@@ -46,6 +118,9 @@ export const buildStripeCheckoutSessionItems = ({
 
 	// 4. Filter recurring items by largest interval (for Stripe Checkout)
 	recurringStripeItemSpecs = filterStripeItemSpecsByLargestInterval({
+		stripeItemSpecs: recurringStripeItemSpecs,
+	});
+	recurringStripeItemSpecs = filterRecurringStripeItemSpecsForCheckout({
 		stripeItemSpecs: recurringStripeItemSpecs,
 	});
 
@@ -83,7 +158,7 @@ export const buildStripeCheckoutSessionItems = ({
 	const oneOffLineItems = updateOneOffTieredItems({
 		oneOffItemSpecs,
 		org: ctx.org,
-	});
+	}).filter((lineItem) => !isZeroAmountInlineLineItem({ lineItem }));
 
 	return { recurringLineItems, oneOffLineItems };
 };
