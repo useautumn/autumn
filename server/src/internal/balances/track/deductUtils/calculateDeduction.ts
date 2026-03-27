@@ -24,19 +24,36 @@ export const calculateDeduction = ({
 	maxBalance,
 	alterGrantedBalance = false,
 }: CalculateDeductionParams): CalculateDeductionResult => {
-	let newBalance = new Decimal(currentBalance).sub(amountToDeduct).toNumber();
+	const isRefund = amountToDeduct < 0;
 
-	// Apply floor (minBalance)
-	if (minBalance !== undefined && newBalance < minBalance) {
-		newBalance = minBalance;
+	let deducted: number;
+	let newBalance: number;
+
+	if (isRefund) {
+		const amountToAdd = new Decimal(amountToDeduct).negated().toNumber();
+		const maxAddable =
+			maxBalance === undefined
+				? amountToAdd
+				: Math.max(
+						0,
+						new Decimal(maxBalance).sub(currentBalance).toNumber(),
+					);
+		const added = Math.min(amountToAdd, maxAddable);
+
+		deducted = -added;
+		newBalance = new Decimal(currentBalance).add(added).toNumber();
+	} else {
+		const maxDeductible =
+			minBalance === undefined
+				? amountToDeduct
+				: Math.max(
+						0,
+						new Decimal(currentBalance).sub(minBalance).toNumber(),
+					);
+		deducted = Math.min(amountToDeduct, maxDeductible);
+		newBalance = new Decimal(currentBalance).sub(deducted).toNumber();
 	}
 
-	// Apply ceiling (maxBalance) - for when adding credits
-	if (maxBalance !== undefined && newBalance > maxBalance) {
-		newBalance = maxBalance;
-	}
-
-	const deducted = new Decimal(currentBalance).sub(newBalance).toNumber();
 	const remaining = new Decimal(amountToDeduct).sub(deducted).toNumber();
 
 	// Update adjustment if alterGrantedBalance is true
