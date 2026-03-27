@@ -144,7 +144,56 @@ test.concurrent(`${chalk.yellowBright("metadata: autumn_* keys are stripped")}`,
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: metadata passthrough via Stripe checkout flow
+// TEST 3: metadata passthrough on proration invoice (immediate upgrade)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("metadata: passthrough to proration invoice on upgrade")}`, async () => {
+	const customerId = "attach-metadata-upgrade-invoice";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const free = products.base({
+		id: "free-metadata-inv",
+		items: [messagesItem],
+	});
+
+	const proMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const pro = products.pro({
+		id: "pro-metadata-inv",
+		items: [proMessagesItem],
+	});
+
+	const { autumnV2_1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: true, paymentMethod: "success" }),
+			s.products({ list: [free, pro] }),
+		],
+		actions: [s.billing.attach({ productId: free.id })],
+	});
+
+	const result = await autumnV2_1.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		metadata: {
+			user_id: "u-invoice-test",
+			campaign: "upgrade-promo",
+		},
+	});
+
+	expect(result.invoice).toBeDefined();
+	expect(result.invoice!.stripe_id).toBeDefined();
+
+	const stripeInvoice = await ctx.stripeCli.invoices.retrieve(
+		result.invoice!.stripe_id,
+	);
+
+	expect(stripeInvoice.metadata?.user_id).toBe("u-invoice-test");
+	expect(stripeInvoice.metadata?.campaign).toBe("upgrade-promo");
+	expect(stripeInvoice.metadata?.autumn_billing_update).toBe("true");
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 4: metadata passthrough via Stripe checkout flow
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("metadata: passthrough via Stripe checkout")}`, async () => {
