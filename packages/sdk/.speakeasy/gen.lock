@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: cdf6bf5ac65e68bff7f5674356c2d49a
+  docChecksum: 8e2e25abf9f36dfb0033a199c125eee7
   docVersion: 2.2.0
-  speakeasyVersion: 1.759.2
-  generationVersion: 2.869.23
+  speakeasyVersion: 1.759.3
+  generationVersion: 2.869.25
   releaseVersion: 0.10.17
   configChecksum: c6b2bd1231da8dc3af5be7430f3cfbac
 persistentEdits:
-  generation_id: 86b35b5f-870f-4b06-a0e6-37e3e16be108
-  pristine_commit_hash: 53c05e58366f3297e2bb0e563cdfc0ca0ce84ef8
-  pristine_tree_hash: ed5ed78779031856781e2ddc6affb6881d13d270
+  generation_id: 9d101e5e-e418-4d50-b75a-5d7f63b4c09e
+  pristine_commit_hash: 1df44a5e5b8f14d6f7c874e3e8b2ed2f0134ee65
+  pristine_tree_hash: 736c3e7f680344400d84ad0de55e47693469c6dd
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -968,8 +968,8 @@ trackedFiles:
     pristine_git_object: e934594068751ae479bd067c0e9f4533776642e5
   docs/models/events-aggregate-params.md:
     id: 081dcd1094d6
-    last_write_checksum: sha1:8af480662e4a569fdda32abd9246e07a60ed43d6
-    pristine_git_object: 902ee7cd62c6a20ad3cf64c00e51528525ecffc2
+    last_write_checksum: sha1:66a721a5264c50f8f301e28f72ff27f84bba0624
+    pristine_git_object: fd14516ca6eb58db784ef020daba5546d5f6a4b2
   docs/models/events-list-params.md:
     id: b743a4817767
     last_write_checksum: sha1:5398e590e9563862ff7aea3056fd8f9218f17b6b
@@ -3144,8 +3144,8 @@ trackedFiles:
     pristine_git_object: 44be0eae8246521b230e8e711a88eff738fc015d
   src/lib/config.ts:
     id: 320761608fb3
-    last_write_checksum: sha1:1536946ab85340e3fee648b266b461c5d1591a17
-    pristine_git_object: 2f1ad2a54b3d880d33a6be6a91f4d894d229a871
+    last_write_checksum: sha1:6296c29a9a15cd7a43070dfbf7a0d89a76cde5c7
+    pristine_git_object: a84fef9e21cfe8cbfae5e31e31443f44e374b471
   src/lib/dlv.ts:
     id: b1988214835a
     last_write_checksum: sha1:1dd3e3fbb4550c4bf31f5ef997faff355d6f3250
@@ -3204,8 +3204,8 @@ trackedFiles:
     pristine_git_object: 79e7ce660b3732053e3adcbb5a4cdeb51496e8aa
   src/models/aggregate-events-op.ts:
     id: 4b7c98b18e2b
-    last_write_checksum: sha1:8f48330768a443847fc9a910c60c4da04a0a724b
-    pristine_git_object: 65d36ceb395f6ce936fc3a03b29f9232db5cd43a
+    last_write_checksum: sha1:5aa521962d62951928e3f6c16592ce2c625081c2
+    pristine_git_object: de7e12d1ca3c8dd221acb912247a67667a914de8
   src/models/attach-op.ts:
     id: 83ed65c26ab4
     last_write_checksum: sha1:e8536a781d7c257fe11f1e1901746919fcd07346
