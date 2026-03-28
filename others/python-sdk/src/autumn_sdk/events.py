@@ -22,7 +22,6 @@ class Events(BaseSDK):
         custom_range: Optional[
             Union[models.ListEventsCustomRange, models.ListEventsCustomRangeTypedDict]
         ] = None,
-        filter_by: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -36,7 +35,6 @@ class Events(BaseSDK):
         :param entity_id: Filter events by entity ID (e.g., per-seat or per-resource)
         :param feature_id: Filter by specific feature ID(s)
         :param custom_range: Filter events by time range
-        :param filter_by: Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -61,7 +59,6 @@ class Events(BaseSDK):
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.ListEventsCustomRange]
             ),
-            filter_by=filter_by,
         )
 
         req = self._build_request(
@@ -136,7 +133,6 @@ class Events(BaseSDK):
         custom_range: Optional[
             Union[models.ListEventsCustomRange, models.ListEventsCustomRangeTypedDict]
         ] = None,
-        filter_by: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -150,7 +146,6 @@ class Events(BaseSDK):
         :param entity_id: Filter events by entity ID (e.g., per-seat or per-resource)
         :param feature_id: Filter by specific feature ID(s)
         :param custom_range: Filter events by time range
-        :param filter_by: Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -175,7 +170,6 @@ class Events(BaseSDK):
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.ListEventsCustomRange]
             ),
-            filter_by=filter_by,
         )
 
         req = self._build_request_async(
