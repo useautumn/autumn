@@ -4,6 +4,7 @@ from typing import Optional, Tuple, Union
 
 import httpx
 
+from autumn_sdk.httpclient import AsyncHttpClient, HttpClient
 from autumn_sdk.sdkconfiguration import SDKConfiguration
 
 from .types import (
@@ -50,7 +51,9 @@ FAIL_OPEN_BODIES: dict = {
 }
 
 
-def _make_synthetic_response(status_code: int, body: Optional[dict] = None) -> httpx.Response:
+def _make_synthetic_response(
+    status_code: int, body: Optional[dict] = None
+) -> httpx.Response:
     content = json.dumps(body).encode() if body else b""
     headers = {"content-type": "application/json"} if body else {}
     return httpx.Response(
@@ -63,7 +66,7 @@ def _make_synthetic_response(status_code: int, body: Optional[dict] = None) -> h
 class _SafeSyncClient:
     """Wraps an httpx sync client to catch connection/timeout errors and return a 503."""
 
-    def __init__(self, inner: httpx.Client):
+    def __init__(self, inner: HttpClient):
         self._inner = inner
 
     def send(self, request: httpx.Request, **kwargs) -> httpx.Response:
@@ -85,7 +88,7 @@ class _SafeSyncClient:
 class _SafeAsyncClient:
     """Wraps an httpx async client to catch connection/timeout errors and return a 503."""
 
-    def __init__(self, inner: httpx.AsyncClient):
+    def __init__(self, inner: AsyncHttpClient):
         self._inner = inner
 
     async def send(self, request: httpx.Request, **kwargs) -> httpx.Response:
@@ -118,7 +121,9 @@ class FailOpenHook(SDKInitHook, AfterErrorHook):
         if config.client is not None and not isinstance(config.client, _SafeSyncClient):
             config.client = _SafeSyncClient(config.client)
 
-        if config.async_client is not None and not isinstance(config.async_client, _SafeAsyncClient):
+        if config.async_client is not None and not isinstance(
+            config.async_client, _SafeAsyncClient
+        ):
             config.async_client = _SafeAsyncClient(config.async_client)
 
         return config

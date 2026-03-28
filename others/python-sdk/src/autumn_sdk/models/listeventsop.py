@@ -5,7 +5,7 @@ from autumn_sdk.types import BaseModel, UNSET_SENTINEL
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -28,7 +28,7 @@ class ListEventsGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -73,7 +73,7 @@ class ListEventsCustomRange(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -95,6 +95,8 @@ class EventsListParamsTypedDict(TypedDict):
     r"""Filter by specific feature ID(s)"""
     custom_range: NotRequired[ListEventsCustomRangeTypedDict]
     r"""Filter events by time range"""
+    filter_by: NotRequired[Dict[str, str]]
+    r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
 
 
 class EventsListParams(BaseModel):
@@ -116,6 +118,9 @@ class EventsListParams(BaseModel):
     custom_range: Optional[ListEventsCustomRange] = None
     r"""Filter events by time range"""
 
+    filter_by: Optional[Dict[str, str]] = None
+    r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -126,6 +131,7 @@ class EventsListParams(BaseModel):
                 "entity_id",
                 "feature_id",
                 "custom_range",
+                "filter_by",
             ]
         )
         serialized = handler(self)
@@ -133,7 +139,7 @@ class EventsListParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:

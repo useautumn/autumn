@@ -11034,6 +11034,13 @@ paths:
                       type: number
                       description: Filter events before this timestamp (epoch milliseconds)
                   description: Filter events by time range
+                filter_by:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: 'Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.'
               title: EventsListParams
               examples:
                 - customer_id: cus_123
@@ -11183,6 +11190,13 @@ paths:
                     - start
                     - end
                   description: Custom time range to aggregate events for. If provided, range must not be provided
+                filter_by:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: 'Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.'
               required:
                 - feature_id
               title: EventsAggregateParams
