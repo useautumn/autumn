@@ -102,7 +102,7 @@ export const OTPSignIn = ({
 			<p className="text-sm text-muted-foreground">
 				Check your email for the 6 digit code
 			</p>
-			<div className={cn(verifying && "shimmer")}>
+			<div className={cn(verifying && "opacity-50 pointer-events-none")}>
 				<InputOTP
 					maxLength={6}
 					value={otp}
