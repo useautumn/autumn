@@ -3,6 +3,7 @@ import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
 	ApiBalanceV1Schema,
 	ApiCustomerV5Schema,
+	ApiEventsListParamsSchema,
 	ApiPlanV1Schema,
 	AttachParamsV1Schema,
 	AttachPreviewResponseSchema,
@@ -71,6 +72,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(CheckResponseV3Schema);
 	registerInternalSchemas(TrackResponseV3Schema);
 	registerInternalSchemas(CustomerDataSchema);
+	registerInternalSchemas(ApiEventsListParamsSchema);
 
 	const openApiDocument = (await generator.generate(v2_1ContractRouter, {
 		info: {

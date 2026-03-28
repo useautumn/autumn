@@ -2,6 +2,7 @@ import type { ApiEventsListItem } from "@autumn/shared";
 import { epochToDateTime } from "@autumn/shared/api/common/epochUtils";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 
 /** Lists events for the external API with offset-based pagination */
 export const listEvents = async ({
@@ -16,6 +17,7 @@ export const listEvents = async ({
 		custom_range?: { start?: number; end?: number };
 		offset: number;
 		limit: number;
+		filter_by?: Record<string, string>;
 	};
 }) => {
 	const pipes = getTinybirdPipes();
@@ -41,6 +43,18 @@ export const listEvents = async ({
 		limit: params.limit,
 	});
 
+	// Build filter_by indexed params
+	const filterParams: Record<string, string> = {};
+	if (params.filter_by) {
+		const entries = Object.entries(params.filter_by).slice(0, 5);
+		for (let i = 0; i < entries.length; i++) {
+			const [key, value] = entries[i];
+			validatePropertyPathForJSON({ propertyKey: key });
+			filterParams[`filter_key_${i}`] = key;
+			filterParams[`filter_value_${i}`] = value;
+		}
+	}
+
 	const startTime = performance.now();
 	const result = await pipes.listEventsPaginated({
 		org_id: org.id,
@@ -52,6 +66,7 @@ export const listEvents = async ({
 		event_names: params.feature_ids,
 		limit: fetchLimit,
 		offset: params.offset,
+		...filterParams,
 	});
 
 	const queryDuration = performance.now() - startTime;
