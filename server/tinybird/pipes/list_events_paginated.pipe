@@ -38,6 +38,21 @@ SQL >
         {% if defined(entity_id) and String(entity_id, '') != '' %}
         AND entity_id = {{ String(entity_id) }}
         {% end %}
+        {% if defined(filter_key_0) and String(filter_key_0, '') != '' %}
+        AND positionCaseInsensitive(assumeNotNull(properties), concat('"', {{ String(filter_key_0, '') }}, '":"', {{ String(filter_value_0, '') }}, '"')) > 0
+        {% end %}
+        {% if defined(filter_key_1) and String(filter_key_1, '') != '' %}
+        AND positionCaseInsensitive(assumeNotNull(properties), concat('"', {{ String(filter_key_1, '') }}, '":"', {{ String(filter_value_1, '') }}, '"')) > 0
+        {% end %}
+        {% if defined(filter_key_2) and String(filter_key_2, '') != '' %}
+        AND positionCaseInsensitive(assumeNotNull(properties), concat('"', {{ String(filter_key_2, '') }}, '":"', {{ String(filter_value_2, '') }}, '"')) > 0
+        {% end %}
+        {% if defined(filter_key_3) and String(filter_key_3, '') != '' %}
+        AND positionCaseInsensitive(assumeNotNull(properties), concat('"', {{ String(filter_key_3, '') }}, '":"', {{ String(filter_value_3, '') }}, '"')) > 0
+        {% end %}
+        {% if defined(filter_key_4) and String(filter_key_4, '') != '' %}
+        AND positionCaseInsensitive(assumeNotNull(properties), concat('"', {{ String(filter_key_4, '') }}, '":"', {{ String(filter_value_4, '') }}, '"')) > 0
+        {% end %}
     ORDER BY timestamp DESC, id DESC
     LIMIT {{ Int32(limit, 101) }}
     OFFSET {{ Int32(offset, 0) }}

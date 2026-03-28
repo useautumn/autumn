@@ -26,6 +26,7 @@ export type TotalEventsParams = {
 	interval?: RangeEnum;
 	customer?: FullCustomer;
 	bin_size: BinSizeEnum;
+	filter_by?: Record<string, string>;
 };
 
 export type TimeseriesEventsParams = TotalEventsParams & {
