@@ -37,6 +37,7 @@ export const ApiEventsListParamsSchema = createPaginationParamsSchema({
 		})
 		.optional()
 		.meta({
+			internal: true,
 			description:
 				'Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.',
 		}),
