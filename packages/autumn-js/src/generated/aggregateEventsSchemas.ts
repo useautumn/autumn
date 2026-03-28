@@ -59,6 +59,7 @@ export const eventsAggregateParamsOutboundSchema = z.object({
 	filter_by: z
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
+	max_groups: z.union([z.number(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -80,4 +81,5 @@ export const eventsAggregateParamsSchema = z.object({
 	filterBy: z
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
+	maxGroups: z.union([z.number(), z.undefined()]).optional(),
 });

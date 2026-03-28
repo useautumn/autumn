@@ -2,12 +2,12 @@ import type { FullCustomer } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useCustomersQueryStates } from "./useCustomersQueryStates";
+import { useCustomerFilters } from "./useCustomerFilters";
 
 export const FULL_CUSTOMERS_QUERY_KEY = "full_customers";
 
 export const useFullCusSearchQuery = () => {
-	const { queryStates } = useCustomersQueryStates();
+	const { queryStates, isInitialized } = useCustomerFilters();
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
@@ -41,6 +41,7 @@ export const useFullCusSearchQuery = () => {
 
 			return data;
 		},
+		enabled: isInitialized,
 		placeholderData: keepPreviousData,
 		refetchOnWindowFocus: false,
 	});

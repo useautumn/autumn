@@ -91,6 +91,9 @@ export type EventsAggregateParams = {
    * Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.
    */
   filterBy?: { [k: string]: string } | undefined;
+   * Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
+   */
+  maxGroups?: number | undefined;
 };
 
 export type AggregateEventsList = {
@@ -191,6 +194,7 @@ export type EventsAggregateParams$Outbound = {
   bin_size: string;
   custom_range?: AggregateEventsCustomRange$Outbound | undefined;
   filter_by?: { [k: string]: string } | undefined;
+  max_groups?: number | undefined;
 };
 
 /** @internal */
@@ -209,6 +213,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
       z.lazy(() => AggregateEventsCustomRange$outboundSchema),
     ),
     filterBy: z.optional(z.record(z.string(), z.string())),
+    maxGroups: z.optional(z.int()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -219,6 +224,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
       binSize: "bin_size",
       customRange: "custom_range",
       filterBy: "filter_by",
+      maxGroups: "max_groups",
     });
   }),
 );

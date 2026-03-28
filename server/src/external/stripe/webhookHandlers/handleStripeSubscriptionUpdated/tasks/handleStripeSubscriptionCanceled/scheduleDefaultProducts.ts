@@ -11,6 +11,7 @@ import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionU
 
 /**
  * Schedules default products for customer product groups that are being canceled.
+ * Returns a map of product group -> scheduled customer product.
  */
 export const scheduleDefaultProducts = async ({
 	ctx,
@@ -20,9 +21,11 @@ export const scheduleDefaultProducts = async ({
 	ctx: StripeWebhookContext;
 	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
 	canceledCustomerProducts: FullCusProduct[];
-}): Promise<void> => {
+}): Promise<Map<string, FullCusProduct>> => {
 	const { db, org, env } = ctx;
 	const { stripeSubscription, fullCustomer } = subscriptionUpdatedContext;
+
+	const scheduledByGroup = new Map<string, FullCusProduct>();
 
 	// Fetch default products upfront (optimization)
 	const defaultProducts = await ProductService.listDefault({
@@ -41,7 +44,7 @@ export const scheduleDefaultProducts = async ({
 		});
 		if (!eligibleForDefaultProduct) continue;
 
-		await scheduleDefaultProduct({
+		const scheduledCusProduct = await scheduleDefaultProduct({
 			ctx,
 			productGroup: canceledProduct.product.group,
 			fullCustomer: enrichFullCustomerWithEntity({
@@ -51,5 +54,11 @@ export const scheduleDefaultProducts = async ({
 			scheduleAtMs,
 			defaultProducts,
 		});
+
+		if (scheduledCusProduct) {
+			scheduledByGroup.set(canceledProduct.product.group, scheduledCusProduct);
+		}
 	}
+
+	return scheduledByGroup;
 };

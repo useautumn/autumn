@@ -6,6 +6,7 @@ import {
 	ResetInterval,
 	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -202,6 +203,111 @@ test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage: increase
 		usage: trackedUsage,
 		prepaidRemaining: 50,
 		usageBasedUsage: 0,
+	});
+
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
+});
+
+test.concurrent(`${chalk.yellowBright("update-quantity-prepaid-overage: increasing zero prepaid preserves usage-based grant")}`, async () => {
+	const customerId = "qty-prepaid-preserve-usage-grant";
+	const monthlyBasePrice = 20;
+	const consumableIncludedUsage = 100;
+	const checkoutPrepaidQuantity = 600;
+	const expectedPrepaidCharge = 50;
+
+	const product = products.base({
+		id: "prepaid-preserve-usage-grant",
+		items: [
+			items.monthlyPrice({ price: monthlyBasePrice }),
+			items.consumableMessages({
+				includedUsage: consumableIncludedUsage,
+			}),
+			items.volumePrepaidMessages({
+				includedUsage: 0,
+				billingUnits: 1,
+				tiers: [
+					{ to: 500, amount: 0, flat_amount: 0 },
+					{ to: "inf", amount: 0, flat_amount: 50 },
+				],
+			}),
+		],
+	});
+
+	const { autumnV2_1, autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: product.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
+			}),
+		],
+	});
+
+	const customerBefore =
+		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer: customerBefore,
+		featureId: TestFeature.Messages,
+		remaining: consumableIncludedUsage,
+		usage: 0,
+		breakdown: {
+			[BillingMethod.UsageBased]: {
+				included_grant: consumableIncludedUsage,
+				remaining: consumableIncludedUsage,
+				usage: 0,
+			},
+			[BillingMethod.Prepaid]: {
+				prepaid_grant: 0,
+				remaining: 0,
+				usage: 0,
+			},
+		},
+	});
+
+	await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+		customer_id: customerId,
+		plan_id: product.id,
+		feature_quantities: [
+			{
+				feature_id: TestFeature.Messages,
+				quantity: checkoutPrepaidQuantity,
+			},
+		],
+		recalculate_balances: {
+			enabled: true,
+		},
+	});
+
+	const customerAfter =
+		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer: customerAfter,
+		featureId: TestFeature.Messages,
+		remaining: checkoutPrepaidQuantity + consumableIncludedUsage,
+		usage: 0,
+		breakdown: {
+			[BillingMethod.UsageBased]: {
+				included_grant: consumableIncludedUsage,
+				remaining: consumableIncludedUsage,
+				usage: 0,
+			},
+			[BillingMethod.Prepaid]: {
+				prepaid_grant: checkoutPrepaidQuantity,
+				remaining: checkoutPrepaidQuantity,
+				usage: 0,
+			},
+		},
+	});
+
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		count: 2,
+		latestTotal: expectedPrepaidCharge,
+		latestStatus: "paid",
 	});
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });

@@ -52,6 +52,7 @@ export const AnalyticsView = () => {
 		bcExclusionFlag,
 		groupBy,
 		truncated,
+		entityNames,
 	} = useAnalyticsData({ hasCleared });
 
 	// Show toast when data is truncated due to too many unique group values
@@ -140,10 +141,11 @@ export const AnalyticsView = () => {
 			features,
 			groupBy,
 			originalColors: colors,
+			entityNames,
 		});
 
 		return { chartData: transformed, chartConfig: config };
-	}, [events, features, groupBy, groupFilter]);
+	}, [events, features, groupBy, groupFilter, entityNames]);
 
 	useEffect(() => {
 		if (error?.response?.data?.code === ErrCode.ClickHouseDisabled) {
@@ -226,6 +228,7 @@ export const AnalyticsView = () => {
 				groupFilter,
 				setGroupFilter,
 				availableGroupValues,
+				entityNames,
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-4 sm:px-10 pt-4 sm:pt-8">

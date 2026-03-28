@@ -781,6 +781,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""Whether to carry over balances from the previous plan."""
     carry_over_usages: NotRequired[AttachCarryOverUsagesTypedDict]
     r"""Whether to carry over usages from the previous plan."""
+    metadata: NotRequired[Dict[str, str]]
+    r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
 
 
 class AttachParams(BaseModel):
@@ -841,6 +843,9 @@ class AttachParams(BaseModel):
     carry_over_usages: Optional[AttachCarryOverUsages] = None
     r"""Whether to carry over usages from the previous plan."""
 
+    metadata: Optional[Dict[str, str]] = None
+    r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -862,6 +867,7 @@ class AttachParams(BaseModel):
                 "processor_subscription_id",
                 "carry_over_balances",
                 "carry_over_usages",
+                "metadata",
             ]
         )
         serialized = handler(self)

@@ -11,7 +11,6 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
-import { useHasChanges } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -24,6 +23,7 @@ import { useOnboardingVisibility } from "@/views/onboarding4/hooks/useOnboarding
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { useCusQuery } from "../../customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "../../customers/customer/hooks/useCusReferralQuery";
+import { CustomerBillingControlsSection } from "../components/CustomerBillingControlsSection";
 import { CustomerPlansSection } from "../components/CustomerPlansSection";
 import { CustomerFeatureUsageTable } from "../components/table/customer-feature-usage/CustomerFeatureUsageTable";
 import { CustomerInvoicesTable } from "../components/table/customer-invoices/CustomerInvoicesTable";
@@ -43,9 +43,6 @@ export default function CustomerView2() {
 
 	const sheetType = useSheetStore((s) => s.type);
 	const closeProductSheet = useSheetStore((s) => s.closeSheet);
-	const sheetData = useSheetStore((s) => s.data);
-	const hasChanges = useHasChanges();
-	const hasCustomizedProduct = !!sheetData?.customizedProduct;
 	const isMobile = useIsMobile();
 	const [isInlineEditorOpen, setIsInlineEditorOpen] = useState(false);
 
@@ -124,12 +121,13 @@ export default function CustomerView2() {
 													<Tooltip delayDuration={0}>
 														<TooltipTrigger>
 															<svg
-																fill="currentColor" 
-																xmlns="http://www.w3.org/2000/svg" 
+																fill="currentColor"
+																xmlns="http://www.w3.org/2000/svg"
 																viewBox="0 0 1155 1000"
 																className="w-3 h-3 text-black dark:text-white"
 															>
-																<path d="m577.3 0 577.4 1000H0z"/>
+																<title>Vercel Marketplace Customer</title>
+																<path d="m577.3 0 577.4 1000H0z" />
 															</svg>
 														</TooltipTrigger>
 														<TooltipContent>
@@ -148,29 +146,30 @@ export default function CustomerView2() {
 							<div className="flex flex-col gap-12 w-full">
 								<CustomerPlansSection />
 								<CustomerFeatureUsageTable />
-								<CustomerUsageAnalyticsTable />
-								<CustomerInvoicesTable />
+								{!entityId && <CustomerUsageAnalyticsTable />}
+								<CustomerBillingControlsSection />
+								{!entityId && <CustomerInvoicesTable />}
 							</div>
 						</div>
 					</div>
-					{!isMobile &&
-						createPortal(
-							<AnimatePresence>
-								{sheetType && !isInlineEditorOpen && (
-									<motion.div
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 1 }}
-										exit={{ opacity: 0 }}
-										className="fixed inset-0 bg-white/60 dark:bg-black/60"
-										style={{ zIndex: 40 }}
-										onMouseDown={() => {
-											!hasCustomizedProduct && closeProductSheet();
-										}}
-									/>
-								)}
-							</AnimatePresence>,
-							document.body,
-						)}
+				{!isMobile &&
+					createPortal(
+						<AnimatePresence>
+							{sheetType && !isInlineEditorOpen && (
+								<motion.div
+									initial={{ opacity: 0 }}
+									animate={{ opacity: 1 }}
+									exit={{ opacity: 0 }}
+									className="fixed inset-0 bg-white/60 dark:bg-black/60"
+									style={{ zIndex: 40 }}
+									onMouseDown={() => {
+										closeProductSheet();
+									}}
+								/>
+							)}
+						</AnimatePresence>,
+						document.body,
+					)}
 				</motion.div>
 
 				<CustomerSheets />

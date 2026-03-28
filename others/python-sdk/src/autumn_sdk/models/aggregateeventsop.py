@@ -101,6 +101,8 @@ class EventsAggregateParamsTypedDict(TypedDict):
     r"""Custom time range to aggregate events for. If provided, range must not be provided"""
     filter_by: NotRequired[Dict[str, str]]
     r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
+    max_groups: NotRequired[int]
+    r"""Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9"""
 
 
 class EventsAggregateParams(BaseModel):
@@ -127,6 +129,8 @@ class EventsAggregateParams(BaseModel):
 
     filter_by: Optional[Dict[str, str]] = None
     r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
+    max_groups: Optional[int] = None
+    r"""Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9"""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -139,6 +143,7 @@ class EventsAggregateParams(BaseModel):
                 "bin_size",
                 "custom_range",
                 "filter_by",
+                "max_groups",
             ]
         )
         serialized = handler(self)

@@ -6,10 +6,10 @@ import {
 	DropdownMenuSubTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
-import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
+import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 
 export const FilterStatusSubMenu = () => {
-	const { queryStates, setFilters } = useCustomersQueryStates();
+	const { queryStates, setFilters } = useCustomerFilters();
 
 	const statuses: string[] = [
 		"active",

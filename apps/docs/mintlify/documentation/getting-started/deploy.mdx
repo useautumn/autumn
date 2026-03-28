@@ -29,10 +29,6 @@ bunx atmn push -p
 
 Alternatively, the Deploy dialog in the dashboard can copy your sandbox plans to production for you.
 
-<Warning>
-Review the diff carefully — production pushes prompt for confirmation before applying changes. Use `--yes` only in CI where you've already validated the config.
-</Warning>
-
 </Step>
 
 <Step>
@@ -58,12 +54,6 @@ The key prefix determines the environment automatically — `_test_` routes to s
 ### Verify fail-open behavior
 
 Autumn's SDK is **fail-open by default** — if Autumn is unreachable, `check`, `track`, and customer fetches return safe dummy responses instead of throwing errors. This means Autumn can never take your app down.
-
-| Method | Fail-open response |
-|--------|-------------------|
-| `check` | `allowed: true` |
-| `track` | Succeeds silently |
-| `customers.get` | Empty customer object |
 
 You should verify this before going live. The easiest way is to point the SDK at a non-existent URL and exercise your app's core flows:
 
@@ -93,21 +83,8 @@ With this in place:
 4. Remove the `serverURL` override when done
 
 <Warning>
-While the SDK gracefully handles outages for read-path calls, write operations like `attach` (which initiate checkout or subscription changes) will still fail when Autumn is unreachable. This is expected — you don't want to silently skip payment collection.
+While the SDK gracefully handles outages for read-path calls, write operations like `attach` (which initiate checkout or subscription changes) will still fail when Autumn is unreachable.
 </Warning>
-
-</Step>
-
-<Step>
-### Test a real purchase
-
-Make a real purchase using a small-amount plan or Stripe's [test clocks](https://docs.stripe.com/billing/testing/test-clocks):
-
-1. Create a customer with a real email
-2. Attach a plan and complete Stripe checkout
-3. Verify the subscription appears in both Autumn and your Stripe dashboard
-4. Check that `check` and `track` calls work correctly for this customer
-5. Cancel the subscription and confirm the customer loses access
 
 </Step>
 

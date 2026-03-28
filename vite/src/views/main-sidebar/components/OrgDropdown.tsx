@@ -27,11 +27,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/contexts/ThemeProvider";
-import {
-	clearOrgCache,
-	setLastSwitchedOrgId,
-	useOrg,
-} from "@/hooks/common/useOrg";
+import { setLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import {
 	authClient,
 	useListOrganizations,
@@ -256,8 +252,6 @@ export const useOrgSwitch = () => {
 			await authClient.organization.setActive({
 				organizationId: orgId,
 			});
-
-			clearOrgCache();
 
 			const { data: newOrg } = await axiosInstance.get("/organization");
 
