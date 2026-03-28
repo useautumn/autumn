@@ -28,7 +28,7 @@ class AggregateEventsGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -99,6 +99,8 @@ class EventsAggregateParamsTypedDict(TypedDict):
     r"""Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day"""
     custom_range: NotRequired[AggregateEventsCustomRangeTypedDict]
     r"""Custom time range to aggregate events for. If provided, range must not be provided"""
+    filter_by: NotRequired[Dict[str, str]]
+    r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
 
 
 class EventsAggregateParams(BaseModel):
@@ -123,6 +125,9 @@ class EventsAggregateParams(BaseModel):
     custom_range: Optional[AggregateEventsCustomRange] = None
     r"""Custom time range to aggregate events for. If provided, range must not be provided"""
 
+    filter_by: Optional[Dict[str, str]] = None
+    r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -133,6 +138,7 @@ class EventsAggregateParams(BaseModel):
                 "range",
                 "bin_size",
                 "custom_range",
+                "filter_by",
             ]
         )
         serialized = handler(self)
@@ -140,7 +146,7 @@ class EventsAggregateParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -176,7 +182,7 @@ class AggregateEventsList(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
