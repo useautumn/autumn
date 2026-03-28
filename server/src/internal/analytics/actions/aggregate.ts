@@ -17,6 +17,25 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 
+/** Flattens filter_by into indexed filter_key_N / filter_value_N params for Tinybird pipes */
+const buildFilterParams = ({
+	filter_by,
+}: {
+	filter_by?: Record<string, string>;
+}): Record<string, string> => {
+	const params: Record<string, string> = {};
+	if (!filter_by) return params;
+
+	const entries = Object.entries(filter_by).slice(0, 5);
+	for (let i = 0; i < entries.length; i++) {
+		const [key, value] = entries[i];
+		validatePropertyPathForJSON({ propertyKey: key });
+		params[`filter_key_${i}`] = key;
+		params[`filter_value_${i}`] = value;
+	}
+	return params;
+};
+
 const DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
 /** Validates and sanitizes timezone string to prevent injection */
@@ -376,11 +395,8 @@ export const aggregate = async ({
 			entity_id: params.entity_id,
 			group_column: groupColumn,
 			property_key: propertyKey,
+			...buildFilterParams({ filter_by: params.filter_by }),
 		};
-
-		// ctx.logger.debug("Calling Tinybird aggregate_groupable pipe", {
-		// 	pipeParams,
-		// });
 
 		const result = await pipes.aggregateGroupable(pipeParams);
 
@@ -411,6 +427,7 @@ export const aggregate = async ({
 			timezone,
 			customer_id: params.aggregateAll ? undefined : params.customer_id,
 			entity_id: params.entity_id,
+			...buildFilterParams({ filter_by: params.filter_by }),
 		};
 
 		const result = await pipes.aggregateSimple(pipeParams);

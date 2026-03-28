@@ -30,6 +30,16 @@ export const listEventsPaginatedPipeParamsSchema = z.object({
 	event_names: z.array(z.string()).optional(),
 	limit: z.number().optional(),
 	offset: z.number().optional(),
+	filter_key_0: z.string().optional(),
+	filter_value_0: z.string().optional(),
+	filter_key_1: z.string().optional(),
+	filter_value_1: z.string().optional(),
+	filter_key_2: z.string().optional(),
+	filter_value_2: z.string().optional(),
+	filter_key_3: z.string().optional(),
+	filter_value_3: z.string().optional(),
+	filter_key_4: z.string().optional(),
+	filter_value_4: z.string().optional(),
 });
 
 export type ListEventsPaginatedPipeParams = z.infer<
