@@ -87,6 +87,10 @@ export type EventsAggregateParams = {
    * Custom time range to aggregate events for. If provided, range must not be provided
    */
   customRange?: AggregateEventsCustomRange | undefined;
+  /**
+   * Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.
+   */
+  filterBy?: { [k: string]: string } | undefined;
 };
 
 export type AggregateEventsList = {
@@ -186,6 +190,7 @@ export type EventsAggregateParams$Outbound = {
   range?: string | undefined;
   bin_size: string;
   custom_range?: AggregateEventsCustomRange$Outbound | undefined;
+  filter_by?: { [k: string]: string } | undefined;
 };
 
 /** @internal */
@@ -203,6 +208,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
     customRange: z.optional(
       z.lazy(() => AggregateEventsCustomRange$outboundSchema),
     ),
+    filterBy: z.optional(z.record(z.string(), z.string())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -212,6 +218,7 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
       groupBy: "group_by",
       binSize: "bin_size",
       customRange: "custom_range",
+      filterBy: "filter_by",
     });
   }),
 );

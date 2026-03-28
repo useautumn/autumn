@@ -24,6 +24,9 @@ export const eventsListParamsSchema = z.object({
 		.union([z.string(), z.array(z.string()), z.undefined()])
 		.optional(),
 	customRange: z.union([listEventsCustomRangeSchema, z.undefined()]).optional(),
+	filterBy: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
 });
 
 export const listEventsPropertiesSchema = z.object({});
@@ -65,5 +68,8 @@ export const eventsListParamsOutboundSchema = z.object({
 		.optional(),
 	custom_range: z
 		.union([listEventsCustomRangeOutboundSchema, z.undefined()])
+		.optional(),
+	filter_by: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 });

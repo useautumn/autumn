@@ -58,6 +58,10 @@ export type EventsListParams = {
    * Filter events by time range
    */
   customRange?: ListEventsCustomRange | undefined;
+  /**
+   * Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.
+   */
+  filterBy?: { [k: string]: string } | undefined;
 };
 
 /**
@@ -166,6 +170,7 @@ export type EventsListParams$Outbound = {
   entity_id?: string | undefined;
   feature_id?: string | Array<string> | undefined;
   custom_range?: ListEventsCustomRange$Outbound | undefined;
+  filter_by?: { [k: string]: string } | undefined;
 };
 
 /** @internal */
@@ -180,6 +185,7 @@ export const EventsListParams$outboundSchema: z.ZodMiniType<
     entityId: z.optional(z.string()),
     featureId: z.optional(smartUnion([z.string(), z.array(z.string())])),
     customRange: z.optional(z.lazy(() => ListEventsCustomRange$outboundSchema)),
+    filterBy: z.optional(z.record(z.string(), z.string())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -187,6 +193,7 @@ export const EventsListParams$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       featureId: "feature_id",
       customRange: "custom_range",
+      filterBy: "filter_by",
     });
   }),
 );
