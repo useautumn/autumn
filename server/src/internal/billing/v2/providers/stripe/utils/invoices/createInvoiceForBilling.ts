@@ -15,6 +15,7 @@ import {
 import type { Stripe } from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 
 const stripeDiscountsToInvoiceParams = ({
 	stripeDiscounts,
@@ -68,10 +69,13 @@ export const createInvoiceForBilling = async ({
 		? "send_invoice"
 		: "charge_automatically";
 
-	const invoiceMetadata: Stripe.InvoiceCreateParams["metadata"] = {
-		autumn_billing_update: "true",
-		autumn_invoice_mode: billingContext.invoiceMode ? "true" : "false",
-	};
+	const invoiceMetadata = mergeStripeMetadata({
+		userMetadata: billingContext.userMetadata,
+		autumnMetadata: {
+			autumn_billing_update: "true",
+			autumn_invoice_mode: billingContext.invoiceMode ? "true" : "false",
+		},
+	});
 
 	const invoiceEligibleStripeDiscounts = getInvoiceEligibleStripeDiscounts({
 		stripeDiscounts: billingContext.stripeDiscounts ?? [],

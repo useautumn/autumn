@@ -3,7 +3,7 @@ import { ArrowRightIcon } from "@phosphor-icons/react";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect, useRef, useState } from "react";
-import { Outlet, useNavigate } from "react-router";
+import { Navigate, Outlet, useNavigate } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { SandboxBanner } from "@/components/general/SandboxBanner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -50,6 +50,13 @@ export function MainLayout() {
 		return () => window.removeEventListener("error", handleGlobalError);
 	}, [handleApiError]);
 
+	// Redirect to sign in if no session
+	useEffect(() => {
+		if (!isPending && !data) {
+			navigate("/sign-in");
+		}
+	}, [isPending, data, navigate]);
+
 	// Redirect to sandbox if not deployed
 	useEffect(() => {
 		if (!orgLoading && org && !org.deployed && env !== AppEnv.Sandbox) {
@@ -84,10 +91,8 @@ export function MainLayout() {
 		);
 	}
 
-	// 2. If no user, redirect to sign in
 	if (!data) {
-		navigate("/sign-in");
-		return;
+		return <Navigate to="/sign-in" replace={true} />;
 	}
 
 	return (

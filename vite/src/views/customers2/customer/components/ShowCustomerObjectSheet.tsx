@@ -1,3 +1,4 @@
+import { LATEST_VERSION } from "@autumn/shared";
 import { Spinner } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
@@ -37,7 +38,7 @@ export function ShowCustomerObjectSheet({
 	setOpen,
 }: ShowCustomerObjectSheetProps) {
 	const { customer_id } = useParams();
-	const axiosInstance = useAxiosInstance();
+	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();
 
 	const { data, isLoading, error } = useQuery({

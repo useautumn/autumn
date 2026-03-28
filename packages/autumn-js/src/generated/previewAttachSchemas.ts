@@ -281,6 +281,9 @@ export const previewAttachParamsOutboundSchema = z.object({
 	carry_over_usages: z
 		.union([previewAttachCarryOverUsagesOutboundSchema, z.undefined()])
 		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -419,6 +422,9 @@ export const previewAttachParamsSchema = z.object({
 		.optional(),
 	carryOverUsages: z
 		.union([previewAttachCarryOverUsagesSchema, z.undefined()])
+		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 });
 

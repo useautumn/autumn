@@ -2,6 +2,7 @@ import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
 import { InternalError, nullish } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { willStripeSubscriptionUpdateCreateInvoice } from "./willStripeSubscriptionUpdateCreateInvoice";
 
 export const executeStripeSubscriptionOperation = async ({
@@ -46,6 +47,10 @@ export const executeStripeSubscriptionOperation = async ({
 			? { default_payment_method: paymentMethod.id }
 			: {};
 
+	const userMeta = mergeStripeMetadata({
+		userMetadata: billingContext.userMetadata,
+	});
+
 	switch (subscriptionAction.type) {
 		case "update": {
 			let stripeSubscription = billingContext.stripeSubscription;
@@ -71,6 +76,7 @@ export const executeStripeSubscriptionOperation = async ({
 					...subscriptionAction.params,
 					...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
 					...(updateWillCreateInvoice ? invoiceModeParams : {}),
+					...(userMeta && { metadata: userMeta }),
 					payment_behavior: "error_if_incomplete",
 					expand: ["latest_invoice"],
 				},
@@ -81,6 +87,7 @@ export const executeStripeSubscriptionOperation = async ({
 				...subscriptionAction.params,
 				...invoiceModeParams,
 				...fallbackPaymentMethodParams,
+				...(userMeta && { metadata: userMeta }),
 
 				billing_mode: { type: "flexible" },
 

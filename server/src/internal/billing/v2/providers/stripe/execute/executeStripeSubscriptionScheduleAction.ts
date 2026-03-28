@@ -10,13 +10,14 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 
 /**
  * Maps update phase format to create phase format (strips start_date).
- * Preserves discounts so they carry forward to the new schedule phases.
+ * Preserves inline `price_data` items so standalone schedule creation
+ * can carry entity-scoped recurring prices forward correctly.
  */
 const toCreatePhase = (
 	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
 ): Stripe.SubscriptionScheduleCreateParams.Phase => ({
 	items: phase.items?.map((item) => ({
-		price: item.price,
+		...(item.price_data ? { price_data: item.price_data } : { price: item.price }),
 		quantity: item.quantity,
 		...(item.metadata && { metadata: item.metadata }),
 	})),

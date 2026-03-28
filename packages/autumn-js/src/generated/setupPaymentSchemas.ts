@@ -178,6 +178,9 @@ export const setupPaymentParamsOutboundSchema = z.object({
 	carry_over_usages: z
 		.union([setupPaymentCarryOverUsagesOutboundSchema, z.undefined()])
 		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -298,5 +301,8 @@ export const setupPaymentParamsSchema = z.object({
 		.optional(),
 	carryOverUsages: z
 		.union([setupPaymentCarryOverUsagesSchema, z.undefined()])
+		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 });

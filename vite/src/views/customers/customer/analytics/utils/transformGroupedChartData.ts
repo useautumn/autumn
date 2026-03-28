@@ -176,11 +176,13 @@ export function generateChartConfig({
 	features,
 	groupBy,
 	originalColors,
+	entityNames,
 }: {
 	events: EventsData;
 	features: Feature[];
 	groupBy: string | null;
 	originalColors: string[];
+	entityNames?: Record<string, string>;
 }): ChartSeriesConfig[] {
 	const colorsToUse = groupBy ? CHART_COLORS : originalColors;
 
@@ -213,8 +215,14 @@ export function generateChartConfig({
 		const groupValue = parts[parts.length - 1];
 
 		const featureName = getFeatureName({ key: featureKey, features });
-		const displayGroupValue =
-			groupValue === "AUTUMN_RESERVED" ? "Other values" : groupValue;
+		let displayGroupValue: string;
+		if (groupValue === "AUTUMN_RESERVED") {
+			displayGroupValue = "Other values";
+		} else if (entityNames?.[groupValue]) {
+			displayGroupValue = entityNames[groupValue];
+		} else {
+			displayGroupValue = groupValue;
+		}
 
 		config.push({
 			xKey: "period",

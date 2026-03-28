@@ -56,6 +56,7 @@ class Billing(BaseSDK):
         carry_over_usages: Optional[
             Union[models.AttachCarryOverUsages, models.AttachCarryOverUsagesTypedDict]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -84,6 +85,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -133,6 +135,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.AttachCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request(
@@ -241,6 +244,7 @@ class Billing(BaseSDK):
         carry_over_usages: Optional[
             Union[models.AttachCarryOverUsages, models.AttachCarryOverUsagesTypedDict]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -269,6 +273,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -318,6 +323,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.AttachCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request_async(
@@ -739,6 +745,7 @@ class Billing(BaseSDK):
                 models.PreviewAttachCarryOverUsagesTypedDict,
             ]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -767,6 +774,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -817,6 +825,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.PreviewAttachCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request(
@@ -932,6 +941,7 @@ class Billing(BaseSDK):
                 models.PreviewAttachCarryOverUsagesTypedDict,
             ]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -960,6 +970,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1010,6 +1021,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.PreviewAttachCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request_async(
@@ -2242,6 +2254,7 @@ class Billing(BaseSDK):
                 models.SetupPaymentCarryOverUsagesTypedDict,
             ]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2264,6 +2277,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2307,6 +2321,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.SetupPaymentCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request(
@@ -2413,6 +2428,7 @@ class Billing(BaseSDK):
                 models.SetupPaymentCarryOverUsagesTypedDict,
             ]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2435,6 +2451,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2478,6 +2495,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.SetupPaymentCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request_async(

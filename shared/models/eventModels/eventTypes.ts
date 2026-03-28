@@ -34,6 +34,7 @@ export type TimeseriesEventsParams = TotalEventsParams & {
 	no_count?: boolean;
 	timezone?: string;
 	enforceGroupLimit?: boolean;
+	max_groups?: number;
 };
 
 export type CalculateDateRangeParams = Omit<

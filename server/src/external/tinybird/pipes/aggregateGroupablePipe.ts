@@ -42,6 +42,7 @@ export const aggregateGroupablePipeParamsSchema = z.object({
 	filter_value_3: z.string().optional(),
 	filter_key_4: z.string().optional(),
 	filter_value_4: z.string().optional(),
+	max_groups: z.number().int().min(1).max(250).optional(),
 });
 
 export type AggregateGroupablePipeParams = z.infer<

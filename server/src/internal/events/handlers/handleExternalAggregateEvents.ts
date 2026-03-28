@@ -32,6 +32,7 @@ export const handleExternalAggregateEvents = createRoute({
 			bin_size,
 			custom_range,
 			filter_by,
+			max_groups,
 		} = c.req.valid("json");
 
 		console.log("handleAggregateEvents", {
@@ -88,6 +89,7 @@ export const handleExternalAggregateEvents = createRoute({
 					custom_range,
 					enforceGroupLimit: true,
 					filter_by,
+					max_groups,
 				},
 			}),
 			eventActions.getCountAndSum({

@@ -11,7 +11,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
-import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
+import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { FULL_CUSTOMERS_QUERY_KEY } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useCustomerListColumns } from "@/views/customers2/hooks/useCustomerListColumns";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
@@ -39,7 +39,7 @@ export function CustomerListTable({
 		env === AppEnv.Sandbox ? "calc(100vh - 174px)" : "calc(100vh - 134px)";
 
 	const { features } = useFeaturesQuery();
-	const { queryStates } = useCustomersQueryStates();
+	const { queryStates } = useCustomerFilters();
 	const buildKey = useQueryKeyFactory();
 
 	// Subscribe to full_customers query to get reactive updates

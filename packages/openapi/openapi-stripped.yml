@@ -6411,6 +6411,15 @@ paths:
                   required:
                     - enabled
                   description: Whether to carry over usages from the previous plan.
+                metadata:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: Key-value metadata to attach to the Stripe subscription, invoice,
+                    and checkout session created during this attach flow. Keys
+                    prefixed with 'autumn_' are reserved and will be stripped.
               required:
                 - customer_id
                 - plan_id
@@ -7411,6 +7420,15 @@ paths:
                   required:
                     - enabled
                   description: Whether to carry over usages from the previous plan.
+                metadata:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: Key-value metadata to attach to the Stripe subscription, invoice,
+                    and checkout session created during this attach flow. Keys
+                    prefixed with 'autumn_' are reserved and will be stripped.
               required:
                 - customer_id
                 - plan_id
@@ -10112,6 +10130,15 @@ paths:
                   required:
                     - enabled
                   description: Whether to carry over usages from the previous plan.
+                metadata:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: Key-value metadata to attach to the Stripe subscription, invoice,
+                    and checkout session created during this attach flow. Keys
+                    prefixed with 'autumn_' are reserved and will be stripped.
               required:
                 - customer_id
               title: SetupPaymentParams
@@ -11424,6 +11451,13 @@ paths:
                     type: string
                   description: 'Filter events by property values, e.g. {"model": "gpt-4",
                     "region": "us"}. Maximum 5 filters.'
+                max_groups:
+                  type: integer
+                  minimum: 1
+                  maximum: 250
+                  description: Maximum number of distinct group values to return per time bin when
+                    using group_by. Remaining values are bundled into an 'Other'
+                    bucket. Defaults to 9
               required:
                 - feature_id
               title: EventsAggregateParams
