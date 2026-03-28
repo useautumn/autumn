@@ -13,7 +13,11 @@ export function backendToDisplayQuantity({
 	prepaidItems,
 }: {
 	backendOptions: { feature_id: string; quantity: number }[];
-	prepaidItems: { feature_id?: string | null; billing_units?: number | null }[];
+	prepaidItems: {
+		feature_id?: string | null;
+		billing_units?: number | null;
+		included_usage?: number | "inf" | null;
+	}[];
 }): Record<string, number> {
 	const backendLookup = backendOptions.reduce(
 		(acc, option) => {
@@ -28,10 +32,13 @@ export function backendToDisplayQuantity({
 			if (!item.feature_id) return acc;
 
 			const backendQuantity = backendLookup[item.feature_id] ?? 0;
-			acc[item.feature_id] = getPrepaidDisplayQuantity({
-				quantity: backendQuantity,
-				billingUnits: item.billing_units,
-			});
+			const includedUsage =
+				typeof item.included_usage === "number" ? item.included_usage : 0;
+			acc[item.feature_id] =
+				getPrepaidDisplayQuantity({
+					quantity: backendQuantity,
+					billingUnits: item.billing_units,
+				}) + includedUsage;
 			return acc;
 		},
 		{} as Record<string, number>,

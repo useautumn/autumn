@@ -1,12 +1,8 @@
 import {
 	CusProductStatus,
 	type Entity,
-	featureToOptions,
-	getPrepaidDisplayQuantity,
 	isCustomerProductTrialing,
-	isOneOffProductV2,
 	type ProductItem,
-	UsageModel,
 } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
@@ -24,7 +20,6 @@ import {
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useEffect } from "react";
-import { useNavigate } from "react-router";
 import { Button } from "@/components/v2/buttons/Button";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -39,24 +34,21 @@ import {
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 
+import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
-import { pushPage } from "@/utils/genUtils";
 import { getStripeSubLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
-import { useFeaturesQuery } from "../../../../hooks/queries/useFeaturesQuery";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
 import { UpdatePlanButton } from "./UpdatePlanButton";
 
 export function SubscriptionDetailSheet() {
 	const { customer } = useCusQuery();
 	const { stripeAccount } = useOrgStripeQuery();
-	const { features } = useFeaturesQuery();
 	const env = useEnv();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const navigate = useNavigate();
 	const resetProductStore = useProductStore((s) => s.reset);
 	const sheetType = useSheetStore((s) => s.type);
 	// Get edited product from store
@@ -86,7 +78,6 @@ export function SubscriptionDetailSheet() {
 
 	// Check for prepaid items in the product (must be called before any returns)
 	const { prepaidItems } = usePrepaidItems({ product: productV2 ?? undefined });
-	const hasPrepaidItems = prepaidItems.length > 0;
 
 	if (!cusProduct) {
 		return (
@@ -106,43 +97,14 @@ export function SubscriptionDetailSheet() {
 	);
 
 	const isScheduled = cusProduct.status === CusProductStatus.Scheduled;
+	const prepaidDisplayQuantities = backendToDisplayQuantity({
+		backendOptions: cusProduct.options,
+		prepaidItems,
+	});
 
 	const formatDate = (timestamp: number | null | undefined) => {
 		if (!timestamp) return "—";
 		return format(new Date(timestamp), "MMM d, yyyy, HH:mm");
-	};
-
-	const handleEditPlan = () => {
-		if (!cusProduct || !customer) return;
-
-		const entity = customer.entities?.find(
-			(e: Entity) =>
-				e.internal_id === cusProduct.internal_entity_id ||
-				e.id === cusProduct.entity_id,
-		);
-
-		pushPage({
-			path: `/customers/${customer.id || customer.internal_id}/${cusProduct.product_id}`,
-			queryParams: {
-				id: cusProduct.id,
-				entity_id: entity ? entity.id || entity.internal_id : undefined,
-				version: cusProduct.product.version,
-			},
-			navigate,
-		});
-		// closeSheet();
-	};
-
-	const canEditPlan = () => {
-		return (
-			!isOneOffProductV2({ items: productV2?.items ?? [] }) &&
-			!isExpired &&
-			!isScheduled
-		);
-	};
-
-	const handleUpdateQuantities = () => {
-		setSheet({ type: "subscription-update", itemId });
 	};
 
 	const handleUpdateSubscription = () => {
@@ -193,21 +155,8 @@ export function SubscriptionDetailSheet() {
 						<div className="space-y-2">
 							{productV2.items.map((item: ProductItem, index: number) => {
 								if (!item.feature_id) return null;
-
-								const feature = features.find((f) => f.id === item.feature_id);
-								const prepaidOption = featureToOptions({
-									feature,
-									options: cusProduct.options,
-								});
-
 								const prepaidQuantity =
-									item.usage_model === UsageModel.Prepaid &&
-									prepaidOption?.quantity
-										? getPrepaidDisplayQuantity({
-												quantity: prepaidOption.quantity,
-												billingUnits: item.billing_units,
-											})
-										: null;
+									prepaidDisplayQuantities[item.feature_id] ?? null;
 
 								return (
 									<PlanFeatureRow
