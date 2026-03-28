@@ -11416,6 +11416,14 @@ paths:
                     - end
                   description: Custom time range to aggregate events for. If provided, range must
                     not be provided
+                filter_by:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: string
+                  description: 'Filter events by property values, e.g. {"model": "gpt-4",
+                    "region": "us"}. Maximum 5 filters.'
               required:
                 - feature_id
               title: EventsAggregateParams
