@@ -31,6 +31,7 @@ export const handleExternalAggregateEvents = createRoute({
 			range,
 			bin_size,
 			custom_range,
+			filter_by,
 		} = c.req.valid("json");
 
 		console.log("handleAggregateEvents", {
@@ -41,6 +42,7 @@ export const handleExternalAggregateEvents = createRoute({
 			range,
 			bin_size,
 			custom_range,
+			filter_by,
 		});
 
 		let customer: Awaited<ReturnType<typeof CusService.getFull>> | undefined;
@@ -85,6 +87,7 @@ export const handleExternalAggregateEvents = createRoute({
 					bin_size: bin_size ?? "day",
 					custom_range,
 					enforceGroupLimit: true,
+					filter_by,
 				},
 			}),
 			eventActions.getCountAndSum({
@@ -98,6 +101,7 @@ export const handleExternalAggregateEvents = createRoute({
 					customer,
 					custom_range,
 					bin_size: bin_size ?? "day",
+					filter_by,
 				},
 			}),
 		]);
