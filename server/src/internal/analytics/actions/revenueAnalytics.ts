@@ -429,7 +429,11 @@ export const getEstimatedMrr = async ({
 	}>;
 
 	if (!resultJson.data.length) {
-		return { estimated_mrr: 0, active_subscriptions: 0, currency: "usd" };
+		return {
+			estimated_mrr: 0,
+			active_subscriptions: 0,
+			currency: org.default_currency || "usd",
+		};
 	}
 
 	const row = resultJson.data[0];
