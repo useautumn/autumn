@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+	AppEnv,
 	getPrepaidDisplayQuantity,
 	type ProductV2,
 	UsageModel,
@@ -17,7 +18,7 @@ function makeProduct({ items }: { items: ProductV2["items"] }): ProductV2 {
 		is_default: false,
 		version: 1,
 		group: null,
-		env: "sandbox" as any,
+		env: AppEnv.Sandbox,
 		items,
 		created_at: Date.now(),
 	};
@@ -46,6 +47,26 @@ describe("backendToDisplayQuantity", () => {
 		});
 
 		expect(result).toEqual({ messages: 10000, tokens: 2500 });
+	});
+
+	test("should add included_usage on top of the purchased quantity", () => {
+		const result = backendToDisplayQuantity({
+			backendOptions: [{ feature_id: "credits", quantity: 500 }],
+			prepaidItems: [{ feature_id: "credits", included_usage: 250 }],
+		});
+
+		expect(result).toEqual({ credits: 750 });
+	});
+
+	test("should add included_usage after expanding billing_units", () => {
+		const result = backendToDisplayQuantity({
+			backendOptions: [{ feature_id: "credits", quantity: 1 }],
+			prepaidItems: [
+				{ feature_id: "credits", billing_units: 500, included_usage: 250 },
+			],
+		});
+
+		expect(result).toEqual({ credits: 750 });
 	});
 
 	test("should default to billing_units=1 when nullish", () => {

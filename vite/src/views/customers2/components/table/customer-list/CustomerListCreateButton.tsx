@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
@@ -20,6 +21,7 @@ import { getBackendErr, navigateTo } from "@/utils/genUtils";
 export function CustomerListCreateButton() {
 	const navigate = useNavigate();
 	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
 	const [open, setOpen] = useState(false);
 	const [fields, setFields] = useState<{ [key: string]: string }>({
 		name: "",
@@ -45,6 +47,10 @@ export function CustomerListCreateButton() {
 			});
 
 			const customer = data.customer || data;
+
+			queryClient.invalidateQueries({ queryKey: ["customers"] });
+			queryClient.invalidateQueries({ queryKey: ["full_customers"] });
+
 			if (customer) {
 				navigateTo(
 					`/customers/${

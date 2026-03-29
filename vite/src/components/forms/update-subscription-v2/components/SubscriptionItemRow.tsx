@@ -214,6 +214,8 @@ export function SubscriptionItemRow({
 	const showPrepaidOutside = isPrepaid && form && featureId && !hasEditableEdit;
 	const inputQuantity = prepaidQuantity ?? 0;
 	const billingUnitStep = item.billing_units ?? 1;
+	const minPrepaidQuantity =
+		typeof item.included_usage === "number" ? item.included_usage : 0;
 	const { roundedQuantity, normalizedBillingUnits, shouldShowRoundingHint } =
 		getPrepaidQuantityTooltipData({
 			inputQuantity,
@@ -302,7 +304,7 @@ export function SubscriptionItemRow({
 										{(field) => (
 											<field.QuantityField
 												label=""
-												min={0}
+												min={minPrepaidQuantity}
 												step={billingUnitStep}
 												hideFieldInfo
 											/>
@@ -345,7 +347,7 @@ export function SubscriptionItemRow({
 	);
 	const prepaidTooltipContent = (
 		<div className="flex flex-col gap-1">
-			<p>Quantity is exclusive of included usage.</p>
+			<p>Quantity includes included usage.</p>
 			{shouldShowRoundingHint && (
 				<p>
 					Rounded up to {roundedQuantity} to match {normalizedBillingUnits}-unit

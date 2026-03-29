@@ -1,13 +1,10 @@
 import {
-	type AutoTopup,
 	computeGrantedBalanceInput,
 	type Entity,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
 	getRolloverFields,
-	isOneOffPrice,
-	isPrepaidPrice,
 	isUnlimitedCusEnt,
 	numberWithCommas,
 } from "@autumn/shared";
@@ -24,14 +21,12 @@ import { LabelInput } from "@/components/v2/inputs/LabelInput";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useCustomerContext } from "../../customer/CustomerContext";
-import { AutoTopUpSection } from "./AutoTopUpSection";
 import { BalanceEditPreviews } from "./BalanceEditPreviews";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
 import {
@@ -81,19 +76,6 @@ export function BalanceEditSheet() {
 			cp.price.entitlement_id === selectedCusEnt.entitlement.id,
 	);
 
-	const hasOneOffPrepaidPrice = cusPrice
-		? isOneOffPrice(cusPrice.price) && isPrepaidPrice(cusPrice.price)
-		: false;
-	const hasExistingAutoTopUp = customer?.auto_topups?.some(
-		(c: AutoTopup) => c.feature_id === featureId,
-	);
-	const isEligibleForAutoTopUp =
-		hasOneOffPrepaidPrice || !!hasExistingAutoTopUp;
-
-	const existingAutoTopUp =
-		customer?.auto_topups?.find((c: AutoTopup) => c.feature_id === featureId) ??
-		null;
-
 	return (
 		<div className="flex flex-col h-full">
 			<SheetHeader
@@ -120,8 +102,6 @@ export function BalanceEditSheet() {
 					cusProduct={cusProduct}
 					cusPrice={cusPrice}
 					featureId={featureId}
-					existingAutoTopUp={existingAutoTopUp}
-					isEligibleForAutoTopUp={isEligibleForAutoTopUp}
 				/>
 			)}
 		</div>
@@ -162,8 +142,6 @@ function BalanceEditForm({
 	cusProduct,
 	cusPrice,
 	featureId,
-	existingAutoTopUp,
-	isEligibleForAutoTopUp,
 }: {
 	selectedCusEnt: FullCustomerEntitlement;
 	entityId: string | null;
@@ -171,13 +149,10 @@ function BalanceEditForm({
 	cusProduct: FullCusProduct | undefined;
 	cusPrice: FullCustomerPrice | undefined;
 	featureId: string;
-	existingAutoTopUp: AutoTopup | null;
-	isEligibleForAutoTopUp: boolean;
 }) {
 	const form = useBalanceEditForm({
 		selectedCusEnt,
 		entityId,
-		existingAutoTopUp,
 	});
 
 	return (
@@ -191,19 +166,13 @@ function BalanceEditForm({
 				/>
 			</SheetSection>
 
-			<SheetSection withSeparator={isEligibleForAutoTopUp}>
+			<SheetSection withSeparator={false}>
 				<BalanceFields
 					form={form}
 					selectedCusEnt={selectedCusEnt}
 					cusPrice={cusPrice}
 				/>
 			</SheetSection>
-
-			{isEligibleForAutoTopUp && (
-				<SheetSection withSeparator={false}>
-					<AutoTopUpSection form={form} />
-				</SheetSection>
-			)}
 
 			<SubmitButton
 				form={form}
@@ -559,40 +528,6 @@ function SubmitButton({
 				}
 			}
 
-			// Queue auto top-up update
-			if (hasAutoTopUpChanges({ form })) {
-				const autoTopUp = values.autoTopUp;
-				const newConfig: AutoTopup = {
-					feature_id: featureId,
-					enabled: autoTopUp.enabled,
-					threshold: autoTopUp.threshold ?? 0,
-					quantity: autoTopUp.quantity ?? 1,
-					...(autoTopUp.enabled &&
-						autoTopUp.maxPurchasesEnabled && {
-							purchase_limit: {
-								interval: autoTopUp.interval,
-								limit: autoTopUp.maxPurchases ?? 1,
-							},
-						}),
-				};
-
-				const otherConfigs = (customer.auto_topups ?? []).filter(
-					(c: AutoTopup) => c.feature_id !== featureId,
-				);
-
-				promises.push(
-					CusService.updateCustomer({
-						axios: axiosInstance,
-						customer_id: customer.id || customer.internal_id,
-						data: {
-							billing_controls: {
-								auto_topups: [...otherConfigs, newConfig],
-							},
-						},
-					}),
-				);
-			}
-
 			await Promise.all(promises);
 			toast.success("Updated successfully");
 			handleClose();
@@ -635,24 +570,6 @@ function hasBalanceChanges({
 		meta.balance?.isDirty ||
 		meta.nextResetAt?.isDirty ||
 		meta.grantedAndPurchasedBalance?.isDirty ||
-		false
-	);
-}
-
-function hasAutoTopUpChanges({
-	form,
-}: {
-	form: BalanceEditFormInstance;
-}): boolean {
-	const meta = form.state.fieldMeta;
-
-	return (
-		meta["autoTopUp.enabled"]?.isDirty ||
-		meta["autoTopUp.threshold"]?.isDirty ||
-		meta["autoTopUp.quantity"]?.isDirty ||
-		meta["autoTopUp.maxPurchasesEnabled"]?.isDirty ||
-		meta["autoTopUp.interval"]?.isDirty ||
-		meta["autoTopUp.maxPurchases"]?.isDirty ||
 		false
 	);
 }

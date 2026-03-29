@@ -11,6 +11,7 @@ import { format, startOfDay, startOfHour, sub } from "date-fns";
 import { Decimal } from "decimal.js";
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 
 const DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
@@ -93,13 +94,26 @@ export const getCountAndSum = async ({
 
 	const { startDate, endDate } = await calculateDateRange({ ctx, params });
 
+	// Build dynamic filter_by clauses using native JSON sub-column access
+	let filterBySql = "";
+	const filterByParams: Record<string, string> = {};
+	if (params.filter_by) {
+		const entries = Object.entries(params.filter_by).slice(0, 5);
+		for (let i = 0; i < entries.length; i++) {
+			const [key, value] = entries[i];
+			validatePropertyPathForJSON({ propertyKey: key });
+			filterBySql += `\n\t\t\tAND properties.${key}::String = {filter_value_${i}:String}`;
+			filterByParams[`filter_value_${i}`] = value;
+		}
+	}
+
 	const query = `
 		WITH customer_events AS (
 			SELECT *
 			FROM events
 			WHERE org_id = {org_id:String} AND env = {env:String}
 			${params.aggregateAll ? "" : "AND customer_id = {customer_id:String}"}
-			${params.entity_id ? "AND entity_id = {entity_id:String}" : ""}
+			${params.entity_id ? "AND entity_id = {entity_id:String}" : ""}${filterBySql}
 		)
 		SELECT
 			e.event_name,
@@ -130,6 +144,7 @@ export const getCountAndSum = async ({
 			start_date: startDate,
 			end_date: endDate,
 			event_names: params.event_names,
+			...filterByParams,
 		},
 		format: "JSON",
 	});

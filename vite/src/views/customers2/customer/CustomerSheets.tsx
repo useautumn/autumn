@@ -75,7 +75,7 @@ export function CustomerSheets() {
 					className="absolute right-0 top-0 bottom-0"
 					style={{ width: isMobile ? "100%" : "28rem", zIndex: 45 }}
 				>
-					<SheetContainer className="w-full bg-background z-40 sm:border-l border-border/40 h-full relative">
+					<SheetContainer className="w-full bg-card z-40 sm:border-l border-border/40 h-full relative">
 						<SheetCloseButton onClose={handleClose} />
 						{renderSheet()}
 					</SheetContainer>

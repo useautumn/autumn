@@ -5,7 +5,7 @@ from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext
 from autumn_sdk.types import OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
-from typing import Mapping, Optional, Union
+from typing import Dict, Mapping, Optional, Union
 
 
 class Events(BaseSDK):
@@ -248,6 +248,7 @@ class Events(BaseSDK):
                 models.AggregateEventsCustomRangeTypedDict,
             ]
         ] = None,
+        filter_by: Optional[Dict[str, str]] = None,
         max_groups: Optional[int] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -263,6 +264,7 @@ class Events(BaseSDK):
         :param range: Time range to aggregate events for. Either range or custom_range must be provided
         :param bin_size: Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
         :param custom_range: Custom time range to aggregate events for. If provided, range must not be provided
+        :param filter_by: Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters.
         :param max_groups: Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -289,6 +291,7 @@ class Events(BaseSDK):
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.AggregateEventsCustomRange]
             ),
+            filter_by=filter_by,
             max_groups=max_groups,
         )
 
@@ -368,6 +371,7 @@ class Events(BaseSDK):
                 models.AggregateEventsCustomRangeTypedDict,
             ]
         ] = None,
+        filter_by: Optional[Dict[str, str]] = None,
         max_groups: Optional[int] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -383,6 +387,7 @@ class Events(BaseSDK):
         :param range: Time range to aggregate events for. Either range or custom_range must be provided
         :param bin_size: Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
         :param custom_range: Custom time range to aggregate events for. If provided, range must not be provided
+        :param filter_by: Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters.
         :param max_groups: Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -409,6 +414,7 @@ class Events(BaseSDK):
             custom_range=utils.get_pydantic_model(
                 custom_range, Optional[models.AggregateEventsCustomRange]
             ),
+            filter_by=filter_by,
             max_groups=max_groups,
         )
 
