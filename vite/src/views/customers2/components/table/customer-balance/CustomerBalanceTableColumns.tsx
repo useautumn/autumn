@@ -8,6 +8,7 @@ import {
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
 	cusEntToPrepaidQuantity,
+	getRolloverFields,
 	nullish,
 } from "@autumn/shared";
 import { CaretRightIcon } from "@phosphor-icons/react";
@@ -44,13 +45,13 @@ function getIndividualEntValues({
 	const balance = cusEntsToBalance({
 		cusEnts: [ent],
 		entityId: entityId ?? undefined,
-		withRollovers: true,
+		withRollovers: false,
 	});
 
 	const grantedBalance = cusEntsToGrantedBalance({
 		cusEnts: [ent],
 		entityId: entityId ?? undefined,
-		withRollovers: true,
+		withRollovers: false,
 	});
 
 	const prepaidAllowance = cusEntsToPrepaidQuantity({
@@ -60,6 +61,10 @@ function getIndividualEntValues({
 	void grantedBalance;
 	void prepaidAllowance;
 
+	const rolloverBalance =
+		getRolloverFields({ cusEnt: ent, entityId: entityId ?? undefined })
+			?.balance ?? 0;
+
 	const quantity = ent.customer_product?.quantity || 1;
 	const allowance =
 		(ent.entitlement.allowance ?? 0) * quantity +
@@ -67,7 +72,7 @@ function getIndividualEntValues({
 			? (ent.entities[entityId].adjustment ?? ent.adjustment ?? 0)
 			: (ent.adjustment ?? 0)) +
 		cusEntToPrepaidQuantity({ cusEnt: ent });
-	return { balance, allowance, quantity };
+	return { balance, allowance, quantity, rolloverBalance };
 }
 
 // --- Usage cells ---
@@ -86,6 +91,7 @@ function ParentUsageCell({
 	const {
 		allowance,
 		balance,
+		rolloverBalance,
 		initialAllowance,
 		usageType,
 		shouldShowOutOfBalance,
@@ -106,6 +112,7 @@ function ParentUsageCell({
 			allowance={allowance}
 			initialAllowance={initialAllowance}
 			balance={balance}
+			rolloverBalance={rolloverBalance}
 			shouldShowOutOfBalance={shouldShowOutOfBalance}
 			shouldShowUsed={shouldShowUsed}
 			usageType={usageType}
@@ -124,7 +131,10 @@ function SubRowUsageCell({
 		return <span className="text-t4">Unlimited</span>;
 	}
 
-	const { balance, allowance } = getIndividualEntValues({ ent, entityId });
+	const { balance, allowance, rolloverBalance } = getIndividualEntValues({
+		ent,
+		entityId,
+	});
 	const shouldShowOutOfBalance = allowance > 0 || balance > 0;
 	const shouldShowUsed = balance < 0 || (balance === 0 && allowance <= 0);
 
@@ -133,6 +143,7 @@ function SubRowUsageCell({
 			allowance={allowance}
 			initialAllowance={allowance}
 			balance={balance}
+			rolloverBalance={rolloverBalance}
 			shouldShowOutOfBalance={shouldShowOutOfBalance}
 			shouldShowUsed={shouldShowUsed}
 			usageType={ent.entitlement.feature.config?.usage_type}
