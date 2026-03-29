@@ -3,6 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getArpc,
 	getCustomerLeaderboard,
+	getEstimatedMrr,
 	getInvoiceStatus,
 	getRevenueByProduct,
 	getRevenueProductShare,
@@ -52,6 +53,15 @@ export const handleCustomerLeaderboard = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const result = await getCustomerLeaderboard({ ctx });
+		return c.json(result);
+	},
+});
+
+export const handleEstimatedMrr = createRoute({
+	body: z.object({}),
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const result = await getEstimatedMrr({ ctx });
 		return c.json(result);
 	},
 });

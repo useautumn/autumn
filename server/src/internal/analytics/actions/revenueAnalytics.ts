@@ -355,3 +355,83 @@ export const getCustomerLeaderboard = async ({
 		currency: row.currency,
 	})) as CustomerLeaderboardRow[];
 };
+
+// ── 6. Estimated MRR (current snapshot) ─────────────────────────────
+
+export type EstimatedMrrResult = {
+	estimated_mrr: number;
+	active_subscriptions: number;
+	currency: string;
+};
+
+export const getEstimatedMrr = async ({
+	ctx,
+}: {
+	ctx: AutumnContext;
+}): Promise<EstimatedMrrResult> => {
+	const ch = getClickhouseClient();
+	const { org } = ctx;
+
+	const query = `
+		SELECT
+			SUM(
+				CASE JSONExtractString(pr.config, 'interval')
+					WHEN 'month' THEN JSONExtractFloat(pr.config, 'amount') * cp.quantity
+					WHEN 'quarter' THEN JSONExtractFloat(pr.config, 'amount') * cp.quantity / 3
+					WHEN 'semi_annual' THEN JSONExtractFloat(pr.config, 'amount') * cp.quantity / 6
+					WHEN 'year' THEN JSONExtractFloat(pr.config, 'amount') * cp.quantity / 12
+					WHEN 'week' THEN JSONExtractFloat(pr.config, 'amount') * cp.quantity * 4.33
+					ELSE 0
+				END
+			) AS estimated_mrr,
+			COUNT(DISTINCT cp.id) AS active_subscriptions,
+			o.default_currency AS currency
+		FROM customer_products AS cp FINAL
+		INNER JOIN (
+			SELECT id, internal_product_id, config, entitlement_id, org_id, is_custom
+			FROM prices FINAL
+			WHERE __action != 'delete'
+		) AS pr ON pr.internal_product_id = cp.internal_product_id
+			AND pr.org_id = {org_id:String}
+			AND (pr.entitlement_id IS NULL OR pr.entitlement_id = '')
+		INNER JOIN (
+			SELECT internal_id, org_id, env
+			FROM customers FINAL
+			WHERE __action != 'delete'
+		) AS cus ON cus.internal_id = cp.internal_customer_id
+			AND cus.org_id = {org_id:String}
+		INNER JOIN (
+			SELECT id, default_currency
+			FROM organizations FINAL
+		) AS o ON o.id = {org_id:String}
+		WHERE cus.env = 'live'
+			AND cp.__action != 'delete'
+			AND cp.canceled = 0
+			AND (cp.ended_at IS NULL OR cp.ended_at = 0)
+			AND JSONExtractString(pr.config, 'interval') != 'one_off'
+		GROUP BY currency
+	`;
+
+	const result = await ch.query({
+		query,
+		query_params: { org_id: org.id },
+		format: "JSON",
+	});
+
+	const resultJson = (await result.json()) as ClickHouseResult<{
+		estimated_mrr: string;
+		active_subscriptions: string;
+		currency: string;
+	}>;
+
+	if (!resultJson.data.length) {
+		return { estimated_mrr: 0, active_subscriptions: 0, currency: "usd" };
+	}
+
+	const row = resultJson.data[0];
+	return {
+		estimated_mrr: Number(row.estimated_mrr),
+		active_subscriptions: Number(row.active_subscriptions),
+		currency: row.currency,
+	};
+};

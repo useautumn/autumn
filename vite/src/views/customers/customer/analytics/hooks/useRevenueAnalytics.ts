@@ -154,3 +154,28 @@ export const useCustomerLeaderboard = () => {
 
 	return { data, isLoading };
 };
+
+export type EstimatedMrrResult = {
+	estimated_mrr: number;
+	active_subscriptions: number;
+	currency: string;
+};
+
+export const useEstimatedMrr = () => {
+	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
+
+	const { data, isLoading } = useQuery({
+		queryKey: buildKey(["revenue-estimated-mrr"]),
+		queryFn: async () => {
+			const { data } = await axiosInstance.post(
+				"/query/revenue/estimated-mrr",
+				{},
+			);
+			return data as EstimatedMrrResult;
+		},
+		staleTime: 5 * 60 * 1000,
+	});
+
+	return { data, isLoading };
+};
