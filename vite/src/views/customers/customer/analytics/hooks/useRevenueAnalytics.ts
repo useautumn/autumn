@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 
 export type RevenueByProductRow = {
 	period_label: string;
@@ -48,6 +49,8 @@ export const useRevenueByProduct = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const queryClient = useQueryClient();
+	const env = useEnv();
+	const isLive = env === "live";
 
 	const fetchGranularity = async ({
 		g,
@@ -60,15 +63,16 @@ export const useRevenueByProduct = ({
 		return data as RevenueByProductRow[];
 	};
 
-	// Active query for selected granularity
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-by-product", granularity]),
 		queryFn: () => fetchGranularity({ g: granularity }),
 		staleTime: 5 * 60 * 1000,
+		enabled: isLive,
 	});
 
 	// Background prefetch other granularities so switching is instant
 	useEffect(() => {
+		if (!isLive) return;
 		for (const g of ["day", "month", "year"] as const) {
 			if (g === granularity) continue;
 			queryClient.prefetchQuery({
@@ -77,7 +81,7 @@ export const useRevenueByProduct = ({
 				staleTime: 5 * 60 * 1000,
 			});
 		}
-	}, [granularity, queryClient, buildKey, axiosInstance]);
+	}, [granularity, queryClient, buildKey, axiosInstance, isLive]);
 
 	return { data, isLoading };
 };
@@ -85,6 +89,7 @@ export const useRevenueByProduct = ({
 export const useRevenueProductShare = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
+	const env = useEnv();
 
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-product-share"]),
@@ -96,6 +101,7 @@ export const useRevenueProductShare = () => {
 			return data as ProductShareRow[];
 		},
 		staleTime: 5 * 60 * 1000,
+		enabled: env === "live",
 	});
 
 	return { data, isLoading };
@@ -104,6 +110,7 @@ export const useRevenueProductShare = () => {
 export const useArpc = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
+	const env = useEnv();
 
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-arpc"]),
@@ -112,6 +119,7 @@ export const useArpc = () => {
 			return data as ArpcRow[];
 		},
 		staleTime: 5 * 60 * 1000,
+		enabled: env === "live",
 	});
 
 	return { data, isLoading };
@@ -120,6 +128,7 @@ export const useArpc = () => {
 export const useInvoiceStatus = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
+	const env = useEnv();
 
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-invoice-status"]),
@@ -131,6 +140,7 @@ export const useInvoiceStatus = () => {
 			return data as InvoiceStatusRow[];
 		},
 		staleTime: 5 * 60 * 1000,
+		enabled: env === "live",
 	});
 
 	return { data, isLoading };
@@ -139,6 +149,7 @@ export const useInvoiceStatus = () => {
 export const useCustomerLeaderboard = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
+	const env = useEnv();
 
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-customer-leaderboard"]),
@@ -150,6 +161,7 @@ export const useCustomerLeaderboard = () => {
 			return data as CustomerLeaderboardRow[];
 		},
 		staleTime: 5 * 60 * 1000,
+		enabled: env === "live",
 	});
 
 	return { data, isLoading };
@@ -164,6 +176,7 @@ export type EstimatedMrrResult = {
 export const useEstimatedMrr = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
+	const env = useEnv();
 
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-estimated-mrr"]),
@@ -175,6 +188,7 @@ export const useEstimatedMrr = () => {
 			return data as EstimatedMrrResult;
 		},
 		staleTime: 5 * 60 * 1000,
+		enabled: env === "live",
 	});
 
 	return { data, isLoading };

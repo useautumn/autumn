@@ -66,6 +66,7 @@ export const getRevenueByProduct = async ({
 	// Limit date range based on granularity to keep charts readable
 	const dateCutoffMap: Record<string, string> = {
 		day: `AND i.created_at >= toInt64(toUnixTimestamp(now() - INTERVAL 30 DAY)) * 1000`,
+		month: `AND i.created_at >= toInt64(toUnixTimestamp(now() - INTERVAL 24 MONTH)) * 1000`,
 		year: `AND i.created_at >= toInt64(toUnixTimestamp(now() - INTERVAL 10 YEAR)) * 1000`,
 	};
 	const dateCutoff = dateCutoffMap[granularity] ?? "";
@@ -77,7 +78,7 @@ export const getRevenueByProduct = async ({
 				{date_format:String}
 			) AS period_label,
 			p.name AS product_name,
-			SUM(i.total) AS volume,
+			SUM(i.total / length(i.internal_product_ids)) AS volume,
 			o.default_currency AS currency
 		FROM invoices AS i FINAL
 		ARRAY JOIN i.internal_product_ids AS ipid
@@ -139,7 +140,7 @@ export const getRevenueProductShare = async ({
 	const query = `
 		SELECT
 			p.name AS product_name,
-			SUM(i.total) AS volume,
+			SUM(i.total / length(i.internal_product_ids)) AS volume,
 			o.default_currency AS currency
 		FROM invoices AS i FINAL
 		ARRAY JOIN i.internal_product_ids AS ipid
@@ -388,12 +389,15 @@ export const getEstimatedMrr = async ({
 			o.default_currency AS currency
 		FROM customer_products AS cp FINAL
 		INNER JOIN (
-			SELECT id, internal_product_id, config, entitlement_id, org_id, is_custom
+			SELECT
+				internal_product_id,
+				argMin(config, created_at) AS config
 			FROM prices FINAL
 			WHERE __action != 'delete'
+				AND org_id = {org_id:String}
+				AND (entitlement_id IS NULL OR entitlement_id = '')
+			GROUP BY internal_product_id
 		) AS pr ON pr.internal_product_id = cp.internal_product_id
-			AND pr.org_id = {org_id:String}
-			AND (pr.entitlement_id IS NULL OR pr.entitlement_id = '')
 		INNER JOIN (
 			SELECT internal_id, org_id, env
 			FROM customers FINAL
