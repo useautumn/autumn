@@ -45,7 +45,7 @@ function formatCurrency({
 		currency,
 		minimumFractionDigits: 0,
 		maximumFractionDigits: 0,
-	}).format(value / 100);
+	}).format(value);
 }
 
 function CustomTooltip({

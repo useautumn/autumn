@@ -5,12 +5,14 @@ import { useEnv } from "@/utils/envUtils";
 import {
 	useArpc,
 	useCustomerLeaderboard,
+	useEstimatedMrr,
 	useInvoiceStatus,
 	useRevenueByProduct,
 	useRevenueProductShare,
 } from "../hooks/useRevenueAnalytics";
 import { ArpcChart } from "./ArpcChart";
 import { CustomerLeaderboardTable } from "./CustomerLeaderboardTable";
+import { EstimatedMrrCard } from "./EstimatedMrrCard";
 import { InvoiceStatusChart } from "./InvoiceStatusChart";
 import { RevenueByProductChart } from "./RevenueByProductChart";
 import { RevenueProductShareChart } from "./RevenueProductShareChart";
@@ -27,6 +29,7 @@ export const RevenueMetricsSection = () => {
 	const arpc = useArpc();
 	const invoiceStatus = useInvoiceStatus();
 	const leaderboard = useCustomerLeaderboard();
+	const estimatedMrr = useEstimatedMrr();
 
 	if (env !== "live") return null;
 
@@ -48,6 +51,11 @@ export const RevenueMetricsSection = () => {
 					Invoice data may be incomplete
 				</span>
 			</div>
+
+			<EstimatedMrrCard
+				data={estimatedMrr.data}
+				loading={estimatedMrr.isLoading}
+			/>
 
 			<RevenueByProductChart
 				data={revenueByProduct.data ?? []}

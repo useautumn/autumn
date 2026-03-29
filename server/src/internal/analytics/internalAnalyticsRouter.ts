@@ -7,6 +7,7 @@ import { handleListEventNames } from "./internalHandlers/handleListEventNames.js
 import {
 	handleArpc,
 	handleCustomerLeaderboard,
+	handleEstimatedMrr,
 	handleInvoiceStatus,
 	handleRevenueByProduct,
 	handleRevenueProductShare,
@@ -30,3 +31,4 @@ internalAnalyticsRouter.post(
 	"/revenue/customer-leaderboard",
 	...handleCustomerLeaderboard,
 );
+internalAnalyticsRouter.post("/revenue/estimated-mrr", ...handleEstimatedMrr);
