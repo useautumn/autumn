@@ -1,4 +1,9 @@
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import type { EstimatedMrrResult } from "../hooks/useRevenueAnalytics";
 
 const formatCurrency = ({
@@ -30,7 +35,14 @@ export const EstimatedMrrCard = ({
 					<ArrowsClockwiseIcon size={20} className="text-t3" />
 				</div>
 				<div>
-					<p className="text-xs text-t3">Estimated MRR</p>
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<p className="text-xs text-t3 cursor-help w-fit">
+								Monthly Recurring Revenue
+							</p>
+						</TooltipTrigger>
+						<TooltipContent>Estimated value</TooltipContent>
+					</Tooltip>
 					{loading ? (
 						<div className="h-6 w-24 animate-pulse rounded bg-border mt-0.5" />
 					) : (
@@ -55,7 +67,7 @@ export const EstimatedMrrCard = ({
 						<p className="text-lg font-semibold text-t2 tabular-nums">
 							{data?.active_subscriptions ?? 0}
 						</p>
-						<p className="text-xs text-t4">active subs in autumn</p>
+						<p className="text-xs text-t4">active cus products</p>
 					</>
 				)}
 			</div>
