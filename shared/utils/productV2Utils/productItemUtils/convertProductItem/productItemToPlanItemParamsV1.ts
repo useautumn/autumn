@@ -55,6 +55,7 @@ export const productItemToPlanItemParamsV1 = ({
 		rollover: planItemV1.rollover
 			? {
 					max: planItemV1.rollover.max ?? undefined,
+					max_percentage: planItemV1.rollover.max_percentage ?? undefined,
 					expiry_duration_type: planItemV1.rollover.expiry_duration_type,
 					expiry_duration_length:
 						planItemV1.rollover.expiry_duration_length ?? undefined,

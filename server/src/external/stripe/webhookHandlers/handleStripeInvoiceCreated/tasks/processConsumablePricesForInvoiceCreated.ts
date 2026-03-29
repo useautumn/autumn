@@ -1,5 +1,6 @@
 import {
 	customerEntitlementShouldBeBilled,
+	type FullCusEntWithProduct,
 	type LineItem,
 	secondsToMs,
 } from "@autumn/shared";
@@ -107,10 +108,15 @@ export const processConsumablePricesForInvoiceCreated = async ({
 			nextResetAt: Date.now(),
 		});
 
+		const fullCusEnt: FullCusEntWithProduct = {
+			...update.customerEntitlement,
+			customer_product: null,
+		};
+
 		await RolloverService.insert({
 			ctx,
 			rows: rolloverUpdates.toInsert,
-			fullCusEnt: update.customerEntitlement,
+			fullCusEnt,
 		});
 	});
 
