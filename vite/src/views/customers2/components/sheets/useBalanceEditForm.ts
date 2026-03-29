@@ -26,7 +26,7 @@ export function useBalanceEditForm({
 	const balance = cusEntsToBalance({
 		cusEnts: [selectedCusEnt],
 		entityId: entityId ?? undefined,
-		withRollovers: true,
+		withRollovers: false,
 	});
 
 	const grantedBalance = cusEntsToGrantedBalance({

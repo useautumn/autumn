@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 export interface FeatureBalanceDisplayProps {
 	allowance: number;
 	balance: number;
+	rolloverBalance?: number;
 	shouldShowOutOfBalance: boolean;
 	shouldShowUsed: boolean;
 	usageType?: string;
@@ -18,6 +19,7 @@ export interface FeatureBalanceDisplayProps {
 export function FeatureBalanceDisplay({
 	allowance,
 	balance,
+	rolloverBalance = 0,
 	shouldShowOutOfBalance,
 	shouldShowUsed,
 	usageType,
@@ -30,7 +32,6 @@ export function FeatureBalanceDisplay({
 	const overage = balance < 0 ? balance * -1 : 0;
 
 	const getUsedLabel = () => {
-		//change for feather
 		if (initialAllowance > 0) return "overage";
 		if (usageType === FeatureUsageType.Continuous) return "in use";
 		return "used";
@@ -46,6 +47,11 @@ export function FeatureBalanceDisplay({
 							{compact
 								? `/ ${formatNumber(allowance)}`
 								: `/ ${formatNumber(allowance)} left`}
+						</span>
+					)}
+					{rolloverBalance > 0 && (
+						<span className="text-t4">
+							(+{formatNumber(rolloverBalance)} rollover)
 						</span>
 					)}
 				</>
