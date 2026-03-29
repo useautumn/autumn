@@ -122,8 +122,8 @@ export function CustomerComboBox() {
 											params.delete("customer_id");
 											const queryString = params.toString();
 											const path = queryString
-												? `/events?${queryString}`
-												: "/events";
+												? `/analytics?${queryString}`
+												: "/analytics";
 											navigateTo(path, navigate, env);
 											setOpen(false);
 											setHasCleared(false);
@@ -148,7 +148,7 @@ export function CustomerComboBox() {
 															"customer_id",
 															c.id || c.internal_id || "",
 														);
-														const path = `/events?${params.toString()}`;
+														const path = `/analytics?${params.toString()}`;
 														navigateTo(path, navigate, env);
 														setOpen(false);
 													}}
