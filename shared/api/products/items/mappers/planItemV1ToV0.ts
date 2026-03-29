@@ -59,6 +59,7 @@ export function planItemV1ToV0({
 		rollover: item.rollover
 			? {
 					max: item.rollover.max ?? null,
+					max_percentage: item.rollover.max_percentage ?? null,
 					expiry_duration_type: item.rollover.expiry_duration_type,
 					expiry_duration_length: item.rollover.expiry_duration_length,
 				}

@@ -101,6 +101,10 @@ export const CreatePlanItemParamsV1Schema = z
 				max: z.number().optional().meta({
 					description: "Max rollover units. Omit for unlimited rollover.",
 				}),
+				max_percentage: z.number().optional().meta({
+					description:
+						"Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.",
+				}),
 				expiry_duration_type: z.enum(RolloverExpiryDurationType).meta({
 					description: "When rolled over units expire.",
 				}),

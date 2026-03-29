@@ -1,5 +1,5 @@
 import {
-	type FullCustomerEntitlement,
+	type FullCusEntWithProduct,
 	type Rollover,
 	rollovers,
 } from "@autumn/shared";
@@ -87,7 +87,7 @@ export class RolloverService {
 	}: {
 		ctx: RepoContext;
 		rows: Rollover[];
-		fullCusEnt: FullCustomerEntitlement;
+		fullCusEnt: FullCusEntWithProduct;
 	}) {
 		const { db } = ctx;
 		if (rows.length === 0) return {};
@@ -111,7 +111,7 @@ export class RolloverService {
 	}: {
 		ctx: RepoContext;
 		newRows: Rollover[];
-		fullCusEnt: FullCustomerEntitlement;
+		fullCusEnt: FullCusEntWithProduct;
 	}): Promise<{
 		rollovers: Rollover[];
 		deletedIds: string[];

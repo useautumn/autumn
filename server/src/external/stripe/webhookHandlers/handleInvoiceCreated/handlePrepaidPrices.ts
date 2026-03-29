@@ -120,7 +120,7 @@ export const handlePrepaidPrices = async ({
 		await RolloverService.insert({
 			ctx,
 			rows: rolloverUpdate.toInsert,
-			fullCusEnt: cusEnt,
+			fullCusEnt: { ...cusEnt, customer_product: cusProduct },
 		});
 	}
 

@@ -169,7 +169,7 @@ export const handleUsagePrices = async ({
 		await RolloverService.insert({
 			ctx,
 			rows: rolloverUpdate.toInsert,
-			fullCusEnt: relatedCusEnt,
+			fullCusEnt: { ...relatedCusEnt, customer_product: activeProduct },
 		});
 	}
 
