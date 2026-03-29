@@ -1,4 +1,8 @@
-import type { EntInterval, FullEntitlement, ResetCusEnt } from "@autumn/shared";
+import type {
+	EntInterval,
+	FullEntitlement,
+	ResetCusEnt,
+} from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { Decimal } from "decimal.js";
 import type { RepoContext } from "@/db/repoContext";
