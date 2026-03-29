@@ -143,8 +143,8 @@ export const MainSidebar = ({
 							<PanelLeft size={14} />
 						</Button>
 					)}
-				<OrgDropdown />
-				<EnvDropdown env={env} />
+					<OrgDropdown />
+					<EnvDropdown env={env} />
 					<div className="flex flex-col px-2 gap-1">
 						<CollapsibleNavGroup
 							value="products"
@@ -178,9 +178,9 @@ export const MainSidebar = ({
 							env={env}
 						/>
 						<NavButton
-							value="events"
+							value="analytics"
 							icon={<ChartBarIcon size={16} weight="fill" />}
-							title="Events"
+							title="Analytics"
 							env={env}
 						/>
 						<CollapsibleNavGroup
