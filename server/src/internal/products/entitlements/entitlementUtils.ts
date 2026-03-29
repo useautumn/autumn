@@ -107,6 +107,7 @@ const rolloversAreSame = ({
 
 	return (
 		rollover1!.max == rollover2!.max &&
+		rollover1!.max_percentage == rollover2!.max_percentage &&
 		rollover1!.duration == rollover2!.duration &&
 		rollover1!.length == rollover2!.length
 	);

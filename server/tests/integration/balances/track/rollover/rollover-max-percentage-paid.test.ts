@@ -135,7 +135,7 @@ test.concurrent(`${chalk.yellowBright("paid rollover max_percentage (prepaid): n
 				productId: pro.id,
 				options: [{ feature_id: TestFeature.Messages, quantity: 200 }],
 			}),
-			s.track({ featureId: TestFeature.Messages, value: 250, timeout: 2000 }),
+			s.track({ featureId: TestFeature.Messages, value: 150, timeout: 2000 }),
 			s.advanceToNextInvoice(),
 		],
 	});
@@ -147,7 +147,7 @@ test.concurrent(`${chalk.yellowBright("paid rollover max_percentage (prepaid): n
 	expectBalanceCorrect({
 		customer: after,
 		featureId: TestFeature.Messages,
-		remaining: 350,
+		remaining: 250,
 		usage: 0,
 		rollovers: [{ balance: 50 }],
 	});
