@@ -48,7 +48,7 @@ export const RevenueMetricsSection = () => {
 					</Badge>
 				</div>
 				<span className="text-xs text-t4 flex items-center">
-					Invoice data may be incomplete
+					Invoice data may be incomplete, and may be up to 24 hours behind.
 				</span>
 			</div>
 
