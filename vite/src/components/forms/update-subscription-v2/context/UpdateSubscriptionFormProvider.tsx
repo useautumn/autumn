@@ -169,27 +169,6 @@ export function UpdateSubscriptionFormProvider({
 	const initialPrepaidOptions = defaultValues?.prepaidOptions ?? {};
 	const initialBillingBehavior = defaultValues?.billingBehavior ?? null;
 
-	const hasChanges = useHasSubscriptionChanges({
-		formValues,
-		initialPrepaidOptions,
-		initialBillingBehavior,
-		prepaidItems,
-		customerProduct,
-		currentVersion,
-		originalItems,
-		features,
-	});
-
-	const changedPrepaidOptions = useMemo(() => {
-		const changed: Record<string, number> = {};
-		for (const [featureId, quantity] of Object.entries(prepaidOptions)) {
-			if (quantity !== initialPrepaidOptions[featureId]) {
-				changed[featureId] = quantity;
-			}
-		}
-		return Object.keys(changed).length > 0 ? changed : undefined;
-	}, [prepaidOptions, initialPrepaidOptions]);
-
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
 		if (!effectiveProduct) return undefined;
 
@@ -202,6 +181,63 @@ export function UpdateSubscriptionFormProvider({
 			formValues,
 		});
 	}, [effectiveProduct, formValues]);
+
+	const currentPrepaidItems = useMemo(
+		() =>
+			(productWithFormItems?.items ?? []).filter(
+				(item) => item.usage_model === "prepaid" && item.feature_id,
+			),
+		[productWithFormItems?.items],
+	);
+
+	const normalizedPrepaidOptions = useMemo(() => {
+		const normalizedOptions = { ...prepaidOptions };
+
+		for (const item of currentPrepaidItems) {
+			if (!item.feature_id) continue;
+
+			const minQuantity =
+				typeof item.included_usage === "number" ? item.included_usage : 0;
+			const currentQuantity = normalizedOptions[item.feature_id];
+
+			if (currentQuantity === undefined || currentQuantity < minQuantity) {
+				normalizedOptions[item.feature_id] = minQuantity;
+			}
+		}
+
+		return normalizedOptions;
+	}, [prepaidOptions, currentPrepaidItems]);
+
+	const normalizedFormValues = useMemo(
+		() => ({
+			...formValues,
+			prepaidOptions: normalizedPrepaidOptions,
+		}),
+		[formValues, normalizedPrepaidOptions],
+	);
+
+	const hasChanges = useHasSubscriptionChanges({
+		formValues: normalizedFormValues,
+		initialPrepaidOptions,
+		initialBillingBehavior,
+		prepaidItems,
+		customerProduct,
+		currentVersion,
+		originalItems,
+		features,
+	});
+
+	const changedPrepaidOptions = useMemo(() => {
+		const changed: Record<string, number> = {};
+		for (const [featureId, quantity] of Object.entries(
+			normalizedPrepaidOptions,
+		)) {
+			if (quantity !== initialPrepaidOptions[featureId]) {
+				changed[featureId] = quantity;
+			}
+		}
+		return Object.keys(changed).length > 0 ? changed : undefined;
+	}, [normalizedPrepaidOptions, initialPrepaidOptions]);
 
 	const baseProduct = useMemo((): FrontendProduct | undefined => {
 		if (!product) return undefined;
@@ -217,9 +253,9 @@ export function UpdateSubscriptionFormProvider({
 
 		return getProductWithSupportedFormValues({
 			baseProduct: base,
-			formValues,
+			formValues: normalizedFormValues,
 		});
-	}, [effectiveProduct, formValues]);
+	}, [effectiveProduct, normalizedFormValues]);
 
 	const hasBillingChanges = useHasBillingChanges({
 		baseProduct: baseProduct as FrontendProduct,
@@ -237,6 +273,7 @@ export function UpdateSubscriptionFormProvider({
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext: formContext,
 		form,
+		currentPrepaidItems,
 	});
 
 	// Build the preview body reactively — formValues triggers recomputation,
@@ -340,7 +377,7 @@ export function UpdateSubscriptionFormProvider({
 		() => ({
 			formContext,
 			form,
-			formValues,
+			formValues: normalizedFormValues,
 			features,
 			trialState,
 			originalItems,

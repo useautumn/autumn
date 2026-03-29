@@ -5,14 +5,14 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
-import { ClosedEnum } from "../types/enums.js";
-import { Result as SafeParseResult } from "../types/fp.js";
+import type { ClosedEnum } from "../types/enums.js";
+import type { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
-import { SDKValidationError } from "./sdk-validation-error.js";
+import type { SDKValidationError } from "./sdk-validation-error.js";
 
 export type AggregateEventsGlobals = {
-  xApiVersion?: string | undefined;
+	xApiVersion?: string | undefined;
 };
 
 /**
@@ -24,13 +24,13 @@ export type AggregateEventsFeatureId = string | Array<string>;
  * Time range to aggregate events for. Either range or custom_range must be provided
  */
 export const Range = {
-  TwentyFourh: "24h",
-  Sevend: "7d",
-  Thirtyd: "30d",
-  Ninetyd: "90d",
-  LastCycle: "last_cycle",
-  Onebc: "1bc",
-  Threebc: "3bc",
+	TwentyFourh: "24h",
+	Sevend: "7d",
+	Thirtyd: "30d",
+	Ninetyd: "90d",
+	LastCycle: "last_cycle",
+	Onebc: "1bc",
+	Threebc: "3bc",
 } as const;
 /**
  * Time range to aggregate events for. Either range or custom_range must be provided
@@ -41,9 +41,9 @@ export type Range = ClosedEnum<typeof Range>;
  * Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
  */
 export const BinSize = {
-  Day: "day",
-  Hour: "hour",
-  Month: "month",
+	Day: "day",
+	Hour: "hour",
+	Month: "month",
 } as const;
 /**
  * Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
@@ -54,83 +54,87 @@ export type BinSize = ClosedEnum<typeof BinSize>;
  * Custom time range to aggregate events for. If provided, range must not be provided
  */
 export type AggregateEventsCustomRange = {
-  start: number;
-  end: number;
+	start: number;
+	end: number;
 };
 
 export type EventsAggregateParams = {
-  /**
-   * Customer ID to aggregate events for
-   */
-  customerId?: string | undefined;
-  /**
-   * Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)
-   */
-  entityId?: string | undefined;
-  /**
-   * Feature ID(s) to aggregate events for
-   */
-  featureId: string | Array<string>;
-  /**
-   * Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" to group by those columns
-   */
-  groupBy?: string | undefined;
-  /**
-   * Time range to aggregate events for. Either range or custom_range must be provided
-   */
-  range?: Range | undefined;
-  /**
-   * Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
-   */
-  binSize?: BinSize | undefined;
-  /**
-   * Custom time range to aggregate events for. If provided, range must not be provided
-   */
-  customRange?: AggregateEventsCustomRange | undefined;
-  /**
-   * Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
-   */
-  maxGroups?: number | undefined;
+	/**
+	 * Customer ID to aggregate events for
+	 */
+	customerId?: string | undefined;
+	/**
+	 * Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)
+	 */
+	entityId?: string | undefined;
+	/**
+	 * Feature ID(s) to aggregate events for
+	 */
+	featureId: string | Array<string>;
+	/**
+	 * Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" to group by those columns
+	 */
+	groupBy?: string | undefined;
+	/**
+	 * Time range to aggregate events for. Either range or custom_range must be provided
+	 */
+	range?: Range | undefined;
+	/**
+	 * Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day
+	 */
+	binSize?: BinSize | undefined;
+	/**
+	 * Custom time range to aggregate events for. If provided, range must not be provided
+	 */
+	customRange?: AggregateEventsCustomRange | undefined;
+	/**
+	 * Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.
+	 */
+	filterBy?: { [k: string]: string } | undefined;
+	/**
+	 * Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
+	 */
+	maxGroups?: number | undefined;
 };
 
 export type AggregateEventsList = {
-  /**
-   * Unix timestamp (epoch ms) for this time period
-   */
-  period: number;
-  /**
-   * Aggregated values per feature: { [featureId]: number }
-   */
-  values: { [k: string]: number };
-  /**
-   * Values broken down by group (only present when group_by is used): { [featureId]: { [groupValue]: number } }
-   */
-  groupedValues?: { [k: string]: { [k: string]: number } } | undefined;
+	/**
+	 * Unix timestamp (epoch ms) for this time period
+	 */
+	period: number;
+	/**
+	 * Aggregated values per feature: { [featureId]: number }
+	 */
+	values: { [k: string]: number };
+	/**
+	 * Values broken down by group (only present when group_by is used): { [featureId]: { [groupValue]: number } }
+	 */
+	groupedValues?: { [k: string]: { [k: string]: number } } | undefined;
 };
 
 export type Total = {
-  /**
-   * Number of events for this feature
-   */
-  count: number;
-  /**
-   * Sum of event values for this feature
-   */
-  sum: number;
+	/**
+	 * Number of events for this feature
+	 */
+	count: number;
+	/**
+	 * Sum of event values for this feature
+	 */
+	sum: number;
 };
 
 /**
  * OK
  */
 export type AggregateEventsResponse = {
-  /**
-   * Array of time periods with aggregated values
-   */
-  list: Array<AggregateEventsList>;
-  /**
-   * Total aggregations per feature. Keys are feature IDs, values contain count and sum.
-   */
-  total: { [k: string]: Total };
+	/**
+	 * Array of time periods with aggregated values
+	 */
+	list: Array<AggregateEventsList>;
+	/**
+	 * Total aggregations per feature. Keys are feature IDs, values contain count and sum.
+	 */
+	total: { [k: string]: Total };
 };
 
 /** @internal */
@@ -138,159 +142,164 @@ export type AggregateEventsFeatureId$Outbound = string | Array<string>;
 
 /** @internal */
 export const AggregateEventsFeatureId$outboundSchema: z.ZodMiniType<
-  AggregateEventsFeatureId$Outbound,
-  AggregateEventsFeatureId
+	AggregateEventsFeatureId$Outbound,
+	AggregateEventsFeatureId
 > = smartUnion([z.string(), z.array(z.string())]);
 
 export function aggregateEventsFeatureIdToJSON(
-  aggregateEventsFeatureId: AggregateEventsFeatureId,
+	aggregateEventsFeatureId: AggregateEventsFeatureId,
 ): string {
-  return JSON.stringify(
-    AggregateEventsFeatureId$outboundSchema.parse(aggregateEventsFeatureId),
-  );
+	return JSON.stringify(
+		AggregateEventsFeatureId$outboundSchema.parse(aggregateEventsFeatureId),
+	);
 }
 
 /** @internal */
 export const Range$outboundSchema: z.ZodMiniEnum<typeof Range> = z.enum(Range);
 
 /** @internal */
-export const BinSize$outboundSchema: z.ZodMiniEnum<typeof BinSize> = z.enum(
-  BinSize,
-);
+export const BinSize$outboundSchema: z.ZodMiniEnum<typeof BinSize> =
+	z.enum(BinSize);
 
 /** @internal */
 export type AggregateEventsCustomRange$Outbound = {
-  start: number;
-  end: number;
+	start: number;
+	end: number;
 };
 
 /** @internal */
 export const AggregateEventsCustomRange$outboundSchema: z.ZodMiniType<
-  AggregateEventsCustomRange$Outbound,
-  AggregateEventsCustomRange
+	AggregateEventsCustomRange$Outbound,
+	AggregateEventsCustomRange
 > = z.object({
-  start: z.number(),
-  end: z.number(),
+	start: z.number(),
+	end: z.number(),
 });
 
 export function aggregateEventsCustomRangeToJSON(
-  aggregateEventsCustomRange: AggregateEventsCustomRange,
+	aggregateEventsCustomRange: AggregateEventsCustomRange,
 ): string {
-  return JSON.stringify(
-    AggregateEventsCustomRange$outboundSchema.parse(aggregateEventsCustomRange),
-  );
+	return JSON.stringify(
+		AggregateEventsCustomRange$outboundSchema.parse(aggregateEventsCustomRange),
+	);
 }
 
 /** @internal */
 export type EventsAggregateParams$Outbound = {
-  customer_id?: string | undefined;
-  entity_id?: string | undefined;
-  feature_id: string | Array<string>;
-  group_by?: string | undefined;
-  range?: string | undefined;
-  bin_size: string;
-  custom_range?: AggregateEventsCustomRange$Outbound | undefined;
-  max_groups?: number | undefined;
+	customer_id?: string | undefined;
+	entity_id?: string | undefined;
+	feature_id: string | Array<string>;
+	group_by?: string | undefined;
+	range?: string | undefined;
+	bin_size: string;
+	custom_range?: AggregateEventsCustomRange$Outbound | undefined;
+	filter_by?: { [k: string]: string } | undefined;
+	max_groups?: number | undefined;
 };
 
 /** @internal */
 export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
-  EventsAggregateParams$Outbound,
-  EventsAggregateParams
+	EventsAggregateParams$Outbound,
+	EventsAggregateParams
 > = z.pipe(
-  z.object({
-    customerId: z.optional(z.string()),
-    entityId: z.optional(z.string()),
-    featureId: smartUnion([z.string(), z.array(z.string())]),
-    groupBy: z.optional(z.string()),
-    range: z.optional(Range$outboundSchema),
-    binSize: z._default(BinSize$outboundSchema, "day"),
-    customRange: z.optional(
-      z.lazy(() => AggregateEventsCustomRange$outboundSchema),
-    ),
-    maxGroups: z.optional(z.int()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      customerId: "customer_id",
-      entityId: "entity_id",
-      featureId: "feature_id",
-      groupBy: "group_by",
-      binSize: "bin_size",
-      customRange: "custom_range",
-      maxGroups: "max_groups",
-    });
-  }),
+	z.object({
+		customerId: z.optional(z.string()),
+		entityId: z.optional(z.string()),
+		featureId: smartUnion([z.string(), z.array(z.string())]),
+		groupBy: z.optional(z.string()),
+		range: z.optional(Range$outboundSchema),
+		binSize: z._default(BinSize$outboundSchema, "day"),
+		customRange: z.optional(
+			z.lazy(() => AggregateEventsCustomRange$outboundSchema),
+		),
+		filterBy: z.optional(z.record(z.string(), z.string())),
+		maxGroups: z.optional(z.int()),
+	}),
+	z.transform((v) => {
+		return remap$(v, {
+			customerId: "customer_id",
+			entityId: "entity_id",
+			featureId: "feature_id",
+			groupBy: "group_by",
+			binSize: "bin_size",
+			customRange: "custom_range",
+			filterBy: "filter_by",
+			maxGroups: "max_groups",
+		});
+	}),
 );
 
 export function eventsAggregateParamsToJSON(
-  eventsAggregateParams: EventsAggregateParams,
+	eventsAggregateParams: EventsAggregateParams,
 ): string {
-  return JSON.stringify(
-    EventsAggregateParams$outboundSchema.parse(eventsAggregateParams),
-  );
+	return JSON.stringify(
+		EventsAggregateParams$outboundSchema.parse(eventsAggregateParams),
+	);
 }
 
 /** @internal */
 export const AggregateEventsList$inboundSchema: z.ZodMiniType<
-  AggregateEventsList,
-  unknown
+	AggregateEventsList,
+	unknown
 > = z.pipe(
-  z.object({
-    period: types.number(),
-    values: z.record(z.string(), types.number()),
-    grouped_values: types.optional(
-      z.record(z.string(), z.record(z.string(), types.number())),
-    ),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "grouped_values": "groupedValues",
-    });
-  }),
+	z.object({
+		period: types.number(),
+		values: z.record(z.string(), types.number()),
+		grouped_values: types.optional(
+			z.record(z.string(), z.record(z.string(), types.number())),
+		),
+	}),
+	z.transform((v) => {
+		return remap$(v, {
+			grouped_values: "groupedValues",
+		});
+	}),
 );
 
 export function aggregateEventsListFromJSON(
-  jsonString: string,
+	jsonString: string,
 ): SafeParseResult<AggregateEventsList, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => AggregateEventsList$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'AggregateEventsList' from JSON`,
-  );
+	return safeParse(
+		jsonString,
+		(x) => AggregateEventsList$inboundSchema.parse(JSON.parse(x)),
+		`Failed to parse 'AggregateEventsList' from JSON`,
+	);
 }
 
 /** @internal */
 export const Total$inboundSchema: z.ZodMiniType<Total, unknown> = z.object({
-  count: types.number(),
-  sum: types.number(),
+	count: types.number(),
+	sum: types.number(),
 });
 
 export function totalFromJSON(
-  jsonString: string,
+	jsonString: string,
 ): SafeParseResult<Total, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => Total$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Total' from JSON`,
-  );
+	return safeParse(
+		jsonString,
+		(x) => Total$inboundSchema.parse(JSON.parse(x)),
+		`Failed to parse 'Total' from JSON`,
+	);
 }
 
 /** @internal */
 export const AggregateEventsResponse$inboundSchema: z.ZodMiniType<
-  AggregateEventsResponse,
-  unknown
+	AggregateEventsResponse,
+	unknown
 > = z.object({
-  list: z.array(z.lazy(() => AggregateEventsList$inboundSchema)),
-  total: z.record(z.string(), z.lazy(() => Total$inboundSchema)),
+	list: z.array(z.lazy(() => AggregateEventsList$inboundSchema)),
+	total: z.record(
+		z.string(),
+		z.lazy(() => Total$inboundSchema),
+	),
 });
 
 export function aggregateEventsResponseFromJSON(
-  jsonString: string,
+	jsonString: string,
 ): SafeParseResult<AggregateEventsResponse, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => AggregateEventsResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'AggregateEventsResponse' from JSON`,
-  );
+	return safeParse(
+		jsonString,
+		(x) => AggregateEventsResponse$inboundSchema.parse(JSON.parse(x)),
+		`Failed to parse 'AggregateEventsResponse' from JSON`,
+	);
 }

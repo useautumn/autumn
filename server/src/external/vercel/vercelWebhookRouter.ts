@@ -22,6 +22,7 @@ import {
 } from "./handlers/transfers/handleResourceTransfers.js";
 import { captureRawBody } from "./misc/rawBodyMiddleware.js";
 import { vercelOidcAuthMiddleware } from "./misc/vercelAuth.js";
+import { vercelCustomerMiddleware } from "./misc/vercelCustomerMiddleware.js";
 import {
 	vercelLogMiddleware,
 	vercelSeederMiddleware,
@@ -34,119 +35,82 @@ import {
 
 export const vercelWebhookRouter = new Hono<HonoEnv>();
 
+// Global middlewares for all vercel webhook routes
 vercelWebhookRouter.use(
 	"/:orgId/:env/*",
 	vercelSeederMiddleware,
 	analyticsMiddleware,
 );
 
+// Product-level plans (no integrationConfigurationId in path)
 vercelWebhookRouter.get(
 	"/:orgId/:env/v1/products/:productId/plans",
-	vercelSeederMiddleware,
 	vercelOidcAuthMiddleware,
 	...handleListBillingPlansPerInstall,
 );
 
-vercelWebhookRouter.get(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId/plans",
-	vercelSeederMiddleware,
+// --- Installation sub-router ---
+// Mounted at /:orgId/:env/v1/installations/:integrationConfigurationId
+// All routes get OIDC auth + customer middleware automatically
+const installationsRouter = new Hono<HonoEnv>();
+
+installationsRouter.use(
+	"/*",
 	vercelOidcAuthMiddleware,
-	...handleListBillingPlansPerInstall,
+	vercelCustomerMiddleware,
+);
+installationsRouter.use(
+	"/",
+	vercelOidcAuthMiddleware,
+	vercelCustomerMiddleware,
 );
 
-vercelWebhookRouter.get(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
-	...handleGetInstallation,
+// Plans
+installationsRouter.get("/plans", ...handleListBillingPlansPerInstall);
+
+// Installation CRUD
+installationsRouter.get("/", ...handleGetInstallation);
+installationsRouter.put("/", ...handleUpsertInstallation);
+installationsRouter.patch("/", ...handleUpdateVercelBillingPlan);
+installationsRouter.delete("/", ...handleDeleteInstallation);
+
+// Resources
+installationsRouter.post("/resources", ...handleCreateResource);
+installationsRouter.get("/resources/:resourceId", ...handleGetResource);
+installationsRouter.patch("/resources/:resourceId", ...handleUpdateResource);
+installationsRouter.delete("/resources/:resourceId", ...handleDeleteResource);
+installationsRouter.post(
+	"/resources/:resourceId/secrets/rotate",
+	...handleRotateResourceSecret,
 );
 
-vercelWebhookRouter.put(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
-	...handleUpsertInstallation,
-);
-
-vercelWebhookRouter.patch(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
-	...handleUpdateVercelBillingPlan,
-);
-
-vercelWebhookRouter.post(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId/resources",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
-	...handleCreateResource,
-);
-
-vercelWebhookRouter.get(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId/resources/:resourceId",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
-	...handleGetResource,
-);
-
-vercelWebhookRouter.patch(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId/resources/:resourceId",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
-	...handleUpdateResource,
-);
-
-vercelWebhookRouter.post(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId/resource-transfer-requests",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
+// Resource transfers
+installationsRouter.post(
+	"/resource-transfer-requests",
 	...handleCreateResourceTransfer,
 );
-
-vercelWebhookRouter.get(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId/resource-transfer-requests/:providerClaimId/verify",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
+installationsRouter.get(
+	"/resource-transfer-requests/:providerClaimId/verify",
 	...handleVerifyResourceTransfer,
 );
-
-vercelWebhookRouter.post(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId/resource-transfer-requests/:providerClaimId/accept",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
+installationsRouter.post(
+	"/resource-transfer-requests/:providerClaimId/accept",
 	...handleAcceptResourceTransfer,
 );
 
-vercelWebhookRouter.delete(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId/resources/:resourceId",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
-	...handleDeleteResource,
-);
-
-vercelWebhookRouter.delete(
+vercelWebhookRouter.route(
 	"/:orgId/:env/v1/installations/:integrationConfigurationId",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
-	...handleDeleteInstallation,
-);
-
-vercelWebhookRouter.post(
-	"/:orgId/:env/v1/installations/:integrationConfigurationId/resources/:resourceId/secrets/rotate",
-	vercelSeederMiddleware,
-	vercelOidcAuthMiddleware,
-	...handleRotateResourceSecret,
+	installationsRouter,
 );
 
 // Vercel marketplace webhooks - POST with signature validation
 vercelWebhookRouter.post(
 	"/:orgId/:env/*",
-	vercelSeederMiddleware,
 	captureRawBody,
 	vercelSignatureMiddleware,
 	vercelLogMiddleware,
 	async (c) => {
-		const { db, org, env, logger } = c.get("ctx");
+		const { org, env, logger } = c.get("ctx");
 		const ctx = c.get("ctx");
 		let body: any;
 		try {
@@ -200,6 +164,6 @@ vercelWebhookRouter.post(
 );
 
 // Fallback for other methods
-vercelWebhookRouter.all("/:orgId/:env/*", vercelSeederMiddleware, async (c) => {
+vercelWebhookRouter.all("/:orgId/:env/*", async (c) => {
 	return c.body(null, 200);
 });

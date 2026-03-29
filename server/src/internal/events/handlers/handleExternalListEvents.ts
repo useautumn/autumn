@@ -26,6 +26,7 @@ export const handleExternalListEvents = createRoute({
 				custom_range: validatedParams.custom_range,
 				offset: validatedParams.offset,
 				limit: validatedParams.limit,
+				filter_by: validatedParams.filter_by,
 			},
 		});
 

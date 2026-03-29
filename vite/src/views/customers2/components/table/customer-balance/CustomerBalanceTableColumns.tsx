@@ -9,9 +9,16 @@ import {
 	cusEntsToPrepaidQuantity,
 	cusEntToPrepaidQuantity,
 	getRolloverFields,
+	isFreeCustomerEntitlement,
+	isPrepaidCustomerEntitlement,
 	nullish,
 } from "@autumn/shared";
-import { CaretRightIcon } from "@phosphor-icons/react";
+import {
+	BoxArrowDownIcon,
+	CaretRightIcon,
+	MoneyWavyIcon,
+	WalletIcon,
+} from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { Trash } from "lucide-react";
 import { AdminHover } from "@/components/general/AdminHover";
@@ -22,6 +29,11 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
 import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
@@ -31,8 +43,54 @@ import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceD
 import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
 import {
 	canDeleteCustomerBalance,
-	getCustomerBalanceSourceLabel,
+	getCustomerBalanceSourceParts,
 } from "./customerBalanceUtils";
+
+function getBalanceBillingIcon({
+	balance,
+}: {
+	balance: FullCusEntWithFullCusProduct;
+}) {
+	const size = 14;
+	const weight = "duotone" as const;
+
+	if (isFreeCustomerEntitlement(balance))
+		return {
+			icon: <BoxArrowDownIcon size={size} weight={weight} />,
+			color: "text-green-500",
+			label: "Included",
+		};
+
+	if (isPrepaidCustomerEntitlement(balance))
+		return {
+			icon: <WalletIcon size={size} weight={weight} />,
+			color: "text-orange-500",
+			label: "Prepaid price",
+		};
+
+	return {
+		icon: <MoneyWavyIcon size={size} weight={weight} />,
+		color: "text-yellow-500",
+		label: "Usage-based price",
+	};
+}
+
+function BalanceBillingIcon({
+	balance,
+}: {
+	balance: FullCusEntWithFullCusProduct;
+}) {
+	const { icon, color, label } = getBalanceBillingIcon({ balance });
+
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<div className={cn("shrink-0", color)}>{icon}</div>
+			</TooltipTrigger>
+			<TooltipContent>{label}</TooltipContent>
+		</Tooltip>
+	);
+}
 
 /** Computes balance values from a single entitlement (for sub-rows) */
 function getIndividualEntValues({
@@ -364,18 +422,45 @@ export const CustomerBalanceTableColumns = ({
 			const isSubRow = row.depth > 0;
 
 			if (isSubRow) {
+				const { productName, intervalLabel, entityName } =
+					getCustomerBalanceSourceParts({ balance: ent, entities });
+				const hasPlan = !!ent.customer_product;
+				const metaParts = [intervalLabel, entityName]
+					.filter(Boolean)
+					.join(" · ");
+
+				if (!hasPlan) {
+					return (
+						<div className="flex items-center gap-2 min-w-0">
+							<BalanceBillingIcon balance={ent} />
+							<AdminHover
+								texts={getCusEntHoverTexts({
+									cusEnt: ent,
+									entities,
+								})}
+							>
+								<span className="text-t3 truncate text-xs">{metaParts}</span>
+							</AdminHover>
+						</div>
+					);
+				}
+
 				return (
-					<div className="flex items-center gap-2 pl-5.5">
-						<AdminHover
-							texts={getCusEntHoverTexts({
-								cusEnt: ent,
-								entities,
-							})}
-						>
-							<span className="text-t2 truncate">
-								{getCustomerBalanceSourceLabel({ balance: ent, entities })}
-							</span>
-						</AdminHover>
+					<div className="flex flex-col gap-0.5 min-w-0">
+						<div className="flex items-center gap-2">
+							<BalanceBillingIcon balance={ent} />
+							<AdminHover
+								texts={getCusEntHoverTexts({
+									cusEnt: ent,
+									entities,
+								})}
+							>
+								<span className="text-t1 text-xs font-medium truncate">
+									{productName}
+								</span>
+							</AdminHover>
+						</div>
+						<span className="text-t3 text-xs truncate pl-5.5">{metaParts}</span>
 					</div>
 				);
 			}

@@ -87,9 +87,7 @@ export const ConfigureVercel = () => {
 
 		setVercelConfig((prev) => ({
 			...prev,
-			allowed_product_ids_live:
-				vercelOrgConfig.allowed_product_ids_live ??
-				[],
+			allowed_product_ids_live: vercelOrgConfig.allowed_product_ids_live ?? [],
 			allowed_product_ids_sandbox:
 				vercelOrgConfig.allowed_product_ids_sandbox ?? [],
 		}));
@@ -103,10 +101,12 @@ export const ConfigureVercel = () => {
 			value: product.id,
 		}));
 
-	const currentClientIntegrationId = org?.processor_configs?.vercel?.client_integration_id
-	const currentClientSecret = org?.processor_configs?.vercel?.client_secret
-	const currentWebhookUrl = org?.processor_configs?.vercel?.webhook_url
-	const currentCustomPaymentMethod = org?.processor_configs?.vercel?.custom_payment_method
+	const currentClientIntegrationId =
+		org?.processor_configs?.vercel?.client_integration_id;
+	const currentClientSecret = org?.processor_configs?.vercel?.client_secret;
+	const currentWebhookUrl = org?.processor_configs?.vercel?.webhook_url;
+	const currentCustomPaymentMethod =
+		org?.processor_configs?.vercel?.custom_payment_method;
 
 	const { isDark } = useTheme();
 
@@ -140,8 +140,7 @@ export const ConfigureVercel = () => {
 				if (env === "live") {
 					filteredConfig.webhook_url = vercelConfig.webhook_url.trim();
 				} else {
-					filteredConfig.sandbox_webhook_url =
-						vercelConfig.webhook_url.trim();
+					filteredConfig.sandbox_webhook_url = vercelConfig.webhook_url.trim();
 				}
 			}
 
@@ -177,7 +176,8 @@ export const ConfigureVercel = () => {
 					client_secret: "",
 					webhook_url: "",
 					custom_payment_method: "",
-					marketplace_mode: filteredConfig.marketplace_mode as VercelMarketplaceMode,
+					marketplace_mode:
+						filteredConfig.marketplace_mode as VercelMarketplaceMode,
 				}));
 			} else {
 				toast.error("Failed to update Vercel config");
@@ -241,29 +241,11 @@ export const ConfigureVercel = () => {
 										}))
 									}
 									placeholder={
-										currentClientSecret ||
-										"eg. VAxvZFz8ST4d5b9pa2EuXkWG"
+										currentClientSecret || "eg. VAxvZFz8ST4d5b9pa2EuXkWG"
 									}
 								/>
 							</div>
-							<div>
-								<FormLabel className="mb-1">
-									<span className="text-t2">Webhook URL</span>
-								</FormLabel>
-								<Input
-									value={vercelConfig.webhook_url || ""}
-									onChange={(e) =>
-										setVercelConfig((prev) => ({
-											...prev,
-											webhook_url: e.target.value,
-										}))
-									}
-									placeholder={
-										currentWebhookUrl || "eg. https://example.com/api/webhooks"
-									}
-								/>
-							</div>
-							<div>
+							<div className="col-span-2">
 								<FormLabel className="mb-1">
 									<span className="text-t2">
 										Stripe Custom Payment Method ID
@@ -297,7 +279,9 @@ export const ConfigureVercel = () => {
 							</div>
 							<div className="col-span-2">
 								<FormLabel className="mb-1">
-									<span className="text-t2">Allowed Product IDs (Optional)</span>
+									<span className="text-t2">
+										Allowed Product IDs (Optional)
+									</span>
 								</FormLabel>
 								<p className="text-t3 text-sm mb-2">
 									Optional: choose product IDs to show in Vercel plans.
@@ -314,8 +298,9 @@ export const ConfigureVercel = () => {
 												<div className="p-2 text-t6">No products found</div>
 											) : (
 												productOptions.map((option) => {
-													const isSelected =
-														activeAllowedProductIds.includes(option.value);
+													const isSelected = activeAllowedProductIds.includes(
+														option.value,
+													);
 													return (
 														<div
 															key={option.value}
@@ -338,7 +323,10 @@ export const ConfigureVercel = () => {
 																		? activeAllowedProductIds.filter(
 																				(id) => id !== option.value,
 																			)
-																		: [...activeAllowedProductIds, option.value];
+																		: [
+																				...activeAllowedProductIds,
+																				option.value,
+																			];
 																	setActiveAllowedProductIds(nextValue);
 																	setOpen(false);
 																}
@@ -373,7 +361,7 @@ export const ConfigureVercel = () => {
 				</Card>
 
 				<div>
-					<FormLabel className="mb-1">
+					<FormLabel className="mb-0">
 						<span className="text-t2">Base URL</span>
 					</FormLabel>
 					<p className="text-t3 text-sm mb-2">
@@ -386,6 +374,7 @@ export const ConfigureVercel = () => {
 								{env === "live" ? "Live" : "Sandbox"}
 							</CodeGroupTab>
 							<CodeGroupCopyButton
+								className="h-full"
 								onCopy={() =>
 									navigator.clipboard.writeText(
 										`https://api.useautumn.com/webhooks/vercel/${org?.id}/${env}`,
@@ -396,7 +385,7 @@ export const ConfigureVercel = () => {
 						<CodeGroupContent
 							value={env}
 							copyText={`https://api.useautumn.com/webhooks/vercel/${org?.id}/${env}`}
-							className="border-t"
+							className="p-2 border-t-0"
 						>
 							<CodeGroupCodeSolidColour className="text-primary">{`https://api.useautumn.com/webhooks/vercel/${org?.id}/${env}`}</CodeGroupCodeSolidColour>
 						</CodeGroupContent>

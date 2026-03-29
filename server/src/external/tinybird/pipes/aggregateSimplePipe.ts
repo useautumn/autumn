@@ -23,6 +23,16 @@ export const aggregateSimplePipeParamsSchema = z.object({
 	timezone: z.string(),
 	customer_id: z.string().optional(),
 	entity_id: z.string().optional(),
+	filter_key_0: z.string().optional(),
+	filter_value_0: z.string().optional(),
+	filter_key_1: z.string().optional(),
+	filter_value_1: z.string().optional(),
+	filter_key_2: z.string().optional(),
+	filter_value_2: z.string().optional(),
+	filter_key_3: z.string().optional(),
+	filter_value_3: z.string().optional(),
+	filter_key_4: z.string().optional(),
+	filter_value_4: z.string().optional(),
 });
 
 export type AggregateSimplePipeParams = z.infer<
