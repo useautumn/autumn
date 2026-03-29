@@ -385,9 +385,21 @@ export const getEstimatedMrr = async ({
 					ELSE 0
 				END
 			) AS estimated_mrr,
-			COUNT(DISTINCT cp.id) AS active_subscriptions,
+			COUNT(DISTINCT cp.internal_customer_id) AS active_subscriptions,
 			o.default_currency AS currency
-		FROM customer_products AS cp FINAL
+		FROM (
+			SELECT
+				internal_customer_id,
+				argMax(id, created_at) AS id,
+				argMax(internal_product_id, created_at) AS internal_product_id,
+				argMax(quantity, created_at) AS quantity
+			FROM customer_products FINAL
+			WHERE __action != 'delete'
+				AND canceled = 0
+				AND status = 'active'
+				AND (ended_at IS NULL OR ended_at = 0)
+			GROUP BY internal_customer_id
+		) AS cp
 		INNER JOIN (
 			SELECT
 				internal_product_id,
@@ -409,9 +421,6 @@ export const getEstimatedMrr = async ({
 			FROM organizations FINAL
 		) AS o ON o.id = {org_id:String}
 		WHERE cus.env = 'live'
-			AND cp.__action != 'delete'
-			AND cp.canceled = 0
-			AND (cp.ended_at IS NULL OR cp.ended_at = 0)
 			AND JSONExtractString(pr.config, 'interval') != 'one_off'
 		GROUP BY currency
 	`;
