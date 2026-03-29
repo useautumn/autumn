@@ -50,6 +50,7 @@ export const ApiPlanItemV0Schema = z
 		rollover: z
 			.object({
 				max: z.number().nullable(),
+				max_percentage: z.number().nullable().optional(),
 				expiry_duration_type: z.enum(RolloverExpiryDurationType),
 				expiry_duration_length: z.number().optional(),
 			})

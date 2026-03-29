@@ -3,7 +3,7 @@ import {
 	type EntInterval,
 	type EntityBalance,
 	type FullCusEntWithFullCusProduct,
-	type FullCustomerEntitlement,
+	type FullCusEntWithProduct,
 	getStartingBalance,
 	isLifetimeEntitlement,
 	isUnlimitedEntitlement,
@@ -25,7 +25,10 @@ export type ResetUpdates = {
 
 export type ProcessResetResult = {
 	updates: ResetUpdates;
-	rolloverInsert?: { rows: Rollover[]; fullCusEnt: FullCustomerEntitlement };
+	rolloverInsert?: {
+		rows: Rollover[];
+		fullCusEnt: FullCusEntWithProduct;
+	};
 };
 
 /** Processes a single cusEnt reset. Returns updates + optional rollover insert, or null if skipped. */
@@ -105,7 +108,7 @@ export const processReset = async ({
 				};
 
 	let rolloverInsert:
-		| { rows: Rollover[]; fullCusEnt: FullCustomerEntitlement }
+		| { rows: Rollover[]; fullCusEnt: FullCusEntWithProduct }
 		| undefined;
 
 	if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {

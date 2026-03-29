@@ -56,6 +56,7 @@ const planItemV0ToItemConfig = ({
 		if (planItemV0.rollover) {
 			return {
 				max: planItemV0.rollover.max,
+				max_percentage: planItemV0.rollover.max_percentage ?? null,
 				duration: planItemV0.rollover.expiry_duration_type,
 				length: planItemV0.rollover.expiry_duration_length ?? 1,
 			} satisfies RolloverConfig;
