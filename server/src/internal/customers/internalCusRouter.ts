@@ -6,10 +6,12 @@ import { handleGetCustomerEvents } from "./internalHandlers/handleGetCustomerEve
 import { handleGetCustomerProduct } from "./internalHandlers/handleGetCustomerProduct.js";
 import { handleGetFullCustomers } from "./internalHandlers/handleGetFullCustomers.js";
 import { handleSearchCustomers } from "./internalHandlers/handleSearchCustomers.js";
+import { handleSyncInvoice } from "./internalHandlers/handleSyncInvoice.js";
 
 export const internalCusRouter = new Hono<HonoEnv>();
 
 internalCusRouter.post("/all/search", ...handleSearchCustomers);
+internalCusRouter.post("/:customer_id/sync_invoice", ...handleSyncInvoice);
 internalCusRouter.post("/all/full_customers", ...handleGetFullCustomers);
 internalCusRouter.get("/:customer_id", ...handleGetCustomer);
 internalCusRouter.get("/:customer_id/events", ...handleGetCustomerEvents);
