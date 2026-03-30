@@ -1,4 +1,4 @@
-import { createAuthEndpoint } from "better-auth/plugins";
+import { createAuthEndpoint } from "better-auth/api";
 
 import { routeConfigs } from "../../backend/core/routes/routeConfigs";
 import type { RouteName } from "../../backend/core/types";
