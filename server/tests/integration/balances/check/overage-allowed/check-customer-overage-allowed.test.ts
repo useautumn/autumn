@@ -80,7 +80,7 @@ test.concurrent(`${chalk.yellowBright("check-overage-allowed-2: free feature, en
 		required_balance: 50,
 	});
 	expect(check.allowed).toBe(true);
-	expect(check.balance!.remaining).toBeLessThan(0);
+	expect(check.balance!.usage).toBe(150);
 });
 
 test.concurrent(`${chalk.yellowBright("check-overage-allowed-3: free feature, no billing control (baseline) — check returns allowed:false at 0")}`, async () => {
@@ -141,7 +141,7 @@ test.concurrent(`${chalk.yellowBright("check-overage-allowed-4: check with send_
 		send_event: true,
 	});
 	expect(checkResult.allowed).toBe(true);
-	expect(checkResult.balance!.remaining).toBe(-25);
+	expect(checkResult.balance!.usage).toBe(125);
 });
 
 test.concurrent(`${chalk.yellowBright("check-overage-allowed-5: cache/DB parity — cached and uncached check responses match")}`, async () => {

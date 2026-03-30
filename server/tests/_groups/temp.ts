@@ -2,11 +2,12 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Entity create/delete seat billing tests",
+	description: "Overage allowed billing control tests",
 	tier: "domain",
 	paths: [
-		"integration/crud/entities/create-entity/create-entity-paid.test.ts",
-		"integration/crud/entities/create-entity/create-entity-race.test.ts",
-		"advanced/usageLimit/usageLimit1.test.ts",
+		"integration/balances/check/overage-allowed/",
+		"integration/balances/track/overage-allowed/",
+		"integration/crud/customers/customer-billing-controls.test.ts",
+		"integration/crud/entities/update-entity-billing-controls.test.ts",
 	],
 };
