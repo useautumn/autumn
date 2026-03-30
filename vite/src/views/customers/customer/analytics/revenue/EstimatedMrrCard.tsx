@@ -67,7 +67,7 @@ export const EstimatedMrrCard = ({
 						<p className="text-lg font-semibold text-t2 tabular-nums">
 							{data?.active_subscriptions ?? 0}
 						</p>
-						<p className="text-xs text-t4">active cus products</p>
+						<p className="text-xs text-t4">active plans</p>
 					</>
 				)}
 			</div>
