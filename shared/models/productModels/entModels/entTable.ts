@@ -36,6 +36,9 @@ export const entitlements = pgTable(
 		usage_limit: numeric({ mode: "number" }),
 
 		rollover: jsonb().$type<RolloverConfig>(),
+
+		variant_action: text("variant_action"),
+		base_entitlement_id: text("base_entitlement_id"),
 	},
 	(table) => [
 		foreignKey({
