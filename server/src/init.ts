@@ -11,6 +11,10 @@ import {
 	shutdownPgHealthMonitor,
 } from "./db/pgHealthMonitor.js";
 import { logger } from "./external/logtail/logtailUtils.js";
+import {
+	startRequestBlockPolling,
+	stopRequestBlockPolling,
+} from "./internal/requestBlocks/requestBlockStore.js";
 import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
@@ -24,6 +28,7 @@ const init = async () => {
 
 	initPgHealthMonitor({ client: clientCritical });
 	await Promise.all([warmupRegionalRedis()]);
+	await startRequestBlockPolling({ logger });
 
 	const PORT = process.env.SERVER_PORT
 		? Number.parseInt(process.env.SERVER_PORT)
@@ -83,6 +88,7 @@ async function gracefulShutdown() {
 			await otelSdk.shutdown();
 		}
 		shutdownPgHealthMonitor();
+		stopRequestBlockPolling();
 		await Promise.all([
 			client.end(),
 			clientCritical.end(),
