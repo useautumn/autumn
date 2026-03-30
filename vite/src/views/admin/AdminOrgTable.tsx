@@ -22,7 +22,7 @@ export const AdminOrgTable = () => {
 	if (before) params.append("before", before);
 	const url = `/admin/orgs${params.toString() ? `?${params.toString()}` : ""}`;
 
-	const { data, isLoading } = useQuery({
+	const { data, isLoading, refetch } = useQuery({
 		queryKey: ["admin-orgs", search, after, before],
 		queryFn: async () => {
 			const { data } = await axiosInstance.get(url);
