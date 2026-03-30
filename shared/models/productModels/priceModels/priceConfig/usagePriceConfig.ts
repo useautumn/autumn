@@ -13,12 +13,35 @@ export enum TierBehavior {
 	VolumeBased = "volume",
 }
 
-export const UsageTierSchema = z
-	.object({
-		to: z.number().or(z.literal(Infinite)),
-		amount: z.number().optional(),
-		flat_amount: z.number().optional(),
-	})
+/**
+ * Base tier shape — no refine/transform, safe for OpenAPI/JSON-schema generation.
+ * `amount` is optional here (for input schemas where users provide amount OR flat_amount).
+ */
+const UsageTierBaseSchema = z.object({
+	to: z.number().or(z.literal(Infinite)),
+	amount: z.number().optional(),
+	flat_amount: z.number().optional(),
+});
+
+/**
+ * API input tier schema (amount optional — user provides amount or flat_amount).
+ * Use in create/update param schemas.
+ */
+export const ApiUsageTierSchema = UsageTierBaseSchema;
+
+/**
+ * API output tier schema (amount always present — transform defaults it to 0).
+ * Use in response schemas (apiPlanItemV1, apiBalanceV1, etc.).
+ */
+export const ApiUsageTierOutputSchema = UsageTierBaseSchema.extend({
+	amount: z.number(),
+});
+
+/**
+ * Internal tier schema with validation + transform (amount defaults to 0).
+ * Use for internal model parsing, NOT in API schemas (breaks OpenAPI generation).
+ */
+export const UsageTierSchema = ApiUsageTierSchema
 	.refine(
 		(val) => val.amount !== undefined || val.flat_amount !== undefined,
 		{
