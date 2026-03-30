@@ -13,7 +13,7 @@ from .types import (
     SDKInitHook,
 )
 
-FAIL_OPEN_OPERATION_IDS = {"check", "track", "getOrCreateCustomer"}
+FAIL_OPEN_OPERATION_IDS = {"check", "track", "listPlans"}
 
 FAIL_OPEN_LOG_MESSAGE = (
     "[Autumn] Request failed \u2014 failing open. "
@@ -23,43 +23,35 @@ FAIL_OPEN_LOG_MESSAGE = (
 FAIL_OPEN_BODIES: dict = {
     "check": {
         "allowed": True,
-        "customer_id": None,
+        "customer_id": "",
         "balance": None,
         "flag": None,
     },
     "track": {
-        "customer_id": None,
+        "customer_id": "",
         "value": 0,
         "balance": None,
     },
-    "getOrCreateCustomer": {
-        "id": None,
-        "name": None,
-        "email": None,
-        "created_at": 0,
-        "fingerprint": None,
-        "stripe_id": None,
-        "env": "live",
-        "metadata": {},
-        "send_email_receipts": False,
-        "billing_controls": {},
-        "subscriptions": [],
-        "purchases": [],
-        "balances": {},
-        "flags": {},
+    "listPlans": {
+        "list": [],
     },
 }
 
 
 def _make_synthetic_response(
-    status_code: int, body: Optional[dict] = None
+    status_code: int,
+    body: Optional[dict] = None,
+    request: Optional[httpx.Request] = None,
 ) -> httpx.Response:
     content = json.dumps(body).encode() if body else b""
     headers = {"content-type": "application/json"} if body else {}
+    if request is None:
+        request = httpx.Request("GET", "https://synthetic.local")
     return httpx.Response(
         status_code=status_code,
         headers=headers,
         content=content,
+        request=request,
     )
 
 
@@ -73,7 +65,7 @@ class _SafeSyncClient:
         try:
             return self._inner.send(request, **kwargs)
         except (httpx.ConnectError, httpx.TimeoutException):
-            return _make_synthetic_response(503)
+            return _make_synthetic_response(503, request=request)
 
     def build_request(self, *args, **kwargs) -> httpx.Request:
         return self._inner.build_request(*args, **kwargs)
@@ -95,7 +87,7 @@ class _SafeAsyncClient:
         try:
             return await self._inner.send(request, **kwargs)
         except (httpx.ConnectError, httpx.TimeoutException):
-            return _make_synthetic_response(503)
+            return _make_synthetic_response(503, request=request)
 
     def build_request(self, *args, **kwargs) -> httpx.Request:
         return self._inner.build_request(*args, **kwargs)
