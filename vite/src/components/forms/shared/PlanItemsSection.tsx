@@ -135,7 +135,12 @@ export function PlanItemsSection({
 					/>
 					{product?.items?.map((item, index) => (
 						<PlanItemRow
-							key={item.feature_id || item.price_id || index}
+							key={
+								item.entitlement_id ||
+								item.price_id ||
+								item.feature_id ||
+								index
+							}
 							item={item}
 							index={index}
 							useStagger
@@ -172,7 +177,12 @@ export function PlanItemsSection({
 				>
 					{product?.items?.map((item, index) => (
 						<PlanItemRow
-							key={item.feature_id || item.price_id || index}
+							key={
+								item.entitlement_id ||
+								item.price_id ||
+								item.feature_id ||
+								index
+							}
 							item={item}
 							index={index}
 							{...itemRowProps}

@@ -7,6 +7,7 @@ export interface FeatureBalanceDisplayProps {
 	rolloverBalance?: number;
 	shouldShowOutOfBalance: boolean;
 	shouldShowUsed: boolean;
+	showZeroAllowance?: boolean;
 	usageType?: string;
 	className?: string;
 	initialAllowance: number;
@@ -22,6 +23,7 @@ export function FeatureBalanceDisplay({
 	rolloverBalance = 0,
 	shouldShowOutOfBalance,
 	shouldShowUsed,
+	showZeroAllowance = false,
 	usageType,
 	className,
 	initialAllowance,
@@ -42,7 +44,7 @@ export function FeatureBalanceDisplay({
 			{shouldShowOutOfBalance && (
 				<>
 					<span className="text-t1">{formatNumber(displayBalance)}</span>
-					{allowance > 0 && (
+					{(allowance > 0 || showZeroAllowance) && (
 						<span className="text-t4">
 							{compact
 								? `/ ${formatNumber(allowance)}`

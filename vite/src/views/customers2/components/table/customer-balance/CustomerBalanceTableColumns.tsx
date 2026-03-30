@@ -193,8 +193,12 @@ function SubRowUsageCell({
 		ent,
 		entityId,
 	});
-	const shouldShowOutOfBalance = allowance > 0 || balance > 0;
-	const shouldShowUsed = balance < 0 || (balance === 0 && allowance <= 0);
+	const showZeroAllowance =
+		isPrepaidCustomerEntitlement(ent) && allowance === 0 && balance === 0;
+	const shouldShowOutOfBalance =
+		allowance > 0 || balance > 0 || showZeroAllowance;
+	const shouldShowUsed =
+		!showZeroAllowance && (balance < 0 || (balance === 0 && allowance <= 0));
 
 	return (
 		<FeatureBalanceDisplay
@@ -204,6 +208,7 @@ function SubRowUsageCell({
 			rolloverBalance={rolloverBalance}
 			shouldShowOutOfBalance={shouldShowOutOfBalance}
 			shouldShowUsed={shouldShowUsed}
+			showZeroAllowance={showZeroAllowance}
 			usageType={ent.entitlement.feature.config?.usage_type}
 		/>
 	);

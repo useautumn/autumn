@@ -130,13 +130,44 @@ export const toFeaturePriceItem = ({
 };
 
 export const toPriceItem = ({ price }: { price: Price }) => {
-	const config = price.config as FixedPriceConfig;
+	const config = price.config as FixedPriceConfig | UsagePriceConfig;
+
+	if ("bill_when" in config && config.feature_id) {
+		const usageConfig = config;
+		const tiers = usageConfig.usage_tiers.map((tier) => ({
+			amount: tier.amount,
+			to: tier.to === -1 ? TierInfinite : tier.to,
+			flat_amount: tier.flat_amount,
+		}));
+
+		return {
+			feature_id: usageConfig.feature_id,
+			included_usage: 0,
+			interval: billingToItemInterval({ billingInterval: usageConfig.interval }),
+			interval_count: usageConfig.interval_count ?? 1,
+			price: null,
+			tiers,
+			billing_units: usageConfig.billing_units,
+			tier_behavior: price.tier_behavior ?? null,
+			usage_model:
+				usageConfig.bill_when === BillWhen.StartOfPeriod ||
+				usageConfig.bill_when === BillWhen.InAdvance
+					? UsageModel.Prepaid
+					: UsageModel.PayPerUse,
+			price_id: price.id,
+			created_at: price.created_at,
+			price_config: price.config,
+		};
+	}
+
+	const fixedConfig = config as FixedPriceConfig;
+
 	return {
 		feature_id: null,
 
-		interval: billingToItemInterval({ billingInterval: config.interval }),
-		interval_count: config.interval_count ?? 1,
-		price: config.amount,
+		interval: billingToItemInterval({ billingInterval: fixedConfig.interval }),
+		interval_count: fixedConfig.interval_count ?? 1,
+		price: fixedConfig.amount,
 
 		price_id: price.id,
 		created_at: price.created_at,

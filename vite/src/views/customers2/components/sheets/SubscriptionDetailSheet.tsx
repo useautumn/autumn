@@ -3,6 +3,7 @@ import {
 	type Entity,
 	isCustomerProductTrialing,
 	type ProductItem,
+	UsageModel,
 } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
@@ -156,11 +157,18 @@ export function SubscriptionDetailSheet() {
 							{productV2.items.map((item: ProductItem, index: number) => {
 								if (!item.feature_id) return null;
 								const prepaidQuantity =
-									prepaidDisplayQuantities[item.feature_id] ?? null;
+									item.usage_model === UsageModel.Prepaid
+										? (prepaidDisplayQuantities[item.feature_id] ?? 0) || null
+										: null;
 
 								return (
 									<PlanFeatureRow
-										key={item.feature_id || item.price_id || index}
+										key={
+											item.entitlement_id ||
+											item.price_id ||
+											item.feature_id ||
+											index
+										}
 										item={item}
 										index={index}
 										readOnly={true}
