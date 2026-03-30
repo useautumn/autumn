@@ -30,10 +30,17 @@ export const toProductItem = ({
 	ent?: EntitlementWithFeature;
 	price?: Price;
 }) => {
-	if (nullish(price)) return toFeatureItem({ ent: ent! }) as ProductItem;
-	if (nullish(ent)) return toPriceItem({ price: price }) as ProductItem;
+	if (nullish(price)) {
+		if (nullish(ent)) {
+			throw new Error("Expected either entitlement or price");
+		}
 
-	return toFeaturePriceItem({ ent: ent, price: price }) as ProductItem;
+		return toFeatureItem({ ent }) as ProductItem;
+	}
+
+	if (nullish(ent)) return toPriceItem({ price }) as ProductItem;
+
+	return toFeaturePriceItem({ ent, price }) as ProductItem;
 };
 
 export const toFeatureItem = ({ ent }: { ent: EntitlementWithFeature }) => {
@@ -143,7 +150,9 @@ export const toPriceItem = ({ price }: { price: Price }) => {
 		return {
 			feature_id: usageConfig.feature_id,
 			included_usage: 0,
-			interval: billingToItemInterval({ billingInterval: usageConfig.interval }),
+			interval: billingToItemInterval({
+				billingInterval: usageConfig.interval,
+			}),
 			interval_count: usageConfig.interval_count ?? 1,
 			price: null,
 			tiers,
