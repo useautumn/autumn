@@ -1,13 +1,20 @@
-import type {
-	AppEnv,
-	EntInterval,
-	FullCusProduct,
-	Organization,
+import {
+	type AppEnv,
+	type EntInterval,
+	EntInterval as EntIntervalEnum,
+	type FullCusProduct,
+	type Organization,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { getDate, getMonth, setDate } from "date-fns";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getNextResetAt } from "@/utils/timeUtils.js";
+
+const shortDurations: string[] = [
+	EntIntervalEnum.Minute,
+	EntIntervalEnum.Hour,
+	EntIntervalEnum.Day,
+];
 
 /** Computes next reset timestamp, adjusting for Stripe billing anchor on edge dates. */
 export const getResetAtUpdate = async ({
@@ -32,6 +39,7 @@ export const getResetAtUpdate = async ({
 	});
 
 	if (!cusProduct) return nextResetAt;
+	if (shortDurations.includes(interval)) return nextResetAt;
 
 	// Only check Stripe anchor on edge dates (28th Feb, 30th of month)
 	const nextResetAtDate = new UTCDate(nextResetAt);
@@ -39,7 +47,7 @@ export const getResetAtUpdate = async ({
 	const nextResetAtMonth = getMonth(nextResetAtDate);
 
 	const shouldCheck =
-		nextResetAtDay === 30 || (nextResetAtDay === 28 && nextResetAtMonth === 2);
+		nextResetAtDay === 30 || (nextResetAtDay === 28 && nextResetAtMonth === 1);
 
 	if (!shouldCheck) return nextResetAt;
 
