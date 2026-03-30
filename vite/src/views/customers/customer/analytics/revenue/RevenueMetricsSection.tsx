@@ -78,7 +78,8 @@ export const RevenueMetricsSection = () => {
 			<ArpcChart data={arpc.data ?? []} loading={arpc.isLoading} />
 
 			<CustomerLeaderboardTable
-				data={leaderboard.data ?? []}
+				data={leaderboard.data?.rows ?? []}
+				totalRevenue={leaderboard.data?.total_revenue ?? 0}
 				loading={leaderboard.isLoading}
 			/>
 		</div>
