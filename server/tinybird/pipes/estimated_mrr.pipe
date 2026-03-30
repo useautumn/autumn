@@ -1,0 +1,82 @@
+DESCRIPTION >
+    Estimated MRR via customer_prices → prices chain, with invoice-based override.
+    For each active customer_product with a recurring base price:
+    - If customer has non-zero paid invoices → they're paying, use the base price
+    - If customer has invoices but ALL are $0 → given for free (Stripe credits), $0
+    - If customer has NO invoices → new customer, use base price as estimate
+    Normalizes all amounts to monthly by billing interval.
+
+TOKEN "estimated_mrr_read" READ
+
+NODE invoice_stats
+DESCRIPTION >
+    Per-customer invoice counts: total and non-zero paid invoices.
+SQL >
+    SELECT
+        internal_customer_id,
+        count(*) AS invoice_count,
+        countIf(total > 0) AS nonzero_count
+    FROM invoices FINAL
+    WHERE __action != 'delete'
+        AND status = 'paid'
+        AND hosted_invoice_url LIKE '%live%'
+    GROUP BY internal_customer_id
+
+NODE endpoint
+TYPE endpoint
+DESCRIPTION >
+    Compute estimated MRR from active customer_products with base prices.
+SQL >
+    %
+    SELECT
+        SUM(
+            multiIf(
+                inv.nonzero_count > 0, 1,
+                inv.invoice_count > 0, 0,
+                1
+            )
+            * JSONExtractFloat(pr.config, 'amount') * cp.quantity
+            * CASE JSONExtractString(pr.config, 'interval')
+                WHEN 'month' THEN 1
+                WHEN 'quarter' THEN 1.0 / 3
+                WHEN 'semi_annual' THEN 1.0 / 6
+                WHEN 'year' THEN 1.0 / 12
+                WHEN 'week' THEN 4.33
+                ELSE 0
+            END
+        ) AS estimated_mrr,
+        COUNT(DISTINCT cp.internal_customer_id) AS active_subscriptions,
+        o.default_currency AS currency
+    FROM customer_products AS cp FINAL
+    INNER JOIN (
+        SELECT internal_id
+        FROM customers FINAL
+        WHERE __action != 'delete'
+            AND org_id = {{ String(org_id, '') }}
+            AND env = 'live'
+    ) AS cus ON cus.internal_id = cp.internal_customer_id
+    LEFT JOIN (
+        SELECT customer_product_id, price_id
+        FROM customer_prices FINAL
+        WHERE __action != 'delete'
+    ) AS cp_price ON cp_price.customer_product_id = cp.id
+    LEFT JOIN (
+        SELECT id, config
+        FROM prices FINAL
+        WHERE __action != 'delete'
+            AND (entitlement_id IS NULL OR entitlement_id = '')
+            AND JSONExtractString(config, 'type') = 'fixed'
+    ) AS pr ON pr.id = cp_price.price_id
+    LEFT JOIN invoice_stats AS inv ON inv.internal_customer_id = cp.internal_customer_id
+    INNER JOIN (
+        SELECT id, default_currency
+        FROM organizations FINAL
+    ) AS o ON o.id = {{ String(org_id, '') }}
+    WHERE cp.__action != 'delete'
+        AND cp.status = 'active'
+        AND cp.canceled = 0
+        AND (cp.ended_at IS NULL OR cp.ended_at = 0)
+        AND pr.id IS NOT NULL
+        AND JSONExtractFloat(pr.config, 'amount') > 0
+        AND JSONExtractString(pr.config, 'interval') IN ('month', 'quarter', 'semi_annual', 'year', 'week')
+    GROUP BY currency
