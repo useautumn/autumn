@@ -56,7 +56,7 @@ export const PlanItemSchema = z.object({
     }),
     tier_behavior: z.union([z.literal("graduated"), z.literal("volume")]).optional(),
     
-    interval: z.union([z.literal("week"), z.literal("month"), z.literal("quarter"), z.literal("semi_annual"), z.literal("year")]).meta({
+    interval: z.union([z.literal("one_off"), z.literal("week"), z.literal("month"), z.literal("quarter"), z.literal("semi_annual"), z.literal("year")]).meta({
     description:
     "Billing interval. For consumable features, should match reset.interval.",
     }),
@@ -176,7 +176,7 @@ export const PlanSchema = z.object({
 // Type aliases for literal unions
 export type ResetInterval = "one_off" | "minute" | "hour" | "day" | "week" | "month" | "quarter" | "semi_annual" | "year";
 export type RolloverExpiryDurationType = "month" | "forever";
-export type BillingInterval = "week" | "month" | "quarter" | "semi_annual" | "year";
+export type BillingInterval = "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 export type PlanPriceInterval = "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 export type BillingMethod = "prepaid" | "usage_based";
 export type OnIncrease = "prorate" | "charge_immediately";
