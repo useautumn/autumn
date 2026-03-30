@@ -7,7 +7,6 @@ from .utils.logger import Logger, get_default_logger
 from .utils.retries import RetryConfig
 from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext, SDKHooks
-from autumn_sdk._hooks.registration import init_hooks
 from autumn_sdk.models import internal
 from autumn_sdk.types import OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
@@ -54,8 +53,8 @@ class Autumn(BaseSDK):
         x_api_version: Optional[str] = None,
         fail_open: Optional[bool] = None,
         server_idx: Optional[int] = None,
-        url_params: Optional[Dict[str, str]] = None,
         server_url: Optional[str] = None,
+        url_params: Optional[Dict[str, str]] = None,
         client: Optional[HttpClient] = None,
         async_client: Optional[AsyncHttpClient] = None,
         retry_config: OptionalNullable[RetryConfig] = UNSET,
@@ -80,9 +79,9 @@ class Autumn(BaseSDK):
             client = httpx.Client(follow_redirects=True)
             client_supplied = False
 
-        assert issubclass(type(client), HttpClient), (
-            "The provided client must implement the HttpClient protocol."
-        )
+        assert issubclass(
+            type(client), HttpClient
+        ), "The provided client must implement the HttpClient protocol."
 
         async_client_supplied = True
         if async_client is None:
@@ -92,9 +91,9 @@ class Autumn(BaseSDK):
         if debug_logger is None:
             debug_logger = get_default_logger()
 
-        assert issubclass(type(async_client), AsyncHttpClient), (
-            "The provided async_client must implement the AsyncHttpClient protocol."
-        )
+        assert issubclass(
+            type(async_client), AsyncHttpClient
+        ), "The provided async_client must implement the AsyncHttpClient protocol."
 
         security: Any = None
         if callable(secret_key):
@@ -133,7 +132,6 @@ class Autumn(BaseSDK):
         )
 
         hooks = SDKHooks()
-        init_hooks(hooks)
 
         # pylint: disable=protected-access
         self.sdk_configuration.__dict__["_hooks"] = hooks

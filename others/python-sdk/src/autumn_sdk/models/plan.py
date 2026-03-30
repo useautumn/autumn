@@ -54,7 +54,7 @@ class PlanPriceDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -95,7 +95,7 @@ class PlanPrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -194,7 +194,7 @@ class PlanFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -250,7 +250,7 @@ class PlanReset(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -343,7 +343,7 @@ class PlanItemPrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -386,7 +386,7 @@ class PlanItemDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -412,6 +412,8 @@ class PlanRolloverTypedDict(TypedDict):
     r"""Maximum rollover units. Null for unlimited rollover."""
     expiry_duration_type: ExpiryDurationType
     r"""When rolled over units expire."""
+    max_percentage: NotRequired[Nullable[float]]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
     expiry_duration_length: NotRequired[float]
     r"""Number of periods before expiry."""
 
@@ -425,19 +427,22 @@ class PlanRollover(BaseModel):
     expiry_duration_type: ExpiryDurationType
     r"""When rolled over units expire."""
 
+    max_percentage: OptionalNullable[float] = UNSET
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
     expiry_duration_length: Optional[float] = None
     r"""Number of periods before expiry."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["expiry_duration_length"])
-        nullable_fields = set(["max"])
+        optional_fields = set(["max_percentage", "expiry_duration_length"])
+        nullable_fields = set(["max", "max_percentage"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -507,7 +512,7 @@ class Item(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -629,7 +634,7 @@ class CustomerEligibility(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -724,7 +729,7 @@ class Plan(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

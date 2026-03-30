@@ -15,6 +15,7 @@ import type { ExternalProcessors } from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
 import type {
 	AutoTopup,
+	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
 } from "./billingControls/customerBillingControls.js";
@@ -44,6 +45,7 @@ export const customers = pgTable(
 		auto_topups: jsonb().$type<AutoTopup[]>(),
 		spend_limits: jsonb().$type<DbSpendLimit[]>(),
 		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
+		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),

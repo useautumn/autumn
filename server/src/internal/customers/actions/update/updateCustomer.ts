@@ -115,6 +115,7 @@ export const updateCustomer = async ({
 			auto_topups: billing_controls.auto_topups,
 			spend_limits: billing_controls.spend_limits,
 			usage_alerts: billing_controls.usage_alerts,
+			overage_allowed: billing_controls.overage_allowed,
 		}),
 	};
 

@@ -237,6 +237,10 @@ const plan = await autumn.plans.get({
           Maximum rollover units. Null for unlimited rollover.
         </DynamicResponseField>
 
+        <DynamicResponseField name="max_percentage" type="number | null">
+          Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+        </DynamicResponseField>
+
         <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'">
           When rolled over units expire.
         </DynamicResponseField>
