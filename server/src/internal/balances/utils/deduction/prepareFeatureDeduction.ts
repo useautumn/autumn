@@ -91,6 +91,16 @@ export const prepareFeatureDeduction = ({
 		featureIds: effectiveFeatureIds,
 	});
 
+	// For each feature, check if any cusEnt already has native usage_allowed
+	// (from pay-per-use pricing). If so, overage_allowed: enabled: true
+	// should NOT force usage_allowed on other cusEnts — the native overage
+	// mechanism (with max_purchase) already handles it.
+	const nativeUsageAllowedFeatureIds = new Set(
+		cusEnts
+			.filter((ce) => ce.usage_allowed)
+			.map((ce) => ce.entitlement.feature.id),
+	);
+
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
 		cusEnts.map((ce) => {
@@ -115,7 +125,10 @@ export const prepareFeatureDeduction = ({
 			let effectiveUsageAllowed =
 				ce.usage_allowed || isFreeAllocatedUsageAllowed;
 
-			if (overageAllowedControl?.enabled === true) {
+			if (
+				overageAllowedControl?.enabled === true &&
+				!nativeUsageAllowedFeatureIds.has(ce.entitlement.feature.id)
+			) {
 				effectiveUsageAllowed = true;
 			} else if (overageAllowedControl?.enabled === false) {
 				effectiveUsageAllowed = false;
