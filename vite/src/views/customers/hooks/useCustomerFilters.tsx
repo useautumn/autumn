@@ -5,7 +5,14 @@ import {
 	parseAsString,
 	useQueryStates,
 } from "nuqs";
-import { useCallback, useEffect, useState } from "react";
+import {
+	createContext,
+	type ReactNode,
+	useContext,
+	useEffect,
+	useMemo,
+	useState,
+} from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useEnv } from "@/utils/envUtils";
 
@@ -63,25 +70,40 @@ function buildRestoredState({
 	};
 }
 
-export const useCustomerFilters = () => {
+const queryStatesConfig = {
+	q: parseAsString.withDefault(""),
+	status: parseAsArrayOf(parseAsString).withDefault([]),
+	version: parseAsArrayOf(parseAsString).withDefault([]),
+	none: parseAsBoolean.withDefault(false),
+	page: parseAsInteger.withDefault(1),
+	pageSize: parseAsInteger.withDefault(50),
+	lastItemId: parseAsString.withDefault(""),
+};
+
+type QueryStates = ReturnType<typeof useQueryStates<typeof queryStatesConfig>>;
+
+interface CustomerFiltersContextValue {
+	queryStates: QueryStates[0];
+	setQueryStates: QueryStates[1];
+	setFilters: (
+		filters: Partial<Omit<QueryStates[0], "page" | "lastItemId">>,
+	) => void;
+	isInitialized: boolean;
+}
+
+const CustomerFiltersContext =
+	createContext<CustomerFiltersContextValue | null>(null);
+
+export function CustomerFiltersProvider({
+	children,
+}: { children: ReactNode }) {
 	const { org } = useOrg();
 	const orgId = org?.id;
 	const env = useEnv();
 
-	const [queryStates, setQueryStates] = useQueryStates(
-		{
-			q: parseAsString.withDefault(""),
-			status: parseAsArrayOf(parseAsString).withDefault([]),
-			version: parseAsArrayOf(parseAsString).withDefault([]),
-			none: parseAsBoolean.withDefault(false),
-			page: parseAsInteger.withDefault(1),
-			pageSize: parseAsInteger.withDefault(50),
-			lastItemId: parseAsString.withDefault(""),
-		},
-		{
-			history: "replace",
-		},
-	);
+	const [queryStates, setQueryStates] = useQueryStates(queryStatesConfig, {
+		history: "replace",
+	});
 
 	const settleKey = orgId ? `${orgId}:${env}` : null;
 	const [settledKey, setSettledKey] = useState<string | null>(null);
@@ -114,10 +136,11 @@ export const useCustomerFilters = () => {
 		}
 	}, [settleKey, settledKey, setQueryStates, orgId, env]);
 
-	const setFilters = useCallback(
-		(filters: Partial<Omit<typeof queryStates, "page" | "lastItemId">>) => {
-			setQueryStates({ ...filters, page: 1, lastItemId: "" });
-		},
+	const setFilters = useMemo(
+		() =>
+			(filters: Partial<Omit<typeof queryStates, "page" | "lastItemId">>) => {
+				setQueryStates({ ...filters, page: 1, lastItemId: "" });
+			},
 		[setQueryStates],
 	);
 
@@ -146,10 +169,37 @@ export const useCustomerFilters = () => {
 		queryStates.pageSize,
 	]);
 
-	return {
-		queryStates,
-		setQueryStates,
-		setFilters,
-		isInitialized,
-	};
-};
+	return (
+		<CustomerFiltersContext.Provider
+			value={{ queryStates, setQueryStates, setFilters, isInitialized }}
+		>
+			{children}
+		</CustomerFiltersContext.Provider>
+	);
+}
+
+/**
+ * Inside CustomerFiltersProvider (customers list page): returns the provider's
+ * managed state with initialization gating and localStorage restore.
+ *
+ * Outside the provider (customer detail pages, layout, etc.): falls back to
+ * reading URL query params directly via nuqs, always treated as initialized.
+ */
+export function useCustomerFilters(): CustomerFiltersContextValue {
+	const context = useContext(CustomerFiltersContext);
+	const [queryStates, setQueryStates] = useQueryStates(queryStatesConfig, {
+		history: "replace",
+	});
+
+	const setFilters = useMemo(
+		() =>
+			(filters: Partial<Omit<typeof queryStates, "page" | "lastItemId">>) => {
+				setQueryStates({ ...filters, page: 1, lastItemId: "" });
+			},
+		[setQueryStates],
+	);
+
+	if (context) return context;
+
+	return { queryStates, setQueryStates, setFilters, isInitialized: true };
+}

@@ -93,6 +93,10 @@ export function TableContentVirtualized({
 					className,
 				)}
 			>
+				{isLoading && (
+					<div className="bg-white/60 dark:bg-black/60 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
+				)}
+
 			{/* Fixed header table - scrolls horizontally in sync with body */}
 				<div
 					ref={headerRef}
