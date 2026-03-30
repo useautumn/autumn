@@ -76,6 +76,7 @@ export const batchCreateEntities = async ({
 				...(inputEntities[0].billing_controls && {
 					spend_limits: inputEntities[0].billing_controls.spend_limits,
 					usage_alerts: inputEntities[0].billing_controls.usage_alerts,
+					overage_allowed: inputEntities[0].billing_controls.overage_allowed,
 				}),
 			},
 		});

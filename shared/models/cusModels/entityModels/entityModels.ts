@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import type { Feature } from "../../featureModels/featureModels.js";
 import {
+	DbOverageAllowedSchema,
 	DbSpendLimitSchema,
 	DbUsageAlertSchema,
 } from "../billingControls/customerBillingControls.js";
@@ -18,6 +19,7 @@ export const EntitySchema = z.object({
 	internal_feature_id: z.string(),
 	spend_limits: z.array(DbSpendLimitSchema).nullish(),
 	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
+	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
 });
 
 // export const CreateEntitySchema = z.object({

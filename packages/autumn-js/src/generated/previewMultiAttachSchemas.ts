@@ -36,6 +36,11 @@ export const previewMultiAttachSpendLimitSchema = z.object({
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const previewMultiAttachOverageAllowedSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
 export const previewMultiAttachDiscountSchema = z.object({
 	amountOff: z.number(),
 	percentOff: z.union([z.number(), z.undefined()]).optional(),
@@ -166,6 +171,7 @@ export const previewMultiAttachProrationOutboundSchema = z.object({
 
 export const previewMultiAttachRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -250,12 +256,23 @@ export const previewMultiAttachUsageAlertOutboundSchema = z.object({
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const previewMultiAttachOverageAllowedOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+});
+
 export const previewMultiAttachBillingControlsOutboundSchema = z.object({
 	spend_limits: z
 		.union([z.array(previewMultiAttachSpendLimitOutboundSchema), z.undefined()])
 		.optional(),
 	usage_alerts: z
 		.union([z.array(previewMultiAttachUsageAlertOutboundSchema), z.undefined()])
+		.optional(),
+	overage_allowed: z
+		.union([
+			z.array(previewMultiAttachOverageAllowedOutboundSchema),
+			z.undefined(),
+		])
 		.optional(),
 });
 
@@ -326,6 +343,7 @@ export const previewMultiAttachExpiryDurationTypeSchema = closedEnumSchema;
 
 export const previewMultiAttachRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: previewMultiAttachExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -397,6 +415,9 @@ export const previewMultiAttachBillingControlsSchema = z.object({
 		.optional(),
 	usageAlerts: z
 		.union([z.array(previewMultiAttachUsageAlertSchema), z.undefined()])
+		.optional(),
+	overageAllowed: z
+		.union([z.array(previewMultiAttachOverageAllowedSchema), z.undefined()])
 		.optional(),
 });
 

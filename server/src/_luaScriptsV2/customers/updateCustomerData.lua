@@ -18,7 +18,8 @@
         processors?: object | null,
         auto_topups?: array | null,
         spend_limits?: array | null,
-        usage_alerts?: array | null
+        usage_alerts?: array | null,
+        overage_allowed?: array | null
       }
     }
 
@@ -119,6 +120,15 @@ if updates.usage_alerts ~= nil then
     redis.call('JSON.SET', cache_key, '$.usage_alerts', cjson.encode(updates.usage_alerts))
   end
   table.insert(updated_fields, 'usage_alerts')
+end
+
+if updates.overage_allowed ~= nil then
+  if is_nil(updates.overage_allowed) then
+    redis.call('JSON.SET', cache_key, '$.overage_allowed', 'null')
+  else
+    redis.call('JSON.SET', cache_key, '$.overage_allowed', cjson.encode(updates.overage_allowed))
+  end
+  table.insert(updated_fields, 'overage_allowed')
 end
 
 return cjson.encode({ success = true, updated_fields = updated_fields })

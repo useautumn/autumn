@@ -246,6 +246,10 @@ export type PreviewMultiAttachRollover = {
    */
   max?: number | undefined;
   /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
    * When rolled over units expire.
    */
   expiryDurationType: PreviewMultiAttachExpiryDurationType;
@@ -476,6 +480,17 @@ export type PreviewMultiAttachUsageAlert = {
   name?: string | undefined;
 };
 
+export type PreviewMultiAttachOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
 /**
  * Billing controls for the entity.
  */
@@ -488,6 +503,10 @@ export type PreviewMultiAttachBillingControls = {
    * List of usage alert configurations per feature.
    */
   usageAlerts?: Array<PreviewMultiAttachUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<PreviewMultiAttachOverageAllowed> | undefined;
 };
 
 export type PreviewMultiAttachEntityData = {
@@ -1094,6 +1113,7 @@ export const PreviewMultiAttachExpiryDurationType$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewMultiAttachRollover$Outbound = {
   max?: number | undefined;
+  max_percentage?: number | undefined;
   expiry_duration_type: string;
   expiry_duration_length?: number | undefined;
 };
@@ -1105,11 +1125,13 @@ export const PreviewMultiAttachRollover$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
     expiryDurationType: PreviewMultiAttachExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      maxPercentage: "max_percentage",
       expiryDurationType: "expiry_duration_type",
       expiryDurationLength: "expiry_duration_length",
     });
@@ -1474,9 +1496,44 @@ export function previewMultiAttachUsageAlertToJSON(
 }
 
 /** @internal */
+export type PreviewMultiAttachOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const PreviewMultiAttachOverageAllowed$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachOverageAllowed$Outbound,
+  PreviewMultiAttachOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function previewMultiAttachOverageAllowedToJSON(
+  previewMultiAttachOverageAllowed: PreviewMultiAttachOverageAllowed,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachOverageAllowed$outboundSchema.parse(
+      previewMultiAttachOverageAllowed,
+    ),
+  );
+}
+
+/** @internal */
 export type PreviewMultiAttachBillingControls$Outbound = {
   spend_limits?: Array<PreviewMultiAttachSpendLimit$Outbound> | undefined;
   usage_alerts?: Array<PreviewMultiAttachUsageAlert$Outbound> | undefined;
+  overage_allowed?:
+    | Array<PreviewMultiAttachOverageAllowed$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -1491,11 +1548,15 @@ export const PreviewMultiAttachBillingControls$outboundSchema: z.ZodMiniType<
     usageAlerts: z.optional(
       z.array(z.lazy(() => PreviewMultiAttachUsageAlert$outboundSchema)),
     ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => PreviewMultiAttachOverageAllowed$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       spendLimits: "spend_limits",
       usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
     });
   }),
 );

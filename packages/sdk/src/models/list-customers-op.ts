@@ -176,6 +176,17 @@ export type ListCustomersUsageAlert = {
   name?: string | undefined;
 };
 
+export type ListCustomersOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -192,6 +203,10 @@ export type ListCustomersBillingControls = {
    * List of usage alert configurations per feature.
    */
   usageAlerts?: Array<ListCustomersUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<ListCustomersOverageAllowed> | undefined;
 };
 
 /**
@@ -674,6 +689,32 @@ export function listCustomersUsageAlertFromJSON(
 }
 
 /** @internal */
+export const ListCustomersOverageAllowed$inboundSchema: z.ZodMiniType<
+  ListCustomersOverageAllowed,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function listCustomersOverageAllowedFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersOverageAllowed, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersOverageAllowed$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersOverageAllowed' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListCustomersBillingControls$inboundSchema: z.ZodMiniType<
   ListCustomersBillingControls,
   unknown
@@ -688,12 +729,16 @@ export const ListCustomersBillingControls$inboundSchema: z.ZodMiniType<
     usage_alerts: types.optional(
       z.array(z.lazy(() => ListCustomersUsageAlert$inboundSchema)),
     ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => ListCustomersOverageAllowed$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "auto_topups": "autoTopups",
       "spend_limits": "spendLimits",
       "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
     });
   }),
 );
