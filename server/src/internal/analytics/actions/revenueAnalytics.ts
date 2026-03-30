@@ -2,6 +2,7 @@ import type { ClickHouseResult } from "@autumn/shared";
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getConversionRatesJson } from "../currencyConversion.js";
 
 // ── Exported row types ───────────────────────────────────────────────
 
@@ -49,6 +50,13 @@ export type CustomerLeaderboardResult = {
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
+/** SQL expression to convert an invoice amount to the org's base currency */
+const CONVERTED_TOTAL =
+	"i.total * coalesce(JSONExtractFloat({rates:String}, lower(i.currency)), 1)";
+
+/** Same but split across multi-product invoices */
+const CONVERTED_TOTAL_SPLIT = `(${CONVERTED_TOTAL}) / length(i.internal_product_ids)`;
+
 const GRANULARITY_FORMAT: Record<string, string> = {
 	day: "%Y-%m-%d",
 	month: "%Y-%m",
@@ -68,8 +76,9 @@ export const getRevenueByProduct = async ({
 	const { org } = ctx;
 
 	const dateFormat = GRANULARITY_FORMAT[granularity];
+	const targetCurrency = org.default_currency || "usd";
+	const rates = await getConversionRatesJson({ baseCurrency: targetCurrency });
 
-	// Limit date range based on granularity to keep charts readable
 	const dateCutoffMap: Record<string, string> = {
 		day: `AND i.created_at >= toInt64(toUnixTimestamp(now() - INTERVAL 30 DAY)) * 1000`,
 		month: `AND i.created_at >= toInt64(toUnixTimestamp(now() - INTERVAL 24 MONTH)) * 1000`,
@@ -79,13 +88,10 @@ export const getRevenueByProduct = async ({
 
 	const query = `
 		SELECT
-			formatDateTime(
-				toDateTime(i.created_at / 1000),
-				{date_format:String}
-			) AS period_label,
+			formatDateTime(toDateTime(i.created_at / 1000), {date_format:String}) AS period_label,
 			p.name AS product_name,
-			SUM(i.total / length(i.internal_product_ids)) AS volume,
-			o.default_currency AS currency
+			SUM(${CONVERTED_TOTAL_SPLIT}) AS volume,
+			{target_currency:String} AS currency
 		FROM invoices AS i FINAL
 		ARRAY JOIN i.internal_product_ids AS ipid
 		INNER JOIN (
@@ -96,16 +102,12 @@ export const getRevenueByProduct = async ({
 			SELECT internal_id, org_id, env
 			FROM customers FINAL
 		) AS cus ON cus.internal_id = i.internal_customer_id AND cus.org_id = {org_id:String}
-		INNER JOIN (
-			SELECT id, default_currency
-			FROM organizations FINAL
-		) AS o ON o.id = {org_id:String}
 		WHERE cus.env = 'live'
 			AND i.hosted_invoice_url LIKE '%live%'
 			AND i.status = 'paid'
 			AND i.__action != 'delete'
 			${dateCutoff}
-		GROUP BY period_label, product_name, currency
+		GROUP BY period_label, product_name
 		ORDER BY period_label ASC, product_name ASC
 	`;
 
@@ -114,6 +116,8 @@ export const getRevenueByProduct = async ({
 		query_params: {
 			org_id: org.id,
 			date_format: dateFormat,
+			rates,
+			target_currency: targetCurrency,
 		},
 		format: "JSON",
 	});
@@ -142,12 +146,14 @@ export const getRevenueProductShare = async ({
 }) => {
 	const ch = getClickhouseClient();
 	const { org } = ctx;
+	const targetCurrency = org.default_currency || "usd";
+	const rates = await getConversionRatesJson({ baseCurrency: targetCurrency });
 
 	const query = `
 		SELECT
 			p.name AS product_name,
-			SUM(i.total / length(i.internal_product_ids)) AS volume,
-			o.default_currency AS currency
+			SUM(${CONVERTED_TOTAL_SPLIT}) AS volume,
+			{target_currency:String} AS currency
 		FROM invoices AS i FINAL
 		ARRAY JOIN i.internal_product_ids AS ipid
 		INNER JOIN (
@@ -158,23 +164,17 @@ export const getRevenueProductShare = async ({
 			SELECT internal_id, org_id, env
 			FROM customers FINAL
 		) AS cus ON cus.internal_id = i.internal_customer_id AND cus.org_id = {org_id:String}
-		INNER JOIN (
-			SELECT id, default_currency
-			FROM organizations FINAL
-		) AS o ON o.id = {org_id:String}
 		WHERE cus.env = 'live'
 			AND i.hosted_invoice_url LIKE '%live%'
 			AND i.status = 'paid'
 			AND i.__action != 'delete'
-		GROUP BY product_name, currency
+		GROUP BY product_name
 		ORDER BY volume DESC
 	`;
 
 	const result = await ch.query({
 		query,
-		query_params: {
-			org_id: org.id,
-		},
+		query_params: { org_id: org.id, rates, target_currency: targetCurrency },
 		format: "JSON",
 	});
 
@@ -196,38 +196,31 @@ export const getRevenueProductShare = async ({
 export const getArpc = async ({ ctx }: { ctx: AutumnContext }) => {
 	const ch = getClickhouseClient();
 	const { org } = ctx;
+	const targetCurrency = org.default_currency || "usd";
+	const rates = await getConversionRatesJson({ baseCurrency: targetCurrency });
 
 	const query = `
 		SELECT
-			formatDateTime(
-				toDateTime(i.created_at / 1000),
-				'%Y-%m'
-			) AS period_label,
-			SUM(i.total) / COUNT(DISTINCT i.internal_customer_id) AS arpc,
+			formatDateTime(toDateTime(i.created_at / 1000), '%Y-%m') AS period_label,
+			SUM(${CONVERTED_TOTAL}) / COUNT(DISTINCT i.internal_customer_id) AS arpc,
 			COUNT(DISTINCT i.internal_customer_id) AS customer_count,
-			o.default_currency AS currency
+			{target_currency:String} AS currency
 		FROM invoices AS i FINAL
 		INNER JOIN (
 			SELECT internal_id, org_id, env
 			FROM customers FINAL
 		) AS cus ON cus.internal_id = i.internal_customer_id AND cus.org_id = {org_id:String}
-		INNER JOIN (
-			SELECT id, default_currency
-			FROM organizations FINAL
-		) AS o ON o.id = {org_id:String}
 		WHERE cus.env = 'live'
 			AND i.hosted_invoice_url LIKE '%live%'
 			AND i.status = 'paid'
 			AND i.__action != 'delete'
-		GROUP BY period_label, currency
+		GROUP BY period_label
 		ORDER BY period_label ASC
 	`;
 
 	const result = await ch.query({
 		query,
-		query_params: {
-			org_id: org.id,
-		},
+		query_params: { org_id: org.id, rates, target_currency: targetCurrency },
 		format: "JSON",
 	});
 
@@ -252,33 +245,30 @@ export const getInvoiceStatus = async ({ ctx }: { ctx: AutumnContext }) => {
 	const ch = getClickhouseClient();
 	const { org } = ctx;
 
+	const targetCurrency = org.default_currency || "usd";
+	const rates = await getConversionRatesJson({ baseCurrency: targetCurrency });
+
 	const query = `
 		SELECT
 			i.status AS status,
 			COUNT(*) AS invoice_count,
-			SUM(i.total) AS total_volume,
-			o.default_currency AS currency
+			SUM(${CONVERTED_TOTAL}) AS total_volume,
+			{target_currency:String} AS currency
 		FROM invoices AS i FINAL
 		INNER JOIN (
 			SELECT internal_id, org_id, env
 			FROM customers FINAL
 		) AS cus ON cus.internal_id = i.internal_customer_id AND cus.org_id = {org_id:String}
-		INNER JOIN (
-			SELECT id, default_currency
-			FROM organizations FINAL
-		) AS o ON o.id = {org_id:String}
 		WHERE cus.env = 'live'
 			AND i.hosted_invoice_url LIKE '%live%'
 			AND i.__action != 'delete'
-		GROUP BY status, currency
+		GROUP BY status
 		ORDER BY total_volume DESC
 	`;
 
 	const result = await ch.query({
 		query,
-		query_params: {
-			org_id: org.id,
-		},
+		query_params: { org_id: org.id, rates, target_currency: targetCurrency },
 		format: "JSON",
 	});
 
@@ -306,6 +296,8 @@ export const getCustomerLeaderboard = async ({
 }) => {
 	const ch = getClickhouseClient();
 	const { org } = ctx;
+	const targetCurrency = org.default_currency || "usd";
+	const rates = await getConversionRatesJson({ baseCurrency: targetCurrency });
 
 	const query = `
 		SELECT
@@ -313,29 +305,25 @@ export const getCustomerLeaderboard = async ({
 			any(cus.name) AS customer_name,
 			any(cus.id) AS customer_id,
 			any(cus.email) AS customer_email,
-			SUM(i.total) AS total_volume,
+			SUM(${CONVERTED_TOTAL}) AS total_volume,
 			COUNT(*) AS invoice_count,
-			o.default_currency AS currency
+			{target_currency:String} AS currency
 		FROM invoices AS i FINAL
 		INNER JOIN (
 			SELECT internal_id, org_id, env, id, name, email
 			FROM customers FINAL
 		) AS cus ON cus.internal_id = i.internal_customer_id AND cus.org_id = {org_id:String}
-		INNER JOIN (
-			SELECT id, default_currency
-			FROM organizations FINAL
-		) AS o ON o.id = {org_id:String}
 		WHERE cus.env = 'live'
 			AND i.hosted_invoice_url LIKE '%live%'
 			AND i.status = 'paid'
 			AND i.__action != 'delete'
-		GROUP BY internal_customer_id, currency
+		GROUP BY internal_customer_id
 		ORDER BY total_volume DESC
 		LIMIT 10
 	`;
 
 	const totalQuery = `
-		SELECT SUM(i.total) AS total_revenue
+		SELECT SUM(${CONVERTED_TOTAL}) AS total_revenue
 		FROM invoices AS i FINAL
 		INNER JOIN (
 			SELECT internal_id, org_id, env
@@ -350,12 +338,12 @@ export const getCustomerLeaderboard = async ({
 	const [result, totalResult] = await Promise.all([
 		ch.query({
 			query,
-			query_params: { org_id: org.id },
+			query_params: { org_id: org.id, rates, target_currency: targetCurrency },
 			format: "JSON",
 		}),
 		ch.query({
 			query: totalQuery,
-			query_params: { org_id: org.id },
+			query_params: { org_id: org.id, rates },
 			format: "JSON",
 		}),
 	]);
