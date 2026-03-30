@@ -1,7 +1,7 @@
 import type { DbOverageAllowed } from "@models/cusModels/billingControls/customerBillingControls.js";
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
 
-/** Extract enabled overage_allowed entries for the requested features from a FullCustomer. */
+/** Extract overage_allowed entries for the requested features from a FullCustomer. */
 export const fullCustomerToOverageAllowedByFeatureId = ({
 	fullCustomer,
 	featureIds,
@@ -24,7 +24,7 @@ export const fullCustomerToOverageAllowedByFeatureId = ({
 
 	for (const featureId of uniqueFeatureIds) {
 		const overageAllowed = scopedOverageAllowed?.find(
-			(candidate) => candidate.feature_id === featureId && candidate.enabled,
+			(candidate) => candidate.feature_id === featureId,
 		);
 
 		if (overageAllowed) {

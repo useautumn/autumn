@@ -37,7 +37,11 @@ export const apiBalanceToAllowed = ({
 		feature,
 	});
 
-	// console.log("Overage allowed control", overageAllowedControl);
+	if (overageAllowedControl?.enabled === false) {
+		if (new Decimal(apiBalance.remaining).gte(requiredBalance))
+			return { allowed: true };
+		return { allowed: false, limitType: "included" };
+	}
 
 	if (apiBalance.overage_allowed || overageAllowedControl?.enabled) {
 		const { availableOverage, reason } = apiBalanceV1ToAvailableOverage({
@@ -45,9 +49,6 @@ export const apiBalanceToAllowed = ({
 			apiSubject,
 			feature,
 		});
-
-		// console.log("Available overage", availableOverage);
-		// console.log("Reason", reason);
 
 		if (notNullish(availableOverage)) {
 			const allowed = new Decimal(availableOverage)

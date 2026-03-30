@@ -19,7 +19,5 @@ export const apiSubjectToOverageAllowedControl = ({
 
 	const overageAllowed = subject.billing_controls.overage_allowed ?? [];
 
-	return overageAllowed.find(
-		(entry) => entry.enabled && entry.feature_id === feature.id,
-	);
+	return overageAllowed.find((entry) => entry.feature_id === feature.id);
 };

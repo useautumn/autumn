@@ -109,18 +109,24 @@ export const prepareFeatureDeduction = ({
 			const isFreeAllocatedUsageAllowed =
 				isFreeAllocated && overageBehaviour !== "reject";
 
-			const billingControlOverageAllowed =
-				overageAllowedByFeatureId[ce.entitlement.feature.id]?.enabled ?? false;
+			const overageAllowedControl =
+				overageAllowedByFeatureId[ce.entitlement.feature.id];
+
+			let effectiveUsageAllowed =
+				ce.usage_allowed || isFreeAllocatedUsageAllowed;
+
+			if (overageAllowedControl?.enabled === true) {
+				effectiveUsageAllowed = true;
+			} else if (overageAllowedControl?.enabled === false) {
+				effectiveUsageAllowed = false;
+			}
 
 			return {
 				customer_entitlement_id: ce.id,
 				credit_cost: creditCost,
 				feature_id: ce.entitlement.feature.id,
 				entity_feature_id: ce.entitlement.entity_feature_id ?? null,
-				usage_allowed:
-					ce.usage_allowed ||
-					isFreeAllocatedUsageAllowed ||
-					billingControlOverageAllowed,
+				usage_allowed: effectiveUsageAllowed,
 				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
 				max_balance: resetBalance,
 			};
