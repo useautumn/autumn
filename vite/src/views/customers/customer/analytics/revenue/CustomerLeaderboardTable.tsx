@@ -94,19 +94,19 @@ const createColumns = ({
 
 export const CustomerLeaderboardTable = ({
 	data,
+	totalRevenue,
 	loading,
 }: {
 	data: LeaderboardRow[];
+	totalRevenue: number;
 	loading: boolean;
 }) => {
 	const navigate = useNavigate();
 
-	const totalVolume = useMemo(
-		() => data.reduce((sum, row) => sum + row.total_volume, 0),
-		[data],
+	const columns = useMemo(
+		() => createColumns({ totalVolume: totalRevenue }),
+		[totalRevenue],
 	);
-
-	const columns = useMemo(() => createColumns({ totalVolume }), [totalVolume]);
 
 	const table = useReactTable({
 		data,
