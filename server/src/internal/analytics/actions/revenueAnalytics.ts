@@ -373,33 +373,90 @@ export const getEstimatedMrr = async ({
 	const ch = getClickhouseClient();
 	const { org } = ctx;
 
+	// Invoice-based MRR with fallback to plan base price.
+	// 1. For each active customer on a PAID product, take their latest paid invoice total
+	// 2. If no invoice yet, use the base price from their customer_price → price chain
+	// 3. Products with no base price row in prices table are free plans → excluded
+	// Normalize all amounts to monthly using the product's billing interval.
 	const query = `
+		WITH active_cus AS (
+			SELECT
+				cp.internal_customer_id,
+				argMax(cp.id, cp.created_at) AS cp_id,
+				argMax(cp.internal_product_id, cp.created_at) AS internal_product_id
+			FROM customer_products AS cp FINAL
+			INNER JOIN (
+				SELECT internal_id
+				FROM customers FINAL
+				WHERE __action != 'delete'
+					AND org_id = {org_id:String}
+					AND env = 'live'
+			) AS cus ON cus.internal_id = cp.internal_customer_id
+			WHERE cp.__action != 'delete'
+				AND cp.canceled = 0
+				AND cp.status = 'active'
+				AND (cp.ended_at IS NULL OR cp.ended_at = 0)
+			GROUP BY cp.internal_customer_id
+		),
+		has_any_invoice AS (
+			SELECT
+				internal_customer_id,
+				1 AS has_invoice
+			FROM invoices FINAL
+			WHERE __action != 'delete'
+				AND status = 'paid'
+				AND hosted_invoice_url LIKE '%live%'
+			GROUP BY internal_customer_id
+		),
+		latest_nonzero_inv AS (
+			SELECT
+				internal_customer_id,
+				argMax(total, created_at) AS latest_total
+			FROM invoices FINAL
+			WHERE __action != 'delete'
+				AND status = 'paid'
+				AND hosted_invoice_url LIKE '%live%'
+				AND total > 0
+			GROUP BY internal_customer_id
+		),
+		cus_base_prices AS (
+			SELECT
+				cp_price.customer_product_id,
+				JSONExtractFloat(pr.config, 'amount') AS base_amount
+			FROM customer_prices AS cp_price FINAL
+			INNER JOIN (
+				SELECT id, config
+				FROM prices FINAL
+				WHERE __action != 'delete'
+					AND org_id = {org_id:String}
+					AND (entitlement_id IS NULL OR entitlement_id = '')
+			) AS pr ON pr.id = cp_price.price_id
+			WHERE cp_price.__action != 'delete'
+		)
 		SELECT
 			SUM(
-				CASE JSONExtractString(pr.config, 'interval')
-					WHEN 'month' THEN JSONExtractFloat(pr.config, 'amount') * cp.quantity
-					WHEN 'quarter' THEN JSONExtractFloat(pr.config, 'amount') * cp.quantity / 3
-					WHEN 'semi_annual' THEN JSONExtractFloat(pr.config, 'amount') * cp.quantity / 6
-					WHEN 'year' THEN JSONExtractFloat(pr.config, 'amount') * cp.quantity / 12
-					WHEN 'week' THEN JSONExtractFloat(pr.config, 'amount') * cp.quantity * 4.33
+				-- effective_amount: use latest non-zero invoice if available,
+				-- else if customer has any invoices (all $0) → they pay $0,
+				-- else (no invoices yet) → fall back to base price from cus_price/price
+				multiIf(
+					li.latest_total IS NOT NULL, li.latest_total,
+					hai.has_invoice IS NOT NULL, 0,
+					cbp.base_amount IS NOT NULL, cbp.base_amount,
+					0
+				)
+				-- normalize to monthly by billing interval
+				* CASE JSONExtractString(pr.config, 'interval')
+					WHEN 'month' THEN 1
+					WHEN 'quarter' THEN 1.0 / 3
+					WHEN 'semi_annual' THEN 1.0 / 6
+					WHEN 'year' THEN 1.0 / 12
+					WHEN 'week' THEN 4.33
 					ELSE 0
 				END
 			) AS estimated_mrr,
-			COUNT(DISTINCT cp.internal_customer_id) AS active_subscriptions,
+			COUNT(DISTINCT ac.internal_customer_id) AS active_subscriptions,
 			o.default_currency AS currency
-		FROM (
-			SELECT
-				internal_customer_id,
-				argMax(id, created_at) AS id,
-				argMax(internal_product_id, created_at) AS internal_product_id,
-				argMax(quantity, created_at) AS quantity
-			FROM customer_products FINAL
-			WHERE __action != 'delete'
-				AND canceled = 0
-				AND status = 'active'
-				AND (ended_at IS NULL OR ended_at = 0)
-			GROUP BY internal_customer_id
-		) AS cp
+		FROM active_cus AS ac
 		INNER JOIN (
 			SELECT
 				internal_product_id,
@@ -409,19 +466,15 @@ export const getEstimatedMrr = async ({
 				AND org_id = {org_id:String}
 				AND (entitlement_id IS NULL OR entitlement_id = '')
 			GROUP BY internal_product_id
-		) AS pr ON pr.internal_product_id = cp.internal_product_id
-		INNER JOIN (
-			SELECT internal_id, org_id, env
-			FROM customers FINAL
-			WHERE __action != 'delete'
-		) AS cus ON cus.internal_id = cp.internal_customer_id
-			AND cus.org_id = {org_id:String}
+		) AS pr ON pr.internal_product_id = ac.internal_product_id
+		LEFT JOIN latest_nonzero_inv AS li ON li.internal_customer_id = ac.internal_customer_id
+		LEFT JOIN has_any_invoice AS hai ON hai.internal_customer_id = ac.internal_customer_id
+		LEFT JOIN cus_base_prices AS cbp ON cbp.customer_product_id = ac.cp_id
 		INNER JOIN (
 			SELECT id, default_currency
 			FROM organizations FINAL
 		) AS o ON o.id = {org_id:String}
-		WHERE cus.env = 'live'
-			AND JSONExtractString(pr.config, 'interval') != 'one_off'
+		WHERE JSONExtractString(pr.config, 'interval') != 'one_off'
 		GROUP BY currency
 	`;
 
