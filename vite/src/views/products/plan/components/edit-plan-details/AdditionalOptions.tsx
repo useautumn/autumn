@@ -61,10 +61,7 @@ export const AdditionalOptions = ({
 					disabledReason={
 						product.is_default
 							? "Cannot mark as add-on while auto-enable is active"
-							: product.planType !== "free" &&
-									!product.items.some((item) => item.interval)
-								? "Add a recurring price to this plan before marking it as an add-on."
-								: undefined
+							: undefined
 					}
 					onCheckedChange={(checked) =>
 						setProduct({
