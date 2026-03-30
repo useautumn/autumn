@@ -34,9 +34,7 @@ const getConfigLocation = () => {
 	const bucket = process.env.REQUEST_BLOCK_CONFIG_S3_BUCKET;
 	const key = process.env.REQUEST_BLOCK_CONFIG_S3_KEY;
 	const region =
-		process.env.REQUEST_BLOCK_CONFIG_S3_REGION ||
-		process.env.AWS_REGION ||
-		DEFAULT_AWS_REGION;
+		process.env.REQUEST_BLOCK_CONFIG_S3_REGION || DEFAULT_AWS_REGION;
 
 	return {
 		bucket,
