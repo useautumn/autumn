@@ -1,8 +1,8 @@
 [project]
 name = "autumn-sdk"
-version = "0.4.18"
-description = "Python SDK for the Autumn billing API"
-authors = [{ name = "Autumn" },]
+version = "1.0.0"
+description = "The official Python SDK for the Autumn billing API"
+authors = [{ name = "Autumn", email = "hey@useautumn.com" }]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -10,7 +10,22 @@ dependencies = [
     "httpx >=0.28.1",
     "pydantic >=2.11.2",
 ]
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://useautumn.com"
+Documentation = "https://docs.useautumn.com"
+Repository = "https://github.com/useautumn/autumn"
 
 [dependency-groups]
 dev = [
