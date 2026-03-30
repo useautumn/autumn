@@ -7,6 +7,14 @@ import { Decimal } from "decimal.js";
 import type { ApiBalanceBreakdownV1, ApiBalanceV1 } from "../../apiBalanceV1";
 import { apiBalanceV1ToOverage } from "./apiBalanceV1ToOverage";
 
+const NOT_USAGE_BASED = -1;
+
+/**
+ * Returns the max overage for a single breakdown item.
+ * - Usage-based: returns `max_purchase` (number) or `undefined` if uncapped.
+ * - Non-usage-based (free/prepaid/lifetime): returns `NOT_USAGE_BASED` sentinel
+ *   so the caller can distinguish "not relevant" from "capped at 0" (`max_purchase: 0`).
+ */
 export const apiBalanceBreakdownV1ToMaxOverage = ({
 	apiBalanceBreakdown,
 }: {
@@ -16,9 +24,15 @@ export const apiBalanceBreakdownV1ToMaxOverage = ({
 		return apiBalanceBreakdown.price?.max_purchase ?? undefined;
 	}
 
-	return undefined;
+	return NOT_USAGE_BASED;
 };
 
+/**
+ * Aggregates max overage across all breakdowns for a balance.
+ * Only usage-based breakdowns contribute; non-usage breakdowns are ignored.
+ * Returns `undefined` when there are no usage-based breakdowns or any
+ * usage-based breakdown has no `max_purchase` (meaning overage is uncapped).
+ */
 export const apiBalanceV1ToMaxOverage = ({
 	apiBalance,
 }: {
@@ -26,17 +40,19 @@ export const apiBalanceV1ToMaxOverage = ({
 }): number | undefined => {
 	const breakdownItems = apiBalance.breakdown ?? [];
 
-	const availableOverages = breakdownItems.map((item) =>
-		apiBalanceBreakdownV1ToMaxOverage({ apiBalanceBreakdown: item }),
-	);
+	const usageBasedOverages = breakdownItems
+		.map((item) =>
+			apiBalanceBreakdownV1ToMaxOverage({ apiBalanceBreakdown: item }),
+		)
+		.filter((value) => value !== NOT_USAGE_BASED);
 
-	if (availableOverages.some((overage) => overage === undefined)) {
+	if (usageBasedOverages.length === 0) return undefined;
+
+	if (usageBasedOverages.some((overage) => overage === undefined)) {
 		return undefined;
 	}
 
-	return sumValues(
-		availableOverages.filter((overage) => overage !== undefined),
-	);
+	return sumValues(usageBasedOverages.filter((v) => v !== undefined));
 };
 
 export type AvailableOverageResult = {
