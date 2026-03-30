@@ -95,6 +95,7 @@ export const listPlansExpiryDurationTypeSchema = openEnumSchema;
 
 export const listPlansRolloverSchema = z.object({
 	max: z.number().nullable(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional().nullable(),
 	expiryDurationType: listPlansExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });

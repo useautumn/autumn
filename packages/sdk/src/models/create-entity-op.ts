@@ -74,6 +74,17 @@ export type CreateEntityUsageAlertRequestBody = {
   name?: string | undefined;
 };
 
+export type CreateEntityOverageAllowedRequest = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
 /**
  * Billing controls for the entity.
  */
@@ -86,6 +97,10 @@ export type CreateEntityBillingControlsRequest = {
    * List of usage alert configurations per feature.
    */
   usageAlerts?: Array<CreateEntityUsageAlertRequestBody> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CreateEntityOverageAllowedRequest> | undefined;
 };
 
 export type CreateEntityParams = {
@@ -366,6 +381,17 @@ export type CreateEntityUsageAlertResponse = {
   name?: string | undefined;
 };
 
+export type CreateEntityOverageAllowedResponse = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
 /**
  * Billing controls for the entity.
  */
@@ -378,6 +404,10 @@ export type CreateEntityBillingControlsResponse = {
    * List of usage alert configurations per feature.
    */
   usageAlerts?: Array<CreateEntityUsageAlertResponse> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CreateEntityOverageAllowedResponse> | undefined;
 };
 
 export type CreateEntityInvoice = {
@@ -533,9 +563,44 @@ export function createEntityUsageAlertRequestBodyToJSON(
 }
 
 /** @internal */
+export type CreateEntityOverageAllowedRequest$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const CreateEntityOverageAllowedRequest$outboundSchema: z.ZodMiniType<
+  CreateEntityOverageAllowedRequest$Outbound,
+  CreateEntityOverageAllowedRequest
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function createEntityOverageAllowedRequestToJSON(
+  createEntityOverageAllowedRequest: CreateEntityOverageAllowedRequest,
+): string {
+  return JSON.stringify(
+    CreateEntityOverageAllowedRequest$outboundSchema.parse(
+      createEntityOverageAllowedRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateEntityBillingControlsRequest$Outbound = {
   spend_limits?: Array<CreateEntitySpendLimitRequest$Outbound> | undefined;
   usage_alerts?: Array<CreateEntityUsageAlertRequestBody$Outbound> | undefined;
+  overage_allowed?:
+    | Array<CreateEntityOverageAllowedRequest$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -550,11 +615,15 @@ export const CreateEntityBillingControlsRequest$outboundSchema: z.ZodMiniType<
     usageAlerts: z.optional(
       z.array(z.lazy(() => CreateEntityUsageAlertRequestBody$outboundSchema)),
     ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => CreateEntityOverageAllowedRequest$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       spendLimits: "spend_limits",
       usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
     });
   }),
 );
@@ -886,6 +955,33 @@ export function createEntityUsageAlertResponseFromJSON(
 }
 
 /** @internal */
+export const CreateEntityOverageAllowedResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityOverageAllowedResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function createEntityOverageAllowedResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityOverageAllowedResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateEntityOverageAllowedResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityOverageAllowedResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateEntityBillingControlsResponse$inboundSchema: z.ZodMiniType<
   CreateEntityBillingControlsResponse,
   unknown
@@ -897,11 +993,15 @@ export const CreateEntityBillingControlsResponse$inboundSchema: z.ZodMiniType<
     usage_alerts: types.optional(
       z.array(z.lazy(() => CreateEntityUsageAlertResponse$inboundSchema)),
     ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => CreateEntityOverageAllowedResponse$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "spend_limits": "spendLimits",
       "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
     });
   }),
 );

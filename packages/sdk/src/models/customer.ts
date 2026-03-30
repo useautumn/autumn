@@ -130,6 +130,17 @@ export type CustomerUsageAlert = {
   name?: string | undefined;
 };
 
+export type CustomerOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -146,6 +157,10 @@ export type CustomerBillingControls = {
    * List of usage alert configurations per feature.
    */
   usageAlerts?: Array<CustomerUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CustomerOverageAllowed> | undefined;
 };
 
 /**
@@ -722,6 +737,32 @@ export function customerUsageAlertFromJSON(
 }
 
 /** @internal */
+export const CustomerOverageAllowed$inboundSchema: z.ZodMiniType<
+  CustomerOverageAllowed,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function customerOverageAllowedFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerOverageAllowed, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerOverageAllowed$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerOverageAllowed' from JSON`,
+  );
+}
+
+/** @internal */
 export const CustomerBillingControls$inboundSchema: z.ZodMiniType<
   CustomerBillingControls,
   unknown
@@ -736,12 +777,16 @@ export const CustomerBillingControls$inboundSchema: z.ZodMiniType<
     usage_alerts: types.optional(
       z.array(z.lazy(() => CustomerUsageAlert$inboundSchema)),
     ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => CustomerOverageAllowed$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "auto_topups": "autoTopups",
       "spend_limits": "spendLimits",
       "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
     });
   }),
 );

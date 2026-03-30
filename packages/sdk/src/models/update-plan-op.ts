@@ -236,6 +236,10 @@ export type UpdatePlanRolloverRequest = {
    */
   max?: number | undefined;
   /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
    * When rolled over units expire.
    */
   expiryDurationType: UpdatePlanExpiryDurationTypeRequest;
@@ -612,6 +616,10 @@ export type UpdatePlanRolloverResponse = {
    * Maximum rollover units. Null for unlimited rollover.
    */
   max: number | null;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | null | undefined;
   /**
    * When rolled over units expire.
    */
@@ -1038,6 +1046,7 @@ export const UpdatePlanExpiryDurationTypeRequest$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type UpdatePlanRolloverRequest$Outbound = {
   max?: number | undefined;
+  max_percentage?: number | undefined;
   expiry_duration_type: string;
   expiry_duration_length?: number | undefined;
 };
@@ -1049,11 +1058,13 @@ export const UpdatePlanRolloverRequest$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
     expiryDurationType: UpdatePlanExpiryDurationTypeRequest$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      maxPercentage: "max_percentage",
       expiryDurationType: "expiry_duration_type",
       expiryDurationLength: "expiry_duration_length",
     });
@@ -1483,11 +1494,13 @@ export const UpdatePlanRolloverResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     max: types.nullable(types.number()),
+    max_percentage: z.optional(z.nullable(types.number())),
     expiry_duration_type: UpdatePlanExpiryDurationTypeResponse$inboundSchema,
     expiry_duration_length: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      "max_percentage": "maxPercentage",
       "expiry_duration_type": "expiryDurationType",
       "expiry_duration_length": "expiryDurationLength",
     });

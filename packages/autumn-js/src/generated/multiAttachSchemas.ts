@@ -36,6 +36,11 @@ export const multiAttachSpendLimitSchema = z.object({
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const multiAttachOverageAllowedSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
 export const multiAttachInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -83,6 +88,7 @@ export const multiAttachProrationOutboundSchema = z.object({
 
 export const multiAttachRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -160,12 +166,20 @@ export const multiAttachUsageAlertOutboundSchema = z.object({
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const multiAttachOverageAllowedOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+});
+
 export const multiAttachBillingControlsOutboundSchema = z.object({
 	spend_limits: z
 		.union([z.array(multiAttachSpendLimitOutboundSchema), z.undefined()])
 		.optional(),
 	usage_alerts: z
 		.union([z.array(multiAttachUsageAlertOutboundSchema), z.undefined()])
+		.optional(),
+	overage_allowed: z
+		.union([z.array(multiAttachOverageAllowedOutboundSchema), z.undefined()])
 		.optional(),
 });
 
@@ -232,6 +246,7 @@ export const multiAttachExpiryDurationTypeSchema = closedEnumSchema;
 
 export const multiAttachRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: multiAttachExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -294,6 +309,9 @@ export const multiAttachBillingControlsSchema = z.object({
 		.optional(),
 	usageAlerts: z
 		.union([z.array(multiAttachUsageAlertSchema), z.undefined()])
+		.optional(),
+	overageAllowed: z
+		.union([z.array(multiAttachOverageAllowedSchema), z.undefined()])
 		.optional(),
 });
 
