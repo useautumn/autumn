@@ -52,6 +52,7 @@ export const ApiCustomerV1Schema = z.object({
 	entitlements: z.array(ApiCusFeatureV1Schema),
 	invoices: z.array(ApiInvoiceV0Schema),
 	trials_used: z.array(ApiTrialsUsedV0Schema).optional(),
+	payment_method: z.any().nullish(),
 });
 
 export type ApiCustomerV1 = z.infer<typeof ApiCustomerV1Schema>;
