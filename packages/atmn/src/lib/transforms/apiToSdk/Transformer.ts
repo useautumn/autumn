@@ -98,6 +98,18 @@ export class Transformer<TInput = unknown, TOutput = unknown> {
 		// Track which fields should swap false to undefined
 		const swapFalseSet = new Set(mapping.swapFalse || []);
 
+		// Helper to safely set properties on the output object
+		const safeSet = (field: string, value: unknown) => {
+			if (
+				field === "__proto__" ||
+				field === "constructor" ||
+				field === "prototype"
+			) {
+				return;
+			}
+			output[field] = value;
+		};
+
 		// 1. Copy fields
 		if (mapping.copy) {
 			for (const field of mapping.copy) {
@@ -113,7 +125,7 @@ export class Transformer<TInput = unknown, TOutput = unknown> {
 						// Don't set the field (undefined)
 						continue;
 					}
-					output[field] = value;
+					safeSet(field, value);
 				}
 			}
 		}
@@ -133,7 +145,7 @@ export class Transformer<TInput = unknown, TOutput = unknown> {
 						// Don't set the field (undefined)
 						continue;
 					}
-					output[sdkField] = value;
+					safeSet(sdkField, value);
 				}
 			}
 		}
@@ -153,7 +165,7 @@ export class Transformer<TInput = unknown, TOutput = unknown> {
 						// Don't set the field (undefined)
 						continue;
 					}
-					output[flatName] = value;
+					safeSet(flatName, value);
 				}
 			}
 		}
@@ -163,7 +175,7 @@ export class Transformer<TInput = unknown, TOutput = unknown> {
 			for (const [sdkField, computeFn] of Object.entries(mapping.compute)) {
 				const value = computeFn(input);
 				if (value !== undefined) {
-					output[sdkField] = value;
+					safeSet(sdkField, value);
 				}
 			}
 		}
@@ -176,8 +188,9 @@ export class Transformer<TInput = unknown, TOutput = unknown> {
 				const apiArray = this.getNestedValue(input, config.from);
 				if (Array.isArray(apiArray)) {
 					const transformer = new Transformer(config.transform);
-					output[sdkField] = apiArray.map((item) =>
-						transformer.transform(item),
+					safeSet(
+						sdkField,
+						apiArray.map((item) => transformer.transform(item)),
 					);
 				}
 			}
@@ -187,7 +200,7 @@ export class Transformer<TInput = unknown, TOutput = unknown> {
 		if (mapping.defaults) {
 			for (const [field, defaultValue] of Object.entries(mapping.defaults)) {
 				if (output[field] === undefined || output[field] === null) {
-					output[field] = defaultValue;
+					safeSet(field, defaultValue);
 				}
 			}
 		}
@@ -206,11 +219,19 @@ export class Transformer<TInput = unknown, TOutput = unknown> {
 			if (value === null || value === undefined) {
 				return undefined;
 			}
+			if (
+				part === "__proto__" ||
+				part === "constructor" ||
+				part === "prototype"
+			) {
+				return undefined;
+			}
 			value = (value as Record<string, unknown>)[part];
 		}
 
 		return value;
 	}
+
 }
 
 /**
