@@ -7,7 +7,9 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
+	getRolloverFields,
 	nullish,
+	sumValues,
 } from "@autumn/shared";
 
 export interface FeatureUsageBalanceParams {
@@ -21,6 +23,7 @@ export interface FeatureUsageBalanceResult {
 	allowance: number;
 	initialAllowance: number;
 	balance: number;
+	rolloverBalance: number;
 	shouldShowOutOfBalance: boolean;
 	shouldShowUsed: boolean;
 	isUnlimited: boolean;
@@ -59,7 +62,7 @@ export function useFeatureUsageBalance({
 	const allowance = cusEntsToGrantedBalance({
 		cusEnts,
 		entityId: entityId ?? undefined,
-		withRollovers: true,
+		withRollovers: false,
 	});
 
 	const prepaidAllowance = cusEntsToPrepaidQuantity({
@@ -70,13 +73,21 @@ export function useFeatureUsageBalance({
 	const balance = cusEntsToBalance({
 		cusEnts,
 		entityId: entityId ?? undefined,
-		withRollovers: true,
+		withRollovers: false,
 	});
 
 	const shouldShowOutOfBalance =
 		allowance + prepaidAllowance > 0 || balance > 0;
 	const shouldShowUsed =
 		balance < 0 || ((balance ?? 0) === 0 && (allowance ?? 0) <= 0);
+
+	const rolloverBalance = sumValues(
+		cusEnts.map(
+			(cusEnt) =>
+				getRolloverFields({ cusEnt, entityId: entityId ?? undefined })
+					?.balance ?? 0,
+		),
+	);
 
 	const isUnlimited = cusEnts.some((e) => e.unlimited);
 	const usageType = cusEnts[0]?.entitlement?.feature?.config?.usage_type;
@@ -89,6 +100,7 @@ export function useFeatureUsageBalance({
 		allowance: allowance + prepaidAllowance,
 		initialAllowance: initialAllowance + prepaidAllowance,
 		balance: balance ?? 0,
+		rolloverBalance,
 		shouldShowOutOfBalance,
 		shouldShowUsed,
 		isUnlimited,

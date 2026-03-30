@@ -4,6 +4,7 @@ import {
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
+	getRolloverFields,
 	isUnlimitedCusEnt,
 	numberWithCommas,
 } from "@autumn/shared";
@@ -327,6 +328,9 @@ function SetBalanceFields({
 	const balance = useStore(form.store, (s) => s.values.balance);
 	const gpb = useStore(form.store, (s) => s.values.grantedAndPurchasedBalance);
 
+	const rolloverBalance =
+		getRolloverFields({ cusEnt: selectedCusEnt })?.balance ?? 0;
+
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex items-end gap-2 w-full">
@@ -366,6 +370,11 @@ function SetBalanceFields({
 						<span className="truncate">
 							{numberWithCommas((gpb ?? 0) - (balance ?? 0))} used
 						</span>
+						{/* {rolloverBalance > 0 && (
+							<span className="truncate">
+								+{numberWithCommas(rolloverBalance)} rollover
+							</span>
+						)} */}
 					</div>
 				</div>
 			</div>
@@ -564,4 +573,3 @@ function hasBalanceChanges({
 		false
 	);
 }
-

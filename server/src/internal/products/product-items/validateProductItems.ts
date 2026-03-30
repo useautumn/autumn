@@ -257,6 +257,28 @@ const validateProductItem = ({
 			}
 		}
 
+		// Validate rollover max_percentage
+		if (notNullish(rollover.max_percentage)) {
+			if (rollover.max_percentage <= 0 || rollover.max_percentage > 100) {
+				throw new RecaseError({
+					message:
+						"Rollover max_percentage must be between 0 (exclusive) and 100 (inclusive)",
+					code: ErrCode.InvalidInputs,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+		}
+
+		// max and max_percentage are mutually exclusive
+		if (notNullish(rollover.max) && notNullish(rollover.max_percentage)) {
+			throw new RecaseError({
+				message:
+					"Rollover max and max_percentage are mutually exclusive. Set one or the other, not both.",
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
 		// Validate rollover length for monthly durations
 		if (rollover.duration === RolloverExpiryDurationType.Month) {
 			if (typeof rollover.length !== "number" || rollover.length < 0) {

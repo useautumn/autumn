@@ -42,6 +42,11 @@ export type CustomerLeaderboardRow = {
 	currency: string;
 };
 
+export type CustomerLeaderboardResult = {
+	rows: CustomerLeaderboardRow[];
+	total_revenue: number;
+};
+
 // ── Helpers ──────────────────────────────────────────────────────────
 
 const GRANULARITY_FORMAT: Record<string, string> = {
@@ -329,13 +334,31 @@ export const getCustomerLeaderboard = async ({
 		LIMIT 10
 	`;
 
-	const result = await ch.query({
-		query,
-		query_params: {
-			org_id: org.id,
-		},
-		format: "JSON",
-	});
+	const totalQuery = `
+		SELECT SUM(i.total) AS total_revenue
+		FROM invoices AS i FINAL
+		INNER JOIN (
+			SELECT internal_id, org_id, env
+			FROM customers FINAL
+		) AS cus ON cus.internal_id = i.internal_customer_id AND cus.org_id = {org_id:String}
+		WHERE cus.env = 'live'
+			AND i.hosted_invoice_url LIKE '%live%'
+			AND i.status = 'paid'
+			AND i.__action != 'delete'
+	`;
+
+	const [result, totalResult] = await Promise.all([
+		ch.query({
+			query,
+			query_params: { org_id: org.id },
+			format: "JSON",
+		}),
+		ch.query({
+			query: totalQuery,
+			query_params: { org_id: org.id },
+			format: "JSON",
+		}),
+	]);
 
 	const resultJson = (await result.json()) as ClickHouseResult<{
 		internal_customer_id: string;
@@ -347,7 +370,11 @@ export const getCustomerLeaderboard = async ({
 		currency: string;
 	}>;
 
-	return resultJson.data.map((row) => ({
+	const totalJson = (await totalResult.json()) as ClickHouseResult<{
+		total_revenue: string;
+	}>;
+
+	const rows = resultJson.data.map((row) => ({
 		internal_customer_id: row.internal_customer_id,
 		customer_name: row.customer_name,
 		customer_id: row.customer_id,
@@ -356,6 +383,11 @@ export const getCustomerLeaderboard = async ({
 		invoice_count: Number(row.invoice_count),
 		currency: row.currency,
 	})) as CustomerLeaderboardRow[];
+
+	return {
+		rows,
+		total_revenue: Number(totalJson.data[0]?.total_revenue ?? 0),
+	} as CustomerLeaderboardResult;
 };
 
 // ── 6. Estimated MRR (current snapshot) ─────────────────────────────
