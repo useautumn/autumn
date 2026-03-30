@@ -48,7 +48,7 @@ export const RevenueMetricsSection = () => {
 					</Badge>
 				</div>
 				<span className="text-xs text-t4 flex items-center">
-					Invoice data may be incomplete
+					Invoice data may be incomplete, and may be up to 24 hours behind.
 				</span>
 			</div>
 
@@ -78,7 +78,8 @@ export const RevenueMetricsSection = () => {
 			<ArpcChart data={arpc.data ?? []} loading={arpc.isLoading} />
 
 			<CustomerLeaderboardTable
-				data={leaderboard.data ?? []}
+				data={leaderboard.data?.rows ?? []}
+				totalRevenue={leaderboard.data?.total_revenue ?? 0}
 				loading={leaderboard.isLoading}
 			/>
 		</div>

@@ -11,6 +11,38 @@ import { STAGGER_ITEM_LAYOUT } from "@/components/forms/update-subscription-v2/c
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 
+export function getPlanItemPrepaidQuantity({
+	featureId,
+	prepaidOptions,
+	initialPrepaidOptions,
+	existingOptions,
+	features,
+}: {
+	featureId: string;
+	prepaidOptions: Record<string, number>;
+	initialPrepaidOptions: Record<string, number>;
+	existingOptions?: FeatureOptions[];
+	features: Feature[];
+}) {
+	const formQuantity = prepaidOptions[featureId];
+	if (formQuantity !== undefined) return formQuantity;
+
+	const initialQuantity = initialPrepaidOptions[featureId];
+	if (initialQuantity !== undefined) return initialQuantity;
+
+	if (!existingOptions) return undefined;
+
+	const featureForOptions = features?.find((f) => f.id === featureId);
+	if (!featureForOptions) return undefined;
+
+	const prepaidOption = featureToOptions({
+		feature: featureForOptions,
+		options: existingOptions,
+	});
+
+	return prepaidOption?.quantity;
+}
+
 export function PlanItemRow({
 	item,
 	index,
@@ -41,17 +73,13 @@ export function PlanItemRow({
 	const featureId = item.feature_id;
 	const isPrepaid = item.usage_model === UsageModel.Prepaid;
 
-	let currentPrepaidQuantity: number | undefined;
-	if (isPrepaid) {
-		currentPrepaidQuantity = prepaidOptions[featureId];
-	} else if (existingOptions) {
-		const featureForOptions = features?.find((f) => f.id === featureId);
-		const prepaidOption = featureToOptions({
-			feature: featureForOptions,
-			options: existingOptions,
-		});
-		currentPrepaidQuantity = prepaidOption?.quantity;
-	}
+	const currentPrepaidQuantity = getPlanItemPrepaidQuantity({
+		featureId,
+		prepaidOptions,
+		initialPrepaidOptions,
+		existingOptions: isPrepaid ? undefined : existingOptions,
+		features,
+	});
 
 	const initialPrepaidQuantity = isPrepaid
 		? initialPrepaidOptions[featureId]

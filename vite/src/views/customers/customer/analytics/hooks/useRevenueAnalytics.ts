@@ -41,6 +41,11 @@ export type CustomerLeaderboardRow = {
 	currency: string;
 };
 
+export type CustomerLeaderboardResult = {
+	rows: CustomerLeaderboardRow[];
+	total_revenue: number;
+};
+
 export const useRevenueByProduct = ({
 	granularity,
 }: {
@@ -158,7 +163,7 @@ export const useCustomerLeaderboard = () => {
 				"/query/revenue/customer-leaderboard",
 				{},
 			);
-			return data as CustomerLeaderboardRow[];
+			return data as CustomerLeaderboardResult;
 		},
 		staleTime: 5 * 60 * 1000,
 		enabled: env === "live",

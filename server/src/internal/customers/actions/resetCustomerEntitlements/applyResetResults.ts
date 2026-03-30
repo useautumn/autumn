@@ -1,6 +1,6 @@
 import type {
+	FullCusEntWithProduct,
 	FullCustomer,
-	FullCustomerEntitlement,
 	Rollover,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -13,21 +13,25 @@ export type RolloverClearingInfo = {
 	overwrites: Rollover[];
 };
 
-/** Find a cusEnt on the FullCustomer by ID. */
+/** Find a cusEnt on the FullCustomer by ID, attaching the parent cusProduct.
+ *  Uses Object.assign to preserve the original reference so in-place mutations
+ *  (balance, rollovers, etc.) propagate back to the FullCustomer object. */
 const findCusEnt = ({
 	fullCus,
 	cusEntId,
 }: {
 	fullCus: FullCustomer;
 	cusEntId: string;
-}): FullCustomerEntitlement | null => {
+}): FullCusEntWithProduct | null => {
 	for (const cusProduct of fullCus.customer_products) {
 		for (const cusEnt of cusProduct.customer_entitlements) {
-			if (cusEnt.id === cusEntId) return cusEnt;
+			if (cusEnt.id === cusEntId)
+				return Object.assign(cusEnt, { customer_product: cusProduct });
 		}
 	}
 	for (const cusEnt of fullCus.extra_customer_entitlements || []) {
-		if (cusEnt.id === cusEntId) return cusEnt;
+		if (cusEnt.id === cusEntId)
+			return Object.assign(cusEnt, { customer_product: null });
 	}
 	return null;
 };
