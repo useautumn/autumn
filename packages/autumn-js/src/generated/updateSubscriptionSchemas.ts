@@ -82,6 +82,7 @@ export const billingUpdateProrationOutboundSchema = z.object({
 
 export const billingUpdateRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -205,6 +206,7 @@ export const billingUpdateExpiryDurationTypeSchema = closedEnumSchema;
 
 export const billingUpdateRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: billingUpdateExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });

@@ -119,6 +119,17 @@ export type GetOrCreateCustomerUsageAlert = {
   name?: string | undefined;
 };
 
+export type GetOrCreateCustomerOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -135,6 +146,10 @@ export type GetOrCreateCustomerBillingControls = {
    * List of usage alert configurations per feature.
    */
   usageAlerts?: Array<GetOrCreateCustomerUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<GetOrCreateCustomerOverageAllowed> | undefined;
 };
 
 export type GetOrCreateCustomerParams = {
@@ -341,10 +356,45 @@ export function getOrCreateCustomerUsageAlertToJSON(
 }
 
 /** @internal */
+export type GetOrCreateCustomerOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const GetOrCreateCustomerOverageAllowed$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerOverageAllowed$Outbound,
+  GetOrCreateCustomerOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function getOrCreateCustomerOverageAllowedToJSON(
+  getOrCreateCustomerOverageAllowed: GetOrCreateCustomerOverageAllowed,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerOverageAllowed$outboundSchema.parse(
+      getOrCreateCustomerOverageAllowed,
+    ),
+  );
+}
+
+/** @internal */
 export type GetOrCreateCustomerBillingControls$Outbound = {
   auto_topups?: Array<GetOrCreateCustomerAutoTopup$Outbound> | undefined;
   spend_limits?: Array<GetOrCreateCustomerSpendLimit$Outbound> | undefined;
   usage_alerts?: Array<GetOrCreateCustomerUsageAlert$Outbound> | undefined;
+  overage_allowed?:
+    | Array<GetOrCreateCustomerOverageAllowed$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -362,12 +412,16 @@ export const GetOrCreateCustomerBillingControls$outboundSchema: z.ZodMiniType<
     usageAlerts: z.optional(
       z.array(z.lazy(() => GetOrCreateCustomerUsageAlert$outboundSchema)),
     ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => GetOrCreateCustomerOverageAllowed$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       autoTopups: "auto_topups",
       spendLimits: "spend_limits",
       usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
     });
   }),
 );

@@ -11,6 +11,11 @@ export const getOrCreateCustomerSpendLimitSchema = z.object({
 	overageLimit: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const getOrCreateCustomerOverageAllowedSchema = z.object({
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
 export const getOrCreateCustomerPurchaseLimitOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.number(),
@@ -41,6 +46,11 @@ export const getOrCreateCustomerUsageAlertOutboundSchema = z.object({
 	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const getOrCreateCustomerOverageAllowedOutboundSchema = z.object({
+	feature_id: z.string(),
+	enabled: z.boolean(),
+});
+
 export const getOrCreateCustomerBillingControlsOutboundSchema = z.object({
 	auto_topups: z
 		.union([z.array(getOrCreateCustomerAutoTopupOutboundSchema), z.undefined()])
@@ -54,6 +64,12 @@ export const getOrCreateCustomerBillingControlsOutboundSchema = z.object({
 	usage_alerts: z
 		.union([
 			z.array(getOrCreateCustomerUsageAlertOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	overage_allowed: z
+		.union([
+			z.array(getOrCreateCustomerOverageAllowedOutboundSchema),
 			z.undefined(),
 		])
 		.optional(),
@@ -117,6 +133,9 @@ export const getOrCreateCustomerBillingControlsSchema = z.object({
 		.optional(),
 	usageAlerts: z
 		.union([z.array(getOrCreateCustomerUsageAlertSchema), z.undefined()])
+		.optional(),
+	overageAllowed: z
+		.union([z.array(getOrCreateCustomerOverageAllowedSchema), z.undefined()])
 		.optional(),
 });
 

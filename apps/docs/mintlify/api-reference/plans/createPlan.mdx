@@ -276,6 +276,10 @@ await autumn.plans.create({
           Max rollover units. Omit for unlimited rollover.
         </DynamicParamField>
 
+        <DynamicParamField body="max_percentage" type="number">
+          Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+        </DynamicParamField>
+
         <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
           When rolled over units expire.
         </DynamicParamField>
@@ -505,6 +509,10 @@ await autumn.plans.create({
       <Expandable title="properties">
         <DynamicResponseField name="max" type="number | null">
           Maximum rollover units. Null for unlimited rollover.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="max_percentage" type="number | null">
+          Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
         </DynamicResponseField>
 
         <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'">

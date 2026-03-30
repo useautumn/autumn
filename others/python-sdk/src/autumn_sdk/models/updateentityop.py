@@ -37,7 +37,7 @@ class UpdateEntityGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -73,7 +73,7 @@ class UpdateEntitySpendLimitRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -126,7 +126,38 @@ class UpdateEntityUsageAlertRequestBody(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdateEntityOverageAllowedRequestTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether overage is allowed for this feature."""
+
+
+class UpdateEntityOverageAllowedRequest(BaseModel):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether overage is allowed for this feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -142,6 +173,8 @@ class UpdateEntityBillingControlsRequestTypedDict(TypedDict):
     r"""List of overage spend limits per feature."""
     usage_alerts: NotRequired[List[UpdateEntityUsageAlertRequestBodyTypedDict]]
     r"""List of usage alert configurations per feature."""
+    overage_allowed: NotRequired[List[UpdateEntityOverageAllowedRequestTypedDict]]
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
 
 class UpdateEntityBillingControlsRequest(BaseModel):
@@ -153,15 +186,18 @@ class UpdateEntityBillingControlsRequest(BaseModel):
     usage_alerts: Optional[List[UpdateEntityUsageAlertRequestBody]] = None
     r"""List of usage alert configurations per feature."""
 
+    overage_allowed: Optional[List[UpdateEntityOverageAllowedRequest]] = None
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["spend_limits", "usage_alerts"])
+        optional_fields = set(["spend_limits", "usage_alerts", "overage_allowed"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -197,7 +233,7 @@ class UpdateEntityParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -315,7 +351,7 @@ class UpdateEntitySubscription(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -368,7 +404,7 @@ class UpdateEntityPurchase(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -438,7 +474,7 @@ class UpdateEntityDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -511,7 +547,7 @@ class UpdateEntityFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -558,7 +594,7 @@ class UpdateEntityFlags(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -602,7 +638,7 @@ class UpdateEntitySpendLimitResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -658,7 +694,38 @@ class UpdateEntityUsageAlertResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdateEntityOverageAllowedResponseTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether overage is allowed for this feature."""
+
+
+class UpdateEntityOverageAllowedResponse(BaseModel):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether overage is allowed for this feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -674,6 +741,8 @@ class UpdateEntityBillingControlsResponseTypedDict(TypedDict):
     r"""List of overage spend limits per feature."""
     usage_alerts: NotRequired[List[UpdateEntityUsageAlertResponseTypedDict]]
     r"""List of usage alert configurations per feature."""
+    overage_allowed: NotRequired[List[UpdateEntityOverageAllowedResponseTypedDict]]
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
 
 class UpdateEntityBillingControlsResponse(BaseModel):
@@ -685,15 +754,18 @@ class UpdateEntityBillingControlsResponse(BaseModel):
     usage_alerts: Optional[List[UpdateEntityUsageAlertResponse]] = None
     r"""List of usage alert configurations per feature."""
 
+    overage_allowed: Optional[List[UpdateEntityOverageAllowedResponse]] = None
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["spend_limits", "usage_alerts"])
+        optional_fields = set(["spend_limits", "usage_alerts", "overage_allowed"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -750,7 +822,7 @@ class UpdateEntityInvoice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -838,7 +910,7 @@ class UpdateEntityResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

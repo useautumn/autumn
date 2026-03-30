@@ -64,6 +64,20 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       </Expandable>
     </DynamicParamField>
 
+    <DynamicParamField body="overage_allowed" type="object[]">
+      List of overage allowed controls per feature. When enabled, usage can exceed balance.
+      <Expandable title="properties">
+        <DynamicParamField body="feature_id" type="string" required>
+          The feature ID this overage allowed control applies to.
+        </DynamicParamField>
+
+        <DynamicParamField body="enabled" type="boolean">
+          Whether overage is allowed for this feature.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
   </Expandable>
 </DynamicParamField>
 
@@ -297,6 +311,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
               <Expandable title="properties">
                 <DynamicResponseField name="max" type="number | null">
                   Maximum rollover units. Null for unlimited rollover.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="max_percentage" type="number | null">
+                  Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
                 </DynamicResponseField>
 
                 <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'">
@@ -625,6 +643,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
               <Expandable title="properties">
                 <DynamicResponseField name="max" type="number | null">
                   Maximum rollover units. Null for unlimited rollover.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="max_percentage" type="number | null">
+                  Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
                 </DynamicResponseField>
 
                 <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'">
@@ -1038,6 +1060,20 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
         <DynamicResponseField name="name" type="string">
           Optional user-defined label to distinguish multiple alerts on the same feature.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="overage_allowed" type="object[]">
+      List of overage allowed controls per feature. When enabled, usage can exceed balance.
+      <Expandable title="properties">
+        <DynamicResponseField name="feature_id" type="string">
+          The feature ID this overage allowed control applies to.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="enabled" type="boolean">
+          Whether overage is allowed for this feature.
         </DynamicResponseField>
 
       </Expandable>

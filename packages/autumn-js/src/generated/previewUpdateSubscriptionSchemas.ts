@@ -162,6 +162,7 @@ export const previewUpdateProrationOutboundSchema = z.object({
 
 export const previewUpdateRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -290,6 +291,7 @@ export const previewUpdateExpiryDurationTypeSchema = closedEnumSchema;
 
 export const previewUpdateRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: previewUpdateExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });

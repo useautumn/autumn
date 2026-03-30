@@ -35,7 +35,7 @@ class CreatePlanGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -86,7 +86,7 @@ class CreatePlanPriceRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -135,7 +135,7 @@ class CreatePlanResetRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -171,7 +171,7 @@ class CreatePlanTier(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -267,7 +267,7 @@ class CreatePlanItemPriceRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -328,6 +328,8 @@ class CreatePlanRolloverRequestTypedDict(TypedDict):
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
     expiry_duration_length: NotRequired[float]
     r"""Number of periods before expiry."""
 
@@ -341,18 +343,21 @@ class CreatePlanRolloverRequest(BaseModel):
     max: Optional[float] = None
     r"""Max rollover units. Omit for unlimited rollover."""
 
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
     expiry_duration_length: Optional[float] = None
     r"""Number of periods before expiry."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["max", "expiry_duration_length"])
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -414,7 +419,7 @@ class CreatePlanPlanItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -462,7 +467,7 @@ class FreeTrialRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -539,7 +544,7 @@ class CreatePlanParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -596,7 +601,7 @@ class CreatePlanPriceDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -637,7 +642,7 @@ class CreatePlanPriceResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -736,7 +741,7 @@ class CreatePlanFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -792,7 +797,7 @@ class CreatePlanResetResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -885,7 +890,7 @@ class CreatePlanItemPriceResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -928,7 +933,7 @@ class CreatePlanItemDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -954,6 +959,8 @@ class CreatePlanRolloverResponseTypedDict(TypedDict):
     r"""Maximum rollover units. Null for unlimited rollover."""
     expiry_duration_type: CreatePlanExpiryDurationTypeResponse
     r"""When rolled over units expire."""
+    max_percentage: NotRequired[Nullable[float]]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
     expiry_duration_length: NotRequired[float]
     r"""Number of periods before expiry."""
 
@@ -967,19 +974,22 @@ class CreatePlanRolloverResponse(BaseModel):
     expiry_duration_type: CreatePlanExpiryDurationTypeResponse
     r"""When rolled over units expire."""
 
+    max_percentage: OptionalNullable[float] = UNSET
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
     expiry_duration_length: Optional[float] = None
     r"""Number of periods before expiry."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["expiry_duration_length"])
-        nullable_fields = set(["max"])
+        optional_fields = set(["max_percentage", "expiry_duration_length"])
+        nullable_fields = set(["max", "max_percentage"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1049,7 +1059,7 @@ class CreatePlanItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1171,7 +1181,7 @@ class CreatePlanCustomerEligibility(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -1270,7 +1280,7 @@ class CreatePlanResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

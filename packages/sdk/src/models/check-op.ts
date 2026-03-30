@@ -246,7 +246,8 @@ export const RolloverDuration = {
 export type RolloverDuration = OpenEnum<typeof RolloverDuration>;
 
 export type CheckRollover = {
-  max: number | null;
+  max?: number | null | undefined;
+  maxPercentage?: number | null | undefined;
   duration: RolloverDuration;
   length: number;
 };
@@ -812,11 +813,19 @@ export const RolloverDuration$inboundSchema: z.ZodMiniType<
 export const CheckRollover$inboundSchema: z.ZodMiniType<
   CheckRollover,
   unknown
-> = z.object({
-  max: types.nullable(types.number()),
-  duration: z._default(RolloverDuration$inboundSchema, "month"),
-  length: types.number(),
-});
+> = z.pipe(
+  z.object({
+    max: z.optional(z.nullable(types.number())),
+    max_percentage: z.optional(z.nullable(types.number())),
+    duration: z._default(RolloverDuration$inboundSchema, "month"),
+    length: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "max_percentage": "maxPercentage",
+    });
+  }),
+);
 
 export function checkRolloverFromJSON(
   jsonString: string,

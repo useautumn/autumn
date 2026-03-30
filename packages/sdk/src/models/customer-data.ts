@@ -113,6 +113,17 @@ export type CustomerDataUsageAlert = {
   name?: string | undefined;
 };
 
+export type CustomerDataOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -129,6 +140,10 @@ export type CustomerDataBillingControls = {
    * List of usage alert configurations per feature.
    */
   usageAlerts?: Array<CustomerDataUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CustomerDataOverageAllowed> | undefined;
 };
 
 /**
@@ -325,10 +340,41 @@ export function customerDataUsageAlertToJSON(
 }
 
 /** @internal */
+export type CustomerDataOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const CustomerDataOverageAllowed$outboundSchema: z.ZodMiniType<
+  CustomerDataOverageAllowed$Outbound,
+  CustomerDataOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function customerDataOverageAllowedToJSON(
+  customerDataOverageAllowed: CustomerDataOverageAllowed,
+): string {
+  return JSON.stringify(
+    CustomerDataOverageAllowed$outboundSchema.parse(customerDataOverageAllowed),
+  );
+}
+
+/** @internal */
 export type CustomerDataBillingControls$Outbound = {
   auto_topups?: Array<CustomerDataAutoTopup$Outbound> | undefined;
   spend_limits?: Array<CustomerDataSpendLimit$Outbound> | undefined;
   usage_alerts?: Array<CustomerDataUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<CustomerDataOverageAllowed$Outbound> | undefined;
 };
 
 /** @internal */
@@ -346,12 +392,16 @@ export const CustomerDataBillingControls$outboundSchema: z.ZodMiniType<
     usageAlerts: z.optional(
       z.array(z.lazy(() => CustomerDataUsageAlert$outboundSchema)),
     ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => CustomerDataOverageAllowed$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       autoTopups: "auto_topups",
       spendLimits: "spend_limits",
       usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
     });
   }),
 );
