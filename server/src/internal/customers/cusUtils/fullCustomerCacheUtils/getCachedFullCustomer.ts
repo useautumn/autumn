@@ -5,14 +5,16 @@ import {
 	FullCustomerSchema,
 	type Invoice,
 } from "@autumn/shared";
+
 import { Decimal } from "decimal.js";
 import type { Redis } from "ioredis";
 import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
-import { redis } from "@/external/redis/initRedis.js";
+import { isCacheStale } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
 import { resetCustomerEntitlements } from "../../actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
+import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
 import { buildFullCustomerCacheKey } from "./fullCustomerCacheConfig.js";
 
 /**
@@ -130,7 +132,7 @@ export const getCachedFullCustomer = async ({
 	entityId?: string;
 	redisInstance?: Redis;
 }): Promise<FullCustomer | undefined> => {
-	const { org, env } = ctx;
+	const { org, env, redis } = ctx;
 	const cacheKey = buildFullCustomerCacheKey({
 		orgId: org.id,
 		env,
@@ -144,9 +146,29 @@ export const getCachedFullCustomer = async ({
 
 	if (!cached) return undefined;
 
+	const parsed = JSON.parse(cached);
+	const cachedAt = parsed._cachedAt as number | undefined;
+	delete parsed._cachedAt;
+
+	const cacheIsStale = isCacheStale({
+		cachedAt,
+		customerId,
+		redisConfig: ctx.org.redis_config,
+	});
+	if (cacheIsStale) {
+		ctx.logger.warn(`[getCachedFullCustomer] Cache is stale for ${customerId}`);
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId,
+			source: "getCachedFullCustomer: cache is stale",
+			skipGuard: true,
+		});
+		return undefined;
+	}
+
 	const fullCustomer = normalizeFromSchema<FullCustomer>({
 		schema: FullCustomerSchema,
-		data: JSON.parse(cached),
+		data: parsed,
 	});
 
 	if (entityId) {

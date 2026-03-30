@@ -1,36 +1,33 @@
 import { ErrCode, InternalError, RecaseError } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import {
-	currentRegion,
-	getRegionalRedis,
-	redis,
-} from "@/external/redis/initRedis.js";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
 /**
  * Atomically claims a lock receipt: pending → processing.
  *
- * Routes the claim to the Redis instance the receipt was originally written to
- * (identified by receipt.region) so that Active-Active replication cannot allow
- * two concurrent claims on separate regional instances.
+ * Uses resolveRedisForCustomer with region to handle both cases:
+ * - Orgs with dedicated Redis: per-customer bucket routing (region ignored)
+ * - Orgs on master Redis: routes to the receipt's origin region for Active-Active
  *
- * Returns the Redis instance that was used — callers must use it for all
- * subsequent operations (unwind deduction, delete) to stay on the same instance.
- *
- * Throws RecaseError for terminal/already-processing statuses.
- * Throws InternalError when Redis is unavailable.
+ * Returns the Redis instance used — callers must use it for all subsequent
+ * operations (unwind deduction, delete) to stay on the same instance.
  */
 export const claimLockReceipt = async ({
+	ctx,
 	lockReceiptKey,
 	receiptRegion,
 }: {
+	ctx: AutumnContext;
 	lockReceiptKey: string;
 	receiptRegion?: string | null;
 }): Promise<{ redisInstance: Redis }> => {
-	const redisInstance =
-		receiptRegion && receiptRegion !== currentRegion
-			? getRegionalRedis(receiptRegion)
-			: redis;
+	const redisInstance = resolveRedisForCustomer({
+		org: ctx.org,
+		customerId: ctx.customerId,
+		region: receiptRegion,
+	});
 
 	const result = await tryRedisWrite(
 		() => redisInstance.claimLockReceipt(lockReceiptKey),

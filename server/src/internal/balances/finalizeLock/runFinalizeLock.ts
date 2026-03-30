@@ -18,8 +18,8 @@ export const runFinalizeLock = async ({
 	const { lockReceiptKey, receipt, finalValue, lockValue } =
 		finalizeLockContext;
 
-	// Claim on the receipt's origin region to prevent cross-region double-claim
 	const { redisInstance } = await claimLockReceipt({
+		ctx,
 		lockReceiptKey,
 		receiptRegion: receipt.region,
 	});

@@ -1,9 +1,17 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
+import type { Redis } from "ioredis";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { redis } from "./initRedis.js";
 
-export const clearLock = async ({ lockKey }: { lockKey: string }) => {
-	await tryRedisWrite(() => redis.del(lockKey));
+export const clearLock = async ({
+	lockKey,
+	redisInstance,
+}: {
+	lockKey: string;
+	redisInstance?: Redis;
+}) => {
+	const targetRedis = redisInstance ?? redis;
+	await tryRedisWrite(() => targetRedis.del(lockKey), targetRedis);
 };
 
 interface LockData {
@@ -22,21 +30,23 @@ export const acquireLock = async ({
 	lockKey,
 	ttlMs = 10000,
 	errorMessage = DEFAULT_ERROR_MESSAGE,
+	redisInstance,
 }: {
 	lockKey: string;
 	ttlMs?: number;
 	errorMessage?: string;
+	redisInstance?: Redis;
 }): Promise<boolean> => {
+	const targetRedis = redisInstance ?? redis;
+
 	// If Redis not ready, allow operation to proceed
-	if (redis.status !== "ready") {
+	if (targetRedis.status !== "ready") {
 		return true;
 	}
 
 	try {
-		// NX = only set if key doesn't exist, PX = set expiry in milliseconds
-		// Store as JSON for future extensibility
 		const lockData: LockData = { errorMessage };
-		const result = await redis.set(
+		const result = await targetRedis.set(
 			lockKey,
 			JSON.stringify(lockData),
 			"PX",
@@ -46,7 +56,7 @@ export const acquireLock = async ({
 
 		// If result is null, lock already exists (NX failed)
 		if (result === null) {
-			const existingData = await redis.get(lockKey);
+			const existingData = await targetRedis.get(lockKey);
 			const parsed = existingData
 				? (JSON.parse(existingData) as LockData)
 				: null;
@@ -78,18 +88,20 @@ export const withLock = async <T>({
 	lockKey,
 	ttlMs = 10000,
 	errorMessage = DEFAULT_ERROR_MESSAGE,
+	redisInstance,
 	fn,
 }: {
 	lockKey: string;
 	ttlMs?: number;
 	errorMessage?: string;
+	redisInstance?: Redis;
 	fn: () => Promise<T>;
 }): Promise<T> => {
-	await acquireLock({ lockKey, ttlMs, errorMessage });
+	await acquireLock({ lockKey, ttlMs, errorMessage, redisInstance });
 
 	try {
 		return await fn();
 	} finally {
-		await clearLock({ lockKey });
+		await clearLock({ lockKey, redisInstance });
 	}
 };

@@ -1,5 +1,5 @@
 import type { Entity } from "@autumn/shared";
-import { redis } from "@/external/redis/initRedis.js";
+
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
@@ -52,7 +52,7 @@ export const updateEntityInCache = async ({
 		});
 
 		const result = await tryRedisWrite(async () => {
-			return await redis.updateEntityInCustomer(
+			return await ctx.redis.updateEntityInCustomer(
 				cacheKey,
 				JSON.stringify({
 					id_or_internal_id: idOrInternalId,

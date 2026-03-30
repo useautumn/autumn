@@ -2,7 +2,7 @@ import { customerEntitlements, type FullCustomer } from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
-import { redis } from "@/external/redis/initRedis.js";
+import type { Redis } from "ioredis";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 
 /**
@@ -10,6 +10,7 @@ import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCus
  * Reads the cached blob, finds the cusEnt by ID, then uses JSON.SET on the exact path.
  */
 export const setCachedCusEntField = async ({
+	redisInstance,
 	orgId,
 	env,
 	customerId,
@@ -17,6 +18,7 @@ export const setCachedCusEntField = async ({
 	field,
 	value,
 }: {
+	redisInstance: Redis;
 	orgId: string;
 	env: string;
 	customerId: string;
@@ -26,7 +28,7 @@ export const setCachedCusEntField = async ({
 }): Promise<void> => {
 	const cacheKey = buildFullCustomerCacheKey({ orgId, env, customerId });
 
-	const raw = (await redis.call("JSON.GET", cacheKey)) as string | null;
+	const raw = (await redisInstance.call("JSON.GET", cacheKey)) as string | null;
 	if (!raw) return;
 
 	const fullCustomer = JSON.parse(raw) as FullCustomer;
@@ -36,7 +38,7 @@ export const setCachedCusEntField = async ({
 		const cusEnts = fullCustomer.customer_products[cpIdx].customer_entitlements;
 		for (let ceIdx = 0; ceIdx < cusEnts.length; ceIdx++) {
 			if (cusEnts[ceIdx].id === cusEntId) {
-				await redis.call(
+				await redisInstance.call(
 					"JSON.SET",
 					cacheKey,
 					`$.customer_products[${cpIdx}].customer_entitlements[${ceIdx}].${field}`,
@@ -50,7 +52,7 @@ export const setCachedCusEntField = async ({
 	const extras = fullCustomer.extra_customer_entitlements || [];
 	for (let eIdx = 0; eIdx < extras.length; eIdx++) {
 		if (extras[eIdx].id === cusEntId) {
-			await redis.call(
+			await redisInstance.call(
 				"JSON.SET",
 				cacheKey,
 				`$.extra_customer_entitlements[${eIdx}].${field}`,
@@ -98,6 +100,7 @@ export const expireCusEntForReset = async ({
 
 	// Update Redis cache
 	await setCachedCusEntField({
+		redisInstance: ctx.redis,
 		orgId: ctx.org.id,
 		env: ctx.env,
 		customerId,

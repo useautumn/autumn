@@ -1,5 +1,6 @@
 import { RELEVANT_STATUSES } from "@autumn/shared";
 import type { Context, Next } from "hono";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { CusService } from "../../../internal/customers/CusService";
 import type {
 	StripeWebhookContext,
@@ -56,5 +57,15 @@ export const stripeToAutumnCustomerMiddleware = async (
 ) => {
 	const ctx = c.get("ctx") as StripeWebhookContext;
 	await getAutumnCustomerId({ ctx });
+
+	// Re-resolve ctx.redis now that the customer is known
+	if (ctx.fullCustomer?.id) {
+		ctx.customerId = ctx.fullCustomer.id;
+		ctx.redis = resolveRedisForCustomer({
+			org: ctx.org,
+			customerId: ctx.customerId,
+		});
+	}
+
 	await next();
 };

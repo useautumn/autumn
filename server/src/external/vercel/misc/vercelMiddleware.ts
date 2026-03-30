@@ -2,6 +2,7 @@ import { AppEnv, AuthType, type Organization } from "@autumn/shared";
 import chalk from "chalk";
 import type { Context, Next } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -30,6 +31,11 @@ export const vercelSeederMiddleware = async (
 		});
 	}
 
+	ctx.redis = resolveRedisForCustomer({
+		org: ctx.org,
+		customerId: ctx.customerId,
+	});
+
 	ctx.logger = addAppContextToLogs({
 		logger: ctx.logger,
 		appContext: {
@@ -38,6 +44,7 @@ export const vercelSeederMiddleware = async (
 			env: ctx.env,
 			auth_type: AuthType.Vercel,
 			api_version: ctx.apiVersion?.semver,
+			redis_url: ctx.org?.redis_config?.url,
 		},
 	});
 

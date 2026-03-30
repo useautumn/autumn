@@ -26,6 +26,7 @@ export const handleClearCustomerCache = createRoute({
 					customerId: id,
 					orgId: ctx.org.id,
 					env: ctx.env,
+					redisConfig: ctx.org.redis_config,
 				})),
 			});
 		}

@@ -1,7 +1,8 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ApiCustomer, ApiVersion } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
+import { resolveTestRedis } from "@tests/utils/testInitUtils/resolveTestRedis.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { currentRegion } from "@/external/redis/initRedis.js";
@@ -54,6 +55,7 @@ describe(`${chalk.yellowBright("track-race-condition2: sync should not wipe out 
 		version: ApiVersion.V2_0,
 		skipCacheDeletion: true,
 	});
+	const ctx = resolveTestRedis({ ctx: defaultCtx, customerId });
 
 	beforeAll(async () => {
 		// Clean up any stale test guards from previous runs

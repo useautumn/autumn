@@ -1,7 +1,9 @@
 import { type AppEnv, CusProductStatus } from "@autumn/shared";
 import type { RepoContext } from "@/db/repoContext.js";
+import { redis } from "@/external/redis/initRedis.js";
 import { getOneOffCustomerProductsToCleanup } from "@/internal/customers/cusProducts/actions/cleanupOneOff/getOneOffToCleanup.js";
 import { batchUpdateCustomerProducts } from "@/internal/customers/cusProducts/repos/batchUpdateCustomerProducts.js";
+import { batchDeleteCachedFullCustomers } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers.js";
 import type { CronContext } from "../utils/CronContext.js";
 
 /** Dry-run: fetches one-off customer products eligible for cleanup and logs them without making any updates. */
@@ -63,6 +65,7 @@ export const runOneOffCleanup = async ({ ctx }: { ctx: CronContext }) => {
 				},
 				env: group.env,
 				logger: logger,
+				redis,
 			};
 			await batchUpdateCustomerProducts({
 				ctx: repoContext,
@@ -70,6 +73,23 @@ export const runOneOffCleanup = async ({ ctx }: { ctx: CronContext }) => {
 					id,
 					updates: { status: CusProductStatus.Expired },
 				})),
+			});
+		}
+
+		// Invalidate cached customer data for all affected customers
+		const customersToInvalidate = toCleanup
+			.filter((result) => result.customer.id)
+			.map((result) => ({
+				orgId: result.org.id,
+				env: result.customer.env,
+				customerId: result.customer.id!,
+				redisConfig: result.org.redis_config,
+			}));
+
+		if (customersToInvalidate.length > 0) {
+			await batchDeleteCachedFullCustomers({
+				customers: customersToInvalidate,
+				logger,
 			});
 		}
 

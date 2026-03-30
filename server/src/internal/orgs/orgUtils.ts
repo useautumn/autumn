@@ -265,6 +265,12 @@ export const createOrgResponse = ({
 		live_pkey: org.live_pkey,
 		onboarded: org.onboarded ?? true,
 		deployed: org.deployed ?? true,
+		redis_config: org.redis_config
+			? {
+					url: org.redis_config.url,
+					migrationPercent: org.redis_config.migrationPercent,
+				}
+			: null,
 	};
 };
 

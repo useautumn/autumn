@@ -1,5 +1,5 @@
 import type { Customer } from "@autumn/shared";
-import { redis } from "@/external/redis/initRedis.js";
+
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
@@ -65,7 +65,7 @@ export const updateCachedCustomerData = async ({
 		const paramsJson = JSON.stringify({ updates });
 
 		const result = await tryRedisWrite(async () => {
-			return await redis.updateCustomerData(cacheKey, paramsJson);
+			return await ctx.redis.updateCustomerData(cacheKey, paramsJson);
 		});
 
 		if (result === null) {

@@ -12,6 +12,7 @@ import {
 import type { Context, Next } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import { StatusCodes } from "http-status-codes";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import { checkoutActions } from "@/internal/checkouts/actions";
 import { OrgService } from "@/internal/orgs/OrgService";
@@ -124,6 +125,10 @@ export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		features: orgWithFeatures.features,
 		isPublic: true,
 		customerId: validCheckout.customer_id,
+		redis: resolveRedisForCustomer({
+			org: orgWithFeatures.org,
+			customerId: validCheckout.customer_id,
+		}),
 	});
 
 	// Attach checkout to context for handlers

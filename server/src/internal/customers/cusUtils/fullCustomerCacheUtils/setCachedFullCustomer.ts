@@ -1,5 +1,4 @@
 import type { FullCustomer } from "@autumn/shared";
-import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildPathIndex } from "@/internal/customers/cache/pathIndex/buildPathIndex.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -30,11 +29,18 @@ export const setCachedFullCustomer = async ({
 	source?: string;
 	overwrite?: boolean;
 }): Promise<SetCacheResult> => {
-	const { org, env, logger } = ctx;
+	const { org, env, logger, redis } = ctx;
 
-	const cacheKey = buildFullCustomerCacheKey({ orgId: org.id, env, customerId });
+	const cacheKey = buildFullCustomerCacheKey({
+		orgId: org.id,
+		env,
+		customerId,
+	});
 	const pathIndexEntries = buildPathIndex({ fullCustomer });
 	const pathIndexJson = JSON.stringify(pathIndexEntries);
+
+	// Embed _cachedAt so getCachedFullCustomer can detect stale entries during migration
+	const dataToCache = { ...fullCustomer, _cachedAt: fetchTimeMs };
 
 	const result = await tryRedisWrite(async () => {
 		return await redis.setFullCustomerCache(
@@ -44,7 +50,7 @@ export const setCachedFullCustomer = async ({
 			customerId,
 			String(fetchTimeMs),
 			String(FULL_CUSTOMER_CACHE_TTL_SECONDS),
-			JSON.stringify(fullCustomer),
+			JSON.stringify(dataToCache),
 			String(overwrite),
 			pathIndexJson,
 		);

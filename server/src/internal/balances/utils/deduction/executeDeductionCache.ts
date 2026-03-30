@@ -1,5 +1,5 @@
 import type { EntityRolloverBalance, FullCustomer } from "@autumn/shared";
-import { redis } from "@/external/redis/initRedis.js";
+
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -90,7 +90,10 @@ export const syncCustomerEntitlementUpdatesToCache = async ({
 		});
 
 		await tryRedisWrite(() =>
-			redis.updateCustomerEntitlements(cacheKey, JSON.stringify({ updates })),
+			ctx.redis.updateCustomerEntitlements(
+				cacheKey,
+				JSON.stringify({ updates }),
+			),
 		);
 	} catch (error) {
 		ctx.logger.error(

@@ -13,6 +13,11 @@ import {
 } from "./handlers/handleRevenueCatConfig.js";
 import { handleUpdateOrg } from "./handlers/handleUpdateOrg.js";
 import {
+	handleDeleteRedisConfig,
+	handleUpdateRedisMigration,
+	handleUpsertRedisConfig,
+} from "./handlers/handleRedisConfig.js";
+import {
 	handleGetVercelSink,
 	handleUpsertVercelConfig,
 } from "./handlers/handleVercelConfig.js";
@@ -49,6 +54,10 @@ honoOrgRouter.delete("/stripe", ...handleDeleteStripe);
 honoOrgRouter.post("/stripe", ...handleConnectStripe);
 honoOrgRouter.get("/stripe/oauth_url", ...handleGetOAuthUrl);
 honoOrgRouter.post("/reset_default_account", ...handleResetDefaultAccount);
+
+honoOrgRouter.patch("/redis", ...handleUpsertRedisConfig);
+honoOrgRouter.patch("/redis/migration", ...handleUpdateRedisMigration);
+honoOrgRouter.delete("/redis", ...handleDeleteRedisConfig);
 
 honoOrgRouter.patch("/vercel", ...handleUpsertVercelConfig);
 honoOrgRouter.get("/vercel_sink", ...handleGetVercelSink);

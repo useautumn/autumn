@@ -7,7 +7,8 @@ import {
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
+import { resolveTestRedis } from "@tests/utils/testInitUtils/resolveTestRedis.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { timeout } from "@/utils/genUtils.js";
@@ -44,6 +45,7 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 	const customerId = testCase;
 	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
 	let customer: Customer;
+	const ctx = resolveTestRedis({ ctx: defaultCtx, customerId });
 
 	beforeAll(async () => {
 		await initProductsV0({

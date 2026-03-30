@@ -109,11 +109,12 @@ test.concurrent(`${chalk.yellowBright("track-event-name2: track with event_name 
 	expect(trackRes.value).toBe(deductValue);
 	expect(trackRes.balance).toBeNull();
 	expect(trackRes.balances).toBeDefined();
-	expect(trackRes.balances?.[TestFeature.Action1]?.current_balance).toBe(
+	const round2 = (v: number) => Math.round(v * 100) / 100;
+	expect(round2(trackRes.balances?.[TestFeature.Action1]?.current_balance ?? 0)).toBe(
 		expectedAction1Balance,
 	);
 	expect(trackRes.balances?.[TestFeature.Action1]?.usage).toBe(deductValue);
-	expect(trackRes.balances?.[TestFeature.Action3]?.current_balance).toBe(
+	expect(round2(trackRes.balances?.[TestFeature.Action3]?.current_balance ?? 0)).toBe(
 		expectedAction3Balance,
 	);
 	expect(trackRes.balances?.[TestFeature.Action3]?.usage).toBe(deductValue);

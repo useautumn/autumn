@@ -3,7 +3,7 @@ import type {
 	FullCustomer,
 } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { currentRegion, redis } from "@/external/redis/initRedis.js";
+import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
@@ -148,17 +148,22 @@ export const executeRedisDeduction = async ({
 			lock_receipt_key: lockReceiptKey ?? null,
 		};
 
-		const targetRedis = redisInstance ?? redis;
+		const targetRedis = redisInstance ?? ctx.redis;
+		const luaCallStart = Date.now();
 		const result = await tryRedisWrite(
 			() =>
 				targetRedis.deductFromCustomerEntitlements(
 					cacheKey,
 					JSON.stringify(luaParams),
 				),
-			redisInstance,
+			targetRedis,
 		);
+		const luaCallMs = Date.now() - luaCallStart;
 
 		if (!result) {
+			ctx.logger.error(
+				`[executeRedisDeduction] tryRedisWrite returned null (Redis call failed silently) after ${luaCallMs}ms — customer=${customerId}, feature=${feature.id}, amount=${toDeduct}`,
+			);
 			throw new RedisDeductionError({
 				message: "Redis not ready for deduction",
 				code: RedisDeductionErrorCode.CustomerNotFound,
@@ -168,16 +173,30 @@ export const executeRedisDeduction = async ({
 		const resultJson = JSON.parse(result) as LuaDeductionResult;
 
 		if (resultJson.logs && resultJson.logs.length > 0) {
-			ctx.logger.debug(
-				`[executeRedisDeduction] Logs: ${resultJson.logs.join("\n")}`,
+			const hasViolation = resultJson.logs.some((l) =>
+				l.includes("ATOMICITY VIOLATION"),
 			);
+			if (hasViolation) {
+				ctx.logger.error(
+					`[executeRedisDeduction] ATOMICITY VIOLATION detected (${luaCallMs}ms):\n${resultJson.logs.join("\n")}`,
+				);
+			}
 		}
 
 		if (resultJson.error) {
+			ctx.logger.error(
+				`[executeRedisDeduction] Lua error=${resultJson.error} after ${luaCallMs}ms — customer=${customerId}, feature=${feature.id}, amount=${toDeduct}`,
+			);
 			throw new RedisDeductionError({
 				message: `Redis deduction failed: ${resultJson.error}`,
 				code: resultJson.error as RedisDeductionErrorCode,
 			});
+		}
+
+		if (luaCallMs > 100) {
+			ctx.logger.warn(
+				`[executeRedisDeduction] Slow Lua call: ${luaCallMs}ms — customer=${customerId}, feature=${feature.id}`,
+			);
 		}
 
 		const { updates, rollover_updates } = resultJson;

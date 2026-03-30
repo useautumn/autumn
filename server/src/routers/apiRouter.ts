@@ -13,6 +13,7 @@ import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware.js";
 import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware.js";
 import { refreshProductsCacheMiddleware } from "../honoMiddlewares/refreshProductsCacheMiddleware.js";
 import { responseFilterMiddleware } from "../honoMiddlewares/responseFilter/responseFilterMiddleware.js";
+import { orgRedisMiddleware } from "../honoMiddlewares/orgRedisMiddleware.js";
 import { secretKeyMiddleware } from "../honoMiddlewares/secretKeyMiddleware.js";
 import type { HonoEnv } from "../honoUtils/HonoEnv.js";
 import {
@@ -41,6 +42,7 @@ export const apiRouter = new Hono<HonoEnv>();
 apiRouter.use("*", criticalDbMiddleware);
 apiRouter.use("*", responseFilterMiddleware);
 apiRouter.use("*", secretKeyMiddleware);
+apiRouter.use("*", orgRedisMiddleware);
 apiRouter.use("*", orgConfigMiddleware);
 apiRouter.use("*", apiVersionMiddleware);
 apiRouter.use("*", refreshCacheMiddleware);

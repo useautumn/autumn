@@ -28,6 +28,7 @@ export type LogAppContext = {
 	user_id?: string;
 	user_email?: string;
 	api_version: string;
+	redis_url?: string;
 };
 
 /** Stripe webhook event context */

@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { customerProductToDefaultProduct } from "@utils/cusProductUtils/convertCusProduct/customerProductToDefaultProduct";
 import type { InferSelectModel } from "drizzle-orm";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
@@ -23,8 +24,16 @@ export const processExpiredTrialRow = async ({
 	customer: InferSelectModel<typeof customers>;
 	defaultProducts: FullProduct[];
 }) => {
+	// Shallow-copy ctx so concurrent Promise.all callers don't stomp each other's redis
+	const customerCtx: AutumnContext = {
+		...ctx,
+		redis: customer.id
+			? resolveRedisForCustomer({ org: ctx.org, customerId: customer.id })
+			: ctx.redis,
+	};
+
 	const fullCustomer = await CusService.getFull({
-		ctx,
+		ctx: customerCtx,
 		idOrInternalId: customer.internal_id,
 		withEntities: true,
 		withSubs: true,
@@ -37,21 +46,21 @@ export const processExpiredTrialRow = async ({
 	if (!fullCustomerProduct) return;
 
 	const defaultProduct = customerProductToDefaultProduct({
-		ctx,
+		ctx: customerCtx,
 		customerProduct: fullCustomerProduct,
 		defaultProducts,
 	});
 
 	if (defaultProduct) {
 		await activateFreeDefaultProduct({
-			ctx,
+			ctx: customerCtx,
 			customerProduct: fullCustomerProduct,
 			fullCustomer,
 			defaultProduct,
 		});
 	}
 	await CusProductService.update({
-		ctx,
+		ctx: customerCtx,
 		cusProductId: fullCustomerProduct.id,
 		updates: {
 			status: CusProductStatus.Expired,
@@ -59,7 +68,7 @@ export const processExpiredTrialRow = async ({
 	});
 
 	await deleteCachedFullCustomer({
-		ctx,
+		ctx: customerCtx,
 		customerId: fullCustomer.id ?? "",
 		source: "productCron",
 	});

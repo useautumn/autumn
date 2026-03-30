@@ -132,10 +132,8 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 1: upgrade with payment me
 
 	// Attach successful payment method
 	await attachPmToCus({
-		db: ctx.db,
+		ctx,
 		customer,
-		org: ctx.org,
-		env: ctx.env,
 	});
 
 	// Now upgrade to Premium should succeed

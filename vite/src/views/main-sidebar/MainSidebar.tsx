@@ -4,6 +4,7 @@ import {
 	ChartBarIcon,
 	CoinVerticalIcon,
 	CubeIcon,
+	DatabaseIcon,
 	LegoIcon,
 	OptionIcon,
 	TerminalWindowIcon,
@@ -16,6 +17,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "@/components/ui/button";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
@@ -29,12 +31,14 @@ import { SidebarRail } from "./SidebarRail";
 
 const buildDevSubTabs = ({
 	flags,
+	isAdmin,
 }: {
 	flags: {
 		webhooks: boolean;
 		vercel: boolean;
 		revenuecat: boolean;
 	};
+	isAdmin: boolean;
 }) => {
 	return [
 		{
@@ -61,7 +65,6 @@ const buildDevSubTabs = ({
 					{
 						title: "RevenueCat",
 						value: "revenuecat",
-						// icon: <PawPrintIcon size={16} weight="fill" />,
 						icon: <RevenueCatIcon size={64} />,
 					},
 				]
@@ -72,6 +75,15 @@ const buildDevSubTabs = ({
 						title: "Webhooks",
 						value: "webhooks",
 						icon: <WebhooksLogoIcon size={16} weight="fill" />,
+					},
+				]
+			: []),
+		...(isAdmin
+			? [
+					{
+						title: "Redis",
+						value: "redis",
+						icon: <DatabaseIcon size={16} weight="fill" />,
 					},
 				]
 			: []),
@@ -86,6 +98,7 @@ export const MainSidebar = ({
 	const env = useEnv();
 
 	const flags = useAutumnFlags();
+	const { isAdmin } = useAdmin();
 
 	const [storedExpanded, setExpanded] = useLocalStorage<boolean>(
 		"sidebar.expanded",
@@ -190,7 +203,7 @@ export const MainSidebar = ({
 							env={env}
 							isOpen={devGroupOpen}
 							onToggle={() => setDevGroupOpen((prev) => !prev)}
-							subTabs={buildDevSubTabs({ flags })}
+							subTabs={buildDevSubTabs({ flags, isAdmin })}
 						/>
 					</div>
 				</div>

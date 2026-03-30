@@ -37,12 +37,15 @@ if not updates then
 end
 
 -- Read the full customer to find the matching cusProduct index
-local raw = redis.call('JSON.GET', cache_key, '.')
+local raw = redis.call('JSON.GET', cache_key, '$')
 if not raw then
   return cjson.encode({ ok = false, error = "cache_miss" })
 end
 
 local full_customer = cjson.decode(raw)
+if type(full_customer) == 'table' and full_customer[1] ~= nil then
+  full_customer = full_customer[1]
+end
 
 if not full_customer.customer_products then
   return cjson.encode({ ok = false, error = "no_customer_products" })

@@ -3,11 +3,13 @@ import {
 	EntInterval,
 	type FullEntitlement,
 	getStartingBalance,
+	type Organization,
 	type ResetCusEnt,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { format } from "date-fns";
 import type { RepoContext } from "@/db/repoContext";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
@@ -26,19 +28,24 @@ export const resetCustomerEntitlement = async ({
 	ctx,
 	cusEnt,
 	updatedCusEnts,
+	orgRedisMap,
 }: {
 	ctx: CronContext;
 	cusEnt: ResetCusEnt;
 	updatedCusEnts: ResetCusEnt[];
+	orgRedisMap: Map<string, Organization>;
 }) => {
+	const orgId = cusEnt.customer.org_id;
+	const customerId = cusEnt.customer?.id ?? "";
+	const org = orgRedisMap.get(orgId) ?? { id: orgId };
+
 	const repoContext: RepoContext = {
 		db: ctx.db,
 		logger: ctx.logger,
-		org: {
-			id: cusEnt.customer.org_id,
-		},
+		org: { id: orgId },
 		env: cusEnt.customer.env,
-		customerId: cusEnt.customer_id ?? "",
+		customerId,
+		redis: resolveRedisForCustomer({ org, customerId }),
 	};
 
 	try {

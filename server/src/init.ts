@@ -5,13 +5,14 @@ import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
 import { getRequestListener } from "@hono/node-server";
-import { client, clientCritical, clientReplica } from "./db/initDrizzle.js";
+import { client, clientCritical, clientReplica, db } from "./db/initDrizzle.js";
 import {
 	initPgHealthMonitor,
 	shutdownPgHealthMonitor,
 } from "./db/pgHealthMonitor.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import { warmupRegionalRedis } from "./external/redis/initRedis.js";
+import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -24,6 +25,10 @@ const init = async () => {
 
 	initPgHealthMonitor({ client: clientCritical });
 	await Promise.all([warmupRegionalRedis()]);
+	// Fire-and-forget — server starts immediately, org Redis connections warm in background
+	preWarmOrgRedisConnections({ db }).catch((error) =>
+		logger.error("[OrgRedis] Pre-warm failed:", error),
+	);
 
 	const PORT = process.env.SERVER_PORT
 		? Number.parseInt(process.env.SERVER_PORT)

@@ -8,9 +8,11 @@ import {
 import type { Context, Next } from "hono";
 import { db, dbGeneral } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { redis } from "@/external/redis/initRedis.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs";
+import { resolveCustomerId } from "./utils/resolveCustomerId.js";
 
 /**
  * Base middleware that sets up the request context
@@ -31,7 +33,12 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			? await tryCatch(c.req.json())
 			: { data: undefined };
 
-	// const { data: body } = await tryCatch(c.req.json());
+	const customerId = resolveCustomerId({
+		method: c.req.method,
+		path: c.req.path,
+		body,
+		query: c.req.query(),
+	});
 
 	const childLogger = addRequestToLogs({
 		logger,
@@ -55,6 +62,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		db,
 		dbGeneral,
 		logger: childLogger,
+		redis, // default to master; overridden by orgRedisMiddleware after auth
 
 		// Request info
 		id,
@@ -66,6 +74,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		org: undefined as any,
 		features: [],
 		userId: undefined,
+		customerId,
 		authType: AuthType.Unknown,
 		env: AppEnv.Sandbox, // maybe use app_env headers
 

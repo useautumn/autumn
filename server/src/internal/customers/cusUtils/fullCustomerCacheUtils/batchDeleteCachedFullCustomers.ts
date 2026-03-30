@@ -1,76 +1,37 @@
+import type { OrgRedisConfig } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import {
-	getConfiguredRegions,
-	getRegionalRedis,
-} from "@/external/redis/initRedis.js";
+import { invalidateCache } from "@/external/redis/orgRedisPool.js";
 import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
 import {
 	buildFullCustomerCacheGuardKey,
 	buildFullCustomerCacheKey,
 	FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
 } from "./fullCustomerCacheConfig.js";
-import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard.js";
 
-type CustomerToDelete = {
+export type CustomerToDelete = {
 	orgId: string;
 	env: string;
 	customerId: string;
+	redisConfig?: OrgRedisConfig | null;
 };
-
-const isProductionNode = process.env.NODE_ENV === "production";
 
 /**
  * Per org: all keys share `{orgId}` so Redis Cluster stays in one slot per pipeline.
  */
 const deleteFullCustomerCacheRowsForOrg = async ({
-	regionalRedis,
+	redisInstance,
 	orgCustomers,
 	guardTimestamp,
 }: {
-	regionalRedis: Redis;
+	redisInstance: Redis;
 	orgCustomers: CustomerToDelete[];
 	guardTimestamp: string;
-}): Promise<{ deleted: number; skipped: number }> => {
-	let skipped = 0;
-	let customersToProcess = orgCustomers;
+}): Promise<number> => {
+	if (orgCustomers.length === 0) return 0;
 
-	if (!isProductionNode) {
-		const existsPipeline = regionalRedis.pipeline();
-		for (const customer of orgCustomers) {
-			existsPipeline.exists(
-				buildTestFullCustomerCacheGuardKey({
-					orgId: customer.orgId,
-					env: customer.env,
-					customerId: customer.customerId,
-				}),
-			);
-		}
-		const existsResults = await existsPipeline.exec();
-		if (!existsResults) return { deleted: 0, skipped: 0 };
-
-		const allowed: CustomerToDelete[] = [];
-		for (let index = 0; index < orgCustomers.length; index++) {
-			const tuple = existsResults[index];
-			if (!tuple)
-				throw new Error(
-					"batchDeleteCachedFullCustomers: missing EXISTS result",
-				);
-			const [error, existsCount] = tuple;
-			if (error) throw error;
-			if (existsCount === 1) {
-				skipped += 1;
-				continue;
-			}
-			allowed.push(orgCustomers[index]!);
-		}
-		customersToProcess = allowed;
-	}
-
-	if (customersToProcess.length === 0) return { deleted: 0, skipped };
-
-	const pipeline = regionalRedis.pipeline();
-	for (const customer of customersToProcess) {
+	const pipeline = redisInstance.pipeline();
+	for (const customer of orgCustomers) {
 		const { orgId, env, customerId } = customer;
 		const guardKey = buildFullCustomerCacheGuardKey({ orgId, env, customerId });
 		const cacheKey = buildFullCustomerCacheKey({ orgId, env, customerId });
@@ -86,12 +47,12 @@ const deleteFullCustomerCacheRowsForOrg = async ({
 	}
 
 	const deleteResults = await pipeline.exec();
-	if (!deleteResults) return { deleted: 0, skipped };
+	if (!deleteResults) return 0;
 
 	let deleted = 0;
 	for (
 		let customerIndex = 0;
-		customerIndex < customersToProcess.length;
+		customerIndex < orgCustomers.length;
 		customerIndex++
 	) {
 		const baseIndex = customerIndex * 3;
@@ -109,19 +70,23 @@ const deleteFullCustomerCacheRowsForOrg = async ({
 		if (unlinkCount > 0) deleted += 1;
 	}
 
-	return { deleted, skipped };
+	return deleted;
 };
 
 /**
- * Batch delete multiple FullCustomer caches across ALL regions.
+ * Batch delete multiple FullCustomer caches. Uses invalidateCache per org
+ * to hit both dedicated org Redis AND all master regions (idempotent).
  */
 export const batchDeleteCachedFullCustomers = async ({
 	customers,
+	logger,
 }: {
 	customers: CustomerToDelete[];
 	logger?: Logger;
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
+
+	const log = logger ?? console;
 
 	const customersByOrg = new Map<string, CustomerToDelete[]>();
 	for (const customer of customers) {
@@ -130,37 +95,48 @@ export const batchDeleteCachedFullCustomers = async ({
 		customersByOrg.set(customer.orgId, existing);
 	}
 
-	const regions = getConfiguredRegions();
 	const guardTimestamp = Date.now().toString();
 
-	const regionPromises = regions.map(async (region) => {
-		const regionalRedis = getRegionalRedis(region);
+	log.info(
+		`[batchDeleteCachedFullCustomers] starting: ${customers.length} customers across ${customersByOrg.size} orgs`,
+	);
+	console.log(
+		`[batchDeleteCachedFullCustomers] starting: ${customers.length} customers across ${customersByOrg.size} orgs`,
+	);
 
-		if (regionalRedis.status !== "ready") {
-			console.warn(`[batchDeleteCachedFullCustomers] ${region}: not_ready`);
-			return 0;
-		}
+	const orgPromises = Array.from(customersByOrg.entries()).map(
+		async ([orgId, orgCustomers]) => {
+			let totalDeleted = 0;
 
-		let deleted = 0;
-		let skipped = 0;
-		for (const orgCustomers of customersByOrg.values()) {
-			const orgResult = await deleteFullCustomerCacheRowsForOrg({
-				regionalRedis,
-				orgCustomers,
-				guardTimestamp,
+			await invalidateCache({
+				org: { id: orgId, redis_config: orgCustomers[0]?.redisConfig },
+				fn: async (instance, label) => {
+					const deleted = await deleteFullCustomerCacheRowsForOrg({
+						redisInstance: instance,
+						orgCustomers,
+						guardTimestamp,
+					});
+					totalDeleted += deleted;
+					log.info(
+						`[batchDeleteCachedFullCustomers] ${label}: ${deleted}/${orgCustomers.length} cache hits for org ${orgId}`,
+					);
+				},
 			});
-			deleted += orgResult.deleted;
-			skipped += orgResult.skipped;
-		}
 
-		const skipSuffix =
-			!isProductionNode && skipped > 0 ? `, skipped_test_guard ${skipped}` : "";
-		console.info(
-			`[batchDeleteCachedFullCustomers] ${region}: unlinked ${deleted} cache keys, customers (${customers.length}), orgs (${customersByOrg.size})${skipSuffix}`,
-		);
-		return deleted;
-	});
+			console.log(
+				`[batchDeleteCachedFullCustomers] ${orgId}: ${totalDeleted}/${customers.length} cache hits across ${customersByOrg.size} orgs`,
+			);
 
-	const regionDeleted = await Promise.all(regionPromises);
-	return regionDeleted.reduce((sum, count) => sum + count, 0);
+			return totalDeleted;
+		},
+	);
+
+	const deletedCounts = await Promise.all(orgPromises);
+	const totalDeleted = deletedCounts.reduce((sum, count) => sum + count, 0);
+
+	log.info(
+		`[batchDeleteCachedFullCustomers] done: ${totalDeleted}/${customers.length} cache hits across ${customersByOrg.size} orgs`,
+	);
+
+	return totalDeleted;
 };

@@ -21,6 +21,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext.js";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { triggerVerifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/triggerVerifyCacheConsistency.js";
 import { searchCusProducts } from "@/internal/customers/cusProducts/cusProductUtils.js";
@@ -357,11 +358,13 @@ export const createFullCusProduct = async ({
 
 	const repoContext: RepoContext = {
 		db,
-		org: {
-			id: customer.org_id,
-		},
+		org: attachParams.org,
 		env: customer.env,
 		logger,
+		redis: resolveRedisForCustomer({
+			org: attachParams.org,
+			customerId: customer.id ?? "",
+		}),
 	};
 
 	if (

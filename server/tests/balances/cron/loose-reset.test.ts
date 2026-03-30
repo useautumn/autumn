@@ -107,6 +107,7 @@ describe(`${chalk.yellowBright("loose-reset: test getActiveResetPassed for loose
 			ctx,
 			cusEnt: resetCusEnt,
 			updatedCusEnts: [],
+			orgRedisMap: new Map([[ctx.org.id, ctx.org]]),
 		});
 
 		if (updatedCusEnt) {

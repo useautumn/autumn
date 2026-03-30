@@ -21,6 +21,7 @@ import { hoursToFinalizeInvoice } from "../constants.js";
 import { createReferralProgram, createReward } from "../productUtils.js";
 import { advanceTestClock as advanceTestClockFn } from "../stripeUtils.js";
 import defaultCtx, { type TestContext } from "./createTestContext.js";
+import { resolveTestRedis } from "./resolveTestRedis.js";
 
 // ═══════════════════════════════════════════════════════════════════
 // TYPES
@@ -1613,6 +1614,8 @@ export async function initScenario({
 		}
 	}
 
+	const customerCtx = resolveTestRedis({ ctx, customerId: customerId ?? "" });
+
 	return {
 		customerId,
 		autumnV0,
@@ -1623,7 +1626,7 @@ export async function initScenario({
 		autumnV2_2,
 		testClockId,
 		customer,
-		ctx,
+		ctx: customerCtx,
 		entities: generatedEntities,
 		advancedTo,
 		otherCustomers: otherCustomersMap,

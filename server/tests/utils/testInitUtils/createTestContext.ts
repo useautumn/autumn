@@ -19,6 +19,7 @@ import {
 	type Logger,
 	logger,
 } from "../../../src/external/logtail/logtailUtils.js";
+import { resolveRedisForCustomer } from "../../../src/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "../../../src/honoUtils/HonoEnv.js";
 import { generateId } from "../../../src/utils/genUtils.js";
 
@@ -83,6 +84,7 @@ export const createTestContext = async () => {
 		skipCache: false,
 		expand: [],
 		extraLogs: {},
+		redis: resolveRedisForCustomer({ org }),
 	} satisfies TestContext;
 };
 

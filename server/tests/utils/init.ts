@@ -1,7 +1,6 @@
 import {
 	AggregateType,
 	AllowanceType,
-	type AppEnv,
 	BillingInterval,
 	BillWhen,
 	CouponDurationType,
@@ -11,17 +10,13 @@ import {
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
-	type Organization,
 	PriceType,
 	type ProductItem,
 	RewardReceivedBy,
 	RewardTriggerEvent,
 	RewardType,
 } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { attachPmToCus } from "@/external/stripe/stripeCusUtils.js";
 import { generateId } from "@/utils/genUtils.js";
-import { getAxiosInstance } from "./setup.js";
 
 export const keyToTitle = (key: string) => {
 	return key
@@ -263,70 +258,6 @@ export const initProduct = ({
 		free_trial: freeTrial,
 		group: group,
 	};
-};
-
-export const initCustomer = async ({
-	customer_data,
-	customerId,
-	attachPm = false,
-	db,
-	org,
-	env,
-	testClockId,
-}: {
-	customer_data?: {
-		id: string;
-		name?: string;
-		email?: string;
-		fingerprint?: string;
-	};
-	customerId?: string;
-	attachPm?: boolean;
-	db: DrizzleCli;
-	org: Organization;
-	env: AppEnv;
-	testClockId?: string;
-}) => {
-	const axiosInstance = getAxiosInstance();
-
-	if (!customerId && !customer_data) {
-		throw new Error("customerId or customer_data is required");
-	}
-
-	const customerData = customerId
-		? {
-				id: customerId,
-				name: customerId,
-				email: `${customerId}@example.com`,
-			}
-		: customer_data;
-
-	// Delete customer if exists
-	try {
-		await axiosInstance.delete(`/v1/customers/${customerData!.id}`);
-		// console.log("   - Successfully deleted customer");
-	} catch (error) {
-		// console.log("Failed to delete customer");
-	}
-
-	try {
-		const { data } = await axiosInstance.post(`/v1/customers`, customerData);
-		// Attach stripe card
-
-		if (attachPm) {
-			await attachPmToCus({
-				customer: data.customer,
-				org: org,
-				env: env,
-				db: db,
-				testClockId: testClockId,
-			});
-		}
-
-		return data.customer;
-	} catch (error) {
-		console.log("Failed to create customer", error);
-	}
 };
 
 // Init Reward

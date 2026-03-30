@@ -1,5 +1,5 @@
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { redis } from "@/external/redis/initRedis.js";
+
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 /**
@@ -34,7 +34,7 @@ export const setTestFullCustomerCacheGuard = async ({
 		customerId,
 	});
 	try {
-		await redis.set(key, "1", "PX", ttlMs);
+		await ctx.redis.set(key, "1", "PX", ttlMs);
 		return true;
 	} catch (error) {
 		logger.error(`Failed to set test fullCustomer cache guard: ${error}`);
@@ -58,7 +58,7 @@ export const removeTestFullCustomerCacheGuard = async ({
 		customerId,
 	});
 	try {
-		await redis.del(key);
+		await ctx.redis.del(key);
 		return true;
 	} catch (error) {
 		logger.error(`Failed to remove test fullCustomer cache guard: ${error}`);

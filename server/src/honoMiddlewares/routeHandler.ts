@@ -154,6 +154,7 @@ export function createRoute<
 
 		// Acquire lock if lock config provided
 		let lockKey: string | null = null;
+		const { redis: orgRedis } = c.get("ctx");
 		if (opts.lock) {
 			lockKey = opts.lock.getKey(c);
 			if (lockKey) {
@@ -161,6 +162,7 @@ export function createRoute<
 					lockKey,
 					ttlMs: opts.lock.ttlMs,
 					errorMessage: opts.lock.errorMessage,
+					redisInstance: orgRedis,
 				});
 			}
 		}
@@ -182,7 +184,7 @@ export function createRoute<
 		} finally {
 			// Always release lock
 			if (lockKey) {
-				await clearLock({ lockKey });
+				await clearLock({ lockKey, redisInstance: orgRedis });
 			}
 		}
 	};

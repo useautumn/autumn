@@ -469,6 +469,15 @@ export class OrgService {
 		await clearOrgCache({ db, orgId });
 	}
 
+	static async listWithRedisConfig({ db }: { db: DrizzleCli }) {
+		const result = await db.query.organizations.findMany({
+			where: isNotNull(organizations.redis_config),
+			columns: { id: true, redis_config: true },
+		});
+
+		return result as Organization[];
+	}
+
 	static async listPreviewOrgsForDeletion({ db }: { db: DrizzleCli }) {
 		const PREVIEW_ORG_PATTERN = "preview|%";
 		// 1. Find all preview orgs with no memberships

@@ -1,5 +1,4 @@
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
-import { redis } from "@/external/redis/initRedis.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 
 export const deleteLock = async ({
@@ -16,5 +15,5 @@ export const deleteLock = async ({
 		lockKey: hashedKey,
 	});
 
-	await redis.del(redisReceiptKey);
+	await ctx.redis.del(redisReceiptKey);
 };

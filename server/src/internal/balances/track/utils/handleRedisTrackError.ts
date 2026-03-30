@@ -54,7 +54,7 @@ export const handleRedisTrackError = async ({
 	// Fallback to Postgres for recoverable errors
 	if (error.shouldFallback()) {
 		ctx.logger.warn(
-			`Falling back to Postgres for track operation: ${error.code}`,
+			`[handleRedisTrackError] FALLBACK to Postgres: code=${error.code}, customer=${body.customer_id}, feature=${body.feature_id}, value=${body.value ?? 1}, message=${error.message}`,
 		);
 
 		return await runPostgresTrack({

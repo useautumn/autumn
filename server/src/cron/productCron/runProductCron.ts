@@ -62,7 +62,9 @@ export const runProductCron = async ({
 							orgId: row.customer.org_id,
 							env: row.customer.env as AppEnv,
 							customerId: row.customer.id ?? "",
+							redisConfig: ctx.org.redis_config,
 						})),
+						logger: ctx.logger,
 					});
 					console.log(`Expired ${rows.length} customer products`);
 					continue;

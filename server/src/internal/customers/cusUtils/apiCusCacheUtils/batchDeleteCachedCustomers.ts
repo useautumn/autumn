@@ -1,3 +1,4 @@
+import type { OrgRedisConfig } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import { batchDeleteCachedFullCustomers } from "../fullCustomerCacheUtils/batchDeleteCachedFullCustomers";
 
@@ -5,8 +6,6 @@ import { batchDeleteCachedFullCustomers } from "../fullCustomerCacheUtils/batchD
  * Batch delete multiple customer caches in one Redis operation across ALL regions.
  * This ensures cache consistency and prevents race conditions where
  * a stale cache in another region could be read after deletion.
- * @param customers Array of {orgId, env, customerId} to delete
- * @returns Number of keys deleted
  */
 export const batchDeleteCachedCustomers = async ({
 	customers,
@@ -15,6 +14,7 @@ export const batchDeleteCachedCustomers = async ({
 		orgId: string;
 		env: string;
 		customerId: string;
+		redisConfig?: OrgRedisConfig | null;
 	}>;
 }): Promise<number> => {
 	if (redis.status !== "ready") {

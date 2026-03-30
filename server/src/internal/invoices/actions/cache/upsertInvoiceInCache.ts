@@ -1,5 +1,5 @@
 import type { Invoice } from "@autumn/shared";
-import { redis } from "@/external/redis/initRedis.js";
+
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -44,7 +44,7 @@ export const upsertInvoiceInCache = async ({
 		const invoiceJson = JSON.stringify(invoice);
 
 		const result = await tryRedisWrite(async () => {
-			return await redis.upsertInvoiceInCustomer(cacheKey, invoiceJson);
+			return await ctx.redis.upsertInvoiceInCustomer(cacheKey, invoiceJson);
 		});
 
 		if (result === null) {

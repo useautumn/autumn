@@ -1,4 +1,3 @@
-import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { ResetCusEntParam } from "@/internal/balances/utils/sql/client.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
@@ -56,6 +55,6 @@ export const executeResetCache = async ({
 	});
 
 	await tryRedisWrite(() =>
-		redis.updateCustomerEntitlements(cacheKey, JSON.stringify({ updates })),
+		ctx.redis.updateCustomerEntitlements(cacheKey, JSON.stringify({ updates })),
 	);
 };

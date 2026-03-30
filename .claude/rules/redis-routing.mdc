@@ -1,0 +1,69 @@
+---
+alwaysApply: true
+---
+
+# Per-Org Redis Routing Contract
+
+## Core Rule
+
+Every code path that populates `ctx.org` + `ctx.customerId` **MUST** also resolve `ctx.redis` via `resolveRedisForCustomer`. Forgetting this means customer cache operations silently hit master Redis instead of the org's dedicated Redis.
+
+```typescript
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting.js";
+
+ctx.redis = resolveRedisForCustomer({
+  org: ctx.org,
+  customerId: ctx.customerId,
+});
+```
+
+## Where Redis Resolution Happens
+
+These are the canonical places that set `ctx.redis`. When adding a new middleware, webhook handler, or worker context that knows both `org` and `customerId`, add Redis resolution here too.
+
+| Location | When Redis is resolved |
+|---|---|
+| `baseMiddleware` | Defaults `ctx.redis` to master Redis |
+| `orgRedisMiddleware` | Re-resolves after `secretKeyMiddleware` populates `ctx.org` (main API routes) |
+| `checkoutMiddleware` | Resolves when setting up checkout context (public checkout routes) |
+| `stripeToAutumnCustomerMiddleware` | Re-resolves after customer lookup |
+| `resolveRevenuecatResources` | Re-resolves after `ctx.customerId` is set |
+| `vercelMiddleware` | Resolves with `ctx.customerId` (may be undefined at seeder time) |
+| `createWorkerContext` | Resolves for worker jobs; `customerId` may be undefined for org-level jobs |
+| `createWorkerAutumnContext` | Resolves for worker jobs without customer context |
+| `migrateCustomer` | Re-resolves per-customer since the migration job context has no single customer |
+
+## Region-Dependent Operations
+
+For operations that need to target a specific region's master Redis (lock receipts, sync), pass `region` to `resolveRedisForCustomer`:
+
+```typescript
+const redisInstance = resolveRedisForCustomer({
+  org: ctx.org,
+  customerId,
+  region: receiptRegion, // e.g. "us-east-2"
+});
+```
+
+The function handles both cases:
+- Org with `redis_config` + customer bucket on dedicated -> returns org Redis (region ignored)
+- Customer on master -> returns `getRegionalRedis(region)` if provided, else master singleton
+
+Do NOT manually branch on `ctx.org.redis_config` and call `getRegionalRedis` separately. That duplicated two-path pattern was the source of multiple bugs.
+
+## Non-Customer Cache Operations Stay on Master
+
+These caches are org-level or global and must NOT go through `ctx.redis`:
+
+- **Product cache**: `CacheManager` -> `getPrimaryRedis()` (master)
+- **API key cache**: `redis` singleton (master) directly
+- **Rate limiter**: `redis` singleton (master) directly
+- **`queryWithCache`**: `CacheManager` -> `getPrimaryRedis()` (master)
+
+## Webhook Seeders: Do NOT Set `ctx.redis` Before Customer Is Known
+
+Stripe/RevenueCat seeder middlewares run before the customer is identified. Do NOT call `resolveRedisForCustomer` in the seeder -- it will always return master (customerId is undefined) and is confusing. Let the downstream middleware (`stripeToAutumnCustomerMiddleware`, `resolveRevenuecatResources`) handle it after the customer is resolved.
+
+## Batch/Invalidation Operations
+
+For batch cache deletions or invalidations that need to hit all Redis instances for an org, use `invalidateCache` from `orgRedisPool.ts`. It handles both the org's dedicated Redis AND all master regions automatically. Do NOT manually partition orgs into "org Redis" vs "master Redis" groups.

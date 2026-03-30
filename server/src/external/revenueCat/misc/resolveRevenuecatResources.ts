@@ -6,6 +6,7 @@ import {
 	ProcessorType,
 	RecaseError,
 } from "@shared/index";
+import { resolveRedisForCustomer } from "@/external/redis/customerRedisRouting";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
@@ -87,8 +88,12 @@ export const resolveRevenuecatResources = async ({
 			cp.processor?.type === ProcessorType.RevenueCat || cp.product.is_default,
 	);
 
-	// Set customer ID in context for cache refresh middleware
+	// Set customer ID and re-resolve Redis now that the customer is known
 	ctx.customerId = customer.id ?? "";
+	ctx.redis = resolveRedisForCustomer({
+		org: ctx.org,
+		customerId: ctx.customerId,
+	});
 
 	return { product, customer, cusProducts };
 };

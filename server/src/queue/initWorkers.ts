@@ -378,6 +378,12 @@ export const initWorkers = async () => {
 	const { db } = initDrizzle({ maxConnections: 10 });
 	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
 	await warmupRegionalRedis();
+	const { preWarmOrgRedisConnections } = await import(
+		"@/external/redis/orgRedisPool.js"
+	);
+	preWarmOrgRedisConnections({ db }).catch((error) =>
+		console.error("[OrgRedis] Worker pre-warm failed:", error),
+	);
 
 	const shutdown = async () => {
 		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
