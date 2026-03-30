@@ -2,6 +2,7 @@ import {
 	cusEntToStartingBalance,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToOverageAllowedByFeatureId,
 	fullCustomerToSpendLimitByFeatureId,
 	fullCustomerToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
@@ -85,6 +86,10 @@ export const prepareFeatureDeduction = ({
 			fullCustomer,
 			featureIds: effectiveFeatureIds,
 		});
+	const overageAllowedByFeatureId = fullCustomerToOverageAllowedByFeatureId({
+		fullCustomer,
+		featureIds: effectiveFeatureIds,
+	});
 
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
@@ -104,12 +109,18 @@ export const prepareFeatureDeduction = ({
 			const isFreeAllocatedUsageAllowed =
 				isFreeAllocated && overageBehaviour !== "reject";
 
+			const billingControlOverageAllowed =
+				overageAllowedByFeatureId[ce.entitlement.feature.id]?.enabled ?? false;
+
 			return {
 				customer_entitlement_id: ce.id,
 				credit_cost: creditCost,
 				feature_id: ce.entitlement.feature.id,
 				entity_feature_id: ce.entitlement.entity_feature_id ?? null,
-				usage_allowed: ce.usage_allowed || isFreeAllocatedUsageAllowed,
+				usage_allowed:
+					ce.usage_allowed ||
+					isFreeAllocatedUsageAllowed ||
+					billingControlOverageAllowed,
 				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
 				max_balance: resetBalance,
 			};

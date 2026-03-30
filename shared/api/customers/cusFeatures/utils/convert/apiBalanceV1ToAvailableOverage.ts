@@ -16,7 +16,7 @@ export const apiBalanceBreakdownV1ToMaxOverage = ({
 		return apiBalanceBreakdown.price?.max_purchase ?? undefined;
 	}
 
-	return 0;
+	return undefined;
 };
 
 export const apiBalanceV1ToMaxOverage = ({
