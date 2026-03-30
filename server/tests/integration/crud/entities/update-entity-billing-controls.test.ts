@@ -28,6 +28,15 @@ const usageAlertControls: EntityBillingControls = {
 	],
 };
 
+const overageAllowedControls: EntityBillingControls = {
+	overage_allowed: [
+		{
+			feature_id: TestFeature.Messages,
+			enabled: true,
+		},
+	],
+};
+
 test.concurrent(`${chalk.yellowBright("entity billing controls: create and update entity spend limits")}`, async () => {
 	const { customerId, autumnV2_1 } = await initScenario({
 		customerId: "entity-billing-controls-1",
@@ -347,6 +356,130 @@ test.concurrent(`${chalk.yellowBright("entity billing controls: clearing usage a
 
 	expect(fetched.billing_controls?.usage_alerts).toEqual([]);
 	// spend_limits should still be intact
+	expect(fetched.billing_controls?.spend_limits).toEqual(
+		initialBillingControls.spend_limits,
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("entity billing controls: create entity with overage_allowed")}`, async () => {
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "entity-billing-controls-9",
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	const created = await autumnV2_1.entities.create(customerId, {
+		id: "entity-oa-1",
+		name: "Entity OA 1",
+		feature_id: TestFeature.Users,
+		billing_controls: overageAllowedControls,
+	});
+
+	expect((created as ApiEntityV2).billing_controls?.overage_allowed).toEqual(
+		overageAllowedControls.overage_allowed,
+	);
+
+	const fetched = await autumnV2_1.entities.get<ApiEntityV2>(
+		customerId,
+		"entity-oa-1",
+	);
+	expect(fetched.billing_controls?.overage_allowed).toEqual(
+		overageAllowedControls.overage_allowed,
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("entity billing controls: update overage_allowed without clearing spend limits")}`, async () => {
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "entity-billing-controls-10",
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	await autumnV2_1.entities.create(customerId, {
+		id: "entity-oa-preserve-1",
+		name: "Entity OA Preserve 1",
+		feature_id: TestFeature.Users,
+		billing_controls: initialBillingControls,
+	});
+
+	await autumnV2_1.entities.update(customerId, "entity-oa-preserve-1", {
+		billing_controls: overageAllowedControls,
+	});
+
+	const fetched = await autumnV2_1.entities.get<ApiEntityV2>(
+		customerId,
+		"entity-oa-preserve-1",
+	);
+	expect(fetched.billing_controls?.spend_limits).toEqual(
+		initialBillingControls.spend_limits,
+	);
+	expect(fetched.billing_controls?.overage_allowed).toEqual(
+		overageAllowedControls.overage_allowed,
+	);
+
+	const fromDb = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		withEntities: true,
+	});
+	const entity = fromDb.entities.find(
+		(candidate) => candidate.id === "entity-oa-preserve-1",
+	);
+	expect(entity?.spend_limits).toEqual(initialBillingControls.spend_limits);
+	expect(entity?.overage_allowed).toEqual(
+		overageAllowedControls.overage_allowed,
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("entity billing controls: reject duplicate overage_allowed feature ids")}`, async () => {
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "entity-billing-controls-11",
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		func: async () =>
+			await autumnV2_1.entities.create(customerId, {
+				id: "entity-oa-dup",
+				name: "Entity OA Dup",
+				feature_id: TestFeature.Users,
+				billing_controls: {
+					overage_allowed: [
+						{ feature_id: TestFeature.Messages, enabled: true },
+						{ feature_id: TestFeature.Messages, enabled: false },
+					],
+				},
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("entity billing controls: clearing overage_allowed with empty array")}`, async () => {
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "entity-billing-controls-12",
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	await autumnV2_1.entities.create(customerId, {
+		id: "entity-oa-clear-1",
+		name: "Entity OA Clear 1",
+		feature_id: TestFeature.Users,
+		billing_controls: {
+			...initialBillingControls,
+			...overageAllowedControls,
+		},
+	});
+
+	await autumnV2_1.entities.update(customerId, "entity-oa-clear-1", {
+		billing_controls: { overage_allowed: [] },
+	});
+
+	const fetched = await autumnV2_1.entities.get<ApiEntityV2>(
+		customerId,
+		"entity-oa-clear-1",
+	);
+	expect(fetched.billing_controls?.overage_allowed).toEqual([]);
 	expect(fetched.billing_controls?.spend_limits).toEqual(
 		initialBillingControls.spend_limits,
 	);
