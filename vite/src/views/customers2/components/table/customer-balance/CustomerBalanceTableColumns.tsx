@@ -189,7 +189,7 @@ function SubRowUsageCell({
 		return <span className="text-t4">Unlimited</span>;
 	}
 
-	console.log("ent", ent);
+	
 
 	const { balance, allowance, rolloverBalance } = getIndividualEntValues({
 		ent,
