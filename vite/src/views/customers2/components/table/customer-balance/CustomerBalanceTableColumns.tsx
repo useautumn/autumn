@@ -189,6 +189,8 @@ function SubRowUsageCell({
 		return <span className="text-t4">Unlimited</span>;
 	}
 
+	
+
 	const { balance, allowance, rolloverBalance } = getIndividualEntValues({
 		ent,
 		entityId,
