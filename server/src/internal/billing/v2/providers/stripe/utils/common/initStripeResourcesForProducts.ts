@@ -1,5 +1,11 @@
 import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
-import { cusProductToProduct } from "@autumn/shared";
+import {
+	cusProductToProduct,
+	isCustomerProductOnStripeSubscription,
+	isCustomerProductOnStripeSubscriptionSchedule,
+	isPrepaidPrice,
+	type UsagePriceConfig,
+} from "@autumn/shared";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
@@ -15,8 +21,8 @@ export const initStripeResourcesForBillingPlan = async ({
 }) => {
 	const { db, org, env, logger } = ctx;
 
-	// For each insert customer product
-	const { fullCustomer } = billingContext;
+	const { fullCustomer, stripeSubscription, stripeSubscriptionSchedule } =
+		billingContext;
 	const { insertCustomerProducts } = autumnBillingPlan;
 
 	const newProducts = insertCustomerProducts.flatMap((cp) =>
@@ -55,5 +61,58 @@ export const initStripeResourcesForBillingPlan = async ({
 			);
 		}
 	}
+
+	// Also ensure V2 Stripe prices exist for existing customer products on the
+	// same subscription/schedule. The phase builder includes these products when
+	// constructing schedule items, so any prepaid price missing
+	// stripe_prepaid_price_v2_id would cause a failure.
+	const existingCusProducts = fullCustomer.customer_products.filter(
+		(customerProduct) => {
+			if (
+				stripeSubscription &&
+				isCustomerProductOnStripeSubscription({
+					customerProduct,
+					stripeSubscriptionId: stripeSubscription.id,
+				})
+			) {
+				return true;
+			}
+
+			if (
+				stripeSubscriptionSchedule &&
+				isCustomerProductOnStripeSubscriptionSchedule({
+					customerProduct,
+					stripeSubscriptionScheduleId: stripeSubscriptionSchedule.id,
+				})
+			) {
+				return true;
+			}
+
+			return false;
+		},
+	);
+
+	for (const cusProduct of existingCusProducts) {
+		const product = cusProductToProduct({ cusProduct });
+
+		for (const price of product.prices) {
+			if (!isPrepaidPrice(price)) continue;
+
+			const config = price.config as UsagePriceConfig;
+			if (config.stripe_prepaid_price_v2_id) continue;
+
+			batchPriceUpdates.push(
+				createStripePriceIFNotExist({
+					ctx,
+					price,
+					entitlements: product.entitlements,
+					product,
+					internalEntityId,
+					useCheckout: false,
+				}),
+			);
+		}
+	}
+
 	await Promise.all(batchPriceUpdates);
 };
