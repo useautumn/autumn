@@ -23,6 +23,16 @@ export const buildAutoTopUpLockKey = ({
 	});
 };
 
+const featureMatchesOption = ({
+	feature,
+	option,
+}: {
+	feature: Feature;
+	option: FeatureOptions;
+}) =>
+	option.internal_feature_id === feature.internal_id ||
+	option.feature_id === feature.id;
+
 /** Compute updated options array with the top-up packs added. */
 export const buildUpdatedOptions = ({
 	cusProduct,
@@ -35,11 +45,12 @@ export const buildUpdatedOptions = ({
 }): FeatureOptions[] => {
 	if (!cusProduct) return [];
 
-	return cusProduct.options.map((opt) => {
-		if (
-			opt.internal_feature_id === feature.internal_id ||
-			opt.feature_id === feature.id
-		) {
+	const options = cusProduct.options ?? [];
+	let matched = false;
+
+	const nextOptions = options.map((opt) => {
+		if (featureMatchesOption({ feature, option: opt })) {
+			matched = true;
 			return {
 				...opt,
 				quantity: new Decimal(opt.quantity || 0).add(topUpPacks).toNumber(),
@@ -47,6 +58,17 @@ export const buildUpdatedOptions = ({
 		}
 		return opt;
 	});
+
+	if (matched) return nextOptions;
+
+	return [
+		...nextOptions,
+		{
+			feature_id: feature.id,
+			internal_feature_id: feature.internal_id,
+			quantity: topUpPacks,
+		},
+	];
 };
 
 export const updateCusEntOptionsInline = ({
@@ -58,19 +80,39 @@ export const updateCusEntOptionsInline = ({
 	feature: Feature;
 	quantity: number;
 }) => {
-	// const cusPrice = cusEntToCusPrice({ cusEnt });
+	const customerProduct = cusEnt.customer_product;
+
+	if (!customerProduct) {
+		return cusEnt;
+	}
+
+	const options = customerProduct.options ?? [];
+	let matched = false;
+
+	const nextOptions = options.map((opt) => {
+		if (featureMatchesOption({ feature, option: opt })) {
+			matched = true;
+			return { ...opt, quantity };
+		}
+		return opt;
+	});
+
+	const optionsWithTopUp = matched
+		? nextOptions
+		: [
+				...nextOptions,
+				{
+					feature_id: feature.id,
+					internal_feature_id: feature.internal_id,
+					quantity,
+				},
+			];
+
 	return {
 		...cusEnt,
-		customer_product: cusEnt.customer_product
-			? {
-					...cusEnt.customer_product,
-					options: cusEnt.customer_product.options.map((opt) =>
-						opt.internal_feature_id === feature.internal_id ||
-						opt.feature_id === feature.id
-							? { ...opt, quantity }
-							: opt,
-					),
-				}
-			: cusEnt.customer_product,
+		customer_product: {
+			...customerProduct,
+			options: optionsWithTopUp,
+		},
 	};
 };
