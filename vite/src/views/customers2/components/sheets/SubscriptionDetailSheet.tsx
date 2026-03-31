@@ -3,6 +3,7 @@ import {
 	type Entity,
 	isCustomerProductTrialing,
 	type ProductItem,
+	UsageModel,
 } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
@@ -152,22 +153,24 @@ export function SubscriptionDetailSheet() {
 							</div>
 						)}
 
-						<div className="space-y-2">
-							{productV2.items.map((item: ProductItem, index: number) => {
-								if (!item.feature_id) return null;
-								const prepaidQuantity =
-									prepaidDisplayQuantities[item.feature_id] ?? null;
+					<div className="space-y-2">
+						{productV2.items.map((item: ProductItem, index: number) => {
+							if (!item.feature_id) return null;
+							const prepaidQuantity =
+								item.usage_model === UsageModel.Prepaid
+									? (prepaidDisplayQuantities[item.feature_id] ?? null)
+									: null;
 
-								return (
-									<PlanFeatureRow
-										key={item.feature_id || item.price_id || index}
-										item={item}
-										index={index}
-										readOnly={true}
-										prepaidQuantity={prepaidQuantity}
-									/>
-								);
-							})}
+							return (
+								<PlanFeatureRow
+									key={item.feature_id || item.price_id || index}
+									item={item}
+									index={index}
+									readOnly={true}
+									prepaidQuantity={prepaidQuantity}
+								/>
+							);
+						})}
 						</div>
 					</SheetSection>
 				)}

@@ -1,5 +1,6 @@
 import type {
 	AutoTopup,
+	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
 	Entity,
@@ -150,7 +151,9 @@ const UsageAlertRow = ({
 				})}
 			</span>
 			{usageAlert.name && (
-				<span className="truncate text-xs text-t3 font-mono ml-4">{usageAlert.name}</span>
+				<span className="truncate text-xs text-t3 font-mono ml-4">
+					{usageAlert.name}
+				</span>
 			)}
 			<div className="ml-auto flex items-center gap-1.5 shrink-0">
 				<Pill>At: {thresholdLabel}</Pill>
@@ -163,6 +166,24 @@ const UsageAlertRow = ({
 		</div>
 	);
 };
+
+const OverageAllowedRow = ({
+	overageAllowed,
+	featureNameById,
+}: {
+	overageAllowed: DbOverageAllowed;
+	featureNameById: Map<string, string>;
+}) => (
+	<div className={rowClassName}>
+		<StatusPill enabled={overageAllowed.enabled} />
+		<span className="truncate text-sm text-t1 font-medium">
+			{getFeatureLabel({
+				featureId: overageAllowed.feature_id,
+				featureNameById,
+			})}
+		</span>
+	</div>
+);
 
 export function CustomerBillingControlsSection() {
 	const { customer, features, isLoading } = useCusQuery();
@@ -194,15 +215,22 @@ export function CustomerBillingControlsSection() {
 	const usageAlerts = selectedEntity
 		? (selectedEntity.usage_alerts ?? [])
 		: (fullCustomer?.usage_alerts ?? []);
+	const overageAllowed = selectedEntity
+		? (selectedEntity.overage_allowed ?? [])
+		: (fullCustomer?.overage_allowed ?? []);
 
 	const hasAnyControls =
-		autoTopups.length > 0 || spendLimits.length > 0 || usageAlerts.length > 0;
+		autoTopups.length > 0 ||
+		spendLimits.length > 0 ||
+		usageAlerts.length > 0 ||
+		overageAllowed.length > 0;
 
 	const entitiesWithControlsCount =
 		fullCustomer?.entities?.filter(
 			(entity: Entity) =>
 				(entity.spend_limits?.length ?? 0) > 0 ||
-				(entity.usage_alerts?.length ?? 0) > 0,
+				(entity.usage_alerts?.length ?? 0) > 0 ||
+				(entity.overage_allowed?.length ?? 0) > 0,
 		).length ?? 0;
 
 	if (!isLoading && !hasAnyControls && selectedEntity) return null;
@@ -216,11 +244,7 @@ export function CustomerBillingControlsSection() {
 		<Table.Container>
 			<Table.Toolbar>
 				<Table.Heading>
-					<GavelIcon
-						size={16}
-						weight="fill"
-						className="text-subtle"
-					/>
+					<GavelIcon size={16} weight="fill" className="text-subtle" />
 					Billing controls
 				</Table.Heading>
 			</Table.Toolbar>
@@ -232,11 +256,7 @@ export function CustomerBillingControlsSection() {
 			) : (
 				<div className="flex flex-col gap-4">
 					{autoTopups.length > 0 && (
-						<BillingControlsGroup
-							title="Auto top-ups"
-							emptyText=""
-							hasItems
-						>
+						<BillingControlsGroup title="Auto top-ups" emptyText="" hasItems>
 							<div className="flex flex-col gap-1.5">
 								{autoTopups.map((autoTopup) => (
 									<AutoTopupRow
@@ -250,11 +270,7 @@ export function CustomerBillingControlsSection() {
 					)}
 
 					{spendLimits.length > 0 && (
-						<BillingControlsGroup
-							title="Spend limits"
-							emptyText=""
-							hasItems
-						>
+						<BillingControlsGroup title="Spend limits" emptyText="" hasItems>
 							<div className="flex flex-col gap-1.5">
 								{spendLimits.map((spendLimit, index) => (
 									<SpendLimitRow
@@ -268,16 +284,26 @@ export function CustomerBillingControlsSection() {
 					)}
 
 					{usageAlerts.length > 0 && (
-						<BillingControlsGroup
-							title="Usage alerts"
-							emptyText=""
-							hasItems
-						>
+						<BillingControlsGroup title="Usage alerts" emptyText="" hasItems>
 							<div className="flex flex-col gap-1.5">
 								{usageAlerts.map((usageAlert, index) => (
 									<UsageAlertRow
 										key={`usage-alert-${usageAlert.feature_id ?? "global"}-${usageAlert.name ?? index}`}
 										usageAlert={usageAlert}
+										featureNameById={featureNameById}
+									/>
+								))}
+							</div>
+						</BillingControlsGroup>
+					)}
+
+					{overageAllowed.length > 0 && (
+						<BillingControlsGroup title="Overage enabled" emptyText="" hasItems>
+							<div className="flex flex-col gap-1.5">
+								{overageAllowed.map((item) => (
+									<OverageAllowedRow
+										key={`overage-allowed-${item.feature_id}`}
+										overageAllowed={item}
 										featureNameById={featureNameById}
 									/>
 								))}
