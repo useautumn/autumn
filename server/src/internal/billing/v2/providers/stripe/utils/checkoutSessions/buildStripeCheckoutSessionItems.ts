@@ -85,6 +85,51 @@ const filterRecurringStripeItemSpecsForCheckout = ({
 	});
 };
 
+/**
+ * Adds `adjustable_quantity` to a prepaid line item if the feature is marked adjustable.
+ * Skips tiered one-off items that use inline `price_data` (quantity is pre-computed).
+ */
+const applyAdjustableQuantityToPrepaidLineItem = ({
+	lineItem,
+	spec,
+	billingContext,
+}: {
+	lineItem: Stripe.Checkout.SessionCreateParams.LineItem;
+	spec: StripeItemSpec;
+	billingContext: BillingContext;
+}): Stripe.Checkout.SessionCreateParams.LineItem => {
+	const { autumnPrice, autumnEntitlement } = spec;
+
+	if (!autumnPrice || !autumnEntitlement || !isPrepaidPrice(autumnPrice)) {
+		return lineItem;
+	}
+
+	// Tiered one-off items use inline price_data with quantity: 1, adjustable doesn't apply
+	if ("price_data" in lineItem) {
+		return lineItem;
+	}
+
+	const feature = autumnEntitlement.feature;
+	const isAdjustable =
+		billingContext.adjustableFeatureQuantities?.includes(feature.id);
+
+	if (!isAdjustable) {
+		return lineItem;
+	}
+
+	return {
+		...lineItem,
+		adjustable_quantity: {
+			enabled: true,
+			minimum: priceUtils.convert.toAllowanceInPacks({
+				price: autumnPrice,
+				entitlement: autumnEntitlement,
+			}),
+			maximum: 999999,
+		},
+	} as Stripe.Checkout.SessionCreateParams.LineItem;
+};
+
 export const buildStripeCheckoutSessionItems = ({
 	ctx,
 	billingContext,
@@ -126,39 +171,27 @@ export const buildStripeCheckoutSessionItems = ({
 
 	// 5. Convert recurring item specs to line items
 	const recurringLineItems = recurringStripeItemSpecs.map((item) => {
-		const { autumnPrice, autumnEntitlement } = item;
 		const lineItem = stripeItemSpecToCheckoutLineItem({ spec: item });
-
-		// If it's a prepaid price, allow adjustable quantity
-		if (autumnPrice && autumnEntitlement && isPrepaidPrice(autumnPrice)) {
-			const feature = autumnEntitlement.feature;
-			const isAdjustable = billingContext.adjustableFeatureQuantities?.includes(
-				feature.id,
-			);
-
-			return {
-				...lineItem,
-				adjustable_quantity: isAdjustable
-					? {
-							enabled: true,
-							minimum: priceUtils.convert.toAllowanceInPacks({
-								price: autumnPrice,
-								entitlement: autumnEntitlement,
-							}),
-							maximum: 999999,
-						}
-					: undefined,
-			} as Stripe.Checkout.SessionCreateParams.LineItem;
-		}
-
-		return lineItem;
+		return applyAdjustableQuantityToPrepaidLineItem({
+			lineItem,
+			spec: item,
+			billingContext,
+		});
 	});
 
 	// 6. Convert one-off item specs to line items (handles tiered one-off prices)
 	const oneOffLineItems = updateOneOffTieredItems({
 		oneOffItemSpecs,
 		org: ctx.org,
-	}).filter((lineItem) => !isZeroAmountInlineLineItem({ lineItem }));
+	})
+		.map((lineItem, index) =>
+			applyAdjustableQuantityToPrepaidLineItem({
+				lineItem,
+				spec: oneOffItemSpecs[index],
+				billingContext,
+			}),
+		)
+		.filter((lineItem) => !isZeroAmountInlineLineItem({ lineItem }));
 
 	return { recurringLineItems, oneOffLineItems };
 };
