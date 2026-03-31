@@ -87,7 +87,7 @@ const filterRecurringStripeItemSpecsForCheckout = ({
 
 /**
  * Adds `adjustable_quantity` to a prepaid line item if the feature is marked adjustable.
- * Skips tiered one-off items that use inline `price_data` (quantity is pre-computed).
+ * Skips tiered one-off items whose total is pre-computed into a single lump-sum line item.
  */
 const applyAdjustableQuantityToPrepaidLineItem = ({
 	lineItem,
@@ -98,14 +98,18 @@ const applyAdjustableQuantityToPrepaidLineItem = ({
 	spec: StripeItemSpec;
 	billingContext: BillingContext;
 }): Stripe.Checkout.SessionCreateParams.LineItem => {
-	const { autumnPrice, autumnEntitlement } = spec;
+	const { autumnPrice, autumnEntitlement, autumnProduct } = spec;
 
 	if (!autumnPrice || !autumnEntitlement || !isPrepaidPrice(autumnPrice)) {
 		return lineItem;
 	}
 
-	// Tiered one-off items use inline price_data with quantity: 1, adjustable doesn't apply
-	if ("price_data" in lineItem) {
+	// Tiered one-off items have their total pre-computed into a lump-sum price_data
+	// with quantity: 1 — adjustable quantity doesn't apply to them.
+	if (
+		autumnProduct &&
+		priceUtils.isTieredOneOff({ price: autumnPrice, product: autumnProduct })
+	) {
 		return lineItem;
 	}
 
