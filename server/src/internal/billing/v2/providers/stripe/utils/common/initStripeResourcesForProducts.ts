@@ -32,8 +32,11 @@ export const initStripeResourcesForBillingPlan = async ({
 		)
 		.map((product) => ({
 			...product,
-			prices: product.prices.filter((price) =>
-				nullish(price.config.stripe_price_id),
+			prices: product.prices.filter(
+				(price) =>
+					nullish(price.config.stripe_price_id) ||
+					("stripe_prepaid_price_v2_id" in price.config &&
+						nullish(price.config.stripe_prepaid_price_v2_id)),
 			),
 		}))
 		.filter(
