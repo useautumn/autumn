@@ -8,6 +8,7 @@ import {
 	isUnlimitedCusEnt,
 	numberWithCommas,
 } from "@autumn/shared";
+import { ClockCountdownIcon } from "@phosphor-icons/react";
 
 import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
@@ -129,6 +130,7 @@ function UnlimitedBalanceInfo({
 					isUnlimited
 				/>
 			</SheetSection>
+			<RolloversSection selectedCusEnt={selectedCusEnt} />
 		</div>
 	);
 }
@@ -166,6 +168,8 @@ function BalanceEditForm({
 				/>
 			</SheetSection>
 
+			<RolloversSection selectedCusEnt={selectedCusEnt} entityId={entityId} />
+
 			<SheetSection withSeparator={false}>
 				<BalanceFields
 					form={form}
@@ -183,6 +187,61 @@ function BalanceEditForm({
 				cusPrice={cusPrice}
 			/>
 		</div>
+	);
+}
+
+/* ─── Rollovers Section ─── */
+
+function RolloversSection({
+	selectedCusEnt,
+	entityId,
+}: {
+	selectedCusEnt: FullCustomerEntitlement;
+	entityId?: string | null;
+}) {
+	const rolloverFields = getRolloverFields({
+		cusEnt: selectedCusEnt,
+		entityId: entityId ?? undefined,
+	});
+
+	if (!rolloverFields || rolloverFields.rollovers.length === 0) return null;
+
+	const { rollovers } = rolloverFields;
+
+	return (
+		<SheetSection withSeparator>
+			<div className="flex flex-col gap-2">
+				<div className="flex items-center gap-1.5 text-t3 text-sm font-medium">
+					<ClockCountdownIcon size={14} weight="duotone" />
+					Rollovers
+				</div>
+				<div className="flex flex-col gap-1.5">
+					{rollovers.map((rollover, index) => {
+						const expiryText = rollover.expires_at
+							? `${formatUnixToDateTime(rollover.expires_at, { withYear: true }).date}, ${formatUnixToDateTime(rollover.expires_at).time}`
+							: "No expiry";
+
+						return (
+							<div
+								key={`rollover-${index}-${rollover.expires_at}`}
+								className="flex items-center justify-between text-sm px-2 py-0.5 rounded-md"
+							>
+								<span className="text-t1 font-medium">
+									+{numberWithCommas(rollover.balance)}
+								</span>
+								<span className="text-t3 text-xs">
+									{rollover.expires_at ? `Expires ${expiryText}` : expiryText}
+								</span>
+							</div>
+						);
+					})}
+				</div>
+				<div className="flex items-center justify-between text-xs text-t4 px-2">
+					<span>Total rollover</span>
+					<span>+{numberWithCommas(rolloverFields.balance)}</span>
+				</div>
+			</div>
+		</SheetSection>
 	);
 }
 
@@ -328,9 +387,6 @@ function SetBalanceFields({
 	const balance = useStore(form.store, (s) => s.values.balance);
 	const gpb = useStore(form.store, (s) => s.values.grantedAndPurchasedBalance);
 
-	const rolloverBalance =
-		getRolloverFields({ cusEnt: selectedCusEnt })?.balance ?? 0;
-
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex items-end gap-2 w-full">
@@ -368,13 +424,11 @@ function SetBalanceFields({
 					)}
 					<div className="text-t4 text-sm truncate mb-1 flex justify-center max-w-full w-full">
 						<span className="truncate">
-							{numberWithCommas((gpb ?? 0) - (balance ?? 0))} used
+							{numberWithCommas(
+								(gpb ?? 0) + form.rolloverBalance - (balance ?? 0),
+							)}{" "}
+							used
 						</span>
-						{/* {rolloverBalance > 0 && (
-							<span className="truncate">
-								+{numberWithCommas(rolloverBalance)} rollover
-							</span>
-						)} */}
 					</div>
 				</div>
 			</div>
@@ -503,11 +557,14 @@ function SubmitButton({
 						prepaidAllowance: form.prepaidAllowance,
 					});
 
+					const targetBalance =
+						parseFloat(String(values.balance)) - form.rolloverBalance;
+
 					promises.push(
 						axiosInstance.post("/v1/balances/update", {
 							customer_id: customer.id || customer.internal_id,
 							feature_id: featureId,
-							current_balance: parseFloat(String(values.balance)),
+							current_balance: targetBalance,
 							included_grant: grantedBalanceInput ?? undefined,
 							granted_balance: grantedBalanceInput ?? undefined,
 							customer_entitlement_id: selectedCusEnt.id,
