@@ -54,7 +54,7 @@ export const fullCustomerToAutoTopupObjects = ({
 
 	// 4. Check balance against threshold
 	const remainingBalance = cusEntsToBalance({ cusEnts, withRollovers: true });
-	const balanceBelowThreshold = remainingBalance < autoTopupConfig.threshold;
+	const balanceBelowThreshold = remainingBalance <= autoTopupConfig.threshold;
 
 	return { autoTopupConfig, customerEntitlement, balanceBelowThreshold };
 };

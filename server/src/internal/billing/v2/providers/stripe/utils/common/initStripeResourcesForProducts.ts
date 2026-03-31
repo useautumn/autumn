@@ -15,7 +15,6 @@ export const initStripeResourcesForBillingPlan = async ({
 }) => {
 	const { db, org, env, logger } = ctx;
 
-	// For each insert customer product
 	const { fullCustomer } = billingContext;
 	const { insertCustomerProducts } = autumnBillingPlan;
 
@@ -23,8 +22,14 @@ export const initStripeResourcesForBillingPlan = async ({
 		cusProductToProduct({ cusProduct: cp }),
 	);
 
+	const existingProducts = fullCustomer.customer_products.map((cp) =>
+		cusProductToProduct({ cusProduct: cp }),
+	);
+
+	const allProducts = [...newProducts, ...existingProducts];
+
 	const batchProductUpdates = [];
-	for (const product of newProducts) {
+	for (const product of allProducts) {
 		batchProductUpdates.push(
 			checkStripeProductExists({
 				db,
@@ -41,7 +46,7 @@ export const initStripeResourcesForBillingPlan = async ({
 
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
-	for (const product of newProducts) {
+	for (const product of allProducts) {
 		for (const price of product.prices) {
 			batchPriceUpdates.push(
 				createStripePriceIFNotExist({
