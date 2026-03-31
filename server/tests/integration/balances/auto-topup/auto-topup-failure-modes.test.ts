@@ -153,7 +153,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup fm3: monthly (non-one-off) fea
 	expect(after.balances[TestFeature.Messages].remaining).toBe(15);
 });
 
-test.concurrent(`${chalk.yellowBright("auto-topup fm4: track exactly to threshold — no trigger")}`, async () => {
+test.concurrent(`${chalk.yellowBright("auto-topup fm4: track exactly to threshold — trigger")}`, async () => {
 	const oneOffItem = items.oneOffMessages({
 		includedUsage: 0,
 		billingUnits: 100,
@@ -197,7 +197,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup fm4: track exactly to threshol
 	await timeout(AUTO_TOPUP_WAIT_MS);
 
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expect(after.balances[TestFeature.Messages].remaining).toBe(20);
+	expect(after.balances[TestFeature.Messages].remaining).toBe(120);
 });
 
 test.concurrent(`${chalk.yellowBright("auto-topup fm5: insufficient balance rejection does NOT double-trigger")}`, async () => {
