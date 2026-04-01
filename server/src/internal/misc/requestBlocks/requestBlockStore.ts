@@ -1,11 +1,16 @@
-import { GetObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { ErrCode } from "@autumn/shared";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+	ADMIN_REQUEST_BLOCK_CONFIG_KEY,
+	getAdminS3Config,
+} from "@/external/aws/s3/adminS3Config.js";
+import { getS3Client } from "@/external/aws/s3/initS3.js";
+import { getS3BodyAsString } from "@/external/aws/s3/s3Utils.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { ErrCode } from "@autumn/shared";
-import { DEFAULT_AWS_REGION } from "@/external/aws/awsRegionUtils.js";
 import {
-	RequestBlockConfigSchema,
 	type RequestBlockConfig,
+	RequestBlockConfigSchema,
 	type RequestBlockEntry,
 	type RequestBlockUpdate,
 } from "./requestBlockSchemas.js";
@@ -31,10 +36,8 @@ let runtimeStatus: RequestBlockStatus = {
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 
 const getConfigLocation = () => {
-	const bucket = process.env.REQUEST_BLOCK_CONFIG_S3_BUCKET;
-	const key = process.env.REQUEST_BLOCK_CONFIG_S3_KEY;
-	const region =
-		process.env.REQUEST_BLOCK_CONFIG_S3_REGION || DEFAULT_AWS_REGION;
+	const { bucket, region } = getAdminS3Config();
+	const key = ADMIN_REQUEST_BLOCK_CONFIG_KEY;
 
 	return {
 		bucket,
@@ -44,27 +47,14 @@ const getConfigLocation = () => {
 	};
 };
 
-const getS3Client = () => {
-	const { region } = getConfigLocation();
-	return new S3Client({ region });
-};
-
-const streamToString = async (body: { transformToString?: () => Promise<string> }) => {
-	if (typeof body.transformToString === "function") {
-		return await body.transformToString();
-	}
-
-	return await new Response(body as BodyInit).text();
-};
-
 const readConfigFromS3 = async (): Promise<RequestBlockConfig> => {
-	const { bucket, key, configured } = getConfigLocation();
+	const { bucket, key, configured, region } = getConfigLocation();
 
 	if (!configured || !bucket || !key) {
 		return emptyConfig();
 	}
 
-	const client = getS3Client();
+	const client = getS3Client({ region });
 	try {
 		const response = await client.send(
 			new GetObjectCommand({
@@ -77,7 +67,7 @@ const readConfigFromS3 = async (): Promise<RequestBlockConfig> => {
 			return emptyConfig();
 		}
 
-		const raw = (await streamToString(response.Body)).trim();
+		const raw = (await getS3BodyAsString({ body: response.Body })).trim();
 		if (!raw) {
 			return emptyConfig();
 		}
@@ -93,7 +83,7 @@ const readConfigFromS3 = async (): Promise<RequestBlockConfig> => {
 };
 
 const writeConfigToS3 = async (config: RequestBlockConfig) => {
-	const { bucket, key, configured } = getConfigLocation();
+	const { bucket, key, configured, region } = getConfigLocation();
 
 	if (!configured || !bucket || !key) {
 		throw new RecaseError({
@@ -103,7 +93,7 @@ const writeConfigToS3 = async (config: RequestBlockConfig) => {
 		});
 	}
 
-	const client = getS3Client();
+	const client = getS3Client({ region });
 	await client.send(
 		new PutObjectCommand({
 			Bucket: bucket,
@@ -166,7 +156,7 @@ export const refreshRequestBlockConfig = async ({
 			lastSuccessAt: runtimeStatus.lastSuccessAt,
 			error: error instanceof Error ? error.message : "Failed to load config",
 		};
-		logger?.error("Failed to refresh request block config", { error });
+		logger?.warn(`Failed to refresh request block config: ${error}`);
 	}
 };
 
@@ -211,8 +201,7 @@ export const updateOrgRequestBlockInSource = async ({
 	updatedBy?: string;
 }) => {
 	const config = await readConfigFromS3();
-	const shouldDelete =
-		!update.blockAll && update.blockedEndpoints.length === 0;
+	const shouldDelete = !update.blockAll && update.blockedEndpoints.length === 0;
 
 	if (shouldDelete) {
 		delete config.orgs[orgId];

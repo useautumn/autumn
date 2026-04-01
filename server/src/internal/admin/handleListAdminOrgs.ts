@@ -1,6 +1,6 @@
 import { member, organizations, user } from "@autumn/shared";
 import { and, desc, eq, gt, gte, ilike, inArray, lt, or } from "drizzle-orm";
-import { getRequestBlockConfigFromSource } from "../requestBlocks/requestBlockStore.js";
+import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 export const handleListAdminOrgs = createRoute({
