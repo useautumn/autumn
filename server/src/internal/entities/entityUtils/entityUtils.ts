@@ -34,6 +34,7 @@ export const constructEntity = ({
 		created_at: Date.now(),
 		spend_limits: inputEntity.billing_controls?.spend_limits,
 		usage_alerts: inputEntity.billing_controls?.usage_alerts,
+		overage_allowed: inputEntity.billing_controls?.overage_allowed,
 	};
 
 	return entity;

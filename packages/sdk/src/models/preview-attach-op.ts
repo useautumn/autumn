@@ -259,6 +259,10 @@ export type PreviewAttachRollover = {
    */
   max?: number | undefined;
   /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
    * When rolled over units expire.
    */
   expiryDurationType: PreviewAttachExpiryDurationType;
@@ -1117,6 +1121,7 @@ export const PreviewAttachExpiryDurationType$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewAttachRollover$Outbound = {
   max?: number | undefined;
+  max_percentage?: number | undefined;
   expiry_duration_type: string;
   expiry_duration_length?: number | undefined;
 };
@@ -1128,11 +1133,13 @@ export const PreviewAttachRollover$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
     expiryDurationType: PreviewAttachExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      maxPercentage: "max_percentage",
       expiryDurationType: "expiry_duration_type",
       expiryDurationLength: "expiry_duration_length",
     });

@@ -15,6 +15,7 @@ import type { ExternalProcessors } from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
 import type {
 	AutoTopup,
+	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
 } from "./billingControls/customerBillingControls.js";
@@ -44,6 +45,7 @@ export const customers = pgTable(
 		auto_topups: jsonb().$type<AutoTopup[]>(),
 		spend_limits: jsonb().$type<DbSpendLimit[]>(),
 		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
+		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),
@@ -62,10 +64,18 @@ export const customers = pgTable(
 			.on(table.org_id, table.env, table.fingerprint)
 			.where(sql`${table.fingerprint} IS NOT NULL`),
 		index("idx_customers_processor_id").on(sql`(${table.processor} ->> 'id')`),
+		index("idx_customers_composite").on(table.org_id, table.env, table.id),
+		index("idx_customers_org_env_internal_id").on(
+			table.org_id,
+			table.env,
+			sql`${table.internal_id} DESC`,
+		),
+		index("idx_customers_org_id_env_created_at").on(
+			table.org_id,
+			table.env,
+			sql`${table.created_at} DESC`,
+		),
 	],
 ).enableRLS();
 
 collatePgColumn(customers.internal_id, "C");
-
-// CREATE INDEX idx_customers_org_env_internal_id
-// ON customers (org_id, env, internal_id DESC);

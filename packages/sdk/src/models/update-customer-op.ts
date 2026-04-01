@@ -126,6 +126,17 @@ export type UpdateCustomerUsageAlertRequestBody = {
   name?: string | undefined;
 };
 
+export type UpdateCustomerOverageAllowedRequest = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -142,6 +153,10 @@ export type UpdateCustomerBillingControlsRequest = {
    * List of usage alert configurations per feature.
    */
   usageAlerts?: Array<UpdateCustomerUsageAlertRequestBody> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<UpdateCustomerOverageAllowedRequest> | undefined;
 };
 
 export type UpdateCustomerParams = {
@@ -304,6 +319,17 @@ export type UpdateCustomerUsageAlertResponse = {
   name?: string | undefined;
 };
 
+export type UpdateCustomerOverageAllowedResponse = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
 /**
  * Billing controls for the customer (auto top-ups, etc.)
  */
@@ -320,6 +346,10 @@ export type UpdateCustomerBillingControlsResponse = {
    * List of usage alert configurations per feature.
    */
   usageAlerts?: Array<UpdateCustomerUsageAlertResponse> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<UpdateCustomerOverageAllowedResponse> | undefined;
 };
 
 /**
@@ -732,11 +762,46 @@ export function updateCustomerUsageAlertRequestBodyToJSON(
 }
 
 /** @internal */
+export type UpdateCustomerOverageAllowedRequest$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const UpdateCustomerOverageAllowedRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerOverageAllowedRequest$Outbound,
+  UpdateCustomerOverageAllowedRequest
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function updateCustomerOverageAllowedRequestToJSON(
+  updateCustomerOverageAllowedRequest: UpdateCustomerOverageAllowedRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerOverageAllowedRequest$outboundSchema.parse(
+      updateCustomerOverageAllowedRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateCustomerBillingControlsRequest$Outbound = {
   auto_topups?: Array<UpdateCustomerAutoTopupRequest$Outbound> | undefined;
   spend_limits?: Array<UpdateCustomerSpendLimitRequest$Outbound> | undefined;
   usage_alerts?:
     | Array<UpdateCustomerUsageAlertRequestBody$Outbound>
+    | undefined;
+  overage_allowed?:
+    | Array<UpdateCustomerOverageAllowedRequest$Outbound>
     | undefined;
 };
 
@@ -755,12 +820,16 @@ export const UpdateCustomerBillingControlsRequest$outboundSchema: z.ZodMiniType<
     usageAlerts: z.optional(
       z.array(z.lazy(() => UpdateCustomerUsageAlertRequestBody$outboundSchema)),
     ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => UpdateCustomerOverageAllowedRequest$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       autoTopups: "auto_topups",
       spendLimits: "spend_limits",
       usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
     });
   }),
 );
@@ -962,6 +1031,33 @@ export function updateCustomerUsageAlertResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerOverageAllowedResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerOverageAllowedResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function updateCustomerOverageAllowedResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerOverageAllowedResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdateCustomerOverageAllowedResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerOverageAllowedResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerBillingControlsResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerBillingControlsResponse,
   unknown
@@ -976,12 +1072,16 @@ export const UpdateCustomerBillingControlsResponse$inboundSchema: z.ZodMiniType<
     usage_alerts: types.optional(
       z.array(z.lazy(() => UpdateCustomerUsageAlertResponse$inboundSchema)),
     ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => UpdateCustomerOverageAllowedResponse$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "auto_topups": "autoTopups",
       "spend_limits": "spendLimits",
       "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
     });
   }),
 );

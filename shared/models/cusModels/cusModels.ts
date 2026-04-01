@@ -3,6 +3,7 @@ import { AppEnv } from "../genModels/genEnums.js";
 import { ExternalProcessorsSchema } from "../genModels/processorSchemas.js";
 import {
 	AutoTopupSchema,
+	DbOverageAllowedSchema,
 	DbSpendLimitSchema,
 	DbUsageAlertSchema,
 } from "./billingControls/customerBillingControls.js";
@@ -25,6 +26,7 @@ export const CustomerSchema = z.object({
 	auto_topups: z.array(AutoTopupSchema).nullish(),
 	spend_limits: z.array(DbSpendLimitSchema).nullish(),
 	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
+	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
 });
 
 export type Customer = z.infer<typeof CustomerSchema>;

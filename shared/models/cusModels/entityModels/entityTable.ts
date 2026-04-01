@@ -12,6 +12,7 @@ import {
 import { features } from "../../featureModels/featureTable.js";
 import { organizations } from "../../orgModels/orgTable.js";
 import type {
+	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
 } from "../billingControls/customerBillingControls.js";
@@ -31,6 +32,7 @@ export const entities = pgTable(
 		internal_feature_id: text("internal_feature_id"),
 		spend_limits: jsonb().$type<DbSpendLimit[]>(),
 		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
+		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
 
 		// Optional...
 		feature_id: text("feature_id"),
@@ -58,10 +60,7 @@ export const entities = pgTable(
 			table.internal_customer_id,
 			table.id,
 		),
-		index("idx_entities_internal_customer_id").using(
-			"hash",
-			table.internal_customer_id,
-		),
+		index("idx_entities_internal_customer_id").on(table.internal_customer_id),
 		index("idx_entities_customer_internal_desc").on(
 			table.internal_customer_id,
 			sql`${table.internal_id} DESC`,

@@ -61,7 +61,12 @@ const MappingRow = memo(function MappingRow({
 
 	return (
 		<div className="flex flex-col gap-2 p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg">
-			<div className="font-medium text-t2">{mapping.autumnProductName}</div>
+			<div className="flex items-center gap-2">
+				<span className="font-medium text-t2">{mapping.autumnProductName}</span>
+				<span className="text-tiny-id text-t3 bg-muted px-1.5 py-0.5 rounded-md">
+					{mapping.autumnProductId}
+				</span>
+			</div>
 
 			{/* Display selected products as tags */}
 			{selectedProducts.length > 0 && (
