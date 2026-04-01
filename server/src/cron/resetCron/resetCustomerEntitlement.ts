@@ -26,10 +26,12 @@ export const resetCustomerEntitlement = async ({
 	ctx,
 	cusEnt,
 	updatedCusEnts,
+	persistFreeOverage = false,
 }: {
 	ctx: CronContext;
 	cusEnt: ResetCusEnt;
 	updatedCusEnts: ResetCusEnt[];
+	persistFreeOverage?: boolean;
 }) => {
 	const repoContext: RepoContext = {
 		db: ctx.db,
@@ -130,6 +132,7 @@ export const resetCustomerEntitlement = async ({
 		const resetBalanceUpdate = getResetBalancesUpdate({
 			cusEnt,
 			allowance: resetBalance || undefined,
+			persistFreeOverage,
 		});
 
 		// Only check sub anchor for product-based ents (loose ents have no subscription)

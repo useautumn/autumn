@@ -9,5 +9,7 @@ export const temp: TestGroup = {
 		"integration/balances/track/overage-allowed/",
 		"integration/crud/customers/customer-billing-controls.test.ts",
 		"integration/crud/entities/update-entity-billing-controls.test.ts",
+		"integration/balances/reset/persist-free-overage-on.test.ts",
+		"integration/balances/reset/persist-free-overage-off.test.ts",
 	],
 };
