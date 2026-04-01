@@ -1,13 +1,6 @@
-import { ErrCode } from "@autumn/shared";
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import {
-	ADMIN_REQUEST_BLOCK_CONFIG_KEY,
-	getAdminS3Config,
-} from "@/external/aws/s3/adminS3Config.js";
-import { getS3Client } from "@/external/aws/s3/initS3.js";
-import { getS3BodyAsString } from "@/external/aws/s3/s3Utils.js";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+import { ADMIN_REQUEST_BLOCK_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
+import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
+import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 import {
 	type RequestBlockConfig,
 	RequestBlockConfigSchema,
@@ -15,179 +8,32 @@ import {
 	type RequestBlockUpdate,
 } from "./requestBlockSchemas.js";
 
-const POLL_INTERVAL_MS = 60_000;
-
-type RequestBlockStatus = {
-	configured: boolean;
-	healthy: boolean;
-	lastFetchAt?: string;
-	lastSuccessAt?: string;
-	error?: string;
-};
-
-const emptyConfig = (): RequestBlockConfig => ({ orgs: {} });
-
-let runtimeConfig: RequestBlockConfig = emptyConfig();
-let runtimeStatus: RequestBlockStatus = {
-	configured: false,
-	healthy: false,
-	error: "Request block config is not configured",
-};
-let pollTimer: ReturnType<typeof setInterval> | null = null;
-
-const getConfigLocation = () => {
-	const { bucket, region } = getAdminS3Config();
-	const key = ADMIN_REQUEST_BLOCK_CONFIG_KEY;
-
-	return {
-		bucket,
-		key,
-		region,
-		configured: Boolean(bucket && key),
-	};
-};
-
-const readConfigFromS3 = async (): Promise<RequestBlockConfig> => {
-	const { bucket, key, configured, region } = getConfigLocation();
-
-	if (!configured || !bucket || !key) {
-		return emptyConfig();
-	}
-
-	const client = getS3Client({ region });
-	try {
-		const response = await client.send(
-			new GetObjectCommand({
-				Bucket: bucket,
-				Key: key,
-			}),
-		);
-
-		if (!response.Body) {
-			return emptyConfig();
-		}
-
-		const raw = (await getS3BodyAsString({ body: response.Body })).trim();
-		if (!raw) {
-			return emptyConfig();
-		}
-
-		return RequestBlockConfigSchema.parse(JSON.parse(raw));
-	} catch (error) {
-		const name = error instanceof Error ? error.name : "";
-		if (name === "NoSuchKey") {
-			return emptyConfig();
-		}
-		throw error;
-	}
-};
-
-const writeConfigToS3 = async (config: RequestBlockConfig) => {
-	const { bucket, key, configured, region } = getConfigLocation();
-
-	if (!configured || !bucket || !key) {
-		throw new RecaseError({
-			message: "Request block config is not configured",
-			code: ErrCode.InvalidRequest,
-			statusCode: 503,
-		});
-	}
-
-	const client = getS3Client({ region });
-	await client.send(
-		new PutObjectCommand({
-			Bucket: bucket,
-			Key: key,
-			Body: JSON.stringify(config, null, 2),
-			ContentType: "application/json",
-		}),
-	);
-};
-
 const nowIso = () => new Date().toISOString();
 
-export const getRuntimeRequestBlockStatus = () => runtimeStatus;
+const store = createEdgeConfigStore<RequestBlockConfig>({
+	s3Key: ADMIN_REQUEST_BLOCK_CONFIG_KEY,
+	schema: RequestBlockConfigSchema,
+	defaultValue: () => ({ orgs: {} }),
+});
+
+registerEdgeConfig({ store });
+
+export const getRuntimeRequestBlockStatus = () => store.getStatus();
 
 export const getRuntimeRequestBlockEntry = (
 	orgId: string,
-): RequestBlockEntry | undefined => runtimeConfig.orgs[orgId];
-
-export const getRuntimeRequestBlockConfig = () => runtimeConfig;
-
-export const refreshRequestBlockConfig = async ({
-	logger,
-}: {
-	logger?: Logger;
-} = {}) => {
-	const { configured } = getConfigLocation();
-	runtimeStatus = {
-		...runtimeStatus,
-		configured,
-		lastFetchAt: nowIso(),
-	};
-
-	if (!configured) {
-		runtimeConfig = emptyConfig();
-		runtimeStatus = {
-			configured: false,
-			healthy: false,
-			lastFetchAt: runtimeStatus.lastFetchAt,
-			lastSuccessAt: runtimeStatus.lastSuccessAt,
-			error: "Request block config is not configured",
-		};
-		return;
-	}
-
-	try {
-		const config = await readConfigFromS3();
-		runtimeConfig = config;
-		runtimeStatus = {
-			configured: true,
-			healthy: true,
-			lastFetchAt: runtimeStatus.lastFetchAt,
-			lastSuccessAt: nowIso(),
-		};
-	} catch (error) {
-		runtimeConfig = emptyConfig();
-		runtimeStatus = {
-			configured: true,
-			healthy: false,
-			lastFetchAt: runtimeStatus.lastFetchAt,
-			lastSuccessAt: runtimeStatus.lastSuccessAt,
-			error: error instanceof Error ? error.message : "Failed to load config",
-		};
-		logger?.warn(`Failed to refresh request block config: ${error}`);
-	}
-};
-
-export const startRequestBlockPolling = async ({
-	logger,
-}: {
-	logger?: Logger;
-} = {}) => {
-	if (pollTimer) {
-		return;
-	}
-
-	await refreshRequestBlockConfig({ logger });
-	pollTimer = setInterval(() => {
-		void refreshRequestBlockConfig({ logger });
-	}, POLL_INTERVAL_MS);
-};
-
-export const stopRequestBlockPolling = () => {
-	if (pollTimer) {
-		clearInterval(pollTimer);
-		pollTimer = null;
-	}
-};
+): RequestBlockEntry | undefined => store.get().orgs[orgId];
 
 export const getRequestBlockConfigFromSource = async () => {
-	return await readConfigFromS3();
+	return await store.readFromSource();
 };
 
-export const getOrgRequestBlockFromSource = async (orgId: string) => {
-	const config = await readConfigFromS3();
+export const getOrgRequestBlockFromSource = async ({
+	orgId,
+}: {
+	orgId: string;
+}) => {
+	const config = await store.readFromSource();
 	return config.orgs[orgId];
 };
 
@@ -200,7 +46,7 @@ export const updateOrgRequestBlockInSource = async ({
 	update: RequestBlockUpdate;
 	updatedBy?: string;
 }) => {
-	const config = await readConfigFromS3();
+	const config = await store.readFromSource();
 	const shouldDelete = !update.blockAll && update.blockedEndpoints.length === 0;
 
 	if (shouldDelete) {
@@ -214,15 +60,7 @@ export const updateOrgRequestBlockInSource = async ({
 		};
 	}
 
-	await writeConfigToS3(config);
-
-	runtimeConfig = config;
-	runtimeStatus = {
-		configured: true,
-		healthy: true,
-		lastFetchAt: nowIso(),
-		lastSuccessAt: nowIso(),
-	};
+	await store.writeToSource({ config });
 
 	return config.orgs[orgId];
 };

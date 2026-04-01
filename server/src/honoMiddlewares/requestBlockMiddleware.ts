@@ -22,8 +22,6 @@ export const requestBlockMiddleware = async (
 		return;
 	}
 
-	console.log("Entry:", entry);
-
 	if (entry.blockAll) {
 		ctx.logger.warn("Rejecting blocked /v1 request (block all)");
 
