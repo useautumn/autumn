@@ -89,6 +89,13 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_on_internal_entity_id").on(
 			table.internal_entity_id,
 		),
+		index("idx_customer_products_on_internal_product_id").on(
+			table.internal_product_id,
+		),
+		index("idx_customer_products_subscription_ids").using(
+			"gin",
+			table.subscription_ids,
+		),
 	],
 );
 
