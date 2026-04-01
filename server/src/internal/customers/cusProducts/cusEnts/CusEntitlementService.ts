@@ -223,6 +223,53 @@ export class CusEntService {
 		return allResults as ResetCusEnt[];
 	}
 
+	/**
+	 * Lightweight query: returns unique customers needing a reset, grouped by org/env.
+	 * Only includes loose entitlements (no product) or those attached to active products.
+	 */
+	static async getCustomerIdsForReset({
+		db,
+		limit = 10_000,
+	}: {
+		db: DrizzleCli;
+		limit?: number;
+	}) {
+		const now = Date.now();
+
+		const rows = await db
+			.selectDistinctOn([customerEntitlements.internal_customer_id], {
+				internalCustomerId: customerEntitlements.internal_customer_id,
+				customerId: customers.id,
+				orgId: customers.org_id,
+				env: customers.env,
+			})
+			.from(customerEntitlements)
+			.innerJoin(
+				customers,
+				eq(customerEntitlements.internal_customer_id, customers.internal_id),
+			)
+			.leftJoin(
+				customerProducts,
+				sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
+			)
+			.where(
+				and(
+					or(
+						isNull(customerEntitlements.customer_product_id),
+						eq(customerProducts.status, CusProductStatus.Active),
+					),
+					lt(customerEntitlements.next_reset_at, now),
+					or(
+						isNull(customerEntitlements.expires_at),
+						gt(customerEntitlements.expires_at, now),
+					),
+				),
+			)
+			.limit(limit);
+
+		return rows;
+	}
+
 	static async update({
 		ctx,
 		id,
