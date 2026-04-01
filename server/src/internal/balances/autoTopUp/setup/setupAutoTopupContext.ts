@@ -95,11 +95,16 @@ export const setupAutoTopupContext = async ({
 		return null;
 	}
 
+	const invoiceMode = autoTopupConfig.invoice_mode
+		? { finalizeInvoice: true, enableProductImmediately: true }
+		: undefined;
+
 	return {
 		// BillingContext fields
 		fullCustomer,
 		fullProducts: [cusProductToProduct({ cusProduct })],
 		featureQuantities: [],
+		invoiceMode,
 		currentEpochMs,
 		billingCycleAnchorMs: "now",
 		resetCycleAnchorMs: "now",

@@ -41,6 +41,10 @@ export const AutoTopupSchema = z.object({
 	purchase_limit: AutoTopupPurchaseLimitSchema.optional().meta({
 		description: "Optional rate limit to cap how often auto top-ups occur.",
 	}),
+	invoice_mode: z.boolean().optional().meta({
+		description:
+			"When true, auto top-up creates a send_invoice invoice instead of auto-charging.",
+	}),
 });
 
 export const CustomerBillingControlsSchema = z.object({
