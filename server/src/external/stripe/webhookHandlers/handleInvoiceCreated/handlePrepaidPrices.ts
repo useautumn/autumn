@@ -4,6 +4,7 @@ import {
 	type FeatureOptions,
 	type FullCusProduct,
 	type FullCustomerPrice,
+	orgPersistFreeOverage,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -64,6 +65,7 @@ export const handlePrepaidPrices = async ({
 	const resetUpdate = getResetBalancesUpdate({
 		cusEnt,
 		allowance: newAllowance,
+		persistFreeOverage: orgPersistFreeOverage({ org }),
 	});
 
 	// console.log("--------------------------------");

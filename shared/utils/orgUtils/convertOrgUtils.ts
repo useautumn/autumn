@@ -41,3 +41,7 @@ export const orgDisableStripeWrites = ({ ctx }: { ctx: SharedContext }) => {
 	}
 	return ctx.org.config.disable_stripe_writes;
 };
+
+export const orgPersistFreeOverage = ({ org }: { org: Organization }) => {
+	return org.config.persist_free_overage ?? false;
+};
