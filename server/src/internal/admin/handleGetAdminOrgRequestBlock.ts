@@ -12,7 +12,7 @@ export const handleGetAdminOrgRequestBlock = createRoute({
 	handler: async (c) => {
 		const { org_id: orgId } = c.req.valid("param");
 		const status = getRuntimeRequestBlockStatus();
-		const entry = await getOrgRequestBlockFromSource(orgId);
+		const entry = await getOrgRequestBlockFromSource({ orgId });
 
 		return c.json({
 			blockAll: entry?.blockAll ?? false,
