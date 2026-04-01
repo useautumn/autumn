@@ -63,6 +63,14 @@ export const autoTopup = async ({
 			billingContext: autoTopupContext,
 		});
 
+		if (org.config.dryrun_autotopups) {
+			logger.info(
+				`[autoTopup] Dry run enabled, skipping recordAutoTopupAttempt`,
+				{ extras: ctx.extraLogs },
+			);
+			return;
+		}
+
 		let billingResult: Awaited<ReturnType<typeof executeBillingPlan>>;
 		billingResult = await executeBillingPlan({
 			ctx,

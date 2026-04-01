@@ -32,6 +32,7 @@ export const OrgConfigSchema = z.object({
 	disable_stripe_writes: z.boolean().default(false),
 
 	disabled_auto_topup: z.boolean().default(false),
+	dryrun_autotopups: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;
