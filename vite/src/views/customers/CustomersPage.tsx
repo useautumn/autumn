@@ -9,11 +9,14 @@ import LoadingScreen from "../general/LoadingScreen";
 import { OnboardingGuide } from "../onboarding4/OnboardingGuide";
 import { CustomersContext } from "./CustomersContext";
 import { useCusSearchQuery } from "./hooks/useCusSearchQuery";
-import { useCustomerFilters } from "./hooks/useCustomerFilters";
+import {
+	CustomerFiltersProvider,
+	useCustomerFilters,
+} from "./hooks/useCustomerFilters";
 import { useFullCusSearchQuery } from "./hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "./hooks/useSavedViewsQuery";
 
-function CustomersPage() {
+function CustomersPageContent() {
 	const { org } = useOrg();
 	const { isInitialized } = useCustomerFilters();
 	const {
@@ -52,4 +55,10 @@ function CustomersPage() {
 	);
 }
 
-export default CustomersPage;
+export default function CustomersPage() {
+	return (
+		<CustomerFiltersProvider>
+			<CustomersPageContent />
+		</CustomerFiltersProvider>
+	);
+}

@@ -7,6 +7,7 @@ import {
 	getStartingBalance,
 	isLifetimeEntitlement,
 	isUnlimitedEntitlement,
+	orgPersistFreeOverage,
 	type Rollover,
 } from "@autumn/shared";
 import { logger } from "better-auth";
@@ -85,9 +86,11 @@ export const processReset = async ({
 	});
 
 	// Compute reset balance update
+	const persistFreeOverage = orgPersistFreeOverage({ org: ctx.org });
 	const resetBalanceUpdate = getResetBalancesUpdate({
 		cusEnt,
 		allowance: resetBalance,
+		persistFreeOverage,
 	});
 
 	const updates: ResetUpdates =

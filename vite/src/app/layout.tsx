@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import CommandBar from "@/views/command-bar/CommandBar";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
-import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
@@ -141,7 +140,6 @@ const MainContent = ({
 	useAutumnFlags();
 	useFeaturesQuery();
 	useRewardsQuery();
-	useCusSearchQuery();
 	useEventNames();
 
 	return (
