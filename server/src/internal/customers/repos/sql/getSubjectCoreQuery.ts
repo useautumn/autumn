@@ -245,6 +245,7 @@ export const getSubjectCoreQuery = ({
 }) => {
 	const page = pagination.page ?? 50;
 	const offset = pagination.offset ?? 0;
+	const entityOnlyLookup = !!entityId && !customerId;
 
 	const statusFilter =
 		inStatuses.length > 0
@@ -269,8 +270,32 @@ export const getSubjectCoreQuery = ({
 			OFFSET ${offset}
 		`;
 
-	const entityRecordCte = entityId
-		? sql`,
+	let leadingCtes: SQL;
+	if (entityOnlyLookup) {
+		leadingCtes = sql`
+		WITH entity_record AS (
+			SELECT e.*
+			FROM entities e
+			WHERE e.org_id = ${orgId}
+				AND e.env = ${env}
+				AND (e.id = ${entityId} OR e.internal_id = ${entityId})
+			LIMIT 1
+		),
+		subject_customer_records AS (
+			SELECT c.*
+			FROM customers c
+			WHERE c.internal_id = (SELECT internal_customer_id FROM entity_record LIMIT 1)
+		)`;
+	} else if (entityId) {
+		leadingCtes = sql`
+		WITH subject_customer_records AS (
+			SELECT *
+			FROM customers c
+			WHERE c.org_id = ${orgId}
+				AND c.env = ${env}
+				${customerFilter}
+			${customerPagination}
+		),
 		entity_record AS (
 			SELECT e.*
 			FROM entities e
@@ -280,12 +305,22 @@ export const getSubjectCoreQuery = ({
 			)
 				AND (e.id = ${entityId} OR e.internal_id = ${entityId})
 			LIMIT 1
-		)
-	`
-		: sql``;
+		)`;
+	} else {
+		leadingCtes = sql`
+		WITH subject_customer_records AS (
+			SELECT *
+			FROM customers c
+			WHERE c.org_id = ${orgId}
+				AND c.env = ${env}
+				${customerFilter}
+			${customerPagination}
+		)`;
+	}
 
 	const customerProductEntityFilter = entityId
-		? sql`AND cp.internal_entity_id = (SELECT internal_id FROM entity_record LIMIT 1)`
+		? sql`AND (cp.internal_entity_id = (SELECT internal_id FROM entity_record LIMIT 1)
+				OR cp.internal_entity_id IS NULL)`
 		: sql`AND cp.internal_entity_id IS NULL`;
 
 	const entityFragments = getEntityAggregateFragments({
@@ -303,32 +338,59 @@ export const getSubjectCoreQuery = ({
 		`
 		: sql``;
 
-	/**
-	 * Builds the normalized subject-core query used by both single-customer and
-	 * list-customer reads.
-	 *
-	 * The result shape is always one row per matched customer with flat JSON arrays
-	 * for customer products, customer entitlements, prices, rollovers, products,
-	 * entitlements, and free trials. Callers can then hydrate that payload into a
-	 * `FullCustomer`-style object in TypeScript.
-	 *
-	 * Behavior:
-	 * - `customerId`: narrows to a single customer lookup.
-	 * - `pagination`: applies only when listing customers.
-	 * - `entityId`: switches product selection to the matching entity-scoped
-	 *   customer products and limits the final rowset to that entity's customer.
-	 * - `inStatuses`: filters customer products before downstream joins.
-	 */
-	return sql`
-		WITH subject_customer_records AS (
+	const subscriptionsCte = sql`,
+
+		customer_subscriptions AS (
+			SELECT DISTINCT s.*
+			FROM cus_products cp
+			JOIN LATERAL unnest(cp.subscription_ids) AS cp_sub(stripe_id) ON true
+			JOIN subscriptions s ON s.stripe_id = cp_sub.stripe_id
+		)`;
+
+	const invoicesCte = entityId
+		? sql``
+		: sql`,
+
+		customer_invoices AS (
 			SELECT *
-			FROM customers c
-			WHERE c.org_id = ${orgId}
-				AND c.env = ${env}
-				${customerFilter}
-			${customerPagination}
-		)
-		${entityRecordCte}
+			FROM invoices i
+			WHERE i.internal_customer_id IN (SELECT internal_id FROM subject_customer_records)
+			ORDER BY i.created_at DESC, i.id DESC
+			LIMIT 10
+		)`;
+
+	const subscriptionsSelect = sql`,
+
+			COALESCE(
+				(
+					SELECT json_agg(row_to_json(cs)) FILTER (WHERE cs.stripe_id IS NOT NULL)
+					FROM customer_subscriptions cs
+				),
+				'[]'::json
+			) AS subscriptions`;
+
+	const invoicesSelect = entityId
+		? sql``
+		: sql`,
+
+			COALESCE(
+				(
+					SELECT json_agg(row_to_json(ci) ORDER BY ci.created_at DESC, ci.id DESC)
+						FILTER (WHERE ci.id IS NOT NULL)
+					FROM customer_invoices ci
+					WHERE ci.internal_customer_id = scr.internal_id
+				),
+				'[]'::json
+			) AS invoices`;
+
+	const entitySelect = entityId
+		? sql`,
+
+			(SELECT row_to_json(er) FROM entity_record er LIMIT 1) AS entity`
+		: sql``;
+
+	return sql`
+		${leadingCtes}
 		,
 
 		cus_products AS (
@@ -375,6 +437,8 @@ export const getSubjectCoreQuery = ({
 			WHERE cpr.customer_product_id IN (SELECT id FROM cus_products)
 		)
 
+		${subscriptionsCte}
+		${invoicesCte}
 		${entityFragments.ctes}
 		,
 
@@ -537,6 +601,9 @@ export const getSubjectCoreQuery = ({
 				'[]'::json
 			) AS free_trials
 
+			${subscriptionsSelect}
+			${invoicesSelect}
+			${entitySelect}
 			${entityFragments.selectColumns}
 
 		FROM subject_customer_records scr

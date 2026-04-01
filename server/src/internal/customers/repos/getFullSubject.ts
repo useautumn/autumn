@@ -1,18 +1,60 @@
 import type {
+	AggregatedCustomerEntitlement,
+	CusProductStatus,
+	Customer,
 	CustomerPrice,
+	DbCustomer,
+	DbCustomerEntitlement,
+	DbCustomerPrice,
+	DbCustomerProduct,
+	DbEntitlement,
+	DbFeature,
+	DbFreeTrial,
 	DbPrice,
+	DbProduct,
 	DbRollover,
 	Entity,
 	FullAggregatedCustomerEntitlement,
 	FullCusProduct,
-	FullCustomer,
 	FullCustomerEntitlement,
 	FullCustomerPrice,
+	FullSubject,
 	Invoice,
 	Replaceable,
 	Subscription,
+	SubjectType,
 } from "@autumn/shared";
-import type { SubjectCoreRow } from "../getFullSubject.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { RELEVANT_STATUSES } from "../cusProducts/CusProductService.js";
+import { getSubjectCoreQuery } from "./sql/getSubjectCoreQuery.js";
+
+type EntitlementWithFeatureRow = DbEntitlement & {
+	feature: DbFeature;
+};
+
+export interface EntityAggregations {
+	aggregated_customer_products: DbCustomerProduct[];
+	aggregated_customer_entitlements: AggregatedCustomerEntitlement[];
+	aggregated_customer_prices: DbCustomerPrice[];
+}
+
+/** Raw row shape returned by getSubjectCoreQuery. */
+export interface SubjectCoreRow {
+	customer: DbCustomer;
+	customer_products: DbCustomerProduct[];
+	customer_entitlements: DbCustomerEntitlement[];
+	customer_prices: DbCustomerPrice[];
+	extra_customer_entitlements: DbCustomerEntitlement[];
+	rollovers: DbRollover[];
+	products: DbProduct[];
+	entitlements: EntitlementWithFeatureRow[];
+	prices: DbPrice[];
+	free_trials: DbFreeTrial[];
+	entity_aggregations?: EntityAggregations;
+	subscriptions: Subscription[];
+	invoices?: Invoice[];
+	entity?: Entity;
+}
 
 const getRolloverSortValue = ({ rollover }: { rollover: DbRollover }) =>
 	rollover.expires_at ?? Number.POSITIVE_INFINITY;
@@ -55,17 +97,14 @@ const buildFullCustomerPrice = ({
 	} as FullCustomerPrice;
 };
 
-export const resultToFullCustomer = ({
+export const resultToFullSubject = ({
 	row,
-	entities = [],
-	invoices,
-	subscriptions,
 }: {
 	row: SubjectCoreRow;
-	entities?: Entity[];
-	invoices?: Invoice[];
-	subscriptions?: Subscription[];
-}): FullCustomer => {
+}): FullSubject => {
+	const entity = row.entity as Entity | undefined;
+	const isEntitySubject = !!entity;
+
 	const productsByInternalId = new Map(
 		row.products.map((product) => [product.internal_id, product] as const),
 	);
@@ -83,13 +122,10 @@ export const resultToFullCustomer = ({
 
 	const rolloversByCustomerEntitlementId = new Map<string, DbRollover[]>();
 	for (const rollover of row.rollovers) {
-		const existingRollovers =
+		const existing =
 			rolloversByCustomerEntitlementId.get(rollover.cus_ent_id) ?? [];
-		existingRollovers.push(rollover);
-		rolloversByCustomerEntitlementId.set(
-			rollover.cus_ent_id,
-			existingRollovers,
-		);
+		existing.push(rollover);
+		rolloversByCustomerEntitlementId.set(rollover.cus_ent_id, existing);
 	}
 
 	const customerPricesByCustomerProductId = new Map<
@@ -105,17 +141,16 @@ export const resultToFullCustomer = ({
 				? pricesById.get(customerPrice.price_id)
 				: undefined,
 		});
-
 		if (!fullCustomerPrice) continue;
 
-		const existingCustomerPrices =
+		const existing =
 			customerPricesByCustomerProductId.get(
 				customerPrice.customer_product_id,
 			) ?? [];
-		existingCustomerPrices.push(fullCustomerPrice);
+		existing.push(fullCustomerPrice);
 		customerPricesByCustomerProductId.set(
 			customerPrice.customer_product_id,
-			existingCustomerPrices,
+			existing,
 		);
 	}
 
@@ -132,17 +167,16 @@ export const resultToFullCustomer = ({
 			rollovers:
 				rolloversByCustomerEntitlementId.get(customerEntitlement.id) ?? [],
 		});
-
 		if (!fullCustomerEntitlement) continue;
 
-		const existingCustomerEntitlements =
+		const existing =
 			customerEntitlementsByCustomerProductId.get(
 				customerEntitlement.customer_product_id,
 			) ?? [];
-		existingCustomerEntitlements.push(fullCustomerEntitlement);
+		existing.push(fullCustomerEntitlement);
 		customerEntitlementsByCustomerProductId.set(
 			customerEntitlement.customer_product_id,
-			existingCustomerEntitlements,
+			existing,
 		);
 	}
 
@@ -246,13 +280,24 @@ export const resultToFullCustomer = ({
 			.filter((e): e is FullAggregatedCustomerEntitlement => e !== null);
 	}
 
+	const customer = row.customer as unknown as Customer;
+
 	return {
-		...row.customer,
+		subjectType: (isEntitySubject ? "entity" : "customer") as SubjectType,
+		customerId: customer.id ?? customer.internal_id,
+		internalCustomerId: customer.internal_id,
+		...(entity
+			? {
+					entityId: entity.id ?? entity.internal_id,
+					internalEntityId: entity.internal_id,
+					entity,
+				}
+			: {}),
+		customer,
 		customer_products: customerProducts,
 		extra_customer_entitlements: extraCustomerEntitlements,
-		entities,
-		...(invoices ? { invoices } : {}),
-		...(subscriptions ? { subscriptions } : {}),
+		subscriptions: row.subscriptions ?? [],
+		invoices: row.invoices ?? [],
 		...(aggregatedCustomerProducts
 			? { aggregated_customer_products: aggregatedCustomerProducts }
 			: {}),
@@ -262,5 +307,33 @@ export const resultToFullCustomer = ({
 		...(aggregatedCustomerPrices
 			? { aggregated_customer_prices: aggregatedCustomerPrices }
 			: {}),
-	} as FullCustomer;
+	} as FullSubject;
 };
+
+export async function getFullSubject({
+	ctx,
+	customerId,
+	entityId,
+	inStatuses = RELEVANT_STATUSES,
+}: {
+	ctx: AutumnContext;
+	customerId?: string;
+	entityId?: string;
+	inStatuses?: CusProductStatus[];
+}): Promise<FullSubject | null> {
+	const { db, org, env } = ctx;
+
+	const result = await db.execute(
+		getSubjectCoreQuery({
+			orgId: org.id,
+			env,
+			customerId,
+			entityId,
+			inStatuses,
+		}),
+	);
+
+	if (!result?.length) return null;
+
+	return resultToFullSubject({ row: result[0] as unknown as SubjectCoreRow });
+}

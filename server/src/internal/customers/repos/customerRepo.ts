@@ -1,5 +1,5 @@
-import { getFullCustomerV2 } from "./getFullCustomerV2.js";
+import { getFullSubject } from "./getFullSubject.js";
 
 export const customerRepo = {
-	getFullV2: getFullCustomerV2,
+	getFullSubject,
 } as const;
