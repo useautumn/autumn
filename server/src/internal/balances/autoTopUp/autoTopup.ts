@@ -86,7 +86,10 @@ export const autoTopup = async ({
 			billingResult,
 		});
 
-		if (billingResult.stripe?.stripeInvoice?.status !== "paid") {
+		const isInvoiceMode = Boolean(autoTopupContext.invoiceMode);
+		const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
+
+		if (!isInvoiceMode && invoiceStatus !== "paid") {
 			await voidStripeInvoiceIfOpen({
 				ctx,
 				stripeInvoice: billingResult.stripe?.stripeInvoice,
