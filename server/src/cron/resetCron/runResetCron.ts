@@ -6,6 +6,7 @@ import {
 	type ResetCusEnt,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
+import * as Sentry from "@sentry/bun";
 import { format } from "date-fns";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -26,7 +27,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 		orgId,
 	}: {
 		orgId: string;
-	}): Promise<OrgConfig> => {
+	}): Promise<OrgConfig | undefined> => {
 		const cached = orgConfigCache.get(orgId);
 		if (cached) return cached;
 
@@ -35,10 +36,15 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 			const config = OrgConfigSchema.parse(org.config || {});
 			orgConfigCache.set(orgId, config);
 			return config;
-		} catch {
-			const defaultConfig = OrgConfigSchema.parse({});
-			orgConfigCache.set(orgId, defaultConfig);
-			return defaultConfig;
+		} catch (error) {
+			console.error(
+				`Reset cron: failed to fetch org config for orgId=${orgId}, skipping cusEnts for this org`,
+				error,
+			);
+			Sentry.captureException(error, {
+				extra: { orgId, context: "runResetCron.getOrgConfig" },
+			});
+			return undefined;
 		}
 	};
 
@@ -79,12 +85,14 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 				const updatedCusEnts: ResetCusEnt[] = [];
 				for (const cusEnt of batch) {
 					const orgConfig = orgConfigCache.get(cusEnt.customer.org_id);
+					if (!orgConfig) continue;
+
 					batchResets.push(
 						resetCustomerEntitlement({
 							ctx,
 							cusEnt: cusEnt,
 							updatedCusEnts,
-							persistFreeOverage: orgConfig?.persist_free_overage ?? false,
+							persistFreeOverage: orgConfig.persist_free_overage ?? false,
 						}),
 					);
 				}
