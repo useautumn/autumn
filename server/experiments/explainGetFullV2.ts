@@ -5,7 +5,7 @@ import {
 	prodTestOrgId,
 } from "./experimentEnv";
 const { getSubjectCoreQuery } = await import(
-	"../src/internal/customers/repos/getFullCustomerV2"
+	"../src/internal/customers/repos/sql/getSubjectCoreQuery"
 );
 import { AppEnv } from "@autumn/shared";
 

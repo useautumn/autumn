@@ -8,6 +8,15 @@ export const ms = {
 	months: (n: number) => n * 30 * 24 * 60 * 60 * 1000,
 };
 
+/** Converts time units to seconds. */
+export const seconds = {
+	minutes: (n: number) => n * 60,
+	hours: (n: number) => n * 60 * 60,
+	days: (n: number) => n * 24 * 60 * 60,
+	weeks: (n: number) => n * 7 * 24 * 60 * 60,
+	months: (n: number) => n * 30 * 24 * 60 * 60,
+};
+
 /**
  * Validates that a timestamp is in milliseconds (not seconds).
  * Returns true if valid, false otherwise.

@@ -2,7 +2,7 @@ import { AppEnv, type FullCustomer } from "@autumn/shared";
 import { initDrizzle } from "@server/db/initDrizzle.js";
 import { RELEVANT_STATUSES } from "@server/internal/customers/cusProducts/CusProductService.js";
 import { getFullCusQuery } from "@server/internal/customers/getFullCusQuery.js";
-import type { SubjectCoreRow } from "@server/internal/customers/repos/getFullCustomerV2.js";
+import type { SubjectCoreRow } from "@server/internal/customers/repos/getFullSubject.js";
 import { resultToFullCustomer } from "@server/internal/customers/repos/getFullCustomerV2/resultToFullCustomer.js";
 import { getSubjectCoreQuery } from "@server/internal/customers/repos/sql/getSubjectCoreQuery.js";
 import { loadLocalEnv } from "@server/utils/envUtils.js";

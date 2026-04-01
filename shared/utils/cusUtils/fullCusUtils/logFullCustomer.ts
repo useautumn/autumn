@@ -1,10 +1,19 @@
 import type { FullCustomer } from "../../../models/cusModels/fullCusModel.js";
+import type { FullAggregatedCustomerEntitlement } from "../../../models/cusProductModels/cusEntModels/aggregatedCusEnt.js";
+import type { CustomerPrice } from "../../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
+import type { FullCusProduct } from "../../../models/cusProductModels/cusProductModels.js";
+
+type FullCustomerWithAggregations = FullCustomer & {
+	aggregated_customer_products?: FullCusProduct[];
+	aggregated_customer_entitlements?: FullAggregatedCustomerEntitlement[];
+	aggregated_customer_prices?: CustomerPrice[];
+};
 
 /** Logs a compact summary of a FullCustomer without flooding the terminal. */
 export const logFullCustomer = ({
 	fullCustomer,
 }: {
-	fullCustomer: FullCustomer;
+	fullCustomer: FullCustomerWithAggregations;
 }) => {
 	const summarizeProduct = (cp: FullCustomer["customer_products"][number]) => ({
 		id: cp.id,
@@ -25,7 +34,9 @@ export const logFullCustomer = ({
 	});
 
 	const summarizeAggregatedEnt = (
-		ae: NonNullable<FullCustomer["aggregated_customer_entitlements"]>[number],
+		ae: NonNullable<
+			FullCustomerWithAggregations["aggregated_customer_entitlements"]
+		>[number],
 	) => ({
 		feature_id: ae.feature_id,
 		balance: ae.balance,

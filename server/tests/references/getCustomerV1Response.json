@@ -1,0 +1,237 @@
+{
+  "id": "get-cus-multi-ent-v2",
+  "created_at": 1774899525971,
+  "name": "get-cus-multi-ent-v2",
+  "email": "get-cus-multi-ent-v2@example.com",
+  "fingerprint": null,
+  "stripe_id": "cus_UFGA5ZzfGCckTr",
+  "env": "sandbox",
+  "metadata": {},
+  "send_email_receipts": false,
+  "products": [
+    {
+      "id": "cus-lvl_get-cus-multi-ent-v2",
+      "name": "Cus Lvl get-cus-multi-ent-v2",
+      "group": "get-cus-multi-ent-v2",
+      "status": "active",
+      "canceled_at": null,
+      "started_at": 1774899525000,
+      "is_default": false,
+      "is_add_on": false,
+      "version": 1,
+      "current_period_start": 1774899525000,
+      "current_period_end": 1777577925000,
+      "items": [
+        {
+          "type": "price",
+          "feature_id": null,
+          "feature": null,
+          "interval": "month",
+          "interval_count": 1,
+          "price": 20,
+          "display": {
+            "primary_text": "$20",
+            "secondary_text": "per month"
+          }
+        },
+        {
+          "type": "feature",
+          "feature_id": "dashboard",
+          "feature_type": "static",
+          "feature": {
+            "id": "dashboard",
+            "name": "Dashboard",
+            "type": "boolean",
+            "display": {
+              "singular": "Dashboard",
+              "plural": "Dashboard"
+            }
+          },
+          "included_usage": 0,
+          "interval": null,
+          "reset_usage_when_enabled": false,
+          "display": {
+            "primary_text": "Dashboard"
+          }
+        },
+        {
+          "type": "feature",
+          "feature_id": "messages",
+          "feature_type": "single_use",
+          "feature": {
+            "id": "messages",
+            "name": "Messages",
+            "type": "single_use",
+            "display": {
+              "singular": "Messages",
+              "plural": "Messages"
+            }
+          },
+          "included_usage": 100,
+          "interval": "month",
+          "reset_usage_when_enabled": true,
+          "display": {
+            "primary_text": "100 Messages"
+          }
+        }
+      ],
+      "quantity": 1
+    },
+    {
+      "id": "ent-prod_get-cus-multi-ent-v2",
+      "name": "Ent Prod get-cus-multi-ent-v2",
+      "group": "get-cus-multi-ent-v2",
+      "status": "active",
+      "canceled_at": null,
+      "started_at": 1774899538120,
+      "is_default": false,
+      "is_add_on": false,
+      "version": 1,
+      "current_period_start": null,
+      "current_period_end": null,
+      "items": [
+        {
+          "type": "feature",
+          "feature_id": "credits",
+          "feature_type": "single_use",
+          "feature": {
+            "id": "credits",
+            "name": "Credits",
+            "type": "credit_system",
+            "display": {
+              "singular": "Credits",
+              "plural": "Credits"
+            },
+            "credit_schema": [
+              {
+                "metered_feature_id": "action1",
+                "credit_cost": 0.2
+              },
+              {
+                "metered_feature_id": "action2",
+                "credit_cost": 0.6
+              }
+            ]
+          },
+          "included_usage": 200,
+          "interval": "month",
+          "reset_usage_when_enabled": true,
+          "display": {
+            "primary_text": "200 Credits"
+          }
+        }
+      ],
+      "quantity": 2
+    }
+  ],
+  "features": {
+    "messages": {
+      "id": "messages",
+      "type": "single_use",
+      "name": "Messages",
+      "interval": "month",
+      "interval_count": 1,
+      "unlimited": false,
+      "balance": 90,
+      "usage": 10,
+      "included_usage": 100,
+      "next_reset_at": 1777577925000,
+      "overage_allowed": false,
+      "breakdown": [
+        {
+          "interval": "month",
+          "interval_count": 1,
+          "balance": 90,
+          "usage": 10,
+          "included_usage": 100,
+          "next_reset_at": 1777577925000,
+          "expires_at": null,
+          "overage_allowed": false
+        }
+      ]
+    },
+    "credits": {
+      "id": "credits",
+      "type": "single_use",
+      "name": "Credits",
+      "interval": "month",
+      "interval_count": 1,
+      "unlimited": false,
+      "balance": 400,
+      "usage": 0,
+      "included_usage": 400,
+      "next_reset_at": 1777577925000,
+      "overage_allowed": false,
+      "breakdown": [
+        {
+          "interval": "month",
+          "interval_count": 1,
+          "balance": 200,
+          "usage": 0,
+          "included_usage": 200,
+          "next_reset_at": 1777577925000,
+          "expires_at": null,
+          "overage_allowed": false
+        },
+        {
+          "interval": "month",
+          "interval_count": 1,
+          "balance": 200,
+          "usage": 0,
+          "included_usage": 200,
+          "next_reset_at": 1777577925000,
+          "expires_at": null,
+          "overage_allowed": false
+        }
+      ],
+      "credit_schema": [
+        {
+          "feature_id": "action1",
+          "credit_amount": 0.2
+        },
+        {
+          "feature_id": "action2",
+          "credit_amount": 0.6
+        }
+      ]
+    },
+    "dashboard": {
+      "id": "dashboard",
+      "type": "static",
+      "name": "Dashboard",
+      "interval": null,
+      "interval_count": null,
+      "unlimited": false,
+      "balance": 0,
+      "usage": 0,
+      "included_usage": 0,
+      "next_reset_at": null,
+      "overage_allowed": false,
+      "breakdown": [
+        {
+          "interval": null,
+          "interval_count": null,
+          "balance": 0,
+          "usage": 0,
+          "included_usage": 0,
+          "next_reset_at": null,
+          "expires_at": null,
+          "overage_allowed": false
+        }
+      ]
+    }
+  },
+  "invoices": [
+    {
+      "product_ids": [
+        "cus-lvl_get-cus-multi-ent-v2"
+      ],
+      "stripe_id": "in_1TGle86GVhEVh7f8YnHsCA2a",
+      "status": "paid",
+      "total": 20,
+      "currency": "usd",
+      "created_at": 1774899525000,
+      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3Bg8p9i1EF5PBHdyGGKiXPif0Fh"
+    }
+  ]
+}
