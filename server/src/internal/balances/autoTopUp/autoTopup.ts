@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import { withLock } from "@/external/redis/redisUtils.js";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -31,6 +32,13 @@ export const autoTopup = async ({
 			`========= RUNNING AUTO TOPUP FOR CUSTOMER ${customerId} AND FEATURE ${featureId} ========`,
 		);
 
+		if (org.config.disabled_auto_topup && env === AppEnv.Live) {
+			logger.info(
+				`[autoTopup] Auto top-up is disabled for organization ${org.id}, skipping`,
+			);
+			return;
+		}
+
 		// 1. Setup — fetch full customer, auto-topup config, cusEnt, Stripe context
 		const autoTopupContext = await setupAutoTopupContext({ ctx, payload });
 
@@ -55,6 +63,14 @@ export const autoTopup = async ({
 			billingContext: autoTopupContext,
 		});
 
+		if (org.config.dryrun_autotopups) {
+			logger.info(
+				`[autoTopup] Dry run enabled, skipping recordAutoTopupAttempt`,
+				{ extras: ctx.extraLogs },
+			);
+			return;
+		}
+
 		let billingResult: Awaited<ReturnType<typeof executeBillingPlan>>;
 		billingResult = await executeBillingPlan({
 			ctx,
@@ -70,7 +86,10 @@ export const autoTopup = async ({
 			billingResult,
 		});
 
-		if (billingResult.stripe?.stripeInvoice?.status !== "paid") {
+		const isInvoiceMode = Boolean(autoTopupContext.invoiceMode);
+		const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
+
+		if (!isInvoiceMode && invoiceStatus !== "paid") {
 			await voidStripeInvoiceIfOpen({
 				ctx,
 				stripeInvoice: billingResult.stripe?.stripeInvoice,

@@ -1,5 +1,9 @@
-import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
-import { cusProductToProduct } from "@autumn/shared";
+import {
+	type AutumnBillingPlan,
+	type BillingContext,
+	cusProductToProduct,
+	nullish,
+} from "@autumn/shared";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
@@ -15,7 +19,6 @@ export const initStripeResourcesForBillingPlan = async ({
 }) => {
 	const { db, org, env, logger } = ctx;
 
-	// For each insert customer product
 	const { fullCustomer } = billingContext;
 	const { insertCustomerProducts } = autumnBillingPlan;
 
@@ -23,8 +26,29 @@ export const initStripeResourcesForBillingPlan = async ({
 		cusProductToProduct({ cusProduct: cp }),
 	);
 
+	const existingProducts = fullCustomer.customer_products
+		.map((customerProduct) =>
+			cusProductToProduct({ cusProduct: customerProduct }),
+		)
+		.map((product) => ({
+			...product,
+			prices: product.prices.filter(
+				(price) =>
+					nullish(price.config.stripe_price_id) ||
+					("stripe_prepaid_price_v2_id" in price.config &&
+						nullish(price.config.stripe_prepaid_price_v2_id)),
+			),
+		}))
+		.filter(
+			(product) => nullish(product.processor?.id) || product.prices.length > 0,
+		);
+
+	const allProducts = [...newProducts, ...existingProducts];
+
 	const batchProductUpdates = [];
-	for (const product of newProducts) {
+	for (const product of allProducts) {
+		if (product.processor?.id != null) continue;
+
 		batchProductUpdates.push(
 			checkStripeProductExists({
 				db,
@@ -41,7 +65,7 @@ export const initStripeResourcesForBillingPlan = async ({
 
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
-	for (const product of newProducts) {
+	for (const product of allProducts) {
 		for (const price of product.prices) {
 			batchPriceUpdates.push(
 				createStripePriceIFNotExist({

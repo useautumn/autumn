@@ -3,6 +3,7 @@ import {
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
 	type FullCusEntWithFullCusProduct,
+	getRolloverFields,
 	nullish,
 } from "@autumn/shared";
 import { useAppForm } from "@/hooks/form/form";
@@ -26,7 +27,7 @@ export function useBalanceEditForm({
 	const balance = cusEntsToBalance({
 		cusEnts: [selectedCusEnt],
 		entityId: entityId ?? undefined,
-		withRollovers: false,
+		withRollovers: true,
 	});
 
 	const grantedBalance = cusEntsToGrantedBalance({
@@ -35,6 +36,12 @@ export function useBalanceEditForm({
 	});
 
 	const grantedAndPurchasedBalance = grantedBalance + prepaidAllowance;
+
+	const rolloverBalance =
+		getRolloverFields({
+			cusEnt: selectedCusEnt,
+			entityId: entityId ?? undefined,
+		})?.balance ?? 0;
 
 	const form = useAppForm({
 		defaultValues: {
@@ -49,7 +56,7 @@ export function useBalanceEditForm({
 		},
 	});
 
-	return Object.assign(form, { prepaidAllowance });
+	return Object.assign(form, { prepaidAllowance, rolloverBalance });
 }
 
 export type BalanceEditFormInstance = ReturnType<typeof useBalanceEditForm>;

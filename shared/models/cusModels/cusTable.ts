@@ -64,6 +64,17 @@ export const customers = pgTable(
 			.on(table.org_id, table.env, table.fingerprint)
 			.where(sql`${table.fingerprint} IS NOT NULL`),
 		index("idx_customers_processor_id").on(sql`(${table.processor} ->> 'id')`),
+		index("idx_customers_composite").on(table.org_id, table.env, table.id),
+		index("idx_customers_org_env_internal_id").on(
+			table.org_id,
+			table.env,
+			sql`${table.internal_id} DESC`,
+		),
+		index("idx_customers_org_id_env_created_at").on(
+			table.org_id,
+			table.env,
+			sql`${table.created_at} DESC`,
+		),
 	],
 ).enableRLS();
 
