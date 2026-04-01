@@ -158,6 +158,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
               Max rollover units. Omit for unlimited rollover.
             </DynamicParamField>
 
+            <DynamicParamField body="max_percentage" type="number">
+              Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+            </DynamicParamField>
+
             <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
               When rolled over units expire.
             </DynamicParamField>

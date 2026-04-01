@@ -38,6 +38,15 @@ const usageAlertControls: CustomerBillingControls = {
 	],
 };
 
+const overageAllowedControls: CustomerBillingControls = {
+	overage_allowed: [
+		{
+			feature_id: TestFeature.Messages,
+			enabled: true,
+		},
+	],
+};
+
 test.concurrent(`${chalk.yellowBright("customer billing controls: create customer with spend limits")}`, async () => {
 	const customerId = "customer-billing-controls-1";
 	const { autumnV2_1, ctx } = await initScenario({
@@ -331,6 +340,134 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: clearing usage
 		skip_cache: "true",
 	});
 	expect(uncached.billing_controls?.usage_alerts).toEqual([]);
+	expect(uncached.billing_controls?.spend_limits).toEqual(
+		spendLimitControls.spend_limits,
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("customer billing controls: create customer with overage_allowed")}`, async () => {
+	const customerId = "customer-billing-controls-8";
+	const { autumnV2_1, ctx } = await initScenario({
+		setup: [s.deleteCustomer({ customerId })],
+		actions: [],
+	});
+
+	await autumnV2_1.customers.create({
+		id: customerId,
+		name: "Overage Allowed Customer",
+		email: `${customerId}@example.com`,
+		billing_controls: overageAllowedControls,
+	});
+
+	const cachedCustomer =
+		await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expect(cachedCustomer.billing_controls?.overage_allowed).toEqual(
+		overageAllowedControls.overage_allowed,
+	);
+
+	const uncachedCustomer = await autumnV2_1.customers.get<ApiCustomerV5>(
+		customerId,
+		{
+			skip_cache: "true",
+		},
+	);
+	expect(uncachedCustomer.billing_controls?.overage_allowed).toEqual(
+		overageAllowedControls.overage_allowed,
+	);
+
+	const fromDb = await CusService.getFull({ ctx, idOrInternalId: customerId });
+	expect(fromDb.overage_allowed).toEqual(
+		overageAllowedControls.overage_allowed,
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("customer billing controls: update overage_allowed without clearing other billing controls")}`, async () => {
+	const customerId = "customer-billing-controls-9";
+	const { autumnV2_1 } = await initScenario({
+		customerId,
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: spendLimitControls,
+	});
+
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: overageAllowedControls,
+	});
+
+	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expect(cached.billing_controls?.spend_limits).toEqual(
+		spendLimitControls.spend_limits,
+	);
+	expect(cached.billing_controls?.overage_allowed).toEqual(
+		overageAllowedControls.overage_allowed,
+	);
+
+	const uncached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expect(uncached.billing_controls?.spend_limits).toEqual(
+		spendLimitControls.spend_limits,
+	);
+	expect(uncached.billing_controls?.overage_allowed).toEqual(
+		overageAllowedControls.overage_allowed,
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("customer billing controls: reject duplicate overage_allowed feature ids")}`, async () => {
+	const customerId = "customer-billing-controls-10";
+	const { autumnV2_1 } = await initScenario({
+		setup: [s.deleteCustomer({ customerId })],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		func: async () =>
+			await autumnV2_1.customers.create({
+				id: customerId,
+				name: "Duplicate Overage Allowed",
+				email: `${customerId}@example.com`,
+				billing_controls: {
+					overage_allowed: [
+						{ feature_id: TestFeature.Messages, enabled: true },
+						{ feature_id: TestFeature.Messages, enabled: false },
+					],
+				},
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("customer billing controls: clearing overage_allowed with empty array")}`, async () => {
+	const customerId = "customer-billing-controls-11";
+	const { autumnV2_1 } = await initScenario({
+		customerId,
+		setup: [s.customer({})],
+		actions: [],
+	});
+
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: {
+			...spendLimitControls,
+			...overageAllowedControls,
+		},
+	});
+
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: { overage_allowed: [] },
+	});
+
+	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expect(cached.billing_controls?.overage_allowed).toEqual([]);
+	expect(cached.billing_controls?.spend_limits).toEqual(
+		spendLimitControls.spend_limits,
+	);
+
+	const uncached = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		skip_cache: "true",
+	});
+	expect(uncached.billing_controls?.overage_allowed).toEqual([]);
 	expect(uncached.billing_controls?.spend_limits).toEqual(
 		spendLimitControls.spend_limits,
 	);

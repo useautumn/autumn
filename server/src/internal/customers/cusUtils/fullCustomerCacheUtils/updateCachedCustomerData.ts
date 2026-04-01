@@ -23,6 +23,7 @@ type CustomerDataUpdates = Pick<
 	| "auto_topups"
 	| "spend_limits"
 	| "usage_alerts"
+	| "overage_allowed"
 >;
 
 /**

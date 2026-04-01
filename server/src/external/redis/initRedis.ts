@@ -92,12 +92,14 @@ const waitForRedisReady = (
 
 /** Pre-warm all regional Redis connections. Call on startup before processing requests. */
 export const warmupRegionalRedis = async (): Promise<void> => {
+	console.time("redis:warmup-total");
 	const regions = getConfiguredRegions();
 	console.log(
 		`[Redis] Warming up connections for ${regions.length} regions...`,
 	);
 
 	const warmupPromises = regions.map(async (region) => {
+		console.time(`redis:warmup-${region}`);
 		try {
 			const instance = getRegionalRedis(region);
 			await waitForRedisReady(instance, region);
@@ -105,9 +107,11 @@ export const warmupRegionalRedis = async (): Promise<void> => {
 			console.error(`[Redis] ${region}: warmup failed -`, error);
 			// Don't throw - allow startup to continue even if one region fails
 		}
+		console.timeEnd(`redis:warmup-${region}`);
 	});
 
 	await Promise.all(warmupPromises);
+	console.timeEnd("redis:warmup-total");
 	console.log(`[Redis] Warmup complete`);
 };
 

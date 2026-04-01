@@ -157,6 +157,22 @@ components:
                   - threshold
                   - threshold_type
               description: List of usage alert configurations per feature.
+            overage_allowed:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: The feature ID this overage allowed control applies to.
+                  enabled:
+                    type: boolean
+                    default: false
+                    description: Whether overage is allowed for this feature.
+                required:
+                  - feature_id
+              description: List of overage allowed controls per feature. When enabled, usage
+                can exceed balance.
           description: Billing controls for the customer (auto top-ups, etc.)
       title: CustomerData
       description: Customer details to set when creating a customer
@@ -324,6 +340,22 @@ components:
                   - threshold
                   - threshold_type
               description: List of usage alert configurations per feature.
+            overage_allowed:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: The feature ID this overage allowed control applies to.
+                  enabled:
+                    type: boolean
+                    default: false
+                    description: Whether overage is allowed for this feature.
+                required:
+                  - feature_id
+              description: List of overage allowed controls per feature. When enabled, usage
+                can exceed balance.
           description: Billing controls for the customer (auto top-ups, etc.)
         subscriptions:
           type: array
@@ -1084,6 +1116,12 @@ components:
                       - type: number
                       - type: "null"
                     description: Maximum rollover units. Null for unlimited rollover.
+                  max_percentage:
+                    anyOf:
+                      - type: number
+                      - type: "null"
+                    description: Maximum rollover as a percentage (0-100) of included + prepaid
+                      grant. Mutually exclusive with max.
                   expiry_duration_type:
                     enum:
                       - month
@@ -1639,6 +1677,22 @@ paths:
                           - threshold
                           - threshold_type
                       description: List of usage alert configurations per feature.
+                    overage_allowed:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature ID this overage allowed control applies to.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether overage is allowed for this feature.
+                        required:
+                          - feature_id
+                      description: List of overage allowed controls per feature. When enabled, usage
+                        can exceed balance.
                   description: Billing controls for the customer (auto top-ups, etc.)
                 expand:
                   type: array
@@ -1890,6 +1944,22 @@ paths:
                                   - threshold
                                   - threshold_type
                               description: List of usage alert configurations per feature.
+                            overage_allowed:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The feature ID this overage allowed control applies to.
+                                  enabled:
+                                    type: boolean
+                                    default: false
+                                    description: Whether overage is allowed for this feature.
+                                required:
+                                  - feature_id
+                              description: List of overage allowed controls per feature. When enabled, usage
+                                can exceed balance.
                           description: Billing controls for the customer (auto top-ups, etc.)
                         subscriptions:
                           type: array
@@ -2434,6 +2504,22 @@ paths:
                           - threshold
                           - threshold_type
                       description: List of usage alert configurations per feature.
+                    overage_allowed:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature ID this overage allowed control applies to.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether overage is allowed for this feature.
+                        required:
+                          - feature_id
+                      description: List of overage allowed controls per feature. When enabled, usage
+                        can exceed balance.
                   description: Billing controls for the customer (auto top-ups, etc.)
                 new_customer_id:
                   $ref: "#/components/schemas/CustomerId"
@@ -2602,6 +2688,22 @@ paths:
                             - threshold
                             - threshold_type
                         description: List of usage alert configurations per feature.
+                      overage_allowed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this overage allowed control applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether overage is allowed for this feature.
+                          required:
+                            - feature_id
+                        description: List of overage allowed controls per feature. When enabled, usage
+                          can exceed balance.
                     description: Billing controls for the customer (auto top-ups, etc.)
                   subscriptions:
                     type: array
@@ -3152,6 +3254,10 @@ paths:
                           max:
                             type: number
                             description: Max rollover units. Omit for unlimited rollover.
+                          max_percentage:
+                            type: number
+                            description: Maximum rollover as a percentage (0-100) of included + prepaid
+                              grant. Mutually exclusive with max.
                           expiry_duration_type:
                             enum:
                               - month
@@ -3504,6 +3610,12 @@ paths:
                                 - type: number
                                 - type: "null"
                               description: Maximum rollover units. Null for unlimited rollover.
+                            max_percentage:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                grant. Mutually exclusive with max.
                             expiry_duration_type:
                               enum:
                                 - month
@@ -3968,6 +4080,12 @@ paths:
                                 - type: number
                                 - type: "null"
                               description: Maximum rollover units. Null for unlimited rollover.
+                            max_percentage:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                grant. Mutually exclusive with max.
                             expiry_duration_type:
                               enum:
                                 - month
@@ -4439,6 +4557,12 @@ paths:
                                       - type: number
                                       - type: "null"
                                     description: Maximum rollover units. Null for unlimited rollover.
+                                  max_percentage:
+                                    anyOf:
+                                      - type: number
+                                      - type: "null"
+                                    description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                      grant. Mutually exclusive with max.
                                   expiry_duration_type:
                                     enum:
                                       - month
@@ -4809,6 +4933,10 @@ paths:
                           max:
                             type: number
                             description: Max rollover units. Omit for unlimited rollover.
+                          max_percentage:
+                            type: number
+                            description: Maximum rollover as a percentage (0-100) of included + prepaid
+                              grant. Mutually exclusive with max.
                           expiry_duration_type:
                             enum:
                               - month
@@ -5147,6 +5275,12 @@ paths:
                                 - type: number
                                 - type: "null"
                               description: Maximum rollover units. Null for unlimited rollover.
+                            max_percentage:
+                              anyOf:
+                                - type: number
+                                - type: "null"
+                              description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                grant. Mutually exclusive with max.
                             expiry_duration_type:
                               enum:
                                 - month
@@ -6226,6 +6360,10 @@ paths:
                               max:
                                 type: number
                                 description: Max rollover units. Omit for unlimited rollover.
+                              max_percentage:
+                                type: number
+                                description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                  grant. Mutually exclusive with max.
                               expiry_duration_type:
                                 enum:
                                   - month
@@ -6709,6 +6847,10 @@ paths:
                                     max:
                                       type: number
                                       description: Max rollover units. Omit for unlimited rollover.
+                                    max_percentage:
+                                      type: number
+                                      description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                        grant. Mutually exclusive with max.
                                     expiry_duration_type:
                                       enum:
                                         - month
@@ -6914,6 +7056,22 @@ paths:
                               - threshold
                               - threshold_type
                           description: List of usage alert configurations per feature.
+                        overage_allowed:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: The feature ID this overage allowed control applies to.
+                              enabled:
+                                type: boolean
+                                default: false
+                                description: Whether overage is allowed for this feature.
+                            required:
+                              - feature_id
+                          description: List of overage allowed controls per feature. When enabled, usage
+                            can exceed balance.
                       description: Billing controls for the entity.
                   required:
                     - feature_id
@@ -7235,6 +7393,10 @@ paths:
                               max:
                                 type: number
                                 description: Max rollover units. Omit for unlimited rollover.
+                              max_percentage:
+                                type: number
+                                description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                  grant. Mutually exclusive with max.
                               expiry_duration_type:
                                 enum:
                                   - month
@@ -7998,6 +8160,10 @@ paths:
                                     max:
                                       type: number
                                       description: Max rollover units. Omit for unlimited rollover.
+                                    max_percentage:
+                                      type: number
+                                      description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                        grant. Mutually exclusive with max.
                                     expiry_duration_type:
                                       enum:
                                         - month
@@ -8203,6 +8369,22 @@ paths:
                               - threshold
                               - threshold_type
                           description: List of usage alert configurations per feature.
+                        overage_allowed:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: The feature ID this overage allowed control applies to.
+                              enabled:
+                                type: boolean
+                                default: false
+                                description: Whether overage is allowed for this feature.
+                            required:
+                              - feature_id
+                          description: List of overage allowed controls per feature. When enabled, usage
+                            can exceed balance.
                       description: Billing controls for the entity.
                   required:
                     - feature_id
@@ -8800,6 +8982,10 @@ paths:
                               max:
                                 type: number
                                 description: Max rollover units. Omit for unlimited rollover.
+                              max_percentage:
+                                type: number
+                                description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                  grant. Mutually exclusive with max.
                               expiry_duration_type:
                                 enum:
                                   - month
@@ -9234,6 +9420,10 @@ paths:
                               max:
                                 type: number
                                 description: Max rollover units. Omit for unlimited rollover.
+                              max_percentage:
+                                type: number
+                                description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                  grant. Mutually exclusive with max.
                               expiry_duration_type:
                                 enum:
                                   - month
@@ -9992,6 +10182,10 @@ paths:
                               max:
                                 type: number
                                 description: Max rollover units. Omit for unlimited rollover.
+                              max_percentage:
+                                type: number
+                                description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                  grant. Mutually exclusive with max.
                               expiry_duration_type:
                                 enum:
                                   - month
@@ -10912,6 +11106,10 @@ paths:
                                                     anyOf:
                                                       - type: number
                                                       - type: "null"
+                                                  max_percentage:
+                                                    anyOf:
+                                                      - type: number
+                                                      - type: "null"
                                                   duration:
                                                     enum:
                                                       - month
@@ -10921,7 +11119,6 @@ paths:
                                                   length:
                                                     type: number
                                                 required:
-                                                  - max
                                                   - length
                                               - type: "null"
                                           on_increase:
@@ -11667,6 +11864,22 @@ paths:
                           - threshold
                           - threshold_type
                       description: List of usage alert configurations per feature.
+                    overage_allowed:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature ID this overage allowed control applies to.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether overage is allowed for this feature.
+                        required:
+                          - feature_id
+                      description: List of overage allowed controls per feature. When enabled, usage
+                        can exceed balance.
                   description: Billing controls for the entity.
                 customer_data:
                   $ref: "#/components/schemas/CustomerData"
@@ -11997,6 +12210,22 @@ paths:
                             - threshold
                             - threshold_type
                         description: List of usage alert configurations per feature.
+                      overage_allowed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this overage allowed control applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether overage is allowed for this feature.
+                          required:
+                            - feature_id
+                        description: List of overage allowed controls per feature. When enabled, usage
+                          can exceed balance.
                     description: Billing controls for the entity.
                   invoices:
                     type: array
@@ -12435,6 +12664,22 @@ paths:
                             - threshold
                             - threshold_type
                         description: List of usage alert configurations per feature.
+                      overage_allowed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this overage allowed control applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether overage is allowed for this feature.
+                          required:
+                            - feature_id
+                        description: List of overage allowed controls per feature. When enabled, usage
+                          can exceed balance.
                     description: Billing controls for the entity.
                   invoices:
                     type: array
@@ -12611,6 +12856,22 @@ paths:
                           - threshold
                           - threshold_type
                       description: List of usage alert configurations per feature.
+                    overage_allowed:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature ID this overage allowed control applies to.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether overage is allowed for this feature.
+                        required:
+                          - feature_id
+                      description: List of overage allowed controls per feature. When enabled, usage
+                        can exceed balance.
                   description: Billing controls to replace on the entity.
               required:
                 - entity_id
@@ -12932,6 +13193,22 @@ paths:
                             - threshold
                             - threshold_type
                         description: List of usage alert configurations per feature.
+                      overage_allowed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this overage allowed control applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether overage is allowed for this feature.
+                          required:
+                            - feature_id
+                        description: List of overage allowed controls per feature. When enabled, usage
+                          can exceed balance.
                     description: Billing controls for the entity.
                   invoices:
                     type: array

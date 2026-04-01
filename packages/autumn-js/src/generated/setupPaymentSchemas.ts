@@ -90,6 +90,7 @@ export const setupPaymentProrationOutboundSchema = z.object({
 
 export const setupPaymentRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -232,6 +233,7 @@ export const setupPaymentExpiryDurationTypeSchema = closedEnumSchema;
 
 export const setupPaymentRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: setupPaymentExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });

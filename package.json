@@ -72,6 +72,7 @@
 		"dx": "bun scripts/dx.ts",
 		"d:test": "lsof -ti:8080 -ti:3000 | xargs kill -9 2>/dev/null || true; ENV_FILE=.env infisical run --env=test -- bun scripts/dev.ts",
 		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/dev.ts",
+		"s": "ENV_FILE=.env.staging infisical run --env=staging -- bun scripts/dev.ts",
 		"l": "bash ./scripts/dev-local.sh",
 		"setup": "node scripts/setup/setup.js",
 		"setup:test": "infisical run --env=dev -- bun scripts/setup/setup-test.ts",
