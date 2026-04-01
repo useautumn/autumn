@@ -1,7 +1,9 @@
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { User } from "better-auth";
 import { format } from "date-fns";
+import { Badge } from "@/components/v2/badges/Badge";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
+import { Button } from "@/components/v2/buttons/Button";
 import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type AdminOrg = {
@@ -10,9 +12,17 @@ export type AdminOrg = {
 	slug: string;
 	createdAt: string;
 	users: User[];
+	requestBlockSummary: {
+		blockAll: boolean;
+		ruleCount: number;
+	};
 };
 
-export const createAdminOrgColumns = (): ColumnDef<AdminOrg, unknown>[] => [
+export const createAdminOrgColumns = ({
+	onManageRequestBlocks,
+}: {
+	onManageRequestBlocks: (org: AdminOrg) => void;
+}): ColumnDef<AdminOrg, unknown>[] => [
 	{
 		id: "id",
 		header: "ID",
@@ -75,6 +85,32 @@ export const createAdminOrgColumns = (): ColumnDef<AdminOrg, unknown>[] => [
 		},
 	},
 	{
+		id: "requestBlock",
+		header: "Request blocks",
+		accessorKey: "requestBlockSummary",
+		cell: ({ row }: { row: Row<AdminOrg> }) => {
+			const summary = row.original.requestBlockSummary;
+
+			if (summary.blockAll) {
+				return (
+					<Badge className="bg-red-50 text-red-700 border-red-200">
+						Blocked
+					</Badge>
+				);
+			}
+
+			if (summary.ruleCount > 0) {
+				return (
+					<Badge className="bg-amber-50 text-amber-700 border-amber-200">
+						{summary.ruleCount} rule{summary.ruleCount === 1 ? "" : "s"}
+					</Badge>
+				);
+			}
+
+			return <Badge variant="muted">Open</Badge>;
+		},
+	},
+	{
 		id: "impersonate",
 		header: "Actions",
 		enableSorting: false,
@@ -87,7 +123,14 @@ export const createAdminOrgColumns = (): ColumnDef<AdminOrg, unknown>[] => [
 			}
 
 			return (
-				<div onClick={(e) => e.stopPropagation()}>
+				<div onClick={(e) => e.stopPropagation()} className="flex gap-2">
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={() => onManageRequestBlocks(row.original)}
+					>
+						Block
+					</Button>
 					<ImpersonateButton userId={users?.[0]?.id} />
 				</div>
 			);

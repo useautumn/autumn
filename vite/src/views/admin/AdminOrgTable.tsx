@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/v2/buttons/Button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { type AdminOrg, createAdminOrgColumns } from "./AdminOrgColumns";
+import { RequestBlockDialog } from "./components/RequestBlockDialog";
 import { useAdminTable } from "./hooks/useAdminTable";
 
 export const AdminOrgTable = () => {
@@ -13,6 +14,7 @@ export const AdminOrgTable = () => {
 	const [after, setAfter] = useState<string | undefined>(undefined);
 	const [before, setBefore] = useState<string | undefined>(undefined);
 	const [page, setPage] = useState(1);
+	const [selectedOrg, setSelectedOrg] = useState<AdminOrg | null>(null);
 
 	const params = new URLSearchParams();
 	if (search) params.append("search", search);
@@ -20,7 +22,7 @@ export const AdminOrgTable = () => {
 	if (before) params.append("before", before);
 	const url = `/admin/orgs${params.toString() ? `?${params.toString()}` : ""}`;
 
-	const { data, isLoading } = useQuery({
+	const { data, isLoading, refetch } = useQuery({
 		queryKey: ["admin-orgs", search, after, before],
 		queryFn: async () => {
 			const { data } = await axiosInstance.get(url);
@@ -59,7 +61,13 @@ export const AdminOrgTable = () => {
 		setPage((p) => (direction === "next" ? p + 1 : Math.max(1, p - 1)));
 	};
 
-	const columns = useMemo(() => createAdminOrgColumns(), []);
+	const columns = useMemo(
+		() =>
+			createAdminOrgColumns({
+				onManageRequestBlocks: (org) => setSelectedOrg(org),
+			}),
+		[],
+	);
 
 	const table = useAdminTable({
 		data: rows,
@@ -70,6 +78,19 @@ export const AdminOrgTable = () => {
 
 	return (
 		<div className="space-y-4 flex-1">
+			<RequestBlockDialog
+				open={Boolean(selectedOrg)}
+				onOpenChange={(open) => {
+					if (!open) {
+						setSelectedOrg(null);
+					}
+				}}
+				orgId={selectedOrg?.id}
+				orgName={selectedOrg?.name}
+				onSaved={async () => {
+					await refetch();
+				}}
+			/>
 			<div className="flex items-center justify-between">
 				<h2 className="text-sm font-medium">Organizations</h2>
 			</div>
