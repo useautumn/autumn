@@ -11,6 +11,7 @@ const FAIL_OPEN_OPERATION_IDS = new Set([
 	"check",
 	"track",
 	"getOrCreateCustomer",
+	"getEntity",
 ]);
 
 const FAIL_OPEN_LOG_MESSAGE =
@@ -39,6 +40,18 @@ const FAIL_OPEN_BODIES: Record<string, object> = {
 		metadata: {},
 		send_email_receipts: false,
 		billing_controls: {},
+		subscriptions: [],
+		purchases: [],
+		balances: {},
+		flags: {},
+	},
+	getEntity: {
+		id: null,
+		name: null,
+		customer_id: null,
+		feature_id: null,
+		created_at: 0,
+		env: "live",
 		subscriptions: [],
 		purchases: [],
 		balances: {},
