@@ -14,7 +14,7 @@ import { logger } from "./external/logtail/logtailUtils.js";
 import {
 	startRequestBlockPolling,
 	stopRequestBlockPolling,
-} from "./internal/requestBlocks/requestBlockStore.js";
+} from "./internal/misc/requestBlocks/requestBlockStore.js";
 import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";

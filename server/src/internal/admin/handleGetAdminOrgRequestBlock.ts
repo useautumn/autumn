@@ -3,7 +3,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	getOrgRequestBlockFromSource,
 	getRuntimeRequestBlockStatus,
-} from "@/internal/requestBlocks/requestBlockStore.js";
+} from "@/internal/misc/requestBlocks/requestBlockStore.js";
 
 export const handleGetAdminOrgRequestBlock = createRoute({
 	params: z.object({

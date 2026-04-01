@@ -74,6 +74,7 @@
 		"p": "ENV_FILE=.env.prod infisical run --env=prod -- bun scripts/dev.ts",
 		"l": "bash ./scripts/dev-local.sh",
 		"setup": "node scripts/setup/setup.js",
+		"setup:s3-admin": "bun scripts/setup/setupS3Admin.ts",
 		"setup:test": "infisical run --env=dev -- bun scripts/setup/setup-test.ts",
 		"migrate-functions": "infisical run --env=dev -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:test": "infisical run --env=test -- bun scripts/migrations/migrate-functions.ts",

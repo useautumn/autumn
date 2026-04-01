@@ -1,8 +1,8 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { getRuntimeRequestBlockEntry } from "@/internal/misc/requestBlocks/requestBlockStore.js";
 import { matchRoute } from "./middlewareUtils.js";
-import { getRuntimeRequestBlockEntry } from "@/internal/requestBlocks/requestBlockStore.js";
 
 export const requestBlockMiddleware = async (
 	c: Context<HonoEnv>,
@@ -22,14 +22,10 @@ export const requestBlockMiddleware = async (
 		return;
 	}
 
+	console.log("Entry:", entry);
+
 	if (entry.blockAll) {
-		ctx.logger.warn("Rejecting blocked /v1 request", {
-			orgId,
-			orgSlug: ctx.org?.slug,
-			method: c.req.method,
-			path: c.req.path,
-			blockAll: true,
-		});
+		ctx.logger.warn("Rejecting blocked /v1 request (block all)");
 
 		throw new RecaseError({
 			message: "API access is temporarily disabled for this organization",
@@ -54,13 +50,9 @@ export const requestBlockMiddleware = async (
 		return;
 	}
 
-	ctx.logger.warn("Rejecting endpoint-blocked /v1 request", {
-		orgId,
-		orgSlug: ctx.org?.slug,
-		method: c.req.method,
-		path: c.req.path,
-		rule: matchedRule,
-	});
+	ctx.logger.warn(
+		"Rejecting endpoint-blocked /v1 request (blocked endpoint, matched rule)",
+	);
 
 	throw new RecaseError({
 		message: "This endpoint is temporarily disabled for this organization",
