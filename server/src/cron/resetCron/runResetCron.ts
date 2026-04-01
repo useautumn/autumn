@@ -15,7 +15,7 @@ import { clearCusEntsFromCache } from "./clearCusEntsFromCache";
 import { resetCustomerEntitlement } from "./resetCustomerEntitlement";
 
 export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
-	const { db } = ctx;
+	const { db, logger } = ctx;
 
 	const maxIterations = 10;
 	const timeoutMs = 60_000; // 1 minute
@@ -41,6 +41,11 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 				`Reset cron: failed to fetch org config for orgId=${orgId}, skipping cusEnts for this org`,
 				error,
 			);
+
+			logger.error(
+				`Reset cron: failed to fetch org config for orgId=${orgId}, skipping cusEnts for this org ${error}`,
+			);
+
 			Sentry.captureException(error, {
 				extra: { orgId, context: "runResetCron.getOrgConfig" },
 			});
