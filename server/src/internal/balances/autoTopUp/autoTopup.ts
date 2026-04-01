@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import { withLock } from "@/external/redis/redisUtils.js";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -30,6 +31,13 @@ export const autoTopup = async ({
 		logger.info(
 			`========= RUNNING AUTO TOPUP FOR CUSTOMER ${customerId} AND FEATURE ${featureId} ========`,
 		);
+
+		if (org.config.disabled_auto_topup && env === AppEnv.Live) {
+			logger.info(
+				`[autoTopup] Auto top-up is disabled for organization ${org.id}, skipping`,
+			);
+			return;
+		}
 
 		// 1. Setup — fetch full customer, auto-topup config, cusEnt, Stripe context
 		const autoTopupContext = await setupAutoTopupContext({ ctx, payload });
