@@ -43,11 +43,11 @@ export function CustomerListSearchBar() {
 			/>
 			<Input
 				value={localQuery}
-				onChange={(e) => {
-					const q = e.target.value.trim();
-					setLocalQuery(q);
-					debouncedSearch(q);
-				}}
+			onChange={(e) => {
+				const raw = e.target.value;
+				setLocalQuery(raw);
+				debouncedSearch(raw.trim());
+			}}
 				className="pl-8! text-sm w-sm"
 				placeholder={`Search ${Intl.NumberFormat("en-US").format(totalCount)} customers`}
 			/>
