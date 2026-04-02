@@ -61,7 +61,7 @@ export const AutumnProvider = ({
 			headers,
 		});
 		return { client };
-	}, [backendUrl, pathPrefix, useBetterAuth, includeCredentials, headers]);
+	}, [backendUrl, pathPrefix, useBetterAuth, includeCredentials, JSON.stringify(headers)]);
 
 	return (
 		<QueryClientProvider client={queryClientRef.current}>
