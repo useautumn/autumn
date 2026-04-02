@@ -2,8 +2,8 @@ import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { User } from "better-auth";
 import { format } from "date-fns";
 import { Badge } from "@/components/v2/badges/Badge";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { Button } from "@/components/v2/buttons/Button";
+import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type AdminOrg = {

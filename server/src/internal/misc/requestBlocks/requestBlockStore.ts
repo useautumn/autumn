@@ -64,3 +64,11 @@ export const updateOrgRequestBlockInSource = async ({
 
 	return config.orgs[orgId];
 };
+
+export const updateFullRequestBlockConfig = async ({
+	config,
+}: {
+	config: RequestBlockConfig;
+}) => {
+	await store.writeToSource({ config });
+};

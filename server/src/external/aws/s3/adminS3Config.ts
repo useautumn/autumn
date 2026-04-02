@@ -1,4 +1,5 @@
 export const ADMIN_REQUEST_BLOCK_CONFIG_KEY = "admin/request-block-config.json";
+export const ADMIN_FEATURE_FLAGS_CONFIG_KEY = "admin/feature-flags-config.json";
 
 type AdminS3Target = "dev" | "prod";
 

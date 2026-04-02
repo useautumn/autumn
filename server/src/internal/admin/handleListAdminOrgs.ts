@@ -1,7 +1,7 @@
 import { member, organizations, user } from "@autumn/shared";
 import { and, desc, eq, gt, gte, ilike, inArray, lt, or } from "drizzle-orm";
-import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
+import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
 
 export const handleListAdminOrgs = createRoute({
 	handler: async (c) => {
@@ -70,7 +70,12 @@ export const handleListAdminOrgs = createRoute({
 			.limit(21);
 
 		const orgIds = orgs.map((org) => org.id);
-		let requestBlockConfig = { orgs: {} as Record<string, { blockAll: boolean; blockedEndpoints: unknown[] }> };
+		let requestBlockConfig = {
+			orgs: {} as Record<
+				string,
+				{ blockAll: boolean; blockedEndpoints: unknown[] }
+			>,
+		};
 
 		try {
 			requestBlockConfig = await getRequestBlockConfigFromSource();
@@ -91,8 +96,7 @@ export const handleListAdminOrgs = createRoute({
 					.filter((membership) => membership.member.organizationId === org.id)
 					.map((membership) => membership.user),
 				requestBlockSummary: {
-					blockAll:
-						requestBlockConfig.orgs[org.id]?.blockAll ?? false,
+					blockAll: requestBlockConfig.orgs[org.id]?.blockAll ?? false,
 					ruleCount:
 						requestBlockConfig.orgs[org.id]?.blockedEndpoints.length ?? 0,
 				},
