@@ -1,7 +1,6 @@
 import { LATEST_VERSION } from "@autumn/shared";
 import { Spinner } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
 import {
 	CodeGroup,
 	CodeGroupCode,
@@ -10,46 +9,40 @@ import {
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
 import {
-	Sheet,
-	SheetContent,
+	LayoutGroup,
 	SheetHeader,
-	SheetTitle,
-} from "@/components/v2/sheets/Sheet";
+} from "@/components/v2/sheets/SharedSheetComponents";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "../../customer/CustomerContext";
 
-interface ShowCustomerObjectSheetProps {
-	open: boolean;
-	setOpen: (open: boolean) => void;
-}
-
-const EXPAND_PARAMS = [
-	"invoices",
-	"trials_used",
-	"rewards",
-	"entities",
-	"referrals",
-	"payment_method",
-].join(",");
-
-export function ShowCustomerObjectSheet({
-	open,
-	setOpen,
-}: ShowCustomerObjectSheetProps) {
-	const { customer_id } = useParams();
+export function CheckBalanceSheet() {
+	const sheetData = useSheetStore((s) => s.data);
+	const { customer } = useCusQuery();
+	const { entityId } = useCustomerContext();
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();
 
+	const featureId = sheetData?.featureId as string | undefined;
+	const featureName = sheetData?.featureName as string | undefined;
+	const customerId = customer?.id || customer?.internal_id;
+
 	const { data, isLoading, error } = useQuery({
-		queryKey: buildKey(["customer-object", customer_id, "expanded"]),
+		queryKey: buildKey(["check-balance", customerId, featureId, entityId]),
 		queryFn: async () => {
-			const { data } = await axiosInstance.get(
-				`/v1/customers/${customer_id}?expand=${EXPAND_PARAMS}`,
-			);
+			const params: Record<string, unknown> = {
+				customer_id: customerId,
+				feature_id: featureId,
+			};
+			if (entityId) params.entity_id = entityId;
+
+			const { data } = await axiosInstance.post("/v1/check", params);
 			return data;
 		},
-		enabled: open && !!customer_id,
+		enabled: !!customerId && !!featureId,
 		gcTime: 0,
 		staleTime: 0,
 	});
@@ -57,14 +50,12 @@ export function ShowCustomerObjectSheet({
 	const formattedJson = data ? JSON.stringify(data, null, 2) : "";
 
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent className="flex flex-col overflow-hidden bg-background min-w-xl">
-				<SheetHeader>
-					<SheetTitle>Customer Object</SheetTitle>
-					<p className="text-t3 text-sm">
-						Customer state from GET /customers/{customer_id}
-					</p>
-				</SheetHeader>
+		<LayoutGroup>
+			<div className="flex h-full flex-col overflow-hidden">
+				<SheetHeader
+					title="Check Balance"
+					description={`POST /check for ${featureName ?? featureId}`}
+				/>
 
 				<div className="flex-1 overflow-hidden flex flex-col px-4 pb-4">
 					{isLoading && (
@@ -75,7 +66,7 @@ export function ShowCustomerObjectSheet({
 
 					{error && (
 						<div className="p-4 rounded-md bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
-							{getBackendErr(error, "Failed to fetch customer")}
+							{getBackendErr(error, "Failed to check balance")}
 						</div>
 					)}
 
@@ -93,7 +84,7 @@ export function ShowCustomerObjectSheet({
 						</CodeGroup>
 					)}
 				</div>
-			</SheetContent>
-		</Sheet>
+			</div>
+		</LayoutGroup>
 	);
 }
