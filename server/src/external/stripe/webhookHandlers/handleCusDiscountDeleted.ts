@@ -1,7 +1,6 @@
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
+import { redemptionRepo, rewardRepo } from "@/internal/rewards/repos/index.js";
 import { notNullish } from "@/utils/genUtils.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext";
 
@@ -20,7 +19,7 @@ export async function handleCusDiscountDeleted({
 	const discount = stripeEvent.data.object as any;
 
 	// Check if any redemptions available, and apply to customer if so
-	const redemptions = await RewardRedemptionService.getUnappliedRedemptions({
+	const redemptions = await redemptionRepo.getUnapplied({
 		db,
 		internalCustomerId: fullCustomer.internal_id,
 	});
@@ -73,7 +72,7 @@ export async function handleCusDiscountDeleted({
 			paidProductRedemption.referral_code.internal_customer_id ===
 			fullCustomer.internal_id;
 
-		await RewardRedemptionService.update({
+		await redemptionRepo.update({
 			db,
 			id: paidProductRedemption.id,
 			updates: {
@@ -98,7 +97,7 @@ export async function handleCusDiscountDeleted({
 		return;
 	}
 
-	const reward = await RewardService.get({
+	const reward = await rewardRepo.get({
 		db,
 		orgId: org.id,
 		env,
@@ -123,7 +122,7 @@ export async function handleCusDiscountDeleted({
 		coupon: reward.id,
 	});
 
-	await RewardRedemptionService.update({
+	await redemptionRepo.update({
 		db,
 		id: redemption.id,
 		updates: {

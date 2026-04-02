@@ -18,7 +18,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
-import { RewardRedemptionService } from "../RewardRedemptionService.js";
+import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 import { ReferralResponseCodes } from "../referralUtils.js";
 import { triggerFreePaidProduct } from "./triggerFreePaidProduct.js";
 
@@ -150,7 +150,7 @@ export const triggerFreeProduct = async ({
 		logger.info(`✅ Added ${fullProduct.name} to referrer`);
 	}
 
-	await RewardRedemptionService.update({
+	await redemptionRepo.update({
 		db,
 		id: redemption.id,
 		updates: {
