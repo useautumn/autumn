@@ -93,12 +93,59 @@ When a customer switches between plans (upgrade or downgrade), Autumn prorates a
 <Info>
 **Example**
 
-A customer is on a $20/month plan and upgrades to a $50/month plan on day 15 of a 30-day cycle.
+A customer is on a \$20/month plan and upgrades to a \$50/month plan on day 15 of a 30-day cycle.
 
 - Old plan credit: $20 × (15/30) = $10 credit
 - New plan charge: $50 × (15/30) = $25 charge
 - Net charge: $25 - $10 = **$15**
 </Info>
+
+### Controlling proration in attach
+
+By default, plan switches prorate immediately. You can override this behavior using the `proration_behavior` parameter in `billing.attach`:
+
+| Value | Behavior |
+|-------|----------|
+| `prorate_immediately` | **(default)** Charges or credits the prorated difference immediately |
+| `none` | Skips proration — no charges or credits are created for the plan change |
+
+<CodeGroup>
+```typescript TypeScript
+await autumn.billing.attach({
+  customerId: "user_123",
+  planId: "enterprise",
+  prorationBehavior: "none",
+});
+```
+
+```python Python
+autumn.billing.attach(
+  customer_id="user_123",
+  plan_id="enterprise",
+  proration_behavior="none",
+)
+```
+
+```bash cURL
+curl -X POST https://api.useautumn.com/v2/billing/attach \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "plan_id": "enterprise",
+    "proration_behavior": "none"
+  }'
+```
+</CodeGroup>
+
+<Warning>
+`proration_behavior: "none"` cannot be used when:
+- Upgrading from a **free** plan to a **paid** plan
+- Removing an active **free trial**
+- Any transition that would result in a new charge
+
+In these cases, Autumn requires immediate billing and will return an error.
+</Warning>
 
 ## Usage-based proration
 
