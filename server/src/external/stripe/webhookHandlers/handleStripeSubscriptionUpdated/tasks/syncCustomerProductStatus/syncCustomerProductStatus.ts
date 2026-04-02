@@ -16,24 +16,37 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { trackCustomerProductUpdate } from "../../../common/trackCustomerProductUpdate";
-import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
+import type {
+	StripeSubscriptionUpdatedContext,
+	SubscriptionPreviousAttributes,
+} from "../../stripeSubscriptionUpdatedContext";
 import { fixUnexpectedStatuses } from "./fixUnexpectedStatuses";
 
 /**
  * In cases where a manual invoice was created due to an upgrade, we don't want to treat it as a past due.
+ * Only applies when the subscription just transitioned to past_due from a healthy state.
+ * If the sub was already past_due before this event, it's a real past_due.
  */
 const handleFalsePositivePastDue = async ({
 	ctx,
 	stripeSubscription,
 	autumnStatus,
+	previousAttributes,
 }: {
 	ctx: StripeWebhookContext;
 	stripeSubscription: ExpandedStripeSubscription;
 	autumnStatus: CusProductStatus;
+	previousAttributes: SubscriptionPreviousAttributes;
 }): Promise<CusProductStatus> => {
 	if (!isStripeSubscriptionPastDue(stripeSubscription)) return autumnStatus;
 
-	// const latestInvoice = await get
+	// If the status didn't change in this event or was already past_due,
+	// the subscription was genuinely past_due — don't override.
+	const wasAlreadyPastDue =
+		previousAttributes.status === undefined ||
+		previousAttributes.status === "past_due";
+	if (wasAlreadyPastDue) return autumnStatus;
+
 	const latestInvoice = await getStripeInvoice({
 		stripeClient: ctx.stripeCli,
 		invoiceId: stripeSubscription.latest_invoice,
@@ -70,8 +83,12 @@ export const syncCustomerProductStatus = async ({
 	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
 }): Promise<void> => {
 	const { db, logger, org, env } = ctx;
-	const { stripeSubscription, customerProducts, fullCustomer } =
-		subscriptionUpdatedContext;
+	const {
+		stripeSubscription,
+		customerProducts,
+		fullCustomer,
+		previousAttributes,
+	} = subscriptionUpdatedContext;
 
 	// Map Stripe status to Autumn status
 	let autumnStatus = stripeSubscriptionToAutumnStatus({
@@ -82,6 +99,7 @@ export const syncCustomerProductStatus = async ({
 		ctx,
 		stripeSubscription,
 		autumnStatus,
+		previousAttributes,
 	});
 
 	// Don't transition autumn status to past_due if the stripe invoice has metadata: autumn_billing_update, and invoice_mode is false.

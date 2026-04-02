@@ -10,7 +10,6 @@ import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/han
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
-import { handleFeatureQuantityErrors } from "./handleFeatureQuantityErrors";
 import {
 	checkTrialRemovalWithOneOffItems,
 	handleOneOffErrors,
@@ -46,13 +45,10 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 2. Product type transition errors
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });
 
-	// 3. Feature quantity errors (prepaid prices must have options)
-	handleFeatureQuantityErrors({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-		params,
-	});
+	// // 3. Feature quantity errors (recurring prepaid prices must have options)
+	// handleFeatureQuantityErrors({
+	// 	autumnBillingPlan,
+	// });
 
 	// 4. Custom plan errors
 	handleCustomPlanErrors({ ctx, billingContext, autumnBillingPlan, params });
