@@ -1,5 +1,5 @@
 const STRIPE_MAX_KEYS = 48; // leave 2 slots for autumn_id + autumn_internal_id
-const STRIPE_MAX_KEY_LENGTH = 40;
+export const STRIPE_MAX_KEY_LENGTH = 40;
 const STRIPE_MAX_VALUE_LENGTH = 500;
 
 /**

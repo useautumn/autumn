@@ -10,7 +10,10 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import { autumnToStripeCustomerMetadata } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
+import {
+	autumnToStripeCustomerMetadata,
+	STRIPE_MAX_KEY_LENGTH,
+} from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { updateCachedCustomerData } from "../../cusUtils/fullCustomerCacheUtils/updateCachedCustomerData";
@@ -97,7 +100,8 @@ export const updateCustomer = async ({
 
 	const stripeMetadataDeletions: Record<string, ""> = {};
 	for (const key of deletedMetadataKeys) {
-		if (!key.startsWith("autumn_")) stripeMetadataDeletions[key] = "";
+		if (!key.startsWith("autumn_"))
+			stripeMetadataDeletions[key.slice(0, STRIPE_MAX_KEY_LENGTH)] = "";
 	}
 
 	const stripeUpdate: Stripe.CustomerUpdateParams = {
