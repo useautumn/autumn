@@ -4,11 +4,13 @@ import type {
 	FullCustomerEntitlement,
 } from "@autumn/shared";
 import { FeatureType, type FullCusProduct } from "@autumn/shared";
-import { CubeIcon } from "@phosphor-icons/react";
-import { SectionTag } from "@/components/v2/badges/SectionTag";
+import { CubeIcon, PlusIcon } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
+import { SectionTag } from "@/components/v2/badges/SectionTag";
+import { Button } from "@/components/v2/buttons/Button";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
@@ -27,6 +29,7 @@ import {
 
 export function CustomerFeatureUsageTable() {
 	const { customer, features, isLoading } = useCusQuery();
+	const { setSheet } = useSheetStore();
 
 	const { entityId } = useEntity();
 
@@ -173,13 +176,20 @@ export function CustomerFeatureUsageTable() {
 				<Table.Container>
 					<Table.Toolbar>
 						<Table.Heading>
-							<CubeIcon
-								size={16}
-								weight="fill"
-								className="text-subtle"
-							/>
+							<CubeIcon size={16} weight="fill" className="text-subtle" />
 							Features
 						</Table.Heading>
+						<Table.Actions>
+							<Button
+								variant="secondary"
+								size="mini"
+								className="gap-2 font-medium"
+								onClick={() => setSheet({ type: "balance-create" })}
+							>
+								<PlusIcon className="size-3.5" />
+								Create Balance
+							</Button>
+						</Table.Actions>
 					</Table.Toolbar>
 					{hasBooleanFlags && <SectionTag>Balances</SectionTag>}
 					{hasMeteredBalances ? (
@@ -190,7 +200,8 @@ export function CustomerFeatureUsageTable() {
 							isLoading={isLoading}
 						/>
 					) : (
-						!isLoading && !hasBooleanFlags && (
+						!isLoading &&
+						!hasBooleanFlags && (
 							<EmptyState text="Enable a plan to grant access to features" />
 						)
 					)}

@@ -13,6 +13,7 @@ import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/
 import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet2";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { AttachProductSheetV2 } from "../components/sheets/AttachProductSheetV2";
+import { BalanceCreateSheet } from "../components/sheets/BalanceCreateSheet";
 import { BalanceDeleteSheet } from "../components/sheets/BalanceDeleteSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
@@ -53,6 +54,8 @@ export function CustomerSheets() {
 				return <BalanceEditSheet />;
 			case "balance-delete":
 				return <BalanceDeleteSheet />;
+			case "balance-create":
+				return <BalanceCreateSheet />;
 			case "invoice-detail": {
 				const invoice = sheetData?.invoice as Invoice | undefined;
 				const lineItems = (sheetData?.lineItems as InvoiceLineItem[]) ?? [];
