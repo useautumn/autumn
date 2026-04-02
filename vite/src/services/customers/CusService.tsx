@@ -27,6 +27,28 @@ export class CusService {
 		return await axios.post(`/v1/customers/${customer_id}`, data);
 	}
 
+	static async updateEntity({
+		axios,
+		customerId,
+		entityId,
+		billingControls,
+	}: {
+		axios: AxiosInstance;
+		customerId: string;
+		entityId: string;
+		billingControls: {
+			spend_limits?: any[];
+			usage_alerts?: any[];
+			overage_allowed?: any[];
+		};
+	}) {
+		return await axios.post("/v1/entities.update", {
+			customer_id: customerId,
+			entity_id: entityId,
+			billing_controls: billingControls,
+		});
+	}
+
 	static async getProductOptions(axios: AxiosInstance, data: any) {
 		return await axios.post(`/customers/product_options`, {
 			...data,

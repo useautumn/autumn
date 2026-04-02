@@ -203,6 +203,9 @@ export function BillingAutoTopupSheet() {
 				data: {
 					billing_controls: {
 						auto_topups: currentAutoTopups,
+						spend_limits: fullCustomer?.spend_limits,
+						usage_alerts: fullCustomer?.usage_alerts,
+						overage_allowed: fullCustomer?.overage_allowed,
 					},
 				},
 			});
@@ -233,6 +236,9 @@ export function BillingAutoTopupSheet() {
 				data: {
 					billing_controls: {
 						auto_topups: currentAutoTopups,
+						spend_limits: fullCustomer?.spend_limits,
+						usage_alerts: fullCustomer?.usage_alerts,
+						overage_allowed: fullCustomer?.overage_allowed,
 					},
 				},
 			});

@@ -72,24 +72,39 @@ export function BillingUsageAlertSheet() {
 		return [...(fullCustomer?.usage_alerts ?? [])];
 	};
 
-	const buildBillingControls = ({
+	const saveBillingControls = async ({
 		usageAlerts,
 	}: {
 		usageAlerts: DbUsageAlert[];
 	}) => {
+		const customerId = fullCustomer?.id || fullCustomer?.internal_id;
+		if (!customerId) return;
+
 		if (selectedEntity) {
-			return {
-				spend_limits: selectedEntity.spend_limits,
-				usage_alerts: usageAlerts,
-				overage_allowed: selectedEntity.overage_allowed,
-			};
+			await CusService.updateEntity({
+				axios: axiosInstance,
+				customerId,
+				entityId: selectedEntity.id || selectedEntity.internal_id,
+				billingControls: {
+					spend_limits: selectedEntity.spend_limits ?? undefined,
+					usage_alerts: usageAlerts,
+					overage_allowed: selectedEntity.overage_allowed ?? undefined,
+				},
+			});
+		} else {
+			await CusService.updateCustomer({
+				axios: axiosInstance,
+				customer_id: customerId,
+				data: {
+					billing_controls: {
+						auto_topups: fullCustomer?.auto_topups,
+						spend_limits: fullCustomer?.spend_limits,
+						usage_alerts: usageAlerts,
+						overage_allowed: fullCustomer?.overage_allowed,
+					},
+				},
+			});
 		}
-		return {
-			auto_topups: fullCustomer?.auto_topups,
-			spend_limits: fullCustomer?.spend_limits,
-			usage_alerts: usageAlerts,
-			overage_allowed: fullCustomer?.overage_allowed,
-		};
 	};
 
 	const handleSave = async () => {
@@ -112,9 +127,6 @@ export function BillingUsageAlertSheet() {
 			name: name.trim() || undefined,
 		};
 
-		const customerId = fullCustomer?.id || fullCustomer?.internal_id;
-		if (!customerId) return;
-
 		const currentUsageAlerts = getCurrentUsageAlerts();
 
 		if (isEdit && existingIndex !== undefined) {
@@ -125,15 +137,7 @@ export function BillingUsageAlertSheet() {
 
 		setIsSaving(true);
 		try {
-			await CusService.updateCustomer({
-				axios: axiosInstance,
-				customer_id: customerId,
-				data: {
-					billing_controls: buildBillingControls({
-						usageAlerts: currentUsageAlerts,
-					}),
-				},
-			});
+			await saveBillingControls({ usageAlerts: currentUsageAlerts });
 			await refetch();
 			closeSheet();
 			toast.success(isEdit ? "Usage alert updated" : "Usage alert added");
@@ -147,23 +151,12 @@ export function BillingUsageAlertSheet() {
 	const handleDelete = async () => {
 		if (existingIndex === undefined) return;
 
-		const customerId = fullCustomer?.id || fullCustomer?.internal_id;
-		if (!customerId) return;
-
 		const currentUsageAlerts = getCurrentUsageAlerts();
 		currentUsageAlerts.splice(existingIndex, 1);
 
 		setIsSaving(true);
 		try {
-			await CusService.updateCustomer({
-				axios: axiosInstance,
-				customer_id: customerId,
-				data: {
-					billing_controls: buildBillingControls({
-						usageAlerts: currentUsageAlerts,
-					}),
-				},
-			});
+			await saveBillingControls({ usageAlerts: currentUsageAlerts });
 			await refetch();
 			closeSheet();
 			toast.success("Usage alert deleted");
@@ -224,10 +217,10 @@ export function BillingUsageAlertSheet() {
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="usage">Absolute usage</SelectItem>
-									<SelectItem value="usage_percentage">
-										Percentage of allowance
-									</SelectItem>
+								<SelectItem value="usage">Absolute usage</SelectItem>
+								<SelectItem value="usage_percentage">
+									% of allowance used
+								</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
