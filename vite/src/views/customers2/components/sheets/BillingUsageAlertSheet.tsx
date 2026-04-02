@@ -86,9 +86,7 @@ export function BillingUsageAlertSheet() {
 				customerId,
 				entityId: selectedEntity.id || selectedEntity.internal_id,
 				billingControls: {
-					spend_limits: selectedEntity.spend_limits ?? undefined,
 					usage_alerts: usageAlerts,
-					overage_allowed: selectedEntity.overage_allowed ?? undefined,
 				},
 			});
 		} else {
@@ -97,10 +95,7 @@ export function BillingUsageAlertSheet() {
 				customer_id: customerId,
 				data: {
 					billing_controls: {
-						auto_topups: fullCustomer?.auto_topups,
-						spend_limits: fullCustomer?.spend_limits,
 						usage_alerts: usageAlerts,
-						overage_allowed: fullCustomer?.overage_allowed,
 					},
 				},
 			});
@@ -217,10 +212,10 @@ export function BillingUsageAlertSheet() {
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-								<SelectItem value="usage">Absolute usage</SelectItem>
-								<SelectItem value="usage_percentage">
-									% of allowance used
-								</SelectItem>
+									<SelectItem value="usage">Absolute usage</SelectItem>
+									<SelectItem value="usage_percentage">
+										% of allowance used
+									</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
