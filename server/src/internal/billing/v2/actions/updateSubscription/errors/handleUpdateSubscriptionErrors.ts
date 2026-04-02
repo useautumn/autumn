@@ -46,12 +46,9 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 2. Product type transition errors
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });
 
-	// 3. Feature quantity errors (prepaid prices must have options)
+	// 3. Feature quantity errors (recurring prepaid prices must have options)
 	handleFeatureQuantityErrors({
-		ctx,
-		billingContext,
 		autumnBillingPlan,
-		params,
 	});
 
 	// 4. Custom plan errors
