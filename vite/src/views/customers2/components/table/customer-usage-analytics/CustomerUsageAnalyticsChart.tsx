@@ -78,15 +78,16 @@ export function CustomerUsageAnalyticsChart({
 					isLoading && "animate-pulse")}
 				barCategoryGap={4}
 			>
+				{eventNames.length > 0 && !isLoading && (
 				<CartesianGrid
 					vertical={false}
 					className="fill-white dark:fill-gray-900"
 					stroke="var(--chart-grid-stroke)"
 					strokeWidth={1}
 					strokeDasharray="2 2"
-					// verticalPoints={[20]}
 					horizontalPoints={[5, 50, 100, 150, 200]}
 				/>
+			)}
 				<XAxis
 					dataKey="date"
 					tickLine={false}
