@@ -1,12 +1,12 @@
 import {
-	type Customer,
-	orgDisableStripeWrites,
-	ProcessorType,
+    type Customer,
+    orgDisableStripeWrites,
+    ProcessorType,
 } from "@autumn/shared";
 import { createStripeCustomer } from "@/external/stripe/customers/operations/createStripeCustomer";
 import {
-	type ExpandedStripeCustomer,
-	getExpandedStripeCustomer,
+    type ExpandedStripeCustomer,
+    getExpandedStripeCustomer,
 } from "@/external/stripe/customers/operations/getExpandedStripeCustomer";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService";
@@ -24,6 +24,7 @@ export const getOrCreateStripeCustomer = async ({
 		updateDb?: boolean;
 	};
 }): Promise<ExpandedStripeCustomer | undefined> => {
+	throw new Error("FATAL: CANNOT AND MUST NOT CREATE A STRIPE CUSTOMER FROM HERE");
 	const { logger } = ctx;
 
 	const currentStripeCustomer = await getExpandedStripeCustomer({

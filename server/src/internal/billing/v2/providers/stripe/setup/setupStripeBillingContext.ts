@@ -30,9 +30,20 @@ export const setupStripeBillingContext = async ({
 	params?: AttachParamsV1 | MultiAttachParamsV0 | UpdateSubscriptionV1Params;
 	newBillingSubscription?: boolean;
 }) => {
-	const { stripeBillingContext } = contextOverride;
+	const { stripeBillingContext, noStripeCustomer } = contextOverride;
 
 	if (stripeBillingContext) return stripeBillingContext;
+
+	if (noStripeCustomer) {
+		return {
+			stripeSubscription: undefined,
+			stripeSubscriptionSchedule: undefined,
+			stripeCustomer: undefined,
+			stripeDiscounts: [],
+			paymentMethod: undefined,
+			testClockFrozenTime: undefined,
+		};
+	}
 
 	const {
 		stripeCus: stripeCustomer,

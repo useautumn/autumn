@@ -1,8 +1,8 @@
 import {
-	CheckoutAction,
-	type UpdateSubscriptionBillingContext,
-	type UpdateSubscriptionBillingContextOverride,
-	type UpdateSubscriptionV1Params,
+    CheckoutAction,
+    type UpdateSubscriptionBillingContext,
+    type UpdateSubscriptionBillingContextOverride,
+    type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
@@ -15,8 +15,8 @@ import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/log
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import {
-	type CreateAutumnCheckoutResult,
-	createAutumnCheckout,
+    type CreateAutumnCheckoutResult,
+    createAutumnCheckout,
 } from "../../common/createAutumnCheckout";
 
 export async function updateSubscription({

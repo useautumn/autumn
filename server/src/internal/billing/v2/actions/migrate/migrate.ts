@@ -1,12 +1,12 @@
 import {
-	type AttachBillingContext,
-	type BillingPlan,
-	type BillingResult,
-	type FullCusProduct,
-	type FullCustomer,
-	type FullProduct,
-	featureUtils,
-	type UpdateSubscriptionV1Params,
+    type AttachBillingContext,
+    type BillingPlan,
+    type BillingResult,
+    type FullCusProduct,
+    type FullCustomer,
+    type FullProduct,
+    featureUtils,
+    type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { TransitionRules } from "@shared/api/billing/common/transitionRules";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -54,6 +54,7 @@ export async function migrate({
 
 		transition_rules: transitionRules,
 		redirect_mode: "if_required",
+		no_billing_changes: true,
 	};
 
 	ctx.logger.info(
@@ -72,6 +73,7 @@ export async function migrate({
 			},
 
 			billingVersion: currentCustomerProduct.billing_version,
+			noStripeCustomer: true,
 		},
 	});
 

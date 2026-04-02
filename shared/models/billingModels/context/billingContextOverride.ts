@@ -3,8 +3,8 @@ import type { TransitionConfig } from "@models/billingModels/context/transitionC
 import type { StripeDiscountWithCoupon } from "@models/billingModels/stripe/stripeDiscountWithCoupon";
 import type { FullCustomer } from "@models/cusModels/fullCusModel";
 import type {
-	FeatureOptions,
-	FullCusProduct,
+    FeatureOptions,
+    FullCusProduct,
 } from "@models/cusProductModels/cusProductModels";
 import type { Entitlement } from "@models/productModels/entModels/entModels";
 import type { Price } from "@models/productModels/priceModels/priceModels";
@@ -36,6 +36,8 @@ export interface BillingContextOverride {
 	transitionConfig?: TransitionConfig;
 	billingVersion?: BillingVersion;
 	endOfCycleMsOverride?: number;
+	/** Skip Stripe customer fetch/creation entirely (e.g. for free-product migrations) */
+	noStripeCustomer?: boolean;
 }
 
 export interface UpdateSubscriptionBillingContextOverride

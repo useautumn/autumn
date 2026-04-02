@@ -15,6 +15,7 @@ export const createStripeCustomer = async ({
 		testClockId?: string;
 	};
 }): Promise<ExpandedStripeCustomer> => {
+	throw new Error("FATAL: CANNOT AND MUST NOT CREATE A STRIPE CUSTOMER FROM HERE");
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
