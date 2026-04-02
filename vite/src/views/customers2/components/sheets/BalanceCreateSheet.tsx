@@ -117,7 +117,7 @@ export function BalanceCreateSheet() {
 			<div className="flex h-full flex-col overflow-y-auto">
 				<SheetHeader
 					title="Create Balance"
-					description="Create a new, standalone balance for this customer that's not associated with any plan."
+					description="Create a separate balance for this customer that is not associated with any plan."
 				/>
 
 				<SheetSection withSeparator>

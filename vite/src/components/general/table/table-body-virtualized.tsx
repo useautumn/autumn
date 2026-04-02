@@ -52,6 +52,7 @@ const VirtualRowInner = <T,>({
 				"text-t3 transition-none h-10 relative border-b",
 				rowClassName,
 				isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
+				(onRowClick || rowHref) && "cursor-pointer",
 			)}
 			onClick={handleClick}
 			onDoubleClick={onRowDoubleClick ? handleDoubleClick : undefined}

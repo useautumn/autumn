@@ -20,6 +20,16 @@ export type SheetType =
 	| "balance-delete"
 	| "balance-create"
 	| "invoice-detail"
+	| "billing-auto-topup-add"
+	| "billing-auto-topup-edit"
+	| "billing-spend-limit-add"
+	| "billing-spend-limit-edit"
+	| "billing-usage-alert-add"
+	| "billing-usage-alert-edit"
+	| "billing-overage-allowed-add"
+	| "billing-overage-allowed-edit"
+	| "record-usage"
+	| "check-balance"
 	| null;
 
 // Store state interface
