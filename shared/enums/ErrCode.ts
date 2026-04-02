@@ -179,4 +179,8 @@ export const ErrCode = {
 
 	// Products
 	ProductNotFound: "product_not_found",
+
+	// Maintenance
+	UnderMaintenance: "under_maintenance",
+	ServiceUnavailable: "service_unavailable",
 };

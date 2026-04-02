@@ -1,6 +1,7 @@
 import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import {
@@ -11,7 +12,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/ui/input";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -79,7 +79,9 @@ export function RequestBlockDialog({
 			})
 			.catch((error) => {
 				if (!cancelled) {
-					toast.error(getBackendErr(error, "Failed to load request block state"));
+					toast.error(
+						getBackendErr(error, "Failed to load request block state"),
+					);
 				}
 			})
 			.finally(() => {
@@ -101,10 +103,7 @@ export function RequestBlockDialog({
 		[rules],
 	);
 
-	const updateRule = (
-		index: number,
-		next: Partial<RequestBlockRule>,
-	) => {
+	const updateRule = (index: number, next: Partial<RequestBlockRule>) => {
 		setRules((current) =>
 			current.map((rule, ruleIndex) =>
 				ruleIndex === index ? { ...rule, ...next } : rule,
@@ -113,7 +112,9 @@ export function RequestBlockDialog({
 	};
 
 	const removeRule = (index: number) => {
-		setRules((current) => current.filter((_, ruleIndex) => ruleIndex !== index));
+		setRules((current) =>
+			current.filter((_, ruleIndex) => ruleIndex !== index),
+		);
 	};
 
 	const addRule = () => {
@@ -190,11 +191,7 @@ export function RequestBlockDialog({
 										Method + pattern rules use exact route matching.
 									</div>
 								</div>
-								<Button
-									variant="secondary"
-									size="sm"
-									onClick={addRule}
-								>
+								<Button variant="secondary" size="sm" onClick={addRule}>
 									<Plus className="size-3.5" />
 									Add rule
 								</Button>
@@ -207,7 +204,10 @@ export function RequestBlockDialog({
 									</div>
 								) : (
 									rules.map((rule, index) => (
-										<div key={`${rule.method}-${index}`} className="grid grid-cols-[120px_1fr_auto] gap-2">
+										<div
+											key={`${rule.method}-${index}`}
+											className="grid grid-cols-[120px_1fr_auto] gap-2"
+										>
 											<select
 												className="h-8 rounded-md border border-input bg-input px-2 text-sm"
 												value={rule.method}
@@ -256,7 +256,9 @@ export function RequestBlockDialog({
 											: "bg-amber-50 text-amber-700 border-amber-200"
 									}
 								>
-									{status?.configHealthy ? "Config healthy" : "Config unavailable"}
+									{status?.configHealthy
+										? "Config healthy"
+										: "Config unavailable"}
 								</Badge>
 								{status?.lastSuccessAt && (
 									<span>
@@ -268,17 +270,15 @@ export function RequestBlockDialog({
 							<div>
 								{status?.configConfigured === false
 									? "S3 request block config is not configured in the server environment."
-									: status?.error || "When config refresh fails, blocking is disabled until the next successful refresh."}
+									: status?.error ||
+										"When config refresh fails, blocking is disabled until the next successful refresh."}
 							</div>
 						</div>
 					</div>
 				)}
 
 				<DialogFooter>
-					<Button
-						variant="secondary"
-						onClick={() => onOpenChange(false)}
-					>
+					<Button variant="secondary" onClick={() => onOpenChange(false)}>
 						Cancel
 					</Button>
 					<Button
