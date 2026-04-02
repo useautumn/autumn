@@ -76,8 +76,6 @@ export function BillingSpendLimitSheet() {
 				entityId: selectedEntity.id || selectedEntity.internal_id,
 				billingControls: {
 					spend_limits: spendLimits,
-					usage_alerts: selectedEntity.usage_alerts ?? undefined,
-					overage_allowed: selectedEntity.overage_allowed ?? undefined,
 				},
 			});
 		} else {
@@ -86,10 +84,7 @@ export function BillingSpendLimitSheet() {
 				customer_id: customerId,
 				data: {
 					billing_controls: {
-						auto_topups: fullCustomer?.auto_topups,
 						spend_limits: spendLimits,
-						usage_alerts: fullCustomer?.usage_alerts,
-						overage_allowed: fullCustomer?.overage_allowed,
 					},
 				},
 			});
