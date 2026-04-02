@@ -1,5 +1,5 @@
 export const otelConfig = {
 	redis: true,
-	stripe: false,
+	stripe: true,
 	drizzle: true,
 };
