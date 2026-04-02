@@ -71,8 +71,6 @@ export function BillingOverageAllowedSheet() {
 				customerId,
 				entityId: selectedEntity.id || selectedEntity.internal_id,
 				billingControls: {
-					spend_limits: selectedEntity.spend_limits ?? undefined,
-					usage_alerts: selectedEntity.usage_alerts ?? undefined,
 					overage_allowed: overageAllowed,
 				},
 			});
@@ -82,9 +80,6 @@ export function BillingOverageAllowedSheet() {
 				customer_id: customerId,
 				data: {
 					billing_controls: {
-						auto_topups: fullCustomer?.auto_topups,
-						spend_limits: fullCustomer?.spend_limits,
-						usage_alerts: fullCustomer?.usage_alerts,
 						overage_allowed: overageAllowed,
 					},
 				},

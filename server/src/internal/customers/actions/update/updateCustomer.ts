@@ -127,17 +127,24 @@ export const updateCustomer = async ({
 		await stripeCli.customers.update(stripeId, stripeUpdate);
 	}
 
-	// Prepare update data
+	// Prepare update data — only include defined billing control fields
+	const billingControlUpdates: Partial<Customer> = {};
+	if (billing_controls) {
+		if (billing_controls.auto_topups !== undefined)
+			billingControlUpdates.auto_topups = billing_controls.auto_topups;
+		if (billing_controls.spend_limits !== undefined)
+			billingControlUpdates.spend_limits = billing_controls.spend_limits;
+		if (billing_controls.usage_alerts !== undefined)
+			billingControlUpdates.usage_alerts = billing_controls.usage_alerts;
+		if (billing_controls.overage_allowed !== undefined)
+			billingControlUpdates.overage_allowed = billing_controls.overage_allowed;
+	}
+
 	const updateData: Partial<Customer> = {
 		...newCusData,
 		id: newCustomerId,
 		metadata: mergedMetadata,
-		...(billing_controls && {
-			auto_topups: billing_controls.auto_topups,
-			spend_limits: billing_controls.spend_limits,
-			usage_alerts: billing_controls.usage_alerts,
-			overage_allowed: billing_controls.overage_allowed,
-		}),
+		...billingControlUpdates,
 	};
 
 	if (newStripeId) {
