@@ -57,24 +57,39 @@ export function BillingOverageAllowedSheet() {
 		return [...(fullCustomer?.overage_allowed ?? [])];
 	};
 
-	const buildBillingControls = ({
+	const saveBillingControls = async ({
 		overageAllowed,
 	}: {
 		overageAllowed: DbOverageAllowed[];
 	}) => {
+		const customerId = fullCustomer?.id || fullCustomer?.internal_id;
+		if (!customerId) return;
+
 		if (selectedEntity) {
-			return {
-				spend_limits: selectedEntity.spend_limits,
-				usage_alerts: selectedEntity.usage_alerts,
-				overage_allowed: overageAllowed,
-			};
+			await CusService.updateEntity({
+				axios: axiosInstance,
+				customerId,
+				entityId: selectedEntity.id || selectedEntity.internal_id,
+				billingControls: {
+					spend_limits: selectedEntity.spend_limits ?? undefined,
+					usage_alerts: selectedEntity.usage_alerts ?? undefined,
+					overage_allowed: overageAllowed,
+				},
+			});
+		} else {
+			await CusService.updateCustomer({
+				axios: axiosInstance,
+				customer_id: customerId,
+				data: {
+					billing_controls: {
+						auto_topups: fullCustomer?.auto_topups,
+						spend_limits: fullCustomer?.spend_limits,
+						usage_alerts: fullCustomer?.usage_alerts,
+						overage_allowed: overageAllowed,
+					},
+				},
+			});
 		}
-		return {
-			auto_topups: fullCustomer?.auto_topups,
-			spend_limits: fullCustomer?.spend_limits,
-			usage_alerts: fullCustomer?.usage_alerts,
-			overage_allowed: overageAllowed,
-		};
 	};
 
 	const handleSave = async () => {
@@ -88,9 +103,6 @@ export function BillingOverageAllowedSheet() {
 			enabled,
 		};
 
-		const customerId = fullCustomer?.id || fullCustomer?.internal_id;
-		if (!customerId) return;
-
 		const currentOverageAllowed = getCurrentOverageAllowed();
 
 		if (isEdit && existingIndex !== undefined) {
@@ -101,15 +113,7 @@ export function BillingOverageAllowedSheet() {
 
 		setIsSaving(true);
 		try {
-			await CusService.updateCustomer({
-				axios: axiosInstance,
-				customer_id: customerId,
-				data: {
-					billing_controls: buildBillingControls({
-						overageAllowed: currentOverageAllowed,
-					}),
-				},
-			});
+			await saveBillingControls({ overageAllowed: currentOverageAllowed });
 			await refetch();
 			closeSheet();
 			toast.success(
@@ -125,23 +129,12 @@ export function BillingOverageAllowedSheet() {
 	const handleDelete = async () => {
 		if (existingIndex === undefined) return;
 
-		const customerId = fullCustomer?.id || fullCustomer?.internal_id;
-		if (!customerId) return;
-
 		const currentOverageAllowed = getCurrentOverageAllowed();
 		currentOverageAllowed.splice(existingIndex, 1);
 
 		setIsSaving(true);
 		try {
-			await CusService.updateCustomer({
-				axios: axiosInstance,
-				customer_id: customerId,
-				data: {
-					billing_controls: buildBillingControls({
-						overageAllowed: currentOverageAllowed,
-					}),
-				},
-			});
+			await saveBillingControls({ overageAllowed: currentOverageAllowed });
 			await refetch();
 			closeSheet();
 			toast.success("Overage allowed deleted");
