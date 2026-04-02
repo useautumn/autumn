@@ -19,6 +19,12 @@
       "./*": "./src/*.ts"
     }
   },
+  "files": [
+    "dist",
+    "src",
+    "FUNCTIONS.md",
+    "RUNTIMES.md"
+  ],
   "sideEffects": false,
   "scripts": {
     "lint": "eslint --cache --max-warnings=0 src",
