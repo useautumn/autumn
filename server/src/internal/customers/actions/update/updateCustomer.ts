@@ -5,10 +5,12 @@ import {
 	notNullish,
 	ProcessorType,
 	RecaseError,
+	shouldForwardCustomerMetadata,
 	type UpdateCustomerParamsV1,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { autumnToStripeCustomerMetadata } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { updateCachedCustomerData } from "../../cusUtils/fullCustomerCacheUtils/updateCachedCustomerData";
@@ -76,14 +78,26 @@ export const updateCustomer = async ({
 		);
 	}
 
-	// Check if customer email is being changed
 	const oldMetadata = originalCustomer.metadata || {};
 	const newMetadata = newCusData.metadata || {};
+	const deletedMetadataKeys: string[] = [];
 	for (const key in newMetadata) {
 		if (newMetadata[key] === null) {
+			deletedMetadataKeys.push(key);
 			delete newMetadata[key];
 			delete oldMetadata[key];
 		}
+	}
+	const mergedMetadata = { ...oldMetadata, ...newMetadata };
+
+	const hasMetadataChanges =
+		Object.keys(newMetadata).length > 0 || deletedMetadataKeys.length > 0;
+	const forwardMetadata =
+		shouldForwardCustomerMetadata({ org }) && hasMetadataChanges;
+
+	const stripeMetadataDeletions: Record<string, ""> = {};
+	for (const key of deletedMetadataKeys) {
+		if (!key.startsWith("autumn_")) stripeMetadataDeletions[key] = "";
 	}
 
 	const stripeUpdate: Stripe.CustomerUpdateParams = {
@@ -96,6 +110,12 @@ export const updateCustomer = async ({
 			originalCustomer.name !== newCusData.name && notNullish(newCusData.name)
 				? newCusData.name
 				: undefined,
+		...(forwardMetadata && {
+			metadata: {
+				...autumnToStripeCustomerMetadata({ metadata: mergedMetadata }),
+				...stripeMetadataDeletions,
+			},
+		}),
 	};
 
 	if (Object.keys(stripeUpdate).length > 0 && stripeId) {
@@ -107,10 +127,7 @@ export const updateCustomer = async ({
 	const updateData: Partial<Customer> = {
 		...newCusData,
 		id: newCustomerId,
-		metadata: {
-			...oldMetadata,
-			...newMetadata,
-		},
+		metadata: mergedMetadata,
 		...(billing_controls && {
 			auto_topups: billing_controls.auto_topups,
 			spend_limits: billing_controls.spend_limits,
