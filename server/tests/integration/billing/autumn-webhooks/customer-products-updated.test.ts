@@ -11,7 +11,12 @@
  */
 
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import type { ApiCustomerV3, ApiEntityV0, ApiProduct } from "@autumn/shared";
+import type {
+	ApiCustomerV3,
+	ApiEntityV0,
+	ApiProduct,
+	UpdateSubscriptionV1ParamsInput,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import {
 	expectProductActive,
@@ -20,7 +25,9 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId";
 import {
+	getPlayHistory,
 	getTestSvixAppId,
+	parseEventBody,
 	setupWebhookTest,
 	type WebhookTestSetup,
 	waitForWebhook,
@@ -485,4 +492,91 @@ test.concurrent(`${chalk.yellowBright("webhook: entity uncancel - scenario: rene
 	// Verify entity product is now active (not canceling)
 	const entity = await autumnV1.entities.get<ApiEntityV0>(customerId, entityId);
 	await expectProductActive({ customer: entity, productId: pro.id });
+});
+
+test.concurrent(`${chalk.yellowBright("webhook: update prepaid quantity - scenario: update_prepaid_quantity")}`, async () => {
+	const customerId = "webhook-update-prepaid-quantity";
+	const initialQuantity = 100;
+	const updatedQuantity = 200;
+
+	const product = products.base({
+		id: "prepaid-qty",
+		items: [
+			items.monthlyPrice({ price: 20 }),
+			items.volumePrepaidMessages({
+				includedUsage: 0,
+				billingUnits: 100,
+			}),
+		],
+	});
+
+	const { autumnV1, autumnV2_1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [product] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: product.id,
+				options: [
+					{ feature_id: TestFeature.Messages, quantity: initialQuantity },
+				],
+			}),
+		],
+	});
+
+	await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+		customer_id: customerId,
+		plan_id: product.id,
+		feature_quantities: [
+			{ feature_id: TestFeature.Messages, quantity: updatedQuantity },
+		],
+	});
+
+	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "customer.products.updated" &&
+			payload.data?.customer?.id === customerId &&
+			payload.data?.scenario === "update_prepaid_quantity" &&
+			payload.data?.updated_product?.id === product.id,
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	expect(result?.payload.type).toBe("customer.products.updated");
+
+	const { data } = result!.payload;
+	expect(data.scenario).toBe("update_prepaid_quantity");
+	expect(data.updated_product.id).toBe(product.id);
+	expect(data.customer.id).toBe(customerId);
+	expect(data.entity).toBeUndefined();
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		balance: updatedQuantity,
+	});
+
+	const history = await getPlayHistory({ token: playToken });
+	const customerEvents = history.data
+		.map((event) => parseEventBody<CustomerProductsUpdatedPayload>(event))
+		.filter(
+			(payload) =>
+				payload.type === "customer.products.updated" &&
+				payload.data?.customer?.id === customerId,
+		);
+
+	expect(
+		customerEvents.filter(
+			(payload) => payload.data.scenario === "update_prepaid_quantity",
+		),
+	).toHaveLength(1);
+	expect(
+		customerEvents.some((payload) =>
+			["cancel", "renew"].includes(payload.data.scenario),
+		),
+	).toBe(false);
 });
