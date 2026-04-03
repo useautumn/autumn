@@ -2,6 +2,10 @@ import { Decimal } from "decimal.js";
 
 import type { BillingInterval } from "../../models/productModels/intervals/billingInterval";
 import type { Price } from "../../models/productModels/priceModels/priceModels";
+import {
+	compareBillingIntervals,
+	getLargestInterval,
+} from "../intervalUtils/priceIntervalUtils";
 import { intervalToValue } from "../intervalUtils";
 import { nullish } from "../utils";
 import {
@@ -68,6 +72,17 @@ export const isProductUpgrade = ({
 		usageAlwaysUpgrade
 	) {
 		return true;
+	}
+
+	const billingInterval1 = getLargestInterval({ prices: prices1 });
+	const billingInterval2 = getLargestInterval({ prices: prices2 });
+
+	if (billingInterval1 && billingInterval2) {
+		const cmp = compareBillingIntervals({
+			configA: billingInterval1,
+			configB: billingInterval2,
+		});
+		if (cmp > 0) return true;
 	}
 
 	const total1 = getNormalizedTotal({ prices: prices1 });
