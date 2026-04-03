@@ -2,14 +2,14 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Overage allowed billing control tests",
+	description: "Billing cycle anchor reset tests",
 	tier: "domain",
 	paths: [
-		"integration/balances/check/overage-allowed/",
-		"integration/balances/track/overage-allowed/",
-		"integration/crud/customers/customer-billing-controls.test.ts",
-		"integration/crud/entities/update-entity-billing-controls.test.ts",
-		"integration/balances/reset/persist-free-overage-on.test.ts",
-		"integration/balances/reset/persist-free-overage-off.test.ts",
+		"integration/billing/attach/params/billing-cycle-anchor/billing-cycle-anchor-reset.test.ts",
+		"integration/billing/attach/params/billing-cycle-anchor/billing-cycle-anchor-reset-entities.test.ts",
+		"integration/billing/attach/params/billing-cycle-anchor/billing-cycle-anchor-new-plan.test.ts",
+		"integration/billing/attach/params/billing-cycle-anchor/billing-cycle-anchor-new-plan-entities.test.ts",
+		"integration/billing/attach/invoice-line-items/billing-cycle-anchor-reset-line-items.test.ts",
+		"integration/billing/attach/errors/attach-billing-cycle-anchor-errors.test.ts",
 	],
 };

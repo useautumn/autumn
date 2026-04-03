@@ -44,8 +44,10 @@
 export { calculateCrossIntervalUpgrade } from "./calculateCrossIntervalUpgrade";
 export { calculateProratedDiff } from "./calculateProratedDiff";
 export {
+	calculateBillingCycleAnchorResetNextCycle,
 	calculateProration,
 	calculateProrationFromPeriod,
+	calculateResetBillingCycleNowTotal,
 } from "./calculateProration";
 export {
 	type BillingPeriod,

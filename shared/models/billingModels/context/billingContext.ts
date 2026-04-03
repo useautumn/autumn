@@ -1,4 +1,5 @@
 import type {
+	BillingBehavior,
 	CancelAction,
 	CheckoutMode,
 	Entitlement,
@@ -47,6 +48,8 @@ export interface BillingContext {
 	currentEpochMs: number;
 	billingCycleAnchorMs: number | "now";
 	resetCycleAnchorMs: number | "now";
+	requestedBillingCycleAnchor?: number | "now";
+	requestedProrationBehavior?: BillingBehavior;
 
 	// Stripe context
 	stripeCustomer?: Stripe.Customer;
