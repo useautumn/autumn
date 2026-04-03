@@ -71,4 +71,5 @@ export interface InitFullCustomerProductOptions {
 	apiSemver?: ApiVersion;
 	collectionMethod?: CollectionMethod;
 	externalId?: string;
+	billingCycleAnchorResetsAt?: number | null;
 }

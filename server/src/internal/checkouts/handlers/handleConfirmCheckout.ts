@@ -5,7 +5,7 @@ import {
 	ConfirmCheckoutParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { buildBillingLockKey } from "@/internal/billing/utils/buildBillingLockKey";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { checkoutActions } from "../actions";
 import { augmentCheckoutParams } from "../utils/augmentCheckoutParams";
 

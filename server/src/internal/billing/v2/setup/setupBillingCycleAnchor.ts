@@ -20,13 +20,19 @@ export const setupBillingCycleAnchor = ({
 	newFullProduct,
 	trialContext,
 	currentEpochMs,
+	requestedBillingCycleAnchor,
 }: {
 	stripeSubscription?: Stripe.Subscription;
 	customerProduct?: FullCusProduct;
 	newFullProduct: FullProduct;
 	trialContext?: TrialContext;
 	currentEpochMs: number;
+	requestedBillingCycleAnchor?: number | "now";
 }): number | "now" => {
+	if (requestedBillingCycleAnchor !== undefined) {
+		return requestedBillingCycleAnchor;
+	}
+
 	const currentIsFree = isCustomerProductFree(customerProduct);
 	const newIsFree = isFreeProduct({ prices: newFullProduct.prices });
 

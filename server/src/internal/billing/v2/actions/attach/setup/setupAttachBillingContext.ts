@@ -155,6 +155,7 @@ export const setupAttachBillingContext = async ({
 		newFullProduct: attachProduct,
 		trialContext,
 		currentEpochMs,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 	});
 
 	// Trial ends at overrides billing cycle anchor
@@ -215,6 +216,8 @@ export const setupAttachBillingContext = async ({
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		requestedProrationBehavior: params.proration_behavior,
 
 		invoiceMode,
 
