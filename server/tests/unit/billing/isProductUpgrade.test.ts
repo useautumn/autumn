@@ -192,7 +192,23 @@ describe("isProductUpgrade", () => {
 			expect(isProductUpgrade({ prices1, prices2 })).toBe(true);
 		});
 
-		test("$20/mo to $200/yr = downgrade ($20/mo > $16.67/mo)", () => {
+		test("$20/mo to $500/yr = upgrade (larger interval always upgrade, even if expensive)", () => {
+			const prices1 = [
+				createFixedPrice({
+					amount: 20,
+					interval: BillingInterval.Month,
+				}),
+			];
+			const prices2 = [
+				createFixedPrice({
+					amount: 500,
+					interval: BillingInterval.Year,
+				}),
+			];
+			expect(isProductUpgrade({ prices1, prices2 })).toBe(true);
+		});
+
+		test("$20/mo to $200/yr = upgrade (larger interval always upgrade)", () => {
 			const prices1 = [
 				createFixedPrice({
 					amount: 20,
@@ -205,7 +221,7 @@ describe("isProductUpgrade", () => {
 					interval: BillingInterval.Year,
 				}),
 			];
-			expect(isProductUpgrade({ prices1, prices2 })).toBe(false);
+			expect(isProductUpgrade({ prices1, prices2 })).toBe(true);
 		});
 
 		test("$5/week to $20/mo = upgrade ($20/mo <= $20/mo)", () => {
