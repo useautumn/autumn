@@ -10,7 +10,11 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, atmnToStripeAmount } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	BillingInterval,
+	atmnToStripeAmount,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import {
@@ -18,7 +22,10 @@ import {
 	expectProductCanceling,
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { calculateProratedDiff } from "@tests/integration/billing/utils/proration";
+import {
+	calculateCrossIntervalUpgrade,
+	calculateProratedDiff,
+} from "@tests/integration/billing/utils/proration";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -575,18 +582,20 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-basic 7: pro annual to p
 	const customerId = "imm-switch-pro-annual-to-premium";
 
 	const proAnnualMessages = items.monthlyMessages({ includedUsage: 500 });
-	const proAnnual = products.proAnnual({
+	const proAnnualPrice = items.annualPrice({ price: 200 });
+	const premiumMonthlyPrice = items.monthlyPrice({ price: 50 });
+	const proAnnual = products.base({
 		id: "pro-annual",
-		items: [proAnnualMessages],
+		items: [proAnnualMessages, proAnnualPrice],
 	});
 
 	const premiumMessages = items.monthlyMessages({ includedUsage: 1000 });
-	const premium = products.premium({
+	const premium = products.base({
 		id: "premium",
-		items: [premiumMessages],
+		items: [premiumMessages, premiumMonthlyPrice],
 	});
 
-	const { autumnV1, ctx } = await initScenario({
+	const { autumnV1, ctx, advancedTo } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -595,13 +604,21 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-basic 7: pro annual to p
 		actions: [s.billing.attach({ productId: proAnnual.id })],
 	});
 
+	const expectedTotal = await calculateCrossIntervalUpgrade({
+		customerId,
+		advancedTo,
+		oldAmount: 200,
+		newAmount: 50,
+		oldInterval: "year",
+		newInterval: BillingInterval.Month,
+	});
+
 	// 1. Preview switch to premium monthly
-	// At start of cycle: credit for full annual ($200) exceeds premium monthly ($50)
 	const preview = await autumnV1.billing.previewAttach({
 		customer_id: customerId,
 		product_id: premium.id,
 	});
-	expect(preview.total).toBe(0);
+	expect(preview.total).toBeCloseTo(expectedTotal, 0);
 
 	// 2. Attach premium (immediate because interval differs: annual -> monthly)
 	await autumnV1.billing.attach({
@@ -628,11 +645,11 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-basic 7: pro annual to p
 		usage: 0,
 	});
 
-	// Verify invoices: proAnnual ($200) + switch invoice ($0, credit exceeds charge)
+	// Verify invoices: proAnnual ($200) + switch invoice (negative = credit)
 	await expectCustomerInvoiceCorrect({
 		customer,
 		count: 2,
-		latestTotal: 0,
+		latestTotal: expectedTotal,
 	});
 
 	await expectSubToBeCorrect({

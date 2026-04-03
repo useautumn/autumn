@@ -5,8 +5,6 @@ import {
 	type FullProduct,
 	findMainActiveCustomerProductByGroup,
 	findMainScheduledCustomerProductByGroup,
-	getProductBaseInterval,
-	intervalsDifferent,
 	isOneOffProduct,
 	isProductUpgrade,
 } from "@autumn/shared";
@@ -55,30 +53,12 @@ export const setupAttachTransitionContext = ({
 			cusProduct: currentCustomerProduct,
 		});
 
-		const currentBaseInterval = getProductBaseInterval({
-			prices: currentPrices,
-		});
-		const newBaseInterval = getProductBaseInterval({
-			prices: attachProduct.prices,
+		const isUpgrade = isProductUpgrade({
+			prices1: currentPrices,
+			prices2: attachProduct.prices,
 		});
 
-		const baseIntervalsAreDifferent =
-			currentBaseInterval &&
-			newBaseInterval &&
-			intervalsDifferent({
-				intervalA: currentBaseInterval,
-				intervalB: newBaseInterval,
-			});
-
-		if (baseIntervalsAreDifferent) {
-			planTiming = "immediate";
-		} else {
-			const isUpgrade = isProductUpgrade({
-				prices1: currentPrices,
-				prices2: attachProduct.prices,
-			});
-			planTiming = isUpgrade ? "immediate" : "end_of_cycle";
-		}
+		planTiming = isUpgrade ? "immediate" : "end_of_cycle";
 	}
 
 	// Override if plan_schedule param is provided
