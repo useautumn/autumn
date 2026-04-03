@@ -56,13 +56,23 @@ export const ACCORDION_ITEM: Variants = {
 export function AdvancedSection({
 	hasCustomSettings,
 	customSettingsTooltip,
+	alwaysExpanded,
 	children,
 }: {
 	hasCustomSettings: boolean;
 	customSettingsTooltip?: string;
+	alwaysExpanded?: boolean;
 	children: ReactNode;
 }) {
 	const [isOpen, setIsOpen] = useState(false);
+
+	if (alwaysExpanded) {
+		return (
+			<SheetSection withSeparator>
+				<div className="space-y-2">{children}</div>
+			</SheetSection>
+		);
+	}
 
 	return (
 		<SheetSection withSeparator>

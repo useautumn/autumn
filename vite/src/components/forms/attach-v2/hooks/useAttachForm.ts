@@ -24,6 +24,7 @@ export function useAttachForm({
 			redirectMode: "if_required",
 			newBillingSubscription: false,
 			discounts: [],
+			grantFree: false,
 		} as AttachForm,
 		validators: {
 			onChange: AttachFormSchema,

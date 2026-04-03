@@ -56,6 +56,7 @@ export interface PlanItemsSectionProps {
 
 	useStaggerAnimation?: boolean;
 	gateDeletedItemsByCustomizations?: boolean;
+	readOnly?: boolean;
 }
 
 export function PlanItemsSection({
@@ -74,10 +75,12 @@ export function PlanItemsSection({
 	trialConfig,
 	useStaggerAnimation = false,
 	gateDeletedItemsByCustomizations = false,
+	readOnly = false,
 }: PlanItemsSectionProps) {
 	const originalItemsMap = new Map<string | null, ProductItem>(
-		originalItems?.filter((i) => i.feature_id).map((i) => [i.feature_id ?? null, i]) ??
-			[],
+		originalItems
+			?.filter((i) => i.feature_id)
+			.map((i) => [i.feature_id ?? null, i]) ?? [],
 	);
 
 	const currentFeatureIds = new Set(
@@ -100,7 +103,7 @@ export function PlanItemsSection({
 		return (
 			<Button variant="secondary" onClick={onEditPlan} className="w-full">
 				<PencilSimpleIcon size={14} className="mr-1" />
-				Edit Plan Items
+				Create Custom Plan
 			</Button>
 		);
 	}
@@ -114,6 +117,7 @@ export function PlanItemsSection({
 		existingOptions,
 		form,
 		hasCustomizations,
+		readOnly,
 	};
 
 	if (useStaggerAnimation) {
@@ -151,7 +155,7 @@ export function PlanItemsSection({
 						/>
 					))}
 					<PlanTrialEditor trialConfig={trialConfig} form={form} useStagger />
-					<PlanEditButton onEditPlan={onEditPlan} useStagger />
+					{!readOnly && <PlanEditButton onEditPlan={onEditPlan} useStagger />}
 				</motion.div>
 			</LayoutGroup>
 		);
@@ -187,7 +191,7 @@ export function PlanItemsSection({
 					))}
 					<PlanVersionChangeRow versionChange={versionChange} />
 					<PlanTrialEditor trialConfig={trialConfig} form={form} />
-					<PlanEditButton onEditPlan={onEditPlan} />
+					{!readOnly && <PlanEditButton onEditPlan={onEditPlan} />}
 				</motion.div>
 			</LayoutGroup>
 		</>

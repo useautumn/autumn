@@ -4,7 +4,11 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { productV2ToFrontendProduct, UsageModel } from "@autumn/shared";
+import {
+	FreeTrialDuration,
+	productV2ToFrontendProduct,
+	UsageModel,
+} from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import {
 	createContext,
@@ -161,9 +165,12 @@ export function AttachFormProvider({
 		previousProductIdRef.current = productId;
 
 		if (isProductChange) {
-			// Reset items and version when product changes
 			form.setFieldValue("items", null);
 			form.setFieldValue("version", undefined);
+			form.setFieldValue("trialEnabled", false);
+			form.setFieldValue("trialLength", null);
+			form.setFieldValue("trialDuration", FreeTrialDuration.Day);
+			form.setFieldValue("trialCardRequired", true);
 		}
 
 		// Initialize prepaid options for the selected product
@@ -176,6 +183,19 @@ export function AttachFormProvider({
 			}
 			form.setFieldValue("prepaidOptions", newInitialPrepaidOptions);
 			setInitialPrepaidOptions(newInitialPrepaidOptions);
+
+			if (product.free_trial) {
+				form.setFieldValue("trialEnabled", true);
+				form.setFieldValue("trialLength", Number(product.free_trial.length));
+				form.setFieldValue(
+					"trialDuration",
+					product.free_trial.duration as FreeTrialDuration,
+				);
+				form.setFieldValue(
+					"trialCardRequired",
+					Boolean(product.free_trial.card_required),
+				);
+			}
 		}
 	}, [productId, product, form]);
 
