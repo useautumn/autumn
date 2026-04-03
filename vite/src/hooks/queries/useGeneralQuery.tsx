@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useGeneralQuery = ({
@@ -13,6 +14,7 @@ export const useGeneralQuery = ({
 	enabled?: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 
 	const fetcher = async () => {
 		const { data } = await axiosInstance.request({
@@ -24,7 +26,7 @@ export const useGeneralQuery = ({
 	};
 
 	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: queryKey || ["general", url],
+		queryKey: buildKey(queryKey || ["general", url]),
 		queryFn: fetcher,
 		enabled,
 	});

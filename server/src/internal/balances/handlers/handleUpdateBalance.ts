@@ -30,6 +30,17 @@ export const handleUpdateBalance = createRoute({
 			});
 		}
 
+		const targetBalance = params.remaining ?? params.current_balance;
+
+		if (notNullish(params.included_grant) && nullish(targetBalance)) {
+			throw new RecaseError({
+				message:
+					"'remaining' is required when updating granted balance",
+				code: ErrCode.InvalidRequest,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
 		let fullCustomer = await getOrSetCachedFullCustomer({
 			ctx,
 			customerId: params.customer_id,
@@ -37,7 +48,6 @@ export const handleUpdateBalance = createRoute({
 			source: "handleUpdateBalance",
 		});
 
-		const targetBalance = params.remaining ?? params.current_balance;
 		if (notNullish(params.add_to_balance) || notNullish(targetBalance)) {
 			const result = await runUpdateBalanceV2({ ctx, params, fullCustomer });
 			fullCustomer = result?.fullCus ?? fullCustomer;
@@ -49,13 +59,6 @@ export const handleUpdateBalance = createRoute({
 		}
 
 		if (notNullish(params.included_grant)) {
-			if (nullish(params.current_balance)) {
-				throw new RecaseError({
-					message: "current_balance is required when updating granted balance",
-					code: ErrCode.InvalidRequest,
-					statusCode: StatusCodes.BAD_REQUEST,
-				});
-			}
 
 			ctx.logger.info(
 				`updating granted balance for feature ${params.feature_id} to ${params.included_grant}`,

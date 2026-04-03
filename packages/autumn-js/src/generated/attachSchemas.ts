@@ -96,6 +96,7 @@ export const attachProrationOutboundSchema = z.object({
 
 export const attachRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -190,6 +191,9 @@ export const attachParamsOutboundSchema = z.object({
 	carry_over_usages: z
 		.union([attachCarryOverUsagesOutboundSchema, z.undefined()])
 		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -241,6 +245,7 @@ export const attachExpiryDurationTypeSchema = closedEnumSchema;
 
 export const attachRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: attachExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -311,6 +316,9 @@ export const attachParamsSchema = z.object({
 		.optional(),
 	carryOverUsages: z
 		.union([attachCarryOverUsagesSchema, z.undefined()])
+		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 });
 

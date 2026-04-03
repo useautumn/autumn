@@ -16,22 +16,22 @@ import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/e
 import {
 	expectProductActive,
 	expectProductCanceling,
+	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId";
+import {
+	getTestSvixAppId,
+	setupWebhookTest,
+	type WebhookTestSetup,
+	waitForWebhook,
+} from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import {
-	generatePlayToken,
-	getPlayWebhookUrl,
-	waitForWebhook,
-} from "./utils/svixPlayClient.js";
-import {
-	createTestEndpoint,
-	deleteTestEndpoint,
-} from "./utils/svixTestEndpoint.js";
+import { timeout } from "@/utils/genUtils";
 
 type CustomerProductsUpdatedPayload = {
 	type: string;
@@ -47,37 +47,20 @@ type CustomerProductsUpdatedPayload = {
 // SVIX PLAY SETUP (shared across all tests)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+let webhook: WebhookTestSetup;
 let playToken: string;
-let endpointId: string;
 
 beforeAll(async () => {
-	// 1. Generate Svix Play token
-	playToken = await generatePlayToken();
-	console.log(`Generated Svix Play token: ${playToken}`);
-
-	// 2. Get org's Svix app ID
-	const svixAppId = ctx.org.svix_config?.sandbox_app_id;
-	if (!svixAppId) {
-		throw new Error(
-			"Test org does not have svix_config.sandbox_app_id configured. " +
-				"Cannot run webhook integration tests without Svix app.",
-		);
-	}
-
-	// 3. Create Svix endpoint pointing to Svix Play
-	const playUrl = getPlayWebhookUrl(playToken);
-	console.log(`Creating Svix endpoint: ${playUrl}`);
-	endpointId = await createTestEndpoint({ appId: svixAppId, playUrl });
-	console.log(`Created Svix endpoint: ${endpointId}`);
+	const appId = getTestSvixAppId({ svixConfig: ctx.org.svix_config });
+	webhook = await setupWebhookTest({
+		appId,
+		filterTypes: ["customer.products.updated"],
+	});
+	playToken = webhook.playToken;
 });
 
 afterAll(async () => {
-	// Cleanup: delete Svix endpoint
-	const svixAppId = ctx.org.svix_config?.sandbox_app_id;
-	if (svixAppId && endpointId) {
-		await deleteTestEndpoint({ appId: svixAppId, endpointId });
-		console.log(`Deleted Svix endpoint: ${endpointId}`);
-	}
+	await webhook?.cleanup();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -242,6 +225,92 @@ test.concurrent(`${chalk.yellowBright("webhook: cancel end of cycle (with free d
 	expect(data.customer).toBeDefined();
 	expect(data.customer.id).toBe(customerId);
 	expect(data.entity).toBeUndefined();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WEBHOOK TESTS - STRIPE-INITIATED CANCEL (default scheduled before webhook)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("webhook: Stripe-initiated cancel fires after default product scheduled")}`, async () => {
+	const customerId = "webhook-stripe-cancel-default";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const pro = products.pro({ id: "pro", items: [messagesItem] });
+	const freeDefault = products.base({
+		id: "free-default",
+		items: [messagesItem],
+		isDefault: true,
+	});
+
+	const { autumnV1, ctx: testCtx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success", skipWebhooks: true }),
+			s.products({ list: [pro, freeDefault] }),
+		],
+		actions: [s.attach({ productId: pro.id })],
+	});
+
+	// Verify pro is active
+	const customerAfterAttach =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({
+		customer: customerAfterAttach,
+		productId: pro.id,
+	});
+
+	// Get Stripe subscription ID and cancel externally via Stripe CLI
+	const subscriptionId = await getSubscriptionId({
+		ctx: testCtx,
+		customerId,
+		productId: pro.id,
+	});
+
+	await testCtx.stripeCli.subscriptions.update(subscriptionId, {
+		cancel_at_period_end: true,
+	});
+
+	// Wait for webhook triggered by the Stripe-initiated cancellation
+	const result = await waitForWebhook<CustomerProductsUpdatedPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "customer.products.updated" &&
+			payload.data?.customer?.id === customerId &&
+			payload.data?.scenario === "cancel",
+		timeoutMs: 20000,
+	});
+
+	expect(result).not.toBeNull();
+	expect(result?.payload.type).toBe("customer.products.updated");
+
+	const { data } = result!.payload;
+
+	expect(data.scenario).toBe("cancel");
+	expect(data.updated_product).toBeDefined();
+	expect(data.updated_product.id).toBe(pro.id);
+	expect(data.customer).toBeDefined();
+	expect(data.customer.id).toBe(customerId);
+
+	// The webhook customer should include the scheduled default product
+	// because webhooks now fire AFTER defaults are scheduled
+	const scheduledProduct = data.customer.products.find(
+		(p) => p.id === freeDefault.id,
+	);
+	expect(scheduledProduct).toBeDefined();
+	expect(scheduledProduct!.status).toBe("scheduled");
+
+	// Also verify via API that the state is correct
+	await timeout(2000);
+	const customerAfterCancel =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductCanceling({
+		customer: customerAfterCancel,
+		productId: pro.id,
+	});
+	await expectProductScheduled({
+		customer: customerAfterCancel,
+		productId: freeDefault.id,
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

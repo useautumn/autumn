@@ -12,7 +12,11 @@
 		"strict": false
 	},
 	"contextual": {
-		"options": ["copy", "cursor", "view"]
+		"options": [
+			"copy",
+			"cursor",
+			"view"
+		]
 	},
 	"banner": {
 		"content": "You're viewing the docs for Autumn's v2 API. You can find the previous API version [here](https://docs-v1.useautumn.com).",
@@ -71,7 +75,8 @@
 						"pages": [
 							"documentation/getting-started/setup",
 							"documentation/getting-started/gating",
-							"documentation/getting-started/display-billing"
+							"documentation/getting-started/display-billing",
+							"documentation/getting-started/deploy"
 						]
 					},
 					{
@@ -117,6 +122,7 @@
 							"documentation/customers/tracking-usage",
 							"documentation/customers/balance-locking",
 							"documentation/customers/managing-balances",
+							"documentation/customers/billing-controls",
 							"documentation/customers/feature-entities"
 						]
 					},
@@ -124,6 +130,7 @@
 						"group": "Additional Resources",
 						"pages": [
 							"documentation/webhooks",
+							"documentation/fail-open",
 							"documentation/external-providers/convex",
 							"documentation/external-providers/revenuecat",
 							"documentation/external-providers/vercel-marketplace"
@@ -167,7 +174,11 @@
 			{
 				"tab": "CLI",
 				"icon": "square-terminal",
-				"pages": ["cli/getting-started", "cli/config", "cli/commands"]
+				"pages": [
+					"cli/getting-started",
+					"cli/config",
+					"cli/commands"
+				]
 			},
 			{
 				"tab": "API Reference",
@@ -242,12 +253,32 @@
 							"api-reference/features/deleteFeature"
 						]
 					},
-
 					{
 						"group": "Referrals",
 						"pages": [
 							"api-reference/referrals/createReferralCode",
 							"api-reference/referrals/redeemReferralCode"
+						]
+					},
+					{
+						"group": "Webhook Events",
+						"pages": [
+							{
+								"group": "Balances",
+								"pages": [
+									"api-reference/webhooks/balancesUsageAlertTriggered",
+									"api-reference/webhooks/balancesLimitReached"
+								]
+							},
+							{
+								"group": "Vercel",
+								"pages": [
+									"api-reference/webhooks/vercelResourcesDeleted",
+									"api-reference/webhooks/vercelResourcesProvisioned",
+									"api-reference/webhooks/vercelResourcesRotateSecrets",
+									"api-reference/webhooks/vercelWebhooksEvent"
+								]
+							}
 						]
 					},
 					{
@@ -266,7 +297,9 @@
 			{
 				"tab": "Changelog",
 				"icon": "list-ol",
-				"pages": ["changelog/changelog"]
+				"pages": [
+					"changelog/changelog"
+				]
 			}
 		]
 	},
@@ -279,7 +312,11 @@
 			"display": "interactive"
 		},
 		"examples": {
-			"languages": ["typescript", "python", "bash"]
+			"languages": [
+				"typescript",
+				"python",
+				"bash"
+			]
 		}
 	},
 	"background": {

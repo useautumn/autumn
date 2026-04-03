@@ -2,9 +2,9 @@ import type { BillingBehavior } from "@autumn/shared";
 import {
 	AppEnv,
 	type CreateFreeTrial,
+	type FeatureOptions,
 	type ProductItem,
 	type ProductV2,
-	UsageModel,
 } from "@autumn/shared";
 import { useMemo } from "react";
 import type {
@@ -78,28 +78,9 @@ export function useUpdateSubscriptionBodyBuilder(
 				mergedParams.version ??
 				(storeProduct?.id ? storeProduct.version : undefined);
 
-			// Convert prepaidOptions to options array
-			const options = mergedParams.prepaidOptions
-				? Object.entries(mergedParams.prepaidOptions).map(
-						([featureId, quantity]) => {
-							const prepaidItem = product?.items.find(
-								(item) =>
-									item.feature_id === featureId &&
-									item.usage_model === UsageModel.Prepaid,
-							);
-
-							const includedUsage =
-								prepaidItem && typeof prepaidItem.included_usage === "number"
-									? prepaidItem.included_usage
-									: 0;
-
-							return {
-								feature_id: featureId,
-								quantity: (quantity || 0) + includedUsage,
-							};
-						},
-					)
-				: [];
+			const options = buildLegacyUpdateSubscriptionOptions({
+				prepaidOptions: mergedParams.prepaidOptions,
+			});
 
 			// Build the body using getUpdateSubscriptionBody (includes freeTrial support)
 			return getUpdateSubscriptionBody({
@@ -132,4 +113,17 @@ export function useUpdateSubscriptionBodyBuilder(
 	);
 
 	return { updateSubscriptionBody, buildUpdateSubscriptionBody };
+}
+
+export function buildLegacyUpdateSubscriptionOptions({
+	prepaidOptions,
+}: {
+	prepaidOptions?: Record<string, number>;
+}): FeatureOptions[] {
+	if (!prepaidOptions) return [];
+
+	return Object.entries(prepaidOptions).map(([featureId, quantity]) => ({
+		feature_id: featureId,
+		quantity: quantity || 0,
+	}));
 }

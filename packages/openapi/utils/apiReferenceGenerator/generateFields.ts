@@ -1,4 +1,8 @@
-import type { ParsedOperation, SchemaField } from "./parseOpenApi.js";
+import type {
+	ParsedOperation,
+	ParsedWebhook,
+	SchemaField,
+} from "./parseOpenApi.js";
 
 /**
  * Generate the MDX content for request body and response fields.
@@ -231,6 +235,79 @@ function formatType(type: string, enumValues?: string[]): string {
 		return isArray ? `(${values})[]` : values;
 	}
 	return type;
+}
+
+/**
+ * Generate MDX content for a webhook event.
+ * Uses plain `ParamField` with snake_case names since webhook payloads
+ * are raw JSON (not SDK-transformed).
+ */
+export function generateWebhookFields({
+	webhook,
+}: {
+	webhook: ParsedWebhook;
+}): string {
+	const sections: string[] = [];
+
+	if (webhook.dataFields && webhook.dataFields.length > 0) {
+		sections.push("### Payload Fields\n");
+		sections.push(
+			generateStaticParamFields({ fields: webhook.dataFields, indent: 0 }),
+		);
+	}
+
+	return sections.join("\n");
+}
+
+/**
+ * Generate ParamField components with static snake_case names.
+ */
+function generateStaticParamFields({
+	fields,
+	indent,
+}: {
+	fields: SchemaField[];
+	indent: number;
+}): string {
+	const indentStr = "  ".repeat(indent);
+	const lines: string[] = [];
+
+	for (const field of fields) {
+		const typeStr = formatType(field.type, field.enumValues);
+		const requiredAttr = field.required ? " required" : "";
+		const description = escapeDescription(field.description);
+		const hasChildren = field.children && field.children.length > 0;
+
+		if (hasChildren) {
+			lines.push(
+				`${indentStr}<ParamField body="${field.name}" type="${typeStr}"${requiredAttr}>`,
+			);
+			if (description) {
+				lines.push(`${indentStr}  ${description}`);
+			}
+			lines.push(`${indentStr}  <Expandable title="properties">`);
+			lines.push(
+				generateStaticParamFields({
+					fields: field.children!,
+					indent: indent + 2,
+				}),
+			);
+			lines.push(`${indentStr}  </Expandable>`);
+			lines.push(`${indentStr}</ParamField>\n`);
+		} else if (description) {
+			lines.push(
+				`${indentStr}<ParamField body="${field.name}" type="${typeStr}"${requiredAttr}>`,
+			);
+			lines.push(`${indentStr}  ${description}`);
+			lines.push(`${indentStr}</ParamField>\n`);
+		} else {
+			lines.push(
+				`${indentStr}<ParamField body="${field.name}" type="${typeStr}"${requiredAttr} />\n`,
+			);
+		}
+	}
+
+	return lines.join("\n");
 }
 
 /**

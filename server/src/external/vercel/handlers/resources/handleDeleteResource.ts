@@ -3,7 +3,6 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import {
 	type VercelResourceDeletedEvent,
 	VercelWebhooks,
@@ -18,7 +17,7 @@ export const handleDeleteResource = createRoute({
 		const { orgId, env, integrationConfigurationId, resourceId } =
 			c.req.param();
 		const ctx = c.get("ctx");
-		const { db, org } = ctx;
+		const { db, org, fullCustomer: customer } = ctx;
 		const stripeCli = createStripeCli({ org, env: env as AppEnv });
 
 		await VercelResourceService.delete({
@@ -43,11 +42,6 @@ export const handleDeleteResource = createRoute({
 				},
 				installation_id: integrationConfigurationId,
 			} satisfies VercelResourceDeletedEvent,
-		});
-
-		const customer = await CusService.getByVercelId({
-			ctx,
-			vercelInstallationId: integrationConfigurationId,
 		});
 
 		customer?.customer_products.forEach(async (x) => {

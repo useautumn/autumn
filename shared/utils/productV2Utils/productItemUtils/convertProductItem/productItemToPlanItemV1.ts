@@ -109,6 +109,7 @@ const itemToPlanFeatureRollover = ({
 
 	return {
 		max: item.config.rollover.max ?? null,
+		max_percentage: item.config.rollover.max_percentage ?? null,
 		expiry_duration_type: item.config.rollover.duration,
 		expiry_duration_length: item.config.rollover.length,
 	};

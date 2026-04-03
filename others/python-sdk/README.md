@@ -1,14 +1,9 @@
 # autumn-sdk
 
-Developer-friendly & type-safe Python SDK specifically catered to leverage *autumn-sdk* API.
+The official Python SDK for the [Autumn](https://useautumn.com) billing API.
 
-[![Built by Speakeasy](https://img.shields.io/badge/Built_by-SPEAKEASY-374151?style=for-the-badge&labelColor=f3f4f6)](https://www.speakeasy.com/?utm_source=autumn-sdk&utm_campaign=python)
-[![License: MIT](https://img.shields.io/badge/LICENSE_//_MIT-3b5bdb?style=for-the-badge&labelColor=eff6ff)](https://opensource.org/licenses/MIT)
-
-
-<br /><br />
-> [!IMPORTANT]
-> This SDK is not yet ready for production use. To complete setup please follow the steps outlined in your [workspace](https://app.speakeasy.com/org/autumn-gne/autumn). Delete this section before > publishing to a package manager.
+[![PyPI version](https://img.shields.io/pypi/v/autumn-sdk.svg)](https://pypi.org/project/autumn-sdk/)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 <!-- Start Summary [summary] -->
 ## Summary
@@ -32,7 +27,6 @@ Developer-friendly & type-safe Python SDK specifically catered to leverage *autu
   * [Resource Management](#resource-management)
   * [Debugging](#debugging)
 * [Development](#development)
-  * [Maturity](#maturity)
   * [Contributions](#contributions)
 
 <!-- End Table of Contents [toc] -->
@@ -558,15 +552,6 @@ s = Autumn(debug_logger=logging.getLogger("autumn_sdk"))
 
 # Development
 
-## Maturity
-
-This SDK is in beta, and there may be breaking changes between versions without a major version update. Therefore, we recommend pinning usage
-to a specific package version. This way, you can install the same version each time without breaking changes unless you are intentionally
-looking for the latest version.
-
 ## Contributions
 
-While we value open-source contributions to this SDK, this library is generated programmatically. Any manual changes added to internal files will be overwritten on the next generation. 
-We look forward to hearing your feedback. Feel free to open a PR or an issue with a proof of concept and we'll do our best to include it in a future release. 
-
-### SDK Created by [Speakeasy](https://www.speakeasy.com/?utm_source=autumn-sdk&utm_campaign=python)
+We welcome contributions! Feel free to open a PR or an issue on the [Autumn GitHub repository](https://github.com/useautumn/autumn).

@@ -20,6 +20,12 @@ export {
 	createAggregateSimplePipe,
 } from "./aggregateSimplePipe.js";
 export {
+	createEstimatedMrrPipe,
+	type EstimatedMrrPipeParams,
+	type EstimatedMrrPipeRow,
+	estimatedMrrPipeParamsSchema,
+} from "./estimatedMrrPipe.js";
+export {
 	createListEventNamesPipe,
 	type ListEventNamesPipeParams,
 	type ListEventNamesPipeRow,

@@ -1,14 +1,16 @@
 import type { CustomerWithProducts } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useCustomersQueryStates } from "./useCustomersQueryStates";
+import { useCustomerFilters } from "./useCustomerFilters";
 
 export const useCusSearchQuery = () => {
-	const { queryStates } = useCustomersQueryStates();
+	const { queryStates, isInitialized } = useCustomerFilters();
 	const trimmedSearch = queryStates.q.trim();
 
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const fetcher = async () => {
 		const { data } = await axiosInstance.post(`/customers/all/search`, {
 			search: trimmedSearch,
@@ -36,7 +38,7 @@ export const useCusSearchQuery = () => {
 		customers: CustomerWithProducts[];
 		totalCount: number;
 	}>({
-		queryKey: [
+		queryKey: buildKey([
 			"customers",
 			queryStates.page,
 			queryStates.pageSize,
@@ -44,8 +46,9 @@ export const useCusSearchQuery = () => {
 			queryStates.version,
 			queryStates.none,
 			trimmedSearch,
-		],
+		]),
 		queryFn: fetcher,
+		enabled: isInitialized,
 		placeholderData: keepPreviousData,
 	});
 
@@ -81,6 +84,7 @@ export const useCusSearchQueryV2 = ({
 }) => {
 	const trimmedSearch = search.trim();
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const fetcher = async () => {
 		const { data } = await axiosInstance.post(`/customers/all/search`, {
 			search: trimmedSearch,
@@ -108,7 +112,7 @@ export const useCusSearchQueryV2 = ({
 		customers: CustomerWithProducts[];
 		totalCount: number;
 	}>({
-		queryKey: [
+		queryKey: buildKey([
 			"customers",
 			page,
 			page_size,
@@ -116,7 +120,7 @@ export const useCusSearchQueryV2 = ({
 			filters?.version,
 			filters?.none,
 			trimmedSearch,
-		],
+		]),
 		queryFn: fetcher,
 		placeholderData: keepPreviousData,
 	});

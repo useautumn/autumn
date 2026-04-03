@@ -12,12 +12,14 @@ export const resetAndGetCusEnt = async ({
 	productGroup,
 	featureId,
 	skipCacheDeletion = false,
+	persistFreeOverage = false,
 }: {
 	ctx: TestContext;
 	customer: Customer;
 	productGroup: string;
 	featureId: string;
 	skipCacheDeletion?: boolean;
+	persistFreeOverage?: boolean;
 }) => {
 	const { db } = ctx;
 	// Run reset cusEnt on ...
@@ -41,6 +43,7 @@ export const resetAndGetCusEnt = async ({
 		ctx,
 		cusEnt: resetCusEnt,
 		updatedCusEnts: [],
+		persistFreeOverage,
 	});
 
 	if (!skipCacheDeletion) {

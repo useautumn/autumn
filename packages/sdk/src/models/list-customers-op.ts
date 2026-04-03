@@ -140,6 +140,54 @@ export type ListCustomersSpendLimit = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const ListCustomersThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type ListCustomersThresholdType = OpenEnum<
+  typeof ListCustomersThresholdType
+>;
+
+export type ListCustomersUsageAlert = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled: boolean;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: ListCustomersThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type ListCustomersOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
  * Billing controls for the customer (auto top-ups, etc.)
  */
 export type ListCustomersBillingControls = {
@@ -151,6 +199,14 @@ export type ListCustomersBillingControls = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<ListCustomersSpendLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<ListCustomersUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<ListCustomersOverageAllowed> | undefined;
 };
 
 /**
@@ -423,6 +479,14 @@ export type ListCustomersResponse = {
    * Total number of items returned in the current page
    */
   total: number;
+  /**
+   * Total number of customers available in the current organization and environment
+   */
+  totalCount: number;
+  /**
+   * Total number of customers matching the current filter before pagination is applied
+   */
+  totalFilteredCount: number;
 };
 
 /** @internal */
@@ -589,6 +653,68 @@ export function listCustomersSpendLimitFromJSON(
 }
 
 /** @internal */
+export const ListCustomersThresholdType$inboundSchema: z.ZodMiniType<
+  ListCustomersThresholdType,
+  unknown
+> = openEnums.inboundSchema(ListCustomersThresholdType);
+
+/** @internal */
+export const ListCustomersUsageAlert$inboundSchema: z.ZodMiniType<
+  ListCustomersUsageAlert,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), true),
+    threshold: types.number(),
+    threshold_type: ListCustomersThresholdType$inboundSchema,
+    name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "threshold_type": "thresholdType",
+    });
+  }),
+);
+
+export function listCustomersUsageAlertFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersUsageAlert, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersUsageAlert$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersUsageAlert' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListCustomersOverageAllowed$inboundSchema: z.ZodMiniType<
+  ListCustomersOverageAllowed,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function listCustomersOverageAllowedFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersOverageAllowed, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersOverageAllowed$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersOverageAllowed' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListCustomersBillingControls$inboundSchema: z.ZodMiniType<
   ListCustomersBillingControls,
   unknown
@@ -600,11 +726,19 @@ export const ListCustomersBillingControls$inboundSchema: z.ZodMiniType<
     spend_limits: types.optional(
       z.array(z.lazy(() => ListCustomersSpendLimit$inboundSchema)),
     ),
+    usage_alerts: types.optional(
+      z.array(z.lazy(() => ListCustomersUsageAlert$inboundSchema)),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => ListCustomersOverageAllowed$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "auto_topups": "autoTopups",
       "spend_limits": "spendLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
     });
   }),
 );
@@ -875,10 +1009,14 @@ export const ListCustomersResponse$inboundSchema: z.ZodMiniType<
     offset: types.number(),
     limit: types.number(),
     total: types.number(),
+    total_count: types.number(),
+    total_filtered_count: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "has_more": "hasMore",
+      "total_count": "totalCount",
+      "total_filtered_count": "totalFilteredCount",
     });
   }),
 );

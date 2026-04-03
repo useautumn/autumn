@@ -253,6 +253,10 @@ export type SetupPaymentRollover = {
    */
   max?: number | undefined;
   /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
    * When rolled over units expire.
    */
   expiryDurationType: SetupPaymentExpiryDurationType;
@@ -475,6 +479,10 @@ export type SetupPaymentParams = {
    * Whether to carry over usages from the previous plan.
    */
   carryOverUsages?: SetupPaymentCarryOverUsages | undefined;
+  /**
+   * Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+   */
+  metadata?: { [k: string]: string } | undefined;
 };
 
 /**
@@ -756,6 +764,7 @@ export const SetupPaymentExpiryDurationType$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type SetupPaymentRollover$Outbound = {
   max?: number | undefined;
+  max_percentage?: number | undefined;
   expiry_duration_type: string;
   expiry_duration_length?: number | undefined;
 };
@@ -767,11 +776,13 @@ export const SetupPaymentRollover$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
     expiryDurationType: SetupPaymentExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      maxPercentage: "max_percentage",
       expiryDurationType: "expiry_duration_type",
       expiryDurationLength: "expiry_duration_length",
     });
@@ -1045,6 +1056,7 @@ export type SetupPaymentParams$Outbound = {
   processor_subscription_id?: string | undefined;
   carry_over_balances?: SetupPaymentCarryOverBalances$Outbound | undefined;
   carry_over_usages?: SetupPaymentCarryOverUsages$Outbound | undefined;
+  metadata?: { [k: string]: string } | undefined;
 };
 
 /** @internal */
@@ -1078,6 +1090,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     carryOverUsages: z.optional(
       z.lazy(() => SetupPaymentCarryOverUsages$outboundSchema),
     ),
+    metadata: z.optional(z.record(z.string(), z.string())),
   }),
   z.transform((v) => {
     return remap$(v, {

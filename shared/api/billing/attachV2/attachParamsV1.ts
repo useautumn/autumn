@@ -74,6 +74,11 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 			description: "Whether to carry over usages from the previous plan.",
 		}),
 
+	metadata: z.record(z.string(), z.string()).optional().meta({
+		description:
+			"Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.",
+	}),
+
 	no_billing_changes: z.boolean().optional().meta({
 		internal: true,
 	}),

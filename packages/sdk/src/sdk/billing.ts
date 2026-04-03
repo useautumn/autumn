@@ -57,6 +57,7 @@ export class Billing extends ClientSDK {
    * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
    * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
    * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+   * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
    *
    * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
    */
@@ -148,6 +149,7 @@ export class Billing extends ClientSDK {
    * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
    * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
    * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+   * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
    *
    * @returns A preview response with line items, totals, and effective dates for the proposed changes.
    */
@@ -232,6 +234,7 @@ export class Billing extends ClientSDK {
    * @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
    * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
    * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+   * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
    *
    * @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
    */
@@ -269,6 +272,7 @@ export class Billing extends ClientSDK {
    * @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
    * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
    * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+   * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
    *
    * @returns A preview response with line items showing prorated charges or credits for the proposed changes.
    */

@@ -2,6 +2,7 @@ import type { FullCustomer, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { create } from "zustand";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const REFETCH_INTERVAL = 5000;
@@ -54,13 +55,14 @@ interface OnboardingProgress {
  */
 export const useOnboardingProgress = (): OnboardingProgress => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const { isDismissed, dismiss, show } = useOnboardingDismissedStore();
 
 	// Products query
 	const { data: productsData, isLoading: productsLoading } = useQuery<{
 		products: ProductV2[];
 	}>({
-		queryKey: ["onboarding-products"],
+		queryKey: buildKey(["onboarding-products"]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.get("/products/products");
 			return data;
@@ -80,7 +82,7 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 	const { data: customersData, isLoading: customersLoading } = useQuery<{
 		fullCustomers: FullCustomer[];
 	}>({
-		queryKey: ["onboarding-customers"],
+		queryKey: buildKey(["onboarding-customers"]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.post(
 				"/customers/all/full_customers",
@@ -98,7 +100,7 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 	const { data: eventsData, isLoading: eventsLoading } = useQuery<{
 		rawEvents: { data: unknown[] };
 	}>({
-		queryKey: ["onboarding-events"],
+		queryKey: buildKey(["onboarding-events"]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.post("/query/raw", {
 				customer_id: null,

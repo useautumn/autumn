@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useParams } from "react-router";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -10,6 +11,7 @@ import { useCachedCustomer } from "./useCachedCustomer";
 export const useCusQuery = ({ enabled = true }: { enabled?: boolean } = {}) => {
 	const { customer_id } = useParams();
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const { getCachedCustomer } = useCachedCustomer(customer_id);
 
 	const cachedCustomer = useMemo(getCachedCustomer, [getCachedCustomer]);
@@ -29,7 +31,7 @@ export const useCusQuery = ({ enabled = true }: { enabled?: boolean } = {}) => {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: ["customer", customer_id],
+		queryKey: buildKey(["customer", customer_id]),
 		queryFn: fetcher,
 		enabled: enabled && !!customer_id,
 		retry: false,

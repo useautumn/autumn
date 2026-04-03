@@ -38,7 +38,7 @@ export const SaveChangesBar = ({
 
 	const [saving, setSaving] = useState(false);
 
-	const { refetch } = useProductsQuery();
+	const { invalidate: invalidateProducts } = useProductsQuery();
 	const { counts, isLoading } = useProductCountsQuery();
 	const { refetch: queryRefetch } = useProductQuery();
 
@@ -92,11 +92,8 @@ export const SaveChangesBar = ({
 			productId: product.id,
 			product,
 			onSuccess: async () => {
-				if (isOnboarding) {
-					await refetch();
-				} else {
-					await queryRefetch();
-				}
+				await queryRefetch();
+				invalidateProducts();
 			},
 		});
 

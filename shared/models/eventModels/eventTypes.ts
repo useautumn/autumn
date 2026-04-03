@@ -26,6 +26,7 @@ export type TotalEventsParams = {
 	interval?: RangeEnum;
 	customer?: FullCustomer;
 	bin_size: BinSizeEnum;
+	filter_by?: Record<string, string>;
 };
 
 export type TimeseriesEventsParams = TotalEventsParams & {
@@ -33,6 +34,7 @@ export type TimeseriesEventsParams = TotalEventsParams & {
 	no_count?: boolean;
 	timezone?: string;
 	enforceGroupLimit?: boolean;
+	max_groups?: number;
 };
 
 export type CalculateDateRangeParams = Omit<

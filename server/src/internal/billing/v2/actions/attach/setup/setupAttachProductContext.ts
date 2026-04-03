@@ -31,6 +31,8 @@ export const setupAttachProductContext = async ({
 		orgId: org.id,
 		env,
 		version: params.version,
+		logResult: true,
+		logger: ctx.logger,
 	});
 
 	// 2. Handle custom items if provided

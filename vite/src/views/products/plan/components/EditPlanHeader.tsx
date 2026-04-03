@@ -1,4 +1,4 @@
-import { UserIcon } from "@phosphor-icons/react";
+import { TriangleIcon, UserIcon } from "@phosphor-icons/react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -7,6 +7,7 @@ import { IconBadge } from "@/components/v2/badges/IconBadge";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton.tsx";
+import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import {
 	Select,
 	SelectContent,
@@ -15,10 +16,19 @@ import {
 	SelectValue,
 } from "@/components/v2/selects/Select";
 import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
+import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { useOrg } from "@/hooks/common/useOrg";
+import { useRCMappings } from "@/hooks/queries/revcat/useRCMappings";
+import {
 	useIsCusPlanEditor,
 	useProductStore,
 } from "@/hooks/stores/useProductStore.ts";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { isOneOffProduct } from "@/utils/product/priceUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery.tsx";
@@ -43,6 +53,28 @@ export const EditPlanHeader = () => {
 	const axiosInstance = useAxiosInstance();
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
+	const flags = useAutumnFlags();
+	const { mappings } = useRCMappings();
+	const { org } = useOrg();
+	const env = useEnv();
+
+	const hasRCMapping =
+		flags.revenuecat &&
+		mappings.some(
+			(m) =>
+				m.autumn_product_id === product.id &&
+				m.revenuecat_product_ids.length > 0,
+		);
+
+	const vercelConfig = org?.processor_configs?.vercel;
+	const vercelAllowedIds =
+		env === "live"
+			? vercelConfig?.allowed_product_ids_live
+			: vercelConfig?.allowed_product_ids_sandbox;
+	const hasVercelLink =
+		flags.vercel &&
+		!!vercelAllowedIds?.length &&
+		vercelAllowedIds.includes(product.id);
 
 	const versionOptions = Array.from(
 		{ length: numVersions },
@@ -159,6 +191,32 @@ export const EditPlanHeader = () => {
 						<IconBadge variant="muted" icon={<UserIcon />}>
 							{counts?.active || 0}
 						</IconBadge>
+						{hasRCMapping && (
+							<Tooltip>
+								<TooltipTrigger>
+									<IconBadge variant="muted" icon={<RevenueCatIcon size={14} />}>
+										RC
+									</IconBadge>
+								</TooltipTrigger>
+								<TooltipContent>
+									This plan is linked to RevenueCat for mobile billing
+								</TooltipContent>
+							</Tooltip>
+						)}
+						{hasVercelLink && (
+							<Tooltip>
+								<TooltipTrigger>
+									<IconBadge
+										variant="muted"
+										icon={<TriangleIcon size={12} weight="fill" />}
+									>
+									</IconBadge>
+								</TooltipTrigger>
+								<TooltipContent>
+									This plan is linked to Vercel Marketplace
+								</TooltipContent>
+							</Tooltip>
+						)}
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">

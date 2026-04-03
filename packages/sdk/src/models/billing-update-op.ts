@@ -258,6 +258,10 @@ export type BillingUpdateRollover = {
    */
   max?: number | undefined;
   /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
    * When rolled over units expire.
    */
   expiryDurationType: BillingUpdateExpiryDurationType;
@@ -414,6 +418,16 @@ export type BillingUpdateCancelAction = ClosedEnum<
   typeof BillingUpdateCancelAction
 >;
 
+/**
+ * Controls whether balances should be recalculated during the subscription update.
+ */
+export type BillingUpdateRecalculateBalances = {
+  /**
+   * If true, recalculates balances during the subscription update. Only applicable when updating feature quantities.
+   */
+  enabled: boolean;
+};
+
 export type UpdateSubscriptionParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -463,6 +477,10 @@ export type UpdateSubscriptionParams = {
    * If true, the subscription is updated internally without applying billing changes in Stripe.
    */
   noBillingChanges?: boolean | undefined;
+  /**
+   * Controls whether balances should be recalculated during the subscription update.
+   */
+  recalculateBalances?: BillingUpdateRecalculateBalances | undefined;
 };
 
 /**
@@ -807,6 +825,7 @@ export const BillingUpdateExpiryDurationType$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type BillingUpdateRollover$Outbound = {
   max?: number | undefined;
+  max_percentage?: number | undefined;
   expiry_duration_type: string;
   expiry_duration_length?: number | undefined;
 };
@@ -818,11 +837,13 @@ export const BillingUpdateRollover$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
     expiryDurationType: BillingUpdateExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      maxPercentage: "max_percentage",
       expiryDurationType: "expiry_duration_type",
       expiryDurationLength: "expiry_duration_length",
     });
@@ -1004,6 +1025,29 @@ export const BillingUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdateCancelAction);
 
 /** @internal */
+export type BillingUpdateRecalculateBalances$Outbound = {
+  enabled: boolean;
+};
+
+/** @internal */
+export const BillingUpdateRecalculateBalances$outboundSchema: z.ZodMiniType<
+  BillingUpdateRecalculateBalances$Outbound,
+  BillingUpdateRecalculateBalances
+> = z.object({
+  enabled: z.boolean(),
+});
+
+export function billingUpdateRecalculateBalancesToJSON(
+  billingUpdateRecalculateBalances: BillingUpdateRecalculateBalances,
+): string {
+  return JSON.stringify(
+    BillingUpdateRecalculateBalances$outboundSchema.parse(
+      billingUpdateRecalculateBalances,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateSubscriptionParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -1017,6 +1061,7 @@ export type UpdateSubscriptionParams$Outbound = {
   subscription_id?: string | undefined;
   cancel_action?: string | undefined;
   no_billing_changes?: boolean | undefined;
+  recalculate_balances?: BillingUpdateRecalculateBalances$Outbound | undefined;
 };
 
 /** @internal */
@@ -1046,6 +1091,9 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
     subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(BillingUpdateCancelAction$outboundSchema),
     noBillingChanges: z.optional(z.boolean()),
+    recalculateBalances: z.optional(
+      z.lazy(() => BillingUpdateRecalculateBalances$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1059,6 +1107,7 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
       noBillingChanges: "no_billing_changes",
+      recalculateBalances: "recalculate_balances",
     });
   }),
 );

@@ -192,6 +192,10 @@ const response = await autumn.billing.update({
               Max rollover units. Omit for unlimited rollover.
             </DynamicParamField>
 
+            <DynamicParamField body="max_percentage" type="number">
+              Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+            </DynamicParamField>
+
             <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
               When rolled over units expire.
             </DynamicParamField>
@@ -263,6 +267,16 @@ const response = await autumn.billing.update({
 
 <DynamicParamField body="no_billing_changes" type="boolean">
   If true, the subscription is updated internally without applying billing changes in Stripe.
+</DynamicParamField>
+
+<DynamicParamField body="recalculate_balances" type="object">
+  Controls whether balances should be recalculated during the subscription update.
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required>
+      If true, recalculates balances during the subscription update. Only applicable when updating feature quantities.
+    </DynamicParamField>
+
+  </Expandable>
 </DynamicParamField>
 
 

@@ -96,6 +96,52 @@ export type CustomerSpendLimit = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const CustomerThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type CustomerThresholdType = OpenEnum<typeof CustomerThresholdType>;
+
+export type CustomerUsageAlert = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled: boolean;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: CustomerThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type CustomerOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
  * Billing controls for the customer (auto top-ups, etc.)
  */
 export type CustomerBillingControls = {
@@ -107,6 +153,14 @@ export type CustomerBillingControls = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<CustomerSpendLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<CustomerUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CustomerOverageAllowed> | undefined;
 };
 
 /**
@@ -647,6 +701,68 @@ export function customerSpendLimitFromJSON(
 }
 
 /** @internal */
+export const CustomerThresholdType$inboundSchema: z.ZodMiniType<
+  CustomerThresholdType,
+  unknown
+> = openEnums.inboundSchema(CustomerThresholdType);
+
+/** @internal */
+export const CustomerUsageAlert$inboundSchema: z.ZodMiniType<
+  CustomerUsageAlert,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), true),
+    threshold: types.number(),
+    threshold_type: CustomerThresholdType$inboundSchema,
+    name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "threshold_type": "thresholdType",
+    });
+  }),
+);
+
+export function customerUsageAlertFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerUsageAlert, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerUsageAlert$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerUsageAlert' from JSON`,
+  );
+}
+
+/** @internal */
+export const CustomerOverageAllowed$inboundSchema: z.ZodMiniType<
+  CustomerOverageAllowed,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function customerOverageAllowedFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerOverageAllowed, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerOverageAllowed$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerOverageAllowed' from JSON`,
+  );
+}
+
+/** @internal */
 export const CustomerBillingControls$inboundSchema: z.ZodMiniType<
   CustomerBillingControls,
   unknown
@@ -658,11 +774,19 @@ export const CustomerBillingControls$inboundSchema: z.ZodMiniType<
     spend_limits: types.optional(
       z.array(z.lazy(() => CustomerSpendLimit$inboundSchema)),
     ),
+    usage_alerts: types.optional(
+      z.array(z.lazy(() => CustomerUsageAlert$inboundSchema)),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => CustomerOverageAllowed$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "auto_topups": "autoTopups",
       "spend_limits": "spendLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
     });
   }),
 );

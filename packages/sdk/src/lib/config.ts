@@ -25,6 +25,11 @@ export type SDKOptions = {
    */
   xApiVersion?: string | undefined;
 
+  /**
+   * Allows setting the failOpen parameter for all supported operations
+   */
+  failOpen?: boolean | undefined;
+
   httpClient?: HTTPClient;
   /**
    * Allows overriding the default server used by the SDK
@@ -67,6 +72,6 @@ export const SDK_METADATA = {
   language: "typescript",
   openapiDocVersion: "2.2.0",
   sdkVersion: "0.10.17",
-  genVersion: "2.866.2",
-  userAgent: "speakeasy-sdk/typescript 0.10.17 2.866.2 2.2.0 @useautumn/sdk",
+  genVersion: "2.824.1",
+  userAgent: "speakeasy-sdk/typescript 0.10.17 2.824.1 2.2.0 @useautumn/sdk",
 } as const;
