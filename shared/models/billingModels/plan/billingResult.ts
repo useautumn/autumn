@@ -5,7 +5,7 @@ export interface StripeBillingPlanResult {
 	deferred?: boolean;
 	stripeInvoice?: Stripe.Invoice;
 	stripeSubscription?: Stripe.Subscription;
-	stripeCheckoutSession?: Stripe.Checkout.Session;
+	stripeCheckoutSession?: Partial<Stripe.Checkout.Session>;
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
 	requiredAction?: {
 		code: PaymentFailureCode;
