@@ -33,6 +33,7 @@ export interface BuildAttachRequestBodyParams {
 	billingBehavior: BillingBehavior | null;
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
+	resetBillingCycle: boolean;
 	discounts: FormDiscount[];
 }
 
@@ -52,6 +53,7 @@ export function buildAttachRequestBody({
 	billingBehavior,
 	redirectMode,
 	newBillingSubscription,
+	resetBillingCycle,
 	discounts,
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
 	if (!customerId || !product) {
@@ -116,6 +118,10 @@ export function buildAttachRequestBody({
 		body.new_billing_subscription = true;
 	}
 
+	if (resetBillingCycle) {
+		body.billing_cycle_anchor = "now";
+	}
+
 	const validDiscounts = filterValidDiscounts(discounts);
 	if (validDiscounts.length > 0) {
 		body.discounts = validDiscounts;
@@ -140,6 +146,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		billingBehavior,
 		redirectMode,
 		newBillingSubscription,
+		resetBillingCycle,
 		discounts,
 	} = params;
 
@@ -160,6 +167,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				billingBehavior,
 				redirectMode,
 				newBillingSubscription,
+				resetBillingCycle,
 				discounts,
 			}),
 		[
@@ -177,6 +185,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			billingBehavior,
 			redirectMode,
 			newBillingSubscription,
+			resetBillingCycle,
 			discounts,
 		],
 	);

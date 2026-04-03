@@ -23,6 +23,7 @@ export function useAttachForm({
 			billingBehavior: null,
 			redirectMode: "if_required",
 			newBillingSubscription: false,
+			resetBillingCycle: false,
 			discounts: [],
 		} as AttachForm,
 		validators: {

@@ -130,6 +130,7 @@ export function AttachFormProvider({
 		billingBehavior,
 		redirectMode,
 		newBillingSubscription,
+		resetBillingCycle,
 		discounts,
 	} = formValues;
 
@@ -226,6 +227,7 @@ export function AttachFormProvider({
 		billingBehavior,
 		redirectMode,
 		newBillingSubscription,
+		resetBillingCycle,
 		discounts,
 	});
 
