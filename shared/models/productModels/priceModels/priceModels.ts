@@ -29,6 +29,9 @@ export const PriceSchema = z.object({
 	entitlement_id: z.string().nullish(),
 
 	proration_config: ProrationConfigSchema.nullable(),
+
+	variant_action: z.string().nullable().optional(),
+	base_price_id: z.string().nullable().optional(),
 });
 
 export const CreatePriceSchema = z.object({

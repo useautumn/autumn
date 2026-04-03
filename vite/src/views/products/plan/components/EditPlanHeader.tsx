@@ -83,7 +83,7 @@ export const EditPlanHeader = () => {
 	const currentVersion = queryStates.version || product.version;
 
 	const handleVersionChange = (version: string) => {
-		const versionNumber = parseInt(version, 10);
+		const versionNumber = parseFloat(version);
 		if (versionNumber === numVersions && !isCusPlanEditor) {
 			// Remove version param for latest version
 			setQueryStates({ version: null });
