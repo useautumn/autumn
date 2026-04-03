@@ -1,4 +1,8 @@
-import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
+import {
+	type AutumnBillingPlan,
+	type BillingContext,
+	formatMs,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs";
@@ -56,9 +60,10 @@ export const logAutumnBillingPlan = ({
 						.join(", ") || "none",
 
 				lineItems:
-					plan.lineItems?.map(
-						(item) => `${item.description}: ${item.amountAfterDiscounts}`,
-					) ?? "none",
+					plan.lineItems?.map((item) => ({
+						item: `${item.description}: ${item.amountAfterDiscounts}`,
+						effectivePeriod: `${formatMs(item.context.effectivePeriod?.start)} - ${formatMs(item.context.effectivePeriod?.end)}`,
+					})) ?? "none",
 			},
 		},
 	});

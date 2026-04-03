@@ -1,0 +1,114 @@
+---
+title: "Deploy to production"
+description: "A checklist to go live with confidence"
+---
+
+Once you've tested your integration in sandbox, follow this checklist to go live with real payments.
+
+<Steps>
+<Step>
+### Connect your live Stripe account
+
+In the Autumn dashboard, open the **Deploy to Production** dialog from the sidebar.
+Connect your live Stripe account via OAuth — this links Autumn to your real Stripe environment.
+
+<Note>
+Your sandbox uses a shared Stripe test account by default. Production requires your own Stripe account.
+</Note>
+
+</Step>
+
+<Step>
+### Push your plans to production
+
+If you're using the [CLI](/cli/getting-started), push your config to the production environment:
+
+```bash
+bunx atmn push -p
+```
+
+Alternatively, the Deploy dialog in the dashboard can copy your sandbox plans to production for you.
+
+</Step>
+
+<Step>
+### Swap your API key
+
+Replace your sandbox secret key with a live one. Create a production key from [Developer Settings](https://app.useautumn.com/production/dev?tab=api_keys), and update your environment variable:
+
+```bash .env
+AUTUMN_SECRET_KEY=am_sk_live_...
+```
+
+Double check that:
+- Your **server-side** code uses the live secret key (`am_sk_live_*`)
+- If you're using a publishable key client-side, it's the live one (`am_pk_live_*`)
+
+<Tip>
+The key prefix determines the environment automatically — `_test_` routes to sandbox, `_live_` routes to production. There's no separate "environment" config to flip.
+</Tip>
+
+</Step>
+
+<Step>
+### Verify fail-open behavior
+
+Autumn's SDK is **fail-open by default** — if Autumn is unreachable, `check`, `track`, and customer fetches return safe dummy responses instead of throwing errors. This means Autumn can never take your app down.
+
+You should verify this before going live. The easiest way is to point the SDK at a non-existent URL and exercise your app's core flows:
+
+<CodeGroup>
+
+```typescript TypeScript
+const autumn = new Autumn({
+  secretKey: process.env.AUTUMN_SECRET_KEY,
+  serverURL: "https://localhost:9999", // simulate outage
+});
+```
+
+```python Python
+autumn = Autumn(
+    secret_key=os.environ["AUTUMN_SECRET_KEY"],
+    server_url="https://localhost:9999",  # simulate outage
+)
+```
+
+</CodeGroup>
+
+With this in place:
+
+1. Trigger actions that call `check` — they should return `allowed: true`
+2. Trigger actions that call `track` — they should not crash
+3. Confirm your core user flows work as normal
+4. Remove the `serverURL` override when done
+
+<Warning>
+While the SDK gracefully handles outages for read-path calls, write operations like `attach` (which initiate checkout or subscription changes) will still fail when Autumn is unreachable.
+</Warning>
+
+</Step>
+
+<Step>
+### Set up webhooks (if applicable)
+
+If you're listening for Autumn [webhook events](/documentation/webhooks) (e.g. `customer.products.updated`), make sure your production webhook endpoint is configured in the dashboard. Verify you can receive a test event.
+
+</Step>
+
+<Step>
+### Monitor your first users
+
+After deploying, keep an eye on the [Customers](https://app.useautumn.com/production/customers) page in the Autumn dashboard. Verify that:
+
+- New customers are created correctly
+- Subscriptions are attached as expected
+- Usage is being tracked
+- Invoices are generated in Stripe
+
+</Step>
+
+</Steps>
+
+---
+
+Once you've completed this checklist, you're live. Your sandbox environment remains available for testing new plans and pricing changes before pushing them to production.

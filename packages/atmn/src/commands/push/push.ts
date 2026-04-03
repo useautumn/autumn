@@ -23,7 +23,10 @@ import {
 	transformApiFeature,
 	transformApiPlan,
 } from "../../lib/transforms/apiToSdk/index.js";
-import { transformFeatureToApi, transformPlanToApi } from "../../lib/transforms/sdkToApi/index.js";
+import {
+	transformFeatureToApi,
+	transformPlanToApi,
+} from "../../lib/transforms/sdkToApi/index.js";
 import type {
 	FeatureDeleteInfo,
 	PlanDeleteInfo,
@@ -156,10 +159,9 @@ async function checkPlanForVersioning(
 		};
 	}
 
-	const missingFeatureIds =
-		(plan.items || [])
-			.map((item) => item.featureId)
-			.filter((featureId) => !remoteFeatureIds.has(featureId));
+	const missingFeatureIds = (plan.items || [])
+		.map((item) => item.featureId)
+		.filter((featureId) => !remoteFeatureIds.has(featureId));
 
 	const missingLocalFeatureIds = missingFeatureIds.filter((featureId) =>
 		localFeatureIds.has(featureId),
@@ -169,15 +171,15 @@ async function checkPlanForVersioning(
 	);
 
 	if (missingLocalFeatureIds.length > 0) {
-		if (missingUnknownFeatureIds.length > 0) {
-			console.log(
-				`[checkPlanForVersioning] plan=${plan.id} has mixed missing features. Local-first features: ${missingLocalFeatureIds.join(", ")}; missing unknown: ${missingUnknownFeatureIds.join(", ")}.`,
-			);
-		} else {
-			console.log(
-				`[checkPlanForVersioning] plan=${plan.id} has local-only feature refs (${missingLocalFeatureIds.join(", ")}). Deferring versioning check until after feature upsert.`,
-			);
-		}
+		// if (missingUnknownFeatureIds.length > 0) {
+		// 	console.log(
+		// 		`[checkPlanForVersioning] plan=${plan.id} has mixed missing features. Local-first features: ${missingLocalFeatureIds.join(", ")}; missing unknown: ${missingUnknownFeatureIds.join(", ")}.`,
+		// 	);
+		// } else {
+		// 	console.log(
+		// 		`[checkPlanForVersioning] plan=${plan.id} has local-only feature refs (${missingLocalFeatureIds.join(", ")}). Deferring versioning check until after feature upsert.`,
+		// 	);
+		// }
 
 		return {
 			plan,
@@ -209,9 +211,10 @@ async function checkPlanForVersioning(
 		const responseMessage =
 			(response && (response.message as string | undefined)) || "";
 
-		const missingFeatureMatch = /Feature\s+["']?([a-zA-Z0-9_-]+)["']?\s+not\s+found/i.exec(
-			responseMessage,
-		);
+		const missingFeatureMatch =
+			/Feature\s+["']?([a-zA-Z0-9_-]+)["']?\s+not\s+found/i.exec(
+				responseMessage,
+			);
 		const missingFeature =
 			response?.feature || response?.feature_id || missingFeatureMatch?.[1];
 
@@ -223,19 +226,19 @@ async function checkPlanForVersioning(
 				responseMessage,
 			)
 		) {
-			if (missingUnknownFeatureIds.length > 0) {
-				console.log(
-					`[checkPlanForVersioning] plan=${plan.id} failed versioning check: feature "${missingFeature || "unknown"}" not found and not in local config`,
-				);
-			} else if (missingFeature) {
-				console.log(
-					`[checkPlanForVersioning] plan=${plan.id} deferring versioning check due feature_not_found for feature "${missingFeature}", will recheck after feature upsert`,
-				);
-			} else {
-				console.log(
-					`[checkPlanForVersioning] plan=${plan.id} deferring versioning check due feature_not_found`,
-				);
-			}
+			// if (missingUnknownFeatureIds.length > 0) {
+			// 	console.log(
+			// 		`[checkPlanForVersioning] plan=${plan.id} failed versioning check: feature "${missingFeature || "unknown"}" not found and not in local config`,
+			// 	);
+			// } else if (missingFeature) {
+			// 	console.log(
+			// 		`[checkPlanForVersioning] plan=${plan.id} deferring versioning check due feature_not_found for feature "${missingFeature}", will recheck after feature upsert`,
+			// 	);
+			// } else {
+			// 	console.log(
+			// 		`[checkPlanForVersioning] plan=${plan.id} deferring versioning check due feature_not_found`,
+			// 	);
+			// }
 
 			return {
 				plan,
@@ -339,9 +342,7 @@ function normalizeFeatureForCompare(f: Feature): Record<string, unknown> {
 
 	if (f.creditSchema && f.creditSchema.length > 0) {
 		result.creditSchema = [...f.creditSchema]
-			.sort((a, b) =>
-				a.meteredFeatureId.localeCompare(b.meteredFeatureId),
-			)
+			.sort((a, b) => a.meteredFeatureId.localeCompare(b.meteredFeatureId))
 			.map((cs) => ({
 				meteredFeatureId: cs.meteredFeatureId,
 				creditCost: cs.creditCost,
@@ -355,9 +356,7 @@ function normalizeFeatureForCompare(f: Feature): Record<string, unknown> {
  * Normalize a plan item to a canonical form for comparison.
  * Strips default values (unlimited: false, billingUnits: 1, intervalCount: 1).
  */
-function normalizePlanFeatureForCompare(
-	pf: PlanItem,
-): Record<string, unknown> {
+function normalizePlanFeatureForCompare(pf: PlanItem): Record<string, unknown> {
 	const f = pf as Record<string, unknown>;
 	const result: Record<string, unknown> = {
 		featureId: pf.featureId,
@@ -379,8 +378,7 @@ function normalizePlanFeatureForCompare(
 	if (price != null) {
 		const p: Record<string, unknown> = {};
 		if (price.amount != null) p.amount = price.amount;
-		if (price.billingMethod != null)
-			p.billingMethod = price.billingMethod;
+		if (price.billingMethod != null) p.billingMethod = price.billingMethod;
 		if (price.interval != null) p.interval = price.interval;
 		if (price.intervalCount != null && price.intervalCount !== 1) {
 			p.intervalCount = price.intervalCount;
@@ -493,9 +491,7 @@ export async function analyzePush(
 
 	const localFeatureIds = new Set(localFeatures.map((f) => f.id));
 	const localPlanIds = new Set(localPlans.map((p) => p.id));
-	const remoteFeaturesById = new Map(
-		remoteData.features.map((f) => [f.id, f]),
-	);
+	const remoteFeaturesById = new Map(remoteData.features.map((f) => [f.id, f]));
 	const remotePlansById = new Map(remoteData.plans.map((p) => [p.id, p]));
 	const localPlansById = new Map(localPlans.map((p) => [p.id, p]));
 
@@ -514,15 +510,14 @@ export async function analyzePush(
 	const archivedFeatures = localFeatures.filter((f) => {
 		const remote = remoteFeaturesById.get(f.id);
 		const localArchived = (f as Feature & { archived?: boolean }).archived;
-		const remoteArchived = remote && (remote as Feature & { archived?: boolean }).archived;
+		const remoteArchived =
+			remote && (remote as Feature & { archived?: boolean }).archived;
 		// Prompt to unarchive only if remote is archived but local doesn't explicitly want it archived
 		return remoteArchived && !localArchived;
 	});
 
 	// Find plans to create and update (only actually changed plans)
-	const plansToCreate = localPlans.filter(
-		(p) => !remotePlansById.has(p.id),
-	);
+	const plansToCreate = localPlans.filter((p) => !remotePlansById.has(p.id));
 	const plansToUpdateLocal = localPlans.filter((p) => {
 		const remotePlan = remotePlansById.get(p.id);
 		if (!remotePlan) return false;
@@ -532,7 +527,12 @@ export async function analyzePush(
 	// Check versioning info for each plan to update
 	const remoteFeatureIds = new Set(remoteData.features.map((f) => f.id));
 	const planUpdatePromises = plansToUpdateLocal.map((plan) =>
-		checkPlanForVersioning(plan, remoteData.plans, localFeatureIds, remoteFeatureIds),
+		checkPlanForVersioning(
+			plan,
+			remoteData.plans,
+			localFeatureIds,
+			remoteFeatureIds,
+		),
 	);
 	const plansToUpdate = await Promise.all(planUpdatePromises);
 
@@ -556,7 +556,8 @@ export async function analyzePush(
 	const archivedPlans = localPlans.filter((p) => {
 		const remote = remotePlansById.get(p.id);
 		const localArchived = (p as Plan & { archived?: boolean }).archived;
-		const remoteArchived = remote && (remote as Plan & { archived?: boolean }).archived;
+		const remoteArchived =
+			remote && (remote as Plan & { archived?: boolean }).archived;
 		// Prompt to unarchive only if remote is archived but local doesn't explicitly want it archived
 		return remoteArchived && !localArchived;
 	});
@@ -593,10 +594,7 @@ export async function analyzePush(
 				if (plansRemovingFeature) {
 					plansRemovingFeature.add(remotePlan.id);
 				} else {
-					plansRemovingFeatureById.set(
-						featureId,
-						new Set([remotePlan.id]),
-					);
+					plansRemovingFeatureById.set(featureId, new Set([remotePlan.id]));
 				}
 			}
 		}
@@ -626,7 +624,8 @@ export async function analyzePush(
 			return info;
 		}
 
-		const remotePlansForFeature = remoteFeaturePlanRefs.get(info.id) ?? new Set();
+		const remotePlansForFeature =
+			remoteFeaturePlanRefs.get(info.id) ?? new Set();
 		let hasBlockingPlan = false;
 
 		for (const planId of remotePlansForFeature) {

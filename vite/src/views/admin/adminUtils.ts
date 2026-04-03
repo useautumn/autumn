@@ -10,7 +10,6 @@ import type {
 	Rollover,
 } from "@autumn/shared";
 import { toast } from "sonner";
-import { clearOrgCache } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
 
@@ -41,8 +40,13 @@ export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
 	];
 };
 
-export const impersonateUser = async (userId: string) => {
-	console.log("impersonating user", userId);
+export const impersonateUser = async ({
+	userId,
+	organizationId,
+}: {
+	userId: string;
+	organizationId?: string;
+}) => {
 	try {
 		await authClient.admin.stopImpersonating();
 	} catch (error) {
@@ -57,7 +61,10 @@ export const impersonateUser = async (userId: string) => {
 		return;
 	}
 
-	clearOrgCache();
+	if (organizationId) {
+		await authClient.organization.setActive({ organizationId });
+	}
+
 	window.location.reload();
 };
 

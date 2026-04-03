@@ -67,6 +67,8 @@ export function CustomerUsageAnalyticsTable() {
 		});
 
 	const isLoading = rawEventsLoading || rawEventsFetching || timeseriesLoading;
+	// Synced loading state for the layout — excludes background refetches to avoid disruption
+	const isSyncedLoading = rawEventsLoading || timeseriesLoading;
 
 	// Generate dynamic columns from event properties
 	const columns = useMemo(() => {
@@ -111,19 +113,20 @@ export function CustomerUsageAnalyticsTable() {
 					table,
 					numberOfColumns: columns.length,
 					enableSorting: false,
-					isLoading,
+					isLoading: false,
 					onRowClick: handleRowClick,
 					rowClassName:
-						"h-8 bg-interactive-secondary dark:bg-card border-b cursor-pointer hover:bg-interactive-secondary-hover",
+						"h-8 bg-interactive-secondary border-b! cursor-pointer hover:bg-interactive-secondary-hover",
 					flexibleTableColumns: true,
 					enableColumnVisibility: true,
 					columnVisibilityStorageKey: "customer-usage-analytics",
 					columnVisibilityClassName: "right-3",
-					virtualization: {
-						containerHeight: "250px",
-						rowHeight: 32,
-						overscan: 15,
-					},
+				virtualization: {
+					containerHeight: "250px",
+					rowHeight: 32,
+					overscan: 15,
+					fixedHeight: true,
+				},
 				}}
 			>
 				<Table.Container>
@@ -140,56 +143,74 @@ export function CustomerUsageAnalyticsTable() {
 							<CustomerUsageAnalyticsFullButton />
 						</Table.Actions>
 					</Table.Toolbar>
-					<div className="flex flex-col lg:flex-row w-full gap-4 lg:gap-2">
-						{isLoading ? (
-							<EmptyState text={<LoadingShimmerText text="Loading events" />} />
-						) : hasEvents ? (
-							<>
-								<div className="w-full lg:max-w-1/2">
-									<Table.VirtualizedContent className="rounded-lg bg-card w-full max-h-[250px]">
-										<Table.VirtualizedBody />
-									</Table.VirtualizedContent>
-								</div>
+				<div className="flex flex-col lg:flex-row w-full gap-4 lg:gap-2">
+					{isSyncedLoading ? (
+						<>
+							<div className="w-full lg:max-w-1/2 h-[250px]">
+								<EmptyState
+									className="h-full"
+									text={<LoadingShimmerText text="Loading events" />}
+								/>
+							</div>
+							<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
+								<CustomerUsageAnalyticsChart isLoading={true} daysToShow={selectedDays ?? 7} />
+							</div>
+						</>
+					) : hasEvents ? (
+						<>
+							<div className="w-full lg:max-w-1/2 h-[250px]">
+								<Table.VirtualizedContent className="rounded-lg w-full h-full bg-interactive-secondary">
+									<Table.VirtualizedBody />
+								</Table.VirtualizedContent>
+							</div>
 
-								<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
-									<CustomerUsageAnalyticsChart
-										timeseriesEvents={timeseriesEvents}
-										daysToShow={selectedDays ?? 7}
-									/>
-								</div>
-							</>
-						) : (
+							<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
+								<CustomerUsageAnalyticsChart
+									timeseriesEvents={timeseriesEvents}
+									daysToShow={selectedDays ?? 7}
+								/>
+							</div>
+						</>
+					) : (
+						<>
+						<div className="w-full lg:max-w-1/2 min-w-0 h-[250px]">
 							<EmptyState
+								className="h-full"
 								text={
 									<>
 										Track an event to display feature usage
-										{env === AppEnv.Sandbox && (
-											<IconButton
-												variant="muted"
-												size="sm"
-												iconOrientation="right"
-												icon={
-													<ArrowSquareOutIcon
-														size={16}
-														className="-translate-y-px"
-													/>
-												}
-												className="px-1! ml-2"
-												onClick={() =>
-													window.open(
-														"https://docs.useautumn.com/documentation/getting-started/gating",
-														"_blank",
-													)
-												}
-											>
-												Docs
-											</IconButton>
-										)}
-									</>
-								}
-							/>
-						)}
-					</div>
+											{env === AppEnv.Sandbox && (
+												<IconButton
+													variant="muted"
+													size="sm"
+													iconOrientation="right"
+													icon={
+														<ArrowSquareOutIcon
+															size={16}
+															className="-translate-y-px"
+														/>
+													}
+													className="px-1! ml-2"
+													onClick={() =>
+														window.open(
+															"https://docs.useautumn.com/documentation/getting-started/gating",
+															"_blank",
+														)
+													}
+												>
+													Docs
+												</IconButton>
+											)}
+										</>
+									}
+								/>
+							</div>
+							<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
+								<CustomerUsageAnalyticsChart daysToShow={selectedDays ?? 7} />
+							</div>
+						</>
+					)}
+				</div>
 				</Table.Container>
 			</Table.Provider>
 		</>

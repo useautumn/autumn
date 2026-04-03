@@ -1,4 +1,3 @@
-import { MultiSelect } from "@inkjs/ui";
 import { Box, Text } from "ink";
 import { useEffect, useState } from "react";
 import {
@@ -6,7 +5,11 @@ import {
 	type FileOption,
 	useAgentSetup,
 } from "../../../../lib/hooks/index.js";
-import { StatusLine, StepHeader } from "../../components/index.js";
+import {
+	MultiSelect,
+	StatusLine,
+	StepHeader,
+} from "../../components/index.js";
 
 interface AgentStepProps {
 	step: number;

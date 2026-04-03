@@ -60,6 +60,7 @@ import { Result } from "../types/fp.js";
  * @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
  * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
  * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+ * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
  *
  * @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
  */

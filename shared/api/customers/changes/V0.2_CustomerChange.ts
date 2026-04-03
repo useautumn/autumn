@@ -110,6 +110,7 @@ export const V0_2_CustomerChange = defineVersionChange({
 			entitlements: v1_features,
 			invoices: invoices || [],
 			trials_used,
+			payment_method: customerFields.payment_method,
 		} satisfies z.infer<typeof ApiCustomerV1Schema>;
 	},
 });

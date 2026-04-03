@@ -1,0 +1,7 @@
+{
+  "plugins": {
+    "linear": {
+      "enabled": true
+    }
+  }
+}

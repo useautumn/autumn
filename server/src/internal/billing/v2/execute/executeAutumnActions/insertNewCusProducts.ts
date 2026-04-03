@@ -53,7 +53,7 @@ export const insertNewCusProducts = async ({
 			await RolloverService.insert({
 				ctx,
 				rows: cusEnt.rollovers,
-				fullCusEnt: cusEnt,
+				fullCusEnt: { ...cusEnt, customer_product: cusProduct ?? null },
 			});
 		}
 	}

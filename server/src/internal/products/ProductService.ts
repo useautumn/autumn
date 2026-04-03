@@ -26,6 +26,7 @@ import {
 	sql,
 } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
+import type { Logger } from "@/external/logtail/logtailUtils";
 import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
 import { buildProductsCacheKey, PRODUCTS_CACHE_TTL } from "./productCacheUtils";
 import { getLatestProducts, isFreeProduct } from "./productUtils";
@@ -372,6 +373,8 @@ export class ProductService {
 		env,
 		version,
 		allowNotFound = false,
+		logResult = false,
+		logger,
 	}: {
 		db: DrizzleCli;
 		idOrInternalId: string;
@@ -379,6 +382,8 @@ export class ProductService {
 		env: AppEnv;
 		version?: number;
 		allowNotFound?: boolean;
+		logResult?: boolean;
+		logger?: Logger;
 	}) {
 		const data = (await db.query.products.findFirst({
 			where: and(
@@ -404,6 +409,20 @@ export class ProductService {
 		})) as FullProduct;
 
 		parseFreeTrials({ product: data });
+
+		if (logResult && logger) {
+			logger.info("full product:", {
+				data: {
+					result: data,
+					params: {
+						idOrInternalId,
+						orgId,
+						env,
+						version,
+					},
+				},
+			});
+		}
 
 		if (!data) {
 			if (allowNotFound) return null as unknown as FullProduct;

@@ -59,12 +59,16 @@ The one-off prepaid item (`$10 per 1,000 credits`) is what Autumn uses to replen
 </Tab>
 <Tab title="Dashboard">
 
-1. Navigate to the **Customers** page
-2. Click on a customer
-3. Under their balance for a feature, configure **Auto Top-Up**:
-   - **Threshold**: the balance level that triggers a top-up
-   - **Quantity**: how many units to purchase each time
-4. The customer's plan must include a **one-off prepaid item** for the feature. This is what Autumn charges when a top-up is triggered.
+1. Navigate to the **Plans** page and select (or create) the plan you want to add auto top-ups to
+2. Add a new item for the feature with:
+   - **Interval** set to **One-Off**
+   - **Billing method** set to **Prepaid**
+   - Configure the price and billing units (e.g. $10 per 1,000 credits)
+3. Configure auto top-ups per customer via the API (see below)
+
+<Note>
+The same feature can appear as multiple items on a plan. For example, you might have a monthly allowance of 5,000 credits **and** a one-off prepaid item for top-ups — both referencing the same feature.
+</Note>
 
 </Tab>
 </Tabs>

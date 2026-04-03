@@ -42,13 +42,15 @@ export const computeAutoTopupPlan = ({
 	const billingUnits = priceConfig.billing_units || 1;
 	const topUpPacks = new Decimal(quantity).div(billingUnits).toNumber();
 
+	const inlineCusEnt = updateCusEntOptionsInline({
+		cusEnt: customerEntitlement,
+		feature,
+		quantity: topUpPacks,
+	});
+
 	// B. Build line item
 	const lineItem = usagePriceToLineItem({
-		cusEnt: updateCusEntOptionsInline({
-			cusEnt: customerEntitlement,
-			feature,
-			quantity: topUpPacks,
-		}),
+		cusEnt: inlineCusEnt,
 		context: {
 			price: cusPrice.price,
 			product: cusProduct.product,

@@ -41,7 +41,7 @@ env:
   PACKAGE_NAME: autumn-js
   TEST_PACKAGE_NAME: "@useautumn/js-test"
   # ⚠️  ONE-LINE TOGGLE: Set to 'true' to publish to @useautumn/js-test instead of autumn-js
-  USE_TEST_PACKAGE: "true"
+  USE_TEST_PACKAGE: "false"
 
 jobs:
   publish:
@@ -99,10 +99,10 @@ jobs:
             if echo "$COMMIT_MSG" | grep -qE "^major:|BREAKING CHANGE"; then
               echo "bump=major" >> $GITHUB_OUTPUT
               echo "Detected major version bump"
-            elif echo "$COMMIT_MSG" | grep -qE "^minor:|^feat:"; then
+            elif echo "$COMMIT_MSG" | grep -qE "^minor:"; then
               echo "bump=minor" >> $GITHUB_OUTPUT
               echo "Detected minor version bump"
-            elif echo "$COMMIT_MSG" | grep -qE "^fix:|^patch:"; then
+            elif echo "$COMMIT_MSG" | grep -qE "^fix:|^patch:|^feat:"; then
               echo "bump=patch" >> $GITHUB_OUTPUT
               echo "Detected patch version bump"
             else
@@ -273,6 +273,6 @@ jobs:
           echo "No version bump pattern detected in commit message." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "To trigger a publish, use one of these commit message prefixes:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`fix:\` or \`patch:\` for patch version" >> $GITHUB_STEP_SUMMARY
-          echo "- \`feat:\` or \`minor:\` for minor version" >> $GITHUB_STEP_SUMMARY
+          echo "- \`fix:\`, \`patch:\`, or \`feat:\` for patch version" >> $GITHUB_STEP_SUMMARY
+          echo "- \`minor:\` for minor version" >> $GITHUB_STEP_SUMMARY
           echo "- \`major:\` or \`BREAKING CHANGE\` for major version" >> $GITHUB_STEP_SUMMARY

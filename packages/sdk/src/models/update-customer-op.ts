@@ -90,6 +90,54 @@ export type UpdateCustomerSpendLimitRequest = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const UpdateCustomerThresholdTypeRequestBody = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type UpdateCustomerThresholdTypeRequestBody = ClosedEnum<
+  typeof UpdateCustomerThresholdTypeRequestBody
+>;
+
+export type UpdateCustomerUsageAlertRequestBody = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: UpdateCustomerThresholdTypeRequestBody;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type UpdateCustomerOverageAllowedRequest = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
  * Billing controls for the customer (auto top-ups, etc.)
  */
 export type UpdateCustomerBillingControlsRequest = {
@@ -101,6 +149,14 @@ export type UpdateCustomerBillingControlsRequest = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<UpdateCustomerSpendLimitRequest> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<UpdateCustomerUsageAlertRequestBody> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<UpdateCustomerOverageAllowedRequest> | undefined;
 };
 
 export type UpdateCustomerParams = {
@@ -227,6 +283,54 @@ export type UpdateCustomerSpendLimitResponse = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const UpdateCustomerThresholdTypeResponse = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type UpdateCustomerThresholdTypeResponse = OpenEnum<
+  typeof UpdateCustomerThresholdTypeResponse
+>;
+
+export type UpdateCustomerUsageAlertResponse = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled: boolean;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: UpdateCustomerThresholdTypeResponse;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type UpdateCustomerOverageAllowedResponse = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
  * Billing controls for the customer (auto top-ups, etc.)
  */
 export type UpdateCustomerBillingControlsResponse = {
@@ -238,6 +342,14 @@ export type UpdateCustomerBillingControlsResponse = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<UpdateCustomerSpendLimitResponse> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<UpdateCustomerUsageAlertResponse> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<UpdateCustomerOverageAllowedResponse> | undefined;
 };
 
 /**
@@ -605,9 +717,92 @@ export function updateCustomerSpendLimitRequestToJSON(
 }
 
 /** @internal */
+export const UpdateCustomerThresholdTypeRequestBody$outboundSchema:
+  z.ZodMiniEnum<typeof UpdateCustomerThresholdTypeRequestBody> = z.enum(
+    UpdateCustomerThresholdTypeRequestBody,
+  );
+
+/** @internal */
+export type UpdateCustomerUsageAlertRequestBody$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const UpdateCustomerUsageAlertRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageAlertRequestBody$Outbound,
+  UpdateCustomerUsageAlertRequestBody
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: UpdateCustomerThresholdTypeRequestBody$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function updateCustomerUsageAlertRequestBodyToJSON(
+  updateCustomerUsageAlertRequestBody: UpdateCustomerUsageAlertRequestBody,
+): string {
+  return JSON.stringify(
+    UpdateCustomerUsageAlertRequestBody$outboundSchema.parse(
+      updateCustomerUsageAlertRequestBody,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateCustomerOverageAllowedRequest$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const UpdateCustomerOverageAllowedRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerOverageAllowedRequest$Outbound,
+  UpdateCustomerOverageAllowedRequest
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function updateCustomerOverageAllowedRequestToJSON(
+  updateCustomerOverageAllowedRequest: UpdateCustomerOverageAllowedRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerOverageAllowedRequest$outboundSchema.parse(
+      updateCustomerOverageAllowedRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateCustomerBillingControlsRequest$Outbound = {
   auto_topups?: Array<UpdateCustomerAutoTopupRequest$Outbound> | undefined;
   spend_limits?: Array<UpdateCustomerSpendLimitRequest$Outbound> | undefined;
+  usage_alerts?:
+    | Array<UpdateCustomerUsageAlertRequestBody$Outbound>
+    | undefined;
+  overage_allowed?:
+    | Array<UpdateCustomerOverageAllowedRequest$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -622,11 +817,19 @@ export const UpdateCustomerBillingControlsRequest$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => UpdateCustomerSpendLimitRequest$outboundSchema)),
     ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => UpdateCustomerUsageAlertRequestBody$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => UpdateCustomerOverageAllowedRequest$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       autoTopups: "auto_topups",
       spendLimits: "spend_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
     });
   }),
 );
@@ -792,6 +995,69 @@ export function updateCustomerSpendLimitResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerThresholdTypeResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerThresholdTypeResponse,
+  unknown
+> = openEnums.inboundSchema(UpdateCustomerThresholdTypeResponse);
+
+/** @internal */
+export const UpdateCustomerUsageAlertResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerUsageAlertResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), true),
+    threshold: types.number(),
+    threshold_type: UpdateCustomerThresholdTypeResponse$inboundSchema,
+    name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "threshold_type": "thresholdType",
+    });
+  }),
+);
+
+export function updateCustomerUsageAlertResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerUsageAlertResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerUsageAlertResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerUsageAlertResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerOverageAllowedResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerOverageAllowedResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function updateCustomerOverageAllowedResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerOverageAllowedResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdateCustomerOverageAllowedResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerOverageAllowedResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerBillingControlsResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerBillingControlsResponse,
   unknown
@@ -803,11 +1069,19 @@ export const UpdateCustomerBillingControlsResponse$inboundSchema: z.ZodMiniType<
     spend_limits: types.optional(
       z.array(z.lazy(() => UpdateCustomerSpendLimitResponse$inboundSchema)),
     ),
+    usage_alerts: types.optional(
+      z.array(z.lazy(() => UpdateCustomerUsageAlertResponse$inboundSchema)),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => UpdateCustomerOverageAllowedResponse$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "auto_topups": "autoTopups",
       "spend_limits": "spendLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
     });
   }),
 );

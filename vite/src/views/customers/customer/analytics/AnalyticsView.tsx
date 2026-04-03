@@ -1,16 +1,10 @@
 import { ErrCode } from "@autumn/shared";
-import {
-	ArrowSquareOutIcon,
-	ChartBarIcon,
-	DatabaseIcon,
-} from "@phosphor-icons/react";
+import { ChartBarIcon, DatabaseIcon } from "@phosphor-icons/react";
 import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
@@ -21,6 +15,7 @@ import {
 	useAnalyticsData,
 	useRawAnalyticsData,
 } from "./hooks/useAnalyticsData";
+import { RevenueMetricsSection } from "./revenue/RevenueMetricsSection";
 import { extractPropertyKeys } from "./utils/extractPropertyKeys";
 import {
 	generateChartConfig,
@@ -52,6 +47,7 @@ export const AnalyticsView = () => {
 		bcExclusionFlag,
 		groupBy,
 		truncated,
+		entityNames,
 	} = useAnalyticsData({ hasCleared });
 
 	// Show toast when data is truncated due to too many unique group values
@@ -140,10 +136,11 @@ export const AnalyticsView = () => {
 			features,
 			groupBy,
 			originalColors: colors,
+			entityNames,
 		});
 
 		return { chartData: transformed, chartConfig: config };
-	}, [events, features, groupBy, groupFilter]);
+	}, [events, features, groupBy, groupFilter, entityNames]);
 
 	useEffect(() => {
 		if (error?.response?.data?.code === ErrCode.ClickHouseDisabled) {
@@ -156,35 +153,6 @@ export const AnalyticsView = () => {
 			<div className="flex flex-col items-center justify-center h-full">
 				<h3 className="text-sm text-t2 font-bold">ClickHouse is disabled</h3>
 			</div>
-		);
-	}
-
-	// Show empty state if no actual analytics events (check rawEvents and totalRows)
-	const hasNoData =
-		!rawQueryLoading &&
-		(!rawEvents || !rawEvents.data || rawEvents.data.length === 0) &&
-		totalRows === 0;
-
-	if (hasNoData) {
-		return (
-			<EmptyState
-				type="analytics"
-				actionButton={
-					<IconButton
-						variant="secondary"
-						iconOrientation="right"
-						icon={<ArrowSquareOutIcon size={16} />}
-						onClick={() => {
-							window.open(
-								"https://docs.useautumn.com/documentation/getting-started/gating",
-								"_blank",
-							);
-						}}
-					>
-						Docs
-					</IconButton>
-				}
-			/>
 		);
 	}
 
@@ -226,10 +194,12 @@ export const AnalyticsView = () => {
 				groupFilter,
 				setGroupFilter,
 				availableGroupValues,
+				entityNames,
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-4 sm:px-10 pt-4 sm:pt-8">
 				<OnboardingGuide />
+				<RevenueMetricsSection />
 				<div className="max-h-[400px] min-h-[400px] pb-6 shrink-0">
 					<div className="flex justify-between pb-4 h-10">
 						<div className="text-t3 text-md flex gap-2 items-center">

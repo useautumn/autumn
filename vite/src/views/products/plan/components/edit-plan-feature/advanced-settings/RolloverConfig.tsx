@@ -2,9 +2,7 @@ import {
 	type RolloverConfig as RolloverConfigType,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
-import { InfinityIcon } from "@phosphor-icons/react";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import {
@@ -16,6 +14,8 @@ import {
 } from "@/components/v2/selects/Select";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
+type MaxMode = "absolute" | "percentage" | "unlimited";
+
 /** Visibility is controlled by parent AdvancedSettings */
 export function RolloverConfig() {
 	const { item, setItem } = useProductItemContext();
@@ -26,6 +26,7 @@ export function RolloverConfig() {
 		duration: RolloverExpiryDurationType.Month,
 		length: 1 as number,
 		max: null,
+		max_percentage: null,
 	};
 
 	const setRolloverConfigKey = (
@@ -60,6 +61,36 @@ export function RolloverConfig() {
 	const rollover = item.config?.rollover as RolloverConfigType;
 	const hasRollover = item.config?.rollover != null;
 
+	const maxMode: MaxMode =
+		rollover?.max_percentage != null
+			? "percentage"
+			: rollover?.max === null
+				? "unlimited"
+				: "absolute";
+
+	const handleMaxModeChange = (mode: MaxMode) => {
+		const current = item.config?.rollover || defaultRollover;
+		if (mode === "unlimited") {
+			setRolloverConfig({
+				...current,
+				max: null,
+				max_percentage: null,
+			});
+		} else if (mode === "absolute") {
+			setRolloverConfig({
+				...current,
+				max: 0,
+				max_percentage: null,
+			});
+		} else {
+			setRolloverConfig({
+				...current,
+				max: null,
+				max_percentage: 50,
+			});
+		}
+	};
+
 	return (
 		<AreaCheckbox
 			title="Rollovers"
@@ -83,39 +114,70 @@ export function RolloverConfig() {
 		>
 			<div className="space-y-4 w-xs max-w-full">
 				<div className="space-y-2 w-full">
-					<FormLabel>Maximum rollover amount</FormLabel>
+					<FormLabel>Maximum rollover</FormLabel>
 					<div className="flex items-center gap-2">
-						<Input
-							type="number"
-							value={
-								rollover?.max === null
-									? ""
-									: rollover?.max === 0
-										? ""
-										: rollover?.max
+						<Select
+							value={maxMode}
+							onValueChange={(value) =>
+								handleMaxModeChange(value as MaxMode)
 							}
-							className="flex-1"
-							placeholder={
-								rollover?.max === null ? "Unlimited" : "e.g. 100 credits"
-							}
-							disabled={rollover?.max === null}
-							onChange={(e) => {
-								const value = e.target.value;
-								const numValue = value === "" ? 0 : parseInt(value) || 0;
-								setRolloverConfigKey("max", numValue);
-							}}
-							onClick={(e) => e.stopPropagation()}
-						/>
-						<IconCheckbox
-							icon={<InfinityIcon />}
-							iconOrientation="center"
-							variant="muted"
-							size="default"
-							checked={rollover?.max === null}
-							onCheckedChange={(checked) =>
-								setRolloverConfigKey("max", checked ? null : 0)
-							}
-						/>
+						>
+							<SelectTrigger
+								className="w-32"
+								onClick={(e) => e.stopPropagation()}
+							>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="unlimited">Unlimited</SelectItem>
+								<SelectItem value="absolute">Absolute</SelectItem>
+								<SelectItem value="percentage">Percentage</SelectItem>
+							</SelectContent>
+						</Select>
+
+						{maxMode === "absolute" && (
+							<Input
+								type="number"
+								value={
+									rollover?.max === 0 ? "" : (rollover?.max ?? "")
+								}
+								className="flex-1"
+								placeholder="e.g. 100 credits"
+								onChange={(e) => {
+									const value = e.target.value;
+									const numValue =
+										value === "" ? 0 : parseInt(value) || 0;
+									setRolloverConfigKey("max", numValue);
+								}}
+								onClick={(e) => e.stopPropagation()}
+							/>
+						)}
+
+						{maxMode === "percentage" && (
+							<div className="flex items-center gap-1 flex-1">
+								<Input
+									type="number"
+									value={
+										rollover?.max_percentage === 0
+											? ""
+											: (rollover?.max_percentage ?? "")
+									}
+									className="flex-1"
+									placeholder="e.g. 50"
+									onChange={(e) => {
+										const value = e.target.value;
+										const numValue =
+											value === "" ? 0 : parseInt(value) || 0;
+										setRolloverConfigKey(
+											"max_percentage",
+											Math.min(100, Math.max(0, numValue)),
+										);
+									}}
+									onClick={(e) => e.stopPropagation()}
+								/>
+								<span className="text-t3 text-sm">%</span>
+							</div>
+						)}
 					</div>
 				</div>
 

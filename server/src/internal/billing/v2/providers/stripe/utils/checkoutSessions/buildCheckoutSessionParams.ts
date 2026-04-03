@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { buildCheckoutSessionMetadata } from "./buildCheckoutSessionMetadata";
 
 /**
@@ -6,23 +7,27 @@ import { buildCheckoutSessionMetadata } from "./buildCheckoutSessionMetadata";
  * are preserved alongside Autumn-internal fields (e.g. trial_end).
  */
 const mergeSubscriptionData = ({
+	userMetadata,
 	paramsSubscriptionData,
 	userSubscriptionData,
 }: {
+	userMetadata?: Record<string, string>;
 	paramsSubscriptionData?: Stripe.Checkout.SessionCreateParams.SubscriptionData;
 	userSubscriptionData?: Stripe.Checkout.SessionCreateParams.SubscriptionData;
 }): Stripe.Checkout.SessionCreateParams.SubscriptionData | undefined => {
-	if (!paramsSubscriptionData && !userSubscriptionData) {
+	if (!paramsSubscriptionData && !userSubscriptionData && !userMetadata) {
 		return undefined;
 	}
+
+	const autumnMetadata = {
+		...(userSubscriptionData?.metadata ?? {}),
+		...(paramsSubscriptionData?.metadata ?? {}),
+	};
 
 	return {
 		...(userSubscriptionData ?? {}),
 		...(paramsSubscriptionData ?? {}),
-		metadata: {
-			...(userSubscriptionData?.metadata ?? {}),
-			...(paramsSubscriptionData?.metadata ?? {}),
-		},
+		metadata: mergeStripeMetadata({ userMetadata, autumnMetadata }) ?? {},
 	};
 };
 
@@ -34,6 +39,7 @@ export const buildCheckoutSessionParams = ({
 	defaultInvoiceCreation,
 	defaultSavedPaymentMethodOptions,
 	autumnMetadataId,
+	userMetadata,
 }: {
 	params: Stripe.Checkout.SessionCreateParams;
 	checkoutSessionParams?: Partial<Stripe.Checkout.SessionCreateParams>;
@@ -42,6 +48,7 @@ export const buildCheckoutSessionParams = ({
 	defaultInvoiceCreation?: Stripe.Checkout.SessionCreateParams.InvoiceCreation;
 	defaultSavedPaymentMethodOptions?: Stripe.Checkout.SessionCreateParams.SavedPaymentMethodOptions;
 	autumnMetadataId?: string;
+	userMetadata?: Record<string, string>;
 }): Stripe.Checkout.SessionCreateParams => {
 	const mergedParams: Stripe.Checkout.SessionCreateParams = {
 		...(checkoutSessionParams ?? {}),
@@ -65,11 +72,13 @@ export const buildCheckoutSessionParams = ({
 			defaultSavedPaymentMethodOptions,
 		invoice_creation: mergedParams.invoice_creation ?? defaultInvoiceCreation,
 		metadata: buildCheckoutSessionMetadata({
+			userMetadata,
 			paramsMetadata: params.metadata,
 			checkoutSessionMetadata: checkoutSessionParams?.metadata,
 			autumnMetadataId,
 		}),
 		subscription_data: mergeSubscriptionData({
+			userMetadata,
 			paramsSubscriptionData: params.subscription_data as
 				| Stripe.Checkout.SessionCreateParams.SubscriptionData
 				| undefined,

@@ -1,8 +1,8 @@
 import type {
 	CustomerEntitlement,
 	EntitlementWithFeature,
+	FullCusEntWithProduct,
 	FullCusProduct,
-	FullCustomerEntitlement,
 	Rollover,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -25,12 +25,8 @@ export const getNewProductRollovers = async ({
 	if (!curCusProduct.id) return [];
 	try {
 		const rolloverOperations: {
-			// rolloverConfig: RolloverConfig;
 			toInsert: Rollover[];
-			cusEnt: FullCustomerEntitlement;
-			// cusEntId: string;
-			// toUpdate: Rollover[];
-			// entityMode: boolean;
+			cusEnt: FullCusEntWithProduct;
 		}[] = [];
 
 		// let newRollovers: Rollover[] = [];
@@ -68,7 +64,6 @@ export const getNewProductRollovers = async ({
 				});
 			}
 
-			// // Add this entitlement's rollover operations
 			rolloverOperations.push({
 				toInsert: newRollovers,
 				cusEnt: {
@@ -76,6 +71,7 @@ export const getNewProductRollovers = async ({
 					entitlement: newEnt,
 					rollovers: [],
 					replaceables: [],
+					customer_product: curCusProduct,
 				},
 			});
 		}

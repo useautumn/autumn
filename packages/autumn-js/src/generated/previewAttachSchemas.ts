@@ -178,6 +178,7 @@ export const previewAttachProrationOutboundSchema = z.object({
 
 export const previewAttachRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -281,11 +282,16 @@ export const previewAttachParamsOutboundSchema = z.object({
 	carry_over_usages: z
 		.union([previewAttachCarryOverUsagesOutboundSchema, z.undefined()])
 		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
 });
 
 const closedEnumSchema = z.any();
 
 const planSchema = z.any();
+
+const openEnumSchema = z.any();
 
 export const previewAttachPriceIntervalSchema = closedEnumSchema;
 
@@ -334,6 +340,7 @@ export const previewAttachExpiryDurationTypeSchema = closedEnumSchema;
 
 export const previewAttachRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: previewAttachExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -418,6 +425,9 @@ export const previewAttachParamsSchema = z.object({
 	carryOverUsages: z
 		.union([previewAttachCarryOverUsagesSchema, z.undefined()])
 		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
 });
 
 export const previewAttachIncomingSchema = z.object({
@@ -425,6 +435,8 @@ export const previewAttachIncomingSchema = z.object({
 	plan: z.union([planSchema, z.undefined()]).optional(),
 	featureQuantities: z.array(previewAttachIncomingFeatureQuantitySchema),
 	effectiveAt: z.number().nullable(),
+	canceledAt: z.number().nullable(),
+	expiresAt: z.number().nullable(),
 });
 
 export const previewAttachOutgoingSchema = z.object({
@@ -432,7 +444,11 @@ export const previewAttachOutgoingSchema = z.object({
 	plan: z.union([planSchema, z.undefined()]).optional(),
 	featureQuantities: z.array(previewAttachOutgoingFeatureQuantitySchema),
 	effectiveAt: z.number().nullable(),
+	canceledAt: z.number().nullable(),
+	expiresAt: z.number().nullable(),
 });
+
+export const previewAttachCheckoutTypeSchema = openEnumSchema;
 
 export const previewAttachResponseSchema = z.object({
 	customerId: z.string(),
@@ -444,4 +460,6 @@ export const previewAttachResponseSchema = z.object({
 	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 	incoming: z.array(previewAttachIncomingSchema),
 	outgoing: z.array(previewAttachOutgoingSchema),
+	redirectToCheckout: z.boolean(),
+	checkoutType: previewAttachCheckoutTypeSchema.nullable(),
 });

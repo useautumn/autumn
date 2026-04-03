@@ -22,6 +22,8 @@ type CustomerDataUpdates = Pick<
 	| "processors"
 	| "auto_topups"
 	| "spend_limits"
+	| "usage_alerts"
+	| "overage_allowed"
 >;
 
 /**

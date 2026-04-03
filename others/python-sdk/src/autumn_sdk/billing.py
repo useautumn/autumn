@@ -56,6 +56,7 @@ class Billing(BaseSDK):
         carry_over_usages: Optional[
             Union[models.AttachCarryOverUsages, models.AttachCarryOverUsagesTypedDict]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -84,6 +85,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -133,6 +135,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.AttachCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request(
@@ -241,6 +244,7 @@ class Billing(BaseSDK):
         carry_over_usages: Optional[
             Union[models.AttachCarryOverUsages, models.AttachCarryOverUsagesTypedDict]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -269,6 +273,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -318,6 +323,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.AttachCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request_async(
@@ -739,6 +745,7 @@ class Billing(BaseSDK):
                 models.PreviewAttachCarryOverUsagesTypedDict,
             ]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -767,6 +774,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -817,6 +825,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.PreviewAttachCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request(
@@ -932,6 +941,7 @@ class Billing(BaseSDK):
                 models.PreviewAttachCarryOverUsagesTypedDict,
             ]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -960,6 +970,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1010,6 +1021,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.PreviewAttachCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request_async(
@@ -1418,6 +1430,12 @@ class Billing(BaseSDK):
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        recalculate_balances: Optional[
+            Union[
+                models.BillingUpdateRecalculateBalances,
+                models.BillingUpdateRecalculateBalancesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1439,6 +1457,7 @@ class Billing(BaseSDK):
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1473,6 +1492,9 @@ class Billing(BaseSDK):
             subscription_id=subscription_id,
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            recalculate_balances=utils.get_pydantic_model(
+                recalculate_balances, Optional[models.BillingUpdateRecalculateBalances]
+            ),
         )
 
         req = self._build_request(
@@ -1561,6 +1583,12 @@ class Billing(BaseSDK):
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        recalculate_balances: Optional[
+            Union[
+                models.BillingUpdateRecalculateBalances,
+                models.BillingUpdateRecalculateBalancesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1582,6 +1610,7 @@ class Billing(BaseSDK):
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1616,6 +1645,9 @@ class Billing(BaseSDK):
             subscription_id=subscription_id,
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            recalculate_balances=utils.get_pydantic_model(
+                recalculate_balances, Optional[models.BillingUpdateRecalculateBalances]
+            ),
         )
 
         req = self._build_request_async(
@@ -1704,6 +1736,12 @@ class Billing(BaseSDK):
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        recalculate_balances: Optional[
+            Union[
+                models.PreviewUpdateRecalculateBalances,
+                models.PreviewUpdateRecalculateBalancesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1725,6 +1763,7 @@ class Billing(BaseSDK):
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1760,6 +1799,9 @@ class Billing(BaseSDK):
             subscription_id=subscription_id,
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            recalculate_balances=utils.get_pydantic_model(
+                recalculate_balances, Optional[models.PreviewUpdateRecalculateBalances]
+            ),
         )
 
         req = self._build_request(
@@ -1848,6 +1890,12 @@ class Billing(BaseSDK):
         subscription_id: Optional[str] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
+        recalculate_balances: Optional[
+            Union[
+                models.PreviewUpdateRecalculateBalances,
+                models.PreviewUpdateRecalculateBalancesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1869,6 +1917,7 @@ class Billing(BaseSDK):
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
+        :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1904,6 +1953,9 @@ class Billing(BaseSDK):
             subscription_id=subscription_id,
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
+            recalculate_balances=utils.get_pydantic_model(
+                recalculate_balances, Optional[models.PreviewUpdateRecalculateBalances]
+            ),
         )
 
         req = self._build_request_async(
@@ -2202,6 +2254,7 @@ class Billing(BaseSDK):
                 models.SetupPaymentCarryOverUsagesTypedDict,
             ]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2224,6 +2277,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2267,6 +2321,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.SetupPaymentCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request(
@@ -2373,6 +2428,7 @@ class Billing(BaseSDK):
                 models.SetupPaymentCarryOverUsagesTypedDict,
             ]
         ] = None,
+        metadata: Optional[Dict[str, str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2395,6 +2451,7 @@ class Billing(BaseSDK):
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
+        :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2438,6 +2495,7 @@ class Billing(BaseSDK):
             carry_over_usages=utils.get_pydantic_model(
                 carry_over_usages, Optional[models.SetupPaymentCarryOverUsages]
             ),
+            metadata=metadata,
         )
 
         req = self._build_request_async(

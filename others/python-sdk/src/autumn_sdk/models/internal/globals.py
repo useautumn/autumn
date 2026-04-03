@@ -11,6 +11,7 @@ from typing_extensions import Annotated, NotRequired, TypedDict
 
 class GlobalsTypedDict(TypedDict):
     x_api_version: NotRequired[str]
+    fail_open: NotRequired[bool]
 
 
 class Globals(BaseModel):
@@ -20,15 +21,21 @@ class Globals(BaseModel):
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
     ] = "2.2.0"
 
+    fail_open: Annotated[
+        Optional[bool],
+        pydantic.Field(alias="fail-open"),
+        FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
+    ] = True
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["x-api-version"])
+        optional_fields = set(["x-api-version", "fail-open"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:

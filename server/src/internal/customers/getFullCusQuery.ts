@@ -440,41 +440,12 @@ export const getPaginatedFullCusQuery = ({
 			: sql``;
 	};
 
-	const withCustomerProductFilter = () => {
-		const hasPlansFilter = plans && plans.length > 0;
-
-		// Only filter customers by plans, not by status
-		// Status filtering is applied to customer_products, not to exclude customers
-		// This allows customers with only loose entitlements (no customer_products) to be included
-		if (!hasPlansFilter) return sql``;
-
-		const planConditions = plans.map((plan) => {
-			if (plan.versions && plan.versions.length > 0) {
-				return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
-					plan.versions.map((v) => sql`${v}`),
-					sql`, `,
-				)}))`;
-			}
-			return sql`p_filter.id = ${plan.id}`;
-		});
-
-		return sql`AND EXISTS (
-			SELECT 1 FROM customer_products cp_filter
-			JOIN products p_filter ON cp_filter.internal_product_id = p_filter.internal_id
-			WHERE cp_filter.internal_customer_id = c.internal_id
-				AND (${sql.join(planConditions, sql` OR `)})
-		)`;
-	};
-
-	const withSearchFilter = () => {
-		if (!search) return sql``;
-		const pattern = `%${search}%`;
-		return sql`AND (
-			c.id ILIKE ${pattern}
-			OR c.name ILIKE ${pattern}
-			OR c.email ILIKE ${pattern}
-		)`;
-	};
+	const customerListFilterSql = getCustomerListFilterSql({
+		internalCustomerIds,
+		inStatuses,
+		plans,
+		search,
+	});
 
 	// ADDITION: Unconditionally add extra entitlements CTE (305-308)
 	// This matches the style of the rest of the CTE construction blocks.
@@ -529,16 +500,7 @@ export const getPaginatedFullCusQuery = ({
       FROM customers c
       WHERE c.org_id = ${orgId}
         AND c.env = ${env}
-      ${
-				internalCustomerIds && internalCustomerIds.length > 0
-					? sql`AND c.internal_id IN (${sql.join(
-							internalCustomerIds.map((id) => sql`${id}`),
-							sql`, `,
-						)})`
-					: sql``
-			}
-      ${withCustomerProductFilter()}
-      ${withSearchFilter()}
+	      ${customerListFilterSql}
       ORDER BY c.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     ),
@@ -744,4 +706,86 @@ export const getPaginatedFullCusQuery = ({
     LEFT JOIN extra_customer_entitlements ece ON ece.internal_customer_id = cr.internal_id
     ORDER BY cr.created_at DESC
   `;
+};
+
+export const hasCustomerListFilters = ({
+	internalCustomerIds,
+	inStatuses: _inStatuses,
+	plans,
+	search,
+}: {
+	internalCustomerIds?: string[];
+	inStatuses?: CusProductStatus[];
+	plans?: ListCustomersV2Params["plans"];
+	search?: string;
+}) => {
+	return Boolean(
+		(internalCustomerIds && internalCustomerIds.length > 0) ||
+			(plans && plans.length > 0) ||
+			search?.trim(),
+	);
+};
+
+export const getCustomerListFilterSql = ({
+	internalCustomerIds,
+	inStatuses,
+	plans,
+	search,
+}: {
+	internalCustomerIds?: string[];
+	inStatuses?: CusProductStatus[];
+	plans?: ListCustomersV2Params["plans"];
+	search?: string;
+}) => {
+	const filters = [];
+
+	if (internalCustomerIds && internalCustomerIds.length > 0) {
+		filters.push(
+			sql`AND c.internal_id IN (${sql.join(
+				internalCustomerIds.map((id) => sql`${id}`),
+				sql`, `,
+			)})`,
+		);
+	}
+
+	if (plans && plans.length > 0) {
+		const planConditions = plans.map((plan) => {
+			if (plan.versions && plan.versions.length > 0) {
+				return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
+					plan.versions.map((version) => sql`${version}`),
+					sql`, `,
+				)}))`;
+			}
+
+			return sql`p_filter.id = ${plan.id}`;
+		});
+
+		filters.push(sql`AND EXISTS (
+			SELECT 1
+			FROM customer_products cp_filter
+			JOIN products p_filter ON cp_filter.internal_product_id = p_filter.internal_id
+			WHERE cp_filter.internal_customer_id = c.internal_id
+				${
+					inStatuses?.length
+						? sql`AND cp_filter.status = ANY(ARRAY[${sql.join(
+								inStatuses.map((status) => sql`${status}`),
+								sql`, `,
+							)}])`
+						: sql``
+				}
+				AND (${sql.join(planConditions, sql` OR `)})
+		)`);
+	}
+
+	const trimmedSearch = search?.trim();
+	if (trimmedSearch) {
+		const pattern = `%${trimmedSearch}%`;
+		filters.push(sql`AND (
+			c.id ILIKE ${pattern}
+			OR c.name ILIKE ${pattern}
+			OR c.email ILIKE ${pattern}
+		)`);
+	}
+
+	return sql.join(filters, sql` `);
 };

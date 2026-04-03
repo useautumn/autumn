@@ -1,0 +1,508 @@
+---
+title: "Billing Controls"
+description: "Configure overage behavior, spend limits, usage alerts, and auto top-ups per customer or entity"
+---
+
+Billing controls let you manage how individual customers (or [entities](/documentation/customers/feature-entities)) consume usage-based features. You can toggle whether overage is allowed, cap how much overage accumulates, get notified when usage crosses a threshold, and automatically replenish prepaid balances — all configured per-customer via the API or viewed in the dashboard.
+
+All billing controls are set through the `billingControls` field when [updating a customer](/api-reference/customers/updateCustomer) or [updating an entity](/api-reference/entities/updateEntity).
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    overageAllowed: [{ featureId: "api_calls", enabled: true }],
+    spendLimits: [{ featureId: "api_calls", enabled: true, overageLimit: 5000 }],
+    usageAlerts: [{ featureId: "api_calls", threshold: 80, thresholdType: "usage_percentage", enabled: true }],
+    autoTopups: [{ featureId: "credits", enabled: true, threshold: 500, quantity: 1000 }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "overage_allowed": [{"feature_id": "api_calls", "enabled": True}],
+        "spend_limits": [{"feature_id": "api_calls", "enabled": True, "overage_limit": 5000}],
+        "usage_alerts": [{"feature_id": "api_calls", "threshold": 80, "threshold_type": "usage_percentage", "enabled": True}],
+        "auto_topups": [{"feature_id": "credits", "enabled": True, "threshold": 500, "quantity": 1000}],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "overage_allowed": [{"feature_id": "api_calls", "enabled": true}],
+      "spend_limits": [{"feature_id": "api_calls", "enabled": true, "overage_limit": 5000}],
+      "usage_alerts": [{"feature_id": "api_calls", "threshold": 80, "threshold_type": "usage_percentage", "enabled": true}],
+      "auto_topups": [{"feature_id": "credits", "enabled": true, "threshold": 500, "quantity": 1000}]
+    }
+  }'
+```
+
+</CodeGroup>
+
+## Overage Allowed
+
+By default, whether a customer can use a feature beyond their included balance depends on the plan's pricing model. Features with [usage-based pricing](/documentation/modelling-pricing/usage-based-pricing) (pay-per-use) automatically allow overage — the customer keeps using and gets billed for the extra. Features without usage-based pricing (like a flat included allowance) block usage once the balance hits zero.
+
+The `overageAllowed` control lets you override this default per customer or entity.
+
+#### Default behavior (no override)
+
+| Plan item pricing | Overage? |
+|-------------------|----------|
+| Usage-based (pay-per-use) | Allowed — customer is billed for overage |
+| Included / prepaid (no overage price) | Blocked — `check` returns `allowed: false` at zero balance |
+
+#### With `overageAllowed` enabled
+
+Setting `overageAllowed` to `true` on a feature lets a customer consume beyond their included balance **even when the plan doesn't have usage-based pricing** for that feature. The balance goes negative, meaning you can track how much overage occurred, though no automatic overage charge is created.
+
+> **Example** <br />
+> A customer is on a free plan with 100 API calls included (no overage pricing). Normally they'd be blocked at 0 remaining. You set `overageAllowed: true` for `api_calls`. Now they can keep using beyond 100, and you can decide how to handle the overage in your application (prompt an upgrade, bill manually, etc.).
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    overageAllowed: [{
+      featureId: "api_calls",
+      enabled: true,
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "overage_allowed": [{
+            "feature_id": "api_calls",
+            "enabled": True,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "overage_allowed": [{
+        "feature_id": "api_calls",
+        "enabled": true
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string | The feature to override overage behavior for |
+| `enabled` | boolean | `true` to allow overage, `false` to block it |
+
+#### Disabling overage on a pay-per-use feature
+
+You can also use `overageAllowed` to **block** overage on a feature that would normally allow it. Setting `enabled: false` forces a hard cap at the included balance — even if the plan has usage-based pricing for that feature.
+
+> **Example** <br />
+> A customer's plan includes 1,000 API calls with pay-per-use overage at $1/1,000 calls. You set `overageAllowed: false` for `api_calls`. The customer is now blocked at 1,000 total calls — no overage charges will occur.
+
+<Warning>
+Setting `overageAllowed: false` is a hard override. It takes precedence over usage-based pricing on the plan. The customer will be blocked at zero remaining balance regardless of whether overage pricing exists.
+</Warning>
+
+#### How it interacts with spend limits
+
+`overageAllowed` and [spend limits](#spend-limits) are complementary:
+
+- **`overageAllowed`** answers: *can* usage go beyond the included balance?
+- **Spend limits** answer: *how far* can overage go?
+
+If both are set, `overageAllowed` is checked first. If overage is blocked (`enabled: false`), the spend limit is irrelevant. If overage is allowed, the spend limit caps how much overage can accumulate.
+
+## Spend Limits
+
+Spend limits cap how much overage a customer can accumulate on a usage-based feature. Once the cap is reached, `check` returns `allowed: false` and `track` stops deducting.
+
+> **Example** <br />
+> A customer's plan includes 1,000 API calls with $1 per 1,000 overage calls. You set a spend limit of 5,000 on `api_calls`. The customer can use up to 6,000 total calls (1,000 included + 5,000 overage), then they're blocked.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    spendLimits: [{
+      featureId: "api_calls",
+      enabled: true,
+      overageLimit: 5000,
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "spend_limits": [{
+            "feature_id": "api_calls",
+            "enabled": True,
+            "overage_limit": 5000,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "spend_limits": [{
+        "feature_id": "api_calls",
+        "enabled": true,
+        "overage_limit": 5000
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string | The feature to cap |
+| `enabled` | boolean | Whether the spend limit is active |
+| `overage_limit` | number | Maximum overage units beyond the included amount |
+
+<Note>
+The `overage_limit` is measured in feature units, not dollars. An `overage_limit` of 5,000 on "API calls" means 5,000 additional API calls beyond the included allowance.
+</Note>
+
+When both a spend limit and a plan-level max purchase exist for the same feature, the **spend limit takes precedence**. This lets you use max purchase as a default for all customers, then selectively raise or lower the cap per-customer.
+
+For a deeper dive, see [Spend Limits & Usage Alerts](/documentation/modelling-pricing/spend-limits).
+
+## Usage Alerts
+
+Usage alerts fire a webhook when a customer's usage crosses a threshold. They don't block usage — they notify, so you can take action like sending a warning email or prompting an upgrade.
+
+There are two threshold types:
+
+- **`usage`** — fires when absolute usage reaches a specific count
+- **`usage_percentage`** — fires when usage reaches a percentage of the included allowance
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    usageAlerts: [
+      {
+        featureId: "api_calls",
+        threshold: 80,
+        thresholdType: "usage_percentage",
+        enabled: true,
+        name: "80% usage warning",
+      },
+      {
+        featureId: "api_calls",
+        threshold: 900,
+        thresholdType: "usage",
+        enabled: true,
+        name: "Approaching limit",
+      },
+    ],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "usage_alerts": [
+            {
+                "feature_id": "api_calls",
+                "threshold": 80,
+                "threshold_type": "usage_percentage",
+                "enabled": True,
+                "name": "80% usage warning",
+            },
+            {
+                "feature_id": "api_calls",
+                "threshold": 900,
+                "threshold_type": "usage",
+                "enabled": True,
+                "name": "Approaching limit",
+            },
+        ],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "usage_alerts": [
+        {
+          "feature_id": "api_calls",
+          "threshold": 80,
+          "threshold_type": "usage_percentage",
+          "enabled": true,
+          "name": "80% usage warning"
+        },
+        {
+          "feature_id": "api_calls",
+          "threshold": 900,
+          "threshold_type": "usage",
+          "enabled": true,
+          "name": "Approaching limit"
+        }
+      ]
+    }
+  }'
+```
+
+</CodeGroup>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string | The feature to monitor |
+| `threshold` | number | Trigger value — absolute count or percentage (0–100) |
+| `threshold_type` | string | `"usage"` for absolute count, `"usage_percentage"` for percentage of included allowance |
+| `enabled` | boolean | Whether the alert is active (defaults to `true`) |
+| `name` | string (optional) | A label to distinguish multiple alerts |
+
+Each alert fires **once** per threshold crossing. It won't re-fire unless usage drops below the threshold and crosses it again.
+
+When triggered, Autumn sends a `balances.usage_alert_triggered` [webhook](/documentation/webhooks). See the [webhook schema](/api-reference/webhooks/balancesUsageAlertTriggered) for the full payload.
+
+For more details and examples, see [Spend Limits & Usage Alerts](/documentation/modelling-pricing/spend-limits#usage-alerts).
+
+## Auto Top-Ups
+
+Auto top-ups automatically replenish a customer's prepaid balance when it drops below a configured threshold. This prevents service interruptions for customers who don't want to manually manage their credits.
+
+> **Example** <br />
+> A customer gets 5,000 credits per month. When their balance drops below 500, Autumn automatically purchases 1,000 more credits using the plan's one-off prepaid price.
+
+Auto top-ups require a plan with a [one-off prepaid](/documentation/modelling-pricing/one-off-purchases) item for the feature, and the customer must have a payment method on file.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    autoTopups: [{
+      featureId: "credits",
+      enabled: true,
+      threshold: 500,
+      quantity: 1000,
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "auto_topups": [{
+            "feature_id": "credits",
+            "enabled": True,
+            "threshold": 500,
+            "quantity": 1000,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "auto_topups": [{
+        "feature_id": "credits",
+        "enabled": true,
+        "threshold": 500,
+        "quantity": 1000
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string | The feature (credit balance) to monitor |
+| `enabled` | boolean | Whether auto top-up is active |
+| `threshold` | number | Balance level that triggers a top-up |
+| `quantity` | number | Units to purchase each time |
+| `purchase_limit` | object (optional) | Rate limit on how often top-ups can occur |
+
+To prevent runaway spending, you can set a purchase limit:
+
+```json
+{
+  "purchase_limit": {
+    "interval": "month",
+    "interval_count": 1,
+    "limit": 5
+  }
+}
+```
+
+This limits the customer to 5 auto top-ups per month. Supported intervals: `hour`, `day`, `week`, `month`.
+
+For setup instructions and how it works end-to-end, see [Auto Top-Ups](/documentation/modelling-pricing/auto-top-ups).
+
+## Customer vs Entity Controls
+
+Billing controls can be set at two levels:
+
+| Control | Customer-level | Entity-level |
+|---------|---------------|--------------|
+| **Overage allowed** | Yes | Yes |
+| **Spend limits** | Yes | Yes |
+| **Usage alerts** | Yes | Yes |
+| **Auto top-ups** | Yes | No |
+
+**Entity-level** controls are configured by updating the entity instead of the customer. Entity-level controls override customer-level controls for that entity — for example, an entity overage override takes precedence over the customer-level setting, and entity spend limits override the customer-level limit.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.entities.update({
+  customerId: "org_123",
+  entityId: "workspace_a",
+  billingControls: {
+    overageAllowed: [{
+      featureId: "api_calls",
+      enabled: true,
+    }],
+    spendLimits: [{
+      featureId: "api_calls",
+      enabled: true,
+      overageLimit: 2000,
+    }],
+    usageAlerts: [{
+      featureId: "api_calls",
+      threshold: 90,
+      thresholdType: "usage_percentage",
+      enabled: true,
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.entities.update(
+    customer_id="org_123",
+    entity_id="workspace_a",
+    billing_controls={
+        "overage_allowed": [{
+            "feature_id": "api_calls",
+            "enabled": True,
+        }],
+        "spend_limits": [{
+            "feature_id": "api_calls",
+            "enabled": True,
+            "overage_limit": 2000,
+        }],
+        "usage_alerts": [{
+            "feature_id": "api_calls",
+            "threshold": 90,
+            "threshold_type": "usage_percentage",
+            "enabled": True,
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/entities/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "org_123",
+    "entity_id": "workspace_a",
+    "billing_controls": {
+      "overage_allowed": [{
+        "feature_id": "api_calls",
+        "enabled": true
+      }],
+      "spend_limits": [{
+        "feature_id": "api_calls",
+        "enabled": true,
+        "overage_limit": 2000
+      }],
+      "usage_alerts": [{
+        "feature_id": "api_calls",
+        "threshold": 90,
+        "threshold_type": "usage_percentage",
+        "enabled": true
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+<Info>
+Auto top-ups are customer-level only because they create invoices and charge a payment method, which is tied to the customer account — not individual entities.
+</Info>
+
+## Related Webhooks
+
+Billing controls tie into three webhook events that fire automatically based on usage:
+
+| Event | When it fires |
+|-------|---------------|
+| [`balances.limit_reached`](/api-reference/webhooks/balancesLimitReached) | Customer transitions from allowed to not allowed on a feature (included allowance exhausted, max purchase hit, or spend limit reached) |
+| [`balances.usage_alert_triggered`](/api-reference/webhooks/balancesUsageAlertTriggered) | Customer's usage crosses a configured alert threshold |
+| [`customer.products.updated`](/documentation/webhooks#customerproductsupdated) | Customer's subscription changes (new, upgrade, downgrade, cancel, etc.) |
+
+For webhook setup and security details, see [Webhooks](/documentation/webhooks).
+
+## Viewing in the Dashboard
+
+You can view a customer's active billing controls on their details page in the [Autumn dashboard](https://app.useautumn.com/customers). The billing controls section shows all configured auto top-ups, spend limits, and usage alerts with their current settings.
+
+When viewing an entity, the dashboard shows entity-level spend limits and usage alerts for that entity.
+
+<Note>
+Billing controls are configured via the API — the dashboard provides a read-only view of the current configuration.
+</Note>

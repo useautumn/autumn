@@ -4,16 +4,12 @@ import { Mail } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { z } from "zod/v4";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Input } from "@/components/v2/inputs/Input";
-import { useOrg } from "@/hooks/common/useOrg";
-import { authClient, signIn } from "@/lib/auth-client";
+import { authClient, signIn, useSession } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
 import { OTPSignIn } from "./components/OTPSignIn";
-
-const emailSchema = z.string().email();
 
 /**
  * Check if URL has OAuth parameters (from OAuth provider redirect)
@@ -40,7 +36,7 @@ export const SignIn = () => {
 	const [sendOtpLoading, setSendOtpLoading] = useState(false);
 	const [otpSent, setOtpSent] = useState(false);
 
-	const { org } = useOrg();
+	const { data: session } = useSession();
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 
@@ -66,14 +62,10 @@ export const SignIn = () => {
 		}
 
 		// Regular sign-in flow - redirect to dashboard if already authenticated
-		if (org) {
-			if (org.deployed) {
-				navigate("/products?tab=products");
-			} else {
-				navigate("/sandbox/products?tab=products");
-			}
+		if (session) {
+			navigate("/", { replace: true });
 		}
-	}, [org, navigate, oauthRedirectUrl]);
+	}, [session, navigate, oauthRedirectUrl]);
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();

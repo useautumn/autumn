@@ -7,6 +7,7 @@ import {
 	findFeatureOptionsByFeature,
 	InternalError,
 	isOneOffPrice,
+	isPrepaidPrice,
 	type LineItem,
 	RecaseError,
 	type UpdateCustomerEntitlement,
@@ -78,7 +79,9 @@ export const computeUpdateQuantityDetails = ({
 
 	const customerPrice = findCusPriceByFeature({
 		internalFeatureId: internalFeatureId,
-		cusPrices: customerProduct.customer_prices,
+		cusPrices: customerProduct.customer_prices.filter((cp) =>
+			isPrepaidPrice(cp.price),
+		),
 		errorOnNotFound: true,
 	});
 

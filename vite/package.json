@@ -81,7 +81,6 @@
 		"streamdown": "^1.6.10",
 		"stripe": "catalog:",
 		"svix-react": "^1.13.3",
-		"swr": "^2.3.3",
 		"tailwind-merge": "^3.0.2",
 		"tailwind-scrollbar-hide": "^4.0.0",
 		"tailwindcss": "^4.0.13",

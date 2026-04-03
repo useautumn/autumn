@@ -30,6 +30,21 @@ SQL >
         {% if defined(entity_id) %}
         AND entity_id = {{ String(entity_id) }}
         {% end %}
+        {% if defined(filter_key_0) and String(filter_key_0, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_0, '')) }}::String = {{ String(filter_value_0, '') }}
+        {% end %}
+        {% if defined(filter_key_1) and String(filter_key_1, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_1, '')) }}::String = {{ String(filter_value_1, '') }}
+        {% end %}
+        {% if defined(filter_key_2) and String(filter_key_2, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_2, '')) }}::String = {{ String(filter_value_2, '') }}
+        {% end %}
+        {% if defined(filter_key_3) and String(filter_key_3, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_3, '')) }}::String = {{ String(filter_value_3, '') }}
+        {% end %}
+        {% if defined(filter_key_4) and String(filter_key_4, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_4, '')) }}::String = {{ String(filter_value_4, '') }}
+        {% end %}
 
 NODE aggregate_by_period
 TYPE endpoint

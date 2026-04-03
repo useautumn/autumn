@@ -158,6 +158,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
               Max rollover units. Omit for unlimited rollover.
             </DynamicParamField>
 
+            <DynamicParamField body="max_percentage" type="number">
+              Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+            </DynamicParamField>
+
             <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
               When rolled over units expire.
             </DynamicParamField>
@@ -299,6 +303,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="metadata.{key}" type="string">
+  Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+</DynamicParamField>
+
 
 ### Response
 
@@ -307,7 +315,6 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="line_items" type="object[]">
-  List of line items for the current billing period.
   <Expandable title="properties">
     <DynamicResponseField name="display_name" type="string">
       The name of the line item to display to the customer if you're building a UI. It will either be the plan name or the feature name.
@@ -702,6 +709,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
                   Maximum rollover units. Null for unlimited rollover.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="max_percentage" type="number | null">
+                  Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                </DynamicResponseField>
+
                 <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'">
                   When rolled over units expire.
                 </DynamicResponseField>
@@ -794,6 +805,14 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
     <DynamicResponseField name="effective_at" type="number | null">
       When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="canceled_at" type="number | null">
+      When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
     </DynamicResponseField>
 
   </Expandable>
@@ -1005,6 +1024,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
                   Maximum rollover units. Null for unlimited rollover.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="max_percentage" type="number | null">
+                  Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                </DynamicResponseField>
+
                 <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'">
                   When rolled over units expire.
                 </DynamicResponseField>
@@ -1099,7 +1122,23 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
     </DynamicResponseField>
 
+    <DynamicResponseField name="canceled_at" type="number | null">
+      When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="expires_at" type="number | null">
+      When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+    </DynamicResponseField>
+
   </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="redirect_to_checkout" type="boolean">
+  Whether the customer will be redirected to a checkout page if attach is called.
+</DynamicResponseField>
+
+<DynamicResponseField name="checkout_type" type="'stripe_checkout' | 'autumn_checkout'">
+  The type of checkout that will be used if the customer is redirected to a checkout page.
 </DynamicResponseField>
 
 

@@ -27,6 +27,7 @@ const MAX_MESSAGES_BEFORE_RECYCLE = 50_000;
 
 // Idle self-kill — exit if worker processes 0 messages for this many consecutive intervals
 const IDLE_SELF_KILL_THRESHOLD = 5; // ~5 min of 0 messages (5 * 60s)
+const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 
 // Per-message processing timeout — must be under VisibilityTimeout (30s)
 const MESSAGE_TIMEOUT_MS = 25_000;
@@ -134,6 +135,7 @@ const startPollingLoop = async ({
 			consecutiveZeroMessageIntervals++;
 
 			if (
+				shouldIdleSelfKill &&
 				consecutiveZeroMessageIntervals >= IDLE_SELF_KILL_THRESHOLD &&
 				totalMessagesProcessed > 0 &&
 				activeMigrationJobs === 0

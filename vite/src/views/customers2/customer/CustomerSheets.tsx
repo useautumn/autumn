@@ -13,6 +13,7 @@ import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/
 import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet2";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { AttachProductSheetV2 } from "../components/sheets/AttachProductSheetV2";
+import { BalanceDeleteSheet } from "../components/sheets/BalanceDeleteSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
@@ -50,6 +51,8 @@ export function CustomerSheets() {
 				return <SubscriptionUncancelSheet />;
 			case "balance-edit":
 				return <BalanceEditSheet />;
+			case "balance-delete":
+				return <BalanceDeleteSheet />;
 			case "invoice-detail": {
 				const invoice = sheetData?.invoice as Invoice | undefined;
 				const lineItems = (sheetData?.lineItems as InvoiceLineItem[]) ?? [];
@@ -72,7 +75,7 @@ export function CustomerSheets() {
 					className="absolute right-0 top-0 bottom-0"
 					style={{ width: isMobile ? "100%" : "28rem", zIndex: 45 }}
 				>
-					<SheetContainer className="w-full bg-background z-40 sm:border-l border-border/40 h-full relative">
+					<SheetContainer className="w-full bg-card z-40 sm:border-l border-border/40 h-full relative">
 						<SheetCloseButton onClose={handleClose} />
 						{renderSheet()}
 					</SheetContainer>

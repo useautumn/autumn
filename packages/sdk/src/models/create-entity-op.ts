@@ -6,7 +6,7 @@ import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import * as openEnums from "../types/enums.js";
-import { OpenEnum } from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { Balance, Balance$inboundSchema } from "./balance.js";
@@ -38,6 +38,54 @@ export type CreateEntitySpendLimitRequest = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const CreateEntityThresholdTypeRequestBody = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type CreateEntityThresholdTypeRequestBody = ClosedEnum<
+  typeof CreateEntityThresholdTypeRequestBody
+>;
+
+export type CreateEntityUsageAlertRequestBody = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: CreateEntityThresholdTypeRequestBody;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type CreateEntityOverageAllowedRequest = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
  * Billing controls for the entity.
  */
 export type CreateEntityBillingControlsRequest = {
@@ -45,6 +93,14 @@ export type CreateEntityBillingControlsRequest = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<CreateEntitySpendLimitRequest> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<CreateEntityUsageAlertRequestBody> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CreateEntityOverageAllowedRequest> | undefined;
 };
 
 export type CreateEntityParams = {
@@ -289,6 +345,54 @@ export type CreateEntitySpendLimitResponse = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const CreateEntityThresholdTypeResponse = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type CreateEntityThresholdTypeResponse = OpenEnum<
+  typeof CreateEntityThresholdTypeResponse
+>;
+
+export type CreateEntityUsageAlertResponse = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled: boolean;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: CreateEntityThresholdTypeResponse;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type CreateEntityOverageAllowedResponse = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
  * Billing controls for the entity.
  */
 export type CreateEntityBillingControlsResponse = {
@@ -296,6 +400,14 @@ export type CreateEntityBillingControlsResponse = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<CreateEntitySpendLimitResponse> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<CreateEntityUsageAlertResponse> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CreateEntityOverageAllowedResponse> | undefined;
 };
 
 export type CreateEntityInvoice = {
@@ -407,8 +519,88 @@ export function createEntitySpendLimitRequestToJSON(
 }
 
 /** @internal */
+export const CreateEntityThresholdTypeRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof CreateEntityThresholdTypeRequestBody
+> = z.enum(CreateEntityThresholdTypeRequestBody);
+
+/** @internal */
+export type CreateEntityUsageAlertRequestBody$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const CreateEntityUsageAlertRequestBody$outboundSchema: z.ZodMiniType<
+  CreateEntityUsageAlertRequestBody$Outbound,
+  CreateEntityUsageAlertRequestBody
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: CreateEntityThresholdTypeRequestBody$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function createEntityUsageAlertRequestBodyToJSON(
+  createEntityUsageAlertRequestBody: CreateEntityUsageAlertRequestBody,
+): string {
+  return JSON.stringify(
+    CreateEntityUsageAlertRequestBody$outboundSchema.parse(
+      createEntityUsageAlertRequestBody,
+    ),
+  );
+}
+
+/** @internal */
+export type CreateEntityOverageAllowedRequest$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const CreateEntityOverageAllowedRequest$outboundSchema: z.ZodMiniType<
+  CreateEntityOverageAllowedRequest$Outbound,
+  CreateEntityOverageAllowedRequest
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function createEntityOverageAllowedRequestToJSON(
+  createEntityOverageAllowedRequest: CreateEntityOverageAllowedRequest,
+): string {
+  return JSON.stringify(
+    CreateEntityOverageAllowedRequest$outboundSchema.parse(
+      createEntityOverageAllowedRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type CreateEntityBillingControlsRequest$Outbound = {
   spend_limits?: Array<CreateEntitySpendLimitRequest$Outbound> | undefined;
+  usage_alerts?: Array<CreateEntityUsageAlertRequestBody$Outbound> | undefined;
+  overage_allowed?:
+    | Array<CreateEntityOverageAllowedRequest$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -420,10 +612,18 @@ export const CreateEntityBillingControlsRequest$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => CreateEntitySpendLimitRequest$outboundSchema)),
     ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => CreateEntityUsageAlertRequestBody$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => CreateEntityOverageAllowedRequest$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       spendLimits: "spend_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
     });
   }),
 );
@@ -719,6 +919,69 @@ export function createEntitySpendLimitResponseFromJSON(
 }
 
 /** @internal */
+export const CreateEntityThresholdTypeResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityThresholdTypeResponse,
+  unknown
+> = openEnums.inboundSchema(CreateEntityThresholdTypeResponse);
+
+/** @internal */
+export const CreateEntityUsageAlertResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityUsageAlertResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), true),
+    threshold: types.number(),
+    threshold_type: CreateEntityThresholdTypeResponse$inboundSchema,
+    name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "threshold_type": "thresholdType",
+    });
+  }),
+);
+
+export function createEntityUsageAlertResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityUsageAlertResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreateEntityUsageAlertResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityUsageAlertResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const CreateEntityOverageAllowedResponse$inboundSchema: z.ZodMiniType<
+  CreateEntityOverageAllowedResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function createEntityOverageAllowedResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreateEntityOverageAllowedResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      CreateEntityOverageAllowedResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreateEntityOverageAllowedResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreateEntityBillingControlsResponse$inboundSchema: z.ZodMiniType<
   CreateEntityBillingControlsResponse,
   unknown
@@ -727,10 +990,18 @@ export const CreateEntityBillingControlsResponse$inboundSchema: z.ZodMiniType<
     spend_limits: types.optional(
       z.array(z.lazy(() => CreateEntitySpendLimitResponse$inboundSchema)),
     ),
+    usage_alerts: types.optional(
+      z.array(z.lazy(() => CreateEntityUsageAlertResponse$inboundSchema)),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => CreateEntityOverageAllowedResponse$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "spend_limits": "spendLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
     });
   }),
 );

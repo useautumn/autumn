@@ -10,7 +10,7 @@ import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocat
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
-import { handleThresholdReached } from "../handleThresholdReached.js";
+import { fireTrackWebhooks } from "../../trackWebhooks/fireTrackWebhooks.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -24,6 +24,7 @@ import type { RolloverUpdate } from "../types/rolloverUpdate.js";
 import { applyDeductionUpdateToFullCustomer } from "./applyDeductionUpdateToFullCustomer.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
+import { mutationLogsToFeatures } from "./mutationLogsToFeatures.js";
 import { prepareDeductionOptions } from "./prepareDeductionOptions.js";
 import { prepareFeatureDeduction } from "./prepareFeatureDeduction.js";
 
@@ -120,6 +121,9 @@ export const executeRedisDeduction = async ({
 
 		// Call Lua script to deduct from FullCustomer in Redis
 		const luaParams = {
+			org_id: org.id,
+			env,
+			customer_id: customerId,
 			sorted_entitlements: customerEntitlementDeductions,
 			spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 			usage_based_cus_ent_ids_by_feature_id:
@@ -235,15 +239,18 @@ export const executeRedisDeduction = async ({
 			throw error;
 		}
 
-		handleThresholdReached({
+		const featuresFromMutationLogs = mutationLogsToFeatures({
+			fullCustomer,
+			mutationLogs: mutation_logs,
+		});
+
+		fireTrackWebhooks({
 			ctx,
 			oldFullCus,
 			newFullCus: fullCustomer,
 			feature: deduction.feature,
-		}).catch((error) => {
-			ctx.logger.error(
-				`[executeRedisDeduction] Failed to handle threshold reached: ${error}`,
-			);
+			entityId,
+			featuresFromMutationLogs,
 		});
 
 		if (options.triggerAutoTopUp) {

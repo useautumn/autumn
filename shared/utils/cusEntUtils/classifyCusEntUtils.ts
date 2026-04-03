@@ -2,6 +2,7 @@ import { InternalError } from "@api/errors";
 import { ms } from "@utils/common";
 import {
 	isPayPerUsePrice,
+	isPrepaidPrice,
 	isVolumePrice,
 } from "@utils/productUtils/priceUtils/classifyPriceUtils";
 import type {
@@ -122,4 +123,22 @@ export const isUsageBasedAllocatedCustomerEntitlement = (
 	const isUsageBased = isPayPerUsePrice({ price: cusPrice.price });
 
 	return isAllocated && isUsageBased;
+};
+
+/** Whether the customer entitlement has a prepaid price (usage billed in advance). */
+export const isPrepaidCustomerEntitlement = (
+	cusEnt: FullCusEntWithFullCusProduct,
+) => {
+	const cusPrice = cusEntToCusPrice({ cusEnt });
+	if (!cusPrice) return false;
+	return isPrepaidPrice(cusPrice.price);
+};
+
+/** Whether the customer entitlement has a pay-per-use price (usage billed in arrears). */
+export const isPayPerUseCustomerEntitlement = (
+	cusEnt: FullCusEntWithFullCusProduct,
+) => {
+	const cusPrice = cusEntToCusPrice({ cusEnt });
+	if (!cusPrice) return false;
+	return isPayPerUsePrice({ price: cusPrice.price });
 };

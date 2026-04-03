@@ -83,6 +83,54 @@ export type GetOrCreateCustomerSpendLimit = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const GetOrCreateCustomerThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type GetOrCreateCustomerThresholdType = ClosedEnum<
+  typeof GetOrCreateCustomerThresholdType
+>;
+
+export type GetOrCreateCustomerUsageAlert = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: GetOrCreateCustomerThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type GetOrCreateCustomerOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
  * Billing controls for the customer (auto top-ups, etc.)
  */
 export type GetOrCreateCustomerBillingControls = {
@@ -94,6 +142,14 @@ export type GetOrCreateCustomerBillingControls = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<GetOrCreateCustomerSpendLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<GetOrCreateCustomerUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<GetOrCreateCustomerOverageAllowed> | undefined;
 };
 
 export type GetOrCreateCustomerParams = {
@@ -256,9 +312,89 @@ export function getOrCreateCustomerSpendLimitToJSON(
 }
 
 /** @internal */
+export const GetOrCreateCustomerThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof GetOrCreateCustomerThresholdType
+> = z.enum(GetOrCreateCustomerThresholdType);
+
+/** @internal */
+export type GetOrCreateCustomerUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const GetOrCreateCustomerUsageAlert$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerUsageAlert$Outbound,
+  GetOrCreateCustomerUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: GetOrCreateCustomerThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function getOrCreateCustomerUsageAlertToJSON(
+  getOrCreateCustomerUsageAlert: GetOrCreateCustomerUsageAlert,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerUsageAlert$outboundSchema.parse(
+      getOrCreateCustomerUsageAlert,
+    ),
+  );
+}
+
+/** @internal */
+export type GetOrCreateCustomerOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const GetOrCreateCustomerOverageAllowed$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerOverageAllowed$Outbound,
+  GetOrCreateCustomerOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function getOrCreateCustomerOverageAllowedToJSON(
+  getOrCreateCustomerOverageAllowed: GetOrCreateCustomerOverageAllowed,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerOverageAllowed$outboundSchema.parse(
+      getOrCreateCustomerOverageAllowed,
+    ),
+  );
+}
+
+/** @internal */
 export type GetOrCreateCustomerBillingControls$Outbound = {
   auto_topups?: Array<GetOrCreateCustomerAutoTopup$Outbound> | undefined;
   spend_limits?: Array<GetOrCreateCustomerSpendLimit$Outbound> | undefined;
+  usage_alerts?: Array<GetOrCreateCustomerUsageAlert$Outbound> | undefined;
+  overage_allowed?:
+    | Array<GetOrCreateCustomerOverageAllowed$Outbound>
+    | undefined;
 };
 
 /** @internal */
@@ -273,11 +409,19 @@ export const GetOrCreateCustomerBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => GetOrCreateCustomerSpendLimit$outboundSchema)),
     ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => GetOrCreateCustomerUsageAlert$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => GetOrCreateCustomerOverageAllowed$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       autoTopups: "auto_topups",
       spendLimits: "spend_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
     });
   }),
 );

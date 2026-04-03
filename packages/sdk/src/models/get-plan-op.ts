@@ -277,6 +277,10 @@ export type GetPlanRollover = {
    */
   max: number | null;
   /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | null | undefined;
+  /**
    * When rolled over units expire.
    */
   expiryDurationType: GetPlanExpiryDurationType;
@@ -770,11 +774,13 @@ export const GetPlanRollover$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     max: types.nullable(types.number()),
+    max_percentage: z.optional(z.nullable(types.number())),
     expiry_duration_type: GetPlanExpiryDurationType$inboundSchema,
     expiry_duration_length: types.optional(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      "max_percentage": "maxPercentage",
       "expiry_duration_type": "expiryDurationType",
       "expiry_duration_length": "expiryDurationLength",
     });

@@ -243,6 +243,52 @@ export type GetEntitySpendLimit = {
 };
 
 /**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export const GetEntityThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ */
+export type GetEntityThresholdType = OpenEnum<typeof GetEntityThresholdType>;
+
+export type GetEntityUsageAlert = {
+  /**
+   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled: boolean;
+  /**
+   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   */
+  thresholdType: GetEntityThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type GetEntityOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled: boolean;
+};
+
+/**
  * Billing controls for the entity.
  */
 export type GetEntityBillingControls = {
@@ -250,6 +296,14 @@ export type GetEntityBillingControls = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<GetEntitySpendLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<GetEntityUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<GetEntityOverageAllowed> | undefined;
 };
 
 export type GetEntityInvoice = {
@@ -589,6 +643,68 @@ export function getEntitySpendLimitFromJSON(
 }
 
 /** @internal */
+export const GetEntityThresholdType$inboundSchema: z.ZodMiniType<
+  GetEntityThresholdType,
+  unknown
+> = openEnums.inboundSchema(GetEntityThresholdType);
+
+/** @internal */
+export const GetEntityUsageAlert$inboundSchema: z.ZodMiniType<
+  GetEntityUsageAlert,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.optional(types.string()),
+    enabled: z._default(types.boolean(), true),
+    threshold: types.number(),
+    threshold_type: GetEntityThresholdType$inboundSchema,
+    name: types.optional(types.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "threshold_type": "thresholdType",
+    });
+  }),
+);
+
+export function getEntityUsageAlertFromJSON(
+  jsonString: string,
+): SafeParseResult<GetEntityUsageAlert, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetEntityUsageAlert$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetEntityUsageAlert' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetEntityOverageAllowed$inboundSchema: z.ZodMiniType<
+  GetEntityOverageAllowed,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    enabled: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function getEntityOverageAllowedFromJSON(
+  jsonString: string,
+): SafeParseResult<GetEntityOverageAllowed, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetEntityOverageAllowed$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetEntityOverageAllowed' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetEntityBillingControls$inboundSchema: z.ZodMiniType<
   GetEntityBillingControls,
   unknown
@@ -597,10 +713,18 @@ export const GetEntityBillingControls$inboundSchema: z.ZodMiniType<
     spend_limits: types.optional(
       z.array(z.lazy(() => GetEntitySpendLimit$inboundSchema)),
     ),
+    usage_alerts: types.optional(
+      z.array(z.lazy(() => GetEntityUsageAlert$inboundSchema)),
+    ),
+    overage_allowed: types.optional(
+      z.array(z.lazy(() => GetEntityOverageAllowed$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "spend_limits": "spendLimits",
+      "usage_alerts": "usageAlerts",
+      "overage_allowed": "overageAllowed",
     });
   }),
 );

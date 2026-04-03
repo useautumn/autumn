@@ -33,11 +33,22 @@ export interface ParsedOperation {
 	allSchemas?: Record<string, unknown>;
 }
 
+export interface ParsedWebhook {
+	eventType: string;
+	operationId: string;
+	group: string;
+	summary?: string;
+	description?: string;
+	/** Fields inside the `data` envelope (excludes the outer `type` field) */
+	dataFields?: SchemaField[];
+}
+
 interface OpenApiDocument {
 	components?: {
 		schemas?: Record<string, unknown>;
 	};
 	paths?: Record<string, Record<string, unknown>>;
+	webhooks?: Record<string, Record<string, unknown>>;
 }
 
 /**
@@ -149,6 +160,74 @@ export function parseOpenApi({
 	}
 
 	return operations;
+}
+
+/**
+ * Parse webhook definitions from the OpenAPI `webhooks` section.
+ * Extracts the `data` sub-schema from the `{ type, data }` envelope
+ * so we can generate field docs for just the meaningful payload.
+ *
+ * @param groupMap - Maps operationId -> group name (from the webhook registry).
+ */
+export function parseWebhooks({
+	openApiPath,
+	groupMap = {},
+}: {
+	openApiPath: string;
+	groupMap?: Record<string, string>;
+}): ParsedWebhook[] {
+	const content = readFileSync(openApiPath, "utf-8");
+	const doc = yaml.parse(content) as OpenApiDocument;
+
+	const schemas = doc.components?.schemas ?? {};
+	const webhooks: ParsedWebhook[] = [];
+
+	for (const [eventType, webhookItem] of Object.entries(doc.webhooks ?? {})) {
+		const postOp = webhookItem.post as Record<string, unknown> | undefined;
+		if (!postOp) continue;
+
+		const operationId = postOp.operationId as string | undefined;
+		if (!operationId) continue;
+
+		const parsed: ParsedWebhook = {
+			eventType,
+			operationId,
+			group: groupMap[operationId] ?? "Webhooks",
+			summary: postOp.summary as string | undefined,
+			description: postOp.description as string | undefined,
+		};
+
+		const requestBody = postOp.requestBody as
+			| Record<string, unknown>
+			| undefined;
+		const jsonContent = (
+			requestBody?.content as Record<string, unknown> | undefined
+		)?.["application/json"] as Record<string, unknown> | undefined;
+		const bodySchema = jsonContent?.schema as
+			| Record<string, unknown>
+			| undefined;
+
+		if (bodySchema) {
+			const properties = bodySchema.properties as
+				| Record<string, unknown>
+				| undefined;
+			const dataSchema = properties?.data as
+				| Record<string, unknown>
+				| undefined;
+
+			if (dataSchema) {
+				parsed.dataFields = parseSchema({
+					schema: dataSchema,
+					schemas,
+					requiredFields: (dataSchema.required as string[]) ?? [],
+				});
+			}
+		}
+
+		webhooks.push(parsed);
+	}
+
+	return webhooks;
 }
 
 /**

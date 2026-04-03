@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Table } from "@/components/ui/table";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useScrollbarWidth } from "@/hooks/useScrollbarWidth";
 import { cn } from "@/lib/utils";
 import { TableColumnVisibility } from "./table-column-visibility";
@@ -24,7 +23,6 @@ export function TableContentVirtualized({
 		virtualization,
 	} = context;
 	const { isLoading } = context;
-	const sheetType = useSheetStore((s) => s.type);
 	const rows = table.getRowModel().rows;
 
 	// Use state instead of ref so changes trigger re-renders for virtualizer
@@ -89,18 +87,17 @@ export function TableContentVirtualized({
 		<TableContext.Provider value={contextWithRef}>
 			<div
 				className={cn(
-					"rounded-lg shadow-[0_0_8px_rgba(0,0,0,0.04)] border relative z-50 min-w-0 overflow-hidden",
+					"rounded-lg border relative z-50 min-w-0 overflow-hidden",
 					!rows.length &&
 						"border-dashed bg-interactive-secondary dark:bg-transparent",
 					className,
 				)}
 			>
-				{/* Overlay - shown when a sheet is open or data is loading */}
-				{(sheetType || isLoading) && (
+				{isLoading && (
 					<div className="bg-white/60 dark:bg-black/60 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
 				)}
 
-				{/* Fixed header table - scrolls horizontally in sync with body */}
+			{/* Fixed header table - scrolls horizontally in sync with body */}
 				<div
 					ref={headerRef}
 					className="overflow-x-auto overflow-y-hidden scrollbar-none"
@@ -138,7 +135,7 @@ export function TableContentVirtualized({
 					key={visibleColumnKey}
 					ref={setScrollContainer}
 					onScroll={handleScroll}
-					className="rounded-b-lg w-full overflow-auto"
+					className="w-full overflow-auto"
 					style={{
 						minHeight,
 						maxHeight: virtualization?.containerHeight

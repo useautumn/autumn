@@ -132,7 +132,7 @@ html {
 	--chart-9: #349eff;
 	--chart-10: #27a7ff;
 
-	--chart-grid-stroke: #d1d1d1;
+	--chart-grid-stroke: #d1d1d190;
 
 	--sidebar: oklch(0.985 0 0);
 	--sidebar-foreground: oklch(0.141 0.005 285.823);
@@ -318,6 +318,7 @@ html {
 	--shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
 	--shadow-lg:
 		0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+	--shadow-card: 0 0 8px rgba(0, 0, 0, 0.04);
 
 	--color-yellow-50: #fefce8;
 	--color-yellow-100: #fdedd3;
@@ -529,7 +530,7 @@ input[type="number"]::-webkit-inner-spin-button {
 	background: linear-gradient(
 		90deg,
 		transparent,
-		rgba(255, 255, 255, 0.4),
+		rgba(255, 255, 255, 0.7),
 		transparent
 	);
 	pointer-events: none;
@@ -540,6 +541,15 @@ input[type="number"]::-webkit-inner-spin-button {
 .shimmer-hover:hover::after {
 	animation: shimmer-once 0.8s;
 	opacity: 1;
+}
+
+.dark .shimmer-hover::after {
+	background: linear-gradient(
+		90deg,
+		transparent,
+		rgba(25, 25, 25, 0.5),
+		transparent
+	);
 }
 
 @keyframes shimmer-once {

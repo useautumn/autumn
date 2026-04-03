@@ -3,6 +3,7 @@ import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
 	ApiBalanceV1Schema,
 	ApiCustomerV5Schema,
+	ApiEventsListParamsSchema,
 	ApiPlanV1Schema,
 	AttachParamsV1Schema,
 	AttachPreviewResponseSchema,
@@ -36,6 +37,7 @@ import {
 } from "../utils/openapiTransform/index.js";
 import { registerInternalSchemas } from "../utils/registerInternalSchemas.js";
 import { v2_1ContractRouter } from "./contracts/index.js";
+import { injectWebhooks } from "./webhooks/injectWebhooks.js";
 
 const generator = new OpenAPIGenerator({
 	schemaConverters: [new ZodToJsonSchemaConverter()],
@@ -70,6 +72,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(CheckResponseV3Schema);
 	registerInternalSchemas(TrackResponseV3Schema);
 	registerInternalSchemas(CustomerDataSchema);
+	registerInternalSchemas(ApiEventsListParamsSchema);
 
 	const openApiDocument = (await generator.generate(v2_1ContractRouter, {
 		info: {
@@ -120,6 +123,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 		version: OPENAPI_DOC_VERSION,
 	});
 	removeInternalFields({ openApiDocument });
+	injectWebhooks({ openApiDocument });
 
 	return openApiDocument;
 }

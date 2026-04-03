@@ -10,6 +10,12 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiProduct } from "@autumn/shared";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import {
+	getTestSvixAppId,
+	setupWebhookTest,
+	type WebhookTestSetup,
+	waitForWebhook,
+} from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeStripeCheckoutFormV2.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -17,15 +23,6 @@ import { timeout } from "@tests/utils/genUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import {
-	generatePlayToken,
-	getPlayWebhookUrl,
-	waitForWebhook,
-} from "./utils/svixPlayClient.js";
-import {
-	createTestEndpoint,
-	deleteTestEndpoint,
-} from "./utils/svixTestEndpoint.js";
 
 type CustomerProductsUpdatedPayload = {
 	type: string;
@@ -40,33 +37,20 @@ type CustomerProductsUpdatedPayload = {
 // SVIX PLAY SETUP
 // ═══════════════════════════════════════════════════════════════════════════════
 
+let webhook: WebhookTestSetup;
 let playToken: string;
-let endpointId: string;
 
 beforeAll(async () => {
-	playToken = await generatePlayToken();
-	console.log(`Generated Svix Play token: ${playToken}`);
-
-	const svixAppId = ctx.org.svix_config?.sandbox_app_id;
-	if (!svixAppId) {
-		throw new Error(
-			"Test org does not have svix_config.sandbox_app_id configured. " +
-				"Cannot run webhook integration tests without Svix app.",
-		);
-	}
-
-	const playUrl = getPlayWebhookUrl(playToken);
-	console.log(`Creating Svix endpoint: ${playUrl}`);
-	endpointId = await createTestEndpoint({ appId: svixAppId, playUrl });
-	console.log(`Created Svix endpoint: ${endpointId}`);
+	const appId = getTestSvixAppId({ svixConfig: ctx.org.svix_config });
+	webhook = await setupWebhookTest({
+		appId,
+		filterTypes: ["customer.products.updated"],
+	});
+	playToken = webhook.playToken;
 });
 
 afterAll(async () => {
-	const svixAppId = ctx.org.svix_config?.sandbox_app_id;
-	if (svixAppId && endpointId) {
-		await deleteTestEndpoint({ appId: svixAppId, endpointId });
-		console.log(`Deleted Svix endpoint: ${endpointId}`);
-	}
+	await webhook?.cleanup();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -9,22 +9,21 @@ import LoadingScreen from "../general/LoadingScreen";
 import { OnboardingGuide } from "../onboarding4/OnboardingGuide";
 import { CustomersContext } from "./CustomersContext";
 import { useCusSearchQuery } from "./hooks/useCusSearchQuery";
-import { useFullCusSearchQuery } from "./hooks/useFullCusSearchQuery";
 import {
-	restoreCustomerFilters,
-	usePersistedFilters,
-} from "./hooks/usePersistedFilters";
+	CustomerFiltersProvider,
+	useCustomerFilters,
+} from "./hooks/useCustomerFilters";
+import { useFullCusSearchQuery } from "./hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "./hooks/useSavedViewsQuery";
 
-function CustomersPage() {
-	restoreCustomerFilters();
+function CustomersPageContent() {
 	const { org } = useOrg();
+	const { isInitialized } = useCustomerFilters();
 	const {
 		customers,
 		isLoading: customersLoading,
 		isFetchingUncached,
 	} = useCusSearchQuery();
-	usePersistedFilters();
 
 	const { isLoading: productsLoading } = useProductsQuery();
 	const resetProductStore = useProductStore((s) => s.reset);
@@ -34,7 +33,7 @@ function CustomersPage() {
 	useSavedViewsQuery();
 	useFullCusSearchQuery();
 
-	if (productsLoading || customersLoading) {
+	if (!isInitialized || productsLoading || customersLoading) {
 		return <LoadingScreen />;
 	}
 
@@ -56,4 +55,10 @@ function CustomersPage() {
 	);
 }
 
-export default CustomersPage;
+export default function CustomersPage() {
+	return (
+		<CustomerFiltersProvider>
+			<CustomersPageContent />
+		</CustomerFiltersProvider>
+	);
+}

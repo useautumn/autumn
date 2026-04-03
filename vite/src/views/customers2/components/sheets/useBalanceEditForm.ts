@@ -1,11 +1,10 @@
 import {
-	type AutoTopup,
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
 	type FullCusEntWithFullCusProduct,
+	getRolloverFields,
 	nullish,
-	PurchaseLimitInterval,
 } from "@autumn/shared";
 import { useAppForm } from "@/hooks/form/form";
 import {
@@ -16,11 +15,9 @@ import {
 export function useBalanceEditForm({
 	selectedCusEnt,
 	entityId,
-	existingAutoTopUp,
 }: {
 	selectedCusEnt: FullCusEntWithFullCusProduct;
 	entityId: string | null;
-	existingAutoTopUp: AutoTopup | null;
 }) {
 	const prepaidAllowance = cusEntsToPrepaidQuantity({
 		cusEnts: [selectedCusEnt],
@@ -40,6 +37,12 @@ export function useBalanceEditForm({
 
 	const grantedAndPurchasedBalance = grantedBalance + prepaidAllowance;
 
+	const rolloverBalance =
+		getRolloverFields({
+			cusEnt: selectedCusEnt,
+			entityId: entityId ?? undefined,
+		})?.balance ?? 0;
+
 	const form = useAppForm({
 		defaultValues: {
 			mode: "set",
@@ -47,23 +50,13 @@ export function useBalanceEditForm({
 			grantedAndPurchasedBalance: grantedAndPurchasedBalance ?? null,
 			nextResetAt: selectedCusEnt.next_reset_at ?? null,
 			addValue: null,
-			autoTopUp: {
-				enabled: existingAutoTopUp?.enabled ?? false,
-				threshold: existingAutoTopUp?.threshold ?? null,
-				quantity: existingAutoTopUp?.quantity ?? null,
-				maxPurchasesEnabled: !!existingAutoTopUp?.purchase_limit,
-				interval:
-					existingAutoTopUp?.purchase_limit?.interval ??
-					PurchaseLimitInterval.Month,
-				maxPurchases: existingAutoTopUp?.purchase_limit?.limit ?? null,
-			},
 		} as BalanceEditForm,
 		validators: {
 			onChange: BalanceEditFormSchema,
 		},
 	});
 
-	return Object.assign(form, { prepaidAllowance });
+	return Object.assign(form, { prepaidAllowance, rolloverBalance });
 }
 
 export type BalanceEditFormInstance = ReturnType<typeof useBalanceEditForm>;

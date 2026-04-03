@@ -1,15 +1,14 @@
 import {
-	type AutoTopup,
 	computeGrantedBalanceInput,
 	type Entity,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
-	isOneOffPrice,
-	isPrepaidPrice,
+	getRolloverFields,
 	isUnlimitedCusEnt,
 	numberWithCommas,
 } from "@autumn/shared";
+import { ClockCountdownIcon } from "@phosphor-icons/react";
 
 import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
@@ -23,14 +22,12 @@ import { LabelInput } from "@/components/v2/inputs/LabelInput";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useCustomerContext } from "../../customer/CustomerContext";
-import { AutoTopUpSection } from "./AutoTopUpSection";
 import { BalanceEditPreviews } from "./BalanceEditPreviews";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
 import {
@@ -80,19 +77,6 @@ export function BalanceEditSheet() {
 			cp.price.entitlement_id === selectedCusEnt.entitlement.id,
 	);
 
-	const hasOneOffPrepaidPrice = cusPrice
-		? isOneOffPrice(cusPrice.price) && isPrepaidPrice(cusPrice.price)
-		: false;
-	const hasExistingAutoTopUp = customer?.auto_topups?.some(
-		(c: AutoTopup) => c.feature_id === featureId,
-	);
-	const isEligibleForAutoTopUp =
-		hasOneOffPrepaidPrice || !!hasExistingAutoTopUp;
-
-	const existingAutoTopUp =
-		customer?.auto_topups?.find((c: AutoTopup) => c.feature_id === featureId) ??
-		null;
-
 	return (
 		<div className="flex flex-col h-full">
 			<SheetHeader
@@ -119,8 +103,6 @@ export function BalanceEditSheet() {
 					cusProduct={cusProduct}
 					cusPrice={cusPrice}
 					featureId={featureId}
-					existingAutoTopUp={existingAutoTopUp}
-					isEligibleForAutoTopUp={isEligibleForAutoTopUp}
 				/>
 			)}
 		</div>
@@ -148,6 +130,7 @@ function UnlimitedBalanceInfo({
 					isUnlimited
 				/>
 			</SheetSection>
+			<RolloversSection selectedCusEnt={selectedCusEnt} />
 		</div>
 	);
 }
@@ -161,8 +144,6 @@ function BalanceEditForm({
 	cusProduct,
 	cusPrice,
 	featureId,
-	existingAutoTopUp,
-	isEligibleForAutoTopUp,
 }: {
 	selectedCusEnt: FullCustomerEntitlement;
 	entityId: string | null;
@@ -170,13 +151,10 @@ function BalanceEditForm({
 	cusProduct: FullCusProduct | undefined;
 	cusPrice: FullCustomerPrice | undefined;
 	featureId: string;
-	existingAutoTopUp: AutoTopup | null;
-	isEligibleForAutoTopUp: boolean;
 }) {
 	const form = useBalanceEditForm({
 		selectedCusEnt,
 		entityId,
-		existingAutoTopUp,
 	});
 
 	return (
@@ -190,19 +168,15 @@ function BalanceEditForm({
 				/>
 			</SheetSection>
 
-			<SheetSection withSeparator={isEligibleForAutoTopUp}>
+			<RolloversSection selectedCusEnt={selectedCusEnt} entityId={entityId} />
+
+			<SheetSection withSeparator={false}>
 				<BalanceFields
 					form={form}
 					selectedCusEnt={selectedCusEnt}
 					cusPrice={cusPrice}
 				/>
 			</SheetSection>
-
-			{isEligibleForAutoTopUp && (
-				<SheetSection withSeparator={false}>
-					<AutoTopUpSection form={form} />
-				</SheetSection>
-			)}
 
 			<SubmitButton
 				form={form}
@@ -213,6 +187,61 @@ function BalanceEditForm({
 				cusPrice={cusPrice}
 			/>
 		</div>
+	);
+}
+
+/* ─── Rollovers Section ─── */
+
+function RolloversSection({
+	selectedCusEnt,
+	entityId,
+}: {
+	selectedCusEnt: FullCustomerEntitlement;
+	entityId?: string | null;
+}) {
+	const rolloverFields = getRolloverFields({
+		cusEnt: selectedCusEnt,
+		entityId: entityId ?? undefined,
+	});
+
+	if (!rolloverFields || rolloverFields.rollovers.length === 0) return null;
+
+	const { rollovers } = rolloverFields;
+
+	return (
+		<SheetSection withSeparator>
+			<div className="flex flex-col gap-2">
+				<div className="flex items-center gap-1.5 text-t3 text-sm font-medium">
+					<ClockCountdownIcon size={14} weight="duotone" />
+					Rollovers
+				</div>
+				<div className="flex flex-col gap-1.5">
+					{rollovers.map((rollover, index) => {
+						const expiryText = rollover.expires_at
+							? `${formatUnixToDateTime(rollover.expires_at, { withYear: true }).date}, ${formatUnixToDateTime(rollover.expires_at).time}`
+							: "No expiry";
+
+						return (
+							<div
+								key={`rollover-${index}-${rollover.expires_at}`}
+								className="flex items-center justify-between text-sm px-2 py-0.5 rounded-md"
+							>
+								<span className="text-t1 font-medium">
+									+{numberWithCommas(rollover.balance)}
+								</span>
+								<span className="text-t3 text-xs">
+									{rollover.expires_at ? `Expires ${expiryText}` : expiryText}
+								</span>
+							</div>
+						);
+					})}
+				</div>
+				<div className="flex items-center justify-between text-xs text-t4 px-2">
+					<span>Total rollover</span>
+					<span>+{numberWithCommas(rolloverFields.balance)}</span>
+				</div>
+			</div>
+		</SheetSection>
 	);
 }
 
@@ -395,7 +424,10 @@ function SetBalanceFields({
 					)}
 					<div className="text-t4 text-sm truncate mb-1 flex justify-center max-w-full w-full">
 						<span className="truncate">
-							{numberWithCommas((gpb ?? 0) - (balance ?? 0))} used
+							{numberWithCommas(
+								(gpb ?? 0) + form.rolloverBalance - (balance ?? 0),
+							)}{" "}
+							used
 						</span>
 					</div>
 				</div>
@@ -525,11 +557,14 @@ function SubmitButton({
 						prepaidAllowance: form.prepaidAllowance,
 					});
 
+					const targetBalance =
+						parseFloat(String(values.balance)) - form.rolloverBalance;
+
 					promises.push(
 						axiosInstance.post("/v1/balances/update", {
 							customer_id: customer.id || customer.internal_id,
 							feature_id: featureId,
-							current_balance: parseFloat(String(values.balance)),
+							current_balance: targetBalance,
 							included_grant: grantedBalanceInput ?? undefined,
 							granted_balance: grantedBalanceInput ?? undefined,
 							customer_entitlement_id: selectedCusEnt.id,
@@ -548,40 +583,6 @@ function SubmitButton({
 						}),
 					);
 				}
-			}
-
-			// Queue auto top-up update
-			if (hasAutoTopUpChanges({ form })) {
-				const autoTopUp = values.autoTopUp;
-				const newConfig: AutoTopup = {
-					feature_id: featureId,
-					enabled: autoTopUp.enabled,
-					threshold: autoTopUp.threshold ?? 0,
-					quantity: autoTopUp.quantity ?? 1,
-					...(autoTopUp.enabled &&
-						autoTopUp.maxPurchasesEnabled && {
-							purchase_limit: {
-								interval: autoTopUp.interval,
-								limit: autoTopUp.maxPurchases ?? 1,
-							},
-						}),
-				};
-
-				const otherConfigs = (customer.auto_topups ?? []).filter(
-					(c: AutoTopup) => c.feature_id !== featureId,
-				);
-
-				promises.push(
-					CusService.updateCustomer({
-						axios: axiosInstance,
-						customer_id: customer.id || customer.internal_id,
-						data: {
-							billing_controls: {
-								auto_topups: [...otherConfigs, newConfig],
-							},
-						},
-					}),
-				);
 			}
 
 			await Promise.all(promises);
@@ -626,24 +627,6 @@ function hasBalanceChanges({
 		meta.balance?.isDirty ||
 		meta.nextResetAt?.isDirty ||
 		meta.grantedAndPurchasedBalance?.isDirty ||
-		false
-	);
-}
-
-function hasAutoTopUpChanges({
-	form,
-}: {
-	form: BalanceEditFormInstance;
-}): boolean {
-	const meta = form.state.fieldMeta;
-
-	return (
-		meta["autoTopUp.enabled"]?.isDirty ||
-		meta["autoTopUp.threshold"]?.isDirty ||
-		meta["autoTopUp.quantity"]?.isDirty ||
-		meta["autoTopUp.maxPurchasesEnabled"]?.isDirty ||
-		meta["autoTopUp.interval"]?.isDirty ||
-		meta["autoTopUp.maxPurchases"]?.isDirty ||
 		false
 	);
 }

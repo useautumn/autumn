@@ -51,6 +51,10 @@ export type DeleteBalanceParams = {
    */
   balanceId?: string | undefined;
   /**
+   * If true, deduct the deleted balance's remaining amount from the customer's other balances for the same feature after deletion.
+   */
+  recalculateBalances?: boolean | undefined;
+  /**
    * Target a specific balance by its reset interval. Use when the customer has multiple balances for the same feature with different reset intervals.
    */
   interval?: DeleteBalanceInterval | undefined;
@@ -74,6 +78,7 @@ export type DeleteBalanceParams$Outbound = {
   entity_id?: string | undefined;
   feature_id?: string | undefined;
   balance_id?: string | undefined;
+  recalculate_balances?: boolean | undefined;
   interval?: string | undefined;
 };
 
@@ -87,6 +92,7 @@ export const DeleteBalanceParams$outboundSchema: z.ZodMiniType<
     entityId: z.optional(z.string()),
     featureId: z.optional(z.string()),
     balanceId: z.optional(z.string()),
+    recalculateBalances: z.optional(z.boolean()),
     interval: z.optional(DeleteBalanceInterval$outboundSchema),
   }),
   z.transform((v) => {
@@ -95,6 +101,7 @@ export const DeleteBalanceParams$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       featureId: "feature_id",
       balanceId: "balance_id",
+      recalculateBalances: "recalculate_balances",
     });
   }),
 );

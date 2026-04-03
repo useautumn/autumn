@@ -1,0 +1,51 @@
+# Redis benchmark load test — stresses check/track for a single large customer
+# to verify path index optimization holds under concurrent load.
+#
+# Prerequisites:
+#   1. Run setup: cd server && bun perf/redis-bench/setup.ts
+#   2. Start server: bun dev
+#   3. Run: npx artillery run perf/redis-bench/artillery.yml
+
+config:
+  target: "http://localhost:8080"
+  processor: "./processor.mjs"
+
+  phases:
+    - duration: 30
+      arrivalRate: 5
+      rampTo: 50
+      name: "Ramp"
+
+    - duration: 120
+      arrivalRate: 50
+      name: "Sustained"
+
+    - duration: 30
+      arrivalRate: 50
+      rampTo: 100
+      name: "Spike"
+
+  defaults:
+    headers:
+      Authorization: "Bearer {{ $processEnvironment.UNIT_TEST_AUTUMN_SECRET_KEY }}"
+      Content-Type: "application/json"
+
+scenarios:
+  - name: "Check + Track (large customer, random entity)"
+    weight: 1
+    beforeScenario: "setContext"
+    flow:
+      - post:
+          url: "/v1/check"
+          json:
+            customer_id: "{{ customerId }}"
+            feature_id: "{{ featureId }}"
+            entity_id: "{{ entityId }}"
+
+      - post:
+          url: "/v1/track"
+          json:
+            customer_id: "{{ customerId }}"
+            feature_id: "{{ featureId }}"
+            entity_id: "{{ entityId }}"
+            value: 1

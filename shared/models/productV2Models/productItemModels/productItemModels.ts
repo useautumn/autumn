@@ -54,7 +54,8 @@ export enum ProductItemFeatureType {
 }
 
 export const RolloverConfigSchema = z.object({
-	max: z.number().nullable(),
+	max: z.number().nullable().optional(),
+	max_percentage: z.number().nullable().optional(),
 	duration: z
 		.enum(RolloverExpiryDurationType)
 		.default(RolloverExpiryDurationType.Month),
