@@ -6,15 +6,16 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
-
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
 import { logAttachContext } from "@/internal/billing/v2/actions/attach/logs/logAttachContext";
 import { setupAttachBillingContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachBillingContext";
+import { checkCheckoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkCheckoutSessionLock";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
+import { hashJson } from "@/utils/hash/hashJson";
 import {
 	type CreateAutumnCheckoutResult,
 	createAutumnCheckout,
@@ -83,19 +84,29 @@ export async function attach({
 		};
 	}
 
+	// 5. Checkout session lock (skip for confirm flows)
+	if (!skipAutumnCheckout) {
+		const cachedResult = await checkCheckoutSessionLock({
+			ctx,
+			params,
+			billingContext,
+			billingPlan,
+		});
+
+		if (cachedResult) return cachedResult;
+	}
+
 	if (
 		billingContext.checkoutMode === "autumn_checkout" &&
 		!skipAutumnCheckout
 	) {
-		const checkoutResult = await createAutumnCheckout<AttachBillingContext>({
+		return createAutumnCheckout<AttachBillingContext>({
 			ctx,
 			action: CheckoutAction.Attach,
 			params,
 			billingContext,
 			billingPlan,
 		});
-
-		return checkoutResult;
 	}
 
 	// 6. Execute billing plan
@@ -103,6 +114,9 @@ export async function attach({
 		ctx,
 		billingContext,
 		billingPlan,
+		checkoutLockParamsHash: !skipAutumnCheckout
+			? hashJson({ value: params })
+			: undefined,
 	});
 
 	logStripeBillingResult({ ctx, result: billingResult.stripe });

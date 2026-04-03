@@ -5,6 +5,7 @@ import type {
 	StripeBillingPlanResult,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -14,10 +15,12 @@ export const executeBillingPlan = async ({
 	ctx,
 	billingContext,
 	billingPlan,
+	checkoutLockParamsHash,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
 	billingPlan: BillingPlan;
+	checkoutLockParamsHash?: string;
 }): Promise<BillingResult> => {
 	const stripeBillingResult: StripeBillingPlanResult =
 		billingContext.skipBillingChanges
@@ -40,6 +43,25 @@ export const executeBillingPlan = async ({
 				stripeInvoiceId: stripeBillingResult.stripeInvoice.id,
 				autumnInvoiceId: stripeBillingResult.autumnInvoice.id,
 				billingLineItems: billingPlan.autumn.lineItems,
+			});
+		}
+
+		if (
+			checkoutLockParamsHash &&
+			stripeBillingResult.stripeCheckoutSession
+		) {
+			await checkoutSessionLock.set({
+				ctx,
+				customerId:
+					billingContext.fullCustomer.id ??
+					billingContext.fullCustomer.internal_id,
+				data: {
+					paramsHash: checkoutLockParamsHash,
+					checkoutSessionUrl:
+						stripeBillingResult.stripeCheckoutSession.url ?? "",
+					checkoutSessionId:
+						stripeBillingResult.stripeCheckoutSession.id ?? "",
+				},
 			});
 		}
 
