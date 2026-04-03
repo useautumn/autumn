@@ -10,6 +10,10 @@ const deterministicStringify = (value: unknown): string => {
 		return `[${value.map(deterministicStringify).join(",")}]`;
 
 	const obj = value as Record<string, unknown>;
+
+	if (typeof obj.toJSON === "function")
+		return deterministicStringify(obj.toJSON());
+
 	const sortedKeys = Object.keys(obj)
 		.filter((k) => obj[k] !== undefined)
 		.sort();

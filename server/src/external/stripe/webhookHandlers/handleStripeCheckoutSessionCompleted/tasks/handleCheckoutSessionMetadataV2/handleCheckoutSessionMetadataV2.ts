@@ -73,10 +73,12 @@ export const handleCheckoutSessionMetadataV2 = async ({
 	});
 
 	// Clear checkout session lock now that customer_product rows exist
-	await checkoutSessionLock.clear({
-		ctx,
-		customerId: ctx.fullCustomer?.id ?? "",
-	});
+	const lockCustomerId =
+		updatedDeferredData.billingContext.fullCustomer.id ??
+		updatedDeferredData.billingContext.fullCustomer.internal_id;
+	if (lockCustomerId) {
+		await checkoutSessionLock.clear({ ctx, customerId: lockCustomerId });
+	}
 
 	// Queue customer.products.updated webhook (mirrors executeBillingPlan)
 	await billingPlanToSendProductsUpdated({
