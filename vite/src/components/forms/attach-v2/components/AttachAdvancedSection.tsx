@@ -1,4 +1,5 @@
 import {
+	ArrowCounterClockwiseIcon,
 	CalendarIcon,
 	CalendarXIcon,
 	LightningIcon,
@@ -27,7 +28,8 @@ import { AttachDiscountRow } from "./AttachDiscountRow";
 
 export function AttachAdvancedSection() {
 	const { form, formValues, previewQuery } = useAttachFormContext();
-	const { discounts, newBillingSubscription, redirectMode } = formValues;
+	const { discounts, newBillingSubscription, resetBillingCycle, redirectMode } =
+		formValues;
 	const checkoutType = previewQuery.data?.checkout_type;
 
 	const {
@@ -52,9 +54,12 @@ export function AttachAdvancedSection() {
 		if ("promotion_code" in d) return d.promotion_code !== "";
 		return false;
 	});
+	const showResetBillingCycle = showBillingBehavior && hasOutgoing;
+
 	const hasCustomSettings =
 		(hasActiveSubscription && (hasCustomSchedule || hasCustomBilling)) ||
 		newBillingSubscription ||
+		resetBillingCycle ||
 		redirectMode === "always" ||
 		hasDiscounts;
 	const showRedirectModeRow =
@@ -81,6 +86,10 @@ export function AttachAdvancedSection() {
 			parts.push(
 				`Billing: ${effectiveBillingBehavior === "none" ? "No Charges" : "Prorate"}`,
 			);
+		}
+
+		if (resetBillingCycle) {
+			parts.push("Reset Billing Cycle");
 		}
 
 		if (hasDiscounts) {
@@ -236,6 +245,23 @@ export function AttachAdvancedSection() {
 							<TooltipContent>{noChargesDisabledReason}</TooltipContent>
 						)}
 					</Tooltip>
+				</AdvancedToggleRow>
+			)}
+
+			{showResetBillingCycle && (
+				<AdvancedToggleRow label="Reset Billing Cycle">
+					<IconCheckbox
+						icon={<ArrowCounterClockwiseIcon />}
+						iconOrientation="left"
+						variant="secondary"
+						size="sm"
+						checked={resetBillingCycle}
+						onCheckedChange={(checked) =>
+							form.setFieldValue("resetBillingCycle", !!checked)
+						}
+					>
+						Reset Now
+					</IconCheckbox>
 				</AdvancedToggleRow>
 			)}
 

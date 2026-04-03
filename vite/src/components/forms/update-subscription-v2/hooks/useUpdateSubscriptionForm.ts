@@ -52,6 +52,7 @@ export function useUpdateSubscriptionForm({
 			items: null,
 			cancelAction: null,
 			billingBehavior: null,
+			resetBillingCycle: false,
 			refundBehavior: null,
 			...defaultOverrides,
 		} as UpdateSubscriptionForm,

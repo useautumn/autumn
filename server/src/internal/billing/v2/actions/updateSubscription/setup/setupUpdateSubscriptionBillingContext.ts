@@ -26,6 +26,7 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"version",
 	"customize",
 	"cancel_action",
+	"billing_cycle_anchor",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
 
 /**
@@ -96,6 +97,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		newFullProduct: fullProduct,
 		trialContext,
 		currentEpochMs,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 	});
 
 	// 4. Trial ends at overrides reset cycle anchor
@@ -163,6 +165,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		requestedProrationBehavior: params.proration_behavior,
 
 		invoiceMode,
 		featureQuantities,
