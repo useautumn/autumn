@@ -9,7 +9,6 @@ import {
 	type Feature,
 	type FixedPriceConfig,
 	type FullProduct,
-	intervalsSame,
 	nullish,
 	type Organization,
 	type Price,
@@ -18,18 +17,15 @@ import {
 	ProcessorType,
 	type Product,
 	ProductSchema,
+	isProductUpgrade as sharedIsProductUpgrade,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { createStripeCli } from "@server/external/connect/createStripeCli.js";
 import { createStripePriceIFNotExist } from "@server/external/stripe/createStripePrice/createStripePrice.js";
-import {
-	getBillingInterval,
-	getBillingType,
-} from "@server/internal/products/prices/priceUtils.js";
+import { getBillingType } from "@server/internal/products/prices/priceUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
 import { generateId, notNullish } from "@server/utils/genUtils.js";
-import { Decimal } from "decimal.js";
 import { Stripe } from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type {
@@ -42,7 +38,6 @@ import { getEntitlementsForProduct } from "./entitlements/entitlementUtils.js";
 import { FreeTrialService } from "./free-trials/FreeTrialService.js";
 import { ProductService } from "./ProductService.js";
 import { PriceService } from "./prices/PriceService.js";
-import { compareBillingIntervals } from "./prices/priceUtils/priceIntervalUtils.js";
 import { isDefaultTrialFullProduct } from "./productUtils/classifyProduct.js";
 
 export const getLatestProducts = (products: FullProduct[]) => {
@@ -118,61 +113,66 @@ export const isProductUpgrade = ({
 	prices2: Price[];
 	usageAlwaysUpgrade?: boolean;
 }) => {
-	if (isFreeProduct(prices1) && !isFreeProduct(prices2)) {
-		return true;
-	}
+	return sharedIsProductUpgrade({
+		prices1,
+		prices2,
+		usageAlwaysUpgrade,
+	});
+	// if (isFreeProduct(prices1) && !isFreeProduct(prices2)) {
+	// 	return true;
+	// }
 
-	if (!isFreeProduct(prices1) && isFreeProduct(prices2)) {
-		return false;
-	}
+	// if (!isFreeProduct(prices1) && isFreeProduct(prices2)) {
+	// 	return false;
+	// }
 
-	if (
-		prices1.every(
-			(p) => getBillingType(p.config!) === BillingType.UsageInArrear,
-		) &&
-		prices2.every(
-			(p) => getBillingType(p.config!) === BillingType.UsageInArrear,
-		) &&
-		usageAlwaysUpgrade
-	) {
-		return true;
-	}
+	// if (
+	// 	prices1.every(
+	// 		(p) => getBillingType(p.config!) === BillingType.UsageInArrear,
+	// 	) &&
+	// 	prices2.every(
+	// 		(p) => getBillingType(p.config!) === BillingType.UsageInArrear,
+	// 	) &&
+	// 	usageAlwaysUpgrade
+	// ) {
+	// 	return true;
+	// }
 
-	const billingInterval1 = getBillingInterval(prices1); // pro quarter
-	const billingInterval2 = getBillingInterval(prices2); // premium
+	// const billingInterval1 = getBillingInterval(prices1); // pro quarter
+	// const billingInterval2 = getBillingInterval(prices2); // premium
 
-	// 2. Get total price for each product
-	const getTotalPrice = (prices: Price[]) => {
-		let totalPrice = new Decimal(0);
-		for (const price of prices) {
-			if ("usage_tiers" in price.config!) {
-				const tiers = price.config!.usage_tiers;
-				if (nullish(tiers) || tiers.length === 0) continue;
-				totalPrice = totalPrice.plus(tiers[0].amount);
-			} else {
-				totalPrice = totalPrice.plus(price.config!.amount);
-			}
-		}
-		return totalPrice.toNumber();
-	};
+	// // 2. Get total price for each product
+	// const getTotalPrice = (prices: Price[]) => {
+	// 	let totalPrice = new Decimal(0);
+	// 	for (const price of prices) {
+	// 		if ("usage_tiers" in price.config!) {
+	// 			const tiers = price.config!.usage_tiers;
+	// 			if (nullish(tiers) || tiers.length === 0) continue;
+	// 			totalPrice = totalPrice.plus(tiers[0].amount);
+	// 		} else {
+	// 			totalPrice = totalPrice.plus(price.config!.amount);
+	// 		}
+	// 	}
+	// 	return totalPrice.toNumber();
+	// };
 
-	// 3. Compare prices
+	// // 3. Compare prices
 
-	if (
-		intervalsSame({
-			intervalA: billingInterval1,
-			intervalB: billingInterval2,
-		})
-	) {
-		return getTotalPrice(prices1) < getTotalPrice(prices2);
-	} else {
-		return (
-			compareBillingIntervals({
-				configA: billingInterval1,
-				configB: billingInterval2,
-			}) > 0
-		);
-	}
+	// if (
+	// 	intervalsSame({
+	// 		intervalA: billingInterval1,
+	// 		intervalB: billingInterval2,
+	// 	})
+	// ) {
+	// 	return getTotalPrice(prices1) < getTotalPrice(prices2);
+	// } else {
+	// 	return (
+	// 		compareBillingIntervals({
+	// 			configA: billingInterval1,
+	// 			configB: billingInterval2,
+	// 		}) > 0
+	// 	);
+	// }
 };
 
 export const isFreeProduct = (prices: Price[]) => {

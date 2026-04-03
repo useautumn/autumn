@@ -1,14 +1,42 @@
 import { Decimal } from "decimal.js";
 
+import type { BillingInterval } from "../../models/productModels/intervals/billingInterval";
 import type { Price } from "../../models/productModels/priceModels/priceModels";
-import {
-	compareBillingIntervals,
-	getLargestInterval,
-	intervalsSame,
-} from "../intervalUtils/priceIntervalUtils";
+import { intervalToValue } from "../intervalUtils";
 import { nullish } from "../utils";
 import { isFreeProduct } from "./classifyProduct/classifyProductUtils";
 import { isConsumablePrice } from "./priceUtils/classifyPriceUtils";
+
+/** Gets the raw amount from a price (fixed amount or first usage tier amount). */
+const getPriceAmount = ({ price }: { price: Price }): number => {
+	if ("usage_tiers" in price.config) {
+		const tiers = price.config.usage_tiers;
+		if (nullish(tiers) || tiers.length === 0) return 0;
+		return tiers[0].amount;
+	}
+	return price.config.amount;
+};
+
+/** Normalizes a price to a monthly rate using Decimal.js for precision. */
+const normalizeToMonthlyRate = ({ price }: { price: Price }): Decimal => {
+	const amount = new Decimal(getPriceAmount({ price }));
+	const months = intervalToValue(
+		price.config.interval as BillingInterval,
+		price.config.interval_count,
+	);
+	if (months === 0) return amount;
+	return amount.div(months);
+};
+
+/** Sums normalized monthly rates for all non-consumable prices. */
+const getNormalizedTotal = ({ prices }: { prices: Price[] }): Decimal => {
+	let total = new Decimal(0);
+	for (const price of prices) {
+		if (isConsumablePrice(price)) continue;
+		total = total.plus(normalizeToMonthlyRate({ price }));
+	}
+	return total;
+};
 
 export const isProductUpgrade = ({
 	prices1,
@@ -22,8 +50,6 @@ export const isProductUpgrade = ({
 	const prod1IsFree = isFreeProduct({ prices: prices1 });
 	const prod2IsFree = isFreeProduct({ prices: prices2 });
 
-	// 1. If one product is free and the other is not, then free -> paid is an upgrade
-	if (prod1IsFree && prod2IsFree) return true;
 	if (prod1IsFree && !prod2IsFree) return true;
 	if (!prod1IsFree && prod2IsFree) return false;
 
@@ -35,42 +61,8 @@ export const isProductUpgrade = ({
 		return true;
 	}
 
-	const billingInterval1 = getLargestInterval({ prices: prices1 }); // pro quarter
-	const billingInterval2 = getLargestInterval({ prices: prices2 }); // premium
+	const total1 = getNormalizedTotal({ prices: prices1 });
+	const total2 = getNormalizedTotal({ prices: prices2 });
 
-	// Billing is nullish if there's a free product. Should not happen!
-	if (nullish(billingInterval1) || nullish(billingInterval2)) return false;
-
-	// 2. Get total price for each product
-	const getTotalPrice = (prices: Price[]) => {
-		let totalPrice = new Decimal(0);
-		for (const price of prices) {
-			if ("usage_tiers" in price.config) {
-				const tiers = price.config.usage_tiers;
-				if (nullish(tiers) || tiers.length === 0) continue;
-				totalPrice = totalPrice.plus(tiers[0].amount);
-			} else {
-				totalPrice = totalPrice.plus(price.config.amount);
-			}
-		}
-		return totalPrice.toNumber();
-	};
-
-	// 3. Compare prices
-
-	if (
-		intervalsSame({
-			intervalA: billingInterval1,
-			intervalB: billingInterval2,
-		})
-	) {
-		return getTotalPrice(prices1) <= getTotalPrice(prices2);
-	} else {
-		return (
-			compareBillingIntervals({
-				configA: billingInterval1,
-				configB: billingInterval2,
-			}) > 0
-		);
-	}
+	return total1.lte(total2);
 };
