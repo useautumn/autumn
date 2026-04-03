@@ -19,7 +19,7 @@ export function PlanEditButton({
 		>
 			<Button variant="secondary" onClick={onEditPlan} className="w-full">
 				<PencilSimpleIcon size={14} className="mr-1" />
-				Edit Plan Items
+				Create Custom Plan
 			</Button>
 		</motion.div>
 	);

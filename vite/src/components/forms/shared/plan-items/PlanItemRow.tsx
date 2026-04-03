@@ -54,6 +54,7 @@ export function PlanItemRow({
 	existingOptions,
 	form,
 	hasCustomizations,
+	readOnly,
 	useStagger,
 }: {
 	item: ProductItem;
@@ -66,6 +67,7 @@ export function PlanItemRow({
 	existingOptions?: FeatureOptions[];
 	form: UseUpdateSubscriptionForm | UseAttachForm;
 	hasCustomizations: boolean;
+	readOnly?: boolean;
 	useStagger?: boolean;
 }) {
 	if (!item.feature_id) return null;
@@ -75,8 +77,8 @@ export function PlanItemRow({
 
 	const currentPrepaidQuantity = getPlanItemPrepaidQuantity({
 		featureId,
-		prepaidOptions,
-		initialPrepaidOptions,
+		prepaidOptions: isPrepaid ? prepaidOptions : {},
+		initialPrepaidOptions: isPrepaid ? initialPrepaidOptions : {},
 		existingOptions: isPrepaid ? undefined : existingOptions,
 		features,
 	});
@@ -112,6 +114,7 @@ export function PlanItemRow({
 				form={form}
 				featureId={featureId}
 				isCreated={isCreated}
+				readOnly={readOnly}
 			/>
 		</motion.div>
 	);
