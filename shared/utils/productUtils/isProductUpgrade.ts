@@ -4,7 +4,10 @@ import type { BillingInterval } from "../../models/productModels/intervals/billi
 import type { Price } from "../../models/productModels/priceModels/priceModels";
 import { intervalToValue } from "../intervalUtils";
 import { nullish } from "../utils";
-import { isFreeProduct } from "./classifyProduct/classifyProductUtils";
+import {
+	isFreeProduct,
+	isOneOffProduct,
+} from "./classifyProduct/classifyProductUtils";
 import { isConsumablePrice } from "./priceUtils/classifyPriceUtils";
 
 /** Gets the raw amount from a price (fixed amount or first usage tier amount). */
@@ -52,6 +55,12 @@ export const isProductUpgrade = ({
 
 	if (prod1IsFree && !prod2IsFree) return true;
 	if (!prod1IsFree && prod2IsFree) return false;
+
+	if (
+		isOneOffProduct({ prices: prices2 }) ||
+		isOneOffProduct({ prices: prices1 })
+	)
+		return true;
 
 	if (
 		prices1.every(isConsumablePrice) &&
