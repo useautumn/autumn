@@ -53,5 +53,6 @@ export const CustomerInvoicesColumns = [
 	createDateTimeColumn<CustomerInvoice>({
 		header: "Created At",
 		accessorKey: "created_at",
+		withYear: true,
 	}),
 ];
