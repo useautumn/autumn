@@ -556,3 +556,89 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-basic 6: invoice line it
 		notPresent: [pro.id],
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 7: Pro Annual to Premium Monthly (interval change = immediate)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer has pro annual ($200/year)
+ * - Switch to premium monthly ($50/mo)
+ *
+ * Expected Result:
+ * - Premium is active immediately (different billing interval = always immediate)
+ * - Pro annual is removed
+ * - Credit for unused annual applied against premium charge
+ */
+test.concurrent(`${chalk.yellowBright("immediate-switch-basic 7: pro annual to premium monthly (interval change)")}`, async () => {
+	const customerId = "imm-switch-pro-annual-to-premium";
+
+	const proAnnualMessages = items.monthlyMessages({ includedUsage: 500 });
+	const proAnnual = products.proAnnual({
+		id: "pro-annual",
+		items: [proAnnualMessages],
+	});
+
+	const premiumMessages = items.monthlyMessages({ includedUsage: 1000 });
+	const premium = products.premium({
+		id: "premium",
+		items: [premiumMessages],
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [proAnnual, premium] }),
+		],
+		actions: [s.billing.attach({ productId: proAnnual.id })],
+	});
+
+	// 1. Preview switch to premium monthly
+	// At start of cycle: credit for full annual ($200) exceeds premium monthly ($50)
+	const preview = await autumnV1.billing.previewAttach({
+		customer_id: customerId,
+		product_id: premium.id,
+	});
+	expect(preview.total).toBe(0);
+
+	// 2. Attach premium (immediate because interval differs: annual -> monthly)
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: premium.id,
+		redirect_mode: "if_required",
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Premium should be active, pro annual should be gone (immediate switch)
+	await expectCustomerProducts({
+		customer,
+		active: [premium.id],
+		notPresent: [proAnnual.id],
+	});
+
+	// Verify messages feature has premium's balance
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		includedUsage: 1000,
+		balance: 1000,
+		usage: 0,
+	});
+
+	// Verify invoices: proAnnual ($200) + switch invoice ($0, credit exceeds charge)
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestTotal: 0,
+	});
+
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
+	});
+});
