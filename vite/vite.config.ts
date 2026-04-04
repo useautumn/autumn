@@ -7,6 +7,9 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 // https://vite.dev/config/
 export default defineConfig({
+	define: {
+		__APP_ENV__: JSON.stringify(process.env.VITE_APP_ENV || ""),
+	},
 	esbuild: {
 		pure: ["console.log"],
 	},

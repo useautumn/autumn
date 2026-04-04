@@ -20,6 +20,7 @@ export type SheetType =
 	| "balance-delete"
 	| "balance-create"
 	| "invoice-detail"
+	| "sync-stripe"
 	| "billing-auto-topup-add"
 	| "billing-auto-topup-edit"
 	| "billing-spend-limit-add"

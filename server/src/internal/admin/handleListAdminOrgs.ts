@@ -1,5 +1,6 @@
 import { member, organizations, user } from "@autumn/shared";
 import { and, desc, eq, gt, gte, ilike, inArray, lt, or } from "drizzle-orm";
+import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 export const handleListAdminOrgs = createRoute({
@@ -69,6 +70,13 @@ export const handleListAdminOrgs = createRoute({
 			.limit(21);
 
 		const orgIds = orgs.map((org) => org.id);
+		let requestBlockConfig = { orgs: {} as Record<string, { blockAll: boolean; blockedEndpoints: unknown[] }> };
+
+		try {
+			requestBlockConfig = await getRequestBlockConfigFromSource();
+		} catch {
+			// Admin list should still render even if S3 is unavailable.
+		}
 
 		const memberships = await db
 			.select()
@@ -82,6 +90,12 @@ export const handleListAdminOrgs = createRoute({
 				users: memberships
 					.filter((membership) => membership.member.organizationId === org.id)
 					.map((membership) => membership.user),
+				requestBlockSummary: {
+					blockAll:
+						requestBlockConfig.orgs[org.id]?.blockAll ?? false,
+					ruleCount:
+						requestBlockConfig.orgs[org.id]?.blockedEndpoints.length ?? 0,
+				},
 			})),
 			hasNextPage: orgs.length > 20,
 		});

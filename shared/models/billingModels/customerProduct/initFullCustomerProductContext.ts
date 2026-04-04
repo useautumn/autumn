@@ -71,4 +71,7 @@ export interface InitFullCustomerProductOptions {
 	apiSemver?: ApiVersion;
 	collectionMethod?: CollectionMethod;
 	externalId?: string;
+
+	/** When true, preserve subscription_ids even for non-paid-recurring products (used by sync). */
+	keepSubscriptionIds?: boolean;
 }
