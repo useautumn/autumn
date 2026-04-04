@@ -71,13 +71,11 @@ export const executeStripeSubscriptionOperation = async ({
 				stripeSubscription?.default_payment_method;
 			const shouldResetBillingCycleAnchorNow =
 				billingContext.requestedBillingCycleAnchor === "now";
-			const shouldSkipResetForProrationNone =
-				billingContext.requestedProrationBehavior === "none";
+			// const shouldSkipResetForProrationNone =
+			// 	billingContext.requestedProrationBehavior === "none" &&
+			// 	!billingContext.anchorResetRefund?.noPartialRefund;
 
-			if (
-				shouldResetBillingCycleAnchorNow &&
-				!shouldSkipResetForProrationNone
-			) {
+			if (shouldResetBillingCycleAnchorNow) {
 				stripeSubscription = await stripeClient.subscriptions.update(
 					subscriptionAction.stripeSubscriptionId,
 					{

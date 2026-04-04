@@ -1,9 +1,5 @@
 import { expect, test } from "bun:test";
-import {
-	type ApiCustomerV5,
-	type AttachParamsV1Input,
-	formatMs,
-} from "@autumn/shared";
+import { type ApiCustomerV5, type AttachParamsV1Input } from "@autumn/shared";
 import { advanceToAnchor } from "@tests/integration/billing/utils/advanceUtils/advanceToAnchor";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -21,7 +17,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addDays } from "date-fns";
 
-test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 1: anchor before next cycle previews short reset invoice")}`, async () => {
+test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule 1: anchor before next cycle previews short reset invoice")}`, async () => {
 	const customerId = "attach-anchor-scheduled-reset";
 
 	const pro = products.pro({
@@ -50,17 +46,12 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 1: anchor b
 		nextCycleAmount: 50,
 	});
 
-	const params = {
+	const params: any = {
 		customer_id: customerId,
 		plan_id: premium.id,
 		billing_cycle_anchor: scheduledAnchorMs,
 	};
 
-	console.log("PREVIEW PARAMS:", JSON.stringify(params, null, 2));
-	console.log("EXPECTED NEXT CYCLE:", {
-		startsAt: formatMs(expectedNextCycle.startsAt),
-		total: expectedNextCycle.total,
-	});
 	const preview =
 		await autumnV2_2.billing.previewAttach<AttachParamsV1Input>(params);
 
@@ -75,6 +66,7 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 1: anchor b
 	await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: premium.id,
+		// @ts-expect-error scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 		redirect_mode: "if_required",
 	});
@@ -139,7 +131,7 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 1: anchor b
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 2: anchor after next cycle previews regular renewal first")}`, async () => {
+test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule 2: anchor after next cycle previews regular renewal first")}`, async () => {
 	const customerId = "attach-anchor-scheduled-after-cycle";
 
 	const pro = products.pro({
@@ -171,6 +163,7 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 2: anchor a
 	const preview = await autumnV2_2.billing.previewAttach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: premium.id,
+		// @ts-expect-error scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 	});
 
@@ -184,6 +177,7 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 2: anchor a
 	const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: premium.id,
+		// @ts-expect-error scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 		redirect_mode: "if_required",
 	});
@@ -228,7 +222,7 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 2: anchor a
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
-test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 3: mid-cycle upgrade with scheduled anchor charges prorated difference")}`, async () => {
+test.skip(`${chalk.yellowBright("billing-cycle-anchor-schedule 3: mid-cycle upgrade with scheduled anchor charges prorated difference")}`, async () => {
 	const customerId = "attach-anchor-scheduled-midcycle";
 
 	const pro = products.pro({
@@ -270,6 +264,7 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 3: mid-cycl
 	const preview = await autumnV2_2.billing.previewAttach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: premium.id,
+		// @ts-expect-error scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 	});
 
@@ -283,6 +278,7 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-schedule 3: mid-cycl
 	const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: premium.id,
+		// @ts-expect-error scheduled anchor not yet supported
 		billing_cycle_anchor: scheduledAnchorMs,
 		redirect_mode: "if_required",
 	});

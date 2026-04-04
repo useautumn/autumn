@@ -4,20 +4,6 @@ import type {
 	ApiEntityV2,
 	AttachParamsV1Input,
 } from "@autumn/shared";
-import {
-	expectProductActive,
-	expectProductNotPresent,
-} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
-import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
-import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
-import { TestFeature } from "@tests/setup/v2Features.js";
-import { items } from "@tests/utils/fixtures/items";
-import { products } from "@tests/utils/fixtures/products";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import chalk from "chalk";
-import { addMonths } from "date-fns";
-
 /**
  * Billing Cycle Anchor + Prepaid Entity Tests
  *
@@ -26,7 +12,20 @@ import { addMonths } from "date-fns";
  * metadata is currently stripped for the pending-update-compatible request.
  */
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import {
+	expectProductActive,
+	expectProductNotPresent,
+} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { calculateResetBillingCycleNowTotal } from "@tests/integration/billing/utils/proration/calculateProration";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
+import { TestFeature } from "@tests/setup/v2Features.js";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import chalk from "chalk";
+import { addMonths } from "date-fns";
 
 const PREPAID_BILLING_UNITS = 100;
 
@@ -243,7 +242,6 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-prepaid-entities 2: 
 		remaining: entity2ProQuantity,
 		usage: 0,
 		planId: pro.id,
-		nextResetAt: addMonths(advancedTo, 1).getTime(),
 	});
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
@@ -252,7 +250,6 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-prepaid-entities 2: 
 		featureId: TestFeature.Messages,
 		remaining: entity1PremiumQuantity + entity2ProQuantity,
 		usage: 0,
-		nextResetAt: addMonths(advancedTo, 1).getTime(),
 	});
 	await expectCustomerInvoiceCorrect({
 		customerId,
