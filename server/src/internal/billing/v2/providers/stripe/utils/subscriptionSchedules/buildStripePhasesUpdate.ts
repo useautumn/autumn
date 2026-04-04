@@ -26,6 +26,12 @@ const normalizeCustomerProductTimestamps = (
 	ended_at: customerProduct.ended_at
 		? truncateMsToSecondPrecision(customerProduct.ended_at)
 		: undefined,
+	billing_cycle_anchor_resets_at:
+		customerProduct.billing_cycle_anchor_resets_at
+			? truncateMsToSecondPrecision(
+					customerProduct.billing_cycle_anchor_resets_at,
+				)
+			: customerProduct.billing_cycle_anchor_resets_at,
 });
 
 /**

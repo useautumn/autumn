@@ -9,7 +9,7 @@ import {
     LightningIcon,
     ProhibitIcon,
 } from "@phosphor-icons/react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
     AdvancedSection,
     AdvancedToggleRow,
@@ -33,6 +33,12 @@ export function UpdateSubscriptionAdvancedSection() {
 	}, [formContext.customerProduct]);
 
 	const showResetBillingCycle = isPaidRecurring;
+
+	useEffect(() => {
+		if (!showResetBillingCycle && resetBillingCycle) {
+			form.setFieldValue("resetBillingCycle", false);
+		}
+	}, [showResetBillingCycle, resetBillingCycle, form]);
 
 	const hasCustomSettings = isNextCycleOnly || resetBillingCycle || noBillingChanges;
 	const customSettingsLabels = [

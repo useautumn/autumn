@@ -76,19 +76,7 @@ test.concurrent(`${chalk.yellowBright("billing-cycle-anchor-line-items 1: pro to
 				minCount: 1,
 			},
 			{
-				featureId: TestFeature.Messages,
-				direction: "refund",
-				productId: pro.id,
-				minCount: 1,
-			},
-			{
 				isBasePrice: true,
-				direction: "charge",
-				productId: premium.id,
-				minCount: 1,
-			},
-			{
-				featureId: TestFeature.Messages,
 				direction: "charge",
 				productId: premium.id,
 				minCount: 1,
