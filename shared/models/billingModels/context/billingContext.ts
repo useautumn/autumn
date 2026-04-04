@@ -8,6 +8,7 @@ import type {
 	Price,
 } from "@autumn/shared";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
+import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
@@ -33,6 +34,14 @@ export interface TrialContext {
 	customFreeTrial?: FreeTrial;
 	appliesToBilling: boolean;
 	cardRequired: boolean;
+}
+
+export interface AnchorResetRefund {
+	noPartialRefund: boolean;
+	refundCycle?: {
+		interval: EntInterval;
+		intervalCount: number;
+	};
 }
 
 export interface BillingContext {
@@ -78,4 +87,6 @@ export interface BillingContext {
 	skipBillingChanges?: boolean;
 
 	checkoutMode?: CheckoutMode;
+
+	anchorResetRefund?: AnchorResetRefund;
 }
