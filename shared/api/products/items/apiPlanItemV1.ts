@@ -5,8 +5,8 @@ import { RolloverExpiryDurationType } from "@models/productModels/durationTypes/
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval.js";
 import {
+	ApiUsageTierOutputSchema,
 	TierBehavior,
-	UsageTierSchema,
 } from "@models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import {
 	OnDecrease,
@@ -90,7 +90,7 @@ export const ApiPlanItemV1Schema = z
 					description:
 						"Price per billing_units after included usage is consumed. Mutually exclusive with tiers.",
 				}),
-				tiers: z.array(UsageTierSchema).optional().meta({
+				tiers: z.array(ApiUsageTierOutputSchema).optional().meta({
 					description:
 						"Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.",
 				}),
