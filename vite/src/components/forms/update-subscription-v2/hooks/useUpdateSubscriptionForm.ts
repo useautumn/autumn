@@ -53,6 +53,7 @@ export function useUpdateSubscriptionForm({
 			cancelAction: null,
 			billingBehavior: null,
 			refundBehavior: null,
+			noBillingChanges: false,
 			...defaultOverrides,
 		} as UpdateSubscriptionForm,
 		validators: {

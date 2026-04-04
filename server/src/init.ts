@@ -11,6 +11,13 @@ import {
 	shutdownPgHealthMonitor,
 } from "./db/pgHealthMonitor.js";
 import { logger } from "./external/logtail/logtailUtils.js";
+import {
+	startAllEdgeConfigPolling,
+	stopAllEdgeConfigPolling,
+} from "./internal/misc/edgeConfig/edgeConfigRegistry.js";
+
+// Edge config modules self-register on import
+import "./internal/misc/requestBlocks/requestBlockStore.js";
 import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
@@ -31,6 +38,7 @@ const init = async () => {
 	console.time("init:redis-warmup");
 	await Promise.all([warmupRegionalRedis()]);
 	console.timeEnd("init:redis-warmup");
+	await startAllEdgeConfigPolling({ logger });
 
 	const PORT = process.env.SERVER_PORT
 		? Number.parseInt(process.env.SERVER_PORT)
@@ -102,6 +110,7 @@ async function gracefulShutdown() {
 			await otelSdk.shutdown();
 		}
 		shutdownPgHealthMonitor();
+		stopAllEdgeConfigPolling();
 		await Promise.all([
 			client.end(),
 			clientCritical.end(),
