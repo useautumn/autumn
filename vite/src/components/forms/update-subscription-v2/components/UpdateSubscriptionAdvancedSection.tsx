@@ -1,4 +1,4 @@
-import { CalendarIcon, LightningIcon } from "@phosphor-icons/react";
+import { CalendarIcon, LightningIcon, ProhibitIcon } from "@phosphor-icons/react";
 import {
 	AdvancedSection,
 	AdvancedToggleRow,
@@ -9,15 +9,17 @@ import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionF
 
 export function UpdateSubscriptionAdvancedSection() {
 	const { form, formValues } = useUpdateSubscriptionFormContext();
-	const { billingBehavior } = formValues;
+	const { billingBehavior, noBillingChanges } = formValues;
 
 	const isProrate = billingBehavior !== "none";
 	const isNextCycleOnly = billingBehavior === "none";
 
-	const hasCustomSettings = isNextCycleOnly;
-	const customSettingsTooltip = isNextCycleOnly
-		? "Proration: Next Cycle Only"
-		: "";
+	const hasCustomSettings = isNextCycleOnly || noBillingChanges;
+	const customSettingsLabels = [
+		isNextCycleOnly && "Proration: Next Cycle Only",
+		noBillingChanges && "No Billing Changes",
+	].filter(Boolean);
+	const customSettingsTooltip = customSettingsLabels.join(", ");
 
 	return (
 		<AdvancedSection
@@ -46,6 +48,22 @@ export function UpdateSubscriptionAdvancedSection() {
 					className={cn("rounded-l-none", !isNextCycleOnly && "border-l-0")}
 				>
 					Next Cycle Only
+				</IconCheckbox>
+			</AdvancedToggleRow>
+
+			<AdvancedToggleRow label="No Billing Changes">
+				<IconCheckbox
+					icon={<ProhibitIcon />}
+					iconOrientation="left"
+					variant="secondary"
+					size="sm"
+					checked={noBillingChanges}
+					onCheckedChange={(checked) => {
+						form.setFieldValue("noBillingChanges", checked);
+						if (checked) form.setFieldValue("billingBehavior", null);
+					}}
+				>
+					{noBillingChanges ? "On" : "Off"}
 				</IconCheckbox>
 			</AdvancedToggleRow>
 		</AdvancedSection>

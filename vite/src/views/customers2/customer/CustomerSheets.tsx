@@ -18,6 +18,7 @@ import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { SubscriptionUpdateSheet } from "../components/sheets/SubscriptionUpdateSheet";
+import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export function CustomerSheets() {
@@ -59,6 +60,8 @@ export function CustomerSheets() {
 				if (!invoice) return null;
 				return <InvoiceDetailSheet invoice={invoice} lineItems={lineItems} />;
 			}
+			case "sync-stripe":
+				return <SyncStripeSheet />;
 			default:
 				return null;
 		}
