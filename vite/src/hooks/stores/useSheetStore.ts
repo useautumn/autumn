@@ -19,6 +19,7 @@ export type SheetType =
 	| "balance-edit"
 	| "balance-delete"
 	| "invoice-detail"
+	| "sync-stripe"
 	| null;
 
 // Store state interface

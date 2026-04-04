@@ -116,6 +116,7 @@ export function useUpdateSubscriptionRequestBody({
 			items,
 			cancelAction,
 			billingBehavior,
+			noBillingChanges,
 		} = formValues;
 
 		const base = {
@@ -135,6 +136,7 @@ export function useUpdateSubscriptionRequestBody({
 					cancelAction === "cancel_immediately"
 						? billingBehavior || undefined
 						: undefined,
+				no_billing_changes: noBillingChanges || undefined,
 			};
 		}
 
@@ -160,6 +162,7 @@ export function useUpdateSubscriptionRequestBody({
 			items: items && items.length > 0 ? items : undefined,
 			version: version !== initialVersion ? version : undefined,
 			billing_behavior: billingBehavior || undefined,
+			no_billing_changes: noBillingChanges || undefined,
 		};
 	}, [
 		form.store,

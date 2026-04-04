@@ -136,6 +136,32 @@ export class PriceService {
 		return byStripeId;
 	}
 
+	static async getByStripeProductIds({
+		db,
+		stripeProductIds,
+	}: {
+		db: DrizzleCli;
+		stripeProductIds: string[];
+	}) {
+		if (!stripeProductIds || stripeProductIds.length === 0)
+			return {} as Record<string, Price & { product: Product }>;
+
+		const rows = (await db.query.prices.findMany({
+			where: sql`${prices.config} ->> 'stripe_product_id' = ANY(ARRAY[${sql.join(
+				stripeProductIds.map((id) => sql`${id}`),
+				sql`, `,
+			)}])`,
+			with: { product: true },
+		})) as (Price & { product: Product })[];
+
+		const byStripeProductId: Record<string, Price & { product: Product }> = {};
+		for (const row of rows) {
+			const cfg: any = (row as any).config || {};
+			if (cfg.stripe_product_id) byStripeProductId[cfg.stripe_product_id] = row;
+		}
+		return byStripeProductId;
+	}
+
 	static async updateConfig({
 		db,
 		id,
