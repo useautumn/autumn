@@ -459,7 +459,7 @@ export type PreviewMultiAttachThresholdType = ClosedEnum<
 
 export type PreviewMultiAttachUsageAlert = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**

@@ -149,6 +149,7 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 	redirect_mode: z.string(),
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	cancel_action: z.union([z.string(), z.undefined()]).optional(),
+	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	recalculate_balances: z
 		.union([billingUpdateRecalculateBalancesOutboundSchema, z.undefined()])
@@ -273,6 +274,7 @@ export const updateSubscriptionParamsSchema = z.object({
 	cancelAction: z
 		.union([billingUpdateCancelActionSchema, z.undefined()])
 		.optional(),
+	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	recalculateBalances: z
 		.union([billingUpdateRecalculateBalancesSchema, z.undefined()])
