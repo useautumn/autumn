@@ -103,3 +103,5 @@ collatePgColumn(customerProducts.id, "C");
 
 export type CustomerProduct = InferSelectModel<typeof customerProducts>;
 export type InsertCustomerProduct = InferInsertModel<typeof customerProducts>;
+export type DbCustomerProduct = InferSelectModel<typeof customerProducts>;
+export type InsertDbCustomerProduct = InferInsertModel<typeof customerProducts>;
