@@ -9,17 +9,19 @@ export function createDateTimeColumn<T>({
 	header,
 	accessorKey,
 	className = "text-xs text-t3",
+	withYear = false,
 }: {
 	header: string;
 	accessorKey: keyof T & string;
 	className?: string;
+	withYear?: boolean;
 }) {
 	return {
 		header,
 		accessorKey,
 		cell: ({ row }: { row: Row<T> }) => {
 			const timestamp = row.original[accessorKey] as number;
-			const { date, time } = formatUnixToDateTime(timestamp);
+			const { date, time } = formatUnixToDateTime(timestamp, { withYear });
 			return (
 				<div className={className}>
 					{date} {time}

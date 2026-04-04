@@ -14,6 +14,7 @@ export type AutumnProviderProps = {
 	pathPrefix?: string;
 	useBetterAuth?: boolean;
 	includeCredentials?: boolean;
+	headers?: Record<string, string>;
 };
 
 /**
@@ -30,6 +31,7 @@ export const AutumnProvider = ({
 	pathPrefix,
 	useBetterAuth,
 	includeCredentials,
+	headers,
 }: AutumnProviderProps) => {
 	const queryClientRef = useRef<QueryClient | null>(null);
 	if (!queryClientRef.current) {
@@ -56,9 +58,10 @@ export const AutumnProvider = ({
 			backendUrl,
 			pathPrefix: resolvedPathPrefix,
 			includeCredentials: resolvedIncludeCredentials,
+			headers,
 		});
 		return { client };
-	}, [backendUrl, pathPrefix, useBetterAuth, includeCredentials]);
+	}, [backendUrl, pathPrefix, useBetterAuth, includeCredentials, JSON.stringify(headers)]);
 
 	return (
 		<QueryClientProvider client={queryClientRef.current}>

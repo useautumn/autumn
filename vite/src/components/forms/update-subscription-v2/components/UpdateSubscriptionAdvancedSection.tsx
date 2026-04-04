@@ -1,17 +1,18 @@
 import {
-	cusProductToPrices,
-	isFreeProduct,
-	isOneOffProduct,
+    cusProductToPrices,
+    isFreeProduct,
+    isOneOffProduct,
 } from "@autumn/shared";
 import {
-	ArrowCounterClockwiseIcon,
-	CalendarIcon,
-	LightningIcon,
+    ArrowCounterClockwiseIcon,
+    CalendarIcon,
+    LightningIcon,
+    ProhibitIcon,
 } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import {
-	AdvancedSection,
-	AdvancedToggleRow,
+    AdvancedSection,
+    AdvancedToggleRow,
 } from "@/components/forms/shared/advanced-section";
 import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
 import { cn } from "@/lib/utils";
@@ -19,7 +20,7 @@ import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionF
 
 export function UpdateSubscriptionAdvancedSection() {
 	const { form, formValues, formContext } = useUpdateSubscriptionFormContext();
-	const { billingBehavior, resetBillingCycle } = formValues;
+	const { billingBehavior, resetBillingCycle, noBillingChanges } = formValues;
 
 	const isProrate = billingBehavior !== "none";
 	const isNextCycleOnly = billingBehavior === "none";
@@ -33,18 +34,18 @@ export function UpdateSubscriptionAdvancedSection() {
 
 	const showResetBillingCycle = isPaidRecurring;
 
-	const hasCustomSettings = isNextCycleOnly || resetBillingCycle;
-	const getCustomSettingsTooltip = (): string => {
-		const parts: string[] = [];
-		if (isNextCycleOnly) parts.push("Proration: Next Cycle Only");
-		if (resetBillingCycle) parts.push("Reset Billing Cycle");
-		return parts.join(" \u2022 ");
-	};
+	const hasCustomSettings = isNextCycleOnly || resetBillingCycle || noBillingChanges;
+	const customSettingsLabels = [
+		isNextCycleOnly && "Proration: Next Cycle Only",
+		resetBillingCycle && "Reset Billing Cycle",
+		noBillingChanges && "No Billing Changes",
+	].filter(Boolean);
+	const customSettingsTooltip = customSettingsLabels.join(" \u2022 ");
 
 	return (
 		<AdvancedSection
 			hasCustomSettings={hasCustomSettings}
-			customSettingsTooltip={getCustomSettingsTooltip()}
+			customSettingsTooltip={customSettingsTooltip}
 		>
 			<AdvancedToggleRow label="Proration Behaviour">
 				<IconCheckbox
@@ -87,6 +88,22 @@ export function UpdateSubscriptionAdvancedSection() {
 					</IconCheckbox>
 				</AdvancedToggleRow>
 			)}
+
+			<AdvancedToggleRow label="No Billing Changes">
+				<IconCheckbox
+					icon={<ProhibitIcon />}
+					iconOrientation="left"
+					variant="secondary"
+					size="sm"
+					checked={noBillingChanges}
+					onCheckedChange={(checked) => {
+						form.setFieldValue("noBillingChanges", checked);
+						if (checked) form.setFieldValue("billingBehavior", null);
+					}}
+				>
+					{noBillingChanges ? "On" : "Off"}
+				</IconCheckbox>
+			</AdvancedToggleRow>
 		</AdvancedSection>
 	);
 }

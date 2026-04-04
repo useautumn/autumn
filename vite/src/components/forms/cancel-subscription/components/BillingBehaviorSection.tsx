@@ -11,14 +11,18 @@ export function BillingBehaviorSection() {
 	const { customerProduct } = formContext;
 
 	const cancelAction = formValues.cancelAction;
+	const noBillingChanges = formValues.noBillingChanges;
 	const billingBehavior = formValues.billingBehavior ?? "prorate_immediately";
 
 	// Only show billing behavior options when:
 	// 1. Cancel action is "cancel_immediately"
 	// 2. Product is NOT free or one-off (has recurring billing)
+	// 3. "No billing changes" is not enabled
 	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
 	const showBillingBehavior =
-		cancelAction === "cancel_immediately" && !isFreeOrOneOff;
+		cancelAction === "cancel_immediately" &&
+		!isFreeOrOneOff &&
+		!noBillingChanges;
 
 	return (
 		<AnimatePresence initial={false}>

@@ -21,7 +21,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	}),
 	billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
 		description:
-			"Reset the billing cycle anchor immediately with 'now' or schedule it for a future Unix timestamp in milliseconds.",
+			"Reset the billing cycle anchor immediately with 'now'.",
 	}),
 	plan_schedule: PlanTimingSchema.optional().meta({
 		description:
