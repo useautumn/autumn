@@ -7,6 +7,7 @@ import {
 	SquareSplitHorizontalIcon,
 	UniteIcon,
 } from "@phosphor-icons/react";
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import {
 	ACCORDION_ITEM,
@@ -55,6 +56,12 @@ export function AttachAdvancedSection() {
 		return false;
 	});
 	const showResetBillingCycle = showBillingBehavior && hasOutgoing;
+
+	useEffect(() => {
+		if (!showResetBillingCycle && resetBillingCycle) {
+			form.setFieldValue("resetBillingCycle", false);
+		}
+	}, [showResetBillingCycle, resetBillingCycle, form]);
 
 	const hasCustomSettings =
 		(hasActiveSubscription && (hasCustomSchedule || hasCustomBilling)) ||
