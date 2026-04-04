@@ -69,6 +69,10 @@ export const logAttachContext = ({
 				trialContext: trialContext
 					? `trial ends at: ${formatMs(trialContext.trialEndsAt)} | free trial ID: ${trialContext.freeTrial?.id ?? "none"} | appliesToBilling: ${trialContext.appliesToBilling}`
 					: "none",
+
+				anchorResetRefund: billingContext.anchorResetRefund
+					? `noPartialRefund: ${billingContext.anchorResetRefund.noPartialRefund} | refundCycle: ${billingContext.anchorResetRefund.refundCycle ? `${billingContext.anchorResetRefund.refundCycle.interval} x${billingContext.anchorResetRefund.refundCycle.intervalCount}` : "none"}`
+					: "none",
 			},
 		},
 	});

@@ -55,8 +55,6 @@ export const buildAutumnLineItems = ({
 		}),
 	);
 
-	// Combine all line items - trial filtering and unchanged price filtering
-	// will be handled in finalizeUpdateSubscriptionPlan
 	const allLineItems = [
 		...arrearLineItems,
 		...deletedLineItems,

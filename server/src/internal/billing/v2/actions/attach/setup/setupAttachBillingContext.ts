@@ -22,6 +22,7 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
+import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
@@ -155,6 +156,7 @@ export const setupAttachBillingContext = async ({
 		newFullProduct: attachProduct,
 		trialContext,
 		currentEpochMs,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 	});
 
 	// Trial ends at overrides billing cycle anchor
@@ -215,6 +217,8 @@ export const setupAttachBillingContext = async ({
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		requestedProrationBehavior: params.proration_behavior,
 
 		invoiceMode,
 
@@ -237,5 +241,12 @@ export const setupAttachBillingContext = async ({
 			orgDisableStripeWrites({ ctx }) ||
 			params.no_billing_changes === true ||
 			params.processor_subscription_id !== undefined,
+
+		anchorResetRefund: setupAnchorResetRefund({
+			billingCycleAnchor: params.billing_cycle_anchor,
+			prorationBehavior: params.proration_behavior,
+			outgoingCustomerProduct: currentCustomerProduct,
+			carryOverBalances: params.carry_over_balances,
+		}),
 	};
 };
