@@ -289,3 +289,99 @@ test(`${chalk.yellowBright("sync-scenario: ad-hoc inline price")}`, async () => 
 	};
 	await ctx.stripeCli.subscriptions.create(adHocParams);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// H: Ad-hoc tiered Stripe price (graduated + volume)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test(`${chalk.yellowBright("sync-scenario: ad-hoc tiered price")}`, async () => {
+	const customerId = "sync-sc-tiered-adhoc";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const pro = products.pro({ id: "pro", items: [messagesItem] });
+
+	await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const stripeCustomerId = fullCustomer.processor!.id!;
+
+	const tieredProduct = await ctx.stripeCli.products.create({
+		name: "API Calls (Tiered)",
+	});
+
+	const graduatedPrice = await ctx.stripeCli.prices.create({
+		product: tieredProduct.id,
+		currency: "usd",
+		recurring: { interval: "month" },
+		billing_scheme: "tiered",
+		tiers_mode: "graduated",
+		tiers: [
+			{ up_to: 1000, unit_amount: 10 },
+			{ up_to: 10000, unit_amount: 5 },
+			{ up_to: "inf", unit_amount: 2 },
+		],
+	});
+
+	const volumeProduct = await ctx.stripeCli.products.create({
+		name: "Storage (Volume)",
+	});
+
+	const volumePrice = await ctx.stripeCli.prices.create({
+		product: volumeProduct.id,
+		currency: "usd",
+		recurring: { interval: "month" },
+		billing_scheme: "tiered",
+		tiers_mode: "volume",
+		tiers: [
+			{ up_to: 100, unit_amount: 500, flat_amount: 0 },
+			{ up_to: "inf", unit_amount: 200, flat_amount: 1000 },
+		],
+	});
+
+	const meter = await ctx.stripeCli.billing.meters.create({
+		display_name: "Sync Test Events",
+		event_name: `sync_test_events_${customerId}_${Date.now()}`,
+		default_aggregation: { formula: "sum" },
+	});
+
+	const meteredProduct = await ctx.stripeCli.products.create({
+		name: "Events (Metered Graduated)",
+	});
+
+	const meteredGraduatedPrice = await ctx.stripeCli.prices.create({
+		product: meteredProduct.id,
+		currency: "usd",
+		recurring: {
+			interval: "month",
+			usage_type: "metered",
+			meter: meter.id,
+		},
+		billing_scheme: "tiered",
+		tiers_mode: "graduated",
+		tiers: [
+			{ up_to: 5000, unit_amount: 1 },
+			{ up_to: 50000, unit_amount: 0, flat_amount: 40 },
+			{ up_to: "inf", unit_amount: 0, flat_amount: 20 },
+		],
+	});
+
+	const subParams: Stripe.SubscriptionCreateParams = {
+		customer: stripeCustomerId,
+		items: [
+			{ price: graduatedPrice.id },
+			{ price: volumePrice.id },
+			{ price: meteredGraduatedPrice.id },
+		],
+	};
+	await ctx.stripeCli.subscriptions.create(subParams);
+});
