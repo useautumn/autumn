@@ -47,24 +47,8 @@ const formatItemPrice = ({ item }: { item: SyncProposalItem }): string => {
 	const currency = item.currency ?? "usd";
 
 	if (item.billing_scheme === "tiered") {
-		const label =
-			item.tiers_mode === "volume" ? "Volume pricing" : "Tiered pricing";
-		if (!item.tiers || item.tiers.length === 0) return label;
-
-		const tierDescriptions = item.tiers.map((tier) => {
-			const upTo = tier.up_to === null ? "∞" : tier.up_to.toLocaleString();
-			const parts: string[] = [];
-			if (tier.unit_amount != null)
-				parts.push(
-					`${formatStripeCurrency({ amount: tier.unit_amount, currency })}/unit`,
-				);
-			if (tier.flat_amount != null)
-				parts.push(
-					`${formatStripeCurrency({ amount: tier.flat_amount, currency })} flat`,
-				);
-			return `≤${upTo}: ${parts.join(" + ") || "free"}`;
-		});
-		return `${label} — ${tierDescriptions.join(", ")}`;
+		if (item.tiers_mode === "volume") return "Volume";
+		return "Tiered";
 	}
 
 	if (item.recurring_usage_type === "metered") {
@@ -275,11 +259,11 @@ export function SyncProposalCard({
 					return (
 						<div
 							key={item.stripe_price_id}
-							className="flex items-center justify-between text-xs"
+							className="flex items-center justify-between text-xs gap-3"
 						>
 							<span
 								className={cn(
-									"text-t2",
+									"text-t2 truncate min-w-0",
 									!item.stripe_product_name && "font-mono text-t3",
 								)}
 							>

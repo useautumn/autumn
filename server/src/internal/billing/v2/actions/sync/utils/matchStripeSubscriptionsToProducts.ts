@@ -80,11 +80,56 @@ const fetchStripeProductNames = async ({
 	return nameMap;
 };
 
+/** Collects Stripe price IDs that use tiered billing (need a separate fetch for tiers). */
+const collectTieredPriceIds = ({
+	stripeSubscriptions,
+}: {
+	stripeSubscriptions: Stripe.Subscription[];
+}): string[] => {
+	const ids = new Set<string>();
+	for (const sub of stripeSubscriptions) {
+		for (const item of sub.items.data) {
+			if (item.price?.billing_scheme === "tiered" && item.price.id)
+				ids.add(item.price.id);
+		}
+	}
+	return Array.from(ids);
+};
+
+/** Fetches full price objects (with tiers expanded) for tiered prices. */
+const fetchTieredPriceTiers = async ({
+	stripeCli,
+	tieredPriceIds,
+}: {
+	stripeCli: Stripe;
+	tieredPriceIds: string[];
+}): Promise<Record<string, SyncProposalStripeTier[]>> => {
+	if (tieredPriceIds.length === 0) return {};
+
+	const tiersMap: Record<string, SyncProposalStripeTier[]> = {};
+	const prices = await Promise.all(
+		tieredPriceIds.map((id) =>
+			stripeCli.prices.retrieve(id, { expand: ["tiers"] }),
+		),
+	);
+	for (const price of prices) {
+		if (!price.tiers) continue;
+		tiersMap[price.id] = price.tiers.map((tier) => ({
+			up_to: tier.up_to,
+			unit_amount: tier.unit_amount,
+			flat_amount: tier.flat_amount,
+		}));
+	}
+	return tiersMap;
+};
+
 /** Extracts price metadata (amount, currency, billing scheme, tiers) from a Stripe subscription item. */
 const extractPriceMetadata = ({
 	stripeItem,
+	tieredPriceTiers,
 }: {
 	stripeItem: Stripe.SubscriptionItem;
+	tieredPriceTiers: Record<string, SyncProposalStripeTier[]>;
 }): {
 	unit_amount: number | null;
 	currency: string | null;
@@ -104,13 +149,14 @@ const extractPriceMetadata = ({
 			tiers: null,
 		};
 
-	const tiers: SyncProposalStripeTier[] | null = price.tiers
-		? price.tiers.map((tier) => ({
-				up_to: tier.up_to,
-				unit_amount: tier.unit_amount,
-				flat_amount: tier.flat_amount,
-			}))
-		: null;
+	const tiers: SyncProposalStripeTier[] | null =
+		price.tiers?.map((tier) => ({
+			up_to: tier.up_to,
+			unit_amount: tier.unit_amount,
+			flat_amount: tier.flat_amount,
+		})) ??
+		tieredPriceTiers[price.id] ??
+		null;
 
 	return {
 		unit_amount: price.unit_amount ?? null,
@@ -158,13 +204,15 @@ export const matchStripeSubscriptionsToProducts = async ({
 }): Promise<SyncProposal[]> => {
 	const allStripePriceIds = collectStripePriceIds({ stripeSubscriptions });
 	const allStripeProductIds = collectStripeProductIds({ stripeSubscriptions });
+	const tieredPriceIds = collectTieredPriceIds({ stripeSubscriptions });
 
-	// Batch all lookups in parallel (DB + Stripe product names)
+	// Batch all lookups in parallel (DB + Stripe product names + tiered price tiers)
 	const [
 		priceByStripePriceId,
 		priceByStripeProductId,
 		productByStripeProductId,
 		stripeProductNames,
+		tieredPriceTiers,
 	] = await Promise.all([
 		PriceService.getByStripeIds({ db, stripePriceIds: allStripePriceIds }),
 		PriceService.getByStripeProductIds({
@@ -181,6 +229,7 @@ export const matchStripeSubscriptionsToProducts = async ({
 			stripeCli,
 			stripeProductIds: allStripeProductIds,
 		}),
+		fetchTieredPriceTiers({ stripeCli, tieredPriceIds }),
 	]);
 
 	const proposals: SyncProposal[] = [];
@@ -201,7 +250,10 @@ export const matchStripeSubscriptionsToProducts = async ({
 				productByStripeProductId,
 			});
 
-			const priceMetadata = extractPriceMetadata({ stripeItem });
+			const priceMetadata = extractPriceMetadata({
+				stripeItem,
+				tieredPriceTiers,
+			});
 
 			items.push({
 				stripe_price_id: stripePriceId,
