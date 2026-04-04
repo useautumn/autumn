@@ -13,9 +13,16 @@ import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/
 import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet2";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
 import { AttachProductSheetV2 } from "../components/sheets/AttachProductSheetV2";
+import { BalanceCreateSheet } from "../components/sheets/BalanceCreateSheet";
 import { BalanceDeleteSheet } from "../components/sheets/BalanceDeleteSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
+import { BillingAutoTopupSheet } from "../components/sheets/BillingAutoTopupSheet";
+import { BillingOverageAllowedSheet } from "../components/sheets/BillingOverageAllowedSheet";
+import { BillingSpendLimitSheet } from "../components/sheets/BillingSpendLimitSheet";
+import { BillingUsageAlertSheet } from "../components/sheets/BillingUsageAlertSheet";
+import { CheckBalanceSheet } from "../components/sheets/CheckBalanceSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
+import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { SubscriptionUpdateSheet } from "../components/sheets/SubscriptionUpdateSheet";
 import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
@@ -54,6 +61,8 @@ export function CustomerSheets() {
 				return <BalanceEditSheet />;
 			case "balance-delete":
 				return <BalanceDeleteSheet />;
+			case "balance-create":
+				return <BalanceCreateSheet />;
 			case "invoice-detail": {
 				const invoice = sheetData?.invoice as Invoice | undefined;
 				const lineItems = (sheetData?.lineItems as InvoiceLineItem[]) ?? [];
@@ -62,6 +71,22 @@ export function CustomerSheets() {
 			}
 			case "sync-stripe":
 				return <SyncStripeSheet />;
+			case "billing-auto-topup-add":
+			case "billing-auto-topup-edit":
+				return <BillingAutoTopupSheet />;
+			case "billing-spend-limit-add":
+			case "billing-spend-limit-edit":
+				return <BillingSpendLimitSheet />;
+			case "billing-usage-alert-add":
+			case "billing-usage-alert-edit":
+				return <BillingUsageAlertSheet />;
+			case "billing-overage-allowed-add":
+			case "billing-overage-allowed-edit":
+				return <BillingOverageAllowedSheet />;
+			case "record-usage":
+				return <RecordUsageSheet />;
+			case "check-balance":
+				return <CheckBalanceSheet />;
 			default:
 				return null;
 		}
