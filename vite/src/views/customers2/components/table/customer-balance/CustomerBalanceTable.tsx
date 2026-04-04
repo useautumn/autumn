@@ -59,6 +59,22 @@ export function CustomerBalanceTable({
 							balance,
 						},
 					}),
+				onRecordUsageClick: (balance) =>
+					setSheet({
+						type: "record-usage",
+						data: {
+							featureId: balance.entitlement.feature.id,
+							featureName: balance.entitlement.feature.name,
+						},
+					}),
+				onCheckBalanceClick: (balance) =>
+					setSheet({
+						type: "check-balance",
+						data: {
+							featureId: balance.entitlement.feature.id,
+							featureName: balance.entitlement.feature.name,
+						},
+					}),
 			}),
 		[customer, entityId, setSheet],
 	);

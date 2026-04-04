@@ -61,6 +61,14 @@ export const scenarioSections: Array<ScenarioSection> = [
         description: "Inspect entity-level behavior.",
         status: "ready",
       },
+      {
+        id: "headers-test",
+        title: "Headers Test",
+        href: "/scenarios/core/headers-test",
+        description:
+          "Verify custom headers from AutumnProvider are sent to backend.",
+        status: "ready",
+      },
     ],
   },
   {

@@ -214,6 +214,7 @@ test.concurrent(`${chalk.yellowBright("anchor-reset-carry-over 3: monthly + hour
 		billing_cycle_anchor: "now",
 		proration_behavior: "none",
 		carry_over_balances: { enabled: true },
+		plan_schedule: "immediate",
 	});
 
 	expectTotalEqual({ actual: preview.total, expected: expectedTotal });
@@ -285,6 +286,7 @@ test.concurrent(`${chalk.yellowBright("anchor-reset-carry-over 4: monthly messag
 		billing_cycle_anchor: "now",
 		proration_behavior: "none",
 		carry_over_balances: { enabled: true },
+		plan_schedule: "immediate",
 	});
 
 	expectTotalEqual({ actual: preview.total, expected: expectedTotal });

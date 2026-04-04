@@ -16,7 +16,7 @@ export function CustomerFlagsSection({
 				{booleanEnts.map((ent) => (
 					<div
 						key={ent.entitlement.feature.id}
-						className="text-sm text-t2 bg-interactive-secondary border h-8 flex items-center px-4 rounded-lg"
+						className="text-sm text-t2 bg-interactive-secondary border h-12 flex items-center px-4 rounded-lg"
 					>
 						<span>{ent.entitlement.feature.name}</span>
 					</div>
