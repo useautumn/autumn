@@ -11,8 +11,10 @@ import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { resetCustomerEntitlements } from "@/internal/customers/actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
+import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
+import { deleteCachedFullSubject } from "./deleteCachedFullSubject.js";
 import { buildFullSubjectCacheKey } from "./fullSubjectCacheConfig.js";
 
 const roundBalance = (value: number | null | undefined): number => {
@@ -116,9 +118,33 @@ export const getCachedFullSubject = async ({
 
 	if (!cached) return undefined;
 
+	const parsed = JSON.parse(cached);
+	const cachedAt = parsed._cachedAt as number | undefined;
+	delete parsed._cachedAt;
+
+	if (
+		ctx.rolloutSnapshot &&
+		isSnapshotCacheStale({
+			snapshot: ctx.rolloutSnapshot,
+			cachedAt,
+		})
+	) {
+		ctx.logger.warn(
+			`[getCachedFullSubject] Stale rollout cache for ${customerId}, evicting`,
+		);
+		await deleteCachedFullSubject({
+			ctx,
+			customerId,
+			entityId,
+			source: "stale-rollout",
+			skipGuard: true,
+		});
+		return undefined;
+	}
+
 	const fullSubject = normalizeFromSchema<FullSubject>({
 		schema: FullSubjectSchema,
-		data: JSON.parse(cached),
+		data: parsed,
 	});
 
 	if (!fullSubject.extra_customer_entitlements) {

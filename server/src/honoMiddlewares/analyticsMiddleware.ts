@@ -7,69 +7,6 @@ import {
 } from "@/utils/logging/addContextToLogs";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
-export const parseCustomerIdFromUrl = ({
-	url,
-}: {
-	url: string;
-}): string | undefined => {
-	if (!url.startsWith("/v1")) {
-		return undefined;
-	}
-
-	const cleanUrl = url.split("?")[0].replace(/^\/+|\/+$/g, "");
-	const segments = cleanUrl.split("/");
-	const customersIndex = segments.indexOf("customers");
-
-	if (customersIndex !== -1 && segments[customersIndex + 1]) {
-		return segments[customersIndex + 1];
-	}
-
-	return undefined;
-};
-
-const extractCustomerIdFromBody = ({
-	body,
-	path,
-	method,
-}: {
-	body: Record<string, unknown>;
-	path: string;
-	method: string;
-}): string | undefined => {
-	const isCreateCustomerPath =
-		(path.startsWith("/v1/customers") && method === "POST" && !path.includes("customers.get_or_create"));
-	return (isCreateCustomerPath ? body?.id : body?.customer_id) as
-		| string
-		| undefined;
-};
-
-export const parseCustomerIdFromBody = async (
-	c: Context<HonoEnv>,
-): Promise<
-	{ customerId: string | undefined; sendEvent: boolean | undefined } | undefined
-> => {
-	const method = c.req.method;
-	if (method === "POST" || method === "PUT" || method === "PATCH") {
-		try {
-			const body = await c.req.json();
-
-			return {
-				customerId: extractCustomerIdFromBody({
-					body,
-					path: c.req.path,
-					method,
-				}),
-				sendEvent: body?.send_event,
-			};
-		} catch (_error) {
-			// Body might not be JSON, that's okay
-			return undefined;
-		}
-	}
-
-	return undefined;
-};
-
 /**
  * Logs response details asynchronously without blocking
  */
@@ -85,17 +22,13 @@ const logResponse = async ({
 	durationMs: number;
 }) => {
 	try {
-		// Skip logging for certain URLs
-		if (skipUrls.includes(c.req.path)) {
-			return;
-		}
+		if (skipUrls.includes(c.req.path)) return;
 
 		ctx.logger = addExtrasToLogs({
 			logger: ctx.logger,
 			extras: ctx.extraLogs,
 		});
 
-		// Only clone and log response body for /v1 API routes (saves memory on webhooks, health checks, etc.)
 		let responseBody: Record<string, unknown> | null = null;
 		if (c.req.path.includes("/v1")) {
 			const contentType = c.res.headers.get("content-type");
@@ -103,14 +36,10 @@ const logResponse = async ({
 				try {
 					const clonedResponse = c.res.clone();
 					responseBody = await clonedResponse.json();
-				} catch (_error) {
-					// Response might not be JSON or already consumed
-				}
+				} catch (_error) {}
 			}
 		}
 
-		// Log response in non-development environments
-		// if (process.env.NODE_ENV !== "development") {
 		const log = c.res.status === 200 ? ctx.logger.info : ctx.logger.warn;
 		const statusColor = c.res.status === 200 ? chalk.green : chalk.yellow;
 
@@ -144,14 +73,8 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 	const skipUrls = ["/v1/customers/all/search"];
 
-	let { customerId } = (await parseCustomerIdFromBody(c)) || {};
-	if (!customerId) {
-		customerId = parseCustomerIdFromUrl({ url: c.req.path });
-	}
+	const customerId = ctx.customerId;
 
-	ctx.customerId = customerId;
-
-	// Update logger with enriched context
 	ctx.logger = addAppContextToLogs({
 		logger: ctx.logger,
 		appContext: {
@@ -170,14 +93,11 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		`${c.req.method} ${c.req.path} (${ctx.org?.slug}) [${ctx.id}]`,
 	);
 
-	// Execute the request
 	await next();
 
-	// Re-fetch ctx after next() since handlers may have replaced it via c.set("ctx", {...})
 	const finalCtx = c.get("ctx");
 	const durationMs = Date.now() - finalCtx.timestamp;
 
-	// Log response asynchronously without blocking (runs after response is sent)
 	Promise.resolve()
 		.then(() => logResponse({ ctx: finalCtx, c, skipUrls, durationMs }))
 		.catch((error) => {

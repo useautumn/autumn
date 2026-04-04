@@ -1,4 +1,4 @@
-import { Globe } from "@phosphor-icons/react";
+import { Globe, Sliders } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,15 @@ export const AdminView = () => {
 		<div className="flex flex-col p-6 gap-8">
 			<div className="flex justify-end absolute top-10 right-10 gap-2">
 				<CreateUser />
+				<Button
+					onClick={() => navigate("/admin/edge-config")}
+					variant="outline"
+					size="sm"
+					className="w-fit"
+				>
+					<Sliders className="w-4 h-4 mr-1.5" />
+					Rollouts
+				</Button>
 				<Button
 					onClick={() => navigate("/admin/oauth")}
 					variant="outline"

@@ -1,4 +1,5 @@
 export const ADMIN_REQUEST_BLOCK_CONFIG_KEY = "admin/request-block-config.json";
+export const ADMIN_ROLLOUT_CONFIG_KEY = "admin/rollout-config.json";
 
 type AdminS3Target = "dev" | "prod";
 
