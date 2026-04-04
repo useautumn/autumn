@@ -29,12 +29,10 @@ export const getCancelFieldsFromStripe = ({
 
 	let endedAt: number | undefined;
 
-	if (stripeSubscription.cancel_at) {
-		endedAt = secondsToMs(stripeSubscription.cancel_at);
-	}
-
-	if (!endedAt && stripeSubscription.ended_at) {
+	if (stripeSubscription.ended_at) {
 		endedAt = secondsToMs(stripeSubscription.ended_at);
+	} else if (stripeSubscription.cancel_at) {
+		endedAt = secondsToMs(stripeSubscription.cancel_at);
 	}
 
 	return { canceledAt, endedAt };

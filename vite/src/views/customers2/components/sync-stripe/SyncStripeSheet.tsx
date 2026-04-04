@@ -83,7 +83,7 @@ export function SyncStripeSheet() {
 		mappingIndex: number;
 	} | null>(null);
 
-	if (proposals.length > 0 && !initialized) {
+	if (proposals.length > 0 && !initialized && products && products.length > 0) {
 		setMappings(
 			buildDefaultMappings({
 				proposals,
