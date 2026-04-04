@@ -166,6 +166,7 @@ export const setupPaymentParamsOutboundSchema = z.object({
 		.union([z.array(setupPaymentAttachDiscountOutboundSchema), z.undefined()])
 		.optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
+	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
@@ -291,6 +292,7 @@ export const setupPaymentParamsSchema = z.object({
 		.union([z.array(setupPaymentAttachDiscountSchema), z.undefined()])
 		.optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
+	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),

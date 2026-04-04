@@ -17,6 +17,7 @@ import {
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
 import { handleUncancelErrors } from "./handleUncancelErrors";
 import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors";
+import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
@@ -73,9 +74,12 @@ export const handleUpdateSubscriptionErrors = async ({
 		params,
 	});
 
-	// 10. Update checkout errors
+	// 10. Billing cycle anchor errors
+	handleUpdateSubscriptionBillingCycleAnchorErrors({ billingContext });
+
+	// 11. Update checkout errors
 	handleUpdateCheckoutErrors({ billingContext });
 
-	// 11. Stripe billing plan errors (validate Stripe resources)
+	// 12. Stripe billing plan errors (validate Stripe resources)
 	handleStripeBillingPlanErrors({ billingContext });
 };
