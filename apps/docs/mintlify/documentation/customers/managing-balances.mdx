@@ -36,9 +36,9 @@ import { Autumn } from "autumn-js";
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
 await autumn.balances.create({
-  customer_id: "user_123",
-  feature_id: "credits",
-  granted_balance: 500,
+  customerId: "user_123",
+  featureId: "credits",
+  grantedBalance: 500,
   reset: {
     interval: "one_off"
   }
@@ -76,7 +76,7 @@ curl -X POST https://api.useautumn.com/v1/balances/create \
 
 </CodeGroup>
 
-See the [Create Balance API reference](/api-reference/features/create-balance) for all available parameters.
+See the [Create Balance API reference](/api-reference/balances/createBalance) for all available parameters.
 
 ## Updating Balances (API)
 
@@ -90,7 +90,7 @@ import { Autumn } from "autumn-js";
 const autumn = new Autumn({ secretKey: "am_sk_..." });
 
 await autumn.customers.updateBalances("user_123", {
-  balances: [{ feature_id: "credits", balance: 750 }]
+  balances: [{ featureId: "credits", balance: 750 }]
 });
 ```
 
@@ -116,7 +116,7 @@ curl -X POST https://api.useautumn.com/v1/customers/user_123/balances \
 
 </CodeGroup>
 
-See the [Set Feature Balance API reference](/api-reference/features/set-feature-balances) for all available parameters.
+See the [Update Balance API reference](/api-reference/balances/updateBalance) for all available parameters.
 
 ## Querying Balances
 
@@ -153,8 +153,8 @@ Check access and get the current balance for a specific feature:
 
 ```typescript Node.js
 const result = await autumn.check({
-  customer_id: "user_123",
-  feature_id: "credits"
+  customerId: "user_123",
+  featureId: "credits"
 });
 
 console.log(result.allowed);
