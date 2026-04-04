@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 
 let lastSwitchedOrgId: string | null = null;
 export const setLastSwitchedOrgId = (id: string) => {
@@ -11,6 +12,7 @@ export const setLastSwitchedOrgId = (id: string) => {
 export const getLastSwitchedOrgId = () => lastSwitchedOrgId;
 
 export const useOrg = (params?: { env?: AppEnv }) => {
+	const currentEnv = useEnv();
 	const axiosInstance = useAxiosInstance({ env: params?.env });
 	const { data: orgList } = useListOrganizations();
 
@@ -29,7 +31,7 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: params?.env ? ["org", params.env] : ["org"],
+		queryKey: params?.env ? ["org", params.env] : ["org", currentEnv],
 		queryFn: fetcher,
 		placeholderData: keepPreviousData,
 		refetchOnWindowFocus: true,

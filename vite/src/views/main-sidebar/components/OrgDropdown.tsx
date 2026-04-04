@@ -35,6 +35,7 @@ import {
 } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
@@ -239,6 +240,7 @@ export const useOrgSwitch = () => {
 	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const axiosInstance = useAxiosInstance();
+	const env = useEnv();
 
 	return async ({
 		orgId,
@@ -257,7 +259,7 @@ export const useOrgSwitch = () => {
 
 			if (newOrg?.id) setLastSwitchedOrgId(newOrg.id);
 
-			queryClient.setQueryData(["org"], newOrg);
+			queryClient.setQueryData(["org", env], newOrg);
 			queryClient.invalidateQueries({ queryKey: ["org"] });
 
 			if (

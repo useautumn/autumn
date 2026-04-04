@@ -19,8 +19,10 @@ export const recordAutoTopupAttempt = async ({
 }) => {
 	const now = Date.now();
 	const { limitState: state, autoTopupConfig } = autoTopupContext;
+	const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
+	const isInvoiceMode = Boolean(autoTopupContext.invoiceMode);
 	const outcome =
-		billingResult.stripe?.stripeInvoice?.status === "paid"
+		invoiceStatus === "paid" || (isInvoiceMode && invoiceStatus === "open")
 			? "success"
 			: "failure";
 
