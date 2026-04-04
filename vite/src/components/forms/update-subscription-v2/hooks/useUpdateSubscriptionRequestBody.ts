@@ -116,6 +116,7 @@ export function useUpdateSubscriptionRequestBody({
 			items,
 			cancelAction,
 			billingBehavior,
+			resetBillingCycle,
 			noBillingChanges,
 		} = formValues;
 
@@ -162,6 +163,7 @@ export function useUpdateSubscriptionRequestBody({
 			items: items && items.length > 0 ? items : undefined,
 			version: version !== initialVersion ? version : undefined,
 			billing_behavior: billingBehavior || undefined,
+			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
 			no_billing_changes: noBillingChanges || undefined,
 		};
 	}, [

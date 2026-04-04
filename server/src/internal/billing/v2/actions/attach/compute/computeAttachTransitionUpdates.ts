@@ -14,6 +14,8 @@ export const computeAttachTransitionUpdates = ({
 }): AutumnBillingPlan["updateCustomerProduct"] => {
 	const { currentCustomerProduct, planTiming, currentEpochMs, endOfCycleMs } =
 		attachBillingContext;
+	const shouldClearBillingCycleReset =
+		attachBillingContext.requestedBillingCycleAnchor !== undefined;
 
 	if (!currentCustomerProduct) return undefined;
 
@@ -21,6 +23,9 @@ export const computeAttachTransitionUpdates = ({
 		return {
 			customerProduct: currentCustomerProduct,
 			updates: {
+				billing_cycle_anchor_resets_at: shouldClearBillingCycleReset
+					? null
+					: undefined,
 				status: CusProductStatus.Expired,
 				ended_at: currentEpochMs,
 				canceled: true,
@@ -33,6 +38,9 @@ export const computeAttachTransitionUpdates = ({
 	return {
 		customerProduct: currentCustomerProduct,
 		updates: {
+			billing_cycle_anchor_resets_at: shouldClearBillingCycleReset
+				? null
+				: undefined,
 			canceled: true,
 			canceled_at: currentEpochMs,
 			ended_at: endOfCycleMs,

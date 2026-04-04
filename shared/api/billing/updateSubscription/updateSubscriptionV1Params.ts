@@ -1,5 +1,6 @@
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { z } from "zod/v4";
+import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
 import { RedirectModeSchema } from "../common/redirectMode";
@@ -13,6 +14,10 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 		cancel_action: CancelActionSchema.optional().meta({
 			description:
 				"Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.",
+		}),
+		billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
+			description:
+				"Reset the billing cycle anchor immediately with 'now' or schedule it for a future Unix timestamp in milliseconds.",
 		}),
 
 		processor_subscription_id: z.string().nullable().optional().meta({
@@ -55,6 +60,7 @@ const UPDATE_FIELDS = [
 	"version",
 	"customize",
 	"cancel_action",
+	"billing_cycle_anchor",
 	"processor_subscription_id",
 	"no_billing_changes",
 	"recalculate_balances",
@@ -72,7 +78,7 @@ export const UpdateSubscriptionV1ParamsSchema =
 		redirect_mode: RedirectModeSchema.optional(),
 	}).refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
 		message:
-			"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, or recalculate_balances)",
+			"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances or billing_cycle_anchor)",
 	});
 
 export type UpdateSubscriptionV1Params = z.infer<

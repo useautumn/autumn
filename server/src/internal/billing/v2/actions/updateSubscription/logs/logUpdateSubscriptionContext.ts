@@ -57,6 +57,10 @@ export const logUpdateSubscriptionContext = ({
 				defaultProduct: billingContext.defaultProduct?.name ?? "undefined",
 				cancelAction: cancelAction ? cancelAction : "no cancel operation",
 				skipBillingChanges: billingContext.skipBillingChanges,
+
+				anchorResetRefund: billingContext.anchorResetRefund
+					? `noPartialRefund: ${billingContext.anchorResetRefund.noPartialRefund} | refundCycle: ${billingContext.anchorResetRefund.refundCycle ? `${billingContext.anchorResetRefund.refundCycle.interval} x${billingContext.anchorResetRefund.refundCycle.intervalCount}` : "none"}`
+					: "none",
 			},
 		},
 	});
