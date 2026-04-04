@@ -11,6 +11,15 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { OidcClaims } from "@/external/vercel/misc/vercelAuth.js";
 
+export type RolloutSnapshot = {
+	rolloutId: string | null;
+	enabled: boolean;
+	percent: number;
+	previousPercent: number;
+	changedAt: number;
+	customerBucket: number | null;
+};
+
 export type RequestContext = {
 	// Variables
 	org: Organization;
@@ -39,6 +48,7 @@ export type RequestContext = {
 	extraLogs: Record<string, unknown>;
 
 	fullCustomer?: FullCustomer;
+	rolloutSnapshot?: RolloutSnapshot;
 
 	testOptions?: {
 		skipCacheDeletion?: boolean;

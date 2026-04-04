@@ -10,6 +10,7 @@ import { useSession } from "./lib/auth-client";
 import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
 import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
+import { EdgeConfigView } from "./views/admin/edge-config/EdgeConfigView";
 import { OAuthClientsView } from "./views/admin/oauth/OAuthClientsView";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { Consent } from "./views/auth/Consent";
@@ -72,6 +73,7 @@ export default function App() {
 					<Route path="/settings" element={<OrgSettingsView />} />
 					<Route path="/admin" element={<AdminView />} />
 					<Route path="/admin/oauth" element={<OAuthClientsView />} />
+					<Route path="/admin/edge-config" element={<EdgeConfigView />} />
 					<Route
 						path="/impersonate-redirect"
 						element={<ImpersonateRedirect />}
