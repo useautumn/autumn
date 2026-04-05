@@ -36,7 +36,7 @@ export const ApiEventsListItemSchema = z.object({
 
 	customer_id: z.string().describe("Customer identifier"),
 	value: z.number().describe("Event value/count"),
-	properties: z.object({}).describe("Event properties (JSONB)"),
+	properties: z.record(z.string(), z.unknown()).describe("Event properties (JSONB)"),
 });
 
 export const ApiEventsListResponseSchema = createPagePaginatedResponseSchema(
