@@ -91,11 +91,12 @@ const calculateDateRange = async ({
 	);
 
 	if (isBillingCycle && !params.aggregateAll && params.customer) {
-		const billingCycleResult = (await getBillingCycleStartDate(
-			params.customer,
+		const billingCycleResult = (await getBillingCycleStartDate({
+			customer: params.customer,
 			db,
-			intervalType as "1bc" | "3bc" | "last_cycle",
-		)) as BillingCycleResult | null;
+			intervalType: intervalType as "1bc" | "3bc" | "last_cycle",
+			ctx,
+		})) as BillingCycleResult | null;
 
 		if (billingCycleResult?.startDate && billingCycleResult?.endDate) {
 			return {

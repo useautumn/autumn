@@ -1,21 +1,33 @@
 import {
 	cusProductToProduct,
 	EntInterval,
+	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
 	type FullCustomerEntitlement,
 	type FullProduct,
+	RecaseError,
 	type Subscription,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { isFreeProduct } from "../products/productUtils.js";
+import type Stripe from "stripe";
 
-export async function getBillingCycleStartDate(
-	customer?: FullCustomer,
-	db?: DrizzleCli,
-	intervalType?: "1bc" | "3bc" | "last_cycle",
-) {
+export async function getBillingCycleStartDate({
+	customer,
+	db,
+	intervalType,
+	ctx,
+}: {
+	customer?: FullCustomer;
+	db?: DrizzleCli;
+	intervalType?: "1bc" | "3bc" | "last_cycle";
+	ctx: AutumnContext;
+}) {
 	if (!customer || !db || !intervalType) {
 		return {};
 	}
@@ -25,16 +37,45 @@ export async function getBillingCycleStartDate(
 		(product: FullCusProduct) => ACTIVE_STATUSES.includes(product.status),
 	);
 
-	if (cusProducts.length === 0) return {};
+	if (cusProducts.length === 0) {
+		return {};
+	}
 
 	const fullProducts = cusProducts.map((cp: FullCusProduct) =>
 		cusProductToProduct({ cusProduct: cp }),
 	);
 
 	const areAllProductsFree = checkIfAllProductsAreFree(fullProducts);
-	const { startDates, endDates, createdDates } = areAllProductsFree
+
+	let { startDates, endDates, createdDates } = areAllProductsFree
 		? getDateRangesFromEntitlements(customer.customer_products)
 		: getDateRangesFromSubscriptions(cusProducts, subscriptions);
+
+	// If we have subscription_ids but no matching subscriptions in DB, fallback to Stripe
+	const hasMissingSubscriptions =
+		!areAllProductsFree &&
+		startDates.length === 0 &&
+		cusProducts.some(
+			(p) => p.subscription_ids && p.subscription_ids.length > 0,
+		);
+
+	if (hasMissingSubscriptions) {
+		const stripeSubs = await fetchMissingSubscriptionsFromStripe({
+			cusProducts,
+			dbSubscriptions: subscriptions,
+			ctx,
+		});
+
+		// Re-calculate date ranges with Stripe subscriptions
+		const stripeDateRanges = getDateRangesFromStripeSubscriptions(
+			cusProducts,
+			stripeSubs,
+		);
+
+		startDates = stripeDateRanges.startDates;
+		endDates = stripeDateRanges.endDates;
+		createdDates = stripeDateRanges.createdDates;
+	}
 
 	if (startDates.length === 0 || endDates.length === 0) {
 		return {};
@@ -46,6 +87,78 @@ export async function getBillingCycleStartDate(
 		createdDates,
 		intervalType,
 	);
+}
+
+async function fetchMissingSubscriptionsFromStripe({
+	cusProducts,
+	dbSubscriptions,
+	ctx,
+}: {
+	cusProducts: FullCusProduct[];
+	dbSubscriptions: Subscription[];
+	ctx: AutumnContext;
+}): Promise<Stripe.Subscription[]> {
+	// Collect all subscription IDs from products that aren't in the DB
+	const missingSubIds: string[] = [];
+
+	for (const product of cusProducts) {
+		for (const subId of product.subscription_ids || []) {
+			const foundInDb = dbSubscriptions.some((s) => s.stripe_id === subId);
+			if (!foundInDb && subId) {
+				missingSubIds.push(subId);
+			}
+		}
+	}
+
+	if (missingSubIds.length === 0) {
+		return [];
+	}
+
+	const stripe = createStripeCli({ org: ctx.org, env: ctx.env });
+	const stripeSubs: Stripe.Subscription[] = [];
+
+	for (const subId of missingSubIds) {
+		try {
+			const stripeSub = await stripe.subscriptions.retrieve(subId);
+			stripeSubs.push(stripeSub);
+		} catch (error) {
+			throw new RecaseError({
+				message: `Failed to fetch subscription ${subId} from Stripe: ${error instanceof Error ? error.message : "Unknown error"}`,
+				code: ErrCode.StripeError,
+				statusCode: 500,
+			});
+		}
+	}
+
+	return stripeSubs;
+}
+
+function getDateRangesFromStripeSubscriptions(
+	customerProductsFiltered: FullCusProduct[],
+	stripeSubscriptions: Stripe.Subscription[],
+): { startDates: string[]; endDates: string[]; createdDates: string[] } {
+	const startDates: string[] = [];
+	const endDates: string[] = [];
+	const createdDates: string[] = [];
+
+	for (const product of customerProductsFiltered) {
+		for (const subscriptionId of product.subscription_ids || []) {
+			const subscription = stripeSubscriptions.find(
+				(s) => s.id === subscriptionId,
+			);
+
+			if (subscription) {
+				// Use utility to extract period dates from subscription items
+				const period = subToPeriodStartEnd({ sub: subscription });
+
+				startDates.push(formatDateToString(new Date(period.start * 1000)));
+				endDates.push(formatDateToString(new Date(period.end * 1000)));
+				createdDates.push(formatDateToString(new Date(subscription.created * 1000)));
+			}
+		}
+	}
+
+	return { startDates, endDates, createdDates };
 }
 
 function checkIfAllProductsAreFree(fullProducts: FullProduct[]): boolean {
@@ -68,8 +181,8 @@ function getDateRangesFromSubscriptions(
 	const endDates: string[] = [];
 	const createdDates: string[] = [];
 
-	customerProductsFiltered.forEach((product: FullCusProduct) => {
-		product.subscription_ids?.forEach((subscriptionId: string) => {
+	for (const product of customerProductsFiltered) {
+		for (const subscriptionId of product.subscription_ids || []) {
 			const subscription = subscriptions.find(
 				(subscription: Subscription) =>
 					subscription.stripe_id === subscriptionId,
@@ -90,8 +203,8 @@ function getDateRangesFromSubscriptions(
 					formatDateToString(new Date((subscription.created_at ?? 0) * 1000)),
 				);
 			}
-		});
-	});
+		}
+	}
 
 	return { startDates, endDates, createdDates };
 }
@@ -109,36 +222,34 @@ function getDateRangesFromEntitlements(customerProducts?: FullCusProduct[]): {
 		return { startDates, endDates, createdDates };
 	}
 
-	customerProducts.forEach((product: FullCusProduct) => {
+	for (const product of customerProducts) {
 		if (
 			!product.customer_entitlements ||
 			product.customer_entitlements.length < 1
 		) {
-			return;
+			continue;
 		}
 
-		product.customer_entitlements?.forEach(
-			(entitlement: FullCustomerEntitlement) => {
-				if (entitlement.next_reset_at) {
-					endDates.push(
-						formatDateToString(new Date(entitlement.next_reset_at)),
-					);
-				}
-
-				const startDate = calculateStartDateFromInterval(
-					entitlement.entitlement.interval,
-					entitlement.next_reset_at,
-					entitlement.created_at,
+		for (const entitlement of product.customer_entitlements) {
+			if (entitlement.next_reset_at) {
+				endDates.push(
+					formatDateToString(new Date(entitlement.next_reset_at)),
 				);
+			}
 
-				if (startDate) {
-					startDates.push(startDate);
-				}
+			const startDate = calculateStartDateFromInterval(
+				entitlement.entitlement.interval,
+				entitlement.next_reset_at,
+				entitlement.created_at,
+			);
 
-				createdDates.push(formatDateToString(new Date(entitlement.created_at)));
-			},
-		);
-	});
+			if (startDate) {
+				startDates.push(startDate);
+			}
+
+			createdDates.push(formatDateToString(new Date(entitlement.created_at)));
+		}
+	}
 
 	return { startDates, endDates, createdDates };
 }
@@ -183,10 +294,17 @@ function calculateBillingCycleResult(
 		};
 	}
 
+	const gapMultiplier = intervalType === "1bc" ? 1 : 3;
+	const now = new Date();
+	
+	// For analytics, we look BACKWARD from today for N billing cycles
+	// End date is today, start date is today - (gap * multiplier)
+	const adjustedStartDate = new Date(now.getTime() - gap * gapMultiplier);
+
 	return {
-		startDate: startDates[0],
-		endDate: endDates[0],
-		gap: gapDays * (intervalType === "1bc" ? 1 : 3),
+		startDate: formatDateToString(adjustedStartDate),
+		endDate: formatDateToString(now),
+		gap: gapDays * gapMultiplier,
 	};
 }
 
