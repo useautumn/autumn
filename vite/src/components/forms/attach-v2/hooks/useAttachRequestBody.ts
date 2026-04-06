@@ -12,6 +12,7 @@ import type {
 import { useMemo } from "react";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
+import type { FormCustomLineItem } from "../attachFormSchema";
 import { normalizeAttachProrationBehavior } from "../utils/attachProrationBehaviorRules";
 import {
 	type FormDiscount,
@@ -34,6 +35,11 @@ export interface BuildAttachRequestBodyParams {
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
 	discounts: FormDiscount[];
+	noBillingChanges: boolean;
+	carryOverBalances: boolean;
+	carryOverUsages: boolean;
+	processorSubscriptionId: string;
+	customLineItems: FormCustomLineItem[];
 }
 
 /** Pure function to build the attach request body. Extracted for testability. */
@@ -53,6 +59,11 @@ export function buildAttachRequestBody({
 	redirectMode,
 	newBillingSubscription,
 	discounts,
+	noBillingChanges,
+	carryOverBalances,
+	carryOverUsages,
+	processorSubscriptionId,
+	customLineItems,
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
 	if (!customerId || !product) {
 		return null;
@@ -63,7 +74,7 @@ export function buildAttachRequestBody({
 		product,
 	});
 
-	const body: AttachParamsV0Input = {
+	const body: Record<string, unknown> = {
 		customer_id: customerId,
 		product_id: product.id,
 		redirect_mode: redirectMode,
@@ -123,6 +134,32 @@ export function buildAttachRequestBody({
 		body.discounts = validDiscounts;
 	}
 
+	if (noBillingChanges) {
+		body.no_billing_changes = true;
+	}
+
+	if (carryOverBalances) {
+		body.carry_over_balances = { enabled: true };
+	}
+
+	if (carryOverUsages) {
+		body.carry_over_usages = { enabled: true };
+	}
+
+	if (processorSubscriptionId) {
+		body.processor_subscription_id = processorSubscriptionId;
+	}
+
+	const validLineItems = customLineItems.filter(
+		(item) => item.amount !== "" && item.description.trim() !== "",
+	);
+	if (validLineItems.length > 0) {
+		body.custom_line_items = validLineItems.map(({ amount, description }) => ({
+			amount: Number(amount),
+			description,
+		}));
+	}
+
 	return body as AttachParamsV0;
 }
 
@@ -143,6 +180,11 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		redirectMode,
 		newBillingSubscription,
 		discounts,
+		noBillingChanges,
+		carryOverBalances,
+		carryOverUsages,
+		processorSubscriptionId,
+		customLineItems,
 	} = params;
 
 	const requestBody = useMemo(
@@ -163,6 +205,11 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				redirectMode,
 				newBillingSubscription,
 				discounts,
+				noBillingChanges,
+				carryOverBalances,
+				carryOverUsages,
+				processorSubscriptionId,
+				customLineItems,
 			}),
 		[
 			customerId,
@@ -180,6 +227,11 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			redirectMode,
 			newBillingSubscription,
 			discounts,
+			noBillingChanges,
+			carryOverBalances,
+			carryOverUsages,
+			processorSubscriptionId,
+			customLineItems,
 		],
 	);
 

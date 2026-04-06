@@ -8,6 +8,12 @@ import {
 import { z } from "zod/v4";
 import type { FormDiscount } from "./utils/discountUtils";
 
+export interface FormCustomLineItem {
+	_id: string;
+	amount: number | "";
+	description: string;
+}
+
 export const AttachFormSchema = z.object({
 	productId: z.string(),
 	prepaidOptions: z.record(z.string(), z.number().nonnegative()),
@@ -23,6 +29,12 @@ export const AttachFormSchema = z.object({
 	newBillingSubscription: z.boolean(),
 	discounts: z.custom<FormDiscount[]>(),
 	grantFree: z.boolean(),
+
+	noBillingChanges: z.boolean(),
+	carryOverBalances: z.boolean(),
+	carryOverUsages: z.boolean(),
+	processorSubscriptionId: z.string(),
+	customLineItems: z.custom<FormCustomLineItem[]>(),
 });
 
 export type AttachForm = z.infer<typeof AttachFormSchema>;
