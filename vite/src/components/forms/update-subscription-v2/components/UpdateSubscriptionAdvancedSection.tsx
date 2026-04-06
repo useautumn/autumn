@@ -14,16 +14,8 @@ export function UpdateSubscriptionAdvancedSection() {
 	const isProrate = billingBehavior !== "none";
 	const isNextCycleOnly = billingBehavior === "none";
 
-	const hasCustomSettings = isNextCycleOnly;
-	const customSettingsTooltip = isNextCycleOnly
-		? "Proration: Next Cycle Only"
-		: "";
-
 	return (
-		<AdvancedSection
-			hasCustomSettings={hasCustomSettings}
-			customSettingsTooltip={customSettingsTooltip}
-		>
+		<AdvancedSection>
 			<AdvancedToggleRow label="Proration Behaviour">
 				<IconCheckbox
 					icon={<LightningIcon />}

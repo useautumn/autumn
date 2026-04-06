@@ -10,11 +10,6 @@ import {
 	LAYOUT_TRANSITION,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 
 const ACCORDION_EASE = [0.32, 0.72, 0, 1] as const;
 
@@ -52,27 +47,15 @@ export const ACCORDION_ITEM: Variants = {
 	},
 };
 
-/** Shared accordion shell for "Advanced" sections in billing sheets. */
+/** Shared section with always-visible children and an optional "More Options" accordion. */
 export function AdvancedSection({
-	hasCustomSettings,
-	customSettingsTooltip,
-	alwaysExpanded,
+	moreOptions,
 	children,
 }: {
-	hasCustomSettings: boolean;
-	customSettingsTooltip?: string;
-	alwaysExpanded?: boolean;
+	moreOptions?: ReactNode;
 	children: ReactNode;
 }) {
 	const [isOpen, setIsOpen] = useState(false);
-
-	if (alwaysExpanded) {
-		return (
-			<SheetSection withSeparator>
-				<div className="space-y-2">{children}</div>
-			</SheetSection>
-		);
-	}
 
 	return (
 		<SheetSection withSeparator>
@@ -83,69 +66,54 @@ export function AdvancedSection({
 				animate="visible"
 				variants={STAGGER_CONTAINER}
 			>
-				<motion.div variants={STAGGER_ITEM}>
-					<button
-						type="button"
-						onClick={() => setIsOpen((prev) => !prev)}
-						className="flex items-center justify-between w-full cursor-pointer select-none"
-					>
-						<h3 className="text-sub flex items-center gap-2">
-							Advanced
-							<AnimatePresence>
-								{hasCustomSettings && (
-									<Tooltip>
-										<TooltipTrigger asChild>
-											<motion.span
-												initial={{ opacity: 0, scale: 0 }}
-												animate={{ opacity: 1, scale: 1 }}
-												exit={{ opacity: 0, scale: 0 }}
-												transition={{ duration: 0.15 }}
-												className="size-1.5 rounded-full bg-blue-400"
-											/>
-										</TooltipTrigger>
-										{customSettingsTooltip && (
-											<TooltipContent>{customSettingsTooltip}</TooltipContent>
-										)}
-									</Tooltip>
-								)}
-							</AnimatePresence>
-						</h3>
-						<motion.span
-							animate={{ rotate: isOpen ? 180 : 0 }}
-							transition={{ duration: 0.2 }}
-							className="text-t3"
-						>
-							<CaretDownIcon size={12} />
-						</motion.span>
-					</button>
-				</motion.div>
+				<div className="space-y-2">{children}</div>
 
-				<AnimatePresence initial={false}>
-					{isOpen && (
-						<motion.div
-							initial={{ height: 0 }}
-							animate={{
-								height: "auto",
-								transition: { height: ACCORDION_EXPAND },
-							}}
-							exit={{
-								height: 0,
-								transition: { height: ACCORDION_COLLAPSE },
-							}}
-							className="overflow-hidden"
-						>
-							<motion.div
-								className="pt-2 space-y-2"
-								initial="hidden"
-								animate="visible"
-								exit="hidden"
-								variants={ACCORDION_CONTENT}
+				{moreOptions && (
+					<>
+						<motion.div variants={STAGGER_ITEM} className="pt-2">
+							<button
+								type="button"
+								onClick={() => setIsOpen((prev) => !prev)}
+								className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-t3 hover:text-t1 transition-colors"
 							>
-								{children}
-							</motion.div>
+								More Options
+								<motion.span
+									animate={{ rotate: isOpen ? 180 : 0 }}
+									transition={{ duration: 0.2 }}
+								>
+									<CaretDownIcon size={10} />
+								</motion.span>
+							</button>
 						</motion.div>
-					)}
-				</AnimatePresence>
+
+						<AnimatePresence initial={false}>
+							{isOpen && (
+								<motion.div
+									initial={{ height: 0 }}
+									animate={{
+										height: "auto",
+										transition: { height: ACCORDION_EXPAND },
+									}}
+									exit={{
+										height: 0,
+										transition: { height: ACCORDION_COLLAPSE },
+									}}
+									className="overflow-hidden"
+								>
+									<motion.div
+										className="pt-2 space-y-2"
+										initial="hidden"
+										animate="visible"
+										exit="hidden"
+										variants={ACCORDION_CONTENT}
+									>
+										{moreOptions}
+									</motion.div>
+								</motion.div>
+							)}
+						</AnimatePresence>
+					</>
+				)}
 			</motion.div>
 		</SheetSection>
 	);

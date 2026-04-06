@@ -135,7 +135,7 @@ function SheetContent() {
 						</SheetHeader>
 
 						<AttachPlanSection readOnly />
-						<AttachAdvancedSection alwaysExpanded />
+						<AttachAdvancedSection />
 						<AttachUpdatesSection />
 						<AttachPreviewSection />
 						<AttachFooterV3 />

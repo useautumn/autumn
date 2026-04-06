@@ -33,10 +33,8 @@ export function AttachAdvancedSection() {
 	const {
 		hasActiveSubscription,
 		hasOutgoing,
-		showBillingBehavior,
-		effectiveBillingBehavior,
-		hasCustomSchedule,
-		hasCustomBilling,
+		showProrationBehavior,
+		effectiveProrationBehavior,
 		isImmediateSelected,
 		isEndOfCycleSelected,
 		isNoChargesAllowed,
@@ -44,19 +42,9 @@ export function AttachAdvancedSection() {
 		canChooseBillingCycle,
 		handleScheduleChange,
 		handleBillingCycleChange,
-		handleBillingBehaviorChange,
+		handleProrationBehaviorChange,
 	} = usePlanScheduleField();
 
-	const hasDiscounts = discounts.some((d) => {
-		if ("reward_id" in d) return d.reward_id !== "";
-		if ("promotion_code" in d) return d.promotion_code !== "";
-		return false;
-	});
-	const hasCustomSettings =
-		(hasActiveSubscription && (hasCustomSchedule || hasCustomBilling)) ||
-		newBillingSubscription ||
-		redirectMode === "always" ||
-		hasDiscounts;
 	const showRedirectModeRow =
 		checkoutType === "autumn_checkout" || checkoutType === null;
 
@@ -64,46 +52,48 @@ export function AttachAdvancedSection() {
 		form.setFieldValue("discounts", addDiscount(discounts));
 	};
 
-	const getCustomSettingsTooltip = (): string => {
-		const parts: string[] = [];
-
-		if (hasCustomSchedule) {
-			parts.push(
-				`Plan schedule: ${isImmediateSelected ? "Immediate" : "End of cycle"}`,
-			);
-		}
-
-		if (newBillingSubscription) {
-			parts.push("Create New Cycle");
-		}
-
-		if (hasCustomBilling) {
-			parts.push(
-				`Billing: ${effectiveBillingBehavior === "none" ? "No Charges" : "Prorate"}`,
-			);
-		}
-
-		if (hasDiscounts) {
-			const validCount = discounts.filter((d) => {
-				if ("reward_id" in d) return d.reward_id !== "";
-				if ("promotion_code" in d) return d.promotion_code !== "";
-				return false;
-			}).length;
-			parts.push(`${validCount} discount${validCount > 1 ? "s" : ""}`);
-		}
-
-		if (redirectMode === "always") {
-			parts.push("Checkout redirect: Always");
-		}
-
-		return parts.join(" \u2022 ");
-	};
+	const moreOptions = showRedirectModeRow ? (
+		<motion.div variants={ACCORDION_ITEM}>
+			<div className="rounded-xl input-base px-3 py-2">
+				<div className="flex items-center justify-between gap-3">
+					<span className="text-sm text-t2">Checkout Redirect</span>
+					<div className="flex shrink-0">
+						<IconCheckbox
+							variant="secondary"
+							size="sm"
+							checked={redirectMode === "if_required"}
+							onCheckedChange={() =>
+								form.setFieldValue("redirectMode", "if_required")
+							}
+							className={cn(
+								"min-w-[76px] px-2 text-xs rounded-r-none",
+								redirectMode !== "if_required" && "border-r-0",
+							)}
+						>
+							Auto
+						</IconCheckbox>
+						<IconCheckbox
+							variant="secondary"
+							size="sm"
+							checked={redirectMode === "always"}
+							onCheckedChange={() =>
+								form.setFieldValue("redirectMode", "always")
+							}
+							className={cn(
+								"min-w-[76px] px-2 text-xs rounded-l-none",
+								redirectMode !== "always" && "border-l-0",
+							)}
+						>
+							Always
+						</IconCheckbox>
+					</div>
+				</div>
+			</div>
+		</motion.div>
+	) : undefined;
 
 	return (
-		<AdvancedSection
-			hasCustomSettings={hasCustomSettings}
-			customSettingsTooltip={getCustomSettingsTooltip()}
-		>
+		<AdvancedSection moreOptions={moreOptions}>
 			{/* Plan Schedule — only when customer has an active Stripe subscription */}
 			{hasActiveSubscription && (
 				<AdvancedToggleRow label="Plan Schedule">
@@ -192,21 +182,21 @@ export function AttachAdvancedSection() {
 				</AdvancedToggleRow>
 			)}
 
-			{/* Billing Behavior — only when plan schedule is immediate and subscription exists */}
-			{showBillingBehavior && (
-				<AdvancedToggleRow label="Billing Behavior">
+			{/* Proration Behavior — only when plan schedule is immediate and subscription exists */}
+			{showProrationBehavior && (
+				<AdvancedToggleRow label="Proration Behavior">
 					<IconCheckbox
 						icon={<LightningIcon />}
 						iconOrientation="left"
 						variant="secondary"
 						size="sm"
-						checked={effectiveBillingBehavior === "prorate_immediately"}
+						checked={effectiveProrationBehavior === "prorate_immediately"}
 						onCheckedChange={() =>
-							handleBillingBehaviorChange("prorate_immediately")
+							handleProrationBehaviorChange("prorate_immediately")
 						}
 						className={cn(
 							"rounded-r-none",
-							effectiveBillingBehavior !== "prorate_immediately" &&
+							effectiveProrationBehavior !== "prorate_immediately" &&
 								"border-r-0",
 						)}
 					>
@@ -220,12 +210,12 @@ export function AttachAdvancedSection() {
 									iconOrientation="left"
 									variant="secondary"
 									size="sm"
-									checked={effectiveBillingBehavior === "none"}
+									checked={effectiveProrationBehavior === "none"}
 									disabled={!isNoChargesAllowed}
-									onCheckedChange={() => handleBillingBehaviorChange("none")}
+									onCheckedChange={() => handleProrationBehaviorChange("none")}
 									className={cn(
 										"rounded-l-none",
-										effectiveBillingBehavior !== "none" && "border-l-0",
+										effectiveProrationBehavior !== "none" && "border-l-0",
 									)}
 								>
 									No Charges
@@ -240,79 +230,37 @@ export function AttachAdvancedSection() {
 			)}
 
 			{/* Discounts */}
-			<motion.div variants={ACCORDION_ITEM}>
-				<div className="rounded-xl input-base px-3 py-2">
-					<div className="flex items-center justify-between h-6">
-						<span className="text-sm text-t2">Discounts</span>
-						<IconButton
-							variant="muted"
-							size="sm"
-							onClick={handleAddDiscount}
-							icon={<PlusIcon size={12} />}
-							className="text-t3"
-						>
-							Add
-						</IconButton>
-					</div>
-					{discounts.length > 0 && (
-						<div className="mt-2 pt-2 border-t border-border space-y-2">
-							<AnimatePresence initial={false} mode="popLayout">
-								{discounts.map((discount, index) => (
-									<motion.div
-										key={discount._id}
-										initial={{ opacity: 0, scale: 0.95 }}
-										animate={{ opacity: 1, scale: 1 }}
-										exit={{ opacity: 0, scale: 0.95 }}
-										transition={{ duration: 0.15 }}
-									>
-										<AttachDiscountRow index={index} />
-									</motion.div>
-								))}
-							</AnimatePresence>
-						</div>
-					)}
+			<div className="rounded-xl input-base px-3 py-2">
+				<div className="flex items-center justify-between h-6">
+					<span className="text-sm text-t2">Discounts</span>
+					<IconButton
+						variant="muted"
+						size="sm"
+						onClick={handleAddDiscount}
+						icon={<PlusIcon size={12} />}
+						className="text-t3"
+					>
+						Add
+					</IconButton>
 				</div>
-			</motion.div>
-
-			{showRedirectModeRow && (
-				<motion.div variants={ACCORDION_ITEM}>
-					<div className="rounded-xl input-base px-3 py-2">
-						<div className="flex items-center justify-between gap-3">
-							<span className="text-sm text-t2">Checkout Redirect</span>
-							<div className="flex shrink-0">
-								<IconCheckbox
-									variant="secondary"
-									size="sm"
-									checked={redirectMode === "if_required"}
-									onCheckedChange={() =>
-										form.setFieldValue("redirectMode", "if_required")
-									}
-									className={cn(
-										"min-w-[76px] px-2 text-xs rounded-r-none",
-										redirectMode !== "if_required" && "border-r-0",
-									)}
+				{discounts.length > 0 && (
+					<div className="mt-2 pt-2 border-t border-border space-y-2">
+						<AnimatePresence initial={false} mode="popLayout">
+							{discounts.map((discount, index) => (
+								<motion.div
+									key={discount._id}
+									initial={{ opacity: 0, scale: 0.95 }}
+									animate={{ opacity: 1, scale: 1 }}
+									exit={{ opacity: 0, scale: 0.95 }}
+									transition={{ duration: 0.15 }}
 								>
-									Auto
-								</IconCheckbox>
-								<IconCheckbox
-									variant="secondary"
-									size="sm"
-									checked={redirectMode === "always"}
-									onCheckedChange={() =>
-										form.setFieldValue("redirectMode", "always")
-									}
-									className={cn(
-										"min-w-[76px] px-2 text-xs rounded-l-none",
-										redirectMode !== "always" && "border-l-0",
-									)}
-								>
-									Always
-								</IconCheckbox>
-							</div>
-						</div>
+									<AttachDiscountRow index={index} />
+								</motion.div>
+							))}
+						</AnimatePresence>
 					</div>
-				</motion.div>
-			)}
+				)}
+			</div>
 		</AdvancedSection>
 	);
 }
