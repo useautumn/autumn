@@ -13,6 +13,7 @@ import { stripeWebhookRouter } from "./external/stripe/stripeWebhookRouter.js";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
+import { replicaDbMiddleware } from "./honoMiddlewares/replicaDbMiddleware.js";
 import { traceEnrichMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
@@ -90,6 +91,7 @@ export const createHonoApp = () => {
 		}),
 	);
 	app.use("*", baseMiddleware);
+	app.use("*", replicaDbMiddleware);
 	app.use("*", traceEnrichMiddleware);
 
 	app.get("/", handleHealthCheck);
