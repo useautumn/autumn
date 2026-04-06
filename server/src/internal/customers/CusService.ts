@@ -142,11 +142,9 @@ export class CusService {
 						.slice(0, 5);
 				}
 
-				// Skip reset when reading from replica — writes already go through
-				// dbGeneral, but the replica read may be stale so we should not
-				// recompute lazy resets from it.
-				const readingFromReplica = usedReplica || ctx.useReplicaDb === true;
-				if (!readingFromReplica) {
+				// Skip reset only when executeWithHealthTracking explicitly chose the
+				// replica. Lazy reset writes themselves go through dbGeneral.
+				if (!usedReplica) {
 					await resetCustomerEntitlements({
 						fullCus,
 						ctx,
