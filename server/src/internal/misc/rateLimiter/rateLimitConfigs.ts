@@ -128,7 +128,7 @@ export type RateLimitConfig = {
 export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	[RateLimitType.General]: {
 		name: "general",
-		limit: 10,
+		limit: process.env.NODE_ENV === "development" ? 1000 : 25,
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Org,
