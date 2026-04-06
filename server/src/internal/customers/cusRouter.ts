@@ -50,5 +50,5 @@ customerRpcRouter.post(
 );
 
 customerRpcRouter.post("/customers.update", ...handleUpdateCustomerV2);
-customerRpcRouter.post("/customers.list", ...handleListCustomersV2);
+// customerRpcRouter.post("/customers.list", ...handleListCustomersV2);
 customerRpcRouter.post("/customers.delete", ...handleDeleteCustomerV2);
