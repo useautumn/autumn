@@ -394,6 +394,7 @@ export const ProductScenario = {
   New: "new",
   Renew: "renew",
   Upgrade: "upgrade",
+  UpdatePrepaidQuantity: "update_prepaid_quantity",
   Downgrade: "downgrade",
   Cancel: "cancel",
   Expired: "expired",

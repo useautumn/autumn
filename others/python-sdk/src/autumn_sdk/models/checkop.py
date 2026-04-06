@@ -810,6 +810,7 @@ ProductScenario = Union[
         "new",
         "renew",
         "upgrade",
+        "update_prepaid_quantity",
         "downgrade",
         "cancel",
         "expired",
