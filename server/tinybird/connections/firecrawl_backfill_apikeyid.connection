@@ -1,0 +1,4 @@
+TYPE s3
+S3_ARN {{ tb_secret("s3_role_arn_firecrawl_backfill_apikeyid_75f684b3") }}
+S3_REGION us-west-2
+# Learn more at https://www.tinybird.co/docs/forward/get-data-in/connectors/s3#s3-connection-settings

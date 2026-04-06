@@ -18,7 +18,7 @@ SQL >
         {% end %}
         event_name,
         sum(total_value) as total_value
-    FROM {% if defined(filter_key_0) and String(filter_key_0, '') != '' %}events_hourly_mv{% elif defined(filter_key_1) and String(filter_key_1, '') != '' %}events_hourly_mv{% elif defined(filter_key_2) and String(filter_key_2, '') != '' %}events_hourly_mv{% elif defined(filter_key_3) and String(filter_key_3, '') != '' %}events_hourly_mv{% elif defined(filter_key_4) and String(filter_key_4, '') != '' %}events_hourly_mv{% else %}events_hourly_no_props_mv{% end %}
+    FROM {% if defined(filter_key_0) and String(filter_key_0, '') != '' %}events_hourly_mv{% elif defined(filter_key_1) and String(filter_key_1, '') != '' %}events_hourly_mv{% elif defined(filter_key_2) and String(filter_key_2, '') != '' %}events_hourly_mv{% elif defined(filter_key_3) and String(filter_key_3, '') != '' %}events_hourly_mv{% elif defined(filter_key_4) and String(filter_key_4, '') != '' %}events_hourly_mv{% else %}events_hourly_no_properties_two_mv{% end %}
     WHERE
         org_id = {{ String(org_id, '') }}
         AND env = {{ String(env, 'test') }}
