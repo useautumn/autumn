@@ -38,6 +38,7 @@ import {
 	useAttachPreview,
 } from "../hooks/useAttachPreview";
 import { useAttachRequestBody } from "../hooks/useAttachRequestBody";
+import { useGrantFree } from "../hooks/useGrantFree";
 
 interface AttachFormContextValue {
 	form: UseAttachForm;
@@ -58,6 +59,8 @@ interface AttachFormContextValue {
 	handleEditPlan: () => void;
 	handlePlanEditorSave: (product: FrontendProduct) => void;
 	handlePlanEditorCancel: () => void;
+
+	handleGrantFreeToggle: (params: { enabled: boolean }) => void;
 
 	isPending: boolean;
 	handleConfirm: () => void;
@@ -135,6 +138,7 @@ export function AttachFormProvider({
 		redirectMode,
 		newBillingSubscription,
 		discounts,
+		grantFree,
 	} = formValues;
 
 	const product = useMemo(
@@ -149,6 +153,16 @@ export function AttachFormProvider({
 		productVersionQuery.data?.numVersions ?? product?.version ?? 1;
 
 	const { prepaidItems } = usePrepaidItems({ product });
+
+	const resolveCurrentItems = useCallback(
+		() => items ?? (product?.items as ProductItem[]) ?? [],
+		[items, product?.items],
+	);
+
+	const { handleGrantFreeToggle, resetGrantFree } = useGrantFree({
+		form,
+		resolveCurrentItems,
+	});
 
 	// Track product changes and initialize prepaid options
 	const previousProductIdRef = useRef<string | undefined>();
@@ -171,6 +185,8 @@ export function AttachFormProvider({
 			form.setFieldValue("trialLength", null);
 			form.setFieldValue("trialDuration", FreeTrialDuration.Day);
 			form.setFieldValue("trialCardRequired", true);
+			form.setFieldValue("grantFree", false);
+			resetGrantFree();
 		}
 
 		// Initialize prepaid options for the selected product
@@ -197,7 +213,7 @@ export function AttachFormProvider({
 				);
 			}
 		}
-	}, [productId, product, form]);
+	}, [productId, product, form, resetGrantFree]);
 
 	const originalItems = product?.items as ProductItem[] | undefined;
 
@@ -260,10 +276,10 @@ export function AttachFormProvider({
 	});
 
 	const handleEditPlan = useCallback(() => {
-		if (!productWithFormItems) return;
+		if (!productWithFormItems || grantFree) return;
 		setShowPlanEditor(true);
 		onPlanEditorOpen?.();
-	}, [productWithFormItems, onPlanEditorOpen]);
+	}, [productWithFormItems, onPlanEditorOpen, grantFree]);
 
 	const handlePlanEditorSave = useCallback(
 		(draftProduct: FrontendProduct) => {
@@ -345,6 +361,7 @@ export function AttachFormProvider({
 			handleEditPlan,
 			handlePlanEditorSave,
 			handlePlanEditorCancel,
+			handleGrantFreeToggle,
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,
@@ -365,6 +382,7 @@ export function AttachFormProvider({
 			handleEditPlan,
 			handlePlanEditorSave,
 			handlePlanEditorCancel,
+			handleGrantFreeToggle,
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,

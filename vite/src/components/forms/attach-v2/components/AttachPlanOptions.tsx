@@ -73,7 +73,8 @@ function OptionRow({
 }
 
 export function AttachPlanOptions() {
-	const { form, formValues, numVersions, product } = useAttachFormContext();
+	const { form, formValues, numVersions, product, handleGrantFreeToggle } =
+		useAttachFormContext();
 	const { trialEnabled, trialCardRequired, grantFree } = formValues as Record<
 		string,
 		// biome-ignore lint/suspicious/noExplicitAny: form values are typed through the schema
@@ -198,9 +199,7 @@ export function AttachPlanOptions() {
 				title="Grant for Free"
 				description="Remove all prices on this plan for this customer"
 				enabled={!!grantFree}
-				onToggle={(enabled) => {
-					form.setFieldValue("grantFree" as never, enabled as never);
-				}}
+				onToggle={(enabled) => handleGrantFreeToggle({ enabled })}
 			/>
 		</div>
 	);
