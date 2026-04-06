@@ -16,7 +16,7 @@ import { outgoingToProductItems } from "../utils/attachDiffUtils";
 import { AttachPlanSkeleton } from "./AttachPlanSkeleton";
 import { AttachSectionTitle } from "./AttachSectionTitle";
 
-export function AttachPlanSection() {
+export function AttachPlanSection({ readOnly }: { readOnly?: boolean } = {}) {
 	const {
 		form,
 		formValues,
@@ -29,7 +29,9 @@ export function AttachPlanSection() {
 		previewQuery,
 	} = useAttachFormContext();
 
-	const { prepaidOptions, trialEnabled } = formValues;
+	const hideEditButton = readOnly || formValues.grantFree;
+
+	const { prepaidOptions } = formValues;
 
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
@@ -53,7 +55,9 @@ export function AttachPlanSection() {
 
 	// When there are outgoing items, always show diffs because we're comparing
 	// outgoing (what customer has) vs incoming (what they're getting) - different things
-	const showDiffs = hasCustomizations || outgoingItems.length > 0;
+	const showDiffs = readOnly
+		? false
+		: hasCustomizations || outgoingItems.length > 0;
 
 	// Show skeleton only on initial load (isPending = no data yet)
 	// Subsequent fetches keep showing previous data via keepPreviousData
@@ -84,6 +88,7 @@ export function AttachPlanSection() {
 		currency,
 		onEditPlan: handleEditPlan,
 		gateDeletedItemsByCustomizations: true,
+		readOnly: hideEditButton,
 	} as const;
 
 	return (
@@ -99,19 +104,16 @@ export function AttachPlanSection() {
 					transition={{ layout: LAYOUT_TRANSITION }}
 					variants={STAGGER_ITEM_LAYOUT}
 				>
-					<h3 className="text-sub select-none w-full">
-						<AttachSectionTitle />
-					</h3>
+					{readOnly ? (
+						<h3 className="text-sub select-none w-full">{product.name}</h3>
+					) : (
+						<h3 className="text-sub select-none w-full">
+							<AttachSectionTitle />
+						</h3>
+					)}
 				</motion.div>
 				{hasItems ? (
-					<PlanItemsSection
-						{...planItemsProps}
-						trialConfig={{
-							trialEnabled,
-							onTrialCollapse: () => form.setFieldValue("trialEnabled", false),
-						}}
-						useStaggerAnimation
-					/>
+					<PlanItemsSection {...planItemsProps} useStaggerAnimation />
 				) : (
 					<motion.div variants={STAGGER_ITEM}>
 						<PlanItemsSection {...planItemsProps} />
