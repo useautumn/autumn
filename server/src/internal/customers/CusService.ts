@@ -142,10 +142,11 @@ export class CusService {
 						.slice(0, 5);
 				}
 
-				// Skip reset when reading from replica — it writes to primary,
-				// and replica data is stale anyway. When degraded WITHOUT a replica
-				// (falls back to primary), the reset should still run.
-				if (!usedReplica) {
+				// Skip reset when reading from replica — writes already go through
+				// dbGeneral, but the replica read may be stale so we should not
+				// recompute lazy resets from it.
+				const readingFromReplica = usedReplica || ctx.useReplicaDb === true;
+				if (!readingFromReplica) {
 					await resetCustomerEntitlements({
 						fullCus,
 						ctx,
