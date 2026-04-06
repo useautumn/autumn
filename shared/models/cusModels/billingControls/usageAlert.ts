@@ -6,7 +6,7 @@ export const DbUsageAlertSchema = z
 	.object({
 		feature_id: z.string().optional().meta({
 			description:
-				"The feature ID this alert applies to. If omitted, the alert applies globally.",
+				"The feature ID this alert applies to.",
 		}),
 		enabled: z.boolean().default(true).meta({
 			description: "Whether this usage alert is enabled.",

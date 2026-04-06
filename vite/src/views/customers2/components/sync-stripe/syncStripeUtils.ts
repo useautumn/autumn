@@ -21,12 +21,14 @@ export const hasActiveProductInGroup = ({
 	customerProducts: FullCusProduct[];
 }): boolean => {
 	const selectedProduct = products.find((p) => p.id === planId);
-	if (!selectedProduct?.group) return false;
+	if (!selectedProduct) return false;
+
+	const selectedGroup = selectedProduct.group || "";
 
 	return customerProducts.some(
 		(customerProduct) =>
 			ACTIVE_STATUSES.has(customerProduct.status) &&
 			!customerProduct.product.is_add_on &&
-			customerProduct.product.group === selectedProduct.group,
+			(customerProduct.product.group || "") === selectedGroup,
 	);
 };
