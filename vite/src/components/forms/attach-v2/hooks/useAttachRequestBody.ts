@@ -12,7 +12,7 @@ import type {
 import { useMemo } from "react";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
-import { normalizeAttachBillingBehavior } from "../utils/attachBillingBehaviorRules";
+import { normalizeAttachProrationBehavior } from "../utils/attachProrationBehaviorRules";
 import {
 	type FormDiscount,
 	filterValidDiscounts,
@@ -30,7 +30,7 @@ export interface BuildAttachRequestBodyParams {
 	trialEnabled: boolean;
 	trialCardRequired: boolean;
 	planSchedule: PlanTiming | null;
-	billingBehavior: BillingBehavior | null;
+	prorationBehavior: BillingBehavior | null;
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
 	discounts: FormDiscount[];
@@ -49,7 +49,7 @@ export function buildAttachRequestBody({
 	trialEnabled,
 	trialCardRequired,
 	planSchedule,
-	billingBehavior,
+	prorationBehavior,
 	redirectMode,
 	newBillingSubscription,
 	discounts,
@@ -97,19 +97,21 @@ export function buildAttachRequestBody({
 	});
 	if (freeTrial !== undefined) {
 		body.free_trial = freeTrial;
+	} else if (!trialEnabled) {
+		body.free_trial = null;
 	}
 
 	if (planSchedule) {
 		body.plan_schedule = planSchedule;
 	}
 
-	const normalizedBillingBehavior = normalizeAttachBillingBehavior({
-		billingBehavior,
+	const normalizedProrationBehavior = normalizeAttachProrationBehavior({
+		prorationBehavior,
 		newBillingSubscription,
 	});
 
-	if (normalizedBillingBehavior) {
-		body.billing_behavior = normalizedBillingBehavior;
+	if (normalizedProrationBehavior) {
+		body.billing_behavior = normalizedProrationBehavior;
 	}
 
 	if (newBillingSubscription) {
@@ -137,7 +139,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		trialEnabled,
 		trialCardRequired,
 		planSchedule,
-		billingBehavior,
+		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
 		discounts,
@@ -157,7 +159,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				trialEnabled,
 				trialCardRequired,
 				planSchedule,
-				billingBehavior,
+				prorationBehavior,
 				redirectMode,
 				newBillingSubscription,
 				discounts,
@@ -174,7 +176,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			trialEnabled,
 			trialCardRequired,
 			planSchedule,
-			billingBehavior,
+			prorationBehavior,
 			redirectMode,
 			newBillingSubscription,
 			discounts,

@@ -18,10 +18,11 @@ export const AttachFormSchema = z.object({
 	trialEnabled: z.boolean(),
 	trialCardRequired: z.boolean(),
 	planSchedule: z.custom<PlanTiming>().nullable(),
-	billingBehavior: z.custom<BillingBehavior>().nullable(),
+	prorationBehavior: z.custom<BillingBehavior>().nullable(),
 	redirectMode: RedirectModeSchema,
 	newBillingSubscription: z.boolean(),
 	discounts: z.custom<FormDiscount[]>(),
+	grantFree: z.boolean(),
 });
 
 export type AttachForm = z.infer<typeof AttachFormSchema>;

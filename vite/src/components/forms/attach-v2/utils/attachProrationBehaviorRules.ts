@@ -15,23 +15,23 @@ export function isNoChargesAllowedForAttach({
 	return !newBillingSubscription && !blocksNextCycleOnly;
 }
 
-export function normalizeAttachBillingBehavior({
-	billingBehavior,
+export function normalizeAttachProrationBehavior({
+	prorationBehavior,
 	newBillingSubscription,
 	blocksNextCycleOnly = false,
 }: {
-	billingBehavior: BillingBehavior | null;
+	prorationBehavior: BillingBehavior | null;
 	newBillingSubscription: boolean;
 	blocksNextCycleOnly?: boolean;
 }) {
-	if (billingBehavior !== "none") {
-		return billingBehavior;
+	if (prorationBehavior !== "none") {
+		return prorationBehavior;
 	}
 
 	if (
 		isNoChargesAllowedForAttach({ newBillingSubscription, blocksNextCycleOnly })
 	) {
-		return billingBehavior;
+		return prorationBehavior;
 	}
 
 	return null;
