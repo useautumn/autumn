@@ -8,160 +8,99 @@ export enum RateLimitType {
 	Check = "check",
 	Events = "events",
 	Attach = "attach",
-	ListProducts = "list_products",
+	ListCustomers = "list_customers",
 }
+
+type RoutePattern = {
+	method: string;
+	url: string;
+};
+
+type RateLimitRouteGroup = {
+	type: Exclude<RateLimitType, RateLimitType.General>;
+	patterns: RoutePattern[];
+};
+
+const route = ({ method, url }: RoutePattern): RoutePattern => ({
+	method,
+	url,
+});
+
+const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
+	{
+		type: RateLimitType.Attach,
+		patterns: [
+			route({ method: "POST", url: "/v1/attach/preview" }),
+			route({ method: "POST", url: "/v1/cancel" }),
+			route({ method: "POST", url: "/v1/setup_payment" }),
+			route({ method: "POST", url: "/v1/checkout" }),
+			route({ method: "POST", url: "/v1/attach" }),
+			route({ method: "POST", url: "/v1/billing.attach" }),
+			route({ method: "POST", url: "/v1/billing.multi_attach" }),
+			route({ method: "POST", url: "/v1/billing.update" }),
+
+			route({ method: "POST", url: "/v1/billing.preview_update" }),
+			route({ method: "POST", url: "/v1/billing.preview_multi_attach" }),
+			route({ method: "POST", url: "/v1/billing.preview_attach" }),
+			route({ method: "POST", url: "/v1/billing.setup_payment" }),
+			route({ method: "POST", url: "/v1/billing.open_customer_portal" }),
+			route({ method: "POST", url: "/v1/billing.sync_proposals" }),
+			route({ method: "POST", url: "/v1/billing.sync" }),
+		],
+	},
+	{
+		type: RateLimitType.ListCustomers,
+		patterns: [
+			route({ method: "GET", url: "/v1/customers" }),
+			route({ method: "POST", url: "/v1/customers/list" }),
+			route({ method: "POST", url: "/v1/customers.list" }),
+		],
+	},
+	{
+		type: RateLimitType.Events,
+		patterns: [
+			route({ method: "POST", url: "/v1/events/list" }),
+			route({ method: "POST", url: "/v1/events/aggregate" }),
+			route({ method: "POST", url: "/v1/query" }),
+			route({ method: "POST", url: "/v1/events.list" }),
+			route({ method: "POST", url: "/v1/events.aggregate" }),
+		],
+	},
+	{
+		type: RateLimitType.Track,
+		patterns: [
+			route({ method: "POST", url: "/v1/events" }),
+			route({ method: "POST", url: "/v1/track" }),
+			route({ method: "POST", url: "/v1/usage" }),
+			route({ method: "POST", url: "/v1/balances/update" }),
+			route({ method: "POST", url: "/v1/balances.track" }),
+			route({ method: "POST", url: "/v1/balances.finalize" }),
+			route({ method: "POST", url: "/v1/balances.update" }),
+		],
+	},
+	{
+		type: RateLimitType.Check,
+		patterns: [
+			route({ method: "POST", url: "/v1/check" }),
+			route({ method: "POST", url: "/v1/entitled" }),
+			route({ method: "POST", url: "/v1/balances.check" }),
+			route({ method: "GET", url: "/v1/customers/:customer_id" }),
+			route({
+				method: "GET",
+				url: "/v1/customers/:customer_id/entities/:entity_id",
+			}),
+			route({ method: "POST", url: "/v1/customers" }),
+			route({ method: "POST", url: "/v1/customers.get_or_create" }),
+			route({ method: "POST", url: "/v1/entities.get" }),
+		],
+	},
+];
 
 export const getRateLimitType = (c: Context<HonoEnv>) => {
 	const method = c.req.method;
 	const path = c.req.path;
 
-	// Exact match patterns for track endpoints
-	const trackPatterns = [
-		{
-			method: "POST",
-			url: "/v1/events",
-		},
-		{
-			method: "POST",
-			url: "/v1/track",
-		},
-		{
-			method: "POST",
-			url: "/v1/balances.track",
-		},
-		{
-			method: "POST",
-			url: "/v1/balances.finalize",
-		},
-		{
-			method: "POST",
-			url: "/v1/usage",
-		},
-		{
-			method: "POST",
-			url: "/v1/balances/update",
-		},
-		{
-			method: "POST",
-			url: "/v1/balances.update",
-		},
-	];
-
-	// Patterns for check endpoints (including dynamic customer_id)
-	const checkPatterns = [
-		{
-			method: "POST",
-			url: "/v1/check",
-		},
-		{
-			method: "POST",
-			url: "/v1/entitled",
-		},
-		{
-			method: "POST",
-			url: "/v1/balances.check",
-		},
-	];
-
-	const getCustomerPatterns = [
-		{
-			method: "GET",
-			url: "/v1/customers/:customer_id",
-		},
-		{
-			method: "GET",
-			url: "/v1/customers/:customer_id/entities/:entity_id",
-		},
-		{
-			method: "POST",
-			url: "/v1/customers",
-		},
-		{
-			method: "POST",
-			url: "/v1/customers.get_or_create",
-		},
-		{
-			method: "POST",
-			url: "/v1/entities.get",
-		},
-	];
-
-	const eventsPatterns = [
-		{
-			method: "POST",
-			url: "/v1/events/list",
-		},
-		{
-			method: "POST",
-			url: "/v1/events/aggregate",
-		},
-		{
-			method: "POST",
-			url: "/v1/query",
-		},
-		{
-			method: "POST",
-			url: "/v1/events.list",
-		},
-		{
-			method: "POST",
-			url: "/v1/events.aggregate",
-		},
-	];
-
-	const attachPatterns = [
-		{
-			method: "POST",
-			url: "/v1/attach",
-		},
-		{
-			method: "POST",
-			url: "/v1/billing.attach",
-		},
-		{
-			method: "POST",
-			url: "/v1/billing.multi_attach",
-		},
-		{
-			method: "POST",
-			url: "/v1/billing.update",
-		},
-	];
-
-	const listProductsPatterns = [
-		{
-			method: "GET",
-			url: "/v1/products",
-		},
-		{
-			method: "GET",
-			url: "/v1/products_beta",
-		},
-		{
-			method: "GET",
-			url: "/v1/plans",
-		},
-		{
-			method: "POST",
-			url: "/v1/plans.list",
-		},
-	];
-
-	const patternMap: {
-		patterns: { method: string; url: string }[];
-		type: RateLimitType;
-	}[] = [
-		{ patterns: listProductsPatterns, type: RateLimitType.ListProducts },
-		{ patterns: attachPatterns, type: RateLimitType.Attach },
-		{ patterns: trackPatterns, type: RateLimitType.Track },
-		{
-			patterns: checkPatterns.concat(getCustomerPatterns),
-			type: RateLimitType.Check,
-		},
-		{ patterns: eventsPatterns, type: RateLimitType.Events },
-	];
-
-	for (const { patterns, type } of patternMap) {
+	for (const { patterns, type } of RATE_LIMIT_ROUTE_GROUPS) {
 		if (
 			patterns.some((pattern) => matchRoute({ url: path, method, pattern }))
 		) {
@@ -189,7 +128,7 @@ export type RateLimitConfig = {
 export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	[RateLimitType.General]: {
 		name: "general",
-		limit: 100,
+		limit: 10,
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Org,
@@ -222,9 +161,9 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		notInRedis: false,
 		scope: RateLimitScope.Customer,
 	},
-	[RateLimitType.ListProducts]: {
-		name: "list_products",
-		limit: 20,
+	[RateLimitType.ListCustomers]: {
+		name: "list_customers",
+		limit: 1,
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Org,
