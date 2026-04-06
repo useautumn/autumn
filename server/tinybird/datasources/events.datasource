@@ -21,7 +21,3 @@ SCHEMA >
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
 ENGINE_SORTING_KEY "org_id, env, customer_id, event_name, timestamp"
-
-IMPORT_CONNECTION_NAME firecrawl_backfill_apikeyid
-IMPORT_BUCKET_URI s3://firecrawl-emergency-backfill-apikeyid/v2/**/*.ndjson
-IMPORT_SCHEDULE @auto
