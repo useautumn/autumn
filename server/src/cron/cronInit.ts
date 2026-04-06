@@ -3,6 +3,7 @@ import { CronJob } from "cron";
 import { initDrizzle } from "../db/initDrizzle.js";
 import { logger } from "../external/logtail/logtailUtils.js";
 import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
+import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runProductCron } from "./productCron/runProductCron.js";
 import { runResetCron } from "./resetCron/runResetCron.js";
 import type { CronContext } from "./utils/CronContext.js";
@@ -38,7 +39,7 @@ const main = async () => {
 		runProductCron({ ctx }),
 		runResetCron({ ctx }),
 		runInvoiceCron({ ctx }),
-		// runOneOffCleanup({ ctx }),
+		runOneOffCleanup({ ctx }),
 	]);
 };
 
