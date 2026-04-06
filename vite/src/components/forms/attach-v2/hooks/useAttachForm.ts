@@ -25,6 +25,11 @@ export function useAttachForm({
 			newBillingSubscription: false,
 			discounts: [],
 			grantFree: false,
+			noBillingChanges: false,
+			carryOverBalances: false,
+			carryOverUsages: false,
+			processorSubscriptionId: "",
+			customLineItems: [],
 		} as AttachForm,
 		validators: {
 			onChange: AttachFormSchema,

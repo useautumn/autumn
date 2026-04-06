@@ -139,6 +139,11 @@ export function AttachFormProvider({
 		newBillingSubscription,
 		discounts,
 		grantFree,
+		noBillingChanges,
+		carryOverBalances,
+		carryOverUsages,
+		processorSubscriptionId,
+		customLineItems,
 	} = formValues;
 
 	const product = useMemo(
@@ -263,6 +268,11 @@ export function AttachFormProvider({
 		redirectMode,
 		newBillingSubscription,
 		discounts,
+		noBillingChanges,
+		carryOverBalances,
+		carryOverUsages,
+		processorSubscriptionId,
+		customLineItems,
 	});
 
 	const previewQuery = useAttachPreview({ requestBody });
