@@ -15,9 +15,9 @@ import { addHours } from "date-fns";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { findStripePriceFromPrices } from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
 import { getStripeSchedules } from "@/external/stripe/stripeSubUtils.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { findStripePriceForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findStripePriceForAutumnPrice.js";
 import { isV4Usage } from "@/internal/products/prices/priceUtils/usagePriceUtils/classifyUsagePrice.js";
 import { isFreeProductV2 } from "@/internal/products/productUtils/classifyProduct.js";
 import { hoursToFinalizeInvoice } from "../constants.js";
@@ -198,9 +198,10 @@ export const expectSubScheduleCorrect = async ({
 	let missingUsageCount = 0;
 
 	for (const autumnPrice of autumnPrices) {
-		const stripePrice = findStripePriceFromPrices({
+		const stripePrice = findStripePriceForAutumnPrice({
 			stripePrices,
 			autumnPrice,
+			product: cusProduct.product,
 		});
 
 		if (isV4Usage({ price: autumnPrice!, cusProduct })) {
