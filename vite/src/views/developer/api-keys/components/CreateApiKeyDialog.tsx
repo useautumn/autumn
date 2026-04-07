@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
+import { DateInputUnix } from "@/components/general/DateInputUnix";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
@@ -13,6 +14,13 @@ import {
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { Input } from "@/components/v2/inputs/Input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/v2/selects/Select";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -37,6 +45,8 @@ export const CreateApiKeyDialog = ({
 	const [copied, setCopied] = useState(false);
 	const [copiedEnv, setCopiedEnv] = useState(false);
 	const [validationError, setValidationError] = useState<string | null>(null);
+	const [expiryOption, setExpiryOption] = useState<string>("never");
+	const [customExpiresAt, setCustomExpiresAt] = useState<number | null>(null);
 
 	useEffect(() => {
 		if (open) {
@@ -45,6 +55,8 @@ export const CreateApiKeyDialog = ({
 			setCopied(false);
 			setCopiedEnv(false);
 			setValidationError(null);
+			setExpiryOption("never");
+			setCustomExpiresAt(null);
 		} else if (!open) {
 			refetch();
 			setTimeout(() => {
@@ -74,6 +86,19 @@ export const CreateApiKeyDialog = ({
 		}
 	}, [copiedEnv]);
 
+	const computeExpiresAt = (): number | null => {
+		if (expiryOption === "never") return null;
+		if (expiryOption === "custom") return customExpiresAt;
+		const durations: Record<string, number> = {
+			"7d": 7 * 24 * 60 * 60 * 1000,
+			"30d": 30 * 24 * 60 * 60 * 1000,
+			"60d": 60 * 24 * 60 * 60 * 1000,
+			"90d": 90 * 24 * 60 * 60 * 1000,
+			"1y": 365 * 24 * 60 * 60 * 1000,
+		};
+		return Date.now() + (durations[expiryOption] ?? 0);
+	};
+
 	const handleCreate = async () => {
 		const result = createApiKeySchema.safeParse({ name });
 		if (!result.success) {
@@ -85,6 +110,7 @@ export const CreateApiKeyDialog = ({
 		try {
 			const { api_key } = await DevService.createAPIKey(axiosInstance, {
 				name: name,
+				expires_at: computeExpiresAt(),
 			});
 
 			setApiKey(api_key);
@@ -187,6 +213,30 @@ export const CreateApiKeyDialog = ({
 							/>
 							{validationError && (
 								<p className="mt-2 text-sm text-red-500">{validationError}</p>
+							)}
+							<p className="mt-4 mb-2 text-sm text-t3">Expiration</p>
+							<Select value={expiryOption} onValueChange={setExpiryOption}>
+								<SelectTrigger>
+									<SelectValue placeholder="Never" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="7d">7 days</SelectItem>
+									<SelectItem value="30d">30 days</SelectItem>
+									<SelectItem value="60d">60 days</SelectItem>
+									<SelectItem value="90d">90 days</SelectItem>
+									<SelectItem value="1y">1 year</SelectItem>
+									<SelectItem value="custom">Custom</SelectItem>
+									<SelectItem value="never">Never</SelectItem>
+								</SelectContent>
+							</Select>
+							{expiryOption === "custom" && (
+								<div className="mt-2">
+									<DateInputUnix
+										unixDate={customExpiresAt}
+										setUnixDate={setCustomExpiresAt}
+										withTime
+									/>
+								</div>
 							)}
 						</motion.div>
 					)}

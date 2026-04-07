@@ -2,6 +2,7 @@ import type { ApiKey } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import {
 	CalendarIcon,
+	ClockIcon,
 	ShieldCheckIcon,
 	TerminalIcon,
 	UserIcon,
@@ -42,10 +43,16 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		header: "Name",
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<ApiKey> }) => {
+			const isExpired =
+				!!row.original.expires_at && row.original.expires_at <= Date.now();
 			return (
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<div className="font-medium text-t1 truncate max-w-[150px]">
+						<div
+							className={`font-medium text-t1 truncate max-w-[150px]${
+								isExpired ? " opacity-50" : ""
+							}`}
+						>
 							{row.original.name}
 						</div>
 					</TooltipTrigger>
@@ -60,8 +67,14 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		accessorKey: "prefix",
 		cell: ({ row }: { row: Row<ApiKey> }) => {
 			const apiKey = row.original;
+			const isExpired =
+				!!apiKey.expires_at && apiKey.expires_at <= Date.now();
 			return (
-				<div className="font-mono justify-start flex w-full group overflow-hidden">
+				<div
+					className={`font-mono justify-start flex w-full group overflow-hidden${
+						isExpired ? " opacity-50" : ""
+					}`}
+				>
 					{apiKey.prefix ? (
 						<span className="text-tiny-id"> {apiKey.prefix}</span>
 					) : (
@@ -77,10 +90,15 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		accessorKey: "meta",
 		cell: ({ row }: { row: Row<ApiKey> }) => {
 			const source = getSourceInfo(row.original.meta);
+			const isExpired =
+				!!row.original.expires_at && row.original.expires_at <= Date.now();
+			const wrapperClass = `flex justify-start items-center${
+				isExpired ? " opacity-50" : ""
+			}`;
 
 			if (source.type === "cli") {
 				return (
-					<div className="flex justify-start items-center">
+					<div className={wrapperClass}>
 						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 rounded-md">
 							<TerminalIcon size={12} />
 							CLI
@@ -91,7 +109,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 
 			if (source.type === "autumn_support") {
 				return (
-					<div className="flex justify-start items-center">
+					<div className={wrapperClass}>
 						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-md">
 							<ShieldCheckIcon size={12} />
 							Autumn Support
@@ -102,7 +120,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 
 			if (source.type === "dashboard" && source.author) {
 				return (
-					<div className="flex justify-start items-center">
+					<div className={wrapperClass}>
 						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-muted text-t2 rounded-md">
 							<UserIcon size={12} className="shrink-0" />
 							{source.author}
@@ -125,6 +143,36 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		size: 120,
 		cell: ({ row }: { row: Row<ApiKey> }) => {
 			const { date, time } = formatUnixToDateTime(row.original.created_at);
+			return (
+				<div className="text-xs text-t3 pr-4 w-full">
+					{date} <span className="truncate">{time}</span>
+				</div>
+			);
+		},
+	},
+	{
+		header: () => (
+			<div className="flex items-center gap-1.5">
+				<ClockIcon size={14} className="text-t4" />
+				<span>Expires</span>
+			</div>
+		),
+		accessorKey: "expires_at",
+		size: 120,
+		cell: ({ row }: { row: Row<ApiKey> }) => {
+			const expiresAt = row.original.expires_at;
+
+			if (!expiresAt) {
+				return <div className="text-xs text-t4">Never</div>;
+			}
+
+			const isExpired = expiresAt <= Date.now();
+
+			if (isExpired) {
+				return <div className="text-xs text-red-500">Expired</div>;
+			}
+
+			const { date, time } = formatUnixToDateTime(expiresAt);
 			return (
 				<div className="text-xs text-t3 pr-4 w-full">
 					{date} <span className="truncate">{time}</span>
