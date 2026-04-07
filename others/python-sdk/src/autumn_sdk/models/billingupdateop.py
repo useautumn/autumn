@@ -36,7 +36,7 @@ class BillingUpdateGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -76,7 +76,7 @@ class BillingUpdateFeatureQuantity(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -127,7 +127,7 @@ class BillingUpdateBasePrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -176,7 +176,7 @@ class BillingUpdateReset(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -212,7 +212,7 @@ class BillingUpdateTier(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -308,7 +308,7 @@ class BillingUpdatePrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -398,7 +398,7 @@ class BillingUpdateRollover(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -460,7 +460,7 @@ class BillingUpdatePlanItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -508,7 +508,7 @@ class BillingUpdateFreeTrialParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -549,7 +549,7 @@ class BillingUpdateCustomize(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -597,7 +597,7 @@ class BillingUpdateInvoiceMode(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -667,7 +667,7 @@ class UpdateSubscriptionParamsTypedDict(TypedDict):
     cancel_action: NotRequired[BillingUpdateCancelAction]
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
     billing_cycle_anchor: Literal["now"]
-    r"""Reset the billing cycle anchor immediately with 'now' or schedule it for a future Unix timestamp in milliseconds."""
+    r"""Reset the billing cycle anchor immediately with 'now'"""
     no_billing_changes: NotRequired[bool]
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
     recalculate_balances: NotRequired[BillingUpdateRecalculateBalancesTypedDict]
@@ -712,7 +712,7 @@ class UpdateSubscriptionParams(BaseModel):
         Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
         pydantic.Field(alias="billing_cycle_anchor"),
     ] = "now"
-    r"""Reset the billing cycle anchor immediately with 'now' or schedule it for a future Unix timestamp in milliseconds."""
+    r"""Reset the billing cycle anchor immediately with 'now'"""
 
     no_billing_changes: Optional[bool] = None
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
@@ -744,7 +744,7 @@ class UpdateSubscriptionParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -793,7 +793,7 @@ class BillingUpdateInvoice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 m[k] = val
@@ -873,7 +873,7 @@ class BillingUpdateResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
