@@ -9,6 +9,7 @@ import { SandboxBanner } from "@/components/general/SandboxBanner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
@@ -138,6 +139,7 @@ const MainContent = ({
 
 	useDevQuery();
 	useAutumnFlags();
+	useFeatureFlags();
 	useFeaturesQuery();
 	useRewardsQuery();
 	useEventNames();
