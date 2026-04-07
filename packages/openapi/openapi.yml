@@ -142,16 +142,18 @@ components:
                   threshold:
                     type: number
                     minimum: 0
-                    description: The threshold value that triggers the alert. For usage, this is an
-                      absolute count. For usage_percentage, this is a percentage
-                      (0-100).
+                    description: The threshold value that triggers the alert. For usage or
+                      remaining, this is an absolute count. For usage_percentage
+                      or remaining_percentage, this is a percentage (0-100).
                   threshold_type:
                     enum:
                       - usage
                       - usage_percentage
+                      - remaining
+                      - remaining_percentage
                     type: string
-                    description: Whether the threshold is an absolute usage count or a percentage of
-                      the usage allowance.
+                    description: Whether the threshold is an absolute count or a percentage of the
+                      usage allowance or remaining balance.
                   name:
                     type: string
                     description: Optional user-defined label to distinguish multiple alerts on the
@@ -328,16 +330,18 @@ components:
                   threshold:
                     type: number
                     minimum: 0
-                    description: The threshold value that triggers the alert. For usage, this is an
-                      absolute count. For usage_percentage, this is a percentage
-                      (0-100).
+                    description: The threshold value that triggers the alert. For usage or
+                      remaining, this is an absolute count. For usage_percentage
+                      or remaining_percentage, this is a percentage (0-100).
                   threshold_type:
                     enum:
                       - usage
                       - usage_percentage
+                      - remaining
+                      - remaining_percentage
                     type: string
-                    description: Whether the threshold is an absolute usage count or a percentage of
-                      the usage allowance.
+                    description: Whether the threshold is an absolute count or a percentage of the
+                      usage allowance or remaining balance.
                   name:
                     type: string
                     description: Optional user-defined label to distinguish multiple alerts on the
@@ -1709,16 +1713,19 @@ paths:
                           threshold:
                             type: number
                             minimum: 0
-                            description: The threshold value that triggers the alert. For usage, this is an
-                              absolute count. For usage_percentage, this is a
-                              percentage (0-100).
+                            description: The threshold value that triggers the alert. For usage or
+                              remaining, this is an absolute count. For
+                              usage_percentage or remaining_percentage, this is
+                              a percentage (0-100).
                           threshold_type:
                             enum:
                               - usage
                               - usage_percentage
+                              - remaining
+                              - remaining_percentage
                             type: string
-                            description: Whether the threshold is an absolute usage count or a percentage of
-                              the usage allowance.
+                            description: Whether the threshold is an absolute count or a percentage of the
+                              usage allowance or remaining balance.
                           name:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
@@ -1974,16 +1981,19 @@ paths:
                                   threshold:
                                     type: number
                                     minimum: 0
-                                    description: The threshold value that triggers the alert. For usage, this is an
-                                      absolute count. For usage_percentage, this
-                                      is a percentage (0-100).
+                                    description: The threshold value that triggers the alert. For usage or
+                                      remaining, this is an absolute count. For
+                                      usage_percentage or remaining_percentage,
+                                      this is a percentage (0-100).
                                   threshold_type:
                                     enum:
                                       - usage
                                       - usage_percentage
+                                      - remaining
+                                      - remaining_percentage
                                     type: string
-                                    description: Whether the threshold is an absolute usage count or a percentage of
-                                      the usage allowance.
+                                    description: Whether the threshold is an absolute count or a percentage of the
+                                      usage allowance or remaining balance.
                                   name:
                                     type: string
                                     description: Optional user-defined label to distinguish multiple alerts on the
@@ -2535,16 +2545,19 @@ paths:
                           threshold:
                             type: number
                             minimum: 0
-                            description: The threshold value that triggers the alert. For usage, this is an
-                              absolute count. For usage_percentage, this is a
-                              percentage (0-100).
+                            description: The threshold value that triggers the alert. For usage or
+                              remaining, this is an absolute count. For
+                              usage_percentage or remaining_percentage, this is
+                              a percentage (0-100).
                           threshold_type:
                             enum:
                               - usage
                               - usage_percentage
+                              - remaining
+                              - remaining_percentage
                             type: string
-                            description: Whether the threshold is an absolute usage count or a percentage of
-                              the usage allowance.
+                            description: Whether the threshold is an absolute count or a percentage of the
+                              usage allowance or remaining balance.
                           name:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
@@ -2720,16 +2733,19 @@ paths:
                             threshold:
                               type: number
                               minimum: 0
-                              description: The threshold value that triggers the alert. For usage, this is an
-                                absolute count. For usage_percentage, this is a
-                                percentage (0-100).
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
                             threshold_type:
                               enum:
                                 - usage
                                 - usage_percentage
+                                - remaining
+                                - remaining_percentage
                               type: string
-                              description: Whether the threshold is an absolute usage count or a percentage of
-                                the usage allowance.
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
                             name:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
@@ -7506,16 +7522,19 @@ paths:
                               threshold:
                                 type: number
                                 minimum: 0
-                                description: The threshold value that triggers the alert. For usage, this is an
-                                  absolute count. For usage_percentage, this is
-                                  a percentage (0-100).
+                                description: The threshold value that triggers the alert. For usage or
+                                  remaining, this is an absolute count. For
+                                  usage_percentage or remaining_percentage, this
+                                  is a percentage (0-100).
                               threshold_type:
                                 enum:
                                   - usage
                                   - usage_percentage
+                                  - remaining
+                                  - remaining_percentage
                                 type: string
-                                description: Whether the threshold is an absolute usage count or a percentage of
-                                  the usage allowance.
+                                description: Whether the threshold is an absolute count or a percentage of the
+                                  usage allowance or remaining balance.
                               name:
                                 type: string
                                 description: Optional user-defined label to distinguish multiple alerts on the
@@ -8918,16 +8937,19 @@ paths:
                               threshold:
                                 type: number
                                 minimum: 0
-                                description: The threshold value that triggers the alert. For usage, this is an
-                                  absolute count. For usage_percentage, this is
-                                  a percentage (0-100).
+                                description: The threshold value that triggers the alert. For usage or
+                                  remaining, this is an absolute count. For
+                                  usage_percentage or remaining_percentage, this
+                                  is a percentage (0-100).
                               threshold_type:
                                 enum:
                                   - usage
                                   - usage_percentage
+                                  - remaining
+                                  - remaining_percentage
                                 type: string
-                                description: Whether the threshold is an absolute usage count or a percentage of
-                                  the usage allowance.
+                                description: Whether the threshold is an absolute count or a percentage of the
+                                  usage allowance or remaining balance.
                               name:
                                 type: string
                                 description: Optional user-defined label to distinguish multiple alerts on the
@@ -9415,8 +9437,7 @@ paths:
         pending cancellation. (optional)
 
         @param billingCycleAnchor - Reset the billing cycle anchor immediately
-        with 'now' or schedule it for a future Unix timestamp in milliseconds.
-        (optional)
+        with 'now' (optional)
 
         @param noBillingChanges - If true, the subscription is updated
         internally without applying billing changes in Stripe. (optional)
@@ -9745,8 +9766,7 @@ paths:
                     period end, 'uncancel' reverses a pending cancellation.
                 billing_cycle_anchor:
                   const: now
-                  description: Reset the billing cycle anchor immediately with 'now' or schedule
-                    it for a future Unix timestamp in milliseconds.
+                  description: Reset the billing cycle anchor immediately with 'now'
                 no_billing_changes:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
@@ -9920,8 +9940,7 @@ paths:
         pending cancellation. (optional)
 
         @param billingCycleAnchor - Reset the billing cycle anchor immediately
-        with 'now' or schedule it for a future Unix timestamp in milliseconds.
-        (optional)
+        with 'now' (optional)
 
         @param noBillingChanges - If true, the subscription is updated
         internally without applying billing changes in Stripe. (optional)
@@ -10250,8 +10269,7 @@ paths:
                     period end, 'uncancel' reverses a pending cancellation.
                 billing_cycle_anchor:
                   const: now
-                  description: Reset the billing cycle anchor immediately with 'now' or schedule
-                    it for a future Unix timestamp in milliseconds.
+                  description: Reset the billing cycle anchor immediately with 'now'
                 no_billing_changes:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
@@ -12681,16 +12699,19 @@ paths:
                           threshold:
                             type: number
                             minimum: 0
-                            description: The threshold value that triggers the alert. For usage, this is an
-                              absolute count. For usage_percentage, this is a
-                              percentage (0-100).
+                            description: The threshold value that triggers the alert. For usage or
+                              remaining, this is an absolute count. For
+                              usage_percentage or remaining_percentage, this is
+                              a percentage (0-100).
                           threshold_type:
                             enum:
                               - usage
                               - usage_percentage
+                              - remaining
+                              - remaining_percentage
                             type: string
-                            description: Whether the threshold is an absolute usage count or a percentage of
-                              the usage allowance.
+                            description: Whether the threshold is an absolute count or a percentage of the
+                              usage allowance or remaining balance.
                           name:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
@@ -13024,16 +13045,19 @@ paths:
                             threshold:
                               type: number
                               minimum: 0
-                              description: The threshold value that triggers the alert. For usage, this is an
-                                absolute count. For usage_percentage, this is a
-                                percentage (0-100).
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
                             threshold_type:
                               enum:
                                 - usage
                                 - usage_percentage
+                                - remaining
+                                - remaining_percentage
                               type: string
-                              description: Whether the threshold is an absolute usage count or a percentage of
-                                the usage allowance.
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
                             name:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
@@ -13506,16 +13530,19 @@ paths:
                             threshold:
                               type: number
                               minimum: 0
-                              description: The threshold value that triggers the alert. For usage, this is an
-                                absolute count. For usage_percentage, this is a
-                                percentage (0-100).
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
                             threshold_type:
                               enum:
                                 - usage
                                 - usage_percentage
+                                - remaining
+                                - remaining_percentage
                               type: string
-                              description: Whether the threshold is an absolute usage count or a percentage of
-                                the usage allowance.
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
                             name:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
@@ -13705,16 +13732,19 @@ paths:
                           threshold:
                             type: number
                             minimum: 0
-                            description: The threshold value that triggers the alert. For usage, this is an
-                              absolute count. For usage_percentage, this is a
-                              percentage (0-100).
+                            description: The threshold value that triggers the alert. For usage or
+                              remaining, this is an absolute count. For
+                              usage_percentage or remaining_percentage, this is
+                              a percentage (0-100).
                           threshold_type:
                             enum:
                               - usage
                               - usage_percentage
+                              - remaining
+                              - remaining_percentage
                             type: string
-                            description: Whether the threshold is an absolute usage count or a percentage of
-                              the usage allowance.
+                            description: Whether the threshold is an absolute count or a percentage of the
+                              usage allowance or remaining balance.
                           name:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
@@ -14039,16 +14069,19 @@ paths:
                             threshold:
                               type: number
                               minimum: 0
-                              description: The threshold value that triggers the alert. For usage, this is an
-                                absolute count. For usage_percentage, this is a
-                                percentage (0-100).
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
                             threshold_type:
                               enum:
                                 - usage
                                 - usage_percentage
+                                - remaining
+                                - remaining_percentage
                               type: string
-                              description: Whether the threshold is an absolute usage count or a percentage of
-                                the usage allowance.
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
                             name:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
@@ -14417,6 +14450,8 @@ webhooks:
                           enum:
                             - usage
                             - usage_percentage
+                            - remaining
+                            - remaining_percentage
                       required:
                         - threshold
                         - threshold_type

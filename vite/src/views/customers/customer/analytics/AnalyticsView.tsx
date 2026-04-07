@@ -5,6 +5,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useEnv } from "@/utils/envUtils";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
@@ -35,6 +37,9 @@ export const AnalyticsView = () => {
 	const [groupFilter, setGroupFilter] = useState<string | null>(null);
 	const gridRef = useRef<AgGridReact>(null);
 	const navigate = useNavigate();
+
+	const env = useEnv();
+	const { flags, isLoading: isFeatureFlagsLoading } = useFeatureFlags();
 
 	const customerId = searchParams.get("customer_id");
 
@@ -143,7 +148,17 @@ export const AnalyticsView = () => {
 	}, [events, features, groupBy, groupFilter, entityNames]);
 
 	useEffect(() => {
-		if (error?.response?.data?.code === ErrCode.ClickHouseDisabled) {
+		if (
+			(
+				error as {
+					response?: {
+						data?: {
+							code?: string;
+						};
+					};
+				}
+			)?.response?.data?.code === ErrCode.TinybirdDisabled
+		) {
 			setClickHouseDisabled(true);
 		}
 	}, [error]);
@@ -151,10 +166,15 @@ export const AnalyticsView = () => {
 	if (clickHouseDisabled) {
 		return (
 			<div className="flex flex-col items-center justify-center h-full">
-				<h3 className="text-sm text-t2 font-bold">ClickHouse is disabled</h3>
+				<h3 className="text-sm text-t2 font-bold">Tinybird is disabled</h3>
 			</div>
 		);
 	}
+
+	const showRevenueMetrics =
+		env === "live" &&
+		!isFeatureFlagsLoading &&
+		!flags.maintenanceModes.analytics.disableRevenueMetrics;
 
 	return (
 		<AnalyticsContext.Provider
@@ -199,7 +219,7 @@ export const AnalyticsView = () => {
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-4 sm:px-10 pt-4 sm:pt-8">
 				<OnboardingGuide />
-				<RevenueMetricsSection />
+				{showRevenueMetrics && <RevenueMetricsSection />}
 				<div className="max-h-[400px] min-h-[400px] pb-6 shrink-0">
 					<div className="flex justify-between pb-4 h-10">
 						<div className="text-t3 text-md flex gap-2 items-center">

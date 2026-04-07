@@ -5,6 +5,7 @@ import { handleSaveRCMappings } from "@/external/revenueCat/handlers/handleSaveR
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleDeleteOrg } from "./handlers/crudHandlers/handleDeleteOrg.js";
 import { handleGetOrg } from "./handlers/crudHandlers/handleGetOrg.js";
+import { handleGetOrgFlags } from "./handlers/handleGetOrgFlags.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import { handleResetDefaultAccount } from "./handlers/handleResetDefaultAccount.js";
 import {
@@ -35,6 +36,7 @@ internalOrgRouter.get("/invites", ...handleGetInvites);
 
 export const honoOrgRouter = new Hono<HonoEnv>();
 honoOrgRouter.get("", ...handleGetOrg);
+honoOrgRouter.get("/flags", ...handleGetOrgFlags);
 honoOrgRouter.get("/me", (c) => {
 	const { org, env } = c.get("ctx");
 	return c.json({
