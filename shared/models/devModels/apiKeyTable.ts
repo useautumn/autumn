@@ -22,6 +22,7 @@ export const apiKeys = pgTable(
 		env: text(),
 		hashed_key: text("hashed_key"),
 		meta: jsonb(),
+		expires_at: numeric("expires_at", { mode: "number" }),
 	},
 	(table) => [
 		foreignKey({
