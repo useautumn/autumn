@@ -279,7 +279,7 @@ export const CreateApiKeyDialog = ({
 									onClick={handleCreate}
 									variant="primary"
 									className="cursor-pointer"
-									disabled={!!validationError || !name.trim()}
+									disabled={!!validationError || !name.trim() || (expiryOption === "custom" && !customExpiresAt)}
 								>
 									Create
 								</Button>
