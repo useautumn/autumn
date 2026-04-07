@@ -89,6 +89,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           </Expandable>
         </DynamicParamField>
 
+        <DynamicParamField body="invoice_mode" type="boolean">
+          When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+        </DynamicParamField>
+
       </Expandable>
     </DynamicParamField>
 
@@ -114,7 +118,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       List of usage alert configurations per feature.
       <Expandable title="properties">
         <DynamicParamField body="feature_id" type="string">
-          The feature ID this alert applies to. If omitted, the alert applies globally.
+          The feature ID this alert applies to.
         </DynamicParamField>
 
         <DynamicParamField body="enabled" type="boolean">
@@ -236,6 +240,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           </Expandable>
         </DynamicResponseField>
 
+        <DynamicResponseField name="invoice_mode" type="boolean">
+          When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+        </DynamicResponseField>
+
       </Expandable>
     </DynamicResponseField>
 
@@ -261,7 +269,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       List of usage alert configurations per feature.
       <Expandable title="properties">
         <DynamicResponseField name="feature_id" type="string">
-          The feature ID this alert applies to. If omitted, the alert applies globally.
+          The feature ID this alert applies to.
         </DynamicResponseField>
 
         <DynamicResponseField name="enabled" type="boolean">

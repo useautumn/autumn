@@ -72,6 +72,10 @@ export type UpdateCustomerAutoTopupRequest = {
    * Optional rate limit to cap how often auto top-ups occur.
    */
   purchaseLimit?: UpdateCustomerPurchaseLimitRequest | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
 };
 
 export type UpdateCustomerSpendLimitRequest = {
@@ -105,7 +109,7 @@ export type UpdateCustomerThresholdTypeRequestBody = ClosedEnum<
 
 export type UpdateCustomerUsageAlertRequestBody = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**
@@ -265,6 +269,10 @@ export type UpdateCustomerAutoTopupResponse = {
    * Optional rate limit to cap how often auto top-ups occur.
    */
   purchaseLimit?: UpdateCustomerPurchaseLimitResponse | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
 };
 
 export type UpdateCustomerSpendLimitResponse = {
@@ -298,7 +306,7 @@ export type UpdateCustomerThresholdTypeResponse = OpenEnum<
 
 export type UpdateCustomerUsageAlertResponse = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**
@@ -647,6 +655,7 @@ export type UpdateCustomerAutoTopupRequest$Outbound = {
   threshold: number;
   quantity: number;
   purchase_limit?: UpdateCustomerPurchaseLimitRequest$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
 };
 
 /** @internal */
@@ -662,11 +671,13 @@ export const UpdateCustomerAutoTopupRequest$outboundSchema: z.ZodMiniType<
     purchaseLimit: z.optional(
       z.lazy(() => UpdateCustomerPurchaseLimitRequest$outboundSchema),
     ),
+    invoiceMode: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
     });
   }),
 );
@@ -947,11 +958,13 @@ export const UpdateCustomerAutoTopupResponse$inboundSchema: z.ZodMiniType<
     purchase_limit: types.optional(
       z.lazy(() => UpdateCustomerPurchaseLimitResponse$inboundSchema),
     ),
+    invoice_mode: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "purchase_limit": "purchaseLimit",
+      "invoice_mode": "invoiceMode",
     });
   }),
 );

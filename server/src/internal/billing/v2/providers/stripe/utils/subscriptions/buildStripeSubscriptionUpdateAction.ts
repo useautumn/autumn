@@ -1,4 +1,5 @@
 import type {
+	AutumnBillingPlan,
 	BillingContext,
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
@@ -13,12 +14,15 @@ export const buildStripeSubscriptionUpdateAction = ({
 	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
 	ctx,
 	billingContext,
+	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
+	autumnBillingPlan,
 	subItemsUpdate,
 	stripeSubscriptionScheduleAction,
 	subscriptionCancelAt,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
+	autumnBillingPlan: AutumnBillingPlan;
 	subItemsUpdate: Stripe.SubscriptionUpdateParams.Item[];
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 	subscriptionCancelAt?: number | null;

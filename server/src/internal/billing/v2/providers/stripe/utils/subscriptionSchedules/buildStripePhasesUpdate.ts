@@ -26,6 +26,12 @@ const normalizeCustomerProductTimestamps = (
 	ended_at: customerProduct.ended_at
 		? truncateMsToSecondPrecision(customerProduct.ended_at)
 		: undefined,
+	billing_cycle_anchor_resets_at:
+		customerProduct.billing_cycle_anchor_resets_at
+			? truncateMsToSecondPrecision(
+					customerProduct.billing_cycle_anchor_resets_at,
+				)
+			: customerProduct.billing_cycle_anchor_resets_at,
 });
 
 /**
@@ -108,8 +114,7 @@ const stripeDiscountsToPhaseDiscounts = ({
 	if (!stripeDiscounts || stripeDiscounts.length === 0) return undefined;
 
 	const activeDiscounts = stripeDiscounts.filter(
-		(discount) =>
-			discount.end == null || discount.end > phaseStartDateSeconds,
+		(discount) => discount.end == null || discount.end > phaseStartDateSeconds,
 	);
 
 	if (activeDiscounts.length === 0) return undefined;
@@ -119,6 +124,33 @@ const stripeDiscountsToPhaseDiscounts = ({
 			? { discount: discount.id }
 			: { coupon: discount.source.coupon.id },
 	);
+};
+
+const getBillingCycleAnchorResetAt = ({
+	customerProducts,
+	nowMs,
+}: {
+	customerProducts: FullCusProduct[];
+	nowMs: number;
+}) => {
+	const futureResetTimestamps = Array.from(
+		new Set(
+			customerProducts
+				.map(
+					(customerProduct) => customerProduct.billing_cycle_anchor_resets_at,
+				)
+				.filter(
+					(resetAt): resetAt is number =>
+						typeof resetAt === "number" && resetAt > nowMs,
+				),
+		),
+	).sort((a, b) => a - b);
+
+	if (futureResetTimestamps.length === 0) {
+		return undefined;
+	}
+
+	return futureResetTimestamps[0];
 };
 
 /**
@@ -147,12 +179,17 @@ export const buildStripePhasesUpdate = ({
 	const normalizedCustomerProducts = customerProducts.map(
 		normalizeCustomerProductTimestamps,
 	);
+	const billingCycleAnchorResetAt = getBillingCycleAnchorResetAt({
+		customerProducts: normalizedCustomerProducts,
+		nowMs,
+	});
 
 	// Find all transition points
 	const transitionPoints = buildTransitionPoints({
 		customerProducts: normalizedCustomerProducts,
 		nowMs,
 		trialEndsAt: normalizedTrialEndsAt,
+		newBillingCycleAnchorMs: billingCycleAnchorResetAt,
 	});
 
 	const debugLogs = false;
@@ -211,11 +248,19 @@ export const buildStripePhasesUpdate = ({
 		};
 
 		const phaseStartDateSeconds = msToSeconds(startMs);
+		const isBillingCycleAnchorResetPhase =
+			billingCycleAnchorResetAt === startMs;
 		const phase: Stripe.SubscriptionScheduleUpdateParams.Phase = {
 			items: phaseItems,
 			start_date: phaseStartDateSeconds,
 			end_date: endMs ? msToSeconds(endMs) : undefined,
 			trial_end: computePhaseTrialEndsAt(),
+			billing_cycle_anchor: isBillingCycleAnchorResetPhase
+				? "phase_start"
+				: undefined,
+			proration_behavior: isBillingCycleAnchorResetPhase
+				? "always_invoice"
+				: undefined,
 			discounts: stripeDiscountsToPhaseDiscounts({
 				stripeDiscounts: billingContext.stripeDiscounts,
 				phaseStartDateSeconds,

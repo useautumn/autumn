@@ -506,6 +506,10 @@ export type AttachParams = {
    */
   newBillingSubscription?: boolean | undefined;
   /**
+   * Reset the billing cycle anchor immediately with 'now'.
+   */
+  billingCycleAnchor?: "now" | undefined;
+  /**
    * When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
    */
   planSchedule?: AttachPlanSchedule | undefined;
@@ -1169,6 +1173,7 @@ export type AttachParams$Outbound = {
   discounts?: Array<AttachAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   new_billing_subscription?: boolean | undefined;
+  billing_cycle_anchor?: "now" | undefined;
   plan_schedule?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<AttachCustomLineItem$Outbound> | undefined;
@@ -1201,6 +1206,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     ),
     successUrl: z.optional(z.string()),
     newBillingSubscription: z.optional(z.boolean()),
+    billingCycleAnchor: z.optional(z.literal("now")),
     planSchedule: z.optional(AttachPlanSchedule$outboundSchema),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
@@ -1227,6 +1233,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       subscriptionId: "subscription_id",
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
+      billingCycleAnchor: "billing_cycle_anchor",
       planSchedule: "plan_schedule",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",

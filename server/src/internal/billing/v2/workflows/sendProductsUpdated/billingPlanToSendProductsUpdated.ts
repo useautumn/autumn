@@ -25,6 +25,10 @@ import { workflows } from "@/queue/workflows.js";
 // HELPERS
 // ============================================================================
 
+type UpdateCustomerProductUpdates = NonNullable<
+	NonNullable<AutumnBillingPlan["updateCustomerProduct"]>["updates"]
+>;
+
 /** Check if any scheduled product in the list is paid (not free) */
 const hasPaidScheduledProduct = ({
 	customerProducts,
@@ -46,11 +50,7 @@ const getUpdateScenario = ({
 	updates,
 	insertCustomerProducts,
 }: {
-	updates: {
-		canceled?: boolean | null;
-		canceled_at?: number | null;
-		ended_at?: number | null;
-	};
+	updates: UpdateCustomerProductUpdates;
 	insertCustomerProducts: FullCusProduct[];
 }): AttachScenario | null => {
 	// Cancel: canceled=true with timestamps set
@@ -71,6 +71,10 @@ const getUpdateScenario = ({
 		updates.ended_at === null
 	) {
 		return AttachScenario.Renew;
+	}
+
+	if (updates.options != null) {
+		return AttachScenario.UpdatePrepaidQuantity;
 	}
 
 	return null;
