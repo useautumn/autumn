@@ -92,17 +92,18 @@ function SheetContent() {
 								<SheetSection withSeparator>
 									<AttachPlanOptions />
 								</SheetSection>
-								<SheetFooter>
-									<Button variant="secondary" onClick={closeSheet}>
-										Cancel
-									</Button>
+							<SheetFooter>
+								<Button variant="secondary" onClick={closeSheet} className="w-full">
+									Cancel
+								</Button>
 								<Button
 									variant="primary"
 									onClick={() => setStage("review")}
+									className="w-full"
 								>
 									Preview Changes
 								</Button>
-								</SheetFooter>
+							</SheetFooter>
 							</>
 						)}
 					</>
