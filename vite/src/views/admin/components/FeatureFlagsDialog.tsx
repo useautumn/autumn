@@ -246,10 +246,7 @@ export function FeatureFlagsDialog({
 						{/* Right: Monaco */}
 						<div className="flex flex-col gap-2">
 							<div className="text-xs font-medium text-t3 uppercase tracking-wide">Raw JSON</div>
-							<div
-								className="rounded-md border border-border overflow-hidden"
-								style={{ resize: "both", overflow: "auto", minWidth: 300, minHeight: 200, height: 300 }}
-							>
+							<div className="rounded-md border border-border overflow-hidden h-[300px]">
 								<Editor
 									height="100%"
 									language="json"

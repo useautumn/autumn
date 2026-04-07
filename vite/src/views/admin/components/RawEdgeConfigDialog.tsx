@@ -64,6 +64,7 @@ export function RawEdgeConfigDialog({
 					...configData
 				} = data;
 				setJsonText(JSON.stringify(configData, null, 2));
+				setJsonError(null);
 			})
 			.catch((error) => {
 				if (!cancelled) {
