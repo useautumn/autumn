@@ -8,14 +8,21 @@ export const handleListAdminUsers = createRoute({
 		const { db } = ctx;
 
 		const { search, after: afterQuery, before: beforeQuery } = c.req.query();
+		const trimmedSearch = search?.trim();
+		const searchTerm = trimmedSearch ? trimmedSearch : undefined;
 
-		let after,
-			before:
-				| {
-						id: string;
-						createdAt: Date;
-				  }
-				| undefined;
+		let after:
+			| {
+					id: string;
+					createdAt: Date;
+			  }
+			| undefined;
+		let before:
+			| {
+					id: string;
+					createdAt: Date;
+			  }
+			| undefined;
 
 		if (afterQuery) {
 			after = {
@@ -34,11 +41,11 @@ export const handleListAdminUsers = createRoute({
 			.from(user)
 			.where(
 				and(
-					search
+					searchTerm
 						? or(
-								ilike(user.email, `%${search as string}%`),
-								ilike(user.name, `%${search as string}%`),
-								ilike(user.id, `%${search as string}%`),
+								eq(user.id, searchTerm),
+								ilike(user.email, `%${searchTerm}%`),
+								ilike(user.name, `%${searchTerm}%`),
 							)
 						: undefined,
 					after
