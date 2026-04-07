@@ -4,19 +4,10 @@ import {
 	FeatureType,
 	type ProductItem,
 } from "@autumn/shared";
-import {
-	CaretDownIcon,
-	MagnifyingGlassIcon,
-	PlusIcon,
-} from "@phosphor-icons/react";
+import { PlusIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	useProduct,
@@ -24,9 +15,7 @@ import {
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
-import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { getDefaultItem } from "../utils/getDefaultItem";
 
 /** Get all feature IDs already in the plan, including underlying features from credit systems */
@@ -64,33 +53,21 @@ export function SelectFeatureSheet({
 	isOnboarding?: boolean;
 }) {
 	const [selectOpen, setSelectOpen] = useState(false);
-	const [searchValue, setSearchValue] = useState("");
 
 	const { features } = useFeaturesQuery();
 	const { product, setProduct, initialProduct } = useProduct();
 	const { setSheet } = useSheet();
 
+	const nonArchivedFeatures = useMemo(
+		() => features.filter((f: Feature) => !f.archived),
+		[features],
+	);
+
 	useEffect(() => {
-		// Always delay to let sheet animate in (300ms animation + buffer)
 		const timer = setTimeout(() => setSelectOpen(true), 350);
 		return () => clearTimeout(timer);
 	}, []);
 
-	// Reset search when dropdown closes
-	useEffect(() => {
-		if (!selectOpen) {
-			setSearchValue("");
-		}
-	}, [selectOpen]);
-
-	// Filter features based on search and exclude archived features
-	const filteredFeatures = features.filter(
-		(feature: Feature) =>
-			!feature.archived &&
-			feature.name.toLowerCase().includes(searchValue.toLowerCase()),
-	);
-
-	// Get features already in the plan (for showing "Already in plan" tag)
 	const featuresInPlan = useMemo(
 		() =>
 			getFeaturesAlreadyInPlan({
@@ -143,63 +120,20 @@ export function SelectFeatureSheet({
 			<div className="flex-1 overflow-y-auto">
 				<SheetSection withSeparator={false}>
 					<FormLabel>Select a feature</FormLabel>
-					<DropdownMenu open={selectOpen} onOpenChange={setSelectOpen}>
-						<DropdownMenuTrigger asChild>
-							<button
-								type="button"
-								className={cn(
-									"flex items-center justify-between w-full rounded-lg border bg-transparent text-sm outline-none h-input input-base input-shadow-default input-state-open p-2",
-								)}
-							>
-								<span className="text-t4">Select a feature</span>
-								<CaretDownIcon className="size-4 opacity-50" />
-							</button>
-						</DropdownMenuTrigger>
-						<DropdownMenuContent
-							align="start"
-							className="w-(--radix-dropdown-menu-trigger-width)"
-						>
-							{/* Search input */}
-							<div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
-								<MagnifyingGlassIcon className="size-4 text-t4" />
-								<input
-									type="text"
-									placeholder="Search features..."
-									value={searchValue}
-									onChange={(e) => setSearchValue(e.target.value)}
-									onKeyDown={(e) => e.stopPropagation()}
-									className="flex-1 bg-transparent text-sm outline-none placeholder:text-t4"
-								/>
-							</div>
-
-							<div className="max-h-60 overflow-y-auto">
-								{filteredFeatures.length === 0 ? (
-									<div className="py-4 text-center text-sm text-t4">
-										No features found.
-									</div>
-								) : (
-									filteredFeatures.map((feature: Feature) => (
-										<DropdownMenuItem
-											key={feature.id}
-											onClick={() => handleFeatureSelect(feature.id)}
-											className="py-2 px-2.5"
-										>
-											<div className="flex items-center gap-2 w-full">
-												<div className="shrink-0">
-													{getFeatureIcon({ feature })}
-												</div>
-												<span className="truncate flex-1">{feature.name}</span>
-												{featuresInPlan.has(feature.id) && (
-													<span className="shrink-0 text-xs text-t3 bg-muted px-1 py-0 rounded-md">
-														Already in plan
-													</span>
-												)}
-											</div>
-										</DropdownMenuItem>
-									))
-								)}
-							</div>
-
+					<FeatureSearchDropdown
+						features={nonArchivedFeatures}
+						value={null}
+						onSelect={handleFeatureSelect}
+						open={selectOpen}
+						onOpenChange={setSelectOpen}
+						renderExtra={(feature) =>
+							featuresInPlan.has(feature.id) ? (
+								<span className="shrink-0 text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+									Already in plan
+								</span>
+							) : null
+						}
+						footer={
 							<div className="border-t pt-2 pb-1 px-2">
 								<Button
 									variant="muted"
@@ -210,8 +144,8 @@ export function SelectFeatureSheet({
 									Create new feature
 								</Button>
 							</div>
-						</DropdownMenuContent>
-					</DropdownMenu>
+						}
+					/>
 				</SheetSection>
 			</div>
 		</div>

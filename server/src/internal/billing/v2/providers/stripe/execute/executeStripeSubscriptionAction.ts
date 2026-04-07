@@ -37,6 +37,7 @@ export const executeStripeSubscriptionAction = async ({
 
 	let { invoiceMode, stripeSubscription, currentEpochMs } = billingContext;
 	const { logger } = ctx;
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	// 2. Lock stripe subscription
 	if (stripeSubscription) {
@@ -68,7 +69,7 @@ export const executeStripeSubscriptionAction = async ({
 	if (latestStripeInvoice && invoiceMode?.finalizeInvoice) {
 		logger.debug(`[execSubAction] Finalizing invoice`);
 		latestStripeInvoice = await finalizeStripeInvoice({
-			stripeCli: createStripeCli({ org: ctx.org, env: ctx.env }),
+			stripeCli,
 			invoiceId: latestStripeInvoice.id,
 		});
 	}
@@ -77,7 +78,7 @@ export const executeStripeSubscriptionAction = async ({
 	const requiredAction =
 		latestStripeInvoice?.status === "open"
 			? await getRequiredActionFromSubscriptionInvoice({
-					stripeClient: createStripeCli({ org: ctx.org, env: ctx.env }),
+					stripeClient: stripeCli,
 					invoiceId: latestStripeInvoice!.id,
 					hasPaymentMethod: Boolean(billingContext.paymentMethod),
 					invoiceMode: billingContext.invoiceMode ?? undefined,

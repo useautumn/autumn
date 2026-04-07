@@ -1,5 +1,6 @@
-import type { Customer } from "@autumn/shared";
+import { type Customer, shouldForwardCustomerMetadata } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { autumnToStripeCustomerMetadata } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import { buildStripeCustomerIdempotencyKey } from "@/external/stripe/customers/utils/buildIdempotencyKey";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { ExpandedStripeCustomer } from "./getExpandedStripeCustomer";
@@ -23,6 +24,10 @@ export const createStripeCustomer = async ({
 		customerId: customer.id || customer.internal_id,
 	});
 
+	const forwardCustomerMetadata = shouldForwardCustomerMetadata({
+		org: ctx.org,
+	});
+
 	const stripeCustomer = await stripeCli.customers.create(
 		{
 			name: customer.name || undefined,
@@ -30,6 +35,8 @@ export const createStripeCustomer = async ({
 			metadata: {
 				autumn_id: customer.id || null,
 				autumn_internal_id: customer.internal_id,
+				...(forwardCustomerMetadata &&
+					autumnToStripeCustomerMetadata({ metadata: customer.metadata })),
 			},
 			test_clock: options.testClockId,
 			expand: [

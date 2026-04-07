@@ -89,6 +89,8 @@ class CustomerAutoTopupTypedDict(TypedDict):
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[CustomerPurchaseLimitTypedDict]
     r"""Optional rate limit to cap how often auto top-ups occur."""
+    invoice_mode: NotRequired[bool]
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
 
 class CustomerAutoTopup(BaseModel):
@@ -107,9 +109,12 @@ class CustomerAutoTopup(BaseModel):
     purchase_limit: Optional[CustomerPurchaseLimit] = None
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
+    invoice_mode: Optional[bool] = None
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "purchase_limit"])
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
         serialized = handler(self)
         m = {}
 
@@ -176,7 +181,7 @@ class CustomerUsageAlertTypedDict(TypedDict):
     threshold_type: CustomerThresholdType
     r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
     feature_id: NotRequired[str]
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
@@ -191,7 +196,7 @@ class CustomerUsageAlert(BaseModel):
     r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
 
     feature_id: Optional[str] = None
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
 
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""

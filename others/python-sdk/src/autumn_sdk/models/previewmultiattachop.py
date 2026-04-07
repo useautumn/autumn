@@ -746,7 +746,7 @@ class PreviewMultiAttachUsageAlertTypedDict(TypedDict):
     threshold_type: PreviewMultiAttachThresholdType
     r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
     feature_id: NotRequired[str]
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
@@ -761,7 +761,7 @@ class PreviewMultiAttachUsageAlert(BaseModel):
     r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
 
     feature_id: Optional[str] = None
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
 
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""

@@ -1,23 +1,52 @@
-import { CalendarIcon, LightningIcon } from "@phosphor-icons/react";
 import {
-	AdvancedSection,
-	AdvancedToggleRow,
+    cusProductToPrices,
+    isFreeProduct,
+    isOneOffProduct,
+} from "@autumn/shared";
+import {
+    ArrowCounterClockwiseIcon,
+    CalendarIcon,
+    LightningIcon,
+    ProhibitIcon,
+} from "@phosphor-icons/react";
+import { useEffect, useMemo } from "react";
+import {
+    AdvancedSection,
+    AdvancedToggleRow,
 } from "@/components/forms/shared/advanced-section";
 import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
 import { cn } from "@/lib/utils";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function UpdateSubscriptionAdvancedSection() {
-	const { form, formValues } = useUpdateSubscriptionFormContext();
-	const { billingBehavior } = formValues;
+	const { form, formValues, formContext } = useUpdateSubscriptionFormContext();
+	const { billingBehavior, resetBillingCycle, noBillingChanges } = formValues;
 
 	const isProrate = billingBehavior !== "none";
 	const isNextCycleOnly = billingBehavior === "none";
 
-	const hasCustomSettings = isNextCycleOnly;
-	const customSettingsTooltip = isNextCycleOnly
-		? "Proration: Next Cycle Only"
-		: "";
+	const isPaidRecurring = useMemo(() => {
+		const prices = cusProductToPrices({
+			cusProduct: formContext.customerProduct,
+		});
+		return !isFreeProduct({ prices }) && !isOneOffProduct({ prices });
+	}, [formContext.customerProduct]);
+
+	const showResetBillingCycle = isPaidRecurring;
+
+	useEffect(() => {
+		if (!showResetBillingCycle && resetBillingCycle) {
+			form.setFieldValue("resetBillingCycle", false);
+		}
+	}, [showResetBillingCycle, resetBillingCycle, form]);
+
+	const hasCustomSettings = isNextCycleOnly || resetBillingCycle || noBillingChanges;
+	const customSettingsLabels = [
+		isNextCycleOnly && "Proration: Next Cycle Only",
+		resetBillingCycle && "Reset Billing Cycle",
+		noBillingChanges && "No Billing Changes",
+	].filter(Boolean);
+	const customSettingsTooltip = customSettingsLabels.join(" \u2022 ");
 
 	return (
 		<AdvancedSection
@@ -46,6 +75,39 @@ export function UpdateSubscriptionAdvancedSection() {
 					className={cn("rounded-l-none", !isNextCycleOnly && "border-l-0")}
 				>
 					Next Cycle Only
+				</IconCheckbox>
+			</AdvancedToggleRow>
+
+			{showResetBillingCycle && (
+				<AdvancedToggleRow label="Reset Billing Cycle">
+					<IconCheckbox
+						icon={<ArrowCounterClockwiseIcon />}
+						iconOrientation="left"
+						variant="secondary"
+						size="sm"
+						checked={resetBillingCycle}
+						onCheckedChange={(checked) =>
+							form.setFieldValue("resetBillingCycle", !!checked)
+						}
+					>
+						Reset Now
+					</IconCheckbox>
+				</AdvancedToggleRow>
+			)}
+
+			<AdvancedToggleRow label="No Billing Changes">
+				<IconCheckbox
+					icon={<ProhibitIcon />}
+					iconOrientation="left"
+					variant="secondary"
+					size="sm"
+					checked={noBillingChanges}
+					onCheckedChange={(checked) => {
+						form.setFieldValue("noBillingChanges", checked);
+						if (checked) form.setFieldValue("billingBehavior", null);
+					}}
+				>
+					{noBillingChanges ? "On" : "Off"}
 				</IconCheckbox>
 			</AdvancedToggleRow>
 		</AdvancedSection>

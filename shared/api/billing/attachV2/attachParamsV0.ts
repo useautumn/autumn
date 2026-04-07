@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
 import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
+import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
 import { AttachDiscountSchema } from "./attachDiscount";
 
@@ -17,6 +18,7 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	success_url: z.string().optional(),
 
 	new_billing_subscription: z.boolean().optional(),
+	billing_cycle_anchor: BillingCycleAnchorSchema.optional(),
 
 	plan_schedule: PlanTimingSchema.optional(),
 
