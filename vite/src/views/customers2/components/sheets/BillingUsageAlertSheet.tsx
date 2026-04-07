@@ -1,10 +1,16 @@
 import {
+	ACTIVE_STATUSES,
+	cusEntsToBalance,
+	cusEntsToGrantedBalance,
+	cusEntsToPrepaidQuantity,
 	type DbUsageAlert,
 	type Feature,
 	FeatureType,
 	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
+	nullish,
 } from "@autumn/shared";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/v2/buttons/Button";
@@ -67,6 +73,38 @@ export function BillingUsageAlertSheet() {
 		(f: Feature) => !f.archived && f.type !== FeatureType.Boolean,
 	);
 
+	const featureRemaining = useMemo(() => {
+		if (!fullCustomer || !featureId) return null;
+
+		const cusEnts = fullCustomerToCustomerEntitlements({
+			fullCustomer,
+			featureId,
+			entity: selectedEntity ?? undefined,
+			inStatuses: ACTIVE_STATUSES,
+		});
+
+		const grantedBalance = cusEntsToGrantedBalance({
+			cusEnts,
+			entityId: entityId ?? undefined,
+		});
+		const prepaid = cusEntsToPrepaidQuantity({
+			cusEnts,
+			sumAcrossEntities: nullish(entityId),
+		});
+		const totalAllowance = grantedBalance + prepaid;
+
+		const balance = cusEntsToBalance({
+			cusEnts,
+			entityId: entityId ?? undefined,
+		});
+
+		return {
+			remaining: balance,
+			remainingPercentage:
+				totalAllowance > 0 ? (balance / totalAllowance) * 100 : null,
+		};
+	}, [fullCustomer, featureId, selectedEntity, entityId]);
+
 	const getCurrentUsageAlerts = () => {
 		if (selectedEntity) return [...(selectedEntity.usage_alerts ?? [])];
 		return [...(fullCustomer?.usage_alerts ?? [])];
@@ -109,7 +147,11 @@ export function BillingUsageAlertSheet() {
 			return;
 		}
 
-		if (thresholdType === "usage_percentage" && parsedThreshold > 100) {
+		if (
+			(thresholdType === "usage_percentage" ||
+				thresholdType === "remaining_percentage") &&
+			parsedThreshold > 100
+		) {
 			toast.error("Percentage threshold must be between 0 and 100");
 			return;
 		}
@@ -118,7 +160,7 @@ export function BillingUsageAlertSheet() {
 			feature_id: featureId || undefined,
 			enabled,
 			threshold: parsedThreshold,
-			threshold_type: thresholdType as "usage" | "usage_percentage",
+			threshold_type: thresholdType as DbUsageAlert["threshold_type"],
 			name: name.trim() || undefined,
 		};
 
@@ -189,6 +231,27 @@ export function BillingUsageAlertSheet() {
 					)}
 				</SheetSection>
 
+				{featureRemaining && (
+					<SheetSection withSeparator>
+						<div className="flex items-center gap-4">
+							<div className="flex flex-col">
+								<FormLabel>Remaining</FormLabel>
+								<span className="text-sm text-t2">
+									{featureRemaining.remaining.toLocaleString()}
+								</span>
+							</div>
+							{featureRemaining.remainingPercentage !== null && (
+								<div className="flex flex-col">
+									<FormLabel>Remaining %</FormLabel>
+									<span className="text-sm text-t2">
+										{Math.round(featureRemaining.remainingPercentage)}%
+									</span>
+								</div>
+							)}
+						</div>
+					</SheetSection>
+				)}
+
 				<SheetSection withSeparator>
 					<div className="flex flex-col gap-3">
 						<div className="flex items-center justify-between">
@@ -216,6 +279,12 @@ export function BillingUsageAlertSheet() {
 									<SelectItem value="usage_percentage">
 										% of allowance used
 									</SelectItem>
+									<SelectItem value="remaining">
+										Remaining (absolute)
+									</SelectItem>
+									<SelectItem value="remaining_percentage">
+										Remaining % of allowance
+									</SelectItem>
 								</SelectContent>
 							</Select>
 						</div>
@@ -223,11 +292,17 @@ export function BillingUsageAlertSheet() {
 						<div>
 							<FormLabel>
 								Threshold
-								{thresholdType === "usage_percentage" ? " (%)" : ""}
+								{thresholdType === "usage_percentage" ||
+								thresholdType === "remaining_percentage"
+									? " (%)"
+									: ""}
 							</FormLabel>
 							<Input
 								placeholder={
-									thresholdType === "usage_percentage" ? "eg, 80" : "eg, 1000"
+									thresholdType === "usage_percentage" ||
+									thresholdType === "remaining_percentage"
+										? "eg, 80"
+										: "eg, 1000"
 								}
 								type="number"
 								value={threshold}
