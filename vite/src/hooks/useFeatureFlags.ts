@@ -24,7 +24,7 @@ const DEFAULT_FLAGS: FeatureFlags = {
 export const useFeatureFlags = () => {
 	const axiosInstance = useAxiosInstance();
 
-	const { data, isLoading } = useQuery({
+	const { data, isLoading, isPlaceholderData } = useQuery({
 		queryKey: ["feature-flags"],
 		queryFn: async (): Promise<FeatureFlags> => {
 			const { data } = await axiosInstance.get<FeatureFlags>("/v1/organization/flags");
@@ -48,6 +48,6 @@ export const useFeatureFlags = () => {
 
 	return {
 		flags: data ?? DEFAULT_FLAGS,
-		isLoading,
+		isLoading: isLoading || isPlaceholderData,
 	};
 };
