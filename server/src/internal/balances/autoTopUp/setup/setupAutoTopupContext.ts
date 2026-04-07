@@ -3,8 +3,8 @@ import {
 	BillingVersion,
 	cusEntToCusPrice,
 	cusProductToProduct,
+	customerPriceToBillingUnits,
 	roundUsageToNearestBillingUnit,
-	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js";
@@ -62,9 +62,12 @@ export const setupAutoTopupContext = async ({
 	}
 
 	const { autoTopupConfig, customerEntitlement } = resolved;
-	const customerPrice = cusEntToCusPrice({ cusEnt: customerEntitlement });
-	const priceConfig = customerPrice?.price.config as UsagePriceConfig;
-	const billingUnits = priceConfig.billing_units || 1;
+	const customerPrice = cusEntToCusPrice({
+		cusEnt: customerEntitlement,
+		errorOnNotFound: true,
+	});
+
+	const billingUnits = customerPriceToBillingUnits({ customerPrice });
 	const roundedQuantity = roundUsageToNearestBillingUnit({
 		usage: autoTopupConfig.quantity,
 		billingUnits,
