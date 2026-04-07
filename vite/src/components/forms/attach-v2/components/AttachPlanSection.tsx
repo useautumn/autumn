@@ -13,7 +13,6 @@ import {
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { outgoingToProductItems } from "../utils/attachDiffUtils";
-import { AttachPlanSkeleton } from "./AttachPlanSkeleton";
 import { AttachSectionTitle } from "./AttachSectionTitle";
 
 export function AttachPlanSection({ readOnly }: { readOnly?: boolean } = {}) {
@@ -58,12 +57,6 @@ export function AttachPlanSection({ readOnly }: { readOnly?: boolean } = {}) {
 	const showDiffs = readOnly
 		? false
 		: hasCustomizations || outgoingItems.length > 0;
-
-	// Show skeleton only on initial load (isPending = no data yet)
-	// Subsequent fetches keep showing previous data via keepPreviousData
-	if (previewQuery.isPending) {
-		return <AttachPlanSkeleton />;
-	}
 
 	if (!product) return null;
 

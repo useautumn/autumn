@@ -32,8 +32,9 @@ export const AttachFormSchema = z.object({
 
 	noBillingChanges: z.boolean(),
 	carryOverBalances: z.boolean(),
+	carryOverBalanceFeatureIds: z.array(z.string()),
 	carryOverUsages: z.boolean(),
-	processorSubscriptionId: z.string(),
+	carryOverUsageFeatureIds: z.array(z.string()),
 	customLineItems: z.custom<FormCustomLineItem[]>(),
 });
 

@@ -21,12 +21,13 @@ function getConfirmLabel({
 	previewData:
 		| {
 				redirect_to_checkout: boolean;
+				total: number;
 				incoming?: { effective_at: number | null }[];
 		  }
 		| null
 		| undefined;
 }): string {
-	if (!previewData) return "Charge Customer";
+	if (!previewData) return "Attach Product";
 
 	const isScheduled = previewData.incoming?.some(
 		(change) => change.effective_at !== null,
@@ -34,6 +35,8 @@ function getConfirmLabel({
 	if (isScheduled) return "Schedule Change";
 
 	if (previewData.redirect_to_checkout) return "Copy Checkout URL";
+
+	if (previewData.total <= 0) return "Attach Product";
 
 	return "Charge Customer";
 }
@@ -46,14 +49,17 @@ export function AttachFooterV3() {
 	const ownStripeAccount = org?.stripe_connection !== "default";
 	const { isEndOfCycleSelected } = usePlanScheduleField();
 
+	const previewLoading = previewQuery.isLoading;
+	const previewData = previewQuery.data;
+	const confirmLabel = getConfirmLabel({ previewData });
+
+	if (previewLoading || (!previewData && !previewQuery.error)) return null;
+
 	const invoiceDisabledReason = isEndOfCycleSelected
 		? "Invoices are not available for end of cycle changes as there is no immediate charge to invoice"
 		: !ownStripeAccount
 			? "Connect your own Stripe account to send invoices"
 			: null;
-
-	const previewData = previewQuery.data;
-	const confirmLabel = getConfirmLabel({ previewData });
 
 	return (
 		<SheetFooter className="flex flex-col grid-cols-1 mt-0">

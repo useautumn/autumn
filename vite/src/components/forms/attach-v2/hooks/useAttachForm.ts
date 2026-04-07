@@ -27,8 +27,9 @@ export function useAttachForm({
 			grantFree: false,
 			noBillingChanges: false,
 			carryOverBalances: false,
+			carryOverBalanceFeatureIds: [],
 			carryOverUsages: false,
-			processorSubscriptionId: "",
+			carryOverUsageFeatureIds: [],
 			customLineItems: [],
 		} as AttachForm,
 		validators: {

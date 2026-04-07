@@ -62,7 +62,7 @@ function createIdCopyColumn<T>({
 							<span className="truncate">{displayValue}</span>
 						</CopyButton>
 					) : (
-						<span className="px-1 text-t3">NULL</span>
+						<span className="px-1 text-t3">PENDING</span>
 					)}
 				</div>
 			);
