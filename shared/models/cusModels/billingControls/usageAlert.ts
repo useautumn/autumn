@@ -1,12 +1,16 @@
 import { z } from "zod/v4";
 
-export const UsageAlertThresholdType = z.enum(["usage", "usage_percentage"]);
+export const UsageAlertThresholdType = z.enum([
+	"usage",
+	"usage_percentage",
+	"remaining",
+	"remaining_percentage",
+]);
 
 export const DbUsageAlertSchema = z
 	.object({
 		feature_id: z.string().optional().meta({
-			description:
-				"The feature ID this alert applies to.",
+			description: "The feature ID this alert applies to.",
 		}),
 		enabled: z.boolean().default(true).meta({
 			description: "Whether this usage alert is enabled.",
@@ -27,12 +31,15 @@ export const DbUsageAlertSchema = z
 	.check((ctx) => {
 		const { threshold_type, threshold } = ctx.value;
 
-		if (threshold_type === "usage_percentage" && threshold > 100) {
+		if (
+			(threshold_type === "usage_percentage" || threshold_type === "remaining_percentage") 
+			&& threshold > 100
+		) {
 			ctx.issues.push({
 				code: "custom",
 				input: threshold,
 				path: ["threshold"],
-				message: "Threshold must be between 0 and 100 for usage_percentage",
+				message: "Threshold must be between 0 and 100 for percentage types",
 			});
 		}
 	});

@@ -345,7 +345,7 @@ test(`${chalk.yellowBright("entity-alert3: customer-level and entity-level alert
 // TEST 4: Entity percentage threshold alert
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test(`${chalk.yellowBright("entity-alert4: entity percentage threshold fires correctly")}`, async () => {
+test(`${chalk.yellowBright("entity-alert4: entity usage percentage threshold fires correctly")}`, async () => {
 	const perEntityMessages = items.monthlyMessages({
 		includedUsage: 200,
 		entityFeatureId: TestFeature.Users,
@@ -461,4 +461,130 @@ test(`${chalk.yellowBright("entity-alert5: entity alert does not fire when below
 	});
 
 	expect(result).toBeNull();
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Entity remaining threshold alert
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test(`${chalk.yellowBright("entity-alert6: entity remaining threshold fires correctly")}`, async () => {
+	const perEntityMessages = items.monthlyMessages({
+		includedUsage: 500,
+		entityFeatureId: TestFeature.Users,
+	});
+	const prod = products.base({
+		id: "ea-remaining-1",
+		items: [perEntityMessages],
+	});
+
+	const { customerId, autumnV2_1, entities } = await initScenario({
+		customerId: "entity-alert-remaining-1",
+		setup: [
+			s.customer({ testClock: false }),
+			s.products({ list: [prod] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [s.attach({ productId: prod.id })],
+	});
+
+	// Set entity-level remaining alert at 100
+	await autumnV2_1.entities.update(customerId, entities[0].id, {
+		billing_controls: {
+			usage_alerts: [
+				{
+					feature_id: TestFeature.Messages,
+					threshold: 100,
+					threshold_type: "remaining",
+					enabled: true,
+				},
+			],
+		} as EntityBillingControls,
+	});
+
+	// Track 450 usage on entity — remaining becomes 50, crosses below 100 threshold
+	await autumnV2_1.track({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		value: 450,
+	});
+
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "balances.usage_alert_triggered" &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.entity_id === entities[0].id &&
+			payload.data?.usage_alert?.threshold === 100,
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	const { data } = result!.payload;
+	expect(data.entity_id).toBe(entities[0].id);
+	expect(data.usage_alert.threshold).toBe(100);
+	expect(data.usage_alert.threshold_type).toBe("remaining");
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 7: Entity remaining_percentage threshold alert
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test(`${chalk.yellowBright("entity-alert7: entity remaining percentage threshold fires correctly")}`, async () => {
+	const perEntityMessages = items.monthlyMessages({
+		includedUsage: 200,
+		entityFeatureId: TestFeature.Users,
+	});
+	const prod = products.base({
+		id: "ea-remaining-pct-1",
+		items: [perEntityMessages],
+	});
+
+	const { customerId, autumnV2_1, entities } = await initScenario({
+		customerId: "entity-alert-remaining-pct-1",
+		setup: [
+			s.customer({ testClock: false }),
+			s.products({ list: [prod] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [s.attach({ productId: prod.id })],
+	});
+
+	// Set entity-level remaining_percentage alert at 25%
+	await autumnV2_1.entities.update(customerId, entities[0].id, {
+		billing_controls: {
+			usage_alerts: [
+				{
+					feature_id: TestFeature.Messages,
+					threshold: 25,
+					threshold_type: "remaining_percentage",
+					enabled: true,
+				},
+			],
+		} as EntityBillingControls,
+	});
+
+	// Track 160 usage on entity — remaining is 40 (20% of 200), crosses below 25%
+	await autumnV2_1.track({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		value: 160,
+	});
+
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "balances.usage_alert_triggered" &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.entity_id === entities[0].id &&
+			payload.data?.usage_alert?.threshold === 25,
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	const { data } = result!.payload;
+	expect(data.entity_id).toBe(entities[0].id);
+	expect(data.usage_alert.threshold).toBe(25);
+	expect(data.usage_alert.threshold_type).toBe("remaining_percentage");
 });
