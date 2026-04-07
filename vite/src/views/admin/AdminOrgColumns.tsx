@@ -117,8 +117,9 @@ export const createAdminOrgColumns = ({
 		enableHiding: false,
 		cell: ({ row }: { row: Row<AdminOrg> }) => {
 			const users = row.original.users;
+			const firstNonAdminUser = users.find((user) => user.role !== "admin");
 
-			if (!users || users.length === 0) {
+			if (!firstNonAdminUser) {
 				return null;
 			}
 
@@ -131,7 +132,7 @@ export const createAdminOrgColumns = ({
 					>
 						Block
 					</Button>
-					<ImpersonateButton userId={users?.[0]?.id} />
+					<ImpersonateButton userId={firstNonAdminUser.id} />
 				</div>
 			);
 		},
