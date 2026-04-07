@@ -124,7 +124,7 @@ export function PlanItemsSection({
 		return (
 			<LayoutGroup>
 				<motion.div
-					className="flex flex-col gap-3"
+					className="flex flex-col gap-2"
 					layout="position"
 					transition={{ layout: LAYOUT_TRANSITION }}
 					initial="hidden"
@@ -139,7 +139,7 @@ export function PlanItemsSection({
 					/>
 					{product?.items?.map((item, index) => (
 						<PlanItemRow
-							key={item.feature_id || item.price_id || index}
+							key={`${item.feature_id ?? ''}-${item.price_id ?? ''}-${item.interval ?? ''}-${item.interval_count ?? ''}`}
 							item={item}
 							index={index}
 							useStagger
@@ -148,7 +148,7 @@ export function PlanItemsSection({
 					))}
 					{deletedItems.map((item, index) => (
 						<DeletedItemRow
-							key={`deleted-${item.feature_id || index}`}
+							key={`deleted-${item.feature_id ?? ''}-${item.price_id ?? ''}-${item.interval ?? ''}-${item.interval_count ?? ''}`}
 							item={item}
 							index={index}
 							useStagger
@@ -176,7 +176,7 @@ export function PlanItemsSection({
 				>
 					{product?.items?.map((item, index) => (
 						<PlanItemRow
-							key={item.feature_id || item.price_id || index}
+							key={`${item.feature_id ?? ''}-${item.price_id ?? ''}-${item.interval ?? ''}-${item.interval_count ?? ''}`}
 							item={item}
 							index={index}
 							{...itemRowProps}
@@ -184,7 +184,7 @@ export function PlanItemsSection({
 					))}
 					{deletedItems.map((item, index) => (
 						<DeletedItemRow
-							key={`deleted-${item.feature_id || index}`}
+							key={`deleted-${item.feature_id ?? ''}-${item.price_id ?? ''}-${item.interval ?? ''}-${item.interval_count ?? ''}`}
 							item={item}
 							index={index}
 						/>

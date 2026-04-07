@@ -1,24 +1,23 @@
-import {
-	ArrowsClockwiseIcon,
-	CalendarIcon,
-	CalendarXIcon,
-	LightningIcon,
-	LinkIcon,
-	PlusIcon,
-	ProhibitIcon,
-	ScalesIcon,
-	SquareSplitHorizontalIcon,
-	UniteIcon,
-	XIcon,
-} from "@phosphor-icons/react";
+import type { Feature, FullCustomer } from "@autumn/shared";
+import { CaretDownIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
+import { useMemo, useState } from "react";
 import {
-	ACCORDION_ITEM,
 	AdvancedSection,
 	AdvancedToggleRow,
+	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
+import {
+	DropdownMenu,
+	DropdownMenuCheckboxItem,
+	DropdownMenuContent,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { Input } from "@/components/v2/inputs/Input";
 import {
 	Tooltip,
@@ -26,6 +25,7 @@ import {
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
@@ -42,20 +42,100 @@ function createCustomLineItem(): FormCustomLineItem {
 	};
 }
 
+function FeatureSelectDropdown({
+	features,
+	selectedFeatureIds,
+	onChange,
+}: {
+	features: Feature[];
+	selectedFeatureIds: string[];
+	onChange: ({ featureIds }: { featureIds: string[] }) => void;
+}) {
+	const isAllSelected = selectedFeatureIds.length === 0;
+	const [open, setOpen] = useState(false);
+
+	const label = isAllSelected
+		? "All Features"
+		: `${selectedFeatureIds.length} feature${selectedFeatureIds.length !== 1 ? "s" : ""} selected`;
+
+	return (
+		<DropdownMenu open={open} onOpenChange={setOpen}>
+			<DropdownMenuTrigger asChild>
+				<Button
+					variant="secondary"
+					size="mini"
+					className={cn(
+						"gap-1 w-full justify-between",
+						open && "btn-secondary-active",
+					)}
+				>
+					{label}
+					<CaretDownIcon className="size-3.5 text-t3" />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end" className="min-w-48">
+				<DropdownMenuCheckboxItem
+					checked={isAllSelected}
+					onCheckedChange={() => onChange({ featureIds: [] })}
+				>
+					All Features
+				</DropdownMenuCheckboxItem>
+				{features.length > 0 && <DropdownMenuSeparator />}
+				{features.map((feature) => {
+					const isChecked = selectedFeatureIds.includes(feature.id);
+					return (
+						<DropdownMenuCheckboxItem
+							key={feature.id}
+							checked={isChecked}
+							onCheckedChange={(checked) => {
+								const newIds = checked
+									? [...selectedFeatureIds, feature.id]
+									: selectedFeatureIds.filter((id) => id !== feature.id);
+								onChange({ featureIds: newIds });
+							}}
+						>
+							{feature.name}
+						</DropdownMenuCheckboxItem>
+					);
+				})}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+}
+
 export function AttachAdvancedSection() {
-	const { form, formValues, previewQuery } = useAttachFormContext();
+	const { form, formValues, features, previewQuery } = useAttachFormContext();
 	const {
 		discounts,
 		newBillingSubscription,
 		redirectMode,
 		noBillingChanges,
 		carryOverBalances,
+		carryOverBalanceFeatureIds,
 		carryOverUsages,
-		processorSubscriptionId,
+		carryOverUsageFeatureIds,
 		customLineItems,
 	} = formValues;
 	const checkoutType = previewQuery.data?.checkout_type;
 
+	const { customer } = useCusQuery();
+	const fullCustomer = customer as FullCustomer | null;
+
+	const hasCustomerEntitlements = useMemo(() => {
+		if (!fullCustomer) return false;
+
+		const hasProductEntitlements = fullCustomer.customer_products?.some(
+			(customerProduct) => customerProduct.customer_entitlements?.length > 0,
+		);
+		const hasExtraEntitlements =
+			fullCustomer.extra_customer_entitlements?.length > 0;
+
+		return hasProductEntitlements || hasExtraEntitlements;
+	}, [fullCustomer]);
+
+	const [overrideLineItemsEnabled, setOverrideLineItemsEnabled] = useState(
+		customLineItems.length > 0,
+	);
 	const {
 		hasActiveSubscription,
 		hasOutgoing,
@@ -64,7 +144,6 @@ export function AttachAdvancedSection() {
 		isImmediateSelected,
 		isEndOfCycleSelected,
 		isNoChargesAllowed,
-		noChargesDisabledReason,
 		canChooseBillingCycle,
 		handleScheduleChange,
 		handleBillingCycleChange,
@@ -115,119 +194,113 @@ export function AttachAdvancedSection() {
 
 	const moreOptions = (
 		<>
-			{showRedirectModeRow && (
-				<motion.div variants={ACCORDION_ITEM}>
-					<div className="rounded-xl input-base px-3 py-2">
-						<div className="flex items-center justify-between gap-3">
-							<span className="text-sm text-t2">Checkout Redirect</span>
-							<div className="flex shrink-0">
-								<IconCheckbox
-									variant="secondary"
-									size="sm"
-									checked={redirectMode === "if_required"}
-									onCheckedChange={() =>
-										form.setFieldValue("redirectMode", "if_required")
-									}
-									className={cn(
-										"min-w-[76px] px-2 text-xs rounded-r-none",
-										redirectMode !== "if_required" && "border-r-0",
-									)}
-								>
-									Auto
-								</IconCheckbox>
-								<IconCheckbox
-									variant="secondary"
-									size="sm"
-									checked={redirectMode === "always"}
-									onCheckedChange={() =>
-										form.setFieldValue("redirectMode", "always")
-									}
-									className={cn(
-										"min-w-[76px] px-2 text-xs rounded-l-none",
-										redirectMode !== "always" && "border-l-0",
-									)}
-								>
-									Always
-								</IconCheckbox>
-							</div>
-						</div>
-					</div>
-				</motion.div>
+			{hasCustomerEntitlements && (
+				<ConfigRow
+					title="Carry Over Balances"
+					description="Preserve existing feature balances when switching plans"
+					expanded={carryOverBalances}
+					action={
+						<Switch
+							checked={carryOverBalances}
+							onCheckedChange={(checked) => {
+								form.setFieldValue("carryOverBalances", !!checked);
+								if (!checked)
+									form.setFieldValue("carryOverBalanceFeatureIds", []);
+							}}
+						/>
+					}
+				>
+					<FeatureSelectDropdown
+						features={features}
+						selectedFeatureIds={carryOverBalanceFeatureIds}
+						onChange={({ featureIds }) =>
+							form.setFieldValue("carryOverBalanceFeatureIds", featureIds)
+						}
+					/>
+				</ConfigRow>
 			)}
 
-			<AdvancedToggleRow label="No Billing Operation">
-				<IconCheckbox
-					icon={<ProhibitIcon />}
-					iconOrientation="left"
-					variant="secondary"
-					size="sm"
-					checked={noBillingChanges}
-					onCheckedChange={(checked) =>
-						form.setFieldValue("noBillingChanges", !!checked)
-					}
-					className="px-2 text-xs"
-				>
-					Skip Billing
-				</IconCheckbox>
-			</AdvancedToggleRow>
-
-			<AdvancedToggleRow label="Carry Over Balances">
-				<IconCheckbox
-					icon={<ScalesIcon />}
-					iconOrientation="left"
-					variant="secondary"
-					size="sm"
-					checked={carryOverBalances}
-					onCheckedChange={(checked) =>
-						form.setFieldValue("carryOverBalances", !!checked)
-					}
-					className="px-2 text-xs"
-				>
-					Enabled
-				</IconCheckbox>
-			</AdvancedToggleRow>
-
-			<AdvancedToggleRow label="Carry Over Usages">
-				<IconCheckbox
-					icon={<ArrowsClockwiseIcon />}
-					iconOrientation="left"
-					variant="secondary"
-					size="sm"
-					checked={carryOverUsages}
-					onCheckedChange={(checked) =>
-						form.setFieldValue("carryOverUsages", !!checked)
-					}
-					className="px-2 text-xs"
-				>
-					Enabled
-				</IconCheckbox>
-			</AdvancedToggleRow>
-
-			<motion.div variants={ACCORDION_ITEM}>
-				<div className="rounded-xl input-base px-3 py-2">
-					<div className="flex items-center justify-between gap-3">
-						<span className="text-sm text-t2 flex items-center gap-1.5">
-							<LinkIcon size={14} className="text-t3" />
-							Processor Subscription ID
-						</span>
-					</div>
-					<div className="mt-2">
-						<Input
-							placeholder="sub_..."
-							value={processorSubscriptionId}
-							onChange={(e) =>
-								form.setFieldValue("processorSubscriptionId", e.target.value)
-							}
-							className="h-8 text-xs"
+			{hasCustomerEntitlements && (
+				<ConfigRow
+					title="Carry Over Usages"
+					description="Preserve existing usage counts when switching plans"
+					expanded={carryOverUsages}
+					action={
+						<Switch
+							checked={carryOverUsages}
+							onCheckedChange={(checked) => {
+								form.setFieldValue("carryOverUsages", !!checked);
+								if (!checked)
+									form.setFieldValue("carryOverUsageFeatureIds", []);
+							}}
 						/>
-					</div>
-				</div>
-			</motion.div>
+					}
+				>
+					<FeatureSelectDropdown
+						features={features}
+						selectedFeatureIds={carryOverUsageFeatureIds}
+						onChange={({ featureIds }) =>
+							form.setFieldValue("carryOverUsageFeatureIds", featureIds)
+						}
+					/>
+				</ConfigRow>
+			)}
 
-			<motion.div variants={ACCORDION_ITEM}>
-				<div className="rounded-xl input-base px-3 py-2">
-					<div className="flex items-center justify-between h-6">
-						<span className="text-sm text-t2">Custom Line Items</span>
+			{showRedirectModeRow && (
+				<ConfigRow
+					title="Checkout Redirect"
+					description="Control when the customer is redirected to a checkout page"
+					action={
+						<>
+							<IconCheckbox
+								variant="secondary"
+								size="sm"
+								checked={redirectMode === "if_required"}
+								onCheckedChange={() =>
+									form.setFieldValue("redirectMode", "if_required")
+								}
+								className={cn(
+									"min-w-[76px] px-2 text-xs rounded-r-none",
+									redirectMode !== "if_required" && "border-r-0",
+								)}
+							>
+								Auto
+							</IconCheckbox>
+							<IconCheckbox
+								variant="secondary"
+								size="sm"
+								checked={redirectMode === "always"}
+								onCheckedChange={() =>
+									form.setFieldValue("redirectMode", "always")
+								}
+								className={cn(
+									"min-w-[76px] px-2 text-xs rounded-l-none",
+									redirectMode !== "always" && "border-l-0",
+								)}
+							>
+								Always
+							</IconCheckbox>
+						</>
+					}
+				/>
+			)}
+
+			<ConfigRow
+				title="Override Line Items"
+				description="Replace default invoice line items with custom amounts"
+				expanded={overrideLineItemsEnabled}
+				action={
+					<Switch
+						checked={overrideLineItemsEnabled}
+						onCheckedChange={(checked) => {
+							setOverrideLineItemsEnabled(!!checked);
+							if (!checked) form.setFieldValue("customLineItems", []);
+						}}
+					/>
+				}
+			>
+				<div className="flex flex-col gap-2">
+					<div className="flex justify-end">
 						<IconButton
 							variant="muted"
 							size="sm"
@@ -239,7 +312,7 @@ export function AttachAdvancedSection() {
 						</IconButton>
 					</div>
 					{customLineItems.length > 0 && (
-						<div className="mt-2 pt-2 border-t border-border space-y-2">
+						<div className="space-y-2">
 							<AnimatePresence initial={false} mode="popLayout">
 								{customLineItems.map((lineItem, index) => (
 									<motion.div
@@ -289,24 +362,109 @@ export function AttachAdvancedSection() {
 						</div>
 					)}
 				</div>
-			</motion.div>
+			</ConfigRow>
+
+			{canChooseBillingCycle && (
+				<ConfigRow
+					title="New Billing Subscription"
+					description="Create a separate billing cycle instead of merging with existing"
+					action={
+						<Switch
+							checked={newBillingSubscription}
+							onCheckedChange={(checked) =>
+								handleBillingCycleChange({
+									createNewCycle: !!checked,
+								})
+							}
+						/>
+					}
+				/>
+			)}
+
+			<ConfigRow
+				title="Skip Billing"
+				description="Attach the plan without making changes in Stripe"
+				action={
+					<Switch
+						checked={noBillingChanges}
+						onCheckedChange={(checked) =>
+							form.setFieldValue("noBillingChanges", !!checked)
+						}
+					/>
+				}
+			/>
 		</>
 	);
 
 	return (
 		<AdvancedSection moreOptions={moreOptions}>
+			{/* Discounts */}
+			<ConfigRow
+				title="Discounts"
+				description="Apply percentage or fixed-amount discounts to this plan"
+				action={
+					<IconButton
+						variant="muted"
+						size="sm"
+						onClick={handleAddDiscount}
+						icon={<PlusIcon size={12} />}
+						className="text-t3"
+					>
+						Add
+					</IconButton>
+				}
+			>
+				{discounts.length > 0 && (
+					<div className="space-y-2">
+						<AnimatePresence initial={false} mode="popLayout">
+							{discounts.map((discount, index) => (
+								<motion.div
+									key={discount._id}
+									initial={{ opacity: 0, scale: 0.95 }}
+									animate={{ opacity: 1, scale: 1 }}
+									exit={{ opacity: 0, scale: 0.95 }}
+									transition={{ duration: 0.15 }}
+								>
+									<AttachDiscountRow index={index} />
+								</motion.div>
+							))}
+						</AnimatePresence>
+					</div>
+				)}
+			</ConfigRow>
+
+			{/* Proration — only when plan schedule is immediate and subscription exists */}
+			{showProrationBehavior && (
+				<ConfigRow
+					title="Prorate Changes"
+					description="Prorate price differences when changing plans mid-cycle"
+					action={
+						<Switch
+							checked={effectiveProrationBehavior === "prorate_immediately"}
+							disabled={!isNoChargesAllowed}
+							onCheckedChange={(checked) =>
+								handleProrationBehaviorChange(
+									checked ? "prorate_immediately" : "none",
+								)
+							}
+						/>
+					}
+				/>
+			)}
+
 			{/* Plan Schedule — only when customer has an active Stripe subscription */}
 			{hasActiveSubscription && (
-				<AdvancedToggleRow label="Plan Schedule">
+				<AdvancedToggleRow
+					label="Plan Schedule"
+					description="When the new plan should take effect"
+				>
 					<IconCheckbox
-						icon={<LightningIcon />}
-						iconOrientation="left"
 						variant="secondary"
 						size="sm"
 						checked={isImmediateSelected}
 						onCheckedChange={() => handleScheduleChange("immediate")}
 						className={cn(
-							"rounded-r-none",
+							"min-w-[76px] px-2 text-xs rounded-r-none",
 							!isImmediateSelected && "border-r-0",
 						)}
 					>
@@ -316,15 +474,13 @@ export function AttachAdvancedSection() {
 						<TooltipTrigger asChild>
 							<span className="inline-flex">
 								<IconCheckbox
-									icon={<CalendarIcon />}
-									iconOrientation="left"
 									variant="secondary"
 									size="sm"
 									checked={isEndOfCycleSelected}
 									disabled={!hasOutgoing}
 									onCheckedChange={() => handleScheduleChange("end_of_cycle")}
 									className={cn(
-										"rounded-l-none",
+										"min-w-[76px] px-2 text-xs rounded-l-none",
 										!isEndOfCycleSelected && "border-l-0",
 									)}
 								>
@@ -341,127 +497,6 @@ export function AttachAdvancedSection() {
 				</AdvancedToggleRow>
 			)}
 
-			{/* Billing Cycle — shown when this attach can target an existing paid recurring cycle */}
-			{canChooseBillingCycle && (
-				<AdvancedToggleRow label="Billing Cycle">
-					<IconCheckbox
-						icon={<UniteIcon />}
-						iconOrientation="left"
-						variant="secondary"
-						size="sm"
-						checked={!newBillingSubscription}
-						onCheckedChange={() =>
-							handleBillingCycleChange({
-								createNewCycle: false,
-							})
-						}
-						className={cn(
-							"rounded-r-none",
-							newBillingSubscription && "border-r-0",
-						)}
-					>
-						Merge With Existing
-					</IconCheckbox>
-					<IconCheckbox
-						icon={<SquareSplitHorizontalIcon />}
-						iconOrientation="left"
-						variant="secondary"
-						size="sm"
-						checked={newBillingSubscription}
-						onCheckedChange={() =>
-							handleBillingCycleChange({
-								createNewCycle: true,
-							})
-						}
-						className={cn(
-							"rounded-l-none",
-							!newBillingSubscription && "border-l-0",
-						)}
-					>
-						Create New Cycle
-					</IconCheckbox>
-				</AdvancedToggleRow>
-			)}
-
-			{/* Proration Behavior — only when plan schedule is immediate and subscription exists */}
-			{showProrationBehavior && (
-				<AdvancedToggleRow label="Proration Behavior">
-					<IconCheckbox
-						icon={<LightningIcon />}
-						iconOrientation="left"
-						variant="secondary"
-						size="sm"
-						checked={effectiveProrationBehavior === "prorate_immediately"}
-						onCheckedChange={() =>
-							handleProrationBehaviorChange("prorate_immediately")
-						}
-						className={cn(
-							"rounded-r-none",
-							effectiveProrationBehavior !== "prorate_immediately" &&
-								"border-r-0",
-						)}
-					>
-						Prorate
-					</IconCheckbox>
-					<Tooltip>
-						<TooltipTrigger asChild>
-							<span className="inline-flex">
-								<IconCheckbox
-									icon={<CalendarXIcon />}
-									iconOrientation="left"
-									variant="secondary"
-									size="sm"
-									checked={effectiveProrationBehavior === "none"}
-									disabled={!isNoChargesAllowed}
-									onCheckedChange={() => handleProrationBehaviorChange("none")}
-									className={cn(
-										"rounded-l-none",
-										effectiveProrationBehavior !== "none" && "border-l-0",
-									)}
-								>
-									No Charges
-								</IconCheckbox>
-							</span>
-						</TooltipTrigger>
-						{!isNoChargesAllowed && (
-							<TooltipContent>{noChargesDisabledReason}</TooltipContent>
-						)}
-					</Tooltip>
-				</AdvancedToggleRow>
-			)}
-
-			{/* Discounts */}
-			<div className="rounded-xl input-base px-3 py-2">
-				<div className="flex items-center justify-between h-6">
-					<span className="text-sm text-t2">Discounts</span>
-					<IconButton
-						variant="muted"
-						size="sm"
-						onClick={handleAddDiscount}
-						icon={<PlusIcon size={12} />}
-						className="text-t3"
-					>
-						Add
-					</IconButton>
-				</div>
-				{discounts.length > 0 && (
-					<div className="mt-2 pt-2 border-t border-border space-y-2">
-						<AnimatePresence initial={false} mode="popLayout">
-							{discounts.map((discount, index) => (
-								<motion.div
-									key={discount._id}
-									initial={{ opacity: 0, scale: 0.95 }}
-									animate={{ opacity: 1, scale: 1 }}
-									exit={{ opacity: 0, scale: 0.95 }}
-									transition={{ duration: 0.15 }}
-								>
-									<AttachDiscountRow index={index} />
-								</motion.div>
-							))}
-						</AnimatePresence>
-					</div>
-				)}
-			</div>
 		</AdvancedSection>
 	);
 }

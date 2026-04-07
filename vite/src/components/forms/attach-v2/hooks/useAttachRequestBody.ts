@@ -1,6 +1,5 @@
 import type {
 	AttachParamsV0,
-	AttachParamsV0Input,
 	BillingBehavior,
 	FreeTrialDuration,
 	PlanTiming,
@@ -37,8 +36,9 @@ export interface BuildAttachRequestBodyParams {
 	discounts: FormDiscount[];
 	noBillingChanges: boolean;
 	carryOverBalances: boolean;
+	carryOverBalanceFeatureIds: string[];
 	carryOverUsages: boolean;
-	processorSubscriptionId: string;
+	carryOverUsageFeatureIds: string[];
 	customLineItems: FormCustomLineItem[];
 }
 
@@ -61,8 +61,9 @@ export function buildAttachRequestBody({
 	discounts,
 	noBillingChanges,
 	carryOverBalances,
+	carryOverBalanceFeatureIds = [],
 	carryOverUsages,
-	processorSubscriptionId,
+	carryOverUsageFeatureIds = [],
 	customLineItems,
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
 	if (!customerId || !product) {
@@ -139,15 +140,17 @@ export function buildAttachRequestBody({
 	}
 
 	if (carryOverBalances) {
-		body.carry_over_balances = { enabled: true };
+		body.carry_over_balances =
+			carryOverBalanceFeatureIds.length > 0
+				? { enabled: true, feature_ids: carryOverBalanceFeatureIds }
+				: { enabled: true };
 	}
 
 	if (carryOverUsages) {
-		body.carry_over_usages = { enabled: true };
-	}
-
-	if (processorSubscriptionId) {
-		body.processor_subscription_id = processorSubscriptionId;
+		body.carry_over_usages =
+			carryOverUsageFeatureIds.length > 0
+				? { enabled: true, feature_ids: carryOverUsageFeatureIds }
+				: { enabled: true };
 	}
 
 	const validLineItems = customLineItems.filter(
@@ -182,8 +185,9 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		discounts,
 		noBillingChanges,
 		carryOverBalances,
+		carryOverBalanceFeatureIds,
 		carryOverUsages,
-		processorSubscriptionId,
+		carryOverUsageFeatureIds,
 		customLineItems,
 	} = params;
 
@@ -207,8 +211,9 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				discounts,
 				noBillingChanges,
 				carryOverBalances,
+				carryOverBalanceFeatureIds,
 				carryOverUsages,
-				processorSubscriptionId,
+				carryOverUsageFeatureIds,
 				customLineItems,
 			}),
 		[
@@ -229,8 +234,9 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			discounts,
 			noBillingChanges,
 			carryOverBalances,
+			carryOverBalanceFeatureIds,
 			carryOverUsages,
-			processorSubscriptionId,
+			carryOverUsageFeatureIds,
 			customLineItems,
 		],
 	);

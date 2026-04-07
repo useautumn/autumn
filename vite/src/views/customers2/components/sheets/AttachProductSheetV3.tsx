@@ -40,7 +40,6 @@ function SheetContent() {
 		showPlanEditor,
 		handlePlanEditorSave,
 		handlePlanEditorCancel,
-		previewQuery,
 	} = useAttachFormContext();
 
 	const { closeSheet } = useSheetStore();
@@ -53,12 +52,6 @@ function SheetContent() {
 	const fullEntity = entities.find(
 		(e: Entity) => e.id === entityId || e.internal_id === entityId,
 	);
-
-	const isPreviewReady =
-		hasProductSelected &&
-		!previewQuery.isLoading &&
-		!previewQuery.error &&
-		!!previewQuery.data;
 
 	return (
 		<LayoutGroup>
@@ -103,13 +96,12 @@ function SheetContent() {
 									<Button variant="secondary" onClick={closeSheet}>
 										Cancel
 									</Button>
-									<Button
-										variant="primary"
-										onClick={() => setStage("review")}
-										disabled={!isPreviewReady}
-									>
-										Preview Changes
-									</Button>
+								<Button
+									variant="primary"
+									onClick={() => setStage("review")}
+								>
+									Preview Changes
+								</Button>
 								</SheetFooter>
 							</>
 						)}

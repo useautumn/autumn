@@ -30,7 +30,7 @@ export function BillingBehaviorSection() {
 					transition={COLLAPSE_TRANSITION}
 					style={{ overflow: "hidden" }}
 				>
-					<SheetSection title="Billing Behavior" withSeparator>
+					<SheetSection title="Proration Behavior" withSeparator>
 						<div className="space-y-4">
 							<div className="flex w-full items-center gap-4">
 								<PanelButton
@@ -58,12 +58,10 @@ export function BillingBehaviorSection() {
 									icon={<CalendarCheckIcon size={18} weight="duotone" />}
 								/>
 								<div className="flex-1">
-									<div className="text-body-highlight mb-1">
-										Next cycle only
-									</div>
-									<div className="text-body-secondary leading-tight">
-										No charges or credits issued. Access ends immediately.
-									</div>
+								<div className="text-body-highlight mb-1">None</div>
+								<div className="text-body-secondary leading-tight">
+									No charges or credits issued. Access ends immediately.
+								</div>
 								</div>
 							</div>
 						</div>

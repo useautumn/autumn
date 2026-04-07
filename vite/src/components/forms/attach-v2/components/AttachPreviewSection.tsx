@@ -96,15 +96,6 @@ export function AttachPreviewSection() {
 						totals={totals}
 						filterZeroAmounts
 					/>
-					{previewData?.checkout_type && (
-						<SheetSection withSeparator={false} className="py-0 pb-2">
-							<InfoBox variant="note">
-								{previewData.checkout_type === "stripe_checkout"
-									? "Customer will be redirected to Stripe Checkout to complete payment"
-									: "Customer will be redirected to Autumn Checkout to complete payment"}
-							</InfoBox>
-						</SheetSection>
-					)}
 				</motion.div>
 			) : null}
 		</AnimatePresence>

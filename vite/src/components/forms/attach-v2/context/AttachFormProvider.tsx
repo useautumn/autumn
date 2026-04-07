@@ -141,8 +141,9 @@ export function AttachFormProvider({
 		grantFree,
 		noBillingChanges,
 		carryOverBalances,
+		carryOverBalanceFeatureIds,
 		carryOverUsages,
-		processorSubscriptionId,
+		carryOverUsageFeatureIds,
 		customLineItems,
 	} = formValues;
 
@@ -157,17 +158,41 @@ export function AttachFormProvider({
 	const numVersions =
 		productVersionQuery.data?.numVersions ?? product?.version ?? 1;
 
-	const { prepaidItems } = usePrepaidItems({ product });
+	// Fetch the target version's product data when version differs from latest
+	const isVersionChanged =
+		version !== undefined && version !== (product?.version ?? numVersions);
+	const versionProductQuery = useProductVersionQuery({
+		productId: product?.id,
+		version,
+		enabled: isVersionChanged,
+	});
+
+	const effectiveProduct = useMemo((): ProductV2 | undefined => {
+		if (isVersionChanged && versionProductQuery.data) {
+			return versionProductQuery.data.product;
+		}
+		return product;
+	}, [product, isVersionChanged, versionProductQuery.data]);
+
+	const { prepaidItems } = usePrepaidItems({ product: effectiveProduct });
 
 	const resolveCurrentItems = useCallback(
-		() => items ?? (product?.items as ProductItem[]) ?? [],
-		[items, product?.items],
+		() => items ?? (effectiveProduct?.items as ProductItem[]) ?? [],
+		[items, effectiveProduct?.items],
 	);
 
 	const { handleGrantFreeToggle, resetGrantFree } = useGrantFree({
 		form,
 		resolveCurrentItems,
 	});
+
+	// Reset items when version changes so new version's items display
+	const previousVersionRef = useRef<number | undefined>(version);
+	useEffect(() => {
+		if (previousVersionRef.current === version) return;
+		previousVersionRef.current = version;
+		form.setFieldValue("items", null);
+	}, [version, form]);
 
 	// Track product changes and initialize prepaid options
 	const previousProductIdRef = useRef<string | undefined>();
@@ -220,15 +245,15 @@ export function AttachFormProvider({
 		}
 	}, [productId, product, form, resetGrantFree]);
 
-	const originalItems = product?.items as ProductItem[] | undefined;
+	const originalItems = effectiveProduct?.items as ProductItem[] | undefined;
 
 	const hasCustomizations = items !== null && items.length > 0;
 
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
-		if (!product) return undefined;
+		if (!effectiveProduct) return undefined;
 
 		const baseFrontendProduct = productV2ToFrontendProduct({
-			product: product as ProductV2,
+			product: effectiveProduct as ProductV2,
 		});
 
 		return getProductWithSupportedPlanFormValues({
@@ -243,7 +268,7 @@ export function AttachFormProvider({
 			},
 		});
 	}, [
-		product,
+		effectiveProduct,
 		items,
 		version,
 		trialLength,
@@ -255,7 +280,7 @@ export function AttachFormProvider({
 	const { requestBody, buildRequestBody } = useAttachRequestBody({
 		customerId,
 		entityId,
-		product,
+		product: effectiveProduct,
 		prepaidOptions,
 		items,
 		version,
@@ -270,8 +295,9 @@ export function AttachFormProvider({
 		discounts,
 		noBillingChanges,
 		carryOverBalances,
+		carryOverBalanceFeatureIds,
 		carryOverUsages,
-		processorSubscriptionId,
+		carryOverUsageFeatureIds,
 		customLineItems,
 	});
 
@@ -359,7 +385,7 @@ export function AttachFormProvider({
 			form,
 			formValues,
 			features,
-			product,
+			product: effectiveProduct,
 			prepaidItems,
 			originalItems,
 			productWithFormItems,
@@ -380,7 +406,7 @@ export function AttachFormProvider({
 			form,
 			formValues,
 			features,
-			product,
+			effectiveProduct,
 			prepaidItems,
 			originalItems,
 			productWithFormItems,
