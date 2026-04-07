@@ -127,13 +127,15 @@ export class ClientSDK {
     if (!base) {
       return ERR(new InvalidRequestError("No base URL provided for operation"));
     }
-    const reqURL = new URL(base);
-    const inputURL = new URL(path, reqURL);
-
+    const baseURL = new URL(base);
+    let reqURL: URL;
     if (path) {
-      reqURL.pathname += reqURL.pathname.endsWith("/") ? "" : "/";
-      reqURL.pathname += inputURL.pathname.replace(/^\/+/, "");
+      baseURL.pathname = baseURL.pathname.replace(/\/+$/, "") + "/";
+      reqURL = new URL(path, baseURL);
+    } else {
+      reqURL = baseURL;
     }
+    reqURL.hash = "";
 
     let finalQuery = query || "";
 
