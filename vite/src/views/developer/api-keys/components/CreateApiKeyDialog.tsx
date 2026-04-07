@@ -215,29 +215,35 @@ export const CreateApiKeyDialog = ({
 								<p className="mt-2 text-sm text-red-500">{validationError}</p>
 							)}
 							<p className="mt-4 mb-2 text-sm text-t3">Expiration</p>
-							<Select value={expiryOption} onValueChange={setExpiryOption}>
-								<SelectTrigger>
-									<SelectValue placeholder="Never" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="7d">7 days</SelectItem>
-									<SelectItem value="30d">30 days</SelectItem>
-									<SelectItem value="60d">60 days</SelectItem>
-									<SelectItem value="90d">90 days</SelectItem>
-									<SelectItem value="1y">1 year</SelectItem>
-									<SelectItem value="custom">Custom</SelectItem>
-									<SelectItem value="never">Never</SelectItem>
-								</SelectContent>
-							</Select>
-							{expiryOption === "custom" && (
-								<div className="mt-2">
+							<div
+								className={
+									expiryOption === "custom"
+										? "grid grid-cols-[auto_1fr] gap-2 items-center"
+										: undefined
+								}
+							>
+								<Select value={expiryOption} onValueChange={setExpiryOption}>
+									<SelectTrigger>
+										<SelectValue placeholder="Never" />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="7d">7 days</SelectItem>
+										<SelectItem value="30d">30 days</SelectItem>
+										<SelectItem value="60d">60 days</SelectItem>
+										<SelectItem value="90d">90 days</SelectItem>
+										<SelectItem value="1y">1 year</SelectItem>
+										<SelectItem value="custom">Custom</SelectItem>
+										<SelectItem value="never">Never</SelectItem>
+									</SelectContent>
+								</Select>
+								{expiryOption === "custom" && (
 									<DateInputUnix
 										unixDate={customExpiresAt}
 										setUnixDate={setCustomExpiresAt}
 										withTime
 									/>
-								</div>
-							)}
+								)}
+							</div>
 						</motion.div>
 					)}
 				</AnimatePresence>
