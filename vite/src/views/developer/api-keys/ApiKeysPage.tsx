@@ -14,8 +14,18 @@ export const ApiKeysPage = () => {
 
 	const columns = useMemo(() => createAPIKeyTableColumns(), []);
 
+	const sortedApiKeys = useMemo(() => {
+		if (!apiKeys) return [];
+		const now = Date.now();
+		return [...apiKeys].sort((a, b) => {
+			const aExpired = a.expires_at && a.expires_at <= now ? 1 : 0;
+			const bExpired = b.expires_at && b.expires_at <= now ? 1 : 0;
+			return aExpired - bExpired;
+		});
+	}, [apiKeys]);
+
 	const apiKeyTable = useProductTable({
-		data: apiKeys || [],
+		data: sortedApiKeys,
 		columns,
 		options: {
 			globalFilterFn: "includesString",
