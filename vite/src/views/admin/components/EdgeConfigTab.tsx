@@ -55,13 +55,12 @@ export function EdgeConfigTab() {
 				onOpenChange={setFeatureFlagsOpen}
 			/>
 
-			<EdgeConfigDialog
-				open={requestBlockEditOpen}
-				onOpenChange={(open) => {
-					if (!open) setRequestBlockEditOpen(false);
-				}}
-				configId="request-block"
-			/>
+		<EdgeConfigDialog
+			open={requestBlockEditOpen}
+			onOpenChange={(open) => {
+				if (!open) setRequestBlockEditOpen(false);
+			}}
+		/>
 
 			<RawEdgeConfigDialog
 				open={requestBlockRawOpen}

@@ -182,5 +182,4 @@ export const ErrCode = {
 
 	// Maintenance
 	UnderMaintenance: "under_maintenance",
-	ServiceUnavailable: "service_unavailable",
 };

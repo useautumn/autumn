@@ -47,11 +47,9 @@ type Step = "select-org" | "edit";
 export function EdgeConfigDialog({
 	open,
 	onOpenChange,
-	configId,
 }: {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
-	configId: "request-block";
 }) {
 	const axiosInstance = useAxiosInstance();
 	const [step, setStep] = useState<Step>("select-org");
@@ -152,6 +150,16 @@ export function EdgeConfigDialog({
 		setRules((current) => [...current, { method: "POST", pattern: "/v1/" }]);
 	};
 
+	const isValidRule = (item: unknown): item is RequestBlockRule => {
+		if (!item || typeof item !== "object") return false;
+		const r = item as Record<string, unknown>;
+		return (
+			typeof r.method === "string" &&
+			(METHODS as readonly string[]).includes(r.method) &&
+			typeof r.pattern === "string"
+		);
+	};
+
 	const handleJsonChange = (value: string | undefined) => {
 		const text = value ?? "";
 		setJsonText(text);
@@ -159,8 +167,16 @@ export function EdgeConfigDialog({
 		try {
 			const parsed = JSON.parse(text);
 			if (typeof parsed.blockAll === "boolean") setBlockAll(parsed.blockAll);
-			if (Array.isArray(parsed.blockedEndpoints))
-				setRules(parsed.blockedEndpoints);
+			if (Array.isArray(parsed.blockedEndpoints)) {
+				if (parsed.blockedEndpoints.every(isValidRule)) {
+					setRules(parsed.blockedEndpoints);
+				} else {
+					setJsonError(
+						`Invalid rules: each rule must have a valid method (${METHODS.join(", ")}) and a pattern string`,
+					);
+					return;
+				}
+			}
 			setJsonError(null);
 		} catch {
 			setJsonError("Invalid JSON");
@@ -204,9 +220,6 @@ export function EdgeConfigDialog({
 			setSaving(false);
 		}
 	};
-
-	// Suppress unused configId warning — reserved for future config types
-	void configId;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
