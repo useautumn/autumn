@@ -30,18 +30,20 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	{
 		type: RateLimitType.Attach,
 		patterns: [
-			route({ method: "POST", url: "/v1/attach/preview" }),
+			// These endpoints shldn't be rate limited
+			// route({ method: "POST", url: "/v1/checkout" }),
+			// route({ method: "POST", url: "/v1/attach/preview" }),
+			// route({ method: "POST", url: "/v1/billing.preview_update" }),
+			// route({ method: "POST", url: "/v1/billing.preview_multi_attach" }),
+			// route({ method: "POST", url: "/v1/billing.preview_attach" }),
+
 			route({ method: "POST", url: "/v1/cancel" }),
 			route({ method: "POST", url: "/v1/setup_payment" }),
-			route({ method: "POST", url: "/v1/checkout" }),
 			route({ method: "POST", url: "/v1/attach" }),
 			route({ method: "POST", url: "/v1/billing.attach" }),
 			route({ method: "POST", url: "/v1/billing.multi_attach" }),
 			route({ method: "POST", url: "/v1/billing.update" }),
 
-			route({ method: "POST", url: "/v1/billing.preview_update" }),
-			route({ method: "POST", url: "/v1/billing.preview_multi_attach" }),
-			route({ method: "POST", url: "/v1/billing.preview_attach" }),
 			route({ method: "POST", url: "/v1/billing.setup_payment" }),
 			route({ method: "POST", url: "/v1/billing.open_customer_portal" }),
 			route({ method: "POST", url: "/v1/billing.sync_proposals" }),
