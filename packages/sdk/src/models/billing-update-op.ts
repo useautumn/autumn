@@ -474,7 +474,7 @@ export type UpdateSubscriptionParams = {
    */
   cancelAction?: BillingUpdateCancelAction | undefined;
   /**
-   * Reset the billing cycle anchor immediately with 'now' or schedule it for a future Unix timestamp in milliseconds.
+   * Reset the billing cycle anchor immediately with 'now'
    */
   billingCycleAnchor?: "now" | undefined;
   /**

@@ -17,11 +17,11 @@ export const DbUsageAlertSchema = z
 		}),
 		threshold: z.number().min(0).meta({
 			description:
-				"The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).",
+				"The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).",
 		}),
 		threshold_type: UsageAlertThresholdType.meta({
 			description:
-				"Whether the threshold is an absolute usage count or a percentage of the usage allowance.",
+				"Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.",
 		}),
 		name: z.string().optional().meta({
 			description:
@@ -32,8 +32,9 @@ export const DbUsageAlertSchema = z
 		const { threshold_type, threshold } = ctx.value;
 
 		if (
-			(threshold_type === "usage_percentage" || threshold_type === "remaining_percentage") 
-			&& threshold > 100
+			(threshold_type === "usage_percentage" ||
+				threshold_type === "remaining_percentage") &&
+			threshold > 100
 		) {
 			ctx.issues.push({
 				code: "custom",
