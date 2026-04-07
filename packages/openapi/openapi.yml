@@ -12326,7 +12326,10 @@ paths:
                           description: Event value/count
                         properties:
                           type: object
-                          description: Event properties (JSONB)
+                          propertyNames:
+                            type: string
+                          additionalProperties: {}
+                          description: Event properties (JSON)
                       required:
                         - id
                         - timestamp

@@ -1,7 +1,3 @@
 export const SDK_TEST_IDENTITY = {
-  customerId: "sdk-test-customer",
-  customerData: {
-    name: "SDK Test Customer",
-    email: "sdk-test@useautumn.local",
-  },
+  customerId: "1802e7ce-4ac6-4d85-ace8-12126173a492",
 };
