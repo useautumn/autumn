@@ -145,4 +145,95 @@ test(`${chalk.yellowBright("usage-alert credit system: track action2 triggers al
 
 	expect(result).not.toBeNull();
 	expect(result?.payload.data.feature_id).toBe(TestFeature.Credits);
+	expect(result?.payload.data.usage_alert.threshold_type).toBe("usage");
+});
+
+test(`${chalk.yellowBright("usage-alert credit system: remaining threshold on credits feature")}`, async () => {
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "usage-alert-credit-remaining",
+		setup: [
+			s.customer({ testClock: false, paymentMethod: "success" }),
+			s.products({ list: [creditSystemProduct] }),
+		],
+		actions: [s.attach({ productId: creditSystemProduct.id })],
+	});
+
+	await setCustomerUsageAlerts({
+		autumn: autumnV2_1,
+		customerId,
+		usageAlerts: [
+			{
+				feature_id: TestFeature.Credits,
+				threshold: 20,
+				threshold_type: "remaining",
+				enabled: true,
+			},
+		],
+	});
+
+	// action1 credit_cost 0.2 → 405 units => 81 credits used, 19 remaining (crosses below threshold of 20)
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Action1,
+		value: 405,
+	});
+
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "balances.usage_alert_triggered" &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.feature_id === TestFeature.Credits &&
+			payload.data?.usage_alert?.threshold === 20,
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	expect(result?.payload.data.feature_id).toBe(TestFeature.Credits);
+	expect(result?.payload.data.usage_alert.threshold_type).toBe("remaining");
+});
+
+test(`${chalk.yellowBright("usage-alert credit system: remaining_percentage threshold on credits feature")}`, async () => {
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "usage-alert-credit-remaining-pct",
+		setup: [
+			s.customer({ testClock: false, paymentMethod: "success" }),
+			s.products({ list: [creditSystemProduct] }),
+		],
+		actions: [s.attach({ productId: creditSystemProduct.id })],
+	});
+
+	await setCustomerUsageAlerts({
+		autumn: autumnV2_1,
+		customerId,
+		usageAlerts: [
+			{
+				feature_id: TestFeature.Credits,
+				threshold: 25,
+				threshold_type: "remaining_percentage",
+				enabled: true,
+			},
+		],
+	});
+
+	// action1 credit_cost 0.2 → 405 units => 81 credits used, 19 remaining = 19% (crosses below 25% threshold)
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Action1,
+		value: 405,
+	});
+
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "balances.usage_alert_triggered" &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.feature_id === TestFeature.Credits &&
+			payload.data?.usage_alert?.threshold === 25,
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	expect(result?.payload.data.feature_id).toBe(TestFeature.Credits);
+	expect(result?.payload.data.usage_alert.threshold_type).toBe("remaining_percentage");
 });

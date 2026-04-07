@@ -87,14 +87,16 @@ export type GetOrCreateCustomerSpendLimit = {
 };
 
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export const GetOrCreateCustomerThresholdType = {
   Usage: "usage",
   UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
 } as const;
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type GetOrCreateCustomerThresholdType = ClosedEnum<
   typeof GetOrCreateCustomerThresholdType
@@ -110,11 +112,11 @@ export type GetOrCreateCustomerUsageAlert = {
    */
   enabled?: boolean | undefined;
   /**
-   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
    */
   threshold: number;
   /**
-   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: GetOrCreateCustomerThresholdType;
   /**

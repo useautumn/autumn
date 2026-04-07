@@ -37,7 +37,7 @@ class UpdateCustomerGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -86,7 +86,7 @@ class UpdateCustomerPurchaseLimitRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -137,7 +137,7 @@ class UpdateCustomerAutoTopupRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -173,7 +173,7 @@ class UpdateCustomerSpendLimitRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -185,15 +185,17 @@ class UpdateCustomerSpendLimitRequest(BaseModel):
 UpdateCustomerThresholdTypeRequestBody = Literal[
     "usage",
     "usage_percentage",
+    "remaining",
+    "remaining_percentage",
 ]
-r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
 class UpdateCustomerUsageAlertRequestBodyTypedDict(TypedDict):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
     threshold_type: UpdateCustomerThresholdTypeRequestBody
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
@@ -204,10 +206,10 @@ class UpdateCustomerUsageAlertRequestBodyTypedDict(TypedDict):
 
 class UpdateCustomerUsageAlertRequestBody(BaseModel):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
     threshold_type: UpdateCustomerThresholdTypeRequestBody
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
     r"""The feature ID this alert applies to."""
@@ -226,7 +228,7 @@ class UpdateCustomerUsageAlertRequestBody(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -257,7 +259,7 @@ class UpdateCustomerOverageAllowedRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -304,7 +306,7 @@ class UpdateCustomerBillingControlsRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -382,7 +384,7 @@ class UpdateCustomerParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -452,7 +454,7 @@ class UpdateCustomerPurchaseLimitResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -503,7 +505,7 @@ class UpdateCustomerAutoTopupResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -539,7 +541,7 @@ class UpdateCustomerSpendLimitResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -552,17 +554,19 @@ UpdateCustomerThresholdTypeResponse = Union[
     Literal[
         "usage",
         "usage_percentage",
+        "remaining",
+        "remaining_percentage",
     ],
     UnrecognizedStr,
 ]
-r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
 class UpdateCustomerUsageAlertResponseTypedDict(TypedDict):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
     threshold_type: UpdateCustomerThresholdTypeResponse
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
@@ -573,10 +577,10 @@ class UpdateCustomerUsageAlertResponseTypedDict(TypedDict):
 
 class UpdateCustomerUsageAlertResponse(BaseModel):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
     threshold_type: UpdateCustomerThresholdTypeResponse
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
     r"""The feature ID this alert applies to."""
@@ -595,7 +599,7 @@ class UpdateCustomerUsageAlertResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -626,7 +630,7 @@ class UpdateCustomerOverageAllowedResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -673,7 +677,7 @@ class UpdateCustomerBillingControlsResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -781,7 +785,7 @@ class UpdateCustomerSubscription(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -834,7 +838,7 @@ class UpdateCustomerPurchase(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -904,7 +908,7 @@ class UpdateCustomerDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -977,7 +981,7 @@ class UpdateCustomerFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -1024,7 +1028,7 @@ class UpdateCustomerFlags(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1126,7 +1130,7 @@ class UpdateCustomerResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 m[k] = val
