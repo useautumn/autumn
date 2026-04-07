@@ -1,18 +1,22 @@
 import { Globe } from "@phosphor-icons/react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
 import { AdminOrgTable } from "@/views/admin/AdminOrgTable";
 import { AdminUserTable } from "@/views/admin/AdminUserTable";
 import { DefaultView } from "../DefaultView";
 import LoadingScreen from "../general/LoadingScreen";
 import { CreateUser } from "./components/CreateUser";
+import { EdgeConfigTab } from "./components/EdgeConfigTab";
 import { useAdmin } from "./hooks/useAdmin";
 
 export const AdminView = () => {
 	const navigate = useNavigate();
 	const { isAdmin, isPending } = useAdmin();
+	const [activeTab, setActiveTab] = useState("orgs");
 
 	if (isPending) {
 		return (
@@ -60,10 +64,25 @@ export const AdminView = () => {
 				</Button>
 			</div>
 
-			<div className="flex flex-col gap-8">
-				<AdminUserTable />
-				<AdminOrgTable />
-			</div>
+			<Tabs value={activeTab} onValueChange={setActiveTab}>
+				<TabsList>
+					<TabsTrigger value="orgs">Organizations</TabsTrigger>
+					<TabsTrigger value="users">Users</TabsTrigger>
+					<TabsTrigger value="edge-config">Edge Config</TabsTrigger>
+				</TabsList>
+
+				<TabsContent value="orgs" className="mt-4">
+					<AdminOrgTable />
+				</TabsContent>
+
+				<TabsContent value="users" className="mt-4">
+					<AdminUserTable />
+				</TabsContent>
+
+				<TabsContent value="edge-config" className="mt-4">
+					<EdgeConfigTab />
+				</TabsContent>
+			</Tabs>
 		</div>
 	);
 };
