@@ -34,7 +34,7 @@ class GetOrCreateCustomerGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -83,7 +83,7 @@ class GetOrCreateCustomerPurchaseLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -134,7 +134,7 @@ class GetOrCreateCustomerAutoTopup(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -170,7 +170,7 @@ class GetOrCreateCustomerSpendLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -182,15 +182,17 @@ class GetOrCreateCustomerSpendLimit(BaseModel):
 GetOrCreateCustomerThresholdType = Literal[
     "usage",
     "usage_percentage",
+    "remaining",
+    "remaining_percentage",
 ]
-r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
 class GetOrCreateCustomerUsageAlertTypedDict(TypedDict):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
     threshold_type: GetOrCreateCustomerThresholdType
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
@@ -201,10 +203,10 @@ class GetOrCreateCustomerUsageAlertTypedDict(TypedDict):
 
 class GetOrCreateCustomerUsageAlert(BaseModel):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
     threshold_type: GetOrCreateCustomerThresholdType
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
     r"""The feature ID this alert applies to."""
@@ -223,7 +225,7 @@ class GetOrCreateCustomerUsageAlert(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -254,7 +256,7 @@ class GetOrCreateCustomerOverageAllowed(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -301,7 +303,7 @@ class GetOrCreateCustomerBillingControls(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -391,7 +393,7 @@ class GetOrCreateCustomerParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
