@@ -2,8 +2,8 @@ import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { User } from "better-auth";
 import { format } from "date-fns";
 import { Badge } from "@/components/v2/badges/Badge";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { Button } from "@/components/v2/buttons/Button";
+import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { ImpersonateButton } from "./components/ImpersonateBtn";
 
 export type AdminOrg = {
@@ -117,8 +117,9 @@ export const createAdminOrgColumns = ({
 		enableHiding: false,
 		cell: ({ row }: { row: Row<AdminOrg> }) => {
 			const users = row.original.users;
+			const firstNonAdminUser = users.find((user) => user.role !== "admin");
 
-			if (!users || users.length === 0) {
+			if (!firstNonAdminUser) {
 				return null;
 			}
 
@@ -131,7 +132,7 @@ export const createAdminOrgColumns = ({
 					>
 						Block
 					</Button>
-					<ImpersonateButton userId={users?.[0]?.id} />
+					<ImpersonateButton userId={firstNonAdminUser.id} />
 				</div>
 			);
 		},

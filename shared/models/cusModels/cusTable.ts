@@ -70,6 +70,15 @@ export const customers = pgTable(
 			table.env,
 			sql`${table.internal_id} DESC`,
 		),
+		index("idx_customers_email_trgm")
+			.using("gin", sql`${table.email} gin_trgm_ops`)
+			.where(sql`${table.email} IS NOT NULL`),
+		index("idx_customers_name_trgm")
+			.using("gin", sql`${table.name} gin_trgm_ops`)
+			.where(sql`${table.name} IS NOT NULL`),
+		index("idx_customers_id_trgm")
+			.using("gin", sql`${table.id} gin_trgm_ops`)
+			.where(sql`${table.id} IS NOT NULL`),
 		index("idx_customers_org_id_env_created_at").on(
 			table.org_id,
 			table.env,

@@ -86,15 +86,17 @@ class CreateEntitySpendLimitRequest(BaseModel):
 CreateEntityThresholdTypeRequestBody = Literal[
     "usage",
     "usage_percentage",
+    "remaining",
+    "remaining_percentage",
 ]
-r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
 class CreateEntityUsageAlertRequestBodyTypedDict(TypedDict):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
     threshold_type: CreateEntityThresholdTypeRequestBody
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
@@ -105,10 +107,10 @@ class CreateEntityUsageAlertRequestBodyTypedDict(TypedDict):
 
 class CreateEntityUsageAlertRequestBody(BaseModel):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
     threshold_type: CreateEntityThresholdTypeRequestBody
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
     r"""The feature ID this alert applies to."""
@@ -676,17 +678,19 @@ CreateEntityThresholdTypeResponse = Union[
     Literal[
         "usage",
         "usage_percentage",
+        "remaining",
+        "remaining_percentage",
     ],
     UnrecognizedStr,
 ]
-r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
 class CreateEntityUsageAlertResponseTypedDict(TypedDict):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
     threshold_type: CreateEntityThresholdTypeResponse
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
@@ -697,10 +701,10 @@ class CreateEntityUsageAlertResponseTypedDict(TypedDict):
 
 class CreateEntityUsageAlertResponse(BaseModel):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
     threshold_type: CreateEntityThresholdTypeResponse
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
     r"""The feature ID this alert applies to."""

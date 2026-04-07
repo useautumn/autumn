@@ -731,15 +731,17 @@ class MultiAttachSpendLimit(BaseModel):
 MultiAttachThresholdType = Literal[
     "usage",
     "usage_percentage",
+    "remaining",
+    "remaining_percentage",
 ]
-r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
 class MultiAttachUsageAlertTypedDict(TypedDict):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
     threshold_type: MultiAttachThresholdType
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
     r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
@@ -750,10 +752,10 @@ class MultiAttachUsageAlertTypedDict(TypedDict):
 
 class MultiAttachUsageAlert(BaseModel):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
     threshold_type: MultiAttachThresholdType
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
     r"""The feature ID this alert applies to."""

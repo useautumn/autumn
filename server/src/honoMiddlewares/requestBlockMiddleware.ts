@@ -2,6 +2,7 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { getRuntimeRequestBlockEntry } from "@/internal/misc/requestBlocks/requestBlockStore.js";
+import { logRequestResult } from "./requestLogging/logRequestResult.js";
 import { matchRoute } from "./middlewareUtils.js";
 
 export const requestBlockMiddleware = async (
@@ -23,12 +24,21 @@ export const requestBlockMiddleware = async (
 	}
 
 	if (entry.blockAll) {
-		ctx.logger.warn("Rejecting blocked /v1 request (block all)");
+		await logRequestResult({
+			ctx,
+			c,
+			statusCode: 403,
+			responseBody: {
+				message: "API access is temporarily disabled for this organization",
+				code: ErrCode.RequestTemporarilyDisabled,
+				env: ctx.env,
+			},
+		});
 
 		throw new RecaseError({
 			message: "API access is temporarily disabled for this organization",
 			code: ErrCode.RequestTemporarilyDisabled,
-			statusCode: 503,
+			statusCode: 403,
 		});
 	}
 
@@ -48,13 +58,20 @@ export const requestBlockMiddleware = async (
 		return;
 	}
 
-	ctx.logger.warn(
-		"Rejecting endpoint-blocked /v1 request (blocked endpoint, matched rule)",
-	);
+	await logRequestResult({
+		ctx,
+		c,
+		statusCode: 403,
+		responseBody: {
+			message: "This endpoint is temporarily disabled for this organization",
+			code: ErrCode.RequestTemporarilyDisabled,
+			env: ctx.env,
+		},
+	});
 
 	throw new RecaseError({
 		message: "This endpoint is temporarily disabled for this organization",
 		code: ErrCode.RequestTemporarilyDisabled,
-		statusCode: 503,
+		statusCode: 403,
 	});
 };

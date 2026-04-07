@@ -2,6 +2,7 @@ import type { ProcessorConfigs } from "@models/genModels/processorSchemas.js";
 import { sql } from "drizzle-orm";
 import {
 	boolean,
+	index,
 	jsonb,
 	numeric,
 	pgTable,
@@ -87,6 +88,16 @@ export const organizations = pgTable(
 		deployed: boolean("deployed").default(false),
 	},
 	(table) => [
+		index("idx_organizations_name_trgm")
+			.using("gin", sql`${table.name} gin_trgm_ops`)
+			.where(sql`${table.name} IS NOT NULL`),
+		index("idx_organizations_slug_trgm")
+			.using("gin", sql`${table.slug} gin_trgm_ops`)
+			.where(sql`${table.slug} IS NOT NULL`),
+		index("idx_organizations_created_at_id").on(
+			sql`${table.createdAt} DESC`,
+			sql`${table.id} DESC`,
+		),
 		unique("organizations_test_pkey_key").on(table.test_pkey),
 		unique("organizations_live_pkey_key").on(table.live_pkey),
 	],

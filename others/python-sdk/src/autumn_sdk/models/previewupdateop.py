@@ -668,7 +668,7 @@ class PreviewUpdateParamsTypedDict(TypedDict):
     cancel_action: NotRequired[PreviewUpdateCancelAction]
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
     billing_cycle_anchor: Literal["now"]
-    r"""Reset the billing cycle anchor immediately with 'now' or schedule it for a future Unix timestamp in milliseconds."""
+    r"""Reset the billing cycle anchor immediately with 'now'"""
     no_billing_changes: NotRequired[bool]
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
     recalculate_balances: NotRequired[PreviewUpdateRecalculateBalancesTypedDict]
@@ -713,7 +713,7 @@ class PreviewUpdateParams(BaseModel):
         Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
         pydantic.Field(alias="billing_cycle_anchor"),
     ] = "now"
-    r"""Reset the billing cycle anchor immediately with 'now' or schedule it for a future Unix timestamp in milliseconds."""
+    r"""Reset the billing cycle anchor immediately with 'now'"""
 
     no_billing_changes: Optional[bool] = None
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
