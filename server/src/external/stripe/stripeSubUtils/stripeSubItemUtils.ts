@@ -4,64 +4,11 @@ import {
 	type FullCusProduct,
 	isFixedPrice,
 	type Price,
-	PriceType,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { getBillingType } from "@/internal/products/prices/priceUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
-
-const autumnStripePricesMatch = ({
-	stripePrice,
-	autumnPrice,
-	stripeProdId,
-}: {
-	stripePrice: Stripe.Price;
-	autumnPrice: Price;
-	stripeProdId?: string;
-}) => {
-	const config = autumnPrice.config as UsagePriceConfig;
-
-	if (config.type === PriceType.Fixed) {
-		return (
-			config.stripe_price_id === stripePrice.id ||
-			(stripeProdId && stripePrice.product === stripeProdId)
-		);
-	} else {
-		return (
-			config.stripe_price_id === stripePrice.id ||
-			config.stripe_product_id === stripePrice.product ||
-			config.stripe_empty_price_id === stripePrice.id
-		);
-	}
-};
-
-export const priceToScheduleItem = ({
-	price,
-	scheduleItems,
-	stripeProdId,
-}: {
-	price: Price;
-	scheduleItems: Stripe.SubscriptionSchedule.Phase.Item[];
-	stripeProdId?: string;
-}) => {
-	for (const scheduleItem of scheduleItems) {
-		// 1. If price is fixed
-		const schedulePrice = scheduleItem.price as Stripe.Price;
-
-		if (
-			autumnStripePricesMatch({
-				stripePrice: schedulePrice,
-				autumnPrice: price,
-				stripeProdId,
-			})
-		) {
-			return scheduleItem;
-		}
-	}
-
-	return undefined;
-};
 
 /**
  * @deprecated Use `findBillingLineItemByStripeLineItem` from `@autumn/shared` instead.
@@ -159,38 +106,6 @@ export const findPriceInStripeItems = ({
 	});
 };
 
-export const findStripePriceFromPrices = ({
-	stripePrices,
-	autumnPrice,
-}: {
-	stripePrices: Stripe.Price[];
-	autumnPrice: Price;
-}) => {
-	return stripePrices.find((p: Stripe.Price) =>
-		autumnStripePricesMatch({
-			stripePrice: p,
-			autumnPrice,
-		}),
-	);
-};
-
-const lineItemInCusProduct = ({
-	cusProduct,
-	lineItem,
-}: {
-	cusProduct: FullCusProduct;
-	lineItem: Stripe.InvoiceLineItem;
-}) => {
-	const stripeProdId = cusProduct.product.processor?.id;
-
-	const prices = cusProductToPrices({ cusProduct });
-	const price = findPriceInStripeItems({ prices, lineItem });
-
-	const priceDetails = lineItem.pricing?.price_details;
-
-	return stripeProdId === priceDetails?.product || notNullish(price);
-};
-
 export const subItemInCusProduct = ({
 	cusProduct,
 	subItem,
@@ -206,54 +121,6 @@ export const subItemInCusProduct = ({
 	return stripeProdId === subItem.price.product || notNullish(price);
 };
 
-const scheduleItemToPrice = ({
-	scheduleItem,
-	cusProducts,
-}: {
-	scheduleItem: Stripe.SubscriptionSchedule.Phase.Item;
-	cusProducts: FullCusProduct[];
-}) => {
-	for (const cusProduct of cusProducts) {
-		const prices = cusProductToPrices({ cusProduct });
-		const price = prices.find((p) => {
-			const stripePrice = scheduleItem.price as Stripe.Price;
-			return autumnStripePricesMatch({
-				stripePrice,
-				autumnPrice: p,
-			});
-		});
-
-		if (price) {
-			return price;
-		}
-	}
-
-	return undefined;
-};
-
-export const scheduleItemInCusProduct = ({
-	cusProduct,
-	scheduleItem,
-}: {
-	cusProduct: FullCusProduct;
-	scheduleItem: Stripe.SubscriptionSchedule.Phase.Item;
-}) => {
-	const stripeProdId = cusProduct.product.processor?.id;
-
-	const autumnPrices = cusProductToPrices({ cusProduct });
-	const price = autumnPrices.find((p) => {
-		const stripePrice = scheduleItem.price as Stripe.Price;
-
-		return autumnStripePricesMatch({
-			stripePrice,
-			autumnPrice: p,
-			stripeProdId,
-		});
-	});
-
-	return notNullish(price);
-};
-
 export const isLicenseItem = ({
 	stripeItem,
 }: {
@@ -261,13 +128,3 @@ export const isLicenseItem = ({
 }) => {
 	return stripeItem.price?.recurring?.usage_type === "licensed";
 };
-
-const isMeteredItem = ({
-	stripeItem,
-}: {
-	stripeItem: Stripe.SubscriptionItem | Stripe.LineItem;
-}) => {
-	return stripeItem.price?.recurring?.usage_type === "metered";
-};
-
-// Get sub item from product
