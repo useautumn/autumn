@@ -169,7 +169,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 			const isExpired = expiresAt <= Date.now();
 
 			if (isExpired) {
-				return <div className="text-xs text-red-500">Expired</div>;
+				return <div className="text-xs text-t4">Expired</div>;
 			}
 
 			const { date, time } = formatUnixToDateTime(expiresAt);
