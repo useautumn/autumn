@@ -405,7 +405,7 @@
         "@orpc/zod": "^1.13.4",
         "date-fns": "^4.1.0",
         "decimal.js": "^10.5.0",
-        "dotenv": "^16.5.0",
+        "dotenv": "^17.4.1",
         "drizzle-kit": "catalog:",
         "drizzle-orm": "catalog:",
         "stripe": "catalog:",
@@ -5428,6 +5428,8 @@
 
     "@autumn/shared/@date-fns/utc": ["@date-fns/utc@2.1.0", "", {}, "sha512-176grgAgU2U303rD2/vcOmNg0kGPbhzckuH1TEP2al7n0AQipZIy9P15usd2TKQCG1g+E1jX/ZVQSzs4sUDwgA=="],
 
+    "@autumn/shared/dotenv": ["dotenv@17.4.1", "", {}, "sha512-k8DaKGP6r1G30Lx8V4+pCsLzKr8vLmV2paqEj1Y55GdAgJuIqpRp5FfajGF8KtwMxCz9qJc6wUIJnm053d/WCw=="],
+
     "@autumn/vite/@types/node": ["@types/node@22.19.15", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-F0R/h2+dsy5wJAUe3tAU6oqa2qbWY5TpNfL/RGmo1y38hiyO1w3x2jPtt76wmuaJI4DQnOBu21cNXQ2STIUUWg=="],
 
     "@autumn/vite/date-fns": ["date-fns@3.6.0", "", {}, "sha512-fRHTG8g/Gif+kSh50gaGEdToemgfj74aRX3swtiouboip5JDLAyDE9F11nHMIcvOaXeOC6D7SpNhi7uFyB7Uww=="],
@@ -6240,7 +6242,7 @@
 
     "atmn/@typescript/native-preview": ["@typescript/native-preview@7.0.0-dev.20260326.1", "", { "optionalDependencies": { "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260326.1", "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260326.1", "@typescript/native-preview-linux-arm": "7.0.0-dev.20260326.1", "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260326.1", "@typescript/native-preview-linux-x64": "7.0.0-dev.20260326.1", "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260326.1", "@typescript/native-preview-win32-x64": "7.0.0-dev.20260326.1" }, "bin": { "tsgo": "bin/tsgo.js" } }, "sha512-oq2UShxAa+CS4aalhQjntuxuzTv/ud54So3lqfYcJDiQabmpGk/95rGvW5PXi28JIBlZ6AbUL6gEj0gRvIDJcQ=="],
 
-    "atmn/dotenv": ["dotenv@17.3.1", "", {}, "sha512-IO8C/dzEb6O3F9/twg6ZLXz164a2fhTnEWb95H23Dm4OuN+92NmEAlTrupP9VW6Jm3sO26tQlqyvyi4CsnY9GA=="],
+    "atmn/dotenv": ["dotenv@17.4.1", "", {}, "sha512-k8DaKGP6r1G30Lx8V4+pCsLzKr8vLmV2paqEj1Y55GdAgJuIqpRp5FfajGF8KtwMxCz9qJc6wUIJnm053d/WCw=="],
 
     "atmn/eslint-plugin-react-hooks": ["eslint-plugin-react-hooks@4.6.2", "", { "peerDependencies": { "eslint": "^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0-0" } }, "sha512-QzliNJq4GinDBcD8gPB5v0wh6g8q3SUi6EFF0x8N/BL9PoVs0atuGc47ozMRyOWAKdwaZ5OnbOEa3WR+dSGKuQ=="],
 

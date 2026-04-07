@@ -101,6 +101,7 @@ export const handleSetupPreviewOrg = createRoute({
 			name: "Preview API Key",
 			prefix: "am_sk_test",
 			meta: { preview: true },
+			expiresAt: null,
 		});
 
 		return c.json({

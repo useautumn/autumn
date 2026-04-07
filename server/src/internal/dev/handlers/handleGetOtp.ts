@@ -41,6 +41,7 @@ export const handleGetOtp = createRoute({
 				generatedAt: new Date().toISOString(),
 			},
 			userId: user?.id,
+			expiresAt: null,
 		});
 
 		const prodKey = await createKey({
@@ -54,6 +55,7 @@ export const handleGetOtp = createRoute({
 				generatedAt: new Date().toISOString(),
 			},
 			userId: user?.id,
+			expiresAt: null,
 		});
 
 		const org = await OrgService.get({

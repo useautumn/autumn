@@ -4,6 +4,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { ApiKeyService } from "../ApiKeyService.js";
 import {
+	clearSecretKeyCache,
 	getCachedSecretKeyVerification,
 	SECRET_KEY_CACHE_TTL_SECONDS,
 	setCachedSecretKeyVerification,
@@ -46,6 +47,7 @@ export const createKey = async ({
 	orgId,
 	prefix,
 	meta,
+	expiresAt,
 }: {
 	db: DrizzleCli;
 	env: AppEnv;
@@ -54,6 +56,7 @@ export const createKey = async ({
 	prefix: string;
 	meta: Record<string, unknown>;
 	userId?: string;
+	expiresAt?: number | null;
 }) => {
 	const apiKey = generateApiKey(42, prefix);
 	const hashedKey = hashApiKey(apiKey);
@@ -68,6 +71,7 @@ export const createKey = async ({
 		env,
 		hashed_key: hashedKey,
 		meta,
+		expires_at: expiresAt ?? null,
 	};
 
 	await ApiKeyService.insert({ db, apiKey: apiKeyData });
@@ -113,6 +117,7 @@ export const createHardcodedKey = async ({
 		env,
 		hashed_key: hashedKey,
 		meta,
+		expires_at: null,
 	};
 
 	await ApiKeyService.insert({ db, apiKey: apiKeyData });
@@ -140,10 +145,11 @@ export const verifyKey = async ({
 	});
 
 	if (cached) {
-		return {
-			valid: true,
-			data: cached,
-		};
+		if (cached.expiresAt && cached.expiresAt <= Date.now()) {
+			await clearSecretKeyCache({ hashedKey });
+			return { valid: false, data: null };
+		}
+		return { valid: true, data: cached };
 	}
 
 	const data = await ApiKeyService.verifyAndFetch({
@@ -159,11 +165,26 @@ export const verifyKey = async ({
 		};
 	}
 
-	await setCachedSecretKeyVerification({
-		hashedKey,
-		data,
-		ttl: SECRET_KEY_CACHE_TTL_SECONDS,
-	});
+	if (data.expiresAt && data.expiresAt <= Date.now()) {
+		return { valid: false, data: null };
+	}
+
+	let ttl = SECRET_KEY_CACHE_TTL_SECONDS;
+	if (data.expiresAt) {
+		const secondsUntilExpiry = Math.max(
+			0,
+			Math.floor((data.expiresAt - Date.now()) / 1000),
+		);
+		ttl = Math.min(ttl, secondsUntilExpiry);
+	}
+
+	if (ttl > 0) {
+		await setCachedSecretKeyVerification({
+			hashedKey,
+			data,
+			ttl,
+		});
+	}
 
 	return {
 		valid: true,
