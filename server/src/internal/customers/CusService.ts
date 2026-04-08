@@ -54,6 +54,7 @@ export class CusService {
 		allowNotFound = false,
 		withEvents = false,
 		explain = false,
+		skipReset = false,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -65,6 +66,7 @@ export class CusService {
 		allowNotFound?: boolean;
 		withEvents?: boolean;
 		explain?: boolean;
+		skipReset?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -145,7 +147,7 @@ export class CusService {
 				// Skip reset when reading from replica — it writes to primary,
 				// and replica data is stale anyway. When degraded WITHOUT a replica
 				// (falls back to primary), the reset should still run.
-				if (!usedReplica) {
+				if (!usedReplica && !skipReset) {
 					await resetCustomerEntitlements({
 						fullCus,
 						ctx,
