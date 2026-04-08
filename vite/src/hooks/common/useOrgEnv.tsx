@@ -52,6 +52,14 @@ export function OrgEnvGuard() {
 	const isAdmin =
 		session?.user?.role === "admin" || notNullish(session?.session?.impersonatedBy);
 
+	// LOG: Right after computed values
+	console.log("[OrgEnvGuard] URL orgId:", orgId, "| isSlug:", isSlug);
+	console.log("[OrgEnvGuard] matchedOrg:", matchedOrg?.id ?? "none", "| effectiveOrgId:", effectiveOrgId);
+	console.log("[OrgEnvGuard] isInUserOrgs:", isInUserOrgs, "| isAlreadyActive:", isAlreadyActive, "| isAdmin:", isAdmin);
+	console.log("[OrgEnvGuard] resolvedOrgId:", resolvedOrgId, "| slugResolving:", slugResolving, "| syncing:", syncing, "| syncError:", syncError);
+	console.log("[OrgEnvGuard] session activeOrgId:", session?.session?.activeOrganizationId, "| user role:", session?.user?.role, "| impersonatedBy:", session?.session?.impersonatedBy);
+	console.log("[OrgEnvGuard] orgList:", orgList?.map(o => ({ id: o.id, slug: o.slug })));
+
 	// ALL useEffect hooks MUST be before any early returns
 
 	// Store env in localStorage on successful render
@@ -63,21 +71,29 @@ export function OrgEnvGuard() {
 
 	// Effect for admin slug resolution via API
 	useEffect(() => {
-		// Only resolve slugs that aren't in the user's org list
-		if (!isSlug || matchedOrg || resolvedOrgId || slugResolving || sessionPending || orgListPending) return;
-		// Only admins can resolve arbitrary slugs
-		if (!isAdmin) return;
+		console.log("[OrgEnvGuard:slugResolve] Effect triggered — isSlug:", isSlug, "matchedOrg:", !!matchedOrg, "resolvedOrgId:", resolvedOrgId, "slugResolving:", slugResolving, "isAdmin:", isAdmin, "sessionPending:", sessionPending, "orgListPending:", orgListPending);
+
+		if (!isSlug) { console.log("[OrgEnvGuard:slugResolve] Skipping: not a slug"); return; }
+		if (matchedOrg) { console.log("[OrgEnvGuard:slugResolve] Skipping: already matched in org list as", matchedOrg.id); return; }
+		if (resolvedOrgId) { console.log("[OrgEnvGuard:slugResolve] Skipping: already resolved to", resolvedOrgId); return; }
+		if (slugResolving) { console.log("[OrgEnvGuard:slugResolve] Skipping: already resolving"); return; }
+		if (sessionPending || orgListPending) { console.log("[OrgEnvGuard:slugResolve] Skipping: still loading session/orgList"); return; }
+		if (!isAdmin) { console.log("[OrgEnvGuard:slugResolve] Skipping: not admin, can't resolve arbitrary slugs"); return; }
+
+		console.log("[OrgEnvGuard:slugResolve] Starting slug resolution for:", orgId);
 
 		// Check localStorage cache first
 		const slugMap: Record<string, string> = JSON.parse(
 			localStorage.getItem("autumn:slugToOrgId") || "{}"
 		);
 		if (slugMap[orgId]) {
+			console.log("[OrgEnvGuard:slugResolve] Found in localStorage cache:", slugMap[orgId]);
 			setResolvedOrgId(slugMap[orgId]);
 			return;
 		}
 
 		// Fetch from admin API
+		console.log("[OrgEnvGuard:slugResolve] Fetching from API for slug:", orgId);
 		setSlugResolving(true);
 		fetch(
 			`${import.meta.env.VITE_BACKEND_URL}/admin/org-by-slug?slug=${encodeURIComponent(orgId)}`,
@@ -89,6 +105,7 @@ export function OrgEnvGuard() {
 			})
 			.then((data) => {
 				if (data.orgId) {
+					console.log("[OrgEnvGuard:slugResolve] API returned orgId:", data.orgId);
 					// Save to localStorage for future use
 					slugMap[orgId] = data.orgId;
 					localStorage.setItem("autumn:slugToOrgId", JSON.stringify(slugMap));
@@ -96,24 +113,36 @@ export function OrgEnvGuard() {
 				}
 				setSlugResolving(false);
 			})
-			.catch(() => {
+			.catch((error) => {
+				console.log("[OrgEnvGuard:slugResolve] API fetch failed:", error);
 				setSlugResolving(false);
 			});
 	}, [isSlug, matchedOrg, resolvedOrgId, slugResolving, isAdmin, orgId, sessionPending, orgListPending]);
 
 	// Effect for syncing active organization
 	useEffect(() => {
-		if (!effectiveOrgId) return;
+		console.log("[OrgEnvGuard:sync] shouldSync check — effectiveOrgId:", effectiveOrgId, "isInUserOrgs:", isInUserOrgs, "resolvedOrgId:", resolvedOrgId, "isAlreadyActive:", isAlreadyActive, "syncing:", syncing, "syncError:", syncError, "sessionPending:", sessionPending, "orgListPending:", orgListPending);
+
+		if (!effectiveOrgId) {
+			console.log("[OrgEnvGuard:sync] No effectiveOrgId, returning");
+			return;
+		}
+
 		const shouldSync = (isInUserOrgs || resolvedOrgId) && !isAlreadyActive && !syncing && !syncError && !sessionPending && !orgListPending;
+		console.log("[OrgEnvGuard:sync] shouldSync:", shouldSync);
+
 		if (shouldSync) {
+			console.log("[OrgEnvGuard:sync] Calling setActive with:", effectiveOrgId);
 			setSyncing(true);
 			authClient.organization
 				.setActive({ organizationId: effectiveOrgId })
 				.then(() => {
+					console.log("[OrgEnvGuard:sync] setActive succeeded for:", effectiveOrgId);
 					queryClient.invalidateQueries({ queryKey: ["org"] });
 					setSyncing(false);
 				})
-				.catch(() => {
+				.catch((error) => {
+					console.log("[OrgEnvGuard:sync] setActive FAILED for:", effectiveOrgId, error);
 					setSyncing(false);
 					setSyncError(true);
 				});
@@ -122,6 +151,7 @@ export function OrgEnvGuard() {
 
 	// NOW safe to do early returns
 	if (!isValidEnv) {
+		console.log("[OrgEnvGuard:render] Invalid env, showing 404");
 		return (
 			<div className="flex h-screen w-full items-center justify-center">
 				<div className="text-center">
@@ -133,6 +163,7 @@ export function OrgEnvGuard() {
 	}
 
 	if (sessionPending || orgListPending) {
+		console.log("[OrgEnvGuard:render] Showing loading — sessionPending:", sessionPending, "orgListPending:", orgListPending);
 		return (
 			<div className="h-screen w-full flex items-center justify-center bg-outer-background">
 				<LoadingScreen />
@@ -141,10 +172,12 @@ export function OrgEnvGuard() {
 	}
 
 	if (!session) {
+		console.log("[OrgEnvGuard:render] No session, redirecting to sign-in");
 		return <Navigate to="/sign-in" />;
 	}
 
 	if (slugResolving) {
+		console.log("[OrgEnvGuard:render] Showing loading — slugResolving");
 		return (
 			<div className="h-screen w-full flex items-center justify-center bg-outer-background">
 				<LoadingScreen />
@@ -153,6 +186,7 @@ export function OrgEnvGuard() {
 	}
 
 	if (syncing) {
+		console.log("[OrgEnvGuard:render] Showing loading — syncing");
 		return (
 			<div className="h-screen w-full flex items-center justify-center bg-outer-background">
 				<LoadingScreen />
@@ -161,6 +195,7 @@ export function OrgEnvGuard() {
 	}
 
 	if (syncError) {
+		console.log("[OrgEnvGuard:render] Sync error, falling back to first org");
 		// Fall back to first org if sync failed
 		if (orgList && orgList.length > 0) {
 			return <Navigate to={buildOrgEnvPath({ orgId: orgList[0].id, env: appEnv, path: "/customers" })} />;
@@ -170,6 +205,7 @@ export function OrgEnvGuard() {
 
 	// If slug couldn't be resolved and we're done loading, redirect to first org
 	if (isSlug && !matchedOrg && !resolvedOrgId && !slugResolving) {
+		console.log("[OrgEnvGuard:render] Unresolvable slug, redirecting to first org");
 		if (orgList && orgList.length > 0) {
 			return <Navigate to={buildOrgEnvPath({ orgId: orgList[0].id, env: appEnv, path: "/customers" })} />;
 		}
@@ -177,10 +213,12 @@ export function OrgEnvGuard() {
 	}
 
 	if (isInUserOrgs) {
+		console.log("[OrgEnvGuard:render] Rendering app — org is in user list and active");
 		return <Outlet />;
 	}
 
 	if (isAdmin && effectiveOrgId && !isInUserOrgs) {
+		console.log("[OrgEnvGuard:render] Admin impersonation redirect — effectiveOrgId:", effectiveOrgId, "redirect will keep slug:", orgId);
 		const redirectPath = buildOrgEnvPath({
 			orgId,
 			env: appEnv,
@@ -194,6 +232,7 @@ export function OrgEnvGuard() {
 		);
 	}
 
+	console.log("[OrgEnvGuard:render] Not in org list, not admin — redirecting to first org");
 	if (orgList && orgList.length > 0) {
 		const firstOrgId = orgList[0].id;
 		return (
