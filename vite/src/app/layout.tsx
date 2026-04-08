@@ -3,14 +3,14 @@ import { ArrowRightIcon } from "@phosphor-icons/react";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect, useRef, useState } from "react";
-import { Navigate, Outlet, useNavigate } from "react-router";
+import { Navigate, Outlet } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { SandboxBanner } from "@/components/general/SandboxBanner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
-import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
@@ -35,8 +35,6 @@ export function MainLayout() {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
-	const navigate = useNavigate();
-
 	// Global error handler for API errors
 	useEffect(() => {
 		const handleGlobalError = (event: ErrorEvent) => {
@@ -49,23 +47,7 @@ export function MainLayout() {
 		return () => window.removeEventListener("error", handleGlobalError);
 	}, [handleApiError]);
 
-	// Redirect to sign in if no session
-	useEffect(() => {
-		if (!isPending && !data) {
-			navigate("/sign-in");
-		}
-	}, [isPending, data, navigate]);
-
-	// Redirect to sandbox if not deployed
-	useEffect(() => {
-		if (!orgLoading && org && !org.deployed && env !== AppEnv.Sandbox) {
-			const lastSwitchedId = getLastSwitchedOrgId();
-			if (lastSwitchedId && org.id !== lastSwitchedId) return;
-			const pathname = window.location.pathname;
-			const search = window.location.search;
-			navigate(`/sandbox${pathname}${search}`);
-		}
-	}, [orgLoading, org, env, navigate]);
+	// Note: Auth redirects are handled by OrgEnvGuard, not here
 
 	if (isPending || orgLoading) {
 		return (
