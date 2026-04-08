@@ -53,6 +53,7 @@ interface SearchFilters {
 	status?: string[];
 	version?: string[];
 	none?: boolean;
+	processor?: string[];
 }
 
 export class CusSearchService {
@@ -228,6 +229,22 @@ export class CusSearchService {
 						ilike(customers.id, `%${search}%`),
 						ilike(customers.name, `%${search}%`),
 						ilike(customers.email, `%${search}%`),
+					)
+				: undefined,
+
+			filters.processor?.length
+				? or(
+						...filters.processor
+							.map((proc) => {
+								if (proc === "stripe")
+									return sql`(${customers.processor}->>'id' IS NOT NULL)`;
+								if (proc === "revenuecat")
+									return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
+								if (proc === "vercel")
+									return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
+								return undefined;
+							})
+							.filter((c): c is NonNullable<typeof c> => c !== undefined),
 					)
 				: undefined,
 		);
@@ -409,6 +426,21 @@ export class CusSearchService {
 					)
 				: undefined,
 			noneFilter,
+			filters?.processor?.length
+				? or(
+						...filters.processor
+							.map((proc) => {
+								if (proc === "stripe")
+									return sql`(${customers.processor}->>'id' IS NOT NULL)`;
+								if (proc === "revenuecat")
+									return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
+								if (proc === "vercel")
+									return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
+								return undefined;
+							})
+							.filter((c): c is NonNullable<typeof c> => c !== undefined),
+					)
+				: undefined,
 		);
 
 		let baseQuery;
@@ -451,6 +483,23 @@ export class CusSearchService {
 								)
 							: undefined,
 						noneFilter,
+						filters?.processor?.length
+							? or(
+									...filters.processor
+										.map((proc) => {
+											if (proc === "stripe")
+												return sql`(${customers.processor}->>'id' IS NOT NULL)`;
+											if (proc === "revenuecat")
+												return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
+											if (proc === "vercel")
+												return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
+											return undefined;
+										})
+										.filter(
+											(c): c is NonNullable<typeof c> => c !== undefined,
+										),
+								)
+							: undefined,
 					),
 				),
 		]);
@@ -551,6 +600,21 @@ export class CusSearchService {
 						ilike(customers.id, `%${search}%`),
 						ilike(customers.name, `%${search}%`),
 						ilike(customers.email, `%${search}%`),
+					)
+				: undefined,
+			filters?.processor?.length
+				? or(
+						...filters.processor
+							.map((proc) => {
+								if (proc === "stripe")
+									return sql`(${customers.processor}->>'id' IS NOT NULL)`;
+								if (proc === "revenuecat")
+									return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
+								if (proc === "vercel")
+									return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
+								return undefined;
+							})
+							.filter((c): c is NonNullable<typeof c> => c !== undefined),
 					)
 				: undefined,
 		);
