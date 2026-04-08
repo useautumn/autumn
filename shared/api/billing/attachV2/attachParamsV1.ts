@@ -20,8 +20,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 			"Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.",
 	}),
 	billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
-		description:
-			"Reset the billing cycle anchor immediately with 'now'.",
+		description: "Reset the billing cycle anchor immediately with 'now'.",
 	}),
 	plan_schedule: PlanTimingSchema.optional().meta({
 		description:
@@ -80,7 +79,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	}),
 
 	no_billing_changes: z.boolean().optional().meta({
-		internal: true,
+		description: "If true, skips any billing changes for the attach operation.",
 	}),
 });
 

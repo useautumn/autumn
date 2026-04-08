@@ -6595,6 +6595,9 @@ paths:
                   description: Key-value metadata to attach to the Stripe subscription, invoice,
                     and checkout session created during this attach flow. Keys
                     prefixed with 'autumn_' are reserved and will be stripped.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, skips any billing changes for the attach operation.
               required:
                 - customer_id
                 - plan_id
@@ -7633,6 +7636,9 @@ paths:
                   description: Key-value metadata to attach to the Stripe subscription, invoice,
                     and checkout session created during this attach flow. Keys
                     prefixed with 'autumn_' are reserved and will be stripped.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, skips any billing changes for the attach operation.
               required:
                 - customer_id
                 - plan_id
@@ -10386,6 +10392,9 @@ paths:
                   description: Key-value metadata to attach to the Stripe subscription, invoice,
                     and checkout session created during this attach flow. Keys
                     prefixed with 'autumn_' are reserved and will be stripped.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, skips any billing changes for the attach operation.
               required:
                 - customer_id
               title: SetupPaymentParams

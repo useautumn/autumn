@@ -67,6 +67,18 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		initializeUndefinedQuantities: true,
 	});
 
+	const billingRelatedFields = Object.keys(params).filter((key) =>
+		FIELDS_WITH_BILLING_CHANGES.includes(
+			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
+		),
+	);
+
+	const skipBillingChanges =
+		orgDisableStripeWrites({ ctx }) ||
+		params.no_billing_changes === true ||
+		params.processor_subscription_id !== undefined ||
+		billingRelatedFields.length === 0;
+
 	const {
 		stripeSubscription,
 		stripeSubscriptionSchedule,
@@ -79,6 +91,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		fullCustomer,
 		targetCustomerProduct: customerProduct,
 		contextOverride,
+		skipBillingChanges,
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
@@ -123,12 +136,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	const cancelAction = setupCancelAction({ params });
-
-	const billingRelatedFields = Object.keys(params).filter((key) =>
-		FIELDS_WITH_BILLING_CHANGES.includes(
-			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
-		),
-	);
 
 	let checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
@@ -183,11 +190,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			? contextOverride.billingVersion
 			: (customerProduct.billing_version ?? BillingVersion.V2),
 
-		skipBillingChanges:
-			orgDisableStripeWrites({ ctx }) ||
-			params.no_billing_changes === true ||
-			params.processor_subscription_id !== undefined ||
-			billingRelatedFields.length === 0,
+		skipBillingChanges,
 
 		checkoutMode,
 
