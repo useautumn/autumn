@@ -11,7 +11,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	applyProductTrialConfig,
 	handleFreeTrialParam,
-	inheritTrialFromCustomerProduct,
 	inheritTrialFromSubscription,
 } from "@/internal/billing/v2/setup/trialContext";
 import { isAttachUpgrade } from "../utils/isAttachUpgrade";
@@ -69,13 +68,13 @@ export const setupAttachTrialContext = async ({
 		return inheritTrialFromSubscription({ stripeSubscription });
 	}
 
-	// For free products, inherit trial from current customer product
-	if (!newProductIsPaidRecurring && currentCustomerProduct) {
-		return inheritTrialFromCustomerProduct({
-			customerProduct: currentCustomerProduct,
-			currentEpochMs,
-		});
-	}
+	// // For free products, inherit trial from current customer product
+	// if (!newProductIsPaidRecurring && currentCustomerProduct) {
+	// 	return inheritTrialFromCustomerProduct({
+	// 		customerProduct: currentCustomerProduct,
+	// 		currentEpochMs,
+	// 	});
+	// }
 
 	// Apply product's trial config (upgrade or fresh attach) with dedup check
 	return applyProductTrialConfig({

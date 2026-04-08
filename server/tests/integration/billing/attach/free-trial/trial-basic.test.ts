@@ -20,6 +20,7 @@ import {
 	expectProductActive,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
+import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
 import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
 import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -225,5 +226,84 @@ test.concurrent(`${chalk.yellowBright("trial-basic 5: free to trial product")}`,
 		org: ctx.org,
 		env: ctx.env,
 		flags: { checkTrialing: true },
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Free product to free product with trial
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer has a free product (no Stripe subscription)
+ * - Attach baseWithTrial (free product with 14-day trial, no card required)
+ *
+ * Expected Result:
+ * - Free product is replaced by trial product
+ * - Product is trialing with correct end date
+ * - No Stripe subscription (both products are free)
+ * - Feature balance reflects the new product's included usage
+ */
+test.concurrent(`${chalk.yellowBright("trial-basic 6: free product to free product with trial")}`, async () => {
+	const customerId = "trial-basic-free-to-free-trial";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const free = products.base({
+		id: "free",
+		items: [messagesItem],
+	});
+
+	const trialMessagesItem = items.monthlyMessages({ includedUsage: 500 });
+	const freeWithTrial = products.baseWithTrial({
+		id: "free-trial",
+		items: [trialMessagesItem],
+		trialDays: 14,
+		cardRequired: false,
+	});
+
+	const { autumnV1, ctx, advancedTo } = await initScenario({
+		customerId,
+		setup: [s.customer({}), s.products({ list: [free, freeWithTrial] })],
+		actions: [s.billing.attach({ productId: free.id })],
+	});
+
+	// Attach the free trial product (upgrade from free → free with trial)
+	await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: freeWithTrial.id,
+		redirect_mode: "if_required",
+	});
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// Verify product states
+	await expectCustomerProducts({
+		customer,
+		active: [freeWithTrial.id],
+		notPresent: [free.id],
+	});
+
+	// Verify product is trialing with correct end date
+	await expectProductTrialing({
+		customer,
+		productId: freeWithTrial.id,
+		trialEndsAt: advancedTo + ms.days(14),
+	});
+
+	// Verify feature balance reflects new product
+	expectCustomerFeatureCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		includedUsage: 500,
+		balance: 500,
+		usage: 0,
+	});
+
+	// Verify no Stripe subscription (both products are free)
+	await expectNoStripeSubscription({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });
