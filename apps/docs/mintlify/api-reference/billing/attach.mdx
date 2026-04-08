@@ -316,6 +316,10 @@ This is useful for attaching custom metadata to the Stripe subscription created 
   Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
 </DynamicParamField>
 
+<DynamicParamField body="billing_cycle_anchor" type="any">
+  Reset the billing cycle anchor immediately with 'now'.
+</DynamicParamField>
+
 <DynamicParamField body="plan_schedule" type="'immediate' | 'end_of_cycle'">
   When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
 </DynamicParamField>

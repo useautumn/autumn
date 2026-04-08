@@ -15,6 +15,13 @@ const CHECKOUT_PORT = 3001 + portOffset;
 const skipWorkers = worktreeNum > 1;
 const isProductionMode = process.argv.includes("--production");
 
+const envFile = process.env.ENV_FILE ?? ".env";
+const viteAppEnv = envFile.includes(".env.prod")
+	? "prod"
+	: envFile.includes(".env.staging")
+		? "staging"
+		: "dev";
+
 /**
  * Read environment variable from .env file
  */
@@ -183,11 +190,12 @@ async function startDev() {
 
 		const concurrentlyProc = Bun.spawn(shellArgs, {
 			cwd: projectRoot,
-			env: {
-				...process.env,
-				VITE_PORT: VITE_PORT.toString(),
-				SERVER_PORT: SERVER_PORT.toString(),
-				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
+		env: {
+			...process.env,
+			VITE_PORT: VITE_PORT.toString(),
+			SERVER_PORT: SERVER_PORT.toString(),
+			CHECKOUT_PORT: CHECKOUT_PORT.toString(),
+			VITE_APP_ENV: viteAppEnv,
 				...(worktreeNum > 1 && {
 					CLIENT_URL: `http://localhost:${VITE_PORT}`,
 					BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,

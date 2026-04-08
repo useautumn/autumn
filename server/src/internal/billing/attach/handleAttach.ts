@@ -5,7 +5,7 @@ import {
 	applyResponseVersionChanges,
 } from "../../../../../shared/api/versionUtils/versionUtils";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { buildBillingLockKey } from "../../billing/utils/buildBillingLockKey";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { checkStripeConnections } from "../../customers/attach/attachRouter";
 import { getAttachParams } from "../../customers/attach/attachUtils/attachParams/getAttachParams";
 import { getAttachBranch } from "../../customers/attach/attachUtils/getAttachBranch";

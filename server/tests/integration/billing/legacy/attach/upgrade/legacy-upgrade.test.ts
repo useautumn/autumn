@@ -307,3 +307,80 @@ test.concurrent(`${chalk.yellowBright("legacy-upgrade 3: upgrade monthly to annu
 		-Math.log10(toMilliseconds.days(1)),
 	);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 4: Upgrade from free (no prices) to $0/month with usage-based prices
+//
+// Scenario:
+// - Free product with no prices, just a feature (Messages, 50 included)
+// - Product with $0/month base + consumable messages ($0.10/unit overage)
+// - Attach free product
+// - Upgrade to $0/month + usage product
+//
+// Expected:
+// - Switch happens immediately (free → $0 usage plan is always upgrade)
+// - Customer has the new product active with correct features
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("legacy-upgrade 4: free (no prices) to $0/month with usage-based prices")}`, async () => {
+	const customerId = "legacy-upgrade-free-to-zero-usage";
+
+	const zeroMonthlyPrice = items.monthlyPrice({ price: 0 });
+
+	const free = products.base({
+		id: "free",
+		items: [
+			zeroMonthlyPrice,
+			items.consumableMessages({ includedUsage: 0, price: 0.5 }),
+		],
+	});
+
+	const usagePlan = products.base({
+		id: "usage-plan",
+		items: [
+			zeroMonthlyPrice,
+			items.consumableMessages({ includedUsage: 0, price: 0.1 }),
+		],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [free, usagePlan] }),
+		],
+		actions: [s.attach({ productId: free.id })],
+	});
+
+	// Verify on free plan
+	const customerBefore =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer: customerBefore,
+		active: [free.id],
+	});
+
+	// Upgrade to $0/month + usage plan (should be immediate)
+	await autumnV1.attach({
+		customer_id: customerId,
+		product_id: usagePlan.id,
+	});
+
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+	// New plan should be active immediately, free should be gone
+	await expectCustomerProducts({
+		customer: customerAfter,
+		active: [usagePlan.id],
+		notPresent: [free.id],
+	});
+
+	// Verify consumable messages feature
+	expectCustomerFeatureCorrect({
+		customer: customerAfter,
+		featureId: TestFeature.Messages,
+		includedUsage: 0,
+		balance: 0,
+		usage: 0,
+	});
+});

@@ -21,6 +21,7 @@ export const AttachFormSchema = z.object({
 	billingBehavior: z.custom<BillingBehavior>().nullable(),
 	redirectMode: RedirectModeSchema,
 	newBillingSubscription: z.boolean(),
+	resetBillingCycle: z.boolean(),
 	discounts: z.custom<FormDiscount[]>(),
 });
 

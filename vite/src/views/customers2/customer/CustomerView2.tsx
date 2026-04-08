@@ -143,7 +143,7 @@ export default function CustomerView2() {
 								</div>
 								<SelectedEntityDetails />
 							</div>
-							<div className="flex flex-col gap-12 w-full">
+							<div className="flex flex-col gap-16 w-full">
 								<CustomerPlansSection />
 								<CustomerFeatureUsageTable />
 								{!entityId && <CustomerUsageAnalyticsTable />}

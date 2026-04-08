@@ -1,5 +1,4 @@
-import type { BillingContext } from "@autumn/shared";
-import type { StripeSubscriptionAction } from "@autumn/shared";
+import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
 
 export const willStripeSubscriptionUpdateCreateInvoice = ({
@@ -11,6 +10,13 @@ export const willStripeSubscriptionUpdateCreateInvoice = ({
 }): boolean => {
 	const actionType = stripeSubscriptionAction?.type;
 	if (actionType !== "update") return false;
+
+	// if (
+	// 	billingContext.requestedBillingCycleAnchor !== undefined &&
+	// 	billingContext.billingCycleAnchorMs === "now"
+	// ) {
+	// 	return true;
+	// }
 
 	const { isTrialing, willBeTrialing } = getTrialStateTransition({
 		billingContext,

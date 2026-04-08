@@ -45,3 +45,11 @@ export const orgDisableStripeWrites = ({ ctx }: { ctx: SharedContext }) => {
 export const orgPersistFreeOverage = ({ org }: { org: Organization }) => {
 	return org.config.persist_free_overage ?? false;
 };
+
+export const shouldForwardCustomerMetadata = ({
+	org,
+}: {
+	org: Organization;
+}) => {
+	return org.config.forward_customer_metadata;
+};

@@ -11,6 +11,16 @@ import { BillingType } from "../../../models/productModels/priceModels/priceEnum
 import type { Price } from "../../../models/productModels/priceModels/priceModels";
 import { getBillingType } from "../priceUtils";
 
+/** Returns the billing interval of the base (fixed) price for a set of prices, or null if none found. */
+export const getProductBaseInterval = ({ prices }: { prices: Price[] }) => {
+	const basePrice = prices.find(isFixedPrice);
+	if (!basePrice) return null;
+	return {
+		interval: basePrice.config.interval as BillingInterval,
+		intervalCount: basePrice.config.interval_count ?? 1,
+	};
+};
+
 export const isOneOffPrice = (
 	price: Price,
 ): price is Price & {

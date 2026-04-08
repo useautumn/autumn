@@ -95,7 +95,7 @@ class UpdateEntityUsageAlertRequestBodyTypedDict(TypedDict):
     threshold_type: UpdateEntityThresholdTypeRequestBody
     r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
     feature_id: NotRequired[str]
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
@@ -110,7 +110,7 @@ class UpdateEntityUsageAlertRequestBody(BaseModel):
     r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
 
     feature_id: Optional[str] = None
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
 
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
@@ -663,7 +663,7 @@ class UpdateEntityUsageAlertResponseTypedDict(TypedDict):
     threshold_type: UpdateEntityThresholdTypeResponse
     r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
     feature_id: NotRequired[str]
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
@@ -678,7 +678,7 @@ class UpdateEntityUsageAlertResponse(BaseModel):
     r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
 
     feature_id: Optional[str] = None
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
 
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""

@@ -65,6 +65,10 @@ export type GetOrCreateCustomerAutoTopup = {
    * Optional rate limit to cap how often auto top-ups occur.
    */
   purchaseLimit?: GetOrCreateCustomerPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
 };
 
 export type GetOrCreateCustomerSpendLimit = {
@@ -98,7 +102,7 @@ export type GetOrCreateCustomerThresholdType = ClosedEnum<
 
 export type GetOrCreateCustomerUsageAlert = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**
@@ -242,6 +246,7 @@ export type GetOrCreateCustomerAutoTopup$Outbound = {
   threshold: number;
   quantity: number;
   purchase_limit?: GetOrCreateCustomerPurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
 };
 
 /** @internal */
@@ -257,11 +262,13 @@ export const GetOrCreateCustomerAutoTopup$outboundSchema: z.ZodMiniType<
     purchaseLimit: z.optional(
       z.lazy(() => GetOrCreateCustomerPurchaseLimit$outboundSchema),
     ),
+    invoiceMode: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
     });
   }),
 );
