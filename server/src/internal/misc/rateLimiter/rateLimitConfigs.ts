@@ -165,7 +165,7 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	},
 	[RateLimitType.ListCustomers]: {
 		name: "list_customers",
-		limit: 1,
+		limit: 5,
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Org,
