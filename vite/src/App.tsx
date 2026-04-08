@@ -2,10 +2,16 @@ import * as Sentry from "@sentry/react";
 import { init } from "@squircle/core";
 import * as React from "react";
 import { useEffect } from "react";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { BrowserRouter, Route, Routes, useParams } from "react-router";
 import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
 import { OrgEnvGuard, RootRedirect } from "./hooks/common/useOrgEnv";
+
+// Wrapper to force remount when org_id changes
+function OrgEnvGuardWrapper() {
+	const { org_id } = useParams<{ org_id: string }>();
+	return <OrgEnvGuard key={org_id} />;
+}
 import { useSession } from "./lib/auth-client";
 import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
@@ -71,7 +77,7 @@ export default function App() {
 				<Route path="/" element={<RootRedirect />} />
 
 				{/* Org-scoped routes */}
-				<Route path="/:org_id/:env" element={<OrgEnvGuard />}>
+				<Route path="/:org_id/:env" element={<OrgEnvGuardWrapper />}>
 					{/* Onboarding (separate layout) */}
 					<Route element={<OnboardingLayout />}>
 						<Route path="quickstart" element={<QuickstartView />} />

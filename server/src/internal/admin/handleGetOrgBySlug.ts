@@ -1,4 +1,4 @@
-import { organizations } from "@autumn/shared";
+import { organizations, RecaseError, ErrCode } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
@@ -18,7 +18,11 @@ export const handleGetOrgBySlug = createRoute({
 		const slug = c.req.query("slug");
 
 		if (!slug) {
-			return c.json({ error: "slug is required" }, 400);
+			throw new RecaseError({
+				message: "slug is required",
+				code: ErrCode.InvalidInputs,
+				statusCode: 400,
+			});
 		}
 
 		const org = await db.query.organizations.findFirst({
@@ -27,7 +31,11 @@ export const handleGetOrgBySlug = createRoute({
 		});
 
 		if (!org) {
-			return c.json({ error: "Organization not found" }, 404);
+			throw new RecaseError({
+				message: "Organization not found",
+				code: ErrCode.OrgNotFound,
+				statusCode: 404,
+			});
 		}
 
 		return c.json({ orgId: org.id });
