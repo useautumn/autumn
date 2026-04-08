@@ -6608,6 +6608,9 @@ paths:
         flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         (optional)
 
+        @param noBillingChanges - If true, skips any billing changes for the
+        attach operation. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and
         payment URL (if checkout required).
@@ -7020,6 +7023,9 @@ paths:
                   description: Key-value metadata to attach to the Stripe subscription, invoice,
                     and checkout session created during this attach flow. Keys
                     prefixed with 'autumn_' are reserved and will be stripped.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, skips any billing changes for the attach operation.
               required:
                 - customer_id
                 - plan_id
@@ -7754,6 +7760,9 @@ paths:
         flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         (optional)
 
+        @param noBillingChanges - If true, skips any billing changes for the
+        attach operation. (optional)
+
 
         @returns A preview response with line items, totals, and effective dates
         for the proposed changes.
@@ -8166,6 +8175,9 @@ paths:
                   description: Key-value metadata to attach to the Stripe subscription, invoice,
                     and checkout session created during this attach flow. Keys
                     prefixed with 'autumn_' are reserved and will be stripped.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, skips any billing changes for the attach operation.
               required:
                 - customer_id
                 - plan_id
@@ -11071,6 +11083,9 @@ paths:
                   description: Key-value metadata to attach to the Stripe subscription, invoice,
                     and checkout session created during this attach flow. Keys
                     prefixed with 'autumn_' are reserved and will be stripped.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, skips any billing changes for the attach operation.
               required:
                 - customer_id
               title: SetupPaymentParams
