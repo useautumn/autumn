@@ -4,7 +4,7 @@
 import { AppEnv } from "@autumn/shared";
 import { Check } from "lucide-react";
 import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useLocation, useNavigate } from "react-router";
 
 import {
 	DropdownMenu,
@@ -13,12 +13,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
-import { envToPath } from "@/utils/genUtils";
+import { buildOrgEnvPath, envToPath, getOrgEnvFromPath } from "@/utils/genUtils";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 import { StaticEnvPill } from "./env-dropdown/StaticEnvPill";
 
 export const useEnvChange = () => {
 	const navigate = useNavigate();
+	const location = useLocation();
 
 	const handleEnvChange = (targetEnv: AppEnv, reset?: boolean) => {
 		const newPath = envToPath(targetEnv, location.pathname);
@@ -29,10 +30,14 @@ export const useEnvChange = () => {
 			const url = tab ? `${newPath}?tab=${encodeURIComponent(tab)}` : newPath;
 			navigate(url);
 		} else {
-			navigate(
-				targetEnv === AppEnv.Sandbox ? "/sandbox/products" : "/products",
-			);
+			const { orgId } = getOrgEnvFromPath(location.pathname);
+			if (orgId) {
+				navigate(buildOrgEnvPath({ orgId, env: targetEnv, path: '/products' }));
+			} else {
+				navigate('/');
+			}
 		}
+		localStorage.setItem('autumn:lastEnv', targetEnv === AppEnv.Sandbox ? 'sandbox' : 'live');
 	};
 
 	return handleEnvChange;

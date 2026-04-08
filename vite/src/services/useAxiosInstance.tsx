@@ -4,6 +4,7 @@ import axios from "axios";
 import { useMemo } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
+import { getOrgEnvFromPath } from "@/utils/genUtils";
 
 const defaultParams = {
 	isAuth: true,
@@ -64,7 +65,13 @@ export function useAxiosInstance(params?: {
 									organizationId: nextOrg.id,
 								});
 								// Redirect to products page of the new organization
-								window.location.href = `/${currentEnv === AppEnv.Sandbox ? "sandbox" : "production"}/products`;
+								const { orgId, env } = getOrgEnvFromPath(window.location.pathname);
+								if (orgId) {
+									const envStr = env === AppEnv.Sandbox ? 'sandbox' : 'live';
+									window.location.href = `/${nextOrg.id}/${envStr}/products`;
+								} else {
+									window.location.href = '/';
+								}
 								return Promise.reject(
 									new Error("Redirecting to available organization"),
 								);

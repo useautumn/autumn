@@ -34,8 +34,8 @@ export const InviteNotifications = () => {
 				await authClient.organization.setActive({
 					organizationId: invite.organization.id,
 				});
-
-				window.location.reload();
+				const lastEnv = localStorage.getItem('autumn:lastEnv') || 'sandbox';
+				window.location.href = `/${invite.organization.id}/${lastEnv}/customers`;
 			} else {
 				await authClient.organization.rejectInvitation({
 					invitationId: invite.id,

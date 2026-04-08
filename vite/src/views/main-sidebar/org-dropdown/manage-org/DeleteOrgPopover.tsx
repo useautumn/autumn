@@ -10,7 +10,8 @@ import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
 import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { getBackendErr } from "@/utils/genUtils";
+import { AppEnv } from "@autumn/shared";
+import { getBackendErr, getOrgEnvFromPath } from "@/utils/genUtils";
 import { useMemberships } from "../hooks/useMemberships";
 
 export const DeleteOrgPopover = () => {
@@ -57,7 +58,9 @@ export const DeleteOrgPopover = () => {
 			throw error;
 		}
 
-		window.location.reload();
+		const { env } = getOrgEnvFromPath(window.location.pathname);
+		const envStr = env === AppEnv.Sandbox ? 'sandbox' : 'live';
+		window.location.href = `/${otherOrg!.id}/${envStr}/customers`;
 	};
 	const handleDeleteClicked = async () => {
 		setDeleting(true);

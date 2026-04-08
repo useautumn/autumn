@@ -26,8 +26,40 @@ export function OrgEnvGuard() {
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
 
-  // Validate env
   const isValidEnv = env === "live" || env === "sandbox";
+  const orgId = org_id ?? "";
+  const appEnv = env === "sandbox" ? AppEnv.Sandbox : AppEnv.Live;
+
+  // Compute these unconditionally (safe even if session/orgList are null)
+  const userOrgIds = orgList?.map((o) => o.id) ?? [];
+  const isInUserOrgs = userOrgIds.includes(orgId);
+  const isAlreadyActive = session?.session?.activeOrganizationId === orgId;
+  const isAdmin =
+    session?.user?.role === "admin" || notNullish(session?.session?.impersonatedBy);
+
+  // ALL useEffect hooks MUST be before any early returns
+  useEffect(() => {
+    if (isValidEnv) {
+      localStorage.setItem("autumn:lastEnv", env!);
+    }
+  }, [env, isValidEnv]);
+
+  useEffect(() => {
+    if (isInUserOrgs && !isAlreadyActive && !syncing && !sessionPending && !orgListPending) {
+      setSyncing(true);
+      authClient.organization
+        .setActive({ organizationId: orgId })
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ["org"] });
+          setSyncing(false);
+        })
+        .catch(() => {
+          setSyncing(false);
+        });
+    }
+  }, [isInUserOrgs, isAlreadyActive, orgId, syncing, queryClient, sessionPending, orgListPending]);
+
+  // NOW safe to do early returns
   if (!isValidEnv) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -39,63 +71,22 @@ export function OrgEnvGuard() {
     );
   }
 
-  // Show loading while session/org list loads
   if (sessionPending || orgListPending) {
     return <LoadingScreen />;
   }
 
-  // No session - redirect to sign in
   if (!session) {
     return <Navigate to="/sign-in" />;
   }
 
-  const orgId = org_id!;
-  const appEnv = env === "sandbox" ? AppEnv.Sandbox : AppEnv.Live;
-
-  // Check if user is admin
-  const isAdmin =
-    session.user.role === "admin" || notNullish(session.session.impersonatedBy);
-
-  // Check if org_id is in user's org list
-  const userOrgIds = orgList?.map((o) => o.id) ?? [];
-  const isInUserOrgs = userOrgIds.includes(orgId);
-
-  // Org is already active
-  const isAlreadyActive = session.session.activeOrganizationId === orgId;
-
-  useEffect(() => {
-    // Store env in localStorage on successful render
-    localStorage.setItem("autumn:lastEnv", env);
-  }, [env]);
-
-  useEffect(() => {
-    // If org is in list but not active, set it active
-    if (isInUserOrgs && !isAlreadyActive && !syncing) {
-      setSyncing(true);
-      authClient.organization
-        .setActive({ organizationId: orgId })
-        .then(() => {
-          // Invalidate org query to force refetch
-          queryClient.invalidateQueries({ queryKey: ["org"] });
-          setSyncing(false);
-        })
-        .catch(() => {
-          setSyncing(false);
-        });
-    }
-  }, [isInUserOrgs, isAlreadyActive, orgId, syncing, queryClient]);
-
-  // Show loading while syncing org
   if (syncing) {
     return <LoadingScreen />;
   }
 
-  // Org is in list and active (or just became active) - render outlet
   if (isInUserOrgs) {
     return <Outlet />;
   }
 
-  // Not in org list but user is admin - redirect to impersonate
   if (isAdmin) {
     const redirectPath = buildOrgEnvPath({
       orgId,
@@ -109,7 +100,6 @@ export function OrgEnvGuard() {
     );
   }
 
-  // Not in org list and not admin - fall back to first org
   if (orgList && orgList.length > 0) {
     const firstOrgId = orgList[0].id;
     return (
@@ -123,7 +113,6 @@ export function OrgEnvGuard() {
     );
   }
 
-  // No orgs at all - redirect to sign in
   return <Navigate to="/sign-in" />;
 }
 

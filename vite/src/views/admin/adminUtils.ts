@@ -63,9 +63,11 @@ export const impersonateUser = async ({
 
 	if (organizationId) {
 		await authClient.organization.setActive({ organizationId });
+		const lastEnv = localStorage.getItem('autumn:lastEnv') || 'sandbox';
+		window.location.href = `/${organizationId}/${lastEnv}/customers`;
+	} else {
+		window.location.reload();
 	}
-
-	window.location.reload();
 };
 
 export const getCusEntHoverTexts = ({
