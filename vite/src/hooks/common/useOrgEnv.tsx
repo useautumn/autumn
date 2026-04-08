@@ -30,6 +30,7 @@ export function OrgEnvGuard() {
 	// Slug resolution state
 	const [resolvedOrgId, setResolvedOrgId] = useState<string | null>(null);
 	const [slugResolving, setSlugResolving] = useState(false);
+	const [slugResolutionAttempted, setSlugResolutionAttempted] = useState(false);
 
 	const isValidEnv = env === "live" || env === "sandbox";
 	const orgId = org_id ?? "";
@@ -56,7 +57,7 @@ export function OrgEnvGuard() {
 	console.log("[OrgEnvGuard] URL orgId:", orgId, "| isSlug:", isSlug);
 	console.log("[OrgEnvGuard] matchedOrg:", matchedOrg?.id ?? "none", "| effectiveOrgId:", effectiveOrgId);
 	console.log("[OrgEnvGuard] isInUserOrgs:", isInUserOrgs, "| isAlreadyActive:", isAlreadyActive, "| isAdmin:", isAdmin);
-	console.log("[OrgEnvGuard] resolvedOrgId:", resolvedOrgId, "| slugResolving:", slugResolving, "| syncing:", syncing, "| syncError:", syncError);
+	console.log("[OrgEnvGuard] resolvedOrgId:", resolvedOrgId, "| slugResolving:", slugResolving, "| slugResolutionAttempted:", slugResolutionAttempted, "| syncing:", syncing, "| syncError:", syncError);
 	console.log("[OrgEnvGuard] session activeOrgId:", session?.session?.activeOrganizationId, "| user role:", session?.user?.role, "| impersonatedBy:", session?.session?.impersonatedBy);
 	console.log("[OrgEnvGuard] orgList:", orgList?.map(o => ({ id: o.id, slug: o.slug })));
 
@@ -73,12 +74,12 @@ export function OrgEnvGuard() {
 	useEffect(() => {
 		console.log("[OrgEnvGuard:slugResolve] Effect triggered — isSlug:", isSlug, "matchedOrg:", !!matchedOrg, "resolvedOrgId:", resolvedOrgId, "slugResolving:", slugResolving, "isAdmin:", isAdmin, "sessionPending:", sessionPending, "orgListPending:", orgListPending);
 
-		if (!isSlug) { console.log("[OrgEnvGuard:slugResolve] Skipping: not a slug"); return; }
-		if (matchedOrg) { console.log("[OrgEnvGuard:slugResolve] Skipping: already matched in org list as", matchedOrg.id); return; }
-		if (resolvedOrgId) { console.log("[OrgEnvGuard:slugResolve] Skipping: already resolved to", resolvedOrgId); return; }
+		if (!isSlug) { console.log("[OrgEnvGuard:slugResolve] Skipping: not a slug"); setSlugResolutionAttempted(true); return; }
+		if (matchedOrg) { console.log("[OrgEnvGuard:slugResolve] Skipping: already matched in org list as", matchedOrg.id); setSlugResolutionAttempted(true); return; }
+		if (resolvedOrgId) { console.log("[OrgEnvGuard:slugResolve] Skipping: already resolved to", resolvedOrgId); setSlugResolutionAttempted(true); return; }
 		if (slugResolving) { console.log("[OrgEnvGuard:slugResolve] Skipping: already resolving"); return; }
 		if (sessionPending || orgListPending) { console.log("[OrgEnvGuard:slugResolve] Skipping: still loading session/orgList"); return; }
-		if (!isAdmin) { console.log("[OrgEnvGuard:slugResolve] Skipping: not admin, can't resolve arbitrary slugs"); return; }
+		if (!isAdmin) { console.log("[OrgEnvGuard:slugResolve] Skipping: not admin, can't resolve arbitrary slugs"); setSlugResolutionAttempted(true); return; }
 
 		console.log("[OrgEnvGuard:slugResolve] Starting slug resolution for:", orgId);
 
@@ -89,6 +90,7 @@ export function OrgEnvGuard() {
 		if (slugMap[orgId]) {
 			console.log("[OrgEnvGuard:slugResolve] Found in localStorage cache:", slugMap[orgId]);
 			setResolvedOrgId(slugMap[orgId]);
+			setSlugResolutionAttempted(true);
 			return;
 		}
 
@@ -112,12 +114,14 @@ export function OrgEnvGuard() {
 					setResolvedOrgId(data.orgId);
 				}
 				setSlugResolving(false);
+				setSlugResolutionAttempted(true);
 			})
 			.catch((error) => {
 				console.log("[OrgEnvGuard:slugResolve] API fetch failed:", error);
 				setSlugResolving(false);
+				setSlugResolutionAttempted(true);
 			});
-	}, [isSlug, matchedOrg, resolvedOrgId, slugResolving, isAdmin, orgId, sessionPending, orgListPending]);
+	}, [isSlug, matchedOrg, resolvedOrgId, slugResolving, slugResolutionAttempted, isAdmin, orgId, sessionPending, orgListPending]);
 
 	// Effect for syncing active organization
 	useEffect(() => {
@@ -205,7 +209,17 @@ export function OrgEnvGuard() {
 
 	// If slug couldn't be resolved and we're done loading, redirect to first org
 	if (isSlug && !matchedOrg && !resolvedOrgId && !slugResolving) {
-		console.log("[OrgEnvGuard:render] Unresolvable slug, redirecting to first org");
+		// If admin and we haven't attempted resolution yet, wait for the effect to fire
+		if (isAdmin && !slugResolutionAttempted) {
+			console.log("[OrgEnvGuard:render] Admin slug resolution pending — waiting for effect to fire");
+			return (
+				<div className="h-screen w-full flex items-center justify-center bg-outer-background">
+					<LoadingScreen />
+				</div>
+			);
+		}
+		// Either non-admin (can't resolve arbitrary slugs) or admin whose resolution already failed
+		console.log("[OrgEnvGuard:render] Unresolvable slug (attempted:", slugResolutionAttempted, ") — redirecting to first org");
 		if (orgList && orgList.length > 0) {
 			return <Navigate to={buildOrgEnvPath({ orgId: orgList[0].id, env: appEnv, path: "/customers" })} />;
 		}
