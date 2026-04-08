@@ -2,10 +2,10 @@ import { AppEnv } from "@autumn/shared";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
-  Navigate,
-  Outlet,
-  useLocation,
-  useParams,
+	Navigate,
+	Outlet,
+	useLocation,
+	useParams,
 } from "react-router";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { authClient, useListOrganizations, useSession } from "@/lib/auth-client";
@@ -14,161 +14,237 @@ import { notNullish, getOrgEnvFromPath, buildOrgEnvPath } from "@/utils/genUtils
 export { getOrgEnvFromPath, buildOrgEnvPath } from "@/utils/genUtils";
 
 export const useOrgId = () => {
-  const { pathname } = useLocation();
-  const { orgId } = getOrgEnvFromPath(pathname);
-  return orgId;
+	const { pathname } = useLocation();
+	const { orgId } = getOrgEnvFromPath(pathname);
+	return orgId;
 };
 
 export function OrgEnvGuard() {
-  const { org_id, env } = useParams<{ org_id: string; env: string }>();
-  const { data: session, isPending: sessionPending } = useSession();
-  const { data: orgList, isPending: orgListPending } = useListOrganizations();
-  const queryClient = useQueryClient();
-  const [syncing, setSyncing] = useState(false);
-  const [syncError, setSyncError] = useState(false);
+	const { org_id, env } = useParams<{ org_id: string; env: string }>();
+	const { data: session, isPending: sessionPending } = useSession();
+	const { data: orgList, isPending: orgListPending } = useListOrganizations();
+	const queryClient = useQueryClient();
+	const [syncing, setSyncing] = useState(false);
+	const [syncError, setSyncError] = useState(false);
 
-  const isValidEnv = env === "live" || env === "sandbox";
-  const orgId = org_id ?? "";
-  const appEnv = env === "sandbox" ? AppEnv.Sandbox : AppEnv.Live;
+	// Slug resolution state
+	const [resolvedOrgId, setResolvedOrgId] = useState<string | null>(null);
+	const [slugResolving, setSlugResolving] = useState(false);
 
-  // Compute these unconditionally (safe even if session/orgList are null)
-  const userOrgIds = orgList?.map((o) => o.id) ?? [];
-  const isInUserOrgs = userOrgIds.includes(orgId);
-  const isAlreadyActive = session?.session?.activeOrganizationId === orgId;
-  const isAdmin =
-    session?.user?.role === "admin" || notNullish(session?.session?.impersonatedBy);
+	const isValidEnv = env === "live" || env === "sandbox";
+	const orgId = org_id ?? "";
+	const appEnv = env === "sandbox" ? AppEnv.Sandbox : AppEnv.Live;
 
-  // ALL useEffect hooks MUST be before any early returns
-  useEffect(() => {
-    if (isValidEnv) {
-      localStorage.setItem("autumn:lastEnv", env!);
-    }
-  }, [env, isValidEnv]);
+	// Determine if URL contains a slug or an org ID (slugs are < 15 chars)
+	const isSlug = orgId.length > 0 && orgId.length < 15;
 
-  useEffect(() => {
-    if (isInUserOrgs && !isAlreadyActive && !syncing && !syncError && !sessionPending && !orgListPending) {
-      setSyncing(true);
-      authClient.organization
-        .setActive({ organizationId: orgId })
-        .then(() => {
-          queryClient.invalidateQueries({ queryKey: ["org"] });
-          setSyncing(false);
-        })
-        .catch(() => {
-          setSyncing(false);
-          setSyncError(true);
-        });
-    }
-  }, [isInUserOrgs, isAlreadyActive, orgId, syncing, syncError, queryClient, sessionPending, orgListPending]);
+	// Try to match from org list (by slug or by id)
+	const matchedOrg = isSlug
+		? orgList?.find((o) => o.slug === orgId)
+		: orgList?.find((o) => o.id === orgId);
 
-  // NOW safe to do early returns
-  if (!isValidEnv) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-t1 mb-2">404</h1>
-          <p className="text-t3">Invalid environment. Use "live" or "sandbox".</p>
-        </div>
-      </div>
-    );
-  }
+	// The actual org ID to use for setActive and API calls
+	const effectiveOrgId = matchedOrg?.id ?? resolvedOrgId ?? (isSlug ? null : orgId);
 
-  if (sessionPending || orgListPending) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-outer-background">
-        <LoadingScreen />
-      </div>
-    );
-  }
+	// Update existing computed values to use effectiveOrgId
+	const isInUserOrgs = !!matchedOrg;
+	const isAlreadyActive = session?.session?.activeOrganizationId === effectiveOrgId;
+	const isAdmin =
+		session?.user?.role === "admin" || notNullish(session?.session?.impersonatedBy);
 
-  if (!session) {
-    return <Navigate to="/sign-in" />;
-  }
+	// ALL useEffect hooks MUST be before any early returns
 
-  if (syncing) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-outer-background">
-        <LoadingScreen />
-      </div>
-    );
-  }
+	// Store env in localStorage on successful render
+	useEffect(() => {
+		if (isValidEnv) {
+			localStorage.setItem("autumn:lastEnv", env!);
+		}
+	}, [env, isValidEnv]);
 
-  if (syncError) {
-    // Fall back to first org if sync failed
-    if (orgList && orgList.length > 0) {
-      return <Navigate to={buildOrgEnvPath({ orgId: orgList[0].id, env: appEnv, path: "/customers" })} />;
-    }
-    return <Navigate to="/sign-in" />;
-  }
+	// Effect for admin slug resolution via API
+	useEffect(() => {
+		// Only resolve slugs that aren't in the user's org list
+		if (!isSlug || matchedOrg || resolvedOrgId || slugResolving || sessionPending || orgListPending) return;
+		// Only admins can resolve arbitrary slugs
+		if (!isAdmin) return;
 
-  if (isInUserOrgs) {
-    return <Outlet />;
-  }
+		// Check localStorage cache first
+		const slugMap: Record<string, string> = JSON.parse(
+			localStorage.getItem("autumn:slugToOrgId") || "{}"
+		);
+		if (slugMap[orgId]) {
+			setResolvedOrgId(slugMap[orgId]);
+			return;
+		}
 
-  if (isAdmin) {
-    const redirectPath = buildOrgEnvPath({
-      orgId,
-      env: appEnv,
-      path: "/customers",
-    });
-    return (
-      <Navigate
-        to={`/impersonate-redirect?org_id=${orgId}&redirect=${encodeURIComponent(redirectPath)}`}
-      />
-    );
-  }
+		// Fetch from admin API
+		setSlugResolving(true);
+		fetch(
+			`${import.meta.env.VITE_BACKEND_URL}/admin/org-by-slug?slug=${encodeURIComponent(orgId)}`,
+			{ credentials: "include" }
+		)
+			.then((res) => {
+				if (!res.ok) throw new Error("Not found");
+				return res.json();
+			})
+			.then((data) => {
+				if (data.orgId) {
+					// Save to localStorage for future use
+					slugMap[orgId] = data.orgId;
+					localStorage.setItem("autumn:slugToOrgId", JSON.stringify(slugMap));
+					setResolvedOrgId(data.orgId);
+				}
+				setSlugResolving(false);
+			})
+			.catch(() => {
+				setSlugResolving(false);
+			});
+	}, [isSlug, matchedOrg, resolvedOrgId, slugResolving, isAdmin, orgId, sessionPending, orgListPending]);
 
-  if (orgList && orgList.length > 0) {
-    const firstOrgId = orgList[0].id;
-    return (
-      <Navigate
-        to={buildOrgEnvPath({
-          orgId: firstOrgId,
-          env: appEnv,
-          path: "/customers",
-        })}
-      />
-    );
-  }
+	// Effect for syncing active organization
+	useEffect(() => {
+		if (!effectiveOrgId) return;
+		const shouldSync = (isInUserOrgs || resolvedOrgId) && !isAlreadyActive && !syncing && !syncError && !sessionPending && !orgListPending;
+		if (shouldSync) {
+			setSyncing(true);
+			authClient.organization
+				.setActive({ organizationId: effectiveOrgId })
+				.then(() => {
+					queryClient.invalidateQueries({ queryKey: ["org"] });
+					setSyncing(false);
+				})
+				.catch(() => {
+					setSyncing(false);
+					setSyncError(true);
+				});
+		}
+	}, [effectiveOrgId, isInUserOrgs, resolvedOrgId, isAlreadyActive, syncing, syncError, queryClient, sessionPending, orgListPending]);
 
-  return <Navigate to="/sign-in" />;
+	// NOW safe to do early returns
+	if (!isValidEnv) {
+		return (
+			<div className="flex h-screen w-full items-center justify-center">
+				<div className="text-center">
+					<h1 className="text-2xl font-bold text-t1 mb-2">404</h1>
+					<p className="text-t3">Invalid environment. Use "live" or "sandbox".</p>
+				</div>
+			</div>
+		);
+	}
+
+	if (sessionPending || orgListPending) {
+		return (
+			<div className="h-screen w-full flex items-center justify-center bg-outer-background">
+				<LoadingScreen />
+			</div>
+		);
+	}
+
+	if (!session) {
+		return <Navigate to="/sign-in" />;
+	}
+
+	if (slugResolving) {
+		return (
+			<div className="h-screen w-full flex items-center justify-center bg-outer-background">
+				<LoadingScreen />
+			</div>
+		);
+	}
+
+	if (syncing) {
+		return (
+			<div className="h-screen w-full flex items-center justify-center bg-outer-background">
+				<LoadingScreen />
+			</div>
+		);
+	}
+
+	if (syncError) {
+		// Fall back to first org if sync failed
+		if (orgList && orgList.length > 0) {
+			return <Navigate to={buildOrgEnvPath({ orgId: orgList[0].id, env: appEnv, path: "/customers" })} />;
+		}
+		return <Navigate to="/sign-in" />;
+	}
+
+	// If slug couldn't be resolved and we're done loading, redirect to first org
+	if (isSlug && !matchedOrg && !resolvedOrgId && !slugResolving) {
+		if (orgList && orgList.length > 0) {
+			return <Navigate to={buildOrgEnvPath({ orgId: orgList[0].id, env: appEnv, path: "/customers" })} />;
+		}
+		return <Navigate to="/sign-in" />;
+	}
+
+	if (isInUserOrgs) {
+		return <Outlet />;
+	}
+
+	if (isAdmin && effectiveOrgId && !isInUserOrgs) {
+		const redirectPath = buildOrgEnvPath({
+			orgId,
+			env: appEnv,
+			path: "/customers",
+		});
+		// Note: orgId (from URL) keeps the slug; effectiveOrgId is the real ID for impersonation
+		return (
+			<Navigate
+				to={`/impersonate-redirect?org_id=${effectiveOrgId}&redirect=${encodeURIComponent(redirectPath)}`}
+			/>
+		);
+	}
+
+	if (orgList && orgList.length > 0) {
+		const firstOrgId = orgList[0].id;
+		return (
+			<Navigate
+				to={buildOrgEnvPath({
+					orgId: firstOrgId,
+					env: appEnv,
+					path: "/customers",
+				})}
+			/>
+		);
+	}
+
+	return <Navigate to="/sign-in" />;
 }
 
 export function RootRedirect() {
-  const { data: session, isPending } = useSession();
-  const { data: orgList, isPending: orgListPending } = useListOrganizations();
+	const { data: session, isPending } = useSession();
+	const { data: orgList, isPending: orgListPending } = useListOrganizations();
 
-  if (isPending || orgListPending) {
-    return (
-      <div className="h-screen w-full flex items-center justify-center bg-outer-background">
-        <LoadingScreen />
-      </div>
-    );
-  }
+	if (isPending || orgListPending) {
+		return (
+			<div className="h-screen w-full flex items-center justify-center bg-outer-background">
+				<LoadingScreen />
+			</div>
+		);
+	}
 
-  if (!session) {
-    return <Navigate to="/sign-in" />;
-  }
+	if (!session) {
+		return <Navigate to="/sign-in" />;
+	}
 
-  // Get org_id: prefer active org, fall back to first org
-  const orgId =
-    session.session.activeOrganizationId ?? orgList?.[0]?.id;
+	// Get org_id: prefer active org, fall back to first org
+	const orgId =
+		session.session.activeOrganizationId ?? orgList?.[0]?.id;
 
-  if (!orgId) {
-    return <Navigate to="/sign-in" />;
-  }
+	if (!orgId) {
+		return <Navigate to="/sign-in" />;
+	}
 
-  // Get env from localStorage or default to sandbox
-  const env = localStorage.getItem("autumn:lastEnv") || "sandbox";
-  const appEnv = env === "live" ? AppEnv.Live : AppEnv.Sandbox;
+	// Get env from localStorage or default to sandbox
+	const env = localStorage.getItem("autumn:lastEnv") || "sandbox";
+	const appEnv = env === "live" ? AppEnv.Live : AppEnv.Sandbox;
 
-  return (
-    <Navigate
-      to={buildOrgEnvPath({
-        orgId,
-        env: appEnv,
-        path: "/customers",
-      })}
-    />
-  );
+	return (
+		<Navigate
+			to={buildOrgEnvPath({
+				orgId,
+				env: appEnv,
+				path: "/customers",
+			})}
+		/>
+	);
 }
