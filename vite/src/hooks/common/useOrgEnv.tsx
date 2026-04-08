@@ -74,7 +74,11 @@ export function OrgEnvGuard() {
   }
 
   if (sessionPending || orgListPending) {
-    return <LoadingScreen />;
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-outer-background">
+        <LoadingScreen />
+      </div>
+    );
   }
 
   if (!session) {
@@ -82,7 +86,11 @@ export function OrgEnvGuard() {
   }
 
   if (syncing) {
-    return <LoadingScreen />;
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-outer-background">
+        <LoadingScreen />
+      </div>
+    );
   }
 
   if (syncError) {
@@ -131,7 +139,11 @@ export function RootRedirect() {
   const { data: orgList, isPending: orgListPending } = useListOrganizations();
 
   if (isPending || orgListPending) {
-    return <LoadingScreen />;
+    return (
+      <div className="h-screen w-full flex items-center justify-center bg-outer-background">
+        <LoadingScreen />
+      </div>
+    );
   }
 
   if (!session) {
