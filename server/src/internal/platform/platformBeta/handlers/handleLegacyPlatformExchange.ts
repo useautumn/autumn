@@ -170,6 +170,7 @@ export const handleLegacyPlatformExchange = createRoute({
 				name: "Platform API Key",
 				prefix: "am_sk_test",
 				meta: {},
+				expiresAt: null,
 			});
 		}
 
@@ -211,6 +212,7 @@ export const handleLegacyPlatformExchange = createRoute({
 				name: "Platform API Key",
 				prefix: "am_sk_live",
 				meta: {},
+				expiresAt: null,
 			});
 		}
 

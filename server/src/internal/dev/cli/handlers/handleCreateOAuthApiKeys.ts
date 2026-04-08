@@ -113,6 +113,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 				userId,
 				prefix: ApiKeyPrefix.Sandbox,
 				meta,
+				expiresAt: null,
 			}),
 			createKey({
 				db,
@@ -122,6 +123,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 				userId,
 				prefix: ApiKeyPrefix.Live,
 				meta,
+				expiresAt: null,
 			}),
 		]);
 

@@ -13,9 +13,49 @@ import {
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { Input } from "@/components/v2/inputs/Input";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/v2/selects/Select";
+import { DateInputUnix } from "@/components/general/DateInputUnix";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+
+type ExpiryOption = "7d" | "30d" | "60d" | "90d" | "1y" | "custom" | "never";
+
+const EXPIRY_OPTIONS: { label: string; value: ExpiryOption }[] = [
+	{ label: "7 days", value: "7d" },
+	{ label: "30 days", value: "30d" },
+	{ label: "60 days", value: "60d" },
+	{ label: "90 days", value: "90d" },
+	{ label: "1 year", value: "1y" },
+	{ label: "Custom", value: "custom" },
+	{ label: "Never", value: "never" },
+];
+
+const MS_DAY = 24 * 60 * 60 * 1000;
+
+function computeExpiresAt({
+	expiryOption,
+	customDate,
+}: {
+	expiryOption: ExpiryOption;
+	customDate: number | null;
+}): number | null {
+	const now = Date.now();
+	if (expiryOption === "never") return null;
+	if (expiryOption === "custom") return customDate;
+	if (expiryOption === "7d") return now + 7 * MS_DAY;
+	if (expiryOption === "30d") return now + 30 * MS_DAY;
+	if (expiryOption === "60d") return now + 60 * MS_DAY;
+	if (expiryOption === "90d") return now + 90 * MS_DAY;
+	if (expiryOption === "1y") return now + 365 * MS_DAY;
+	return null;
+}
 
 const createApiKeySchema = z.object({
 	name: z.string().min(1, "Name is required"),
@@ -37,6 +77,8 @@ export const CreateApiKeyDialog = ({
 	const [copied, setCopied] = useState(false);
 	const [copiedEnv, setCopiedEnv] = useState(false);
 	const [validationError, setValidationError] = useState<string | null>(null);
+	const [expiryOption, setExpiryOption] = useState<ExpiryOption>("never");
+	const [customDate, setCustomDate] = useState<number | null>(null);
 
 	useEffect(() => {
 		if (open) {
@@ -45,6 +87,8 @@ export const CreateApiKeyDialog = ({
 			setCopied(false);
 			setCopiedEnv(false);
 			setValidationError(null);
+			setExpiryOption("never");
+			setCustomDate(null);
 		} else if (!open) {
 			refetch();
 			setTimeout(() => {
@@ -74,6 +118,8 @@ export const CreateApiKeyDialog = ({
 		}
 	}, [copiedEnv]);
 
+	const isCustomWithNoDate = expiryOption === "custom" && customDate === null;
+
 	const handleCreate = async () => {
 		const result = createApiKeySchema.safeParse({ name });
 		if (!result.success) {
@@ -81,10 +127,15 @@ export const CreateApiKeyDialog = ({
 			return;
 		}
 
+		if (isCustomWithNoDate) return;
+
 		setLoading(true);
 		try {
+			const expires_at = computeExpiresAt({ expiryOption, customDate });
+
 			const { api_key } = await DevService.createAPIKey(axiosInstance, {
-				name: name,
+				name,
+				expires_at,
 			});
 
 			setApiKey(api_key);
@@ -166,28 +217,76 @@ export const CreateApiKeyDialog = ({
 								bounce: 0.15,
 								duration: 0.3,
 							}}
+							className="flex flex-col gap-4"
 						>
-							<p className="mb-2 text-sm text-t3">Name</p>
-							<Input
-								placeholder="Name"
-								value={name}
-								onChange={(e) => setName(e.target.value)}
-								variant={validationError ? "destructive" : undefined}
-								onKeyDown={(e) => {
-									if (
-										e.key === "Enter" &&
-										name.trim() &&
-										!loading &&
-										!validationError
-									) {
-										e.preventDefault();
-										handleCreate();
-									}
-								}}
-							/>
-							{validationError && (
-								<p className="mt-2 text-sm text-red-500">{validationError}</p>
-							)}
+							<div>
+								<p className="mb-2 text-sm text-t3">Name</p>
+								<Input
+									placeholder="Name"
+									value={name}
+									onChange={(e) => setName(e.target.value)}
+									variant={validationError ? "destructive" : undefined}
+									onKeyDown={(e) => {
+										if (
+											e.key === "Enter" &&
+											name.trim() &&
+											!loading &&
+											!validationError &&
+											!isCustomWithNoDate
+										) {
+											e.preventDefault();
+											handleCreate();
+										}
+									}}
+								/>
+								{validationError && (
+									<p className="mt-2 text-sm text-red-500">{validationError}</p>
+								)}
+							</div>
+							<div>
+								<p className="mb-2 text-sm text-t3">Expiration</p>
+								{expiryOption === "custom" ? (
+									<div className="grid grid-cols-[auto_1fr] gap-2 items-center">
+										<Select
+											value={expiryOption}
+											onValueChange={(v) =>
+												setExpiryOption(v as ExpiryOption)
+											}
+										>
+											<SelectTrigger>
+												<SelectValue />
+											</SelectTrigger>
+											<SelectContent>
+												{EXPIRY_OPTIONS.map((opt) => (
+													<SelectItem key={opt.value} value={opt.value}>
+														{opt.label}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+										<DateInputUnix
+											unixDate={customDate}
+											setUnixDate={setCustomDate}
+										/>
+									</div>
+								) : (
+									<Select
+										value={expiryOption}
+										onValueChange={(v) => setExpiryOption(v as ExpiryOption)}
+									>
+										<SelectTrigger className="w-full">
+											<SelectValue />
+										</SelectTrigger>
+										<SelectContent>
+											{EXPIRY_OPTIONS.map((opt) => (
+												<SelectItem key={opt.value} value={opt.value}>
+													{opt.label}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								)}
+							</div>
 						</motion.div>
 					)}
 				</AnimatePresence>
@@ -229,7 +328,7 @@ export const CreateApiKeyDialog = ({
 									onClick={handleCreate}
 									variant="primary"
 									className="cursor-pointer"
-									disabled={!!validationError || !name.trim()}
+									disabled={!!validationError || !name.trim() || isCustomWithNoDate}
 								>
 									Create
 								</Button>

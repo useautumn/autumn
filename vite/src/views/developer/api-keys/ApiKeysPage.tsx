@@ -8,14 +8,28 @@ import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { createAPIKeyTableColumns } from "./components/APIKeyTableColumns";
 import { CreateApiKeyDialog } from "./components/CreateApiKeyDialog";
 
+function sortApiKeys(
+	keys: NonNullable<ReturnType<typeof useDevQuery>["apiKeys"]>,
+) {
+	const now = Date.now();
+	const active = keys.filter((k) => !k.expires_at || k.expires_at > now);
+	const expired = keys.filter((k) => k.expires_at && k.expires_at <= now);
+	return [...active, ...expired];
+}
+
 export const ApiKeysPage = () => {
 	const { apiKeys } = useDevQuery();
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
+	const sortedApiKeys = useMemo(
+		() => sortApiKeys(apiKeys || []),
+		[apiKeys],
+	);
+
 	const columns = useMemo(() => createAPIKeyTableColumns(), []);
 
 	const apiKeyTable = useProductTable({
-		data: apiKeys || [],
+		data: sortedApiKeys,
 		columns,
 		options: {
 			globalFilterFn: "includesString",
@@ -27,7 +41,6 @@ export const ApiKeysPage = () => {
 
 	const hasRows = apiKeyTable.getRowModel().rows.length > 0;
 
-	// Add keyboard shortcut: N to open create API key dialog
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (
@@ -114,3 +127,4 @@ export const ApiKeysPage = () => {
 		</div>
 	);
 };
+

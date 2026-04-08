@@ -4,6 +4,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { ApiKeyService } from "../ApiKeyService.js";
 import {
+	clearSecretKeyCache,
 	getCachedSecretKeyVerification,
 	SECRET_KEY_CACHE_TTL_SECONDS,
 	setCachedSecretKeyVerification,
@@ -16,13 +17,11 @@ export enum ApiKeyPrefix {
 
 function generateApiKey(length = 32, prefix = "") {
 	try {
-		// Define allowed characters (alphanumeric only)
 		const allowedChars =
 			"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 		const array = new Uint8Array(length);
 		crypto.getRandomValues(array);
 
-		// Convert random bytes to alphanumeric string
 		const key = Array.from(array)
 			.map((byte) => allowedChars[byte % allowedChars.length])
 			.join("");
@@ -46,6 +45,7 @@ export const createKey = async ({
 	orgId,
 	prefix,
 	meta,
+	expiresAt,
 }: {
 	db: DrizzleCli;
 	env: AppEnv;
@@ -54,6 +54,7 @@ export const createKey = async ({
 	prefix: string;
 	meta: Record<string, unknown>;
 	userId?: string;
+	expiresAt?: number | null;
 }) => {
 	const apiKey = generateApiKey(42, prefix);
 	const hashedKey = hashApiKey(apiKey);
@@ -65,6 +66,7 @@ export const createKey = async ({
 		name,
 		prefix: apiKey.substring(0, 14),
 		created_at: Date.now(),
+		expires_at: expiresAt ?? null,
 		env,
 		hashed_key: hashedKey,
 		meta,
@@ -92,7 +94,6 @@ export const createHardcodedKey = async ({
 }): Promise<{ key: string; alreadyExists: boolean }> => {
 	const hashedKey = hashApiKey(hardcodedKey);
 
-	// Check if key already exists
 	const existing = await ApiKeyService.verifyAndFetch({
 		db,
 		hashedKey,
@@ -110,6 +111,7 @@ export const createHardcodedKey = async ({
 		name,
 		prefix: hardcodedKey.substring(0, 14),
 		created_at: Date.now(),
+		expires_at: null,
 		env,
 		hashed_key: hashedKey,
 		meta,
@@ -140,10 +142,12 @@ export const verifyKey = async ({
 	});
 
 	if (cached) {
-		return {
-			valid: true,
-			data: cached,
-		};
+		if (cached.expiresAt !== null && cached.expiresAt <= Date.now()) {
+			await clearSecretKeyCache({ hashedKey });
+			return { valid: false, data: null };
+		}
+
+		return { valid: true, data: cached };
 	}
 
 	const data = await ApiKeyService.verifyAndFetch({
@@ -153,20 +157,22 @@ export const verifyKey = async ({
 	});
 
 	if (!data) {
-		return {
-			valid: false,
-			data: null,
-		};
+		return { valid: false, data: null };
 	}
 
-	await setCachedSecretKeyVerification({
-		hashedKey,
-		data,
-		ttl: SECRET_KEY_CACHE_TTL_SECONDS,
-	});
+	if (data.expiresAt !== null && data.expiresAt <= Date.now()) {
+		return { valid: false, data: null };
+	}
 
-	return {
-		valid: true,
-		data: data,
-	};
+	let ttl = SECRET_KEY_CACHE_TTL_SECONDS;
+	if (data.expiresAt !== null) {
+		const secondsUntilExpiry = Math.floor((data.expiresAt - Date.now()) / 1000);
+		ttl = Math.min(SECRET_KEY_CACHE_TTL_SECONDS, secondsUntilExpiry);
+	}
+
+	if (ttl > 0) {
+		await setCachedSecretKeyVerification({ hashedKey, data, ttl });
+	}
+
+	return { valid: true, data };
 };

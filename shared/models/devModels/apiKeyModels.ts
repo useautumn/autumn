@@ -7,6 +7,7 @@ export type ApiKey = {
 	name: string;
 	prefix: string;
 	created_at: number;
+	expires_at: number | null;
 	env: AppEnv;
 	hashed_key: string;
 	meta: any;

@@ -15,6 +15,7 @@ export const apiKeys = pgTable(
 	{
 		id: text().primaryKey().notNull(),
 		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
+		expires_at: numeric({ mode: "number" }),
 		name: text(),
 		prefix: text(),
 		org_id: text("org_id"),
