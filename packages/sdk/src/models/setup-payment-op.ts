@@ -460,6 +460,10 @@ export type SetupPaymentParams = {
    */
   successUrl?: string | undefined;
   /**
+   * Reset the billing cycle anchor immediately with 'now'.
+   */
+  billingCycleAnchor?: "now" | undefined;
+  /**
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
@@ -1051,6 +1055,7 @@ export type SetupPaymentParams$Outbound = {
   subscription_id?: string | undefined;
   discounts?: Array<SetupPaymentAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
+  billing_cycle_anchor?: "now" | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<SetupPaymentCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
@@ -1079,6 +1084,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => SetupPaymentAttachDiscount$outboundSchema)),
     ),
     successUrl: z.optional(z.string()),
+    billingCycleAnchor: z.optional(z.literal("now")),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
       z.array(z.lazy(() => SetupPaymentCustomLineItem$outboundSchema)),
@@ -1101,6 +1107,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       prorationBehavior: "proration_behavior",
       subscriptionId: "subscription_id",
       successUrl: "success_url",
+      billingCycleAnchor: "billing_cycle_anchor",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",

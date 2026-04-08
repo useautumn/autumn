@@ -69,6 +69,24 @@ export const executeStripeSubscriptionOperation = async ({
 
 			const subscriptionHasDefaultPm =
 				stripeSubscription?.default_payment_method;
+			const shouldResetBillingCycleAnchorNow =
+				billingContext.requestedBillingCycleAnchor === "now";
+			// const shouldSkipResetForProrationNone =
+			// 	billingContext.requestedProrationBehavior === "none" &&
+			// 	!billingContext.anchorResetRefund?.noPartialRefund;
+
+			if (shouldResetBillingCycleAnchorNow) {
+				stripeSubscription = await stripeClient.subscriptions.update(
+					subscriptionAction.stripeSubscriptionId,
+					{
+						...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
+						billing_cycle_anchor: "now",
+						proration_behavior: "none",
+						payment_behavior: "error_if_incomplete",
+						expand: ["latest_invoice"],
+					},
+				);
+			}
 
 			return await stripeClient.subscriptions.update(
 				subscriptionAction.stripeSubscriptionId,

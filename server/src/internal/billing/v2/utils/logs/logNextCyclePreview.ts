@@ -46,9 +46,12 @@ export const logBillingPreview = ({
 			billingPreview: {
 				// Immediate charge breakdown
 				total: `${total} ${currency}`,
-				allLineItems: allLineItems.map(formatLineItem).join(" | ") || "none",
+				allLineItems:
+					allLineItems.length > 0 ? allLineItems.map(formatLineItem) : "none",
 				immediateLineItems:
-					immediateLineItems.map(formatLineItem).join(" | ") || "none",
+					immediateLineItems.length > 0
+						? immediateLineItems.map(formatLineItem)
+						: "none",
 
 				// Next cycle calculation
 				nextCycle: {

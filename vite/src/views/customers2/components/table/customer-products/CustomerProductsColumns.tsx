@@ -60,12 +60,12 @@ export const CustomerProductsColumns = [
 	createDateTimeColumn<FullCusProduct>({
 		header: "Created At",
 		accessorKey: "created_at",
-		className: "",
+		withYear: true,
 	}),
 	{
 		id: "actions",
 		header: "",
-		size: 50,
+		size: 40,
 		cell: ({
 			row,
 			table,
@@ -86,6 +86,7 @@ export const CustomerProductsColumns = [
 			const isCanceling = row.original.canceled;
 
 			return (
+			<div className="flex justify-end">
 				<TableDropdownMenuCell>
 					{meta.onTestSheetClick && (
 						<DropdownMenuItem
@@ -130,8 +131,9 @@ export const CustomerProductsColumns = [
 							<Delete size={16} /> Cancel
 						</DropdownMenuItem>
 					)}
-				</TableDropdownMenuCell>
-			);
-		},
+			</TableDropdownMenuCell>
+			</div>
+		);
+	},
 	},
 ];

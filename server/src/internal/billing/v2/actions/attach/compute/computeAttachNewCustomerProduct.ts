@@ -9,6 +9,23 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
+const getScheduledBillingCycleAnchorResetAt = ({
+	requestedBillingCycleAnchor,
+	currentEpochMs,
+}: {
+	requestedBillingCycleAnchor?: number | "now";
+	currentEpochMs: number;
+}) => {
+	if (
+		typeof requestedBillingCycleAnchor === "number" &&
+		requestedBillingCycleAnchor > currentEpochMs
+	) {
+		return requestedBillingCycleAnchor;
+	}
+
+	return null;
+};
+
 /**
  * Creates the new FullCusProduct to insert when attaching a product.
  *
@@ -40,6 +57,7 @@ export const computeAttachNewCustomerProduct = ({
 		billingVersion,
 		transitionConfig,
 		externalId,
+		requestedBillingCycleAnchor,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -106,6 +124,10 @@ export const computeAttachNewCustomerProduct = ({
 			status: isScheduled ? CusProductStatus.Scheduled : undefined,
 			startsAt: isScheduled ? endOfCycleMs : undefined,
 			externalId,
+			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
+				requestedBillingCycleAnchor,
+				currentEpochMs,
+			}),
 		},
 	});
 

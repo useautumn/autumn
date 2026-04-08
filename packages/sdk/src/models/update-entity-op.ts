@@ -48,7 +48,7 @@ export type UpdateEntityThresholdTypeRequestBody = ClosedEnum<
 
 export type UpdateEntityUsageAlertRequestBody = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**
@@ -343,7 +343,7 @@ export type UpdateEntityThresholdTypeResponse = OpenEnum<
 
 export type UpdateEntityUsageAlertResponse = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**

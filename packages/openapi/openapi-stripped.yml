@@ -101,6 +101,10 @@ components:
                       - interval
                       - limit
                     description: Optional rate limit to cap how often auto top-ups occur.
+                  invoice_mode:
+                    type: boolean
+                    description: When true, auto top-up creates a send_invoice invoice instead of
+                      auto-charging.
                 required:
                   - feature_id
                   - threshold
@@ -130,8 +134,7 @@ components:
                 properties:
                   feature_id:
                     type: string
-                    description: The feature ID this alert applies to. If omitted, the alert applies
-                      globally.
+                    description: The feature ID this alert applies to.
                   enabled:
                     type: boolean
                     default: true
@@ -284,6 +287,10 @@ components:
                       - interval
                       - limit
                     description: Optional rate limit to cap how often auto top-ups occur.
+                  invoice_mode:
+                    type: boolean
+                    description: When true, auto top-up creates a send_invoice invoice instead of
+                      auto-charging.
                 required:
                   - feature_id
                   - threshold
@@ -313,8 +320,7 @@ components:
                 properties:
                   feature_id:
                     type: string
-                    description: The feature ID this alert applies to. If omitted, the alert applies
-                      globally.
+                    description: The feature ID this alert applies to.
                   enabled:
                     type: boolean
                     default: true
@@ -1621,6 +1627,10 @@ paths:
                               - interval
                               - limit
                             description: Optional rate limit to cap how often auto top-ups occur.
+                          invoice_mode:
+                            type: boolean
+                            description: When true, auto top-up creates a send_invoice invoice instead of
+                              auto-charging.
                         required:
                           - feature_id
                           - threshold
@@ -1650,8 +1660,7 @@ paths:
                         properties:
                           feature_id:
                             type: string
-                            description: The feature ID this alert applies to. If omitted, the alert applies
-                              globally.
+                            description: The feature ID this alert applies to.
                           enabled:
                             type: boolean
                             default: true
@@ -1888,6 +1897,10 @@ paths:
                                       - interval
                                       - limit
                                     description: Optional rate limit to cap how often auto top-ups occur.
+                                  invoice_mode:
+                                    type: boolean
+                                    description: When true, auto top-up creates a send_invoice invoice instead of
+                                      auto-charging.
                                 required:
                                   - feature_id
                                   - threshold
@@ -1917,8 +1930,7 @@ paths:
                                 properties:
                                   feature_id:
                                     type: string
-                                    description: The feature ID this alert applies to. If omitted, the alert applies
-                                      globally.
+                                    description: The feature ID this alert applies to.
                                   enabled:
                                     type: boolean
                                     default: true
@@ -2448,6 +2460,10 @@ paths:
                               - interval
                               - limit
                             description: Optional rate limit to cap how often auto top-ups occur.
+                          invoice_mode:
+                            type: boolean
+                            description: When true, auto top-up creates a send_invoice invoice instead of
+                              auto-charging.
                         required:
                           - feature_id
                           - threshold
@@ -2477,8 +2493,7 @@ paths:
                         properties:
                           feature_id:
                             type: string
-                            description: The feature ID this alert applies to. If omitted, the alert applies
-                              globally.
+                            description: The feature ID this alert applies to.
                           enabled:
                             type: boolean
                             default: true
@@ -2632,6 +2647,10 @@ paths:
                                 - interval
                                 - limit
                               description: Optional rate limit to cap how often auto top-ups occur.
+                            invoice_mode:
+                              type: boolean
+                              description: When true, auto top-up creates a send_invoice invoice instead of
+                                auto-charging.
                           required:
                             - feature_id
                             - threshold
@@ -2661,8 +2680,7 @@ paths:
                           properties:
                             feature_id:
                               type: string
-                              description: The feature ID this alert applies to. If omitted, the alert applies
-                                globally.
+                              description: The feature ID this alert applies to.
                             enabled:
                               type: boolean
                               default: true
@@ -6481,6 +6499,9 @@ paths:
                   description: Only applicable when the customer has an existing Stripe
                     subscription. If true, creates a new separate subscription
                     instead of merging into the existing one.
+                billing_cycle_anchor:
+                  const: now
+                  description: Reset the billing cycle anchor immediately with 'now'.
                 plan_schedule:
                   enum:
                     - immediate
@@ -7029,8 +7050,7 @@ paths:
                             properties:
                               feature_id:
                                 type: string
-                                description: The feature ID this alert applies to. If omitted, the alert applies
-                                  globally.
+                                description: The feature ID this alert applies to.
                               enabled:
                                 type: boolean
                                 default: true
@@ -7514,6 +7534,9 @@ paths:
                   description: Only applicable when the customer has an existing Stripe
                     subscription. If true, creates a new separate subscription
                     instead of merging into the existing one.
+                billing_cycle_anchor:
+                  const: now
+                  description: Reset the billing cycle anchor immediately with 'now'.
                 plan_schedule:
                   enum:
                     - immediate
@@ -8342,8 +8365,7 @@ paths:
                             properties:
                               feature_id:
                                 type: string
-                                description: The feature ID this alert applies to. If omitted, the alert applies
-                                  globally.
+                                description: The feature ID this alert applies to.
                               enabled:
                                 type: boolean
                                 default: true
@@ -9089,6 +9111,10 @@ paths:
                   description: Action to perform for cancellation. 'cancel_immediately' cancels
                     now with prorated refund, 'cancel_end_of_cycle' cancels at
                     period end, 'uncancel' reverses a pending cancellation.
+                billing_cycle_anchor:
+                  const: now
+                  description: Reset the billing cycle anchor immediately with 'now' or schedule
+                    it for a future Unix timestamp in milliseconds.
                 no_billing_changes:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
@@ -9527,6 +9553,10 @@ paths:
                   description: Action to perform for cancellation. 'cancel_immediately' cancels
                     now with prorated refund, 'cancel_end_of_cycle' cancels at
                     period end, 'uncancel' reverses a pending cancellation.
+                billing_cycle_anchor:
+                  const: now
+                  description: Reset the billing cycle anchor immediately with 'now' or schedule
+                    it for a future Unix timestamp in milliseconds.
                 no_billing_changes:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
@@ -10265,6 +10295,9 @@ paths:
                 success_url:
                   type: string
                   description: URL to redirect to after successful checkout.
+                billing_cycle_anchor:
+                  const: now
+                  description: Reset the billing cycle anchor immediately with 'now'.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -11195,6 +11228,7 @@ paths:
                                 - new
                                 - renew
                                 - upgrade
+                                - update_prepaid_quantity
                                 - downgrade
                                 - cancel
                                 - expired
@@ -11837,8 +11871,7 @@ paths:
                         properties:
                           feature_id:
                             type: string
-                            description: The feature ID this alert applies to. If omitted, the alert applies
-                              globally.
+                            description: The feature ID this alert applies to.
                           enabled:
                             type: boolean
                             default: true
@@ -12183,8 +12216,7 @@ paths:
                           properties:
                             feature_id:
                               type: string
-                              description: The feature ID this alert applies to. If omitted, the alert applies
-                                globally.
+                              description: The feature ID this alert applies to.
                             enabled:
                               type: boolean
                               default: true
@@ -12637,8 +12669,7 @@ paths:
                           properties:
                             feature_id:
                               type: string
-                              description: The feature ID this alert applies to. If omitted, the alert applies
-                                globally.
+                              description: The feature ID this alert applies to.
                             enabled:
                               type: boolean
                               default: true
@@ -12829,8 +12860,7 @@ paths:
                         properties:
                           feature_id:
                             type: string
-                            description: The feature ID this alert applies to. If omitted, the alert applies
-                              globally.
+                            description: The feature ID this alert applies to.
                           enabled:
                             type: boolean
                             default: true
@@ -13166,8 +13196,7 @@ paths:
                           properties:
                             feature_id:
                               type: string
-                              description: The feature ID this alert applies to. If omitted, the alert applies
-                                globally.
+                              description: The feature ID this alert applies to.
                             enabled:
                               type: boolean
                               default: true

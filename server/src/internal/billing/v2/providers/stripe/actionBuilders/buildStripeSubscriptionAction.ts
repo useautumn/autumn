@@ -81,6 +81,7 @@ export const buildStripeSubscriptionAction = ({
 		return buildStripeSubscriptionUpdateAction({
 			ctx,
 			billingContext,
+			autumnBillingPlan,
 			subItemsUpdate,
 			stripeSubscriptionScheduleAction,
 			subscriptionCancelAt,
