@@ -311,6 +311,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
 </DynamicParamField>
 
+<DynamicParamField body="no_billing_changes" type="boolean">
+  If true, skips any billing changes for the attach operation.
+</DynamicParamField>
+
 
 ### Response
 

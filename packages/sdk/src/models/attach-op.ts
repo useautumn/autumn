@@ -537,6 +537,10 @@ export type AttachParams = {
    * Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
    */
   metadata?: { [k: string]: string } | undefined;
+  /**
+   * If true, skips any billing changes for the attach operation.
+   */
+  noBillingChanges?: boolean | undefined;
 };
 
 /**
@@ -1181,6 +1185,7 @@ export type AttachParams$Outbound = {
   carry_over_balances?: AttachCarryOverBalances$Outbound | undefined;
   carry_over_usages?: AttachCarryOverUsages$Outbound | undefined;
   metadata?: { [k: string]: string } | undefined;
+  no_billing_changes?: boolean | undefined;
 };
 
 /** @internal */
@@ -1220,6 +1225,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       z.lazy(() => AttachCarryOverUsages$outboundSchema),
     ),
     metadata: z.optional(z.record(z.string(), z.string())),
+    noBillingChanges: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1240,6 +1246,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       processorSubscriptionId: "processor_subscription_id",
       carryOverBalances: "carry_over_balances",
       carryOverUsages: "carry_over_usages",
+      noBillingChanges: "no_billing_changes",
     });
   }),
 );
