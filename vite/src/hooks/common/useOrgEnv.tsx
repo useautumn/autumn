@@ -25,6 +25,7 @@ export function OrgEnvGuard() {
   const { data: orgList, isPending: orgListPending } = useListOrganizations();
   const queryClient = useQueryClient();
   const [syncing, setSyncing] = useState(false);
+  const [syncError, setSyncError] = useState(false);
 
   const isValidEnv = env === "live" || env === "sandbox";
   const orgId = org_id ?? "";
@@ -45,7 +46,7 @@ export function OrgEnvGuard() {
   }, [env, isValidEnv]);
 
   useEffect(() => {
-    if (isInUserOrgs && !isAlreadyActive && !syncing && !sessionPending && !orgListPending) {
+    if (isInUserOrgs && !isAlreadyActive && !syncing && !syncError && !sessionPending && !orgListPending) {
       setSyncing(true);
       authClient.organization
         .setActive({ organizationId: orgId })
@@ -55,9 +56,10 @@ export function OrgEnvGuard() {
         })
         .catch(() => {
           setSyncing(false);
+          setSyncError(true);
         });
     }
-  }, [isInUserOrgs, isAlreadyActive, orgId, syncing, queryClient, sessionPending, orgListPending]);
+  }, [isInUserOrgs, isAlreadyActive, orgId, syncing, syncError, queryClient, sessionPending, orgListPending]);
 
   // NOW safe to do early returns
   if (!isValidEnv) {
@@ -81,6 +83,14 @@ export function OrgEnvGuard() {
 
   if (syncing) {
     return <LoadingScreen />;
+  }
+
+  if (syncError) {
+    // Fall back to first org if sync failed
+    if (orgList && orgList.length > 0) {
+      return <Navigate to={buildOrgEnvPath({ orgId: orgList[0].id, env: appEnv, path: "/customers" })} />;
+    }
+    return <Navigate to="/sign-in" />;
   }
 
   if (isInUserOrgs) {
@@ -118,9 +128,9 @@ export function OrgEnvGuard() {
 
 export function RootRedirect() {
   const { data: session, isPending } = useSession();
-  const { data: orgList } = useListOrganizations();
+  const { data: orgList, isPending: orgListPending } = useListOrganizations();
 
-  if (isPending) {
+  if (isPending || orgListPending) {
     return <LoadingScreen />;
   }
 
