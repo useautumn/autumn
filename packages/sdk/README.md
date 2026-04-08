@@ -259,6 +259,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
+@param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 * [multiAttach](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
@@ -326,6 +327,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
+@param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 * [previewMultiAttach](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -695,6 +697,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
+@param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 - [`billingMultiAttach`](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
@@ -763,6 +766,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
+@param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 - [`billingPreviewMultiAttach`](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.

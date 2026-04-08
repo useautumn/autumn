@@ -105,6 +105,11 @@ export const setupAttachBillingContext = async ({
 			isTransitionFromFree &&
 			hasPaidRecurringSubscription);
 
+	const skipBillingChanges =
+		orgDisableStripeWrites({ ctx }) ||
+		params.no_billing_changes === true ||
+		params.processor_subscription_id !== undefined;
+
 	const {
 		stripeSubscription,
 		stripeSubscriptionSchedule,
@@ -120,6 +125,7 @@ export const setupAttachBillingContext = async ({
 		contextOverride,
 		params,
 		newBillingSubscription: shouldForceNewSubscription,
+		skipBillingChanges,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
@@ -237,10 +243,7 @@ export const setupAttachBillingContext = async ({
 
 		externalId: params.subscription_id,
 
-		skipBillingChanges:
-			orgDisableStripeWrites({ ctx }) ||
-			params.no_billing_changes === true ||
-			params.processor_subscription_id !== undefined,
+		skipBillingChanges,
 
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,
