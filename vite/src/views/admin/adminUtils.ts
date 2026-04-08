@@ -1,4 +1,5 @@
-import { AppEnv, type {
+import { AppEnv } from "@autumn/shared";
+import type {
 	Entity,
 	EntityRolloverBalance,
 	Feature,
@@ -8,7 +9,7 @@ import { AppEnv, type {
 	Product,
 	ProductV2,
 	Rollover,
-} } from "@autumn/shared";
+} from "@autumn/shared";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
