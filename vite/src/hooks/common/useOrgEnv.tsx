@@ -10,6 +10,7 @@ import {
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { authClient, useListOrganizations, useSession } from "@/lib/auth-client";
 import { notNullish, getOrgEnvFromPath, buildOrgEnvPath } from "@/utils/genUtils";
+import { attemptInstantImpersonation } from "@/views/admin/adminUtils";
 
 export { getOrgEnvFromPath, buildOrgEnvPath } from "@/utils/genUtils";
 
@@ -31,6 +32,10 @@ export function OrgEnvGuard() {
 	const [resolvedOrgId, setResolvedOrgId] = useState<string | null>(null);
 	const [slugResolving, setSlugResolving] = useState(false);
 	const [slugResolutionAttempted, setSlugResolutionAttempted] = useState(false);
+
+	// Instant impersonation state (for cached org→user mappings)
+	const [instantImpersonating, setInstantImpersonating] = useState(false);
+	const [instantImpersonationAttempted, setInstantImpersonationAttempted] = useState(false);
 
 	const isValidEnv = env === "live" || env === "sandbox";
 	const orgId = org_id ?? "";
@@ -57,7 +62,7 @@ export function OrgEnvGuard() {
 	console.log("[OrgEnvGuard] URL orgId:", orgId, "| isSlug:", isSlug);
 	console.log("[OrgEnvGuard] matchedOrg:", matchedOrg?.id ?? "none", "| effectiveOrgId:", effectiveOrgId);
 	console.log("[OrgEnvGuard] isInUserOrgs:", isInUserOrgs, "| isAlreadyActive:", isAlreadyActive, "| isAdmin:", isAdmin);
-	console.log("[OrgEnvGuard] resolvedOrgId:", resolvedOrgId, "| slugResolving:", slugResolving, "| slugResolutionAttempted:", slugResolutionAttempted, "| syncing:", syncing, "| syncError:", syncError);
+	console.log("[OrgEnvGuard] resolvedOrgId:", resolvedOrgId, "| slugResolving:", slugResolving, "| slugResolutionAttempted:", slugResolutionAttempted, "| instantImpersonating:", instantImpersonating, "| instantImpersonationAttempted:", instantImpersonationAttempted, "| syncing:", syncing, "| syncError:", syncError);
 	console.log("[OrgEnvGuard] session activeOrgId:", session?.session?.activeOrganizationId, "| user role:", session?.user?.role, "| impersonatedBy:", session?.session?.impersonatedBy);
 	console.log("[OrgEnvGuard] orgList:", orgList?.map(o => ({ id: o.id, slug: o.slug })));
 
@@ -123,16 +128,53 @@ export function OrgEnvGuard() {
 			});
 	}, [isSlug, matchedOrg, resolvedOrgId, slugResolving, slugResolutionAttempted, isAdmin, orgId, sessionPending, orgListPending]);
 
+	// Effect for instant impersonation (bypasses ImpersonateRedirect page)
+	useEffect(() => {
+		console.log("[OrgEnvGuard:instantImpersonation] Effect triggered — isAdmin:", isAdmin, "effectiveOrgId:", effectiveOrgId, "isInUserOrgs:", isInUserOrgs, "instantImpersonating:", instantImpersonating, "instantImpersonationAttempted:", instantImpersonationAttempted, "sessionPending:", sessionPending, "orgListPending:", orgListPending, "slugResolving:", slugResolving);
+
+		if (!isAdmin) { console.log("[OrgEnvGuard:instantImpersonation] Skipping: not admin"); setInstantImpersonationAttempted(true); return; }
+		if (!effectiveOrgId) { console.log("[OrgEnvGuard:instantImpersonation] Skipping: no effectiveOrgId"); setInstantImpersonationAttempted(true); return; }
+		if (isInUserOrgs) { console.log("[OrgEnvGuard:instantImpersonation] Skipping: org is in user list"); setInstantImpersonationAttempted(true); return; }
+		if (instantImpersonating) { console.log("[OrgEnvGuard:instantImpersonation] Skipping: already attempting"); return; }
+		if (instantImpersonationAttempted) { console.log("[OrgEnvGuard:instantImpersonation] Skipping: already attempted"); return; }
+		if (sessionPending || orgListPending) { console.log("[OrgEnvGuard:instantImpersonation] Skipping: still loading"); return; }
+		if (slugResolving) { console.log("[OrgEnvGuard:instantImpersonation] Skipping: still resolving slug"); return; }
+
+		console.log("[OrgEnvGuard:instantImpersonation] Attempting instant impersonation for org:", effectiveOrgId);
+		setInstantImpersonating(true);
+
+		attemptInstantImpersonation({
+			orgId: effectiveOrgId,
+			slug: orgId, // Keep the original slug in URL
+			env: appEnv,
+		}).then((success) => {
+			if (success) {
+				console.log("[OrgEnvGuard:instantImpersonation] Instant impersonation succeeded");
+				// Navigation happens in the function, no state change needed
+			} else {
+				console.log("[OrgEnvGuard:instantImpersonation] Instant impersonation failed or no cache, will fall back to redirect");
+				setInstantImpersonating(false);
+				setInstantImpersonationAttempted(true);
+			}
+		});
+	}, [isAdmin, effectiveOrgId, isInUserOrgs, instantImpersonating, instantImpersonationAttempted, sessionPending, orgListPending, slugResolving, orgId, appEnv]);
+
 	// Effect for syncing active organization
 	useEffect(() => {
-		console.log("[OrgEnvGuard:sync] shouldSync check — effectiveOrgId:", effectiveOrgId, "isInUserOrgs:", isInUserOrgs, "resolvedOrgId:", resolvedOrgId, "isAlreadyActive:", isAlreadyActive, "syncing:", syncing, "syncError:", syncError, "sessionPending:", sessionPending, "orgListPending:", orgListPending);
+		console.log("[OrgEnvGuard:sync] shouldSync check — effectiveOrgId:", effectiveOrgId, "isInUserOrgs:", isInUserOrgs, "resolvedOrgId:", resolvedOrgId, "isAlreadyActive:", isAlreadyActive, "syncing:", syncing, "syncError:", syncError, "sessionPending:", sessionPending, "orgListPending:", orgListPending, "instantImpersonating:", instantImpersonating, "instantImpersonationAttempted:", instantImpersonationAttempted);
 
 		if (!effectiveOrgId) {
 			console.log("[OrgEnvGuard:sync] No effectiveOrgId, returning");
 			return;
 		}
 
-		const shouldSync = (isInUserOrgs || resolvedOrgId) && !isAlreadyActive && !syncing && !syncError && !sessionPending && !orgListPending;
+		// Don't sync if we're attempting instant impersonation
+		if (instantImpersonating) {
+			console.log("[OrgEnvGuard:sync] Skipping: instant impersonation in progress");
+			return;
+		}
+
+		const shouldSync = (isInUserOrgs || resolvedOrgId) && !isAlreadyActive && !syncing && !syncError && !sessionPending && !orgListPending && !instantImpersonationAttempted;
 		console.log("[OrgEnvGuard:sync] shouldSync:", shouldSync);
 
 		if (shouldSync) {
@@ -151,7 +193,7 @@ export function OrgEnvGuard() {
 					setSyncError(true);
 				});
 		}
-	}, [effectiveOrgId, isInUserOrgs, resolvedOrgId, isAlreadyActive, syncing, syncError, queryClient, sessionPending, orgListPending]);
+	}, [effectiveOrgId, isInUserOrgs, resolvedOrgId, isAlreadyActive, syncing, syncError, queryClient, sessionPending, orgListPending, instantImpersonating, instantImpersonationAttempted]);
 
 	// NOW safe to do early returns
 	if (!isValidEnv) {
@@ -226,23 +268,42 @@ export function OrgEnvGuard() {
 		return <Navigate to="/sign-in" />;
 	}
 
+	if (instantImpersonating) {
+		console.log("[OrgEnvGuard:render] Showing loading — instant impersonation in progress");
+		return (
+			<div className="h-screen w-full flex items-center justify-center bg-outer-background">
+				<LoadingScreen />
+			</div>
+		);
+	}
+
 	if (isInUserOrgs) {
 		console.log("[OrgEnvGuard:render] Rendering app — org is in user list and active");
 		return <Outlet />;
 	}
 
 	if (isAdmin && effectiveOrgId && !isInUserOrgs) {
-		console.log("[OrgEnvGuard:render] Admin impersonation redirect — effectiveOrgId:", effectiveOrgId, "redirect will keep slug:", orgId);
-		const redirectPath = buildOrgEnvPath({
-			orgId,
-			env: appEnv,
-			path: "/customers",
-		});
-		// Note: orgId (from URL) keeps the slug; effectiveOrgId is the real ID for impersonation
+		// Check if we've already attempted instant impersonation
+		if (instantImpersonationAttempted) {
+			console.log("[OrgEnvGuard:render] Admin impersonation redirect (instant failed) — effectiveOrgId:", effectiveOrgId, "redirect will keep slug:", orgId);
+			const redirectPath = buildOrgEnvPath({
+				orgId,
+				env: appEnv,
+				path: "/customers",
+			});
+			// Note: orgId (from URL) keeps the slug; effectiveOrgId is the real ID for impersonation
+			return (
+				<Navigate
+					to={`/impersonate-redirect?org_id=${effectiveOrgId}&redirect=${encodeURIComponent(redirectPath)}`}
+				/>
+			);
+		}
+		// If instant impersonation hasn't been attempted yet, we're waiting for the effect
+		console.log("[OrgEnvGuard:render] Waiting for instant impersonation attempt");
 		return (
-			<Navigate
-				to={`/impersonate-redirect?org_id=${effectiveOrgId}&redirect=${encodeURIComponent(redirectPath)}`}
-			/>
+			<div className="h-screen w-full flex items-center justify-center bg-outer-background">
+				<LoadingScreen />
+			</div>
 		);
 	}
 
