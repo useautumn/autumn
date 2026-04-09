@@ -48,7 +48,8 @@ export const CreateNewOrg = ({
 
 			toast.success("Organization created");
 			setDialogType(null);
-			navigate("/");
+			const lastEnv = localStorage.getItem('autumn:lastEnv') || 'sandbox';
+			navigate(`/${data.id}/${lastEnv}/customers`);
 		} catch (error: any) {
 			console.log(error);
 			toast.error(error.message);

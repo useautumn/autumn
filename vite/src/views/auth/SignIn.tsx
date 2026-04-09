@@ -100,10 +100,8 @@ export const SignIn = () => {
 
 			// For OAuth flow, we need to redirect back to continue the flow
 			// For regular sign-in, use the default dashboard paths
-			const googleCallbackUrl =
-				oauthRedirectUrl || `${frontendUrl}${defaultCallbackPath}`;
-			const googleNewUserUrl =
-				oauthRedirectUrl || `${frontendUrl}${defaultNewPath}`;
+			const googleCallbackUrl = oauthRedirectUrl || `${frontendUrl}/`;
+			const googleNewUserUrl = oauthRedirectUrl || `${frontendUrl}/`;
 
 			const { error } = await signIn.social({
 				provider: "google",

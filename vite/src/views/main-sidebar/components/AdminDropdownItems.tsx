@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import { LogOut, Shield } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -6,7 +7,7 @@ import {
 	DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { authClient, useSession } from "@/lib/auth-client";
-import { getBackendErr, notNullish } from "@/utils/genUtils";
+import { getBackendErr, getOrgEnvFromPath, notNullish } from "@/utils/genUtils";
 import { AdminOnly } from "@/views/admin/components/AdminOnly";
 
 export const AdminDropdownItems = () => {
@@ -15,6 +16,12 @@ export const AdminDropdownItems = () => {
 	const [stopImpersonatingLoading, setStopImpersonatingLoading] =
 		useState(false);
 	const isImpersonating = notNullish(data?.session?.impersonatedBy);
+
+	const handleAdminClick = () => {
+		const { orgId, env } = getOrgEnvFromPath(window.location.pathname);
+		const envStr = env === AppEnv.Sandbox ? 'sandbox' : 'live';
+		window.location.href = orgId ? `/${orgId}/${envStr}/admin` : '/admin';
+	};
 
 	if (isPending) return null;
 	return (
@@ -40,11 +47,7 @@ export const AdminDropdownItems = () => {
 					</div>
 				</DropdownMenuItem>
 			)}
-			<DropdownMenuItem
-				onClick={() => {
-					window.location.href = "/admin";
-				}}
-			>
+			<DropdownMenuItem onClick={handleAdminClick}>
 				<div className="flex justify-between w-full items-center gap-2 text-t2">
 					Admin
 					<Shield size={12} />

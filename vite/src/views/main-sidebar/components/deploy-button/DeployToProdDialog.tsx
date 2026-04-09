@@ -16,6 +16,7 @@ import {
 } from "@/components/v2/tooltips/Tooltip";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { getOrgEnvFromPath } from "@/utils/genUtils";
 import { Step1ConnectStripe } from "../../deploy-dialog/Step1ConnectStripe";
 import { Step2CopyProducts } from "../../deploy-dialog/Step2CopyProducts";
 import { Step3CreateApiKey } from "../../deploy-dialog/Step3CreateApiKey";
@@ -42,7 +43,12 @@ export const DeployToProdDialog = ({
 
 			await mutateOrg();
 
-			window.location.href = "/products?tab=products";
+			const { orgId } = getOrgEnvFromPath(window.location.pathname);
+			if (orgId) {
+				window.location.href = `/${orgId}/live/products?tab=products`;
+			} else {
+				window.location.href = '/';
+			}
 		} catch (error) {
 			console.error("Failed to deploy to production:", error);
 		} finally {

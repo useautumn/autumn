@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { authClient, useSession } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
-import { getRedirectUrl } from "@/utils/genUtils";
+import { getOrgEnvFromPath, getRedirectUrl } from "@/utils/genUtils";
 
 function ErrorScreen({
 	children,
@@ -35,9 +35,14 @@ function ErrorScreen({
 						await authClient.organization.setActive({
 							organizationId: nextOrg.id,
 						});
-						// Redirect to products page of the new organization
-						const envPath = env === AppEnv.Sandbox ? "sandbox" : "production";
-						navigate(`/${envPath}/products`);
+						// Redirect to customers page of the new organization
+						const { orgId } = getOrgEnvFromPath(window.location.pathname);
+						if (orgId) {
+							const envStr = env === AppEnv.Sandbox ? 'sandbox' : 'live';
+							navigate(`/${nextOrg.id}/${envStr}/customers`);
+						} else {
+							navigate('/');
+						}
 						return;
 					}
 				}

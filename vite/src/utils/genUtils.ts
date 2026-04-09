@@ -3,6 +3,32 @@ import { AxiosError } from "axios";
 import type { NavigateFunction } from "react-router-dom";
 import { ZodError } from "zod/v3";
 
+export const getOrgEnvFromPath = (pathname: string): { orgId: string | null; env: AppEnv } => {
+  const parts = pathname.split("/").filter(Boolean);
+  // URL pattern: /<org_id>/<env>/...
+  if (parts.length >= 2 && (parts[1] === "live" || parts[1] === "sandbox")) {
+    return {
+      orgId: parts[0],
+      env: parts[1] === "sandbox" ? AppEnv.Sandbox : AppEnv.Live,
+    };
+  }
+  return { orgId: null, env: AppEnv.Live };
+};
+
+export const buildOrgEnvPath = ({
+  orgId,
+  env,
+  path,
+}: {
+  orgId: string;
+  env: AppEnv;
+  path: string;
+}) => {
+  const envStr = env === AppEnv.Sandbox ? "sandbox" : "live";
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `/${orgId}/${envStr}${cleanPath}`;
+};
+
 const compareStatus = (statusA: string, statusB: string) => {
 	const statusOrder = ["scheduled", "active", "past_due", "expired"];
 	return statusOrder.indexOf(statusA) - statusOrder.indexOf(statusB);
@@ -42,38 +68,29 @@ const getBackendErrObj = (error: AxiosError) => {
 };
 
 export const getEnvFromPath = (path: string) => {
-	if (path.includes("/sandbox")) {
-		return AppEnv.Sandbox;
-	}
-	return AppEnv.Live;
+	const { env } = getOrgEnvFromPath(path);
+	return env;
 };
 
-export const envToPath = (env: AppEnv, currentPath: string) => {
-	// Check if we're on a customer detail page
-	const customerDetailPattern = /^(\/sandbox)?\/customers\/[^/]+/;
-	const isCustomerDetailPage = customerDetailPattern.test(currentPath);
+export const envToPath = (targetEnv: AppEnv, currentPath: string) => {
+	const { orgId } = getOrgEnvFromPath(currentPath);
+	if (!orgId) return null;
 
-	if (isCustomerDetailPage) {
-		// Redirect to customers list instead of trying to preserve customer ID
-		return env === AppEnv.Sandbox ? "/sandbox/customers" : "/customers";
+	const parts = currentPath.split("/").filter(Boolean);
+	// parts[0] = org_id, parts[1] = env, parts[2+] = page path
+	const pageParts = parts.slice(2);
+	const pagePath = pageParts.join("/");
+
+	// Check if we're on a customer detail page → redirect to list
+	if (pagePath.startsWith("customers/")) {
+		return buildOrgEnvPath({ orgId, env: targetEnv, path: "/customers" });
+	}
+	// Check if we're on a product detail page → redirect to list
+	if (pagePath.startsWith("products/")) {
+		return buildOrgEnvPath({ orgId, env: targetEnv, path: "/products" });
 	}
 
-	// Check if we're on a product detail page
-	const productDetailPattern = /^(\/sandbox)?\/products\/[^/]+/;
-	const isProductDetailPage = productDetailPattern.test(currentPath);
-
-	if (isProductDetailPage) {
-		// Redirect to products list instead of trying to preserve product ID
-		return env === AppEnv.Sandbox ? "/sandbox/products" : "/products";
-	}
-
-	if (env === AppEnv.Sandbox && !currentPath.includes("/sandbox")) {
-		return `/sandbox${currentPath}`;
-	} else if (env === AppEnv.Live && currentPath.includes("/sandbox")) {
-		return currentPath.replace("/sandbox", "");
-	}
-
-	return null;
+	return buildOrgEnvPath({ orgId, env: targetEnv, path: `/${pagePath}` });
 };
 
 export const navigateTo = (
@@ -82,11 +99,13 @@ export const navigateTo = (
 	env?: AppEnv,
 ) => {
 	const curPath = window.location.pathname;
-	const curEnv = getEnvFromPath(curPath);
+	const { orgId, env: curEnv } = getOrgEnvFromPath(curPath);
 
 	path = path.replace("@", "%40");
-	if (curEnv === AppEnv.Sandbox) {
-		navigate(`/sandbox${path}`);
+
+	if (orgId) {
+		const targetEnv = env ?? curEnv;
+		navigate(buildOrgEnvPath({ orgId, env: targetEnv, path }));
 	} else {
 		navigate(path);
 	}
@@ -106,7 +125,7 @@ export const pushPage = ({
 	debug?: boolean;
 }) => {
 	const pathname = window.location.pathname;
-	const curEnv = getEnvFromPath(pathname);
+	const { orgId, env } = getOrgEnvFromPath(pathname);
 
 	// Start fresh or with current params based on whether new params are provided
 	let curQueryParams: URLSearchParams;
@@ -133,8 +152,13 @@ export const pushPage = ({
 		path = `${path}?${curQueryParams.toString()}`;
 	}
 
-	if (curEnv === AppEnv.Sandbox) {
-		path = `/sandbox${path}`;
+	// Prepend org_id/env prefix
+	if (orgId) {
+		const envStr = env === AppEnv.Sandbox ? "sandbox" : "live";
+		// path might already have query params, so split carefully
+		const [pathPart, queryPart] = path.split("?");
+		const prefixedPath = `/${orgId}/${envStr}${pathPart}`;
+		path = queryPart ? `${prefixedPath}?${queryPart}` : prefixedPath;
 	}
 
 	if (navigate) {
@@ -145,13 +169,20 @@ export const pushPage = ({
 };
 
 export const getRedirectUrl = (path: string, env: AppEnv) => {
-	// Replace @ with %40
+	const curPath = window.location.pathname;
+	const { orgId } = getOrgEnvFromPath(curPath);
+
 	path = path.replace("@", "%40");
+
+	if (orgId) {
+		return buildOrgEnvPath({ orgId, env, path });
+	}
+
+	// Fallback for pages outside org context
 	if (env === AppEnv.Sandbox) {
 		return `/sandbox${path}`;
-	} else {
-		return path;
 	}
+	return path;
 };
 
 export const notNullish = (value: unknown) => {

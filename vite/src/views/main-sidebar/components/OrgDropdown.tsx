@@ -36,6 +36,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
+import { AppEnv } from "@autumn/shared";
+import { getOrgEnvFromPath, buildOrgEnvPath } from "@/utils/genUtils";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
@@ -262,15 +264,16 @@ export const useOrgSwitch = () => {
 			queryClient.setQueryData(["org", env], newOrg);
 			queryClient.invalidateQueries({ queryKey: ["org"] });
 
-			if (
-				newOrg &&
-				!newOrg.deployed &&
-				!window.location.pathname.includes("/sandbox")
-			) {
-				const pathname = window.location.pathname;
-				const search = window.location.search;
-				navigate(`/sandbox${pathname}${search}`);
-			}
+			// Navigate to new org's URL with current path
+			const { env: currentEnv } = getOrgEnvFromPath(window.location.pathname);
+			const parts = window.location.pathname.split('/').filter(Boolean);
+			const pagePath = parts.slice(2).join('/') || 'customers';
+
+			// If org isn't deployed, force sandbox
+			const targetEnv = (newOrg && !newOrg.deployed) ? AppEnv.Sandbox : currentEnv;
+			const targetEnvStr = targetEnv === AppEnv.Sandbox ? 'sandbox' : 'live';
+
+			navigate(`/${orgId}/${targetEnvStr}/${pagePath}${window.location.search}`);
 		} catch (error: any) {
 			toast.error(error.message);
 		} finally {

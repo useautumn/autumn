@@ -13,7 +13,8 @@ import {
 	useListOrganizations,
 	useSession,
 } from "@/lib/auth-client";
-import { getBackendErr } from "@/utils/genUtils";
+import { AppEnv } from "@autumn/shared";
+import { getBackendErr, getOrgEnvFromPath } from "@/utils/genUtils";
 
 export const LeaveOrgPopover = () => {
 	const { org } = useOrg();
@@ -48,7 +49,9 @@ export const LeaveOrgPopover = () => {
 			organizationId: otherOrg!.id,
 		});
 
-		window.location.reload();
+		const { env } = getOrgEnvFromPath(window.location.pathname);
+		const envStr = env === AppEnv.Sandbox ? 'sandbox' : 'live';
+		window.location.href = `/${otherOrg!.id}/${envStr}/customers`;
 	};
 
 	const handleLeaveClicked = async () => {

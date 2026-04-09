@@ -40,7 +40,7 @@ export const PasswordSignIn = () => {
 			if (error) {
 				toast.error(error.message || "Something went wrong. Please try again.");
 			} else {
-				window.location.href = "/sandbox/products";
+				window.location.href = "/";
 			}
 		} catch (error) {
 			toast.error("Something went wrong. Please try again.");

@@ -2,6 +2,7 @@ import { AppEnv } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { authClient } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
+import { getOrgEnvFromPath } from "@/utils/genUtils";
 
 export const useGlobalErrorHandler = () => {
 	const navigate = useNavigate();
@@ -19,9 +20,14 @@ export const useGlobalErrorHandler = () => {
 					await authClient.organization.setActive({
 						organizationId: nextOrg.id,
 					});
-					// Redirect to products page of the new organization
-					const envPath = env === AppEnv.Sandbox ? "sandbox" : "production";
-					navigate(`/${envPath}/products`);
+					// Redirect to customers page of the new organization
+					const { orgId: urlOrgId } = getOrgEnvFromPath(window.location.pathname);
+					if (urlOrgId) {
+						const envStr = env === AppEnv.Sandbox ? 'sandbox' : 'live';
+						navigate(`/${nextOrg.id}/${envStr}/customers`);
+					} else {
+						navigate('/');
+					}
 					return true;
 				}
 			}

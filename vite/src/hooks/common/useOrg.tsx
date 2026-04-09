@@ -1,6 +1,5 @@
 import type { AppEnv, FrontendOrg } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -38,24 +37,8 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		staleTime: 30_000,
 	});
 
-	useEffect(() => {
-		const handleNoActiveOrg = async () => {
-			if (orgList && orgList.length > 0) {
-				await authClient.organization.setActive({
-					organizationId: orgList[0].id,
-				});
-				window.location.reload();
-			} else {
-				console.log("No org to set active, signing out");
-				await authClient.signOut();
-				window.location.href = "/sign-in";
-			}
-		};
-
-		if (!org && !isLoading) {
-			handleNoActiveOrg();
-		}
-	}, [org, orgList, isLoading]);
+	// Note: Org resolution and activation is now handled by OrgEnvGuard
+	// This hook just fetches org data based on the current session
 
 	return { org: org as FrontendOrg, isLoading, error, mutate: refetch };
 };

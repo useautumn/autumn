@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import type {
 	Entity,
 	EntityRolloverBalance,
@@ -63,9 +64,74 @@ export const impersonateUser = async ({
 
 	if (organizationId) {
 		await authClient.organization.setActive({ organizationId });
+		const lastEnv = localStorage.getItem('autumn:lastEnv') || 'sandbox';
+		window.location.href = `/${organizationId}/${lastEnv}/customers`;
+	} else {
+		window.location.reload();
+	}
+};
+
+/**
+ * Attempts instant impersonation using cached orgId→userId mapping.
+ * Returns true if impersonation was attempted (cache existed), false otherwise.
+ * This bypasses the ImpersonateRedirect page entirely.
+ */
+export const attemptInstantImpersonation = async ({
+	orgId,
+	slug,
+	env,
+}: {
+	orgId: string;
+	slug: string;
+	env: AppEnv;
+}): Promise<boolean> => {
+	// Check for cached orgId→userId mapping
+	const orgToUserMap: Record<string, string> = JSON.parse(
+		localStorage.getItem("autumn:orgToUserMap") || "{}"
+	);
+	const cachedUserId = orgToUserMap[orgId];
+
+	if (!cachedUserId) {
+		console.log("[attemptInstantImpersonation] No cached userId for org:", orgId);
+		return false;
 	}
 
-	window.location.reload();
+	console.log("[attemptInstantImpersonation] Found cached userId:", cachedUserId, "for org:", orgId);
+
+	try {
+		// Step 1: Stop any existing impersonation
+		try {
+			await authClient.admin.stopImpersonating();
+		} catch {
+			// Ignore - might not be impersonating
+		}
+
+		// Step 2: Impersonate the cached user
+		const impersonateResult = await authClient.admin.impersonateUser({
+			userId: cachedUserId,
+		});
+
+		if (impersonateResult.error) {
+			console.log("[attemptInstantImpersonation] Impersonation failed:", impersonateResult.error);
+			// Clear the cache since it's stale
+			delete orgToUserMap[orgId];
+			localStorage.setItem("autumn:orgToUserMap", JSON.stringify(orgToUserMap));
+			return false;
+		}
+
+		// Step 3: Set the active organization
+		await authClient.organization.setActive({
+			organizationId: orgId,
+		});
+
+		// Step 4: Navigate to the org with the original slug preserved in URL
+		const envStr = env === AppEnv.Sandbox ? "sandbox" : "live";
+		window.location.href = `/${slug}/${envStr}/customers`;
+		return true;
+	} catch (err) {
+		console.error("[attemptInstantImpersonation] Error:", err);
+		return false;
+	}
 };
 
 export const getCusEntHoverTexts = ({

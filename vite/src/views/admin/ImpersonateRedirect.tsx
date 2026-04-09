@@ -62,7 +62,15 @@ export function ImpersonateRedirect() {
 					organizationId: orgId,
 				});
 
-				// Step 5: Navigate to the redirect path
+				// Step 5: Save the org→user mapping for future instant impersonation
+				const orgToUserMap: Record<string, string> = JSON.parse(
+					localStorage.getItem("autumn:orgToUserMap") || "{}"
+				);
+				orgToUserMap[orgId] = data.userId;
+				localStorage.setItem("autumn:orgToUserMap", JSON.stringify(orgToUserMap));
+				console.log("[ImpersonateRedirect] Cached org→user mapping:", orgId, "→", data.userId);
+
+				// Step 6: Navigate to the redirect path
 				setStatus("Redirecting...");
 				window.location.href = redirect;
 			} catch (err: unknown) {
