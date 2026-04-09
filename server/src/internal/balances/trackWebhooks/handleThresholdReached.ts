@@ -115,6 +115,8 @@ export const handleThresholdReached = async ({
 	newFullCus: FullCustomer;
 	feature: Feature;
 }) => {
+	if (ctx.apiVersion.gte(ApiVersion.V2_1)) return;
+
 	// Alter ctx expand if needed.
 	if (ctx.apiVersion.lte(ApiVersion.V1_2)) {
 		ctx = addToExpand({
