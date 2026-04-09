@@ -54,6 +54,7 @@ export class CusService {
 		allowNotFound = false,
 		withEvents = false,
 		explain = false,
+		skipReset = false,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -65,6 +66,7 @@ export class CusService {
 		allowNotFound?: boolean;
 		withEvents?: boolean;
 		explain?: boolean;
+		skipReset?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -142,9 +144,10 @@ export class CusService {
 						.slice(0, 5);
 				}
 
-				// Skip reset only when executeWithHealthTracking explicitly chose the
-				// replica. Lazy reset writes themselves go through dbGeneral.
-				if (!usedReplica) {
+				// Skip reset when reading from replica — it writes to primary,
+				// and replica data is stale anyway. When degraded WITHOUT a replica
+				// (falls back to primary), the reset should still run.
+				if (!usedReplica && !skipReset) {
 					await resetCustomerEntitlements({
 						fullCus,
 						ctx,
