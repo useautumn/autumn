@@ -80,6 +80,8 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
       ) ft_data ON true
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
       ${withStatusFilter()}
+      ORDER BY cp.created_at DESC
+      LIMIT 10
     )
   `;
 };
