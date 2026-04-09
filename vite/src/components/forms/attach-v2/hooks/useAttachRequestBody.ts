@@ -1,6 +1,5 @@
 import type {
 	AttachParamsV0,
-	AttachParamsV0Input,
 	BillingBehavior,
 	FreeTrialDuration,
 	PlanTiming,
@@ -12,7 +11,8 @@ import type {
 import { useMemo } from "react";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
-import { normalizeAttachBillingBehavior } from "../utils/attachBillingBehaviorRules";
+import type { FormCustomLineItem } from "../attachFormSchema";
+import { normalizeAttachProrationBehavior } from "../utils/attachProrationBehaviorRules";
 import {
 	type FormDiscount,
 	filterValidDiscounts,
@@ -30,10 +30,18 @@ export interface BuildAttachRequestBodyParams {
 	trialEnabled: boolean;
 	trialCardRequired: boolean;
 	planSchedule: PlanTiming | null;
-	billingBehavior: BillingBehavior | null;
+	prorationBehavior: BillingBehavior | null;
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
+	resetBillingCycle: boolean;
 	discounts: FormDiscount[];
+	noBillingChanges: boolean;
+	carryOverBalances: boolean;
+	carryOverBalanceFeatureIds: string[];
+	carryOverUsages: boolean;
+	carryOverUsageFeatureIds: string[];
+	customLineItems: FormCustomLineItem[];
+	isFreeToPaidTransition: boolean;
 }
 
 /** Pure function to build the attach request body. Extracted for testability. */
@@ -49,10 +57,18 @@ export function buildAttachRequestBody({
 	trialEnabled,
 	trialCardRequired,
 	planSchedule,
-	billingBehavior,
+	prorationBehavior,
 	redirectMode,
 	newBillingSubscription,
+	resetBillingCycle,
 	discounts,
+	noBillingChanges,
+	carryOverBalances,
+	carryOverBalanceFeatureIds = [],
+	carryOverUsages,
+	carryOverUsageFeatureIds = [],
+	customLineItems,
+	isFreeToPaidTransition,
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
 	if (!customerId || !product) {
 		return null;
@@ -63,7 +79,7 @@ export function buildAttachRequestBody({
 		product,
 	});
 
-	const body: AttachParamsV0Input = {
+	const body: Record<string, unknown> = {
 		customer_id: customerId,
 		product_id: product.id,
 		redirect_mode: redirectMode,
@@ -97,28 +113,63 @@ export function buildAttachRequestBody({
 	});
 	if (freeTrial !== undefined) {
 		body.free_trial = freeTrial;
+	} else if (!trialEnabled) {
+		body.free_trial = null;
 	}
 
 	if (planSchedule) {
 		body.plan_schedule = planSchedule;
 	}
 
-	const normalizedBillingBehavior = normalizeAttachBillingBehavior({
-		billingBehavior,
+	const normalizedProrationBehavior = normalizeAttachProrationBehavior({
+		prorationBehavior,
 		newBillingSubscription,
+		blocksNextCycleOnly: isFreeToPaidTransition,
 	});
 
-	if (normalizedBillingBehavior) {
-		body.billing_behavior = normalizedBillingBehavior;
+	if (normalizedProrationBehavior) {
+		body.billing_behavior = normalizedProrationBehavior;
 	}
 
 	if (newBillingSubscription) {
 		body.new_billing_subscription = true;
 	}
 
+	if (resetBillingCycle) {
+		body.billing_cycle_anchor = "now";
+	}
+
 	const validDiscounts = filterValidDiscounts(discounts);
 	if (validDiscounts.length > 0) {
 		body.discounts = validDiscounts;
+	}
+
+	if (noBillingChanges) {
+		body.no_billing_changes = true;
+	}
+
+	if (carryOverBalances) {
+		body.carry_over_balances =
+			carryOverBalanceFeatureIds.length > 0
+				? { enabled: true, feature_ids: carryOverBalanceFeatureIds }
+				: { enabled: true };
+	}
+
+	if (carryOverUsages) {
+		body.carry_over_usages =
+			carryOverUsageFeatureIds.length > 0
+				? { enabled: true, feature_ids: carryOverUsageFeatureIds }
+				: { enabled: true };
+	}
+
+	const validLineItems = customLineItems.filter(
+		(item) => item.amount !== "" && item.description.trim() !== "",
+	);
+	if (validLineItems.length > 0) {
+		body.custom_line_items = validLineItems.map(({ amount, description }) => ({
+			amount: Number(amount),
+			description,
+		}));
 	}
 
 	return body as AttachParamsV0;
@@ -137,10 +188,18 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		trialEnabled,
 		trialCardRequired,
 		planSchedule,
-		billingBehavior,
+		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
+		resetBillingCycle,
 		discounts,
+		noBillingChanges,
+		carryOverBalances,
+		carryOverBalanceFeatureIds,
+		carryOverUsages,
+		carryOverUsageFeatureIds,
+		customLineItems,
+		isFreeToPaidTransition,
 	} = params;
 
 	const requestBody = useMemo(
@@ -157,10 +216,18 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				trialEnabled,
 				trialCardRequired,
 				planSchedule,
-				billingBehavior,
+				prorationBehavior,
 				redirectMode,
 				newBillingSubscription,
+				resetBillingCycle,
 				discounts,
+				noBillingChanges,
+				carryOverBalances,
+				carryOverBalanceFeatureIds,
+				carryOverUsages,
+				carryOverUsageFeatureIds,
+				customLineItems,
+				isFreeToPaidTransition,
 			}),
 		[
 			customerId,
@@ -174,10 +241,18 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			trialEnabled,
 			trialCardRequired,
 			planSchedule,
-			billingBehavior,
+			prorationBehavior,
 			redirectMode,
 			newBillingSubscription,
+			resetBillingCycle,
 			discounts,
+			noBillingChanges,
+			carryOverBalances,
+			carryOverBalanceFeatureIds,
+			carryOverUsages,
+			carryOverUsageFeatureIds,
+			customLineItems,
+			isFreeToPaidTransition,
 		],
 	);
 

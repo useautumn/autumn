@@ -1,6 +1,6 @@
 import type { Entity, Feature, FullCustomer } from "@autumn/shared";
 import { FeatureUsageType, getFeatureName } from "@autumn/shared";
-import { TrashIcon, XIcon } from "@phosphor-icons/react";
+import { PlusIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
 import { CheckIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
@@ -9,16 +9,18 @@ import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "../../../customers/customer/hooks/useCusQuery";
+import { CreateEntity } from "./CreateEntity";
 import { DeleteEntity } from "./DeleteEntity";
 
 const mutedDivClassName =
 	"py-0.5 px-1.5 bg-muted rounded-lg text-t3 text-sm flex items-center gap-1 h-6 max-w-48 truncate ";
 
-const placeholderText = "NULL";
+const placeholderText = "PENDING";
 
 export const SelectedEntityDetails = () => {
 	const { customer } = useCusQuery();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 	const { features } = useFeaturesQuery();
 
 	const { entityId, setEntityId } = useEntity();
@@ -71,7 +73,7 @@ export const SelectedEntityDetails = () => {
 
 	const getEntityValue = (entity: Entity) => entity.id || entity.internal_id;
 	const getEntityLabel = (entity: Entity) =>
-		entity.name || entity.id || entity.internal_id;
+		entity.name || entity.id || placeholderText;
 
 	return (
 		<>
@@ -91,14 +93,14 @@ export const SelectedEntityDetails = () => {
 						renderValue={(entity) =>
 							entity ? (
 								<span className="text-t2 truncate">
-									{entity.name || entity.id || entity.internal_id}
+									{entity.name || entity.id || placeholderText}
 								</span>
 							) : (
 								<span className="text-t3">Select entity</span>
 							)
 						}
 						renderOption={(entity, isSelected) => {
-							const entityValue = getEntityValue(entity);
+							const entityLabel = entity.id || placeholderText;
 							return (
 								<>
 									<div className="flex gap-2 items-center min-w-0 flex-1">
@@ -106,13 +108,25 @@ export const SelectedEntityDetails = () => {
 											<span className="text-sm shrink-0">{entity.name}</span>
 										)}
 										<span className="truncate text-t3 font-mono text-xs min-w-0">
-											{entityValue}
+											{entityLabel}
 										</span>
 									</div>
 									{isSelected && <CheckIcon className="size-4 shrink-0" />}
 								</>
 							);
 						}}
+						footer={
+							<div className="border-t py-1.5 px-2">
+								<Button
+									variant="muted"
+									className="w-full"
+									onClick={() => setCreateEntityOpen(true)}
+								>
+									<PlusIcon className="size-[14px] text-t2" weight="regular" />
+									Create new entity
+								</Button>
+							</div>
+						}
 					/>
 					{entityId && (
 						<Button
@@ -129,9 +143,10 @@ export const SelectedEntityDetails = () => {
 				{entityId ? (
 					<div className="flex gap-2 items-center min-w-0 shrink">
 						<CopyButton
-							text={entityId || placeholderText}
+							text={fullEntity?.id || placeholderText}
 							size="mini"
-							innerClassName=" max-w-48 truncate"
+							className="text-t3"
+							innerClassName="max-w-48 text-tiny-id truncate !font-normal"
 						/>
 						{fullEntity?.feature_id && (
 							<div className={mutedDivClassName}>
@@ -161,6 +176,7 @@ export const SelectedEntityDetails = () => {
 				setOpen={setDeleteDialogOpen}
 				entity={fullEntity}
 			/>
+			<CreateEntity open={createEntityOpen} setOpen={setCreateEntityOpen} />
 		</>
 	);
 };

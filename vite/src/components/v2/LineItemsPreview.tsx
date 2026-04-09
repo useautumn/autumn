@@ -73,7 +73,8 @@ export function LineItemsPreview<T extends BillingLineItem>({
 		? lineItems.filter((item) => item.total !== 0)
 		: lineItems;
 
-	const hasContent = filteredItems.length > 0 || totals.length > 0;
+	const hasContent =
+		filteredItems.length > 0 || totals.length > 0;
 
 	if (!isLoading && !hasContent) return null;
 

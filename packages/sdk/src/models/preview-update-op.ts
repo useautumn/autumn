@@ -475,6 +475,10 @@ export type PreviewUpdateParams = {
    */
   cancelAction?: PreviewUpdateCancelAction | undefined;
   /**
+   * Reset the billing cycle anchor immediately with 'now'
+   */
+  billingCycleAnchor?: "now" | undefined;
+  /**
    * If true, the subscription is updated internally without applying billing changes in Stripe.
    */
   noBillingChanges?: boolean | undefined;
@@ -1286,6 +1290,7 @@ export type PreviewUpdateParams$Outbound = {
   redirect_mode: string;
   subscription_id?: string | undefined;
   cancel_action?: string | undefined;
+  billing_cycle_anchor?: "now" | undefined;
   no_billing_changes?: boolean | undefined;
   recalculate_balances?: PreviewUpdateRecalculateBalances$Outbound | undefined;
 };
@@ -1316,6 +1321,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
     ),
     subscriptionId: z.optional(z.string()),
     cancelAction: z.optional(PreviewUpdateCancelAction$outboundSchema),
+    billingCycleAnchor: z.optional(z.literal("now")),
     noBillingChanges: z.optional(z.boolean()),
     recalculateBalances: z.optional(
       z.lazy(() => PreviewUpdateRecalculateBalances$outboundSchema),
@@ -1332,6 +1338,7 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
       cancelAction: "cancel_action",
+      billingCycleAnchor: "billing_cycle_anchor",
       noBillingChanges: "no_billing_changes",
       recalculateBalances: "recalculate_balances",
     });

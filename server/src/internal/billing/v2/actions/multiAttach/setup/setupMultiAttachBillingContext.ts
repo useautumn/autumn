@@ -1,5 +1,6 @@
 import {
 	BillingVersion,
+	isOneOffProduct,
 	type MultiAttachBillingContext,
 	type MultiAttachParamsV0,
 	type MultiAttachProductContext,
@@ -93,7 +94,7 @@ export const setupMultiAttachBillingContext = async ({
 		fullCustomer,
 		targetCustomerProduct: undefined,
 		params,
-		// paramDiscounts: params.discounts,
+		skipSubscriptionFetching: fullProducts.every(isOneOffProduct),
 		newBillingSubscription: params.new_billing_subscription || undefined,
 	});
 

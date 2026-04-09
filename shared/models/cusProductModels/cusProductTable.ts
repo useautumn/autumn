@@ -40,6 +40,7 @@ export const customerProducts = pgTable(
 		product_id: text("product_id"),
 		free_trial_id: text("free_trial_id"),
 		trial_ends_at: numeric({ mode: "number" }),
+		billing_cycle_anchor_resets_at: numeric({ mode: "number" }),
 		collection_method: text("collection_method").default(
 			"charge_automatically",
 		),

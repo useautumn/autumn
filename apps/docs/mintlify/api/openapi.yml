@@ -101,6 +101,10 @@ components:
                       - interval
                       - limit
                     description: Optional rate limit to cap how often auto top-ups occur.
+                  invoice_mode:
+                    type: boolean
+                    description: When true, auto top-up creates a send_invoice invoice instead of
+                      auto-charging.
                 required:
                   - feature_id
                   - threshold
@@ -130,8 +134,7 @@ components:
                 properties:
                   feature_id:
                     type: string
-                    description: The feature ID this alert applies to. If omitted, the alert applies
-                      globally.
+                    description: The feature ID this alert applies to.
                   enabled:
                     type: boolean
                     default: true
@@ -139,16 +142,18 @@ components:
                   threshold:
                     type: number
                     minimum: 0
-                    description: The threshold value that triggers the alert. For usage, this is an
-                      absolute count. For usage_percentage, this is a percentage
-                      (0-100).
+                    description: The threshold value that triggers the alert. For usage or
+                      remaining, this is an absolute count. For usage_percentage
+                      or remaining_percentage, this is a percentage (0-100).
                   threshold_type:
                     enum:
                       - usage
                       - usage_percentage
+                      - remaining
+                      - remaining_percentage
                     type: string
-                    description: Whether the threshold is an absolute usage count or a percentage of
-                      the usage allowance.
+                    description: Whether the threshold is an absolute count or a percentage of the
+                      usage allowance or remaining balance.
                   name:
                     type: string
                     description: Optional user-defined label to distinguish multiple alerts on the
@@ -270,6 +275,10 @@ components:
                       - interval
                       - limit
                     description: Optional rate limit to cap how often auto top-ups occur.
+                  invoice_mode:
+                    type: boolean
+                    description: When true, auto top-up creates a send_invoice invoice instead of
+                      auto-charging.
                 required:
                   - feature_id
                   - threshold
@@ -299,8 +308,7 @@ components:
                 properties:
                   feature_id:
                     type: string
-                    description: The feature ID this alert applies to. If omitted, the alert applies
-                      globally.
+                    description: The feature ID this alert applies to.
                   enabled:
                     type: boolean
                     default: true
@@ -308,16 +316,18 @@ components:
                   threshold:
                     type: number
                     minimum: 0
-                    description: The threshold value that triggers the alert. For usage, this is an
-                      absolute count. For usage_percentage, this is a percentage
-                      (0-100).
+                    description: The threshold value that triggers the alert. For usage or
+                      remaining, this is an absolute count. For usage_percentage
+                      or remaining_percentage, this is a percentage (0-100).
                   threshold_type:
                     enum:
                       - usage
                       - usage_percentage
+                      - remaining
+                      - remaining_percentage
                     type: string
-                    description: Whether the threshold is an absolute usage count or a percentage of
-                      the usage allowance.
+                    description: Whether the threshold is an absolute count or a percentage of the
+                      usage allowance or remaining balance.
                   name:
                     type: string
                     description: Optional user-defined label to distinguish multiple alerts on the
@@ -1607,6 +1617,10 @@ paths:
                               - interval
                               - limit
                             description: Optional rate limit to cap how often auto top-ups occur.
+                          invoice_mode:
+                            type: boolean
+                            description: When true, auto top-up creates a send_invoice invoice instead of
+                              auto-charging.
                         required:
                           - feature_id
                           - threshold
@@ -1636,8 +1650,7 @@ paths:
                         properties:
                           feature_id:
                             type: string
-                            description: The feature ID this alert applies to. If omitted, the alert applies
-                              globally.
+                            description: The feature ID this alert applies to.
                           enabled:
                             type: boolean
                             default: true
@@ -1645,16 +1658,19 @@ paths:
                           threshold:
                             type: number
                             minimum: 0
-                            description: The threshold value that triggers the alert. For usage, this is an
-                              absolute count. For usage_percentage, this is a
-                              percentage (0-100).
+                            description: The threshold value that triggers the alert. For usage or
+                              remaining, this is an absolute count. For
+                              usage_percentage or remaining_percentage, this is
+                              a percentage (0-100).
                           threshold_type:
                             enum:
                               - usage
                               - usage_percentage
+                              - remaining
+                              - remaining_percentage
                             type: string
-                            description: Whether the threshold is an absolute usage count or a percentage of
-                              the usage allowance.
+                            description: Whether the threshold is an absolute count or a percentage of the
+                              usage allowance or remaining balance.
                           name:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
@@ -1898,6 +1914,10 @@ paths:
                                       - interval
                                       - limit
                                     description: Optional rate limit to cap how often auto top-ups occur.
+                                  invoice_mode:
+                                    type: boolean
+                                    description: When true, auto top-up creates a send_invoice invoice instead of
+                                      auto-charging.
                                 required:
                                   - feature_id
                                   - threshold
@@ -1927,8 +1947,7 @@ paths:
                                 properties:
                                   feature_id:
                                     type: string
-                                    description: The feature ID this alert applies to. If omitted, the alert applies
-                                      globally.
+                                    description: The feature ID this alert applies to.
                                   enabled:
                                     type: boolean
                                     default: true
@@ -1936,16 +1955,19 @@ paths:
                                   threshold:
                                     type: number
                                     minimum: 0
-                                    description: The threshold value that triggers the alert. For usage, this is an
-                                      absolute count. For usage_percentage, this
-                                      is a percentage (0-100).
+                                    description: The threshold value that triggers the alert. For usage or
+                                      remaining, this is an absolute count. For
+                                      usage_percentage or remaining_percentage,
+                                      this is a percentage (0-100).
                                   threshold_type:
                                     enum:
                                       - usage
                                       - usage_percentage
+                                      - remaining
+                                      - remaining_percentage
                                     type: string
-                                    description: Whether the threshold is an absolute usage count or a percentage of
-                                      the usage allowance.
+                                    description: Whether the threshold is an absolute count or a percentage of the
+                                      usage allowance or remaining balance.
                                   name:
                                     type: string
                                     description: Optional user-defined label to distinguish multiple alerts on the
@@ -2483,6 +2505,10 @@ paths:
                               - interval
                               - limit
                             description: Optional rate limit to cap how often auto top-ups occur.
+                          invoice_mode:
+                            type: boolean
+                            description: When true, auto top-up creates a send_invoice invoice instead of
+                              auto-charging.
                         required:
                           - feature_id
                           - threshold
@@ -2512,8 +2538,7 @@ paths:
                         properties:
                           feature_id:
                             type: string
-                            description: The feature ID this alert applies to. If omitted, the alert applies
-                              globally.
+                            description: The feature ID this alert applies to.
                           enabled:
                             type: boolean
                             default: true
@@ -2521,16 +2546,19 @@ paths:
                           threshold:
                             type: number
                             minimum: 0
-                            description: The threshold value that triggers the alert. For usage, this is an
-                              absolute count. For usage_percentage, this is a
-                              percentage (0-100).
+                            description: The threshold value that triggers the alert. For usage or
+                              remaining, this is an absolute count. For
+                              usage_percentage or remaining_percentage, this is
+                              a percentage (0-100).
                           threshold_type:
                             enum:
                               - usage
                               - usage_percentage
+                              - remaining
+                              - remaining_percentage
                             type: string
-                            description: Whether the threshold is an absolute usage count or a percentage of
-                              the usage allowance.
+                            description: Whether the threshold is an absolute count or a percentage of the
+                              usage allowance or remaining balance.
                           name:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
@@ -2667,6 +2695,10 @@ paths:
                                 - interval
                                 - limit
                               description: Optional rate limit to cap how often auto top-ups occur.
+                            invoice_mode:
+                              type: boolean
+                              description: When true, auto top-up creates a send_invoice invoice instead of
+                                auto-charging.
                           required:
                             - feature_id
                             - threshold
@@ -2696,8 +2728,7 @@ paths:
                           properties:
                             feature_id:
                               type: string
-                              description: The feature ID this alert applies to. If omitted, the alert applies
-                                globally.
+                              description: The feature ID this alert applies to.
                             enabled:
                               type: boolean
                               default: true
@@ -2705,16 +2736,19 @@ paths:
                             threshold:
                               type: number
                               minimum: 0
-                              description: The threshold value that triggers the alert. For usage, this is an
-                                absolute count. For usage_percentage, this is a
-                                percentage (0-100).
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
                             threshold_type:
                               enum:
                                 - usage
                                 - usage_percentage
+                                - remaining
+                                - remaining_percentage
                               type: string
-                              description: Whether the threshold is an absolute usage count or a percentage of
-                                the usage allowance.
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
                             name:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
@@ -6886,6 +6920,9 @@ paths:
                   description: Only applicable when the customer has an existing Stripe
                     subscription. If true, creates a new separate subscription
                     instead of merging into the existing one.
+                billing_cycle_anchor:
+                  const: now
+                  description: Reset the billing cycle anchor immediately with 'now'.
                 plan_schedule:
                   enum:
                     - immediate
@@ -6963,6 +7000,9 @@ paths:
                   description: Key-value metadata to attach to the Stripe subscription, invoice,
                     and checkout session created during this attach flow. Keys
                     prefixed with 'autumn_' are reserved and will be stripped.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, skips any billing changes for the attach operation.
               required:
                 - customer_id
                 - plan_id
@@ -7464,8 +7504,7 @@ paths:
                             properties:
                               feature_id:
                                 type: string
-                                description: The feature ID this alert applies to. If omitted, the alert applies
-                                  globally.
+                                description: The feature ID this alert applies to.
                               enabled:
                                 type: boolean
                                 default: true
@@ -7473,16 +7512,19 @@ paths:
                               threshold:
                                 type: number
                                 minimum: 0
-                                description: The threshold value that triggers the alert. For usage, this is an
-                                  absolute count. For usage_percentage, this is
-                                  a percentage (0-100).
+                                description: The threshold value that triggers the alert. For usage or
+                                  remaining, this is an absolute count. For
+                                  usage_percentage or remaining_percentage, this
+                                  is a percentage (0-100).
                               threshold_type:
                                 enum:
                                   - usage
                                   - usage_percentage
+                                  - remaining
+                                  - remaining_percentage
                                 type: string
-                                description: Whether the threshold is an absolute usage count or a percentage of
-                                  the usage allowance.
+                                description: Whether the threshold is an absolute count or a percentage of the
+                                  usage allowance or remaining balance.
                               name:
                                 type: string
                                 description: Optional user-defined label to distinguish multiple alerts on the
@@ -8005,6 +8047,9 @@ paths:
                   description: Only applicable when the customer has an existing Stripe
                     subscription. If true, creates a new separate subscription
                     instead of merging into the existing one.
+                billing_cycle_anchor:
+                  const: now
+                  description: Reset the billing cycle anchor immediately with 'now'.
                 plan_schedule:
                   enum:
                     - immediate
@@ -8082,6 +8127,9 @@ paths:
                   description: Key-value metadata to attach to the Stripe subscription, invoice,
                     and checkout session created during this attach flow. Keys
                     prefixed with 'autumn_' are reserved and will be stripped.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, skips any billing changes for the attach operation.
               required:
                 - customer_id
                 - plan_id
@@ -8863,8 +8911,7 @@ paths:
                             properties:
                               feature_id:
                                 type: string
-                                description: The feature ID this alert applies to. If omitted, the alert applies
-                                  globally.
+                                description: The feature ID this alert applies to.
                               enabled:
                                 type: boolean
                                 default: true
@@ -8872,16 +8919,19 @@ paths:
                               threshold:
                                 type: number
                                 minimum: 0
-                                description: The threshold value that triggers the alert. For usage, this is an
-                                  absolute count. For usage_percentage, this is
-                                  a percentage (0-100).
+                                description: The threshold value that triggers the alert. For usage or
+                                  remaining, this is an absolute count. For
+                                  usage_percentage or remaining_percentage, this
+                                  is a percentage (0-100).
                               threshold_type:
                                 enum:
                                   - usage
                                   - usage_percentage
+                                  - remaining
+                                  - remaining_percentage
                                 type: string
-                                description: Whether the threshold is an absolute usage count or a percentage of
-                                  the usage allowance.
+                                description: Whether the threshold is an absolute count or a percentage of the
+                                  usage allowance or remaining balance.
                               name:
                                 type: string
                                 description: Optional user-defined label to distinguish multiple alerts on the
@@ -9666,6 +9716,9 @@ paths:
                   description: Action to perform for cancellation. 'cancel_immediately' cancels
                     now with prorated refund, 'cancel_end_of_cycle' cancels at
                     period end, 'uncancel' reverses a pending cancellation.
+                billing_cycle_anchor:
+                  const: now
+                  description: Reset the billing cycle anchor immediately with 'now'
                 no_billing_changes:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
@@ -10146,6 +10199,9 @@ paths:
                   description: Action to perform for cancellation. 'cancel_immediately' cancels
                     now with prorated refund, 'cancel_end_of_cycle' cancels at
                     period end, 'uncancel' reverses a pending cancellation.
+                billing_cycle_anchor:
+                  const: now
+                  description: Reset the billing cycle anchor immediately with 'now'
                 no_billing_changes:
                   type: boolean
                   description: If true, the subscription is updated internally without applying
@@ -10955,6 +11011,9 @@ paths:
                 success_url:
                   type: string
                   description: URL to redirect to after successful checkout.
+                billing_cycle_anchor:
+                  const: now
+                  description: Reset the billing cycle anchor immediately with 'now'.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -11023,6 +11082,9 @@ paths:
                   description: Key-value metadata to attach to the Stripe subscription, invoice,
                     and checkout session created during this attach flow. Keys
                     prefixed with 'autumn_' are reserved and will be stripped.
+                no_billing_changes:
+                  type: boolean
+                  description: If true, skips any billing changes for the attach operation.
               required:
                 - customer_id
               title: SetupPaymentParams
@@ -12038,6 +12100,7 @@ paths:
                                 - new
                                 - renew
                                 - upgrade
+                                - update_prepaid_quantity
                                 - downgrade
                                 - cancel
                                 - expired
@@ -12424,7 +12487,10 @@ paths:
                           description: Event value/count
                         properties:
                           type: object
-                          description: Event properties (JSONB)
+                          propertyNames:
+                            type: string
+                          additionalProperties: {}
+                          description: Event properties (JSON)
                       required:
                         - id
                         - timestamp
@@ -12802,8 +12868,7 @@ paths:
                         properties:
                           feature_id:
                             type: string
-                            description: The feature ID this alert applies to. If omitted, the alert applies
-                              globally.
+                            description: The feature ID this alert applies to.
                           enabled:
                             type: boolean
                             default: true
@@ -12811,16 +12876,19 @@ paths:
                           threshold:
                             type: number
                             minimum: 0
-                            description: The threshold value that triggers the alert. For usage, this is an
-                              absolute count. For usage_percentage, this is a
-                              percentage (0-100).
+                            description: The threshold value that triggers the alert. For usage or
+                              remaining, this is an absolute count. For
+                              usage_percentage or remaining_percentage, this is
+                              a percentage (0-100).
                           threshold_type:
                             enum:
                               - usage
                               - usage_percentage
+                              - remaining
+                              - remaining_percentage
                             type: string
-                            description: Whether the threshold is an absolute usage count or a percentage of
-                              the usage allowance.
+                            description: Whether the threshold is an absolute count or a percentage of the
+                              usage allowance or remaining balance.
                           name:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
@@ -13148,8 +13216,7 @@ paths:
                           properties:
                             feature_id:
                               type: string
-                              description: The feature ID this alert applies to. If omitted, the alert applies
-                                globally.
+                              description: The feature ID this alert applies to.
                             enabled:
                               type: boolean
                               default: true
@@ -13157,16 +13224,19 @@ paths:
                             threshold:
                               type: number
                               minimum: 0
-                              description: The threshold value that triggers the alert. For usage, this is an
-                                absolute count. For usage_percentage, this is a
-                                percentage (0-100).
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
                             threshold_type:
                               enum:
                                 - usage
                                 - usage_percentage
+                                - remaining
+                                - remaining_percentage
                               type: string
-                              description: Whether the threshold is an absolute usage count or a percentage of
-                                the usage allowance.
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
                             name:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
@@ -13635,8 +13705,7 @@ paths:
                           properties:
                             feature_id:
                               type: string
-                              description: The feature ID this alert applies to. If omitted, the alert applies
-                                globally.
+                              description: The feature ID this alert applies to.
                             enabled:
                               type: boolean
                               default: true
@@ -13644,16 +13713,19 @@ paths:
                             threshold:
                               type: number
                               minimum: 0
-                              description: The threshold value that triggers the alert. For usage, this is an
-                                absolute count. For usage_percentage, this is a
-                                percentage (0-100).
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
                             threshold_type:
                               enum:
                                 - usage
                                 - usage_percentage
+                                - remaining
+                                - remaining_percentage
                               type: string
-                              description: Whether the threshold is an absolute usage count or a percentage of
-                                the usage allowance.
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
                             name:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
@@ -13852,8 +13924,7 @@ paths:
                         properties:
                           feature_id:
                             type: string
-                            description: The feature ID this alert applies to. If omitted, the alert applies
-                              globally.
+                            description: The feature ID this alert applies to.
                           enabled:
                             type: boolean
                             default: true
@@ -13861,16 +13932,19 @@ paths:
                           threshold:
                             type: number
                             minimum: 0
-                            description: The threshold value that triggers the alert. For usage, this is an
-                              absolute count. For usage_percentage, this is a
-                              percentage (0-100).
+                            description: The threshold value that triggers the alert. For usage or
+                              remaining, this is an absolute count. For
+                              usage_percentage or remaining_percentage, this is
+                              a percentage (0-100).
                           threshold_type:
                             enum:
                               - usage
                               - usage_percentage
+                              - remaining
+                              - remaining_percentage
                             type: string
-                            description: Whether the threshold is an absolute usage count or a percentage of
-                              the usage allowance.
+                            description: Whether the threshold is an absolute count or a percentage of the
+                              usage allowance or remaining balance.
                           name:
                             type: string
                             description: Optional user-defined label to distinguish multiple alerts on the
@@ -14189,8 +14263,7 @@ paths:
                           properties:
                             feature_id:
                               type: string
-                              description: The feature ID this alert applies to. If omitted, the alert applies
-                                globally.
+                              description: The feature ID this alert applies to.
                             enabled:
                               type: boolean
                               default: true
@@ -14198,16 +14271,19 @@ paths:
                             threshold:
                               type: number
                               minimum: 0
-                              description: The threshold value that triggers the alert. For usage, this is an
-                                absolute count. For usage_percentage, this is a
-                                percentage (0-100).
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
                             threshold_type:
                               enum:
                                 - usage
                                 - usage_percentage
+                                - remaining
+                                - remaining_percentage
                               type: string
-                              description: Whether the threshold is an absolute usage count or a percentage of
-                                the usage allowance.
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
                             name:
                               type: string
                               description: Optional user-defined label to distinguish multiple alerts on the
@@ -14705,6 +14781,8 @@ webhooks:
                           enum:
                             - usage
                             - usage_percentage
+                            - remaining
+                            - remaining_percentage
                       required:
                         - threshold
                         - threshold_type

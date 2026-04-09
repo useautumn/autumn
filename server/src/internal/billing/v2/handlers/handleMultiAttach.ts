@@ -3,7 +3,7 @@ import {
 	InternalError,
 	MultiAttachParamsV0Schema,
 } from "@autumn/shared";
-import { buildBillingLockKey } from "@/internal/billing/utils/buildBillingLockKey";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";

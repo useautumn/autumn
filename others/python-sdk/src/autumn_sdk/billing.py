@@ -57,6 +57,7 @@ class Billing(BaseSDK):
             Union[models.AttachCarryOverUsages, models.AttachCarryOverUsagesTypedDict]
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
+        no_billing_changes: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -86,6 +87,7 @@ class Billing(BaseSDK):
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+        :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -136,6 +138,7 @@ class Billing(BaseSDK):
                 carry_over_usages, Optional[models.AttachCarryOverUsages]
             ),
             metadata=metadata,
+            no_billing_changes=no_billing_changes,
         )
 
         req = self._build_request(
@@ -245,6 +248,7 @@ class Billing(BaseSDK):
             Union[models.AttachCarryOverUsages, models.AttachCarryOverUsagesTypedDict]
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
+        no_billing_changes: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -274,6 +278,7 @@ class Billing(BaseSDK):
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+        :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -324,6 +329,7 @@ class Billing(BaseSDK):
                 carry_over_usages, Optional[models.AttachCarryOverUsages]
             ),
             metadata=metadata,
+            no_billing_changes=no_billing_changes,
         )
 
         req = self._build_request_async(
@@ -746,6 +752,7 @@ class Billing(BaseSDK):
             ]
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
+        no_billing_changes: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -775,6 +782,7 @@ class Billing(BaseSDK):
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+        :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -826,6 +834,7 @@ class Billing(BaseSDK):
                 carry_over_usages, Optional[models.PreviewAttachCarryOverUsages]
             ),
             metadata=metadata,
+            no_billing_changes=no_billing_changes,
         )
 
         req = self._build_request(
@@ -942,6 +951,7 @@ class Billing(BaseSDK):
             ]
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
+        no_billing_changes: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -971,6 +981,7 @@ class Billing(BaseSDK):
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+        :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1022,6 +1033,7 @@ class Billing(BaseSDK):
                 carry_over_usages, Optional[models.PreviewAttachCarryOverUsages]
             ),
             metadata=metadata,
+            no_billing_changes=no_billing_changes,
         )
 
         req = self._build_request_async(
@@ -2255,6 +2267,7 @@ class Billing(BaseSDK):
             ]
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
+        no_billing_changes: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2278,6 +2291,7 @@ class Billing(BaseSDK):
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+        :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2322,6 +2336,7 @@ class Billing(BaseSDK):
                 carry_over_usages, Optional[models.SetupPaymentCarryOverUsages]
             ),
             metadata=metadata,
+            no_billing_changes=no_billing_changes,
         )
 
         req = self._build_request(
@@ -2429,6 +2444,7 @@ class Billing(BaseSDK):
             ]
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
+        no_billing_changes: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2452,6 +2468,7 @@ class Billing(BaseSDK):
         :param carry_over_balances: Whether to carry over balances from the previous plan.
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+        :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2496,6 +2513,7 @@ class Billing(BaseSDK):
                 carry_over_usages, Optional[models.SetupPaymentCarryOverUsages]
             ),
             metadata=metadata,
+            no_billing_changes=no_billing_changes,
         )
 
         req = self._build_request_async(

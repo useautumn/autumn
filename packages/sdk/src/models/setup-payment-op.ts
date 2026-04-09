@@ -460,6 +460,10 @@ export type SetupPaymentParams = {
    */
   successUrl?: string | undefined;
   /**
+   * Reset the billing cycle anchor immediately with 'now'.
+   */
+  billingCycleAnchor?: "now" | undefined;
+  /**
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
@@ -483,6 +487,10 @@ export type SetupPaymentParams = {
    * Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
    */
   metadata?: { [k: string]: string } | undefined;
+  /**
+   * If true, skips any billing changes for the attach operation.
+   */
+  noBillingChanges?: boolean | undefined;
 };
 
 /**
@@ -1051,12 +1059,14 @@ export type SetupPaymentParams$Outbound = {
   subscription_id?: string | undefined;
   discounts?: Array<SetupPaymentAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
+  billing_cycle_anchor?: "now" | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<SetupPaymentCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
   carry_over_balances?: SetupPaymentCarryOverBalances$Outbound | undefined;
   carry_over_usages?: SetupPaymentCarryOverUsages$Outbound | undefined;
   metadata?: { [k: string]: string } | undefined;
+  no_billing_changes?: boolean | undefined;
 };
 
 /** @internal */
@@ -1079,6 +1089,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => SetupPaymentAttachDiscount$outboundSchema)),
     ),
     successUrl: z.optional(z.string()),
+    billingCycleAnchor: z.optional(z.literal("now")),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
       z.array(z.lazy(() => SetupPaymentCustomLineItem$outboundSchema)),
@@ -1091,6 +1102,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       z.lazy(() => SetupPaymentCarryOverUsages$outboundSchema),
     ),
     metadata: z.optional(z.record(z.string(), z.string())),
+    noBillingChanges: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1101,11 +1113,13 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       prorationBehavior: "proration_behavior",
       subscriptionId: "subscription_id",
       successUrl: "success_url",
+      billingCycleAnchor: "billing_cycle_anchor",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",
       carryOverBalances: "carry_over_balances",
       carryOverUsages: "carry_over_usages",
+      noBillingChanges: "no_billing_changes",
     });
   }),
 );

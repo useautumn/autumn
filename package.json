@@ -33,7 +33,7 @@
 			"@orpc/openapi-client": "^1.0.0",
 			"@tanstack/react-query": "5.85.6",
 			"decimal.js": "10.5.0",
-			"vite": "7.3.1",
+			"vite": "7.3.2",
 			"vite-tsconfig-paths": "6.1.1"
 		}
 	},
@@ -75,6 +75,7 @@
 		"s": "ENV_FILE=.env.staging infisical run --env=staging -- bun scripts/dev.ts",
 		"l": "bash ./scripts/dev-local.sh",
 		"setup": "node scripts/setup/setup.js",
+		"setup:s3-admin": "bun scripts/setup/setupS3Admin.ts",
 		"setup:test": "infisical run --env=dev -- bun scripts/setup/setup-test.ts",
 		"migrate-functions": "infisical run --env=dev -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:test": "infisical run --env=test -- bun scripts/migrations/migrate-functions.ts",

@@ -30,6 +30,7 @@ export const getOrCreateCustomerAutoTopupOutboundSchema = z.object({
 	purchase_limit: z
 		.union([getOrCreateCustomerPurchaseLimitOutboundSchema, z.undefined()])
 		.optional(),
+	invoice_mode: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerSpendLimitOutboundSchema = z.object({
@@ -112,6 +113,7 @@ export const getOrCreateCustomerAutoTopupSchema = z.object({
 	purchaseLimit: z
 		.union([getOrCreateCustomerPurchaseLimitSchema, z.undefined()])
 		.optional(),
+	invoiceMode: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerThresholdTypeSchema = closedEnumSchema;

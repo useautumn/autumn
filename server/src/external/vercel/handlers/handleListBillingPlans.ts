@@ -3,8 +3,9 @@ import {
 	type FullProduct,
 	formatAmount,
 	getProductItemDisplay,
+	isFixedPrice,
+	isPrepaidPrice,
 	isPriceItem,
-	isUsagePrice,
 	mapToProductV2,
 	type Organization,
 	productV2ToBasePrice,
@@ -166,7 +167,13 @@ const listVercelPlansForOrg = async ({
 	// 2. Get rid of products that are archived
 	// 3. Get rid of products that are one off, only if they are not free
 	const filteredProducts = products
-		.filter((p) => !p.prices.some((price) => isUsagePrice({ price })))
+		.filter(
+			(p) =>
+				// If the product has any prices that are not fixed or prepaid, filter it out
+				!p.prices.some(
+					(price) => !isFixedPrice(price) && !isPrepaidPrice(price),
+				),
+		)
 		.filter(
 			(p) =>
 				!p.is_add_on &&

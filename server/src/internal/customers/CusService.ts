@@ -142,9 +142,8 @@ export class CusService {
 						.slice(0, 5);
 				}
 
-				// Skip reset when reading from replica — it writes to primary,
-				// and replica data is stale anyway. When degraded WITHOUT a replica
-				// (falls back to primary), the reset should still run.
+				// Skip reset only when executeWithHealthTracking explicitly chose the
+				// replica. Lazy reset writes themselves go through dbGeneral.
 				if (!usedReplica) {
 					await resetCustomerEntitlements({
 						fullCus,
@@ -303,10 +302,10 @@ export class CusService {
 		ctx: AutumnContext;
 		query?: Pick<
 			ListCustomersV2Params,
-			"plans" | "search" | "subscription_status"
+			"plans" | "search" | "subscription_status" | "processors"
 		>;
 	}): Promise<{ total_filtered_count: number }> {
-		if (!hasCustomerListFilters(query ?? {})) {
+		if (!hasCustomerListFilters({ ...query })) {
 			const { total_count } = await CusService.countByOrgIdAndEnv({ ctx });
 			return { total_filtered_count: total_count };
 		}
@@ -315,6 +314,23 @@ export class CusService {
 		const inStatuses = query?.subscription_status
 			? [query.subscription_status as CusProductStatus]
 			: ACTIVE_STATUSES;
+
+		const processorFilter =
+			query?.processors?.length
+				? or(
+						...query.processors
+							.map((proc) => {
+								if (proc === "stripe")
+									return sql`(${customers.processor}->>'id' IS NOT NULL)`;
+								if (proc === "revenuecat")
+									return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
+								if (proc === "vercel")
+									return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
+								return undefined;
+							})
+							.filter((c): c is NonNullable<typeof c> => c !== undefined),
+					)
+				: undefined;
 
 		if (!query?.plans?.length) {
 			const [result] = await ctx.db
@@ -331,6 +347,7 @@ export class CusService {
 									ilike(customers.email, `%${search}%`),
 								)
 							: undefined,
+						processorFilter,
 					),
 				);
 
@@ -383,17 +400,20 @@ export class CusService {
 			.where(
 				and(
 					inArray(customerProducts.internal_product_id, internalProductIds),
-					search
-						? and(
-								eq(customers.org_id, ctx.org.id),
-								eq(customers.env, ctx.env),
-								or(
-									ilike(customers.id, `%${search}%`),
-									ilike(customers.name, `%${search}%`),
-									ilike(customers.email, `%${search}%`),
-								),
-							)
-						: undefined,
+					or(
+						search
+							? and(
+									eq(customers.org_id, ctx.org.id),
+									eq(customers.env, ctx.env),
+									or(
+										ilike(customers.id, `%${search}%`),
+										ilike(customers.name, `%${search}%`),
+										ilike(customers.email, `%${search}%`),
+									),
+								)
+							: undefined,
+					),
+					processorFilter,
 				),
 			);
 

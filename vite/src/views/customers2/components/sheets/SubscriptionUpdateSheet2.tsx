@@ -13,6 +13,7 @@ import {
 	type UpdateSubscriptionForm,
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
+	UpdateSubscriptionPlanOptions,
 	UpdateSubscriptionPreviewSection,
 	useUpdateSubscriptionFormContext,
 } from "@/components/forms/update-subscription-v2";
@@ -86,6 +87,7 @@ function SheetContent() {
 				</div>
 
 				<EditPlanSection />
+				<UpdateSubscriptionPlanOptions />
 				<UpdateSubscriptionAdvancedSection />
 				<UpdateSubscriptionPreviewSection />
 				<UpdateSubscriptionFooter />

@@ -41,6 +41,8 @@ export const ManageOrg = ({
 							value={currentTab}
 							onValueChange={setCurrentTab as (val: string) => void}
 						>
+
+
 							<div className="flex justify-between items-center px-6">
 								<TabsList className="p-0 flex gap-4 justify-start w-fit bg-transparent!">
 									<TabsTrigger value="user">User</TabsTrigger>

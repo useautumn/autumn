@@ -72,6 +72,10 @@ export type UpdateCustomerAutoTopupRequest = {
    * Optional rate limit to cap how often auto top-ups occur.
    */
   purchaseLimit?: UpdateCustomerPurchaseLimitRequest | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
 };
 
 export type UpdateCustomerSpendLimitRequest = {
@@ -90,14 +94,16 @@ export type UpdateCustomerSpendLimitRequest = {
 };
 
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export const UpdateCustomerThresholdTypeRequestBody = {
   Usage: "usage",
   UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
 } as const;
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type UpdateCustomerThresholdTypeRequestBody = ClosedEnum<
   typeof UpdateCustomerThresholdTypeRequestBody
@@ -105,7 +111,7 @@ export type UpdateCustomerThresholdTypeRequestBody = ClosedEnum<
 
 export type UpdateCustomerUsageAlertRequestBody = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**
@@ -113,11 +119,11 @@ export type UpdateCustomerUsageAlertRequestBody = {
    */
   enabled?: boolean | undefined;
   /**
-   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
    */
   threshold: number;
   /**
-   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: UpdateCustomerThresholdTypeRequestBody;
   /**
@@ -265,6 +271,10 @@ export type UpdateCustomerAutoTopupResponse = {
    * Optional rate limit to cap how often auto top-ups occur.
    */
   purchaseLimit?: UpdateCustomerPurchaseLimitResponse | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
 };
 
 export type UpdateCustomerSpendLimitResponse = {
@@ -283,14 +293,16 @@ export type UpdateCustomerSpendLimitResponse = {
 };
 
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export const UpdateCustomerThresholdTypeResponse = {
   Usage: "usage",
   UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
 } as const;
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type UpdateCustomerThresholdTypeResponse = OpenEnum<
   typeof UpdateCustomerThresholdTypeResponse
@@ -298,7 +310,7 @@ export type UpdateCustomerThresholdTypeResponse = OpenEnum<
 
 export type UpdateCustomerUsageAlertResponse = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**
@@ -306,11 +318,11 @@ export type UpdateCustomerUsageAlertResponse = {
    */
   enabled: boolean;
   /**
-   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
    */
   threshold: number;
   /**
-   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: UpdateCustomerThresholdTypeResponse;
   /**
@@ -647,6 +659,7 @@ export type UpdateCustomerAutoTopupRequest$Outbound = {
   threshold: number;
   quantity: number;
   purchase_limit?: UpdateCustomerPurchaseLimitRequest$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
 };
 
 /** @internal */
@@ -662,11 +675,13 @@ export const UpdateCustomerAutoTopupRequest$outboundSchema: z.ZodMiniType<
     purchaseLimit: z.optional(
       z.lazy(() => UpdateCustomerPurchaseLimitRequest$outboundSchema),
     ),
+    invoiceMode: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
     });
   }),
 );
@@ -947,11 +962,13 @@ export const UpdateCustomerAutoTopupResponse$inboundSchema: z.ZodMiniType<
     purchase_limit: types.optional(
       z.lazy(() => UpdateCustomerPurchaseLimitResponse$inboundSchema),
     ),
+    invoice_mode: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "purchase_limit": "purchaseLimit",
+      "invoice_mode": "invoiceMode",
     });
   }),
 );

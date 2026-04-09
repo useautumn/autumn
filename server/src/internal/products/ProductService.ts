@@ -94,6 +94,39 @@ export class ProductService {
 		return latestProducts;
 	}
 
+	static async getByStripeProductIds({
+		db,
+		stripeProductIds,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		stripeProductIds: string[];
+		orgId: string;
+		env: AppEnv;
+	}) {
+		if (!stripeProductIds || stripeProductIds.length === 0)
+			return {} as Record<string, Product>;
+
+		const rows = (await db.query.products.findMany({
+			where: and(
+				sql`${products.processor} ->> 'id' = ANY(ARRAY[${sql.join(
+					stripeProductIds.map((id) => sql`${id}`),
+					sql`, `,
+				)}])`,
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+			),
+		})) as Product[];
+
+		const byStripeProductId: Record<string, Product> = {};
+		for (const row of rows) {
+			const stripeId = row.processor?.id;
+			if (stripeId) byStripeProductId[stripeId] = row;
+		}
+		return byStripeProductId;
+	}
+
 	static async getByInternalId({
 		db,
 		internalId,
@@ -410,19 +443,19 @@ export class ProductService {
 
 		parseFreeTrials({ product: data });
 
-		if (logResult && logger) {
-			logger.info("full product:", {
-				data: {
-					result: data,
-					params: {
-						idOrInternalId,
-						orgId,
-						env,
-						version,
-					},
-				},
-			});
-		}
+		// if (logResult && logger) {
+		// 	logger.info("full product:", {
+		// 		data: {
+		// 			result: data,
+		// 			params: {
+		// 				idOrInternalId,
+		// 				orgId,
+		// 				env,
+		// 				version,
+		// 			},
+		// 		},
+		// 	});
+		// }
 
 		if (!data) {
 			if (allowNotFound) return null as unknown as FullProduct;

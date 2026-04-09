@@ -1,2 +1,3 @@
-export { ACCORDION_ITEM, AdvancedSection } from "./AdvancedSection";
+export { ConfigRow } from "../ConfigRow";
+export { AdvancedSection } from "./AdvancedSection";
 export { AdvancedToggleRow } from "./AdvancedToggleRow";

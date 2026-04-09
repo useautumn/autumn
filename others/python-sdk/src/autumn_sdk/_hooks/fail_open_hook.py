@@ -13,7 +13,7 @@ from .types import (
     SDKInitHook,
 )
 
-FAIL_OPEN_OPERATION_IDS = {"check", "track", "listPlans"}
+FAIL_OPEN_OPERATION_IDS = {"check", "track", "listPlans", "getEntity"}
 
 FAIL_OPEN_LOG_MESSAGE = (
     "[Autumn] Request failed \u2014 failing open. "
@@ -34,6 +34,18 @@ FAIL_OPEN_BODIES: dict = {
     },
     "listPlans": {
         "list": [],
+    },
+    "getEntity": {
+        "id": None,
+        "name": None,
+        "customer_id": None,
+        "feature_id": None,
+        "created_at": 0,
+        "env": "live",
+        "subscriptions": [],
+        "purchases": [],
+        "balances": {},
+        "flags": {},
     },
 }
 

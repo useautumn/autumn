@@ -7,7 +7,7 @@ import { useCustomerContext } from "./CustomerContext";
 const mutedDivClassName =
 	"py-0.5 px-1.5 rounded-lg text-t3 text-tiny flex items-center gap-2 h-6 max-w-48 truncate bg-muted text-tiny-id";
 
-const placeholderText = "NULL";
+const placeholderText = "PENDING";
 
 export const CustomerPageDetails = () => {
 	const { customer } = useCustomerContext();

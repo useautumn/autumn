@@ -8,15 +8,15 @@ description: Write integration tests for Autumn billing. Covers initScenario set
 ## Before Writing ANY Test
 
 1. **Search for duplicate scenarios** — grep the test directory for similar setups
-2. **Read the rules file** `.Codex/rules/write-tests.mdc` — the 20 rules agents ALWAYS get wrong
+2. **Read the rules file** `.claude/rules/write-tests.mdc` — the test rules agents ALWAYS get wrong
 
 ## Minimal Template
 
 ```typescript
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3 } from "@autumn/shared";
-import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
+import { type ApiCustomerV5, type AttachParamsV1Input } from "@autumn/shared";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -27,17 +27,33 @@ test.concurrent(`${chalk.yellowBright("feature: description")}`, async () => {
   const messagesItem = items.monthlyMessages({ includedUsage: 100 });
   const pro = products.pro({ items: [messagesItem] });
 
-  const { customerId, autumnV1, ctx } = await initScenario({
+  const { customerId, autumnV2_2, ctx } = await initScenario({
     customerId: "unique-test-id",
     setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [pro] })],
-    actions: [s.billing.attach({ productId: pro.id })],
+    actions: [],
   });
 
-  const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-  expectCustomerFeatureCorrect({ customer, featureId: TestFeature.Messages, balance: 100 });
+  const params: AttachParamsV1Input = {
+    customer_id: customerId,
+    plan_id: pro.id,
+    redirect_mode: "if_required",
+  };
+
+  await autumnV2_2.billing.previewAttach<AttachParamsV1Input>(params);
+  await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
+
+  const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+  expectBalanceCorrect({
+    customer,
+    featureId: TestFeature.Messages,
+    remaining: 100,
+    planId: pro.id,
+  });
   await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 ```
+
+**Important:** billing endpoint params are not strongly typed enough by inference alone. Always call `billing.previewAttach`, `billing.attach`, and `subscriptions.update` with explicit generics like `<AttachParamsV1Input>` or `<UpdateSubscriptionV1ParamsInput>`.
 
 ## initScenario — The Core System
 
@@ -50,6 +66,8 @@ const {
   customerId,     // Customer ID (auto-prefixed products)
   autumnV1,       // V1.2 API client
   autumnV2,       // V2.0 API client
+  autumnV2_1,     // V2.1 API client
+  autumnV2_2,     // V2.2 API client (preferred for new billing tests)
   ctx,            // { db, stripeCli, org, env, features }
   testClockId,    // Stripe test clock ID
   customer,       // Customer object after creation
@@ -77,7 +95,7 @@ const {
 
 | Function | Built-in Timeout | Notes |
 |----------|-----------------|-------|
-| `s.billing.attach({ productId, options?, planSchedule?, items?, newBillingSubscription? })` | **5-8s** | V2 endpoint. Use for new billing tests |
+| `s.billing.attach({ productId, options?, planSchedule?, items?, newBillingSubscription? })` | **5-8s** | Setup helper for billing scenarios. Prefer direct `autumnV2_2.billing.attach<AttachParamsV1Input>(...)` in the test body |
 | `s.attach({ productId, entityIndex?, options?, newBillingSubscription? })` | **4-5s** | V1 endpoint. Use for legacy/update-subscription setup |
 | `s.billing.multiAttach({ plans, entityIndex?, freeTrial? })` | **2-5s** | `plans: [{ productId, featureQuantities? }]` |
 | `s.cancel({ productId, entityIndex? })` | **None** | No timeout |
@@ -98,7 +116,9 @@ const {
 | **Endpoint** | V1 `/attach` | V2 `/billing.attach` |
 | **Extra params** | none | `planSchedule`, `items` (custom plan) |
 | **Prepaid quantity** | **Exclusive** of `includedUsage` | **Inclusive** of `includedUsage` |
-| **Use when** | Legacy tests, update-subscription setup | New billing/attach tests |
+| **Use when** | Legacy tests, update-subscription setup | Scenario setup for billing tests |
+
+For the action under test, prefer `autumnV2_2.billing.previewAttach<AttachParamsV1Input>(...)`, `autumnV2_2.billing.attach<AttachParamsV1Input>(...)`, and `autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(...)`.
 
 ### Product ID Prefixing
 
@@ -145,6 +165,20 @@ await expectProductActive({ customer, productId: pro.id });
 await expectProductCanceling({ customer, productId: premium.id });
 await expectProductScheduled({ customer, productId: free.id });
 await expectProductNotPresent({ customer, productId: pro.id });
+```
+
+### Balances
+
+```typescript
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
+
+expectBalanceCorrect({
+  customer,
+  featureId: TestFeature.Messages,
+  remaining: 100,
+  usage: 0,
+  planId: pro.id,
+});
 ```
 
 ### Features
@@ -438,12 +472,12 @@ test.concurrent(`${chalk.yellowBright("prepaid: attach with quantity")}`, async 
 
 | Writing a... | Use in `initScenario` actions | Test body calls |
 |---|---|---|
-| **Billing attach test** | `s.billing.attach()` for setup | `autumnV1.billing.attach()` for action under test |
-| **Multi-attach test** | `s.billing.attach()` for setup | `autumnV1.billing.multiAttach()` |
-| **Update subscription test** | `s.attach()` for initial attach | `autumnV1.subscriptions.update()` |
-| **Cancel test** | `s.billing.attach()` for setup | `autumnV1.subscriptions.update({ cancel: "end_of_cycle" })` |
+| **Billing attach test** | `s.billing.attach()` for setup | `autumnV2_2.billing.attach<AttachParamsV1Input>()` |
+| **Multi-attach test** | `s.billing.attach()` for setup | `autumnV2_2.billing.multiAttach()` |
+| **Update subscription test** | `s.attach()` for initial attach | `autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>()` |
+| **Cancel test** | `s.billing.attach()` for setup | `autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({ cancel_action: "cancel_end_of_cycle" })` |
 | **Track/check test** | `s.attach()` for product setup | `autumnV1.track()` / `autumnV1.check()` |
-| **Prepaid test** | `s.billing.attach({ options })` | `autumnV1.billing.attach()` or `subscriptions.update()` |
+| **Prepaid test** | `s.billing.attach({ options })` | `autumnV2_2.billing.attach<AttachParamsV1Input>()` or `autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>()` |
 | **Entity test** | `s.entities()` in setup, `entityIndex` in actions | Entity-specific API calls |
 | **Webhook test** | `s.customer({ skipWebhooks: true })` | Manual customer create with `skipWebhooks: false` |
 
