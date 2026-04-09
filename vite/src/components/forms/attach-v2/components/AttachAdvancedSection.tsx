@@ -139,6 +139,7 @@ export function AttachAdvancedSection() {
 	const {
 		hasActiveSubscription,
 		hasOutgoing,
+		showProrationRow,
 		showProrationBehavior,
 		effectiveProrationBehavior,
 		isImmediateSelected,
@@ -433,15 +434,18 @@ export function AttachAdvancedSection() {
 				)}
 			</ConfigRow>
 
-			{/* Proration — only when plan schedule is immediate and subscription exists */}
-			{showProrationBehavior && (
+			{/* Proration — disabled (not hidden) when schedule is end-of-cycle */}
+			{showProrationRow && (
 				<ConfigRow
 					title="Prorate Changes"
 					description="Prorate price differences when changing plans mid-cycle"
 					action={
 						<Switch
-							checked={effectiveProrationBehavior === "prorate_immediately"}
-							disabled={!isNoChargesAllowed}
+							checked={
+								showProrationBehavior &&
+								effectiveProrationBehavior === "prorate_immediately"
+							}
+							disabled={!showProrationBehavior || !isNoChargesAllowed}
 							onCheckedChange={(checked) =>
 								handleProrationBehaviorChange(
 									checked ? "prorate_immediately" : "none",
@@ -496,7 +500,6 @@ export function AttachAdvancedSection() {
 					</Tooltip>
 				</AdvancedToggleRow>
 			)}
-
 		</AdvancedSection>
 	);
 }
