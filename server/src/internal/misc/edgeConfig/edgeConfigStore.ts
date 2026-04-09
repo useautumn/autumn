@@ -179,6 +179,10 @@ export const createEdgeConfigStore = <T>({
 		stopPolling,
 		readFromSource,
 		writeToSource,
+		/** Sets in-memory config without writing to S3. For testing only. */
+		_setRuntimeConfigForTesting: (config: T) => {
+			runtimeConfig = config;
+		},
 	};
 };
 
