@@ -1,107 +1,45 @@
-import {
-	ACTIVE_STATUSES,
-	type CusProduct,
-	CusProductStatus,
-	type ProductItem,
-	type ProductV2,
-} from "@autumn/shared";
-import { useMemo } from "react";
 import { PlanItemsSection } from "@/components/forms/shared";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { AttachSectionTitle } from "./AttachSectionTitle";
 
-/**
- * Computes outgoing product items from client-side data (instant, no API call).
- * Finds active customer products in the same group as the incoming product
- * and returns their items for diff comparison.
- *
- * we should replace this later on with the result of preview_attach, and then move this diff to the second stage
- * on sheet load, it will just show empty items, then on clicking preview changes, we'll see the diff
- */
-function getClientOutgoingItems({
-	incomingProduct,
-	customerProducts,
-	allProducts,
+export function AttachPlanSection({
+	readOnly,
+	showDiff,
 }: {
-	incomingProduct: ProductV2 | undefined;
-	customerProducts: CusProduct[] | undefined;
-	allProducts: ProductV2[];
-}): ProductItem[] {
-	if (!incomingProduct || !customerProducts) return [];
-
-	const incomingGroup = incomingProduct.group ?? "";
-
-	const activeStatuses = new Set<string>([
-		...ACTIVE_STATUSES,
-		CusProductStatus.Trialing,
-	]);
-
-	const outgoingItems: ProductItem[] = [];
-
-	for (const customerProduct of customerProducts) {
-		if (!activeStatuses.has(customerProduct.status)) continue;
-
-		const matchingProduct = allProducts.find(
-			(p) => p.id === customerProduct.product_id && !p.is_add_on,
-		);
-		if (!matchingProduct) continue;
-		if ((matchingProduct.group ?? "") !== incomingGroup) continue;
-
-		outgoingItems.push(...matchingProduct.items);
-	}
-
-	return outgoingItems;
-}
-
-export function AttachPlanSection({ readOnly }: { readOnly?: boolean } = {}) {
+	readOnly?: boolean;
+	showDiff?: boolean;
+} = {}) {
 	const {
 		form,
 		formValues,
 		features,
 		originalItems: productTemplateItems,
-		product: incomingProduct,
 		productWithFormItems: product,
 		hasCustomizations,
 		initialPrepaidOptions,
 		handleEditPlan,
+		previewDiff,
 	} = useAttachFormContext();
 
 	const hideEditButton = readOnly || formValues.grantFree;
-
 	const { prepaidOptions } = formValues;
 
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
 
-	const { customer } = useCusQuery();
-	const { products: allProducts } = useProductsQuery();
-
-	const outgoingItems = useMemo(
-		() =>
-			getClientOutgoingItems({
-				incomingProduct,
-				customerProducts: customer?.customer_products as
-					| CusProduct[]
-					| undefined,
-				allProducts,
-			}),
-		[incomingProduct, customer?.customer_products, allProducts],
-	);
+	const outgoingItems = showDiff ? previewDiff.outgoingItems : [];
 
 	const originalItemsForDiff =
 		outgoingItems.length > 0 ? outgoingItems : productTemplateItems;
 
-	const showDiffs = readOnly
-		? false
-		: hasCustomizations || outgoingItems.length > 0;
+	const shouldShowDiff = showDiff
+		? outgoingItems.length > 0 || hasCustomizations
+		: false;
 
 	if (!product) return null;
 
-	// Common props for PlanItemsSection
 	const planItemsProps = {
 		product,
 		originalItems: originalItemsForDiff,
@@ -109,10 +47,10 @@ export function AttachPlanSection({ readOnly }: { readOnly?: boolean } = {}) {
 		prepaidOptions,
 		initialPrepaidOptions,
 		form,
-		hasCustomizations: showDiffs,
+		showDiff: shouldShowDiff,
 		currency,
 		onEditPlan: handleEditPlan,
-		gateDeletedItemsByCustomizations: true,
+		gateDeletedItemsByDiff: true,
 		readOnly: hideEditButton,
 	} as const;
 

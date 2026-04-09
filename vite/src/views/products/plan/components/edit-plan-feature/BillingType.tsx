@@ -50,6 +50,8 @@ export function BillingType() {
 				tiers: null,
 				billing_units: undefined,
 				usage_model: undefined,
+				price: null,
+				price_config: null,
 				included_usage: item.included_usage,
 				interval: isContUseItem({ item, features }) ? null : item.interval,
 			});

@@ -20,7 +20,8 @@ import {
 
 /** Encapsulates planSchedule + prorationBehavior derived state and mutations. */
 export function usePlanScheduleField() {
-	const { form, formValues, previewQuery } = useAttachFormContext();
+	const { form, formValues, previewQuery, isFreeToPaidTransition } =
+		useAttachFormContext();
 	const { planSchedule, prorationBehavior, newBillingSubscription } =
 		formValues;
 	const previewData = previewQuery.data;
@@ -83,8 +84,6 @@ export function usePlanScheduleField() {
 
 	const isDirectPaidTransition =
 		hasOutgoing && isPaidRecurringAttach && isOutgoingPaidRecurring;
-	const isFreeToPaidTransition =
-		hasOutgoing && isPaidRecurringAttach && !isOutgoingPaidRecurring;
 
 	const canChooseBillingCycle =
 		isPaidRecurringAttach &&
@@ -106,7 +105,9 @@ export function usePlanScheduleField() {
 		: (planSchedule ?? defaultPlanSchedule);
 
 	const showProrationRow =
-		hasActiveSubscription && !hasActiveProductWithTrial;
+		hasActiveSubscription &&
+		!hasActiveProductWithTrial &&
+		!isFreeToPaidTransition;
 	const showProrationBehavior =
 		showProrationRow && effectivePlanSchedule === "immediate";
 	const isNoChargesAllowed = isNoChargesAllowedForAttach({

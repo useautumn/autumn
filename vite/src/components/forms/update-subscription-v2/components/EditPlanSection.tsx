@@ -100,7 +100,7 @@ export function EditPlanSection() {
 				initialPrepaidOptions={initialPrepaidOptions}
 				existingOptions={customerProduct?.options}
 				form={form}
-				hasCustomizations={hasCustomizations}
+				showDiff={hasCustomizations}
 				currency={currency}
 				onEditPlan={handleEditPlan}
 				priceChange={priceChange}

@@ -234,7 +234,6 @@ export function SubscriptionItemRow({
 	});
 
 	const renderRowIndicator = () => {
-		if (readOnly) return null;
 		if (isDeleted) return <ItemStatusDot state="removed" />;
 		if (isCreated) return <ItemStatusDot state="new" />;
 		if (hasChanges) return <ItemStatusDot state="changed" />;
