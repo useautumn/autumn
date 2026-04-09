@@ -81,7 +81,7 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
       ${withStatusFilter()}
       ORDER BY cp.created_at DESC
-      LIMIT 10
+      LIMIT 15
     )
   `;
 };
@@ -215,13 +215,19 @@ const buildExtraEntitlementsCTE = () => {
                 WHERE ro.cus_ent_id = ce.id
               )
             )
+            ORDER BY ce.id DESC
           ) FILTER (WHERE ce.id IS NOT NULL),
           '[]'::json
         ) AS extra_customer_entitlements
-      FROM customer_entitlements ce
-      WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
-        AND ce.customer_product_id IS NULL
-        AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+      FROM (
+        SELECT *
+        FROM customer_entitlements ce
+        WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
+          AND ce.customer_product_id IS NULL
+          AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+        ORDER BY ce.id DESC
+        LIMIT 30
+      ) ce
     )
   `;
 };
@@ -454,7 +460,7 @@ export const getPaginatedFullCusQuery = ({
 	// Extra entitlements are those without a customer_product_id (loose entitlements)
 	const extraEntitlementsCTE = sql`, extra_customer_entitlements AS (
     SELECT
-      ce.internal_customer_id,
+      cr.internal_id AS internal_customer_id,
       COALESCE(
         json_agg(
           to_jsonb(ce.*) || jsonb_build_object(
@@ -489,11 +495,17 @@ export const getPaginatedFullCusQuery = ({
         ) FILTER (WHERE ce.id IS NOT NULL),
         '[]'::json
       ) AS extra_customer_entitlements
-    FROM customer_entitlements ce
-    WHERE ce.internal_customer_id IN (SELECT internal_id FROM customer_records)
-      AND ce.customer_product_id IS NULL
-      AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-    GROUP BY ce.internal_customer_id
+    FROM customer_records cr
+    LEFT JOIN LATERAL (
+      SELECT *
+      FROM customer_entitlements ce
+      WHERE ce.internal_customer_id = cr.internal_id
+        AND ce.customer_product_id IS NULL
+        AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+      ORDER BY ce.id DESC
+      LIMIT 30
+    ) ce ON true
+    GROUP BY cr.internal_id
   )`;
 
 	return sql`
@@ -515,7 +527,15 @@ export const getPaginatedFullCusQuery = ({
         ce_data.customer_entitlements,
         ft_data.free_trial
 
-      FROM customer_products cp
+      FROM customer_records cr
+      JOIN LATERAL (
+        SELECT *
+        FROM customer_products cp
+        WHERE cp.internal_customer_id = cr.internal_id
+        ${withStatusFilter()}
+        ORDER BY cp.created_at DESC
+        LIMIT 15
+      ) cp ON true
       JOIN products prod ON cp.internal_product_id = prod.internal_id
       LEFT JOIN LATERAL (
         SELECT COALESCE(
@@ -569,8 +589,6 @@ export const getPaginatedFullCusQuery = ({
         FROM free_trials ft
         WHERE ft.id = cp.free_trial_id
       ) ft_data ON true
-      WHERE cp.internal_customer_id IN (SELECT internal_id FROM customer_records) 
-      ${withStatusFilter()}
     ),
     
     customer_products_aggregated AS (
@@ -633,14 +651,20 @@ export const getPaginatedFullCusQuery = ({
 			withEntities
 				? sql`, customer_entities AS (
       SELECT 
-        e.internal_customer_id,
+        cr.internal_id AS internal_customer_id,
         COALESCE(
           json_agg(row_to_json(e) ORDER BY e.internal_id DESC),
           '[]'::json
         ) AS entities
-      FROM entities e
-      WHERE e.internal_customer_id IN (SELECT internal_id FROM customer_records)
-      GROUP BY e.internal_customer_id
+      FROM customer_records cr
+      LEFT JOIN LATERAL (
+        SELECT *
+        FROM entities e
+        WHERE e.internal_customer_id = cr.internal_id
+        ORDER BY e.internal_id DESC
+        LIMIT 1000
+      ) e ON true
+      GROUP BY cr.internal_id
     )`
 				: sql``
 		}
@@ -797,8 +821,7 @@ export const getCustomerListFilterSql = ({
 	if (processors && processors.length > 0) {
 		const processorConditions = processors
 			.map((proc) => {
-				if (proc === "stripe")
-					return sql`(c.processor->>'id' IS NOT NULL)`;
+				if (proc === "stripe") return sql`(c.processor->>'id' IS NOT NULL)`;
 				if (proc === "revenuecat")
 					return sql`(c.processors->>'revenuecat' IS NOT NULL)`;
 				if (proc === "vercel")
@@ -808,9 +831,7 @@ export const getCustomerListFilterSql = ({
 			.filter((c): c is SQL => c !== null);
 
 		if (processorConditions.length > 0) {
-			filters.push(
-				sql`AND (${sql.join(processorConditions, sql` OR `)})`,
-			);
+			filters.push(sql`AND (${sql.join(processorConditions, sql` OR `)})`);
 		}
 	}
 
