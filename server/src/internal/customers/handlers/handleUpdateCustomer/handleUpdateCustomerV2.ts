@@ -10,7 +10,7 @@ export const handleUpdateCustomerV2 = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const params = c.req.valid("json");
-		const customerId = await customerActions.update({
+		const { oldCustomer, newFullCustomer } = await customerActions.update({
 			ctx,
 			params,
 		});
@@ -18,7 +18,7 @@ export const handleUpdateCustomerV2 = createRoute({
 		ctx.skipCache = true;
 		const fullCustomer = await getOrSetCachedFullCustomer({
 			ctx,
-			customerId,
+			customerId: newFullCustomer.id ?? oldCustomer.id ?? params.customer_id,
 			source: "handleUpdateCustomerV2",
 		});
 
