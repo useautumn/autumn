@@ -1,76 +1,105 @@
-import { motion } from "motion/react";
+import {
+	ACTIVE_STATUSES,
+	type CusProduct,
+	CusProductStatus,
+	type ProductItem,
+	type ProductV2,
+} from "@autumn/shared";
 import { useMemo } from "react";
 import { PlanItemsSection } from "@/components/forms/shared";
-import {
-	STAGGER_CONTAINER,
-	STAGGER_ITEM,
-	STAGGER_ITEM_LAYOUT,
-} from "@/components/forms/update-subscription-v2/constants/animationConstants";
-import {
-	LAYOUT_TRANSITION,
-	SheetSection,
-} from "@/components/v2/sheets/SharedSheetComponents";
+import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { outgoingToProductItems } from "../utils/attachDiffUtils";
-import { AttachPlanSkeleton } from "./AttachPlanSkeleton";
 import { AttachSectionTitle } from "./AttachSectionTitle";
 
-export function AttachPlanSection() {
+/**
+ * Computes outgoing product items from client-side data (instant, no API call).
+ * Finds active customer products in the same group as the incoming product
+ * and returns their items for diff comparison.
+ *
+ * we should replace this later on with the result of preview_attach, and then move this diff to the second stage
+ * on sheet load, it will just show empty items, then on clicking preview changes, we'll see the diff
+ */
+function getClientOutgoingItems({
+	incomingProduct,
+	customerProducts,
+	allProducts,
+}: {
+	incomingProduct: ProductV2 | undefined;
+	customerProducts: CusProduct[] | undefined;
+	allProducts: ProductV2[];
+}): ProductItem[] {
+	if (!incomingProduct || !customerProducts) return [];
+
+	const incomingGroup = incomingProduct.group ?? "";
+
+	const activeStatuses = new Set<string>([
+		...ACTIVE_STATUSES,
+		CusProductStatus.Trialing,
+	]);
+
+	const outgoingItems: ProductItem[] = [];
+
+	for (const customerProduct of customerProducts) {
+		if (!activeStatuses.has(customerProduct.status)) continue;
+
+		const matchingProduct = allProducts.find(
+			(p) => p.id === customerProduct.product_id && !p.is_add_on,
+		);
+		if (!matchingProduct) continue;
+		if ((matchingProduct.group ?? "") !== incomingGroup) continue;
+
+		outgoingItems.push(...matchingProduct.items);
+	}
+
+	return outgoingItems;
+}
+
+export function AttachPlanSection({ readOnly }: { readOnly?: boolean } = {}) {
 	const {
 		form,
 		formValues,
 		features,
 		originalItems: productTemplateItems,
+		product: incomingProduct,
 		productWithFormItems: product,
 		hasCustomizations,
 		initialPrepaidOptions,
 		handleEditPlan,
-		previewQuery,
 	} = useAttachFormContext();
 
-	const { prepaidOptions, trialEnabled } = formValues;
+	const hideEditButton = readOnly || formValues.grantFree;
+
+	const { prepaidOptions } = formValues;
 
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
 
-	// Convert outgoing balances to ProductItem format for diff comparison
-	// This shows what the customer is losing (outgoing) vs gaining (incoming)
+	const { customer } = useCusQuery();
+	const { products: allProducts } = useProductsQuery();
+
 	const outgoingItems = useMemo(
 		() =>
-			outgoingToProductItems({
-				outgoing: previewQuery.data?.outgoing,
-				incomingItems: product?.items,
+			getClientOutgoingItems({
+				incomingProduct,
+				customerProducts: customer?.customer_products as
+					| CusProduct[]
+					| undefined,
+				allProducts,
 			}),
-		[previewQuery.data?.outgoing, product?.items],
+		[incomingProduct, customer?.customer_products, allProducts],
 	);
 
-	// Use outgoing items as the "original" for comparison when available
-	// This enables diffs like "100 → 200" for features in outgoing products
-	// Falls back to product template if no outgoing (new customer or no replacements)
 	const originalItemsForDiff =
 		outgoingItems.length > 0 ? outgoingItems : productTemplateItems;
 
-	// When there are outgoing items, always show diffs because we're comparing
-	// outgoing (what customer has) vs incoming (what they're getting) - different things
-	const showDiffs = hasCustomizations || outgoingItems.length > 0;
-
-	// Show skeleton only on initial load (isPending = no data yet)
-	// Subsequent fetches keep showing previous data via keepPreviousData
-	if (previewQuery.isPending) {
-		return <AttachPlanSkeleton />;
-	}
+	const showDiffs = readOnly
+		? false
+		: hasCustomizations || outgoingItems.length > 0;
 
 	if (!product) return null;
-
-	const hasItems =
-		(product?.items?.length ?? 0) > 0 ||
-		(showDiffs &&
-			originalItemsForDiff?.some(
-				(i) =>
-					i.feature_id &&
-					!product?.items?.some((pi) => pi.feature_id === i.feature_id),
-			));
 
 	// Common props for PlanItemsSection
 	const planItemsProps = {
@@ -84,40 +113,23 @@ export function AttachPlanSection() {
 		currency,
 		onEditPlan: handleEditPlan,
 		gateDeletedItemsByCustomizations: true,
+		readOnly: hideEditButton,
 	} as const;
+
+	const titleContent = readOnly ? (
+		<h3 className="text-sub select-none w-full">{product.name}</h3>
+	) : (
+		<h3 className="text-sub select-none w-full">
+			<AttachSectionTitle />
+		</h3>
+	);
 
 	return (
 		<SheetSection withSeparator>
-			<motion.div
-				className="flex flex-col gap-3"
-				initial="hidden"
-				animate="visible"
-				variants={STAGGER_CONTAINER}
-			>
-				<motion.div
-					layout="position"
-					transition={{ layout: LAYOUT_TRANSITION }}
-					variants={STAGGER_ITEM_LAYOUT}
-				>
-					<h3 className="text-sub select-none w-full">
-						<AttachSectionTitle />
-					</h3>
-				</motion.div>
-				{hasItems ? (
-					<PlanItemsSection
-						{...planItemsProps}
-						trialConfig={{
-							trialEnabled,
-							onTrialCollapse: () => form.setFieldValue("trialEnabled", false),
-						}}
-						useStaggerAnimation
-					/>
-				) : (
-					<motion.div variants={STAGGER_ITEM}>
-						<PlanItemsSection {...planItemsProps} />
-					</motion.div>
-				)}
-			</motion.div>
+			<div className="flex flex-col gap-1">
+				{titleContent}
+				<PlanItemsSection {...planItemsProps} />
+			</div>
 		</SheetSection>
 	);
 }

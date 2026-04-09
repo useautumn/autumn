@@ -1,8 +1,5 @@
 import type { FrontendProduct } from "@autumn/shared";
-import { motion } from "motion/react";
 import { PriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
-import { STAGGER_ITEM_LAYOUT } from "@/components/forms/update-subscription-v2/constants/animationConstants";
-import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 
 interface PriceChange {
 	oldPrice: string;
@@ -16,12 +13,10 @@ export function PlanPriceHeader({
 	priceChange,
 	product,
 	currency,
-	useStagger,
 }: {
 	priceChange?: PriceChange | null;
 	product: FrontendProduct | undefined;
 	currency: string;
-	useStagger?: boolean;
 }) {
 	const content = priceChange ? (
 		<span className="flex items-center gap-1.5">
@@ -36,19 +31,6 @@ export function PlanPriceHeader({
 	) : (
 		<PriceDisplay product={product} currency={currency} />
 	);
-
-	if (useStagger) {
-		return (
-			<motion.div
-				layout="position"
-				transition={{ layout: LAYOUT_TRANSITION }}
-				variants={STAGGER_ITEM_LAYOUT}
-				className="flex gap-2 justify-between items-center"
-			>
-				{content}
-			</motion.div>
-		);
-	}
 
 	return (
 		<div className="flex gap-2 justify-between items-center mb-3">
