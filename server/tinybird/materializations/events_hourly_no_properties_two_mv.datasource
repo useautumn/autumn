@@ -1,0 +1,20 @@
+DESCRIPTION >
+    Hourly aggregates WITHOUT properties for fast aggregation queries.
+    Fresh backfill of events_hourly_no_properties_mv after cleanup.
+    Drops the properties column from the GROUP BY so rows with different
+    properties but the same (org, env, customer, event, entity, hour)
+    are collapsed into a single row.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `customer_id` String,
+    `event_name` String,
+    `entity_id` String DEFAULT '',
+    `hour` DateTime,
+    `total_value` Float64,
+    `event_count` UInt64
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(hour)"
+ENGINE_SORTING_KEY "org_id, env, hour, customer_id, entity_id, event_name"

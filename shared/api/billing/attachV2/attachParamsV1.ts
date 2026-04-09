@@ -1,6 +1,7 @@
 import { BillingParamsBaseV1Schema } from "@api/billing/common/billingParamsBase/billingParamsBaseV1";
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
+import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { CustomLineItemSchema } from "../common/customLineItem";
 import { AttachDiscountSchema } from "./attachDiscount";
 
@@ -17,6 +18,9 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	new_billing_subscription: z.boolean().optional().meta({
 		description:
 			"Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.",
+	}),
+	billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
+		description: "Reset the billing cycle anchor immediately with 'now'.",
 	}),
 	plan_schedule: PlanTimingSchema.optional().meta({
 		description:
@@ -75,7 +79,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	}),
 
 	no_billing_changes: z.boolean().optional().meta({
-		internal: true,
+		description: "If true, skips any billing changes for the attach operation.",
 	}),
 });
 

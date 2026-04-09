@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
@@ -36,6 +37,16 @@ export const user = pgTable(
 		lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
 	},
 	(table) => [
+		index("idx_user_name_trgm")
+			.using("gin", sql`${table.name} gin_trgm_ops`)
+			.where(sql`${table.name} IS NOT NULL`),
+		index("idx_user_email_trgm")
+			.using("gin", sql`${table.email} gin_trgm_ops`)
+			.where(sql`${table.email} IS NOT NULL`),
+		index("idx_user_created_at_id").on(
+			sql`${table.createdAt} DESC`,
+			sql`${table.id} DESC`,
+		),
 		foreignKey({
 			columns: [table.createdBy],
 			foreignColumns: [organizations.id],

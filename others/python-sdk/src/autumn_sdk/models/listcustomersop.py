@@ -201,6 +201,8 @@ class ListCustomersAutoTopupTypedDict(TypedDict):
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[ListCustomersPurchaseLimitTypedDict]
     r"""Optional rate limit to cap how often auto top-ups occur."""
+    invoice_mode: NotRequired[bool]
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
 
 class ListCustomersAutoTopup(BaseModel):
@@ -219,9 +221,12 @@ class ListCustomersAutoTopup(BaseModel):
     purchase_limit: Optional[ListCustomersPurchaseLimit] = None
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
+    invoice_mode: Optional[bool] = None
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "purchase_limit"])
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
         serialized = handler(self)
         m = {}
 
@@ -276,19 +281,21 @@ ListCustomersThresholdType = Union[
     Literal[
         "usage",
         "usage_percentage",
+        "remaining",
+        "remaining_percentage",
     ],
     UnrecognizedStr,
 ]
-r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
 class ListCustomersUsageAlertTypedDict(TypedDict):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
     threshold_type: ListCustomersThresholdType
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
@@ -297,13 +304,13 @@ class ListCustomersUsageAlertTypedDict(TypedDict):
 
 class ListCustomersUsageAlert(BaseModel):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
     threshold_type: ListCustomersThresholdType
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
 
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""

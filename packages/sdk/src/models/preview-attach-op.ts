@@ -525,6 +525,10 @@ export type PreviewAttachParams = {
    */
   newBillingSubscription?: boolean | undefined;
   /**
+   * Reset the billing cycle anchor immediately with 'now'.
+   */
+  billingCycleAnchor?: "now" | undefined;
+  /**
    * When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
    */
   planSchedule?: PreviewAttachPlanSchedule | undefined;
@@ -552,6 +556,10 @@ export type PreviewAttachParams = {
    * Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
    */
   metadata?: { [k: string]: string } | undefined;
+  /**
+   * If true, skips any billing changes for the attach operation.
+   */
+  noBillingChanges?: boolean | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -1459,6 +1467,7 @@ export type PreviewAttachParams$Outbound = {
   discounts?: Array<PreviewAttachAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   new_billing_subscription?: boolean | undefined;
+  billing_cycle_anchor?: "now" | undefined;
   plan_schedule?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<PreviewAttachCustomLineItem$Outbound> | undefined;
@@ -1466,6 +1475,7 @@ export type PreviewAttachParams$Outbound = {
   carry_over_balances?: PreviewAttachCarryOverBalances$Outbound | undefined;
   carry_over_usages?: PreviewAttachCarryOverUsages$Outbound | undefined;
   metadata?: { [k: string]: string } | undefined;
+  no_billing_changes?: boolean | undefined;
 };
 
 /** @internal */
@@ -1498,6 +1508,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     ),
     successUrl: z.optional(z.string()),
     newBillingSubscription: z.optional(z.boolean()),
+    billingCycleAnchor: z.optional(z.literal("now")),
     planSchedule: z.optional(PreviewAttachPlanSchedule$outboundSchema),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
@@ -1511,6 +1522,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewAttachCarryOverUsages$outboundSchema),
     ),
     metadata: z.optional(z.record(z.string(), z.string())),
+    noBillingChanges: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1524,12 +1536,14 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       subscriptionId: "subscription_id",
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
+      billingCycleAnchor: "billing_cycle_anchor",
       planSchedule: "plan_schedule",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",
       carryOverBalances: "carry_over_balances",
       carryOverUsages: "carry_over_usages",
+      noBillingChanges: "no_billing_changes",
     });
   }),
 );

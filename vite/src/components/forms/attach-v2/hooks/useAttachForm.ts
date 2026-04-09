@@ -23,6 +23,7 @@ export function useAttachForm({
 			prorationBehavior: null,
 			redirectMode: "if_required",
 			newBillingSubscription: false,
+			resetBillingCycle: false,
 			discounts: [],
 			grantFree: false,
 			noBillingChanges: false,

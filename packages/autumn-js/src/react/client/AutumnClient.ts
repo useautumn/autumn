@@ -24,6 +24,7 @@ export type AutumnClientConfig = {
 	backendUrl?: string;
 	pathPrefix: string;
 	includeCredentials?: boolean;
+	headers?: Record<string, string>;
 };
 
 export const createAutumnClient = (
@@ -33,6 +34,7 @@ export const createAutumnClient = (
 		backendUrl: config.backendUrl,
 		pathPrefix: config.pathPrefix,
 		includeCredentials: config.includeCredentials,
+		headers: config.headers,
 	});
 
 	return {

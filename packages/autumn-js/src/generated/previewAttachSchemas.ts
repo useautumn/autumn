@@ -268,6 +268,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 		.optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
 	new_billing_subscription: z.union([z.boolean(), z.undefined()]).optional(),
+	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	plan_schedule: z.union([z.string(), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
@@ -285,6 +286,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 	metadata: z
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
+	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -409,6 +411,7 @@ export const previewAttachParamsSchema = z.object({
 		.optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
 	newBillingSubscription: z.union([z.boolean(), z.undefined()]).optional(),
+	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	planSchedule: z
 		.union([previewAttachPlanScheduleSchema, z.undefined()])
 		.optional(),
@@ -428,6 +431,7 @@ export const previewAttachParamsSchema = z.object({
 	metadata: z
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
+	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const previewAttachIncomingSchema = z.object({
