@@ -17,14 +17,11 @@ export const queue = new Queue("autumn", {
 		url: process.env.QUEUE_URL,
 		tls: caText ? { ca: caText } : undefined,
 		enableOfflineQueue: false,
+		maxRetriesPerRequest: null,
 		retryStrategy: () => {
 			return 5000;
 		},
 	},
-});
-
-const queueRedis = new Redis(process.env.QUEUE_URL, {
-	tls: caText ? { ca: caText } : undefined,
 });
 
 // Separate Redis connection for BullMQ Workers (requires maxRetriesPerRequest: null)
@@ -33,10 +30,6 @@ export const workerRedis = new Redis(process.env.QUEUE_URL, {
 	maxRetriesPerRequest: null,
 	enableReadyCheck: false,
 	enableOfflineQueue: false,
-});
-
-queueRedis.on("error", (error) => {
-	// logger.error(`redis (queue) error: ${error.message}`);
 });
 
 workerRedis.on("error", (error) => {

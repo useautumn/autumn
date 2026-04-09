@@ -132,10 +132,17 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 
 		// BullMQ dedup: if a stable dedup ID is provided, use it as the jobId.
 		// BullMQ ignores jobs whose jobId already exists in the queue (not yet completed).
-		await queue.add(jobName as string, payload, {
-			delay: delayMs,
-			...(messageDeduplicationId && { jobId: messageDeduplicationId }),
-		});
+		try {
+			await queue.add(jobName as string, payload, {
+				delay: delayMs,
+				...(messageDeduplicationId && { jobId: messageDeduplicationId }),
+			});
+		} catch (error) {
+			console.warn(
+				`[BullMQ] Failed to enqueue job ${jobName} — Redis may be unavailable:`,
+				(error as Error).message,
+			);
+		}
 		return;
 	}
 
