@@ -19,6 +19,7 @@ import {
 // Edge config modules self-register on import
 import "./internal/misc/requestBlocks/requestBlockStore.js";
 import "./internal/misc/featureFlags/featureFlagStore.js";
+import "./internal/misc/customerBlocks/customerBlockStore.js";
 import { warmupRegionalRedis } from "./external/redis/initRedis.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
