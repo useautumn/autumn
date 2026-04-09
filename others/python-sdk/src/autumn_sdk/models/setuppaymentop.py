@@ -8,9 +8,10 @@ from autumn_sdk.types import (
     UNSET,
     UNSET_SENTINEL,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -712,6 +713,8 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     success_url: NotRequired[str]
     r"""URL to redirect to after successful checkout."""
+    billing_cycle_anchor: Literal["now"]
+    r"""Reset the billing cycle anchor immediately with 'now'."""
     checkout_session_params: NotRequired[Dict[str, Any]]
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     custom_line_items: NotRequired[List[SetupPaymentCustomLineItemTypedDict]]
@@ -724,6 +727,8 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""Whether to carry over usages from the previous plan."""
     metadata: NotRequired[Dict[str, str]]
     r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
+    no_billing_changes: NotRequired[bool]
+    r"""If true, skips any billing changes for the attach operation."""
 
 
 class SetupPaymentParams(BaseModel):
@@ -757,6 +762,12 @@ class SetupPaymentParams(BaseModel):
     success_url: Optional[str] = None
     r"""URL to redirect to after successful checkout."""
 
+    billing_cycle_anchor: Annotated[
+        Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
+        pydantic.Field(alias="billing_cycle_anchor"),
+    ] = "now"
+    r"""Reset the billing cycle anchor immediately with 'now'."""
+
     checkout_session_params: Optional[Dict[str, Any]] = None
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
 
@@ -775,6 +786,9 @@ class SetupPaymentParams(BaseModel):
     metadata: Optional[Dict[str, str]] = None
     r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
 
+    no_billing_changes: Optional[bool] = None
+    r"""If true, skips any billing changes for the attach operation."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -788,12 +802,14 @@ class SetupPaymentParams(BaseModel):
                 "subscription_id",
                 "discounts",
                 "success_url",
+                "billing_cycle_anchor",
                 "checkout_session_params",
                 "custom_line_items",
                 "processor_subscription_id",
                 "carry_over_balances",
                 "carry_over_usages",
                 "metadata",
+                "no_billing_changes",
             ]
         )
         serialized = handler(self)
@@ -848,3 +864,9 @@ class SetupPaymentResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    SetupPaymentParams.model_rebuild()
+except NameError:
+    pass

@@ -85,17 +85,19 @@ class UpdateEntitySpendLimitRequest(BaseModel):
 UpdateEntityThresholdTypeRequestBody = Literal[
     "usage",
     "usage_percentage",
+    "remaining",
+    "remaining_percentage",
 ]
-r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
 class UpdateEntityUsageAlertRequestBodyTypedDict(TypedDict):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
     threshold_type: UpdateEntityThresholdTypeRequestBody
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
@@ -104,13 +106,13 @@ class UpdateEntityUsageAlertRequestBodyTypedDict(TypedDict):
 
 class UpdateEntityUsageAlertRequestBody(BaseModel):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
     threshold_type: UpdateEntityThresholdTypeRequestBody
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
 
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""
@@ -651,19 +653,21 @@ UpdateEntityThresholdTypeResponse = Union[
     Literal[
         "usage",
         "usage_percentage",
+        "remaining",
+        "remaining_percentage",
     ],
     UnrecognizedStr,
 ]
-r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
 
 class UpdateEntityUsageAlertResponseTypedDict(TypedDict):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
     threshold_type: UpdateEntityThresholdTypeResponse
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
     feature_id: NotRequired[str]
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
     enabled: NotRequired[bool]
     r"""Whether this usage alert is enabled."""
     name: NotRequired[str]
@@ -672,13 +676,13 @@ class UpdateEntityUsageAlertResponseTypedDict(TypedDict):
 
 class UpdateEntityUsageAlertResponse(BaseModel):
     threshold: float
-    r"""The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100)."""
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
 
     threshold_type: UpdateEntityThresholdTypeResponse
-    r"""Whether the threshold is an absolute usage count or a percentage of the usage allowance."""
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
 
     feature_id: Optional[str] = None
-    r"""The feature ID this alert applies to. If omitted, the alert applies globally."""
+    r"""The feature ID this alert applies to."""
 
     enabled: Optional[bool] = True
     r"""Whether this usage alert is enabled."""

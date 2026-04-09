@@ -59,7 +59,6 @@ export function useAttachMutation({
 				}
 			} else if (data?.payment_url) {
 				onCheckoutRedirect?.(data.payment_url);
-				toast.success("Redirecting to complete payment...");
 			} else {
 				toast.success("Product attached successfully");
 			}

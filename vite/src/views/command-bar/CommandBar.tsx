@@ -47,6 +47,7 @@ type User = {
 	email: string;
 	createdAt: string;
 	lastSignedIn: string;
+	role?: string | null;
 };
 
 type Org = {
@@ -510,8 +511,10 @@ const CommandBar = () => {
 							<CommandGroup heading="Organizations" className="p-1.5">
 								{orgResults.map((result) => {
 									const org = result.data as Org;
-									const firstUser = org.users?.[0];
-									if (!firstUser) return null;
+									const firstNonAdminUser = org.users?.find(
+										(user) => user.role !== "admin",
+									);
+									if (!firstNonAdminUser) return null;
 
 									return (
 										<CommandRow
@@ -522,7 +525,7 @@ const CommandBar = () => {
 											onSelect={async () => {
 												try {
 													await impersonateUser({
-														userId: firstUser.id,
+														userId: firstNonAdminUser.id,
 														organizationId: org.id,
 													});
 													closeDialog();

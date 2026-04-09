@@ -49,6 +49,7 @@ export const AutumnBillingPlanSchema = z.object({
 			updates: z.object({
 				options: z.array(FeatureOptionsSchema).optional(),
 				status: z.enum(CusProductStatus).optional(),
+				billing_cycle_anchor_resets_at: z.number().nullish(),
 				// Cancel fields (nullish to support uncancel - setting to null)
 				canceled: z.boolean().nullish(),
 				canceled_at: z.number().nullish(),

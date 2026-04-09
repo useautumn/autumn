@@ -223,6 +223,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   URL to redirect to after successful checkout.
 </DynamicParamField>
 
+<DynamicParamField body="billing_cycle_anchor" type="any">
+  Reset the billing cycle anchor immediately with 'now'.
+</DynamicParamField>
+
 <DynamicParamField body="checkout_session_params" type="object">
   Additional parameters to pass into the creation of the Stripe checkout session.
 </DynamicParamField>
@@ -275,6 +279,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 <DynamicParamField body="metadata.{key}" type="string">
   Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+</DynamicParamField>
+
+<DynamicParamField body="no_billing_changes" type="boolean">
+  If true, skips any billing changes for the attach operation.
 </DynamicParamField>
 
 

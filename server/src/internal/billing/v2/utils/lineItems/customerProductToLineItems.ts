@@ -18,6 +18,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
+import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
 type LineItemDirection = "charge" | "refund";
@@ -76,6 +77,19 @@ export const customerProductToLineItems = ({
 			price,
 		});
 
+		let effectiveNow = currentEpochMs;
+
+		if (direction === "refund" && billingPeriod) {
+			const action = augmentBillingContextForAnchorResetRefund({
+				currentEpochMs,
+				billingPeriod,
+				anchorResetRefund: billingContext.anchorResetRefund,
+			});
+
+			if (action.type === "skip") continue;
+			if (action.type === "use_snapped_now") effectiveNow = action.snappedNow;
+		}
+
 		// Build line item context
 		const context: LineItemContext = {
 			price,
@@ -85,7 +99,7 @@ export const customerProductToLineItems = ({
 			billingPeriod,
 			direction,
 			billingTiming: "in_advance",
-			now: currentEpochMs,
+			now: effectiveNow,
 			currency: orgToCurrency({ org: ctx.org }),
 			customerProduct,
 			customerPrice: cusPrice,

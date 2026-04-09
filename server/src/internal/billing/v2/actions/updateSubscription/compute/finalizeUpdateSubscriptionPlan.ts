@@ -35,10 +35,5 @@ export const finalizeUpdateSubscriptionPlan = ({
 		plan.lineItems = [];
 	}
 
-	// Guard: if proration_behavior is 'none', clear line items (skip proration charges)
-	if (params.proration_behavior === "none") {
-		plan.lineItems = [];
-	}
-
 	return plan;
 };

@@ -5,7 +5,7 @@ from autumn_sdk.types import BaseModel, UNSET_SENTINEL
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -142,14 +142,6 @@ class EventsListParams(BaseModel):
         return m
 
 
-class ListEventsPropertiesTypedDict(TypedDict):
-    r"""Event properties (JSONB)"""
-
-
-class ListEventsProperties(BaseModel):
-    r"""Event properties (JSONB)"""
-
-
 class ListEventsListTypedDict(TypedDict):
     id: str
     r"""Event ID (KSUID)"""
@@ -161,8 +153,8 @@ class ListEventsListTypedDict(TypedDict):
     r"""Customer identifier"""
     value: float
     r"""Event value/count"""
-    properties: ListEventsPropertiesTypedDict
-    r"""Event properties (JSONB)"""
+    properties: Dict[str, Any]
+    r"""Event properties (JSON)"""
 
 
 class ListEventsList(BaseModel):
@@ -181,8 +173,8 @@ class ListEventsList(BaseModel):
     value: float
     r"""Event value/count"""
 
-    properties: ListEventsProperties
-    r"""Event properties (JSONB)"""
+    properties: Dict[str, Any]
+    r"""Event properties (JSON)"""
 
 
 class ListEventsResponseTypedDict(TypedDict):

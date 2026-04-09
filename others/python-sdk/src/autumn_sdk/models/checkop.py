@@ -810,6 +810,7 @@ ProductScenario = Union[
         "new",
         "renew",
         "upgrade",
+        "update_prepaid_quantity",
         "downgrade",
         "cancel",
         "expired",
@@ -820,7 +821,7 @@ ProductScenario = Union[
 r"""Scenario for when this product is used in attach flows"""
 
 
-class CheckPropertiesTypedDict(TypedDict):
+class PropertiesTypedDict(TypedDict):
     is_free: bool
     r"""True if the product has no base price or usage prices"""
     is_one_off: bool
@@ -833,7 +834,7 @@ class CheckPropertiesTypedDict(TypedDict):
     r"""True if the product can be updated after creation (only applicable if there are prepaid recurring prices)"""
 
 
-class CheckProperties(BaseModel):
+class Properties(BaseModel):
     is_free: bool
     r"""True if the product has no base price or usage prices"""
 
@@ -902,7 +903,7 @@ class ProductTypedDict(TypedDict):
     r"""ID of the base variant this product is derived from"""
     scenario: NotRequired[ProductScenario]
     r"""Scenario for when this product is used in attach flows"""
-    properties: NotRequired[CheckPropertiesTypedDict]
+    properties: NotRequired[PropertiesTypedDict]
 
 
 class Product(BaseModel):
@@ -945,7 +946,7 @@ class Product(BaseModel):
     scenario: Optional[ProductScenario] = None
     r"""Scenario for when this product is used in attach flows"""
 
-    properties: Optional[CheckProperties] = None
+    properties: Optional[Properties] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

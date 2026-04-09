@@ -157,7 +157,7 @@ export const createCustomerListColumns = (): ColumnDef<
 					{customer.id ? (
 						<MiniCopyButton text={customer.id} />
 					) : (
-						<span className="px-1 text-t3">NULL</span>
+						<span className="px-1 text-t3">PENDING</span>
 					)}
 				</div>
 			);
