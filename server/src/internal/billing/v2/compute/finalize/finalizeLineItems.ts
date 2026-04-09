@@ -31,6 +31,13 @@ export const finalizeLineItems = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	customLineItems?: CustomLineItem[];
 }): LineItem[] => {
+	if (
+		billingContext.requestedProrationBehavior === "none" &&
+		!billingContext.anchorResetRefund?.noPartialRefund
+	) {
+		return [];
+	}
+
 	// 0. If custom line items provided, override computed line items entirely
 	if (customLineItems?.length) {
 		autumnBillingPlan.customLineItems = customLineItems;

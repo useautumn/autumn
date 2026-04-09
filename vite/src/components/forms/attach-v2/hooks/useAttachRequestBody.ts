@@ -33,6 +33,7 @@ export interface BuildAttachRequestBodyParams {
 	prorationBehavior: BillingBehavior | null;
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
+	resetBillingCycle: boolean;
 	discounts: FormDiscount[];
 	noBillingChanges: boolean;
 	carryOverBalances: boolean;
@@ -58,6 +59,7 @@ export function buildAttachRequestBody({
 	prorationBehavior,
 	redirectMode,
 	newBillingSubscription,
+	resetBillingCycle,
 	discounts,
 	noBillingChanges,
 	carryOverBalances,
@@ -130,6 +132,10 @@ export function buildAttachRequestBody({
 		body.new_billing_subscription = true;
 	}
 
+	if (resetBillingCycle) {
+		body.billing_cycle_anchor = "now";
+	}
+
 	const validDiscounts = filterValidDiscounts(discounts);
 	if (validDiscounts.length > 0) {
 		body.discounts = validDiscounts;
@@ -182,6 +188,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
+		resetBillingCycle,
 		discounts,
 		noBillingChanges,
 		carryOverBalances,
@@ -208,6 +215,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				prorationBehavior,
 				redirectMode,
 				newBillingSubscription,
+				resetBillingCycle,
 				discounts,
 				noBillingChanges,
 				carryOverBalances,
@@ -231,6 +239,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			prorationBehavior,
 			redirectMode,
 			newBillingSubscription,
+			resetBillingCycle,
 			discounts,
 			noBillingChanges,
 			carryOverBalances,

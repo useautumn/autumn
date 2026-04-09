@@ -34,6 +34,7 @@ export const initCustomerProduct = ({
 		isCustom,
 		apiSemver,
 		externalId,
+		billingCycleAnchorResetsAt,
 	} = initOptions ?? {};
 
 	const internalEntityId = fullCustomer.entity?.internal_id;
@@ -87,6 +88,7 @@ export const initCustomerProduct = ({
 		ended_at: endedAt,
 
 		trial_ends_at: trialEndsAt,
+		billing_cycle_anchor_resets_at: billingCycleAnchorResetsAt,
 		free_trial_id: freeTrial?.id,
 
 		options: featureQuantities,

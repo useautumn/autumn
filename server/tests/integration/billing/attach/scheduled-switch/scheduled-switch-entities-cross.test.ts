@@ -344,13 +344,15 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-cross 3: entity
 
 /**
  * Scenario:
- * - Entity 1: Premium Annual → Pro (scheduled)
- * - Entity 2: Premium Monthly → Pro (scheduled)
+ * - Entity 1: Premium Annual → Pro (immediate, interval change)
+ * - Entity 2: Premium Monthly → Pro (scheduled, same interval)
  * - Advance 1 month (monthly cycle ends)
  * - Upgrade entity 2 back to premium
  *
  * Expected Result:
- * - After cycle: Entity 1 still on annual (hasn't ended yet), Entity 2 on pro
+ * - Entity 1 immediately switches to pro (annual→monthly = different interval = immediate)
+ * - Entity 2 has premium canceling, pro scheduled (same interval = end_of_cycle)
+ * - After cycle: Entity 1 on pro (renewed), Entity 2 on pro (scheduled switch completed)
  * - After upgrade: Entity 2 on premium
  */
 test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-cross 4: entity 1 premiumAnnual to pro, entity 2 premium to pro, advance cycle, upgrade entity 2 to premium")}`, async () => {
@@ -385,28 +387,27 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-entities-cross 4: entity
 		actions: [
 			s.billing.attach({ productId: premiumAnnual.id, entityIndex: 0 }),
 			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Downgrade entity 1 (annual)
-			s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Downgrade entity 2 (monthly)
+			s.billing.attach({ productId: pro.id, entityIndex: 0 }), // Entity 1: immediate (interval change)
+			s.billing.attach({ productId: pro.id, entityIndex: 1 }), // Entity 2: scheduled (same interval)
 			s.advanceToNextInvoice(), // Advance 1 month
 		],
 	});
 
-	// Verify entity 1: still on annual (annual hasn't ended)
+	// Entity 1 already switched to pro immediately (annual→monthly = different interval)
 	const entity1Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[0].id,
 	);
-	// Entity 1's annual subscription should still be active with pro scheduled
-	await expectProductCanceling({
-		customer: entity1Before,
-		productId: premiumAnnual.id,
-	});
-	await expectProductScheduled({
+	await expectProductActive({
 		customer: entity1Before,
 		productId: pro.id,
 	});
+	await expectProductNotPresent({
+		customer: entity1Before,
+		productId: premiumAnnual.id,
+	});
 
-	// Verify entity 2: now on pro (monthly cycle completed)
+	// Entity 2: now on pro (monthly cycle completed, scheduled switch took effect)
 	const entity2Before = await autumnV1.entities.get<ApiEntityV0>(
 		customerId,
 		entities[1].id,

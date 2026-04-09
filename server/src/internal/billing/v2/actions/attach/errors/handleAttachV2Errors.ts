@@ -5,6 +5,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { handleAttachInvoiceModeErrors } from "@/internal/billing/v2/actions/attach/errors/handleAttachInvoiceModeErrors";
+import { handleBillingCycleAnchorErrors } from "@/internal/billing/v2/actions/attach/errors/handleBillingCycleAnchorErrors";
 import { handleCarryOverBalancesErrors } from "@/internal/billing/v2/actions/attach/errors/handleCarryOverBalancesErrors";
 import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/actions/attach/errors/handleCarryOverUsagesErrors";
 import { handleCurrentCustomerProductErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrentCustomerProductErrors";
@@ -51,6 +52,7 @@ export const handleAttachV2Errors = async ({
 
 	// 6. Scheduled switch with one-off prepaid quantities
 	handleScheduledSwitchOneOffErrors({ ctx, billingContext });
+	handleBillingCycleAnchorErrors({ billingContext });
 
 	// 7. Transition config errors (reset_after_trial_end on allocated features)
 	handleTransitionConfigErrors({ ctx, billingContext });

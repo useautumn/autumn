@@ -23,7 +23,9 @@ export const UpdateSubscriptionFormSchema = z.object({
 
 	cancelAction: CancelActionSchema.nullable(),
 	billingBehavior: BillingBehaviorSchema.nullable(),
+	resetBillingCycle: z.boolean(),
 	refundBehavior: RefundBehaviorSchema.nullable(),
+	noBillingChanges: z.boolean(),
 });
 
 export type UpdateSubscriptionForm = z.infer<

@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -55,7 +56,9 @@ export const useRevenueByProduct = ({
 	const buildKey = useQueryKeyFactory();
 	const queryClient = useQueryClient();
 	const env = useEnv();
+	const { flags } = useFeatureFlags();
 	const isLive = env === "live";
+	const enabled = isLive && !flags.maintenanceModes.analytics.disableRevenueMetrics;
 
 	const fetchGranularity = async ({
 		g,
@@ -72,12 +75,12 @@ export const useRevenueByProduct = ({
 		queryKey: buildKey(["revenue-by-product", granularity]),
 		queryFn: () => fetchGranularity({ g: granularity }),
 		staleTime: 5 * 60 * 1000,
-		enabled: isLive,
+		enabled,
 	});
 
 	// Background prefetch other granularities so switching is instant
 	useEffect(() => {
-		if (!isLive) return;
+		if (!enabled) return;
 		for (const g of ["day", "month", "year"] as const) {
 			if (g === granularity) continue;
 			queryClient.prefetchQuery({
@@ -86,7 +89,7 @@ export const useRevenueByProduct = ({
 				staleTime: 5 * 60 * 1000,
 			});
 		}
-	}, [granularity, queryClient, buildKey, axiosInstance, isLive]);
+	}, [granularity, queryClient, buildKey, axiosInstance, enabled]);
 
 	return { data, isLoading };
 };
@@ -95,6 +98,7 @@ export const useRevenueProductShare = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const env = useEnv();
+	const { flags } = useFeatureFlags();
 
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-product-share"]),
@@ -106,7 +110,7 @@ export const useRevenueProductShare = () => {
 			return data as ProductShareRow[];
 		},
 		staleTime: 5 * 60 * 1000,
-		enabled: env === "live",
+		enabled: env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
 
 	return { data, isLoading };
@@ -116,6 +120,7 @@ export const useArpc = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const env = useEnv();
+	const { flags } = useFeatureFlags();
 
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-arpc"]),
@@ -124,7 +129,7 @@ export const useArpc = () => {
 			return data as ArpcRow[];
 		},
 		staleTime: 5 * 60 * 1000,
-		enabled: env === "live",
+		enabled: env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
 
 	return { data, isLoading };
@@ -134,6 +139,7 @@ export const useInvoiceStatus = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const env = useEnv();
+	const { flags } = useFeatureFlags();
 
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-invoice-status"]),
@@ -145,7 +151,7 @@ export const useInvoiceStatus = () => {
 			return data as InvoiceStatusRow[];
 		},
 		staleTime: 5 * 60 * 1000,
-		enabled: env === "live",
+		enabled: env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
 
 	return { data, isLoading };
@@ -155,6 +161,7 @@ export const useCustomerLeaderboard = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const env = useEnv();
+	const { flags } = useFeatureFlags();
 
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-customer-leaderboard"]),
@@ -166,7 +173,7 @@ export const useCustomerLeaderboard = () => {
 			return data as CustomerLeaderboardResult;
 		},
 		staleTime: 5 * 60 * 1000,
-		enabled: env === "live",
+		enabled: env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
 
 	return { data, isLoading };
@@ -182,6 +189,7 @@ export const useEstimatedMrr = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const env = useEnv();
+	const { flags } = useFeatureFlags();
 
 	const { data, isLoading } = useQuery({
 		queryKey: buildKey(["revenue-estimated-mrr"]),
@@ -193,7 +201,7 @@ export const useEstimatedMrr = () => {
 			return data as EstimatedMrrResult;
 		},
 		staleTime: 5 * 60 * 1000,
-		enabled: env === "live",
+		enabled: env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
 
 	return { data, isLoading };

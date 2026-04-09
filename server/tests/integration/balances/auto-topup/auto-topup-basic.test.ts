@@ -398,3 +398,129 @@ test.concurrent(`${chalk.yellowBright("auto-topup basic: cache and DB agree afte
 		remaining: expectedBalance,
 	});
 });
+
+test.concurrent(`${chalk.yellowBright("auto-topup basic: billing units 1000 with top-up quantity 100")}`, async () => {
+	const oneOffItem = items.oneOffMessages({
+		includedUsage: 0,
+		billingUnits: 1000,
+		price: 10,
+	});
+	const oneOffProd = products.oneOffAddOn({
+		id: "topup-b6",
+		items: [oneOffItem],
+	});
+
+	const { customerId, autumnV2_1, ctx } = await initScenario({
+		customerId: "auto-topup-b6",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [oneOffProd] }),
+		],
+		actions: [
+			s.attach({
+				productId: oneOffProd.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1000 }],
+			}),
+		],
+	});
+
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: makeAutoTopupConfig({
+			threshold: 200,
+			quantity: 100,
+		}),
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 950,
+	});
+
+	await timeout(AUTO_TOPUP_WAIT_MS);
+
+	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	const expectedBalance = new Decimal(1000).sub(950).add(1000).toNumber();
+	expectBalanceCorrect({
+		customer: after,
+		featureId: TestFeature.Messages,
+		remaining: expectedBalance,
+	});
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		count: 2,
+		latestTotal: 10,
+		latestStatus: "paid",
+		latestInvoiceProductId: oneOffProd.id,
+	});
+	await expectCustomerProductOptions({
+		ctx,
+		customerId,
+		productId: oneOffProd.id,
+		featureId: TestFeature.Messages,
+		quantity: 2,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("auto-topup basic: billing units 1000 with top-up quantity 1100")}`, async () => {
+	const oneOffItem = items.oneOffMessages({
+		includedUsage: 0,
+		billingUnits: 1000,
+		price: 10,
+	});
+	const oneOffProd = products.oneOffAddOn({
+		id: "topup-b7",
+		items: [oneOffItem],
+	});
+
+	const { customerId, autumnV2_1, ctx } = await initScenario({
+		customerId: "auto-topup-b7",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [oneOffProd] }),
+		],
+		actions: [
+			s.attach({
+				productId: oneOffProd.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 1000 }],
+			}),
+		],
+	});
+
+	await autumnV2_1.customers.update(customerId, {
+		billing_controls: makeAutoTopupConfig({
+			threshold: 200,
+			quantity: 1100,
+		}),
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 950,
+	});
+
+	await timeout(AUTO_TOPUP_WAIT_MS);
+
+	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	const expectedBalance = new Decimal(1000).sub(950).add(2000).toNumber();
+	expectBalanceCorrect({
+		customer: after,
+		featureId: TestFeature.Messages,
+		remaining: expectedBalance,
+	});
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		count: 2,
+		latestTotal: 20,
+		latestStatus: "paid",
+		latestInvoiceProductId: oneOffProd.id,
+	});
+	await expectCustomerProductOptions({
+		ctx,
+		customerId,
+		productId: oneOffProd.id,
+		featureId: TestFeature.Messages,
+		quantity: 3,
+	});
+});

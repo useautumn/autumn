@@ -268,7 +268,8 @@ export function UpdateSubscriptionFormProvider({
 		hasChanges &&
 		!hasBillingChanges &&
 		!hasPrepaidQuantityChanges &&
-		!isVersionLoading;
+		!isVersionLoading &&
+		!normalizedFormValues.resetBillingCycle;
 
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext: formContext,

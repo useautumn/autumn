@@ -1,5 +1,6 @@
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { isStripeSubscriptionScheduleInLastPhase } from "@/external/stripe/subscriptionSchedules/utils/classifyStripeSubscriptionScheduleUtils";
+import { stripeSubscriptionScheduleToPhaseIndex } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
@@ -27,6 +28,26 @@ export const releaseScheduleIfLastPhase = async ({
 			nowMs,
 		})
 	) {
+		return false;
+	}
+
+	// Stripe's `from_subscription` flow can briefly expose a transient 1-phase schedule before the final multi-phase update settles.
+	const currentPhaseIndex = stripeSubscriptionScheduleToPhaseIndex({
+		stripeSubscriptionSchedule,
+		nowMs,
+	});
+	const currentPhase = stripeSubscriptionSchedule.phases[currentPhaseIndex];
+
+	// Skip release only for that temporary single-phase shape while its future end date shows the real schedule has not settled yet.
+	const isSingleFuturePhase =
+		stripeSubscriptionSchedule.phases.length === 1 &&
+		typeof currentPhase?.end_date === "number" &&
+		currentPhase.end_date * 1000 > nowMs;
+
+	if (isSingleFuturePhase) {
+		logger.debug(
+			`[handleSchedulePhaseChanges] skip release (single-phase schedule still ends in future)`,
+		);
 		return false;
 	}
 

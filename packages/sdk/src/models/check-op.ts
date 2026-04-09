@@ -394,6 +394,7 @@ export const ProductScenario = {
   New: "new",
   Renew: "renew",
   Upgrade: "upgrade",
+  UpdatePrepaidQuantity: "update_prepaid_quantity",
   Downgrade: "downgrade",
   Cancel: "cancel",
   Expired: "expired",
@@ -404,7 +405,7 @@ export const ProductScenario = {
  */
 export type ProductScenario = OpenEnum<typeof ProductScenario>;
 
-export type CheckProperties = {
+export type Properties = {
   /**
    * True if the product has no base price or usage prices
    */
@@ -480,7 +481,7 @@ export type Product = {
    * Scenario for when this product is used in attach flows
    */
   scenario?: ProductScenario | undefined;
-  properties?: CheckProperties | undefined;
+  properties?: Properties | undefined;
 };
 
 /**
@@ -970,34 +971,32 @@ export const ProductScenario$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ProductScenario);
 
 /** @internal */
-export const CheckProperties$inboundSchema: z.ZodMiniType<
-  CheckProperties,
-  unknown
-> = z.pipe(
-  z.object({
-    is_free: types.boolean(),
-    is_one_off: types.boolean(),
-    interval_group: z.optional(z.nullable(types.string())),
-    has_trial: z.optional(z.nullable(types.boolean())),
-    updateable: z.optional(z.nullable(types.boolean())),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "is_free": "isFree",
-      "is_one_off": "isOneOff",
-      "interval_group": "intervalGroup",
-      "has_trial": "hasTrial",
-    });
-  }),
-);
+export const Properties$inboundSchema: z.ZodMiniType<Properties, unknown> = z
+  .pipe(
+    z.object({
+      is_free: types.boolean(),
+      is_one_off: types.boolean(),
+      interval_group: z.optional(z.nullable(types.string())),
+      has_trial: z.optional(z.nullable(types.boolean())),
+      updateable: z.optional(z.nullable(types.boolean())),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "is_free": "isFree",
+        "is_one_off": "isOneOff",
+        "interval_group": "intervalGroup",
+        "has_trial": "hasTrial",
+      });
+    }),
+  );
 
-export function checkPropertiesFromJSON(
+export function propertiesFromJSON(
   jsonString: string,
-): SafeParseResult<CheckProperties, SDKValidationError> {
+): SafeParseResult<Properties, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckProperties$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckProperties' from JSON`,
+    (x) => Properties$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Properties' from JSON`,
   );
 }
 
@@ -1017,7 +1016,7 @@ export const Product$inboundSchema: z.ZodMiniType<Product, unknown> = z.pipe(
     free_trial: types.nullable(z.lazy(() => CheckFreeTrial$inboundSchema)),
     base_variant_id: types.nullable(types.string()),
     scenario: types.optional(ProductScenario$inboundSchema),
-    properties: types.optional(z.lazy(() => CheckProperties$inboundSchema)),
+    properties: types.optional(z.lazy(() => Properties$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

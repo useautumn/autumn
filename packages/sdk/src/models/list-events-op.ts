@@ -60,11 +60,6 @@ export type EventsListParams = {
   customRange?: ListEventsCustomRange | undefined;
 };
 
-/**
- * Event properties (JSONB)
- */
-export type ListEventsProperties = {};
-
 export type ListEventsList = {
   /**
    * Event ID (KSUID)
@@ -87,9 +82,9 @@ export type ListEventsList = {
    */
   value: number;
   /**
-   * Event properties (JSONB)
+   * Event properties (JSON)
    */
-  properties: ListEventsProperties;
+  properties: { [k: string]: any };
 };
 
 /**
@@ -200,22 +195,6 @@ export function eventsListParamsToJSON(
 }
 
 /** @internal */
-export const ListEventsProperties$inboundSchema: z.ZodMiniType<
-  ListEventsProperties,
-  unknown
-> = z.object({});
-
-export function listEventsPropertiesFromJSON(
-  jsonString: string,
-): SafeParseResult<ListEventsProperties, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListEventsProperties$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListEventsProperties' from JSON`,
-  );
-}
-
-/** @internal */
 export const ListEventsList$inboundSchema: z.ZodMiniType<
   ListEventsList,
   unknown
@@ -226,7 +205,7 @@ export const ListEventsList$inboundSchema: z.ZodMiniType<
     feature_id: types.string(),
     customer_id: types.string(),
     value: types.number(),
-    properties: z.lazy(() => ListEventsProperties$inboundSchema),
+    properties: z.record(z.string(), z.any()),
   }),
   z.transform((v) => {
     return remap$(v, {

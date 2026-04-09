@@ -33,6 +33,7 @@ export function useHasSubscriptionChanges({
 }): boolean {
 	return useMemo(() => {
 		if (formValues.billingBehavior !== initialBillingBehavior) return true;
+		if (formValues.resetBillingCycle) return true;
 
 		const trialChanges = generateTrialChanges({
 			customerProduct,
@@ -79,6 +80,7 @@ export function useHasSubscriptionChanges({
 		return prepaidChanges.length > 0;
 	}, [
 		formValues.billingBehavior,
+		formValues.resetBillingCycle,
 		initialBillingBehavior,
 		formValues.removeTrial,
 		formValues.trialLength,
