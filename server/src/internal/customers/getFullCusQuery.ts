@@ -1,7 +1,8 @@
-import type {
-	AppEnv,
-	CusProductStatus,
-	ListCustomersV2Params,
+import {
+	type AppEnv,
+	type CusProductStatus,
+	type ListCustomersV2Params,
+	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
@@ -14,6 +15,11 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
 				)}])`
 			: sql``;
 	};
+
+	const relevantStatusFirst = sql`CASE WHEN cp.status = ANY(ARRAY[${sql.join(
+		RELEVANT_STATUSES.map((status) => sql`${status}`),
+		sql`, `,
+	)}]) THEN 0 ELSE 1 END`;
 
 	return sql`
     customer_products_with_prices AS (
@@ -80,7 +86,7 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
       ) ft_data ON true
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
       ${withStatusFilter()}
-      ORDER BY cp.created_at DESC
+      ORDER BY ${relevantStatusFirst}, cp.created_at DESC
       LIMIT 15
     )
   `;
