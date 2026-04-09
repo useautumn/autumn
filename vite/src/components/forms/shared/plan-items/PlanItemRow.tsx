@@ -74,7 +74,7 @@ export function PlanItemRow({
 	initialPrepaidOptions,
 	existingOptions,
 	form,
-	hasCustomizations,
+	showDiff,
 	readOnly,
 }: {
 	item: ProductItem;
@@ -86,7 +86,7 @@ export function PlanItemRow({
 	initialPrepaidOptions: Record<string, number>;
 	existingOptions?: FeatureOptions[];
 	form: UseUpdateSubscriptionForm | UseAttachForm;
-	hasCustomizations: boolean;
+	showDiff: boolean;
 	readOnly?: boolean;
 }) {
 	if (!item.feature_id) return null;
@@ -108,10 +108,10 @@ export function PlanItemRow({
 	);
 
 	const isCreated =
-		!originalItem && !!originalItems && originalItems.length > 0;
+		showDiff && !originalItem && !!originalItems && originalItems.length > 0;
 
 	const hasChanges =
-		hasCustomizations && !!originalItem
+		showDiff && !!originalItem
 			? hasItemChanged({ originalItem, updatedItem: item })
 			: false;
 

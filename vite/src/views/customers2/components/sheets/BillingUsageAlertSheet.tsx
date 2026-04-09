@@ -275,15 +275,15 @@ export function BillingUsageAlertSheet() {
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="usage">Absolute usage</SelectItem>
+									<SelectItem value="usage">Usage (absolute value)</SelectItem>
 									<SelectItem value="usage_percentage">
-										% of allowance used
+										Percentage used of allowance
 									</SelectItem>
 									<SelectItem value="remaining">
-										Remaining (absolute)
+										Remaining (absolute value)
 									</SelectItem>
 									<SelectItem value="remaining_percentage">
-										Remaining % of allowance
+										Percentage remaining of allowance
 									</SelectItem>
 								</SelectContent>
 							</Select>

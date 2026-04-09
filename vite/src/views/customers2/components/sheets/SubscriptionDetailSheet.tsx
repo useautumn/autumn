@@ -314,7 +314,7 @@ export function SubscriptionDetailSheet() {
 			)}
 
 			{!isExpired && !isScheduled && (
-				<div className="sticky bottom-0 p-4 flex gap-2 border-t border-border/40">
+				<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
 					{isCanceled ? (
 						<Button
 							variant="secondary"

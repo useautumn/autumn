@@ -1,6 +1,6 @@
 import type { Entity, Feature, FullCustomer } from "@autumn/shared";
 import { FeatureUsageType, getFeatureName } from "@autumn/shared";
-import { TrashIcon, XIcon } from "@phosphor-icons/react";
+import { PlusIcon, TrashIcon, XIcon } from "@phosphor-icons/react";
 import { CheckIcon } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
@@ -9,6 +9,7 @@ import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "../../../customers/customer/hooks/useCusQuery";
+import { CreateEntity } from "./CreateEntity";
 import { DeleteEntity } from "./DeleteEntity";
 
 const mutedDivClassName =
@@ -19,6 +20,7 @@ const placeholderText = "PENDING";
 export const SelectedEntityDetails = () => {
 	const { customer } = useCusQuery();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 	const { features } = useFeaturesQuery();
 
 	const { entityId, setEntityId } = useEntity();
@@ -113,6 +115,18 @@ export const SelectedEntityDetails = () => {
 								</>
 							);
 						}}
+						footer={
+							<div className="border-t py-1.5 px-2">
+								<Button
+									variant="muted"
+									className="w-full"
+									onClick={() => setCreateEntityOpen(true)}
+								>
+									<PlusIcon className="size-[14px] text-t2" weight="regular" />
+									Create new entity
+								</Button>
+							</div>
+						}
 					/>
 					{entityId && (
 						<Button
@@ -162,6 +176,7 @@ export const SelectedEntityDetails = () => {
 				setOpen={setDeleteDialogOpen}
 				entity={fullEntity}
 			/>
+			<CreateEntity open={createEntityOpen} setOpen={setCreateEntityOpen} />
 		</>
 	);
 };

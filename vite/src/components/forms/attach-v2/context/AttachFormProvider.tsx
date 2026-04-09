@@ -1,11 +1,19 @@
 import type {
 	Feature,
 	FrontendProduct,
+	FullCusProduct,
+	FullCustomer,
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
 import {
+	ACTIVE_STATUSES,
+	CusProductStatus,
+	cusProductToPrices,
 	FreeTrialDuration,
+	isFreeProduct,
+	isFreeProductV2,
+	isOneOffProductV2,
 	productV2ToFrontendProduct,
 	UsageModel,
 } from "@autumn/shared";
@@ -30,6 +38,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import type { PrepaidItemWithFeature } from "@/hooks/stores/useProductStore";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { AttachForm } from "../attachFormSchema";
 import { type UseAttachForm, useAttachForm } from "../hooks/useAttachForm";
 import { useAttachMutation } from "../hooks/useAttachMutation";
@@ -39,6 +48,10 @@ import {
 } from "../hooks/useAttachPreview";
 import { useAttachRequestBody } from "../hooks/useAttachRequestBody";
 import { useGrantFree } from "../hooks/useGrantFree";
+import {
+	type UsePreviewDiffReturn,
+	usePreviewDiff,
+} from "../hooks/usePreviewDiff";
 
 interface AttachFormContextValue {
 	form: UseAttachForm;
@@ -53,7 +66,10 @@ interface AttachFormContextValue {
 	numVersions: number;
 	initialPrepaidOptions: Record<string, number>;
 
+	isFreeToPaidTransition: boolean;
+
 	previewQuery: UseAttachPreviewReturn;
+	previewDiff: UsePreviewDiffReturn;
 
 	showPlanEditor: boolean;
 	handleEditPlan: () => void;
@@ -174,6 +190,49 @@ export function AttachFormProvider({
 		}
 		return product;
 	}, [product, isVersionChanged, versionProductQuery.data]);
+
+	const { customer } = useCusQuery();
+	const fullCustomer = customer as FullCustomer | null;
+
+	const isFreeToPaidTransition = useMemo(() => {
+		if (!effectiveProduct || !fullCustomer) return false;
+		if (effectiveProduct.is_add_on) return false;
+
+		const isIncomingFree = isFreeProductV2({ items: effectiveProduct.items });
+		const isIncomingOneOff = isOneOffProductV2({
+			items: effectiveProduct.items,
+		});
+		if (isIncomingFree || isIncomingOneOff) return false;
+
+		const outgoingCustomerProduct = fullCustomer.customer_products.find(
+			(customerProduct: FullCusProduct) => {
+				if (customerProduct.product.is_add_on) return false;
+
+				const hasActiveOrTrialing =
+					ACTIVE_STATUSES.includes(customerProduct.status) ||
+					customerProduct.status === CusProductStatus.Trialing;
+				if (!hasActiveOrTrialing) return false;
+
+				const groupMatches =
+					(customerProduct.product.group || "") ===
+					(effectiveProduct.group || "");
+				if (!groupMatches) return false;
+
+				const entityMatches = entityId
+					? customerProduct.entity_id === entityId ||
+						customerProduct.internal_entity_id === entityId
+					: !customerProduct.internal_entity_id;
+				return entityMatches;
+			},
+		);
+
+		if (!outgoingCustomerProduct) return false;
+
+		const outgoingPrices = cusProductToPrices({
+			cusProduct: outgoingCustomerProduct,
+		});
+		return isFreeProduct({ prices: outgoingPrices });
+	}, [effectiveProduct, fullCustomer, entityId]);
 
 	const { prepaidItems } = usePrepaidItems({ product: effectiveProduct });
 
@@ -301,9 +360,18 @@ export function AttachFormProvider({
 		carryOverUsages,
 		carryOverUsageFeatureIds,
 		customLineItems,
+		isFreeToPaidTransition,
 	});
 
 	const previewQuery = useAttachPreview({ requestBody });
+
+	const previewDiff = usePreviewDiff({
+		previewQuery,
+		productId: productId ?? "",
+		items,
+		version,
+		incomingItems: originalItems,
+	});
 
 	const { handleConfirm, handleInvoiceAttach, isPending } = useAttachMutation({
 		customerId,
@@ -394,7 +462,9 @@ export function AttachFormProvider({
 			hasCustomizations,
 			numVersions,
 			initialPrepaidOptions,
+			isFreeToPaidTransition,
 			previewQuery,
+			previewDiff,
 			showPlanEditor,
 			handleEditPlan,
 			handlePlanEditorSave,
@@ -415,7 +485,9 @@ export function AttachFormProvider({
 			hasCustomizations,
 			numVersions,
 			initialPrepaidOptions,
+			isFreeToPaidTransition,
 			previewQuery,
+			previewDiff,
 			showPlanEditor,
 			handleEditPlan,
 			handlePlanEditorSave,

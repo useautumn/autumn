@@ -44,7 +44,7 @@ export interface PlanItemsSectionProps {
 
 	form: UseUpdateSubscriptionForm | UseAttachForm;
 
-	hasCustomizations: boolean;
+	showDiff: boolean;
 	currency: string;
 
 	onEditPlan: () => void;
@@ -53,7 +53,7 @@ export interface PlanItemsSectionProps {
 	versionChange?: VersionChange | null;
 	trialConfig?: TrialConfig;
 
-	gateDeletedItemsByCustomizations?: boolean;
+	gateDeletedItemsByDiff?: boolean;
 	readOnly?: boolean;
 }
 
@@ -65,13 +65,13 @@ export function PlanItemsSection({
 	initialPrepaidOptions,
 	existingOptions,
 	form,
-	hasCustomizations,
+	showDiff,
 	currency,
 	onEditPlan,
 	priceChange,
 	versionChange,
 	trialConfig,
-	gateDeletedItemsByCustomizations = false,
+	gateDeletedItemsByDiff = false,
 	readOnly = false,
 }: PlanItemsSectionProps) {
 	const originalItemsMap = new Map<string, ProductItem>(
@@ -84,8 +84,8 @@ export function PlanItemsSection({
 		product?.items?.map((i) => i.feature_id).filter(Boolean) ?? [],
 	);
 
-	const deletedItems = gateDeletedItemsByCustomizations
-		? hasCustomizations && originalItems
+	const deletedItems = gateDeletedItemsByDiff
+		? showDiff && originalItems
 			? originalItems.filter(
 					(i) => i.feature_id && !currentFeatureIds.has(i.feature_id),
 				)
@@ -113,12 +113,12 @@ export function PlanItemsSection({
 		initialPrepaidOptions,
 		existingOptions,
 		form,
-		hasCustomizations,
+		showDiff,
 		readOnly,
 	};
 
 	return (
-		<>
+		<div>
 			<PlanPriceHeader
 				priceChange={priceChange}
 				product={product}
@@ -126,7 +126,7 @@ export function PlanItemsSection({
 			/>
 			<LayoutGroup>
 				<motion.div
-					className="flex flex-col gap-2"
+					className="flex flex-col gap-1.5"
 					layout="position"
 					transition={{ layout: LAYOUT_TRANSITION }}
 				>
@@ -150,6 +150,6 @@ export function PlanItemsSection({
 					{!readOnly && <PlanEditButton onEditPlan={onEditPlan} />}
 				</motion.div>
 			</LayoutGroup>
-		</>
+		</div>
 	);
 }

@@ -176,6 +176,31 @@ function ReviewPreviewBlock() {
 	);
 }
 
+function PlanDiffSkeleton() {
+	return (
+		<SheetSection withSeparator>
+			<div className="flex flex-col gap-1">
+				<Skeleton className="h-4 w-32 rounded-sm" />
+				<div className="flex flex-col gap-2 mt-1">
+					{[1, 2, 3].map((i) => (
+						<div
+							key={i}
+							className="flex items-center h-10 px-3 rounded-xl input-base gap-2"
+						>
+							<div className="flex items-center gap-1 shrink-0">
+								<Skeleton className="size-4 rounded-sm" />
+								<Skeleton className="size-1 rounded-full" />
+								<Skeleton className="size-4 rounded-sm" />
+							</div>
+							<Skeleton className="h-3.5 w-36 rounded-sm" />
+						</div>
+					))}
+				</div>
+			</div>
+		</SheetSection>
+	);
+}
+
 function SheetContent() {
 	const [stage, setStage] = useState<"select" | "review">("select");
 
@@ -183,6 +208,7 @@ function SheetContent() {
 		formValues,
 		productWithFormItems,
 		product,
+		previewDiff,
 		showPlanEditor,
 		handlePlanEditorSave,
 		handlePlanEditorCancel,
@@ -288,7 +314,11 @@ function SheetContent() {
 							</button>
 						</SheetHeader>
 
-						<AttachPlanSection readOnly />
+						{previewDiff.isDiffLoading ? (
+							<PlanDiffSkeleton />
+						) : (
+							<AttachPlanSection readOnly showDiff />
+						)}
 						<AttachAdvancedSection />
 						<ReviewPreviewBlock />
 					</>
