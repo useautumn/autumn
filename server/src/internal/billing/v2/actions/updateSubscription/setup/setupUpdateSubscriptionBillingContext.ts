@@ -92,6 +92,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		targetCustomerProduct: customerProduct,
 		contextOverride,
 		skipBillingChanges,
+		product: fullProduct,
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
