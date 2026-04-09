@@ -1,11 +1,9 @@
-import type { FreeTrialDuration } from "@autumn/shared";
 import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
-import { TRIAL_DURATION_OPTIONS } from "@/components/forms/update-subscription-v2/constants/trialConstants";
+import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/v2/buttons/Button";
-import { TextCheckbox } from "@/components/v2/checkboxes/TextCheckbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -86,63 +84,31 @@ export function AttachPlanOptions() {
 				/>
 			)}
 
-			<ConfigRow
-				title="Free Trial"
-				description="Let the customer try the plan before being charged"
+			<FreeTrialConfigRow
+				form={form}
 				expanded={!!trialEnabled}
-				action={
-					<Switch
-						checked={!!trialEnabled}
-						onCheckedChange={(enabled) => {
-							form.setFieldValue("trialEnabled", enabled);
-							if (!enabled) {
-								form.setFieldValue("trialLength", null);
+				checked={!!trialEnabled}
+				trialCardRequired={!!trialCardRequired}
+				onToggle={(enabled) => {
+					form.setFieldValue("trialEnabled", enabled);
+					if (enabled) {
+						if (!formValues.trialLength) {
+							const productTrial = product?.free_trial;
+							form.setFieldValue(
+								"trialLength",
+								productTrial
+									? Number(productTrial.length)
+									: FreeTrialConfigRow.DEFAULT_TRIAL_LENGTH,
+							);
+							if (productTrial?.duration) {
+								form.setFieldValue("trialDuration", productTrial.duration);
 							}
-						}}
-					/>
-				}
-			>
-				<div className="flex items-center gap-2">
-					<form.AppField name="trialLength">
-						{(field) => (
-							<field.NumberField
-								label=""
-								placeholder="7"
-								min={1}
-								className="w-20"
-								inputClassName="placeholder:opacity-50"
-								hideFieldInfo
-							/>
-						)}
-					</form.AppField>
-					<form.AppField name="trialDuration">
-						{(field) => (
-							<field.SelectField
-								label=""
-								placeholder="Days"
-								options={
-									TRIAL_DURATION_OPTIONS as unknown as {
-										label: string;
-										value: FreeTrialDuration;
-									}[]
-								}
-								className="w-28"
-								hideFieldInfo
-							/>
-						)}
-					</form.AppField>
-					<div className="mx-2">
-						<TextCheckbox
-							checked={!!trialCardRequired}
-							onCheckedChange={(checked) =>
-								form.setFieldValue("trialCardRequired", checked as boolean)
-							}
-						>
-							Card Required
-						</TextCheckbox>
-					</div>
-				</div>
-			</ConfigRow>
+						}
+					} else {
+						form.setFieldValue("trialLength", null);
+					}
+				}}
+			/>
 
 			<ConfigRow
 				title="Grant for Free"

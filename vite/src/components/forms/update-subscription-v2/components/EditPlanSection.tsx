@@ -12,7 +12,6 @@ export function EditPlanSection() {
 		form,
 		formValues,
 		features,
-		trialState,
 		originalItems,
 		initialPrepaidOptions,
 		productWithFormItems: product,
@@ -20,7 +19,7 @@ export function EditPlanSection() {
 		handleEditPlan,
 	} = useUpdateSubscriptionFormContext();
 
-	const { customerProduct, numVersions, currentVersion } = formContext;
+	const { customerProduct } = formContext;
 	const { prepaidOptions } = formValues;
 	const hasCustomizations = formValues.items !== null || isVersionReady;
 
@@ -88,25 +87,9 @@ export function EditPlanSection() {
 		};
 	}, [originalItems, product?.items, currency]);
 
-	const selectedVersion = form.getFieldValue("version");
-	const versionChange =
-		isVersionReady &&
-		currentVersion !== undefined &&
-		selectedVersion !== undefined
-			? { currentVersion, selectedVersion }
-			: null;
-
 	return (
 		<SheetSection
-			title={
-				<SectionTitle
-					hasCustomizations={formValues.items !== null}
-					form={form}
-					numVersions={numVersions}
-					currentVersion={currentVersion}
-					trialState={trialState}
-				/>
-			}
+			title={<SectionTitle hasCustomizations={formValues.items !== null} />}
 			withSeparator
 		>
 			<PlanItemsSection
@@ -121,8 +104,6 @@ export function EditPlanSection() {
 				currency={currency}
 				onEditPlan={handleEditPlan}
 				priceChange={priceChange}
-				versionChange={versionChange}
-				trialConfig={{ trialState }}
 			/>
 		</SheetSection>
 	);

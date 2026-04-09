@@ -22,21 +22,23 @@ function getConfirmLabel({
 		| {
 				redirect_to_checkout: boolean;
 				total: number;
-				incoming?: { effective_at: number | null }[];
+				outgoing?: { effective_at: number | null }[];
 		  }
 		| null
 		| undefined;
 }): string {
-	if (!previewData) return "Attach Product";
+	if (!previewData) return "Attach Plan";
 
-	const isScheduled = previewData.incoming?.some(
-		(change) => change.effective_at !== null,
+	const sixHoursFromNow = Date.now() + 6 * 60 * 60 * 1000;
+	const isScheduled = previewData.outgoing?.some(
+		(change) =>
+			change.effective_at !== null && change.effective_at > sixHoursFromNow,
 	);
 	if (isScheduled) return "Schedule Change";
 
 	if (previewData.redirect_to_checkout) return "Copy Checkout URL";
 
-	if (previewData.total <= 0) return "Attach Product";
+	if (previewData.total <= 0) return "Attach Plan";
 
 	return "Charge Customer";
 }
@@ -49,11 +51,8 @@ export function AttachFooterV3() {
 	const ownStripeAccount = org?.stripe_connection !== "default";
 	const { isEndOfCycleSelected } = usePlanScheduleField();
 
-	const previewLoading = previewQuery.isLoading;
 	const previewData = previewQuery.data;
 	const confirmLabel = getConfirmLabel({ previewData });
-
-	if (previewLoading || (!previewData && !previewQuery.error)) return null;
 
 	const invoiceDisabledReason = isEndOfCycleSelected
 		? "Invoices are not available for end of cycle changes as there is no immediate charge to invoice"

@@ -54,8 +54,6 @@ function usePrepaidDisplayState({
 }) {
 	const inputQuantity = prepaidQuantity ?? 0;
 	const billingUnitStep = item.billing_units ?? 1;
-	const minPrepaidQuantity =
-		typeof item.included_usage === "number" ? item.included_usage : 0;
 
 	const normalizedBillingUnits = billingUnitStep > 0 ? billingUnitStep : 1;
 	const roundedQuantity = roundUsageToNearestBillingUnit({
@@ -77,7 +75,6 @@ function usePrepaidDisplayState({
 	return {
 		inputQuantity,
 		billingUnitStep,
-		minPrepaidQuantity,
 		roundedQuantity,
 		normalizedBillingUnits,
 		shouldShowRoundingHint,
@@ -92,7 +89,6 @@ function PrepaidQuantityControl({
 	form,
 	featureId,
 	inputQuantity,
-	minQuantity,
 	step,
 	showRing,
 	isEditing,
@@ -102,7 +98,6 @@ function PrepaidQuantityControl({
 	form: UseUpdateSubscriptionForm | UseAttachForm;
 	featureId: string;
 	inputQuantity: number;
-	minQuantity: number;
 	step: number;
 	showRing: boolean;
 	isEditing: boolean;
@@ -140,7 +135,7 @@ function PrepaidQuantityControl({
 							{(field) => (
 								<field.QuantityField
 									label=""
-									min={minQuantity}
+									min={0}
 									step={step}
 									hideFieldInfo
 								/>
@@ -291,7 +286,6 @@ export function SubscriptionItemRow({
 					form={form}
 					featureId={featureId}
 					inputQuantity={prepaid.inputQuantity}
-					minQuantity={prepaid.minPrepaidQuantity}
 					step={prepaid.billingUnitStep}
 					showRing={prepaid.showRightControlRing}
 					isEditing={isEditingQuantity}

@@ -1,22 +1,11 @@
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
-import { STAGGER_ITEM_LAYOUT } from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import { Button } from "@/components/v2/buttons/Button";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 
-export function PlanEditButton({
-	onEditPlan,
-	useStagger,
-}: {
-	onEditPlan: () => void;
-	useStagger?: boolean;
-}) {
+export function PlanEditButton({ onEditPlan }: { onEditPlan: () => void }) {
 	return (
-		<motion.div
-			layout="position"
-			transition={{ layout: LAYOUT_TRANSITION }}
-			variants={useStagger ? STAGGER_ITEM_LAYOUT : undefined}
-		>
+		<motion.div layout="position" transition={{ layout: LAYOUT_TRANSITION }}>
 			<Button variant="secondary" onClick={onEditPlan} className="w-full">
 				<PencilSimpleIcon size={14} className="mr-1" />
 				Create Custom Plan

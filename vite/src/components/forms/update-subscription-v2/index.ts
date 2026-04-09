@@ -2,6 +2,7 @@
 export * from "./components/EditPlanSection";
 export * from "./components/UpdateSubscriptionAdvancedSection";
 export * from "./components/UpdateSubscriptionFooter";
+export * from "./components/UpdateSubscriptionPlanOptions";
 export * from "./components/UpdateSubscriptionPreviewSection";
 
 // Context & Provider

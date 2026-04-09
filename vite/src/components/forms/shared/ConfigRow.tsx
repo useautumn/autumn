@@ -39,22 +39,19 @@ export function ConfigRow({
 					{expanded && children && (
 						<motion.div
 							initial={{ height: 0, opacity: 0 }}
-							animate={{
-								height: "auto",
-								opacity: 1,
-								transition: {
-									height: EXPAND_TRANSITION,
-									opacity: { duration: 0.15, delay: 0.05 },
-								},
-							}}
-							exit={{
-								height: 0,
-								opacity: 0,
-								transition: {
-									opacity: { duration: 0.1 },
-									height: { ...EXPAND_TRANSITION, delay: 0.05 },
-								},
-							}}
+						animate={{
+							height: "auto",
+							opacity: 1,
+							transition: {
+								height: EXPAND_TRANSITION,
+								opacity: { duration: 0.15, delay: 0.05 },
+							},
+						}}
+						exit={{
+							height: 0,
+							opacity: 0,
+							transition: EXPAND_TRANSITION,
+						}}
 							className="overflow-hidden"
 						>
 							{children}

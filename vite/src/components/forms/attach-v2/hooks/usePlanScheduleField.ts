@@ -105,10 +105,10 @@ export function usePlanScheduleField() {
 		? "immediate"
 		: (planSchedule ?? defaultPlanSchedule);
 
+	const showProrationRow =
+		hasActiveSubscription && !hasActiveProductWithTrial;
 	const showProrationBehavior =
-		hasActiveSubscription &&
-		!hasActiveProductWithTrial &&
-		effectivePlanSchedule === "immediate";
+		showProrationRow && effectivePlanSchedule === "immediate";
 	const isNoChargesAllowed = isNoChargesAllowedForAttach({
 		newBillingSubscription,
 		blocksNextCycleOnly: isFreeToPaidTransition,
@@ -202,6 +202,7 @@ export function usePlanScheduleField() {
 		canChooseBillingCycle,
 		defaultPlanSchedule,
 		effectivePlanSchedule,
+		showProrationRow,
 		showProrationBehavior,
 		effectiveProrationBehavior,
 		hasCustomSchedule,
