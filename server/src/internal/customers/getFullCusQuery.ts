@@ -712,16 +712,19 @@ export const hasCustomerListFilters = ({
 	internalCustomerIds,
 	inStatuses: _inStatuses,
 	plans,
+	processors,
 	search,
 }: {
 	internalCustomerIds?: string[];
 	inStatuses?: CusProductStatus[];
 	plans?: ListCustomersV2Params["plans"];
+	processors?: ListCustomersV2Params["processors"];
 	search?: string;
 }) => {
 	return Boolean(
 		(internalCustomerIds && internalCustomerIds.length > 0) ||
 			(plans && plans.length > 0) ||
+			(processors && processors.length > 0) ||
 			search?.trim(),
 	);
 };
@@ -730,11 +733,13 @@ export const getCustomerListFilterSql = ({
 	internalCustomerIds,
 	inStatuses,
 	plans,
+	processors,
 	search,
 }: {
 	internalCustomerIds?: string[];
 	inStatuses?: CusProductStatus[];
 	plans?: ListCustomersV2Params["plans"];
+	processors?: ListCustomersV2Params["processors"];
 	search?: string;
 }) => {
 	const filters = [];
@@ -785,6 +790,26 @@ export const getCustomerListFilterSql = ({
 			OR c.name ILIKE ${pattern}
 			OR c.email ILIKE ${pattern}
 		)`);
+	}
+
+	if (processors && processors.length > 0) {
+		const processorConditions = processors
+			.map((proc) => {
+				if (proc === "stripe")
+					return sql`(c.processor->>'id' IS NOT NULL)`;
+				if (proc === "revenuecat")
+					return sql`(c.processors->>'revenuecat' IS NOT NULL)`;
+				if (proc === "vercel")
+					return sql`(c.processors->>'vercel' IS NOT NULL)`;
+				return null;
+			})
+			.filter((c): c is SQL => c !== null);
+
+		if (processorConditions.length > 0) {
+			filters.push(
+				sql`AND (${sql.join(processorConditions, sql` OR `)})`,
+			);
+		}
 	}
 
 	return sql.join(filters, sql` `);
