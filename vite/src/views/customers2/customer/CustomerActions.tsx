@@ -202,6 +202,20 @@ export function CustomerActions() {
 								Open in Stripe
 							</DropdownMenuItem>
 						)}
+							{isAdmin && (
+								<DropdownMenuItem
+									onClick={() => {
+										window.open(
+											`https://i.useautumn.com/customers/${customer?.internal_id}`,
+											"_blank",
+										);
+									}}
+									className="flex gap-2"
+								>
+									<ArrowSquareOutIcon className="size-3.5" />
+									Open in Admin Panel
+								</DropdownMenuItem>
+							)}
 					{isAdmin &&
 						masterStripeAccount?.id &&
 						stripeAccount?.id &&
