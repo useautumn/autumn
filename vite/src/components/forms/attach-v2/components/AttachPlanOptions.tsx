@@ -16,11 +16,7 @@ import { useAttachFormContext } from "../context/AttachFormProvider";
 export function AttachPlanOptions() {
 	const { form, formValues, numVersions, product, handleGrantFreeToggle } =
 		useAttachFormContext();
-	const { trialEnabled, trialCardRequired, grantFree } = formValues as Record<
-		string,
-		// biome-ignore lint/suspicious/noExplicitAny: form values are typed through the schema
-		any
-	>;
+	const { trialEnabled, trialCardRequired, grantFree } = formValues;
 	const [versionOpen, setVersionOpen] = useState(false);
 
 	const showVersionSelector = numVersions > 1;
