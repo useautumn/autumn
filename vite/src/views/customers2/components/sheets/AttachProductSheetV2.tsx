@@ -1,4 +1,5 @@
 import type { Entity, FullCustomer } from "@autumn/shared";
+import { toast } from "sonner";
 import {
 	AttachAdvancedSection,
 	AttachFooter,
@@ -123,6 +124,7 @@ export function AttachProductSheetV2() {
 			}}
 			onCheckoutRedirect={(checkoutUrl) => {
 				window.open(checkoutUrl, "_blank");
+				toast.success("Redirecting to complete payment...");
 			}}
 			onSuccess={closeSheet}
 		>

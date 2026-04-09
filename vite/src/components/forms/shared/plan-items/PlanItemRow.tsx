@@ -1,13 +1,8 @@
 import type { Feature, FeatureOptions, ProductItem } from "@autumn/shared";
-import {
-	buildEditsForItem,
-	featureToOptions,
-	UsageModel,
-} from "@autumn/shared";
+import { featureToOptions, UsageModel } from "@autumn/shared";
 import { motion } from "motion/react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
-import { STAGGER_ITEM_LAYOUT } from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 
@@ -43,6 +38,32 @@ export function getPlanItemPrepaidQuantity({
 	return prepaidOption?.quantity;
 }
 
+function hasItemChanged({
+	originalItem,
+	updatedItem,
+}: {
+	originalItem: ProductItem;
+	updatedItem: ProductItem;
+}): boolean {
+	if (originalItem.price !== updatedItem.price) return true;
+	if (originalItem.included_usage !== updatedItem.included_usage) return true;
+	if (originalItem.billing_units !== updatedItem.billing_units) return true;
+	if (originalItem.usage_model !== updatedItem.usage_model) return true;
+
+	const oldTiers = originalItem.tiers ?? [];
+	const newTiers = updatedItem.tiers ?? [];
+	if (oldTiers.length !== newTiers.length) return true;
+	for (let i = 0; i < oldTiers.length; i++) {
+		if (
+			oldTiers[i].amount !== newTiers[i].amount ||
+			oldTiers[i].to !== newTiers[i].to
+		)
+			return true;
+	}
+
+	return false;
+}
+
 export function PlanItemRow({
 	item,
 	index,
@@ -54,11 +75,11 @@ export function PlanItemRow({
 	existingOptions,
 	form,
 	hasCustomizations,
-	useStagger,
+	readOnly,
 }: {
 	item: ProductItem;
 	index: number;
-	originalItemsMap: Map<string | null, ProductItem>;
+	originalItemsMap: Map<string, ProductItem>;
 	originalItems: ProductItem[] | undefined;
 	features: Feature[];
 	prepaidOptions: Record<string, number>;
@@ -66,52 +87,48 @@ export function PlanItemRow({
 	existingOptions?: FeatureOptions[];
 	form: UseUpdateSubscriptionForm | UseAttachForm;
 	hasCustomizations: boolean;
-	useStagger?: boolean;
+	readOnly?: boolean;
 }) {
 	if (!item.feature_id) return null;
 
 	const featureId = item.feature_id;
 	const isPrepaid = item.usage_model === UsageModel.Prepaid;
 
-	const currentPrepaidQuantity = getPlanItemPrepaidQuantity({
-		featureId,
-		prepaidOptions,
-		initialPrepaidOptions,
-		existingOptions: isPrepaid ? undefined : existingOptions,
-		features,
-	});
-
-	const initialPrepaidQuantity = isPrepaid
-		? initialPrepaidOptions[featureId]
+	const currentPrepaidQuantity = isPrepaid
+		? getPlanItemPrepaidQuantity({
+				featureId,
+				prepaidOptions,
+				initialPrepaidOptions,
+				features,
+			})
 		: undefined;
 
-	const originalItem = originalItemsMap.get(featureId);
+	const originalItem = originalItemsMap.get(
+		`${featureId}:${item.usage_model ?? ""}`,
+	);
 
-	const isCreated = !originalItem && originalItems && originalItems.length > 0;
+	const isCreated =
+		!originalItem && !!originalItems && originalItems.length > 0;
 
-	const edits = hasCustomizations
-		? buildEditsForItem({
-				updatedItem: item,
-				originalItem,
-				updatedPrepaidQuantity: currentPrepaidQuantity,
-				originalPrepaidQuantity: initialPrepaidQuantity,
-			})
-		: [];
+	const hasChanges =
+		hasCustomizations && !!originalItem
+			? hasItemChanged({ originalItem, updatedItem: item })
+			: false;
 
 	return (
 		<motion.div
 			key={featureId || item.price_id || index}
 			layout="position"
-			variants={useStagger ? STAGGER_ITEM_LAYOUT : undefined}
 			transition={{ layout: LAYOUT_TRANSITION }}
 		>
 			<SubscriptionItemRow
 				item={item}
-				edits={edits}
+				hasChanges={hasChanges}
 				prepaidQuantity={currentPrepaidQuantity}
 				form={form}
 				featureId={featureId}
 				isCreated={isCreated}
+				readOnly={readOnly}
 			/>
 		</motion.div>
 	);

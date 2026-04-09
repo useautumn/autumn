@@ -1,10 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import { TrialEditorRow } from "@/components/forms/update-subscription-v2/components/TrialEditorRow";
-import {
-	FAST_TRANSITION,
-	STAGGER_ITEM,
-} from "@/components/forms/update-subscription-v2/constants/animationConstants";
+import { FAST_TRANSITION } from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import type { UseTrialStateReturn } from "@/components/forms/update-subscription-v2/hooks/useTrialState";
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
@@ -29,11 +26,9 @@ function isComplexTrialConfig(
 export function PlanTrialEditor({
 	trialConfig,
 	form,
-	useStagger,
 }: {
 	trialConfig?: TrialConfig;
 	form: UseUpdateSubscriptionForm | UseAttachForm;
-	useStagger?: boolean;
 }) {
 	if (!trialConfig) return null;
 
@@ -51,7 +46,6 @@ export function PlanTrialEditor({
 				key="trial-editor"
 				layout
 				transition={{ layout: LAYOUT_TRANSITION }}
-				variants={useStagger ? STAGGER_ITEM : undefined}
 			>
 				<TrialEditorRow
 					form={form}

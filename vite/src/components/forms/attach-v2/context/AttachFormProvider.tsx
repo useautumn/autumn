@@ -4,7 +4,11 @@ import type {
 	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { productV2ToFrontendProduct, UsageModel } from "@autumn/shared";
+import {
+	FreeTrialDuration,
+	productV2ToFrontendProduct,
+	UsageModel,
+} from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import {
 	createContext,
@@ -34,6 +38,7 @@ import {
 	useAttachPreview,
 } from "../hooks/useAttachPreview";
 import { useAttachRequestBody } from "../hooks/useAttachRequestBody";
+import { useGrantFree } from "../hooks/useGrantFree";
 
 interface AttachFormContextValue {
 	form: UseAttachForm;
@@ -54,6 +59,8 @@ interface AttachFormContextValue {
 	handleEditPlan: () => void;
 	handlePlanEditorSave: (product: FrontendProduct) => void;
 	handlePlanEditorCancel: () => void;
+
+	handleGrantFreeToggle: (params: { enabled: boolean }) => void;
 
 	isPending: boolean;
 	handleConfirm: () => void;
@@ -127,11 +134,18 @@ export function AttachFormProvider({
 		trialEnabled,
 		trialCardRequired,
 		planSchedule,
-		billingBehavior,
+		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
 		resetBillingCycle,
 		discounts,
+		grantFree,
+		noBillingChanges,
+		carryOverBalances,
+		carryOverBalanceFeatureIds,
+		carryOverUsages,
+		carryOverUsageFeatureIds,
+		customLineItems,
 	} = formValues;
 
 	const product = useMemo(
@@ -145,7 +159,41 @@ export function AttachFormProvider({
 	const numVersions =
 		productVersionQuery.data?.numVersions ?? product?.version ?? 1;
 
-	const { prepaidItems } = usePrepaidItems({ product });
+	// Fetch the target version's product data when version differs from latest
+	const isVersionChanged =
+		version !== undefined && version !== (product?.version ?? numVersions);
+	const versionProductQuery = useProductVersionQuery({
+		productId: product?.id,
+		version,
+		enabled: isVersionChanged,
+	});
+
+	const effectiveProduct = useMemo((): ProductV2 | undefined => {
+		if (isVersionChanged && versionProductQuery.data) {
+			return versionProductQuery.data.product;
+		}
+		return product;
+	}, [product, isVersionChanged, versionProductQuery.data]);
+
+	const { prepaidItems } = usePrepaidItems({ product: effectiveProduct });
+
+	const resolveCurrentItems = useCallback(
+		() => items ?? (effectiveProduct?.items as ProductItem[]) ?? [],
+		[items, effectiveProduct?.items],
+	);
+
+	const { handleGrantFreeToggle, resetGrantFree } = useGrantFree({
+		form,
+		resolveCurrentItems,
+	});
+
+	// Reset items when version changes so new version's items display
+	const previousVersionRef = useRef<number | undefined>(version);
+	useEffect(() => {
+		if (previousVersionRef.current === version) return;
+		previousVersionRef.current = version;
+		form.setFieldValue("items", null);
+	}, [version, form]);
 
 	// Track product changes and initialize prepaid options
 	const previousProductIdRef = useRef<string | undefined>();
@@ -162,9 +210,14 @@ export function AttachFormProvider({
 		previousProductIdRef.current = productId;
 
 		if (isProductChange) {
-			// Reset items and version when product changes
 			form.setFieldValue("items", null);
 			form.setFieldValue("version", undefined);
+			form.setFieldValue("trialEnabled", false);
+			form.setFieldValue("trialLength", null);
+			form.setFieldValue("trialDuration", FreeTrialDuration.Day);
+			form.setFieldValue("trialCardRequired", true);
+			form.setFieldValue("grantFree", false);
+			resetGrantFree();
 		}
 
 		// Initialize prepaid options for the selected product
@@ -177,18 +230,31 @@ export function AttachFormProvider({
 			}
 			form.setFieldValue("prepaidOptions", newInitialPrepaidOptions);
 			setInitialPrepaidOptions(newInitialPrepaidOptions);
-		}
-	}, [productId, product, form]);
 
-	const originalItems = product?.items as ProductItem[] | undefined;
+			if (product.free_trial) {
+				form.setFieldValue("trialEnabled", true);
+				form.setFieldValue("trialLength", Number(product.free_trial.length));
+				form.setFieldValue(
+					"trialDuration",
+					product.free_trial.duration as FreeTrialDuration,
+				);
+				form.setFieldValue(
+					"trialCardRequired",
+					Boolean(product.free_trial.card_required),
+				);
+			}
+		}
+	}, [productId, product, form, resetGrantFree]);
+
+	const originalItems = effectiveProduct?.items as ProductItem[] | undefined;
 
 	const hasCustomizations = items !== null && items.length > 0;
 
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
-		if (!product) return undefined;
+		if (!effectiveProduct) return undefined;
 
 		const baseFrontendProduct = productV2ToFrontendProduct({
-			product: product as ProductV2,
+			product: effectiveProduct as ProductV2,
 		});
 
 		return getProductWithSupportedPlanFormValues({
@@ -203,7 +269,7 @@ export function AttachFormProvider({
 			},
 		});
 	}, [
-		product,
+		effectiveProduct,
 		items,
 		version,
 		trialLength,
@@ -215,7 +281,7 @@ export function AttachFormProvider({
 	const { requestBody, buildRequestBody } = useAttachRequestBody({
 		customerId,
 		entityId,
-		product,
+		product: effectiveProduct,
 		prepaidOptions,
 		items,
 		version,
@@ -224,11 +290,17 @@ export function AttachFormProvider({
 		trialEnabled,
 		trialCardRequired,
 		planSchedule,
-		billingBehavior,
+		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
 		resetBillingCycle,
 		discounts,
+		noBillingChanges,
+		carryOverBalances,
+		carryOverBalanceFeatureIds,
+		carryOverUsages,
+		carryOverUsageFeatureIds,
+		customLineItems,
 	});
 
 	const previewQuery = useAttachPreview({ requestBody });
@@ -242,10 +314,10 @@ export function AttachFormProvider({
 	});
 
 	const handleEditPlan = useCallback(() => {
-		if (!productWithFormItems) return;
+		if (!productWithFormItems || grantFree) return;
 		setShowPlanEditor(true);
 		onPlanEditorOpen?.();
-	}, [productWithFormItems, onPlanEditorOpen]);
+	}, [productWithFormItems, onPlanEditorOpen, grantFree]);
 
 	const handlePlanEditorSave = useCallback(
 		(draftProduct: FrontendProduct) => {
@@ -315,7 +387,7 @@ export function AttachFormProvider({
 			form,
 			formValues,
 			features,
-			product,
+			product: effectiveProduct,
 			prepaidItems,
 			originalItems,
 			productWithFormItems,
@@ -327,6 +399,7 @@ export function AttachFormProvider({
 			handleEditPlan,
 			handlePlanEditorSave,
 			handlePlanEditorCancel,
+			handleGrantFreeToggle,
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,
@@ -335,7 +408,7 @@ export function AttachFormProvider({
 			form,
 			formValues,
 			features,
-			product,
+			effectiveProduct,
 			prepaidItems,
 			originalItems,
 			productWithFormItems,
@@ -347,6 +420,7 @@ export function AttachFormProvider({
 			handleEditPlan,
 			handlePlanEditorSave,
 			handlePlanEditorCancel,
+			handleGrantFreeToggle,
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,

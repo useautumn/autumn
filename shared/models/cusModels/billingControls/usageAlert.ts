@@ -40,7 +40,7 @@ export const DbUsageAlertSchema = z
 				code: "custom",
 				input: threshold,
 				path: ["threshold"],
-				message: "Threshold must be between 0 and 100 for percentage types",
+				message: `Threshold must be between 0 and 100 for ${threshold_type}`,
 			});
 		}
 	});

@@ -26,7 +26,7 @@ const baseParams = {
 	trialEnabled: false,
 	trialCardRequired: false,
 	planSchedule: null,
-	billingBehavior: null,
+	prorationBehavior: null,
 	newBillingSubscription: false,
 	discounts: [],
 };
