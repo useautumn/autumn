@@ -14,7 +14,26 @@ const store = createEdgeConfigStore<StripeSyncConfig>({
 
 registerEdgeConfig({ store });
 
-/** Pure in-memory lookup -- zero I/O, sync. */
-export const isStripeSyncEnabled = ({ orgId }: { orgId: string }): boolean => {
-	return store.get().enabledOrgIds.includes(orgId);
+/** Pure in-memory lookup -- zero I/O, sync. Matches on org ID or slug. */
+export const isStripeSyncEnabled = ({
+	orgId,
+	orgSlug,
+}: {
+	orgId: string;
+	orgSlug?: string;
+}): boolean => {
+	const enabled = store.get().enabledOrgIds;
+	return enabled.includes(orgId) || (!!orgSlug && enabled.includes(orgSlug));
+};
+
+export const getRuntimeStripeSyncStatus = () => store.getStatus();
+
+export const getStripeSyncConfigFromSource = async () => store.readFromSource();
+
+export const updateFullStripeSyncConfig = async ({
+	config,
+}: {
+	config: StripeSyncConfig;
+}) => {
+	await store.writeToSource({ config });
 };
