@@ -21,10 +21,6 @@ export const useEntity = () => {
 	const { customer } = useCusQuery();
 	const entities = (customer as FullCustomer)?.entities || [];
 
-	// #region agent log
-	fetch('http://127.0.0.1:7322/ingest/302190cd-01f7-494e-9c36-a1625f5cf969',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'0967f4'},body:JSON.stringify({sessionId:'0967f4',location:'useSubscriptionStore.ts:useEntity',message:'entities debug',data:{customerExists:!!customer,entitiesRaw:(customer as any)?.entities,entitiesIsArray:Array.isArray((customer as any)?.entities),entitiesLength:entities.length,entitiesNullCount:entities.filter((e:any) => e == null).length,firstFewEntities:entities.slice(0,3).map((e:any) => e == null ? 'NULL' : {id:e?.id,internal_id:e?.internal_id}),selectedEntityId},timestamp:Date.now()})}).catch(()=>{});
-	// #endregion
-
 	// Find the full entity object
 	const entity = entities.find(
 		(e: Entity) =>
