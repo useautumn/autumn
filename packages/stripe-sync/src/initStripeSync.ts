@@ -18,6 +18,7 @@ export const getStripeSyncEngine = (): StripeSync | null => {
 	initAttempted = true;
 
 	const databaseUrl = process.env.STRIPE_SYNC_DATABASE_URL;
+
 	const stripeSecretKey =
 		process.env.STRIPE_LIVE_SECRET_KEY || process.env.STRIPE_SANDBOX_SECRET_KEY;
 
