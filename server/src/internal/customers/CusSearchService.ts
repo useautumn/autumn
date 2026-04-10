@@ -8,6 +8,7 @@ import {
 
 import {
 	and,
+	asc,
 	desc,
 	eq,
 	gt,
@@ -21,6 +22,7 @@ import {
 } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
 
 // Create alias for subquery
 const customerProductsAlias = alias(customerProducts, "cp_alias");
@@ -47,6 +49,7 @@ const productFields = {
 	id: products.id,
 	name: products.name,
 	version: products.version,
+	is_add_on: products.is_add_on,
 };
 
 interface SearchFilters {
@@ -60,25 +63,21 @@ export class CusSearchService {
 	static async searchByProduct({
 		db,
 		orgId,
+		orgSlug,
 		env,
 		search,
 		filters,
 		pageSize = 50,
 		pageNumber,
-		// lastItem,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
+		orgSlug?: string;
 		env: AppEnv;
 		search: string;
 		filters: SearchFilters;
 		pageSize?: number;
 		pageNumber: number;
-		// lastItem?: {
-		//   internal_id: string;
-		//   created_at?: string;
-		//   name?: string;
-		// } | null;
 	}) {
 		// If we have a lastItem with only internal_id, fetch the full customer data for cursor pagination
 		// let resolvedLastItem = lastItem;
@@ -304,14 +303,14 @@ export class CusSearchService {
 			const offset = (pageNumber - 1) * pageSize;
 			productQueryResult = buildQuery()
 				.where(whereClause)
-				.orderBy(desc(customers.internal_id))
+				.orderBy(desc(customers.internal_id), asc(products.is_add_on))
 				.offset(offset)
 				.limit(pageSize);
 		} else {
 			// Use cursor-based pagination
 			productQueryResult = buildQuery()
 				.where(whereClause)
-				.orderBy(desc(customers.internal_id))
+				.orderBy(desc(customers.internal_id), asc(products.is_add_on))
 				.limit(pageSize);
 		}
 
@@ -375,7 +374,14 @@ export class CusSearchService {
 			}
 		}
 
+		const cusProductLimit = getOrgCusProductLimit({ orgId, orgSlug });
 		const processedData = Array.from(customerMap.values());
+		for (const customer of processedData) {
+			customer.customer_products = customer.customer_products.slice(
+				0,
+				cusProductLimit,
+			);
+		}
 
 		const totalCount = totalCountResult[0]?.totalCount || 0;
 
@@ -495,9 +501,7 @@ export class CusSearchService {
 												return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
 											return undefined;
 										})
-										.filter(
-											(c): c is NonNullable<typeof c> => c !== undefined,
-										),
+										.filter((c): c is NonNullable<typeof c> => c !== undefined),
 								)
 							: undefined,
 					),
@@ -510,6 +514,7 @@ export class CusSearchService {
 	static async search({
 		db,
 		orgId,
+		orgSlug,
 		env,
 		search,
 		pageSize = 50,
@@ -519,6 +524,7 @@ export class CusSearchService {
 	}: {
 		db: DrizzleCli;
 		orgId: string;
+		orgSlug?: string;
 		env: AppEnv;
 		search: string;
 		lastItem?: {
@@ -570,7 +576,6 @@ export class CusSearchService {
 				search,
 				filters,
 				pageSize,
-				// lastItem: resolvedLastItem,
 				pageNumber,
 			});
 		}
@@ -583,11 +588,11 @@ export class CusSearchService {
 			return await CusSearchService.searchByProduct({
 				db,
 				orgId,
+				orgSlug,
 				env,
 				search,
 				filters,
 				pageSize,
-				// lastItem: resolvedLastItem,
 				pageNumber,
 			});
 		}
@@ -685,7 +690,7 @@ export class CusSearchService {
 					products,
 					eq(customerProducts.internal_product_id, products.internal_id),
 				)
-				.orderBy(desc(baseQuery.internal_id)),
+				.orderBy(desc(baseQuery.internal_id), asc(products.is_add_on)),
 			totalCountQuery,
 		]);
 
@@ -718,7 +723,14 @@ export class CusSearchService {
 			}
 		}
 
+		const cusProductLimit = getOrgCusProductLimit({ orgId, orgSlug });
 		const finalResults = Array.from(customerMap.values());
+		for (const customer of finalResults) {
+			customer.customer_products = customer.customer_products.slice(
+				0,
+				cusProductLimit,
+			);
+		}
 
 		return { data: finalResults, count: totalCount };
 	}

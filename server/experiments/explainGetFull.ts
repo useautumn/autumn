@@ -24,17 +24,18 @@ const main = async () => {
 
 	const { db } = initDrizzle();
 
-	const query = getFullCusQuery(
-		customerId,
+	const query = getFullCusQuery({
+		idOrInternalId: customerId,
 		orgId,
 		env,
-		RELEVANT_STATUSES,
-		true, // includeInvoices
-		true, // withEntities
-		false, // withTrialsUsed
-		true, // withSubs
-		false, // withEvents
-	);
+		inStatuses: RELEVANT_STATUSES,
+		includeInvoices: true,
+		withEntities: true,
+		withTrialsUsed: false,
+		withSubs: true,
+		withEvents: false,
+		cusProductLimit: 15,
+	});
 
 	// Run the actual query to measure wall-clock time
 	console.log("--- Running query ---");

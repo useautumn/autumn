@@ -1,29 +1,23 @@
 import "dotenv/config";
 import { loadLocalEnv } from "./src/utils/envUtils";
 import Stripe from "stripe";
+import {
+	MAIN_STRIPE_EVENT_TYPES,
+	SYNC_STRIPE_EVENT_TYPES,
+} from "./src/external/stripe/common/stripeConstants";
 
 loadLocalEnv();
 
+const allEventTypes = [
+	...new Set([...MAIN_STRIPE_EVENT_TYPES, ...SYNC_STRIPE_EVENT_TYPES]),
+] as Stripe.WebhookEndpointCreateParams.EnabledEvent[];
+
 const main = async () => {
 	const stripe = new Stripe(process.env.STRIPE_SANDBOX_SECRET_KEY || "");
-	
 
 	const result = await stripe.webhookEndpoints.create({
 		url: `${process.env.STRIPE_WEBHOOK_URL}/webhooks/connect/sandbox`,
-		enabled_events: [
-			"checkout.session.completed",
-			"customer.subscription.created",
-			"customer.subscription.updated",
-			"customer.subscription.deleted",
-			"customer.discount.deleted",
-			"invoice.paid",
-			"invoice.upcoming",
-			"invoice.created",
-			"invoice.finalized",
-			"invoice.updated",
-			"subscription_schedule.canceled",
-			"subscription_schedule.updated",
-		],
+		enabled_events: allEventTypes,
 		connect: true,
 	});
 
