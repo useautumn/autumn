@@ -5,6 +5,7 @@ import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
+import { StripeSyncDialog } from "./StripeSyncDialog";
 
 export function EdgeConfigTab() {
 	const [requestBlockEditOpen, setRequestBlockEditOpen] = useState(false);
@@ -12,6 +13,7 @@ export function EdgeConfigTab() {
 	const [featureFlagsOpen, setFeatureFlagsOpen] = useState(false);
 	const [customerBlockOpen, setCustomerBlockOpen] = useState(false);
 	const [orgLimitsOpen, setOrgLimitsOpen] = useState(false);
+	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -90,6 +92,22 @@ export function EdgeConfigTab() {
 						Edit
 					</Button>
 				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-t1">Stripe Sync</div>
+						<div className="text-xs text-t3">
+							Enable Stripe webhook event syncing to the sync DB per org.
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setStripeSyncOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
 			</div>
 
 			<FeatureFlagsDialog
@@ -116,6 +134,11 @@ export function EdgeConfigTab() {
 			/>
 
 			<OrgLimitsDialog open={orgLimitsOpen} onOpenChange={setOrgLimitsOpen} />
+
+			<StripeSyncDialog
+				open={stripeSyncOpen}
+				onOpenChange={setStripeSyncOpen}
+			/>
 		</div>
 	);
 }
