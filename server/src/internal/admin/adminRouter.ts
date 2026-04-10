@@ -5,6 +5,8 @@ import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsCo
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
+import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
+
 import { handleGetInvoiceLineItems } from "./handleGetInvoiceLineItems";
 import { handleGetMasterStripeAccount } from "./handleGetMasterStripeAccount";
 import { handleGetOrgMember } from "./handleGetOrgMember";
@@ -16,6 +18,7 @@ import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureF
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
+import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 
 export const honoAdminRouter = new Hono<HonoEnv>();
 
@@ -55,6 +58,11 @@ honoAdminRouter.put(
 );
 honoAdminRouter.get("/org-limits-config", ...handleGetAdminOrgLimitsConfig);
 honoAdminRouter.put("/org-limits-config", ...handleUpsertAdminOrgLimitsConfig);
+honoAdminRouter.get("/stripe-sync-config", ...handleGetAdminStripeSyncConfig);
+honoAdminRouter.put(
+	"/stripe-sync-config",
+	...handleUpsertAdminStripeSyncConfig,
+);
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
 honoAdminRouter.get("/oauth-clients", ...handleListOAuthClients);

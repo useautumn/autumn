@@ -22,7 +22,7 @@ export const stripeSyncMiddleware = async (
 	if (!org || !stripeEvent) return;
 	if (
 		process.env.NODE_ENV === "production" &&
-		!isStripeSyncEnabled({ orgId: org.id })
+		!isStripeSyncEnabled({ orgId: org.id, orgSlug: org.slug })
 	)
 		return;
 
