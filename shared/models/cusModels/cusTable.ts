@@ -84,6 +84,12 @@ export const customers = pgTable(
 			table.env,
 			sql`${table.created_at} DESC`,
 		),
+		index("idx_customers_processors_revenuecat").on(
+			sql`(${table.processors} ->> 'revenuecat')`,
+		),
+		index("idx_customers_processors_vercel").on(
+			sql`(${table.processors} ->> 'vercel')`,
+		),
 	],
 ).enableRLS();
 

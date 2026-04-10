@@ -31,6 +31,16 @@ export const getRuntimeFeatureFlag = ({ path }: { path: string }): boolean => {
 	return value === true;
 };
 
+/** Returns the list of customer IDs with skip-overage override for a given org. */
+export const getSkipOverageSubmissionCustomers = ({
+	orgId,
+}: {
+	orgId: string;
+}): string[] => {
+	const config = store.get();
+	return config.skipOverageSubmissionFlags[orgId] ?? [];
+};
+
 export const getFeatureFlagConfigFromSource =
 	async (): Promise<FeatureFlagConfig> => store.readFromSource();
 
@@ -40,4 +50,13 @@ export const updateFullFeatureFlagConfig = async ({
 	config: FeatureFlagConfig;
 }): Promise<void> => {
 	await store.writeToSource({ config });
+};
+
+/** Sets in-memory feature flag config without S3. For testing only. */
+export const _setFeatureFlagConfigForTesting = ({
+	config,
+}: {
+	config: FeatureFlagConfig;
+}): void => {
+	store._setRuntimeConfigForTesting(config);
 };

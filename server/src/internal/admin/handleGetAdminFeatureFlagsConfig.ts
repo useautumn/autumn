@@ -10,7 +10,7 @@ export const handleGetAdminFeatureFlagsConfig = createRoute({
 		const config = await getFeatureFlagConfigFromSource();
 
 		return c.json({
-			maintenanceModes: config.maintenanceModes,
+			...config,
 			configHealthy: status.healthy,
 			configConfigured: status.configured,
 			lastSuccessAt: status.lastSuccessAt ?? null,
