@@ -25,7 +25,7 @@ export const ProcessorSubMenu = () => {
 		if (value === "stripe") return true;
 		if (value === "revenuecat") return flags.revenuecat;
 		if (value === "vercel") return flags.vercel;
-		return true;
+		return false;
 	});
 
 	const selectedProcessors = queryStates.processor || [];
