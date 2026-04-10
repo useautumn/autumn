@@ -24,8 +24,7 @@ export function UpdateSubscriptionAdvancedSection() {
 				description="Prorate price differences when changing plans mid-cycle"
 				action={
 					<Switch
-						checked={isProrate && !resetBillingCycle}
-						disabled={resetBillingCycle}
+						checked={isProrate}
 						onCheckedChange={(checked) =>
 							form.setFieldValue("billingBehavior", checked ? null : "none")
 						}
