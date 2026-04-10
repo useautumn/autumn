@@ -435,7 +435,6 @@ export function AttachAdvancedSection() {
 				)}
 			</ConfigRow>
 
-			{/* Proration — disabled (not hidden) when schedule is end-of-cycle */}
 			{showProrationRow && (
 				<ConfigRow
 					title="Prorate Changes"
@@ -444,14 +443,9 @@ export function AttachAdvancedSection() {
 						<Switch
 							checked={
 								showProrationBehavior &&
-								effectiveProrationBehavior === "prorate_immediately" &&
-								!resetBillingCycle
+								effectiveProrationBehavior === "prorate_immediately"
 							}
-							disabled={
-								!showProrationBehavior ||
-								!isNoChargesAllowed ||
-								resetBillingCycle
-							}
+							disabled={!showProrationBehavior || !isNoChargesAllowed}
 							onCheckedChange={(checked) =>
 								handleProrationBehaviorChange(
 									checked ? "prorate_immediately" : "none",
