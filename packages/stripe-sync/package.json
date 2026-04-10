@@ -15,6 +15,10 @@
 	"private": true,
 	"dependencies": {
 		"@supabase/stripe-sync-engine": "^0.48.5",
+		"pg": "^8.20.0",
 		"stripe": "catalog:"
+	},
+	"devDependencies": {
+		"@types/pg": "^8.20.0"
 	}
 }
