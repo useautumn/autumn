@@ -2,6 +2,7 @@ export const ADMIN_REQUEST_BLOCK_CONFIG_KEY = "admin/request-block-config.json";
 export const ADMIN_FEATURE_FLAGS_CONFIG_KEY = "admin/feature-flags-config.json";
 export const ADMIN_CUSTOMER_BLOCK_CONFIG_KEY =
 	"admin/customer-block-config.json";
+export const ADMIN_ORG_LIMITS_CONFIG_KEY = "admin/org-limits-config.json";
 
 type AdminS3Target = "dev" | "prod";
 
