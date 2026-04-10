@@ -6,6 +6,7 @@ import {
 	CustomerNotFoundError,
 	customerProducts,
 	customers,
+	type Entity,
 	type EntityExpand,
 	ErrCode,
 	type FullCusProduct,
@@ -33,6 +34,7 @@ import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
+import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import {
 	ACTIVE_STATUSES,
@@ -86,7 +88,11 @@ export class CusService {
 				withSubs,
 			},
 			fn: async () => {
-				const query = getFullCusQuery(
+				const cusProductLimit = getOrgCusProductLimit({
+					orgId,
+					orgSlug: org.slug,
+				});
+				const query = getFullCusQuery({
 					idOrInternalId,
 					orgId,
 					env,
@@ -97,7 +103,8 @@ export class CusService {
 					withSubs,
 					withEvents,
 					entityId,
-				);
+					cusProductLimit,
+				});
 
 				if (explain) {
 					const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${query}`;
@@ -144,10 +151,18 @@ export class CusService {
 						.slice(0, 5);
 				}
 
-				// Skip reset when reading from replica — it writes to primary,
-				// and replica data is stale anyway. When degraded WITHOUT a replica
-				// (falls back to primary), the reset should still run.
+				if (orgId === "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF") {
+					fullCus.customer_products = (
+						fullCus.customer_products as FullCusProduct[]
+					)
+						.sort((a, b) => b.customer_prices.length - a.customer_prices.length)
+						.slice(0, 5);
+
+					fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
+				}
 				if (!usedReplica && !skipReset) {
+					// Skip reset only when executeWithHealthTracking explicitly chose the
+					// replica. Lazy reset writes themselves go through dbGeneral.
 					await resetCustomerEntitlements({
 						fullCus,
 						ctx,
@@ -318,22 +333,21 @@ export class CusService {
 			? [query.subscription_status as CusProductStatus]
 			: ACTIVE_STATUSES;
 
-		const processorFilter =
-			query?.processors?.length
-				? or(
-						...query.processors
-							.map((proc) => {
-								if (proc === "stripe")
-									return sql`(${customers.processor}->>'id' IS NOT NULL)`;
-								if (proc === "revenuecat")
-									return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
-								if (proc === "vercel")
-									return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
-								return undefined;
-							})
-							.filter((c): c is NonNullable<typeof c> => c !== undefined),
-					)
-				: undefined;
+		const processorFilter = query?.processors?.length
+			? or(
+					...query.processors
+						.map((proc) => {
+							if (proc === "stripe")
+								return sql`(${customers.processor}->>'id' IS NOT NULL)`;
+							if (proc === "revenuecat")
+								return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
+							if (proc === "vercel")
+								return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
+							return undefined;
+						})
+						.filter((c): c is NonNullable<typeof c> => c !== undefined),
+				)
+			: undefined;
 
 		if (!query?.plans?.length) {
 			const [result] = await ctx.db
