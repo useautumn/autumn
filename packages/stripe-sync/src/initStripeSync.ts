@@ -52,10 +52,12 @@ export const processStripeSyncEvent = async ({
 	event,
 	stripeAccountId,
 	orgId,
+	env,
 }: {
 	event: Stripe.Event;
 	stripeAccountId?: string;
 	orgId?: string;
+	env?: string;
 }): Promise<void> => {
 	const engine = getStripeSyncEngine();
 	if (!engine) return;
@@ -74,12 +76,12 @@ export const processStripeSyncEvent = async ({
 
 	const accountId = stripeAccountId ?? event.account ?? null;
 
-	if (!accountId && !orgId) return;
+	if (!accountId && !orgId && !env) return;
 
 	try {
 		await engine.postgresClient.pool.query(
-			`UPDATE "${SCHEMA}"."${table}" SET stripe_account_id = COALESCE($1, stripe_account_id), org_id = COALESCE($2, org_id) WHERE id = $3`,
-			[accountId, orgId, objectId],
+			`UPDATE "${SCHEMA}"."${table}" SET stripe_account_id = COALESCE($1, stripe_account_id), org_id = COALESCE($2, org_id), env = COALESCE($3, env) WHERE id = $4`,
+			[accountId, orgId, env, objectId],
 		);
 	} catch {
 		// Fail-open: metadata stamp is best-effort

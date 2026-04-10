@@ -20,6 +20,7 @@ import {
 import "./internal/misc/requestBlocks/requestBlockStore.js";
 import "./internal/misc/featureFlags/featureFlagStore.js";
 import "./internal/misc/customerBlocks/customerBlockStore.js";
+import "./internal/misc/edgeConfig/orgLimitsStore.js";
 import "./internal/misc/stripeSync/stripeSyncStore.js";
 import { closeStripeSyncEngine } from "@autumn/stripe-sync";
 import { warmupRegionalRedis } from "./external/redis/initRedis.js";

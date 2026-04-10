@@ -24,6 +24,7 @@ export const handleSearchCustomers = createRoute({
 		const { data: customers, count } = await CusSearchService.search({
 			db,
 			orgId: org.id,
+			orgSlug: org.slug,
 			env,
 			search: search ?? "",
 			filters,

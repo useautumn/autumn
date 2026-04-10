@@ -6,7 +6,13 @@ import {
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
-const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
+const buildOptimizedCusProductsCTE = ({
+	inStatuses,
+	cusProductLimit,
+}: {
+	inStatuses?: CusProductStatus[];
+	cusProductLimit: number;
+}) => {
 	const withStatusFilter = () => {
 		return inStatuses
 			? sql`AND cp.status = ANY(ARRAY[${sql.join(
@@ -86,8 +92,8 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
       ) ft_data ON true
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
       ${withStatusFilter()}
-      ORDER BY ${relevantStatusFirst}, cp.created_at DESC
-      LIMIT 15
+      ORDER BY ${relevantStatusFirst}, prod.is_add_on ASC, cp.created_at DESC
+      LIMIT ${cusProductLimit}
     )
   `;
 };
@@ -101,7 +107,7 @@ const buildEntitiesCTE = (withEntities: boolean) => {
     customer_entities AS (
       SELECT 
         COALESCE(
-          json_agg(row_to_json(e) ORDER BY e.internal_id DESC),
+          json_agg(row_to_json(e) ORDER BY e.internal_id DESC) FILTER (WHERE e.internal_id IS NOT NULL),
           '[]'::json
         ) AS entities
       FROM (
@@ -266,18 +272,31 @@ const buildInvoicesCTE = (hasEntityCTE: boolean) => {
   `;
 };
 
-export const getFullCusQuery = (
-	idOrInternalId: string,
-	orgId: string,
-	env: AppEnv,
-	inStatuses: CusProductStatus[],
-	includeInvoices: boolean,
-	withEntities: boolean,
-	withTrialsUsed: boolean,
-	withSubs: boolean,
-	withEvents: boolean,
-	entityId?: string,
-) => {
+export const getFullCusQuery = ({
+	idOrInternalId,
+	orgId,
+	env,
+	inStatuses,
+	includeInvoices,
+	withEntities,
+	withTrialsUsed,
+	withSubs,
+	withEvents,
+	entityId,
+	cusProductLimit,
+}: {
+	idOrInternalId: string;
+	orgId: string;
+	env: AppEnv;
+	inStatuses: CusProductStatus[];
+	includeInvoices: boolean;
+	withEntities: boolean;
+	withTrialsUsed: boolean;
+	withSubs: boolean;
+	withEvents: boolean;
+	entityId?: string;
+	cusProductLimit: number;
+}) => {
 	const sqlChunks: SQL[] = [];
 
 	// Step 1: Get customer record
@@ -309,7 +328,7 @@ export const getFullCusQuery = (
 	// Add customer products CTE
 	sqlChunks.push(sql`, `);
 	// sqlChunks.push(buildCusProductsCTE(inStatuses));
-	sqlChunks.push(buildOptimizedCusProductsCTE(inStatuses));
+	sqlChunks.push(buildOptimizedCusProductsCTE({ inStatuses, cusProductLimit }));
 
 	// Conditionally add trials used CTE
 	if (withTrialsUsed) {
@@ -429,6 +448,7 @@ export const getPaginatedFullCusQuery = ({
 	internalCustomerIds,
 	plans,
 	search,
+	cusProductLimit,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -444,6 +464,7 @@ export const getPaginatedFullCusQuery = ({
 	internalCustomerIds?: string[];
 	plans?: ListCustomersV2Params["plans"];
 	search?: string;
+	cusProductLimit: number;
 }) => {
 	const withStatusFilter = () => {
 		return inStatuses?.length
@@ -539,8 +560,8 @@ export const getPaginatedFullCusQuery = ({
         FROM customer_products cp
         WHERE cp.internal_customer_id = cr.internal_id
         ${withStatusFilter()}
-        ORDER BY cp.created_at DESC
-        LIMIT 15
+        ORDER BY (SELECT p.is_add_on FROM products p WHERE p.internal_id = cp.internal_product_id) ASC, cp.created_at DESC
+        LIMIT ${cusProductLimit}
       ) cp ON true
       JOIN products prod ON cp.internal_product_id = prod.internal_id
       LEFT JOIN LATERAL (
@@ -659,7 +680,7 @@ export const getPaginatedFullCusQuery = ({
       SELECT 
         cr.internal_id AS internal_customer_id,
         COALESCE(
-          json_agg(row_to_json(e) ORDER BY e.internal_id DESC),
+          json_agg(row_to_json(e) ORDER BY e.internal_id DESC) FILTER (WHERE e.internal_id IS NOT NULL),
           '[]'::json
         ) AS entities
       FROM customer_records cr

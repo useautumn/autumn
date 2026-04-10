@@ -20,7 +20,8 @@ export const addAutumnColumns = async ({
 			await client.query(`
 				ALTER TABLE "${schema}"."${table}"
 				ADD COLUMN IF NOT EXISTS stripe_account_id TEXT,
-				ADD COLUMN IF NOT EXISTS org_id TEXT
+				ADD COLUMN IF NOT EXISTS org_id TEXT,
+				ADD COLUMN IF NOT EXISTS env TEXT
 			`);
 			await client.query(`
 				CREATE INDEX IF NOT EXISTS idx_${table}_stripe_account_id
