@@ -108,6 +108,7 @@ export function AttachAdvancedSection() {
 	const {
 		discounts,
 		newBillingSubscription,
+		resetBillingCycle,
 		redirectMode,
 		noBillingChanges,
 		carryOverBalances,
@@ -434,7 +435,6 @@ export function AttachAdvancedSection() {
 				)}
 			</ConfigRow>
 
-			{/* Proration — disabled (not hidden) when schedule is end-of-cycle */}
 			{showProrationRow && (
 				<ConfigRow
 					title="Prorate Changes"
@@ -456,6 +456,24 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
+			{hasActiveSubscription && (
+				<ConfigRow
+					title="Reset Billing Cycle"
+					description="Restart the billing cycle from today"
+					action={
+						<Switch
+							checked={resetBillingCycle}
+							onCheckedChange={(checked) => {
+								form.setFieldValue("resetBillingCycle", !!checked);
+								if (checked) {
+									handleScheduleChange("immediate");
+								}
+							}}
+						/>
+					}
+				/>
+			)}
+
 			{/* Plan Schedule — only when customer has an active Stripe subscription */}
 			{hasActiveSubscription && (
 				<AdvancedToggleRow
@@ -465,11 +483,12 @@ export function AttachAdvancedSection() {
 					<IconCheckbox
 						variant="secondary"
 						size="sm"
-						checked={isImmediateSelected}
+						checked={isImmediateSelected || resetBillingCycle}
+						disabled={resetBillingCycle}
 						onCheckedChange={() => handleScheduleChange("immediate")}
 						className={cn(
 							"min-w-[76px] px-2 text-xs rounded-r-none",
-							!isImmediateSelected && "border-r-0",
+							!isImmediateSelected && !resetBillingCycle && "border-r-0",
 						)}
 					>
 						Immediately
@@ -480,8 +499,8 @@ export function AttachAdvancedSection() {
 								<IconCheckbox
 									variant="secondary"
 									size="sm"
-									checked={isEndOfCycleSelected}
-									disabled={!hasOutgoing}
+									checked={isEndOfCycleSelected && !resetBillingCycle}
+									disabled={!hasOutgoing || resetBillingCycle}
 									onCheckedChange={() => handleScheduleChange("end_of_cycle")}
 									className={cn(
 										"min-w-[76px] px-2 text-xs rounded-l-none",
