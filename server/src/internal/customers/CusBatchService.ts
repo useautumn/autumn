@@ -11,6 +11,7 @@ import {
 } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
+import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
 import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/triggerBatchResetCustomerEntitlements.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
@@ -24,6 +25,11 @@ export class CusBatchService {
 		internalCustomerIds: string[];
 	}) {
 		const { org, env, db } = ctx;
+		const cusProductLimit = getOrgCusProductLimit({
+			orgId: ctx.org.id,
+			orgSlug: ctx.org.slug,
+		});
+
 		const query = getPaginatedFullCusQuery({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -34,6 +40,7 @@ export class CusBatchService {
 			limit: internalCustomerIds.length || 100,
 			offset: 0,
 			internalCustomerIds,
+			cusProductLimit,
 		});
 		const results = await db.execute(query);
 		const fullCustomers = results as unknown as FullCustomer[];
@@ -66,6 +73,10 @@ export class CusBatchService {
 
 		const { limit, offset, plans, subscription_status, search } = query;
 
+		const cusProductLimit = getOrgCusProductLimit({
+			orgId: ctx.org.id,
+			orgSlug: ctx.org.slug,
+		});
 		const sqlQuery = getPaginatedFullCusQuery({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -80,6 +91,7 @@ export class CusBatchService {
 			offset,
 			search,
 			plans,
+			cusProductLimit,
 		});
 		const results = await ctx.db.execute(sqlQuery);
 		const finals = [];

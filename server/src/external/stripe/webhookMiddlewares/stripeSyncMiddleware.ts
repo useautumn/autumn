@@ -35,6 +35,7 @@ export const stripeSyncMiddleware = async (
 			event: stripeEvent,
 			stripeAccountId,
 			orgId: org.id,
+			env: ctx.env,
 		}).catch((error) => {
 			logger.error(`Stripe sync failed for event ${stripeEvent.id}: ${error}`, {
 				error: {
@@ -48,10 +49,6 @@ export const stripeSyncMiddleware = async (
 			});
 		});
 	} catch (error) {
-		logger.error(`Stripe sync middleware error: ${error}`, {
-			error: {
-				message: error instanceof Error ? error.message : String(error),
-			},
-		});
+		logger.error(`Stripe sync middleware error: ${error}`);
 	}
 };

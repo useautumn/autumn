@@ -108,6 +108,7 @@ const main = async () => {
 		limit: config.limit,
 		offset: config.offset,
 		search: config.search,
+		cusProductLimit: 15,
 	});
 	const filteredCountQuery = getFilteredCountQuery({
 		orgId: config.orgId,
