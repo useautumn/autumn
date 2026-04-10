@@ -2,6 +2,7 @@ import {
 	type Customer,
 	CustomerAlreadyExistsError,
 	CustomerNotFoundError,
+	type FullCustomer,
 	notNullish,
 	ProcessorType,
 	RecaseError,
@@ -16,6 +17,7 @@ import {
 } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
+import { getOrSetCachedFullCustomer } from "../../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer";
 import { updateCachedCustomerData } from "../../cusUtils/fullCustomerCacheUtils/updateCachedCustomerData";
 
 export const updateCustomer = async ({
@@ -24,7 +26,10 @@ export const updateCustomer = async ({
 }: {
 	ctx: AutumnContext;
 	params: UpdateCustomerParamsV1;
-}) => {
+}): Promise<{
+	oldCustomer: Customer;
+	newFullCustomer: FullCustomer;
+}> => {
 	const { db, org, env, logger } = ctx;
 	const {
 		customer_id: customerId,
@@ -170,5 +175,15 @@ export const updateCustomer = async ({
 		updates: updateData,
 	});
 
-	return newCustomerId ?? customerId;
+	ctx.skipCache = true;
+	const fullCustomer = await getOrSetCachedFullCustomer({
+		ctx,
+		customerId: newCustomerId ?? customerId,
+		source: "updateCustomer",
+	});
+
+	return {
+		oldCustomer: originalCustomer,
+		newFullCustomer: fullCustomer,
+	};
 };

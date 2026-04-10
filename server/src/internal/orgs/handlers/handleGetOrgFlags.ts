@@ -5,6 +5,9 @@ import { getRuntimeFeatureFlags } from "@/internal/misc/featureFlags/featureFlag
 export const handleGetOrgFlags = createRoute({
 	handler: async (c) => {
 		const flags = getRuntimeFeatureFlags();
-		return c.json(flags);
+		return c.json({
+			...flags,
+			skipOverageSubmissionFlags: undefined,
+		});
 	},
 });

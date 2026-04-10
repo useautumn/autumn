@@ -47,12 +47,14 @@ export const SavedViews = ({
 			const statusParam = params.get("status") || "";
 			const versionParam = params.get("version") || "";
 			const noneParam = params.get("none");
+			const processorParam = params.get("processor") || "";
 
 			setFilters({
 				q: params.get("q") || "",
 				status: statusParam ? statusParam.split(",").filter(Boolean) : [],
 				version: versionParam ? versionParam.split(",").filter(Boolean) : [],
 				none: noneParam === "true",
+				processor: processorParam ? processorParam.split(",").filter(Boolean) : [],
 			});
 
 			toast.success(`Applied filters from ${view.name} view`);
