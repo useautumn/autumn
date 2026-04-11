@@ -1,10 +1,11 @@
 "use client";
 
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ProcessorType } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
+import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import {
 	Tooltip,
 	TooltipContent,
@@ -67,6 +68,10 @@ export default function CustomerView2() {
 			</ErrorScreen>
 		);
 	}
+
+	const isRevenueCatCustomer = customer.customer_products.some(
+		(cp) => cp.processor?.type === ProcessorType.RevenueCat,
+	);
 
 	return (
 		<CustomerContext.Provider
@@ -132,6 +137,20 @@ export default function CustomerView2() {
 														</TooltipTrigger>
 														<TooltipContent>
 															<span>Vercel Marketplace Customer</span>
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											)}
+											{isRevenueCatCustomer && (
+												<TooltipProvider>
+													<Tooltip delayDuration={0}>
+														<TooltipTrigger>
+															<span className="text-[#ff5f45] dark:text-[#ff8b78]">
+																<RevenueCatIcon size={12} />
+															</span>
+														</TooltipTrigger>
+														<TooltipContent>
+															<span>RevenueCat Customer</span>
 														</TooltipContent>
 													</Tooltip>
 												</TooltipProvider>
