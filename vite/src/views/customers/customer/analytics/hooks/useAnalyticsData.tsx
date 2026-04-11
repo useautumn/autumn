@@ -99,8 +99,7 @@ export const useAnalyticsData = ({
 		groupBy,
 		truncated: data?.truncated ?? false,
 		entityNames: (data?.entityNames as Record<string, string>) ?? undefined,
-		customerNames:
-			(data?.customerNames as Record<string, string>) ?? undefined,
+		customerNames: (data?.customerNames as Record<string, string>) ?? undefined,
 	};
 };
 
