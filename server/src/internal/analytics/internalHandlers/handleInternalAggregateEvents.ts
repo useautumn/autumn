@@ -9,6 +9,7 @@ import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { getCustomerNames } from "@/internal/analytics/actions/getCustomerNames.js";
 import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { eventActions } from "../actions/eventActions.js";
@@ -122,6 +123,27 @@ export const handleInternalAggregateEvents = createRoute({
 			}
 		}
 
+		let customerNames: Record<string, string> | undefined;
+		if (group_by === "customer_id" && events?.data) {
+			const customerIds = [
+				...new Set(
+					events.data
+						.map((row: Record<string, unknown>) => row.customer_id as string)
+						.filter(
+							(id: string) => id && id !== "AUTUMN_RESERVED" && id !== "",
+						),
+				),
+			];
+
+			if (customerIds.length > 0) {
+				customerNames = await getCustomerNames({
+					customerIds,
+					orgId: org.id,
+					env,
+				});
+			}
+		}
+
 		return c.json({
 			customer,
 			events,
@@ -130,6 +152,7 @@ export const handleInternalAggregateEvents = createRoute({
 			bcExclusionFlag,
 			truncated,
 			entityNames,
+			customerNames,
 		});
-	},
-});
+		},
+	});

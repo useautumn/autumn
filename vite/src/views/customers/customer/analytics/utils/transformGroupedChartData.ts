@@ -177,12 +177,14 @@ export function generateChartConfig({
 	groupBy,
 	originalColors,
 	entityNames,
+	customerNames,
 }: {
 	events: EventsData;
 	features: Feature[];
 	groupBy: string | null;
 	originalColors: string[];
 	entityNames?: Record<string, string>;
+	customerNames?: Record<string, string>;
 }): ChartSeriesConfig[] {
 	const colorsToUse = groupBy ? CHART_COLORS : originalColors;
 
@@ -214,15 +216,17 @@ export function generateChartConfig({
 		const featureKey = parts.slice(0, -1).join("__"); // Handle feature names with underscores
 		const groupValue = parts[parts.length - 1];
 
-		const featureName = getFeatureName({ key: featureKey, features });
-		let displayGroupValue: string;
-		if (groupValue === "AUTUMN_RESERVED") {
-			displayGroupValue = "Other values";
-		} else if (entityNames?.[groupValue]) {
-			displayGroupValue = entityNames[groupValue];
-		} else {
-			displayGroupValue = groupValue;
-		}
+			const featureName = getFeatureName({ key: featureKey, features });
+			let displayGroupValue: string;
+			if (groupValue === "AUTUMN_RESERVED") {
+				displayGroupValue = "Other values";
+			} else if (groupBy === "entity_id" && entityNames?.[groupValue]) {
+				displayGroupValue = entityNames[groupValue];
+			} else if (groupBy === "customer_id" && customerNames?.[groupValue]) {
+				displayGroupValue = customerNames[groupValue];
+			} else {
+				displayGroupValue = groupValue;
+			}
 
 		config.push({
 			xKey: "period",
