@@ -236,37 +236,37 @@ export const SelectGroupByDropdown = ({
 							<DropdownMenuLabel className="text-xs text-t4 font-normal">
 								Filter by value
 							</DropdownMenuLabel>
-								<DropdownMenuItem
-									onClick={() => setGroupFilter(null)}
-									className="flex items-center justify-between"
-								>
-									<span className="text-xs">All values</span>
-									{!groupFilter && <Check className="ml-2 h-3 w-3 text-t3" />}
-								</DropdownMenuItem>
-								{availableGroupValues.map((value: string) => {
-									const displayValue =
-										value === "AUTUMN_RESERVED"
-											? "Other values"
-											: currentGroupBy === "entity_id"
-												? (entityNames?.[value] ?? value)
-												: currentGroupBy === "customer_id"
-													? (customerNames?.[value] ?? value)
-													: value;
-									return (
-										<DropdownMenuItem
-											key={value}
-											onClick={() => setGroupFilter(value)}
-											className="flex items-center justify-between"
-										>
-											<span className="text-xs font-mono truncate max-w-[150px]">
-												{displayValue}
-											</span>
-											{groupFilter === value && (
-												<Check className="ml-2 h-3 w-3 text-t3 shrink-0" />
-											)}
-										</DropdownMenuItem>
-									);
-								})}
+							<DropdownMenuItem
+								onClick={() => setGroupFilter(null)}
+								className="flex items-center justify-between"
+							>
+								<span className="text-xs">All values</span>
+								{!groupFilter && <Check className="ml-2 h-3 w-3 text-t3" />}
+							</DropdownMenuItem>
+							{availableGroupValues.map((value: string) => {
+								const displayValue =
+									value === "AUTUMN_RESERVED"
+										? "Other values"
+										: currentGroupBy === "entity_id"
+											? (entityNames?.[value] ?? value)
+											: currentGroupBy === "customer_id"
+												? (customerNames?.[value] ?? value)
+												: value;
+								return (
+									<DropdownMenuItem
+										key={value}
+										onClick={() => setGroupFilter(value)}
+										className="flex items-center justify-between"
+									>
+										<span className="text-xs font-mono truncate max-w-[150px]">
+											{displayValue}
+										</span>
+										{groupFilter === value && (
+											<Check className="ml-2 h-3 w-3 text-t3 shrink-0" />
+										)}
+									</DropdownMenuItem>
+								);
+							})}
 						</>
 					)}
 				</div>
