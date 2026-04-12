@@ -91,7 +91,6 @@ export class CusService {
 					orgSlug: org.slug,
 				});
 
-				console.log("Cus product limit:", cusProductLimit);
 				const query = getFullCusQuery({
 					idOrInternalId,
 					orgId,
