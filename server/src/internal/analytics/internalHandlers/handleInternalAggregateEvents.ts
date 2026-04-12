@@ -154,5 +154,5 @@ export const handleInternalAggregateEvents = createRoute({
 			entityNames,
 			customerNames,
 		});
-		},
-	});
+	},
+});
