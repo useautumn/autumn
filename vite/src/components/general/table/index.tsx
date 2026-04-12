@@ -7,6 +7,7 @@ import { TableColumnVisibility } from "./table-column-visibility";
 import { TableContainer } from "./table-container";
 import { TableContent } from "./table-content";
 import { TableContentVirtualized } from "./table-content-virtualized";
+import { TableFooter } from "./table-footer";
 import { TableHeader } from "./table-header";
 import { TableHeading } from "./table-heading";
 import { TablePagination } from "./table-pagination";
@@ -21,6 +22,7 @@ export const Table = {
 	VirtualizedContent: TableContentVirtualized,
 	Header: TableHeader,
 	Heading: TableHeading,
+	Footer: TableFooter,
 	Body: TableBody,
 	VirtualizedBody: TableBodyVirtualized,
 	Container: TableContainer,

@@ -1,6 +1,7 @@
 import type { Feature, FullCusProduct } from "@autumn/shared";
 import { AppEnv, FeatureUsageType, ProcessorType } from "@autumn/shared";
 import {
+	ArrowCounterClockwiseIcon,
 	ArrowSquareOutIcon,
 	ArrowsClockwiseIcon,
 	BracketsSquareIcon,
@@ -45,6 +46,7 @@ import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCu
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { AddCouponDialog } from "./components/AddCouponDialog";
 import { CreateEntity } from "./components/CreateEntity";
+import { RefundChargeDialog } from "./components/RefundChargeDialog";
 import { ShowCustomerObjectSheet } from "./components/ShowCustomerObjectSheet";
 
 export function CustomerActions() {
@@ -55,6 +57,7 @@ export function CustomerActions() {
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [portalLoading, setPortalLoading] = useState(false);
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
+	const [refundChargeOpen, setRefundChargeOpen] = useState(false);
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
 	const { org } = useOrg();
@@ -113,6 +116,10 @@ export function CustomerActions() {
 			/>
 			<CreateEntity open={createEntityOpen} setOpen={setCreateEntityOpen} />
 			<AddCouponDialog open={addCouponOpen} setOpen={setAddCouponOpen} />
+			<RefundChargeDialog
+				open={refundChargeOpen}
+				onOpenChange={setRefundChargeOpen}
+			/>
 			<ShowCustomerObjectSheet
 				open={showObjectOpen}
 				setOpen={setShowObjectOpen}
@@ -164,6 +171,19 @@ export function CustomerActions() {
 						customer?.processor?.type === ProcessorType.Stripe && (
 							<DropdownMenuItem
 								onClick={() => {
+									setRefundChargeOpen(true);
+									setActionsOpen(false);
+								}}
+								className="flex gap-2"
+							>
+								<ArrowCounterClockwiseIcon />
+								Refund charge
+							</DropdownMenuItem>
+						)}
+					{stripeCustomerId &&
+						customer?.processor?.type === ProcessorType.Stripe && (
+							<DropdownMenuItem
+								onClick={() => {
 									setSheet({ type: "sync-stripe" });
 									setActionsOpen(false);
 								}}
@@ -202,20 +222,20 @@ export function CustomerActions() {
 								Open in Stripe
 							</DropdownMenuItem>
 						)}
-							{isAdmin && (
-								<DropdownMenuItem
-									onClick={() => {
-										window.open(
-											`https://i.useautumn.com/customers/${customer?.internal_id}`,
-											"_blank",
-										);
-									}}
-									className="flex gap-2"
-								>
-									<ArrowSquareOutIcon className="size-3.5" />
-									Open in Admin Panel
-								</DropdownMenuItem>
-							)}
+					{isAdmin && (
+						<DropdownMenuItem
+							onClick={() => {
+								window.open(
+									`https://i.useautumn.com/customers/${customer?.internal_id}`,
+									"_blank",
+								);
+							}}
+							className="flex gap-2"
+						>
+							<ArrowSquareOutIcon className="size-3.5" />
+							Open in Admin Panel
+						</DropdownMenuItem>
+					)}
 					{isAdmin &&
 						masterStripeAccount?.id &&
 						stripeAccount?.id &&
