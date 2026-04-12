@@ -16,7 +16,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "../CusService.js";
 
-const REFUNDABLE_CHARGES_PAGE_LIMIT = 100;
+const STRIPE_CHARGE_LIST_PAGE_LIMIT = 100;
 
 type StripeChargeWithInvoice = Stripe.Charge & {
 	invoice?: string | Stripe.Invoice | null;
@@ -38,6 +38,15 @@ type ChargeMetadata = {
 
 type RefundPreviewItem = RefundableChargeRow & {
 	refundAmount: number;
+};
+
+type RefundExecutionResult = {
+	chargeId: string;
+	refundId: string | null;
+	currency: string;
+	amount: number;
+	status: "succeeded" | "failed";
+	errorMessage: string | null;
 };
 
 const getStripeDashboardBaseUrl = ({
@@ -186,6 +195,14 @@ const getProductNames = ({ metadata }: { metadata: ChargeMetadata }) => {
 	return [...new Set(productNames)];
 };
 
+const isRefundableCharge = ({ charge }: { charge: Stripe.Charge }) => {
+	return (
+		charge.paid &&
+		charge.status === "succeeded" &&
+		charge.amount - charge.amount_refunded > 0
+	);
+};
+
 const getCheckoutSessionForPaymentIntent = async ({
 	stripeCli,
 	paymentIntentId,
@@ -251,10 +268,9 @@ const chargeToRefundableRow = async ({
 	stripeCli: Stripe;
 	charge: Stripe.Charge;
 }): Promise<RefundableChargeRow | null> => {
-	if (!charge.paid || charge.status !== "succeeded") return null;
-	const refundableAmountMinor = charge.amount - charge.amount_refunded;
-	if (refundableAmountMinor <= 0) return null;
+	if (!isRefundableCharge({ charge })) return null;
 
+	const refundableAmountMinor = charge.amount - charge.amount_refunded;
 	const metadata = await getChargeMetadata({ stripeCli, charge });
 	const sourceType = getSourceType({ charge, metadata });
 	const chargeInvoice = getChargeInvoice({ charge });
@@ -344,39 +360,85 @@ export const getRefundCustomer = async ({
 	return customer;
 };
 
-export const listRefundableCharges = async ({
+const getRefundableChargeRowsForChargeIds = async ({
 	ctx,
 	customerId,
+	chargeIds,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	chargeIds: string[];
 }) => {
 	const customer = await getRefundCustomer({ ctx, customerId });
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
-	const charges: Stripe.Charge[] = [];
-	let hasMore = true;
-	let startingAfter: string | undefined;
+	const uniqueChargeIds = [...new Set(chargeIds)];
+	const rows = await Promise.all(
+		uniqueChargeIds.map(async (chargeId) => {
+			const charge = await stripeCli.charges.retrieve(chargeId);
+			if (charge.customer !== customer.processor.id) {
+				throw new RecaseError({
+					message: `Charge ${chargeId} does not belong to this customer`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+			const row = await chargeToRefundableRow({ ctx, stripeCli, charge });
+			if (!row) {
+				throw new RecaseError({
+					message: `Charge ${chargeId} is not refundable or no longer belongs to this customer`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+			return row;
+		}),
+	);
 
-	while (hasMore) {
+	return sortRows({ rows });
+};
+
+export const listRefundableCharges = async ({
+	ctx,
+	customerId,
+	startingAfter,
+	maxRefundableRows,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	startingAfter?: string;
+	maxRefundableRows?: number;
+}) => {
+	const customer = await getRefundCustomer({ ctx, customerId });
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const rows: RefundableChargeRow[] = [];
+	let chargeCursor = startingAfter;
+	let hasMoreCharges = true;
+	const targetCount = maxRefundableRows ?? Number.POSITIVE_INFINITY;
+
+	while (hasMoreCharges && rows.length < targetCount) {
 		const page = await stripeCli.charges.list({
 			customer: customer.processor.id,
-			limit: REFUNDABLE_CHARGES_PAGE_LIMIT,
-			starting_after: startingAfter,
+			limit: STRIPE_CHARGE_LIST_PAGE_LIMIT,
+			starting_after: chargeCursor,
 		});
-		charges.push(...page.data);
-		hasMore = page.has_more;
-		startingAfter = page.data[page.data.length - 1]?.id;
+
+		for (const charge of page.data) {
+			chargeCursor = charge.id;
+			if (!isRefundableCharge({ charge })) continue;
+			const row = await chargeToRefundableRow({ ctx, stripeCli, charge });
+			if (!row) continue;
+			rows.push(row);
+			if (rows.length >= targetCount) break;
+		}
+
+		hasMoreCharges = page.has_more;
 	}
 
-	const rows = await Promise.all(
-		charges.map((charge) => chargeToRefundableRow({ ctx, stripeCli, charge })),
-	);
-	return sortRows({
-		rows: rows.filter(
-			(row: RefundableChargeRow | null): row is RefundableChargeRow =>
-				Boolean(row),
-		),
-	});
+	return {
+		rows: sortRows({ rows }),
+		hasMoreCharges,
+		nextStartingAfter: chargeCursor,
+	};
 };
 
 export const getRefundableChargesPage = async ({
@@ -390,18 +452,21 @@ export const getRefundableChargesPage = async ({
 	offset: number;
 	limit: number;
 }) => {
-	const refundableRows = await listRefundableCharges({
+	const { rows, hasMoreCharges } = await listRefundableCharges({
 		ctx,
 		customerId,
+		maxRefundableRows: offset + limit + 1,
 	});
-	const list = refundableRows.slice(offset, offset + limit);
+	const list = rows.slice(offset, offset + limit);
+	const hasMore = rows.length > offset + limit || hasMoreCharges;
+	const total = hasMore ? offset + list.length + 1 : offset + list.length;
 
 	return {
 		list,
-		has_more: offset + limit < refundableRows.length,
+		has_more: hasMore,
 		offset,
 		limit,
-		total: refundableRows.length,
+		total,
 	};
 };
 
@@ -471,24 +536,11 @@ export const buildRefundPreview = async ({
 		});
 	}
 
-	const normalizedChargeIds = [...new Set(chargeIds)];
-	const refundables = await listRefundableCharges({
+	const selectedRows = await getRefundableChargeRowsForChargeIds({
 		ctx,
 		customerId,
+		chargeIds,
 	});
-	const chargeMap = new Map(refundables.map((row) => [row.chargeId, row]));
-	const selectedRows = normalizedChargeIds.map((chargeId) => {
-		const row = chargeMap.get(chargeId);
-		if (!row) {
-			throw new RecaseError({
-				message: `Charge ${chargeId} is not refundable or no longer belongs to this customer`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-		return row;
-	});
-
 	const currency = validateSharedCurrency({ rows: selectedRows });
 	const charges: RefundPreviewItem[] = selectedRows.map((row) => {
 		const amount =
@@ -570,34 +622,44 @@ export const executeRefunds = async ({
 	});
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-	const refunds = [] as Array<{
-		chargeId: string;
-		refundId: string;
-		currency: string;
-		amount: number;
-		status: string;
-	}>;
+	const refunds: RefundExecutionResult[] = [];
 
 	for (const charge of preview.charges) {
 		if (charge.refundAmount <= 0) continue;
-		const stripeRefund = await stripeCli.refunds.create({
-			charge: charge.chargeId,
-			amount: atmnToStripeAmount({
-				amount: charge.refundAmount,
-				currency: charge.currency,
-			}),
-			reason: reason ?? undefined,
-		});
-		refunds.push({
-			chargeId: charge.chargeId,
-			refundId: stripeRefund.id,
-			currency: stripeRefund.currency,
-			amount: stripeToAtmnAmount({
-				amount: stripeRefund.amount,
+
+		try {
+			const stripeRefund = await stripeCli.refunds.create({
+				charge: charge.chargeId,
+				amount: atmnToStripeAmount({
+					amount: charge.refundAmount,
+					currency: charge.currency,
+				}),
+				reason: reason ?? undefined,
+			});
+			refunds.push({
+				chargeId: charge.chargeId,
+				refundId: stripeRefund.id,
 				currency: stripeRefund.currency,
-			}),
-			status: stripeRefund.status ?? "pending",
-		});
+				amount: stripeToAtmnAmount({
+					amount: stripeRefund.amount,
+					currency: stripeRefund.currency,
+				}),
+				status: "succeeded",
+				errorMessage: null,
+			});
+		} catch (error) {
+			refunds.push({
+				chargeId: charge.chargeId,
+				refundId: null,
+				currency: charge.currency,
+				amount: charge.refundAmount,
+				status: "failed",
+				errorMessage:
+					error instanceof Error
+						? error.message
+						: "Failed to create Stripe refund",
+			});
+		}
 	}
 
 	return {
