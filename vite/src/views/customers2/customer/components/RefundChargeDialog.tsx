@@ -7,7 +7,7 @@ import {
 	type RefundMode,
 	type RefundReason,
 } from "@autumn/shared";
-import { ArrowLeft } from "@phosphor-icons/react";
+import { ArrowLeft, ArrowSquareOut } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import { AnimatePresence, motion } from "motion/react";
@@ -519,19 +519,23 @@ export const RefundChargeDialog = ({
 												return (
 													<tr key={charge.chargeId} className="text-t3">
 														<td className="px-4 py-3 align-top">
-															<div className="flex max-w-[240px] flex-col gap-1">
-																<span className="truncate text-t2">
-																	{charge.sourceLabel}
+															<div className="flex items-center gap-1.5 min-w-0">
+																<span className="truncate text-sm text-t2">
+																	{charge.description || charge.sourceLabel}
 																</span>
 																{sourceLink && (
 																	<button
 																		type="button"
 																		onClick={() =>
-																			window.open(sourceLink, "_blank")
+																			window.open(
+																				sourceLink,
+																				"_blank",
+																				"noopener,noreferrer",
+																			)
 																		}
-																		className="text-left text-xs text-t4 underline-offset-2 hover:text-foreground hover:underline"
+																		className="shrink-0 text-t4 hover:text-t2"
 																	>
-																		Open source in Stripe
+																		<ArrowSquareOut size={13} />
 																	</button>
 																)}
 															</div>
