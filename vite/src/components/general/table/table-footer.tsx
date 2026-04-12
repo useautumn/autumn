@@ -6,16 +6,14 @@ import {
 	ChevronRightIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { useId } from "react";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/v2/buttons/Button";
+} from "@/components/v2/selects/Select";
 import { Separator } from "@/components/v2/separator";
 import { cn } from "@/lib/utils";
 
@@ -37,10 +35,10 @@ export const TableFooter = <TData,>({
 	centerSlot?: ReactNode;
 	rightSlot?: ReactNode;
 }) => {
-	const id = useId();
 	const rowCount = table.getRowCount();
 	const pageIndex = table.getState().pagination.pageIndex;
 	const pageSize = table.getState().pagination.pageSize;
+	const pageCount = Math.max(table.getPageCount(), 1);
 	const start = rowCount === 0 ? 0 : pageIndex * pageSize + 1;
 	const end = Math.min((pageIndex + 1) * pageSize, rowCount);
 
@@ -53,20 +51,15 @@ export const TableFooter = <TData,>({
 		>
 			<div className="flex min-w-0 flex-1 items-center gap-3">
 				<div className="flex items-center gap-2 text-xs text-muted-foreground">
-					<Label htmlFor={id} className="text-xs text-muted-foreground">
-						Rows per page
-					</Label>
+					<span className="text-xs text-muted-foreground">Rows per page</span>
 					<Select
 						onValueChange={(value) => table.setPageSize(Number(value))}
 						value={pageSize.toString()}
 					>
-						<SelectTrigger
-							id={id}
-							className="h-7 w-fit rounded-lg px-2 text-xs"
-						>
+						<SelectTrigger className="h-7 w-fit rounded-lg px-2 text-xs">
 							<SelectValue placeholder="Rows" />
 						</SelectTrigger>
-						<SelectContent className="[&_*[role=option]>span]:start-auto [&_*[role=option]>span]:end-2 [&_*[role=option]]:ps-2 [&_*[role=option]]:pe-8">
+						<SelectContent>
 							{pageSizeOptions.map((option) => (
 								<SelectItem key={option} value={option.toString()}>
 									{option}
@@ -85,7 +78,7 @@ export const TableFooter = <TData,>({
 			)}
 			<div className="flex items-center justify-between gap-3 sm:justify-end">
 				{rightSlot}
-				<div className="inline-flex overflow-hidden rounded-lg border border-border bg-background">
+				<div className="inline-flex items-center overflow-hidden rounded-lg border border-border bg-background">
 					<Button
 						aria-label="Go to first page"
 						className={paginationButtonClassName}
@@ -108,8 +101,8 @@ export const TableFooter = <TData,>({
 						<ChevronLeftIcon size={16} />
 					</Button>
 					<Separator orientation="vertical" />
-					<div className="flex min-w-10 items-center justify-center px-3 text-sm font-medium">
-						{pageIndex + 1}
+					<div className="flex min-w-16 items-center justify-center px-3 text-sm font-medium text-t2">
+						{pageIndex + 1} / {pageCount}
 					</div>
 					<Separator orientation="vertical" />
 					<Button

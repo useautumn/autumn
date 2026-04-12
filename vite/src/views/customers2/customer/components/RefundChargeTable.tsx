@@ -5,7 +5,7 @@ import {
 	type RowSelectionState,
 	useReactTable,
 } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { TableFooter } from "@/components/general/table/table-footer";
 import { getRefundChargeColumns } from "./RefundChargeColumns";
@@ -16,6 +16,9 @@ export const RefundChargeTable = ({
 	rowSelection,
 	onRowSelectionChange,
 	emptyText,
+	pagination,
+	onPaginationChange,
+	rowCount,
 }: {
 	charges: RefundableChargeRow[];
 	rowSelection: RowSelectionState;
@@ -25,11 +28,10 @@ export const RefundChargeTable = ({
 			| ((old: RowSelectionState) => RowSelectionState),
 	) => void;
 	emptyText: string;
+	pagination: PaginationState;
+	onPaginationChange: (pagination: PaginationState) => void;
+	rowCount: number;
 }) => {
-	const [pagination, setPagination] = useState<PaginationState>({
-		pageIndex: 0,
-		pageSize: 5,
-	});
 	const columns = useMemo(() => getRefundChargeColumns(), []);
 
 	const table = useReactTable({
@@ -38,12 +40,18 @@ export const RefundChargeTable = ({
 		getCoreRowModel: getCoreRowModel(),
 		getPaginationRowModel: getPaginationRowModel(),
 		enableRowSelection: true,
+		manualPagination: true,
+		rowCount,
 		onRowSelectionChange,
 		state: {
 			rowSelection,
 			pagination,
 		},
-		onPaginationChange: setPagination,
+		onPaginationChange: (updater) => {
+			const nextPagination =
+				typeof updater === "function" ? updater(pagination) : updater;
+			onPaginationChange(nextPagination);
+		},
 		getRowId: (row) => row.chargeId,
 	});
 

@@ -1,6 +1,7 @@
 import {
 	AppEnv,
 	type CustomerRefundPreviewResponse,
+	type CustomerRefundResponse,
 	formatAmount,
 	type RefundableChargeRow,
 	type RefundMode,
@@ -8,6 +9,7 @@ import {
 } from "@autumn/shared";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { PaginationState, RowSelectionState } from "@tanstack/react-table";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -133,64 +135,60 @@ export const RefundChargeDialog = ({
 	const buildQueryKey = useQueryKeyFactory();
 	const customerId = customer?.id || customer?.internal_id;
 	const [stage, setStage] = useState<RefundDialogStage>("list");
-	const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({});
+	const [selectedChargeIds, setSelectedChargeIds] = useState<string[]>([]);
+	const [pagination, setPagination] = useState<PaginationState>({
+		pageIndex: 0,
+		pageSize: 5,
+	});
 	const [mode, setMode] = useState<RefundMode>("full");
 	const [reason, setReason] = useState<RefundReason>("requested_by_customer");
 	const [amountsByChargeId, setAmountsByChargeId] =
 		useState<RefundAmountsByChargeId>({});
 	const [listError, setListError] = useState<string | null>(null);
 	const [refundError, setRefundError] = useState<string | null>(null);
+	const [resultMessage, setResultMessage] = useState<string | null>(null);
 
 	const refundablesQuery = useQuery({
-		queryKey: buildQueryKey(["customer-refundables", customerId]),
+		queryKey: buildQueryKey([
+			"customer-refundables",
+			customerId,
+			pagination.pageIndex,
+			pagination.pageSize,
+		]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.get(
 				`/v1/customers/${customerId}/refundables`,
 				{
-					params: { offset: 0, limit: 1000 },
+					params: {
+						offset: pagination.pageIndex * pagination.pageSize,
+						limit: pagination.pageSize,
+					},
 				},
 			);
 			return data as {
 				list: RefundableChargeRow[];
+				has_more: boolean;
+				total: number;
 			};
 		},
 		enabled: open && Boolean(customerId),
 	});
 
-	const charges = refundablesQuery.data?.list ?? [];
-	const selectedCharges = useMemo(() => {
-		return charges.filter((charge) => rowSelection[charge.chargeId]);
-	}, [charges, rowSelection]);
-	const currencyMismatchMessage = useMemo(
-		() => getCurrencyMismatchMessage({ charges: selectedCharges }),
-		[selectedCharges],
-	);
-
-	useEffect(() => {
-		if (!open) {
-			setStage("list");
-			setRowSelection({});
-			setMode("full");
-			setReason("requested_by_customer");
-			setAmountsByChargeId({});
-			setListError(null);
-			setRefundError(null);
-		}
-	}, [open]);
-
-	useEffect(() => {
-		if (mode !== "full") return;
-		setAmountsByChargeId(buildFullAmounts({ charges: selectedCharges }));
-	}, [mode, selectedCharges]);
+	const pageCharges = refundablesQuery.data?.list ?? [];
+	const rowSelection = useMemo<RowSelectionState>(() => {
+		return Object.fromEntries(
+			pageCharges
+				.filter((charge) => selectedChargeIds.includes(charge.chargeId))
+				.map((charge) => [charge.chargeId, true]),
+		);
+	}, [pageCharges, selectedChargeIds]);
+	const selectedCount = selectedChargeIds.length;
 
 	const previewQuery = useQuery({
 		queryKey: buildQueryKey([
 			"customer-refund-preview",
 			customerId,
-			selectedCharges
-				.map((charge) => charge.chargeId)
-				.sort()
-				.join(","),
+			selectedChargeIds.slice().sort().join(","),
 			mode,
 			reason,
 			JSON.stringify(amountsByChargeId),
@@ -199,7 +197,7 @@ export const RefundChargeDialog = ({
 			const { data } = await axiosInstance.post(
 				`/v1/customers/${customerId}/refunds/preview`,
 				{
-					charge_ids: selectedCharges.map((charge) => charge.chargeId),
+					charge_ids: selectedChargeIds,
 					mode,
 					amounts_by_charge_id:
 						mode === "custom"
@@ -214,20 +212,41 @@ export const RefundChargeDialog = ({
 			);
 			return data as CustomerRefundPreviewResponse;
 		},
-		enabled:
-			open &&
-			stage === "refund" &&
-			selectedCharges.length > 0 &&
-			!currencyMismatchMessage,
+		enabled: open && stage === "refund" && selectedChargeIds.length > 0,
 		retry: false,
 	});
+
+	const refundCharges = previewQuery.data?.charges ?? [];
+	const currencyMismatchMessage = useMemo(
+		() => getCurrencyMismatchMessage({ charges: refundCharges }),
+		[refundCharges],
+	);
+
+	useEffect(() => {
+		if (!open) {
+			setStage("list");
+			setSelectedChargeIds([]);
+			setPagination({ pageIndex: 0, pageSize: 5 });
+			setMode("full");
+			setReason("requested_by_customer");
+			setAmountsByChargeId({});
+			setListError(null);
+			setRefundError(null);
+			setResultMessage(null);
+		}
+	}, [open]);
+
+	useEffect(() => {
+		if (mode !== "full" || refundCharges.length === 0) return;
+		setAmountsByChargeId(buildFullAmounts({ charges: refundCharges }));
+	}, [mode, refundCharges]);
 
 	const refundMutation = useMutation({
 		mutationFn: async () => {
 			const { data } = await axiosInstance.post(
 				`/v1/customers/${customerId}/refunds`,
 				{
-					charge_ids: selectedCharges.map((charge) => charge.chargeId),
+					charge_ids: selectedChargeIds,
 					mode,
 					amounts_by_charge_id:
 						mode === "custom"
@@ -240,12 +259,33 @@ export const RefundChargeDialog = ({
 					reason,
 				},
 			);
-			return data;
+			return data as CustomerRefundResponse;
 		},
-		onSuccess: async () => {
-			toast.success("Stripe refund issued");
+		onSuccess: async (data) => {
+			const failedRefunds = data.refunds.filter(
+				(refund) => refund.status === "failed",
+			);
+			const succeededCount = data.refunds.length - failedRefunds.length;
+
+			if (failedRefunds.length > 0) {
+				toast.warning(
+					`${succeededCount} refund${succeededCount === 1 ? "" : "s"} succeeded, ${failedRefunds.length} failed`,
+				);
+				setResultMessage(
+					failedRefunds
+						.map(
+							(refund) =>
+								refund.errorMessage || `Refund failed for ${refund.chargeId}`,
+						)
+						.join("\n"),
+				);
+			} else {
+				toast.success("Stripe refund issued");
+				setResultMessage("Stripe refund issued");
+			}
 			setStage("list");
-			setRowSelection({});
+			setSelectedChargeIds([]);
+			setPagination({ pageIndex: 0, pageSize: 5 });
 			setMode("full");
 			setReason("requested_by_customer");
 			setAmountsByChargeId({});
@@ -266,20 +306,21 @@ export const RefundChargeDialog = ({
 
 	const summary: RefundPreviewSummary | null =
 		previewQuery.data?.summary ?? null;
-	const previewCharges = previewQuery.data?.charges ?? [];
-	const canContinue = selectedCharges.length > 0 && !currencyMismatchMessage;
+	const canContinue = selectedChargeIds.length > 0;
 	const canIssueRefund =
 		Boolean(summary) &&
 		summary.totalRefundAmount > 0 &&
+		!currencyMismatchMessage &&
 		!refundMutation.isPending;
 
 	const handleContinue = () => {
-		setListError(currencyMismatchMessage);
-		if (!canContinue) return;
-		setRefundError(null);
-		if (mode === "full") {
-			setAmountsByChargeId(buildFullAmounts({ charges: selectedCharges }));
+		if (selectedChargeIds.length === 0) {
+			setListError("Select at least one charge to refund");
+			return;
 		}
+		setListError(null);
+		setRefundError(null);
+		setResultMessage(null);
 		setStage("refund");
 	};
 
@@ -296,11 +337,9 @@ export const RefundChargeDialog = ({
 		}));
 	};
 
-	const selectedCount = selectedCharges.length;
-
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="max-w-5xl bg-card p-0 gap-0 overflow-hidden">
+			<DialogContent className="max-w-5xl gap-0 overflow-hidden bg-card p-0">
 				<AnimatePresence mode="wait" initial={false}>
 					{stage === "list" ? (
 						<motion.div
@@ -317,10 +356,11 @@ export const RefundChargeDialog = ({
 									</DialogDescription>
 								</DialogHeader>
 							</div>
-							<div className="px-6 py-5 space-y-4">
-								{(listError || refundablesQuery.error) && (
+							<div className="space-y-4 px-6 py-5">
+								{(resultMessage || listError || refundablesQuery.error) && (
 									<InfoBox variant="warning">
-										{listError ||
+										{resultMessage ||
+											listError ||
 											getBackendErr(
 												refundablesQuery.error,
 												"Failed to load refundable charges",
@@ -328,21 +368,37 @@ export const RefundChargeDialog = ({
 									</InfoBox>
 								)}
 								<RefundChargeTable
-									charges={charges}
+									charges={pageCharges}
 									rowSelection={rowSelection}
 									onRowSelectionChange={(updater) => {
 										setListError(null);
-										setRowSelection((current) =>
+										const nextSelection =
 											typeof updater === "function"
-												? updater(current)
-												: updater,
+												? updater(rowSelection)
+												: updater;
+										const pageChargeIds = new Set(
+											pageCharges.map((charge) => charge.chargeId),
 										);
+										setSelectedChargeIds((current) => {
+											const nextSelected = current.filter(
+												(chargeId) => !pageChargeIds.has(chargeId),
+											);
+											for (const charge of pageCharges) {
+												if (nextSelection[charge.chargeId]) {
+													nextSelected.push(charge.chargeId);
+												}
+											}
+											return [...new Set(nextSelected)];
+										});
 									}}
 									emptyText={
 										refundablesQuery.isLoading
 											? "Loading refundable Stripe charges..."
 											: "No refundable Stripe charges found"
 									}
+									pagination={pagination}
+									onPaginationChange={setPagination}
+									rowCount={refundablesQuery.data?.total ?? pageCharges.length}
 								/>
 							</div>
 							<DialogFooter className="border-t border-border px-6 py-4 sm:justify-between">
@@ -390,7 +446,7 @@ export const RefundChargeDialog = ({
 									</DialogDescription>
 								</DialogHeader>
 							</div>
-							<div className="px-6 py-5 space-y-4">
+							<div className="space-y-4 px-6 py-5">
 								<div className="grid gap-4 md:grid-cols-2">
 									<div className="space-y-1.5">
 										<span className="text-sm font-medium text-foreground">
@@ -425,6 +481,9 @@ export const RefundChargeDialog = ({
 									This issues Stripe refunds only. It does not automatically
 									cancel subscriptions or revoke Autumn access.
 								</InfoBox>
+								{currencyMismatchMessage && (
+									<InfoBox variant="warning">{currencyMismatchMessage}</InfoBox>
+								)}
 								{refundError && (
 									<InfoBox variant="warning">{refundError}</InfoBox>
 								)}
@@ -439,7 +498,7 @@ export const RefundChargeDialog = ({
 								<div className="overflow-hidden rounded-lg border border-border">
 									<table className="w-full border-collapse text-sm">
 										<thead className="bg-card">
-											<tr className="border-b border-border text-left text-t4 text-xs">
+											<tr className="border-b border-border text-left text-xs text-t4">
 												<th className="px-4 py-2 font-medium">Source</th>
 												<th className="px-4 py-2 font-medium">Created</th>
 												<th className="px-4 py-2 font-medium">Paid</th>
@@ -451,10 +510,7 @@ export const RefundChargeDialog = ({
 											</tr>
 										</thead>
 										<tbody className="divide-y bg-interactive-secondary">
-											{selectedCharges.map((charge) => {
-												const previewCharge = previewCharges.find(
-													(item) => item.chargeId === charge.chargeId,
-												);
+											{refundCharges.map((charge) => {
 												const sourceLink = getSourceLink({
 													charge,
 													env: customer?.env ?? AppEnv.Sandbox,
@@ -495,7 +551,7 @@ export const RefundChargeDialog = ({
 																currency: charge.currency,
 															})}
 														</td>
-														<td className="px-4 py-3 align-top text-sm text-t2 font-medium">
+														<td className="px-4 py-3 align-top text-sm font-medium text-t2">
 															{formatMoney({
 																amount: charge.refundableAmount,
 																currency: charge.currency,
@@ -521,15 +577,6 @@ export const RefundChargeDialog = ({
 																}
 																className="h-9 min-w-[110px]"
 															/>
-															{previewCharge && (
-																<div className="mt-1 text-xs text-t4">
-																	Preview:{" "}
-																	{formatMoney({
-																		amount: previewCharge.refundAmount,
-																		currency: previewCharge.currency,
-																	})}
-																</div>
-															)}
 														</td>
 													</tr>
 												);
@@ -541,7 +588,7 @@ export const RefundChargeDialog = ({
 									<div>
 										<div className="text-xs text-t4">Selected charges</div>
 										<div className="mt-1 text-sm font-medium text-t2">
-											{summary?.chargeCount ?? selectedCharges.length}
+											{summary?.chargeCount ?? selectedChargeIds.length}
 										</div>
 									</div>
 									<div>

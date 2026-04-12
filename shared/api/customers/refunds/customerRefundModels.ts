@@ -67,10 +67,11 @@ export const CustomerRefundPreviewResponseSchema = z.object({
 
 export const CustomerRefundExecutionResultSchema = z.object({
 	chargeId: z.string(),
-	refundId: z.string(),
+	refundId: z.string().nullable(),
 	currency: z.string(),
 	amount: z.number(),
-	status: z.string(),
+	status: z.enum(["succeeded", "failed"]),
+	errorMessage: z.string().nullable(),
 });
 
 export const CustomerRefundResponseSchema =
