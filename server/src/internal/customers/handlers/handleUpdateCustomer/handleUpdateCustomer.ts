@@ -5,7 +5,6 @@ import {
 	UpdateCustomerParamsV0Schema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { customerActions } from "@/internal/customers/actions";
 import { getApiCustomer } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomer";
 
@@ -30,15 +29,6 @@ export const handleUpdateCustomer = createRoute({
 				...params,
 			},
 		});
-
-		// Fire and forget without awaiting
-		triggerAutoTopUpsOnEnabled({
-			ctx,
-			oldCustomer,
-			fullCustomer: newFullCustomer,
-		}).catch((err) =>
-			ctx.logger.error("triggerAutoTopUpsOnEnabled failed: ", { error: err }),
-		);
 
 		const customerDetails = await getApiCustomer({
 			ctx,
