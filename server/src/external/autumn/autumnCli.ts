@@ -528,6 +528,25 @@ export class AutumnInt {
 			return data;
 		},
 
+		/** Uses the RPC route POST /customers.update (handleUpdateCustomerV2) */
+		updateRpc: async (
+			customerId: string,
+			updates: {
+				new_customer_id?: string;
+				name?: string;
+				email?: string;
+				send_email_receipts?: boolean;
+				metadata?: Record<string, unknown>;
+				billing_controls?: CustomerBillingControlsParams;
+			},
+		) => {
+			const data = await this.post(`/customers.update`, {
+				customer_id: customerId,
+				...updates,
+			});
+			return data;
+		},
+
 		setBalance: async ({
 			customerId,
 			balances,
