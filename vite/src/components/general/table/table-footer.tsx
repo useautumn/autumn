@@ -6,33 +6,24 @@ import {
 	ChevronRightIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { Button } from "@/components/v2/buttons/Button";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
-import { Separator } from "@/components/v2/separator";
 import { cn } from "@/lib/utils";
 
-const paginationButtonClassName =
-	"disabled:pointer-events-none disabled:opacity-50 rounded-none border-none";
+const navBtnBase =
+	"inline-flex items-center justify-center size-5 rounded text-t4 transition-colors hover:text-t2 disabled:pointer-events-none disabled:opacity-30";
 
 export const TableFooter = <TData,>({
 	table,
 	pageSizeOptions = [5, 10, 25, 50],
 	className,
+	colSpan,
 	leftSlot,
-	centerSlot,
 	rightSlot,
 }: {
 	table: TanstackTable<TData>;
 	pageSizeOptions?: number[];
 	className?: string;
+	colSpan?: number;
 	leftSlot?: ReactNode;
-	centerSlot?: ReactNode;
 	rightSlot?: ReactNode;
 }) => {
 	const rowCount = table.getRowCount();
@@ -41,93 +32,78 @@ export const TableFooter = <TData,>({
 	const pageCount = Math.max(table.getPageCount(), 1);
 	const start = rowCount === 0 ? 0 : pageIndex * pageSize + 1;
 	const end = Math.min((pageIndex + 1) * pageSize, rowCount);
+	const resolvedColSpan = colSpan ?? table.getVisibleLeafColumns().length + 1;
 
 	return (
-		<div
-			className={cn(
-				"flex flex-col gap-3 rounded-lg border border-border bg-card px-3 py-2.5 shadow-card sm:flex-row sm:items-center sm:justify-between",
-				className,
-			)}
-		>
-			<div className="flex min-w-0 flex-1 items-center gap-3">
-				<div className="flex items-center gap-2 text-xs text-muted-foreground">
-					<span className="text-xs text-muted-foreground">Rows per page</span>
-					<Select
-						onValueChange={(value) => table.setPageSize(Number(value))}
-						value={pageSize.toString()}
-					>
-						<SelectTrigger className="h-7 w-fit rounded-lg px-2 text-xs">
-							<SelectValue placeholder="Rows" />
-						</SelectTrigger>
-						<SelectContent>
-							{pageSizeOptions.map((option) => (
-								<SelectItem key={option} value={option.toString()}>
-									{option}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
-				<div className="text-sm text-muted-foreground">
-					Showing {start}-{end} of {rowCount}
-				</div>
-				{leftSlot}
-			</div>
-			{centerSlot && (
-				<div className="flex items-center justify-center">{centerSlot}</div>
-			)}
-			<div className="flex items-center justify-between gap-3 sm:justify-end">
-				{rightSlot}
-				<div className="inline-flex items-center overflow-hidden rounded-lg border border-border bg-background">
-					<Button
-						aria-label="Go to first page"
-						className={paginationButtonClassName}
-						disabled={!table.getCanPreviousPage()}
-						onClick={() => table.firstPage()}
-						size="icon"
-						variant="secondary"
-					>
-						<ChevronFirstIcon size={16} />
-					</Button>
-					<Separator orientation="vertical" />
-					<Button
-						aria-label="Go to previous page"
-						className={paginationButtonClassName}
-						disabled={!table.getCanPreviousPage()}
-						onClick={() => table.previousPage()}
-						size="icon"
-						variant="secondary"
-					>
-						<ChevronLeftIcon size={16} />
-					</Button>
-					<Separator orientation="vertical" />
-					<div className="flex min-w-16 items-center justify-center px-3 text-sm font-medium text-t2">
-						{pageIndex + 1} / {pageCount}
+		<tfoot className={cn("bg-card", className)}>
+			<tr className="border-t text-t4">
+				<td colSpan={resolvedColSpan} className="h-8 px-4">
+					<div className="flex items-center justify-between">
+						<div className="flex items-center gap-3 text-tiny font-medium text-t4">
+							<div className="flex items-center gap-1.5">
+								<span>Rows</span>
+								<select
+									value={pageSize}
+									onChange={(e) => table.setPageSize(Number(e.target.value))}
+									className="h-5 cursor-pointer appearance-none rounded bg-transparent px-1 text-tiny font-medium text-t3 outline-none hover:text-t2"
+								>
+									{pageSizeOptions.map((opt) => (
+										<option key={opt} value={opt}>
+											{opt}
+										</option>
+									))}
+								</select>
+							</div>
+							<span className="text-t4">
+								{start}–{end} of {rowCount}
+							</span>
+							{leftSlot}
+						</div>
+						<div className="flex items-center gap-0.5">
+							{rightSlot}
+							<button
+								type="button"
+								aria-label="First page"
+								className={navBtnBase}
+								disabled={!table.getCanPreviousPage()}
+								onClick={() => table.firstPage()}
+							>
+								<ChevronFirstIcon size={14} />
+							</button>
+							<button
+								type="button"
+								aria-label="Previous page"
+								className={navBtnBase}
+								disabled={!table.getCanPreviousPage()}
+								onClick={() => table.previousPage()}
+							>
+								<ChevronLeftIcon size={14} />
+							</button>
+							<span className="min-w-10 text-center text-tiny font-medium text-t3">
+								{pageIndex + 1} / {pageCount}
+							</span>
+							<button
+								type="button"
+								aria-label="Next page"
+								className={navBtnBase}
+								disabled={!table.getCanNextPage()}
+								onClick={() => table.nextPage()}
+							>
+								<ChevronRightIcon size={14} />
+							</button>
+							<button
+								type="button"
+								aria-label="Last page"
+								className={navBtnBase}
+								disabled={!table.getCanNextPage()}
+								onClick={() => table.lastPage()}
+							>
+								<ChevronLastIcon size={14} />
+							</button>
+						</div>
 					</div>
-					<Separator orientation="vertical" />
-					<Button
-						aria-label="Go to next page"
-						className={paginationButtonClassName}
-						disabled={!table.getCanNextPage()}
-						onClick={() => table.nextPage()}
-						size="icon"
-						variant="secondary"
-					>
-						<ChevronRightIcon size={16} />
-					</Button>
-					<Separator orientation="vertical" />
-					<Button
-						aria-label="Go to last page"
-						className={paginationButtonClassName}
-						disabled={!table.getCanNextPage()}
-						onClick={() => table.lastPage()}
-						size="icon"
-						variant="secondary"
-					>
-						<ChevronLastIcon size={16} />
-					</Button>
-				</div>
-			</div>
-		</div>
+				</td>
+			</tr>
+		</tfoot>
 	);
 };

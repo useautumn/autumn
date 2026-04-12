@@ -2,8 +2,7 @@ import { formatAmount } from "@autumn/shared";
 import { ArrowSquareOutIcon } from "@phosphor-icons/react";
 import type { ColumnDef } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import type { RefundableChargeRow } from "./refundChargeTypes";
 
 const renderMoney = ({
@@ -26,26 +25,53 @@ const renderMoney = ({
 export const getRefundChargeColumns = (): ColumnDef<RefundableChargeRow>[] => {
 	return [
 		{
+			id: "select",
+			size: 36,
+			enableSorting: false,
+			enableHiding: false,
+			header: () => null,
+			cell: ({ row }) => (
+				<div
+					className="flex items-center justify-center"
+					onClick={(e) => e.stopPropagation()}
+					onKeyDown={(e) => {
+						if (e.key === "Enter" || e.key === " ") e.stopPropagation();
+					}}
+				>
+					<Checkbox
+						checked={row.getIsSelected()}
+						onCheckedChange={(checked) => row.toggleSelected(!!checked)}
+						size="sm"
+					/>
+				</div>
+			),
+		},
+		{
 			accessorKey: "sourceLabel",
 			header: "Source",
-			size: 240,
+			size: 180,
 			cell: ({ row }) => {
 				const charge = row.original;
+				const label =
+					charge.description || charge.sourceLabel || charge.chargeId;
 				return (
-					<div className="flex min-w-0 flex-col gap-1 py-1">
-						<div className="flex items-center gap-2 min-w-0">
-							<span className="truncate text-t2">{charge.sourceLabel}</span>
-							<Badge variant="muted" className="shrink-0 uppercase">
-								{charge.sourceType.replaceAll("_", " ")}
-							</Badge>
-						</div>
-						<div className="truncate text-xs text-t3">
-							{charge.description || charge.chargeId}
-						</div>
-						{charge.productNames.length > 0 && (
-							<div className="truncate text-xs text-t4">
-								{charge.productNames.join(", ")}
-							</div>
+					<div className="flex items-center gap-1.5 min-w-0">
+						<span className="truncate text-t2">{label}</span>
+						{charge.stripeUrl && (
+							<button
+								type="button"
+								onClick={(e) => {
+									e.stopPropagation();
+									window.open(
+										charge.stripeUrl ?? "",
+										"_blank",
+										"noopener,noreferrer",
+									);
+								}}
+								className="shrink-0 text-t4 hover:text-t2"
+							>
+								<ArrowSquareOutIcon size={13} />
+							</button>
 						)}
 					</div>
 				);
@@ -54,7 +80,7 @@ export const getRefundChargeColumns = (): ColumnDef<RefundableChargeRow>[] => {
 		{
 			accessorKey: "createdAt",
 			header: "Created",
-			size: 120,
+			size: 100,
 			cell: ({ row }) => {
 				return (
 					<span className="text-sm text-t3">
@@ -66,7 +92,7 @@ export const getRefundChargeColumns = (): ColumnDef<RefundableChargeRow>[] => {
 		{
 			accessorKey: "amountPaid",
 			header: "Paid",
-			size: 110,
+			size: 100,
 			cell: ({ row }) => {
 				return (
 					<span className="text-sm text-t2">
@@ -81,7 +107,7 @@ export const getRefundChargeColumns = (): ColumnDef<RefundableChargeRow>[] => {
 		{
 			accessorKey: "refundedAmount",
 			header: "Refunded",
-			size: 110,
+			size: 100,
 			cell: ({ row }) => {
 				return (
 					<span className="text-sm text-t3">
@@ -96,7 +122,7 @@ export const getRefundChargeColumns = (): ColumnDef<RefundableChargeRow>[] => {
 		{
 			accessorKey: "refundableAmount",
 			header: "Refundable",
-			size: 120,
+			size: 110,
 			cell: ({ row }) => {
 				return (
 					<span className="text-sm font-medium text-t2">
@@ -105,26 +131,6 @@ export const getRefundChargeColumns = (): ColumnDef<RefundableChargeRow>[] => {
 							currency: row.original.currency,
 						})}
 					</span>
-				);
-			},
-		},
-		{
-			id: "stripe",
-			header: "",
-			size: 60,
-			cell: ({ row }) => {
-				const stripeUrl = row.original.stripeUrl;
-				if (!stripeUrl) return null;
-				return (
-					<div className="flex justify-end">
-						<Button
-							variant="secondary"
-							size="icon"
-							onClick={() => window.open(stripeUrl, "_blank")}
-						>
-							<ArrowSquareOutIcon size={14} />
-						</Button>
-					</div>
 				);
 			},
 		},

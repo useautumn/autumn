@@ -1,6 +1,5 @@
 import {
 	getCoreRowModel,
-	getPaginationRowModel,
 	type PaginationState,
 	type RowSelectionState,
 	useReactTable,
@@ -38,7 +37,6 @@ export const RefundChargeTable = ({
 		data: charges,
 		columns,
 		getCoreRowModel: getCoreRowModel(),
-		getPaginationRowModel: getPaginationRowModel(),
 		enableRowSelection: true,
 		manualPagination: true,
 		rowCount,
@@ -59,20 +57,19 @@ export const RefundChargeTable = ({
 		<Table.Provider
 			config={{
 				table,
-				numberOfColumns: columns.length + 1,
+				numberOfColumns: columns.length,
 				isLoading: false,
-				enableSelection: true,
 				emptyStateText: emptyText,
 				rowClassName: "h-14",
 				flexibleTableColumns: true,
 			}}
 		>
-			<Table.Container className="gap-3">
+			<Table.Container>
 				<Table.Content>
 					<Table.Header />
 					<Table.Body />
+					<TableFooter table={table} pageSizeOptions={[5, 10, 25]} />
 				</Table.Content>
-				<TableFooter table={table} pageSizeOptions={[5, 10, 25]} />
 			</Table.Container>
 		</Table.Provider>
 	);
