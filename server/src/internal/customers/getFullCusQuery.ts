@@ -447,6 +447,7 @@ export const getPaginatedFullCusQuery = ({
 	entityId: _entityId,
 	internalCustomerIds,
 	plans,
+	processors,
 	search,
 	cusProductLimit,
 }: {
@@ -463,6 +464,7 @@ export const getPaginatedFullCusQuery = ({
 	entityId?: string;
 	internalCustomerIds?: string[];
 	plans?: ListCustomersV2Params["plans"];
+	processors?: ListCustomersV2Params["processors"];
 	search?: string;
 	cusProductLimit: number;
 }) => {
@@ -479,6 +481,7 @@ export const getPaginatedFullCusQuery = ({
 		internalCustomerIds,
 		inStatuses,
 		plans,
+		processors,
 		search,
 	});
 
