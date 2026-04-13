@@ -10,7 +10,9 @@ import {
 	type CachedFullSubject,
 	cachedFullSubjectToNormalized,
 } from "../fullSubjectCacheModel.js";
-import { invalidateCachedFullSubject } from "./invalidateCachedFullSubject.js";
+import { getOrInitFullSubjectCustomerEpoch } from "./invalidate/getOrInitFullSubjectCustomerEpoch.js";
+import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
+import { invalidateCachedFullSubjectExact } from "./invalidate/invalidateFullSubjectExact.js";
 
 export const getCachedFullSubject = async ({
 	ctx,
@@ -42,6 +44,25 @@ export const getCachedFullSubject = async ({
 			`[getCachedFullSubject] Failed to parse cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
 		);
 		return undefined;
+	}
+
+	if (entityId) {
+		const currentCustomerEpoch = await getOrInitFullSubjectCustomerEpoch({
+			ctx,
+			customerId,
+		});
+		if (cached.customerEntityEpoch !== currentCustomerEpoch) {
+			logger.warn(
+				`[getCachedFullSubject] Stale customer entity epoch for ${customerId}:${entityId}, cached=${cached.customerEntityEpoch ?? "missing"}, current=${currentCustomerEpoch}, source: ${source}`,
+			);
+			await invalidateCachedFullSubjectExact({
+				ctx,
+				customerId,
+				entityId,
+				source: "stale-customer-entity-epoch",
+			});
+			return undefined;
+		}
 	}
 
 	const rolloutSnapshot = getFullSubjectRolloutSnapshot({ ctx });

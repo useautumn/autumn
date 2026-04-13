@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	type ApiCustomer,
 	ApiCustomerSchema,
+	type AttachParamsV1Input,
 	CustomerExpand,
 } from "@autumn/shared";
 import {
@@ -120,9 +121,18 @@ test.concurrent(`${chalk.yellowBright("get-customer: multi-entity customer retur
 	});
 
 	const refDir = `${import.meta.dir}/../../../references`;
-	await Bun.write(`${refDir}/getCustomerV1Response.json`, JSON.stringify(cusV1, null, 2));
-	await Bun.write(`${refDir}/getCustomerV2_1Response.json`, JSON.stringify(cusV2_1, null, 2));
-	await Bun.write(`${refDir}/getCustomerV2_2Response.json`, JSON.stringify(cusV2_2, null, 2));
+	await Bun.write(
+		`${refDir}/getCustomerV1Response.json`,
+		JSON.stringify(cusV1, null, 2),
+	);
+	await Bun.write(
+		`${refDir}/getCustomerV2_1Response.json`,
+		JSON.stringify(cusV2_1, null, 2),
+	);
+	await Bun.write(
+		`${refDir}/getCustomerV2_2Response.json`,
+		JSON.stringify(cusV2_2, null, 2),
+	);
 });
 
 test.concurrent(`${chalk.yellowBright("get-customer: expand empty array returns items")}`, async () => {
@@ -263,6 +273,56 @@ test.concurrent(`${chalk.yellowBright("get-customer: created boolean balance is 
 		expiresAt,
 	});
 	expect(customer.balances[TestFeature.Dashboard]).toBeUndefined();
+});
+
+test.concurrent(`${chalk.yellowBright("get-customer: customer cache updates after entity attach")}`, async () => {
+	const creditsItem = items.monthlyCredits({ includedUsage: 200 });
+	const entityProd = products.base({
+		id: "get-customer-entity-attach",
+		items: [creditsItem],
+	});
+	const customerId = "get-customer-after-entity-attach";
+
+	const { autumnV2_2, entities } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [entityProd] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [],
+	});
+
+	const beforeAttach = await autumnV2_2.customers.get<ApiCustomerV5>(
+		customerId,
+		{
+			keepInternalFields: true,
+		},
+	);
+	ApiCustomerV5Schema.parse(beforeAttach);
+	expect(beforeAttach.balances[TestFeature.Credits]).toBeUndefined();
+
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: entityProd.id,
+		entity_id: entities[0].id,
+		redirect_mode: "if_required",
+	});
+
+	const afterAttach = await autumnV2_2.customers.get<ApiCustomerV5>(
+		customerId,
+		{
+			keepInternalFields: true,
+		},
+	);
+	ApiCustomerV5Schema.parse(afterAttach);
+	expectBalanceCorrect({
+		customer: afterAttach,
+		featureId: TestFeature.Credits,
+		remaining: 200,
+		usage: 0,
+		planId: entityProd.id,
+	});
 });
 
 test.concurrent(`${chalk.yellowBright("get-customer: v2 balances.feature also expands flag features")}`, async () => {

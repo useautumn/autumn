@@ -13,6 +13,7 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs";
 import { resolveCustomerId } from "./utils/resolveCustomerId.js";
+import { resolveEntityId } from "./utils/resolveEntityId.js";
 
 /**
  * Base middleware that sets up the request context
@@ -39,6 +40,12 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		body,
 		query: c.req.query(),
 	});
+	const entityId = resolveEntityId({
+		method: c.req.method,
+		path: c.req.path,
+		body,
+		query: c.req.query(),
+	});
 
 	const childLogger = addRequestToLogs({
 		logger,
@@ -47,6 +54,8 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			method: c.req.method,
 			url: c.req.url,
 			timestamp,
+			customer_id: customerId,
+			entity_id: entityId,
 			user_agent: c.req.header("user-agent"),
 			ip_address: c.req.header("x-forwarded-for"),
 			query: c.req.query(),
@@ -74,6 +83,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		features: [],
 		userId: undefined,
 		customerId,
+		entityId,
 		authType: AuthType.Unknown,
 		env: AppEnv.Sandbox, // maybe use app_env headers
 

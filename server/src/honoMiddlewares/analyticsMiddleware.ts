@@ -74,6 +74,7 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const skipUrls = ["/v1/customers/all/search"];
 
 	const customerId = ctx.customerId;
+	const entityId = ctx.entityId;
 
 	ctx.logger = addAppContextToLogs({
 		logger: ctx.logger,
@@ -83,6 +84,7 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			env: ctx.env,
 			auth_type: ctx.authType,
 			customer_id: customerId,
+			entity_id: entityId,
 			user_id: ctx.userId || undefined,
 			user_email: ctx.user?.email || undefined,
 			api_version: ctx.apiVersion?.semver,
