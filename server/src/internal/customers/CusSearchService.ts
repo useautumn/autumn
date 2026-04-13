@@ -60,6 +60,33 @@ interface SearchFilters {
 }
 
 export class CusSearchService {
+	private static getProcessorFilterSql({
+		customerTableAlias = customers,
+	}: {
+		customerTableAlias?: typeof customers;
+	}) {
+		return ({ proc }: { proc: string }) => {
+			if (proc === "stripe") {
+				return sql`(${customerTableAlias.processor}->>'id' IS NOT NULL)`;
+			}
+
+			if (proc === "revenuecat") {
+				return sql`EXISTS (
+					SELECT 1
+					FROM customer_products cp_processor
+					WHERE cp_processor.internal_customer_id = ${customerTableAlias.internal_id}
+						AND cp_processor.processor->>'type' = 'revenuecat'
+				)`;
+			}
+
+			if (proc === "vercel") {
+				return sql`(${customerTableAlias.processors}->>'vercel' IS NOT NULL)`;
+			}
+
+			return undefined;
+		};
+	}
+
 	static async searchByProduct({
 		db,
 		orgId,
@@ -234,15 +261,9 @@ export class CusSearchService {
 			filters.processor?.length
 				? or(
 						...filters.processor
-							.map((proc) => {
-								if (proc === "stripe")
-									return sql`(${customers.processor}->>'id' IS NOT NULL)`;
-								if (proc === "revenuecat")
-									return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
-								if (proc === "vercel")
-									return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
-								return undefined;
-							})
+							.map((proc) =>
+								CusSearchService.getProcessorFilterSql({})({ proc }),
+							)
 							.filter((c): c is NonNullable<typeof c> => c !== undefined),
 					)
 				: undefined,
@@ -435,15 +456,9 @@ export class CusSearchService {
 			filters?.processor?.length
 				? or(
 						...filters.processor
-							.map((proc) => {
-								if (proc === "stripe")
-									return sql`(${customers.processor}->>'id' IS NOT NULL)`;
-								if (proc === "revenuecat")
-									return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
-								if (proc === "vercel")
-									return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
-								return undefined;
-							})
+							.map((proc) =>
+								CusSearchService.getProcessorFilterSql({})({ proc }),
+							)
 							.filter((c): c is NonNullable<typeof c> => c !== undefined),
 					)
 				: undefined,
@@ -610,15 +625,9 @@ export class CusSearchService {
 			filters?.processor?.length
 				? or(
 						...filters.processor
-							.map((proc) => {
-								if (proc === "stripe")
-									return sql`(${customers.processor}->>'id' IS NOT NULL)`;
-								if (proc === "revenuecat")
-									return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
-								if (proc === "vercel")
-									return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
-								return undefined;
-							})
+							.map((proc) =>
+								CusSearchService.getProcessorFilterSql({})({ proc }),
+							)
 							.filter((c): c is NonNullable<typeof c> => c !== undefined),
 					)
 				: undefined,

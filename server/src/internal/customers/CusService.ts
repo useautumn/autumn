@@ -342,7 +342,12 @@ export class CusService {
 							if (proc === "stripe")
 								return sql`(${customers.processor}->>'id' IS NOT NULL)`;
 							if (proc === "revenuecat")
-								return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
+								return sql`EXISTS (
+									SELECT 1
+									FROM customer_products cp_processor
+									WHERE cp_processor.internal_customer_id = ${customers.internal_id}
+										AND cp_processor.processor->>'type' = 'revenuecat'
+								)`;
 							if (proc === "vercel")
 								return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
 							return undefined;
