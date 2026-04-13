@@ -294,8 +294,6 @@ const startPollingLoop = async ({
 		return null;
 	};
 
-	console.log(`${prefix} Started polling ${queueUrl}`);
-
 	const statsInterval = setInterval(logStatsAndCheckZeroMessages, 60000);
 
 	let sqs = getSqsClientFn();
@@ -374,7 +372,13 @@ const startPollingLoop = async ({
  * Initialize SQS pollers for this process.
  * cluster.fork() in workers.ts handles multi-process parallelism.
  */
-export const initWorkers = async () => {
+export const initWorkers = async ({
+	startupStartedAt,
+	queueImplementation,
+}: {
+	startupStartedAt: number;
+	queueImplementation: string;
+}) => {
 	const { db } = initDrizzle({ maxConnections: 10 });
 	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
 	await warmupRegionalRedis();
@@ -399,6 +403,11 @@ export const initWorkers = async () => {
 	process.on("SIGINT", shutdown);
 
 	abortController = new AbortController();
+
+	const startupDurationMs = Date.now() - startupStartedAt;
+	console.log(
+		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
+	);
 
 	await startPollingLoop({
 		db,
