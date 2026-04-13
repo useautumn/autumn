@@ -100,6 +100,16 @@ describe(chalk.yellowBright("resolveCustomerId"), () => {
 				}),
 			).toBe("cus_right");
 		});
+
+		test("uses body.customer_id for customers.delete rpc route", () => {
+			expect(
+				resolveCustomerId({
+					method: "POST",
+					path: "/v1/customers.delete",
+					body: { id: "wrong", customer_id: "cus_rpc_delete" },
+				}),
+			).toBe("cus_rpc_delete");
+		});
 	});
 
 	describe(chalk.cyan("query param parsing"), () => {

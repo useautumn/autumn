@@ -7,10 +7,10 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { redis } from "@/external/redis/initRedis.js";
 import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
-import { batchDeleteCachedCustomers } from "@/internal/customers/cusUtils/apiCusCacheUtils/batchDeleteCachedCustomers.js";
+import { batchDeleteCachedFullCustomers } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 
-test.concurrent(`${chalk.yellowBright("batchDeleteCachedCustomers: clears full customer cache + path index after V2 get")}`, async () => {
+test.concurrent(`${chalk.yellowBright("batchDeleteCachedFullCustomers: clears full customer cache + path index after V2 get")}`, async () => {
 	test.skipIf(redis.status !== "ready");
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 50 });
@@ -68,7 +68,7 @@ test.concurrent(`${chalk.yellowBright("batchDeleteCachedCustomers: clears full c
 	expect(await redis.call("EXISTS", primaryPathKey)).toBe(1);
 	expect(await redis.call("EXISTS", otherPathKey)).toBe(1);
 
-	await batchDeleteCachedCustomers({
+	await batchDeleteCachedFullCustomers({
 		customers: [
 			{ orgId, env, customerId },
 			{ orgId, env, customerId: otherEntry.id },

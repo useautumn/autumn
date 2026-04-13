@@ -1,7 +1,10 @@
 export { getCachedFullSubject } from "./actions/getCachedFullSubject.js";
 export { getOrCreateCachedFullSubject } from "./actions/getOrCreateCachedFullSubject.js";
 export { getOrSetCachedFullSubject } from "./actions/getOrSetCachedFullSubject.js";
-export { invalidateCachedFullSubject } from "./actions/invalidateCachedFullSubject.js";
+export { getOrInitFullSubjectCustomerEpoch } from "./actions/invalidate/getOrInitFullSubjectCustomerEpoch.js";
+export { incrementFullSubjectCustomerEpoch } from "./actions/invalidate/incrementFullSubjectCustomerEpoch.js";
+export { invalidateCachedFullSubject } from "./actions/invalidate/invalidateFullSubject.js";
+export { invalidateCachedFullSubjectExact } from "./actions/invalidate/invalidateFullSubjectExact.js";
 export { getCachedPartialFullSubject } from "./actions/partial/getCachedPartialFullSubject.js";
 export { getOrCreateCachedPartialFullSubject } from "./actions/partial/getOrCreateCachedPartialFullSubject.js";
 export { getOrSetCachedPartialFullSubject } from "./actions/partial/getOrSetCachedPartialFullSubject.js";
@@ -13,6 +16,7 @@ export {
 	getCachedFeatureBalancesBatch,
 } from "./balances/getCachedFeatureBalances.js";
 export { buildFullSubjectBalanceKey } from "./builders/buildFullSubjectBalanceKey.js";
+export { buildFullSubjectCustomerEpochKey } from "./builders/buildFullSubjectCustomerEpochKey.js";
 export { buildFullSubjectGuardKey } from "./builders/buildFullSubjectGuardKey.js";
 export { buildFullSubjectKey } from "./builders/buildFullSubjectKey.js";
 export { buildFullSubjectReserveKey } from "./builders/buildFullSubjectReserveKey.js";
