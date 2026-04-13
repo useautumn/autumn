@@ -97,7 +97,8 @@ export const constructProduct = ({
 		org_id: orgId,
 		created_at: Date.now(),
 		processor,
-		base_variant_id: null,
+		internal_parent_product_id: null,
+		variant_id: null,
 		archived: false,
 	};
 
@@ -358,7 +359,9 @@ export const copyProduct = async ({
 		org_id: toOrgId,
 		env: toEnv,
 		processor: null,
-		base_variant_id: fromEnv === toEnv ? null : product.base_variant_id,
+		internal_parent_product_id:
+			fromEnv === toEnv ? null : product.internal_parent_product_id,
+		variant_id: fromEnv === toEnv ? null : product.variant_id,
 	};
 
 	const newEntitlements: Entitlement[] = [];

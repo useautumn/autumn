@@ -25,7 +25,8 @@ export const ProductSchema = z.object({
 			id: z.string(),
 		})
 		.nullish(),
-	base_variant_id: z.string().nullable(),
+	internal_parent_product_id: z.string().nullable(),
+	variant_id: z.string().nullable(),
 	archived: z.boolean().default(false),
 });
 
