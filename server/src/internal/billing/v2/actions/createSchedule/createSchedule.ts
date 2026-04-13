@@ -60,8 +60,7 @@ export const createSchedule = async ({
 
 	if (billingContext.checkoutMode) {
 		throw new RecaseError({
-			message:
-				"create_schedule requires an immediately billable first phase; checkout flows are not supported yet",
+			message: "Please attach a payment method before creating a schedule.",
 			statusCode: 400,
 		});
 	}

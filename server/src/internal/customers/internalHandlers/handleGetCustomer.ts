@@ -1,4 +1,10 @@
-import { CusProductStatus, CustomerExpand } from "@autumn/shared";
+import {
+	CusProductStatus,
+	CustomerExpand,
+	schedulePhases,
+	schedules,
+} from "@autumn/shared";
+import { eq } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 
@@ -23,8 +29,27 @@ export const handleGetCustomer = createRoute({
 			],
 		});
 
+		const schedule = await (async () => {
+			const [existingSchedule] = await ctx.db
+				.select()
+				.from(schedules)
+				.where(
+					eq(schedules.internal_customer_id, fullCus.internal_id),
+				)
+				.limit(1);
+
+			if (!existingSchedule) return undefined;
+
+			const phases = await ctx.db
+				.select()
+				.from(schedulePhases)
+				.where(eq(schedulePhases.schedule_id, existingSchedule.id));
+
+			return { ...existingSchedule, phases };
+		})();
+
 		return c.json({
-			customer: fullCus,
+			customer: { ...fullCus, schedule },
 		});
 	},
 });

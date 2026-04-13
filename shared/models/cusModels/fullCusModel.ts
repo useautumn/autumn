@@ -8,6 +8,10 @@ import {
 } from "../cusProductModels/cusProductModels.js";
 import type { Event } from "../eventModels/eventTable.js";
 import {
+	type SchedulePhase,
+	type Schedule,
+} from "../scheduleModels/scheduleTable.js";
+import {
 	type Subscription,
 	SubscriptionSchema,
 } from "../subModels/subModels.js";
@@ -33,6 +37,8 @@ export const FullCustomerSchema = CustomerSchema.extend({
 	invoices: z.array(InvoiceSchema).optional(),
 });
 
+export type FullCustomerSchedule = Schedule & { phases: SchedulePhase[] };
+
 export type FullCustomer = Customer & {
 	customer_products: FullCusProduct[];
 	entities: Entity[];
@@ -46,6 +52,7 @@ export type FullCustomer = Customer & {
 	subscriptions?: Subscription[];
 	events?: Event[];
 	extra_customer_entitlements: FullCustomerEntitlement[];
+	schedule?: FullCustomerSchedule;
 };
 
 export const CustomerWithProductsSchema = CustomerSchema.extend({

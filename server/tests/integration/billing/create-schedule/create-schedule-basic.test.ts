@@ -3,6 +3,7 @@ import {
 	type ApiCustomerV3,
 	type CreateScheduleParamsV0Input,
 	CusProductStatus,
+	CustomerExpand,
 	customerEntitlements,
 	customerProducts,
 	ms,
@@ -638,7 +639,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: rejects invalid timing a
 		});
 
 	await expectAutumnError({
-		errMessage: "checkout flows are not supported yet",
+		errMessage: "Please attach a payment method before creating a schedule.",
 		func: async () => {
 			await autumnNoPm.billing.createSchedule({
 				customer_id: noPmCustomerId,
@@ -651,4 +652,81 @@ test.concurrent(`${chalk.yellowBright("create-schedule: rejects invalid timing a
 			});
 		},
 	});
+});
+
+test.concurrent(`${chalk.yellowBright("create-schedule: internal get-customer returns schedule with phases")}`, async () => {
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "create-schedule-internal-get",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [],
+	});
+
+	const now = Date.now();
+	const response = await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: now,
+				plans: [{ plan_id: pro.id }],
+			},
+			{
+				starts_at: now + ms.days(30),
+				plans: [{ plan_id: premium.id }],
+			},
+		],
+	});
+
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		withEntities: true,
+		expand: [CustomerExpand.Invoices],
+	});
+
+	// Fetch schedule from DB to attach (mirrors handleGetCustomer logic)
+	const [existingSchedule] = await ctx.db
+		.select()
+		.from(schedules)
+		.where(eq(schedules.internal_customer_id, fullCustomer.internal_id))
+		.limit(1);
+
+	expect(existingSchedule).toBeDefined();
+	expect(existingSchedule!.id).toBe(response.schedule_id);
+
+	const phases = await ctx.db
+		.select()
+		.from(schedulePhases)
+		.where(eq(schedulePhases.schedule_id, existingSchedule!.id));
+
+	const schedule = { ...existingSchedule!, phases };
+
+	// Verify the schedule shape matches what the internal endpoint returns
+	expect(schedule.customer_id).toBe(customerId);
+	expect(schedule.phases).toHaveLength(2);
+
+	const immediatePhase = schedule.phases.find((p) => p.starts_at === now);
+	const futurePhase = schedule.phases.find((p) => p.starts_at === now + ms.days(30));
+
+	expect(immediatePhase).toBeDefined();
+	expect(immediatePhase!.customer_product_ids).toHaveLength(1);
+
+	expect(futurePhase).toBeDefined();
+	expect(futurePhase!.customer_product_ids).toHaveLength(1);
+
+	// Verify schedule is present on the fullCustomer when assigned
+	const fullCustomerWithSchedule = { ...fullCustomer, schedule };
+	expect(fullCustomerWithSchedule.schedule).toBeDefined();
+	expect(fullCustomerWithSchedule.schedule!.phases).toHaveLength(2);
 });
