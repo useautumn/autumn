@@ -38,8 +38,8 @@ export interface PlanItemsSectionProps {
 	originalItems: ProductItem[] | undefined;
 	features: Feature[];
 
-	prepaidOptions: Record<string, number>;
-	initialPrepaidOptions: Record<string, number>;
+	prepaidOptions: Record<string, number | undefined>;
+	initialPrepaidOptions: Record<string, number | undefined>;
 	existingOptions?: FeatureOptions[];
 
 	form: UseUpdateSubscriptionForm | UseAttachForm;
