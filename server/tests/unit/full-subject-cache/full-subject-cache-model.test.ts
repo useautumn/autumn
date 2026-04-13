@@ -114,6 +114,36 @@ describe("fullSubject cache model", () => {
 		expect(cached._cachedAt).toBeTypeOf("number");
 	});
 
+	test("stores customer entity epoch for entity subjects", () => {
+		const normalized = {
+			...buildNormalized(),
+			subjectType: SubjectType.Entity,
+			entityId: "ent_1",
+			internalEntityId: "ent_int_1",
+			entity: {
+				id: "ent_1",
+				internal_id: "ent_int_1",
+				internal_customer_id: "cus_int_1",
+				org_id: "org_1",
+				env: AppEnv.Live,
+				created_at: 1,
+				name: "Entity",
+				deleted: false,
+				internal_feature_id: "feat_int_entity",
+				feature_id: "feature_entity",
+				spend_limits: null,
+				usage_alerts: null,
+				overage_allowed: null,
+			},
+		} as NormalizedFullSubject;
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			customerEntityEpoch: 7,
+		});
+
+		expect(cached.customerEntityEpoch).toBe(7);
+	});
+
 	test("reconstructs normalized data from cached subject and balances", () => {
 		const normalized = buildNormalized();
 		const cached = normalizedToCachedFullSubject({ normalized });

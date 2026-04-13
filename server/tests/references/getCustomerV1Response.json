@@ -1,10 +1,10 @@
 {
   "id": "get-cus-multi-ent-v2",
-  "created_at": 1774899525971,
+  "created_at": 1776094834653,
   "name": "get-cus-multi-ent-v2",
   "email": "get-cus-multi-ent-v2@example.com",
   "fingerprint": null,
-  "stripe_id": "cus_UFGA5ZzfGCckTr",
+  "stripe_id": "cus_UKRUjVsG2UM9eG",
   "env": "sandbox",
   "metadata": {},
   "send_email_receipts": false,
@@ -15,12 +15,12 @@
       "group": "get-cus-multi-ent-v2",
       "status": "active",
       "canceled_at": null,
-      "started_at": 1774899525000,
+      "started_at": 1776094833000,
       "is_default": false,
       "is_add_on": false,
       "version": 1,
-      "current_period_start": 1774899525000,
-      "current_period_end": 1777577925000,
+      "current_period_start": 1776094833000,
+      "current_period_end": 1778686833000,
       "items": [
         {
           "type": "price",
@@ -83,7 +83,7 @@
       "group": "get-cus-multi-ent-v2",
       "status": "active",
       "canceled_at": null,
-      "started_at": 1774899538120,
+      "started_at": 1776094847266,
       "is_default": false,
       "is_add_on": false,
       "version": 1,
@@ -135,7 +135,7 @@
       "balance": 90,
       "usage": 10,
       "included_usage": 100,
-      "next_reset_at": 1777577925000,
+      "next_reset_at": 1778686833000,
       "overage_allowed": false,
       "breakdown": [
         {
@@ -144,7 +144,7 @@
           "balance": 90,
           "usage": 10,
           "included_usage": 100,
-          "next_reset_at": 1777577925000,
+          "next_reset_at": 1778686833000,
           "expires_at": null,
           "overage_allowed": false
         }
@@ -160,7 +160,7 @@
       "balance": 400,
       "usage": 0,
       "included_usage": 400,
-      "next_reset_at": 1777577925000,
+      "next_reset_at": 1778686833000,
       "overage_allowed": false,
       "breakdown": [
         {
@@ -169,7 +169,7 @@
           "balance": 200,
           "usage": 0,
           "included_usage": 200,
-          "next_reset_at": 1777577925000,
+          "next_reset_at": 1778686833000,
           "expires_at": null,
           "overage_allowed": false
         },
@@ -179,7 +179,7 @@
           "balance": 200,
           "usage": 0,
           "included_usage": 200,
-          "next_reset_at": 1777577925000,
+          "next_reset_at": 1778686833000,
           "expires_at": null,
           "overage_allowed": false
         }
@@ -226,12 +226,12 @@
       "product_ids": [
         "cus-lvl_get-cus-multi-ent-v2"
       ],
-      "stripe_id": "in_1TGle86GVhEVh7f8YnHsCA2a",
+      "stripe_id": "in_1TLmbJ6GVhMpZYlMf5hdUuSY",
       "status": "paid",
       "total": 20,
       "currency": "usd",
-      "created_at": 1774899525000,
-      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3Bg8p9i1EF5PBHdyGGKiXPif0Fh"
+      "created_at": 1776094833000,
+      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3CJDaKtrWTXrrHak4MK0tm8cNRC"
     }
   ]
 }

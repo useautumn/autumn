@@ -13,6 +13,7 @@ import {
 	FULL_SUBJECT_CACHE_TTL_SECONDS,
 } from "../config/fullSubjectCacheConfig.js";
 import { normalizedToCachedFullSubject } from "../fullSubjectCacheModel.js";
+import { getOrInitFullSubjectCustomerEpoch } from "./invalidate/getOrInitFullSubjectCustomerEpoch.js";
 
 export type SetCachedFullSubjectResult =
 	| "OK"
@@ -33,6 +34,13 @@ export const setCachedFullSubject = async ({
 }): Promise<SetCachedFullSubjectResult> => {
 	const { org, env, logger } = ctx;
 	const { customerId, entityId } = normalized;
+	const customerEntityEpoch =
+		normalized.subjectType === "entity"
+			? await getOrInitFullSubjectCustomerEpoch({
+					ctx,
+					customerId,
+				})
+			: undefined;
 	const subjectKey = buildFullSubjectKey({
 		orgId: org.id,
 		env,
@@ -51,7 +59,10 @@ export const setCachedFullSubject = async ({
 		customerId,
 		entityId,
 	});
-	const cached = normalizedToCachedFullSubject({ normalized });
+	const cached = normalizedToCachedFullSubject({
+		normalized,
+		customerEntityEpoch,
+	});
 	const token = generateId("full_subject_res");
 
 	const balancesByFeatureId = new Map<

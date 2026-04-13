@@ -6,12 +6,15 @@ export type CachedFullSubject = Omit<
 > & {
 	_cachedAt: number;
 	meteredFeatures: string[];
+	customerEntityEpoch?: number;
 };
 
 export const normalizedToCachedFullSubject = ({
 	normalized,
+	customerEntityEpoch,
 }: {
 	normalized: NormalizedFullSubject;
+	customerEntityEpoch?: number;
 }): CachedFullSubject => {
 	const meteredFeatures = Array.from(
 		new Set(
@@ -38,6 +41,7 @@ export const normalizedToCachedFullSubject = ({
 		entity_aggregations: normalized.entity_aggregations,
 		_cachedAt: Date.now(),
 		meteredFeatures,
+		customerEntityEpoch,
 	};
 };
 

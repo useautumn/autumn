@@ -3,6 +3,7 @@ import {
 	type ApiEntityV1,
 	ApiEntityV1Schema,
 	type ApiEntityV2,
+	type AttachParamsV1Input,
 } from "@autumn/shared";
 import { ApiEntityV2Schema } from "@shared/api/entities/apiEntityV2";
 import {
@@ -138,9 +139,18 @@ test.concurrent(`${chalk.yellowBright("get-entity: entity inheriting customer-le
 	});
 
 	const refDir = `${import.meta.dir}/../../../references`;
-	await Bun.write(`${refDir}/getEntityV1Response.json`, JSON.stringify(ent0V1, null, 2));
-	await Bun.write(`${refDir}/getEntityV2_1Response.json`, JSON.stringify(ent0V2_1, null, 2));
-	await Bun.write(`${refDir}/getEntityV2_2Response.json`, JSON.stringify(ent0V2_2, null, 2));
+	await Bun.write(
+		`${refDir}/getEntityV1Response.json`,
+		JSON.stringify(ent0V1, null, 2),
+	);
+	await Bun.write(
+		`${refDir}/getEntityV2_1Response.json`,
+		JSON.stringify(ent0V2_1, null, 2),
+	);
+	await Bun.write(
+		`${refDir}/getEntityV2_2Response.json`,
+		JSON.stringify(ent0V2_2, null, 2),
+	);
 });
 
 test.concurrent(`${chalk.yellowBright("get-entity: v2.1 returns boolean features in flags")}`, async () => {
@@ -269,4 +279,78 @@ test.concurrent(`${chalk.yellowBright("get-entity: created boolean balance is re
 		expires_at: expiresAt,
 	});
 	expect(entity.balances[TestFeature.Dashboard]).toBeUndefined();
+});
+
+test.concurrent(`${chalk.yellowBright("get-entity: entity cache updates after customer attach across repeated reads")}`, async () => {
+	const dashboardItem = items.dashboard();
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const customerProd = products.pro({
+		id: "get-entity-customer-attach",
+		items: [dashboardItem, messagesItem],
+	});
+	const customerId = "get-entity-after-customer-attach";
+
+	const { autumnV2_2, entities } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [customerProd] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [],
+	});
+
+	const entityId = entities[0].id;
+	const beforeAttach = await autumnV2_2.entities.get<ApiEntityV2>(
+		customerId,
+		entityId,
+		{ keepInternalFields: true },
+	);
+	ApiEntityV2Schema.parse(beforeAttach);
+	expect(beforeAttach.balances[TestFeature.Messages]).toBeUndefined();
+	expect(beforeAttach.flags[TestFeature.Dashboard]).toBeUndefined();
+
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: customerProd.id,
+		redirect_mode: "if_required",
+	});
+
+	const afterAttachFirst = await autumnV2_2.entities.get<ApiEntityV2>(
+		customerId,
+		entityId,
+		{ keepInternalFields: true },
+	);
+	const afterAttachSecond = await autumnV2_2.entities.get<ApiEntityV2>(
+		customerId,
+		entityId,
+		{ keepInternalFields: true },
+	);
+
+	ApiEntityV2Schema.parse(afterAttachFirst);
+	ApiEntityV2Schema.parse(afterAttachSecond);
+
+	expect(afterAttachFirst.flags[TestFeature.Dashboard]).toMatchObject({
+		feature_id: TestFeature.Dashboard,
+		plan_id: customerProd.id,
+		expires_at: null,
+	});
+	expect(afterAttachSecond.flags[TestFeature.Dashboard]).toMatchObject({
+		feature_id: TestFeature.Dashboard,
+		plan_id: customerProd.id,
+		expires_at: null,
+	});
+
+	expect(afterAttachFirst.balances[TestFeature.Messages]).toMatchObject({
+		feature_id: TestFeature.Messages,
+		granted: 100,
+		remaining: 100,
+		usage: 0,
+	});
+	expect(afterAttachSecond.balances[TestFeature.Messages]).toMatchObject({
+		feature_id: TestFeature.Messages,
+		granted: 100,
+		remaining: 100,
+		usage: 0,
+	});
 });

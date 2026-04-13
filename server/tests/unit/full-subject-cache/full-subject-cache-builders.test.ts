@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	buildFullSubjectBalanceKey,
+	buildFullSubjectCustomerEpochKey,
 	buildFullSubjectGuardKey,
 	buildFullSubjectKey,
 	buildFullSubjectReserveKey,
@@ -40,6 +41,14 @@ describe("fullSubject cache key builders", () => {
 				customerId: "cus",
 			}),
 		).toBe("{cus}:org:test:full_subject:guard");
+
+		expect(
+			buildFullSubjectCustomerEpochKey({
+				orgId: "org",
+				env: "test",
+				customerId: "cus",
+			}),
+		).toBe("{cus}:org:test:full_subject:customer_entity_epoch");
 	});
 
 	test("builds entity-scoped keys", () => {

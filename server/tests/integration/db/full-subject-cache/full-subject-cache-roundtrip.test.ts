@@ -6,10 +6,12 @@ import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { CachedFullSubject } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
 import {
 	buildFullSubjectBalanceKey,
+	buildFullSubjectCustomerEpochKey,
 	buildFullSubjectGuardKey,
 	buildFullSubjectKey,
 	buildFullSubjectReserveKey,
 	getCachedFullSubject,
+	getCachedPartialFullSubject,
 	invalidateCachedFullSubject,
 	setCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
@@ -38,6 +40,11 @@ const cleanupKeys = async ({
 	const subjectRaw = (await redisV2.get(subjectKey)) as string | null;
 	const keys = [
 		subjectKey,
+		buildFullSubjectCustomerEpochKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+		}),
 		buildFullSubjectReserveKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -96,6 +103,18 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				});
 				expect(result).toBe("OK");
 
+				const subjectRaw = await redisV2.get(
+					buildFullSubjectKey({
+						orgId: ctx.org.id,
+						env: ctx.env,
+						customerId: scenario.ids.customerId,
+					}),
+				);
+				const cachedSubject = JSON.parse(
+					subjectRaw as string,
+				) as CachedFullSubject;
+				expect(cachedSubject.customerEntityEpoch).toBeUndefined();
+
 				const cached = await getCachedFullSubject({
 					ctx,
 					customerId: scenario.ids.customerId,
@@ -141,6 +160,18 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					fetchTimeMs: Date.now(),
 				});
 				expect(result).toBe("OK");
+				const subjectRaw = await redisV2.get(
+					buildFullSubjectKey({
+						orgId: ctx.org.id,
+						env: ctx.env,
+						customerId: scenario.ids.customerId,
+						entityId,
+					}),
+				);
+				const cachedSubject = JSON.parse(
+					subjectRaw as string,
+				) as CachedFullSubject;
+				expect(cachedSubject.customerEntityEpoch).toBe(0);
 
 				const cached = await getCachedFullSubject({
 					ctx,
@@ -158,6 +189,64 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 						fullSubject: normalizedToFullSubject({ normalized: normalized! }),
 					}),
 				);
+
+				await cleanupKeys({
+					customerId: scenario.ids.customerId,
+					entityId,
+				});
+			},
+		});
+	});
+
+	test("entity subject cache misses when customer entity epoch changes", async () => {
+		const scenario = buildEntitySubjectScenario({
+			ctx,
+			name: "fullsubject-cache-stale-entity-epoch",
+		});
+
+		await withInsertedScenario({
+			ctx,
+			scenario,
+			run: async ({ scenario }) => {
+				const entityId = scenario.ids.entityIds[0]!;
+				const normalized = await getFullSubjectNormalized({
+					ctx,
+					customerId: scenario.ids.customerId,
+					entityId,
+				});
+				expect(normalized).toBeDefined();
+
+				const result = await setCachedFullSubject({
+					ctx,
+					normalized: normalized!,
+					fetchTimeMs: Date.now(),
+				});
+				expect(result).toBe("OK");
+
+				await redisV2.incr(
+					buildFullSubjectCustomerEpochKey({
+						orgId: ctx.org.id,
+						env: ctx.env,
+						customerId: scenario.ids.customerId,
+					}),
+				);
+
+				const cached = await getCachedFullSubject({
+					ctx,
+					customerId: scenario.ids.customerId,
+					entityId,
+					source: "integration-test",
+				});
+				const partialCached = await getCachedPartialFullSubject({
+					ctx,
+					customerId: scenario.ids.customerId,
+					entityId,
+					featureIds: ["messages", "users"],
+					source: "integration-test",
+				});
+
+				expect(cached).toBeUndefined();
+				expect(partialCached).toBeUndefined();
 
 				await cleanupKeys({
 					customerId: scenario.ids.customerId,

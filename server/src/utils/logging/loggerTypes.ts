@@ -6,6 +6,8 @@ export type LogRequestContext = {
 	method: string;
 	url: string;
 	timestamp: number;
+	customer_id?: string;
+	entity_id?: string;
 
 	user_agent?: string;
 	ip_address?: string;
@@ -25,6 +27,7 @@ export type LogAppContext = {
 	auth_type: AuthType;
 
 	customer_id?: string;
+	entity_id?: string;
 	user_id?: string;
 	user_email?: string;
 	api_version: string;

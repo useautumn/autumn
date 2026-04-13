@@ -12,7 +12,9 @@ import {
 	type CachedFullSubject,
 	cachedFullSubjectToNormalized,
 } from "../../fullSubjectCacheModel.js";
-import { invalidateCachedFullSubject } from "../invalidateCachedFullSubject.js";
+import { getOrInitFullSubjectCustomerEpoch } from "../invalidate/getOrInitFullSubjectCustomerEpoch.js";
+import { invalidateCachedFullSubject } from "../invalidate/invalidateFullSubject.js";
+import { invalidateCachedFullSubjectExact } from "../invalidate/invalidateFullSubjectExact.js";
 
 type BalanceHashMeta = {
 	featureId: string;
@@ -24,20 +26,17 @@ const invalidatePartialFullSubject = async ({
 	customerId,
 	entityId,
 	source,
-	featureIds,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	source: string;
-	featureIds?: string[];
 }) => {
 	await invalidateCachedFullSubject({
 		ctx,
 		customerId,
 		entityId,
 		source,
-		featureIds,
 	});
 };
 
@@ -135,9 +134,27 @@ export const getCachedPartialFullSubject = async ({
 			customerId,
 			entityId,
 			source: "partial-parse-failed",
-			featureIds,
 		});
 		return undefined;
+	}
+
+	if (entityId) {
+		const currentCustomerEpoch = await getOrInitFullSubjectCustomerEpoch({
+			ctx,
+			customerId,
+		});
+		if (cached.customerEntityEpoch !== currentCustomerEpoch) {
+			logger.warn(
+				`[getCachedPartialFullSubject] Stale customer entity epoch for ${customerId}:${entityId}, cached=${cached.customerEntityEpoch ?? "missing"}, current=${currentCustomerEpoch}, source: ${source}`,
+			);
+			await invalidateCachedFullSubjectExact({
+				ctx,
+				customerId,
+				entityId,
+				source: "partial-stale-customer-entity-epoch",
+			});
+			return undefined;
+		}
 	}
 
 	const rolloutSnapshot = getFullSubjectRolloutSnapshot({ ctx });
@@ -156,7 +173,6 @@ export const getCachedPartialFullSubject = async ({
 			customerId,
 			entityId,
 			source: "stale-rollout",
-			featureIds: cached.meteredFeatures,
 		});
 		return undefined;
 	}
@@ -181,7 +197,6 @@ export const getCachedPartialFullSubject = async ({
 			customerId,
 			entityId,
 			source: "partial-incomplete",
-			featureIds: cached.meteredFeatures,
 		});
 		return undefined;
 	}

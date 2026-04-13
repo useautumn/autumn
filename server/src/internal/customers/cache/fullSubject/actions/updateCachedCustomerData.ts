@@ -5,7 +5,7 @@ import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { logAlertEvent } from "@/utils/logging/logAlertEvent.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "../config/fullSubjectCacheConfig.js";
-import { invalidateCachedFullSubject } from "./invalidateCachedFullSubject.js";
+import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
 
 const FULL_SUBJECT_ALERT_BYTES_THRESHOLD = 1024 * 1024;
 const FULL_SUBJECT_UPDATE_SLOW_THRESHOLD_MS = 100;

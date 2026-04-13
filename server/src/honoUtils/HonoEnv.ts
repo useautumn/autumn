@@ -28,6 +28,7 @@ export type RequestContext = {
 	user?: User;
 	userId?: string;
 	customerId?: string;
+	entityId?: string;
 
 	// Objects
 	db: DrizzleCli;
