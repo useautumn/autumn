@@ -37,7 +37,7 @@ const init = async () => {
 	console.timeEnd("init:pg-health-monitor");
 
 	console.time("init:redis-warmup");
-	await Promise.all([warmupRegionalRedis()]);
+	await warmupRegionalRedis();
 	console.timeEnd("init:redis-warmup");
 	await startAllEdgeConfigPolling({ logger });
 

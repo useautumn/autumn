@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
 	ArrowLeft,
@@ -10,12 +11,24 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { Badge } from "@/components/v2/badges/Badge";
+import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import {
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+} from "@/components/v2/cards/Card";
+import { Input } from "@/components/v2/inputs/Input";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { DefaultView } from "../../DefaultView";
 import LoadingScreen from "../../general/LoadingScreen";
 import { useAdmin } from "../hooks/useAdmin";
+import { RolloutCreateDialog } from "./RolloutCreateDialog";
+import { RolloutOrgDialog } from "./RolloutOrgDialog";
 
 type RolloutPercent = {
 	percent: number;
@@ -40,6 +53,8 @@ const formatTimestamp = (timestamp: number) => {
 	return new Date(timestamp).toLocaleString();
 };
 
+const formatPercent = (percent: number) => `${percent}%`;
+
 const RolloutOrgRow = ({
 	rolloutId,
 	orgId,
@@ -54,44 +69,58 @@ const RolloutOrgRow = ({
 		rolloutId,
 		orgId,
 		percent,
-	}: { rolloutId: string; orgId: string; percent: number }) => void;
+	}: {
+		rolloutId: string;
+		orgId: string;
+		percent: number;
+	}) => void;
 	onDelete: ({
 		rolloutId,
 		orgId,
-	}: { rolloutId: string; orgId: string }) => void;
+	}: {
+		rolloutId: string;
+		orgId: string;
+	}) => void;
 }) => {
 	const [editPercent, setEditPercent] = useState(orgEntry.percent);
 
 	return (
-		<div className="flex items-center gap-3 py-2 px-3 bg-t1 rounded-md">
-			<code className="text-xs flex-1 font-mono">{orgId}</code>
-			<input
-				type="number"
-				min={0}
-				max={100}
-				value={editPercent}
-				onChange={(e) => setEditPercent(Number(e.target.value))}
-				className="w-16 px-2 py-1 text-xs border rounded bg-background"
-			/>
-			<span className="text-xs text-t3">%</span>
-			<button
-				type="button"
-				onClick={() => onUpdate({ rolloutId, orgId, percent: editPercent })}
-				disabled={editPercent === orgEntry.percent}
-				className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded disabled:opacity-40"
-			>
-				Save
-			</button>
-			<IconButton
-				icon={<Trash2 className="w-3.5 h-3.5" />}
-				variant="ghost"
-				size="sm"
-				onClick={() => onDelete({ rolloutId, orgId })}
-			/>
-			<span className="text-[10px] text-t3">
-				prev: {orgEntry.previousPercent}% | changed:{" "}
-				{formatTimestamp(orgEntry.changedAt)}
-			</span>
+		<div className="grid gap-3 rounded-xl border border-border bg-muted/20 p-3 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-center">
+			<div className="min-w-0">
+				<p className="truncate font-mono text-xs text-foreground">{orgId}</p>
+				<p className="mt-1 text-[11px] text-muted-foreground">
+					prev: {formatPercent(orgEntry.previousPercent)} | changed:{" "}
+					{formatTimestamp(orgEntry.changedAt)}
+				</p>
+			</div>
+
+			<div className="flex items-center gap-2">
+				<Input
+					type="number"
+					min={0}
+					max={100}
+					value={editPercent}
+					onChange={(event) => setEditPercent(Number(event.target.value))}
+					className="h-9"
+				/>
+				<span className="text-xs text-muted-foreground">%</span>
+			</div>
+
+			<div className="flex items-center gap-2 justify-self-start md:justify-self-end">
+				<Button
+					size="sm"
+					onClick={() => onUpdate({ rolloutId, orgId, percent: editPercent })}
+					disabled={editPercent === orgEntry.percent}
+				>
+					Save
+				</Button>
+				<IconButton
+					icon={<Trash2 className="w-3.5 h-3.5" />}
+					variant="secondary"
+					size="sm"
+					onClick={() => onDelete({ rolloutId, orgId })}
+				/>
+			</div>
 		</div>
 	);
 };
@@ -109,85 +138,133 @@ const RolloutCard = ({
 	onUpdateGlobal: ({
 		rolloutId,
 		percent,
-	}: { rolloutId: string; percent: number }) => void;
+	}: {
+		rolloutId: string;
+		percent: number;
+	}) => void;
 	onUpdateOrg: ({
 		rolloutId,
 		orgId,
 		percent,
-	}: { rolloutId: string; orgId: string; percent: number }) => void;
+	}: {
+		rolloutId: string;
+		orgId: string;
+		percent: number;
+	}) => void;
 	onDeleteOrg: ({
 		rolloutId,
 		orgId,
-	}: { rolloutId: string; orgId: string }) => void;
+	}: {
+		rolloutId: string;
+		orgId: string;
+	}) => void;
 	onAddOrg: ({ rolloutId }: { rolloutId: string }) => void;
 }) => {
 	const [expanded, setExpanded] = useState(true);
 	const [globalPercent, setGlobalPercent] = useState(entry.percent);
 
 	const orgEntries = Object.entries(entry.orgs);
+	const globalPercentInputId = `rollout-global-percent-${rolloutId}`;
 
 	return (
-		<div className="border rounded-lg overflow-hidden">
-			<div className="flex items-center gap-3 p-4 bg-t1/50">
-				<button
-					type="button"
-					onClick={() => setExpanded(!expanded)}
-					className="text-t3"
-				>
-					{expanded ? (
-						<ChevronDown className="w-4 h-4" />
-					) : (
-						<ChevronRight className="w-4 h-4" />
-					)}
-				</button>
-				<h3 className="font-mono font-medium text-sm flex-1">{rolloutId}</h3>
-				<div className="flex items-center gap-2">
-					<span className="text-xs text-t3">Global:</span>
-					<input
-						type="number"
-						min={0}
-						max={100}
-						value={globalPercent}
-						onChange={(e) => setGlobalPercent(Number(e.target.value))}
-						className="w-16 px-2 py-1 text-xs border rounded bg-background"
-					/>
-					<span className="text-xs text-t3">%</span>
-					<button
-						type="button"
-						onClick={() =>
-							onUpdateGlobal({ rolloutId, percent: globalPercent })
-						}
-						disabled={globalPercent === entry.percent}
-						className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded disabled:opacity-40"
-					>
-						Save
-					</button>
-				</div>
-			</div>
-
-			{expanded && (
-				<div className="p-4 flex flex-col gap-3">
-					<div className="text-[10px] text-t3">
-						prev: {entry.previousPercent}% | changed:{" "}
-						{formatTimestamp(entry.changedAt)}
-					</div>
-
-					<div className="flex items-center justify-between">
-						<h4 className="text-xs font-medium text-t2">Org Overrides</h4>
+		<Card className="gap-0 overflow-hidden py-0">
+			<CardHeader className="border-b bg-muted/30 py-4">
+				<div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+					<div className="flex items-start gap-3">
 						<button
 							type="button"
+							onClick={() => setExpanded(!expanded)}
+							className="mt-1 text-muted-foreground transition-colors hover:text-foreground"
+						>
+							{expanded ? (
+								<ChevronDown className="w-4 h-4" />
+							) : (
+								<ChevronRight className="w-4 h-4" />
+							)}
+						</button>
+						<div className="min-w-0">
+							<CardTitle className="font-mono text-sm">{rolloutId}</CardTitle>
+							<div className="mt-2 flex flex-wrap items-center gap-2">
+								<Badge variant="muted">
+									Global {formatPercent(entry.percent)}
+								</Badge>
+								<Badge variant="muted">
+									{orgEntries.length} org override
+									{orgEntries.length === 1 ? "" : "s"}
+								</Badge>
+								<span className="text-[11px] text-muted-foreground">
+									prev: {formatPercent(entry.previousPercent)} | changed:{" "}
+									{formatTimestamp(entry.changedAt)}
+								</span>
+							</div>
+						</div>
+					</div>
+
+					<div className="flex items-end gap-2 lg:min-w-[240px]">
+						<div className="flex-1">
+							<label
+								htmlFor={globalPercentInputId}
+								className="mb-1 block text-[11px] font-medium text-muted-foreground"
+							>
+								Global Percent
+							</label>
+							<Input
+								id={globalPercentInputId}
+								type="number"
+								min={0}
+								max={100}
+								value={globalPercent}
+								onChange={(event) =>
+									setGlobalPercent(Number(event.target.value))
+								}
+								className="h-9"
+							/>
+						</div>
+						<Button
+							size="sm"
+							onClick={() =>
+								onUpdateGlobal({ rolloutId, percent: globalPercent })
+							}
+							disabled={globalPercent === entry.percent}
+						>
+							Save
+						</Button>
+					</div>
+				</div>
+			</CardHeader>
+
+			{expanded && (
+				<CardContent className="flex flex-col gap-4 py-4">
+					<div className="flex items-center justify-between gap-3">
+						<div>
+							<h4 className="text-sm font-medium text-foreground">
+								Org Overrides
+							</h4>
+							<p className="text-xs text-muted-foreground">
+								Override the rollout percentage for specific organizations.
+							</p>
+						</div>
+						<Button
+							type="button"
+							size="sm"
+							variant="secondary"
 							onClick={() => onAddOrg({ rolloutId })}
-							className="flex items-center gap-1 text-xs text-primary hover:underline"
 						>
 							<Plus className="w-3 h-3" />
 							Add Org
-						</button>
+						</Button>
 					</div>
 
 					{orgEntries.length === 0 && (
-						<p className="text-xs text-t3 italic">
-							No org overrides. Global percent applies to all.
-						</p>
+						<div className="rounded-xl border border-dashed border-border bg-muted/10 px-4 py-6 text-center">
+							<p className="text-sm text-muted-foreground">
+								No org overrides yet.
+							</p>
+							<p className="mt-1 text-xs text-muted-foreground">
+								Global rollout percentage applies to every org until you add an
+								override.
+							</p>
+						</div>
 					)}
 
 					<div className="flex flex-col gap-2">
@@ -202,16 +279,20 @@ const RolloutCard = ({
 							/>
 						))}
 					</div>
-				</div>
+				</CardContent>
 			)}
-		</div>
+		</Card>
 	);
 };
 
 export const EdgeConfigView = () => {
 	const navigate = useNavigate();
+	const env = useEnv();
 	const { isAdmin, isPending } = useAdmin();
 	const axiosInstance = useAxiosInstance();
+	const adminBasePath = env === AppEnv.Sandbox ? "/sandbox/admin" : "/admin";
+	const [addOrgRolloutId, setAddOrgRolloutId] = useState<string>();
+	const [createRolloutOpen, setCreateRolloutOpen] = useState(false);
 
 	const { data, isLoading, refetch } = useQuery<RolloutsResponse>({
 		queryKey: ["admin-rollouts"],
@@ -225,7 +306,10 @@ export const EdgeConfigView = () => {
 		mutationFn: async ({
 			rolloutId,
 			percent,
-		}: { rolloutId: string; percent: number }) => {
+		}: {
+			rolloutId: string;
+			percent: number;
+		}) => {
 			await axiosInstance.put(`/admin/rollouts/${rolloutId}`, { percent });
 		},
 		onSuccess: () => {
@@ -241,11 +325,14 @@ export const EdgeConfigView = () => {
 			rolloutId,
 			orgId,
 			percent,
-		}: { rolloutId: string; orgId: string; percent: number }) => {
-			await axiosInstance.put(
-				`/admin/rollouts/${rolloutId}/orgs/${orgId}`,
-				{ percent },
-			);
+		}: {
+			rolloutId: string;
+			orgId: string;
+			percent: number;
+		}) => {
+			await axiosInstance.put(`/admin/rollouts/${rolloutId}/orgs/${orgId}`, {
+				percent,
+			});
 		},
 		onSuccess: () => {
 			toast.success("Org override updated");
@@ -259,10 +346,11 @@ export const EdgeConfigView = () => {
 		mutationFn: async ({
 			rolloutId,
 			orgId,
-		}: { rolloutId: string; orgId: string }) => {
-			await axiosInstance.delete(
-				`/admin/rollouts/${rolloutId}/orgs/${orgId}`,
-			);
+		}: {
+			rolloutId: string;
+			orgId: string;
+		}) => {
+			await axiosInstance.delete(`/admin/rollouts/${rolloutId}/orgs/${orgId}`);
 		},
 		onSuccess: () => {
 			toast.success("Org override removed");
@@ -272,24 +360,13 @@ export const EdgeConfigView = () => {
 			toast.error(getBackendErr(error, "Failed to remove org override")),
 	});
 
-	const handleAddOrg = ({ rolloutId }: { rolloutId: string }) => {
-		const orgId = prompt("Enter org ID:");
-		if (!orgId?.trim()) return;
-
-		const percentStr = prompt("Enter rollout percentage (0-100):", "0");
-		const percent = Number(percentStr);
-		if (Number.isNaN(percent) || percent < 0 || percent > 100) {
-			toast.error("Invalid percentage");
-			return;
-		}
-
-		updateOrgMutation.mutate({ rolloutId, orgId: orgId.trim(), percent });
-	};
-
 	const handleDeleteOrg = ({
 		rolloutId,
 		orgId,
-	}: { rolloutId: string; orgId: string }) => {
+	}: {
+		rolloutId: string;
+		orgId: string;
+	}) => {
 		if (!confirm(`Remove org override for ${orgId}?`)) return;
 		deleteOrgMutation.mutate({ rolloutId, orgId });
 	};
@@ -308,35 +385,93 @@ export const EdgeConfigView = () => {
 	const rolloutEntries = Object.entries(rollouts);
 
 	return (
-		<div className="flex flex-col p-6 gap-6 max-w-4xl mx-auto">
-			<div className="flex items-center gap-3">
-				<IconButton
-					icon={<ArrowLeft className="w-4 h-4" />}
-					variant="ghost"
-					size="sm"
-					onClick={() => navigate("/admin")}
-				/>
-				<h1 className="text-lg font-semibold">Rollout Edge Config</h1>
-				<div className="flex-1" />
-				<IconButton
-					icon={<RefreshCw className="w-4 h-4" />}
-					variant="ghost"
-					size="sm"
-					onClick={() => refetch()}
-				/>
-				{data && (
-					<span className="text-[10px] text-t3">
-						{data.configHealthy ? "Healthy" : "Unhealthy"} | Last sync:{" "}
-						{data.lastSuccessAt ?? "never"}
-					</span>
-				)}
+		<div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
+			<RolloutOrgDialog
+				open={Boolean(addOrgRolloutId)}
+				onOpenChange={(open) => {
+					if (!open) {
+						setAddOrgRolloutId(undefined);
+					}
+				}}
+				rolloutId={addOrgRolloutId}
+				onSubmit={({ rolloutId, orgId, percent }) =>
+					updateOrgMutation.mutate({ rolloutId, orgId, percent })
+				}
+				isSaving={updateOrgMutation.isPending}
+			/>
+			<RolloutCreateDialog
+				open={createRolloutOpen}
+				onOpenChange={setCreateRolloutOpen}
+				onSubmit={({ rolloutId, percent }) =>
+					updateGlobalMutation.mutate(
+						{ rolloutId, percent },
+						{
+							onSuccess: () => {
+								setCreateRolloutOpen(false);
+							},
+						},
+					)
+				}
+				isSaving={updateGlobalMutation.isPending}
+			/>
+
+			<div className="flex items-center justify-between gap-4">
+				<div className="flex items-center gap-3">
+					<IconButton
+						icon={<ArrowLeft className="w-4 h-4" />}
+						variant="secondary"
+						size="sm"
+						onClick={() => navigate(adminBasePath)}
+					/>
+					<div>
+						<h1 className="text-lg font-semibold text-foreground">
+							Rollout Edge Config
+						</h1>
+						<p className="text-sm text-muted-foreground">
+							Manage global rollout percentages and per-org overrides.
+						</p>
+					</div>
+				</div>
+				<div className="flex items-center gap-2">
+					{data && (
+						<Badge variant="muted" className="h-7 px-2 text-xs">
+							{data.configHealthy ? "Healthy" : "Unhealthy"} | Last sync:{" "}
+							{data.lastSuccessAt ?? "never"}
+						</Badge>
+					)}
+					<IconButton
+						icon={<RefreshCw className="w-4 h-4" />}
+						variant="secondary"
+						size="sm"
+						onClick={() => refetch()}
+					>
+						Refresh
+					</IconButton>
+					<Button size="sm" onClick={() => setCreateRolloutOpen(true)}>
+						<Plus className="w-4 h-4" />
+						Add Rollout
+					</Button>
+				</div>
 			</div>
 
 			{rolloutEntries.length === 0 && (
-				<p className="text-sm text-t3 italic">
-					No rollouts configured. Add a rollout entry to the S3 config to get
-					started.
-				</p>
+				<Card className="border-dashed">
+					<CardContent className="flex flex-col items-start gap-3 py-6">
+						<div>
+							<h2 className="text-base font-medium text-foreground">
+								No rollouts configured
+							</h2>
+							<p className="mt-1 text-sm text-muted-foreground">
+								Create your first rollout entry, then add organization-specific
+								overrides where needed.
+							</p>
+						</div>
+						<Button size="sm" onClick={() => setCreateRolloutOpen(true)}>
+							<Plus className="w-4 h-4" />
+							Create First Rollout
+						</Button>
+					</CardContent>
+				</Card>
 			)}
 
 			<div className="flex flex-col gap-4">
@@ -352,7 +487,7 @@ export const EdgeConfigView = () => {
 							updateOrgMutation.mutate({ rolloutId, orgId, percent })
 						}
 						onDeleteOrg={handleDeleteOrg}
-						onAddOrg={handleAddOrg}
+						onAddOrg={({ rolloutId }) => setAddOrgRolloutId(rolloutId)}
 					/>
 				))}
 			</div>

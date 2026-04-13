@@ -3,6 +3,7 @@ import {
 	AppEnv,
 	AuthType,
 	LATEST_VERSION,
+	type Organization,
 	tryCatch,
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
@@ -69,7 +70,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		apiVersion: new ApiVersionClass(LATEST_VERSION),
 
 		// Auth (will be populated by auth middleware)
-		org: undefined as any,
+		org: undefined as unknown as Organization,
 		features: [],
 		userId: undefined,
 		customerId,

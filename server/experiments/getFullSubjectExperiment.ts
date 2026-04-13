@@ -1,7 +1,5 @@
-import { AppEnv } from "@autumn/shared";
-import type { SubjectCoreRow } from "@server/internal/customers/repos/getFullSubject.js";
-import { resultToFullSubject } from "@server/internal/customers/repos/getFullSubject.js";
-import { getSubjectCoreQuery } from "@server/internal/customers/repos/sql/getSubjectCoreQuery.js";
+import { AppEnv, type SubjectQueryRow } from "@autumn/shared";
+import { resultToFullSubject, getFullSubjectQuery } from "@server/internal/customers/repos/getFullSubject/index.js";
 import { sql } from "drizzle-orm";
 import {
 	initDrizzle,
@@ -28,7 +26,7 @@ const runPath = async ({
 	customerId?: string;
 	entityId?: string;
 }) => {
-	const query = getSubjectCoreQuery({
+	const query = getFullSubjectQuery({
 		orgId: ORG_ID,
 		env: ENV,
 		customerId,
@@ -50,7 +48,7 @@ const runPath = async ({
 		return;
 	}
 
-	const row = result[0] as unknown as SubjectCoreRow;
+	const row = result[0] as unknown as SubjectQueryRow;
 	console.log(`  Query:              ${queryMs}ms`);
 	console.log(`  Rows returned:      ${result.length}`);
 	console.log(
