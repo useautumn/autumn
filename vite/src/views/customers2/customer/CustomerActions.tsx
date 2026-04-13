@@ -1,7 +1,6 @@
 import type { Feature, FullCusProduct } from "@autumn/shared";
 import { AppEnv, FeatureUsageType, ProcessorType } from "@autumn/shared";
 import {
-	ArrowCounterClockwiseIcon,
 	ArrowSquareOutIcon,
 	ArrowsClockwiseIcon,
 	BracketsSquareIcon,
@@ -46,7 +45,6 @@ import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCu
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { AddCouponDialog } from "./components/AddCouponDialog";
 import { CreateEntity } from "./components/CreateEntity";
-import { RefundChargeDialog } from "./components/RefundChargeDialog";
 import { ShowCustomerObjectSheet } from "./components/ShowCustomerObjectSheet";
 
 export function CustomerActions() {
@@ -57,7 +55,6 @@ export function CustomerActions() {
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [portalLoading, setPortalLoading] = useState(false);
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
-	const [refundChargeOpen, setRefundChargeOpen] = useState(false);
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
 	const { org } = useOrg();
@@ -116,10 +113,6 @@ export function CustomerActions() {
 			/>
 			<CreateEntity open={createEntityOpen} setOpen={setCreateEntityOpen} />
 			<AddCouponDialog open={addCouponOpen} setOpen={setAddCouponOpen} />
-			<RefundChargeDialog
-				open={refundChargeOpen}
-				onOpenChange={setRefundChargeOpen}
-			/>
 			<ShowCustomerObjectSheet
 				open={showObjectOpen}
 				setOpen={setShowObjectOpen}
@@ -167,19 +160,6 @@ export function CustomerActions() {
 						<BracketsSquareIcon />
 						Show customer object
 					</DropdownMenuItem>
-					{stripeCustomerId &&
-						customer?.processor?.type === ProcessorType.Stripe && (
-							<DropdownMenuItem
-								onClick={() => {
-									setRefundChargeOpen(true);
-									setActionsOpen(false);
-								}}
-								className="flex gap-2"
-							>
-								<ArrowCounterClockwiseIcon />
-								Refund charge
-							</DropdownMenuItem>
-						)}
 					{stripeCustomerId &&
 						customer?.processor?.type === ProcessorType.Stripe && (
 							<DropdownMenuItem
