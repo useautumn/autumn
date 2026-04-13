@@ -53,7 +53,7 @@ export function convertPrepaidOptionsToFeatureOptions({
 	prepaidOptions,
 	product,
 }: {
-	prepaidOptions: Record<string, number>;
+	prepaidOptions: Record<string, number | undefined>;
 	product: ProductV2 | undefined;
 }): FeatureOptions[] | undefined {
 	if (!product || Object.keys(prepaidOptions).length === 0) {
@@ -63,9 +63,10 @@ export function convertPrepaidOptionsToFeatureOptions({
 	const options: FeatureOptions[] = [];
 
 	for (const [featureId, quantity] of Object.entries(prepaidOptions)) {
+		if (quantity === undefined) continue;
 		options.push({
 			feature_id: featureId,
-			quantity: quantity || 0,
+			quantity,
 		});
 	}
 
