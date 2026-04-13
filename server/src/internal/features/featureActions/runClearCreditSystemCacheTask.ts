@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import { and, asc, count, eq, gt, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { batchDeleteCachedCustomers } from "@/internal/customers/cusUtils/apiCusCacheUtils/batchDeleteCachedCustomers.js";
+import { batchDeleteCachedFullCustomers } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
 
 export interface ClearCreditSystemCachePayload {
@@ -133,7 +133,7 @@ export const runClearCreditSystemCacheTask = async ({
 			}));
 
 		if (customersToDelete.length > 0) {
-			const deleted = await batchDeleteCachedCustomers({
+			const deleted = await batchDeleteCachedFullCustomers({
 				customers: customersToDelete,
 			});
 			totalDeleted += deleted;

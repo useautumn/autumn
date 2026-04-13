@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { batchDeleteCachedCustomers } from "../cusUtils/apiCusCacheUtils/batchDeleteCachedCustomers";
-import { deleteCachedApiCustomer } from "../cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
+import { batchDeleteCachedFullCustomers } from "../cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers";
+import { deleteCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 
 export const handleClearCustomerCache = createRoute({
 	body: z.object({
@@ -13,7 +13,7 @@ export const handleClearCustomerCache = createRoute({
 		const { customer_id, customer_ids } = c.req.valid("json");
 
 		if (customer_id) {
-			await deleteCachedApiCustomer({
+			await deleteCachedFullCustomer({
 				customerId: customer_id,
 				ctx,
 				source: `handleClearCustomerCache, deleting single customer cache`,
@@ -21,7 +21,7 @@ export const handleClearCustomerCache = createRoute({
 		}
 
 		if (customer_ids) {
-			await batchDeleteCachedCustomers({
+			await batchDeleteCachedFullCustomers({
 				customers: customer_ids.map((id) => ({
 					customerId: id,
 					orgId: ctx.org.id,
