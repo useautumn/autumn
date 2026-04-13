@@ -150,19 +150,26 @@ const SpendLimitRow = ({
 const UsageAlertRow = ({
 	usageAlert,
 	featureNameById,
-	remaining,
-	remainingPercentage,
+	featureBalance,
 	onClick,
 }: {
 	usageAlert: DbUsageAlert;
 	featureNameById: Map<string, string>;
-	remaining: number | null;
-	remainingPercentage: number | null;
+	featureBalance: {
+		remaining: number;
+		remainingPercentage: number | null;
+		usage: number;
+		usagePercentage: number | null;
+	} | null;
 	onClick: () => void;
 }) => {
 	const isPercentageType =
 		usageAlert.threshold_type === "usage_percentage" ||
 		usageAlert.threshold_type === "remaining_percentage";
+
+	const isUsageType =
+		usageAlert.threshold_type === "usage" ||
+		usageAlert.threshold_type === "usage_percentage";
 
 	const thresholdLabel = isPercentageType
 		? `${usageAlert.threshold}%`
@@ -174,6 +181,28 @@ const UsageAlertRow = ({
 		remaining: "absolute remaining",
 		remaining_percentage: "% remaining of allowance",
 	};
+
+	const statusPill = (() => {
+		if (!featureBalance) return null;
+
+		if (isUsageType) {
+			const percentage = featureBalance.usagePercentage;
+			return (
+				<Pill>
+					Usage: {featureBalance.usage.toLocaleString()}
+					{percentage !== null && ` (${Math.round(percentage)}%)`}
+				</Pill>
+			);
+		}
+
+		return (
+			<Pill>
+				Remaining: {featureBalance.remaining.toLocaleString()}
+				{featureBalance.remainingPercentage !== null &&
+					` (${Math.round(featureBalance.remainingPercentage)}%)`}
+			</Pill>
+		);
+	})();
 
 	return (
 		<button type="button" className={rowClassName} onClick={onClick}>
@@ -190,13 +219,7 @@ const UsageAlertRow = ({
 				</span>
 			)}
 			<div className="ml-auto flex items-center gap-1.5 shrink-0">
-				{remaining !== null && (
-					<Pill>
-						Remaining: {remaining.toLocaleString()}
-						{remainingPercentage !== null &&
-							` (${Math.round(remainingPercentage)}%)`}
-					</Pill>
-				)}
+				{statusPill}
 				<Pill>At: {thresholdLabel}</Pill>
 				<Pill className="hidden sm:inline">
 					{thresholdTypeLabel[usageAlert.threshold_type]}
@@ -261,11 +284,16 @@ export function CustomerBillingControlsSection() {
 		? (selectedEntity.overage_allowed ?? [])
 		: (fullCustomer?.overage_allowed ?? []);
 
-	const remainingByFeatureId = useMemo(() => {
+	const balanceByFeatureId = useMemo(() => {
 		if (!fullCustomer)
 			return new Map<
 				string,
-				{ remaining: number; remainingPercentage: number | null }
+				{
+					remaining: number;
+					remainingPercentage: number | null;
+					usage: number;
+					usagePercentage: number | null;
+				}
 			>();
 
 		const featureIds = [
@@ -278,7 +306,12 @@ export function CustomerBillingControlsSection() {
 
 		const result = new Map<
 			string,
-			{ remaining: number; remainingPercentage: number | null }
+			{
+				remaining: number;
+				remainingPercentage: number | null;
+				usage: number;
+				usagePercentage: number | null;
+			}
 		>();
 		for (const featureId of featureIds) {
 			const cusEnts = fullCustomerToCustomerEntitlements({
@@ -303,10 +336,15 @@ export function CustomerBillingControlsSection() {
 				entityId: entityId ?? undefined,
 			});
 
+			const usage = totalAllowance - balance;
+
 			result.set(featureId, {
 				remaining: balance,
 				remainingPercentage:
 					totalAllowance > 0 ? (balance / totalAllowance) * 100 : null,
+				usage,
+				usagePercentage:
+					totalAllowance > 0 ? (usage / totalAllowance) * 100 : null,
 			});
 		}
 		return result;
@@ -490,18 +528,16 @@ export function CustomerBillingControlsSection() {
 						<BillingControlsGroup title="Usage alerts" emptyText="" hasItems>
 							<div className="flex flex-col gap-1.5 rounded-lg">
 								{usageAlerts.map((usageAlert, index) => {
-									const featureRemaining = usageAlert.feature_id
-										? remainingByFeatureId.get(usageAlert.feature_id)
+									const featureBalance = usageAlert.feature_id
+										? balanceByFeatureId.get(usageAlert.feature_id) ??
+											null
 										: null;
 									return (
 										<UsageAlertRow
 											key={`usage-alert-${usageAlert.feature_id ?? "global"}-${usageAlert.name ?? index}`}
 											usageAlert={usageAlert}
 											featureNameById={featureNameById}
-											remaining={featureRemaining?.remaining ?? null}
-											remainingPercentage={
-												featureRemaining?.remainingPercentage ?? null
-											}
+											featureBalance={featureBalance}
 											onClick={() =>
 												setSheet({
 													type: "billing-usage-alert-edit",
