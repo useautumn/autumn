@@ -22,7 +22,7 @@ export interface BuildAttachRequestBodyParams {
 	customerId: string | undefined;
 	entityId: string | undefined;
 	product: ProductV2 | undefined;
-	prepaidOptions: Record<string, number>;
+	prepaidOptions: Record<string, number | undefined>;
 	items: ProductItem[] | null;
 	version: number | undefined;
 	trialLength: number | null;
