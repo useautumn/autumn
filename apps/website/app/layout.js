@@ -30,11 +30,11 @@ export const metadata = {
   ],
   authors: [{ name: "Autumn" }],
   creator: "Autumn",
-  metadataBase: new URL("https://useautumn.com/"),
+  metadataBase: new URL("https://autumndev.vercel.app"),
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://useautumn.com/",
+    url: "https://autumndev.vercel.app",
     siteName: "Autumn",
     title: "Autumn — Billing Infrastructure for AI Startups",
     description:

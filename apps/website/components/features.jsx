@@ -4,14 +4,17 @@ import { useRef } from "react";
 import { FeatureIconAnimation } from "./feature-icon-animation";
 
 function FeatureCard({ feature }) {
+  const isDesktop =
+    typeof window !== "undefined" &&
+    window.matchMedia("(hover: hover)").matches;
   const iconRef = useRef(null);
   return (
     <div
-      onMouseEnter={() => iconRef.current?.play()}
-      onMouseLeave={() => iconRef.current?.reverse()}
-      className="group relative flex px-4 md:px-6 flex-col justify-between p-6 bg-[#0F0F0F] min-h-[200px] md:min-h-[280px] border-r border-b border-[#292929] overflow-hidden cursor-pointer"
+      onMouseEnter={() => isDesktop && iconRef.current?.play()}
+      onMouseLeave={() => isDesktop && iconRef.current?.reverse()}
+      className="group relative flex px-4 md:px-4 flex-col justify-between p-6 bg-[#0F0F0F] min-h-[200px] md:min-h-[280px] border-r border-b border-[#292929] overflow-hidden cursor-pointer"
     >
-      <div className="absolute inset-0 opacity-0 translate-y-6 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out pointer-events-none z-0 hidden md:block">
+      <div className="absolute inset-0 opacity-0 translate-y-6 md:group-hover:opacity-100 md:group-hover:translate-y-0 pointer-events-none z-0 hidden md:block">
         <video
           src="/images/features/pixel effect.webm"
           autoPlay
@@ -22,7 +25,7 @@ function FeatureCard({ feature }) {
         />
       </div>
       {/* Hover Gradient Overlay */}
-      <div className="absolute inset-x-0 bottom-0 h-[70%] bg-[linear-gradient(to_bottom,rgba(10,10,10,0)_0%,rgba(135,82,250,0.15)_40%,rgba(135,82,250,0.45)_70%,rgba(135,82,250,0.85)_90%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-[70%] bg-[linear-gradient(to_bottom,rgba(10,10,10,0)_0%,rgba(135,82,250,0.15)_40%,rgba(135,82,250,0.45)_70%,rgba(135,82,250,0.85)_90%)] opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
       <div className="relative z-10 flex flex-col h-full gap-[42px] md:gap-24.5">
         <feature.Icon className="w-6 h-6 text-white md:hidden" />
