@@ -16,6 +16,7 @@ import {
 	STRIPE_MAX_KEY_LENGTH,
 } from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { CusService } from "@/internal/customers/CusService";
 import { getOrSetCachedFullCustomer } from "../../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer";
 import { updateCachedCustomerData } from "../../cusUtils/fullCustomerCacheUtils/updateCachedCustomerData";
@@ -181,6 +182,14 @@ export const updateCustomer = async ({
 		customerId: newCustomerId ?? customerId,
 		source: "updateCustomer",
 	});
+
+	triggerAutoTopUpsOnEnabled({
+		ctx,
+		oldCustomer: originalCustomer,
+		fullCustomer,
+	}).catch((err) =>
+		ctx.logger.error("triggerAutoTopUpsOnEnabled failed: ", { error: err }),
+	);
 
 	return {
 		oldCustomer: originalCustomer,

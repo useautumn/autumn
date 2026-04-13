@@ -90,6 +90,7 @@ export class CusService {
 					orgId,
 					orgSlug: org.slug,
 				});
+
 				const query = getFullCusQuery({
 					idOrInternalId,
 					orgId,
@@ -149,7 +150,10 @@ export class CusService {
 						.slice(0, 5);
 				}
 
-				if (orgId === "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF") {
+				if (
+					orgId === "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF" &&
+					idOrInternalId === "698fb72e4c5fa12c1cd11ddc"
+				) {
 					fullCus.customer_products = (
 						fullCus.customer_products as FullCusProduct[]
 					)
