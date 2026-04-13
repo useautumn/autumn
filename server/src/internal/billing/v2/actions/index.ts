@@ -1,4 +1,5 @@
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
+import { createSchedule } from "@/internal/billing/v2/actions/createSchedule/createSchedule";
 import { legacyAttach } from "@/internal/billing/v2/actions/legacy/legacyAttach";
 import { renew } from "@/internal/billing/v2/actions/legacy/renew";
 import { updateQuantity } from "@/internal/billing/v2/actions/legacy/updateQuantity";
@@ -11,6 +12,7 @@ import { updateSubscription } from "@/internal/billing/v2/actions/updateSubscrip
 
 export const billingActions = {
 	attach: attach,
+	createSchedule: createSchedule,
 	multiAttach: multiAttach,
 	setupPayment: setupPayment,
 	updateSubscription: updateSubscription,

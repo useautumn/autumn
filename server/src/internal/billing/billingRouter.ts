@@ -8,6 +8,7 @@ import { handleAttach } from "./attach/handleAttach.js";
 import { handleLegacyApiCheckout } from "./checkout/handleLegacyApiCheckout.js";
 import { handleSetupPayment } from "./handlers/handleSetupPayment.js";
 import { handleAttachV2 } from "./v2/handlers/handleAttachV2.js";
+import { handleCreateSchedule } from "./v2/handlers/handleCreateSchedule.js";
 import { handleMultiAttach } from "./v2/handlers/handleMultiAttach.js";
 import { handlePreviewMultiAttach } from "./v2/handlers/handlePreviewMultiAttach.js";
 import { handlePreviewUpdateSubscription } from "./v2/handlers/handlePreviewUpdateSubscription.js";
@@ -33,6 +34,7 @@ billingRpcRouter.post(
 	...handlePreviewUpdateSubscription,
 );
 billingRpcRouter.post("/billing.attach", ...handleAttachV2);
+billingRpcRouter.post("/billing.create_schedule", ...handleCreateSchedule);
 billingRpcRouter.post("/billing.multi_attach", ...handleMultiAttach);
 billingRpcRouter.post(
 	"/billing.preview_multi_attach",
