@@ -58,11 +58,14 @@ export const stripeToAutumnCustomerMiddleware = async (
 	const ctx = c.get("ctx") as StripeWebhookContext;
 	await getAutumnCustomerId({ ctx });
 
-	if (ctx.fullCustomer?.id) {
-		ctx.customerId = ctx.fullCustomer.id;
+	const customerId =
+		ctx.fullCustomer?.id || ctx.fullCustomer?.internal_id || undefined;
+
+	if (customerId) {
+		ctx.customerId = customerId;
 		ctx.rolloutSnapshot = computeRolloutSnapshot({
 			orgId: ctx.org.id,
-			customerId: ctx.customerId,
+			customerId,
 		});
 	}
 

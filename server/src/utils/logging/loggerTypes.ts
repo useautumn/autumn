@@ -43,3 +43,13 @@ export type LogWorkflowContext = {
 	payload: unknown;
 	name: string; // workflow / job name
 };
+
+export type AlertSeverity = "warning" | "error" | "critical";
+
+export type AlertCategory =
+	| "redis"
+	| "db"
+	| "worker"
+	| "cache"
+	| "billing"
+	| "system";
