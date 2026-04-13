@@ -1,5 +1,12 @@
-import type { Feature, Invoice, InvoiceLineItem } from "@autumn/shared";
 import {
+	type Feature,
+	type Invoice,
+	type InvoiceLineItem,
+	InvoiceStatus,
+	ProcessorType,
+} from "@autumn/shared";
+import {
+	ArrowCounterClockwiseIcon,
 	ArrowSquareOutIcon,
 	EyeIcon,
 	EyeSlashIcon,
@@ -14,11 +21,12 @@ import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
+import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
 
 interface InvoiceDetailSheetProps {
 	invoice: Invoice;
@@ -60,8 +68,11 @@ export function InvoiceDetailSheet({
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
 	const env = useEnv();
-	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const [showDescriptions, setShowDescriptions] = useState(false);
+	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+	const { customer } = useCusQuery();
+	const isStripeCustomer = customer?.processor?.type === ProcessorType.Stripe;
+	const canRefund = isStripeCustomer && invoice.status === InvoiceStatus.Paid;
 
 	// Group line items: first by product_id, then within each product by
 	// stripe_subscription_item_id (for tiered) or individually.
@@ -268,18 +279,32 @@ export function InvoiceDetailSheet({
 
 			{/* Footer */}
 			<div className="p-4 flex gap-2 border-t border-border/40">
-				<Button variant="secondary" className="flex-1" onClick={closeSheet}>
-					Close
-				</Button>
 				<Button
-					variant="primary"
+					variant="secondary"
 					className="flex-1"
 					onClick={handleViewInvoice}
 				>
 					<ArrowSquareOutIcon size={16} className="mr-1.5" />
-					View Invoice
+					Open Invoice
 				</Button>
+				{canRefund && (
+					<Button
+						variant="primary"
+						className="flex-1"
+						onClick={() => setRefundDialogOpen(true)}
+					>
+						<ArrowCounterClockwiseIcon size={16} className="mr-1.5" />
+						Refund Invoice
+					</Button>
+				)}
 			</div>
+			{canRefund && (
+				<RefundInvoiceDialog
+					open={refundDialogOpen}
+					onOpenChange={setRefundDialogOpen}
+					invoice={invoice}
+				/>
+			)}
 		</div>
 	);
 }

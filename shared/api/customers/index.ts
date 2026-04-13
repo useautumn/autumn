@@ -13,7 +13,6 @@ export * from "./customerLegacyData";
 export * from "./customerOpModels";
 export * from "./flags/index";
 export * from "./previousVersions/index";
-export * from "./refunds/customerRefundModels";
 
 // NOTE: changes/ and requestChanges/ are NOT exported here to avoid circular imports
 // Import them directly where needed (e.g., versionChangeRegistry.ts)
