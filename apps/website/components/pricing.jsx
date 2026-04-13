@@ -57,7 +57,7 @@ export default function Pricing() {
       <div className="min-h-screen relative flex w-full lg:w-[calc(100%+calc(var(--page-pad)*2))] lg:-ml-(--page-pad) items-center justify-center lg:py-24 pb-3">
         {/* Desktop Background */}
         <Image
-          src="/images/pricing/pricingbg.webp"
+          src="/images/pricing/pricing.webp"
           alt="pricing background desktop"
           fill
           className="object-cover absolute z-10 lg:z-50 hidden md:block"
@@ -65,7 +65,7 @@ export default function Pricing() {
         />
         {/* Mobile Background */}
         <Image
-          src="/images/pricing/pricing_mobile.webp"
+          src="/images/pricing/pricing-mob.webp"
           alt="pricing background mobile"
           fill
           className="object-cover absolute z-10 lg:z-50 block md:hidden"
@@ -85,11 +85,9 @@ export default function Pricing() {
               {plans.map((plan, index) => (
                 <div
                   key={plan.name}
-                  className={`relative flex flex-col bg-black lg:bg-transparent border lg:border-0 border-[#292929] ${
-                    index === 0 ? "lg:border-r" : ""
-                  } ${
-                    index === 1 ? "lg:border-r" : ""
-                  } ${index === 2 ? "md:col-span-2 lg:col-span-1 md:w-[calc(50%-16px)] md:justify-self-center lg:w-full lg:justify-self-auto" : ""}`}
+                  className={`relative flex flex-col bg-black lg:bg-transparent border lg:border-0 border-[#292929] ${index === 0 ? "lg:border-r" : ""
+                    } ${index === 1 ? "lg:border-r" : ""
+                    } ${index === 2 ? "md:col-span-2 lg:col-span-1 md:w-[calc(50%-16px)] md:justify-self-center lg:w-full lg:justify-self-auto" : ""}`}
                 >
                   {plan.isPro && (
                     <div className="hidden lg:block absolute -inset-px z-20 pointer-events-none border border-transparent [border-image:linear-gradient(to_bottom,#A175FF,#000000)_1]"></div>

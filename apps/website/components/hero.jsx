@@ -147,7 +147,7 @@ export default function Hero() {
 
   return (
     <div ref={containerRef}>
-      <div className="relative hero-root opacity-0 flex flex-col items-stretch pb-0 xl:pb-2.5 mb-0 lg:mb-[33px] bg-[#0F0F0F]">
+      <div className="relative hero-root opacity-0 flex flex-col items-stretch pb-0 md:pb-12 mb-0 bg-[#0F0F0F]">
         <div className="relative hidden xl:block">
           <Image
             className="hero-bg w-full hidden md:block"
@@ -205,10 +205,10 @@ export default function Hero() {
                 {/* Adjusted px-3 for mobile, md:px-4 for desktop */}
                 <div className="relative overflow-hidden flex items-center gap-1.5 md:gap-2.5 cursor-pointer justify-between py-2 px-3 md:px-4 md:py-3.5 md:w-50 font-sans bg-[#9564ff] hover:bg-[#7D46F4] transition-colors duration-300">
                   <CTALines />
-                  <span className="relative z-10 tracking-tight text-white font-medium text-[13px] md:text-base whitespace-nowrap">
+                  <span className="relative z-10 tracking-[-2%] uppercase md:normal-case text-white font-medium text-[12px] md:text-base whitespace-nowrap">
                     Start for free
                   </span>
-                  <span className="relative z-10 scale-75 md:scale-100">
+                  <span className="relative z-10 scale-95 md:scale-100">
                     <IconCTAStart />
                   </span>
                 </div>
@@ -227,10 +227,10 @@ export default function Hero() {
               >
                 <div className="relative overflow-hidden flex items-center gap-1.5 md:gap-2.5 border-r border-[#292929] text-white cursor-pointer justify-between py-2 px-3 md:px-4 md:py-3.5 md:w-50 font-sans bg-[#0F0F0F] hover:bg-[#FFFFFF1F] transition-colors duration-300">
                   <CTALines />
-                  <span className="relative z-10 tracking-tight text-[12px] md:text-[16px] whitespace-nowrap">
+                  <span className="relative z-10 tracking-[-2%] text-[12px] uppercase md:normal-case md:text-[16px] whitespace-nowrap">
                     Read docs
                   </span>
-                  <span className="relative z-10 scale-75 md:scale-100">
+                  <span className="relative z-10 scale-100">
                     <IconCTADocs />
                   </span>
                 </div>
@@ -238,12 +238,12 @@ export default function Hero() {
             </Link>
           </div>
 
-          <div className="hero-cta flex flex-nowrap gap-2 md:gap-3 ml-2 md:ml-3 h-10.5 md:h-12.5 flex-1">
+          <div className="hero-cta hidden md:flex flex-nowrap gap-2 md:gap-3 ml-2 md:ml-3 h-10.5 md:h-12.5 flex-1">
             <div className="border-r border-[#292929] h-full hidden md:block" />
             <div className="border-r border-[#292929] h-full hidden md:block" />
             <div className="border-r border-[#292929] h-full hidden md:block" />
 
-            <div className="border-r border-[#292929] h-full hidden min-[400px]:block" />
+            <div className="border-r border-[#292929] h-full hidden md:block" />
             <div className="border-r border-[#292929] h-full hidden md:block" />
             <div className="border-r border-[#292929] h-full hidden md:block" />
             <div className="border-r border-[#292929] h-full hidden md:block" />

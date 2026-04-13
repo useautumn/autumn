@@ -149,16 +149,20 @@ export default function ProblemAnimation() {
   const handleImageLoad = (index, event) => {
     const img = event.target;
     const isMobile = window.innerWidth < 768;
-    const scale = isMobile ? 0.6 : 1;
+    const scale = isMobile ? 0.7 : 1;
 
     const w = img.naturalWidth * scale;
     const h = img.naturalHeight * scale;
 
+    img.style.width = `${w}px`;
+    img.style.height = `${h}px`;
+
     const container = containerRef.current;
+    const spread = isMobile ? 0.7 : 0.4;
     const spawnX =
       container.offsetWidth / 2 +
-      (Math.random() - 0.5) * (container.offsetWidth * 0.4);
-    const spawnY = -100 - index * 50;
+      (Math.random() - 0.5) * (container.offsetWidth * spread);
+    const spawnY = isMobile ? -100 : -100 - index * 50;
 
     const body = Matter.Bodies.rectangle(spawnX, spawnY, w, h, {
       chamfer: { radius: h / 4 },
@@ -187,7 +191,7 @@ export default function ProblemAnimation() {
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-[450px] lg:h-full bg-[#080808] overflow-hidden touch-none"
+      className="relative w-full h-140 md:h-175 lg:h-175 xl:h-full bg-[#080808] overflow-hidden touch-none"
     >
       {IMAGE_SOURCES.map((src, i) => (
         <div

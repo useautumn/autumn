@@ -150,7 +150,7 @@ export default function ProductionScale() {
   return (
     <div ref={containerRef} className="overflow-hidden">
       <section className="ps-section flex flex-col lg:flex-row items-start justify-between py-12 lg:py-16 gap-12 lg:gap-0 bg-[#0F0F0F]">
-        <div className="flex px-6 xl:pl-22.5 lg:pr-0 flex-col my-auto gap-4 lg:gap-6 pt-2 w-full lg:w-auto">
+        <div className="flex px-4 xl:pl-22.5 lg:pr-0 flex-col my-auto gap-4 lg:gap-6 pt-2 w-full lg:w-auto">
           <div className="leading-none lg:leading-10">
             <p className="text-[#FFFFFF99] tracking-[-4%] text-[30px] lg:text-[40px] font-normal">
               Built for
@@ -163,7 +163,8 @@ export default function ProductionScale() {
             Autumn handles billions of billing events monthly. Open source core,
             self-host ready,{" "}
             <span className="text-white">
-              designed for teams that <br className="hidden lg:block" /> can&apos;t afford billing downtime.
+              designed for teams that <br className="hidden lg:block" />{" "}
+              can&apos;t afford billing downtime.
             </span>
           </p>
         </div>
