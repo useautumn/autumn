@@ -15,7 +15,7 @@ import {
 	replaceEntityInCusEnt,
 } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
-import { cancelSubsForEntity } from "../handlers/handleDeleteEntity/cancelSubsForEntity";
+import { cancelSubsForEntity } from "./deleteEntity/cancelEntitySubscriptions";
 
 export const deleteEntity = async ({
 	ctx,
@@ -132,7 +132,7 @@ export const deleteEntity = async ({
 	// Cancel any subs
 	await cancelSubsForEntity({
 		ctx,
-		cusProducts,
+		fullCustomer: fullCus,
 		entity,
 	});
 
