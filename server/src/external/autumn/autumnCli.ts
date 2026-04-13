@@ -1052,8 +1052,18 @@ export class AutumnInt {
 			TResponse = CreateScheduleResponse,
 		>(
 			params: TInput,
+			{ timeout }: { timeout?: number } = {},
 		): Promise<TResponse> => {
-			return await this.post(`/billing.create_schedule`, params);
+			const data = await this.post(`/billing.create_schedule`, params);
+
+			const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+			const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+			const finalTimeout = timeout ?? defaultTimeout;
+			if (finalTimeout) {
+				await new Promise((resolve) => setTimeout(resolve, finalTimeout));
+			}
+
+			return data;
 		},
 
 		multiAttach: async (
