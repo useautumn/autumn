@@ -5,6 +5,7 @@ import { handleGetCusReferrals } from "./internalHandlers/handleGetCusReferrals.
 import { handleGetCustomerEvents } from "./internalHandlers/handleGetCustomerEvents.js";
 import { handleGetCustomerProduct } from "./internalHandlers/handleGetCustomerProduct.js";
 import { handleGetFullCustomers } from "./internalHandlers/handleGetFullCustomers.js";
+import { handleGetInvoiceLineItems } from "./internalHandlers/handleGetInvoiceLineItems.js";
 import { handleSearchCustomers } from "./internalHandlers/handleSearchCustomers.js";
 
 export const internalCusRouter = new Hono<HonoEnv>();
@@ -17,4 +18,8 @@ internalCusRouter.get(
 	"/:customer_id/product/:product_id",
 	...handleGetCustomerProduct,
 );
-internalCusRouter.get("/:customer_id/referrals", ...handleGetCusReferrals);
+internalCusRouter.post("/:customer_id/referrals", ...handleGetCusReferrals);
+internalCusRouter.post(
+	"/:customer_id/invoice-line-items",
+	...handleGetInvoiceLineItems,
+);

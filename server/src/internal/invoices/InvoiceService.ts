@@ -1,6 +1,7 @@
 import {
 	type ApiInvoiceV1,
 	type Customer,
+	ErrCode,
 	type Feature,
 	type InsertInvoice,
 	type Invoice,
@@ -8,14 +9,16 @@ import {
 	type InvoiceStatus,
 	invoices,
 	type Organization,
+	RecaseError,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { getInvoiceDiscounts } from "@server/external/stripe/stripeInvoiceUtils.js";
 import { generateId } from "@server/utils/genUtils.js";
 import { Autumn } from "autumn-js";
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type Stripe from "stripe";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export const processInvoice = ({
 	invoice,
@@ -72,6 +75,58 @@ export class InvoiceService {
 		})) as Invoice & {
 			customer: Customer & { org: Organization & { master: Organization } };
 		};
+	}
+
+	static async getMany({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+		return (await db.query.invoices.findMany({
+			where: inArray(invoices.id, ids),
+			with: {
+				customer: {
+					with: {
+						org: {
+							with: {
+								master: true,
+							},
+						},
+					},
+				},
+			},
+		})) as (Invoice & {
+			customer: Customer & { org: Organization & { master: Organization } };
+		})[];
+	}
+
+	static async assertOwnership({
+		ctx,
+		id,
+	}: {
+		ctx: AutumnContext;
+		id: string | string[];
+	}) {
+		const invoices = await InvoiceService.getMany({
+			db: ctx.db,
+			ids: Array.isArray(id) ? id : [id],
+		});
+
+		if (invoices.length === 0) {
+			throw new RecaseError({
+				message: `Invoices not found`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		invoices.forEach((invoice) => {
+			if (invoice.customer.org.id !== ctx.org.id) {
+				throw new RecaseError({
+					message: `Invoice ${invoice.id} not owned by this organization`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+		});
+
+		return true;
 	}
 
 	static async list({
