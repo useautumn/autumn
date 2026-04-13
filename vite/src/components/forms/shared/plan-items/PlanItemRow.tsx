@@ -14,8 +14,8 @@ export function getPlanItemPrepaidQuantity({
 	features,
 }: {
 	featureId: string;
-	prepaidOptions: Record<string, number>;
-	initialPrepaidOptions: Record<string, number>;
+	prepaidOptions: Record<string, number | undefined>;
+	initialPrepaidOptions: Record<string, number | undefined>;
 	existingOptions?: FeatureOptions[];
 	features: Feature[];
 }) {
@@ -82,8 +82,8 @@ export function PlanItemRow({
 	originalItemsMap: Map<string, ProductItem>;
 	originalItems: ProductItem[] | undefined;
 	features: Feature[];
-	prepaidOptions: Record<string, number>;
-	initialPrepaidOptions: Record<string, number>;
+	prepaidOptions: Record<string, number | undefined>;
+	initialPrepaidOptions: Record<string, number | undefined>;
 	existingOptions?: FeatureOptions[];
 	form: UseUpdateSubscriptionForm | UseAttachForm;
 	showDiff: boolean;

@@ -52,16 +52,18 @@ function usePrepaidDisplayState({
 	featureId: string | undefined;
 	isEditingQuantity: boolean;
 }) {
-	const inputQuantity = prepaidQuantity ?? 0;
+	const inputQuantity = prepaidQuantity ?? undefined;
 	const billingUnitStep = item.billing_units ?? 1;
 
 	const normalizedBillingUnits = billingUnitStep > 0 ? billingUnitStep : 1;
 	const roundedQuantity = roundUsageToNearestBillingUnit({
-		usage: inputQuantity,
+		usage: inputQuantity ?? 0,
 		billingUnits: normalizedBillingUnits,
 	});
 	const shouldShowRoundingHint =
-		normalizedBillingUnits > 1 && roundedQuantity !== inputQuantity;
+		inputQuantity !== undefined &&
+		normalizedBillingUnits > 1 &&
+		roundedQuantity !== inputQuantity;
 
 	const showDebouncedOffUnitRing = useDebounce({
 		value: shouldShowRoundingHint,
@@ -97,16 +99,18 @@ function PrepaidQuantityControl({
 	readOnly: boolean;
 	form: UseUpdateSubscriptionForm | UseAttachForm;
 	featureId: string;
-	inputQuantity: number;
+	inputQuantity: number | undefined;
 	step: number;
 	showRing: boolean;
 	isEditing: boolean;
 	onEditingChange: (editing: boolean) => void;
 }) {
+	const displayText = inputQuantity !== undefined ? `x${inputQuantity}` : "—";
+
 	if (readOnly) {
 		return (
 			<div className="flex items-center h-10 px-3 rounded-xl input-base w-fit shrink-0">
-				<span className="text-sm tabular-nums text-t3">x{inputQuantity}</span>
+				<span className="text-sm tabular-nums text-t3">{displayText}</span>
 			</div>
 		);
 	}
@@ -159,9 +163,11 @@ function PrepaidQuantityControl({
 						transition={FAST_TRANSITION}
 						className="flex items-center gap-2"
 					>
-						<span className="text-sm tabular-nums text-t3">
-							x{inputQuantity}
-						</span>
+						{inputQuantity !== undefined && (
+							<span className="text-sm tabular-nums text-t3">
+								{displayText}
+							</span>
+						)}
 						<IconButton
 							icon={<PencilSimpleIcon size={14} />}
 							variant="skeleton"
