@@ -1,6 +1,6 @@
 // Suppress BullMQ eviction policy warnings BEFORE any imports
 const originalWarn = console.warn;
-console.warn = (...args: any[]) => {
+console.warn = (...args: unknown[]) => {
 	const msg = args.join(" ");
 	if (msg.includes("Eviction policy")) {
 		return;
@@ -99,19 +99,18 @@ if (cluster.isPrimary) {
 	});
 } else {
 	// Worker process
-	console.log(`[Worker ${process.pid}] Starting queue consumer...`);
+	const startupStartedAt = Date.now();
+	const queueImplementation = process.env.SQS_QUEUE_URL ? "SQS" : "BullMQ";
 	startMemoryMonitor("worker", 60_000);
 
 	// Auto-detect which queue implementation to use
 	if (process.env.SQS_QUEUE_URL) {
-		console.log(`[Worker ${process.pid}] Using SQS queue implementation`);
 		const { initWorkers } = await import("./queue/initWorkers.js");
-		await initWorkers();
+		await initWorkers({ startupStartedAt, queueImplementation });
 		// SQS implementation handles its own SIGTERM/SIGINT
 	} else if (process.env.QUEUE_URL) {
-		console.log(`[Worker ${process.pid}] Using BullMQ queue implementation`);
 		const { initWorkers } = await import("./queue/bullmq/initBullMqWorkers.js");
-		await initWorkers();
+		await initWorkers({ startupStartedAt, queueImplementation });
 		// BullMQ implementation handles its own SIGTERM/SIGINT
 	} else {
 		console.error("No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL");

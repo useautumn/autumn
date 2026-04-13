@@ -17,6 +17,7 @@ import { JobName } from "../JobName.js";
 import { workerRedis } from "./initBullMq.js";
 
 const NUM_WORKERS = 10;
+const shouldLogBullMqWorkerReady = false;
 
 const actionHandlers = [
 	JobName.HandleProductsUpdated,
@@ -147,12 +148,15 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 					});
 					return;
 				}
-			} catch (error: any) {
+			} catch (error: unknown) {
+				const errorMessage =
+					error instanceof Error ? error.message : "Unknown error";
+				const errorStack = error instanceof Error ? error.stack : undefined;
 				workerLogger.error(`Failed to process bullmq job: ${job.name}`, {
 					jobName: job.name,
 					error: {
-						message: error.message,
-						stack: error.stack,
+						message: errorMessage,
+						stack: errorStack,
 					},
 				});
 			}
@@ -172,6 +176,7 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 	);
 
 	worker.on("ready", () => {
+		if (!shouldLogBullMqWorkerReady) return;
 		console.log(`Worker ${id} ready`);
 	});
 
@@ -179,9 +184,16 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 		console.log(`Worker ${id} stalled (jobId: ${jobId})`);
 	});
 
-	worker.on("error", async (error: any) => {
-		if (error.code !== "ECONNREFUSED") {
-			console.log("WORKER ERROR:", error.message);
+	worker.on("error", async (error: unknown) => {
+		const errorCode =
+			error && typeof error === "object" && "code" in error
+				? error.code
+				: undefined;
+		const errorMessage =
+			error instanceof Error ? error.message : "Unknown error";
+
+		if (errorCode !== "ECONNREFUSED") {
+			console.log("WORKER ERROR:", errorMessage);
 		}
 	});
 
@@ -190,7 +202,13 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 	});
 };
 
-export const initWorkers = async () => {
+export const initWorkers = async ({
+	startupStartedAt,
+	queueImplementation,
+}: {
+	startupStartedAt: number;
+	queueImplementation: string;
+}) => {
 	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
 	await warmupRegionalRedis();
 
@@ -204,6 +222,11 @@ export const initWorkers = async () => {
 			}),
 		);
 	}
+
+	const startupDurationMs = Date.now() - startupStartedAt;
+	console.log(
+		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
+	);
 
 	return workers;
 };
