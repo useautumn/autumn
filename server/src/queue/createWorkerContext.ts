@@ -51,6 +51,11 @@ export const createWorkerContext = async ({
 		},
 	});
 
+	const rolloutSnapshot = computeRolloutSnapshot({
+		orgId: org.id,
+		customerId,
+	});
+
 	const ctx: AutumnContext = {
 		org,
 		env,
@@ -69,10 +74,7 @@ export const createWorkerContext = async ({
 		expand: [],
 		skipCache: true,
 		extraLogs: {},
-		rolloutSnapshot: computeRolloutSnapshot({
-			orgId: org.id,
-			customerId,
-		}),
+		rolloutSnapshot,
 	};
 
 	return ctx;

@@ -9,8 +9,8 @@ import { OnboardingLayout } from "./app/OnboardingLayout";
 import { useSession } from "./lib/auth-client";
 import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
-import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
 import { EdgeConfigView } from "./views/admin/edge-config/EdgeConfigView";
+import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
 import { OAuthClientsView } from "./views/admin/oauth/OAuthClientsView";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
 import { Consent } from "./views/auth/Consent";
@@ -72,8 +72,14 @@ export default function App() {
 					<Route path="*" element={<DefaultView />} />
 					<Route path="/settings" element={<OrgSettingsView />} />
 					<Route path="/admin" element={<AdminView />} />
+					<Route path="/sandbox/admin" element={<AdminView />} />
 					<Route path="/admin/oauth" element={<OAuthClientsView />} />
+					<Route path="/sandbox/admin/oauth" element={<OAuthClientsView />} />
 					<Route path="/admin/edge-config" element={<EdgeConfigView />} />
+					<Route
+						path="/sandbox/admin/edge-config"
+						element={<EdgeConfigView />}
+					/>
 					<Route
 						path="/impersonate-redirect"
 						element={<ImpersonateRedirect />}

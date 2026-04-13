@@ -47,6 +47,8 @@ export const createWorkerAutumnContext = async ({
 		createdAt: org.created_at || Date.now(),
 	});
 
+	const rolloutSnapshot = computeRolloutSnapshot({ orgId: org.id });
+
 	return {
 		org,
 		env,
@@ -64,6 +66,6 @@ export const createWorkerAutumnContext = async ({
 		timestamp: Date.now(),
 		skipCache: false,
 		extraLogs: {},
-		rolloutSnapshot: computeRolloutSnapshot({ orgId: org.id }),
+		rolloutSnapshot,
 	} satisfies AutumnContext;
 };

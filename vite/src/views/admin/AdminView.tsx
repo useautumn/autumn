@@ -1,8 +1,10 @@
+import { AppEnv } from "@autumn/shared";
 import { Globe, Sliders } from "@phosphor-icons/react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import { useEnv } from "@/utils/envUtils";
 import { AdminOrgTable } from "@/views/admin/AdminOrgTable";
 import { AdminUserTable } from "@/views/admin/AdminUserTable";
 import { DefaultView } from "../DefaultView";
@@ -12,7 +14,9 @@ import { useAdmin } from "./hooks/useAdmin";
 
 export const AdminView = () => {
 	const navigate = useNavigate();
+	const env = useEnv();
 	const { isAdmin, isPending } = useAdmin();
+	const adminBasePath = env === AppEnv.Sandbox ? "/sandbox/admin" : "/admin";
 
 	if (isPending) {
 		return (
@@ -27,7 +31,7 @@ export const AdminView = () => {
 	}
 
 	const handleStopImpersonating = async () => {
-		const { data, error } = await authClient.admin.stopImpersonating();
+		const { error } = await authClient.admin.stopImpersonating();
 
 		if (error) {
 			toast.error("Something went wrong");
@@ -42,7 +46,7 @@ export const AdminView = () => {
 			<div className="flex justify-end absolute top-10 right-10 gap-2">
 				<CreateUser />
 				<Button
-					onClick={() => navigate("/admin/edge-config")}
+					onClick={() => navigate(`${adminBasePath}/edge-config`)}
 					variant="outline"
 					size="sm"
 					className="w-fit"
@@ -51,7 +55,7 @@ export const AdminView = () => {
 					Rollouts
 				</Button>
 				<Button
-					onClick={() => navigate("/admin/oauth")}
+					onClick={() => navigate(`${adminBasePath}/oauth`)}
 					variant="outline"
 					size="sm"
 					className="w-fit"

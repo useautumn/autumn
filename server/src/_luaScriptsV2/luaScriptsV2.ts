@@ -13,6 +13,7 @@ const LOCK_DIR = join(DEDUCTION_DIR, "lock");
 const DELETE_CACHE_DIR = join(__dirname, "deleteFullCustomerCache");
 const RESET_DIR = join(__dirname, "resetCustomerEntitlements");
 const UPDATE_DIR = join(__dirname, "updateCustomerEntitlements");
+const FULL_SUBJECT_DIR = join(__dirname, "fullSubject");
 
 // ============================================================================
 // HELPER MODULES
@@ -164,6 +165,31 @@ const setFullCustomerCacheScript = readFileSync(
  */
 export const SET_FULL_CUSTOMER_CACHE_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
 ${setFullCustomerCacheScript}`;
+
+const reserveFullSubjectWriteScript = readFileSync(
+	join(FULL_SUBJECT_DIR, "reserveFullSubjectWrite.lua"),
+	"utf-8",
+);
+
+/** Reserve a FullSubject write so only one non-overwrite writer proceeds. */
+export const RESERVE_FULL_SUBJECT_WRITE_SCRIPT = reserveFullSubjectWriteScript;
+
+const releaseFullSubjectReservationScript = readFileSync(
+	join(FULL_SUBJECT_DIR, "releaseFullSubjectReservation.lua"),
+	"utf-8",
+);
+
+/** Release a FullSubject write reservation if the token still matches. */
+export const RELEASE_FULL_SUBJECT_RESERVATION_SCRIPT =
+	releaseFullSubjectReservationScript;
+
+const updateCustomerDataV2Script = readFileSync(
+	join(FULL_SUBJECT_DIR, "updateCustomerDataV2.lua"),
+	"utf-8",
+);
+
+/** Atomically update top-level customer fields in the cached FullSubject. */
+export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = updateCustomerDataV2Script;
 
 // ============================================================================
 // RESET CUSTOMER ENTITLEMENTS SCRIPT (deprecated — kept for backward compat)

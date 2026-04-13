@@ -19,9 +19,12 @@ import {
 	CLAIM_LOCK_RECEIPT_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
+	RELEASE_FULL_SUBJECT_RESERVATION_SCRIPT,
+	RESERVE_FULL_SUBJECT_WRITE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	UPDATE_CUSTOMER_DATA_SCRIPT,
+	UPDATE_CUSTOMER_DATA_V2_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
 	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
@@ -62,7 +65,7 @@ export const getConfiguredRegions = (): string[] => {
 };
 
 /** Wait for a Redis instance to be ready */
-const waitForRedisReady = (
+export const waitForRedisReady = (
 	instance: Redis,
 	region: string,
 	timeoutMs = 10000,
@@ -111,12 +114,20 @@ export const warmupRegionalRedis = async (): Promise<void> => {
 	});
 
 	await Promise.all(warmupPromises);
+
+	try {
+		const { warmupRedisV2 } = await import("./initRedisV2.js");
+		await warmupRedisV2();
+	} catch (error) {
+		console.error("[Redis] v2: warmup failed -", error);
+	}
+
 	console.timeEnd("redis:warmup-total");
 	console.log(`[Redis] Warmup complete`);
 };
 
 /** Configure a Redis instance with custom commands */
-const configureRedisInstance = (redisInstance: Redis): Redis => {
+export const configureRedisInstance = (redisInstance: Redis): Redis => {
 	const batchDeductionScript = getBatchDeductionScript();
 
 	redisInstance.defineCommand("batchDeduction", {
@@ -194,6 +205,16 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
+	redisInstance.defineCommand("reserveFullSubjectWrite", {
+		numberOfKeys: 3,
+		lua: RESERVE_FULL_SUBJECT_WRITE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("releaseFullSubjectReservation", {
+		numberOfKeys: 1,
+		lua: RELEASE_FULL_SUBJECT_RESERVATION_SCRIPT,
+	});
+
 	redisInstance.defineCommand("resetCustomerEntitlements", {
 		numberOfKeys: 1,
 		lua: RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
@@ -207,6 +228,11 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 	redisInstance.defineCommand("updateCustomerData", {
 		numberOfKeys: 1,
 		lua: UPDATE_CUSTOMER_DATA_SCRIPT,
+	});
+
+	redisInstance.defineCommand("updateFullSubjectCustomerDataV2", {
+		numberOfKeys: 1,
+		lua: UPDATE_CUSTOMER_DATA_V2_SCRIPT,
 	});
 
 	redisInstance.defineCommand("appendEntityToCustomer", {
@@ -247,7 +273,7 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 };
 
 /** Create a Redis connection for a specific region */
-const createRedisConnection = ({
+export const createRedisConnection = ({
 	cacheUrl,
 	region,
 }: {
@@ -440,6 +466,19 @@ declare module "ioredis" {
 			overwrite: string,
 			pathIndexJson: string,
 		): Promise<"STALE_WRITE" | "CACHE_EXISTS" | "OK">;
+		reserveFullSubjectWrite(
+			subjectKey: string,
+			reserveKey: string,
+			guardKey: string,
+			token: string,
+			reserveTtl: string,
+			overwrite: string,
+			fetchTimeMs: string,
+		): Promise<"CACHE_EXISTS" | "RESERVED" | "STALE_WRITE">;
+		releaseFullSubjectReservation(
+			reserveKey: string,
+			token: string,
+		): Promise<"RELEASED" | "SKIPPED">;
 		resetCustomerEntitlements(
 			cacheKey: string,
 			paramsJson: string,
@@ -453,6 +492,12 @@ declare module "ioredis" {
 			paramsJson: string,
 		): Promise<string>;
 		updateCustomerData(cacheKey: string, paramsJson: string): Promise<string>;
+		updateFullSubjectCustomerDataV2(
+			subjectKey: string,
+			updatesJson: string,
+			cacheTtlSeconds: string,
+			nowMs: string,
+		): Promise<string>;
 		appendEntityToCustomer(
 			cacheKey: string,
 			entityJson: string,
