@@ -1,26 +1,51 @@
-import { CustomizePlanV1Schema } from "@api/billing/common/customizePlan/customizePlanV1";
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
+import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
+import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { z } from "zod/v4";
 
-export const CreateSchedulePlanSchema = z.object({
-	plan_id: z.string().meta({
-		description: "The ID of the plan to schedule in this phase.",
-	}),
-	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
-		description: "Optional prepaid feature quantities for this phase's plan.",
-	}),
-	version: z.number().optional().meta({
-		description: "Optional explicit plan version to schedule.",
-	}),
-	customize: CustomizePlanV1Schema.optional().meta({
-		description:
-			"Customize the plan to schedule. Can override the price, items, free trial, or a combination.",
-	}),
-	subscription_id: z.string().optional().meta({
-		description:
-			"Unsupported for create_schedule today. Requests that include this field will be rejected.",
-	}),
-});
+const CreateScheduleCustomizePlanSchema = z
+	.object({
+		price: BasePriceParamsSchema.nullable().optional().meta({
+			description:
+				"Override the base price of the plan. Pass null to remove the base price.",
+		}),
+		items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
+			description: "Override the items in the plan.",
+		}),
+	})
+	.strict()
+	.refine(
+		(customize) =>
+			customize.items !== undefined || customize.price !== undefined,
+		{
+			message: "When using customize, either items or price must be provided",
+		},
+	);
+
+export const CreateSchedulePlanSchema = z
+	.object({
+		plan_id: z.string().meta({
+			description: "The ID of the plan to schedule in this phase.",
+		}),
+		feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
+			description: "Optional prepaid feature quantities for this phase's plan.",
+		}),
+		version: z.number().optional().meta({
+			description: "Optional explicit plan version to schedule.",
+		}),
+		customize: CreateScheduleCustomizePlanSchema.optional().meta({
+			description:
+				"Customize the plan to schedule. Can override the price, items, or both.",
+		}),
+		subscription_id: z.string().optional().meta({
+			description:
+				"Unsupported for create_schedule today. Requests that include this field will be rejected.",
+		}),
+	})
+	.refine((plan) => plan.subscription_id === undefined, {
+		message: "subscription_id is not supported for create_schedule",
+		path: ["subscription_id"],
+	});
 
 export const CreateSchedulePhaseSchema = z.object({
 	starts_at: z.number().meta({

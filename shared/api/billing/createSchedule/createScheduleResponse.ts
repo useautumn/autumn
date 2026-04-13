@@ -1,4 +1,7 @@
-import { BillingResponseRequiredActionSchema } from "@api/billing/common/billingResponse";
+import {
+	BillingResponseRequiredActionSchema,
+	BillingResponseSchema,
+} from "@api/billing/common/billingResponse";
 import { z } from "zod/v4";
 
 export const CreateScheduleResponsePhaseSchema = z.object({
@@ -26,10 +29,8 @@ export const CreateScheduleResponseSchema = z.object({
 	phases: z.array(CreateScheduleResponsePhaseSchema).meta({
 		description: "Persisted phases in ascending starts_at order.",
 	}),
-	invoice: z.undefined().optional(),
-	payment_url: z.null().meta({
-		description: "Always null in the initial Autumn-only implementation.",
-	}),
+	invoice: BillingResponseSchema.shape.invoice,
+	payment_url: BillingResponseSchema.shape.payment_url,
 	required_action: BillingResponseRequiredActionSchema.optional(),
 });
 

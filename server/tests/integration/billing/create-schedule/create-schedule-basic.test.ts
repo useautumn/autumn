@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import {
+	type ApiCustomerV3,
 	type CreateScheduleParamsV0Input,
 	CusProductStatus,
 	customerEntitlements,
@@ -8,6 +9,7 @@ import {
 	schedulePhases,
 	schedules,
 } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
@@ -16,8 +18,10 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { and, eq, inArray } from "drizzle-orm";
+import { CusService } from "@/internal/customers/CusService";
+import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer";
 
-test.concurrent(`${chalk.yellowBright("create-schedule: creates sorted phases and scheduled customer products")}`, async () => {
+test.concurrent(`${chalk.yellowBright("create-schedule: bills the first phase immediately and stores later phases as scheduled")}`, async () => {
 	const pro = products.pro({
 		id: "pro",
 		items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -56,6 +60,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: creates sorted phases an
 	expect(response.customer_id).toBe(customerId);
 	expect(response.entity_id).toBeNull();
 	expect(response.payment_url).toBeNull();
+	expect(response.invoice?.total).toBe(40);
 	expect(response.phases).toHaveLength(2);
 	expect(response.phases[0]!.starts_at).toBe(now);
 	expect(response.phases[0]!.customer_product_ids).toHaveLength(2);
@@ -74,36 +79,50 @@ test.concurrent(`${chalk.yellowBright("create-schedule: creates sorted phases an
 		.where(eq(schedulePhases.schedule_id, response.schedule_id));
 	expect(dbPhases).toHaveLength(2);
 
-	const insertedCustomerProducts = await ctx.db
+	const immediatePhaseCustomerProducts = await ctx.db
 		.select()
 		.from(customerProducts)
 		.where(
-			inArray(
-				customerProducts.id,
-				response.phases.flatMap(
-					(phase: { customer_product_ids: string[] }) =>
-						phase.customer_product_ids,
-				),
-			),
+			inArray(customerProducts.id, response.phases[0]!.customer_product_ids),
+		);
+	const phase1CustomerProducts = await ctx.db
+		.select()
+		.from(customerProducts)
+		.where(
+			inArray(customerProducts.id, response.phases[1]!.customer_product_ids),
 		);
 
-	expect(insertedCustomerProducts).toHaveLength(3);
+	expect(immediatePhaseCustomerProducts).toHaveLength(2);
 	expect(
-		insertedCustomerProducts.every(
+		immediatePhaseCustomerProducts.every(
+			(customerProduct) => customerProduct.status === CusProductStatus.Active,
+		),
+	).toBe(true);
+	expect(phase1CustomerProducts).toHaveLength(1);
+	expect(
+		phase1CustomerProducts.every(
 			(customerProduct) =>
 				customerProduct.status === CusProductStatus.Scheduled,
 		),
 	).toBe(true);
 	expect(
-		insertedCustomerProducts.filter(
+		immediatePhaseCustomerProducts.filter(
 			(customerProduct) => customerProduct.product_id === pro.id,
 		),
-	).toHaveLength(2);
+	).toHaveLength(1);
 	expect(
-		insertedCustomerProducts.filter(
+		immediatePhaseCustomerProducts.filter(
 			(customerProduct) => customerProduct.product_id === addon.id,
 		),
 	).toHaveLength(1);
+	expect(phase1CustomerProducts[0]!.product_id).toBe(pro.id);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestTotal: 40,
+	});
 });
 
 test.concurrent(`${chalk.yellowBright("create-schedule: copies entity_id and replaces the prior schedule")}`, async () => {
@@ -148,11 +167,15 @@ test.concurrent(`${chalk.yellowBright("create-schedule: copies entity_id and rep
 					},
 				],
 			},
+			{
+				starts_at: now + ms.days(30),
+				plans: [{ plan_id: backup.id }],
+			},
 		],
 	});
 
-	const firstCustomerProductId =
-		firstResponse.phases[0]!.customer_product_ids[0]!;
+	const firstScheduledCustomerProductId =
+		firstResponse.phases[1]!.customer_product_ids[0]!;
 
 	const secondResponse = await autumnV1.billing.createSchedule({
 		customer_id: customerId,
@@ -177,11 +200,17 @@ test.concurrent(`${chalk.yellowBright("create-schedule: copies entity_id and rep
 	expect(dbSchedules).toHaveLength(1);
 	expect(dbSchedules[0]!.id).toBe(secondResponse.schedule_id);
 
-	const removedCustomerProducts = await ctx.db
+	const removedScheduledProducts = await ctx.db
 		.select()
 		.from(customerProducts)
-		.where(eq(customerProducts.id, firstCustomerProductId));
-	expect(removedCustomerProducts).toHaveLength(0);
+		.where(eq(customerProducts.id, firstScheduledCustomerProductId));
+	expect(removedScheduledProducts).toHaveLength(0);
+
+	const removedSchedule = await ctx.db
+		.select()
+		.from(schedules)
+		.where(eq(schedules.id, firstResponse.schedule_id));
+	expect(removedSchedule).toHaveLength(0);
 
 	const newCustomerProducts = await ctx.db
 		.select()
@@ -198,12 +227,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: copies entity_id and rep
 
 	expect(newCustomerProducts).toHaveLength(1);
 	expect(newCustomerProducts[0]!.entity_id).toBe(entityId);
-
-	const firstScheduleProducts = await ctx.db
-		.select()
-		.from(customerProducts)
-		.where(eq(customerProducts.id, firstCustomerProductId));
-	expect(firstScheduleProducts).toHaveLength(0);
+	expect(newCustomerProducts[0]!.status).toBe(CusProductStatus.Active);
 });
 
 test.concurrent(`${chalk.yellowBright("create-schedule: preserves feature quantity options on created customer products")}`, async () => {
@@ -312,6 +336,173 @@ test.concurrent(`${chalk.yellowBright("create-schedule: preserves customize.item
 	]);
 });
 
+test.concurrent(`${chalk.yellowBright("create-schedule: preserves customize.items on future scheduled customer products")}`, async () => {
+	const base = products.base({
+		id: "custom-future-base",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "create-schedule-customize-future",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [base] }),
+		],
+		actions: [],
+	});
+
+	const now = Date.now();
+	const response = await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: now,
+				plans: [{ plan_id: base.id }],
+			},
+			{
+				starts_at: now + ms.days(30),
+				plans: [
+					{
+						plan_id: base.id,
+						customize: {
+							items: [itemsV2.monthlyWords({ included: 250 })],
+						},
+					},
+				],
+			},
+		],
+	});
+
+	const futurePhase = response.phases[1];
+	expect(futurePhase).toBeDefined();
+
+	const futureCustomerProductId = futurePhase?.customer_product_ids[0];
+	expect(futureCustomerProductId).toBeTruthy();
+
+	if (!futureCustomerProductId) {
+		throw new Error(
+			"Expected a scheduled customer product for the future phase",
+		);
+	}
+
+	const insertedEntitlements = await ctx.db
+		.select({
+			feature_id: customerEntitlements.feature_id,
+			balance: customerEntitlements.balance,
+		})
+		.from(customerEntitlements)
+		.where(
+			eq(customerEntitlements.customer_product_id, futureCustomerProductId),
+		);
+
+	expect(insertedEntitlements).toEqual([
+		{
+			feature_id: TestFeature.Words,
+			balance: 250,
+		},
+	]);
+});
+
+test.concurrent(`${chalk.yellowBright("create-schedule: preserves the existing schedule when immediate billing is deferred")}`, async () => {
+	const pro = products.pro({
+		id: "deferred-pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const premium = products.premium({
+		id: "deferred-premium",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "create-schedule-deferred",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [],
+	});
+
+	const now = Date.now();
+	const initialResponse = await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: now,
+				plans: [{ plan_id: pro.id }],
+			},
+			{
+				starts_at: now + ms.days(30),
+				plans: [{ plan_id: premium.id }],
+			},
+		],
+	});
+
+	const persistedCustomer = await CusService.get({
+		db: ctx.db,
+		idOrInternalId: customerId,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+
+	const stripeCustomerId = persistedCustomer?.processor?.id;
+	if (!stripeCustomerId) {
+		throw new Error(
+			"Expected Stripe customer id before deferred create_schedule test",
+		);
+	}
+
+	await attachPaymentMethod({
+		stripeCli: ctx.stripeCli,
+		stripeCusId: stripeCustomerId,
+		type: "authenticate",
+	});
+
+	await expectAutumnError({
+		errMessage:
+			"create_schedule does not support deferred immediate-phase billing yet",
+		func: async () => {
+			await autumnV1.billing.createSchedule({
+				customer_id: customerId,
+				phases: [
+					{
+						starts_at: Date.now(),
+						plans: [{ plan_id: premium.id }],
+					},
+				],
+			});
+		},
+	});
+
+	const schedulesAfterDeferredAttempt = await ctx.db
+		.select({
+			id: schedules.id,
+		})
+		.from(schedules)
+		.where(eq(schedules.customer_id, customerId));
+
+	expect(schedulesAfterDeferredAttempt).toHaveLength(1);
+	expect(schedulesAfterDeferredAttempt[0]!.id).toBe(
+		initialResponse.schedule_id,
+	);
+
+	const phasesAfterDeferredAttempt = await ctx.db
+		.select({
+			id: schedulePhases.id,
+			customer_product_ids: schedulePhases.customer_product_ids,
+		})
+		.from(schedulePhases)
+		.where(eq(schedulePhases.schedule_id, initialResponse.schedule_id));
+
+	expect(phasesAfterDeferredAttempt).toHaveLength(2);
+	expect(
+		phasesAfterDeferredAttempt.some(
+			(phase) =>
+				phase.customer_product_ids[0] ===
+				initialResponse.phases[1]!.customer_product_ids[0],
+		),
+	).toBe(true);
+});
+
 test.concurrent(`${chalk.yellowBright("create-schedule: rejects invalid timing and entity input")}`, async () => {
 	const pro = products.pro({
 		id: "pro",
@@ -407,6 +598,54 @@ test.concurrent(`${chalk.yellowBright("create-schedule: rejects invalid timing a
 								subscription_id: "sub_123",
 							},
 						],
+					},
+				],
+			});
+		},
+	});
+
+	await expectAutumnError({
+		errMessage: 'Unrecognized key: "free_trial"',
+		func: async () => {
+			await autumnV1.billing.createSchedule({
+				customer_id: customerId,
+				phases: [
+					{
+						starts_at: Date.now(),
+						plans: [
+							{
+								plan_id: pro.id,
+								customize: {
+									free_trial: {
+										duration_length: 7,
+										duration_type: "day",
+										card_required: false,
+									},
+								},
+							},
+						],
+					},
+				],
+			});
+		},
+	});
+
+	const { customerId: noPmCustomerId, autumnV1: autumnNoPm } =
+		await initScenario({
+			customerId: "create-schedule-no-pm",
+			setup: [s.customer({}), s.products({ list: [pro] })],
+			actions: [],
+		});
+
+	await expectAutumnError({
+		errMessage: "checkout flows are not supported yet",
+		func: async () => {
+			await autumnNoPm.billing.createSchedule({
+				customer_id: noPmCustomerId,
+				phases: [
+					{
+						starts_at: Date.now(),
+						plans: [{ plan_id: pro.id }],
 					},
 				],
 			});
