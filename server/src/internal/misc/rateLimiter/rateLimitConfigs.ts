@@ -158,7 +158,7 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	},
 	[RateLimitType.Attach]: {
 		name: "attach",
-		limit: 5,
+		limit: 30,
 		windowMs: 60000,
 		notInRedis: false,
 		scope: RateLimitScope.Customer,
