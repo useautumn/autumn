@@ -23,6 +23,8 @@ import {
 	type CreateCustomerParamsV0Input,
 	type CreateEntityParams,
 	type CreateRewardProgram,
+	type CreateScheduleParamsV0Input,
+	type CreateScheduleResponse,
 	type CustomerBillingControlsParams,
 	CustomerExpand,
 	type DeleteBalanceParamsV0,
@@ -1042,6 +1044,16 @@ export class AutumnInt {
 		setupPayment: async (params: SetupPaymentParamsV1) => {
 			const data = await this.post(`/billing.setup_payment`, params);
 			return data;
+		},
+
+		/** Create a billing schedule through the internal RPC API. */
+		createSchedule: async <
+			TInput = CreateScheduleParamsV0Input,
+			TResponse = CreateScheduleResponse,
+		>(
+			params: TInput,
+		): Promise<TResponse> => {
+			return await this.post(`/billing.create_schedule`, params);
 		},
 
 		multiAttach: async (

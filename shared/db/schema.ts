@@ -63,6 +63,10 @@ import { rewards } from "../models/rewardModels/rewardModels/rewardTable.js";
 // Reward Relations
 import { rewardProgramRelations } from "../models/rewardModels/rewardProgramModels/rewardProgramRelations.js";
 import { rewardPrograms } from "../models/rewardModels/rewardProgramModels/rewardProgramTable.js";
+import {
+	schedulePhases,
+	schedules,
+} from "../models/scheduleModels/scheduleTable.js";
 import { subscriptions } from "../models/subModels/subTable.js";
 import {
 	inviteRelations,
@@ -114,6 +118,8 @@ export {
 	events,
 	replaceables,
 	rollovers,
+	schedules,
+	schedulePhases,
 	vercelResources,
 	revenuecatMappings as revcatMappings,
 	// Auth
