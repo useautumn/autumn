@@ -1,10 +1,13 @@
 import {
 	atmnToStripeAmount,
 	ErrCode,
+	invoices,
 	RecaseError,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
+import { eq, sql } from "drizzle-orm";
 import type Stripe from "stripe";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 /** Resolve the Stripe charge from an invoice's payments list */
 export const resolveChargeFromInvoice = async ({
@@ -128,4 +131,38 @@ export const calculateRefundAmountInCents = ({
 	}
 
 	return refundAmountInCents;
+};
+
+/** Issue a Stripe refund and atomically increment refunded_amount on the Autumn invoice */
+export const createRefundAndUpdateInvoice = async ({
+	stripeCli,
+	db,
+	chargeId,
+	stripeInvoiceId,
+	amountInCents,
+}: {
+	stripeCli: Stripe;
+	db: DrizzleCli;
+	chargeId: string;
+	stripeInvoiceId: string;
+	amountInCents: number;
+}): Promise<Stripe.Refund> => {
+	const stripeRefund = await stripeCli.refunds.create({
+		charge: chargeId,
+		amount: amountInCents,
+	});
+
+	const refundedAmount = stripeToAtmnAmount({
+		amount: stripeRefund.amount,
+		currency: stripeRefund.currency,
+	});
+
+	await db
+		.update(invoices)
+		.set({
+			refunded_amount: sql`${invoices.refunded_amount} + ${refundedAmount}`,
+		})
+		.where(eq(invoices.stripe_id, stripeInvoiceId));
+
+	return stripeRefund;
 };
