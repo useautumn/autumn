@@ -41,7 +41,7 @@ const getOverrideAutoEnableProduct = async ({
 
 	if (
 		!isFreeProduct({ prices: plan.prices }) &&
-		!isDefaultTrialFullProduct({ product: plan })
+		!isDefaultTrialFullProduct({ product: plan, skipDefault: true })
 	) {
 		throw new RecaseError({
 			message: `Auto-enable plan must be a free product, or have a free trial with 'card_required' as false`,
