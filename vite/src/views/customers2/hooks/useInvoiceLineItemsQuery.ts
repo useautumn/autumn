@@ -4,46 +4,46 @@ import { useMemo } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-interface UseInvoiceLineItemsQueryParams {
-	invoiceIds: string[];
-	enabled?: boolean;
-}
-
-interface LineItemsByInvoiceId {
-	[invoiceId: string]: InvoiceLineItem[];
-}
-
 export const useInvoiceLineItemsQuery = ({
+	customerId,
 	invoiceIds,
 	enabled = true,
-}: UseInvoiceLineItemsQueryParams) => {
+}: {
+	customerId: string | undefined;
+	invoiceIds: string[];
+	enabled?: boolean;
+}) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
 	const fetcher = async (): Promise<InvoiceLineItem[]> => {
-		if (invoiceIds.length === 0) {
+		if (invoiceIds.length === 0 || !customerId) {
 			return [];
 		}
 
-		const { data } = await axiosInstance.post("/admin/invoice-line-items", {
-			invoice_ids: invoiceIds,
-		});
+		const { data } = await axiosInstance.post(
+			`/customers/${customerId}/invoice-line-items`,
+			{
+				invoice_ids: invoiceIds,
+			},
+		);
 
 		return data.line_items ?? [];
 	};
 
 	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: buildKey(["invoice-line-items", invoiceIds]),
+		queryKey: buildKey(["invoice-line-items", customerId, invoiceIds]),
 		queryFn: fetcher,
-		enabled: enabled && invoiceIds.length > 0,
-		staleTime: 5 * 60 * 1000, // 5 minutes
+		enabled: enabled && !!customerId && invoiceIds.length > 0,
+		staleTime: 5 * 60 * 1000,
 	});
 
-	// Group line items by invoice_id for easy lookup
-	const lineItemsByInvoiceId = useMemo<LineItemsByInvoiceId>(() => {
+	const lineItemsByInvoiceId = useMemo<
+		Record<string, InvoiceLineItem[]>
+	>(() => {
 		if (!data) return {};
 
-		return data.reduce<LineItemsByInvoiceId>((acc, lineItem) => {
+		return data.reduce<Record<string, InvoiceLineItem[]>>((acc, lineItem) => {
 			const invoiceId = lineItem.invoice_id;
 			if (!acc[invoiceId]) {
 				acc[invoiceId] = [];
