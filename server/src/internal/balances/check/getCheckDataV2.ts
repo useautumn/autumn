@@ -73,6 +73,8 @@ export const getCheckDataV2 = async ({
 				source: "getCheckDataV2",
 			});
 
+	console.log("Full subject", fullSubject);
+
 	const apiSubject = await getApiSubject({
 		ctx,
 		fullSubject,

@@ -12,6 +12,7 @@ import {
 	type CachedFullSubject,
 	cachedFullSubjectToNormalized,
 } from "../../fullSubjectCacheModel.js";
+import { sanitizeCachedFullSubject } from "../../sanitize/index.js";
 import { getOrInitFullSubjectViewEpoch } from "../invalidate/getOrInitFullSubjectViewEpoch.js";
 import { invalidateCachedFullSubject } from "../invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "../invalidate/invalidateFullSubjectExact.js";
@@ -61,7 +62,10 @@ export const getCachedPartialFullSubject = async ({
 
 	let cached: CachedFullSubject;
 	try {
-		cached = JSON.parse(cachedRaw) as CachedFullSubject;
+		const parsedCached = JSON.parse(cachedRaw) as CachedFullSubject;
+		cached = sanitizeCachedFullSubject({
+			cachedFullSubject: parsedCached,
+		});
 	} catch (error) {
 		logger.warn(
 			`[getCachedPartialFullSubject] Failed to parse cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
@@ -144,13 +148,26 @@ export const getCachedPartialFullSubject = async ({
 		(featureBalance) => featureBalance.balances,
 	);
 
-	const normalized = filterNormalizedFullSubjectByFeatureIds({
-		normalized: cachedFullSubjectToNormalized({
-			cached,
-			customerEntitlements,
-		}),
-		featureIds,
-	});
+	try {
+		const normalized = filterNormalizedFullSubjectByFeatureIds({
+			normalized: cachedFullSubjectToNormalized({
+				cached,
+				customerEntitlements,
+			}),
+			featureIds,
+		});
 
-	return normalizedToFullSubject({ normalized });
+		return normalizedToFullSubject({ normalized });
+	} catch (error) {
+		logger.warn(
+			`[getCachedPartialFullSubject] Failed to hydrate cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
+		);
+		await invalidateCachedFullSubjectExact({
+			ctx,
+			customerId,
+			entityId,
+			source: "partial-hydrate-failed",
+		});
+		return undefined;
+	}
 };

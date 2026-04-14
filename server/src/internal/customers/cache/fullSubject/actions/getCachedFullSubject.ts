@@ -10,6 +10,7 @@ import {
 	type CachedFullSubject,
 	cachedFullSubjectToNormalized,
 } from "../fullSubjectCacheModel.js";
+import { sanitizeCachedFullSubject } from "../sanitize/index.js";
 import { getOrInitFullSubjectViewEpoch } from "./invalidate/getOrInitFullSubjectViewEpoch.js";
 import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "./invalidate/invalidateFullSubjectExact.js";
@@ -38,11 +39,20 @@ export const getCachedFullSubject = async ({
 
 	let cached: CachedFullSubject;
 	try {
-		cached = JSON.parse(cachedRaw) as CachedFullSubject;
+		const parsedCached = JSON.parse(cachedRaw) as CachedFullSubject;
+		cached = sanitizeCachedFullSubject({
+			cachedFullSubject: parsedCached,
+		});
 	} catch (error) {
 		logger.warn(
 			`[getCachedFullSubject] Failed to parse cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
 		);
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId,
+			entityId,
+			source: "parse-failed",
+		});
 		return undefined;
 	}
 
@@ -104,10 +114,23 @@ export const getCachedFullSubject = async ({
 		return undefined;
 	}
 
-	const normalized = cachedFullSubjectToNormalized({
-		cached,
-		customerEntitlements: balances.flatMap((balance) => balance.balances),
-	});
+	try {
+		const normalized = cachedFullSubjectToNormalized({
+			cached,
+			customerEntitlements: balances.flatMap((balance) => balance.balances),
+		});
 
-	return normalizedToFullSubject({ normalized });
+		return normalizedToFullSubject({ normalized });
+	} catch (error) {
+		logger.warn(
+			`[getCachedFullSubject] Failed to hydrate cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
+		);
+		await invalidateCachedFullSubjectExact({
+			ctx,
+			customerId,
+			entityId,
+			source: "hydrate-failed",
+		});
+		return undefined;
+	}
 };

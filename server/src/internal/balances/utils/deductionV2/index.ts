@@ -1,5 +1,10 @@
 export { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullSubject.js";
 export { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
 export { deductionToTrackResponseV2 } from "./deductionToTrackResponseV2.js";
+export { executePostgresDeductionV2 } from "./executePostgresDeductionV2.js";
 export { executeRedisDeductionV2 } from "./executeRedisDeductionV2.js";
+export { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
+export { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
+export { prepareDeductionOptionsV2 } from "./prepareDeductionOptionsV2.js";
 export { prepareFeatureDeductionV2 } from "./prepareFeatureDeductionV2.js";
+export { rollbackDeductionV2 } from "./rollbackDeductionV2.js";

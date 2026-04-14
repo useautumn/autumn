@@ -17,20 +17,8 @@ export const runCheckWithRollout = async ({
 	checkData: CheckData;
 	response: CheckResponseV3;
 }> => {
-	if (
-		isFullSubjectRolloutEnabled({ ctx }) &&
-		!body.send_event &&
-		!body.lock?.enabled
-	) {
-		return runCheckV2({
-			ctx,
-			body,
-			requiredBalance,
-		});
-	}
-
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		return runCheckLegacyFlow({
+		return runCheckV2({
 			ctx,
 			body,
 			requiredBalance,

@@ -78,7 +78,7 @@ end
   
   Uses context object for in-memory operations:
     - Reads balances from context.customer_entitlements
-    - Queues writes via queue_balance_update (applied later)
+    - Queues customer_entitlement updates for later shared-hash writeback
     - Updates context balances in-memory after calculating change
     - Logs to context.logs
   
@@ -112,8 +112,6 @@ local function deduct_from_main_balance(params)
   local amount = params.amount * params.credit_cost
   local deducted = 0
   local prefix = params.log_prefix or ""
-  local base_path = ent_data.base_path
-  
   -- Base calc_params (adjustment is set per-case since entities have their own)
   local base_calc_params = {
     available_overage = params.available_overage,
@@ -147,11 +145,8 @@ local function deduct_from_main_balance(params)
     logger.log("%s type: entity, entity_id: %s, balance: %s, to_change: %s", prefix, params.target_entity_id, balance, to_change)
     
     if to_change ~= 0 then
-      local entity_path = build_entity_path(base_path, params.target_entity_id)
-      
       queue_customer_entitlement_mutation({
         context = context,
-        path = entity_path,
         delta = -to_change,
         alter_granted_balance = params.alter_granted_balance,
         customer_entitlement_id = ent_id,
@@ -199,11 +194,8 @@ local function deduct_from_main_balance(params)
       local to_change = calculate_change(balance, remaining, calc_params)
       
       if to_change ~= 0 then
-        local entity_path = build_entity_path(base_path, entity_key)
-        
         queue_customer_entitlement_mutation({
           context = context,
-          path = entity_path,
           delta = -to_change,
           alter_granted_balance = params.alter_granted_balance,
           customer_entitlement_id = ent_id,
@@ -256,7 +248,6 @@ local function deduct_from_main_balance(params)
       
       queue_customer_entitlement_mutation({
         context = context,
-        path = base_path,
         delta = delta,
         alter_granted_balance = params.alter_granted_balance,
         customer_entitlement_id = ent_id,

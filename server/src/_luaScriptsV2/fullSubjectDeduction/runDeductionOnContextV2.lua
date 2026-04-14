@@ -16,7 +16,7 @@ end
 --[[
   process_deduction_pass(params)
 
-  Runs one main-balance deduction pass over all sorted customer_entitlements.
+  Runs one main-balance deduction pass over all customer_entitlement deductions.
 
   Returns:
     {
@@ -26,7 +26,8 @@ end
 ]]
 local function process_deduction_pass(params)
   local context = params.context
-  local sorted_entitlements = params.sorted_entitlements or {}
+  local customer_entitlement_deductions =
+    params.customer_entitlement_deductions or {}
   local target_entity_id = params.target_entity_id
   local spend_limit_by_feature_id = params.spend_limit_by_feature_id
   local usage_based_cus_ent_ids_by_feature_id = params.usage_based_cus_ent_ids_by_feature_id
@@ -41,7 +42,7 @@ local function process_deduction_pass(params)
 
   logger.log("=== %s START ===", pass_name)
 
-  for _, ent_obj in ipairs(sorted_entitlements) do
+  for _, ent_obj in ipairs(customer_entitlement_deductions) do
     if remaining_amount == 0 then
       break
     end
@@ -134,7 +135,8 @@ end
 ]]
 local function process_rollover_deduction(params)
   local context = params.context
-  local sorted_entitlements = params.sorted_entitlements or {}
+  local customer_entitlement_deductions =
+    params.customer_entitlement_deductions or {}
   local rollovers = params.rollovers
   local target_entity_id = params.target_entity_id
   local remaining_amount = params.remaining_amount or 0
@@ -144,7 +146,7 @@ local function process_rollover_deduction(params)
     return 0
   end
 
-  local first_ent = sorted_entitlements[1]
+  local first_ent = customer_entitlement_deductions[1]
   local has_entity_scope = false
   if first_ent then
     has_entity_scope = first_ent.entity_feature_id ~= nil and first_ent.entity_feature_id ~= cjson.null
@@ -171,7 +173,7 @@ end
 
   params:
     context: initialized context
-    sorted_entitlements: deduction inputs
+    customer_entitlement_deductions: deduction inputs
     rollovers: rollover inputs | nil
     amount_to_deduct: number | nil
     target_balance: number | nil
@@ -188,7 +190,8 @@ end
 ]]
 local function run_deduction_on_context(params)
   local context = params.context
-  local sorted_entitlements = params.sorted_entitlements or {}
+  local customer_entitlement_deductions =
+    params.customer_entitlement_deductions or {}
   local rollovers = params.rollovers
   local target_entity_id = params.target_entity_id
   local spend_limit_by_feature_id = params.spend_limit_by_feature_id
@@ -202,7 +205,7 @@ local function run_deduction_on_context(params)
   if not is_nil(params.target_balance) then
     local current_total = get_total_balance({
       context = context,
-      sorted_entitlements = sorted_entitlements,
+      sorted_entitlements = customer_entitlement_deductions,
       target_entity_id = target_entity_id,
     })
     remaining_amount = current_total - params.target_balance
@@ -215,7 +218,7 @@ local function run_deduction_on_context(params)
   if not alter_granted_balance then
     local rollover_deducted = process_rollover_deduction({
       context = context,
-      sorted_entitlements = sorted_entitlements,
+      customer_entitlement_deductions = customer_entitlement_deductions,
       rollovers = rollovers,
       target_entity_id = target_entity_id,
       remaining_amount = remaining_amount,
@@ -225,7 +228,7 @@ local function run_deduction_on_context(params)
 
   local pass_one_result = process_deduction_pass({
     context = context,
-    sorted_entitlements = sorted_entitlements,
+    customer_entitlement_deductions = customer_entitlement_deductions,
     target_entity_id = target_entity_id,
     spend_limit_by_feature_id = spend_limit_by_feature_id,
     usage_based_cus_ent_ids_by_feature_id = usage_based_cus_ent_ids_by_feature_id,
@@ -242,7 +245,7 @@ local function run_deduction_on_context(params)
   if remaining_amount ~= 0 then
     local pass_two_result = process_deduction_pass({
       context = context,
-      sorted_entitlements = sorted_entitlements,
+      customer_entitlement_deductions = customer_entitlement_deductions,
       target_entity_id = target_entity_id,
       spend_limit_by_feature_id = spend_limit_by_feature_id,
       usage_based_cus_ent_ids_by_feature_id = usage_based_cus_ent_ids_by_feature_id,

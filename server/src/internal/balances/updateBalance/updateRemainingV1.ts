@@ -18,7 +18,7 @@ import { runRedisUpdateBalanceV2 } from "./runRedisUpdateBalanceV2.js";
  * 3. Call runRedisUpdateBalanceV2 to update Redis
  * 4. Returns the result (caller handles sync/events if needed)
  */
-export const runUpdateBalanceV2 = async ({
+export const updateRemainingV1 = async ({
 	ctx,
 	params,
 	fullCustomer,
