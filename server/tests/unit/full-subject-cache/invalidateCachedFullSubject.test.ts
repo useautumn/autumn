@@ -9,8 +9,8 @@ import {
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
 import {
-	buildFullSubjectCustomerEpochKey,
 	buildFullSubjectKey,
+	buildFullSubjectViewEpochKey,
 	getCachedFullSubject,
 	getOrSetCachedFullSubject,
 	invalidateCachedFullSubject,
@@ -66,7 +66,7 @@ describeDb("invalidateCachedFullSubject", () => {
 		await cleanupFullSubjectScenario({ ctx, scenario });
 	});
 
-	test("invalidates direct entity cache and increments customer entity epoch", async () => {
+	test("invalidates direct entity cache and increments subject view epoch", async () => {
 		const entityAKey = buildFullSubjectKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -84,7 +84,6 @@ describeDb("invalidateCachedFullSubject", () => {
 			env: ctx.env,
 			customerId: scenario.ids.customerId,
 		});
-
 		await invalidateCachedFullSubject({
 			ctx,
 			customerId: scenario.ids.customerId,
@@ -97,7 +96,7 @@ describeDb("invalidateCachedFullSubject", () => {
 		expect(await redisV2.exists(entityBKey)).toBe(1);
 		expect(
 			await redisV2.get(
-				buildFullSubjectCustomerEpochKey({
+				buildFullSubjectViewEpochKey({
 					orgId: ctx.org.id,
 					env: ctx.env,
 					customerId: scenario.ids.customerId,
@@ -106,7 +105,7 @@ describeDb("invalidateCachedFullSubject", () => {
 		).toBe("1");
 	});
 
-	test("increments customer entity epoch for customer invalidation", async () => {
+	test("increments subject view epoch for customer invalidation", async () => {
 		const entityAKey = buildFullSubjectKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -119,7 +118,7 @@ describeDb("invalidateCachedFullSubject", () => {
 			customerId: scenario.ids.customerId,
 			entityId: scenario.ids.entityIds[1],
 		});
-		const epochKey = buildFullSubjectCustomerEpochKey({
+		const epochKey = buildFullSubjectViewEpochKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			customerId: scenario.ids.customerId,

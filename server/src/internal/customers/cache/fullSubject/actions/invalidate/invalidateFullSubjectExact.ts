@@ -1,29 +1,10 @@
 import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
-import { buildFullSubjectBalanceKey } from "../../builders/buildFullSubjectBalanceKey.js";
 import { buildFullSubjectGuardKey } from "../../builders/buildFullSubjectGuardKey.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectReserveKey } from "../../builders/buildFullSubjectReserveKey.js";
 import { FULL_SUBJECT_CACHE_GUARD_TTL_SECONDS } from "../../config/fullSubjectCacheConfig.js";
-
-const getMeteredFeatureIdsForSubject = async ({
-	subjectKey,
-}: {
-	subjectKey: string;
-}) => {
-	const subjectRaw = await redisV2.get(subjectKey);
-	if (!subjectRaw) return [];
-
-	try {
-		const parsed = JSON.parse(subjectRaw) as {
-			meteredFeatures?: string[];
-		};
-		return parsed.meteredFeatures ?? [];
-	} catch {
-		return [];
-	}
-};
 
 export const invalidateCachedFullSubjectExact = async ({
 	customerId,
@@ -64,10 +45,6 @@ export const invalidateCachedFullSubjectExact = async ({
 
 	try {
 		await tryRedisWrite(async () => {
-			const featureIdsToDelete = await getMeteredFeatureIdsForSubject({
-				subjectKey,
-			});
-
 			const multi = redisV2.multi();
 			if (!skipGuard) {
 				multi.set(
@@ -79,17 +56,6 @@ export const invalidateCachedFullSubjectExact = async ({
 			}
 			multi.unlink(subjectKey);
 			multi.unlink(reserveKey);
-			for (const featureId of featureIdsToDelete ?? []) {
-				multi.unlink(
-					buildFullSubjectBalanceKey({
-						orgId: org.id,
-						env,
-						customerId,
-						entityId,
-						featureId,
-					}),
-				);
-			}
 			await multi.exec();
 		}, redisV2);
 

@@ -58,6 +58,7 @@ describe(`${chalk.yellowBright("fullSubject cache rollout staleness")}`, () => {
 					ctx,
 					normalized: normalized!,
 					fetchTimeMs: Date.now(),
+					fetchedSubjectViewEpoch: 0,
 				});
 				expect(result).toBe("OK");
 

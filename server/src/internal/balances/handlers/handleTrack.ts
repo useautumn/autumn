@@ -5,7 +5,7 @@ import {
 	TrackQuerySchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { runTrackV2 } from "@/internal/balances/track/runTrackV2.js";
+import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import {
 	getTrackEventNameDeductions,
 	getTrackFeatureDeductions,
@@ -37,7 +37,7 @@ export const handleTrack = createRoute({
 				});
 
 		return c.json(
-			await runTrackV2({
+			await runTrackWithRollout({
 				ctx,
 				body,
 				featureDeductions,

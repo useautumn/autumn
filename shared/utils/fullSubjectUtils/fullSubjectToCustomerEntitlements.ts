@@ -10,14 +10,12 @@ export const fullSubjectToCustomerEntitlements = ({
 	fullSubject,
 	inStatuses = [CusProductStatus.Active, CusProductStatus.PastDue],
 	reverseOrder = false,
-	featureId,
 	featureIds,
 	customerEntitlementFilters,
 }: {
 	fullSubject: FullSubject;
 	inStatuses?: CusProductStatus[];
 	reverseOrder?: boolean;
-	featureId?: string;
 	featureIds?: string[];
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 }) => {
@@ -39,13 +37,6 @@ export const fullSubjectToCustomerEntitlements = ({
 			...customerEntitlement,
 			customer_product: null,
 		});
-	}
-
-	if (featureId) {
-		customerEntitlements = customerEntitlements.filter(
-			(customerEntitlement) =>
-				customerEntitlement.entitlement.feature.id === featureId,
-		);
 	}
 
 	if (featureIds) {

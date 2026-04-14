@@ -11,8 +11,8 @@ import {
 import { refreshCacheMiddleware } from "@/honoMiddlewares/refreshCacheMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
-	buildFullSubjectCustomerEpochKey,
 	buildFullSubjectKey,
+	buildFullSubjectViewEpochKey,
 	getOrSetCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
@@ -235,7 +235,7 @@ describeDb("refreshCacheMiddleware routes", () => {
 			customerId: scenario.ids.customerId,
 			entityId: scenario.ids.entityIds[1],
 		});
-		const epochKey = buildFullSubjectCustomerEpochKey({
+		const epochKey = buildFullSubjectViewEpochKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			customerId: scenario.ids.customerId,

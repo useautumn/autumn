@@ -7,7 +7,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
-import { setCachedFullSubject } from "./setCachedFullSubject.js";
+import { getOrInitFullSubjectViewEpoch } from "./invalidate/getOrInitFullSubjectViewEpoch.js";
+import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
 export const getOrSetCachedFullSubject = async ({
 	ctx,
@@ -42,6 +43,10 @@ export const getOrSetCachedFullSubject = async ({
 	logger.debug(
 		`[getOrSetCachedFullSubject] Cache miss for ${customerId}${entityId ? `:${entityId}` : ""}, fetching from DB, source: ${source}`,
 	);
+	const fetchedSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
+		ctx,
+		customerId,
+	});
 
 	const normalized = await getFullSubjectNormalized({
 		ctx,
@@ -55,7 +60,12 @@ export const getOrSetCachedFullSubject = async ({
 	}
 
 	if (!skipCache) {
-		await setCachedFullSubject({ ctx, normalized, fetchTimeMs });
+		await setCachedFullSubject({
+			ctx,
+			normalized,
+			fetchTimeMs,
+			fetchedSubjectViewEpoch,
+		});
 	}
 
 	return normalizedToFullSubject({ normalized });

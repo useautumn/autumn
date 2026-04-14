@@ -6,21 +6,28 @@ export type CachedFullSubject = Omit<
 > & {
 	_cachedAt: number;
 	meteredFeatures: string[];
-	customerEntityEpoch?: number;
+	customerEntitlementIdsByFeatureId: Record<string, string[]>;
+	subjectViewEpoch: number;
 };
 
 export const normalizedToCachedFullSubject = ({
 	normalized,
-	customerEntityEpoch,
+	subjectViewEpoch,
 }: {
 	normalized: NormalizedFullSubject;
-	customerEntityEpoch?: number;
+	subjectViewEpoch: number;
 }): CachedFullSubject => {
-	const meteredFeatures = Array.from(
-		new Set(
-			normalized.customer_entitlements.map((balance) => balance.feature_id),
-		),
-	);
+	const customerEntitlementIdsByFeatureId: Record<string, string[]> = {};
+
+	for (const customerEntitlement of normalized.customer_entitlements) {
+		const existingMembership =
+			customerEntitlementIdsByFeatureId[customerEntitlement.feature_id] ?? [];
+		existingMembership.push(customerEntitlement.id);
+		customerEntitlementIdsByFeatureId[customerEntitlement.feature_id] =
+			existingMembership;
+	}
+
+	const meteredFeatures = Object.keys(customerEntitlementIdsByFeatureId);
 
 	return {
 		subjectType: normalized.subjectType,
@@ -41,7 +48,8 @@ export const normalizedToCachedFullSubject = ({
 		entity_aggregations: normalized.entity_aggregations,
 		_cachedAt: Date.now(),
 		meteredFeatures,
-		customerEntityEpoch,
+		customerEntitlementIdsByFeatureId,
+		subjectViewEpoch,
 	};
 };
 
