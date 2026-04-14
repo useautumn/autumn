@@ -252,11 +252,32 @@ export function InvoiceDetailSheet({
 
 				{/* Invoice Total */}
 				<SheetSection withSeparator={true}>
-					<div className="flex items-center justify-between">
-						<span className="text-sm font-medium text-foreground">Total</span>
-						<span className="text-sm font-semibold text-foreground tabular-nums">
-							{formatSignedAmount(invoice.total, invoice.currency)}
-						</span>
+					<div className="flex flex-col gap-1">
+						<div className="flex items-center justify-between">
+							<span className="text-sm font-medium text-foreground">Total</span>
+							<span className="text-sm font-semibold text-foreground tabular-nums">
+								{formatSignedAmount(invoice.total, invoice.currency)}
+							</span>
+						</div>
+						{invoice.refunded_amount > 0 && (
+							<>
+								<div className="flex items-center justify-between">
+									<span className="text-sm text-t3">Refunded</span>
+									<span className="text-sm text-amber-500 tabular-nums">
+										-{formatAmount(invoice.refunded_amount, invoice.currency)}
+									</span>
+								</div>
+								<div className="flex items-center justify-between pt-1">
+									<span className="text-sm text-t3">Net</span>
+									<span className="text-sm font-semibold text-foreground tabular-nums">
+										{formatSignedAmount(
+											invoice.total - invoice.refunded_amount,
+											invoice.currency,
+										)}
+									</span>
+								</div>
+							</>
+						)}
 					</div>
 				</SheetSection>
 
@@ -267,6 +288,7 @@ export function InvoiceDetailSheet({
 							<span className="text-t3">Invoice ID</span>
 							<MiniCopyButton
 								text={invoice.id}
+								iconOrientation="left"
 								innerClassName="text-xs text-t1 font-mono"
 							/>
 						</div>
@@ -274,6 +296,7 @@ export function InvoiceDetailSheet({
 							<span className="text-t3">Stripe ID</span>
 							<MiniCopyButton
 								text={invoice.stripe_id}
+								iconOrientation="left"
 								innerClassName="text-xs text-t1 font-mono"
 							/>
 						</div>

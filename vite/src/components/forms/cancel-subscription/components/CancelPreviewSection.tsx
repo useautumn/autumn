@@ -11,30 +11,46 @@ export function CancelPreviewSection() {
 	const { previewQuery, formValues } = useUpdateSubscriptionFormContext();
 
 	const cancelAction = formValues.cancelAction ?? "cancel_end_of_cycle";
-	const refundBehavior = formValues.refundBehavior ?? "grant_invoice_credits";
+	const refundBehavior = formValues.refundBehavior;
+	const refundAmount = formValues.refundAmount;
+
+	const isFullRefund = refundBehavior === "refund" && refundAmount === "full";
 
 	const { isLoading, data: previewData, error: queryError } = previewQuery;
 	const error = queryError
 		? getBackendErr(queryError as AxiosError, "Failed to load preview")
 		: undefined;
 
-	const showRefundToggle =
-		cancelAction === "cancel_immediately" &&
-		!!previewData &&
-		previewData.total < 0;
+	const refundPreview = previewData?.refund;
 
 	const totals = useMemo(() => {
 		if (!previewData) return [];
 
 		const result = [];
 
+		// For any refund mode (full or prorated) with preview data, use the exact amount
+		if (refundBehavior === "refund" && refundPreview) {
+			if (refundPreview.invoice.refunded_amount > 0) {
+				result.push({
+					label: "Previously Refunded",
+					amount: -refundPreview.invoice.refunded_amount,
+					variant: "secondary" as const,
+				});
+			}
+
+			result.push({
+				label: "Refund Amount",
+				amount: -refundPreview.amount,
+				variant: "primary" as const,
+			});
+
+			return result;
+		}
+
 		let totalLabel = "Total Due Now";
 		if (previewData.total < 0) {
-			if (showRefundToggle) {
-				totalLabel =
-					refundBehavior === "refund_payment_method"
-						? "Refund Amount"
-						: "Credit Amount";
+			if (refundBehavior === "refund") {
+				totalLabel = "Refund Amount";
 			} else {
 				totalLabel = "Credit Amount";
 			}
@@ -58,13 +74,26 @@ export function CancelPreviewSection() {
 		}
 
 		return result;
-	}, [previewData, cancelAction, refundBehavior, showRefundToggle]);
+	}, [previewData, cancelAction, refundBehavior, refundPreview]);
 
 	if (error) {
 		return (
 			<SheetSection title="Pricing Preview" withSeparator>
 				<PreviewErrorDisplay error={error} />
 			</SheetSection>
+		);
+	}
+
+	// For full refund, show only totals — no prorated line items
+	if (isFullRefund) {
+		return (
+			<LineItemsPreview
+				title="Pricing Preview"
+				isLoading={isLoading}
+				lineItems={[]}
+				currency={previewData?.currency}
+				totals={totals}
+			/>
 		);
 	}
 
