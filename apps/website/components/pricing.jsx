@@ -10,10 +10,9 @@ const plans = [
     price: "0",
     description: "Perfect while finding PMF. Everything you need to start.",
     features: [
-      "Up to 100 active customers",
+      "Up to 8K monthly revenue",
       "All core features",
       "Community support",
-      "Unlimited API calls",
     ],
     buttonText: "Get started",
     href: "https://app.useautumn.com/sign-in",
@@ -21,14 +20,13 @@ const plans = [
   },
   {
     name: "PRO",
-    price: "299",
+    price: "375",
     description: "For teams scaling with real usage-based pricing.",
     features: [
-      "Unlimited customers",
+      "Up to 50K monthly revenue",
       "Priority support",
       "Custom plans",
       "Usage analytics",
-      "SLA guarantees",
     ],
     buttonText: "Start with Pro",
     href: "https://app.useautumn.com/sign-in",
@@ -39,9 +37,7 @@ const plans = [
     price: "Custom",
     description: "For compliance, scale, or custom requirements.",
     features: [
-      "Self-hosted option",
       "Dedicated support",
-      "Custom SLAs",
       "Multi-region",
       "Compliance assistance",
     ],
@@ -169,8 +165,8 @@ export default function Pricing() {
 
             <div className="px-6 md:px-8 py-5 md:py-6 lg:mt-[32px] border border-[#292929] lg:border-x-0 lg:border-b-0 text-left md:text-center bg-black lg:bg-transparent">
               <p className="text-white text-pretty font-light leading-[18px] tracking-[-2%] md:font-extralight text-[16px] md:leading-[1.6] text-wrap-balance">
-                All plans include unlimited API calls · Pricing based on active
-                customers, not events
+                Autumn is built on top of Stripe billing, so Stripe fees (0.7%
+                and 2.9% + 30¢) still apply.
               </p>
             </div>
           </div>
