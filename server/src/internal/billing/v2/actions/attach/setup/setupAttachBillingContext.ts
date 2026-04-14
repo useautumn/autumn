@@ -224,7 +224,11 @@ export const setupAttachBillingContext = async ({
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
-		requestedProrationBehavior: params.proration_behavior,
+		requestedProrationBehavior: isOneOffProduct({
+			prices: attachProduct.prices,
+		})
+			? undefined
+			: params.proration_behavior,
 
 		invoiceMode,
 
