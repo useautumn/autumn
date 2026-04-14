@@ -6,9 +6,11 @@ import type {
 	StripeCheckoutSessionAction,
 	StripeInvoiceAction,
 	StripeInvoiceItemsAction,
+	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import { orgToCurrency } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { buildStripeRefundAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeRefundAction.js";
 import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
 import { shouldCreateManualStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/shouldCreateManualStripeInvoice";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
@@ -65,7 +67,23 @@ export const evaluateStripeBillingPlan = async ({
 		subscriptionCancelAt,
 	});
 
-	const { lineItems } = autumnBillingPlan;
+	const stripeRefundAction = billingContext.refundLastPayment
+		? buildStripeRefundAction({
+				billingContext: billingContext as UpdateSubscriptionBillingContext,
+			})
+		: undefined;
+
+	ctx.logger.info(
+		`[evaluateStripeBillingPlan] refundAction: ${JSON.stringify(stripeRefundAction)}, refundLastPayment: ${billingContext.refundLastPayment}`,
+	);
+
+	// When refundLastPayment is set, keep line items in the billing plan for
+	// preview/display but filter out refund line items from Stripe invoice actions
+	const stripeLineItems = billingContext.refundLastPayment
+		? autumnBillingPlan.lineItems?.filter(
+				(li) => li.context.direction !== "refund",
+			)
+		: autumnBillingPlan.lineItems;
 
 	const createManualInvoice = shouldCreateManualStripeInvoice({
 		ctx,
@@ -93,15 +111,15 @@ export const evaluateStripeBillingPlan = async ({
 		const currency = orgToCurrency({ org: ctx.org });
 
 		stripeInvoiceAction = buildStripeInvoiceAction({
-			lineItems: lineItems ?? undefined,
+			lineItems: stripeLineItems ?? undefined,
 			customLineItems,
 			currency,
 		});
 
 		// Invoice items only apply when using normal line items (not custom)
-		if (!customLineItems?.length && lineItems) {
+		if (!customLineItems?.length && stripeLineItems) {
 			stripeInvoiceItemsAction = buildStripeInvoiceItemsAction({
-				lineItems,
+				lineItems: stripeLineItems,
 				billingContext,
 			});
 		}
@@ -117,5 +135,6 @@ export const evaluateStripeBillingPlan = async ({
 		invoiceItemsAction: stripeInvoiceItemsAction,
 		subscriptionScheduleAction: stripeSubscriptionScheduleAction,
 		checkoutSessionAction: stripeCheckoutSessionAction,
+		refundAction: stripeRefundAction,
 	};
 };
