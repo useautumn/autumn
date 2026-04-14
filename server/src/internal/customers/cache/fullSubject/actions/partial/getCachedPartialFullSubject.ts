@@ -1,25 +1,20 @@
-import type { FullSubject, SubjectBalance } from "@autumn/shared";
+import type { FullSubject } from "@autumn/shared";
 import { normalizedToFullSubject } from "@autumn/shared";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
-import { buildFullSubjectBalanceKey } from "../../builders/buildFullSubjectBalanceKey.js";
+import { getCachedFeatureBalancesBatch } from "../../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { filterNormalizedFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
 import {
 	type CachedFullSubject,
 	cachedFullSubjectToNormalized,
 } from "../../fullSubjectCacheModel.js";
-import { getOrInitFullSubjectCustomerEpoch } from "../invalidate/getOrInitFullSubjectCustomerEpoch.js";
+import { getOrInitFullSubjectViewEpoch } from "../invalidate/getOrInitFullSubjectViewEpoch.js";
 import { invalidateCachedFullSubject } from "../invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "../invalidate/invalidateFullSubjectExact.js";
-
-type BalanceHashMeta = {
-	featureId: string;
-	customerEntitlementIds: string[];
-};
 
 const invalidatePartialFullSubject = async ({
 	ctx,
@@ -38,64 +33,6 @@ const invalidatePartialFullSubject = async ({
 		entityId,
 		source,
 	});
-};
-
-const getStrictFeatureBalances = async ({
-	ctx,
-	customerId,
-	entityId,
-	featureIds,
-}: {
-	ctx: AutumnContext;
-	customerId: string;
-	entityId?: string;
-	featureIds: string[];
-}): Promise<SubjectBalance[] | undefined> => {
-	const { org, env } = ctx;
-	if (featureIds.length === 0) return [];
-
-	const pipeline = redisV2.pipeline();
-	for (const featureId of featureIds) {
-		pipeline.hgetall(
-			buildFullSubjectBalanceKey({
-				orgId: org.id,
-				env,
-				customerId,
-				entityId,
-				featureId,
-			}),
-		);
-	}
-
-	const results = await tryRedisRead(() => pipeline.exec(), redisV2);
-	if (!results) return undefined;
-
-	const balances: SubjectBalance[] = [];
-
-	for (let i = 0; i < featureIds.length; i++) {
-		const fields = results[i]?.[1] as Record<string, string> | null;
-		if (!fields?._meta) return undefined;
-
-		let meta: BalanceHashMeta;
-		try {
-			meta = JSON.parse(fields._meta) as BalanceHashMeta;
-		} catch {
-			return undefined;
-		}
-
-		for (const customerEntitlementId of meta.customerEntitlementIds) {
-			const entryJson = fields[customerEntitlementId];
-			if (!entryJson) return undefined;
-
-			try {
-				balances.push(JSON.parse(entryJson) as SubjectBalance);
-			} catch {
-				return undefined;
-			}
-		}
-	}
-
-	return balances;
 };
 
 export const getCachedPartialFullSubject = async ({
@@ -138,23 +75,21 @@ export const getCachedPartialFullSubject = async ({
 		return undefined;
 	}
 
-	if (entityId) {
-		const currentCustomerEpoch = await getOrInitFullSubjectCustomerEpoch({
+	const currentSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
+		ctx,
+		customerId,
+	});
+	if (cached.subjectViewEpoch !== currentSubjectViewEpoch) {
+		logger.warn(
+			`[getCachedPartialFullSubject] Stale subject view epoch for ${customerId}${entityId ? `:${entityId}` : ""}, cached=${cached.subjectViewEpoch}, current=${currentSubjectViewEpoch}, source: ${source}`,
+		);
+		await invalidateCachedFullSubjectExact({
 			ctx,
 			customerId,
+			entityId,
+			source: "partial-stale-subject-view-epoch",
 		});
-		if (cached.customerEntityEpoch !== currentCustomerEpoch) {
-			logger.warn(
-				`[getCachedPartialFullSubject] Stale customer entity epoch for ${customerId}:${entityId}, cached=${cached.customerEntityEpoch ?? "missing"}, current=${currentCustomerEpoch}, source: ${source}`,
-			);
-			await invalidateCachedFullSubjectExact({
-				ctx,
-				customerId,
-				entityId,
-				source: "partial-stale-customer-entity-epoch",
-			});
-			return undefined;
-		}
+		return undefined;
 	}
 
 	const rolloutSnapshot = getFullSubjectRolloutSnapshot({ ctx });
@@ -181,18 +116,22 @@ export const getCachedPartialFullSubject = async ({
 		cached.meteredFeatures.includes(featureId),
 	);
 
-	const customerEntitlements = await getStrictFeatureBalances({
-		ctx,
+	const featureBalances = await getCachedFeatureBalancesBatch({
+		orgId: org.id,
+		env,
 		customerId,
-		entityId,
 		featureIds: meteredFeatureIdsToFetch,
+		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,
 	});
 
-	if (customerEntitlements === undefined) {
+	if (
+		!featureBalances ||
+		featureBalances.length !== meteredFeatureIdsToFetch.length
+	) {
 		logger.warn(
 			`[getCachedPartialFullSubject] Incomplete cache for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}`,
 		);
-		await invalidatePartialFullSubject({
+		await invalidateCachedFullSubjectExact({
 			ctx,
 			customerId,
 			entityId,
@@ -200,6 +139,10 @@ export const getCachedPartialFullSubject = async ({
 		});
 		return undefined;
 	}
+
+	const customerEntitlements = featureBalances.flatMap(
+		(featureBalance) => featureBalance.balances,
+	);
 
 	const normalized = filterNormalizedFullSubjectByFeatureIds({
 		normalized: cachedFullSubjectToNormalized({

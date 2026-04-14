@@ -407,7 +407,10 @@ const main = async () => {
 		await redisClient.call("CONFIG", "SET", "slowlog-log-slower-than", "0");
 
 		const normalized = generateNormalized();
-		const cached = normalizedToCachedFullSubject({ normalized });
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
 		const subjectKey = buildFullSubjectKey({
 			orgId: FAKE_ORG_ID,
 			env: FAKE_ENV,

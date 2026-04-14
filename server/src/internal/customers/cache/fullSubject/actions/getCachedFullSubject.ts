@@ -10,7 +10,7 @@ import {
 	type CachedFullSubject,
 	cachedFullSubjectToNormalized,
 } from "../fullSubjectCacheModel.js";
-import { getOrInitFullSubjectCustomerEpoch } from "./invalidate/getOrInitFullSubjectCustomerEpoch.js";
+import { getOrInitFullSubjectViewEpoch } from "./invalidate/getOrInitFullSubjectViewEpoch.js";
 import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "./invalidate/invalidateFullSubjectExact.js";
 
@@ -46,23 +46,21 @@ export const getCachedFullSubject = async ({
 		return undefined;
 	}
 
-	if (entityId) {
-		const currentCustomerEpoch = await getOrInitFullSubjectCustomerEpoch({
+	const currentSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
+		ctx,
+		customerId,
+	});
+	if (cached.subjectViewEpoch !== currentSubjectViewEpoch) {
+		logger.warn(
+			`[getCachedFullSubject] Stale subject view epoch for ${customerId}${entityId ? `:${entityId}` : ""}, cached=${cached.subjectViewEpoch}, current=${currentSubjectViewEpoch}, source: ${source}`,
+		);
+		await invalidateCachedFullSubjectExact({
 			ctx,
 			customerId,
+			entityId,
+			source: "stale-subject-view-epoch",
 		});
-		if (cached.customerEntityEpoch !== currentCustomerEpoch) {
-			logger.warn(
-				`[getCachedFullSubject] Stale customer entity epoch for ${customerId}:${entityId}, cached=${cached.customerEntityEpoch ?? "missing"}, current=${currentCustomerEpoch}, source: ${source}`,
-			);
-			await invalidateCachedFullSubjectExact({
-				ctx,
-				customerId,
-				entityId,
-				source: "stale-customer-entity-epoch",
-			});
-			return undefined;
-		}
+		return undefined;
 	}
 
 	const rolloutSnapshot = getFullSubjectRolloutSnapshot({ ctx });
@@ -89,14 +87,20 @@ export const getCachedFullSubject = async ({
 		orgId: org.id,
 		env,
 		customerId,
-		entityId,
 		featureIds: cached.meteredFeatures,
+		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,
 	});
 
-	if (balances.length !== cached.meteredFeatures.length) {
+	if (!balances || balances.length !== cached.meteredFeatures.length) {
 		logger.warn(
-			`[getCachedFullSubject] Incomplete cache for ${customerId}${entityId ? `:${entityId}` : ""}: expected ${cached.meteredFeatures.length} balance keys, got ${balances.length}. Rebuilding from DB, source: ${source}`,
+			`[getCachedFullSubject] Incomplete cache for ${customerId}${entityId ? `:${entityId}` : ""}: expected ${cached.meteredFeatures.length} balance keys, got ${balances?.length ?? 0}. Rebuilding from DB, source: ${source}`,
 		);
+		await invalidateCachedFullSubjectExact({
+			ctx,
+			customerId,
+			entityId,
+			source: "incomplete-shared-balances",
+		});
 		return undefined;
 	}
 
