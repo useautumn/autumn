@@ -9,6 +9,7 @@ export interface StripeBillingPlanResult {
 		| Stripe.Checkout.Session
 		| (Pick<Stripe.Checkout.Session, "id"> & { url?: string | null });
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
+	stripeRefund?: Stripe.Refund;
 	requiredAction?: {
 		code: PaymentFailureCode;
 		reason: string;
