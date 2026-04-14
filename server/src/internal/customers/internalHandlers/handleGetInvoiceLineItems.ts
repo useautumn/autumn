@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos/index.js";
 
 export const handleGetInvoiceLineItems = createRoute({
@@ -10,6 +11,11 @@ export const handleGetInvoiceLineItems = createRoute({
 		const ctx = c.get("ctx");
 		const { db } = ctx;
 		const { invoice_ids } = c.req.valid("json");
+
+		await InvoiceService.assertOwnership({
+			ctx,
+			id: invoice_ids,
+		});
 
 		const lineItems = await invoiceLineItemRepo.getByInvoiceIds({
 			db,
