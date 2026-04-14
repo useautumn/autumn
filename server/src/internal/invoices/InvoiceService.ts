@@ -219,6 +219,7 @@ export class InvoiceService {
 
 			// Stripe stuff
 			total: atmnTotal,
+			refunded_amount: 0,
 			currency: stripeInvoice.currency,
 			discounts: getInvoiceDiscounts({
 				expandedInvoice: stripeInvoice,
