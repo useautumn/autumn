@@ -99,9 +99,11 @@ export class InvoiceService {
 	static async assertOwnership({
 		ctx,
 		id,
+		customerId,
 	}: {
 		ctx: AutumnContext;
 		id: string | string[];
+		customerId?: string;
 	}) {
 		const invoices = await InvoiceService.getMany({
 			db: ctx.db,
@@ -120,6 +122,14 @@ export class InvoiceService {
 			if (invoice.customer.org.id !== ctx.org.id) {
 				throw new RecaseError({
 					message: `Invoice ${invoice.id} not owned by this organization`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+
+			if (customerId && invoice.customer.id !== customerId) {
+				throw new RecaseError({
+					message: `Invoice ${invoice.id} not owned by this customer`,
 					code: ErrCode.InvalidRequest,
 					statusCode: 400,
 				});

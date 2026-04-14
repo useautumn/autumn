@@ -18,7 +18,7 @@ internalCusRouter.get(
 	"/:customer_id/product/:product_id",
 	...handleGetCustomerProduct,
 );
-internalCusRouter.post("/:customer_id/referrals", ...handleGetCusReferrals);
+internalCusRouter.get("/:customer_id/referrals", ...handleGetCusReferrals);
 internalCusRouter.post(
 	"/:customer_id/invoice-line-items",
 	...handleGetInvoiceLineItems,
