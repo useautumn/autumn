@@ -55,30 +55,30 @@ function scrambleText(
 
 const cards = [
   {
+    bg: "#A175FF",
+    icon: "/images/production/uptime2.svg",
+    metric: "1 Billion +",
+    label: "Monthly events",
+    description:
+      "Autumn handles billions of billing events monthly for some of your favorite apps.",
+    clipart: true,
+  },
+  {
     bg: "#FFE8FA",
     icon: "/images/production/latency.svg",
-    metric: "<100ms",
+    metric: "<50ms",
     label: "US latency",
     description:
-      "Every billing check resolves in under 100ms. Your users never wait for a gate.",
+      "Every billing check resolves in under 50ms. Your users never wait for a gate.",
     clipart: true,
   },
   {
     bg: "#D698FF",
     icon: "/images/production/uptiime.svg",
-    metric: "99.99%",
-    label: "Uptime SLA",
+    metric: "10 minutes",
+    label: "Support SLA",
     description:
-      "Designed for teams that can't afford billing downtime. Four nines, guaranteed.",
-    clipart: true,
-  },
-  {
-    bg: "#A175FF",
-    icon: "/images/production/uptime2.svg",
-    metric: "10,000+",
-    label: "Uptime SLA",
-    description:
-      "Autumn handles billions of billing events monthly. Open source core, self-host ready.",
+      "Billing is critical. We're loved for our rapid response times.",
     clipart: true,
   },
   {
@@ -86,7 +86,7 @@ const cards = [
     icon: "/images/production/churn.svg",
     metric: "Zero",
     label: "Churn rate",
-    description: "Per customer. When billing works, customers stay.",
+    description: "Unless their company shuts down, our customers stay with us.",
     clipart: true,
   },
 ];
@@ -153,10 +153,10 @@ export default function ProductionScale() {
         <div className="flex px-4 xl:pl-22.5 lg:pr-0 flex-col my-auto gap-4 lg:gap-6 pt-2 w-full lg:w-auto">
           <div className="leading-none lg:leading-10">
             <p className="text-[#FFFFFF99] tracking-[-4%] text-[30px] lg:text-[40px] font-normal">
-              Built for
+              You're in
             </p>
             <h2 className="text-white tracking-[-4%] text-[30px] lg:text-[40px] font-normal mt-1 lg:mt-0">
-              production scale
+              good hands
             </h2>
           </div>
           <p className="text-[#FFFFFF99] font-light text-[16px] lg:text-sm lg:w-sm leading-[20px] lg:leading-5">

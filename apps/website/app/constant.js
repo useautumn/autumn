@@ -1164,53 +1164,71 @@ export const faqData = [
   },
   {
     id: 2,
-    question: "What if Autumn goes down?",
+    question: "What if Autumn goes down? Will my app go down?",
     answer:
-      "We run on redundant infrastructure with 99.99% uptime. If Autumn doesn't return a response, your app should default to allowing usage. This means Autumn will never take your app down—some users may temporarily get extra usage.\n\nWe'll work with you to reconcile usage tracking and balances afterward if needed.",
+      "We run on redundant infrastructure and high availability is our priority. However, not being able to reach Autumn does not mean that your app will go down. Our SDKs default to fail open and fail fast, meaning that in a worst case scenario, some users may get temporary additional access.\n\nWe can work with you to reconcile usage tracking and balances afterward if needed.",
   },
   {
     id: 3,
     question: "How is Autumn different from Orb or Metronome?",
     answer:
-      "Orb and Metronome focus on usage metering—tracking how much customers consume. You still have to build entitlements, access control, and state management separately.\n\nAutumn is a complete system of record. We handle usage metering + entitlements + feature gating + billing state in one API. `check()` tells you if a user can access a feature in <50ms. You don't build that logic.",
+      "Orb and Metronome focus on usage metering—tracking how much customers consume, suitable for end of month invoicing. You still have to build access control and state management separately, meaning you'll wire together your own logic, Stripe billing and a metering provider.\n\nAutumn is a complete system of record. We handle usage metering + entitlements + feature gating + billing state in one API. `check()` tells you if a user can access a feature in <50ms.",
   },
   {
     id: 4,
-    question: "What if I need to move off Autumn?",
+    question: "What if I need to move off Autumn? Am I locked in?",
     answer:
-      "Autumn is open source. You can self-host anytime, or export all your data. Your Stripe subscriptions remain yours—we never lock you in. Most customers who self-host do so for compliance reasons, not because they're leaving.",
+      "Autumn is open source. You can self-host anytime, or export all your data. Your Stripe subscriptions, customers and payment details remain yours. Moving off Autumn is simply a case of building what you would have built in-house without Autumn (but this has never happened, touch wood!). ",
   },
   {
     id: 5,
     question: "How long does integration take?",
     answer:
-      "Most teams go live in under an hour. Migrating from an existing billing system typically takes 1–2 weeks, depending on complexity. We provide migration guides and work directly with your team.",
+      "Most teams go live in under an hour. Migrating from an existing billing system typically takes 1–2 weeks, depending on complexity. For Series A+ companies, we provide a forward deployed service to work with your team, dual-write to your internal system and Autumn, then smoothly migrate over. Minimal work needed on your part.",
   },
   {
     id: 6,
     question: "Can you handle our event volume?",
     answer:
-      "Yes. Autumn supports 10,000+ events per second per customer. We've processed millions of billing events daily for AI companies at scale. If you have specific requirements, reach out—we'll walk through your architecture.",
+      "Yes. Autumn supports 10,000+ events per second per end customer. We've processed millions of billing events daily for AI companies at scale. If you have specific requirements, reach out—we'll walk through your architecture.",
+  },
+  {
+    id: 7,
+    question: "What if I can't use `check()`?",
+    answer:
+      "Latency-sensitive customers may not be able to use `check()` in real-time. In these cases, you can cache the Autumn customer data on your end, or use our single `customer.products.updated` webhook to replicate the Autumn state into your own system.",
   },
 ];
 
 export const featuresData = [
   {
-    title: "Webhooks Handled",
+    title: "Usage Ledgers",
     description:
-      "Gate features with a single API call. check() resolves what each customer can access in under 50ms no database queries, no hardcoded logic.",
+      "Recurring, one-time and rollover credit balances. Stack balances across plans and topups. Deduct from soonest expiry first.",
     Icon: IconWebhooks,
+  },
+  {
+    title: "Payment Logic",
+    description:
+      "Checkouts, upgrades, downgrades, add-ons, proration, 3DS, edge cases, webhooks: all handled in a single API call.",
+    Icon: IconWebhooks,
+  },
+  {
+    title: "Custom Plans",
+    description:
+      "Create one-off deals for enterprise customers. Unique pricing, features, and limits without touching code.",
+    Icon: IconPlans,
   },
   {
     title: "Usage Analytics",
     description:
-      "Timeseries charts and event logs out of the box. See usage trends, credit consumption, and feature adoption per customer.",
+      "Fast timeseries charts and event logs out of the box. Powered by ClickHouse.",
     Icon: IconAnalytics,
   },
   {
     title: "Team Billing",
     description:
-      "Bill organizations, track usage per seat. Add/remove team members. Prorate seat charges automatically.",
+      "Grant plans and features to entities under an organization. Create pools of credits, or assign to users directly.",
     Icon: IconTeam,
   },
   {
@@ -1220,25 +1238,19 @@ export const featuresData = [
     Icon: IconTopUp,
   },
   {
-    title: "Custom Plans",
-    description:
-      "Create one-off deals for enterprise customers. Unique pricing, credits, and limits without touching code.",
-    Icon: IconPlans,
-  },
-  {
     title: "Pricing Versioning",
     description:
-      "Change your pricing model without breaking existing customers. Grandfather old plans or migrate users gradually. No database migrations.",
+      "Change your pricing model without breaking existing customers. Grandfather old plans or migrate users gradually. No database or Stripe migrations.",
     Icon: IconVersioning,
   },
   {
-    title: "React Components",
+    title: "Alerts and Spend Limits",
     description:
-      "Drop-in components for pricing tables, usage displays, and upgrade flows. Fully styled, production-ready.",
+      "Give customers governance over their usage. Configure alerts, limits and overage per customer.",
     Icon: IconReact,
   },
   {
-    title: "Referral Programs",
+    title: "Coupons and Referrals",
     description:
       "Built-in referral system with rewards, tracking, and attribution. Launch referral programs in minutes.",
     Icon: IconReferral,

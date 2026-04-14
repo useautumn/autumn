@@ -87,10 +87,10 @@ const Testimonials = () => {
       <div className=" mx-auto">
         <div className="px-4 sm:px-6 md:px-4 lg:px-4 xl:px-22.75 pt-[48px] xl:pt-32 pb-[48px] flex flex-row items-start justify-between">
           <h2 className="w-full text-center md:w-auto md:text-left text-[30px] leading-[32px] sm:text-5xl md:text-[40px] font-normal tracking-[-5%]">
-            <span className="text-[#FFFFFF99]">Built by </span>
+            <span className="text-[#FFFFFF99]">Built for </span>
             <span className="text-white">teams</span>
             <br className="sm:hidden" />
-            <span className="text-white"> who ship</span>
+            <span className="text-white"> that move fast</span>
           </h2>
           <div className="hidden md:flex items-center space-x-4">
             <button

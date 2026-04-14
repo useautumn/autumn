@@ -54,9 +54,9 @@ export default function Features() {
           <div className="text-white">Nothing you have to build.</div>
         </h2>
         <div className="mt-4 text-[16px] tracking-[-2%] font-sans font-light text-[#FFFFFF99] leading-[20px] max-w-[420px]">
-          Eight features that eliminate your entire{" "}
+          Your entire billing infrastructure, {" "}
           <span className="text-white">
-            billing infrastructure, fully managed.
+            fully managed.
           </span>
         </div>
       </div>
@@ -66,7 +66,7 @@ export default function Features() {
         {featuresData.map((feature, i) => (
           <FeatureCard key={i} feature={feature} />
         ))}
-        <div className="bg-[#0f0f0f] w-full h-full min-h-[280px] hidden lg:block border-r border-b border-[#292929]" />
+        {/* <div className="bg-[#0f0f0f] w-full h-full min-h-[280px] hidden lg:block border-r border-b border-[#292929]" /> */}
       </div>
     </section>
   );

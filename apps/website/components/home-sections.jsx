@@ -24,18 +24,18 @@ export default function HomeSections() {
   return (
     <>
       <Hero />
-      <SectionDivider title="PRODUCTION SCALE" />
-      <ProductionScale />
       <SectionDivider title="THE PROBLEM" />
       <Problem />
       <SectionDivider title="THE SOLUTION" />
       <Solution />
+            <SectionDivider title="PRICING MODELS" />
+      <PricingModels />
       <SectionDivider title="FEATURES" />
       <Features />
-      <SectionDivider title="PRICING MODELS" />
-      <PricingModels />
       <SectionDivider title="TESTIMONIALS" />
       <Testimonials />
+            <SectionDivider title="PRODUCTION SCALE" />
+      <ProductionScale />
       <SectionDivider title="PRICING" />
       <Pricing />
       <SectionDivider title="FAQ" />
