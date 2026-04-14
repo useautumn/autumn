@@ -92,6 +92,7 @@ export class CusService {
 					orgId,
 					orgSlug: org.slug,
 				});
+
 				const query = getFullCusQuery({
 					idOrInternalId,
 					orgId,
@@ -151,7 +152,10 @@ export class CusService {
 						.slice(0, 5);
 				}
 
-				if (orgId === "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF") {
+				if (
+					orgId === "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF" &&
+					idOrInternalId === "698fb72e4c5fa12c1cd11ddc"
+				) {
 					fullCus.customer_products = (
 						fullCus.customer_products as FullCusProduct[]
 					)
@@ -340,7 +344,12 @@ export class CusService {
 							if (proc === "stripe")
 								return sql`(${customers.processor}->>'id' IS NOT NULL)`;
 							if (proc === "revenuecat")
-								return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
+								return sql`EXISTS (
+									SELECT 1
+									FROM customer_products cp_processor
+									WHERE cp_processor.internal_customer_id = ${customers.internal_id}
+										AND cp_processor.processor->>'type' = 'revenuecat'
+								)`;
 							if (proc === "vercel")
 								return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
 							return undefined;

@@ -99,6 +99,7 @@
 		"svix:push": "infisical run --env=dev -- bun packages/openapi/scripts/svixPush.ts",
 		"svix:push:prod": "infisical run --env=prod -- bun packages/openapi/scripts/svixPush.ts",
 		"docs:pull": "bun -F @autumn/docs pull",
+		"site": "cd apps/website && npm install && npm run dev",
 		"docs": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build",
 		"ts": "bun -F @autumn/server ts && bun -F autumn-js ts && bun -F @autumn/openapi ts && bun -F atmn ts && bun -F checkout ts",

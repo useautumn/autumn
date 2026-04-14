@@ -23,7 +23,7 @@ export function useHasSubscriptionChanges({
 	features,
 }: {
 	formValues: UpdateSubscriptionForm;
-	initialPrepaidOptions: Record<string, number>;
+	initialPrepaidOptions: Record<string, number | undefined>;
 	initialBillingBehavior: BillingBehavior | null;
 	prepaidItems: PrepaidItemWithFeature[];
 	customerProduct: FullCusProduct;

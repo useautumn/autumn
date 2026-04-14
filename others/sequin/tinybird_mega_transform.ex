@@ -40,6 +40,7 @@ def transform(action, record, changes, metadata) do
           status: r["status"],
           hosted_invoice_url: r["hosted_invoice_url"],
           total: df.(r["total"]),
+          refunded_amount: df.(r["refunded_amount"]),
           currency: r["currency"],
           discounts: r["discounts"] |> JSON.encode!(),
           items: r["items"] |> JSON.encode!()

@@ -7,6 +7,7 @@ import {
 	DropdownMenuSubTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
+import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 
 type Processor = "stripe" | "revenuecat" | "vercel";
@@ -31,7 +32,15 @@ const PROCESSORS: { value: Processor; label: string; icon: React.ReactNode }[] =
 	];
 
 export const ProcessorSubMenu = () => {
+	const flags = useAutumnFlags();
 	const { queryStates, setFilters } = useCustomerFilters();
+
+	const visibleProcessors = PROCESSORS.filter(({ value }) => {
+		if (value === "stripe") return true;
+		if (value === "revenuecat") return flags.revenuecat;
+		if (value === "vercel") return flags.vercel;
+		return false;
+	});
 
 	const selectedProcessors = queryStates.processor || [];
 	const hasSelections = selectedProcessors.length > 0;
@@ -56,7 +65,7 @@ export const ProcessorSubMenu = () => {
 				)}
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent>
-				{PROCESSORS.map(({ value, label, icon }) => {
+				{visibleProcessors.map(({ value, label, icon }) => {
 					const isActive = selectedProcessors.includes(value);
 					return (
 						<DropdownMenuItem

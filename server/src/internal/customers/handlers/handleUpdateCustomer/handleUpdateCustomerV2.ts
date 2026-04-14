@@ -2,7 +2,6 @@ import { AffectedResource, UpdateCustomerParamsV1Schema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 import { getApiCustomer } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomer.js";
-import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 
 export const handleUpdateCustomerV2 = createRoute({
 	body: UpdateCustomerParamsV1Schema,
@@ -10,21 +9,14 @@ export const handleUpdateCustomerV2 = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const params = c.req.valid("json");
-		const { oldCustomer, newFullCustomer } = await customerActions.update({
+		const { newFullCustomer } = await customerActions.update({
 			ctx,
 			params,
 		});
 
-		ctx.skipCache = true;
-		const fullCustomer = await getOrSetCachedFullCustomer({
-			ctx,
-			customerId: newFullCustomer.id ?? oldCustomer.id ?? params.customer_id,
-			source: "handleUpdateCustomerV2",
-		});
-
 		const customerDetails = await getApiCustomer({
 			ctx,
-			fullCustomer,
+			fullCustomer: newFullCustomer,
 		});
 
 		return c.json(customerDetails);

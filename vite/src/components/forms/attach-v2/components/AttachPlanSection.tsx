@@ -19,12 +19,17 @@ export function AttachPlanSection({
 		productWithFormItems: product,
 		hasCustomizations,
 		initialPrepaidOptions,
+		previewPrepaidOptions,
 		handleEditPlan,
 		previewDiff,
 	} = useAttachFormContext();
 
 	const hideEditButton = readOnly || formValues.grantFree;
 	const { prepaidOptions } = formValues;
+
+	const effectiveInitialPrepaidOptions = readOnly
+		? previewPrepaidOptions
+		: initialPrepaidOptions;
 
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
@@ -45,7 +50,7 @@ export function AttachPlanSection({
 		originalItems: originalItemsForDiff,
 		features,
 		prepaidOptions,
-		initialPrepaidOptions,
+		initialPrepaidOptions: effectiveInitialPrepaidOptions,
 		form,
 		showDiff: shouldShowDiff,
 		currency,
