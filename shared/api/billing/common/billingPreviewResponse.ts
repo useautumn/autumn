@@ -137,6 +137,30 @@ export const ExtBillingPreviewResponseSchema = z.object({
 	outgoing: z.array(BillingPreviewChangeSchema).meta({
 		description: "Products or subscription changes being removed or ended.",
 	}),
+
+	refund: z
+		.object({
+			amount: z.number().meta({
+				description:
+					"The refund amount that will be issued, accounting for any prior partial refunds.",
+			}),
+			invoice: z
+				.object({
+					stripe_id: z.string(),
+					total: z.number(),
+					refunded_amount: z.number(),
+					currency: z.string(),
+				})
+				.meta({
+					description: "The invoice that will be refunded.",
+				}),
+		})
+		.optional()
+		.meta({
+			internal: true,
+			description:
+				"Refund preview for cancel-with-refund flows. Only present when refund_last_payment is set.",
+		}),
 });
 
 export const BillingPreviewResponseSchema =
