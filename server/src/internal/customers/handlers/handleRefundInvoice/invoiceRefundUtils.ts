@@ -107,6 +107,14 @@ export const calculateRefundAmountInCents = ({
 
 	const refundAmountInCents = atmnToStripeAmount({ amount, currency });
 
+	if (refundAmountInCents <= 0) {
+		throw new RecaseError({
+			message: "Refund amount is too small",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	if (refundAmountInCents > refundableAmountInCents) {
 		const refundableDisplay = stripeToAtmnAmount({
 			amount: refundableAmountInCents,
