@@ -14,12 +14,10 @@ import { handleGetCustomerV2 } from "./handlers/handleGetCustomerV2.js";
 import { handlePostCustomer } from "./handlers/handleGetOrCreateCustomer/handleGetOrCreateCustomer.js";
 import { handleListCustomers } from "./handlers/handleListCustomers.js";
 import { handleListCustomersV2 } from "./handlers/handleListCustomersV2.js";
+import { handleRefundInvoice } from "./handlers/handleRefundInvoice/handleRefundInvoice.js";
 import { handleTransferProductV2 } from "./handlers/handleTransferProductV2.js";
 import { handleUpdateBalancesV2 } from "./handlers/handleUpdateBalancesV2.js";
 import { handleUpdateCustomer } from "./handlers/handleUpdateCustomer/handleUpdateCustomer.js";
-import { handleListRefundableCharges } from "./handlers/refunds/handleListRefundableCharges.js";
-import { handleRefundCharges } from "./handlers/refunds/handleRefundCharges.js";
-import { handleRefundPreview } from "./handlers/refunds/handleRefundPreview.js";
 
 export const cusRouter = new Hono<HonoEnv>();
 
@@ -37,9 +35,10 @@ cusRouter.delete("/:customer_id", ...handleDeleteCustomer);
 
 cusRouter.post("/:customer_id/coupons/:coupon_id", ...handleAddCouponToCusV2);
 cusRouter.post("/:customer_id/transfer", ...handleTransferProductV2);
-cusRouter.get("/:customer_id/refundables", ...handleListRefundableCharges);
-cusRouter.post("/:customer_id/refunds/preview", ...handleRefundPreview);
-cusRouter.post("/:customer_id/refunds", ...handleRefundCharges);
+cusRouter.post(
+	"/:customer_id/invoices/:stripe_invoice_id/refund",
+	...handleRefundInvoice,
+);
 
 // Billing portal
 cusRouter.post("/:customer_id/billing_portal", ...handleCreateBillingPortal);
