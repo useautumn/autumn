@@ -5,7 +5,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
-import { validateImmediateMultiProductTransitions } from "../../common/immediateMultiProduct/validateImmediateMultiProductTransitions";
+import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
 
 /** Build billing context for the immediate phase. */
 export const setupCreateScheduleBillingContext = async ({
@@ -34,8 +34,8 @@ export const setupCreateScheduleBillingContext = async ({
 		params: immediateParams,
 	});
 
-	validateImmediateMultiProductTransitions({
-		productContexts: billingContext.productContexts,
+	validateCreateSchedulePhasePlans({
+		fullProducts: billingContext.fullProducts,
 	});
 
 	return billingContext;

@@ -43,21 +43,18 @@ export const createSchedule = async ({
 		});
 	}
 
-	const immediateAutumnBillingPlan = computeCreateSchedulePlan({
-		ctx,
-		billingContext,
-	});
-	const immediatePhaseCustomerProductIds =
-		immediateAutumnBillingPlan.insertCustomerProducts.map(
-			(customerProduct) => customerProduct.id,
-		);
-	const stripeBillingPlan = await evaluateStripeBillingPlan({
-		ctx,
-		billingContext,
+	const {
 		autumnBillingPlan: immediateAutumnBillingPlan,
-		checkoutMode: billingContext.checkoutMode,
+		immediatePhaseCustomerProducts,
+	} = computeCreateSchedulePlan({
+		ctx,
+		billingContext,
+		immediatePhase,
+		nextPhaseStartsAt: futurePhases[0]?.starts_at,
 	});
-
+	const immediatePhaseCustomerProductIds = immediatePhaseCustomerProducts.map(
+		(customerProduct) => customerProduct.id,
+	);
 	const futureScheduledPhases = await materializeScheduledPhases({
 		ctx,
 		currentEpochMs,
@@ -67,6 +64,12 @@ export const createSchedule = async ({
 	const autumnExecutionPlan = buildCreateScheduleExecutionPlan({
 		immediateAutumnBillingPlan,
 		futureScheduledPhases,
+	});
+	const stripeBillingPlan = await evaluateStripeBillingPlan({
+		ctx,
+		billingContext,
+		autumnBillingPlan: autumnExecutionPlan,
+		checkoutMode: billingContext.checkoutMode,
 	});
 
 	const billingPlan = {
