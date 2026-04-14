@@ -72,7 +72,13 @@ export function InvoiceDetailSheet({
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 	const { customer } = useCusQuery();
 	const isStripeCustomer = customer?.processor?.type === ProcessorType.Stripe;
-	const canRefund = isStripeCustomer && invoice.status === InvoiceStatus.Paid;
+	const isFullyRefunded =
+		invoice.refunded_amount > 0 &&
+		invoice.refunded_amount >= Math.abs(invoice.total);
+	const canRefund =
+		isStripeCustomer &&
+		invoice.status === InvoiceStatus.Paid &&
+		!isFullyRefunded;
 
 	// Group line items: first by product_id, then within each product by
 	// stripe_subscription_item_id (for tiered) or individually.
@@ -188,7 +194,11 @@ export function InvoiceDetailSheet({
 				title={
 					<div className="flex items-center gap-2">
 						<span>Invoice</span>
-						<CustomerInvoiceStatus status={invoice.status ?? "paid"} />
+						<CustomerInvoiceStatus
+							status={invoice.status ?? "paid"}
+							total={invoice.total}
+							refundedAmount={invoice.refunded_amount}
+						/>
 					</div>
 				}
 				description={`${formatDate(invoice.created_at)} • ${formatSignedAmount(invoice.total, invoice.currency)}`}
