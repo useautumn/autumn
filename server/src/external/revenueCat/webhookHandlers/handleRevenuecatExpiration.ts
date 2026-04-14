@@ -19,7 +19,7 @@ export const handleExpiration = async ({
 	const { product, customer, cusProducts } = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
-		customerId: original_app_user_id ?? app_user_id,
+		customerId: app_user_id ?? original_app_user_id,
 	});
 
 	const { curSameProduct } = getExistingCusProducts({

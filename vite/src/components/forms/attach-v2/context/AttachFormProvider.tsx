@@ -15,7 +15,6 @@ import {
 	isFreeProductV2,
 	isOneOffProductV2,
 	productV2ToFrontendProduct,
-	UsageModel,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import {
@@ -65,6 +64,7 @@ interface AttachFormContextValue {
 	hasCustomizations: boolean;
 	numVersions: number;
 	initialPrepaidOptions: Record<string, number>;
+	previewPrepaidOptions: Record<string, number>;
 
 	isFreeToPaidTransition: boolean;
 
@@ -130,9 +130,6 @@ export function AttachFormProvider({
 	children,
 }: AttachFormProviderProps) {
 	const [showPlanEditor, setShowPlanEditor] = useState(false);
-	const [initialPrepaidOptions, setInitialPrepaidOptions] = useState<
-		Record<string, number>
-	>({});
 
 	const form = useAttachForm({ initialProductId });
 
@@ -281,14 +278,7 @@ export function AttachFormProvider({
 
 		// Initialize prepaid options for the selected product
 		if (product) {
-			const newInitialPrepaidOptions: Record<string, number> = {};
-			for (const item of product.items) {
-				if (item.usage_model === UsageModel.Prepaid && item.feature_id) {
-					newInitialPrepaidOptions[item.feature_id] = 0;
-				}
-			}
-			form.setFieldValue("prepaidOptions", newInitialPrepaidOptions);
-			setInitialPrepaidOptions(newInitialPrepaidOptions);
+			form.setFieldValue("prepaidOptions", {});
 
 			if (product.free_trial) {
 				form.setFieldValue("trialEnabled", true);
@@ -365,6 +355,21 @@ export function AttachFormProvider({
 
 	const previewQuery = useAttachPreview({ requestBody });
 
+	const previewPrepaidOptions = useMemo(() => {
+		const incoming = previewQuery.data?.incoming;
+		if (!incoming || incoming.length === 0) return {};
+
+		const options: Record<string, number> = {};
+		for (const change of incoming) {
+			for (const featureQuantity of change.feature_quantities) {
+				options[featureQuantity.feature_id] = featureQuantity.quantity;
+			}
+		}
+		return options;
+	}, [previewQuery.data?.incoming]);
+
+	const initialPrepaidOptions: Record<string, number> = {};
+
 	const previewDiff = usePreviewDiff({
 		previewQuery,
 		productId: productId ?? "",
@@ -420,25 +425,6 @@ export function AttachFormProvider({
 				},
 			});
 
-			const currentPrepaidOptions = form.store.state.values.prepaidOptions;
-			const updatedPrepaidOptions = { ...currentPrepaidOptions };
-			let hasNewPrepaidItems = false;
-
-			for (const item of draftProduct.items) {
-				if (
-					item.usage_model === "prepaid" &&
-					item.feature_id &&
-					updatedPrepaidOptions[item.feature_id] === undefined
-				) {
-					updatedPrepaidOptions[item.feature_id] = 0;
-					hasNewPrepaidItems = true;
-				}
-			}
-
-			if (hasNewPrepaidItems) {
-				form.setFieldValue("prepaidOptions", updatedPrepaidOptions);
-			}
-
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();
 		},
@@ -462,6 +448,7 @@ export function AttachFormProvider({
 			hasCustomizations,
 			numVersions,
 			initialPrepaidOptions,
+			previewPrepaidOptions,
 			isFreeToPaidTransition,
 			previewQuery,
 			previewDiff,
@@ -484,7 +471,7 @@ export function AttachFormProvider({
 			productWithFormItems,
 			hasCustomizations,
 			numVersions,
-			initialPrepaidOptions,
+			previewPrepaidOptions,
 			isFreeToPaidTransition,
 			previewQuery,
 			previewDiff,
