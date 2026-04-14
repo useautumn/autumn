@@ -9,7 +9,10 @@ import chalk from "chalk";
 import type { Logger } from "@/external/logtail/logtailUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
-import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
+import {
+	getDeleteCustomerProducts,
+	getUpdateCustomerProducts,
+} from "@/internal/billing/v2/utils/billingPlan/customerProductMutations";
 import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
 
 const formatLineItem = (item: LineItem) => ({
@@ -74,14 +77,14 @@ const getSiblingCustomerProducts = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	stripeSubscriptionId: string;
 }): FullCusProduct[] => {
-	const updatedCustomerProduct = billingPlanToUpdatedCustomerProduct({
-		autumnBillingPlan,
-	});
-
 	const handledIds = new Set([
 		...autumnBillingPlan.insertCustomerProducts.map((cp) => cp.id),
-		updatedCustomerProduct?.id,
-		autumnBillingPlan.deleteCustomerProduct?.id,
+		...getUpdateCustomerProducts({ autumnBillingPlan }).map(
+			(updateCustomerProduct) => updateCustomerProduct.customerProduct.id,
+		),
+		...getDeleteCustomerProducts({ autumnBillingPlan }).map(
+			(customerProduct) => customerProduct.id,
+		),
 	]);
 
 	return customerProducts.filter((customerProduct) => {

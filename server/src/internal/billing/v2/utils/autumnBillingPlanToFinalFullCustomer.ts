@@ -1,5 +1,9 @@
 import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
-import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
+import {
+	applyCustomerProductUpdate,
+	getDeleteCustomerProducts,
+	getUpdateCustomerProducts,
+} from "@/internal/billing/v2/utils/billingPlan/customerProductMutations";
 
 export const autumnBillingPlanToFinalFullCustomer = ({
 	billingContext,
@@ -9,10 +13,11 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
 	const {
-		deleteCustomerProduct,
 		insertCustomerProducts,
 		updateCustomerEntitlements,
 	} = autumnBillingPlan;
+	const deleteCustomerProducts = getDeleteCustomerProducts({ autumnBillingPlan });
+	const updateCustomerProducts = getUpdateCustomerProducts({ autumnBillingPlan });
 
 	const finalFullCustomer = structuredClone(billingContext.fullCustomer);
 
@@ -22,21 +27,29 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 		...insertCustomerProducts,
 	];
 
-	// 2. Replace updated customer product if applicable
-	const updatedCustomerProduct = billingPlanToUpdatedCustomerProduct({
-		autumnBillingPlan,
-	});
-
 	let customerProducts = combinedCustomerProducts.map((customerProduct) =>
-		customerProduct.id === updatedCustomerProduct?.id
-			? updatedCustomerProduct
+		updateCustomerProducts.find(
+			(updateCustomerProduct) =>
+				updateCustomerProduct.customerProduct.id === customerProduct.id,
+		)
+			? applyCustomerProductUpdate({
+					customerProduct,
+					updates:
+						updateCustomerProducts.find(
+							(updateCustomerProduct) =>
+								updateCustomerProduct.customerProduct.id === customerProduct.id,
+						)!.updates,
+				})
 			: customerProduct,
 	);
 
 	// 3. Remove deleted customer product if applicable
-	if (deleteCustomerProduct) {
+	if (deleteCustomerProducts.length > 0) {
+		const deletedIds = new Set(
+			deleteCustomerProducts.map((customerProduct) => customerProduct.id),
+		);
 		customerProducts = customerProducts.filter(
-			(customerProduct) => customerProduct.id !== deleteCustomerProduct.id,
+			(customerProduct) => !deletedIds.has(customerProduct.id),
 		);
 	}
 

@@ -21,9 +21,14 @@ const createBillingContext = ({
 		(productContext) => productContext.fullProduct,
 	);
 	const currentCustomerProducts = productContexts.flatMap((productContext) =>
-		productContext.currentCustomerProduct
-			? [productContext.currentCustomerProduct]
-			: [],
+		[
+			...(productContext.currentCustomerProduct
+				? [productContext.currentCustomerProduct]
+				: []),
+			...(productContext.scheduledCustomerProduct
+				? [productContext.scheduledCustomerProduct]
+				: []),
+		],
 	);
 
 	return {
@@ -76,19 +81,25 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 		const result = computeCreateSchedulePlan({
 			ctx,
 			billingContext,
+			immediatePhase: {
+				starts_at: Date.now(),
+				plans: [{ plan_id: baseProduct.id }, { plan_id: addonProduct.id }],
+			},
 		});
 
-		expect(result.insertCustomerProducts).toHaveLength(2);
+		expect(result.autumnBillingPlan.insertCustomerProducts).toHaveLength(2);
 		expect(
-			result.insertCustomerProducts.map((product) => product.product_id),
+			result.autumnBillingPlan.insertCustomerProducts.map(
+				(product) => product.product_id,
+			),
 		).toEqual(["base", "addon"]);
 		expect(
-			result.insertCustomerProducts.every(
+			result.autumnBillingPlan.insertCustomerProducts.every(
 				(product) => product.status === CusProductStatus.Active,
 			),
 		).toBe(true);
-		expect(result.updateCustomerProduct).toBeUndefined();
-		expect(result.deleteCustomerProduct).toBeUndefined();
+		expect(result.autumnBillingPlan.updateCustomerProduct).toBeUndefined();
+		expect(result.autumnBillingPlan.deleteCustomerProduct).toBeUndefined();
 	});
 
 	test("expires the current product and removes a scheduled replacement during a transition", () => {
@@ -141,18 +152,32 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 		const result = computeCreateSchedulePlan({
 			ctx,
 			billingContext,
+			immediatePhase: {
+				starts_at: currentEpochMs,
+				plans: [{ plan_id: newProduct.id }],
+			},
 		});
 
-		expect(result.insertCustomerProducts).toHaveLength(1);
-		expect(result.insertCustomerProducts[0]!.product_id).toBe("pro");
-		expect(result.deleteCustomerProduct?.id).toBe("cus_prod_scheduled");
-		expect(result.updateCustomerProduct?.customerProduct.id).toBe(
-			"cus_prod_current",
+		expect(result.autumnBillingPlan.insertCustomerProducts).toHaveLength(1);
+		expect(result.autumnBillingPlan.insertCustomerProducts[0]!.product_id).toBe(
+			"pro",
 		);
-		expect(result.updateCustomerProduct?.updates.status).toBe(
-			CusProductStatus.Expired,
+		expect(result.autumnBillingPlan.deleteCustomerProducts).toHaveLength(1);
+		expect(result.autumnBillingPlan.deleteCustomerProducts?.[0]?.id).toBe(
+			"cus_prod_scheduled",
 		);
-		expect(result.updateCustomerProduct?.updates.ended_at).toBe(currentEpochMs);
-		expect(result.updateCustomerProduct?.updates.canceled).toBe(true);
+		expect(result.autumnBillingPlan.updateCustomerProducts).toHaveLength(1);
+		expect(
+			result.autumnBillingPlan.updateCustomerProducts?.[0]?.customerProduct.id,
+		).toBe("cus_prod_current");
+		expect(
+			result.autumnBillingPlan.updateCustomerProducts?.[0]?.updates.status,
+		).toBe(CusProductStatus.Expired);
+		expect(
+			result.autumnBillingPlan.updateCustomerProducts?.[0]?.updates.ended_at,
+		).toBe(currentEpochMs);
+		expect(
+			result.autumnBillingPlan.updateCustomerProducts?.[0]?.updates.canceled,
+		).toBe(true);
 	});
 });
