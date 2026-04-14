@@ -5,11 +5,11 @@ import {
 	type ProductV2,
 } from "@autumn/shared";
 import { useMemo } from "react";
-import { BillingBehaviorSection } from "@/components/forms/cancel-subscription/components/BillingBehaviorSection";
 import { CancelAdvancedSection } from "@/components/forms/cancel-subscription/components/CancelAdvancedSection";
 import { CancelFooter } from "@/components/forms/cancel-subscription/components/CancelFooter";
 import { CancelModeSection } from "@/components/forms/cancel-subscription/components/CancelModeSection";
 import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
+import { RefundBehaviorSection } from "@/components/forms/cancel-subscription/components/RefundBehaviorSection";
 import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
@@ -70,7 +70,7 @@ function SheetContent() {
 				)}
 
 				<CancelModeSection />
-				<BillingBehaviorSection />
+				<RefundBehaviorSection />
 				<CancelAdvancedSection />
 				<CancelPreviewSection />
 				<CancelFooter />

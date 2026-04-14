@@ -77,22 +77,32 @@ export function RefundInvoiceDialog({
 				toast.error("Please enter a valid refund amount");
 				return;
 			}
-			if (parsed > invoice.total) {
-				toast.error("Refund amount cannot exceed invoice total");
+			if (parsed > remainingRefundable) {
+				toast.error("Refund amount cannot exceed remaining refundable balance");
 				return;
 			}
 		}
 		refundMutation.mutate();
 	};
 
-	const formattedTotal = formatAmount({
-		amount: invoice.total,
-		currency: invoice.currency,
-		minFractionDigits: 2,
-		amountFormatOptions: {
-			currencyDisplay: "narrowSymbol",
-		},
-	});
+	const alreadyRefunded = invoice.refunded_amount ?? 0;
+	const invoiceTotal = Math.abs(invoice.total);
+	const remainingRefundable = invoiceTotal - alreadyRefunded;
+
+	const fmt = ({ amount: amt }: { amount: number }) =>
+		formatAmount({
+			amount: amt,
+			currency: invoice.currency,
+			minFractionDigits: 2,
+			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
+		});
+
+	const refundDisplay =
+		mode === "full"
+			? fmt({ amount: remainingRefundable })
+			: amount
+				? fmt({ amount: Number.parseFloat(amount) || 0 })
+				: fmt({ amount: 0 });
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -100,7 +110,8 @@ export function RefundInvoiceDialog({
 				<DialogHeader>
 					<DialogTitle>Refund Invoice</DialogTitle>
 					<DialogDescription>
-						Invoice total: {formattedTotal} {invoice.currency.toUpperCase()}
+						Invoice total: {fmt({ amount: invoiceTotal })}{" "}
+						{invoice.currency.toUpperCase()}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -129,13 +140,27 @@ export function RefundInvoiceDialog({
 								type="number"
 								min="0.01"
 								step="0.01"
-								max={invoice.total}
+								max={remainingRefundable}
 								placeholder="0.00"
 								value={amount}
 								onChange={(e) => setAmount(e.target.value)}
 							/>
 						</div>
 					)}
+
+					{/* Refund summary */}
+					<div className="flex flex-col gap-1 border-t border-border/40 pt-3">
+						{alreadyRefunded > 0 && (
+							<div className="flex justify-between text-xs text-t3">
+								<span>Previously refunded</span>
+								<span>{fmt({ amount: alreadyRefunded })}</span>
+							</div>
+						)}
+						<div className="flex justify-between text-sm font-medium text-foreground">
+							<span>Refund amount</span>
+							<span>{refundDisplay}</span>
+						</div>
+					</div>
 				</div>
 
 				<DialogFooter>
