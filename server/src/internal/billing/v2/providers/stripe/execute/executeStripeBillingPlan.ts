@@ -9,6 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeStripeCheckoutSessionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeCheckoutSessionAction";
 import { executeStripeInvoiceAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeInvoiceAction";
+import { executeStripeRefundAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeRefundAction.js";
 import { executeStripeSubscriptionAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction";
 import { executeStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionScheduleAction";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
@@ -116,6 +117,20 @@ export const executeStripeBillingPlan = async ({
 		}
 	}
 
+	// Execute refund action (after subscription cancel, which provides the latest_invoice)
+	ctx.logger.info(
+		`[executeStripeBillingPlan] refundAction: ${JSON.stringify(billingPlan.stripe.refundAction)}, hasStripeSubscription: ${!!stripeSubscription}`,
+	);
+	let stripeRefund: Stripe.Refund | undefined;
+	if (billingPlan.stripe.refundAction && stripeSubscription) {
+		stripeRefund = await executeStripeRefundAction({
+			ctx,
+			refundAction: billingPlan.stripe.refundAction,
+			stripeSubscription,
+			currentEpochMs: billingContext.currentEpochMs,
+		});
+	}
+
 	const stripeInvoice =
 		subscriptionResult?.stripeInvoice ?? invoiceResult?.stripeInvoice;
 
@@ -126,6 +141,7 @@ export const executeStripeBillingPlan = async ({
 		stripeSubscription: subscriptionResult?.stripeSubscription,
 		stripeInvoice,
 		stripeInvoiceItems,
+		stripeRefund,
 		requiredAction:
 			subscriptionResult?.requiredAction ?? invoiceResult?.requiredAction,
 		autumnInvoice,
