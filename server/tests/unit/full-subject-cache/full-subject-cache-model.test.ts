@@ -107,14 +107,20 @@ const buildNormalized = (): NormalizedFullSubject =>
 describe("fullSubject cache model", () => {
 	test("stores non-balance data in the top-level subject", () => {
 		const normalized = buildNormalized();
-		const cached = normalizedToCachedFullSubject({ normalized });
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
 
 		expect(cached.customer_products).toEqual(normalized.customer_products);
 		expect(cached.meteredFeatures).toEqual(["feat_1"]);
+		expect(cached.customerEntitlementIdsByFeatureId).toEqual({
+			feat_1: ["cus_ent_1"],
+		});
 		expect(cached._cachedAt).toBeTypeOf("number");
 	});
 
-	test("stores customer entity epoch for entity subjects", () => {
+	test("stores subject view epoch for entity subjects", () => {
 		const normalized = {
 			...buildNormalized(),
 			subjectType: SubjectType.Entity,
@@ -138,15 +144,18 @@ describe("fullSubject cache model", () => {
 		} as NormalizedFullSubject;
 		const cached = normalizedToCachedFullSubject({
 			normalized,
-			customerEntityEpoch: 7,
+			subjectViewEpoch: 7,
 		});
 
-		expect(cached.customerEntityEpoch).toBe(7);
+		expect(cached.subjectViewEpoch).toBe(7);
 	});
 
 	test("reconstructs normalized data from cached subject and balances", () => {
 		const normalized = buildNormalized();
-		const cached = normalizedToCachedFullSubject({ normalized });
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
 		const reconstructed = cachedFullSubjectToNormalized({
 			cached,
 			customerEntitlements: normalized.customer_entitlements,

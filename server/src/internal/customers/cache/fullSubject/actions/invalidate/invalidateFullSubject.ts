@@ -1,5 +1,5 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { incrementFullSubjectCustomerEpoch } from "./incrementFullSubjectCustomerEpoch.js";
+import { incrementFullSubjectViewEpoch } from "./incrementFullSubjectViewEpoch.js";
 import { invalidateCachedFullSubjectExact } from "./invalidateFullSubjectExact.js";
 
 export const invalidateCachedFullSubject = async ({
@@ -34,7 +34,7 @@ export const invalidateCachedFullSubject = async ({
 		});
 	}
 
-	await incrementFullSubjectCustomerEpoch({
+	await incrementFullSubjectViewEpoch({
 		ctx,
 		customerId,
 	});

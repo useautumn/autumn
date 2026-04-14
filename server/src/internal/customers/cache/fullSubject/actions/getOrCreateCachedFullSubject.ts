@@ -12,7 +12,8 @@ import { updateCustomerData } from "@/internal/customers/actions/updateCustomerD
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
-import { setCachedFullSubject } from "./setCachedFullSubject.js";
+import { getOrInitFullSubjectViewEpoch } from "./invalidate/getOrInitFullSubjectViewEpoch.js";
+import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
 export const getOrCreateCachedFullSubject = async ({
 	ctx,
@@ -37,6 +38,7 @@ export const getOrCreateCachedFullSubject = async ({
 	let fullSubject: FullSubject | undefined;
 	let normalized: Awaited<ReturnType<typeof getFullSubjectNormalized>>;
 	let setCache = true;
+	let fetchedSubjectViewEpoch = 0;
 
 	if (customerId && !skipCache) {
 		fullSubject = await getCachedFullSubject({
@@ -53,6 +55,10 @@ export const getOrCreateCachedFullSubject = async ({
 	}
 
 	if (!fullSubject && customerId) {
+		fetchedSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
+			ctx,
+			customerId,
+		});
 		normalized = await getFullSubjectNormalized({
 			ctx,
 			customerId,
@@ -115,6 +121,7 @@ export const getOrCreateCachedFullSubject = async ({
 				ctx,
 				normalized,
 				fetchTimeMs,
+				fetchedSubjectViewEpoch,
 			}).catch((error) =>
 				logger.error(`Failed to set full subject cache: ${error}`),
 			);
