@@ -4,7 +4,7 @@ import {
 	CustomerDataSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { getApiCustomerByRollout } from "@/internal/customers/actions/getApiCustomerByRollout.js";
+import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
 export const handleGetOrCreateCustomerV2 = createRoute({
@@ -19,7 +19,7 @@ export const handleGetOrCreateCustomerV2 = createRoute({
 		const customerData = CustomerDataSchema.parse(createCusParams);
 		const customerId = createCusParams.customer_id;
 
-		const apiCustomer = await getApiCustomerByRollout({
+		const apiCustomer = await getOrCreateApiCustomerByRollout({
 			ctx,
 			params: {
 				customer_id: customerId,

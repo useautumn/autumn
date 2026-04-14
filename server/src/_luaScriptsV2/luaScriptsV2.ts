@@ -14,6 +14,7 @@ const DELETE_CACHE_DIR = join(__dirname, "deleteFullCustomerCache");
 const RESET_DIR = join(__dirname, "resetCustomerEntitlements");
 const UPDATE_DIR = join(__dirname, "updateCustomerEntitlements");
 const FULL_SUBJECT_DIR = join(__dirname, "fullSubject");
+const FULL_SUBJECT_DEDUCTION_DIR = join(__dirname, "fullSubjectDeduction");
 
 // ============================================================================
 // HELPER MODULES
@@ -21,7 +22,7 @@ const FULL_SUBJECT_DIR = join(__dirname, "fullSubject");
 
 const FULL_CUSTOMER_DIR = join(__dirname, "fullCustomer");
 
-const LUA_UTILS = readFileSync(join(DEDUCT_DIR, "luaUtils.lua"), "utf-8");
+const LUA_UTILS = readFileSync(join(__dirname, "luaUtils.lua"), "utf-8");
 
 const FULL_CUSTOMER_UTILS = readFileSync(
 	join(FULL_CUSTOMER_DIR, "fullCustomerUtils.lua"),
@@ -191,6 +192,14 @@ const updateCustomerDataV2Script = readFileSync(
 /** Atomically update top-level customer fields in the cached FullSubject. */
 export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = updateCustomerDataV2Script;
 
+const updateEntityDataV2Script = readFileSync(
+	join(FULL_SUBJECT_DIR, "updateEntityDataV2.lua"),
+	"utf-8",
+);
+
+/** Atomically update top-level entity fields in the cached FullSubject. */
+export const UPDATE_ENTITY_DATA_V2_SCRIPT = updateEntityDataV2Script;
+
 // ============================================================================
 // RESET CUSTOMER ENTITLEMENTS SCRIPT (deprecated — kept for backward compat)
 // ============================================================================
@@ -300,3 +309,79 @@ export const UPDATE_CUSTOMER_PRODUCT_SCRIPT = readFileSync(
 	join(CUS_PRODUCT_DIR, "updateCustomerProduct.lua"),
 	"utf-8",
 );
+
+// ============================================================================
+// FULL SUBJECT DEDUCTION SCRIPT (V2 cache — per-feature hash balances)
+// ============================================================================
+
+const READ_SUBJECT_BALANCES = readFileSync(
+	join(FULL_SUBJECT_DEDUCTION_DIR, "readSubjectBalances.lua"),
+	"utf-8",
+);
+
+const CONTEXT_UTILS_V2 = readFileSync(
+	join(FULL_SUBJECT_DEDUCTION_DIR, "contextUtilsV2.lua"),
+	"utf-8",
+);
+
+const DEDUCT_FROM_ROLLOVERS_V2 = readFileSync(
+	join(FULL_SUBJECT_DEDUCTION_DIR, "deductFromRolloversV2.lua"),
+	"utf-8",
+);
+
+const DEDUCT_FROM_MAIN_BALANCE_V2 = readFileSync(
+	join(FULL_SUBJECT_DEDUCTION_DIR, "deductFromMainBalanceV2.lua"),
+	"utf-8",
+);
+
+const RUN_DEDUCTION_ON_CONTEXT_V2 = readFileSync(
+	join(FULL_SUBJECT_DEDUCTION_DIR, "runDeductionOnContextV2.lua"),
+	"utf-8",
+);
+
+const SPEND_LIMIT_UTILS_V2 = readFileSync(
+	join(FULL_SUBJECT_DEDUCTION_DIR, "spendLimitUtilsV2.lua"),
+	"utf-8",
+);
+
+const DEDUCT_FROM_SUBJECT_BALANCES_MAIN = readFileSync(
+	join(FULL_SUBJECT_DEDUCTION_DIR, "deductFromSubjectBalances.lua"),
+	"utf-8",
+);
+
+/**
+ * Lua script for deducting from subject balances in Redis (V2 cache).
+ * Reads from per-feature hash fields and writes back touched entitlements.
+ * Composed from shared helper modules + V2-specific storage adapters.
+ */
+export const DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
+${READ_SUBJECT_BALANCES}
+${CONTEXT_UTILS_V2}
+${GET_TOTAL_BALANCE}
+${DEDUCT_FROM_ROLLOVERS_V2}
+${DEDUCT_FROM_MAIN_BALANCE_V2}
+${SPEND_LIMIT_UTILS_V2}
+${RUN_DEDUCTION_ON_CONTEXT_V2}
+${MUTATION_ITEM_UTILS}
+${LOCK_RECEIPT_UTILS}
+${LOCK_STATE_UTILS}
+${LOCK_UNWIND_UTILS}
+${DEDUCT_FROM_SUBJECT_BALANCES_MAIN}`;
+
+// ============================================================================
+// UPDATE SUBJECT BALANCES SCRIPT (V2 cache — per-feature hash updates)
+// ============================================================================
+
+const UPDATE_SUBJECT_BALANCES_MAIN = readFileSync(
+	join(FULL_SUBJECT_DIR, "updateSubjectBalances.lua"),
+	"utf-8",
+);
+
+/**
+ * Lua script for atomically updating SubjectBalance entries in a single
+ * per-feature balance hash. Supports scalar updates, rollover ops,
+ * replaceable ops, and expected_next_reset_at guard.
+ * Called once per feature via pipeline.
+ */
+export const UPDATE_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
+${UPDATE_SUBJECT_BALANCES_MAIN}`;

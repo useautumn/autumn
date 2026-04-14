@@ -11,7 +11,6 @@ import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
-import { updateCachedCustomerData } from "../../cusUtils/fullCustomerCacheUtils/updateCachedCustomerData";
 
 export const updateCustomer = async ({
 	ctx,
@@ -133,13 +132,6 @@ export const updateCustomer = async ({
 		ctx,
 		idOrInternalId: originalCustomer.id || originalCustomer.internal_id,
 		update: updateData,
-	});
-
-	await updateCachedCustomerData({
-		ctx,
-		customerId: originalCustomer.id || originalCustomer.internal_id,
-		newCustomerId: newCustomerId ?? undefined,
-		updates: updateData,
 	});
 
 	return newCustomerId ?? customerId;

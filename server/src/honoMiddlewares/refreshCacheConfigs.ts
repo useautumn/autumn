@@ -22,6 +22,16 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 
 	route({
 		method: "POST",
+		url: "/customers/:customer_id",
+	}),
+
+	route({
+		method: "PATCH",
+		url: "/customers/:customer_id",
+	}),
+
+	route({
+		method: "POST",
 		url: "/customers/:customer_id/balances",
 	}),
 
@@ -109,6 +119,16 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/entities.delete",
+	}),
+
+	route({
+		method: "POST",
+		url: "/entities.update",
+	}),
+
+	route({
+		method: "POST",
+		url: "/customers.update",
 	}),
 
 	route({

@@ -36,6 +36,18 @@ export interface Payloads {
 		timestamp: number;
 		cusEntIds: string[];
 		rolloverIds?: string[];
+		entityId?: string;
+	};
+	[JobName.SyncBalanceBatchV4]: {
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		region?: string;
+		timestamp: number;
+		cusEntIds: string[];
+		rolloverIds?: string[];
+		entityId?: string;
+		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 	};
 	[JobName.InsertEventBatch]: {
 		events: EventInsert[];

@@ -1,138 +1,93 @@
 -- ============================================================================
 -- CONTEXT UTILITIES
--- Functions for managing in-memory context during deductions
+-- Functions for managing in-memory SubjectBalance context during deductions
 -- ============================================================================
 
---[[
-  init_context(params)
+local function mark_customer_entitlement_for_update(context, customer_entitlement_id)
 
-  Initializes context object with current balances for all customer_entitlements
-  and builds a rollover index for fast lookups.
-  Reads from Redis once upfront to avoid multiple reads during passes.
+  if is_nil(customer_entitlement_id) then
+    return
+  end
 
-  params:
-    cache_key: string
-    customer_entitlement_ids: array of customer_entitlement IDs
-    full_customer: decoded FullCustomer object (nil when path index is available)
-    pathidx_key: string (path index Redis Hash key)
-    has_pathidx: boolean (true when path index exists)
+  if context.pending_write_ids[customer_entitlement_id] then
+    return
+  end
 
-  Returns: context table with:
-    customer_entitlements: { [cus_ent_id]: { base_path, balance, adjustment, entities } }
-    rollovers: { [rollover_id]: { base_path, cus_ent_id, balance, usage, entities } }
-    mutation_logs: {} (ordered mutation items for receipts and replay)
-    pending_writes: {} (empty array to queue writes)
-    logs: {} (debug logs)
-    logger: { log(fmt, ...): function } (logger that appends to logs)
-]]
+  context.pending_write_ids[customer_entitlement_id] = true
+  table.insert(context.pending_writes, customer_entitlement_id)
+end
+
 local function init_context(params)
   local logs = {}
-  local has_pathidx = params.has_pathidx
-  local pathidx_key = params.pathidx_key
+  local read_result = read_subject_balances({
+    org_id = params.org_id,
+    env = params.env,
+    customer_id = params.customer_id,
+    customer_entitlement_deductions = params.customer_entitlement_deductions,
+  })
 
   local context = {
     customer_entitlements = {},
     rollovers = {},
-    cache_key = params.cache_key,
-    full_customer = params.full_customer,
-    pathidx_key = pathidx_key,
-    has_pathidx = has_pathidx,
+    org_id = params.org_id,
+    env = params.env,
+    customer_id = params.customer_id,
     mutation_logs = {},
     pending_writes = {},
+    pending_write_ids = {},
+    missing_customer_entitlement_ids =
+      read_result.missing_customer_entitlement_ids or {},
     logs = logs,
     logger = {
       log = function(fmt, ...)
         table.insert(logs, string.format(fmt, ...))
-      end
+      end,
     },
   }
 
-  for _, ent_id in ipairs(params.customer_entitlement_ids or {}) do
-    local base_path
-    local has_entity_scope
-    local is_loose
-    local adjustment
-    local unlimited
-    local cus_ent_rollovers
-    local cus_ent_balance
-    local cus_ent_entities
+  for _, ent_obj in ipairs(params.customer_entitlement_deductions or {}) do
+    local ent_id = ent_obj.customer_entitlement_id
+    local balance_entry = read_result.balances_by_id[ent_id]
 
-    if has_pathidx then
-      local result = get_customer_entitlement_via_index({
-        pathidx_key = pathidx_key,
-        cache_key = params.cache_key,
-        cus_ent_id = ent_id,
-      })
-      if result then
-        base_path = result.base_path
-        has_entity_scope = result.has_entity_scope
-        is_loose = result.is_loose
-        local sub = result.sub
-        adjustment = safe_number(sub.adjustment or 0)
-        unlimited = sub.unlimited
-        cus_ent_rollovers = sub.rollovers
-        cus_ent_balance = safe_number(sub.balance or 0)
-        cus_ent_entities = safe_table(sub.entities)
-      end
-    else
-      -- Fallback path: decode full customer + nested loop search
-      local cus_ent, cus_product, ce_idx, cp_idx = find_entitlement(params.full_customer, ent_id)
-
-      if cus_ent then
-        is_loose = (cp_idx == nil)
-
-        if is_loose then
-          local ece_idx_0 = ce_idx - 1
-          base_path = '$.extra_customer_entitlements[' .. ece_idx_0 .. ']'
-        else
-          local cp_idx_0 = cp_idx - 1
-          local ce_idx_0 = ce_idx - 1
-          base_path = '$.customer_products[' .. cp_idx_0 .. '].customer_entitlements[' .. ce_idx_0 .. ']'
-        end
-
-        local entitlement = cus_ent.entitlement
-        has_entity_scope = not is_nil(entitlement) and not is_nil(entitlement.entity_feature_id)
-        adjustment = cus_ent.adjustment or 0
-        unlimited = cus_ent.unlimited
-        cus_ent_rollovers = cus_ent.rollovers
-        cus_ent_balance = safe_number(cus_ent.balance or 0)
-        cus_ent_entities = safe_table(cus_ent.entities)
-      end
-    end
-
-    if base_path then
-      local ent_data = {
-        base_path = base_path,
-        has_entity_scope = has_entity_scope,
-        adjustment = adjustment,
-        unlimited = unlimited,
-        is_loose = is_loose,
-      }
+    if balance_entry then
+      local subject_balance = balance_entry.subject_balance
+      local has_entity_scope = not is_nil(ent_obj.entity_feature_id)
+      local entities = nil
 
       if has_entity_scope then
-        ent_data.balance = 0
-        ent_data.entities = cus_ent_entities or {}
-      else
-        ent_data.balance = cus_ent_balance or 0
-        ent_data.entities = nil
+        entities = safe_table(subject_balance.entities)
+        subject_balance.entities = entities
       end
+
+      local ent_data = {
+        base_path = ent_id,
+        balance_key = balance_entry.balance_key,
+        subject_balance = subject_balance,
+        customer_entitlement_id = ent_id,
+        feature_id = balance_entry.feature_id,
+        has_entity_scope = has_entity_scope,
+        adjustment = safe_number(subject_balance.adjustment),
+        unlimited = subject_balance.unlimited,
+        is_loose = is_nil(subject_balance.customer_product_id),
+        balance = has_entity_scope and 0 or safe_number(subject_balance.balance),
+        entities = has_entity_scope and entities or nil,
+      }
 
       context.customer_entitlements[ent_id] = ent_data
 
-      if cus_ent_rollovers and type(cus_ent_rollovers) == 'table' then
-        for r_idx, rollover in ipairs(cus_ent_rollovers) do
-          if rollover and rollover.id then
-            local r_idx_0 = r_idx - 1
-            local rollover_path = base_path .. '.rollovers[' .. r_idx_0 .. ']'
+      for _, rollover in ipairs(subject_balance.rollovers or {}) do
+        if rollover and rollover.id then
+          local rollover_entities = safe_table(rollover.entities)
+          rollover.entities = rollover_entities
 
-            context.rollovers[rollover.id] = {
-              base_path = rollover_path,
-              cus_ent_id = ent_id,
-              balance = safe_number(rollover.balance or 0),
-              usage = safe_number(rollover.usage or 0),
-              entities = safe_table(rollover.entities),
-            }
-          end
+          context.rollovers[rollover.id] = {
+            base_path = rollover.id,
+            cus_ent_id = ent_id,
+            rollover_ref = rollover,
+            balance = safe_number(rollover.balance),
+            usage = safe_number(rollover.usage),
+            entities = rollover_entities,
+          }
         end
       end
     end
@@ -141,11 +96,6 @@ local function init_context(params)
   return context
 end
 
---[[
-  append_mutation_log(params)
-
-  Appends one ordered mutation log entry for later receipt persistence and replay.
-]]
 local function append_mutation_log(params)
   local context = params.context
   table.insert(context.mutation_logs, {
@@ -161,12 +111,6 @@ local function append_mutation_log(params)
   })
 end
 
---[[
-  update_in_memory_customer_entitlement_mutation(params)
-
-  Applies an arbitrary balance/adjustment mutation to an in-memory
-  customer_entitlement target.
-]]
 local function update_in_memory_customer_entitlement_mutation(params)
   local target = params.target
   local entity_id = params.entity_id
@@ -185,20 +129,23 @@ local function update_in_memory_customer_entitlement_mutation(params)
     if not target[entity_id] then
       target[entity_id] = { balance = 0, adjustment = 0 }
     end
-    target[entity_id].balance = (target[entity_id].balance or 0) + balance_delta
-    target[entity_id].adjustment = (target[entity_id].adjustment or 0) + adjustment_delta
+
+    target[entity_id].balance =
+      (target[entity_id].balance or 0) + balance_delta
+    target[entity_id].adjustment =
+      (target[entity_id].adjustment or 0) + adjustment_delta
     return
   end
 
   target.balance = (target.balance or 0) + balance_delta
   target.adjustment = (target.adjustment or 0) + adjustment_delta
+
+  if target.subject_balance then
+    target.subject_balance.balance = target.balance
+    target.subject_balance.adjustment = target.adjustment
+  end
 end
 
---[[
-  update_in_memory_rollover_mutation(params)
-
-  Applies an arbitrary balance/usage mutation to an in-memory rollover target.
-]]
 local function update_in_memory_rollover_mutation(params)
   local target = params.target
   local entity_id = params.entity_id
@@ -209,6 +156,7 @@ local function update_in_memory_rollover_mutation(params)
     if not target[entity_id] then
       target[entity_id] = { balance = 0, usage = 0 }
     end
+
     target[entity_id].balance = (target[entity_id].balance or 0) + balance_delta
     target[entity_id].usage = (target[entity_id].usage or 0) + usage_delta
     return
@@ -216,17 +164,15 @@ local function update_in_memory_rollover_mutation(params)
 
   target.balance = (target.balance or 0) + balance_delta
   target.usage = (target.usage or 0) + usage_delta
+
+  if target.rollover_ref then
+    target.rollover_ref.balance = target.balance
+    target.rollover_ref.usage = target.usage
+  end
 end
 
---[[
-  queue_customer_entitlement_mutation(params)
-
-  Queues a generic customer_entitlement mutation into pending_writes and
-  mutation_logs.
-]]
 local function queue_customer_entitlement_mutation(params)
   local context = params.context
-  local path = params.path
   local balance_delta = params.balance_delta
   local adjustment_delta = params.adjustment_delta
 
@@ -238,13 +184,14 @@ local function queue_customer_entitlement_mutation(params)
     adjustment_delta = params.alter_granted_balance and balance_delta or 0
   end
 
-  if balance_delta ~= 0 then
-    table.insert(context.pending_writes, { path = path .. '.balance', delta = balance_delta })
+  if balance_delta == 0 and adjustment_delta == 0 then
+    return
   end
 
-  if adjustment_delta ~= 0 then
-    table.insert(context.pending_writes, { path = path .. '.adjustment', delta = adjustment_delta })
-  end
+  mark_customer_entitlement_for_update(
+    context,
+    params.customer_entitlement_id
+  )
 
   append_mutation_log({
     context = context,
@@ -260,27 +207,23 @@ local function queue_customer_entitlement_mutation(params)
   })
 end
 
---[[
-  queue_rollover_mutation(params)
-
-  Queues a generic rollover mutation into pending_writes and mutation_logs.
-]]
 local function queue_rollover_mutation(params)
   local context = params.context
-  local path = params.path
   local balance_delta = params.balance_delta or 0
   local usage_delta = params.usage_delta or 0
   local rollover_id = params.rollover_id
 
-  if balance_delta ~= 0 then
-    table.insert(context.pending_writes, { path = path .. '.balance', delta = balance_delta })
-  end
-
-  if usage_delta ~= 0 then
-    table.insert(context.pending_writes, { path = path .. '.usage', delta = usage_delta })
+  if balance_delta == 0 and usage_delta == 0 then
+    return
   end
 
   local rollover_data = context.rollovers[rollover_id]
+
+  mark_customer_entitlement_for_update(
+    context,
+    rollover_data and rollover_data.cus_ent_id or nil
+  )
+
   append_mutation_log({
     context = context,
     target_type = 'rollover',
@@ -295,18 +238,11 @@ local function queue_rollover_mutation(params)
   })
 end
 
---[[
-  queue_rollover_update(params)
-
-  Queues a rollover balance/usage update to pending_writes.
-  Rollovers track both balance (decrements) and usage (increments).
-]]
 local function queue_rollover_update(params)
   local deduct_amount = params.deduct_amount
 
   queue_rollover_mutation({
     context = params.context,
-    path = params.path,
     rollover_id = params.rollover_id,
     entity_id = params.entity_id,
     credit_cost = params.credit_cost,
@@ -316,11 +252,6 @@ local function queue_rollover_update(params)
   })
 end
 
---[[
-  update_in_memory_rollover(params)
-
-  Backwards-compatible wrapper for main deduction paths.
-]]
 local function update_in_memory_rollover(params)
   update_in_memory_rollover_mutation({
     target = params.target,
@@ -330,14 +261,35 @@ local function update_in_memory_rollover(params)
   })
 end
 
---[[
-  apply_pending_writes(cache_key, context)
+local function apply_pending_writes(_, context)
+  local writes_by_balance_key = {}
 
-  Applies all queued writes to Redis.
-  Called only after validation passes.
-]]
-local function apply_pending_writes(cache_key, context)
-  for _, write in ipairs(context.pending_writes) do
-    redis.call('JSON.NUMINCRBY', cache_key, write.path, write.delta)
+  for _, customer_entitlement_id in ipairs(context.pending_writes) do
+    local ent_data = context.customer_entitlements[customer_entitlement_id]
+
+    if ent_data and ent_data.balance_key and ent_data.subject_balance then
+      if writes_by_balance_key[ent_data.balance_key] == nil then
+        writes_by_balance_key[ent_data.balance_key] = {}
+      end
+
+      table.insert(
+        writes_by_balance_key[ent_data.balance_key],
+        customer_entitlement_id
+      )
+      table.insert(
+        writes_by_balance_key[ent_data.balance_key],
+        cjson.encode(ent_data.subject_balance)
+      )
+    end
+  end
+
+  for balance_key, write_args in pairs(writes_by_balance_key) do
+    if #write_args > 0 then
+      local redis_args = { 'HSET', balance_key }
+      for _, arg in ipairs(write_args) do
+        table.insert(redis_args, arg)
+      end
+      redis.call(unpack(redis_args))
+    end
   end
 end

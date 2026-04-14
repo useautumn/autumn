@@ -84,6 +84,14 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
+		deductFromSubjectBalances(
+			routingKey: string,
+			paramsJson: string,
+		): Promise<string>;
+		updateSubjectBalances(
+			balanceKey: string,
+			paramsJson: string,
+		): Promise<string>;
 		deleteFullCustomerCache(
 			cacheKey: string,
 			orgId: string,
@@ -131,6 +139,12 @@ declare module "ioredis" {
 		): Promise<string>;
 		updateCustomerData(cacheKey: string, paramsJson: string): Promise<string>;
 		updateFullSubjectCustomerDataV2(
+			subjectKey: string,
+			updatesJson: string,
+			cacheTtlSeconds: string,
+			nowMs: string,
+		): Promise<string>;
+		updateFullSubjectEntityDataV2(
 			subjectKey: string,
 			updatesJson: string,
 			cacheTtlSeconds: string,

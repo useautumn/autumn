@@ -6,6 +6,7 @@ import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
+import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
 import { generateFeatureDisplay } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { runMigrationTask } from "@/internal/migrations/runMigrationTask.js";
 import { runRewardMigrationTask } from "@/internal/migrations/runRewardMigrationTask.js";
@@ -107,10 +108,11 @@ const initWorker = ({ id, db }: { id: number; db: DrizzleCli }) => {
 						);
 						return;
 					}
-					await syncItemV3({
-						ctx,
-						payload: job.data,
-					});
+					if (job.data.syncVersion === "v4") {
+						await syncItemV4({ ctx, payload: job.data });
+					} else {
+						await syncItemV3({ ctx, payload: job.data });
+					}
 					return;
 				}
 

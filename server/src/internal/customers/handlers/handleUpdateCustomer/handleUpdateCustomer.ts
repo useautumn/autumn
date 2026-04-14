@@ -6,8 +6,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions";
-import { getApiCustomer } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomer";
-import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer";
+import { getApiCustomerByRollout } from "@/internal/customers/actions/getApiCustomerByRollout.js";
 
 export const handleUpdateCustomer = createRoute({
 	body: UpdateCustomerParamsV0Schema,
@@ -32,15 +31,10 @@ export const handleUpdateCustomer = createRoute({
 		});
 
 		ctx.skipCache = true;
-		const fullCustomer = await getOrSetCachedFullCustomer({
+		const customerDetails = await getApiCustomerByRollout({
 			ctx,
 			customerId: newCustomerId,
-			source: "handleUpdateCustomerV2",
-		});
-
-		const customerDetails = await getApiCustomer({
-			ctx,
-			fullCustomer,
+			source: "handleUpdateCustomer",
 		});
 
 		return c.json(customerDetails);

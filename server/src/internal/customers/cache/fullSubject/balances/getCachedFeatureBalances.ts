@@ -2,6 +2,7 @@ import type { SubjectBalance } from "@autumn/shared";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildSharedFullSubjectBalanceKey } from "../builders/buildSharedFullSubjectBalanceKey.js";
+import { sanitizeCachedSubjectBalance } from "../sanitize/index.js";
 
 export type FeatureBalanceResult = {
 	featureId: string;
@@ -43,7 +44,12 @@ export const getCachedFeatureBalance = async ({
 		const entryJson = results[i];
 		if (!entryJson) return undefined;
 		try {
-			balances.push(JSON.parse(entryJson) as SubjectBalance);
+			const parsedBalance = JSON.parse(entryJson) as SubjectBalance;
+			balances.push(
+				sanitizeCachedSubjectBalance({
+					subjectBalance: parsedBalance,
+				}),
+			);
 		} catch {
 			return undefined;
 		}
@@ -99,7 +105,12 @@ export const getCachedFeatureBalancesBatch = async ({
 		for (const entryJson of values) {
 			if (!entryJson) return undefined;
 			try {
-				balances.push(JSON.parse(entryJson) as SubjectBalance);
+				const parsedBalance = JSON.parse(entryJson) as SubjectBalance;
+				balances.push(
+					sanitizeCachedSubjectBalance({
+						subjectBalance: parsedBalance,
+					}),
+				);
 			} catch {
 				return undefined;
 			}

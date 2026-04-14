@@ -18,6 +18,7 @@ import {
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	CLAIM_LOCK_RECEIPT_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	RELEASE_FULL_SUBJECT_RESERVATION_SCRIPT,
 	RESERVE_FULL_SUBJECT_WRITE_SCRIPT,
@@ -25,9 +26,11 @@ import {
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_DATA_V2_SCRIPT,
+	UPDATE_ENTITY_DATA_V2_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
 	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
+	UPDATE_SUBJECT_BALANCES_SCRIPT,
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../../_luaScriptsV2/luaScriptsV2.js";
 
@@ -104,6 +107,16 @@ export const registerRedisCommands = ({
 		lua: DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	});
 
+	redisInstance.defineCommand("deductFromSubjectBalances", {
+		numberOfKeys: 1,
+		lua: DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
+	});
+
+	redisInstance.defineCommand("updateSubjectBalances", {
+		numberOfKeys: 1,
+		lua: UPDATE_SUBJECT_BALANCES_SCRIPT,
+	});
+
 	redisInstance.defineCommand("deleteFullCustomerCache", {
 		numberOfKeys: 1,
 		lua: DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
@@ -142,6 +155,11 @@ export const registerRedisCommands = ({
 	redisInstance.defineCommand("updateFullSubjectCustomerDataV2", {
 		numberOfKeys: 1,
 		lua: UPDATE_CUSTOMER_DATA_V2_SCRIPT,
+	});
+
+	redisInstance.defineCommand("updateFullSubjectEntityDataV2", {
+		numberOfKeys: 1,
+		lua: UPDATE_ENTITY_DATA_V2_SCRIPT,
 	});
 
 	redisInstance.defineCommand("appendEntityToCustomer", {

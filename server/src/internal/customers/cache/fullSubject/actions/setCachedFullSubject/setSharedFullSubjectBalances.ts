@@ -49,7 +49,7 @@ export const appendSharedFullSubjectBalanceWrite = async ({
 	multi,
 	normalized,
 	meteredFeatures: _meteredFeatures,
-	overwrite: _overwrite,
+	overwrite,
 	ttlSeconds,
 }: {
 	ctx: AutumnContext;
@@ -70,7 +70,13 @@ export const appendSharedFullSubjectBalanceWrite = async ({
 
 	for (const { balanceKey, fields } of balanceWrites) {
 		if (Object.keys(fields).length > 0) {
-			multi.hset(balanceKey, fields);
+			if (overwrite) {
+				multi.hset(balanceKey, fields);
+			} else {
+				for (const [field, value] of Object.entries(fields)) {
+					multi.hsetnx(balanceKey, field, value);
+				}
+			}
 		}
 
 		multi.expire(balanceKey, ttlSeconds);

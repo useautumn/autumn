@@ -13,6 +13,23 @@ import type { Replaceable } from "../../models/cusProductModels/cusEntModels/rep
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 
+const getArrayEntries = <T>({ value }: { value: unknown }): T[] =>
+	Array.isArray(value) ? (value as T[]) : [];
+
+const getObjectEntries = <T extends Record<string, unknown>>({
+	value,
+	fallback,
+}: {
+	value: unknown;
+	fallback: T;
+}): T => {
+	if (!value || Array.isArray(value) || typeof value !== "object") {
+		return fallback;
+	}
+
+	return value as T;
+};
+
 const getRolloverSortValue = ({
 	rollover,
 }: {
@@ -24,6 +41,10 @@ const subjectBalanceToFullCustomerEntitlement = ({
 }: {
 	subjectBalance: SubjectBalance;
 }): FullCustomerEntitlement => {
+	const rollovers = getArrayEntries<SubjectBalance["rollovers"][number]>({
+		value: subjectBalance.rollovers,
+	});
+
 	return {
 		id: subjectBalance.id,
 		internal_customer_id: subjectBalance.internal_customer_id,
@@ -46,7 +67,7 @@ const subjectBalanceToFullCustomerEntitlement = ({
 		customer_id: subjectBalance.customer_id,
 		entitlement: subjectBalance.entitlement,
 		replaceables: [] as Replaceable[],
-		rollovers: [...subjectBalance.rollovers].sort(
+		rollovers: [...rollovers].sort(
 			(left, right) =>
 				getRolloverSortValue({ rollover: left }) -
 				getRolloverSortValue({ rollover: right }),
@@ -96,30 +117,66 @@ export const normalizedToFullSubject = ({
 }: {
 	normalized: NormalizedFullSubject;
 }): FullSubject => {
+	const entitlements = getArrayEntries<
+		NormalizedFullSubject["entitlements"][number]
+	>({
+		value: normalized.entitlements,
+	});
+	const products = getArrayEntries<NormalizedFullSubject["products"][number]>({
+		value: normalized.products,
+	});
+	const prices = getArrayEntries<NormalizedFullSubject["prices"][number]>({
+		value: normalized.prices,
+	});
+	const freeTrials = getArrayEntries<
+		NormalizedFullSubject["free_trials"][number]
+	>({
+		value: normalized.free_trials,
+	});
+	const customerPrices = getArrayEntries<
+		NormalizedFullSubject["customer_prices"][number]
+	>({
+		value: normalized.customer_prices,
+	});
+	const customerEntitlements = getArrayEntries<
+		NormalizedFullSubject["customer_entitlements"][number]
+	>({
+		value: normalized.customer_entitlements,
+	});
+	const customerProductsInput = getArrayEntries<
+		NormalizedFullSubject["customer_products"][number]
+	>({
+		value: normalized.customer_products,
+	});
+	const subscriptions = getArrayEntries<
+		NormalizedFullSubject["subscriptions"][number]
+	>({
+		value: normalized.subscriptions,
+	});
+	const invoices = getArrayEntries<NormalizedFullSubject["invoices"][number]>({
+		value: normalized.invoices,
+	});
+	const flags = getObjectEntries<NormalizedFullSubject["flags"]>({
+		value: normalized.flags,
+		fallback: {},
+	});
+
 	const entitlementsById = new Map(
-		normalized.entitlements.map(
-			(entitlement) => [entitlement.id, entitlement] as const,
-		),
+		entitlements.map((entitlement) => [entitlement.id, entitlement] as const),
 	);
 	const productsByInternalId = new Map(
-		normalized.products.map(
-			(product) => [product.internal_id, product] as const,
-		),
+		products.map((product) => [product.internal_id, product] as const),
 	);
-	const pricesById = new Map(
-		normalized.prices.map((price) => [price.id, price] as const),
-	);
+	const pricesById = new Map(prices.map((price) => [price.id, price] as const));
 	const freeTrialsById = new Map(
-		normalized.free_trials.map(
-			(freeTrial) => [freeTrial.id, freeTrial] as const,
-		),
+		freeTrials.map((freeTrial) => [freeTrial.id, freeTrial] as const),
 	);
 
 	const customerPricesByCustomerProductId = new Map<
 		string,
 		FullCustomerPrice[]
 	>();
-	for (const customerPrice of normalized.customer_prices) {
+	for (const customerPrice of customerPrices) {
 		if (!customerPrice.customer_product_id) continue;
 
 		const price = customerPrice.price_id
@@ -139,7 +196,7 @@ export const normalizedToFullSubject = ({
 		);
 	}
 
-	for (const customerEntitlement of normalized.customer_entitlements) {
+	for (const customerEntitlement of customerEntitlements) {
 		if (!customerEntitlement.customer_product_id) continue;
 		if (!customerEntitlement.customerPrice) continue;
 
@@ -165,7 +222,7 @@ export const normalizedToFullSubject = ({
 	>();
 	const extraMeteredCes: FullCustomerEntitlement[] = [];
 
-	for (const customerEntitlement of normalized.customer_entitlements) {
+	for (const customerEntitlement of customerEntitlements) {
 		const fullCustomerEntitlement = subjectBalanceToFullCustomerEntitlement({
 			subjectBalance: customerEntitlement,
 		});
@@ -191,7 +248,7 @@ export const normalizedToFullSubject = ({
 	>();
 	const extraBooleanCes: FullCustomerEntitlement[] = [];
 
-	for (const flag of Object.values(normalized.flags)) {
+	for (const flag of Object.values(flags)) {
 		const entitlement = entitlementsById.get(flag.entitlementId);
 		if (!entitlement) continue;
 
@@ -211,7 +268,7 @@ export const normalizedToFullSubject = ({
 	}
 
 	const customerProducts: FullCusProduct[] = [];
-	for (const customerProduct of normalized.customer_products) {
+	for (const customerProduct of customerProductsInput) {
 		const product = productsByInternalId.get(
 			customerProduct.internal_product_id,
 		);
@@ -243,9 +300,23 @@ export const normalizedToFullSubject = ({
 
 	if (normalized.entity_aggregations) {
 		const entityAgg = normalized.entity_aggregations;
+		const aggregatedCustomerProductsInput = getArrayEntries<
+			NonNullable<
+				NormalizedFullSubject["entity_aggregations"]
+			>["aggregated_customer_products"][number]
+		>({
+			value: entityAgg.aggregated_customer_products,
+		});
+		const aggregatedCustomerEntitlementsInput = getArrayEntries<
+			NonNullable<
+				NormalizedFullSubject["entity_aggregations"]
+			>["aggregated_customer_entitlements"][number]
+		>({
+			value: entityAgg.aggregated_customer_entitlements,
+		});
 
 		aggregatedCustomerProducts = [];
-		for (const entityCusProduct of entityAgg.aggregated_customer_products) {
+		for (const entityCusProduct of aggregatedCustomerProductsInput) {
 			const product = productsByInternalId.get(
 				entityCusProduct.internal_product_id,
 			);
@@ -262,11 +333,9 @@ export const normalizedToFullSubject = ({
 			} as FullCusProduct);
 		}
 
-		aggregatedCustomerEntitlements = (
-			entityAgg.aggregated_customer_entitlements ?? []
-		)
+		aggregatedCustomerEntitlements = aggregatedCustomerEntitlementsInput
 			.map((aggregatedCusEnt) => {
-				const feature = normalized.entitlements.find(
+				const feature = entitlements.find(
 					(entitlement) =>
 						entitlement.internal_feature_id ===
 						aggregatedCusEnt.internal_feature_id,
@@ -294,8 +363,8 @@ export const normalizedToFullSubject = ({
 		customer: normalized.customer,
 		customer_products: customerProducts,
 		extra_customer_entitlements: extraCustomerEntitlements,
-		subscriptions: normalized.subscriptions ?? [],
-		invoices: normalized.invoices ?? [],
+		subscriptions,
+		invoices,
 		...(aggregatedCustomerProducts
 			? { aggregated_customer_products: aggregatedCustomerProducts }
 			: {}),
