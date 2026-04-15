@@ -110,6 +110,19 @@ export default function PricingModels() {
         </div>
       </div>
 
+      <div className="flex lg:hidden flex-col px-4 py-12 relative z-10">
+        <h2 className="text-[28px] sm:text-[32px] leading-[1.1] font-sans tracking-[-2%] font-normal">
+          <span className="text-[#FFFFFF99]">Any pricing model.</span>{" "}
+          <span className="text-white">Seriously.</span>
+        </h2>
+        <div className="mt-4 text-[15px] font-sans leading-relaxed tracking-[-1%] font-light">
+          <span className="text-[#FFFFFF99]">
+            Configure in the dashboard or CLI.
+          </span>{" "}
+          <span className="text-[#FFFFFF99]">Rollout to all customers, or create custom plans for your largest customers.</span>
+        </div>
+      </div>
+
       <div className="border-t-0 lg:border-t border-[#292929] w-full relative grid grid-cols-1 lg:grid-cols-[60px_220px_220px_1fr] xl:grid-cols-[90px_291px_300px_1fr] auto-rows-auto lg:grid-rows-[200px_260px] xl:grid-rows-[260px_340px]">
         
         <div className="hidden lg:block border-l border-r border-b border-[#292929] min-h-[120px] lg:min-h-[260px]"></div>

@@ -16,8 +16,12 @@ export default function ElasticRecoil({ children }) {
     return () => window.removeEventListener("resize", check);
   }, []);
 
-  const springConfig = { stiffness: 200, damping: 15, mass: 0.5 };
-  const animatedLift = useSpring(liftAmount, springConfig);
+  const desktopSpring = { stiffness: 200, damping: 15, mass: 0.5 };
+  const mobileSpring = { stiffness: 800, damping: 60, mass: 0.2 };
+  const animatedLift = useSpring(
+    liftAmount,
+    isMobile ? mobileSpring : desktopSpring,
+  );
   const cappedMax = isMobile ? -420 : -580;
   const y = useTransform(animatedLift, [0, 400], [0, cappedMax]);
 
@@ -46,9 +50,12 @@ export default function ElasticRecoil({ children }) {
         document.documentElement.scrollHeight - 5;
 
       if (isAtBottom && e.deltaY > 0) {
-        // Normalize delta: Firefox uses deltaMode=1 (lines, ~3/notch) instead of pixels
         const normalizedDelta =
-          e.deltaMode === 1 ? e.deltaY * 20 : e.deltaMode === 2 ? e.deltaY * 300 : e.deltaY;
+          e.deltaMode === 1
+            ? e.deltaY * 20
+            : e.deltaMode === 2
+              ? e.deltaY * 300
+              : e.deltaY;
         liftAmount.set(Math.min(liftAmount.get() + normalizedDelta * 0.5, 400));
         recoilFired = false;
 
@@ -91,10 +98,10 @@ export default function ElasticRecoil({ children }) {
       }
 
       if (delta > 0) {
-        liftAmount.set(liftAmount.get() + delta * 0.8);
+        liftAmount.set(Math.min(liftAmount.get() + delta * 4, 400));
         recoilFired = false;
       } else if (liftAmount.get() > 0) {
-        liftAmount.set(Math.max(0, liftAmount.get() + delta * 0.8));
+        liftAmount.set(Math.max(0, liftAmount.get() + delta * 4));
       }
     };
 

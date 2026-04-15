@@ -25,14 +25,14 @@ import {
 import { DashboardIconPixel } from "./dashboard-icon-pixel";
 
 const NAV_LINKS = [
+  { label: "Docs", href: "https://docs.useautumn.com/welcome", Icon: IconDocs },
+  { label: "Blog", href: "/blog", Icon: IconBlog },
+  { label: "Pricing", href: "#pricing", Icon: IconPricing },
   {
     label: "Discord",
     href: "https://discord.com/invite/STqxY92zuS",
     Icon: IconDiscord,
   },
-  { label: "Blog", href: "https://useautumn.com/blog", Icon: IconBlog },
-  { label: "Docs", href: "https://docs.useautumn.com/welcome", Icon: IconDocs },
-  { label: "Pricing", href: "#", Icon: IconPricing },
 ];
 
 const NavIconPixel = forwardRef(function NavIconPixel({ Icon }, ref) {
@@ -97,10 +97,20 @@ const NavIconPixel = forwardRef(function NavIconPixel({ Icon }, ref) {
 
 function NavLinkItem({ item }) {
   const iconRef = useRef(null);
+  const isAnchor = item.href.startsWith("#");
+
+  const handleClick = (e) => {
+    if (!isAnchor) return;
+    e.preventDefault();
+    const target = document.querySelector(item.href);
+    if (target) target.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div className="nav-link">
       <Link
         href={item.href}
+        onClick={handleClick}
         className="group inline-flex items-center py-2 text-[#FFFFFF99] hover:text-white transition-colors"
         onMouseEnter={() => iconRef.current?.restart()}
         onMouseLeave={() => iconRef.current?.reverse()}
@@ -285,11 +295,10 @@ export default function Navbar() {
       )}
 
       <div
-        className={`${
-          scrolled && !recoilHidden
-            ? "fixed top-0 left-0 z-80 w-full px-4 md:px-(--page-pad) bg-[#0F0F0F] backdrop-blur-md border-b border-t pt-4 border-[#292929]"
-            : "relative"
-        }`}
+        className={`${scrolled && !recoilHidden
+          ? "fixed top-0 left-0 z-80 w-full px-4 md:px-(--page-pad) bg-[#0F0F0F] backdrop-blur-md border-b border-t pt-4 border-[#292929]"
+          : "relative"
+          }`}
       >
         {scrolled && !recoilHidden && (
           <>
@@ -355,7 +364,7 @@ export default function Navbar() {
         </nav>
       </div>
       <div
-        className={`fixed nav-mobile inset-x-0 overflow-y-auto overflow-x-hidden bg-[#000000] flex flex-col font-mono uppercase lg:top-5 h-[calc(100dvh-58px)] z-40 px-4 md:px-(--page-pad) pb-8 transition-all duration-300`}
+        className={`fixed nav-mobile inset-x-0 overflow-y-auto overflow-x-hidden  ${scrolled && !recoilHidden ? "top-[58px] sm:top-[60px]" : "top-[66px] sm:top-[62px]"} bg-[#000000] flex flex-col font-mono uppercase lg:top-5 h-[calc(100dvh-58px)] z-40 px-4 md:px-(--page-pad) pb-8 transition-all duration-300`}
         style={{
           opacity: 0,
           pointerEvents: "none",
@@ -364,17 +373,27 @@ export default function Navbar() {
       >
         {/* Nav items */}
         <div className="flex flex-col">
-          {NAV_LINKS.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              target="_blank"
-              className="flex items-center gap-4 px-4 py-3.5 border-b border-[#292929] active:bg-[#141414ea] text-[#ffffff99] hover:text-white active:text-white transition-colors text-sm tracking-[-1%]"
-            >
-              <item.Icon className="h-3.5 w-3.5 shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          ))}
+          {NAV_LINKS.map((item) => {
+            const isAnchor = item.href.startsWith("#");
+            const isExternal = item.href.startsWith("http");
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                target={isExternal ? "_blank" : undefined}
+                onClick={isAnchor ? (e) => {
+                  e.preventDefault();
+                  setMenuOpen(false);
+                  const target = document.querySelector(item.href);
+                  if (target) target.scrollIntoView({ behavior: "smooth" });
+                } : undefined}
+                className="flex items-center gap-4 px-4 py-3.5 border-b border-[#292929] active:bg-[#141414ea] text-[#ffffff99] hover:text-white active:text-white transition-colors text-sm tracking-[-1%]"
+              >
+                <item.Icon className="h-3.5 w-3.5 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
         <div className="flex flex-col mt-auto -mb-2.5">
           <div className="border-t border-[#292929] py-1.5" />

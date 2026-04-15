@@ -50,7 +50,7 @@ const plans = [
 export default function Pricing() {
   return (
     <>
-      <div className="min-h-screen relative flex w-full lg:w-[calc(100%+calc(var(--page-pad)*2))] lg:-ml-(--page-pad) items-center justify-center lg:py-24 pb-3">
+      <div id="pricing" className="min-h-screen relative flex w-full lg:w-[calc(100%+calc(var(--page-pad)*2))] lg:-ml-(--page-pad) items-center justify-center lg:py-24 pb-3">
         {/* Desktop Background */}
         <Image
           src="/images/pricing/pricing.webp"
