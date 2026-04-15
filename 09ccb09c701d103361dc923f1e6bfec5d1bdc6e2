@@ -1,0 +1,55 @@
+server/src/internal/customers/cusProducts/actions/index.ts
+  4840790455aaa248 4,11-12,25-32
+server/src/internal/customers/cusProducts/actions/markCustomerProductPastDue.ts
+  4840790455aaa248 1-67
+server/src/internal/customers/cusProducts/actions/cancelCustomerProduct.ts
+  40ac2813910e2954 1-70
+server/src/internal/customers/cusProducts/actions/uncancelCustomerProduct.ts
+  40ac2813910e2954 1-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "09ccb09c701d103361dc923f1e6bfec5d1bdc6e2",
+  "prompts": {
+    "40ac2813910e2954": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_26e70c0f8ffeMbApdMVlSLE93T",
+        "model": "fireworks-ai/accounts/fireworks/routers/kimi-k2p5-turbo"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 227,
+      "total_deletions": 72,
+      "accepted_lines": 182,
+      "overriden_lines": 0
+    },
+    "4840790455aaa248": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_26e463ce6ffeL51rcWyAbltqXU",
+        "model": "anthropic/claude-opus-4-6"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 151,
+      "total_deletions": 76,
+      "accepted_lines": 151,
+      "overriden_lines": 0
+    },
+    "5c0ea5ff49c7d250": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_26e63a558ffefTjxi9g820Fm6h",
+        "model": "anthropic/claude-opus-4-6"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 857,
+      "total_deletions": 0,
+      "accepted_lines": 738,
+      "overriden_lines": 15
+    }
+  }
+}
