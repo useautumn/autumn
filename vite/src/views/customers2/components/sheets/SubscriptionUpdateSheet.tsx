@@ -21,6 +21,7 @@ import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
+import { ScheduledPlanGuard } from "@/components/forms/create-schedule/components/ScheduledPlanGuard";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
 const FormContent = ({
@@ -216,11 +217,13 @@ export function SubscriptionUpdateSheet() {
 	}
 
 	return (
-		<SheetContent
-			cusProduct={cusProduct}
-			productV2={productV2}
-			itemId={itemId}
-			customizedProduct={customizedProduct}
-		/>
+		<ScheduledPlanGuard>
+			<SheetContent
+				cusProduct={cusProduct}
+				productV2={productV2}
+				itemId={itemId}
+				customizedProduct={customizedProduct}
+			/>
+		</ScheduledPlanGuard>
 	);
 }
