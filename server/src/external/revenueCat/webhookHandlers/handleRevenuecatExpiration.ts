@@ -38,6 +38,10 @@ export const handleExpiration = async ({
 		ctx,
 		customerProduct: curSameProduct,
 		fullCustomer: customer,
+		updates: {
+			ended_at: event.expiration_at_ms,
+			canceled: !!curSameProduct.canceled_at,
+		},
 	});
 
 	logger.info(`Expired cus_product: ${curSameProduct.id}`);
