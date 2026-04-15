@@ -26,7 +26,7 @@ import { DashboardIconPixel } from "./dashboard-icon-pixel";
 
 const NAV_LINKS = [
   { label: "Docs", href: "https://docs.useautumn.com/welcome", Icon: IconDocs },
-  { label: "Blog", href: "https://useautumn.com/blog", Icon: IconBlog },
+  { label: "Blog", href: "/blog", Icon: IconBlog },
   { label: "Pricing", href: "#pricing", Icon: IconPricing },
   {
     label: "Discord",
@@ -375,11 +375,12 @@ export default function Navbar() {
         <div className="flex flex-col">
           {NAV_LINKS.map((item) => {
             const isAnchor = item.href.startsWith("#");
+            const isExternal = item.href.startsWith("http");
             return (
               <Link
                 key={item.label}
                 href={item.href}
-                target={isAnchor ? undefined : "_blank"}
+                target={isExternal ? "_blank" : undefined}
                 onClick={isAnchor ? (e) => {
                   e.preventDefault();
                   setMenuOpen(false);
