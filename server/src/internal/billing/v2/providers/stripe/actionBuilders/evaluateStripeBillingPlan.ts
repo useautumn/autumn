@@ -6,7 +6,6 @@ import type {
 	StripeCheckoutSessionAction,
 	StripeInvoiceAction,
 	StripeInvoiceItemsAction,
-	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import { orgToCurrency } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -68,9 +67,7 @@ export const evaluateStripeBillingPlan = async ({
 	});
 
 	const stripeRefundAction = billingContext.refundLastPayment
-		? buildStripeRefundAction({
-				billingContext: billingContext as UpdateSubscriptionBillingContext,
-			})
+		? buildStripeRefundAction({ billingContext })
 		: undefined;
 
 	ctx.logger.info(
