@@ -98,13 +98,13 @@ body {
   --color-purple-light-1: #d4b0ff; /* verify */
 
   /* --- Legacy Next.js scaffold (kept for compatibility) --------------------- */
-  --background: #ffffff;
+  --background: #000000;
   --foreground: #171717;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #000000;
     --foreground: #ededed;
   }
 }
