@@ -157,12 +157,19 @@ export const createRefundAndUpdateInvoice = async ({
 		currency: stripeRefund.currency,
 	});
 
-	await db
+	const updatedRows = await db
 		.update(invoices)
 		.set({
 			refunded_amount: sql`${invoices.refunded_amount} + ${refundedAmount}`,
 		})
-		.where(eq(invoices.stripe_id, stripeInvoiceId));
+		.where(eq(invoices.stripe_id, stripeInvoiceId))
+		.returning({ id: invoices.id });
+
+	if (updatedRows.length === 0) {
+		console.warn(
+			`[createRefundAndUpdateInvoice] No Autumn invoice found for stripe_id ${stripeInvoiceId} — refunded_amount not tracked`,
+		);
+	}
 
 	return stripeRefund;
 };

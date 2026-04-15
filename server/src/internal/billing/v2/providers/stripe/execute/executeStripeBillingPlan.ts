@@ -123,12 +123,19 @@ export const executeStripeBillingPlan = async ({
 	);
 	let stripeRefund: Stripe.Refund | undefined;
 	if (billingPlan.stripe.refundAction && stripeSubscription) {
-		stripeRefund = await executeStripeRefundAction({
-			ctx,
-			refundAction: billingPlan.stripe.refundAction,
-			stripeSubscription,
-			currentEpochMs: billingContext.currentEpochMs,
-		});
+		try {
+			stripeRefund = await executeStripeRefundAction({
+				ctx,
+				refundAction: billingPlan.stripe.refundAction,
+				stripeSubscription,
+				currentEpochMs: billingContext.currentEpochMs,
+			});
+		} catch (error) {
+			ctx.logger.error(
+				"[executeStripeBillingPlan] Refund failed after subscription cancel",
+				{ error },
+			);
+		}
 	}
 
 	const stripeInvoice =
