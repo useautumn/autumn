@@ -160,8 +160,8 @@ export default function AutumnConfig({
         </div>
 
         {/* Filename: shrink-0 ensures the text never gets squashed */}
-        <span className="font-mono text-[18px] text-[#FFFFFF99] whitespace-nowrap shrink-0 px-1">
-          autumn.config.ts
+        <span className="font-mono text-[18px] text-[#FFFFFF99] whitespace-nowrap shrink-0 px-2">
+          billing.ts
         </span>
 
         {/* Right Vent: Matches the left one */}

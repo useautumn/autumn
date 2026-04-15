@@ -1182,9 +1182,9 @@ export const faqData = [
   },
   {
     id: 5,
-    question: "How long does integration take?",
+    question: "How long would it take to go live?",
     answer:
-      "Most teams go live in under an hour. Migrating from an existing billing system typically takes 1–2 weeks, depending on complexity. For Series A+ companies, we provide a forward deployed service to work with your team, dual-write to your internal system and Autumn, then smoothly migrate over. Minimal work needed on your part.",
+      "If you're setting up payments for the first time, most teams go live in under an hour. Migrating from an existing billing system typically takes 1–2 weeks, depending on complexity.\n\n For Series A+ companies, we provide a forward deployed service to work with your team, dual-write to your internal system and Autumn, then smoothly migrate over. Minimal work needed on your part.",
   },
   {
     id: 6,

@@ -160,11 +160,12 @@ export default function ProductionScale() {
             </h2>
           </div>
           <p className="text-[#FFFFFF99] font-light text-[16px] lg:text-sm lg:w-sm leading-[20px] lg:leading-5">
-            Autumn handles billions of billing events monthly. Open source core,
-            self-host ready,{" "}
+            Autumn is trusted by some of fastest-growing teams. Open source core,
+            self-host ready.{" "}
             <span className="text-white">
-              designed for teams that <br className="hidden lg:block" />{" "}
-              can&apos;t afford billing downtime.
+            We'll help you go live quickly 
+               <br className="hidden lg:block" />{" "}
+              and get back to what's important.
             </span>
           </p>
         </div>
