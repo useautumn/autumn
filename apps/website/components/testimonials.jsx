@@ -45,6 +45,7 @@ const testimonialsData = [
 ];
 
 const Testimonials = () => {
+  const videoRef = useRef(null);
   const scrollRef = useRef(null);
   const progressRef = useRef(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -63,6 +64,11 @@ const Testimonials = () => {
       }
     }
   };
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 0.4;
+    }
+  }, []);
 
   useEffect(() => {
     handleScroll();
@@ -79,12 +85,12 @@ const Testimonials = () => {
   return (
     <section className="w-full bg-[#000000] text-white overflow-hidden">
       <div className=" mx-auto">
-        <div className="px-4 sm:px-6 md:px-4 xl:px-22.75 pt-[48px] xl:pt-32 pb-[48px] flex flex-row items-start justify-between">
+        <div className="px-4 sm:px-6 md:px-4 lg:px-4 xl:px-22.75 pt-[48px] xl:pt-32 pb-[48px] flex flex-row items-start justify-between">
           <h2 className="w-full text-center md:w-auto md:text-left text-[30px] leading-[32px] sm:text-5xl md:text-[40px] font-normal tracking-[-5%]">
-            <span className="text-[#FFFFFF99]">Built by </span>
+            <span className="text-[#FFFFFF99]">Built for </span>
             <span className="text-white">teams</span>
             <br className="sm:hidden" />
-            <span className="text-white"> who ship</span>
+            <span className="text-white"> that move fast</span>
           </h2>
           <div className="hidden md:flex items-center space-x-4">
             <button
@@ -125,11 +131,21 @@ const Testimonials = () => {
             {testimonialsData.map((testimonial) => (
               <div
                 key={testimonial.id}
-                className="group shrink-0 w-[300px] sm:w-[300px] md:w-[360px] snap-start min-h-[360px] flex flex-col justify-between p-4 sm:p-10 border-l border-r border-b border-[#1A1A1A] transition-all duration-300 relative overflow-hidden"
+                className="group cursor-pointer shrink-0 w-[300px] sm:w-[300px] md:w-[360px] snap-start min-h-[360px] flex flex-col justify-between p-4 sm:p-10 border-l border-r border-b border-[#1A1A1A] transition-all duration-300 relative overflow-hidden"
               >
                 {/* Hover Pixelated Pattern (Masked) */}
                 <div className="absolute inset-x-0 bottom-0 h-[120%] pointer-events-none z-0 overflow-hidden">
-                  <PixelatedPattern className="w-full h-full object-cover object-bottom opacity-0 translate-y-6 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out" />
+                  <div className="absolute inset-0 opacity-0 translate-y-6 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out pointer-events-none z-0 hidden md:block">
+                    <video
+                      ref={videoRef}
+                      src="/images/testimonials/testimonial section.webm"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                 </div>
                 {/* Purple Glow Gradient Overlay */}
                 <div className="absolute inset-x-0 bottom-0 h-[70%] bg-[linear-gradient(to_bottom,rgba(10,10,10,0)_0%,rgba(135,82,250,0.15)_40%,rgba(135,82,250,0.45)_70%,rgba(135,82,250,0.85)_90%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-0" />

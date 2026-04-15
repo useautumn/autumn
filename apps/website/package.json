@@ -1,9 +1,9 @@
 {
-  "name": "pixelup-dev",
+  "name": "autumndev",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npx next dev -p 3005",
+    "dev": "next dev -p 3004",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -15,6 +15,7 @@
     "matter-js": "^0.20.0",
     "motion": "^12.38.0",
     "next": "16.2.1",
+    "ngrok": "^5.0.0-beta.2",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-syntax-highlighter": "^16.1.1"

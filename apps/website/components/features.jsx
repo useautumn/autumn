@@ -4,14 +4,17 @@ import { useRef } from "react";
 import { FeatureIconAnimation } from "./feature-icon-animation";
 
 function FeatureCard({ feature }) {
+  const isDesktop =
+    typeof window !== "undefined" &&
+    window.matchMedia("(hover: hover)").matches;
   const iconRef = useRef(null);
   return (
     <div
-      onMouseEnter={() => iconRef.current?.play()}
-      onMouseLeave={() => iconRef.current?.reverse()}
-      className="group relative flex px-4 md:px-6 flex-col justify-between p-6 bg-[#0F0F0F] min-h-[200px] md:min-h-[280px] border-r border-b border-[#292929] overflow-hidden cursor-pointer"
+      onMouseEnter={() => isDesktop && iconRef.current?.play()}
+      onMouseLeave={() => isDesktop && iconRef.current?.reverse()}
+      className="group relative flex px-4 md:px-4 flex-col justify-between p-6 bg-[#0F0F0F] min-h-[200px] md:min-h-[280px] border-r border-b border-[#292929] overflow-hidden cursor-pointer"
     >
-      <div className="absolute inset-0 opacity-0 translate-y-6 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out pointer-events-none z-0 hidden md:block">
+      <div className="absolute inset-0 opacity-0 translate-y-6 md:group-hover:opacity-100 md:group-hover:translate-y-0 pointer-events-none z-0 hidden md:block">
         <video
           src="/images/features/pixel effect.webm"
           autoPlay
@@ -22,7 +25,7 @@ function FeatureCard({ feature }) {
         />
       </div>
       {/* Hover Gradient Overlay */}
-      <div className="absolute inset-x-0 bottom-0 h-[70%] bg-[linear-gradient(to_bottom,rgba(10,10,10,0)_0%,rgba(135,82,250,0.15)_40%,rgba(135,82,250,0.45)_70%,rgba(135,82,250,0.85)_90%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-[70%] bg-[linear-gradient(to_bottom,rgba(10,10,10,0)_0%,rgba(135,82,250,0.15)_40%,rgba(135,82,250,0.45)_70%,rgba(135,82,250,0.85)_90%)] opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
       <div className="relative z-10 flex flex-col h-full gap-[42px] md:gap-24.5">
         <feature.Icon className="w-6 h-6 text-white md:hidden" />
@@ -47,13 +50,13 @@ export default function Features() {
     <section className="bg-[#000000] w-full">
       <div className="flex flex-col px-4 md:px-4 sm:px-8 py-12 md:py-16 xl:px-22.75 items-start">
         <h2 className="text-[30px] md:text-[40px] leading-[32px] md:leading-[44px] font-sans tracking-[-4%]">
-          <div className="text-[#FFFFFF99]">Everything you need.</div>
-          <div className="text-white">Nothing you have to build.</div>
+          <div className="text-[#FFFFFF99]">Everything you need</div>
+          <div className="text-white">for AI and usage billing.</div>
         </h2>
         <div className="mt-4 text-[16px] tracking-[-2%] font-sans font-light text-[#FFFFFF99] leading-[20px] max-w-[420px]">
-          Eight features that eliminate your entire{" "}
+          Your entire billing infrastructure, {" "}
           <span className="text-white">
-            billing infrastructure, fully managed.
+            fully managed.
           </span>
         </div>
       </div>
@@ -63,7 +66,7 @@ export default function Features() {
         {featuresData.map((feature, i) => (
           <FeatureCard key={i} feature={feature} />
         ))}
-        <div className="bg-[#0f0f0f] w-full h-full min-h-[280px] hidden lg:block border-r border-b border-[#292929]" />
+        {/* <div className="bg-[#0f0f0f] w-full h-full min-h-[280px] hidden lg:block border-r border-b border-[#292929]" /> */}
       </div>
     </section>
   );
