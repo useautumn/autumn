@@ -89,7 +89,7 @@ export default function PricingModels() {
           </div>
         </div>
         <div className="hero-cta">
-          <Link href={"https://useautumn.com/"} target="_blank">
+          <Link href={"https://docs.useautumn.com/examples/monetary-credits"} target="_blank">
             <motion.div
               initial="initial"
               whileHover="hover"

@@ -50,8 +50,8 @@ export default function Features() {
     <section className="bg-[#000000] w-full">
       <div className="flex flex-col px-4 md:px-4 sm:px-8 py-12 md:py-16 xl:px-22.75 items-start">
         <h2 className="text-[30px] md:text-[40px] leading-[32px] md:leading-[44px] font-sans tracking-[-4%]">
-          <div className="text-[#FFFFFF99]">Everything you need.</div>
-          <div className="text-white">Nothing you have to build.</div>
+          <div className="text-[#FFFFFF99]">Everything you need</div>
+          <div className="text-white">for AI and usage billing.</div>
         </h2>
         <div className="mt-4 text-[16px] tracking-[-2%] font-sans font-light text-[#FFFFFF99] leading-[20px] max-w-[420px]">
           Your entire billing infrastructure, {" "}
