@@ -3,6 +3,22 @@ import { type CreateScheduleParamsV0, ms, RecaseError } from "@autumn/shared";
 const FIRST_PHASE_TOLERANCE_MS = ms.minutes(1);
 type CreateSchedulePhase = CreateScheduleParamsV0["phases"][number];
 
+export const getCurrentCreateSchedulePhaseIndex = ({
+	currentEpochMs,
+	phases,
+}: {
+	currentEpochMs: number;
+	phases: CreateScheduleParamsV0["phases"];
+}) => {
+	for (let i = phases.length - 1; i >= 0; i--) {
+		if ((phases[i]?.starts_at ?? Number.POSITIVE_INFINITY) <= currentEpochMs) {
+			return i;
+		}
+	}
+
+	return -1;
+};
+
 /** Sort phases and enforce the supported create_schedule shape. */
 export const normalizeCreateSchedulePhases = ({
 	currentEpochMs,
@@ -43,8 +59,12 @@ export const normalizeCreateSchedulePhases = ({
 	}
 
 	if (
-		firstPhase.starts_at < currentEpochMs - FIRST_PHASE_TOLERANCE_MS ||
-		firstPhase.starts_at > currentEpochMs + FIRST_PHASE_TOLERANCE_MS
+		getCurrentCreateSchedulePhaseIndex({
+			currentEpochMs,
+			phases: sortedPhases,
+		}) === -1 &&
+		(firstPhase.starts_at < currentEpochMs - FIRST_PHASE_TOLERANCE_MS ||
+			firstPhase.starts_at > currentEpochMs + FIRST_PHASE_TOLERANCE_MS)
 	) {
 		throw new RecaseError({
 			message: "The first phase must start immediately",
