@@ -12,7 +12,7 @@ import AutumnConfig from "./autumn-config";
 
 // const AutumnConfig = dynamic(() => import("./autumn-config"), { ssr: false });
 
-const BADGE_TEXT = "// billing infrastructure for ai";
+const BADGE_TEXT = "// 100% open source";
 
 export default function Hero() {
   const containerRef = useRef(null);
@@ -147,24 +147,9 @@ export default function Hero() {
 
   return (
     <div ref={containerRef}>
-      <div className="relative hero-root opacity-0 flex flex-col items-stretch pb-0 xl:pb-2.5 mb-0 lg:mb-[33px] bg-[#0F0F0F]">
-        <div className="relative hidden xl:block">
-          <Image
-            className="hero-bg w-full hidden md:block"
-            src={"/images/hero/hero_img.webp"}
-            width={1359}
-            height={343}
-            sizes="100vw"
-            style={{ width: "100%", height: "auto" }}
-            alt="hero-bg"
-            priority
-          />
-          <div className="hero-reveal absolute right-4 xl:right-8.5 top-38 w-[36vw] max-w-[520px]">
-            <AutumnConfig initialDelay={200} awaitEvent="preloader:complete" />
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-6 px-4 xl:px-22.75 py-8 bg-[#0F0F0F]">
+      <div className="relative hero-root opacity-0 flex flex-col items-stretch pb-0 md:pb-12 mb-0 bg-[#0F0F0F]">
+<div className="flex justify-between">
+        <div className="flex flex-col gap-6 px-4 xl:px-22.75 py-8 bg-[#0F0F0F] mt-26">
           <h4 className="hero-reveal relative uppercase font-mono tracking-[-2%] text-[12px] md:text-sm leading-sm text-white md:text-[#FFFFFF99] bg-[#2c2c2d] w-fit p-2 min-h-[30px] md:min-h-[36px] flex items-center">
             <span className="invisible select-none" aria-hidden="true">
               {BADGE_TEXT}
@@ -181,16 +166,32 @@ export default function Hero() {
               <span className="text-white block md:inline">AI startups</span>
             </h1>
             <p className="hero-reveal tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
-              Stop rebuilding usage limits, credit systems, and subscription
+              Stop rebuilding usage limits, credit ledgers and payment
               logic.{" "}
               <span className="text-white font-light">
-                Autumn is the source of truth
+                Autumn is your customer database
               </span>{" "}
-              that keeps webhooks, payments and usage perfectly in-sync.
+              that scales from your first user to your largest contract.
             </p>
           </div>
-        </div>
 
+        </div>
+        <div className="hero-reveal relative w-[50vw] max-w-[720px] p-16 py-0 mx-auto hidden xl:block">
+            <div className="absolute inset-0 z-0 pointer-events-none">
+              <video
+                src="/images/pricing-models/pricingbg.webm"
+                autoPlay
+                loop
+                muted
+                playsInline
+                className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100"
+              />
+            </div>
+            <div className="relative z-10 translate-y-16 w-full flex justify-center">
+              <AutumnConfig initialDelay={200} awaitEvent="preloader:complete" />
+            </div>
+          </div>
+          </div>
         <div className="border-t border-[#292929]" />
         <div className="flex flex-nowrap items-center xl:px-22.75 px-4 bg-[#0F0F0F] w-full overflow-hidden">
           {/* Primary CTA */}
@@ -205,10 +206,10 @@ export default function Hero() {
                 {/* Adjusted px-3 for mobile, md:px-4 for desktop */}
                 <div className="relative overflow-hidden flex items-center gap-1.5 md:gap-2.5 cursor-pointer justify-between py-2 px-3 md:px-4 md:py-3.5 md:w-50 font-sans bg-[#9564ff] hover:bg-[#7D46F4] transition-colors duration-300">
                   <CTALines />
-                  <span className="relative z-10 tracking-tight text-white font-medium text-[13px] md:text-base whitespace-nowrap">
+                  <span className="relative z-10 tracking-[-2%] uppercase md:normal-case text-white font-medium text-[12px] md:text-base whitespace-nowrap">
                     Start for free
                   </span>
-                  <span className="relative z-10 scale-75 md:scale-100">
+                  <span className="relative z-10 scale-95 md:scale-100">
                     <IconCTAStart />
                   </span>
                 </div>
@@ -218,7 +219,7 @@ export default function Hero() {
 
           {/* Secondary CTA */}
           <div className="hero-cta w-full md:w-fit md:flex-shrink-0">
-            <Link href={"https://docs.useautumn.com/welcome"}>
+            <Link href={"https://cal.com/ayrod"}>
               <motion.div
                 initial="initial"
                 whileHover="hover"
@@ -227,23 +228,24 @@ export default function Hero() {
               >
                 <div className="relative overflow-hidden flex items-center gap-1.5 md:gap-2.5 border-r border-[#292929] text-white cursor-pointer justify-between py-2 px-3 md:px-4 md:py-3.5 md:w-50 font-sans bg-[#0F0F0F] hover:bg-[#FFFFFF1F] transition-colors duration-300">
                   <CTALines />
-                  <span className="relative z-10 tracking-tight text-[12px] md:text-[16px] whitespace-nowrap">
-                    Read docs
+                  <span className="relative z-10 tracking-[-2%] text-[12px] uppercase md:normal-case md:text-[16px] whitespace-nowrap">
+                    Book a call
                   </span>
-                  <span className="relative z-10 scale-75 md:scale-100">
+                  <span className="relative z-10 scale-100">
                     <IconCTADocs />
                   </span>
                 </div>
               </motion.div>
             </Link>
           </div>
+          
 
-          <div className="hero-cta flex flex-nowrap gap-2 md:gap-3 ml-2 md:ml-3 h-10.5 md:h-12.5 flex-1">
+          <div className="hero-cta hidden md:flex flex-nowrap gap-2 md:gap-3 ml-2 md:ml-3 h-10.5 md:h-12.5 flex-1">
             <div className="border-r border-[#292929] h-full hidden md:block" />
             <div className="border-r border-[#292929] h-full hidden md:block" />
             <div className="border-r border-[#292929] h-full hidden md:block" />
 
-            <div className="border-r border-[#292929] h-full hidden min-[400px]:block" />
+            <div className="border-r border-[#292929] h-full hidden md:block" />
             <div className="border-r border-[#292929] h-full hidden md:block" />
             <div className="border-r border-[#292929] h-full hidden md:block" />
             <div className="border-r border-[#292929] h-full hidden md:block" />
@@ -255,13 +257,13 @@ export default function Hero() {
         {/* MOBILE VIEW*/}
         <div className="relative block xl:hidden w-full overflow-hidden  bg-[#0F0F0F] mt-12">
           <div className="relative overflow-hidden w-full p-7 flex items-center justify-center">
-            <Image
-              className="hero-bg absolute inset-0 w-full h-full object-cover"
-              src="/images/hero/hero_mobile.webp"
-              width={900}
-              height={800}
-              alt="hero-bg-mobile"
-              priority
+            <video
+              src="/images/pricing-models/pricingbg.webm"
+              autoPlay
+              loop
+              muted
+              playsInline
+              className="hero-bg absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100"
             />
 
             <div className="hero-reveal relative z-10 w-[96%] sm:w-[90%] max-w-[520px] flex justify-center items-center">

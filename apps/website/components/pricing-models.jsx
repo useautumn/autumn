@@ -73,7 +73,7 @@ export default function PricingModels() {
 
   return (
     <section className="bg-[#000000] w-full overflow-hidden flex flex-col">
-      <div className="hidden lg:flex w-full items-center justify-between py-24 relative z-10 px-4 xl:px-22.75">
+      <div className="hidden lg:flex w-full items-center justify-between py-12 xl:py-24 relative z-10 px-4 xl:px-22.75">
         <div className="flex w-full">
           <div className="">
             <h2 className="text-[40px] leading-[1.1] font-sans tracking-[-2%] font-normal">
@@ -82,14 +82,14 @@ export default function PricingModels() {
             </h2>
             <div className="mt-4 text-[16px] font-sans leading-relaxed tracking-[-1%] font-light">
               <span className="text-[#FFFFFF99]">
-                Configure in the dashboard.
+                Configure in the dashboard or CLI.
               </span>{" "}
-              <span className="text-white">Change without code deploys.</span>
+              <span className="text-[#FFFFFF99]">Rollout to all customers, or create custom plans for your largest customers.</span>
             </div>
           </div>
         </div>
         <div className="hero-cta">
-          <Link href={"https://useautumn.com/"} target="_blank">
+          <Link href={"https://docs.useautumn.com/examples/monetary-credits"} target="_blank">
             <motion.div
               initial="initial"
               whileHover="hover"
@@ -110,17 +110,8 @@ export default function PricingModels() {
         </div>
       </div>
 
-      <div className="border-t-0 lg:border-t border-[#292929] w-full relative grid grid-cols-1 lg:grid-cols-[60px_220px_220px_1fr] xl:grid-cols-[90px_291px_300px_1fr] auto-rows-auto lg:grid-rows-[260px_340px]">
-        <div className="absolute top-0 bottom-0 right-0 lg:w-[calc(100%-500px)] xl:w-[calc(100%-680px)] z-0 overflow-hidden hidden lg:block pointer-events-none">
-          <video
-            src="/images/pricing-models/pricingbg.webm"
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover object-left 2xl:object-center mix-blend-screen opacity-100"
-          />
-        </div>
+      <div className="border-t-0 lg:border-t border-[#292929] w-full relative grid grid-cols-1 lg:grid-cols-[60px_220px_220px_1fr] xl:grid-cols-[90px_291px_300px_1fr] auto-rows-auto lg:grid-rows-[200px_260px] xl:grid-rows-[260px_340px]">
+        
         <div className="hidden lg:block border-l border-r border-b border-[#292929] min-h-[120px] lg:min-h-[260px]"></div>
         <div className="hidden lg:block border-r border-b border-[#292929]"></div>
         <div className="hidden z-20 lg:block border-r border-b bg-[#0F0F0F] border-[#292929]"></div>
@@ -179,17 +170,7 @@ export default function PricingModels() {
                         className="block lg:hidden w-full relative overflow-hidden"
                       >
                         <div className="relative w-full aspect-3/2.5 sm:aspect-square">
-                          <div className="absolute inset-0 z-0 pointer-events-none">
-                            <video
-                              src="/images/pricing-models/pricingbg.webm"
-                              autoPlay
-                              loop
-                              muted
-                              playsInline
-                              className="absolute inset-0 w-full h-full object-cover object-left mix-blend-screen opacity-100"
-                            />
-                          </div>
-                          <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center px-2.5 pt-2">
+                          <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center px-3 pt-2">
                             <img
                               src={images[item.model]}
                               alt="Pricing Model"
@@ -202,7 +183,7 @@ export default function PricingModels() {
                   </AnimatePresence>
 
                   <div
-                    className={`text-[20px] lg:text-[20px] tracking-[-5%] leading-none lg:leading-[20px] flex items-center gap-2 font-sans px-6 lg:px-[14px] py-5 lg:py-1.5 ${
+                    className={`text-[20px] lg:text-[20px] tracking-[-5%] leading-none lg:leading-[20px] flex items-center gap-2 font-sans px-4 lg:px-[14px] py-5 lg:py-1.5 ${
                       isActive
                         ? "text-white lg:text-[#FFFFFF99]"
                         : "text-[#FFFFFF99] lg:text-[#FFFFFF99] lg:opacity-50"
@@ -226,7 +207,7 @@ export default function PricingModels() {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="lg:hidden px-6 border-b border-[#8752FA] overflow-hidden text-[#FFFFFF99] text-[14px] md:text-[16px] lg:text-[14px] leading-[1.4] tracking-[-2%] font-light text-pretty"
+                        className="lg:hidden px-4 border-b border-[#8752FA] overflow-hidden text-[#FFFFFF99] text-[14px] md:text-[16px] lg:text-[14px] leading-[1.4] tracking-[-2%] font-light text-pretty"
                       >
                         <div className="pb-6">{item.desc}</div>
                       </motion.div>

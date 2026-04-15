@@ -29,8 +29,8 @@ export default function FAQ() {
         paddingRight: "var(--page-pad)",
       }}
     >
-      <div className="grid grid-cols-1 md:grid-cols-2 w-full min-h-[500px]">
-        <div className="md:border-r border-b border-[#292929] pl-4 md:pl-4 xl:pl-[90px] pr-6 lg:pr-12 py-12 md:py-[60px] flex flex-col justify-center">
+      <div className="grid grid-cols-1 lg:grid-cols-2 w-full min-h-[500px]">
+        <div className="lg:border-r border-b border-[#292929] pl-4 md:pl-4 xl:pl-[90px] pr-6 lg:pr-12 py-12 md:py-[60px] flex flex-col justify-center">
           <h2 className="text-[30px] md:text-[40px] font-normal tracking-[-2%] leading-[1.1]">
             <span className="text-[#FFFFFF99] font-light">
               Frequently Asked
@@ -40,9 +40,9 @@ export default function FAQ() {
           </h2>
         </div>
 
-        <div className="hidden md:block border-b border-[#292929] h-full w-full"></div>
+        <div className="hidden lg:block border-b border-[#292929] h-full w-full"></div>
 
-        <div className="hidden md:block md:border-r border-[#292929] h-full w-full relative z-0">
+        <div className="hidden lg:block lg:border-r border-[#292929] h-full w-full relative z-0">
           <div className="absolute bottom-0 w-full h-full pb-32"></div>
         </div>
 
@@ -72,7 +72,7 @@ export default function FAQ() {
                   <div className="absolute inset-0 bg-linear-to-r from-[#351B6D]/90 via-[#351B6D]/80 to-black/75 mix-blend-normal" />
                 </div>
 
-                <div className="relative z-10 px-4.5 md:px-8 lg:px-[20px] py-[30px]">
+                <div className="relative z-10 px-4.5 md:px-4 lg:px-[20px] py-[30px]">
                   <div className="flex items-center justify-between gap-4">
                     <h3
                       className={`text-base lg:text-[18px] tracking-[-2%] transition-all duration-400 ${
