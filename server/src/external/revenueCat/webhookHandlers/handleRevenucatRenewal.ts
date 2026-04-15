@@ -137,6 +137,7 @@ export const handleRenewal = async ({
 			},
 			product,
 		),
+		sendWebhook: true,
 	});
 
 	logger.info(
