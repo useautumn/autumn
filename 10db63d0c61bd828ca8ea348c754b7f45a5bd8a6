@@ -1,0 +1,62 @@
+server/src/external/revenueCat/webhookHandlers/handleRevenuecatExpiration.ts
+  4840790455aaa248 2,15,37,39,43
+server/src/external/revenueCat/webhookHandlers/handleRevenuecatCancellation.ts
+  4840790455aaa248 5,15,19,38,40-42
+server/tests/integration/external-psps/revenuecat-webhooks.test.ts
+  5c0ea5ff49c7d250 1-14,16-23,25,27-49,52-118,120-179,181-259,261-279,301-347,349-350,352,356,359-360,364-369,371-374,396-401,403,405-417,419,421-436,438-447,449-526,528-614,616-617,619-620,622-680,682-686,688-695,697-698,700-758,760-764,766-776,778-829
+  4840790455aaa248 15,50,615,618,681,687
+  40ac2813910e2954 24,26,51,348,351,353-354,357-358,361-363,370,381-382,390-391,402,404,418,420,437,696,759,765
+server/src/external/revenueCat/webhookHandlers/handleRevenucatRenewal.ts
+  40ac2813910e2954 45,48,50-61
+  4840790455aaa248 12,77-88,122-130,147-155
+server/src/external/revenueCat/webhookHandlers/handleRevenuecatUncancellation.ts
+  4840790455aaa248 2,5,14,17,29,36-43
+server/src/external/revenueCat/webhookHandlers/handleRevenuecatBillingIssue.ts
+  4840790455aaa248 9,20,23,50,52-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "10db63d0c61bd828ca8ea348c754b7f45a5bd8a6",
+  "prompts": {
+    "40ac2813910e2954": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_26e70c0f8ffeMbApdMVlSLE93T",
+        "model": "fireworks-ai/accounts/fireworks/routers/kimi-k2p5-turbo"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 42,
+      "overriden_lines": 0
+    },
+    "4840790455aaa248": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_26e463ce6ffeL51rcWyAbltqXU",
+        "model": "anthropic/claude-opus-4-6"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 72,
+      "overriden_lines": 0
+    },
+    "5c0ea5ff49c7d250": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_26e63a558ffefTjxi9g820Fm6h",
+        "model": "anthropic/claude-opus-4-6"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 751,
+      "overriden_lines": 0
+    }
+  }
+}
