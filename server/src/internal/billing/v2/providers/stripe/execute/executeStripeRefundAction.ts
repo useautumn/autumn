@@ -6,7 +6,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	createRefundAndUpdateInvoice,
 	resolveChargeFromInvoice,
-	validateChargeRefundable,
 } from "@/internal/customers/handlers/handleRefundInvoice/invoiceRefundUtils.js";
 
 /** Execute a refund against the latest invoice of a cancelled subscription */
@@ -54,8 +53,22 @@ export const executeStripeRefundAction = async ({
 		});
 	}
 
-	// 4. Validate the charge is refundable
-	const refundableAmountInCents = validateChargeRefundable({ charge });
+	// 4. Check the charge is refundable (graceful — don't throw if already fully refunded)
+	if (!charge.paid || charge.status !== "succeeded") {
+		throw new RecaseError({
+			message: "This charge is not eligible for a refund",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
+	const refundableAmountInCents = charge.amount - charge.amount_refunded;
+	if (refundableAmountInCents <= 0) {
+		ctx.logger.info(
+			"[executeStripeRefundAction] Charge already fully refunded, skipping",
+		);
+		return undefined;
+	}
 
 	// 5. Calculate the refund amount
 	let refundAmountInCents: number;
