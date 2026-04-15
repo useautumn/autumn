@@ -1,113 +1,95 @@
 import { test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
 import {
-	applySubscriptionDiscount,
-	createPercentCoupon,
-	getStripeSubscription,
-} from "@tests/integration/billing/utils/discounts/discountTestUtils";
-import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
-import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
-import {
-	expectProductCanceling,
-	expectProductScheduled,
-} from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+	type ApiCustomerV5,
+	type AttachParamsV1Input,
+	RolloverExpiryDurationType,
+} from "@autumn/shared";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
-import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
 
-/**
- * Reproduces: attaching a one-off add-on to a subscription that already
- * has a schedule (from a prior downgrade) fails with Stripe error
- * "You cannot migrate a subscription that is already attached to a schedule".
- *
- * The root cause is that setupStripeBillingContext skips fetching the schedule
- * when targetCustomerProduct is undefined (new attachment, no transition).
- * buildStripeSubscriptionScheduleAction then sees hasSchedule=false and emits
- * type:"create" instead of type:"update", which Stripe rejects.
- */
-test.concurrent(`${chalk.yellowBright("bug-repro: attach one-off add-on after scheduled downgrade hits 'subscription already attached to schedule'")}`, async () => {
-	const customerId = "repro-schedule-addon-attach";
+test.concurrent(`${chalk.yellowBright("temp: pro annual prepaid credits with rollover carries to pro monthly")}`, async () => {
+	const customerId = "temp-annual-prepaid-rollover";
+	const rolloverConfig = {
+		max_percentage: 50,
+		length: 1,
+		duration: RolloverExpiryDurationType.Month,
+	};
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const annualCreditsItem = constructPrepaidItem({
+		featureId: TestFeature.Credits,
+		includedUsage: 100,
+		billingUnits: 1,
+		price: 0.25,
+		rolloverConfig,
+	});
 
-	const premium = products.premium({
-		id: "premium",
-		items: [messagesItem],
+	const monthlyCreditsItem = constructPrepaidItem({
+		featureId: TestFeature.Credits,
+		includedUsage: 100,
+		billingUnits: 1,
+		price: 0.25,
+		rolloverConfig,
+	});
+
+	const proAnnual = products.proAnnual({
+		id: "pro-annual-rollover",
+		items: [annualCreditsItem],
 	});
 
 	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
+		id: "pro-monthly-rollover",
+		items: [monthlyCreditsItem],
 	});
 
-	const topupAddon = products.base({
-		id: "topup-addon",
-		items: [
-			items.oneOffWords({
-				includedUsage: 0,
-				billingUnits: 100,
-				price: 25,
-			}),
-		],
-	});
-
-	const { autumnV1 } = await initScenario({
+	const { autumnV2_2, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [premium, pro, topupAddon] }),
+			s.products({ list: [proAnnual, pro] }),
 		],
-		actions: [s.billing.attach({ productId: premium.id })],
+		actions: [
+			s.billing.attach({
+				productId: proAnnual.id,
+				options: [{ feature_id: TestFeature.Credits, quantity: 1500 }],
+			}),
+			// s.track({ featureId: TestFeature.Action1, value: 10, timeout: 2000 }),
+			s.advanceToNextInvoice(),
+		],
 	});
 
-	// Apply a 20% discount to the subscription (matches production scenario)
-	const { stripeCli, subscription: subBefore } = await getStripeSubscription({
-		customerId,
-	});
+	const customerAfterInvoice =
+		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 
-	const coupon = await createPercentCoupon({
-		stripeCli,
-		percentOff: 20,
-	});
-
-	await applySubscriptionDiscount({
-		stripeCli,
-		subscriptionId: subBefore.id,
-		couponIds: [coupon.id],
-	});
-
-	// Schedule downgrade: Premium -> Pro (creates a subscription schedule)
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: pro.id,
-		redirect_mode: "if_required",
-	});
-
-	// Verify the downgrade was scheduled correctly
-	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductCanceling({ customer, productId: premium.id });
-	await expectProductScheduled({ customer, productId: pro.id });
-
-	await autumnV1.billing.attach({
-		customer_id: customerId,
-		product_id: topupAddon.id,
-		redirect_mode: "if_required",
-		options: [{ feature_id: TestFeature.Words, quantity: 100 }],
-	});
-
-	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	expectCustomerFeatureCorrect({
-		customer: customerAfter,
-		featureId: TestFeature.Words,
-		balance: 100,
+	expectBalanceCorrect({
+		customer: customerAfterInvoice,
+		featureId: TestFeature.Credits,
+		remaining: 1500 + 750,
 		usage: 0,
+		rollovers: [{ balance: 750 }],
 	});
 
-	await expectCustomerInvoiceCorrect({
-		customer: customerAfter,
-		count: 2,
-		latestTotal: 25,
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		redirect_mode: "if_required",
+		// feature_quantities: [{ feature_id: TestFeature.Credits, quantity: 750 }],
 	});
+
+	const customerAfterSwitch =
+		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+
+	expectBalanceCorrect({
+		customer: customerAfterSwitch,
+		featureId: TestFeature.Credits,
+		remaining: 1500 + 750,
+		usage: 0,
+		rollovers: [{ balance: 750 }],
+	});
+
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
