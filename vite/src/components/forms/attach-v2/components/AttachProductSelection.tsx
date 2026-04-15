@@ -24,7 +24,7 @@ export function AttachProductSelection() {
 					<field.SelectField
 						label=""
 						searchable
-						defaultOpen
+						defaultOpen={!productId}
 						options={availableProducts.map((p) => {
 							const entityIdVal = entityId ?? undefined;
 							const alreadyEnabled = isProductAlreadyEnabled({
