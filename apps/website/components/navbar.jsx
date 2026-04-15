@@ -285,11 +285,10 @@ export default function Navbar() {
       )}
 
       <div
-        className={`${
-          scrolled && !recoilHidden
-            ? "fixed top-0 left-0 z-80 w-full px-4 md:px-(--page-pad) bg-[#0F0F0F] backdrop-blur-md border-b border-t pt-4 border-[#292929]"
-            : "relative"
-        }`}
+        className={`${scrolled && !recoilHidden
+          ? "fixed top-0 left-0 z-80 w-full px-4 md:px-(--page-pad) bg-[#0F0F0F] backdrop-blur-md border-b border-t pt-4 border-[#292929]"
+          : "relative"
+          }`}
       >
         {scrolled && !recoilHidden && (
           <>
@@ -355,7 +354,7 @@ export default function Navbar() {
         </nav>
       </div>
       <div
-        className={`fixed nav-mobile inset-x-0 overflow-y-auto overflow-x-hidden bg-[#000000] flex flex-col font-mono uppercase lg:top-5 h-[calc(100dvh-58px)] z-40 px-4 md:px-(--page-pad) pb-8 transition-all duration-300`}
+        className={`fixed nav-mobile inset-x-0 overflow-y-auto overflow-x-hidden  ${scrolled && !recoilHidden ? "top-[58px] sm:top-[60px]" : "top-[66px] sm:top-[62px]"} bg-[#000000] flex flex-col font-mono uppercase lg:top-5 h-[calc(100dvh-58px)] z-40 px-4 md:px-(--page-pad) pb-8 transition-all duration-300`}
         style={{
           opacity: 0,
           pointerEvents: "none",
