@@ -98,7 +98,18 @@ export const UpdateSubscriptionV0ParamsSchema =
 		.refine((data) => !(data.refund_last_payment && data.billing_behavior), {
 			message:
 				"Cannot pass both billing_behavior and refund_last_payment. Use billing_behavior for invoice credits/proration, or refund_last_payment for direct refunds.",
-		});
+		})
+		.refine(
+			(data) =>
+				!(
+					data.refund_last_payment &&
+					data.cancel_action !== "cancel_immediately"
+				),
+			{
+				message:
+					"refund_last_payment requires cancel_action to be 'cancel_immediately'.",
+			},
+		);
 
 export type ExtUpdateSubscriptionV0Params = z.infer<
 	typeof ExtUpdateSubscriptionV0ParamsSchema

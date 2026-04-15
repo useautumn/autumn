@@ -47,8 +47,9 @@ export const computeRefundPreview = async ({
 	if (billingContext.refundLastPayment === "full") {
 		refundAmount = remainingRefundable;
 	} else {
-		// Prorated: the line items total is a negative number representing the prorated credit
-		const proratedAmount = Math.abs(previewTotal);
+		// Prorated: the line items total is a negative number representing the prorated credit.
+		// If total is positive (a charge, not a credit), there is nothing to refund.
+		const proratedAmount = previewTotal < 0 ? Math.abs(previewTotal) : 0;
 		refundAmount = Math.min(proratedAmount, remainingRefundable);
 	}
 
