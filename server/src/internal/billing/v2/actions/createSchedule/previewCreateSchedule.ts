@@ -4,8 +4,12 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
-import { normalizeCreateSchedulePhases } from "./errors/normalizeCreateSchedulePhases";
+import {
+	getCurrentCreateSchedulePhaseIndex,
+	normalizeCreateSchedulePhases,
+} from "./errors/normalizeCreateSchedulePhases";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
+import { resolveCurrentEpochMs } from "./utils/resolveCurrentEpochMs";
 
 /** Preview the immediate-phase billing cost for a create_schedule call. */
 export const previewCreateSchedule = async ({
@@ -15,12 +19,27 @@ export const previewCreateSchedule = async ({
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
 }): Promise<BillingPreviewResponse> => {
-	const currentEpochMs = Date.now();
+	const currentEpochMs = await resolveCurrentEpochMs({
+		ctx,
+		customerId: params.customer_id,
+	});
 	const normalizedPhases = normalizeCreateSchedulePhases({
 		currentEpochMs,
 		phases: params.phases,
 	});
-	const [immediatePhase] = normalizedPhases;
+	const currentPhaseIndex = getCurrentCreateSchedulePhaseIndex({
+		currentEpochMs,
+		phases: normalizedPhases,
+	});
+	const immediatePhase =
+		normalizedPhases[currentPhaseIndex === -1 ? 0 : currentPhaseIndex];
+
+	if (!immediatePhase) {
+		throw new RecaseError({
+			message: "At least one phase must be provided",
+			statusCode: 400,
+		});
+	}
 
 	const billingContext = await setupCreateScheduleBillingContext({
 		ctx,

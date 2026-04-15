@@ -1,6 +1,7 @@
 import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls";
 import { AppEnv } from "@models/genModels/genEnums";
 import { z } from "zod/v4";
+import { ApiCustomerScheduleSchema } from "./components/apiCustomerSchedule";
 
 export const BaseApiCustomerSchema = z.object({
 	autumn_id: z.string().optional().meta({
@@ -36,6 +37,9 @@ export const BaseApiCustomerSchema = z.object({
 	}),
 	billing_controls: CustomerBillingControlsSchema.meta({
 		description: "Billing controls for the customer (auto top-ups, etc.)",
+	}),
+	schedule: ApiCustomerScheduleSchema.optional().meta({
+		description: "The customer's persisted schedule, if one exists.",
 	}),
 });
 
