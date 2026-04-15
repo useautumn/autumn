@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "ae67497f02d31903438554f447bd72b5a73c39a1",
+  "prompts": {
+    "dfc2fcc0515e15c2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_26eaa5d4bffeqW9T3SzQ44gePH",
+        "model": "anthropic/claude-opus-4-6"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 0,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
