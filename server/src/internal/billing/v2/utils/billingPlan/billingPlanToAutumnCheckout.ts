@@ -60,17 +60,18 @@ export async function billingPlanToAutumnCheckout({
 		completed_at: null,
 	};
 
-	// 1. Store in cache (primary storage)
-	await setCheckoutCache({
-		checkoutId,
-		data: checkout,
-	});
-
-	// 2. Store in DB (audit/backup)
-	await checkoutRepo.insert({
-		db: ctx.db,
-		data: checkout,
-	});
+	await Promise.all([
+		// 1. Store in cache (primary storage)
+		setCheckoutCache({
+			checkoutId,
+			data: checkout,
+		}),
+		// 2. Store in DB (audit/backup)
+		checkoutRepo.insert({
+			db: ctx.db,
+			data: checkout,
+		}),
+	]);
 
 	const checkoutUrl = checkoutToUrl({
 		action,
