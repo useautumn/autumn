@@ -1,0 +1,25 @@
+server/src/internal/customers/cusProducts/actions/expireAndActivateDefault.ts
+  b8aefb2e359f29dd 29,34,45
+server/src/external/revenueCat/webhookHandlers/handleRevenuecatExpiration.ts
+  b8aefb2e359f29dd 41-44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "531aa584a2737114fa97a7ef064d1b9223fa50d6",
+  "prompts": {
+    "b8aefb2e359f29dd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_28793fc24ffe4qzfW4tn5S68nk",
+        "model": "openai/gpt-5.4-fast"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 0,
+      "accepted_lines": 7,
+      "overriden_lines": 0
+    }
+  }
+}
