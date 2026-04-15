@@ -25,14 +25,14 @@ import {
 import { DashboardIconPixel } from "./dashboard-icon-pixel";
 
 const NAV_LINKS = [
+  { label: "Docs", href: "https://docs.useautumn.com/welcome", Icon: IconDocs },
+  { label: "Blog", href: "https://useautumn.com/blog", Icon: IconBlog },
+  { label: "Pricing", href: "#pricing", Icon: IconPricing },
   {
     label: "Discord",
     href: "https://discord.com/invite/STqxY92zuS",
     Icon: IconDiscord,
   },
-  { label: "Blog", href: "https://useautumn.com/blog", Icon: IconBlog },
-  { label: "Docs", href: "https://docs.useautumn.com/welcome", Icon: IconDocs },
-  { label: "Pricing", href: "#", Icon: IconPricing },
 ];
 
 const NavIconPixel = forwardRef(function NavIconPixel({ Icon }, ref) {
@@ -97,10 +97,20 @@ const NavIconPixel = forwardRef(function NavIconPixel({ Icon }, ref) {
 
 function NavLinkItem({ item }) {
   const iconRef = useRef(null);
+  const isAnchor = item.href.startsWith("#");
+
+  const handleClick = (e) => {
+    if (!isAnchor) return;
+    e.preventDefault();
+    const target = document.querySelector(item.href);
+    if (target) target.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div className="nav-link">
       <Link
         href={item.href}
+        onClick={handleClick}
         className="group inline-flex items-center py-2 text-[#FFFFFF99] hover:text-white transition-colors"
         onMouseEnter={() => iconRef.current?.restart()}
         onMouseLeave={() => iconRef.current?.reverse()}
@@ -363,17 +373,26 @@ export default function Navbar() {
       >
         {/* Nav items */}
         <div className="flex flex-col">
-          {NAV_LINKS.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              target="_blank"
-              className="flex items-center gap-4 px-4 py-3.5 border-b border-[#292929] active:bg-[#141414ea] text-[#ffffff99] hover:text-white active:text-white transition-colors text-sm tracking-[-1%]"
-            >
-              <item.Icon className="h-3.5 w-3.5 shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          ))}
+          {NAV_LINKS.map((item) => {
+            const isAnchor = item.href.startsWith("#");
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                target={isAnchor ? undefined : "_blank"}
+                onClick={isAnchor ? (e) => {
+                  e.preventDefault();
+                  setMenuOpen(false);
+                  const target = document.querySelector(item.href);
+                  if (target) target.scrollIntoView({ behavior: "smooth" });
+                } : undefined}
+                className="flex items-center gap-4 px-4 py-3.5 border-b border-[#292929] active:bg-[#141414ea] text-[#ffffff99] hover:text-white active:text-white transition-colors text-sm tracking-[-1%]"
+              >
+                <item.Icon className="h-3.5 w-3.5 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
         <div className="flex flex-col mt-auto -mb-2.5">
           <div className="border-t border-[#292929] py-1.5" />
