@@ -1,0 +1,31 @@
+shared/api/billing/updateSubscription/updateSubscriptionV0Params.ts
+  b8aefb2e359f29dd 101-112
+vite/src/components/forms/cancel-subscription/components/CancelPreviewSection.tsx
+  b8aefb2e359f29dd 17-20
+shared/api/billing/updateSubscription/updateSubscriptionV1Params.ts
+  b8aefb2e359f29dd 92-103
+server/src/internal/billing/v2/actions/updateSubscription/compute/cancel/computeRefundPreview.ts
+  b8aefb2e359f29dd 50-52
+vite/src/components/forms/update-subscription/use-update-subscription-body-builder.ts
+  b8aefb2e359f29dd 35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "ebc0e9678c3fab24741020604322b92361230bbd",
+  "prompts": {
+    "b8aefb2e359f29dd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_28793fc24ffe4qzfW4tn5S68nk",
+        "model": "openai/gpt-5.4-fast"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 33,
+      "total_deletions": 6,
+      "accepted_lines": 32,
+      "overriden_lines": 0
+    }
+  }
+}
