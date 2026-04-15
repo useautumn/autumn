@@ -20,7 +20,7 @@ export const executeStripeRefundAction = async ({
 	refundAction: StripeRefundAction;
 	stripeSubscription: Stripe.Subscription;
 	currentEpochMs: number;
-}): Promise<Stripe.Refund> => {
+}): Promise<Stripe.Refund | undefined> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
 	// 1. Get the latest invoice ID from the subscription
@@ -85,11 +85,7 @@ export const executeStripeRefundAction = async ({
 		ctx.logger.info(
 			"[executeStripeRefundAction] Prorated refund amount is 0, skipping refund",
 		);
-		throw new RecaseError({
-			message: "Prorated refund amount is $0, no refund to issue",
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
+		return undefined;
 	}
 
 	// 6. Issue the refund and update the DB

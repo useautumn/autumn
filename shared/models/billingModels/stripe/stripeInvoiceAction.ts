@@ -3,7 +3,6 @@ import { z } from "zod/v4";
 
 export const StripeInvoiceActionSchema = z.object({
 	addLineParams: z.custom<Stripe.InvoiceAddLinesParams>(),
-	refundParams: z.custom<Stripe.RefundCreateParams>().optional(),
 });
 
 export type StripeInvoiceAction = z.infer<typeof StripeInvoiceActionSchema>;

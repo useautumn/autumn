@@ -1,7 +1,7 @@
 import {
+	type BillingContext,
 	type StripeRefundAction,
 	secondsToMs,
-	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 
@@ -9,7 +9,7 @@ import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSub
 export const buildStripeRefundAction = ({
 	billingContext,
 }: {
-	billingContext: UpdateSubscriptionBillingContext;
+	billingContext: BillingContext;
 }): StripeRefundAction | undefined => {
 	if (!billingContext.refundLastPayment) return undefined;
 	if (billingContext.cancelAction !== "cancel_immediately") return undefined;
