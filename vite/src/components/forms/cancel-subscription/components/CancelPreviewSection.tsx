@@ -14,7 +14,10 @@ export function CancelPreviewSection() {
 	const refundBehavior = formValues.refundBehavior;
 	const refundAmount = formValues.refundAmount;
 
-	const isFullRefund = refundBehavior === "refund" && refundAmount === "full";
+	const isFullRefund =
+		cancelAction === "cancel_immediately" &&
+		refundBehavior === "refund" &&
+		refundAmount === "full";
 
 	const { isLoading, data: previewData, error: queryError } = previewQuery;
 	const error = queryError

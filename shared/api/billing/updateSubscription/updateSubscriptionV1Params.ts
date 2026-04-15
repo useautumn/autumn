@@ -89,7 +89,18 @@ export const UpdateSubscriptionV1ParamsSchema =
 		.refine((data) => !(data.refund_last_payment && data.proration_behavior), {
 			message:
 				"Cannot pass both proration_behavior and refund_last_payment. Use proration_behavior for invoice credits/proration, or refund_last_payment for direct refunds.",
-		});
+		})
+		.refine(
+			(data) =>
+				!(
+					data.refund_last_payment &&
+					data.cancel_action !== "cancel_immediately"
+				),
+			{
+				message:
+					"refund_last_payment requires cancel_action to be 'cancel_immediately'.",
+			},
+		);
 
 export type UpdateSubscriptionV1Params = z.infer<
 	typeof UpdateSubscriptionV1ParamsSchema

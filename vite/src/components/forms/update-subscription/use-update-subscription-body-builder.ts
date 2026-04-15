@@ -7,6 +7,7 @@ import {
 	type ProductV2,
 } from "@autumn/shared";
 import { useMemo } from "react";
+import type { RefundBehaviorValue } from "@/components/forms/update-subscription-v2/types/refundBehaviourSchema";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useEnv } from "@/utils/envUtils";
@@ -31,7 +32,7 @@ interface UpdateSubscriptionBodyBuilderParams {
 	// Cancel action fields
 	cancelAction?: CancelAction | null;
 	billingBehavior?: BillingBehavior | null;
-	refundBehavior?: string | null;
+	refundBehavior?: RefundBehaviorValue | null;
 }
 
 /**
