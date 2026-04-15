@@ -84,6 +84,7 @@
 		"arctic": "^3.7.0",
 		"autumn-js": "^0.1.8",
 		"axios": "^1.8.3",
+		"better-all": "0.0.7",
 		"better-auth": "^1.4.12",
 		"body-parser": "^1.20.3",
 		"bullmq": "^5.56.2",

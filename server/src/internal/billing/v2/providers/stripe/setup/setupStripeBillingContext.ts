@@ -9,6 +9,7 @@ import {
 	notNullish,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
+import { all } from "better-all";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
 import { fetchStripeDiscountsForBilling } from "./fetchStripeDiscountsForBilling";
@@ -52,52 +53,67 @@ export const setupStripeBillingContext = async ({
 	}
 
 	const {
-		stripeCus: stripeCustomer,
-		paymentMethod,
-		testClockFrozenTime,
-	} = await fetchStripeCustomerForBilling({
-		ctx,
-		fullCus: fullCustomer,
-	});
-
-	// If no target customer product, skip subscription/schedule fetching
-	// Skip if product being attached is one off
-	const attachingOneOff = product
-		? isOneOffProduct({ prices: product.prices })
-		: false;
-
-	const stripeSubscription =
-		attachingOneOff || skipSubscriptionFetching
-			? undefined
-			: await fetchStripeSubscriptionForBilling({
-					ctx,
-					fullCus: fullCustomer,
-					product,
-					targetCusProductId: targetCustomerProduct?.id,
-					params,
-					newBillingSubscription,
-				});
-
-	const stripeSubscriptionSchedule =
-		targetCustomerProduct || notNullish(stripeSubscription)
-			? await fetchStripeSubscriptionScheduleForBilling({
-					ctx,
-					fullCus: fullCustomer,
-					subscriptionScheduleId:
-						typeof stripeSubscription?.schedule === "string"
-							? stripeSubscription.schedule
-							: undefined,
-					products: [],
-					targetCusProductId: targetCustomerProduct?.id,
-				})
-			: undefined;
-
-	const stripeDiscounts = await fetchStripeDiscountsForBilling({
-		ctx,
+		stripeContext: {
+			stripeCus: stripeCustomer,
+			paymentMethod,
+			testClockFrozenTime,
+		},
 		stripeSubscription,
-		stripeCustomer,
-		paramDiscounts:
-			params && "discounts" in params ? params.discounts : undefined,
+		stripeSubscriptionSchedule,
+		stripeDiscounts,
+	} = await all({
+		async stripeContext() {
+			return fetchStripeCustomerForBilling({
+				ctx,
+				fullCus: fullCustomer,
+			});
+		},
+		async stripeSubscription() {
+			// If no target customer product, skip subscription/schedule fetching
+			// Skip if product being attached is one off
+			const attachingOneOff = product
+				? isOneOffProduct({ prices: product.prices })
+				: false;
+
+			return attachingOneOff || skipSubscriptionFetching
+				? undefined
+				: fetchStripeSubscriptionForBilling({
+						ctx,
+						fullCus: fullCustomer,
+						product,
+						targetCusProductId: targetCustomerProduct?.id,
+						params,
+						newBillingSubscription,
+					});
+		},
+		async stripeSubscriptionSchedule() {
+			const localStripeSubscription = await this.$.stripeSubscription;
+
+			return targetCustomerProduct || notNullish(localStripeSubscription)
+				? fetchStripeSubscriptionScheduleForBilling({
+						ctx,
+						fullCus: fullCustomer,
+						subscriptionScheduleId:
+							typeof localStripeSubscription?.schedule === "string"
+								? localStripeSubscription.schedule
+								: undefined,
+						products: [],
+						targetCusProductId: targetCustomerProduct?.id,
+					})
+				: undefined;
+		},
+		async stripeDiscounts() {
+			const localStripeCustomer = (await this.$.stripeContext).stripeCus;
+			const localStripeSubscription = await this.$.stripeSubscription;
+
+			return fetchStripeDiscountsForBilling({
+				ctx,
+				stripeSubscription: localStripeSubscription,
+				stripeCustomer: localStripeCustomer,
+				paramDiscounts:
+					params && "discounts" in params ? params.discounts : undefined,
+			});
+		},
 	});
 
 	return {
