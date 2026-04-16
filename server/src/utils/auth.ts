@@ -50,14 +50,10 @@ export const auth = betterAuth({
 		session: {
 			create: {
 				before: beforeSessionCreated,
-				after: (session, context) => {
-					return afterSessionCreated(session, context);
-				},
+				after: afterSessionCreated,
 			},
 			delete: {
-				after: (session, context) => {
-					return afterSessionDeleted(session, context);
-				},
+				after: afterSessionDeleted,
 			},
 		},
 	},
