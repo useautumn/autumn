@@ -1,4 +1,8 @@
-import { type FullCusProduct, hasCustomerProductEnded } from "@autumn/shared";
+import {
+	customerProductHasActiveStatus,
+	type FullCusProduct,
+	hasCustomerProductEnded,
+} from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { expireAndActivateWithTracking } from "../../../common";
@@ -22,7 +26,12 @@ export const expireEndedCustomerProducts = async ({
 	const expiredCustomerProducts: FullCusProduct[] = [];
 
 	for (const customerProduct of customerProducts) {
-		if (!hasCustomerProductEnded(customerProduct, { nowMs })) continue;
+		const shouldExpire =
+			hasCustomerProductEnded(customerProduct, { nowMs }) ||
+			(customerProductHasActiveStatus(customerProduct) &&
+				customerProduct.ended_at != null &&
+				nowMs >= customerProduct.ended_at);
+		if (!shouldExpire) continue;
 
 		logger.info(
 			`Expiring product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,

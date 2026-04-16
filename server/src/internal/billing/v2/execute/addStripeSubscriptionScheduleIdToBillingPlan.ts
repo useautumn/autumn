@@ -3,6 +3,7 @@ import type {
 	AutumnBillingPlan,
 	StripeBillingPlan,
 } from "@autumn/shared";
+import { getUpdateCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductMutations";
 
 export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 	autumnBillingPlan,
@@ -21,9 +22,7 @@ export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 		customerProduct.scheduled_ids = [stripeSubscriptionScheduleId];
 	}
 
-	// Add to update customer product
-	if (autumnBillingPlan.updateCustomerProduct) {
-		const { updates } = autumnBillingPlan.updateCustomerProduct;
+	for (const { updates } of getUpdateCustomerProducts({ autumnBillingPlan })) {
 		const isExpiring = updates.status === CusProductStatus.Expired;
 
 		if (!isExpiring) {
