@@ -1,0 +1,25 @@
+server/src/utils/authUtils/afterSessionCreated.ts
+  1895a7ee9df05158 9,11-24
+vite/src/App.tsx
+  1895a7ee9df05158 54-60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.2.8",
+  "base_commit_sha": "b09e44c2279c8b2f560212048f44086dab44eb3c",
+  "prompts": {
+    "1895a7ee9df05158": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_26a3b46ddffefegqjqqWskfgq6",
+        "model": "anthropic/claude-opus-4-6"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 40,
+      "total_deletions": 33,
+      "accepted_lines": 22,
+      "overriden_lines": 0
+    }
+  }
+}
