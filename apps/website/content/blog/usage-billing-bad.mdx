@@ -1,0 +1,84 @@
+---
+title: "People really don't like metered billing"
+description: "Replit’s 2026 pricing shift highlights three trends in AI-first products: usage-based billing creates anxiety, seats don’t map to AI value, and credits/effort-based pricing reduce transparency as agents run longer."
+date: "2026-01-26"
+author: "Ayush, Autumn Co-Founder"
+slug: "usage-billing-bad"
+image: "/images/blog/usage-billing-bad.png"
+featured: true
+---
+
+Replit announced a big pricing change recently, and it put words to a few patterns I’ve been noticing across AI-first products. TL;DR:
+
+-   As agents run longer and more autonomously, pricing gets harder.
+    
+-   People don’t like usage-based billing because they can’t predict it.
+    
+-   Per-seat pricing doesn’t map cleanly to AI value.
+    
+
+From this mess, the pricing model that has prevailed is the "credit": a pre-purchased token for "work".
+
+## Users hate usage-based billing
+
+Usage-based billing is “fair” in theory. You pay for what you use. In practice, especially for UI-first products, it creates background anxiety.
+
+Every click feels like it might cost money, so you explore less, and subconsciously pause before taking each action. You feel out of control of your end of month bill.
+
+This is why you keep seeing products move away from metered billing and more towards **prepaid credits** (a monthly bucket, and usually one-off packs on top). It doesn’t necessarily change the underlying economics, but it changes the product experience: controlled spend with a hard cut-off.
+
+Even in APIs / infra, where usage-based has been the standard, we're seeing auto-topups replacing pure usage-based (OpenAI being a good example).
+
+The direction of travel is the same: when AI costs are high and variable, predictability and hard-limits are necessary.
+
+## Per-seat pricing is basically dead for AI-first products
+
+Replit’s new Pro plan reflects this shift. Instead of $40/seat/mo, they've introduced a team-wide pool of credits, with a seat/collaborator cap (up to 15 builders).
+
+Even for something like Cursor, where the price on their site is displayed "per-seat": what you're _actually_ paying for is the $40 USD of AI usage per-month that come with the seat -- not the seat itself.
+
+In traditional SaaS, seats are a decent proxy for value. More people using the tool generally means more value. In AI-first products, the marginal value often isn’t “another seat.” It’s:
+
+"how much work can the model/agent do for us?"
+
+Replit has also brought “real collaboration” into Core (up to 5 people), and they’re sunsetting the old Teams plan. Importantly, this it’s a product strategy move:
+
+-   Bake collaboration into the default experience.
+    
+-   Make “usage” the thing you sell, rather than individual power users.
+    
+-   Put a cap on seats, but make the variable—and the real value—how much work gets done.
+    
+
+## Pricing is getting less transparent as agents run longer
+
+The more autonomous agents become, the harder it is to keep pricing legible. Replit is a clean example.
+
+> Simple tasks may cost less than $0.25, more complex tasks may cost more than $0.25
+
+They used to charge a fixed $0.25 per checkpoint. Simple mental model that you could predict it. Now it’s "effort-based": you get charged _some random amount_ based on time + compute for the request.
+
+Mechanically, this makes sense. Agent requests vary wildly: a tiny change versus a long-running debugging session are not the same unit of work. But UX-wise, it shifts the feeling.
+
+And credits add a second layer of opacity. You see a credit balance, but the mapping is fuzzy. How do model tokens map to Replit credits? What’s the range for a “normal” request? What's replit's markup on the credits?
+
+When your costs are unpredictable you need some way of passing it on to your customers. Credits are great because they can effectively grant users the same number of credits, or even double them -- but silently increase their margins however they want.
+
+## What's next?
+
+Credits will probably stick around for a while because they’re the best abstraction we have right now. But they also feel like a patch over the harder question:
+
+How do you make AI spend feel predictable when agents can do wildly unpredictable amounts of work?
+
+I would personally love to see more AI products prioritize **billing observability**:
+
+-   flat costs for simple tasks
+    
+-   estimates _before_ you run expensive tasks (“this will be ~X credits based on history”)
+    
+-   a receipt _after_ you run (“this cost X because **\_”)**
+    
+-   ranges + forecasting (“at this pace you’ll run out on **\_”)**
+    
+
+That would make AI feel more like software and less like a casino. But my guess is that uncertainty will just become part of the new software contract.

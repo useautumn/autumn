@@ -25,8 +25,13 @@ export default defineConfig({
 	],
 
 	resolve: {
+		dedupe: ["react", "react-dom"],
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
+
+			// Force all packages to use the same React version
+			react: path.resolve(__dirname, "./node_modules/react"),
+			"react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
 
 			// Workspace packages
 			"autumn-js/react": path.resolve(
