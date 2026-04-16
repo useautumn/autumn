@@ -14,5 +14,5 @@ export * from "./featureQuantity/featureQuantityParamsV0";
 export * from "./featureQuantity/mappers/featureQuantityParamsToCusProductOptions";
 export * from "./invoiceModeParams";
 export * from "./redirectMode";
-export * from "./refundBehavior";
+export * from "./refundLastPayment";
 export * from "./transitionRules";

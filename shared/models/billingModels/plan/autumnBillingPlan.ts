@@ -88,6 +88,19 @@ export const AutumnBillingPlanSchema = z.object({
 	// Upsert operations (populated during webhook handling, e.g., checkout.session.completed)
 	upsertSubscription: SubscriptionSchema.optional(),
 	upsertInvoice: z.custom<InsertInvoice>().optional(),
+
+	/** Refund plan computed by computeRefundPlan: the amount to refund and source invoice */
+	refundPlan: z
+		.object({
+			amount: z.number(),
+			invoice: z.object({
+				stripe_id: z.string(),
+				total: z.number(),
+				current_refunded_amount: z.number(),
+				currency: z.string(),
+			}),
+		})
+		.optional(),
 });
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;

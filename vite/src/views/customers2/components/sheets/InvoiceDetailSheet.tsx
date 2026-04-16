@@ -245,6 +245,25 @@ export function InvoiceDetailSheet() {
 							</span>
 						</div>
 					)}
+					{invoice.refunded_amount > 0 && (
+						<>
+							<div className="flex items-center justify-between">
+								<span className="text-sm text-t3">Refunded</span>
+								<span className="text-sm text-amber-500 tabular-nums">
+									-{formatAmount(invoice.refunded_amount, invoice.currency)}
+								</span>
+							</div>
+							<div className="flex items-center justify-between pt-1">
+								<span className="text-sm text-t3">Net</span>
+								<span className="text-sm font-semibold text-foreground tabular-nums">
+									{formatSignedAmount(
+										invoice.total - invoice.refunded_amount,
+										invoice.currency,
+									)}
+								</span>
+							</div>
+						</>
+					)}
 				</div>
 			</SheetSection>
 

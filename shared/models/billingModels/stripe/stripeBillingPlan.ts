@@ -12,6 +12,10 @@ import {
 	StripeInvoiceItemsActionSchema,
 } from "./stripeInvoiceItemsAction";
 import {
+	type StripeRefundAction,
+	StripeRefundActionSchema,
+} from "./stripeRefundAction";
+import {
 	type StripeSubscriptionAction,
 	StripeSubscriptionActionSchema,
 } from "./stripeSubscriptionAction";
@@ -21,16 +25,18 @@ import {
 } from "./stripeSubscriptionScheduleAction";
 
 export {
-	StripeCheckoutSessionActionSchema,
-	StripeInvoiceActionSchema,
-	StripeInvoiceItemsActionSchema,
-	StripeSubscriptionActionSchema,
-	StripeSubscriptionScheduleActionSchema,
 	type StripeCheckoutSessionAction,
+	StripeCheckoutSessionActionSchema,
 	type StripeInvoiceAction,
+	StripeInvoiceActionSchema,
 	type StripeInvoiceItemsAction,
+	StripeInvoiceItemsActionSchema,
+	type StripeRefundAction,
+	StripeRefundActionSchema,
 	type StripeSubscriptionAction,
+	StripeSubscriptionActionSchema,
 	type StripeSubscriptionScheduleAction,
+	StripeSubscriptionScheduleActionSchema,
 };
 
 export const StripeBillingPlanSchema = z.object({
@@ -39,6 +45,7 @@ export const StripeBillingPlanSchema = z.object({
 	invoiceAction: StripeInvoiceActionSchema.optional(),
 	invoiceItemsAction: StripeInvoiceItemsActionSchema.optional(),
 	checkoutSessionAction: StripeCheckoutSessionActionSchema.optional(),
+	refundAction: StripeRefundActionSchema.optional(),
 });
 
 export type StripeBillingPlan = z.infer<typeof StripeBillingPlanSchema>;
