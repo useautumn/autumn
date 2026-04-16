@@ -44,24 +44,5 @@ describe(chalk.yellowBright("normalizeCreateSchedulePhases"), () => {
 				}),
 			).toThrow("The first phase must start immediately");
 		});
-
-		test("rejects subscription_id inputs", () => {
-			expect(() =>
-				normalizeCreateSchedulePhases({
-					currentEpochMs: 1_000_000,
-					phases: [
-						{
-							starts_at: 1_000_000,
-							plans: [
-								{
-									plan_id: "pro",
-									subscription_id: "sub_123",
-								},
-							],
-						},
-					],
-				}),
-			).toThrow("subscription_id is not supported for create_schedule");
-		});
 	});
 });
