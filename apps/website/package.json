@@ -14,6 +14,7 @@
 		"gray-matter": "^4.0.3",
 		"gsap": "^3.14.2",
 		"lottie-react": "^2.4.1",
+		"lottie-web": "^5.13.0",
 		"matter-js": "^0.20.0",
 		"motion": "^12.38.0",
 		"next": "16.2.4",
