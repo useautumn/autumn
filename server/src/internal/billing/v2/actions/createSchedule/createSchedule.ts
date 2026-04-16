@@ -7,35 +7,12 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
+import { buildCreateScheduleExecutionPlan } from "./compute/buildCreateScheduleExecutionPlan";
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
 import { normalizeCreateSchedulePhases } from "./errors/normalizeCreateSchedulePhases";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
-import type { MaterializedScheduledPhase } from "./utils/materializeScheduledPhases";
 import { materializeScheduledPhases } from "./utils/materializeScheduledPhases";
 import { persistCreateSchedule } from "./utils/persistCreateSchedule";
-
-/** Merge immediate billing changes with future scheduled rows for Autumn execution. */
-const buildCreateScheduleExecutionPlan = ({
-	immediateAutumnBillingPlan,
-	futureScheduledPhases,
-}: {
-	immediateAutumnBillingPlan: ReturnType<typeof computeCreateSchedulePlan>;
-	futureScheduledPhases: MaterializedScheduledPhase[];
-}) => ({
-	...immediateAutumnBillingPlan,
-	insertCustomerProducts: [
-		...immediateAutumnBillingPlan.insertCustomerProducts,
-		...futureScheduledPhases.flatMap((phase) => phase.customerProducts),
-	],
-	customPrices: [
-		...(immediateAutumnBillingPlan.customPrices ?? []),
-		...futureScheduledPhases.flatMap((phase) => phase.customPrices),
-	],
-	customEntitlements: [
-		...(immediateAutumnBillingPlan.customEntitlements ?? []),
-		...futureScheduledPhases.flatMap((phase) => phase.customEntitlements),
-	],
-});
 
 /** Create a schedule with immediate-phase billing and Autumn-managed future phases. */
 export const createSchedule = async ({
