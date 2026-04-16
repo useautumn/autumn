@@ -20,7 +20,7 @@ export const afterSessionDeleted = async (
 			path: "/",
 			maxAge: 0,
 			secure: true,
-			sameSite: "none",
+			sameSite: "lax",
 			httpOnly: false,
 		});
 	} catch (_) {
