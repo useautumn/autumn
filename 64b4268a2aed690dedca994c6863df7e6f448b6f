@@ -1,0 +1,27 @@
+vite/src/App.tsx
+  119a2dda0232a85a 55-60
+server/src/utils/authUtils/afterSessionDeleted.ts
+  119a2dda0232a85a 23
+server/src/utils/authUtils/afterSessionCreated.ts
+  119a2dda0232a85a 23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "64b4268a2aed690dedca994c6863df7e6f448b6f",
+  "prompts": {
+    "119a2dda0232a85a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "7cea591a-5e6b-494e-b0cc-5ce47695f793",
+        "model": "claude-opus-4-7-thinking-high"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 11,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    }
+  }
+}
