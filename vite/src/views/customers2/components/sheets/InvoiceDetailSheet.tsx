@@ -8,8 +8,11 @@ import {
 import {
 	ArrowCounterClockwiseIcon,
 	ArrowSquareOutIcon,
+	CalendarBlankIcon,
+	CreditCardIcon,
 	EyeIcon,
 	EyeSlashIcon,
+	HashIcon,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
@@ -17,6 +20,7 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
+import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -189,7 +193,7 @@ export function InvoiceDetailSheet({
 	};
 
 	return (
-		<div className="flex flex-col h-full">
+		<div className="flex flex-col h-full overflow-y-auto">
 			<SheetHeader
 				title={
 					<div className="flex items-center gap-2">
@@ -204,91 +208,94 @@ export function InvoiceDetailSheet({
 				description={`${formatDate(invoice.created_at)} • ${formatSignedAmount(invoice.total, invoice.currency)}`}
 			/>
 
-			<div className="flex-1 overflow-y-auto min-h-0">
-				{/* Product groups with line items */}
-				{productGroups.map((productGroup) => (
-					<SheetSection
-						key={productGroup.productId ?? "unknown"}
-						withSeparator={true}
-					>
-						{/* Product header with description toggle */}
-						<div className="flex items-center justify-between mb-2">
-							<span className="text-xs font-medium text-t3 truncate">
-								{productGroup.productName}
-							</span>
-							<button
-								type="button"
-								onClick={() => setShowDescriptions((prev) => !prev)}
-								className="text-t4 hover:text-t2 transition-colors p-0.5 rounded"
-								title={
-									showDescriptions
-										? "Show computed display"
-										: "Show descriptions"
-								}
-							>
-								{showDescriptions ? (
-									<EyeSlashIcon size={14} />
-								) : (
-									<EyeIcon size={14} />
-								)}
-							</button>
-						</div>
-
-						{/* Line item groups within this product */}
-						<div className="flex flex-col gap-2">
-							{productGroup.lineItemGroups.map((group) => (
-								<LineItemGroupRow
-									key={group.groupKey}
-									group={group}
-									formatAmount={formatAmount}
-									formatPeriod={formatPeriod}
-									currency={invoice.currency}
-									showDescriptions={showDescriptions}
-								/>
-							))}
-						</div>
-					</SheetSection>
-				))}
-
-				{/* Invoice Total */}
-				<SheetSection withSeparator={true}>
-					<div className="flex items-center justify-between">
-						<span className="text-sm font-medium text-foreground">Total</span>
-						<span className="text-sm font-semibold text-foreground tabular-nums">
-							{formatSignedAmount(invoice.total, invoice.currency)}
+			{productGroups.map((productGroup) => (
+				<SheetSection
+					key={productGroup.productId ?? "unknown"}
+					withSeparator={true}
+				>
+					<div className="flex items-center justify-between mb-2">
+						<span className="text-xs font-medium text-t3 truncate">
+							{productGroup.productName}
 						</span>
+						<button
+							type="button"
+							onClick={() => setShowDescriptions((prev) => !prev)}
+							className="text-t4 hover:text-t2 transition-colors p-0.5 rounded"
+							title={
+								showDescriptions ? "Show computed display" : "Show descriptions"
+							}
+						>
+							{showDescriptions ? (
+								<EyeSlashIcon size={14} />
+							) : (
+								<EyeIcon size={14} />
+							)}
+						</button>
+					</div>
+
+					<div className="flex flex-col gap-2">
+						{productGroup.lineItemGroups.map((group) => (
+							<LineItemGroupRow
+								key={group.groupKey}
+								group={group}
+								formatAmount={formatAmount}
+								formatPeriod={formatPeriod}
+								currency={invoice.currency}
+								showDescriptions={showDescriptions}
+							/>
+						))}
 					</div>
 				</SheetSection>
+			))}
 
-				{/* Invoice Details - Compact */}
-				<SheetSection withSeparator={false}>
-					<div className="space-y-2">
-						<div className="flex items-center justify-between text-xs">
-							<span className="text-t3">Invoice ID</span>
+			<SheetSection withSeparator={true}>
+				<div className="flex items-center justify-between">
+					<span className="text-sm font-medium text-foreground">Total</span>
+					<span className="text-sm font-semibold text-foreground tabular-nums">
+						{formatSignedAmount(invoice.total, invoice.currency)}
+					</span>
+				</div>
+			</SheetSection>
+
+			<SheetSection withSeparator={false}>
+				<div className="space-y-3">
+					<InfoRow
+						icon={<HashIcon size={16} weight="duotone" />}
+						label="Invoice ID"
+						value={
 							<MiniCopyButton
 								text={invoice.id}
-								innerClassName="text-xs text-t1 font-mono"
+								innerClassName="text-sm text-t1 font-mono"
 							/>
-						</div>
-						<div className="flex items-center justify-between text-xs">
-							<span className="text-t3">Stripe ID</span>
+						}
+					/>
+					<InfoRow
+						icon={<CreditCardIcon size={16} weight="duotone" />}
+						label="Stripe ID"
+						value={
 							<MiniCopyButton
 								text={invoice.stripe_id}
-								innerClassName="text-xs text-t1 font-mono"
+								innerClassName="text-sm text-t1 font-mono"
 							/>
-						</div>
-						<div className="flex items-center justify-between text-xs">
-							<span className="text-t3">Created</span>
-							<span className="text-t1">
-								{format(new Date(invoice.created_at), "MMM d, yyyy HH:mm")}
-							</span>
-						</div>
-					</div>
-				</SheetSection>
-			</div>
+						}
+					/>
+					<InfoRow
+						icon={<CalendarBlankIcon size={16} weight="duotone" />}
+						label="Created"
+						value={
+							<MiniCopyButton
+								text={format(
+									new Date(invoice.created_at),
+									"MMM d, yyyy HH:mm",
+								)}
+								innerClassName="text-sm text-t1"
+							/>
+						}
+					/>
+				</div>
+			</SheetSection>
 
-			{/* Footer */}
-			<div className="p-4 flex gap-2 border-t border-border/40">
+			<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
 				<Button
 					variant="secondary"
 					className="flex-1"
