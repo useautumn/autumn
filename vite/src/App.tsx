@@ -51,6 +51,17 @@ export default function App() {
 			Sentry.setTags({
 				org_id: data.session.activeOrganizationId ?? "unknown_org",
 			});
+
+			// Set a non-httpOnly hint cookie so the landing page can detect login state.
+			// In production this is handled server-side on .useautumn.com domain.
+			if (window.location.hostname === "localhost") {
+				if (data?.user) {
+					document.cookie =
+						"logged_in_hint=1; path=/; max-age=604800; SameSite=Lax";
+				} else {
+					document.cookie = "logged_in_hint=; path=/; max-age=0; SameSite=Lax";
+				}
+			}
 		}
 	}, [data]);
 	return (
