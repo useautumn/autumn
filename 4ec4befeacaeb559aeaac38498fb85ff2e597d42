@@ -1,0 +1,27 @@
+server/src/utils/auth.ts
+  9eb63e3f3839c56e 23,57-61
+server/src/utils/authUtils/afterSessionDeleted.ts
+  9eb63e3f3839c56e 1-29
+apps/website/components/hero.jsx
+  9eb63e3f3839c56e 32-37,217-223,234
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "4ec4befeacaeb559aeaac38498fb85ff2e597d42",
+  "prompts": {
+    "9eb63e3f3839c56e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "4918eb03-97d9-46d7-8a64-c979e208a600",
+        "model": "claude-opus-4-7-thinking-high"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 49,
+      "total_deletions": 2,
+      "accepted_lines": 49,
+      "overriden_lines": 0
+    }
+  }
+}
