@@ -1,33 +1,33 @@
 import Image from "next/image";
 import Link from "next/link";
 
-const footerColumns = [
-	{
-		title: "PRODUCT",
-		links: [
-			{ label: "FEATURES", href: "#" },
-			{ label: "INTEGRATIONS", href: "#" },
-			{ label: "PRICING", href: "#" },
-			{ label: "CHANGELOG", href: "#" },
-			{ label: "ROADMAP", href: "#" },
-		],
-	},
-	{
-		title: "COMPANY",
-		links: [
-			{ label: "OUR TEAM", href: "#" },
-			{ label: "OUR VALUES", href: "/privacy" },
-			{ label: "BLOG", href: "/blog" },
-		],
-	},
-	{
-		title: "RESOURCES",
-		links: [
-			{ label: "DOWNLOADS", href: "https://useautumn.com/" },
-			{ label: "DOCUMENTATION", href: "https://docs.useautumn.com/welcome" },
-			{ label: "CONTACT", href: "https://cal.com/ayrod/a?user=ayrod" },
-		],
-	},
+const footerColumns: any[] = [
+	// {
+	// 	title: "PRODUCT",
+	// 	links: [
+	// 		{ label: "FEATURES", href: "#" },
+	// 		{ label: "INTEGRATIONS", href: "#" },
+	// 		{ label: "PRICING", href: "#" },
+	// 		{ label: "CHANGELOG", href: "#" },
+	// 		{ label: "ROADMAP", href: "#" },
+	// 	],
+	// },
+	// {
+	// 	title: "COMPANY",
+	// 	links: [
+	// 		{ label: "OUR TEAM", href: "#" },
+	// 		{ label: "OUR VALUES", href: "/privacy" },
+	// 		{ label: "BLOG", href: "/blog" },
+	// 	],
+	// },
+	// {
+	// 	title: "RESOURCES",
+	// 	links: [
+	// 		{ label: "DOWNLOADS", href: "https://useautumn.com/" },
+	// 		{ label: "DOCUMENTATION", href: "https://docs.useautumn.com/welcome" },
+	// 		{ label: "CONTACT", href: "https://cal.com/ayrod/a?user=ayrod" },
+	// 	],
+	// },
 ];
 
 export default function Footer() {
@@ -59,8 +59,7 @@ export default function Footer() {
 									/>
 								</Link>
 								<p className="text-[14px] md:text-[16px] leading-[18px] md:leading-[20px] tracking-[-2%] text-[#FFFFFF99] font-light">
-									Autumn is built on top of Stripe Billing (for now), so their
-									fees (0.7%, and 2.9% + 30c) still apply.
+									Autumn is drop-in billing for AI companies.
 								</p>
 							</div>
 
