@@ -19,6 +19,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { and, eq, inArray } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
+import { hydrateCustomerWithSchedules } from "@/internal/customers/cusUtils/getFullCustomerSchedule";
 import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer";
 
 test.concurrent(`${chalk.yellowBright("create-schedule: bills the first phase immediately and stores later phases as scheduled")}`, async () => {
@@ -647,4 +648,58 @@ test.concurrent(`${chalk.yellowBright("create-schedule: rejects invalid timing a
 			});
 		},
 	});
+});
+
+test.concurrent(`${chalk.yellowBright("create-schedule: hydrates schedules on the full customer")}`, async () => {
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const premium = products.premium({
+		id: "premium",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "create-schedule-hydrate-customer",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [],
+	});
+
+	const now = Date.now();
+	const response = await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: now,
+				plans: [{ plan_id: pro.id }],
+			},
+			{
+				starts_at: now + ms.days(30),
+				plans: [{ plan_id: premium.id }],
+			},
+		],
+	});
+
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		withEntities: true,
+		expand: [],
+	});
+	const hydratedCustomer = await hydrateCustomerWithSchedules({
+		ctx,
+		fullCustomer,
+	});
+
+	expect(hydratedCustomer.schedule?.id).toBe(response.schedule_id);
+	expect(hydratedCustomer.schedule?.customer_id).toBe(customerId);
+	expect(hydratedCustomer.schedule?.phases).toHaveLength(2);
+	expect(hydratedCustomer.schedule?.phases[0]?.starts_at).toBe(now);
+	expect(hydratedCustomer.schedule?.phases[1]?.starts_at).toBe(
+		now + ms.days(30),
+	);
 });
