@@ -9,10 +9,14 @@ import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/strip
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
 import { buildCreateScheduleExecutionPlan } from "./compute/buildCreateScheduleExecutionPlan";
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
-import { normalizeCreateSchedulePhases } from "./errors/normalizeCreateSchedulePhases";
+import {
+	getCurrentCreateSchedulePhaseIndex,
+	normalizeCreateSchedulePhases,
+} from "./errors/normalizeCreateSchedulePhases";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
 import { materializeScheduledPhases } from "./utils/materializeScheduledPhases";
 import { persistCreateSchedule } from "./utils/persistCreateSchedule";
+import { resolveCurrentEpochMs } from "./utils/resolveCurrentEpochMs";
 
 /** Create a schedule with immediate-phase billing and Autumn-managed future phases. */
 export const createSchedule = async ({
@@ -22,12 +26,28 @@ export const createSchedule = async ({
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
 }): Promise<CreateScheduleResponse> => {
-	const currentEpochMs = Date.now();
+	const currentEpochMs = await resolveCurrentEpochMs({
+		ctx,
+		customerId: params.customer_id,
+	});
 	const normalizedPhases = normalizeCreateSchedulePhases({
 		currentEpochMs,
 		phases: params.phases,
 	});
-	const [immediatePhase, ...futurePhases] = normalizedPhases;
+	const currentPhaseIndex = getCurrentCreateSchedulePhaseIndex({
+		currentEpochMs,
+		phases: normalizedPhases,
+	});
+	const immediatePhaseIndex = currentPhaseIndex === -1 ? 0 : currentPhaseIndex;
+	const immediatePhase = normalizedPhases[immediatePhaseIndex];
+	const futurePhases = normalizedPhases.slice(immediatePhaseIndex + 1);
+
+	if (!immediatePhase) {
+		throw new RecaseError({
+			message: "At least one phase must be provided",
+			statusCode: 400,
+		});
+	}
 
 	const billingContext = await setupCreateScheduleBillingContext({
 		ctx,
@@ -37,8 +57,7 @@ export const createSchedule = async ({
 
 	if (billingContext.checkoutMode) {
 		throw new RecaseError({
-			message:
-				"create_schedule requires an immediately billable first phase; checkout flows are not supported yet",
+			message: "Please attach a payment method before creating a schedule.",
 			statusCode: 400,
 		});
 	}
@@ -87,6 +106,7 @@ export const createSchedule = async ({
 		params,
 		currentEpochMs,
 		fullCustomer: billingContext.fullCustomer,
+		preservePastPhasesBefore: immediatePhase.starts_at,
 		immediatePhaseStartsAt: immediatePhase.starts_at,
 		immediatePhaseCustomerProductIds,
 		futureScheduledPhases,

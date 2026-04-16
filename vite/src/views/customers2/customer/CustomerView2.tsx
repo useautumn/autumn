@@ -37,7 +37,7 @@ import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export default function CustomerView2() {
-	const { customer, isLoading: cusLoading } = useCusQuery();
+	const { customer, schedule, isLoading: cusLoading } = useCusQuery();
 
 	useCusReferralQuery();
 	const { entityId, setEntityId } = useEntity();

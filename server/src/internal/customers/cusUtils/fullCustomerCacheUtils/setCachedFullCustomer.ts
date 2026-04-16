@@ -32,7 +32,11 @@ export const setCachedFullCustomer = async ({
 }): Promise<SetCacheResult> => {
 	const { org, env, logger } = ctx;
 
-	const cacheKey = buildFullCustomerCacheKey({ orgId: org.id, env, customerId });
+	const cacheKey = buildFullCustomerCacheKey({
+		orgId: org.id,
+		env,
+		customerId,
+	});
 	const pathIndexEntries = buildPathIndex({ fullCustomer });
 	const pathIndexJson = JSON.stringify(pathIndexEntries);
 

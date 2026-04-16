@@ -1,4 +1,5 @@
 import { CusProductStatus, CustomerExpand } from "@autumn/shared";
+import { getTestClockFrozenTimeMs } from "@/external/stripe/testClocks/utils/convertStripeTestClock";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 import { hydrateCustomerWithSchedules } from "../cusUtils/getFullCustomerSchedule.js";
@@ -23,13 +24,17 @@ export const handleGetCustomer = createRoute({
 				CusProductStatus.Expired,
 			],
 		});
-		const hydratedCustomer = await hydrateCustomerWithSchedules({
-			ctx,
-			fullCustomer: fullCus,
-		});
+		const [hydratedCustomer, testClockFrozenTimeMs] = await Promise.all([
+			hydrateCustomerWithSchedules({ ctx, fullCustomer: fullCus }),
+			getTestClockFrozenTimeMs({
+				ctx,
+				stripeCustomerId: fullCus.processor?.id,
+			}),
+		]);
 
 		return c.json({
 			customer: hydratedCustomer,
+			test_clock_frozen_time_ms: testClockFrozenTimeMs,
 		});
 	},
 });
