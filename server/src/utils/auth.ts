@@ -20,6 +20,7 @@ import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
 import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { afterSessionCreated } from "./authUtils/afterSessionCreated.js";
+import { afterSessionDeleted } from "./authUtils/afterSessionDeleted.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 
@@ -51,6 +52,11 @@ export const auth = betterAuth({
 				before: beforeSessionCreated,
 				after: (session, context) => {
 					return afterSessionCreated(session, context);
+				},
+			},
+			delete: {
+				after: (session, context) => {
+					return afterSessionDeleted(session, context);
 				},
 			},
 		},

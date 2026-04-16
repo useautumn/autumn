@@ -59,10 +59,8 @@ export default function App() {
 					document.cookie =
 						"logged_in_hint=1; path=/; max-age=604800; SameSite=Lax";
 				} else {
-					document.cookie =
-						"logged_in_hint=; path=/; max-age=0; SameSite=Lax";
+					document.cookie = "logged_in_hint=; path=/; max-age=0; SameSite=Lax";
 				}
-			}
 			}
 		}
 	}, [data]);
