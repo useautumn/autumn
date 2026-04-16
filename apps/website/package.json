@@ -2,14 +2,17 @@
   "name": "pixelup-dev",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "bun@1.3.10",
   "scripts": {
-    "dev": "npx next dev -p 3005",
+    "dev": "next dev -p 3005",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "ultracite check",
+    "lint:fix": "ultracite fix"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "clsx": "^2.1.1",
     "gsap": "^3.14.2",
     "lottie-react": "^2.4.1",
     "matter-js": "^0.20.0",
@@ -17,12 +20,19 @@
     "next": "16.2.1",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-syntax-highlighter": "^16.1.1"
+    "react-syntax-highlighter": "^16.1.1",
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.4.12",
     "@tailwindcss/postcss": "^4.2.2",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.1",
-    "tailwindcss": "^4.2.2"
+    "@types/matter-js": "^0.20.2",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@types/react-syntax-highlighter": "^15.5.13",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^6.0.2",
+    "ultracite": "7.5.9"
   }
 }
