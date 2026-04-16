@@ -31,6 +31,7 @@ export type SheetType =
 	| "billing-overage-allowed-edit"
 	| "record-usage"
 	| "check-balance"
+	| "create-schedule"
 	| null;
 
 // Store state interface

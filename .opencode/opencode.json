@@ -1,36 +1,37 @@
 {
 	"$schema": "https://opencode.ai/config.json",
 	"mcp": {
+		"axiom": {
+			"type": "remote",
+			"url": "https://mcp.axiom.co/mcp"
+		},
 		"linear": {
 			"type": "remote",
 			"url": "https://mcp.linear.app/mcp",
 			"oauth": {}
 		},
+		"trigger": {
+			"type": "local",
+			"command": [
+				"bunx",
+				"trigger.dev@latest",
+				"mcp"
+			]
+		},
+		"tinybird": {
+			"type": "remote",
+			"url": "https://mcp.tinybird.co?token={env:TINYBIRD_READ_TOKEN}"
+		},
 		"mintlify": {
 			"type": "remote",
 			"url": "https://mintlify.com/docs/mcp"
 		},
-
 		"planetscale": {
 			"type": "remote",
 			"url": "https://mcp.pscale.dev/mcp/planetscale"
-		},
-		"axiom": {
-			"type": "remote",
-			"url": "https://mcp.axiom.co/mcp"
-		},
-		"tinybird": {
-			"type": "remote",
-			"url": "https://mcp.tinybird.co?token={env:TINYBIRD_READ_TOKEN}",
-			"oauth": false,
-			"enabled": true
-		},
-		"vercel": {
-			"type": "remote",
-			"url": "https://mcp.vercel.com",
-			"enabled": true
 		}
 	},
-
-	"plugin": ["opencode-supermemory@latest"]
+	"plugin": [
+		"opencode-supermemory@latest"
+	]
 }

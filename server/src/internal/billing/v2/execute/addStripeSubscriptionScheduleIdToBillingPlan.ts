@@ -3,7 +3,7 @@ import type {
 	AutumnBillingPlan,
 	StripeBillingPlan,
 } from "@autumn/shared";
-import { getUpdateCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductMutations";
+import { getUpdateCustomerProducts } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
 export const addStripeSubscriptionScheduleIdToBillingPlan = ({
 	autumnBillingPlan,
