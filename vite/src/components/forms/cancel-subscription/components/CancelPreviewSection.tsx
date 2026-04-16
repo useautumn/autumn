@@ -33,10 +33,10 @@ export function CancelPreviewSection() {
 
 		// For any refund mode (full or prorated) with preview data, use the exact amount
 		if (refundBehavior === "refund" && refundPreview) {
-			if (refundPreview.invoice.refunded_amount > 0) {
+			if (refundPreview.invoice.current_refunded_amount > 0) {
 				result.push({
 					label: "Previously Refunded",
-					amount: -refundPreview.invoice.refunded_amount,
+					amount: -refundPreview.invoice.current_refunded_amount,
 					variant: "secondary" as const,
 				});
 			}

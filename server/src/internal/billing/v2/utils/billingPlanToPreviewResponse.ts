@@ -58,6 +58,6 @@ export const billingPlanToPreviewResponse = async ({
 		next_cycle: nextCycle,
 		incoming,
 		outgoing,
-		refund: autumnBillingPlan.refundPreview,
+		refund: autumnBillingPlan.refundPlan,
 	} satisfies BillingPreviewResponse;
 };

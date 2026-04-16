@@ -89,14 +89,14 @@ export const AutumnBillingPlanSchema = z.object({
 	upsertSubscription: SubscriptionSchema.optional(),
 	upsertInvoice: z.custom<InsertInvoice>().optional(),
 
-	/** Refund preview for cancel-with-refund flows, computed during plan finalization */
-	refundPreview: z
+	/** Refund plan computed by computeRefundPlan: the amount to refund and source invoice */
+	refundPlan: z
 		.object({
 			amount: z.number(),
 			invoice: z.object({
 				stripe_id: z.string(),
 				total: z.number(),
-				refunded_amount: z.number(),
+				current_refunded_amount: z.number(),
 				currency: z.string(),
 			}),
 		})
