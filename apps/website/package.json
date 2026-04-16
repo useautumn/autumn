@@ -10,6 +10,7 @@
 	},
 	"dependencies": {
 		"@gsap/react": "^2.1.2",
+		"@vercel/analytics": "^2.0.1",
 		"gray-matter": "^4.0.3",
 		"gsap": "^3.14.2",
 		"lottie-react": "^2.4.1",
