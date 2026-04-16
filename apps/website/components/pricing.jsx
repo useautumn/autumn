@@ -10,10 +10,9 @@ const plans = [
     price: "0",
     description: "Perfect while finding PMF. Everything you need to start.",
     features: [
-      "Up to 100 active customers",
+      "Up to 8K monthly revenue",
       "All core features",
       "Community support",
-      "Unlimited API calls",
     ],
     buttonText: "Get started",
     href: "https://app.useautumn.com/sign-in",
@@ -21,14 +20,13 @@ const plans = [
   },
   {
     name: "PRO",
-    price: "299",
+    price: "375",
     description: "For teams scaling with real usage-based pricing.",
     features: [
-      "Unlimited customers",
+      "Up to 50K monthly revenue",
       "Priority support",
       "Custom plans",
       "Usage analytics",
-      "SLA guarantees",
     ],
     buttonText: "Start with Pro",
     href: "https://app.useautumn.com/sign-in",
@@ -39,9 +37,7 @@ const plans = [
     price: "Custom",
     description: "For compliance, scale, or custom requirements.",
     features: [
-      "Self-hosted option",
       "Dedicated support",
-      "Custom SLAs",
       "Multi-region",
       "Compliance assistance",
     ],
@@ -54,10 +50,10 @@ const plans = [
 export default function Pricing() {
   return (
     <>
-      <div className="min-h-screen relative flex w-full lg:w-[calc(100%+calc(var(--page-pad)*2))] lg:-ml-(--page-pad) items-center justify-center lg:py-24 pb-3">
+      <div id="pricing" className="min-h-screen relative flex w-full lg:w-[calc(100%+calc(var(--page-pad)*2))] lg:-ml-(--page-pad) items-center justify-center lg:py-24 pb-3">
         {/* Desktop Background */}
         <Image
-          src="/images/pricing/pricingbg.webp"
+          src="/images/pricing/pricing.webp"
           alt="pricing background desktop"
           fill
           className="object-cover absolute z-10 lg:z-50 hidden md:block"
@@ -65,7 +61,7 @@ export default function Pricing() {
         />
         {/* Mobile Background */}
         <Image
-          src="/images/pricing/pricing_mobile.webp"
+          src="/images/pricing/pricing-mob.webp"
           alt="pricing background mobile"
           fill
           className="object-cover absolute z-10 lg:z-50 block md:hidden"
@@ -85,11 +81,9 @@ export default function Pricing() {
               {plans.map((plan, index) => (
                 <div
                   key={plan.name}
-                  className={`relative flex flex-col bg-black lg:bg-transparent border lg:border-0 border-[#292929] ${
-                    index === 0 ? "lg:border-r" : ""
-                  } ${
-                    index === 1 ? "lg:border-r" : ""
-                  } ${index === 2 ? "md:col-span-2 lg:col-span-1 md:w-[calc(50%-16px)] md:justify-self-center lg:w-full lg:justify-self-auto" : ""}`}
+                  className={`relative flex flex-col bg-black lg:bg-transparent border lg:border-0 border-[#292929] ${index === 0 ? "lg:border-r" : ""
+                    } ${index === 1 ? "lg:border-r" : ""
+                    } ${index === 2 ? "md:col-span-2 lg:col-span-1 md:w-[calc(50%-16px)] md:justify-self-center lg:w-full lg:justify-self-auto" : ""}`}
                 >
                   {plan.isPro && (
                     <div className="hidden lg:block absolute -inset-px z-20 pointer-events-none border border-transparent [border-image:linear-gradient(to_bottom,#A175FF,#000000)_1]"></div>
@@ -171,8 +165,8 @@ export default function Pricing() {
 
             <div className="px-6 md:px-8 py-5 md:py-6 lg:mt-[32px] border border-[#292929] lg:border-x-0 lg:border-b-0 text-left md:text-center bg-black lg:bg-transparent">
               <p className="text-white text-pretty font-light leading-[18px] tracking-[-2%] md:font-extralight text-[16px] md:leading-[1.6] text-wrap-balance">
-                All plans include unlimited API calls · Pricing based on active
-                customers, not events
+                Autumn is built on top of Stripe billing, so Stripe fees (0.7%
+                and 2.9% + 30¢) still apply.
               </p>
             </div>
           </div>

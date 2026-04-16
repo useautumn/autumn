@@ -25,42 +25,39 @@ import {
 import { DashboardIconPixel } from "./dashboard-icon-pixel";
 
 const NAV_LINKS = [
+  { label: "Docs", href: "https://docs.useautumn.com/welcome", Icon: IconDocs },
+  { label: "Blog", href: "/blog", Icon: IconBlog },
+  { label: "Pricing", href: "#pricing", Icon: IconPricing },
   {
     label: "Discord",
     href: "https://discord.com/invite/STqxY92zuS",
     Icon: IconDiscord,
   },
-  { label: "Blog", href: "https://useautumn.com/blog", Icon: IconBlog },
-  { label: "Docs", href: "https://docs.useautumn.com/welcome", Icon: IconDocs },
-  { label: "Pricing", href: "#", Icon: IconPricing },
 ];
 
 const NavIconPixel = forwardRef(function NavIconPixel({ Icon }, ref) {
   const iconRef = useRef(null);
-  const pulseRef = useRef(null);
   const tlRef = useRef(null);
 
-  const frames = [
-    "\u2800\u2836\u2800",
-    "\u2830\u28FF\u2806",
-    "\u28BE\u28C9\u2877",
-    "\u28CF\u2800\u28F9",
-    "\u2841\u2800\u2888",
-  ];
-
   useImperativeHandle(ref, () => ({
-    restart: () => {
-      tlRef.current?.play();
-    },
-    reverse: () => {
-      tlRef.current?.reverse();
-    },
+    restart: () => tlRef.current?.play(),
+    reverse: () => tlRef.current?.reverse(),
   }));
 
   useEffect(() => {
-    const pixels = iconRef.current?.querySelectorAll(".icon-pixel-path");
-    const pulseEl = pulseRef.current;
-    if (!pixels || !pulseEl) return;
+    const pixelEls = iconRef.current?.querySelectorAll(".icon-pixel-path");
+    if (!pixelEls?.length) return;
+
+    const pixels = Array.from(pixelEls).sort((a, b) => {
+      const aBox = a.getBBox();
+      const bBox = b.getBBox();
+      return (
+        aBox.x +
+        aBox.width / 2 -
+        (aBox.y + aBox.height / 2) -
+        (bBox.x + bBox.width / 2 - (bBox.y + bBox.height / 2))
+      );
+    });
 
     gsap.set(pixels, {
       opacity: 0.15,
@@ -68,42 +65,21 @@ const NavIconPixel = forwardRef(function NavIconPixel({ Icon }, ref) {
       transformOrigin: "left bottom",
       fill: "currentColor",
     });
-    gsap.set(pulseEl, { opacity: 0 });
 
     tlRef.current = gsap.timeline({ paused: true });
 
     tlRef.current
-      .to(pixels, { opacity: 0, duration: 0.05 })
-      .to(pulseEl, { opacity: 1, duration: 0.05 }, "<")
-      .to(pulseEl, {
-        duration: 0.3,
-        onUpdate: function () {
-          const frameIndex = Math.floor(this.progress() * (frames.length - 1));
-          pulseEl.innerText = frames[frameIndex];
-        },
-        ease: "none",
+      .to(pixels, {
+        opacity: 1,
+        scale: 1.15,
+        fill: "#FFFFFF",
+        duration: 0.01,
+        stagger: 0.025,
+        ease: "power2.out",
       })
-      // 3. REVEAL: Pulse fades, SVG Icon sweeps in from bottom-left
-      .to(pulseEl, { opacity: 0, duration: 0.1, scale: 1.2 })
-      .to(
-        pixels,
-        {
-          opacity: 1,
-          scale: 1.15,
-          fill: "#FFFFFF",
-          duration: 0.2,
-          stagger: {
-            grid: [5, 5],
-            from: [0, 4], // Bottom-Left scan
-            amount: 0.25,
-          },
-          ease: "power2.out",
-        },
-        "-=0.1",
-      )
       .to(pixels, {
         scale: 1,
-        duration: 0.15,
+        duration: 0.01,
         ease: "back.out(3)",
       });
 
@@ -112,28 +88,7 @@ const NavIconPixel = forwardRef(function NavIconPixel({ Icon }, ref) {
 
   return (
     <span className="relative inline-flex items-center justify-center w-8 h-8 group/icon">
-      {/* BACKGROUND MASK: Static field dots */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="grid grid-cols-5 grid-rows-5 gap-[3px]">
-          {Array.from({ length: 25 }).map((_, i) => (
-            <div
-              key={i}
-              className="bg-white/[0.08] w-[1px] h-[1px] rounded-[0.5px]"
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* BRAILLE PULSE LAYER */}
-      <div
-        ref={pulseRef}
-        className="absolute z-20 font-mono text-[16px] text-white pointer-events-none select-none"
-      >
-        {"\u2800\u2836\u2800"}
-      </div>
-
-      {/* SVG ICON LAYER (Idle: Faded / Hover: Solid) */}
-      <div className="relative z-10 w-[16px] h-[16px] flex items-center justify-center">
+      <div className="relative w-[16px] h-[16px] flex items-center justify-center">
         <Icon ref={iconRef} className="w-full h-full text-white" />
       </div>
     </span>
@@ -142,10 +97,20 @@ const NavIconPixel = forwardRef(function NavIconPixel({ Icon }, ref) {
 
 function NavLinkItem({ item }) {
   const iconRef = useRef(null);
+  const isAnchor = item.href.startsWith("#");
+
+  const handleClick = (e) => {
+    if (!isAnchor) return;
+    e.preventDefault();
+    const target = document.querySelector(item.href);
+    if (target) target.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <div className="nav-link">
       <Link
         href={item.href}
+        onClick={handleClick}
         className="group inline-flex items-center py-2 text-[#FFFFFF99] hover:text-white transition-colors"
         onMouseEnter={() => iconRef.current?.restart()}
         onMouseLeave={() => iconRef.current?.reverse()}
@@ -342,7 +307,7 @@ export default function Navbar() {
             <div className="absolute pointer-events-none right-4 md:right-(--page-pad) top-0 bottom-0 border-r border-[#292929]" />
           </>
         )}
-        <nav className="nav-root bg-[#0F0F0F] flex items-center justify-between font-mono uppercase text-xs pl-2 pt-2.5 lg:py-0 xl:py-0 pb-2.5 lg:pb-0 xl:pb-0">
+        <nav className="nav-root bg-[#0F0F0F] flex items-center justify-between font-mono uppercase text-xs pl-2 md:pl-0 h-[44px] md:h-[44px] lg:pb-0 xl:pb-0">
           <Link href={"/"}>
             <Image
               src="/images/navbar/autumnlogo.svg"
@@ -354,13 +319,13 @@ export default function Navbar() {
             />
           </Link>
 
-          <div className="hidden md:flex items-center gap-6">
+          <div className="hidden lg:flex items-center gap-6">
             {NAV_LINKS.map((item) => (
               <NavLinkItem key={item.label} item={item} />
             ))}
           </div>
 
-          <div className="nav-dashboard hidden md:block">
+          <div className="nav-dashboard hidden lg:block">
             <motion.div
               initial="initial"
               whileHover="hover"
@@ -389,7 +354,7 @@ export default function Navbar() {
           </div>
 
           <motion.button
-            className="md:hidden mr-2 p-1.5 text-[#FFFFFF99] cursor-pointer"
+            className="lg:hidden mr-2 p-1.5 text-[#FFFFFF99] cursor-pointer"
             onClick={() => setMenuOpen(!menuOpen)}
             whileTap={{ scale: 0.9 }}
             aria-label="Toggle menu"
@@ -399,22 +364,36 @@ export default function Navbar() {
         </nav>
       </div>
       <div
-        className={`fixed w-full nav-mobile left-0 overflow-y-auto bg-[#000000] flex flex-col font-mono uppercase ${scrolled && !recoilHidden ? "top-[62px] sm:top-[60px]" : "top-[66px] sm:top-[62px]"} md:top-5 h-[calc(100dvh-58px)] z-40 px-4 pb-8 transition-all duration-300`}
-        style={{ opacity: 0, pointerEvents: "none", clipPath: "inset(0% 0 100% 0)" }}
+        className={`fixed nav-mobile inset-x-0 overflow-y-auto overflow-x-hidden  ${scrolled && !recoilHidden ? "top-[58px] sm:top-[60px]" : "top-[66px] sm:top-[62px]"} bg-[#000000] flex flex-col font-mono uppercase lg:top-5 h-[calc(100dvh-58px)] z-40 px-4 md:px-(--page-pad) pb-8 transition-all duration-300`}
+        style={{
+          opacity: 0,
+          pointerEvents: "none",
+          clipPath: "inset(0% 0 100% 0)",
+        }}
       >
         {/* Nav items */}
         <div className="flex flex-col">
-          {NAV_LINKS.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              target="_blank"
-              className="flex items-center gap-4 px-4 py-3.5 border-b border-[#292929] active:bg-[#141414ea] text-[#ffffff99] hover:text-white active:text-white transition-colors text-sm tracking-[-1%]"
-            >
-              <item.Icon className="h-3.5 w-3.5 shrink-0" />
-              <span>{item.label}</span>
-            </Link>
-          ))}
+          {NAV_LINKS.map((item) => {
+            const isAnchor = item.href.startsWith("#");
+            const isExternal = item.href.startsWith("http");
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                target={isExternal ? "_blank" : undefined}
+                onClick={isAnchor ? (e) => {
+                  e.preventDefault();
+                  setMenuOpen(false);
+                  const target = document.querySelector(item.href);
+                  if (target) target.scrollIntoView({ behavior: "smooth" });
+                } : undefined}
+                className="flex items-center gap-4 px-4 py-3.5 border-b border-[#292929] active:bg-[#141414ea] text-[#ffffff99] hover:text-white active:text-white transition-colors text-sm tracking-[-1%]"
+              >
+                <item.Icon className="h-3.5 w-3.5 shrink-0" />
+                <span>{item.label}</span>
+              </Link>
+            );
+          })}
         </div>
         <div className="flex flex-col mt-auto -mb-2.5">
           <div className="border-t border-[#292929] py-1.5" />

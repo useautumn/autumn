@@ -7,15 +7,7 @@ export const DashboardIconPixel = forwardRef(function DashboardIconPixel(
   ref,
 ) {
   const iconRef = useRef(null);
-  const pulseRef = useRef(null);
   const tlRef = useRef(null);
-  const frames = [
-    "\u2800\u2836\u2800",
-    "\u2830\u28FF\u2806",
-    "\u28BE\u28C9\u2877",
-    "\u28CF\u2800\u28F9",
-    "\u2841\u2800\u2888",
-  ];
 
   useImperativeHandle(ref, () => ({
     restart: () => tlRef.current?.play(),
@@ -23,48 +15,50 @@ export const DashboardIconPixel = forwardRef(function DashboardIconPixel(
   }));
 
   useEffect(() => {
-    const pixels = iconRef.current?.querySelectorAll(".icon-pixel-path");
-    const pulseEl = pulseRef.current;
-    if (!pixels || !pulseEl) return;
+    const pixelEls = iconRef.current?.querySelectorAll(".icon-pixel-path");
+    if (!pixelEls?.length) return;
+
+    // Sort pixels by visual position: bottom-left → top-right diagonal
+    const pixels = Array.from(pixelEls).sort((a, b) => {
+      const aBox = a.getBBox();
+      const bBox = b.getBBox();
+      return (
+        aBox.x +
+        aBox.width / 2 -
+        (aBox.y + aBox.height / 2) -
+        (bBox.x + bBox.width / 2 - (bBox.y + bBox.height / 2))
+      );
+    });
 
     gsap.set(pixels, {
-      opacity: 0.25,
+      opacity: 0.15,
       scale: 0.8,
       transformOrigin: "left bottom",
+      fill: "currentColor",
     });
-    gsap.set(pulseEl, { opacity: 0 });
 
-    tlRef.current = gsap
-      .timeline({ paused: true })
-      .to(pixels, { opacity: 0, duration: 0.05 })
-      .to(pulseEl, { opacity: 1, duration: 0.05 }, "<")
-      .to(pulseEl, {
+    tlRef.current = gsap.timeline({ paused: true });
+
+    tlRef.current
+      .to(pixels, {
+        opacity: 1,
+        scale: 1.15,
+        fill: "#FFFFFF",
         duration: 0.2,
-        onUpdate: function () {
-          pulseEl.innerText =
-            frames[Math.floor(this.progress() * (frames.length - 1))];
-        },
+        stagger: 0.01,
+        ease: "power2.out",
       })
-      .to(pulseEl, { opacity: 0, duration: 0.1 })
-      .to(
-        pixels,
-        {
-          opacity: 1,
-          scale: 1,
-          duration: 0.2,
-          stagger: { grid: [5, 5], from: [0, 4], amount: 0.2 },
-        },
-        "-=0.1",
-      );
+      .to(pixels, {
+        scale: 1,
+        duration: 0.01,
+        ease: "back.out(3)",
+      });
+
+    return () => tlRef.current?.kill();
   }, []);
 
   return (
-    // Height and Width match your original icon (14px)
     <span className="relative inline-flex items-center justify-center w-[14px] h-[14px]">
-      <div
-        ref={pulseRef}
-        className="absolute z-20 font-mono text-[14px] text-white opacity-0"
-      />
       <Icon ref={iconRef} className="w-full h-full text-white" />
     </span>
   );
