@@ -5,6 +5,7 @@ export const afterSessionCreated = async (
 	session: Session,
 	context: GenericEndpointContext<BetterAuthOptions> | null,
 ) => {
+	console.log("Running afterSessionCreated for user ", session.userId);
 	try {
 		if (!context) return;
 
@@ -19,7 +20,7 @@ export const afterSessionCreated = async (
 			path: "/",
 			maxAge: 60 * 60 * 24 * 7, // 7 days
 			secure: true,
-			sameSite: "none",
+			sameSite: "lax",
 			httpOnly: false,
 		});
 	} catch (_) {
