@@ -81,6 +81,7 @@ export const materializeScheduledPhases = async ({
 								startsAt: phase.starts_at,
 								endedAt: nextPhaseStartsAt,
 								status: CusProductStatus.Scheduled,
+								isCustom: customPrices.length > 0 || customEntitlements.length > 0,
 							},
 						}),
 						customPrices,

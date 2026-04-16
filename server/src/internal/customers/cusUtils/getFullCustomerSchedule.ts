@@ -4,8 +4,37 @@ import {
 	schedulePhases,
 	schedules,
 } from "@autumn/shared";
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+
+export const getFullCustomerSchedule = async ({
+	ctx,
+	internalCustomerId,
+}: {
+	ctx: AutumnContext;
+	internalCustomerId: string;
+}): Promise<FullCustomerSchedule | undefined> => {
+	const [schedule] = await ctx.db
+		.select()
+		.from(schedules)
+		.where(
+			and(
+				eq(schedules.internal_customer_id, internalCustomerId),
+				isNull(schedules.internal_entity_id),
+			),
+		)
+		.limit(1);
+
+	if (!schedule) return undefined;
+
+	const phases = await ctx.db
+		.select()
+		.from(schedulePhases)
+		.where(eq(schedulePhases.schedule_id, schedule.id))
+		.orderBy(asc(schedulePhases.starts_at));
+
+	return { ...schedule, phases };
+};
 
 export const getAllCustomerSchedules = async ({
 	ctx,
@@ -38,7 +67,21 @@ export const getAllCustomerSchedules = async ({
 	}));
 };
 
-/** Loads schedules and attaches them to the customer and its entities. */
+export const hydrateFullCustomerSchedule = async ({
+	ctx,
+	fullCustomer,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+}) => ({
+	...fullCustomer,
+	schedule: await getFullCustomerSchedule({
+		ctx,
+		internalCustomerId: fullCustomer.internal_id,
+	}),
+});
+
+/** Loads all schedules and attaches them to the customer and its entities. */
 export const hydrateCustomerWithSchedules = async ({
 	ctx,
 	fullCustomer,

@@ -6,7 +6,7 @@ import {
 	schedulePhases,
 	schedules,
 } from "@autumn/shared";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
@@ -81,12 +81,71 @@ const deleteExistingSchedules = async ({
 	await ctx.db.delete(schedules).where(inArray(schedules.id, scheduleIds));
 };
 
+const loadPreservedPastPhases = async ({
+	ctx,
+	internalCustomerId,
+	internalEntityId,
+	preservePastPhasesBefore,
+}: {
+	ctx: AutumnContext;
+	internalCustomerId: string;
+	internalEntityId?: string;
+	preservePastPhasesBefore: number;
+}) => {
+	const existingSchedules = await ctx.db
+		.select({ id: schedules.id })
+		.from(schedules)
+		.where(
+			and(
+				eq(schedules.internal_customer_id, internalCustomerId),
+				internalEntityId
+					? eq(schedules.internal_entity_id, internalEntityId)
+					: isNull(schedules.internal_entity_id),
+			),
+		);
+
+	if (existingSchedules.length === 0) return [];
+
+	const existingPhases = await ctx.db
+		.select({
+			starts_at: schedulePhases.starts_at,
+			customer_product_ids: schedulePhases.customer_product_ids,
+		})
+		.from(schedulePhases)
+		.where(
+			and(
+				inArray(
+					schedulePhases.schedule_id,
+					existingSchedules.map((schedule) => schedule.id),
+				),
+				lt(schedulePhases.starts_at, preservePastPhasesBefore),
+			),
+		);
+
+	const dedupedPhases = new Map<number, string[]>();
+
+	for (const phase of existingPhases) {
+		if (phase.starts_at >= preservePastPhasesBefore) continue;
+		if (dedupedPhases.has(phase.starts_at)) continue;
+		dedupedPhases.set(phase.starts_at, phase.customer_product_ids);
+	}
+
+	return [...dedupedPhases.entries()]
+		.sort(([startsAtA], [startsAtB]) => startsAtA - startsAtB)
+		.map(([starts_at, customer_product_ids]) => ({
+			phase_id: generateId("phase"),
+			starts_at,
+			customer_product_ids,
+		}));
+};
+
 /** Persist the schedule rows and scheduled customer products. */
 export const persistCreateSchedule = async ({
 	ctx,
 	params,
 	currentEpochMs,
 	fullCustomer,
+	preservePastPhasesBefore,
 	immediatePhaseStartsAt,
 	immediatePhaseCustomerProductIds,
 	futureScheduledPhases,
@@ -95,6 +154,7 @@ export const persistCreateSchedule = async ({
 	params: CreateScheduleParamsV0;
 	currentEpochMs: number;
 	fullCustomer: FullCustomer;
+	preservePastPhasesBefore: number;
 	immediatePhaseStartsAt: number;
 	immediatePhaseCustomerProductIds: string[];
 	futureScheduledPhases: MaterializedScheduledPhase[];
@@ -102,6 +162,12 @@ export const persistCreateSchedule = async ({
 	return await ctx.db.transaction(async (tx) => {
 		const txDb = tx as unknown as DrizzleCli;
 		const txCtx = { ...ctx, db: txDb };
+		const preservedPastPhases = await loadPreservedPastPhases({
+			ctx: txCtx,
+			internalCustomerId: fullCustomer.internal_id,
+			internalEntityId: fullCustomer.entity?.internal_id ?? undefined,
+			preservePastPhasesBefore,
+		});
 
 		const existingScheduleState = await getExistingScheduleState({
 			ctx: txCtx,
@@ -122,6 +188,7 @@ export const persistCreateSchedule = async ({
 		});
 
 		const insertedPhases = [
+			...preservedPastPhases,
 			{
 				phase_id: generateId("phase"),
 				starts_at: immediatePhaseStartsAt,
