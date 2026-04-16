@@ -1,14 +1,35 @@
 "use client";
-import { motion, useSpring, useTransform, useMotionValue } from "framer-motion";
-import { useEffect } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { useEffect, useState } from "react";
 import AnimatedFooterImage from "./animated-footer-image";
 
 export default function ElasticRecoil({ children }) {
   const liftAmount = useMotionValue(0);
 
-  const springConfig = { stiffness: 600, damping: 35, mass: 1 };
-  const animatedLift = useSpring(liftAmount, springConfig);
-  const y = useTransform(animatedLift, [0, 400], [0, -280]);
+  const [showFooter, setShowFooter] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
+  const desktopSpring = { stiffness: 200, damping: 15, mass: 0.5 };
+  const mobileSpring = { stiffness: 800, damping: 60, mass: 0.2 };
+  const animatedLift = useSpring(
+    liftAmount,
+    isMobile ? mobileSpring : desktopSpring,
+  );
+  const cappedMax = isMobile ? -420 : -580;
+  const y = useTransform(animatedLift, [0, 400], [0, cappedMax]);
+
+  useEffect(() => {
+    return animatedLift.on("change", (v) => {
+      setShowFooter(v > 1);
+    });
+  }, [animatedLift]);
 
   useEffect(() => {
     let timeout;
@@ -29,16 +50,21 @@ export default function ElasticRecoil({ children }) {
         document.documentElement.scrollHeight - 5;
 
       if (isAtBottom && e.deltaY > 0) {
-        liftAmount.set(liftAmount.get() + e.deltaY * 0.5);
+        const normalizedDelta =
+          e.deltaMode === 1
+            ? e.deltaY * 20
+            : e.deltaMode === 2
+              ? e.deltaY * 300
+              : e.deltaY;
+        liftAmount.set(Math.min(liftAmount.get() + normalizedDelta * 0.5, 400));
         recoilFired = false;
 
-        // Reset timeout on every wheel event
         clearTimeout(timeout);
         timeout = setTimeout(() => {
           if (!isTouching) {
             triggerRebound();
           }
-        }, 1500); // Rebounds 1.5 seconds after wheel stops
+        }, 1500);
       } else if (e.deltaY < 0) {
         if (!isTouching) {
           liftAmount.set(0);
@@ -47,36 +73,46 @@ export default function ElasticRecoil({ children }) {
       }
     };
 
-    let touchStart = 0;
+    let lastTouchY = 0;
+    let atBottomOnStart = false;
     const handleTouchStart = (e) => {
       isTouching = true;
-      touchStart = e.touches[0].clientY;
+      lastTouchY = e.touches[0].clientY;
+      atBottomOnStart =
+        window.innerHeight + window.pageYOffset >=
+        document.documentElement.scrollHeight - 5;
       recoilFired = false;
       clearTimeout(timeout);
     };
 
     const handleTouchMove = (e) => {
-      const isAtBottom =
-        window.innerHeight + window.pageYOffset >=
-        document.documentElement.scrollHeight - 5;
+      const currentY = e.touches[0].clientY;
+      const delta = lastTouchY - currentY;
+      lastTouchY = currentY;
 
-      if (isAtBottom) {
-        const touchDelta = touchStart - e.touches[0].clientY;
-        if (touchDelta > 0) {
-          liftAmount.set(touchDelta * 1.5);
-          recoilFired = false;
-          // Notice: We don't set a timeout here, so it never snaps back while touching
-        }
+      if (!atBottomOnStart) {
+        atBottomOnStart =
+          window.innerHeight + window.pageYOffset >=
+          document.documentElement.scrollHeight - 5;
+        return;
+      }
+
+      if (delta > 0) {
+        liftAmount.set(Math.min(liftAmount.get() + delta * 4, 400));
+        recoilFired = false;
+      } else if (liftAmount.get() > 0) {
+        liftAmount.set(Math.max(0, liftAmount.get() + delta * 4));
       }
     };
 
     const handleTouchEnd = () => {
       isTouching = false;
+      atBottomOnStart = false;
       if (liftAmount.get() > 0) {
         clearTimeout(timeout);
         timeout = setTimeout(() => {
           triggerRebound();
-        }, 1500); // Rebounds 1.5 seconds after lifting finger
+        }, 1500);
       }
     };
 
@@ -98,7 +134,7 @@ export default function ElasticRecoil({ children }) {
 
   return (
     <div className="relative w-full overflow-hidden">
-      <AnimatedFooterImage />
+      {showFooter && <AnimatedFooterImage />}
       <motion.div style={{ y }} className="relative z-10 bg-black">
         {children}
       </motion.div>

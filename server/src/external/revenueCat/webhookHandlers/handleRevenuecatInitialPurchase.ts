@@ -109,6 +109,7 @@ export const handleInitialPurchase = async ({
 			},
 			product,
 		),
+		sendWebhook: true,
 	});
 
 	logger.info(
