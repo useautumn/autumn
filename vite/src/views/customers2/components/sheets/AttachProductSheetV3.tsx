@@ -16,6 +16,8 @@ import {
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
+import { ScheduledPlanGuard } from "@/components/forms/create-schedule/components/ScheduledPlanGuard";
+import type { SchedulePlan } from "@/components/forms/create-schedule/createScheduleFormSchema";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import {
 	STAGGER_CONTAINER,
@@ -204,7 +206,51 @@ function PlanDiffSkeleton() {
 	);
 }
 
-function SheetContent() {
+function ScheduleEditFooter({
+	onCancel,
+	onSave,
+}: {
+	onCancel?: () => void;
+	onSave?: (plan: SchedulePlan) => void;
+}) {
+	const { formValues, hasCustomizations } = useAttachFormContext();
+
+	const handleSaveToSchedule = () => {
+		onSave?.({
+			productId: formValues.productId,
+			prepaidOptions: formValues.prepaidOptions,
+			items: formValues.items,
+			isCustom: formValues.isCustom || hasCustomizations,
+			version: formValues.version,
+		});
+	};
+
+	return (
+		<SheetFooter>
+			<Button variant="secondary" onClick={onCancel} className="w-full">
+				Cancel
+			</Button>
+			<Button
+				variant="primary"
+				onClick={handleSaveToSchedule}
+				disabled={!formValues.productId}
+				className="w-full"
+			>
+				Save to Schedule
+			</Button>
+		</SheetFooter>
+	);
+}
+
+function SheetContent({
+	isScheduleEditMode = false,
+	onScheduleEditCancel,
+	onScheduleEditSave,
+}: {
+	isScheduleEditMode?: boolean;
+	onScheduleEditCancel?: () => void;
+	onScheduleEditSave?: (plan: SchedulePlan) => void;
+} = {}) {
 	const [stage, setStage] = useState<"select" | "review">("select");
 
 	const {
@@ -239,6 +285,58 @@ function SheetContent() {
 
 	const getEntityOptionLabel = (option: EntityOption) =>
 		option === null ? "Customer-level" : option.name || option.id || "PENDING";
+
+	if (isScheduleEditMode) {
+		return (
+			<LayoutGroup>
+				<div className="flex flex-col h-full overflow-y-auto">
+					<SheetHeader
+						title="Configure Plan"
+						description="Configure the plan for this schedule phase"
+					/>
+
+					<SheetSection withSeparator={false} className="pb-0">
+						<AttachProductSelection />
+					</SheetSection>
+
+					{hasProductSelected && (
+						<motion.div
+							initial="hidden"
+							animate="visible"
+							variants={STAGGER_CONTAINER}
+							className="flex flex-col"
+						>
+							<motion.div variants={STAGGER_ITEM}>
+								<AttachPlanSection />
+							</motion.div>
+							<motion.div variants={STAGGER_ITEM}>
+								<ScheduleEditFooter
+									onCancel={onScheduleEditCancel}
+									onSave={onScheduleEditSave}
+								/>
+							</motion.div>
+						</motion.div>
+					)}
+
+					{!hasProductSelected && (
+						<ScheduleEditFooter
+							onCancel={onScheduleEditCancel}
+							onSave={onScheduleEditSave}
+						/>
+					)}
+
+					{productWithFormItems && (
+						<InlinePlanEditor
+							product={productWithFormItems}
+							onSave={handlePlanEditorSave}
+							onCancel={handlePlanEditorCancel}
+							isOpen={showPlanEditor}
+						/>
+					)}
+				</div>
+			</LayoutGroup>
+		);
+	}
 
 	return (
 		<LayoutGroup>
@@ -431,37 +529,82 @@ function SheetContent() {
 	);
 }
 
-export function AttachProductSheetV3() {
+interface AttachProductSheetV3Props {
+	scheduleEditPlan?: SchedulePlan | null;
+	onScheduleEditCancel?: () => void;
+	onScheduleEditSave?: (plan: SchedulePlan) => void;
+}
+
+export function AttachProductSheetV3({
+	scheduleEditPlan,
+	onScheduleEditCancel,
+	onScheduleEditSave,
+}: AttachProductSheetV3Props = {}) {
 	const itemId = useSheetStore((s) => s.itemId);
-	const { closeSheet } = useSheetStore();
+	const sheetData = useSheetStore((s) => s.data);
+	const { closeSheet, setSheet } = useSheetStore();
 	const { customer } = useCusQuery();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
 	const { setIsInlineEditorOpen } = useCustomerContext();
 	const { entityId } = useEntity();
 
+	const isScheduleEditMode =
+		!!scheduleEditPlan ||
+		!!onScheduleEditCancel ||
+		!!onScheduleEditSave ||
+		!!sheetData?.scheduleEditMode;
+
+	const handleSuccess = isScheduleEditMode
+		? (onScheduleEditCancel ?? (() => setSheet({ type: "create-schedule" })))
+		: closeSheet;
+
 	return (
 		<AttachFormProvider
 			customerId={customer?.id ?? customer?.internal_id ?? ""}
 			entityId={entityId ?? undefined}
-			initialProductId={itemId ?? undefined}
+			initialProductId={scheduleEditPlan?.productId ?? itemId ?? undefined}
+			initialSchedulePlan={scheduleEditPlan}
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
 			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
-			onInvoiceCreated={(invoiceId) => {
-				const invoiceLink = getStripeInvoiceLink({
-					stripeInvoice: invoiceId,
-					env,
-					accountId: stripeAccount?.id,
-				});
-				window.open(invoiceLink, "_blank");
-			}}
-			onCheckoutRedirect={(checkoutUrl) => {
-				navigator.clipboard.writeText(checkoutUrl);
-				toast.success("Checkout URL copied to clipboard");
-			}}
-			onSuccess={closeSheet}
+			onInvoiceCreated={
+				isScheduleEditMode
+					? undefined
+					: (invoiceId) => {
+							const invoiceLink = getStripeInvoiceLink({
+								stripeInvoice: invoiceId,
+								env,
+								accountId: stripeAccount?.id,
+							});
+							window.open(invoiceLink, "_blank");
+						}
+			}
+			onCheckoutRedirect={
+				isScheduleEditMode
+					? undefined
+					: (checkoutUrl) => {
+							navigator.clipboard.writeText(checkoutUrl);
+							toast.success("Checkout URL copied to clipboard");
+						}
+			}
+			onSuccess={handleSuccess}
 		>
-			<SheetContent />
+			{isScheduleEditMode ? (
+				<SheetContent
+					isScheduleEditMode
+					onScheduleEditCancel={
+						onScheduleEditCancel ??
+						(() => setSheet({ type: "create-schedule" }))
+					}
+					onScheduleEditSave={
+						onScheduleEditSave ?? (() => setSheet({ type: "create-schedule" }))
+					}
+				/>
+			) : (
+				<ScheduledPlanGuard>
+					<SheetContent />
+				</ScheduledPlanGuard>
+			)}
 		</AttachFormProvider>
 	);
 }

@@ -23,6 +23,7 @@ import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { ScheduledPlanGuard } from "@/components/forms/create-schedule/components/ScheduledPlanGuard";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
@@ -136,13 +137,15 @@ export function SubscriptionCancelSheet() {
 	}
 
 	return (
-		<UpdateSubscriptionFormProvider
-			formContext={formContext}
-			originalItems={undefined}
-			defaultOverrides={{ cancelAction: defaultCancelAction }}
-			onSuccess={closeSheet}
-		>
-			<SheetContent />
-		</UpdateSubscriptionFormProvider>
+		<ScheduledPlanGuard>
+			<UpdateSubscriptionFormProvider
+				formContext={formContext}
+				originalItems={undefined}
+				defaultOverrides={{ cancelAction: defaultCancelAction }}
+				onSuccess={closeSheet}
+			>
+				<SheetContent />
+			</UpdateSubscriptionFormProvider>
+		</ScheduledPlanGuard>
 	);
 }

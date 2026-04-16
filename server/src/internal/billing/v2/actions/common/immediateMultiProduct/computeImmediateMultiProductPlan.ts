@@ -8,6 +8,7 @@ import { computeAttachNewCustomerProduct } from "@/internal/billing/v2/actions/a
 import { computeAttachTransitionUpdates } from "@/internal/billing/v2/actions/attach/compute/computeAttachTransitionUpdates";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
+import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
 
 /** Compute the billing plan for immediate multi-product billing. */
 export const computeImmediateMultiProductPlan = ({
@@ -28,18 +29,10 @@ export const computeImmediateMultiProductPlan = ({
 	let transitionContext: AttachBillingContext | undefined;
 	const insertCustomerProducts = billingContext.productContexts.map(
 		(productContext) => {
-			const attachBillingContext: AttachBillingContext = {
-				...billingContext,
-				attachProduct: productContext.fullProduct,
-				fullProducts: [productContext.fullProduct],
-				featureQuantities: productContext.featureQuantities,
-				customPrices: productContext.customPrices,
-				customEnts: productContext.customEnts,
-				currentCustomerProduct: productContext.currentCustomerProduct,
-				scheduledCustomerProduct: productContext.scheduledCustomerProduct,
-				planTiming: "immediate",
-				externalId: productContext.externalId,
-			};
+			const attachBillingContext = productContextToAttachBillingContext({
+				billingContext,
+				productContext,
+			});
 
 			if (productContext.currentCustomerProduct) {
 				transitionContext = attachBillingContext;
