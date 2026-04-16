@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "66aaa84787f2a64744954c6a13a8a96108053a56",
+  "prompts": {
+    "119a2dda0232a85a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "7cea591a-5e6b-494e-b0cc-5ce47695f793",
+        "model": "claude-opus-4-7-thinking-high"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 8,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
