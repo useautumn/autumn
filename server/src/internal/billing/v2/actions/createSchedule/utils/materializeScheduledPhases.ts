@@ -9,6 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 import { setupAttachProductContext } from "../../attach/setup/setupAttachProductContext";
+import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
 
 export type MaterializedScheduledPhase = {
 	starts_at: number;
@@ -34,7 +35,8 @@ export const materializeScheduledPhases = async ({
 	phases: CreateScheduleParamsV0["phases"];
 }): Promise<MaterializedScheduledPhase[]> => {
 	return await Promise.all(
-		phases.map(async (phase) => {
+		phases.map(async (phase, index) => {
+			const nextPhaseStartsAt = phases[index + 1]?.starts_at;
 			const materializedProducts = await Promise.all(
 				phase.plans.map(async (plan) => {
 					const {
@@ -62,6 +64,7 @@ export const materializeScheduledPhases = async ({
 					});
 
 					return {
+						fullProduct,
 						customerProduct: initFullCustomerProduct({
 							ctx,
 							initContext: {
@@ -76,6 +79,7 @@ export const materializeScheduledPhases = async ({
 							},
 							initOptions: {
 								startsAt: phase.starts_at,
+								endedAt: nextPhaseStartsAt,
 								status: CusProductStatus.Scheduled,
 							},
 						}),
@@ -84,6 +88,11 @@ export const materializeScheduledPhases = async ({
 					};
 				}),
 			);
+			validateCreateSchedulePhasePlans({
+				fullProducts: materializedProducts.map(
+					({ fullProduct }) => fullProduct,
+				),
+			});
 
 			return {
 				starts_at: phase.starts_at,

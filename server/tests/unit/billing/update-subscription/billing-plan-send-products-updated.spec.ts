@@ -16,12 +16,17 @@ afterEach(() => {
 
 const runPlan = async ({
 	updateCustomerProduct,
+	updateCustomerProducts = [],
 	insertCustomerProducts = [],
 }: {
 	updateCustomerProduct?: {
 		customerProduct: ReturnType<typeof customerProducts.create>;
 		updates: Record<string, unknown>;
 	};
+	updateCustomerProducts?: {
+		customerProduct: ReturnType<typeof customerProducts.create>;
+		updates: Record<string, unknown>;
+	}[];
 	insertCustomerProducts?: ReturnType<typeof customerProducts.create>[];
 }) => {
 	const calls: SendProductsUpdatedPayload[] = [];
@@ -38,6 +43,7 @@ const runPlan = async ({
 			customPrices: [],
 			customEntitlements: [],
 			updateCustomerProduct,
+			updateCustomerProducts,
 		},
 		billingContext: contexts.createBilling({}),
 	});
@@ -133,5 +139,90 @@ describe(chalk.yellowBright("billingPlanToSendProductsUpdated"), () => {
 		});
 
 		expect(calls).toHaveLength(0);
+	});
+
+	test("matches each inserted product to its own expired counterpart", async () => {
+		const calls = await runPlan({
+			updateCustomerProducts: [
+				{
+					customerProduct: customerProducts.create({
+						id: "cus_prod_expired_1",
+						productId: "prod_old_1",
+						customerPrices: [
+							prices.createCustomer({
+								customerProductId: "cus_prod_expired_1",
+								price: {
+									...prices.createFixed({ id: "price_old_1" }),
+									config: {
+										...prices.createFixed({ id: "price_old_1" }).config,
+										amount: 100,
+									},
+								},
+							}),
+						],
+					}),
+					updates: { status: CusProductStatus.Expired },
+				},
+				{
+					customerProduct: customerProducts.create({
+						id: "cus_prod_expired_2",
+						productId: "prod_old_2",
+						customerPrices: [
+							prices.createCustomer({
+								customerProductId: "cus_prod_expired_2",
+								price: {
+									...prices.createFixed({ id: "price_old_2" }),
+									config: {
+										...prices.createFixed({ id: "price_old_2" }).config,
+										amount: 300,
+									},
+								},
+							}),
+						],
+					}),
+					updates: { status: CusProductStatus.Expired },
+				},
+			],
+			insertCustomerProducts: [
+				customerProducts.create({
+					id: "cus_prod_new_1",
+					productId: "prod_new_1",
+					customerPrices: [
+						prices.createCustomer({
+							customerProductId: "cus_prod_new_1",
+							price: {
+								...prices.createFixed({ id: "price_new_1" }),
+								config: {
+									...prices.createFixed({ id: "price_new_1" }).config,
+									amount: 200,
+								},
+							},
+						}),
+					],
+				}),
+				customerProducts.create({
+					id: "cus_prod_new_2",
+					productId: "prod_new_2",
+					customerPrices: [
+						prices.createCustomer({
+							customerProductId: "cus_prod_new_2",
+							price: {
+								...prices.createFixed({ id: "price_new_2" }),
+								config: {
+									...prices.createFixed({ id: "price_new_2" }).config,
+									amount: 100,
+								},
+							},
+						}),
+					],
+				}),
+			],
+		});
+
+		expect(calls).toHaveLength(2);
+		expect(calls[0]?.customerProductId).toBe("cus_prod_new_1");
+		expect(calls[0]?.scenario).toBe(AttachScenario.Upgrade);
+		expect(calls[1]?.customerProductId).toBe("cus_prod_new_2");
+		expect(calls[1]?.scenario).toBe(AttachScenario.New);
 	});
 });

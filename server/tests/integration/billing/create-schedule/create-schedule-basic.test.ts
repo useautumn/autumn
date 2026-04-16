@@ -15,12 +15,35 @@ import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { and, eq, inArray } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
 import { hydrateCustomerWithSchedules } from "@/internal/customers/cusUtils/getFullCustomerSchedule";
 import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer";
+
+const getCustomerProductRows = async ({
+	ctx,
+	customerId,
+	productIds,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	customerId: string;
+	productIds: string[];
+}) =>
+	await ctx.db
+		.select({
+			productId: customerProducts.product_id,
+			status: customerProducts.status,
+		})
+		.from(customerProducts)
+		.where(
+			and(
+				eq(customerProducts.customer_id, customerId),
+				inArray(customerProducts.product_id, productIds),
+			),
+		);
 
 test.concurrent(`${chalk.yellowBright("create-schedule: bills the first phase immediately and stores later phases as scheduled")}`, async () => {
 	const pro = products.pro({
@@ -497,6 +520,614 @@ test.concurrent(`${chalk.yellowBright("create-schedule: persists the new schedul
 	expect(phasesAfterDeferredAttempt).toHaveLength(1);
 	expect(phasesAfterDeferredAttempt[0]!.customer_product_ids).toEqual(
 		deferredResponse.phases[0]!.customer_product_ids,
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("create-schedule: allows multiple group replacements when they only conflict with current plans")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const usersItem = items.monthlyUsers({ includedUsage: 5 });
+
+	const existingA = products.base({
+		id: "create-schedule-existing-a",
+		items: [messagesItem, items.monthlyPrice({ price: 5 })],
+	});
+	const existingB = products.base({
+		id: "create-schedule-existing-b",
+		items: [usersItem, items.monthlyPrice({ price: 5 })],
+		group: "group-b",
+	});
+	const replacementA = products.pro({
+		id: "create-schedule-replacement-a",
+		items: [messagesItem],
+	});
+	const replacementB = products.base({
+		id: "create-schedule-replacement-b",
+		items: [usersItem, items.monthlyPrice({ price: 20 })],
+		group: "group-b",
+	});
+
+	const { customerId, autumnV1 } = await initScenario({
+		customerId: "create-schedule-multi-replace",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({
+				list: [existingA, existingB, replacementA, replacementB],
+			}),
+		],
+		actions: [
+			s.billing.attach({ productId: existingA.id }),
+			s.billing.attach({ productId: existingB.id }),
+		],
+	});
+
+	const response = await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: Date.now(),
+				plans: [{ plan_id: replacementA.id }, { plan_id: replacementB.id }],
+			},
+		],
+	});
+
+	expect(response.customer_id).toBe(customerId);
+	expect(response.phases).toHaveLength(1);
+	expect(response.phases[0]!.customer_product_ids).toHaveLength(2);
+});
+
+test.concurrent(`${chalk.yellowBright("create-schedule: later-phase-only plans stay scheduled and never hit immediate billing")}`, async () => {
+	const nowBase = products.pro({
+		id: "create-schedule-now-base",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const nowAddon = products.recurringAddOn({
+		id: "create-schedule-now-addon",
+		items: [items.monthlyWords({ includedUsage: 50 })],
+	});
+	const futureGroupB = products.base({
+		id: "create-schedule-future-group-b",
+		items: [items.monthlyUsers({ includedUsage: 5 }), items.monthlyPrice()],
+		group: "group-b",
+	});
+	const futureGroupC = products.base({
+		id: "create-schedule-future-group-c",
+		items: [
+			items.monthlyMessages({ includedUsage: 250 }),
+			items.monthlyPrice(),
+		],
+		group: "group-c",
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "create-schedule-future-only-not-now",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({
+				list: [nowBase, nowAddon, futureGroupB, futureGroupC],
+			}),
+		],
+		actions: [],
+	});
+
+	const now = Date.now();
+	await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: now,
+				plans: [{ plan_id: nowBase.id }, { plan_id: nowAddon.id }],
+			},
+			{
+				starts_at: now + ms.days(15),
+				plans: [{ plan_id: futureGroupB.id }],
+			},
+			{
+				starts_at: now + ms.days(30),
+				plans: [{ plan_id: futureGroupC.id }],
+			},
+		],
+	});
+
+	const productRows = await getCustomerProductRows({
+		ctx,
+		customerId,
+		productIds: [nowBase.id, nowAddon.id, futureGroupB.id, futureGroupC.id],
+	});
+	const activeRows = productRows
+		.filter((productRow) => productRow.status === CusProductStatus.Active)
+		.sort((a, b) => a.productId!.localeCompare(b.productId!));
+	const scheduledRows = productRows
+		.filter((productRow) => productRow.status === CusProductStatus.Scheduled)
+		.sort((a, b) => a.productId!.localeCompare(b.productId!));
+
+	expect(activeRows).toEqual(
+		[
+			{ productId: nowBase.id, status: CusProductStatus.Active },
+			{ productId: nowAddon.id, status: CusProductStatus.Active },
+		].sort((a, b) => a.productId.localeCompare(b.productId)),
+	);
+	expect(scheduledRows).toEqual(
+		[
+			{ productId: futureGroupB.id, status: CusProductStatus.Scheduled },
+			{ productId: futureGroupC.id, status: CusProductStatus.Scheduled },
+		].sort((a, b) => a.productId.localeCompare(b.productId)),
+	);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 1,
+		latestInvoiceProductIds: [nowBase.id, nowAddon.id],
+	});
+	expect(customer.invoices?.[0]?.product_ids).not.toContain(futureGroupB.id);
+	expect(customer.invoices?.[0]?.product_ids).not.toContain(futureGroupC.id);
+});
+
+test.concurrent(`${chalk.yellowBright("create-schedule: future replacements for an active group stay scheduled until their phase")}`, async () => {
+	const currentGroupB = products.base({
+		id: "create-schedule-current-group-b",
+		items: [
+			items.monthlyUsers({ includedUsage: 5 }),
+			items.monthlyPrice({ price: 5 }),
+		],
+		group: "group-b",
+	});
+	const nowBase = products.pro({
+		id: "create-schedule-active-now-base",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const futureReplacementB = products.base({
+		id: "create-schedule-future-replacement-b",
+		items: [
+			items.monthlyMessages({ includedUsage: 200 }),
+			items.monthlyPrice({ price: 15 }),
+		],
+		group: "group-b",
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "create-schedule-future-replacement-stays-scheduled",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({
+				list: [currentGroupB, nowBase, futureReplacementB],
+			}),
+		],
+		actions: [s.billing.attach({ productId: currentGroupB.id })],
+	});
+
+	const now = Date.now();
+	await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: now,
+				plans: [{ plan_id: nowBase.id }],
+			},
+			{
+				starts_at: now + ms.days(30),
+				plans: [{ plan_id: futureReplacementB.id }],
+			},
+		],
+	});
+
+	const productRows = await getCustomerProductRows({
+		ctx,
+		customerId,
+		productIds: [nowBase.id, futureReplacementB.id],
+	});
+
+	expect(
+		productRows.filter(
+			(productRow) => productRow.productId === futureReplacementB.id,
+		),
+	).toEqual([
+		{
+			productId: futureReplacementB.id,
+			status: CusProductStatus.Scheduled,
+		},
+	]);
+	expect(
+		productRows.filter(
+			(productRow) =>
+				productRow.productId === futureReplacementB.id &&
+				productRow.status === CusProductStatus.Active,
+		),
+	).toHaveLength(0);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerInvoiceCorrect({
+		customer,
+		count: 2,
+		latestInvoiceProductIds: [nowBase.id],
+	});
+	expect(customer.invoices?.[0]?.product_ids).not.toContain(
+		futureReplacementB.id,
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("create-schedule: now phase stays the exact active set across groups and future phases")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const usersItem = items.monthlyUsers({ includedUsage: 5 });
+	const wordsItem = items.monthlyWords({ includedUsage: 25 });
+
+	const currentA = products.base({
+		id: "create-schedule-exact-current-a",
+		items: [messagesItem, items.monthlyPrice({ price: 5 })],
+	});
+	const keepNowB = products.base({
+		id: "create-schedule-exact-keep-b",
+		items: [usersItem, items.monthlyPrice({ price: 5 })],
+		group: "group-b",
+	});
+	const currentAddon = products.recurringAddOn({
+		id: "create-schedule-exact-current-addon",
+		items: [wordsItem],
+	});
+	const nowReplacementA = products.pro({
+		id: "create-schedule-exact-now-a",
+		items: [messagesItem],
+	});
+	const futureReplacementB = products.base({
+		id: "create-schedule-exact-future-b",
+		items: [usersItem, items.monthlyPrice({ price: 15 })],
+		group: "group-b",
+	});
+	const futureAddon = products.recurringAddOn({
+		id: "create-schedule-exact-future-addon",
+		items: [wordsItem],
+	});
+
+	const { customerId, autumnV1, ctx } = await initScenario({
+		customerId: "create-schedule-exact-now-set",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({
+				list: [
+					currentA,
+					keepNowB,
+					currentAddon,
+					nowReplacementA,
+					futureReplacementB,
+					futureAddon,
+				],
+			}),
+		],
+		actions: [
+			s.billing.attach({ productId: currentA.id }),
+			s.billing.attach({ productId: keepNowB.id }),
+			s.billing.attach({ productId: currentAddon.id }),
+		],
+	});
+
+	const now = Date.now();
+	await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: now,
+				plans: [{ plan_id: nowReplacementA.id }, { plan_id: keepNowB.id }],
+			},
+			{
+				starts_at: now + ms.days(15),
+				plans: [
+					{ plan_id: futureReplacementB.id },
+					{ plan_id: futureAddon.id },
+				],
+			},
+			{
+				starts_at: now + ms.days(30),
+				plans: [{ plan_id: currentA.id }],
+			},
+		],
+	});
+
+	const productRows = await getCustomerProductRows({
+		ctx,
+		customerId,
+		productIds: [
+			currentA.id,
+			keepNowB.id,
+			currentAddon.id,
+			nowReplacementA.id,
+			futureReplacementB.id,
+			futureAddon.id,
+		],
+	});
+	const activeRows = productRows
+		.filter((productRow) => productRow.status === CusProductStatus.Active)
+		.sort((a, b) => a.productId!.localeCompare(b.productId!));
+	const scheduledRows = productRows
+		.filter((productRow) => productRow.status === CusProductStatus.Scheduled)
+		.sort((a, b) => a.productId!.localeCompare(b.productId!));
+
+	expect(activeRows).toEqual(
+		[
+			{ productId: keepNowB.id, status: CusProductStatus.Active },
+			{ productId: nowReplacementA.id, status: CusProductStatus.Active },
+		].sort((a, b) => a.productId.localeCompare(b.productId)),
+	);
+	expect(scheduledRows).toEqual(
+		[
+			{ productId: currentA.id, status: CusProductStatus.Scheduled },
+			{ productId: futureAddon.id, status: CusProductStatus.Scheduled },
+			{
+				productId: futureReplacementB.id,
+				status: CusProductStatus.Scheduled,
+			},
+		].sort((a, b) => a.productId.localeCompare(b.productId)),
+	);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expect(customer.invoices?.[0]?.product_ids).not.toContain(
+		futureReplacementB.id,
+	);
+	expect(customer.invoices?.[0]?.product_ids).not.toContain(futureAddon.id);
+});
+
+test.concurrent(`${chalk.yellowBright("create-schedule: plans omitted from the next phase end at the phase boundary")}`, async () => {
+	const nowBase = products.pro({
+		id: "create-schedule-phase-end-now-base",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const nowAddon = products.recurringAddOn({
+		id: "create-schedule-phase-end-now-addon",
+		items: [items.monthlyWords({ includedUsage: 25 })],
+	});
+	const nextBase = products.premium({
+		id: "create-schedule-phase-end-next-base",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+	const nextAddon = products.recurringAddOn({
+		id: "create-schedule-phase-end-next-addon",
+		items: [items.monthlyWords({ includedUsage: 75 })],
+	});
+
+	const { customerId, autumnV1, ctx, testClockId, advancedTo } =
+		await initScenario({
+			customerId: "create-schedule-phase-end-boundary",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [nowBase, nowAddon, nextBase, nextAddon] }),
+			],
+			actions: [],
+		});
+
+	const now = advancedTo;
+	await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: now,
+				plans: [{ plan_id: nowBase.id }, { plan_id: nowAddon.id }],
+			},
+			{
+				starts_at: now + ms.days(15),
+				plans: [{ plan_id: nextBase.id }, { plan_id: nextAddon.id }],
+			},
+		],
+	});
+
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		advanceTo: now + ms.days(16),
+		waitForSeconds: 30,
+	});
+
+	const productRows = await getCustomerProductRows({
+		ctx,
+		customerId,
+		productIds: [nowBase.id, nowAddon.id, nextBase.id, nextAddon.id],
+	});
+
+	expect(
+		productRows
+			.filter((productRow) => productRow.status === CusProductStatus.Active)
+			.sort((a, b) => a.productId!.localeCompare(b.productId!)),
+	).toEqual(
+		[
+			{ productId: nextAddon.id, status: CusProductStatus.Active },
+			{ productId: nextBase.id, status: CusProductStatus.Active },
+		].sort((a, b) => a.productId.localeCompare(b.productId)),
+	);
+	expect(
+		productRows.filter(
+			(productRow) => productRow.status === CusProductStatus.Scheduled,
+		),
+	).toHaveLength(0);
+	expect(
+		productRows
+			.filter((productRow) => productRow.status === CusProductStatus.Expired)
+			.sort((a, b) => a.productId!.localeCompare(b.productId!)),
+	).toEqual(
+		[
+			{ productId: nowAddon.id, status: CusProductStatus.Expired },
+			{ productId: nowBase.id, status: CusProductStatus.Expired },
+		].sort((a, b) => a.productId.localeCompare(b.productId)),
+	);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expect(customer.products?.map((product) => product.id).sort()).toEqual(
+		[nextAddon.id, nextBase.id].sort(),
+	);
+});
+
+test.concurrent(`${chalk.yellowBright("create-schedule: replacing a schedule removes old phases and leaves the correct replacement state in db")}`, async () => {
+	const currentA = products.base({
+		id: "create-schedule-replace-state-current-a",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const currentB = products.base({
+		id: "create-schedule-replace-state-current-b",
+		items: [items.monthlyUsers({ includedUsage: 5 })],
+		group: "group-b",
+	});
+	const currentAddon = products.recurringAddOn({
+		id: "create-schedule-replace-state-current-addon",
+		items: [items.monthlyWords({ includedUsage: 25 })],
+	});
+	const firstFutureA = products.pro({
+		id: "create-schedule-replace-state-first-future-a",
+		items: [items.monthlyMessages({ includedUsage: 300 })],
+	});
+	const firstFutureAddon = products.recurringAddOn({
+		id: "create-schedule-replace-state-first-future-addon",
+		items: [items.monthlyWords({ includedUsage: 75 })],
+	});
+	const secondNowA = products.premium({
+		id: "create-schedule-replace-state-second-now-a",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+	const secondFutureA = products.pro({
+		id: "create-schedule-replace-state-second-future-a",
+		items: [items.monthlyMessages({ includedUsage: 300 })],
+	});
+	const secondFutureB = products.pro({
+		id: "create-schedule-replace-state-second-future-b",
+		items: [items.monthlyUsers({ includedUsage: 10 })],
+		group: "group-b",
+	});
+
+	const { customerId, autumnV1, ctx, advancedTo } = await initScenario({
+		customerId: "create-schedule-replace-state",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({
+				list: [
+					currentA,
+					currentB,
+					currentAddon,
+					firstFutureA,
+					firstFutureAddon,
+					secondNowA,
+					secondFutureA,
+					secondFutureB,
+				],
+			}),
+		],
+		actions: [
+			s.billing.attach({ productId: currentA.id }),
+			s.billing.attach({ productId: currentB.id }),
+			s.billing.attach({ productId: currentAddon.id }),
+		],
+	});
+
+	const now = advancedTo;
+	const firstResponse = await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: now,
+				plans: [
+					{ plan_id: currentA.id },
+					{ plan_id: currentB.id },
+					{ plan_id: currentAddon.id },
+				],
+			},
+			{
+				starts_at: now + ms.days(15),
+				plans: [{ plan_id: firstFutureA.id }, { plan_id: firstFutureAddon.id }],
+			},
+		],
+	});
+
+	const replacementNow = Date.now();
+	const secondResponse = await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: replacementNow,
+				plans: [{ plan_id: secondNowA.id }, { plan_id: currentAddon.id }],
+			},
+			{
+				starts_at: replacementNow + ms.days(15),
+				plans: [{ plan_id: secondFutureA.id }, { plan_id: secondFutureB.id }],
+			},
+		],
+	});
+
+	const dbSchedules = await ctx.db
+		.select()
+		.from(schedules)
+		.where(eq(schedules.customer_id, customerId));
+	expect(dbSchedules).toHaveLength(1);
+	expect(dbSchedules[0]!.id).toBe(secondResponse.schedule_id);
+
+	const firstSchedule = await ctx.db
+		.select()
+		.from(schedules)
+		.where(eq(schedules.id, firstResponse.schedule_id));
+	expect(firstSchedule).toHaveLength(0);
+
+	const secondSchedulePhases = await ctx.db
+		.select()
+		.from(schedulePhases)
+		.where(eq(schedulePhases.schedule_id, secondResponse.schedule_id));
+	expect(secondSchedulePhases).toHaveLength(2);
+
+	const firstSchedulePhases = await ctx.db
+		.select()
+		.from(schedulePhases)
+		.where(eq(schedulePhases.schedule_id, firstResponse.schedule_id));
+	expect(firstSchedulePhases).toHaveLength(0);
+
+	const productRowsAfterReplace = await getCustomerProductRows({
+		ctx,
+		customerId,
+		productIds: [
+			currentA.id,
+			currentB.id,
+			currentAddon.id,
+			firstFutureA.id,
+			firstFutureAddon.id,
+			secondNowA.id,
+			secondFutureA.id,
+			secondFutureB.id,
+		],
+	});
+
+	expect(
+		productRowsAfterReplace
+			.filter((productRow) => productRow.status === CusProductStatus.Active)
+			.sort((a, b) => a.productId!.localeCompare(b.productId!)),
+	).toEqual(
+		[
+			{ productId: currentAddon.id, status: CusProductStatus.Active },
+			{ productId: secondNowA.id, status: CusProductStatus.Active },
+		].sort((a, b) => a.productId.localeCompare(b.productId)),
+	);
+	expect(
+		productRowsAfterReplace
+			.filter((productRow) => productRow.status === CusProductStatus.Scheduled)
+			.sort((a, b) => a.productId!.localeCompare(b.productId!)),
+	).toEqual(
+		[
+			{ productId: secondFutureA.id, status: CusProductStatus.Scheduled },
+			{ productId: secondFutureB.id, status: CusProductStatus.Scheduled },
+		].sort((a, b) => a.productId.localeCompare(b.productId)),
+	);
+	expect(
+		productRowsAfterReplace.filter(
+			(productRow) =>
+				productRow.productId === firstFutureA.id ||
+				productRow.productId === firstFutureAddon.id,
+		),
+	).toHaveLength(0);
+
+	const customerAfterReplace =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	expect(
+		customerAfterReplace.products
+			?.map((product) => ({ id: product.id, status: product.status }))
+			.sort((a, b) => a.id.localeCompare(b.id)),
+	).toEqual(
+		[
+			{ id: currentAddon.id, status: "active" as const },
+			{ id: secondFutureA.id, status: "scheduled" as const },
+			{ id: secondFutureB.id, status: "scheduled" as const },
+			{ id: secondNowA.id, status: "active" as const },
+		].sort((a, b) => a.id.localeCompare(b.id)),
 	);
 });
 

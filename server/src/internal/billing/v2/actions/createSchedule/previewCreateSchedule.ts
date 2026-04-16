@@ -1,5 +1,5 @@
-import { type CreateScheduleParamsV0, RecaseError } from "@autumn/shared";
 import type { BillingPreviewResponse } from "@autumn/shared";
+import { type CreateScheduleParamsV0, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
@@ -35,7 +35,11 @@ export const previewCreateSchedule = async ({
 		});
 	}
 
-	const autumnBillingPlan = computeCreateSchedulePlan({ ctx, billingContext });
+	const { autumnBillingPlan } = computeCreateSchedulePlan({
+		ctx,
+		billingContext,
+		immediatePhase,
+	});
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
