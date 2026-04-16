@@ -55,6 +55,8 @@ export const computeAttachPlan = ({
 		params,
 	});
 
+	const includeArrearLineItems = !params.carry_over_usages?.enabled;
+
 	const { allLineItems: lineItems, updateCustomerEntitlements } =
 		planTiming === "immediate"
 			? buildAutumnLineItems({
@@ -62,7 +64,7 @@ export const computeAttachPlan = ({
 					newCustomerProducts: [newCustomerProduct],
 					deletedCustomerProduct: currentCustomerProduct,
 					billingContext: attachBillingContext,
-					includeArrearLineItems: true,
+					includeArrearLineItems,
 				})
 			: { allLineItems: [], updateCustomerEntitlements: [] };
 
