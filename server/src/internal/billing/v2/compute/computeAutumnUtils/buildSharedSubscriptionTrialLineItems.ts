@@ -12,7 +12,7 @@ import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingCont
 import {
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
-} from "@/internal/billing/v2/utils/billingPlan/customerProductMutations";
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
 
 const formatLineItem = (item: LineItem) => ({

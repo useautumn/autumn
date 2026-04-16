@@ -12,10 +12,6 @@ import type {
 	SchedulePhase,
 } from "../scheduleModels/scheduleTable.js";
 import {
-	type SchedulePhase,
-	type Schedule,
-} from "../scheduleModels/scheduleTable.js";
-import {
 	type Subscription,
 	SubscriptionSchema,
 } from "../subModels/subModels.js";

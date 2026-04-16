@@ -56,17 +56,46 @@ export const CreateSchedulePhaseSchema = z.object({
 	}),
 });
 
-export const CreateScheduleParamsV0Schema = z.object({
-	customer_id: z.string().meta({
-		description: "The ID of the customer to create the schedule for.",
-	}),
-	entity_id: z.string().optional().meta({
-		description: "Optional entity ID for an entity-scoped schedule.",
-	}),
-	phases: z.array(CreateSchedulePhaseSchema).min(1).meta({
-		description: "Ordered phase definitions for the schedule.",
-	}),
-});
+export const CreateScheduleParamsV0Schema = z
+	.object({
+		customer_id: z.string().meta({
+			description: "The ID of the customer to create the schedule for.",
+		}),
+		entity_id: z.string().optional().meta({
+			description: "Optional entity ID for an entity-scoped schedule.",
+		}),
+		phases: z
+			.tuple([CreateSchedulePhaseSchema])
+			.rest(CreateSchedulePhaseSchema)
+			.meta({
+				description: "Ordered phase definitions for the schedule.",
+			}),
+	})
+	.refine(
+		(data) => {
+			const sortedPhases = [...data.phases].sort(
+				(a, b) => a.starts_at - b.starts_at,
+			);
+
+			for (let index = 1; index < sortedPhases.length; index++) {
+				const previousPhase = sortedPhases[index - 1];
+				const currentPhase = sortedPhases[index];
+
+				if (
+					previousPhase &&
+					currentPhase?.starts_at <= previousPhase.starts_at
+				) {
+					return false;
+				}
+			}
+
+			return true;
+		},
+		{
+			message: "Phase starts_at values must be strictly increasing",
+			path: ["phases"],
+		},
+	);
 
 export type CreateScheduleParamsV0 = z.infer<
 	typeof CreateScheduleParamsV0Schema

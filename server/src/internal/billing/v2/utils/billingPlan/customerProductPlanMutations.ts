@@ -37,6 +37,30 @@ export const applyCustomerProductUpdate = ({
 	canceled: updates.canceled ?? customerProduct.canceled,
 });
 
+type CustomerProductUpdate = NonNullable<
+	AutumnBillingPlan["updateCustomerProducts"]
+>[number];
+
+/** Apply schedule phase end timing to a customer product plan result. */
+export const applyScheduleTimingToCustomerProductPlan = ({
+	result,
+	endedAt,
+}: {
+	result: {
+		insertCustomerProduct?: FullCusProduct;
+		updateCustomerProduct?: CustomerProductUpdate;
+	};
+	endedAt: number | null;
+}) => {
+	if (result.insertCustomerProduct) {
+		result.insertCustomerProduct.ended_at = endedAt;
+		result.insertCustomerProduct.scheduled_ids = [];
+	} else if (result.updateCustomerProduct) {
+		result.updateCustomerProduct.updates.ended_at = endedAt;
+		result.updateCustomerProduct.updates.scheduled_ids = [];
+	}
+};
+
 export const getExpiredUpdatedCustomerProducts = ({
 	autumnBillingPlan,
 }: {

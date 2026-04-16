@@ -32,6 +32,12 @@
 		// "**/.claude": true,
 		"**/.cursor": true,
 		// "**/.github": true,
-		"**/.superset": true
+		"**/.superset": true,
+		".claude": true,
+		".codex": true,
+		".agents": true,
+		".cursor": true,
+		".mcp.json": true,
+		".zed": true
 	}
 }
