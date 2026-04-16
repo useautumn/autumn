@@ -5,9 +5,9 @@ import gsap from "gsap";
 import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
-import type { MouseEvent } from "react";
 import {
 	forwardRef,
+	type MouseEvent,
 	useEffect,
 	useImperativeHandle,
 	useRef,
@@ -354,7 +354,7 @@ export default function Navbar({
 							className="relative"
 						>
 							<Link
-								href="https://useautumn.com"
+								href="https://app.useautumn.com"
 								target="_blank"
 								className="relative overflow-hidden inline-flex items-center gap-2 bg-[#9564ff] hover:bg-[#7D46F4] active:bg-[#7D46F4] transition-colors duration-300 px-4 py-3.5 text-white cursor-pointer whitespace-nowrap"
 								onMouseEnter={() => dashboardIconRef.current?.restart()}
@@ -439,9 +439,10 @@ export default function Navbar({
 							<IconCTAStart className="h-3.5 w-3.5" />
 						</Link>
 					</div>
-					{Array.from({ length: 3 }).map((_, i) => (
-						<div key={i} className="border-b border-[#292929] py-1.5" />
-					))}
+
+					<div className="border-b border-[#292929] py-1.5" />
+					<div className="border-b border-[#292929] py-1.5" />
+					<div className="border-b border-[#292929] py-1.5" />
 				</div>
 			</div>
 			{!scrolled && (
