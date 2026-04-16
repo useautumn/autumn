@@ -1,22 +1,15 @@
-import {
-	type CreateScheduleParamsV0,
-	type CreateScheduleResponse,
-	RecaseError,
+import type {
+	CreateScheduleParamsV0,
+	CreateScheduleResponse,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { billingResultToResponse } from "@/internal/billing/v2/utils/billingResult/billingResultToResponse";
-import { buildCreateScheduleExecutionPlan } from "./compute/buildCreateScheduleExecutionPlan";
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
-import {
-	getCurrentCreateSchedulePhaseIndex,
-	normalizeCreateSchedulePhases,
-} from "./errors/normalizeCreateSchedulePhases";
+import { handleCreateScheduleErrors } from "./errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
-import { materializeScheduledPhases } from "./utils/materializeScheduledPhases";
 import { persistCreateSchedule } from "./utils/persistCreateSchedule";
-import { resolveCurrentEpochMs } from "./utils/resolveCurrentEpochMs";
 
 /** Create a schedule with immediate-phase billing and Autumn-managed future phases. */
 export const createSchedule = async ({
@@ -26,73 +19,27 @@ export const createSchedule = async ({
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
 }): Promise<CreateScheduleResponse> => {
-	const currentEpochMs = await resolveCurrentEpochMs({
-		ctx,
-		customerId: params.customer_id,
-	});
-	const normalizedPhases = normalizeCreateSchedulePhases({
-		currentEpochMs,
-		phases: params.phases,
-	});
-	const currentPhaseIndex = getCurrentCreateSchedulePhaseIndex({
-		currentEpochMs,
-		phases: normalizedPhases,
-	});
-	const immediatePhaseIndex = currentPhaseIndex === -1 ? 0 : currentPhaseIndex;
-	const immediatePhase = normalizedPhases[immediatePhaseIndex];
-	const futurePhases = normalizedPhases.slice(immediatePhaseIndex + 1);
-
-	if (!immediatePhase) {
-		throw new RecaseError({
-			message: "At least one phase must be provided",
-			statusCode: 400,
-		});
-	}
-
 	const billingContext = await setupCreateScheduleBillingContext({
 		ctx,
 		params,
-		immediatePhase,
 	});
 
-	if (billingContext.checkoutMode) {
-		throw new RecaseError({
-			message: "Please attach a payment method before creating a schedule.",
-			statusCode: 400,
-		});
-	}
+	handleCreateScheduleErrors({ billingContext });
 
-	const {
-		autumnBillingPlan: immediateAutumnBillingPlan,
-		immediatePhaseCustomerProducts,
-	} = computeCreateSchedulePlan({
+	const { autumnBillingPlan, phases } = computeCreateSchedulePlan({
 		ctx,
 		billingContext,
-		immediatePhase,
-		nextPhaseStartsAt: futurePhases[0]?.starts_at,
 	});
-	const immediatePhaseCustomerProductIds = immediatePhaseCustomerProducts.map(
-		(customerProduct) => customerProduct.id,
-	);
-	const futureScheduledPhases = await materializeScheduledPhases({
-		ctx,
-		currentEpochMs,
-		fullCustomer: billingContext.fullCustomer,
-		phases: futurePhases,
-	});
-	const autumnExecutionPlan = buildCreateScheduleExecutionPlan({
-		immediateAutumnBillingPlan,
-		futureScheduledPhases,
-	});
+
 	const stripeBillingPlan = await evaluateStripeBillingPlan({
 		ctx,
 		billingContext,
-		autumnBillingPlan: autumnExecutionPlan,
+		autumnBillingPlan,
 		checkoutMode: billingContext.checkoutMode,
 	});
 
 	const billingPlan = {
-		autumn: autumnExecutionPlan,
+		autumn: autumnBillingPlan,
 		stripe: stripeBillingPlan,
 	};
 	const billingResult = await executeBillingPlan({
@@ -104,12 +51,9 @@ export const createSchedule = async ({
 	const { insertedPhases, scheduleId } = await persistCreateSchedule({
 		ctx,
 		params,
-		currentEpochMs,
+		currentEpochMs: billingContext.currentEpochMs,
 		fullCustomer: billingContext.fullCustomer,
-		preservePastPhasesBefore: immediatePhase.starts_at,
-		immediatePhaseStartsAt: immediatePhase.starts_at,
-		immediatePhaseCustomerProductIds,
-		futureScheduledPhases,
+		phases,
 	});
 
 	const billingResponse = billingResultToResponse({

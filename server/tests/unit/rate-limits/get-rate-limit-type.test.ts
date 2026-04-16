@@ -86,12 +86,12 @@ describe("getRateLimitType", () => {
 			getRateLimitType(
 				createContext({ method: "POST", path: "/v1/attach/preview" }),
 			),
-		).toBe(RateLimitType.Attach);
+		).toBe(RateLimitType.General);
 		expect(
 			getRateLimitType(
 				createContext({ method: "POST", path: "/v1/billing.preview_update" }),
 			),
-		).toBe(RateLimitType.Attach);
+		).toBe(RateLimitType.General);
 		expect(
 			getRateLimitType(
 				createContext({

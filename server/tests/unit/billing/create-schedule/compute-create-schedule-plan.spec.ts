@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
 	BillingVersion,
+	type CreateScheduleBillingContext,
 	CusProductStatus,
-	type MultiAttachBillingContext,
 } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
@@ -13,23 +13,24 @@ import { computeCreateSchedulePlan } from "@/internal/billing/v2/actions/createS
 
 const createBillingContext = ({
 	productContexts,
+	immediatePhase,
+	futurePhases = [],
 	currentEpochMs = Date.now(),
-}: Pick<MultiAttachBillingContext, "productContexts"> & {
+}: Pick<CreateScheduleBillingContext, "productContexts" | "immediatePhase"> & {
+	futurePhases?: CreateScheduleBillingContext["futurePhases"];
 	currentEpochMs?: number;
-}): MultiAttachBillingContext => {
+}): CreateScheduleBillingContext => {
 	const fullProducts = productContexts.map(
 		(productContext) => productContext.fullProduct,
 	);
-	const currentCustomerProducts = productContexts.flatMap((productContext) =>
-		[
-			...(productContext.currentCustomerProduct
-				? [productContext.currentCustomerProduct]
-				: []),
-			...(productContext.scheduledCustomerProduct
-				? [productContext.scheduledCustomerProduct]
-				: []),
-		],
-	);
+	const currentCustomerProducts = productContexts.flatMap((productContext) => [
+		...(productContext.currentCustomerProduct
+			? [productContext.currentCustomerProduct]
+			: []),
+		...(productContext.scheduledCustomerProduct
+			? [productContext.scheduledCustomerProduct]
+			: []),
+	]);
 
 	return {
 		...contexts.createBilling({
@@ -45,6 +46,9 @@ const createBillingContext = ({
 		customEnts: [],
 		isCustom: false,
 		billingVersion: BillingVersion.V2,
+		immediatePhase,
+		futurePhases,
+		scheduledPhaseContexts: [],
 	};
 };
 
@@ -76,15 +80,15 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 					featureQuantities: [],
 				},
 			],
+			immediatePhase: {
+				starts_at: Date.now(),
+				plans: [{ plan_id: baseProduct.id }, { plan_id: addonProduct.id }],
+			},
 		});
 
 		const result = computeCreateSchedulePlan({
 			ctx,
 			billingContext,
-			immediatePhase: {
-				starts_at: Date.now(),
-				plans: [{ plan_id: baseProduct.id }, { plan_id: addonProduct.id }],
-			},
 		});
 
 		expect(result.autumnBillingPlan.insertCustomerProducts).toHaveLength(2);
@@ -147,15 +151,15 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 					scheduledCustomerProduct,
 				},
 			],
+			immediatePhase: {
+				starts_at: currentEpochMs,
+				plans: [{ plan_id: newProduct.id }],
+			},
 		});
 
 		const result = computeCreateSchedulePlan({
 			ctx,
 			billingContext,
-			immediatePhase: {
-				starts_at: currentEpochMs,
-				plans: [{ plan_id: newProduct.id }],
-			},
 		});
 
 		expect(result.autumnBillingPlan.insertCustomerProducts).toHaveLength(1);

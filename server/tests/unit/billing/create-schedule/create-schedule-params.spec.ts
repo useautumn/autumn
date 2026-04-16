@@ -72,4 +72,31 @@ describe(chalk.yellowBright("CreateScheduleParamsV0Schema"), () => {
 			}),
 		).toThrow("subscription_id is not supported for create_schedule");
 	});
+
+	test("rejects empty phases", () => {
+		expect(() =>
+			CreateScheduleParamsV0Schema.parse({
+				customer_id: "cus_123",
+				phases: [],
+			}),
+		).toThrow();
+	});
+
+	test("rejects duplicate phase starts_at values", () => {
+		expect(() =>
+			CreateScheduleParamsV0Schema.parse({
+				customer_id: "cus_123",
+				phases: [
+					{
+						starts_at: 1_000,
+						plans: [{ plan_id: "base" }],
+					},
+					{
+						starts_at: 1_000,
+						plans: [{ plan_id: "pro" }],
+					},
+				],
+			}),
+		).toThrow("Phase starts_at values must be strictly increasing");
+	});
 });

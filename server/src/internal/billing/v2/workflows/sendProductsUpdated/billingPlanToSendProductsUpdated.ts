@@ -22,7 +22,7 @@ import type { CreateCustomerContext } from "@/internal/customers/actions/createW
 import {
 	getExpiredUpdatedCustomerProducts,
 	getUpdateCustomerProducts,
-} from "@/internal/billing/v2/utils/billingPlan/customerProductMutations";
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { workflows } from "@/queue/workflows.js";
 
 // ============================================================================

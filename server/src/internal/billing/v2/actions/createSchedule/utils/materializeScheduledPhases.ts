@@ -32,7 +32,7 @@ export const materializeScheduledPhases = async ({
 	ctx: AutumnContext;
 	currentEpochMs: number;
 	fullCustomer: FullCustomer;
-	phases: CreateScheduleParamsV0["phases"];
+	phases: CreateScheduleParamsV0["phases"][number][];
 }): Promise<MaterializedScheduledPhase[]> => {
 	return await Promise.all(
 		phases.map(async (phase, index) => {

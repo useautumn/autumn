@@ -5,7 +5,7 @@ import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutum
 import {
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
-} from "@/internal/billing/v2/utils/billingPlan/customerProductMutations";
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";

@@ -3,7 +3,7 @@ import {
 	applyCustomerProductUpdate,
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
-} from "@/internal/billing/v2/utils/billingPlan/customerProductMutations";
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
 export const autumnBillingPlanToFinalFullCustomer = ({
 	billingContext,
