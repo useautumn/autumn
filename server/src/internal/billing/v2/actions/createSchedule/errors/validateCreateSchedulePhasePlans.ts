@@ -26,7 +26,7 @@ export const validateCreateSchedulePhasePlans = ({
 		(products) => (products.length > 1 ? products : []),
 	);
 
-	if (conflictingProducts.length <= 1) return;
+	if (conflictingProducts.length === 0) return;
 
 	const planIds = conflictingProducts
 		.map((product) => `"${product.id}"`)

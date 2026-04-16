@@ -136,7 +136,7 @@ export const billingPlanToSendProductsUpdated = async ({
 	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
 	const { insertCustomerProducts } = autumnBillingPlan;
 	const updateCustomerProducts = getUpdateCustomerProducts({ autumnBillingPlan });
-	const [expiredProduct] = getExpiredUpdatedCustomerProducts({ autumnBillingPlan });
+	const expiredProducts = getExpiredUpdatedCustomerProducts({ autumnBillingPlan });
 
 	// A. Handle cancel/uncancel webhook for updateCustomerProduct
 	for (const updateCustomerProduct of updateCustomerProducts) {
@@ -167,8 +167,12 @@ export const billingPlanToSendProductsUpdated = async ({
 	}
 
 	// B. Queue webhooks for inserted products (excluding scheduled ones)
-	for (const cusProduct of insertCustomerProducts) {
-		if (isCustomerProductScheduled(cusProduct)) continue;
+	const activeInsertCustomerProducts = insertCustomerProducts.filter(
+		(cusProduct) => !isCustomerProductScheduled(cusProduct),
+	);
+
+	for (const [index, cusProduct] of activeInsertCustomerProducts.entries()) {
+		const expiredProduct = expiredProducts[index];
 
 		const scenario = getInsertScenario({
 			insertedProduct: cusProduct,
