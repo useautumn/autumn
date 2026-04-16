@@ -1,38 +1,35 @@
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
 import { escapeChString } from "../clickhouseUtils.js";
 
-type EntityNameRow = {
+type CustomerNameRow = {
 	id: string;
-	name: string;
+	name: string | null;
 };
 
-/** Looks up entity names from the entities datasource by their IDs. Returns a map of id -> name (or id if name is null/empty). */
-export const getEntityNames = async ({
-	entityIds,
+/** Looks up customer names from the customers datasource by their IDs. Returns a map of id -> name (or id if name is null/empty). */
+export const getCustomerNames = async ({
+	customerIds,
 	orgId,
 	env,
 }: {
-	entityIds: string[];
+	customerIds: string[];
 	orgId: string;
 	env: string;
 }): Promise<Record<string, string>> => {
-	if (entityIds.length === 0) return {};
+	if (customerIds.length === 0) return {};
 
 	const ch = getClickhouseClient();
 
-	// Build the IN list as escaped literals to avoid URI-too-large
-	// when the array is serialized as a query parameter.
-	const inList = entityIds
+	const inList = customerIds
 		.map((id) => `'${escapeChString({ value: id })}'`)
 		.join(",");
 
 	const query = `
 		SELECT id, name
-		FROM entities FINAL
+		FROM customers FINAL
 		WHERE org_id = {org_id:String}
 			AND env = {env:String}
 			AND id IN (${inList})
-			AND deleted = 0
 	`;
 
 	const result = await ch.query({
@@ -44,15 +41,15 @@ export const getEntityNames = async ({
 		format: "JSON",
 	});
 
-	const resultJson = (await result.json()) as { data: EntityNameRow[] };
+	const resultJson = (await result.json()) as { data: CustomerNameRow[] };
 
 	const nameMap: Record<string, string> = {};
 	for (const row of resultJson.data) {
+		if (!row.id) continue;
 		nameMap[row.id] = row.name || row.id;
 	}
 
-	// For any IDs not found in the datasource, fall back to the ID itself
-	for (const id of entityIds) {
+	for (const id of customerIds) {
 		if (!nameMap[id]) {
 			nameMap[id] = id;
 		}
