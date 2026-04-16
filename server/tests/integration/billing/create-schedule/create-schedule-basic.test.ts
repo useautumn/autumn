@@ -23,7 +23,10 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { and, eq, inArray } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
-import { hydrateCustomerWithSchedules } from "@/internal/customers/cusUtils/getFullCustomerSchedule";
+import {
+	getFullCustomerSchedule,
+	hydrateCustomerWithSchedules,
+} from "@/internal/customers/cusUtils/getFullCustomerSchedule";
 import { attachPaymentMethod } from "@/utils/scriptUtils/initCustomer";
 
 const getCustomerProductRows = async ({
@@ -2022,7 +2025,15 @@ test.concurrent(`${chalk.yellowBright("create-schedule: customer-level and entit
 
 	const customerLevelSchedule = dbSchedules.find((s) => !s.internal_entity_id);
 	const entityLevelSchedule = dbSchedules.find((s) => !!s.internal_entity_id);
-expect(customerLevelSchedule).toBeDefined();
-expect(entityLevelSchedule).toBeDefined();
-expect(entityLevelSchedule!.entity_id).toBe(entityId);
+	expect(customerLevelSchedule).toBeDefined();
+	expect(entityLevelSchedule).toBeDefined();
+	expect(entityLevelSchedule!.entity_id).toBe(entityId);
+
+	const customerScopedSchedule = await getFullCustomerSchedule({
+		ctx,
+		internalCustomerId: dbSchedules[0]!.internal_customer_id,
+	});
+
+	expect(customerScopedSchedule?.id).toBe(customerLevelSchedule!.id);
+	expect(customerScopedSchedule?.internal_entity_id).toBeNull();
 });

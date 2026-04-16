@@ -4,7 +4,7 @@ import {
 	schedulePhases,
 	schedules,
 } from "@autumn/shared";
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export const getFullCustomerSchedule = async ({
@@ -17,7 +17,12 @@ export const getFullCustomerSchedule = async ({
 	const [schedule] = await ctx.db
 		.select()
 		.from(schedules)
-		.where(eq(schedules.internal_customer_id, internalCustomerId))
+		.where(
+			and(
+				eq(schedules.internal_customer_id, internalCustomerId),
+				isNull(schedules.internal_entity_id),
+			),
+		)
 		.limit(1);
 
 	if (!schedule) return undefined;
