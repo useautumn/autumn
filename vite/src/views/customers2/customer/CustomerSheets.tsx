@@ -1,3 +1,4 @@
+import type { Invoice, InvoiceLineItem } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
@@ -31,6 +32,7 @@ import { SHEET_ANIMATION } from "./customerAnimations";
 export function CustomerSheets() {
 	const isMobile = useIsMobile();
 	const sheetType = useSheetStore((s) => s.type);
+	const sheetData = useSheetStore((s) => s.data);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const closeBalanceSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
 	useSheetEscapeHandler();
@@ -62,8 +64,12 @@ export function CustomerSheets() {
 				return <BalanceDeleteSheet />;
 			case "balance-create":
 				return <BalanceCreateSheet />;
-			case "invoice-detail":
-				return <InvoiceDetailSheet />;
+			case "invoice-detail": {
+				const invoice = sheetData?.invoice as Invoice | undefined;
+				const lineItems = (sheetData?.lineItems as InvoiceLineItem[]) ?? [];
+				if (!invoice) return null;
+				return <InvoiceDetailSheet invoice={invoice} lineItems={lineItems} />;
+			}
 			case "sync-stripe":
 				return <SyncStripeSheet />;
 			case "billing-auto-topup-add":

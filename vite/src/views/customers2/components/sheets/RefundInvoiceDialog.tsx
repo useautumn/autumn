@@ -70,8 +70,6 @@ export function RefundInvoiceDialog({
 		},
 	});
 
-	const refundableAmount = invoice.amount_paid ?? invoice.total;
-
 	const handleSubmit = () => {
 		if (mode === "partial") {
 			const parsed = Number.parseFloat(amount);
@@ -79,8 +77,8 @@ export function RefundInvoiceDialog({
 				toast.error("Please enter a valid refund amount");
 				return;
 			}
-			if (parsed > refundableAmount) {
-				toast.error("Refund amount cannot exceed the amount paid");
+			if (parsed > invoice.total) {
+				toast.error("Refund amount cannot exceed invoice total");
 				return;
 			}
 		}
@@ -88,7 +86,7 @@ export function RefundInvoiceDialog({
 	};
 
 	const formattedTotal = formatAmount({
-		amount: refundableAmount,
+		amount: invoice.total,
 		currency: invoice.currency,
 		minFractionDigits: 2,
 		amountFormatOptions: {
@@ -102,7 +100,7 @@ export function RefundInvoiceDialog({
 				<DialogHeader>
 					<DialogTitle>Refund Invoice</DialogTitle>
 					<DialogDescription>
-						Amount paid: {formattedTotal} {invoice.currency.toUpperCase()}
+						Invoice total: {formattedTotal} {invoice.currency.toUpperCase()}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -131,7 +129,7 @@ export function RefundInvoiceDialog({
 								type="number"
 								min="0.01"
 								step="0.01"
-								max={refundableAmount}
+								max={invoice.total}
 								placeholder="0.00"
 								value={amount}
 								onChange={(e) => setAmount(e.target.value)}
