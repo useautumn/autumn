@@ -14,7 +14,7 @@ interface AttachBodyBuilderParams {
 	productId?: string;
 	product?: ProductV2;
 	entityId?: string;
-	prepaidOptions?: Record<string, number>;
+	prepaidOptions?: Record<string, number | undefined>;
 	version?: number;
 	useInvoice?: boolean;
 	enableProductImmediately?: boolean;

@@ -22,7 +22,9 @@ export const expireEndedCustomerProducts = async ({
 	const expiredCustomerProducts: FullCusProduct[] = [];
 
 	for (const customerProduct of customerProducts) {
-		if (!hasCustomerProductEnded(customerProduct, { nowMs })) continue;
+		const shouldExpire = hasCustomerProductEnded(customerProduct, { nowMs });
+
+		if (!shouldExpire) continue;
 
 		logger.info(
 			`Expiring product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,

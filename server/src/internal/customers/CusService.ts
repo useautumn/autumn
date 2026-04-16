@@ -56,6 +56,7 @@ export class CusService {
 		allowNotFound = false,
 		withEvents = false,
 		explain = false,
+		skipReset = false,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -67,6 +68,7 @@ export class CusService {
 		allowNotFound?: boolean;
 		withEvents?: boolean;
 		explain?: boolean;
+		skipReset?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -162,7 +164,7 @@ export class CusService {
 
 					fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
 				}
-				if (!usedReplica) {
+				if (!usedReplica && !skipReset) {
 					// Skip reset only when executeWithHealthTracking explicitly chose the
 					// replica. Lazy reset writes themselves go through dbGeneral.
 					await resetCustomerEntitlements({
@@ -342,7 +344,12 @@ export class CusService {
 							if (proc === "stripe")
 								return sql`(${customers.processor}->>'id' IS NOT NULL)`;
 							if (proc === "revenuecat")
-								return sql`(${customers.processors}->>'revenuecat' IS NOT NULL)`;
+								return sql`EXISTS (
+									SELECT 1
+									FROM customer_products cp_processor
+									WHERE cp_processor.internal_customer_id = ${customers.internal_id}
+										AND cp_processor.processor->>'type' = 'revenuecat'
+								)`;
 							if (proc === "vercel")
 								return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
 							return undefined;

@@ -11,8 +11,8 @@ export function generatePrepaidChanges({
 	currency = "usd",
 }: {
 	prepaidItems: ProductItem[];
-	originalOptions: Record<string, number>;
-	updatedOptions: Record<string, number>;
+	originalOptions: Record<string, number | undefined>;
+	updatedOptions: Record<string, number | undefined>;
 	currency?: string;
 }): ItemEdit[] {
 	return prepaidItems

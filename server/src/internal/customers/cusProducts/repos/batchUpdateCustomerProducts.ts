@@ -1,4 +1,4 @@
-import { type InsertCustomerProduct } from "@autumn/shared";
+import type { InsertCustomerProduct } from "@autumn/shared";
 import type { RepoContext } from "@/db/repoContext.js";
 import { CusProductService } from "../CusProductService";
 

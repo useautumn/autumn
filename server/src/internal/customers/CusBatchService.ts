@@ -71,7 +71,7 @@ export class CusBatchService {
 		const withEntities = expand.includes(CustomerExpand.Entities);
 		const withTrialsUsed = expand.includes(CustomerExpand.TrialsUsed);
 
-		const { limit, offset, plans, subscription_status, search } = query;
+		const { limit, offset, plans, subscription_status, search, processors } = query;
 
 		const cusProductLimit = getOrgCusProductLimit({
 			orgId: ctx.org.id,
@@ -91,6 +91,7 @@ export class CusBatchService {
 			offset,
 			search,
 			plans,
+			processors,
 			cusProductLimit,
 		});
 		const results = await ctx.db.execute(sqlQuery);

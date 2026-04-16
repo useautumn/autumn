@@ -1,10 +1,12 @@
 "use client";
 
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ProcessorType } from "@autumn/shared";
+import { ClockIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
+import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import {
 	Tooltip,
 	TooltipContent,
@@ -36,7 +38,12 @@ import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export default function CustomerView2() {
-	const { customer, isLoading: cusLoading } = useCusQuery();
+	const {
+		customer,
+		schedule,
+		testClockFrozenTimeMs,
+		isLoading: cusLoading,
+	} = useCusQuery();
 
 	useCusReferralQuery();
 	const { entityId, setEntityId } = useEntity();
@@ -67,6 +74,10 @@ export default function CustomerView2() {
 			</ErrorScreen>
 		);
 	}
+
+	const isRevenueCatCustomer = customer.customer_products.some(
+		(cp) => cp.processor?.type === ProcessorType.RevenueCat,
+	);
 
 	return (
 		<CustomerContext.Provider
@@ -136,6 +147,48 @@ export default function CustomerView2() {
 													</Tooltip>
 												</TooltipProvider>
 											)}
+											{isRevenueCatCustomer && (
+												<TooltipProvider>
+													<Tooltip delayDuration={0}>
+														<TooltipTrigger>
+															<span className="text-[#ff5f45] dark:text-[#ff8b78]">
+																<RevenueCatIcon size={12} />
+															</span>
+														</TooltipTrigger>
+														<TooltipContent>
+															<span>RevenueCat Customer</span>
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											)}
+											{testClockFrozenTimeMs != null && (
+												<TooltipProvider>
+													<Tooltip delayDuration={0}>
+														<TooltipTrigger>
+															<span className="flex items-center justify-center size-5 rounded-md bg-orange-500/15">
+																<ClockIcon
+																	size={12}
+																	weight="bold"
+																	className="text-orange-500"
+																/>
+															</span>
+														</TooltipTrigger>
+														<TooltipContent>
+															Test clock:{" "}
+															{new Date(testClockFrozenTimeMs).toLocaleString(
+																undefined,
+																{
+																	month: "short",
+																	day: "numeric",
+																	year: "numeric",
+																	hour: "numeric",
+																	minute: "2-digit",
+																},
+															)}
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											)}
 										</div>
 
 										<CustomerPageDetails />
@@ -152,24 +205,24 @@ export default function CustomerView2() {
 							</div>
 						</div>
 					</div>
-				{!isMobile &&
-					createPortal(
-						<AnimatePresence>
-							{sheetType && !isInlineEditorOpen && (
-								<motion.div
-									initial={{ opacity: 0 }}
-									animate={{ opacity: 1 }}
-									exit={{ opacity: 0 }}
-									className="fixed inset-0 bg-white/60 dark:bg-black/60"
-									style={{ zIndex: 40 }}
-									onMouseDown={() => {
-										closeProductSheet();
-									}}
-								/>
-							)}
-						</AnimatePresence>,
-						document.body,
-					)}
+					{!isMobile &&
+						createPortal(
+							<AnimatePresence>
+								{sheetType && !isInlineEditorOpen && (
+									<motion.div
+										initial={{ opacity: 0 }}
+										animate={{ opacity: 1 }}
+										exit={{ opacity: 0 }}
+										className="fixed inset-0 bg-white/60 dark:bg-black/60"
+										style={{ zIndex: 40 }}
+										onMouseDown={() => {
+											closeProductSheet();
+										}}
+									/>
+								)}
+							</AnimatePresence>,
+							document.body,
+						)}
 				</motion.div>
 
 				<CustomerSheets />

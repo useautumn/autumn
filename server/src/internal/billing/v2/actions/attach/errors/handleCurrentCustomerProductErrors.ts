@@ -1,7 +1,8 @@
 import {
-	type AttachBillingContext,
-	isCustomerProductPaid,
-	RecaseError,
+    type AttachBillingContext,
+    ErrCode,
+    isCustomerProductPaid,
+    RecaseError,
 } from "@autumn/shared";
 
 export const handleCurrentCustomerProductErrors = ({
@@ -14,7 +15,9 @@ export const handleCurrentCustomerProductErrors = ({
 
 	if (currentCustomerProduct?.product.id === attachProduct.id) {
 		throw new RecaseError({
+			code: ErrCode.PlanAlreadyAttached,
 			message: `Cannot attach because the customer's current product '${currentCustomerProduct.product.name}' is the same as the product being attached`,
+			statusCode: 409,
 		});
 	}
 

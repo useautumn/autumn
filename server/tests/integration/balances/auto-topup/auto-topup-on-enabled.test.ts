@@ -535,3 +535,73 @@ test.concurrent(`${chalk.yellowBright("auto-topup on-enabled 6: multi-feature en
 	expect(messagesToppedUp || storageToppedUp).toBe(true);
 	expect(messagesToppedUp && storageToppedUp).toBe(false);
 });
+
+test.concurrent(`${chalk.yellowBright("auto-topup on-enabled 7: enabling via RPC customers.update endpoint triggers immediate top-up")}`, async () => {
+	const oneOffItem = items.oneOffMessages({
+		includedUsage: 0,
+		billingUnits: 100,
+		price: 10,
+	});
+	const prod = products.base({
+		id: "topup-on-enabled-7",
+		items: [oneOffItem],
+	});
+
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "auto-topup-on-enabled-7",
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [prod] }),
+		],
+		actions: [
+			s.attach({
+				productId: prod.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+			}),
+		],
+	});
+
+	// Deplete balance to 15 (below future threshold of 20)
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 85,
+	});
+
+	await timeout(DB_SYNC_WAIT_MS);
+
+	const before = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer: before,
+		featureId: TestFeature.Messages,
+		remaining: 15,
+	});
+
+	// Enable auto-topup via RPC route (POST /customers.update → handleUpdateCustomerV2)
+	await autumnV2_1.customers.updateRpc(customerId, {
+		billing_controls: makeAutoTopupConfig({
+			threshold: 20,
+			quantity: 100,
+			enabled: true,
+		}),
+	});
+
+	await timeout(AUTO_TOPUP_WAIT_MS);
+
+	// Balance should be: 15 + 100 = 115
+	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer: after,
+		featureId: TestFeature.Messages,
+		remaining: 115,
+	});
+
+	// 2 invoices: initial attach + auto top-up
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		count: 2,
+		latestTotal: 10,
+		latestStatus: "paid",
+		latestInvoiceProductId: prod.id,
+	});
+});

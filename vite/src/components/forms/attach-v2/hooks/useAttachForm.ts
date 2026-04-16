@@ -1,3 +1,4 @@
+import type { ProductItem } from "@autumn/shared";
 import { FreeTrialDuration } from "@autumn/shared";
 import { useAppForm } from "@/hooks/form/form";
 import { type AttachForm, AttachFormSchema } from "../attachFormSchema";
@@ -5,16 +6,23 @@ import { type AttachForm, AttachFormSchema } from "../attachFormSchema";
 export function useAttachForm({
 	initialProductId,
 	initialPrepaidOptions,
+	initialItems,
+	initialIsCustom,
+	initialVersion,
 }: {
 	initialProductId?: string;
 	initialPrepaidOptions?: Record<string, number>;
+	initialItems?: ProductItem[] | null;
+	initialIsCustom?: boolean;
+	initialVersion?: number;
 } = {}) {
 	return useAppForm({
 		defaultValues: {
 			productId: initialProductId || "",
 			prepaidOptions: initialPrepaidOptions ?? {},
-			items: null,
-			version: undefined,
+			items: initialItems ?? null,
+			isCustom: initialIsCustom ?? false,
+			version: initialVersion ?? undefined,
 			trialLength: null,
 			trialDuration: FreeTrialDuration.Day,
 			trialEnabled: false,

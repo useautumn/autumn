@@ -26,10 +26,12 @@ export const expireCustomerProductAndActivateDefault = async ({
 	ctx,
 	customerProduct,
 	fullCustomer,
+	updates: extraUpdates,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	fullCustomer: FullCustomer;
+	updates?: Partial<InsertCustomerProduct>;
 }): Promise<{
 	updates: Partial<InsertCustomerProduct>;
 	activatedCustomerProduct?: FullCusProduct;
@@ -40,6 +42,7 @@ export const expireCustomerProductAndActivateDefault = async ({
 	// 1. Expire the product
 	const updates: Partial<InsertCustomerProduct> = {
 		status: CusProductStatus.Expired,
+		...extraUpdates,
 	};
 
 	await CusProductService.update({

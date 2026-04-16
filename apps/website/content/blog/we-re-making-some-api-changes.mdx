@@ -1,0 +1,40 @@
+---
+title: "We're making some API changes"
+description: "A bit of context about what will be changing in the new version of the Autumn API and SDK."
+date: "2026-02-18"
+author: "Ayush, Autumn Co-Founder"
+slug: "we-re-making-some-api-changes"
+image: "/images/blog/we-re-making-some-api-changes.png"
+featured: true
+---
+
+Over the last year we learned a lot about how you use Autumn. We have noticed which pain points come up repeatedly and where users face limitations. Our v2 SDK will soon be released in beta, which we think offers a more intuitive and flexible experience as you build on Autumn.
+
+**There will be no breaking API changes:** everything is versioned on our end and your current version will continue to be supported. 
+
+### What’s changing?
+
+**New objects / types.** 
+
+Our customer and plan objects are changing to better suit our abstraction:
+
+-   Any reference to `product` is now `plan` to better reflect our abstraction
+    
+-   Customer products are now split into `subscriptions` and `purchases` for easier access
+    
+-   Features that a customer has access to will now be under a `balances` object
+    
+-   Subscription status can now only be one of `active`, `scheduled` or `expired` - with additional params to determine trialing, canceled and past due states
+    
+-   Types are more consistent (eg, consolidation of `one_off` and `lifetime` intervals)
+    
+
+**Attach is being split**
+
+Today, the `attach` function is used for any operation that changes subscription state — checkouts, upgrades, downgrades, quantity updates, trial updates etc. This has become unpredictable to work with for you guys, and almost impossible for us to maintain. Adding functionality in one flow almost always breaks another.
+
+We’re splitting this into 2 functions: `attach` will be used for operations that result in a plan change (checkout, upgrades etc), and `update` will be used for operations that update an existing customer subscription (cancelations, quantity adjustments, trial adjustments).
+
+We know API changes are annoying, but we're biting the bullet now to set ourselves up for better stability in the long run. Again, your existing integrations will not break and we will continue to support the current version. For those of you that want to upgrade, we’ll be providing a short prompt/skill for Claude that can migrate your code for you.
+
+As part of this, we’ve refactored a lot of code, which has allowed us to release a lot of new functionality and configurabilty. More details on that soon. Thank you all for helping make Autumn better ❤️‍🔥
