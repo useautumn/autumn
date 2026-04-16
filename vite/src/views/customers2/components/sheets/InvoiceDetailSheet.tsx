@@ -70,7 +70,6 @@ export function InvoiceDetailSheet() {
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 	const { customer } = useCusQuery();
 
-	console.log("Invoice data:", { total: invoice?.total, amount_paid: invoice?.amount_paid, refunded_amount: invoice?.refunded_amount, status: invoice?.status });
 
 	const productGroups = useMemo(() => {
 		// Step 1: bucket line items by product_id
