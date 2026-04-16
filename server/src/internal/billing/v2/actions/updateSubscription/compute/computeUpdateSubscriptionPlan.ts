@@ -78,7 +78,7 @@ export const computeUpdateSubscriptionPlan = async ({
 	// Apply cancel plan if cancelAction is set in context
 	plan = computeCancelPlan({ ctx, billingContext, plan });
 
-	plan = finalizeUpdateSubscriptionPlan({
+	plan = await finalizeUpdateSubscriptionPlan({
 		ctx,
 		plan,
 		billingContext,

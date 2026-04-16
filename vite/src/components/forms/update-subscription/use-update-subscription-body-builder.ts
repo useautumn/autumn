@@ -1,4 +1,4 @@
-import type { BillingBehavior } from "@autumn/shared";
+import type { BillingBehavior, CancelAction } from "@autumn/shared";
 import {
 	AppEnv,
 	type CreateFreeTrial,
@@ -7,10 +7,7 @@ import {
 	type ProductV2,
 } from "@autumn/shared";
 import { useMemo } from "react";
-import type {
-	CancelActionValue,
-	RefundBehaviorValue,
-} from "@/components/forms/update-subscription-v2/updateSubscriptionFormSchema";
+import type { RefundBehaviorValue } from "@/components/forms/update-subscription-v2/types/refundBehaviourSchema";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useEnv } from "@/utils/envUtils";
@@ -33,7 +30,7 @@ interface UpdateSubscriptionBodyBuilderParams {
 	items?: ProductItem[] | null;
 
 	// Cancel action fields
-	cancelAction?: CancelActionValue | null;
+	cancelAction?: CancelAction | null;
 	billingBehavior?: BillingBehavior | null;
 	refundBehavior?: RefundBehaviorValue | null;
 }
