@@ -1,11 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import {
-	IconArrowLeft,
-	IconArrowRight,
-	IconQuotes,
-	PixelatedPattern,
-} from "@/app/constant";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { IconArrowLeft, IconArrowRight, IconQuotes } from "@/app/constant";
 
 const testimonialsData = [
 	{
@@ -51,7 +46,7 @@ const Testimonials = () => {
 	const [canScrollLeft, setCanScrollLeft] = useState(false);
 	const [canScrollRight, setCanScrollRight] = useState(true);
 
-	const handleScroll = () => {
+	const handleScroll = useCallback(() => {
 		if (scrollRef.current) {
 			const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
 			setCanScrollLeft(scrollLeft > 0);
@@ -63,7 +58,7 @@ const Testimonials = () => {
 				progressRef.current.style.transform = `translateX(${progress}%)`;
 			}
 		}
-	};
+	}, []);
 	useEffect(() => {
 		if (videoRef.current) {
 			videoRef.current.playbackRate = 0.4;
@@ -74,7 +69,7 @@ const Testimonials = () => {
 		handleScroll();
 		window.addEventListener("resize", handleScroll);
 		return () => window.removeEventListener("resize", handleScroll);
-	}, []);
+	}, [handleScroll]);
 
 	const scrollByAmount = (amount: number) => {
 		if (scrollRef.current) {
@@ -97,6 +92,7 @@ const Testimonials = () => {
 							onClick={() => scrollByAmount(-400)}
 							disabled={!canScrollLeft}
 							className="group p-1.5 bg-transparent cursor-pointer flex items-center justify-center transition-all duration-300 border border-[#292929]"
+							type="button"
 							aria-label="Previous testimonials"
 						>
 							<IconArrowLeft
@@ -109,6 +105,7 @@ const Testimonials = () => {
 							onClick={() => scrollByAmount(400)}
 							disabled={!canScrollRight}
 							className="group p-1.5 bg-transparent cursor-pointer flex items-center justify-center transition-all duration-300 border border-[#292929]"
+							type="button"
 							aria-label="Next testimonials"
 						>
 							<IconArrowRight
@@ -170,6 +167,7 @@ const Testimonials = () => {
 							onClick={() => scrollByAmount(-400)}
 							disabled={!canScrollLeft}
 							className="p-1.5 bg-transparent flex items-center justify-center border border-[#292929]"
+							type="button"
 							aria-label="Previous testimonials"
 						>
 							<IconArrowLeft
@@ -182,6 +180,7 @@ const Testimonials = () => {
 							onClick={() => scrollByAmount(400)}
 							disabled={!canScrollRight}
 							className="p-1.5 bg-transparent flex items-center justify-center border border-[#292929]"
+							type="button"
 							aria-label="Next testimonials"
 						>
 							<IconArrowRight
@@ -202,7 +201,7 @@ const Testimonials = () => {
 				</div>
 			</div>
 
-			<style jsx global>{`
+			<style>{`
         .hide-scrollbar::-webkit-scrollbar {
           display: none;
         }

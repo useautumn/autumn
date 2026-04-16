@@ -29,6 +29,7 @@
 		"@tailwindcss/postcss": "^4.2.2",
 		"@tailwindcss/typography": "^0.5.19",
 		"@types/react": "^19.2.14",
+		"@types/react-syntax-highlighter": "^15.5.13",
 		"eslint": "^10.2.0",
 		"eslint-config-next": "16.2.1",
 		"tailwindcss": "^4.2.2",
