@@ -1,4 +1,4 @@
-import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import { type InferInsertModel, type InferSelectModel, sql } from "drizzle-orm";
 import {
 	foreignKey,
 	index,
@@ -6,6 +6,7 @@ import {
 	pgTable,
 	text,
 	unique,
+	uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { customers } from "../cusModels/cusTable.js";
 import { entities } from "../cusModels/entityModels/entityTable.js";
@@ -39,6 +40,17 @@ export const schedules = pgTable(
 			foreignColumns: [entities.internal_id],
 			name: "schedules_internal_entity_id_fkey",
 		}).onDelete("set null"),
+		uniqueIndex("schedules_customer_scope_unique")
+			.on(table.org_id, table.env, table.internal_customer_id)
+			.where(sql`${table.internal_entity_id} IS NULL`),
+		uniqueIndex("schedules_entity_scope_unique")
+			.on(
+				table.org_id,
+				table.env,
+				table.internal_customer_id,
+				table.internal_entity_id,
+			)
+			.where(sql`${table.internal_entity_id} IS NOT NULL`),
 		index("idx_schedules_internal_customer_id").on(table.internal_customer_id),
 		index("idx_schedules_internal_entity_id").on(table.internal_entity_id),
 	],
