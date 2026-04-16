@@ -1,6 +1,7 @@
 import { CusProductStatus, CustomerExpand } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
+import { hydrateCustomerWithSchedules } from "../cusUtils/getFullCustomerSchedule.js";
 
 /**
  * Internal route for get full customer object
@@ -22,9 +23,13 @@ export const handleGetCustomer = createRoute({
 				CusProductStatus.Expired,
 			],
 		});
+		const hydratedCustomer = await hydrateCustomerWithSchedules({
+			ctx,
+			fullCustomer: fullCus,
+		});
 
 		return c.json({
-			customer: fullCus,
+			customer: hydratedCustomer,
 		});
 	},
 });
