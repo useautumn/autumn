@@ -36,28 +36,24 @@ export function PriceSectionTitle({
 				{showVolumePricingToggle && (
 					<div className="flex items-center">
 						<IconCheckbox
-							icon={<CoinsIcon />}
-							iconOrientation="left"
 							variant="secondary"
 							size="sm"
 							checked={volumePricingMode === "per_unit"}
 							onCheckedChange={() => onVolumePricingModeChange("per_unit")}
 							className={cn(
-								"rounded-r-none",
+								"rounded-r-none w-fit",
 								volumePricingMode !== "per_unit" && "border-r-0",
 							)}
 						>
 							Per Unit
 						</IconCheckbox>
 						<IconCheckbox
-							icon={<StackIcon />}
-							iconOrientation="left"
 							variant="secondary"
 							size="sm"
 							checked={volumePricingMode === "flat"}
 							onCheckedChange={() => onVolumePricingModeChange("flat")}
 							className={cn(
-								"rounded-l-none",
+								"rounded-l-none w-fit",
 								volumePricingMode !== "flat" && "border-l-0",
 							)}
 						>
@@ -66,16 +62,14 @@ export function PriceSectionTitle({
 					</div>
 				)}
 				<Select value={tierBehavior} onValueChange={onTierBehaviorChange}>
-					<SelectTrigger className="w-40 h-6 text-xs" size="sm">
+					<SelectTrigger className="w-32 h-6 text-xs!" size="sm">
 						<SelectValue>
 							{tierBehavior === TierBehavior.VolumeBased ? (
 								<span className="flex items-center gap-2">
-									<DropSimpleIcon className="size-3.5" weight="regular" />
 									Volume-based
 								</span>
 							) : (
 								<span className="flex items-center gap-2">
-									<RulerIcon className="size-3.5" weight="regular" />
 									Graduated
 								</span>
 							)}

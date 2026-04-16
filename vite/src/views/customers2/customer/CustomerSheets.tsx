@@ -1,4 +1,3 @@
-import type { Invoice, InvoiceLineItem } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
@@ -22,6 +21,7 @@ import { BillingOverageAllowedSheet } from "../components/sheets/BillingOverageA
 import { BillingSpendLimitSheet } from "../components/sheets/BillingSpendLimitSheet";
 import { BillingUsageAlertSheet } from "../components/sheets/BillingUsageAlertSheet";
 import { CheckBalanceSheet } from "../components/sheets/CheckBalanceSheet";
+import { CreateScheduleSheet } from "../components/sheets/CreateScheduleSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
 import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
@@ -32,7 +32,6 @@ import { SHEET_ANIMATION } from "./customerAnimations";
 export function CustomerSheets() {
 	const isMobile = useIsMobile();
 	const sheetType = useSheetStore((s) => s.type);
-	const sheetData = useSheetStore((s) => s.data);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const closeBalanceSheet = useCustomerBalanceSheetStore((s) => s.closeSheet);
 	useSheetEscapeHandler();
@@ -47,7 +46,11 @@ export function CustomerSheets() {
 			case "attach-product":
 				return <AttachProductSheet />;
 			case "attach-product-v2":
-				return <AttachProductSheetV3 />;
+				return sheetData?.scheduleEditMode ? (
+					<CreateScheduleSheet />
+				) : (
+					<AttachProductSheetV3 />
+				);
 			case "subscription-detail":
 				return <SubscriptionDetailSheet />;
 			case "subscription-update":
@@ -64,12 +67,8 @@ export function CustomerSheets() {
 				return <BalanceDeleteSheet />;
 			case "balance-create":
 				return <BalanceCreateSheet />;
-			case "invoice-detail": {
-				const invoice = sheetData?.invoice as Invoice | undefined;
-				const lineItems = (sheetData?.lineItems as InvoiceLineItem[]) ?? [];
-				if (!invoice) return null;
-				return <InvoiceDetailSheet invoice={invoice} lineItems={lineItems} />;
-			}
+			case "invoice-detail":
+				return <InvoiceDetailSheet />;
 			case "sync-stripe":
 				return <SyncStripeSheet />;
 			case "billing-auto-topup-add":
@@ -88,6 +87,8 @@ export function CustomerSheets() {
 				return <RecordUsageSheet />;
 			case "check-balance":
 				return <CheckBalanceSheet />;
+			case "create-schedule":
+				return <CreateScheduleSheet />;
 			default:
 				return null;
 		}

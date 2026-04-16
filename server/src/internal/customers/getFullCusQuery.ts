@@ -447,6 +447,7 @@ export const getPaginatedFullCusQuery = ({
 	entityId: _entityId,
 	internalCustomerIds,
 	plans,
+	processors,
 	search,
 	cusProductLimit,
 }: {
@@ -463,6 +464,7 @@ export const getPaginatedFullCusQuery = ({
 	entityId?: string;
 	internalCustomerIds?: string[];
 	plans?: ListCustomersV2Params["plans"];
+	processors?: ListCustomersV2Params["processors"];
 	search?: string;
 	cusProductLimit: number;
 }) => {
@@ -479,6 +481,7 @@ export const getPaginatedFullCusQuery = ({
 		internalCustomerIds,
 		inStatuses,
 		plans,
+		processors,
 		search,
 	});
 
@@ -850,7 +853,12 @@ export const getCustomerListFilterSql = ({
 			.map((proc) => {
 				if (proc === "stripe") return sql`(c.processor->>'id' IS NOT NULL)`;
 				if (proc === "revenuecat")
-					return sql`(c.processors->>'revenuecat' IS NOT NULL)`;
+					return sql`EXISTS (
+						SELECT 1
+						FROM customer_products cp_processor
+						WHERE cp_processor.internal_customer_id = c.internal_id
+							AND cp_processor.processor->>'type' = 'revenuecat'
+					)`;
 				if (proc === "vercel")
 					return sql`(c.processors->>'vercel' IS NOT NULL)`;
 				return null;

@@ -18,8 +18,8 @@ export function buildUpdateSubscriptionOptions({
 	initialBackendQuantities,
 }: {
 	prepaidItems: PrepaidItemInput[];
-	prepaidOptions: Record<string, number>;
-	initialPrepaidOptions: Record<string, number>;
+	prepaidOptions: Record<string, number | undefined>;
+	initialPrepaidOptions: Record<string, number | undefined>;
 	initialBackendQuantities: Record<string, number>;
 }): { feature_id: string; quantity: number }[] {
 	const getFeatureId = ({ item }: { item: PrepaidItemInput }) =>

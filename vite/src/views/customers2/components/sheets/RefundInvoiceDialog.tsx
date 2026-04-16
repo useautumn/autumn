@@ -70,6 +70,10 @@ export function RefundInvoiceDialog({
 		},
 	});
 
+	const alreadyRefunded = invoice.refunded_amount ?? 0;
+	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
+	const remainingRefundable = refundableAmount - alreadyRefunded;
+
 	const handleSubmit = () => {
 		if (mode === "partial") {
 			const parsed = Number.parseFloat(amount);
@@ -84,10 +88,6 @@ export function RefundInvoiceDialog({
 		}
 		refundMutation.mutate();
 	};
-
-	const alreadyRefunded = invoice.refunded_amount ?? 0;
-	const invoiceTotal = Math.abs(invoice.total);
-	const remainingRefundable = invoiceTotal - alreadyRefunded;
 
 	const fmt = ({ amount: amt }: { amount: number }) =>
 		formatAmount({
@@ -110,7 +110,7 @@ export function RefundInvoiceDialog({
 				<DialogHeader>
 					<DialogTitle>Refund Invoice</DialogTitle>
 					<DialogDescription>
-						Invoice total: {fmt({ amount: invoiceTotal })}{" "}
+						Amount paid: {fmt({ amount: refundableAmount })}{" "}
 						{invoice.currency.toUpperCase()}
 					</DialogDescription>
 				</DialogHeader>

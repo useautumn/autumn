@@ -78,6 +78,11 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 	},
 	{
 		method: "POST",
+		url: "/billing.create_schedule",
+		source: "createSchedule",
+	},
+	{
+		method: "POST",
 		url: "/billing.update",
 		source: "updateSubscription",
 	},

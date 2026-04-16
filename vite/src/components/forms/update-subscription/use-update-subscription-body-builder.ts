@@ -19,7 +19,7 @@ interface UpdateSubscriptionBodyBuilderParams {
 	productId?: string;
 	product?: ProductV2;
 	entityId?: string;
-	prepaidOptions?: Record<string, number>;
+	prepaidOptions?: Record<string, number | undefined>;
 	version?: number;
 	useInvoice?: boolean;
 	enableProductImmediately?: boolean;
@@ -115,12 +115,14 @@ export function useUpdateSubscriptionBodyBuilder(
 export function buildLegacyUpdateSubscriptionOptions({
 	prepaidOptions,
 }: {
-	prepaidOptions?: Record<string, number>;
+	prepaidOptions?: Record<string, number | undefined>;
 }): FeatureOptions[] {
 	if (!prepaidOptions) return [];
 
-	return Object.entries(prepaidOptions).map(([featureId, quantity]) => ({
-		feature_id: featureId,
-		quantity: quantity || 0,
-	}));
+	return Object.entries(prepaidOptions)
+		.filter((entry): entry is [string, number] => entry[1] !== undefined)
+		.map(([featureId, quantity]) => ({
+			feature_id: featureId,
+			quantity,
+		}));
 }

@@ -9,12 +9,14 @@ export const handleGetInvoiceLineItems = createRoute({
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
+		const { customer_id } = c.req.param();
 		const { db } = ctx;
 		const { invoice_ids } = c.req.valid("json");
 
 		await InvoiceService.assertOwnership({
 			ctx,
 			id: invoice_ids,
+			customerId: customer_id,
 		});
 
 		const lineItems = await invoiceLineItemRepo.getByInvoiceIds({

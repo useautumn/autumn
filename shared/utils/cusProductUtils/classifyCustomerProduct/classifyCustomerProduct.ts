@@ -121,9 +121,8 @@ export const hasCustomerProductEnded = (
 	const nowMs = params?.nowMs ?? Date.now();
 
 	const hasEnded =
-		isCustomerProductCanceling(cp) &&
-		notNullish(cp.ended_at) &&
-		nowMs >= cp.ended_at;
+		// isCustomerProductCanceling(cp) &&
+		notNullish(cp.ended_at) && nowMs >= cp.ended_at;
 	return hasEnded;
 };
 

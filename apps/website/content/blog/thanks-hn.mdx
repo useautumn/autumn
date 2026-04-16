@@ -1,0 +1,64 @@
+---
+title: "A roasting from HN makes better devtools"
+date: "2025-05-20"
+author: "Ayush, Co-Founder at Autumn"
+slug: "thanks-hn"
+image: "/images/blog/thanks-hn.png"
+featured: true
+---
+
+At Autumn, we're trying to build an integrated billing platform that can run any software pricing model.
+
+A lot of the integration lift is on the frontend, since we handle user payment flows (payment links, upgrades/downgrades, paywalls etc). Making the developer experience simple for new devs, while keeping product flexible has been our main focus over the past few months.
+
+Now Stripe is typically a backend-heavy integration, with data being passed to the frontend. One of the first pieces of feedback we got from users was:
+
+> I wish I could direct a customer to a payment URL without needing to generate it on the backend, and pass it to the frontend
+
+We became fixated with trying to let users handle payments with as little backend involvement as possible. Here's what we tried and how a roasting from HN helped us arrived in a better place.
+
+### Part 1: Frontend-only integration with a public key
+
+Our first solution was to create a "publishable key" that could be used straight from the frontend, to get payment URLs and check feature permissions (eg user\_123 has 10 credits).
+
+People were initially satisfied, but there was no way to safely handle things like downgrades and cancellations. So even though setup was faster, it had to be ripped out quickly.
+
+### Part 2: Nextjs server actions
+
+Many of our users apps were built with Next.js, which has a feature called "server-actions". We were excited as it enabled our users to make calls on the frontend, and have them run from the backend. We thought this would solve our problem.
+
+We didn't know much about how Next.js worked, and quickly found out that similar to our public key, server actions are just public endpoints to their own backend server. Since all our requests are based on a `user_id`, it meant that anyone with access to it would be able to perform billing actions.
+
+### Part 3: Reinventing JWTs (badly)
+
+In a moment of genius, we realized we could just encrypt the `user_id`. Users would pass it to us via a Next.js server-side component, we'd encrypt it with their API key, and use it from the client side to authenticate requests.
+
+We posted this approach on Hacker News last week, and got promptly roasted for (amongst other things), simply reinventing JWTs, without token refresh and with more steps.
+
+> Isn't it enough that this startup seems destined to failure? No need to beat a dead horse
+
+Ouch. Thankfully the best part about a startup is you get to learn quickly.
+
+### Part 4: Throwing it all out
+
+The incentive for this exploration had been to spare the user from setting up backend routes. But we'd ended up with:
+
+-   A pretty poor developer experience, especially outside of Next.js
+    
+-   An insecure integration, as if you knew the encrypted customer id, you'd again have full billing permissions
+    
+
+Over the last few days we rewrote the whole library. Instead of reinventing the wheel, we made it easy to set up Autumn cleanly and safely:
+
+-   All functions are called from the backend.
+    
+-   We wrote middleware for each framework to spin up these routes (to make a purchase, check feature permissions, open the billing portal, track billing usage etc).
+    
+-   We hook into the existing auth system through this middleware, by providing an identify function where the user can decrypt their JWTs into the user\_id
+    
+
+![](https://framerusercontent.com/images/yqrINW5SeAFvnhxywyOEHHBD710.png)
+
+We're happier with this for now, although set up is slightly longer and possibly less "magical". It's a lot clearer what happens on the client, what happens on the server, and where to use each package.
+
+Thanks HN for the tough love.

@@ -53,6 +53,7 @@ export const AnalyticsView = () => {
 		groupBy,
 		truncated,
 		entityNames,
+		customerNames,
 	} = useAnalyticsData({ hasCleared });
 
 	// Show toast when data is truncated due to too many unique group values
@@ -142,10 +143,11 @@ export const AnalyticsView = () => {
 			groupBy,
 			originalColors: colors,
 			entityNames,
+			customerNames,
 		});
 
 		return { chartData: transformed, chartConfig: config };
-	}, [events, features, groupBy, groupFilter, entityNames]);
+	}, [events, features, groupBy, groupFilter, entityNames, customerNames]);
 
 	useEffect(() => {
 		if (
@@ -215,6 +217,7 @@ export const AnalyticsView = () => {
 				setGroupFilter,
 				availableGroupValues,
 				entityNames,
+				customerNames,
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-4 sm:px-10 pt-4 sm:pt-8">
