@@ -201,7 +201,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: full refund (s
 		invoice: {
 			stripe_id: initialInvoice.stripe_id,
 			total: 20,
-			refunded_amount: 0,
+			current_refunded_amount: 0,
 			currency: initialInvoice.currency,
 		},
 	});
@@ -292,16 +292,17 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: prorated refun
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 	const refundPreview = getRefundPreview({ preview });
 
+	expect(preview.total).toBe(0);
 	expectWithinOneDollar({
-		actual: preview.total,
-		expected: -expectedRefund,
+		actual: refundPreview.amount,
+		expected: expectedRefund,
 	});
 	expect(refundPreview).toEqual({
 		amount: preview.refund?.amount ?? 0,
 		invoice: {
 			stripe_id: initialInvoice.stripe_id,
 			total: 20,
-			refunded_amount: 0,
+			current_refunded_amount: 0,
 			currency: initialInvoice.currency,
 		},
 	});
@@ -445,7 +446,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: full refund wi
 		invoice: {
 			stripe_id: initialInvoice.stripe_id,
 			total: expectedInitialInvoice,
-			refunded_amount: 0,
+			current_refunded_amount: 0,
 			currency: initialInvoice.currency,
 		},
 	});
@@ -563,16 +564,17 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: prorated refun
 	const preview = await autumnV1.subscriptions.previewUpdate(cancelParams);
 	const refundPreview = getRefundPreview({ preview });
 
+	expect(preview.total).toBe(0);
 	expectWithinOneDollar({
-		actual: preview.total,
-		expected: -expectedRefund,
+		actual: refundPreview.amount,
+		expected: expectedRefund,
 	});
 	expect(refundPreview).toEqual({
 		amount: preview.refund?.amount ?? 0,
 		invoice: {
 			stripe_id: initialInvoice.stripe_id,
 			total: basePrice + prepaidAmount,
-			refunded_amount: 0,
+			current_refunded_amount: 0,
 			currency: initialInvoice.currency,
 		},
 	});
@@ -672,11 +674,11 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: preview and ex
 	});
 
 	expect(refundPreview.invoice.stripe_id).toBe(invoiceBeforeCancel.stripe_id);
-	expect(refundPreview.invoice.refunded_amount).toBe(
+	expect(refundPreview.invoice.current_refunded_amount).toBe(
 		autumnInvoiceBeforeCancel.refunded_amount,
 	);
 	expect(autumnInvoiceAfterCancel.refunded_amount).toBe(
-		refundPreview.invoice.refunded_amount + refundPreview.amount,
+		refundPreview.invoice.current_refunded_amount + refundPreview.amount,
 	);
 	expect(
 		autumnInvoiceAfterCancel.refunded_amount -
@@ -761,7 +763,7 @@ test.concurrent(`${chalk.yellowBright("cancel immediately refund: prior partial 
 		invoice: {
 			stripe_id: invoiceAfterPartialRefund.stripe_id,
 			total: 20,
-			refunded_amount: priorPartialRefund,
+			current_refunded_amount: priorPartialRefund,
 			currency: invoiceAfterPartialRefund.currency,
 		},
 	});

@@ -1,32 +1,67 @@
-import {
-	type BillingContext,
-	type StripeRefundAction,
-	secondsToMs,
-} from "@autumn/shared";
-import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
+import type { AutumnBillingPlan, StripeRefundAction } from "@autumn/shared";
+import { atmnToStripeAmount, ErrCode, RecaseError } from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { resolveChargeFromInvoice } from "@/internal/customers/handlers/handleRefundInvoice/invoiceRefundUtils.js";
 
-/** Build a Stripe refund action for refunding the latest invoice on cancellation */
-export const buildStripeRefundAction = ({
-	billingContext,
+/**
+ * Build a Stripe refund action from the computed refund plan.
+ * Retrieves the invoice/charge, validates refundability, and computes the
+ * final cents amount so execute only needs to issue the refund.
+ */
+export const buildStripeRefundAction = async ({
+	ctx,
+	autumnBillingPlan,
 }: {
-	billingContext: BillingContext;
-}): StripeRefundAction | undefined => {
-	if (!billingContext.refundLastPayment) return undefined;
-	if (billingContext.cancelAction !== "cancel_immediately") return undefined;
+	ctx: AutumnContext;
+	autumnBillingPlan: AutumnBillingPlan;
+}): Promise<StripeRefundAction | undefined> => {
+	const { refundPlan } = autumnBillingPlan;
+	if (!refundPlan) return undefined;
+	if (refundPlan.amount <= 0) return undefined;
 
-	const { stripeSubscription } = billingContext;
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-	if (!stripeSubscription) return undefined;
+	const stripeInvoice = await stripeCli.invoices.retrieve(
+		refundPlan.invoice.stripe_id,
+		{ expand: ["payments.data.payment.payment_intent"] },
+	);
 
-	const periodInSeconds = subToPeriodStartEnd({ sub: stripeSubscription });
+	const charge = await resolveChargeFromInvoice({ stripeCli, stripeInvoice });
+
+	if (!charge) {
+		throw new RecaseError({
+			message: "Could not resolve a charge from the invoice to refund",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
+	if (!charge.paid || charge.status !== "succeeded") {
+		throw new RecaseError({
+			message: "This charge is not eligible for a refund",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
+	const refundableAmountInCents = charge.amount - charge.amount_refunded;
+	if (refundableAmountInCents <= 0) return undefined;
+
+	const amountInCents = Math.min(
+		atmnToStripeAmount({
+			amount: refundPlan.amount,
+			currency: refundPlan.invoice.currency,
+		}),
+		refundableAmountInCents,
+	);
+
+	if (amountInCents <= 0) return undefined;
 
 	return {
 		type: "refund_last_invoice",
-		stripeSubscriptionId: stripeSubscription.id,
-		mode: billingContext.refundLastPayment,
-		billingPeriod: {
-			start: secondsToMs(periodInSeconds.start),
-			end: secondsToMs(periodInSeconds.end),
-		},
+		stripeInvoiceId: refundPlan.invoice.stripe_id,
+		chargeId: charge.id,
+		amountInCents,
 	};
 };

@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
-import { computeRefundPreview } from "./cancel/computeRefundPreview";
+import { computeRefundPlan } from "@/internal/billing/v2/compute/finalize/computeRefundPlan";
 
 /**
  * Finalizes the update subscription billing plan by processing line items,
@@ -36,17 +36,15 @@ export const finalizeUpdateSubscriptionPlan = async ({
 		plan.lineItems = [];
 	}
 
-	// Compute refund preview from finalised line items
-	const previewTotal = (plan.lineItems ?? []).reduce(
-		(sum, item) => sum + (item.amount ?? 0),
-		0,
-	);
-
-	plan.refundPreview = await computeRefundPreview({
+	// Filter refund line items and compute the refund plan
+	const { lineItems: filteredLineItems, refundPlan } = await computeRefundPlan({
 		ctx,
 		billingContext,
-		previewTotal,
+		lineItems: plan.lineItems ?? [],
 	});
+
+	plan.lineItems = filteredLineItems;
+	plan.refundPlan = refundPlan;
 
 	return plan;
 };

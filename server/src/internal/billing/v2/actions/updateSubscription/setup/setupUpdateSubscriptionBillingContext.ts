@@ -158,10 +158,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 	});
 
-	ctx.logger.info(
-		`[setupUpdateSubContext] refundLastPayment: ${params.refund_last_payment}, cancelAction: ${cancelAction}`,
-	);
-
 	return {
 		intent,
 		fullCustomer,

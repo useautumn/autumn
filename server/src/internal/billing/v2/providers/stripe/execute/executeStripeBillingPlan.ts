@@ -117,18 +117,14 @@ export const executeStripeBillingPlan = async ({
 		}
 	}
 
-	// Execute refund action (after subscription cancel, which provides the latest_invoice)
-	ctx.logger.info(
-		`[executeStripeBillingPlan] refundAction: ${JSON.stringify(billingPlan.stripe.refundAction)}, hasStripeSubscription: ${!!stripeSubscription}`,
-	);
+	// Execute refund action (after subscription cancel)
+
 	let stripeRefund: Stripe.Refund | undefined;
-	if (billingPlan.stripe.refundAction && stripeSubscription) {
+	if (billingPlan.stripe.refundAction) {
 		try {
 			stripeRefund = await executeStripeRefundAction({
 				ctx,
 				refundAction: billingPlan.stripe.refundAction,
-				stripeSubscription,
-				currentEpochMs: billingContext.currentEpochMs,
 			});
 		} catch (error) {
 			ctx.logger.error(
