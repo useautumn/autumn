@@ -29,6 +29,12 @@ export default function Hero() {
 	const containerRef = useRef(null);
 	const heroTlRef = useRef(null);
 	const [displayedText, setDisplayedText] = useState("");
+	const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+	// Read the hint cookie after mount to avoid SSR/CSR hydration mismatch.
+	useEffect(() => {
+		setIsLoggedIn(getLoggedInHintCookie() === true);
+	}, []);
 
 	// Badge typewriter
 	useEffect(() => {
@@ -208,7 +214,13 @@ export default function Hero() {
 				<div className="flex flex-nowrap items-center xl:px-22.75 px-4 bg-[#0F0F0F] w-full overflow-hidden">
 					{/* Primary CTA */}
 					<div className="hero-cta w-full md:w-fit md:flex-shrink-0">
-						<Link href={"https://app.useautumn.com/sign-in"}>
+						<Link
+							href={
+								isLoggedIn
+									? "https://app.useautumn.com"
+									: "https://app.useautumn.com/sign-in"
+							}
+						>
 							<motion.div
 								initial="initial"
 								whileHover="hover"
@@ -219,7 +231,7 @@ export default function Hero() {
 								<div className="relative overflow-hidden flex items-center gap-1.5 md:gap-2.5 cursor-pointer justify-between py-2 px-3 md:px-4 md:py-3.5 md:w-50 font-sans bg-[#9564ff] hover:bg-[#7D46F4] transition-colors duration-300">
 									<CTALines />
 									<span className="relative z-10 tracking-[-2%] uppercase md:normal-case text-white font-medium text-[12px] md:text-base whitespace-nowrap">
-										{getLoggedInHintCookie() ? "Dashboard" : "Start for free"}
+										{isLoggedIn ? "Dashboard" : "Start for free"}
 									</span>
 									<span className="relative z-10 scale-95 md:scale-100">
 										<IconCTAStart />
