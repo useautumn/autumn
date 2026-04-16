@@ -403,7 +403,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: preserves customize.item
 	]);
 });
 
-test.concurrent(`${chalk.yellowBright("create-schedule: preserves the existing schedule when immediate billing is deferred")}`, async () => {
+test.concurrent(`${chalk.yellowBright("create-schedule: persists the new schedule and returns required_action when immediate billing is deferred")}`, async () => {
 	const pro = products.pro({
 		id: "deferred-pro",
 		items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -457,21 +457,21 @@ test.concurrent(`${chalk.yellowBright("create-schedule: preserves the existing s
 		type: "authenticate",
 	});
 
-	await expectAutumnError({
-		errMessage:
-			"create_schedule does not support deferred immediate-phase billing yet",
-		func: async () => {
-			await autumnV1.billing.createSchedule({
-				customer_id: customerId,
-				phases: [
-					{
-						starts_at: Date.now(),
-						plans: [{ plan_id: premium.id }],
-					},
-				],
-			});
-		},
+	const deferredResponse = await autumnV1.billing.createSchedule({
+		customer_id: customerId,
+		phases: [
+			{
+				starts_at: Date.now(),
+				plans: [{ plan_id: premium.id }],
+			},
+		],
 	});
+
+	expect(deferredResponse.required_action).toBeDefined();
+	expect(deferredResponse.required_action?.code).toBe("3ds_required");
+	expect(deferredResponse.payment_url).toBeDefined();
+	expect(deferredResponse.schedule_id).not.toBe(initialResponse.schedule_id);
+	expect(deferredResponse.phases).toHaveLength(1);
 
 	const schedulesAfterDeferredAttempt = await ctx.db
 		.select({
@@ -482,7 +482,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: preserves the existing s
 
 	expect(schedulesAfterDeferredAttempt).toHaveLength(1);
 	expect(schedulesAfterDeferredAttempt[0]!.id).toBe(
-		initialResponse.schedule_id,
+		deferredResponse.schedule_id,
 	);
 
 	const phasesAfterDeferredAttempt = await ctx.db
@@ -491,16 +491,12 @@ test.concurrent(`${chalk.yellowBright("create-schedule: preserves the existing s
 			customer_product_ids: schedulePhases.customer_product_ids,
 		})
 		.from(schedulePhases)
-		.where(eq(schedulePhases.schedule_id, initialResponse.schedule_id));
+		.where(eq(schedulePhases.schedule_id, deferredResponse.schedule_id));
 
-	expect(phasesAfterDeferredAttempt).toHaveLength(2);
-	expect(
-		phasesAfterDeferredAttempt.some(
-			(phase) =>
-				phase.customer_product_ids[0] ===
-				initialResponse.phases[1]!.customer_product_ids[0],
-		),
-	).toBe(true);
+	expect(phasesAfterDeferredAttempt).toHaveLength(1);
+	expect(phasesAfterDeferredAttempt[0]!.customer_product_ids).toEqual(
+		deferredResponse.phases[0]!.customer_product_ids,
+	);
 });
 
 test.concurrent(`${chalk.yellowBright("create-schedule: rejects invalid timing and entity input")}`, async () => {
