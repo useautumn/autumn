@@ -1,31 +1,25 @@
 "use client";
-
 import Image from "next/image";
+import { forwardRef } from "react";
 
-export default function AnimatedFooterImage() {
+const AnimatedFooterImage = forwardRef(function AnimatedFooterImage(_, ref) {
   return (
-    <div className="fixed bottom-0 left-0 w-full z-0 pointer-events-none">
-      {/* Mobile */}
-      <Image
-        src="/images/footer/maskedmobile.webp"
-        alt="footer background"
-        loading="lazy"
-        width={0}
-        height={0}
-        sizes="100vw"
-        className="block sm:hidden w-full h-auto"
-      />
-
-      {/* Desktop */}
-      <Image
-        src="/images/footer/maskedimage.webp"
-        alt="footer background"
-        width={0}
-        height={0}
-        sizes="100vw"
-        loading="lazy"
-        className="hidden sm:block w-full h-auto"
-      />
+    <div
+      ref={ref}
+      className="fixed bottom-0 left-0 w-full z-0 pointer-events-none overflow-hidden h-[420px] md:h-[580px]"
+    >
+      <div className="relative w-full h-full">
+        <Image
+          src="/images/footer/footer.webp"
+          alt="footer background"
+          fill
+          priority
+          sizes="100vw"
+          className="object-cover object-top"
+        />
+      </div>
     </div>
   );
-}
+});
+
+export default AnimatedFooterImage;

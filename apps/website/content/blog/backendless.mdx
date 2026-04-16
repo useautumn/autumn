@@ -1,0 +1,76 @@
+---
+title: "We tried to make billing backendless"
+description: "We wanted to make payments, billing, usage limits and tracking as easy as possible. We explored a billing integration that required no backend setup, but ultimately gave up."
+date: "2025-05-13"
+author: "Ayush, Autumn Co-Founder"
+slug: "backendless"
+image: "/images/blog/backendless.jpeg"
+featured: true
+---
+
+[Read the updated version of this article](/blog/thanks-hn)
+
+We think handling payments on the frontend is a better developer experience.
+
+Typically, billing is a backend job and requires webhooks, state syncing, then passing the data to the frontend. We wanted to offer a more "out-of-the-box" experience when handling things like payment links, paywalls and up/downgrade flows, and spent a bunch of time thinking about how we can perform sensitive operations without needing to perform the "round trip" to the backend.
+
+This is a short write up of our exploration around the problem and why we ultimately are giving up.
+
+**Part 1: The Publishable Key**
+
+When we launched, we had a secret key that could be used securely from the backend just as [Stripe](/blog/what-if-stripe-builds-this) does. Many of our first users had actually never set up Stripe before, and immediately told us they wish they could just do it from the frontend.
+
+Our first solution was to create a "publishable key" which would let developers get payment links and check feature access (eg, does my user have any remaining credits) directly from the frontend, in an unprotected way. These functions alone can't really be abused.
+
+The initial response was good and people were happy to use it with their initial set up. But we quickly ran into a couple problems:
+
+1.  It only worked with some endpoints (eg, tracking billable usage events had to be done via the secret key) and ended up confusing devs around which endpoints could be used with which keys.
+    
+2.  Most software billing flows allow you to automatically purchase something if you've made a purchase before. This automatic purchasing (eg for upgrades) definitely couldn't be done with a public key.
+    
+3.  Although it helped people spin up a sample integration fast, it quickly had to be ripped out anyway, so ended up being pretty pointless.
+    
+
+This still exists in our docs today and constantly trips people up. Can't wait to get rid of it.
+
+**Part 2: Server Actions**
+
+When we launched our Next.js library, we were excited to use server actions. The DX felt magical because users could:
+
+1.  Call them from the frontend like any normal function
+    
+2.  The functions run on the server and can access our secret key stored as an ENV variable
+    
+3.  No route set up needed, and the request is secure — nice!
+    
+
+Unfortunately we soon discovered our approach was flawed. Server actions are public, unauthenticated routes, and our API calls updates resources based on a `customer_id` field (eg. upgrade / downgrade requests, tracking usage for a feature, etc).
+
+So if you got a hold of someone else’s customer ID, you could make requests to the public server actions as if you were that customer—making this method insecure.
+
+**Part 3: Server actions + encryption**
+
+We really really liked the DX of server actions though, and so we had to brainstorm a way to overcome the customer ID being expoed in server action routes.
+
+A few options came to mind, like using a middleware, or registering an authentication function, but the cleanest and simplest method we thought of was simply encrypting the customer ID:
+
+Here’s how it worked:
+
+1.  Our Provider was a server component, and so it’d take in a customer ID/user ID (server side), encrypt it using their API key, and pass it to context on the client side (see image below)
+    
+2.  We wrap each server action with a client side function which grabs the `encryptedCustomerId` from context and passes it to the server action. These are all exported through a hook — `useAutumn`
+    
+3.  Each server action first decrypts the customer ID then calls the Autumn API
+    
+
+![](https://framerusercontent.com/images/lr6FGInFULdwXgxESSi825vE.png)
+
+Essentially, we baked our own layer of auth into the server actions, and this is how our Next.js library works today. I haven't seen this approach by anyone else but essentially lets us fully handle secure payments, upgrades, downgrades, usage-based billing events — all from the frontend.
+
+We’re still not fully satisfied since this only works with frameworks that support server actions and SPA / vite is kinda making a comeback. It also makes the implementation different across frameworks.
+
+**The future**
+
+Ultimately I think we'll reach a point where we give up on this approach, and move towards a more framework agnostic approach. Rather than trying to abandon the backend route setup, we'll just make it easy to do. Take better-auth and how they generate their backend routes in just a couple lines of code — they’ve standardised the backend and frontend installation, and is pretty hard to get wrong.
+
+Other companies like Polar have a similar approach and are heavily praised for it. We probably don't need to reinvent the wheel (as fun as it is).

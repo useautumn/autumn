@@ -17,7 +17,7 @@ const footerColumns = [
     links: [
       { label: "OUR TEAM", href: "#" },
       { label: "OUR VALUES", href: "/privacy" },
-      { label: "BLOG", href: "https://useautumn.com/blog" },
+      { label: "BLOG", href: "/blog" },
     ],
   },
   {

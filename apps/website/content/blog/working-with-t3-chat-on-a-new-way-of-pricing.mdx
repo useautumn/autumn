@@ -1,0 +1,101 @@
+---
+title: "Consumer psychology is important in AI pricing (feat. T3 chat)"
+description: "We worked with Theo and Mark from T3 Chat to build a cool new way of pricing. We learned about the psychology behind how AI products are consumed, and what that means for how we should monetize them."
+date: "2026-02-20"
+author: "Ayush, Autumn Co-Founder"
+slug: "working-with-t3-chat-on-a-new-way-of-pricing"
+image: "/images/blog/working-with-t3-chat-on-a-new-way-of-pricing.png"
+featured: true
+---
+
+[T3 Chat](https://t3.chat/) is the best alternative to AI apps like ChatGPT and Claude, created by [YouTuber Theo](https://www.youtube.com/@t3dotgg) and co-founder Mark. It gives you access to all the latest AI models in one place, is a beautifully designed product and has become my daily-driver for AI. It was no surprise to me that they have several 10s of thousands of subscribers.
+
+Initially, the subscription gave access to 1500 "standard" messages, and 100 "premium" messages per month, where premium messages were reserved for more expensive models. We helped them move to a multi-tier, waterfall rate limits model.
+
+It was a pretty interesting insight into the psychology behind how AI products are consumed and what that means for monetization.
+
+### FORO
+
+The first reason behind the change is to address what Theo calls "fear of running out". Whenever users hit enter to send a message to T3, there's a latent anxiety that comes with watching your usage counter slowly tick up.
+
+Almost no users ever hit their limit of 1500 messages, but that didn't really matter -- they were paranoid that they would.
+
+Similar to a video game where you hoard your items til the final boss, users would subconsciously attempt to ration their usage for the month, in case they needed it. The feeling of being limited was often cited as a reason that a user didn't convert.
+
+With the new pricing model, users now have a bucket of usage credits that replenishes every 4 hours. You either use it or lose it, making you feel less guilty about consuming it. If your quota runs out, you simply wait a few hours before coming back.
+
+![](https://framerusercontent.com/images/kTES2qA50b4nRULRUX1JQLUspA.png)
+
+### Prepaid credits > metered pricing
+
+Economically, prepaid credits and metered billing can be identical. A user might consume $6 worth of AI in a month either way. But the experience of spending that $6 is completely different.
+
+With metered pricing, every message feels like a purchase decision. Users are constantly running a background cost-benefit analysis: "is this prompt worth it?"
+
+Prepaid credits flip this. Once the money is spent, using the product stops feeling like spending and starts feeling like redeeming. It becomes "I should use what I've already paid for."
+
+Replit is a great example of a company that just made this change, introducing prepaid credit tiers in their latest pricing change.
+
+Metered is still great for predictable, infrastructure-level usage (cloud compute, API calls at scale) where buyers are sophisticated and want to pay for exactly what they use. But for products where you want users to engage freely and habitually, prepaid credits seem to have become the preferred billing method.
+
+### Variable usage patterns
+
+Users will often send messages in short, frequent sessions. In these cases, each session only uses a small number of tokens.
+
+Other times, usage can be more "bursty", when working on a bigger task. If the 4 hour quota was the only available option, this type of usage would be often interrupted and users would need to wait.
+
+To get around this, some of the monthly quota is assigned to a monthly overage bucket. If a certain session uses more than the 4 hour limit, it will start drawing from this bucket instead.
+
+The challenge with moving to this model was previously, users were able to by lifetime top-up messages, and we needed a way to still honor this purchase. As part of the migration, we converted these prepaid top-up messages into a standalone credit balance that lasts forever. This bucket of messages will be drawn from last in the waterfall.
+
+![](https://framerusercontent.com/images/e7xtV5kyN9erOK99cg6joWWmVTY.png)
+
+[OpenAI's billing system](https://openai.com/index/beyond-rate-limits/) for Codex and Sora works in a very similar way. The team also added a "premier" tier for $50, with 10x more usage, better suited for power users that were previously purchasing multiple top ups.
+
+### Unpredictable costs
+
+Messages are not created equally. Each would consume a fixed quota, but the underlying costs would vary dramatically depending on the input context. Some user behaviors were painfully expensive:
+
+-   Dumping many files from their codebase into the chat
+    
+-   Using expensive models to analyze PDFs and images
+    
+-   Continuing long threads with expensive models, instead of starting new ones
+    
+
+Any of these actions could cost several dollars each and a small (but regular) proportion of the user base ended up being seriously unprofitable.
+
+The team switched to a credits system. Every model and action (eg web search) has an underlying credit cost associated with it.
+
+When a message is requested, an estimated number of credits for that message is prematurely deducted from the user's balance (ie, reserving balance). After the message is completed, an adjustment event is sent to either refund (if the estimate was higher) or capture additional credits (if the estimate lower). Reserving credits before the message is sent protects against overconsumption.
+
+A secondary benefit of this system is that users can now use premium and basic models as they wish interchangeably.
+
+![](https://framerusercontent.com/images/cWI7p7DZOf1joAQDExcxGHsDM0.png)
+
+### How Autumn helped
+
+Before using Autumn, the team had followed [Theo's viral guide](https://github.com/t3dotgg/stripe-recommendations) on how to manage Stripe. Subscription statuses and balances of messages were stored in a Redis instance that ran on upstash. Even though it's the easiest setup to manage, they were still dealing with race conditions around failed payments and race conditions.
+
+With the increase in complexity of the new pricing model, they decided that they didn't want to be slowed down by billing anymore. Using Autumn meant they didn't have to deal with stripe code, webhooks, waterfall credit deduction, cron jobs, cache layers, failed payments / 3DS, etc. All while having full flexibility to change their rate limits at any point, without code changes or migrations.
+
+> Stripe is a hassle. It's an amazing platform with a lot of capability, but with that capability comes a ton of little details that you have to manage.  
+>   
+> Autumn ticked all of our boxes and allowed us to consolidate a bunch of services into one place, and with a team we trust to know the intracacies and do it right.  
+>   
+> We were spending nearly as much on the infrastructure to handle this ourselves (less well) than the cost with autumn. It makes the switch even more of a no brainer.
+
+\-Mark (T3 Chat Co-Founder)
+
+### Thinking about doing something similar?
+
+The specific limits and buckets will still be refined, but having used it myself over a couple weeks, it really does feel great to use and is more profitable for the company. To build a similar model:
+
+1.  Define the average margin per user you're looking to make, and how many credits a user can use each month to hit that. Eg, to make $2 on a $8 sub, you have $6 of credits an average user can use.
+    
+2.  Allocate ~30-50% of those credits to the monthly overage bucket
+    
+3.  With the remaining, divide them across the average number of sessions a user has in a month
+    
+
+This will give you a good place to start. Your users will very quickly tell you how they feel about it, and you can refine it from there.

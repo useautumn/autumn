@@ -26,6 +26,7 @@ body {
 } */
 
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 /* ==========================================================================
    RAW TOKENS  —  single source of truth
@@ -98,13 +99,13 @@ body {
   --color-purple-light-1: #d4b0ff; /* verify */
 
   /* --- Legacy Next.js scaffold (kept for compatibility) --------------------- */
-  --background: #ffffff;
+  --background: #000000;
   --foreground: #171717;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #000000;
     --foreground: #ededed;
   }
 }
@@ -207,6 +208,7 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans);
+  overscroll-behavior-y: none;
 }
 
 
@@ -234,4 +236,99 @@ body {
 /* right floating line */
 .grid-overlay::after {
   right: 20%;
+}
+
+/* ==========================================================================
+   BLOG PROSE OVERRIDES  —  dark theme, matches landing-page tokens
+   ========================================================================== */
+
+.prose.prose-invert {
+  --tw-prose-body: rgba(255, 255, 255, 0.6);
+  --tw-prose-headings: #ffffff;
+  --tw-prose-lead: rgba(255, 255, 255, 0.7);
+  --tw-prose-links: #9564ff;
+  --tw-prose-bold: #ffffff;
+  --tw-prose-counters: rgba(255, 255, 255, 0.6);
+  --tw-prose-bullets: rgba(255, 255, 255, 0.4);
+  --tw-prose-hr: #292929;
+  --tw-prose-quotes: rgba(255, 255, 255, 0.7);
+  --tw-prose-quote-borders: #9564ff;
+  --tw-prose-code: #e0e0e0;
+  --tw-prose-pre-code: rgba(255, 255, 255, 0.6);
+  --tw-prose-pre-bg: #141414;
+  --tw-prose-th-borders: #292929;
+  --tw-prose-td-borders: #292929;
+  font-family: var(--font-geist-sans);
+  font-weight: 300;
+}
+
+.prose.prose-invert p {
+  font-size: 14px;
+  line-height: 1.7;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  .prose.prose-invert p {
+    font-size: 16px;
+  }
+}
+
+.prose.prose-invert h2 {
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin-top: 2.5em;
+}
+
+@media (min-width: 768px) {
+  .prose.prose-invert h2 {
+    font-size: 28px;
+  }
+}
+
+.prose.prose-invert h3 {
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  margin-top: 2em;
+}
+
+@media (min-width: 768px) {
+  .prose.prose-invert h3 {
+    font-size: 22px;
+  }
+}
+
+.prose.prose-invert strong {
+  color: #ffffff;
+  font-weight: 400;
+}
+
+.prose.prose-invert li {
+  font-size: 14px;
+  line-height: 1.7;
+  letter-spacing: -0.02em;
+}
+
+@media (min-width: 768px) {
+  .prose.prose-invert li {
+    font-size: 16px;
+  }
+}
+
+.prose.prose-invert li::marker {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.prose.prose-invert a {
+  text-decoration-color: rgba(149, 100, 255, 0.4);
+  transition: color 0.3s, text-decoration-color 0.3s;
+}
+
+.prose.prose-invert a:hover {
+  color: #b08aff;
+  text-decoration-color: #b08aff;
 }

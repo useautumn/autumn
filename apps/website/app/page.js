@@ -26,8 +26,7 @@ export default function Home() {
             </div>
             <HomeSections />
 
-            <div
-              className="w-full flex-col gap-2.5 mt-10.5 hidden md:flex">
+            <div className="w-full flex-col gap-2.5 mt-10.5 hidden md:flex">
               <div className="border-t border-[#292929] w-full" />
               <div className="border-t border-[#292929] w-full" />
               <div className="border-t border-[#292929] w-full" />
