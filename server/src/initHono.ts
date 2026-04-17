@@ -45,8 +45,6 @@ const ALLOWED_HEADERS = [
 	"If-None-Match",
 	"If-Modified-Since",
 	"If-Unmodified-Since",
-	"x-ready-check-token",
-	"X-Ready-Check-Token",
 	"idempotency-key",
 	"Idempotency-Key",
 	"User-Agent", // Required for better-auth v1.4.0+ compatibility with Safari/Zen browser
