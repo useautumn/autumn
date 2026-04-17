@@ -5,7 +5,7 @@ export const ADMIN_CUSTOMER_BLOCK_CONFIG_KEY =
 export const ADMIN_ORG_LIMITS_CONFIG_KEY = "admin/org-limits-config.json";
 
 const bucket = process.env.S3_BUCKET || "autumn-prod-server";
-const region = process.env.AWS_REGION || "us-east-2";
+const region = process.env.S3_REGION || "us-east-2";
 
 export const getAdminS3Config = () => {
 	return {
