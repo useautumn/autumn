@@ -4,9 +4,6 @@
     "setup": [
       {
         "command": "bun agent:bootstrap"
-      },
-      {
-        "command": "bun install"
       }
     ],
     "terminals": [
