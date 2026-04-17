@@ -82,7 +82,7 @@ export const createHonoApp = () => {
 	// Health check endpoint for AWS/ECS load balancer
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
-	app.get("/ready", handleReadyCheck);
+	app.get("/ready/:token", handleReadyCheck);
 
 	// Step 1: OTel HTTP span + base middleware + span enrichment
 	app.use(

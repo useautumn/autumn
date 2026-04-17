@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import type { Context } from "hono";
 import { clientCritical } from "../db/initDrizzle.js";
 import { getDbHealth, PgHealth } from "../db/pgHealthMonitor.js";
@@ -6,6 +7,7 @@ import type { HonoEnv } from "./HonoEnv.js";
 
 const POSTGRES_TIMEOUT_MS = 1_000;
 const REDIS_TIMEOUT_MS = 500;
+const READY_CHECK_TOKEN = process.env.READY_CHECK_TOKEN?.trim();
 const withTimeout = async <T>({
 	timeoutMs,
 	fn,
@@ -98,6 +100,20 @@ const runRedisCheck = async () => {
 };
 
 export const handleReadyCheck = async (c: Context<HonoEnv>) => {
+	const providedToken = c.req.param("token");
+
+	if (!READY_CHECK_TOKEN || !providedToken) return c.notFound();
+
+	const expected = Buffer.from(READY_CHECK_TOKEN);
+	const provided = Buffer.from(providedToken);
+
+	if (
+		expected.length !== provided.length ||
+		!timingSafeEqual(expected, provided)
+	) {
+		return c.notFound();
+	}
+
 	const [postgresResult, redisResult] = await Promise.all([
 		runPostgresCheck(),
 		runRedisCheck(),
