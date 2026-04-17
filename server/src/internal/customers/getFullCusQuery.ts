@@ -98,7 +98,13 @@ const buildOptimizedCusProductsCTE = ({
   `;
 };
 
-const buildEntitiesCTE = (withEntities: boolean) => {
+const buildEntitiesCTE = ({
+	withEntities,
+	entitiesLimit,
+}: {
+	withEntities: boolean;
+	entitiesLimit: number;
+}) => {
 	if (!withEntities) {
 		return sql``;
 	}
@@ -114,7 +120,7 @@ const buildEntitiesCTE = (withEntities: boolean) => {
         SELECT * FROM entities e
         WHERE e.internal_customer_id = (SELECT internal_id FROM customer_record)
         ORDER BY e.internal_id DESC
-        LIMIT 300
+        LIMIT ${entitiesLimit}
       ) e
     )
   `;
@@ -284,6 +290,7 @@ export const getFullCusQuery = ({
 	withEvents,
 	entityId,
 	cusProductLimit,
+	entitiesLimit = 300,
 }: {
 	idOrInternalId: string;
 	orgId: string;
@@ -296,6 +303,7 @@ export const getFullCusQuery = ({
 	withEvents: boolean;
 	entityId?: string;
 	cusProductLimit: number;
+	entitiesLimit?: number;
 }) => {
 	const sqlChunks: SQL[] = [];
 
@@ -316,7 +324,7 @@ export const getFullCusQuery = ({
 	// Step 2: Get entities
 	if (withEntities) {
 		sqlChunks.push(sql`, `);
-		sqlChunks.push(buildEntitiesCTE(withEntities));
+		sqlChunks.push(buildEntitiesCTE({ withEntities, entitiesLimit }));
 	}
 
 	// Step 3: Get entity

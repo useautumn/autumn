@@ -6,6 +6,7 @@ export const OrgLimitsConfigSchema = z.object({
 			z.string(),
 			z.object({
 				maxCusProducts: z.number().min(1).optional(),
+				maxEntities: z.number().min(1).optional(),
 			}),
 		)
 		.default({}),
