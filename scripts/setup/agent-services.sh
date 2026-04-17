@@ -3,20 +3,38 @@ set -euo pipefail
 
 log() { echo "[agent-services] $*"; }
 
-# --- 1. Start postgresql, redis, clickhouse ---
-log "Starting system services"
-sudo service postgresql start    >/dev/null 2>&1 || true
-sudo service redis-server start  >/dev/null 2>&1 || true
-sudo service clickhouse-server start >/dev/null 2>&1 || true
+OS="$(uname -s)"
 
-# --- 2. ElasticMQ ---
+# =============================================================
+# 1. Start postgres + redis + clickhouse (OS-specific)
+# =============================================================
+log "Starting system services"
+
+if [ "$OS" = "Darwin" ]; then
+  brew services start postgresql@18  >/dev/null 2>&1 || true
+  brew services start redis          >/dev/null 2>&1 || true
+  brew services start clickhouse     >/dev/null 2>&1 || true
+else
+  sudo service postgresql     start >/dev/null 2>&1 || true
+  sudo service redis-server   start >/dev/null 2>&1 || true
+  sudo service clickhouse-server start >/dev/null 2>&1 || true
+fi
+
+# =============================================================
+# 2. ElasticMQ (cross-platform, per-user dir)
+# =============================================================
+ELASTICMQ_DIR="${HOME}/.autumn-agent/elasticmq"
+ELASTICMQ_JAR="${ELASTICMQ_DIR}/elasticmq.jar"
+ELASTICMQ_CONF="${ELASTICMQ_DIR}/elasticmq.conf"
+ELASTICMQ_LOG_DIR="${HOME}/.autumn-agent/logs"
+mkdir -p "$ELASTICMQ_LOG_DIR"
+
 if ! pgrep -f 'elasticmq.*\.jar' >/dev/null 2>&1; then
   log "Starting ElasticMQ on :9324"
-  sudo mkdir -p /var/log/autumn && sudo chmod 0777 /var/log/autumn
   nohup java \
-    -Dconfig.file=/opt/elasticmq/elasticmq.conf \
-    -jar /opt/elasticmq/elasticmq.jar \
-    >/var/log/autumn/elasticmq.log 2>&1 &
+    -Dconfig.file="$ELASTICMQ_CONF" \
+    -jar "$ELASTICMQ_JAR" \
+    >"$ELASTICMQ_LOG_DIR/elasticmq.log" 2>&1 &
   disown || true
   log "Waiting for ElasticMQ to be ready"
   ELASTICMQ_READY=0
@@ -28,22 +46,37 @@ if ! pgrep -f 'elasticmq.*\.jar' >/dev/null 2>&1; then
     sleep 0.5
   done
   if [ "$ELASTICMQ_READY" -eq 0 ]; then
-    echo "[agent-services] ERROR: ElasticMQ did not become ready after 15s. Check /var/log/autumn/elasticmq.log" >&2
+    echo "[agent-services] ERROR: ElasticMQ did not become ready after 15s. Check $ELASTICMQ_LOG_DIR/elasticmq.log" >&2
     exit 1
   fi
 fi
 
-# --- 3. Ensure Postgres DB exists ---
+# =============================================================
+# 3. Ensure Postgres DB + role + pg_trgm
+# =============================================================
 DB_NAME="autumn"
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" 2>/dev/null \
-  | grep -q 1 || sudo -u postgres createdb "$DB_NAME"
-sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';" >/dev/null 2>&1 || true
-sudo -u postgres psql -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" >/dev/null 2>&1 || true
 
-# --- 4. Write env files (no-op if server/.env already exists) ---
+if [ "$OS" = "Darwin" ]; then
+  # macOS: brew's postgres runs as the current user, no 'postgres' role by default
+  psql -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" 2>/dev/null \
+    | grep -q 1 || createdb "$DB_NAME"
+  psql -d postgres -c "DO \$\$ BEGIN CREATE ROLE postgres WITH LOGIN SUPERUSER PASSWORD 'postgres'; EXCEPTION WHEN duplicate_object THEN ALTER ROLE postgres WITH LOGIN SUPERUSER PASSWORD 'postgres'; END \$\$;" >/dev/null 2>&1 || true
+  psql -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" >/dev/null 2>&1 || true
+else
+  sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" 2>/dev/null \
+    | grep -q 1 || sudo -u postgres createdb "$DB_NAME"
+  sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';" >/dev/null 2>&1 || true
+  sudo -u postgres psql -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" >/dev/null 2>&1 || true
+fi
+
+# =============================================================
+# 4. Write env files (no-op if server/.env already exists)
+# =============================================================
 bun scripts/setup/writeAgentEnv.ts
 
-# --- 5. DB migrations ---
+# =============================================================
+# 5. DB migrations
+# =============================================================
 log "Running migrations"
 bun db:generate >/dev/null 2>&1 || true
 bun db:migrate
