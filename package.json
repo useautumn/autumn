@@ -118,7 +118,7 @@
 	"dependencies": {
 		"@aws-sdk/client-sqs": "^3.985.0",
 		"@better-auth/core": "1.4.12",
-		"@better-auth/oauth-provider": "1.4.12",
+		"@better-auth/oauth-provider": "1.6.5",
 		"@wooorm/starry-night": "^3.8.0",
 		"ag-charts-react": "^12.3.0",
 		"better-auth": "1.4.12",
