@@ -1,0 +1,29 @@
+server/tests/integration/balances/create/create-balance-with-rollover.test.ts
+  c7961bdf778cd0c6 2-28,30-35,37-48,50-63,65-141
+vite/src/views/products/plan/components/edit-plan-feature/advanced-settings/RolloverConfig.tsx
+  c7961bdf778cd0c6 1,3-6,14,16,18,20,22-23,25-27,30-34,39-42,44
+vite/src/views/products/plan/components/edit-plan-feature/advanced-settings/RolloverConfigForm.tsx
+  c7961bdf778cd0c6 1-202
+vite/src/views/customers2/components/sheets/BalanceCreateSheet.tsx
+  c7961bdf778cd0c6 1-7,35,64-68,78-107,140-143,174,213,254-257,278-283
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "08aca230711e430997915ea9ff3a4bfc7d5fe366",
+  "prompts": {
+    "c7961bdf778cd0c6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_263ca4ee5ffe3OF218Yo22LVa2",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 439,
+      "total_deletions": 221,
+      "accepted_lines": 421,
+      "overriden_lines": 5
+    }
+  }
+}
