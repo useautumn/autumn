@@ -39,6 +39,9 @@ export function RefundInvoiceDialog({
 	const buildQueryKey = useQueryKeyFactory();
 
 	const customerId = customer?.id || customer?.internal_id;
+	const alreadyRefunded = invoice.refunded_amount ?? 0;
+	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
+	const remainingRefundable = refundableAmount - alreadyRefunded;
 
 	const refundMutation = useMutation({
 		mutationFn: async () => {
@@ -69,10 +72,6 @@ export function RefundInvoiceDialog({
 			toast.error(getBackendErr(error, "Failed to issue refund"));
 		},
 	});
-
-	const alreadyRefunded = invoice.refunded_amount ?? 0;
-	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
-	const remainingRefundable = refundableAmount - alreadyRefunded;
 
 	const handleSubmit = () => {
 		if (mode === "partial") {
@@ -148,7 +147,6 @@ export function RefundInvoiceDialog({
 						</div>
 					)}
 
-					{/* Refund summary */}
 					<div className="flex flex-col gap-1 border-t border-border/40 pt-3">
 						{alreadyRefunded > 0 && (
 							<div className="flex justify-between text-xs text-t3">
