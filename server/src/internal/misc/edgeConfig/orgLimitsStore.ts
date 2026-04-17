@@ -7,6 +7,7 @@ import {
 } from "./orgLimitsSchemas.js";
 
 export const DEFAULT_CUS_PRODUCT_LIMIT = 15;
+export const DEFAULT_ENTITIES_LIMIT = 300;
 
 const store = createEdgeConfigStore<OrgLimitsConfig>({
 	s3Key: ADMIN_ORG_LIMITS_CONFIG_KEY,
@@ -28,9 +29,21 @@ export const getOrgCusProductLimit = ({
 }): number => {
 	const orgs = store.get().orgs;
 	const orgConfig =
-		(orgId ? orgs[orgId] : undefined) ??
-		(orgSlug ? orgs[orgSlug] : undefined);
+		(orgId ? orgs[orgId] : undefined) ?? (orgSlug ? orgs[orgSlug] : undefined);
 	return orgConfig?.maxCusProducts ?? DEFAULT_CUS_PRODUCT_LIMIT;
+};
+
+export const getOrgEntitiesLimit = ({
+	orgId,
+	orgSlug,
+}: {
+	orgId?: string;
+	orgSlug?: string;
+}): number => {
+	const orgs = store.get().orgs;
+	const orgConfig =
+		(orgId ? orgs[orgId] : undefined) ?? (orgSlug ? orgs[orgSlug] : undefined);
+	return orgConfig?.maxEntities ?? DEFAULT_ENTITIES_LIMIT;
 };
 
 export const getOrgLimitsConfigFromSource = async () => {
@@ -62,4 +75,16 @@ export const updateFullOrgLimitsConfig = async ({
 	config: OrgLimitsConfig;
 }) => {
 	await store.writeToSource({ config });
+};
+
+/**
+ * Test-only helper: override the in-memory org limits config without touching S3.
+ * Use inside tests to simulate admin-configured org limits deterministically.
+ */
+export const _setOrgLimitsConfigForTesting = ({
+	config,
+}: {
+	config: OrgLimitsConfig;
+}) => {
+	store._setRuntimeConfigForTesting(config);
 };
