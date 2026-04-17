@@ -34,7 +34,10 @@ import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
-import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
+import {
+	getOrgCusProductLimit,
+	getOrgEntitiesLimit,
+} from "../misc/edgeConfig/orgLimitsStore.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import {
 	ACTIVE_STATUSES,
@@ -90,6 +93,10 @@ export class CusService {
 					orgId,
 					orgSlug: org.slug,
 				});
+				const entitiesLimit = getOrgEntitiesLimit({
+					orgId,
+					orgSlug: org.slug,
+				});
 
 				const query = getFullCusQuery({
 					idOrInternalId,
@@ -103,6 +110,7 @@ export class CusService {
 					withEvents,
 					entityId,
 					cusProductLimit,
+					entitiesLimit,
 				});
 
 				if (explain) {
