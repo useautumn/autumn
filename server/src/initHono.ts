@@ -17,6 +17,7 @@ import { replicaDbMiddleware } from "./honoMiddlewares/replicaDbMiddleware.js";
 import { traceEnrichMiddleware } from "./honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
+import { handleReadyCheck } from "./honoUtils/handleReadyCheck.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
@@ -44,6 +45,8 @@ const ALLOWED_HEADERS = [
 	"If-None-Match",
 	"If-Modified-Since",
 	"If-Unmodified-Since",
+	"x-ready-check-token",
+	"X-Ready-Check-Token",
 	"idempotency-key",
 	"Idempotency-Key",
 	"User-Agent", // Required for better-auth v1.4.0+ compatibility with Safari/Zen browser
@@ -81,6 +84,7 @@ export const createHonoApp = () => {
 	// Health check endpoint for AWS/ECS load balancer
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
+	app.get("/ready", handleReadyCheck);
 
 	// Step 1: OTel HTTP span + base middleware + span enrichment
 	app.use(
