@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { rewardProgramRepo, referralCodeRepo } from "@/internal/rewards/repos/index.js";
-import { generateReferralCode } from "@/internal/rewards/referralUtils.js";
+import { generateReferralCode } from "@/internal/rewards/rewardUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
 

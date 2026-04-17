@@ -22,8 +22,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { redemptionRepo, referralCodeRepo } from "@/internal/rewards/repos/index.js";
-import { triggerFreeProduct } from "@/internal/rewards/referralUtils/triggerFreeProduct.js";
-import { triggerRedemption } from "@/internal/rewards/referralUtils.js";
+import { triggerFreeProduct } from "@/internal/rewards/actions/triggerFreeProduct.js";
+import { triggerDiscount } from "@/internal/rewards/actions/triggerDiscount.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 
 export type GrantCheckoutRewardPayload = {
@@ -256,7 +256,7 @@ const applyReward = async ({
 			redemption,
 		});
 	} else {
-		await triggerRedemption({
+		await triggerDiscount({
 			ctx,
 			referralCode: { ...referralCode, reward_program: rewardProgram },
 			reward,
