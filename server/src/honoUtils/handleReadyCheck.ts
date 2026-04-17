@@ -8,7 +8,6 @@ import type { HonoEnv } from "./HonoEnv.js";
 const POSTGRES_TIMEOUT_MS = 1_000;
 const REDIS_TIMEOUT_MS = 500;
 const READY_CHECK_TOKEN = process.env.READY_CHECK_TOKEN?.trim();
-
 const withTimeout = async <T>({
 	timeoutMs,
 	fn,
@@ -100,20 +99,21 @@ const runRedisCheck = async () => {
 	}
 };
 
-const hasReadyCheckAccess = (c: Context<HonoEnv>) => {
-	const providedToken = c.req.header("x-ready-check-token");
+export const handleReadyCheck = async (c: Context<HonoEnv>) => {
+	const providedToken = c.req.param("token");
 
-	if (!READY_CHECK_TOKEN || !providedToken) return false;
+	if (!READY_CHECK_TOKEN || !providedToken) return c.notFound();
 
 	const expected = Buffer.from(READY_CHECK_TOKEN);
 	const provided = Buffer.from(providedToken);
 
-	return (
-		expected.length === provided.length && timingSafeEqual(expected, provided)
-	);
-};
+	if (
+		expected.length !== provided.length ||
+		!timingSafeEqual(expected, provided)
+	) {
+		return c.notFound();
+	}
 
-export const handleReadyCheck = async (c: Context<HonoEnv>) => {
 	const [postgresResult, redisResult] = await Promise.all([
 		runPostgresCheck(),
 		runRedisCheck(),
@@ -121,10 +121,6 @@ export const handleReadyCheck = async (c: Context<HonoEnv>) => {
 
 	const ok = postgresResult.ok && redisResult.ok;
 	const status = ok ? 200 : 503;
-
-	if (!hasReadyCheckAccess(c)) {
-		return c.json({ ok }, status);
-	}
 
 	return c.json(
 		{

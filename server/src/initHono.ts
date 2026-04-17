@@ -45,8 +45,6 @@ const ALLOWED_HEADERS = [
 	"If-None-Match",
 	"If-Modified-Since",
 	"If-Unmodified-Since",
-	"x-ready-check-token",
-	"X-Ready-Check-Token",
 	"idempotency-key",
 	"Idempotency-Key",
 	"User-Agent", // Required for better-auth v1.4.0+ compatibility with Safari/Zen browser
@@ -84,7 +82,7 @@ export const createHonoApp = () => {
 	// Health check endpoint for AWS/ECS load balancer
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
-	app.get("/ready", handleReadyCheck);
+	app.get("/ready/:token", handleReadyCheck);
 
 	// Step 1: OTel HTTP span + base middleware + span enrichment
 	app.use(
