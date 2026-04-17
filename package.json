@@ -81,7 +81,7 @@
 		"setup:s3-admin": "bun scripts/setup/setupS3Admin.ts",
 		"setup:test": "infisical run --env=dev -- bun scripts/setup/setup-test.ts",
 		"agent:bootstrap": "bash scripts/setup/agent-bootstrap.sh",
-		"dev:agent": "bash scripts/setup/agent-services.sh && bun scripts/dev.ts",
+		"dev:agent": "bash scripts/setup/devAgent.sh",
 		"migrate-functions": "infisical run --env=dev -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:test": "infisical run --env=test -- bun scripts/migrations/migrate-functions.ts",
 		"migrate-functions:prod": "infisical run --env=prod -- bun scripts/migrations/migrate-functions.ts",
