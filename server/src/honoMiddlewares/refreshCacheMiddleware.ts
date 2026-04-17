@@ -39,6 +39,14 @@ const cusPrefixedUrls = [
 		method: "POST",
 		url: "/customers/:customer_id/transfer",
 	},
+	{
+		method: "POST",
+		url: "/customers/:customer_id/billing_portal",
+	},
+	{
+		method: "GET",
+		url: "/customers/:customer_id/billing_portal",
+	},
 ];
 
 /**
@@ -95,6 +103,10 @@ const coreUrls: { method: string; url: string; source?: string }[] = [
 		method: "POST",
 		url: "/billing.multi_attach",
 		source: "multiAttach",
+	},
+	{
+		method: "POST",
+		url: "/billing.open_customer_portal",
 	},
 
 	// BALANCES
