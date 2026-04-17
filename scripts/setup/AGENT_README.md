@@ -10,11 +10,12 @@ Installs all system dependencies and downloads required binaries. Safe to re-run
 
 **Ubuntu/Debian** (via apt):
 - Adds the official PostgreSQL apt repo (PGDG) for PG18
-- Installs `postgresql-18`, `redis-server`, `default-jre-headless`
+- Adds the official Redis apt repo for Redis Stack (required for RedisJSON)
+- Installs `postgresql-18`, `redis-stack-server`, `default-jre-headless`
 - Installs `clickhouse-server` and `clickhouse-client` from the official ClickHouse apt repo
 
 **macOS** (via Homebrew — install brew first if you don't have it):
-- Installs `postgresql@18`, `redis`, `clickhouse`, `openjdk` via brew
+- Installs `postgresql@18`, `redis-stack`, `clickhouse`, `openjdk` via brew
 
 **Both**:
 - Downloads the ElasticMQ jar to `~/.autumn-agent/elasticmq/elasticmq.jar` and writes its config
@@ -55,7 +56,7 @@ Set these in the process environment before running `bun dev:agent` and they wil
 | Service | Port | Notes |
 |---|---|---|
 | PostgreSQL | 5432 | Database: `autumn`, user: `postgres`, password: `postgres` |
-| Redis | 6379 | Used for `CACHE_URL` and `CACHE_URL_US_EAST` |
+| Redis Stack | 6379 | Used for `CACHE_URL` and `CACHE_URL_US_EAST` (RedisJSON required) |
 | ElasticMQ | 9324 | Local SQS replacement, queue: `autumn.fifo` |
 | ClickHouse | 8123 | Used for `TINYBIRD_CLICKHOUSE_URL` |
 | Server | 8080 | Autumn API server |
