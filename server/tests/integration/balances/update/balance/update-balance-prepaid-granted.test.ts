@@ -83,14 +83,7 @@ test.concurrent(`${chalk.yellowBright("update-prepaid-granted1: granted_balance 
 	});
 
 	// ── Simulate BalanceEditSheet "set" mode submission ──
-	// Form defaults mirror the API state:
-	//   defaultGPB       = granted + purchased = 300
-	//   defaultBalance   = current_balance     = 270
-	//   prepaidAllowance = purchased_balance    = 200
-	//
 	// User increases GPB from 300 → 320 (wants +20 on granted)
-	const defaultGPB = bal.granted_balance + bal.purchased_balance; // 300
-	const defaultBalance = bal.current_balance; // 270
 	const prepaidAllowance = bal.purchased_balance; // 200
 	const newGPB = 320;
 
