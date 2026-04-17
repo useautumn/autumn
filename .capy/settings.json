@@ -1,0 +1,20 @@
+{
+  "$schema": "https://capy.ai/settings.schema.json",
+  "hooks": {
+    "setup": [
+      {
+        "command": "bun agent:bootstrap"
+      }
+    ],
+    "terminals": [
+      {
+        "name": "dev",
+        "command": "bun dev:agent",
+        "readonly": true
+      }
+    ],
+    "context": {
+      "maxOutputLength": 2000
+    }
+  }
+}
