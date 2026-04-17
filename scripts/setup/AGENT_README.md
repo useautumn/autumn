@@ -1,6 +1,6 @@
 # Agent Dev Setup
 
-Two commands to spin up the full Autumn stack on a fresh Ubuntu VM — no Docker, no Infisical, no Supabase cloud signup, no interactive prompts.
+Two commands to spin up the full Autumn stack on a fresh Ubuntu/Debian or macOS machine — no Docker, no Infisical, no Supabase cloud signup, no interactive prompts.
 
 ## Commands
 
@@ -8,18 +8,25 @@ Two commands to spin up the full Autumn stack on a fresh Ubuntu VM — no Docker
 
 Installs all system dependencies and downloads required binaries. Safe to re-run; every step is guarded and completes in ~1s if already installed.
 
-- Installs `postgresql-16` and `redis-server` via apt
+**Ubuntu/Debian** (via apt):
+- Adds the official PostgreSQL apt repo (PGDG) for PG18
+- Installs `postgresql-18`, `redis-server`, `default-jre-headless`
 - Installs `clickhouse-server` and `clickhouse-client` from the official ClickHouse apt repo
-- Downloads the ElasticMQ jar to `/opt/elasticmq/elasticmq.jar` and writes its config
+
+**macOS** (via Homebrew — install brew first if you don't have it):
+- Installs `postgresql@18`, `redis`, `clickhouse`, `openjdk` via brew
+
+**Both**:
+- Downloads the ElasticMQ jar to `~/.autumn-agent/elasticmq/elasticmq.jar` and writes its config
 - Runs `bun install --frozen-lockfile` if `node_modules` is missing
 
 ### `bun dev:agent` — every session
 
 Starts all local services, creates the database, writes env files, runs migrations, then starts the dev servers.
 
-1. Starts `postgresql`, `redis-server`, and `clickhouse-server` via `service`
+1. Starts `postgresql`, `redis-server`, and `clickhouse-server` (via `service` on Linux, `brew services` on macOS)
 2. Starts ElasticMQ in the background on `:9324` (skipped if already running)
-3. Creates the `autumn` Postgres database if it does not exist
+3. Creates the `autumn` Postgres database if it does not exist, ensures the `pg_trgm` extension is enabled
 4. Writes `server/.env` (skips if already present) and `vite/.env` from `vite/.env.example`
 5. Runs `bun db:migrate`
 6. Launches server `:8080`, vite `:3000`, checkout `:3001`, and workers via `scripts/dev.ts`
