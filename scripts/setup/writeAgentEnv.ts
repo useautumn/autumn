@@ -70,8 +70,6 @@ CLIENT_URL=http://localhost:${vitePort}
 STRIPE_WEBHOOK_URL=http://localhost:${serverPort}
 
 # Static team-wide (pass-through from process.env)
-GOOGLE_CLIENT_ID=my-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=GOCSPX-secret
 ${passLines}
 
 # Environment

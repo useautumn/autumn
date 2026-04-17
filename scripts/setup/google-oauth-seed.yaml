@@ -1,9 +1,0 @@
-google:
-  users:
-    - email: testuser@example.com
-      name: Test User
-  oauth_clients:
-    - client_id: my-client-id.apps.googleusercontent.com
-      client_secret: GOCSPX-secret
-      redirect_uris:
-        - http://localhost:8080/api/auth/callback/google

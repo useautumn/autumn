@@ -19,11 +19,10 @@ Starts all local services, creates the database, writes env files, runs migratio
 
 1. Starts `postgresql`, `redis-server`, and `clickhouse-server` via `service`
 2. Starts ElasticMQ in the background on `:9324` (skipped if already running)
-3. Starts the Google OAuth emulator in the background on `:4002` (skipped if already running)
-4. Creates the `autumn` Postgres database if it does not exist
-5. Writes `server/.env` (skips if already present) and `vite/.env` from `vite/.env.example`
-6. Runs `bun db:migrate`
-7. Launches server `:8080`, vite `:3000`, checkout `:3001`, and workers via `scripts/dev.ts`
+3. Creates the `autumn` Postgres database if it does not exist
+4. Writes `server/.env` (skips if already present) and `vite/.env` from `vite/.env.example`
+5. Runs `bun db:migrate`
+6. Launches server `:8080`, vite `:3000`, checkout `:3001`, and workers via `scripts/dev.ts`
 
 ## Static team-wide env vars
 
@@ -52,7 +51,6 @@ Set these in the process environment before running `bun dev:agent` and they wil
 | Redis | 6379 | Used for `CACHE_URL` and `CACHE_URL_US_EAST` |
 | ElasticMQ | 9324 | Local SQS replacement, queue: `autumn.fifo` |
 | ClickHouse | 8123 | Used for `TINYBIRD_CLICKHOUSE_URL` |
-| Google OAuth emulator | 4002 | Local emulator for Google sign-in |
 | Server | 8080 | Autumn API server |
 | Vite | 3000 | Frontend dev server |
 | Checkout | 3001 | Checkout app dev server |
@@ -86,10 +84,3 @@ If you change ports after `server/.env` has already been generated, delete it fi
 ```bash
 rm server/.env vite/.env && bun dev:agent 8181 3100
 ```
-
-## Google OAuth (local emulator)
-
-The Google OAuth emulator starts automatically at `:4002` during `bun dev:agent`. Sign in with Google works out of the box using the test user:
-
-- Email: `testuser@example.com`
-- Password: any (the emulator accepts all logins)
