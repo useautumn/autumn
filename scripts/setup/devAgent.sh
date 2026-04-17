@@ -10,4 +10,5 @@ export AGENT_VITE_PORT="$VITE_PORT"
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 bash "$DIR/agent-services.sh"
 
-exec SERVER_PORT="$SERVER_PORT" VITE_PORT="$VITE_PORT" bun scripts/dev.ts
+export SERVER_PORT VITE_PORT
+exec bun scripts/dev.ts
