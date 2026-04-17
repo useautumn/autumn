@@ -1,3 +1,4 @@
+import { redeemPromoCode } from "./redeemPromoCode.js";
 import { runTriggerCheckoutReward } from "./triggerCheckoutReward.js";
 import { triggerDiscount } from "./triggerDiscount.js";
 import { triggerFreePaidProduct } from "./triggerFreePaidProduct.js";
@@ -12,4 +13,6 @@ export const rewardActions = {
 	triggerDiscount,
 	/** Process checkout-triggered reward redemptions (called from job queue) */
 	triggerCheckoutReward: runTriggerCheckoutReward,
+	/** Redeem a promo code and grant loose entitlements */
+	redeemPromoCode,
 };

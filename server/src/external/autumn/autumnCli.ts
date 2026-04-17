@@ -734,6 +734,20 @@ export class AutumnInt {
 			const data = await this.delete(`/rewards/${rewardId}`);
 			return data;
 		},
+
+		redeem: async ({
+			code,
+			customerId,
+		}: {
+			code: string;
+			customerId: string;
+		}) => {
+			const data = await this.post("/rewards.redeem", {
+				code,
+				customer_id: customerId,
+			});
+			return data;
+		},
 	};
 
 	rewardPrograms = {
