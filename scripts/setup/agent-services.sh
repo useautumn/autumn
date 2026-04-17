@@ -12,12 +12,29 @@ log "Starting system services"
 
 if [ "$OS" = "Darwin" ]; then
   brew services start postgresql@18  >/dev/null 2>&1 || true
-  brew services start redis          >/dev/null 2>&1 || true
+  brew services start redis-stack    >/dev/null 2>&1 || true
   brew services start clickhouse     >/dev/null 2>&1 || true
 else
-  sudo service postgresql     start >/dev/null 2>&1 || true
-  sudo service redis-server   start >/dev/null 2>&1 || true
-  sudo service clickhouse-server start >/dev/null 2>&1 || true
+  sudo service postgresql            start >/dev/null 2>&1 || true
+  sudo service clickhouse-server     start >/dev/null 2>&1 || true
+
+  # redis-stack-server ships a systemd unit but no SysV init script.
+  # Try `service` first (works when systemd is the init), then fall back
+  # to invoking the binary directly (works in containers without systemd).
+  if ! redis-cli -p 6379 PING >/dev/null 2>&1; then
+    if ! sudo service redis-stack-server start >/dev/null 2>&1; then
+      REDIS_LOG_DIR="${HOME}/.autumn-agent/logs"
+      mkdir -p "$REDIS_LOG_DIR"
+      log "Starting redis-stack-server manually"
+      nohup /opt/redis-stack/bin/redis-stack-server \
+        >"$REDIS_LOG_DIR/redis-stack.log" 2>&1 &
+      disown || true
+      for i in $(seq 1 30); do
+        redis-cli -p 6379 PING >/dev/null 2>&1 && break
+        sleep 0.2
+      done
+    fi
+  fi
 fi
 
 # =============================================================

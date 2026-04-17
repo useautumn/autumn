@@ -16,9 +16,14 @@ if [ "$OS" = "Darwin" ]; then
 
   BREW_NEEDED=()
   command -v psql             >/dev/null 2>&1 || BREW_NEEDED+=(postgresql@18)
-  command -v redis-server     >/dev/null 2>&1 || BREW_NEEDED+=(redis)
+  command -v redis-stack-server >/dev/null 2>&1 || BREW_NEEDED+=(redis-stack)
   command -v clickhouse       >/dev/null 2>&1 || BREW_NEEDED+=(clickhouse)
   command -v java             >/dev/null 2>&1 || BREW_NEEDED+=(openjdk)
+
+  # redis-stack lives in the redis-stack tap
+  if [[ " ${BREW_NEEDED[*]} " == *" redis-stack "* ]]; then
+    brew tap redis-stack/redis-stack >/dev/null 2>&1 || true
+  fi
 
   if [ ${#BREW_NEEDED[@]} -gt 0 ]; then
     log "Installing via brew: ${BREW_NEEDED[*]}"
@@ -49,18 +54,34 @@ else
     if [ ! -f /etc/apt/sources.list.d/pgdg.list ]; then
       log "Adding official PostgreSQL apt repo (PGDG)"
       sudo mkdir -p /etc/apt/keyrings
-      curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
-        | sudo gpg --dearmor -o /etc/apt/keyrings/postgresql.gpg
+      curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc -o /tmp/pgdg.asc
+      sudo gpg --batch --yes -o /etc/apt/keyrings/postgresql.gpg --dearmor /tmp/pgdg.asc
+      rm -f /tmp/pgdg.asc
       echo "deb [signed-by=/etc/apt/keyrings/postgresql.gpg] https://apt.postgresql.org/pub/repos/apt $(. /etc/os-release && echo $VERSION_CODENAME)-pgdg main" \
         | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
       sudo apt-get update -qq
     fi
   fi
 
+  # Redis Stack (provides RedisJSON, required by Autumn's Lua scripts)
+  # Redis Stack is published for jammy only; that package works cleanly on noble too.
+  if ! command -v redis-stack-server >/dev/null 2>&1; then
+    if [ ! -f /etc/apt/sources.list.d/redis.list ]; then
+      log "Adding Redis Stack apt repo"
+      sudo mkdir -p /etc/apt/keyrings
+      curl -fsSL https://packages.redis.io/gpg -o /tmp/redis-stack.asc
+      sudo gpg --batch --yes -o /etc/apt/keyrings/redis-archive-keyring.gpg --dearmor /tmp/redis-stack.asc
+      rm -f /tmp/redis-stack.asc
+      echo "deb [signed-by=/etc/apt/keyrings/redis-archive-keyring.gpg] https://packages.redis.io/deb jammy main" \
+        | sudo tee /etc/apt/sources.list.d/redis.list >/dev/null
+      sudo apt-get update -qq
+    fi
+  fi
+
   APT_NEEDED=()
-  command -v pg_ctlcluster >/dev/null 2>&1 || APT_NEEDED+=(postgresql-18)
-  command -v redis-server  >/dev/null 2>&1 || APT_NEEDED+=(redis-server)
-  command -v java          >/dev/null 2>&1 || APT_NEEDED+=(default-jre-headless)
+  command -v pg_ctlcluster       >/dev/null 2>&1 || APT_NEEDED+=(postgresql-18)
+  command -v redis-stack-server  >/dev/null 2>&1 || APT_NEEDED+=(redis-stack-server)
+  command -v java                >/dev/null 2>&1 || APT_NEEDED+=(default-jre-headless)
 
   if [ ${#APT_NEEDED[@]} -gt 0 ]; then
     log "Installing via apt: ${APT_NEEDED[*]}"
@@ -71,8 +92,9 @@ else
   if ! command -v clickhouse-server >/dev/null 2>&1; then
     log "Installing ClickHouse from official apt repo"
     sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' \
-      | sudo gpg --dearmor -o /etc/apt/keyrings/clickhouse.gpg
+    curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' -o /tmp/clickhouse.asc
+    sudo gpg --batch --yes -o /etc/apt/keyrings/clickhouse.gpg --dearmor /tmp/clickhouse.asc
+    rm -f /tmp/clickhouse.asc
     echo 'deb [signed-by=/etc/apt/keyrings/clickhouse.gpg] https://packages.clickhouse.com/deb stable main' \
       | sudo tee /etc/apt/sources.list.d/clickhouse.list >/dev/null
     sudo apt-get update -qq
