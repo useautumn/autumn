@@ -14,6 +14,9 @@ const genUrlSafeBase64 = ({ bytes }: { bytes: number }): string =>
 		.replace(/\//g, "_")
 		.replace(/=+$/g, "");
 
+const serverPort = process.env.AGENT_SERVER_PORT ?? "8080";
+const vitePort = process.env.AGENT_VITE_PORT ?? "3000";
+
 if (existsSync(serverEnvPath)) {
 	console.log("[writeAgentEnv] server/.env already exists — skipping generation");
 } else {
@@ -62,11 +65,13 @@ AWS_SECRET_ACCESS_KEY=x
 TINYBIRD_CLICKHOUSE_URL=http://localhost:8123
 
 # App URLs
-BETTER_AUTH_URL=http://localhost:8080
-CLIENT_URL=http://localhost:3000
-STRIPE_WEBHOOK_URL=http://localhost:8080
+BETTER_AUTH_URL=http://localhost:${serverPort}
+CLIENT_URL=http://localhost:${vitePort}
+STRIPE_WEBHOOK_URL=http://localhost:${serverPort}
 
 # Static team-wide (pass-through from process.env)
+GOOGLE_CLIENT_ID=my-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=GOCSPX-secret
 ${passLines}
 
 # Environment
