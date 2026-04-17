@@ -10,24 +10,12 @@ import {
 	S3Client,
 } from "@aws-sdk/client-s3";
 import {
-	ADMIN_REQUEST_BLOCK_CONFIG_KEY as REQUEST_BLOCK_CONFIG_KEY,
 	getAdminS3Config,
+	ADMIN_REQUEST_BLOCK_CONFIG_KEY as REQUEST_BLOCK_CONFIG_KEY,
 } from "@server/external/aws/s3/adminS3Config.js";
+
 const DEFAULT_REQUEST_BLOCK_CONFIG = {
 	orgs: {},
-};
-
-const getTargetFromArgs = () => {
-	const hasDevFlag = process.argv.includes("--dev");
-	const hasProdFlag = process.argv.includes("--prod");
-
-	if (hasDevFlag && hasProdFlag) {
-		throw new Error("Use either --dev or --prod, not both");
-	}
-
-	if (hasDevFlag) return "dev" as const;
-	if (hasProdFlag) return "prod" as const;
-	return undefined;
 };
 
 const createS3Client = ({ region }: { region: string }) => {
@@ -178,12 +166,11 @@ const ensureRequestBlockConfigExists = async ({
 };
 
 const main = async () => {
-	const target = getTargetFromArgs();
-	const { bucket, region } = getAdminS3Config({ target });
+	const { bucket, region } = getAdminS3Config();
 	const s3Client = createS3Client({ region });
 
 	console.log(
-		`Initializing S3 admin config for ${target || process.env.NODE_ENV || "default"} -> s3://${bucket}/${REQUEST_BLOCK_CONFIG_KEY}`,
+		`Initializing S3 admin config for ${process.env.NODE_ENV || "default"} -> s3://${bucket}/${REQUEST_BLOCK_CONFIG_KEY}`,
 	);
 
 	await ensureBucketExists({
