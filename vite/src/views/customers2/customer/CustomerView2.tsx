@@ -164,8 +164,8 @@ export default function CustomerView2() {
 											{testClockFrozenTimeMs != null && (
 												<TooltipProvider>
 													<Tooltip delayDuration={0}>
-														<TooltipTrigger>
-															<span className="flex items-center justify-center size-5 rounded-md bg-orange-500/15">
+														<TooltipTrigger asChild>
+															<span className="flex shrink-0 items-center justify-center size-5 rounded-md bg-orange-500/15">
 																<ClockIcon
 																	size={12}
 																	weight="bold"
