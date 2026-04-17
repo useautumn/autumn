@@ -19,10 +19,18 @@ if ! pgrep -f 'elasticmq.*\.jar' >/dev/null 2>&1; then
     >/var/log/autumn/elasticmq.log 2>&1 &
   disown || true
   log "Waiting for ElasticMQ to be ready"
+  ELASTICMQ_READY=0
   for i in $(seq 1 30); do
-    curl -sf -o /dev/null 'http://localhost:9324/?Action=ListQueues&Version=2012-11-05' && break
+    if curl -sf -o /dev/null 'http://localhost:9324/?Action=ListQueues&Version=2012-11-05'; then
+      ELASTICMQ_READY=1
+      break
+    fi
     sleep 0.5
   done
+  if [ "$ELASTICMQ_READY" -eq 0 ]; then
+    echo "[agent-services] ERROR: ElasticMQ did not become ready after 15s. Check /var/log/autumn/elasticmq.log" >&2
+    exit 1
+  fi
 fi
 
 # --- 3. Ensure Postgres DB exists ---

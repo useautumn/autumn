@@ -28,7 +28,14 @@ if ! command -v clickhouse-server >/dev/null 2>&1; then
     clickhouse-server clickhouse-client
 fi
 
-# --- 3. ElasticMQ jar (local SQS-compatible queue, no Docker) ---
+# --- 3. Java runtime (required for ElasticMQ) ---
+if ! command -v java >/dev/null 2>&1; then
+  log "Installing Java (required for ElasticMQ)"
+  sudo apt-get update -qq
+  sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq default-jre-headless
+fi
+
+# --- 4. ElasticMQ jar (local SQS-compatible queue, no Docker) ---
 ELASTICMQ_VERSION="1.6.11"
 ELASTICMQ_JAR="/opt/elasticmq/elasticmq.jar"
 if [ ! -f "$ELASTICMQ_JAR" ]; then
@@ -66,7 +73,7 @@ queues {
 EOF
 fi
 
-# --- 4. Bun workspace install ---
+# --- 5. Bun workspace install ---
 if [ ! -d node_modules ]; then
   log "Installing workspace dependencies"
   bun install --frozen-lockfile
