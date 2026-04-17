@@ -11,8 +11,6 @@ export function computeGrantedBalanceInput({
 	prepaidAllowance,
 }: {
 	newGPB: number;
-	defaultGPB: number;
-	defaultBalance: number;
 	prepaidAllowance: number;
 }): number {
 	return newGPB - prepaidAllowance;

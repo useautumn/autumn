@@ -96,8 +96,6 @@ test.concurrent(`${chalk.yellowBright("update-prepaid-granted1: granted_balance 
 
 	const grantedBalanceInput = computeGrantedBalanceInput({
 		newGPB,
-		defaultGPB,
-		defaultBalance,
 		prepaidAllowance,
 	});
 
