@@ -7,6 +7,7 @@ export const BalanceEditFormSchema = z
 		grantedAndPurchasedBalance: z.number().nullable(),
 		nextResetAt: z.number().nullable(),
 		addValue: z.number().nullable(),
+		updateGrantedBalance: z.boolean(),
 	})
 	.check((ctx) => {
 		const { mode, balance, addValue } = ctx.value;
