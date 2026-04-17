@@ -1,14 +1,26 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { getAllPosts } from "@/lib/blogUtils";
+import { notFound } from "next/navigation";
+import { getAllTags, getPostsByTag } from "@/lib/blogUtils";
 
-export const metadata: Metadata = {
-	title: "Autumn Blog — Billing infrastructure for AI startups",
-	description:
-		"Thoughts on billing infrastructure, usage-based pricing, and building for AI startups. Engineering deep-dives, product decisions, and lessons from working with AI companies.",
-	alternates: { canonical: "/blog" },
-};
+export function generateStaticParams() {
+	return getAllTags().map((tag) => ({ tag }));
+}
+
+export async function generateMetadata({
+	params,
+}: {
+	params: Promise<{ tag: string }>;
+}): Promise<Metadata> {
+	const { tag } = await params;
+	const title = `Posts tagged "${tag}" - Autumn Blog`;
+	return {
+		title,
+		description: `Autumn blog posts tagged ${tag} — billing infrastructure, pricing, and engineering notes.`,
+		alternates: { canonical: `/blog/tag/${tag}` },
+	};
+}
 
 function formatDate(dateString: string | null) {
 	if (!dateString) return "";
@@ -19,27 +31,50 @@ function formatDate(dateString: string | null) {
 	});
 }
 
-export default function BlogListingPage() {
-	const posts = getAllPosts();
+export default async function TagArchivePage({
+	params,
+}: {
+	params: Promise<{ tag: string }>;
+}) {
+	const { tag } = await params;
+	const posts = getPostsByTag({ tag });
+	if (posts.length === 0) notFound();
 
 	return (
 		<div className="py-16 md:py-24 bg-[#0F0F0F]">
 			<div className="max-w-[800px] mx-auto px-4 xl:px-0">
+				<Link
+					href="/blog"
+					className="inline-flex items-center gap-2 font-mono text-[12px] md:text-[14px] uppercase tracking-[-2%] text-[#FFFFFF66] hover:text-white transition-colors duration-300 mb-10"
+				>
+					<svg
+						width="16"
+						height="16"
+						viewBox="0 0 16 16"
+						fill="none"
+						className="rotate-180"
+						aria-hidden="true"
+					>
+						<title>Back arrow</title>
+						<path
+							d="M6 3L11 8L6 13"
+							stroke="currentColor"
+							strokeWidth="1.5"
+							strokeLinecap="round"
+							strokeLinejoin="round"
+						/>
+					</svg>
+					Back to blog
+				</Link>
+
 				<h1 className="text-[30px] md:text-[40px] font-normal tracking-[-2%] leading-[1.1] font-sans mb-4">
-					<span className="text-[#FFFFFF99] font-light">Autumn </span>
-					<span className="text-white">Blog</span>
+					<span className="text-[#FFFFFF99] font-light">Posts tagged </span>
+					<span className="text-white">&ldquo;{tag}&rdquo;</span>
 				</h1>
 				<p className="text-[14px] md:text-[16px] leading-5 text-[#FFFFFF99] font-light font-sans mb-16">
-					Thoughts on billing infrastructure, usage-based pricing, and building
-					for AI startups. Engineering deep-dives, product decisions, and
-					lessons from working with AI companies.
+					{posts.length} {posts.length === 1 ? "post" : "posts"} tagged with{" "}
+					<span className="font-mono uppercase">{tag}</span>.
 				</p>
-
-				{posts.length === 0 && (
-					<p className="text-[#FFFFFF66] text-center py-16 font-light">
-						No posts yet. Check back soon.
-					</p>
-				)}
 
 				<div className="flex flex-col gap-1">
 					{posts.map((post) => (
@@ -70,13 +105,13 @@ export default function BlogListingPage() {
 								)}
 								{post.tags.length > 0 && (
 									<div className="flex flex-wrap gap-2 relative z-20">
-										{post.tags.map((tag) => (
+										{post.tags.map((t) => (
 											<Link
-												key={tag}
-												href={`/blog/tag/${tag}`}
+												key={t}
+												href={`/blog/tag/${t}`}
 												className="font-mono text-[11px] md:text-[12px] uppercase tracking-[-2%] text-[#FFFFFF99] hover:text-[#9564ff] border border-[#292929] hover:border-[#3f3f3f] px-2 py-1 transition-colors duration-300"
 											>
-												{tag}
+												{t}
 											</Link>
 										))}
 									</div>

@@ -210,7 +210,8 @@ export default function ProductionScale() {
 									src="/images/production/clipart.svg"
 									width={12}
 									height={12}
-									alt="clipart"
+									alt=""
+									role="presentation"
 									className="absolute bottom-0 right-0 max-lg:w-[8px] max-lg:h-[8px]"
 								/>
 							)}

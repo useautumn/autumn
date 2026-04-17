@@ -1,0 +1,62 @@
+# Autumn — https://useautumn.com
+# robots.txt per RFC 9309
+
+User-agent: *
+Allow: /
+
+# --- AI crawlers ---
+# We welcome AI assistants discovering, citing, and learning from our public
+# content. Flip any of these to Disallow to change policy.
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Perplexity-User
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: Bytespider
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+User-agent: cohere-ai
+Allow: /
+
+# --- Content Signals (contentsignals.org / draft-romm-aipref-contentsignals) ---
+# search   = appear in search results
+# ai-input = usable as context when answering user questions (RAG)
+# ai-train = usable as training data for AI models
+Content-Signal: search=yes, ai-input=yes, ai-train=yes
+
+Sitemap: https://useautumn.com/sitemap.xml
+
+# LLM-friendly site summary (llmstxt.org)
+# https://useautumn.com/llms.txt

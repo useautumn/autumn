@@ -69,6 +69,7 @@ export default function ProblemAnimation() {
 						<img
 							src={src}
 							alt=""
+							role="presentation"
 							className="block max-h-full max-w-[90%] object-contain"
 							draggable={false}
 						/>

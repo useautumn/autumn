@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { OrganizationJsonLd, WebSiteJsonLd } from "@/lib/structuredData";
 import type { LayoutProps } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -71,6 +72,12 @@ export const metadata: Metadata = {
 			"max-snippet": -1,
 		},
 	},
+	alternates: { canonical: "/" },
+};
+
+export const viewport: Viewport = {
+	themeColor: "#000000",
+	colorScheme: "dark",
 };
 
 export default function RootLayout({ children }: LayoutProps) {
@@ -84,7 +91,11 @@ export default function RootLayout({ children }: LayoutProps) {
 				"h-full bg-black antialiased",
 			)}
 		>
-			<body className="min-h-full flex flex-col">{children}</body>
+			<body className="min-h-full flex flex-col">
+				<OrganizationJsonLd />
+				<WebSiteJsonLd />
+				{children}
+			</body>
 		</html>
 	);
 }

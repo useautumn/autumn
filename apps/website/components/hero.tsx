@@ -281,7 +281,7 @@ export default function Hero() {
 								src={"/images/hero/autumn_mobile.svg"}
 								width={1600}
 								height={1600}
-								alt="xyz"
+								alt="Autumn billing configuration code editor"
 								priority
 							/>
 						</div>

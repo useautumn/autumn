@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Generated markdown siblings for Accept: text/markdown content negotiation
+/public/_md/

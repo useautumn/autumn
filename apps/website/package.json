@@ -4,7 +4,7 @@
 	"private": true,
 	"scripts": {
 		"dev": "next dev -p 3004",
-		"build": "next build",
+		"build": "next build && node scripts/generate-markdown-siblings.mjs && node scripts/generate-llms-txt.mjs",
 		"start": "next start",
 		"lint": "eslint"
 	},
@@ -24,12 +24,15 @@
 		"react": "19.2.4",
 		"react-dom": "19.2.4",
 		"react-syntax-highlighter": "^16.1.1",
+		"turndown": "^7.2.0",
+		"turndown-plugin-gfm": "^1.0.2",
 		"@types/react": "^19.2.14"
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4.2.2",
 		"@tailwindcss/typography": "^0.5.19",
 		"@types/react-syntax-highlighter": "^15.5.13",
+		"@types/turndown": "^5.0.5",
 		"eslint": "^10.2.0",
 		"eslint-config-next": "16.2.1",
 		"tailwindcss": "^4.2.2",

@@ -70,9 +70,9 @@ export default function Pricing() {
 					<div className="lg:bg-black text-white lg:border lg:border-[#292929] flex flex-col gap-6 lg:gap-0 border-none">
 						{/* Header */}
 						<div className="bg-black lg:bg-transparent -mx-4 px-4 lg:mx-0 lg:px-8 py-10 lg:py-8 border-b-0 lg:border-b border-[#292929]">
-							<h1 className="text-[30px] leading-[32px] md:leading-[40px] md:text-3xl lg:text-[40px] tracking-[-4%] text-white font-normal w-[85%] md:w-full font-sans">
+							<h2 className="text-[30px] leading-[32px] md:leading-[40px] md:text-3xl lg:text-[40px] tracking-[-4%] text-white font-normal w-[85%] md:w-full font-sans">
 								Start free. Scale with confidence.
-							</h1>
+							</h2>
 						</div>
 
 						{/* Pricing Columns */}
