@@ -114,7 +114,7 @@ const buildEntitiesCTE = (withEntities: boolean) => {
         SELECT * FROM entities e
         WHERE e.internal_customer_id = (SELECT internal_id FROM customer_record)
         ORDER BY e.internal_id DESC
-        LIMIT 1000
+        LIMIT 300
       ) e
     )
   `;
@@ -692,7 +692,7 @@ export const getPaginatedFullCusQuery = ({
         FROM entities e
         WHERE e.internal_customer_id = cr.internal_id
         ORDER BY e.internal_id DESC
-        LIMIT 1000
+        LIMIT 300
       ) e ON true
       GROUP BY cr.internal_id
     )`
