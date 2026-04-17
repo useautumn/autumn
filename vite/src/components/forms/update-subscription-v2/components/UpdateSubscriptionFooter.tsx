@@ -1,28 +1,34 @@
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { cn } from "@/lib/utils";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 const FOOTER_DELAY_MS = 350;
 
 export function UpdateSubscriptionFooter() {
-	const {
-		isPending,
-		hasChanges,
-		previewQuery,
-		handleConfirm,
-		handleInvoiceUpdate,
-	} = useUpdateSubscriptionFormContext();
+	const { isPending, hasChanges, previewQuery, handleConfirm } =
+		useUpdateSubscriptionFormContext();
+	const { setSheet } = useSheetStore();
+	const itemId = useSheetStore((s) => s.itemId);
 
 	const isLoading = previewQuery.isLoading;
 	const hasError = !!previewQuery.error;
 	const isReady = hasChanges && !isLoading && !hasError;
+
+	const previewData = previewQuery.data;
+	const isZeroAmount = previewData && previewData.total <= 0;
+
+	const invoiceDisabledReason = isZeroAmount
+		? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
+		: null;
 
 	const [showFooter, setShowFooter] = useState(false);
 
@@ -44,43 +50,41 @@ export function UpdateSubscriptionFooter() {
 				transition={{ duration: 0.2 }}
 				className="flex flex-col gap-2 w-full"
 			>
-				<Popover>
-					<PopoverTrigger asChild>
-						<Button variant="secondary" className="w-full" disabled={isPending}>
-							Send an Invoice
-						</Button>
-					</PopoverTrigger>
-					<PopoverContent className="w-(--radix-popover-trigger-width) p-0">
-						<div className="flex flex-col">
-							<button
-								type="button"
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<span
+							className={cn(
+								"flex w-full",
+								invoiceDisabledReason && "cursor-not-allowed",
+							)}
+						>
+							<Button
+								variant="secondary"
+								className={cn(
+									"w-full",
+									invoiceDisabledReason && "pointer-events-none opacity-50",
+								)}
+								disabled={!invoiceDisabledReason && isPending}
 								onClick={() =>
-									handleInvoiceUpdate({ enableProductImmediately: true })
+									setSheet({
+										type: "subscription-update-send-invoice",
+										itemId,
+									})
 								}
-								className="px-4 py-3 text-left text-sm hover:bg-accent"
 							>
-								<div className="font-medium">Enable plan immediately</div>
-								<div className="text-xs text-muted-foreground">
-									Enable the plan immediately and redirect to Stripe to finalize
-									the invoice
-								</div>
-							</button>
-							<button
-								type="button"
-								onClick={() =>
-									handleInvoiceUpdate({ enableProductImmediately: false })
-								}
-								className="px-4 py-3 text-left text-sm hover:bg-accent border-t"
-							>
-								<div className="font-medium">Enable plan after payment</div>
-								<div className="text-xs text-muted-foreground">
-									Generate an invoice link for the customer. The plan will be
-									enabled after they pay the invoice
-								</div>
-							</button>
-						</div>
-					</PopoverContent>
-				</Popover>
+								Send an Invoice
+							</Button>
+						</span>
+					</TooltipTrigger>
+					{invoiceDisabledReason && (
+						<TooltipContent
+							side="top"
+							className="max-w-(--radix-tooltip-trigger-width)"
+						>
+							{invoiceDisabledReason}
+						</TooltipContent>
+					)}
+				</Tooltip>
 				<Button
 					variant="primary"
 					className="w-full"
