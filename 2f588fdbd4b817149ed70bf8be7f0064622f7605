@@ -1,0 +1,23 @@
+server/src/internal/misc/edgeConfig/orgLimitsStore.ts
+  1b6a6a7ad36a757c 56,60,64,67-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "2f588fdbd4b817149ed70bf8be7f0064622f7605",
+  "prompts": {
+    "1b6a6a7ad36a757c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_264f69b1effe76OfyXBPiQvY2H",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 2,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    }
+  }
+}
