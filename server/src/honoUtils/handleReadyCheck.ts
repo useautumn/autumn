@@ -94,7 +94,7 @@ const runRedisCheck = async () => {
 };
 
 export const handleReadyCheck = async () => {
-	const [postgres, redis] = await Promise.all([
+	const [postgresResult, redisResult] = await Promise.all([
 		runPostgresCheck(),
 		runRedisCheck(),
 	]);
