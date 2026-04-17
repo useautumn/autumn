@@ -40,6 +40,7 @@ const createMockFullCustomer = (
 	entities: [],
 	extra_customer_entitlements: [],
 	send_email_receipts: true,
+	ignore_past_due: false,
 	...overrides,
 });
 

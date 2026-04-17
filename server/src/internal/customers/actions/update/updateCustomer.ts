@@ -36,6 +36,7 @@ export const updateCustomer = async ({
 		customer_id: customerId,
 		new_customer_id: newCustomerId,
 		billing_controls,
+		config,
 		...newCusData
 	} = params;
 
@@ -146,11 +147,19 @@ export const updateCustomer = async ({
 			billingControlUpdates.overage_allowed = billing_controls.overage_allowed;
 	}
 
+	// config fields are flattened onto the customers row
+	const configUpdates: Partial<Customer> = {};
+	if (config) {
+		if (config.ignore_past_due !== undefined)
+			configUpdates.ignore_past_due = config.ignore_past_due;
+	}
+
 	const updateData: Partial<Customer> = {
 		...newCusData,
 		id: newCustomerId,
 		metadata: mergedMetadata,
 		...billingControlUpdates,
+		...configUpdates,
 	};
 
 	if (newStripeId) {

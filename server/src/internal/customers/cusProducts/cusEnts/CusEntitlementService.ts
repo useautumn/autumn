@@ -182,6 +182,11 @@ export class CusEntService {
 						or(
 							isNull(customerEntitlements.customer_product_id),
 							eq(customerProducts.status, CusProductStatus.Active),
+							// Include past_due products when the customer opted into ignore_past_due
+							and(
+								eq(customerProducts.status, CusProductStatus.PastDue),
+								eq(customers.ignore_past_due, true),
+							),
 						),
 						lt(
 							customerEntitlements.next_reset_at,

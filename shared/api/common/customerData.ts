@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls";
+import { CustomerConfigParamsSchema } from "../../models/cusModels/customerConfig/customerConfig";
 import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas";
 
 // for internal use only
@@ -52,6 +53,10 @@ export const CustomerDataSchema = z
 
 		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
 			description: "Billing controls for the customer (auto top-ups, etc.)",
+		}),
+
+		config: CustomerConfigParamsSchema.optional().meta({
+			description: "Miscellaneous configurations for the customer.",
 		}),
 
 		internal_options: CreateCustomerInternalOptionsSchema.optional().meta({

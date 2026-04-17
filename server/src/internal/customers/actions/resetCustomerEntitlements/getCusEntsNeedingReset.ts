@@ -16,9 +16,15 @@ export const getCusEntsNeedingReset = ({
 }): FullCusEntWithFullCusProduct[] => {
 	const result: FullCusEntWithFullCusProduct[] = [];
 
+	// If the customer opted into ignore_past_due, also reset entitlements
+	// for products that are currently past_due.
+	const inStatuses = fullCus.ignore_past_due
+		? [CusProductStatus.Active, CusProductStatus.PastDue]
+		: [CusProductStatus.Active];
+
 	const cusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer: fullCus,
-		inStatuses: [CusProductStatus.Active],
+		inStatuses,
 	});
 
 	for (const cusEnt of cusEnts) {

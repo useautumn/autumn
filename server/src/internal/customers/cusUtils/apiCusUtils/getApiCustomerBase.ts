@@ -85,6 +85,9 @@ export const getApiCustomerBase = async ({
 			usage_alerts: fullCus.usage_alerts ?? undefined,
 			overage_allowed: fullCus.overage_allowed ?? undefined,
 		},
+		config: {
+			ignore_past_due: fullCus.ignore_past_due ?? false,
+		},
 
 		invoices:
 			fullCus.invoices && ctx.expand.includes(CustomerExpand.Invoices)
