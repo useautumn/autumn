@@ -1,0 +1,14 @@
+{
+  "$schema": "https://capy.ai/settings.schema.json",
+  "hooks": {
+    "previews": [
+      {
+        "name": "localhost",
+        "port": 3000
+      }
+    ],
+    "context": {
+      "maxOutputLength": 2000
+    }
+  }
+}
