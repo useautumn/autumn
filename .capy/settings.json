@@ -1,10 +1,25 @@
 {
   "$schema": "https://capy.ai/settings.schema.json",
   "hooks": {
+    "setup": [
+      {
+        "command": "bun agent:bootstrap"
+      }
+    ],
+    "terminals": [
+      {
+        "name": "dev",
+        "command": "bun dev:agent"
+      }
+    ],
     "previews": [
       {
-        "name": "localhost",
+        "name": "Vite",
         "port": 3000
+      },
+      {
+        "name": "Server",
+        "port": 8080
       }
     ],
     "context": {
