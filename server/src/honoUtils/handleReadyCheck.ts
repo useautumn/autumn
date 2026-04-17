@@ -12,9 +12,11 @@ const READY_CHECK_TOKEN = process.env.READY_CHECK_TOKEN?.trim();
 const withTimeout = async <T>({
 	timeoutMs,
 	fn,
+	onTimeout,
 }: {
 	timeoutMs: number;
 	fn: () => Promise<T>;
+	onTimeout?: () => void;
 }): Promise<T> => {
 	let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
@@ -22,10 +24,11 @@ const withTimeout = async <T>({
 		return await Promise.race([
 			fn(),
 			new Promise<never>((_, reject) => {
-				timeoutId = setTimeout(
-					() => reject(new Error(`timed out after ${timeoutMs}ms`)),
-					timeoutMs,
-				);
+				timeoutId = setTimeout(() => {
+					onTimeout?.();
+					reject(new Error(`timed out after ${timeoutMs}ms`));
+				}, timeoutMs);
+				timeoutId.unref?.();
 			}),
 		]);
 	} finally {
@@ -38,11 +41,11 @@ const runPostgresCheck = async () => {
 
 	try {
 		const health = getDbHealth();
+		const query = clientCritical`SELECT 1`;
 		await withTimeout({
 			timeoutMs: POSTGRES_TIMEOUT_MS,
-			fn: async () => {
-				await clientCritical`SELECT 1`;
-			},
+			fn: () => query,
+			onTimeout: () => query.cancel(),
 		});
 
 		return {
