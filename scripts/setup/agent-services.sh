@@ -38,6 +38,7 @@ DB_NAME="autumn"
 sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'" 2>/dev/null \
   | grep -q 1 || sudo -u postgres createdb "$DB_NAME"
 sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'postgres';" >/dev/null 2>&1 || true
+sudo -u postgres psql -d "$DB_NAME" -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;" >/dev/null 2>&1 || true
 
 # --- 4. Write env files (no-op if server/.env already exists) ---
 bun scripts/setup/writeAgentEnv.ts
