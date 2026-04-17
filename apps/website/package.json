@@ -23,13 +23,16 @@
 		"ngrok": "^5.0.0-beta.2",
 		"react": "19.2.4",
 		"react-dom": "19.2.4",
-		"react-syntax-highlighter": "^16.1.1"
+		"react-syntax-highlighter": "^16.1.1",
+		"@types/react": "^19.2.14"
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4.2.2",
 		"@tailwindcss/typography": "^0.5.19",
+		"@types/react-syntax-highlighter": "^15.5.13",
 		"eslint": "^10.2.0",
 		"eslint-config-next": "16.2.1",
-		"tailwindcss": "^4.2.2"
+		"tailwindcss": "^4.2.2",
+		"typescript": "^6.0.2"
 	}
 }
