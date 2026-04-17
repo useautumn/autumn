@@ -53,16 +53,22 @@ export const getOrgLimitsConfigFromSource = async () => {
 export const updateOrgLimitsInSource = async ({
 	orgId,
 	maxCusProducts,
+	maxEntities,
 }: {
 	orgId: string;
 	maxCusProducts?: number;
+	maxEntities?: number;
 }) => {
 	const config = await store.readFromSource();
 
-	if (maxCusProducts === undefined) {
+	if (maxCusProducts === undefined && maxEntities === undefined) {
 		delete config.orgs[orgId];
 	} else {
-		config.orgs[orgId] = { maxCusProducts };
+		config.orgs[orgId] = {
+			...config.orgs[orgId],
+			...(maxCusProducts !== undefined ? { maxCusProducts } : {}),
+			...(maxEntities !== undefined ? { maxEntities } : {}),
+		};
 	}
 
 	await store.writeToSource({ config });
