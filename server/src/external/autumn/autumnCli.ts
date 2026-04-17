@@ -26,6 +26,7 @@ import {
 	type CreateScheduleParamsV0Input,
 	type CreateScheduleResponse,
 	type CustomerBillingControlsParams,
+	type CustomerConfigParams,
 	CustomerExpand,
 	type DeleteBalanceParamsV0,
 	EntityExpand,
@@ -524,6 +525,7 @@ export class AutumnInt {
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
 				billing_controls?: CustomerBillingControlsParams;
+				config?: CustomerConfigParams;
 			},
 		) => {
 			const data = await this.patch(`/customers/${customerId}`, updates);
@@ -540,6 +542,7 @@ export class AutumnInt {
 				send_email_receipts?: boolean;
 				metadata?: Record<string, unknown>;
 				billing_controls?: CustomerBillingControlsParams;
+				config?: CustomerConfigParams;
 			},
 		) => {
 			const data = await this.post(`/customers.update`, {

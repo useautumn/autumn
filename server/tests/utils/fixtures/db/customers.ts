@@ -24,6 +24,7 @@ const create = ({
 	entities: [],
 	extra_customer_entitlements: [],
 	send_email_receipts: false,
+	ignore_past_due: false,
 });
 
 // ═══════════════════════════════════════════════════════════════════
