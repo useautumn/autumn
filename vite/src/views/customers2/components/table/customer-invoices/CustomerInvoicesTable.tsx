@@ -36,7 +36,7 @@ export function CustomerInvoicesTable() {
 	);
 
 	const { lineItemsByInvoiceId } = useInvoiceLineItemsQuery({
-		customerId: customer?.id || customer?.internal_id,
+		customerId: customer?.internal_id || customer?.id,
 		invoiceIds,
 		enabled: invoiceIds.length > 0,
 	});
