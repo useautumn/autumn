@@ -24,17 +24,14 @@ const statusConfig = {
 };
 
 const getRefundStatus = ({
-	amountPaid,
 	total,
 	refundedAmount,
 }: {
-	amountPaid: number;
 	total: number;
 	refundedAmount: number;
 }): { color: string; label: string } | null => {
 	if (refundedAmount <= 0) return null;
-	const refundableAmount = Math.abs(amountPaid ?? total);
-	if (refundedAmount >= refundableAmount) {
+	if (refundedAmount >= Math.abs(total)) {
 		return {
 			color: "bg-amber-500 dark:bg-amber-600",
 			label: "Fully Refunded",
@@ -48,12 +45,10 @@ const getRefundStatus = ({
 
 export function CustomerInvoiceStatus({
 	status,
-	amountPaid,
 	total,
 	refundedAmount,
 }: {
 	status: InvoiceStatus | null | undefined;
-	amountPaid?: number | null;
 	total?: number;
 	refundedAmount?: number;
 }) {
@@ -64,11 +59,7 @@ export function CustomerInvoiceStatus({
 		status === InvoiceStatus.Paid &&
 		total !== undefined &&
 		refundedAmount !== undefined
-			? getRefundStatus({
-					amountPaid: amountPaid ?? total,
-					total,
-					refundedAmount,
-				})
+			? getRefundStatus({ total, refundedAmount })
 			: null;
 
 	const config = refundStatus ?? statusConfig[status];
