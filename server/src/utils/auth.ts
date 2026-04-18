@@ -23,6 +23,7 @@ import { afterSessionCreated } from "./authUtils/afterSessionCreated.js";
 import { afterSessionDeleted } from "./authUtils/afterSessionDeleted.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { ADMIN_USER_IDs } from "./constants.js";
+import { getSelfHostedOrigins } from "./corsOrigins.js";
 
 export const auth = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL,
@@ -73,6 +74,8 @@ export const auth = betterAuth({
 			"https://staging.useautumn.com",
 			"https://*.useautumn.com",
 		];
+
+		origins.push(...getSelfHostedOrigins());
 
 		// Better Auth validates origins independently from app-level CORS.
 		// Allow local multi-port setups for any non-production runtime.

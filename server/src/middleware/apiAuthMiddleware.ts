@@ -1,6 +1,6 @@
 import { AuthType, ErrCode } from "@autumn/shared";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
-import { dashboardOrigins } from "@/utils/constants.js";
+import { isDashboardOrigin } from "@/utils/constants.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { withOrgAuth } from "./authMiddleware.js";
 import { verifyBearerPublishableKey } from "./publicAuthMiddleware.js";
@@ -15,7 +15,7 @@ const verifySecretKey = async (req: any, res: any, next: any) => {
 
 	if (!authHeader || !authHeader.startsWith("Bearer ")) {
 		const origin = req.get("origin");
-		if (dashboardOrigins.includes(origin)) {
+		if (isDashboardOrigin({ origin })) {
 			return withOrgAuth(req, res, next);
 		} else {
 			throw new RecaseError({
@@ -100,7 +100,7 @@ export const apiAuthMiddleware = async (req: any, res: any, next: any) => {
 	} catch (error: any) {
 		if (error instanceof RecaseError) {
 			if (error.code === ErrCode.InvalidSecretKey) {
-				const apiKey = req.headers["authorization"]?.split(" ")[1];
+				const apiKey = req.headers.authorization?.split(" ")[1];
 				error.message = `Invalid secret key: ${maskApiKey(apiKey)}`;
 			}
 
