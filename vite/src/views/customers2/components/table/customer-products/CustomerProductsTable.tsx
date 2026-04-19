@@ -52,7 +52,7 @@ function createScopeColumn(
 					className="font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
 				>
 					<span className="truncate w-full">
-						{entity.name || entity.id || entity.internal_id}
+						{entity.name || entity.id || "PENDING"}
 					</span>
 				</Button>
 			);

@@ -1,3 +1,8 @@
+import type {
+	DbOverageAllowed,
+	DbSpendLimit,
+	DbUsageAlert,
+} from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 
 export class CusService {
@@ -25,6 +30,28 @@ export class CusService {
 		data: any;
 	}) {
 		return await axios.post(`/v1/customers/${customer_id}`, data);
+	}
+
+	static async updateEntity({
+		axios,
+		customerId,
+		entityId,
+		billingControls,
+	}: {
+		axios: AxiosInstance;
+		customerId: string;
+		entityId: string;
+		billingControls: {
+			spend_limits?: DbSpendLimit[];
+			usage_alerts?: DbUsageAlert[];
+			overage_allowed?: DbOverageAllowed[];
+		};
+	}) {
+		return await axios.post("/v1/entities.update", {
+			customer_id: customerId,
+			entity_id: entityId,
+			billing_controls: billingControls,
+		});
 	}
 
 	static async getProductOptions(axios: AxiosInstance, data: any) {

@@ -1,22 +1,16 @@
-import { motion } from "motion/react";
-import { useMemo } from "react";
 import { PlanItemsSection } from "@/components/forms/shared";
-import {
-	STAGGER_CONTAINER,
-	STAGGER_ITEM,
-	STAGGER_ITEM_LAYOUT,
-} from "@/components/forms/update-subscription-v2/constants/animationConstants";
-import {
-	LAYOUT_TRANSITION,
-	SheetSection,
-} from "@/components/v2/sheets/SharedSheetComponents";
+import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { outgoingToProductItems } from "../utils/attachDiffUtils";
-import { AttachPlanSkeleton } from "./AttachPlanSkeleton";
 import { AttachSectionTitle } from "./AttachSectionTitle";
 
-export function AttachPlanSection() {
+export function AttachPlanSection({
+	readOnly,
+	showDiff,
+}: {
+	readOnly?: boolean;
+	showDiff?: boolean;
+} = {}) {
 	const {
 		form,
 		formValues,
@@ -25,99 +19,60 @@ export function AttachPlanSection() {
 		productWithFormItems: product,
 		hasCustomizations,
 		initialPrepaidOptions,
+		previewPrepaidOptions,
 		handleEditPlan,
-		previewQuery,
+		previewDiff,
 	} = useAttachFormContext();
 
-	const { prepaidOptions, trialEnabled } = formValues;
+	const hideEditButton = readOnly || formValues.grantFree;
+	const { prepaidOptions } = formValues;
+
+	const effectiveInitialPrepaidOptions = readOnly
+		? previewPrepaidOptions
+		: initialPrepaidOptions;
 
 	const { org } = useOrg();
 	const currency = org?.default_currency ?? "USD";
 
-	// Convert outgoing balances to ProductItem format for diff comparison
-	// This shows what the customer is losing (outgoing) vs gaining (incoming)
-	const outgoingItems = useMemo(
-		() =>
-			outgoingToProductItems({
-				outgoing: previewQuery.data?.outgoing,
-				incomingItems: product?.items,
-			}),
-		[previewQuery.data?.outgoing, product?.items],
-	);
+	const outgoingItems = showDiff ? previewDiff.outgoingItems : [];
 
-	// Use outgoing items as the "original" for comparison when available
-	// This enables diffs like "100 → 200" for features in outgoing products
-	// Falls back to product template if no outgoing (new customer or no replacements)
 	const originalItemsForDiff =
 		outgoingItems.length > 0 ? outgoingItems : productTemplateItems;
 
-	// When there are outgoing items, always show diffs because we're comparing
-	// outgoing (what customer has) vs incoming (what they're getting) - different things
-	const showDiffs = hasCustomizations || outgoingItems.length > 0;
-
-	// Show skeleton only on initial load (isPending = no data yet)
-	// Subsequent fetches keep showing previous data via keepPreviousData
-	if (previewQuery.isPending) {
-		return <AttachPlanSkeleton />;
-	}
+	const shouldShowDiff = showDiff
+		? outgoingItems.length > 0 || hasCustomizations
+		: false;
 
 	if (!product) return null;
 
-	const hasItems =
-		(product?.items?.length ?? 0) > 0 ||
-		(showDiffs &&
-			originalItemsForDiff?.some(
-				(i) =>
-					i.feature_id &&
-					!product?.items?.some((pi) => pi.feature_id === i.feature_id),
-			));
-
-	// Common props for PlanItemsSection
 	const planItemsProps = {
 		product,
 		originalItems: originalItemsForDiff,
 		features,
 		prepaidOptions,
-		initialPrepaidOptions,
+		initialPrepaidOptions: effectiveInitialPrepaidOptions,
 		form,
-		hasCustomizations: showDiffs,
+		showDiff: shouldShowDiff,
 		currency,
 		onEditPlan: handleEditPlan,
-		gateDeletedItemsByCustomizations: true,
+		gateDeletedItemsByDiff: true,
+		readOnly: hideEditButton,
 	} as const;
+
+	const titleContent = readOnly ? (
+		<h3 className="text-sub select-none w-full">{product.name}</h3>
+	) : (
+		<h3 className="text-sub select-none w-full">
+			<AttachSectionTitle />
+		</h3>
+	);
 
 	return (
 		<SheetSection withSeparator>
-			<motion.div
-				className="flex flex-col gap-3"
-				initial="hidden"
-				animate="visible"
-				variants={STAGGER_CONTAINER}
-			>
-				<motion.div
-					layout="position"
-					transition={{ layout: LAYOUT_TRANSITION }}
-					variants={STAGGER_ITEM_LAYOUT}
-				>
-					<h3 className="text-sub select-none w-full">
-						<AttachSectionTitle />
-					</h3>
-				</motion.div>
-				{hasItems ? (
-					<PlanItemsSection
-						{...planItemsProps}
-						trialConfig={{
-							trialEnabled,
-							onTrialCollapse: () => form.setFieldValue("trialEnabled", false),
-						}}
-						useStaggerAnimation
-					/>
-				) : (
-					<motion.div variants={STAGGER_ITEM}>
-						<PlanItemsSection {...planItemsProps} />
-					</motion.div>
-				)}
-			</motion.div>
+			<div className="flex flex-col gap-1">
+				{titleContent}
+				<PlanItemsSection {...planItemsProps} />
+			</div>
 		</SheetSection>
 	);
 }

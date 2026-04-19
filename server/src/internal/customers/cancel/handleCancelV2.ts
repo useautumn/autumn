@@ -8,10 +8,27 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
+import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 
 export const handleCancelV2 = createRoute({
-	// body: CancelBodySchema,
+	lock:
+		process.env.NODE_ENV !== "development"
+			? {
+					ttlMs: 120000,
+					errorMessage:
+						"Cancel already in progress for this customer, try again in a few seconds",
+					getKey: (c) => {
+						const ctx = c.get("ctx");
+						if (!ctx.customerId) return null;
+						return buildBillingLockKey({
+							orgId: ctx.org.id,
+							env: ctx.env,
+							customerId: ctx.customerId,
+						});
+					},
+				}
+			: undefined,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 

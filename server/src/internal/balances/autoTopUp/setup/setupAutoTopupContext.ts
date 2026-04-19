@@ -1,9 +1,12 @@
 import {
 	ACTIVE_STATUSES,
 	BillingVersion,
+	cusEntToCusPrice,
 	cusProductToProduct,
+	customerPriceToBillingUnits,
 	type FullCustomer,
 	fullSubjectToFullCustomer,
+	roundUsageToNearestBillingUnit,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { fetchStripeCustomerForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.js";
@@ -116,12 +119,26 @@ export const setupAutoTopupContext = async ({
 	}
 
 	const { autoTopupConfig, customerEntitlement } = resolved;
+	const customerPrice = cusEntToCusPrice({
+		cusEnt: customerEntitlement,
+		errorOnNotFound: true,
+	});
+
+	const billingUnits = customerPriceToBillingUnits({ customerPrice });
+	const roundedQuantity = roundUsageToNearestBillingUnit({
+		usage: autoTopupConfig.quantity,
+		billingUnits,
+	});
+	const normalizedAutoTopupConfig = {
+		...autoTopupConfig,
+		quantity: roundedQuantity,
+	};
 
 	const { allowed, reason, limitState } = await preflightAutoTopupLimits({
 		ctx,
 		payload,
 		fullCustomer,
-		autoTopupConfig,
+		autoTopupConfig: normalizedAutoTopupConfig,
 	});
 
 	if (!allowed) {
@@ -170,7 +187,7 @@ export const setupAutoTopupContext = async ({
 		billingVersion: BillingVersion.V2,
 
 		// Auto top-up specific fields
-		autoTopupConfig,
+		autoTopupConfig: normalizedAutoTopupConfig,
 		customerEntitlement,
 
 		limitState,

@@ -7,7 +7,7 @@ import { useCustomerContext } from "./CustomerContext";
 const mutedDivClassName =
 	"py-0.5 px-1.5 rounded-lg text-t3 text-tiny flex items-center gap-2 h-6 max-w-48 truncate bg-muted text-tiny-id";
 
-const placeholderText = "NULL";
+const placeholderText = "PENDING";
 
 export const CustomerPageDetails = () => {
 	const { customer } = useCustomerContext();
@@ -24,21 +24,14 @@ export const CustomerPageDetails = () => {
 						size="mini"
 						className="text-t3"
 						innerClassName="max-w-30 text-tiny-id truncate !font-normal"
-					>
-						{/* <EnvelopeIcon className="!w-4 mt-0.5" weight="regular" /> */}
-					</CopyButton>
+					></CopyButton>
 				)}
 				<CopyButton
 					text={customer.id ?? placeholderText}
 					size="mini"
 					className="text-t3"
 					innerClassName="max-w-30 text-tiny-id truncate !font-normal"
-				>
-					{/* <UserCircleIcon
-						size={10}
-						className="!w-4"
-					/> */}
-				</CopyButton>
+				></CopyButton>
 				{customer.fingerprint && (
 					<div className={mutedDivClassName}>
 						<FingerprintIcon size={12} className="shrink-0" />

@@ -4,6 +4,7 @@ export type HttpClientConfig = {
 	backendUrl?: string;
 	pathPrefix: string;
 	includeCredentials?: boolean;
+	headers?: Record<string, string>;
 };
 
 type ErrorBody = {
@@ -24,7 +25,12 @@ const isErrorBody = (body: unknown): body is ErrorBody => {
 };
 
 export const createHttpClient = (config: HttpClientConfig) => {
-	const { backendUrl, pathPrefix, includeCredentials } = config;
+	const {
+		backendUrl,
+		pathPrefix,
+		includeCredentials,
+		headers: customHeaders,
+	} = config;
 	const baseUrl = backendUrl ? `${backendUrl}${pathPrefix}` : pathPrefix;
 
 	const request = async <T>({
@@ -38,12 +44,16 @@ export const createHttpClient = (config: HttpClientConfig) => {
 	}): Promise<T> => {
 		const url = `${baseUrl}/${route}`;
 
+		// Build headers with custom headers merged
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+			...customHeaders,
+		};
+
 		try {
 			const response = await fetch(url, {
 				method,
-				headers: {
-					"Content-Type": "application/json",
-				},
+				headers,
 				...(includeCredentials && { credentials: "include" as const }),
 				...(body !== undefined && { body: JSON.stringify(body) }),
 			});

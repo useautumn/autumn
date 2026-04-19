@@ -59,3 +59,10 @@ export const orgToFeaturesByOrgEnv = ({
 		[`${org.id}:${env}`]: features,
 	};
 };
+export const shouldForwardCustomerMetadata = ({
+	org,
+}: {
+	org: Organization;
+}) => {
+	return org.config.forward_customer_metadata;
+};

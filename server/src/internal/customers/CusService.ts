@@ -6,6 +6,7 @@ import {
 	CustomerNotFoundError,
 	customerProducts,
 	customers,
+	type Entity,
 	type EntityExpand,
 	ErrCode,
 	type FullCusProduct,
@@ -33,6 +34,7 @@ import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
+import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import {
 	ACTIVE_STATUSES,
@@ -54,6 +56,7 @@ export class CusService {
 		allowNotFound = false,
 		withEvents = false,
 		explain = false,
+		skipReset = false,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -65,6 +68,7 @@ export class CusService {
 		allowNotFound?: boolean;
 		withEvents?: boolean;
 		explain?: boolean;
+		skipReset?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -84,7 +88,12 @@ export class CusService {
 				withSubs,
 			},
 			fn: async () => {
-				const query = getFullCusQuery(
+				const cusProductLimit = getOrgCusProductLimit({
+					orgId,
+					orgSlug: org.slug,
+				});
+
+				const query = getFullCusQuery({
 					idOrInternalId,
 					orgId,
 					env,
@@ -95,7 +104,8 @@ export class CusService {
 					withSubs,
 					withEvents,
 					entityId,
-				);
+					cusProductLimit,
+				});
 
 				if (explain) {
 					const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${query}`;
@@ -142,10 +152,21 @@ export class CusService {
 						.slice(0, 5);
 				}
 
-				// Skip reset when reading from replica — it writes to primary,
-				// and replica data is stale anyway. When degraded WITHOUT a replica
-				// (falls back to primary), the reset should still run.
-				if (!usedReplica) {
+				if (
+					orgId === "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF" &&
+					idOrInternalId === "698fb72e4c5fa12c1cd11ddc"
+				) {
+					fullCus.customer_products = (
+						fullCus.customer_products as FullCusProduct[]
+					)
+						.sort((a, b) => b.customer_prices.length - a.customer_prices.length)
+						.slice(0, 5);
+
+					fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
+				}
+				if (!usedReplica && !skipReset) {
+					// Skip reset only when executeWithHealthTracking explicitly chose the
+					// replica. Lazy reset writes themselves go through dbGeneral.
 					await resetCustomerEntitlements({
 						fullCus,
 						ctx,
@@ -303,10 +324,10 @@ export class CusService {
 		ctx: AutumnContext;
 		query?: Pick<
 			ListCustomersV2Params,
-			"plans" | "search" | "subscription_status"
+			"plans" | "search" | "subscription_status" | "processors"
 		>;
 	}): Promise<{ total_filtered_count: number }> {
-		if (!hasCustomerListFilters(query ?? {})) {
+		if (!hasCustomerListFilters({ ...query })) {
 			const { total_count } = await CusService.countByOrgIdAndEnv({ ctx });
 			return { total_filtered_count: total_count };
 		}
@@ -315,6 +336,27 @@ export class CusService {
 		const inStatuses = query?.subscription_status
 			? [query.subscription_status as CusProductStatus]
 			: ACTIVE_STATUSES;
+
+		const processorFilter = query?.processors?.length
+			? or(
+					...query.processors
+						.map((proc) => {
+							if (proc === "stripe")
+								return sql`(${customers.processor}->>'id' IS NOT NULL)`;
+							if (proc === "revenuecat")
+								return sql`EXISTS (
+									SELECT 1
+									FROM customer_products cp_processor
+									WHERE cp_processor.internal_customer_id = ${customers.internal_id}
+										AND cp_processor.processor->>'type' = 'revenuecat'
+								)`;
+							if (proc === "vercel")
+								return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
+							return undefined;
+						})
+						.filter((c): c is NonNullable<typeof c> => c !== undefined),
+				)
+			: undefined;
 
 		if (!query?.plans?.length) {
 			const [result] = await ctx.db
@@ -331,6 +373,7 @@ export class CusService {
 									ilike(customers.email, `%${search}%`),
 								)
 							: undefined,
+						processorFilter,
 					),
 				);
 
@@ -383,17 +426,20 @@ export class CusService {
 			.where(
 				and(
 					inArray(customerProducts.internal_product_id, internalProductIds),
-					search
-						? and(
-								eq(customers.org_id, ctx.org.id),
-								eq(customers.env, ctx.env),
-								or(
-									ilike(customers.id, `%${search}%`),
-									ilike(customers.name, `%${search}%`),
-									ilike(customers.email, `%${search}%`),
-								),
-							)
-						: undefined,
+					or(
+						search
+							? and(
+									eq(customers.org_id, ctx.org.id),
+									eq(customers.env, ctx.env),
+									or(
+										ilike(customers.id, `%${search}%`),
+										ilike(customers.name, `%${search}%`),
+										ilike(customers.email, `%${search}%`),
+									),
+								)
+							: undefined,
+					),
+					processorFilter,
 				),
 			);
 

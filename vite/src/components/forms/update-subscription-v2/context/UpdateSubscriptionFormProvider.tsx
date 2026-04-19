@@ -64,7 +64,7 @@ interface UpdateSubscriptionFormContextValue {
 
 	// Derived values
 	originalItems: ProductItem[] | undefined;
-	initialPrepaidOptions: Record<string, number>;
+	initialPrepaidOptions: Record<string, number | undefined>;
 	changedPrepaidOptions: Record<string, number> | undefined;
 	productWithFormItems: FrontendProduct | undefined;
 	isVersionReady: boolean;
@@ -232,7 +232,10 @@ export function UpdateSubscriptionFormProvider({
 		for (const [featureId, quantity] of Object.entries(
 			normalizedPrepaidOptions,
 		)) {
-			if (quantity !== initialPrepaidOptions[featureId]) {
+			if (
+				quantity !== undefined &&
+				quantity !== initialPrepaidOptions[featureId]
+			) {
 				changed[featureId] = quantity;
 			}
 		}
@@ -268,7 +271,8 @@ export function UpdateSubscriptionFormProvider({
 		hasChanges &&
 		!hasBillingChanges &&
 		!hasPrepaidQuantityChanges &&
-		!isVersionLoading;
+		!isVersionLoading &&
+		!normalizedFormValues.resetBillingCycle;
 
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext: formContext,
@@ -337,25 +341,6 @@ export function UpdateSubscriptionFormProvider({
 					form.setFieldValue(field, value);
 				},
 			});
-
-			const currentPrepaidOptions = form.store.state.values.prepaidOptions;
-			const updatedPrepaidOptions = { ...currentPrepaidOptions };
-			let hasNewPrepaidItems = false;
-
-			for (const item of draftProduct.items) {
-				if (
-					item.usage_model === "prepaid" &&
-					item.feature_id &&
-					updatedPrepaidOptions[item.feature_id] === undefined
-				) {
-					updatedPrepaidOptions[item.feature_id] = 0;
-					hasNewPrepaidItems = true;
-				}
-			}
-
-			if (hasNewPrepaidItems) {
-				form.setFieldValue("prepaidOptions", updatedPrepaidOptions);
-			}
 
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();

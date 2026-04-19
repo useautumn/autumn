@@ -45,7 +45,7 @@ export const PlanEditor = () => {
 						)}
 					</div>
 				</div>
-				<SheetOverlay />
+				<SheetOverlay inline />
 			</motion.div>
 
 			<ProductSheets />

@@ -1,4 +1,4 @@
-import type { BillingBehavior } from "@autumn/shared";
+import type { BillingBehavior, CancelAction } from "@autumn/shared";
 import {
 	AppEnv,
 	type CreateFreeTrial,
@@ -7,10 +7,7 @@ import {
 	type ProductV2,
 } from "@autumn/shared";
 import { useMemo } from "react";
-import type {
-	CancelActionValue,
-	RefundBehaviorValue,
-} from "@/components/forms/update-subscription-v2/updateSubscriptionFormSchema";
+import type { RefundBehaviorValue } from "@/components/forms/update-subscription-v2/types/refundBehaviourSchema";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useEnv } from "@/utils/envUtils";
@@ -22,7 +19,7 @@ interface UpdateSubscriptionBodyBuilderParams {
 	productId?: string;
 	product?: ProductV2;
 	entityId?: string;
-	prepaidOptions?: Record<string, number>;
+	prepaidOptions?: Record<string, number | undefined>;
 	version?: number;
 	useInvoice?: boolean;
 	enableProductImmediately?: boolean;
@@ -33,7 +30,7 @@ interface UpdateSubscriptionBodyBuilderParams {
 	items?: ProductItem[] | null;
 
 	// Cancel action fields
-	cancelAction?: CancelActionValue | null;
+	cancelAction?: CancelAction | null;
 	billingBehavior?: BillingBehavior | null;
 	refundBehavior?: RefundBehaviorValue | null;
 }
@@ -118,12 +115,14 @@ export function useUpdateSubscriptionBodyBuilder(
 export function buildLegacyUpdateSubscriptionOptions({
 	prepaidOptions,
 }: {
-	prepaidOptions?: Record<string, number>;
+	prepaidOptions?: Record<string, number | undefined>;
 }): FeatureOptions[] {
 	if (!prepaidOptions) return [];
 
-	return Object.entries(prepaidOptions).map(([featureId, quantity]) => ({
-		feature_id: featureId,
-		quantity: quantity || 0,
-	}));
+	return Object.entries(prepaidOptions)
+		.filter((entry): entry is [string, number] => entry[1] !== undefined)
+		.map(([featureId, quantity]) => ({
+			feature_id: featureId,
+			quantity,
+		}));
 }

@@ -18,7 +18,20 @@ export type SheetType =
 	| "subscription-uncancel"
 	| "balance-edit"
 	| "balance-delete"
+	| "balance-create"
 	| "invoice-detail"
+	| "sync-stripe"
+	| "billing-auto-topup-add"
+	| "billing-auto-topup-edit"
+	| "billing-spend-limit-add"
+	| "billing-spend-limit-edit"
+	| "billing-usage-alert-add"
+	| "billing-usage-alert-edit"
+	| "billing-overage-allowed-add"
+	| "billing-overage-allowed-edit"
+	| "record-usage"
+	| "check-balance"
+	| "create-schedule"
 	| null;
 
 // Store state interface

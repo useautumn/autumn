@@ -118,7 +118,7 @@ test(`${chalk.yellowBright("usage-alert1: usage threshold crossing triggers webh
 // TEST 2: Usage percentage threshold crossing triggers webhook
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test(`${chalk.yellowBright("usage-alert2: percentage threshold crossing triggers webhook")}`, async () => {
+test(`${chalk.yellowBright("usage-alert2: usage percentage threshold crossing triggers webhook")}`, async () => {
 	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
 	const freeProd = products.base({
 		id: "ua-pct-1",
@@ -391,15 +391,129 @@ test(`${chalk.yellowBright("usage-alert5: multiple alerts fire independently")}`
 		value: 300,
 	});
 
-	const secondResult = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+	const secondResult = await waitForWebhook<BalancesUsageAlertTriggeredPayload>(
+		{
+			token: playToken,
+			predicate: (payload) =>
+				payload.type === "balances.usage_alert_triggered" &&
+				payload.data?.customer_id === customerId &&
+				payload.data?.usage_alert?.threshold === 800,
+			timeoutMs: 15000,
+		},
+	);
+
+	expect(secondResult).not.toBeNull();
+	expect(secondResult!.payload.data.usage_alert.threshold).toBe(800);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Remaining threshold crossing triggers webhook
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test(`${chalk.yellowBright("usage-alert6: remaining threshold crossing triggers webhook")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
+	const freeProd = products.base({
+		id: "ua-remaining-1",
+		items: [messagesItem],
+	});
+
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "usage-alert-remaining-1",
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	await setCustomerUsageAlerts({
+		autumn: autumnV2_1,
+		customerId,
+		usageAlerts: [
+			{
+				feature_id: TestFeature.Messages,
+				threshold: 200,
+				threshold_type: "remaining",
+				enabled: true,
+			},
+		],
+	});
+
+	// Track 850 usage — remaining becomes 150, crosses below threshold of 200
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 850,
+	});
+
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
 		token: playToken,
 		predicate: (payload) =>
 			payload.type === "balances.usage_alert_triggered" &&
 			payload.data?.customer_id === customerId &&
-			payload.data?.usage_alert?.threshold === 800,
+			payload.data?.usage_alert?.threshold === 200,
 		timeoutMs: 15000,
 	});
 
-	expect(secondResult).not.toBeNull();
-	expect(secondResult!.payload.data.usage_alert.threshold).toBe(800);
+	expect(result).not.toBeNull();
+	expect(result?.payload.type).toBe("balances.usage_alert_triggered");
+
+	const { data } = result!.payload;
+	expect(data.customer_id).toBe(customerId);
+	expect(data.feature_id).toBe(TestFeature.Messages);
+	expect(data.usage_alert.threshold).toBe(200);
+	expect(data.usage_alert.threshold_type).toBe("remaining");
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 7: Remaining percentage threshold crossing triggers webhook
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test(`${chalk.yellowBright("usage-alert7: remaining percentage threshold crossing triggers webhook")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
+	const freeProd = products.base({
+		id: "ua-remaining-pct-1",
+		items: [messagesItem],
+	});
+
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "usage-alert-remaining-pct-1",
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	await setCustomerUsageAlerts({
+		autumn: autumnV2_1,
+		customerId,
+		usageAlerts: [
+			{
+				feature_id: TestFeature.Messages,
+				threshold: 20,
+				threshold_type: "remaining_percentage",
+				enabled: true,
+			},
+		],
+	});
+
+	// Track 850 usage — remaining is 150 = 15% of 1000, crosses below 20% threshold
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 850,
+	});
+
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "balances.usage_alert_triggered" &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.usage_alert?.threshold === 20,
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	expect(result?.payload.type).toBe("balances.usage_alert_triggered");
+
+	const { data } = result!.payload;
+	expect(data.customer_id).toBe(customerId);
+	expect(data.feature_id).toBe(TestFeature.Messages);
+	expect(data.usage_alert.threshold).toBe(20);
+	expect(data.usage_alert.threshold_type).toBe("remaining_percentage");
 });

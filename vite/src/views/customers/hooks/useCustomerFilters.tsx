@@ -23,6 +23,7 @@ const FILTER_PARAM_KEYS = [
 	"status",
 	"version",
 	"none",
+	"processor",
 	"page",
 	"pageSize",
 ] as const;
@@ -31,6 +32,7 @@ type PersistedCustomerFilters = {
 	status: string[];
 	version: string[];
 	none: boolean;
+	processor: string[];
 	pageSize: number;
 };
 
@@ -63,6 +65,7 @@ function buildRestoredState({
 		status: filters?.status?.length ? filters.status : null,
 		version: filters?.version?.length ? filters.version : null,
 		none: filters?.none ? true : null,
+		processor: filters?.processor?.length ? filters.processor : null,
 		page: null,
 		pageSize:
 			filters?.pageSize && filters.pageSize !== 50 ? filters.pageSize : null,
@@ -75,6 +78,7 @@ const queryStatesConfig = {
 	status: parseAsArrayOf(parseAsString).withDefault([]),
 	version: parseAsArrayOf(parseAsString).withDefault([]),
 	none: parseAsBoolean.withDefault(false),
+	processor: parseAsArrayOf(parseAsString).withDefault([]),
 	page: parseAsInteger.withDefault(1),
 	pageSize: parseAsInteger.withDefault(50),
 	lastItemId: parseAsString.withDefault(""),
@@ -155,6 +159,7 @@ export function CustomerFiltersProvider({
 					status: queryStates.status,
 					version: queryStates.version,
 					none: queryStates.none,
+					processor: queryStates.processor,
 					pageSize: queryStates.pageSize,
 				}),
 			);
@@ -166,6 +171,7 @@ export function CustomerFiltersProvider({
 		queryStates.status,
 		queryStates.version,
 		queryStates.none,
+		queryStates.processor,
 		queryStates.pageSize,
 	]);
 

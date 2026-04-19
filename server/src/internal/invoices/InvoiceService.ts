@@ -1,6 +1,7 @@
 import {
 	type ApiInvoiceV1,
 	type Customer,
+	ErrCode,
 	type Feature,
 	type InsertInvoice,
 	type Invoice,
@@ -8,14 +9,16 @@ import {
 	type InvoiceStatus,
 	invoices,
 	type Organization,
+	RecaseError,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { getInvoiceDiscounts } from "@server/external/stripe/stripeInvoiceUtils.js";
 import { generateId } from "@server/utils/genUtils.js";
 import { Autumn } from "autumn-js";
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type Stripe from "stripe";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 export const processInvoice = ({
 	invoice,
@@ -72,6 +75,68 @@ export class InvoiceService {
 		})) as Invoice & {
 			customer: Customer & { org: Organization & { master: Organization } };
 		};
+	}
+
+	static async getMany({ db, ids }: { db: DrizzleCli; ids: string[] }) {
+		return (await db.query.invoices.findMany({
+			where: inArray(invoices.id, ids),
+			with: {
+				customer: {
+					with: {
+						org: {
+							with: {
+								master: true,
+							},
+						},
+					},
+				},
+			},
+		})) as (Invoice & {
+			customer: Customer & { org: Organization & { master: Organization } };
+		})[];
+	}
+
+	static async assertOwnership({
+		ctx,
+		id,
+		customerId,
+	}: {
+		ctx: AutumnContext;
+		id: string | string[];
+		customerId?: string;
+	}) {
+		const invoices = await InvoiceService.getMany({
+			db: ctx.db,
+			ids: Array.isArray(id) ? id : [id],
+		});
+
+		if (invoices.length === 0) {
+			throw new RecaseError({
+				message: `Invoices not found`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		invoices.forEach((invoice) => {
+			if (invoice.customer.org.id !== ctx.org.id) {
+				throw new RecaseError({
+					message: `Invoice ${invoice.id} not owned by this organization`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+
+			if (customerId && invoice.customer.id !== customerId) {
+				throw new RecaseError({
+					message: `Invoice ${invoice.id} not owned by this customer`,
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+		});
+
+		return true;
 	}
 
 	static async list({
@@ -151,6 +216,11 @@ export class InvoiceService {
 			currency: stripeInvoice.currency,
 		});
 
+		const atmnAmountPaid = stripeToAtmnAmount({
+			amount: stripeInvoice.amount_paid,
+			currency: stripeInvoice.currency,
+		});
+
 		const invoice: Invoice = {
 			id: generateId("inv"),
 			internal_customer_id: internalCustomerId,
@@ -164,6 +234,8 @@ export class InvoiceService {
 
 			// Stripe stuff
 			total: atmnTotal,
+			amount_paid: atmnAmountPaid,
+			refunded_amount: 0,
 			currency: stripeInvoice.currency,
 			discounts: getInvoiceDiscounts({
 				expandedInvoice: stripeInvoice,
@@ -257,6 +329,7 @@ export class InvoiceService {
 					hosted_invoice_url: invoice.hosted_invoice_url,
 					discounts: invoice.discounts,
 					total: invoice.total,
+					amount_paid: invoice.amount_paid,
 					product_ids: invoice.product_ids?.length
 						? sql`CASE
 							WHEN ${invoices.product_ids} IS NULL OR cardinality(${invoices.product_ids}) = 0

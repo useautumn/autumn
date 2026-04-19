@@ -56,6 +56,7 @@ export function CustomerListTable({
 			queryStates.status,
 			queryStates.version,
 			queryStates.none,
+			queryStates.processor,
 			queryStates.q,
 		]),
 		// Placeholder queryFn - actual fetching is done by useFullCusSearchQuery
@@ -140,7 +141,8 @@ export function CustomerListTable({
 	const hasFilters =
 		queryStates.status.length > 0 ||
 		queryStates.version.length > 0 ||
-		queryStates.none;
+		queryStates.none ||
+		queryStates.processor.length > 0;
 	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
 
 	// Only show empty state if org has NO customers (no filters/search active and no results)

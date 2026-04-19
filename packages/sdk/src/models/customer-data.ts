@@ -59,6 +59,10 @@ export type CustomerDataAutoTopup = {
    * Optional rate limit to cap how often auto top-ups occur.
    */
   purchaseLimit?: CustomerDataPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
 };
 
 export type CustomerDataSpendLimit = {
@@ -77,14 +81,16 @@ export type CustomerDataSpendLimit = {
 };
 
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export const CustomerDataThresholdType = {
   Usage: "usage",
   UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
 } as const;
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type CustomerDataThresholdType = ClosedEnum<
   typeof CustomerDataThresholdType
@@ -92,7 +98,7 @@ export type CustomerDataThresholdType = ClosedEnum<
 
 export type CustomerDataUsageAlert = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**
@@ -100,11 +106,11 @@ export type CustomerDataUsageAlert = {
    */
   enabled?: boolean | undefined;
   /**
-   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
    */
   threshold: number;
   /**
-   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: CustomerDataThresholdType;
   /**
@@ -232,6 +238,7 @@ export type CustomerDataAutoTopup$Outbound = {
   threshold: number;
   quantity: number;
   purchase_limit?: CustomerDataPurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
 };
 
 /** @internal */
@@ -247,11 +254,13 @@ export const CustomerDataAutoTopup$outboundSchema: z.ZodMiniType<
     purchaseLimit: z.optional(
       z.lazy(() => CustomerDataPurchaseLimit$outboundSchema),
     ),
+    invoiceMode: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
     });
   }),
 );

@@ -1,8 +1,16 @@
-import type { Feature, Invoice, InvoiceLineItem } from "@autumn/shared";
 import {
+	type Feature,
+	type Invoice,
+	type InvoiceLineItem,
+	InvoiceStatus,
+	ProcessorType,
+} from "@autumn/shared";
+import {
+	ArrowCounterClockwiseIcon,
 	ArrowSquareOutIcon,
-	EyeIcon,
-	EyeSlashIcon,
+	CalendarBlankIcon,
+	CreditCardIcon,
+	HashIcon,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
@@ -10,6 +18,7 @@ import { AdminHover } from "@/components/general/AdminHover";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
+import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -18,12 +27,9 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
-
-interface InvoiceDetailSheetProps {
-	invoice: Invoice;
-	lineItems: InvoiceLineItem[];
-}
+import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
 
 type LineItemGroup = {
 	groupKey: string;
@@ -52,20 +58,19 @@ const resolveFeatureName = ({
 	return feature?.name ?? featureId;
 };
 
-export function InvoiceDetailSheet({
-	invoice,
-	lineItems,
-}: InvoiceDetailSheetProps) {
+export function InvoiceDetailSheet() {
+	const sheetData = useSheetStore((s) => s.data);
+	const invoice = sheetData?.invoice as Invoice | undefined;
+	const lineItems = (sheetData?.lineItems as InvoiceLineItem[]) ?? [];
+
 	const { stripeAccount } = useOrgStripeQuery();
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
 	const env = useEnv();
-	const closeSheet = useSheetStore((s) => s.closeSheet);
-	const [showDescriptions, setShowDescriptions] = useState(false);
+	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+	const { customer } = useCusQuery();
 
-	// Group line items: first by product_id, then within each product by
-	// stripe_subscription_item_id (for tiered) or individually.
-	// Sort: base price first, then alphabetically by label within each product.
+
 	const productGroups = useMemo(() => {
 		// Step 1: bucket line items by product_id
 		const byProduct = new Map<string, InvoiceLineItem[]>();
@@ -129,6 +134,17 @@ export function InvoiceDetailSheet({
 		return result;
 	}, [lineItems, features, products]);
 
+	if (!invoice) return null;
+
+	const isStripeCustomer = customer?.processor?.type === ProcessorType.Stripe;
+	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
+	const isFullyRefunded =
+		invoice.refunded_amount > 0 && invoice.refunded_amount >= refundableAmount;
+	const canRefund =
+		isStripeCustomer &&
+		invoice.status === InvoiceStatus.Paid &&
+		!isFullyRefunded;
+
 	const formatAmount = (amount: number, currency: string) => {
 		const absAmount = Math.abs(amount);
 		return new Intl.NumberFormat("en-US", {
@@ -172,114 +188,147 @@ export function InvoiceDetailSheet({
 	};
 
 	return (
-		<div className="flex flex-col h-full">
+		<div className="flex flex-col h-full overflow-y-auto">
 			<SheetHeader
 				title={
 					<div className="flex items-center gap-2">
 						<span>Invoice</span>
-						<CustomerInvoiceStatus status={invoice.status ?? "paid"} />
+						<CustomerInvoiceStatus
+							status={invoice.status ?? "paid"}
+							amountPaid={invoice.amount_paid}
+							total={invoice.total}
+							refundedAmount={invoice.refunded_amount}
+						/>
 					</div>
 				}
 				description={`${formatDate(invoice.created_at)} • ${formatSignedAmount(invoice.total, invoice.currency)}`}
 			/>
 
-			<div className="flex-1 overflow-y-auto min-h-0">
-				{/* Product groups with line items */}
-				{productGroups.map((productGroup) => (
-					<SheetSection
-						key={productGroup.productId ?? "unknown"}
-						withSeparator={true}
-					>
-						{/* Product header with description toggle */}
-						<div className="flex items-center justify-between mb-2">
-							<span className="text-xs font-medium text-t3 truncate">
-								{productGroup.productName}
-							</span>
-							<button
-								type="button"
-								onClick={() => setShowDescriptions((prev) => !prev)}
-								className="text-t4 hover:text-t2 transition-colors p-0.5 rounded"
-								title={
-									showDescriptions
-										? "Show computed display"
-										: "Show descriptions"
-								}
-							>
-								{showDescriptions ? (
-									<EyeSlashIcon size={14} />
-								) : (
-									<EyeIcon size={14} />
-								)}
-							</button>
-						</div>
+			{productGroups.map((productGroup) => (
+				<SheetSection
+					key={productGroup.productId ?? "unknown"}
+					withSeparator={true}
+				>
+					<div className="mb-2">
+						<span className="text-xs font-medium text-t3 truncate">
+							{productGroup.productName}
+						</span>
+					</div>
 
-						{/* Line item groups within this product */}
-						<div className="flex flex-col gap-2">
-							{productGroup.lineItemGroups.map((group) => (
-								<LineItemGroupRow
-									key={group.groupKey}
-									group={group}
-									formatAmount={formatAmount}
-									formatPeriod={formatPeriod}
-									currency={invoice.currency}
-									showDescriptions={showDescriptions}
-								/>
-							))}
-						</div>
-					</SheetSection>
-				))}
+					<div className="flex flex-col gap-2">
+						{productGroup.lineItemGroups.map((group) => (
+							<LineItemGroupRow
+								key={group.groupKey}
+								group={group}
+								formatAmount={formatAmount}
+								formatPeriod={formatPeriod}
+								currency={invoice.currency}
+							/>
+						))}
+					</div>
+				</SheetSection>
+			))}
 
-				{/* Invoice Total */}
-				<SheetSection withSeparator={true}>
+			<SheetSection withSeparator={true}>
+				<div className="flex flex-col gap-1.5">
 					<div className="flex items-center justify-between">
 						<span className="text-sm font-medium text-foreground">Total</span>
 						<span className="text-sm font-semibold text-foreground tabular-nums">
 							{formatSignedAmount(invoice.total, invoice.currency)}
 						</span>
 					</div>
-				</SheetSection>
-
-				{/* Invoice Details - Compact */}
-				<SheetSection withSeparator={false}>
-					<div className="space-y-2">
-						<div className="flex items-center justify-between text-xs">
-							<span className="text-t3">Invoice ID</span>
-							<MiniCopyButton
-								text={invoice.id}
-								innerClassName="text-xs text-t1 font-mono"
-							/>
-						</div>
-						<div className="flex items-center justify-between text-xs">
-							<span className="text-t3">Stripe ID</span>
-							<MiniCopyButton
-								text={invoice.stripe_id}
-								innerClassName="text-xs text-t1 font-mono"
-							/>
-						</div>
-						<div className="flex items-center justify-between text-xs">
-							<span className="text-t3">Created</span>
-							<span className="text-t1">
-								{format(new Date(invoice.created_at), "MMM d, yyyy HH:mm")}
+					{invoice.amount_paid != null && invoice.amount_paid !== invoice.total && (
+						<div className="flex items-center justify-between">
+							<span className="text-sm text-t2">Amount Paid</span>
+							<span className="text-sm tabular-nums text-t2">
+								{formatSignedAmount(invoice.amount_paid, invoice.currency)}
 							</span>
 						</div>
-					</div>
-				</SheetSection>
-			</div>
+					)}
+					{invoice.refunded_amount > 0 && (
+						<>
+							<div className="flex items-center justify-between">
+								<span className="text-sm text-t3">Refunded</span>
+								<span className="text-sm text-amber-500 tabular-nums">
+									-{formatAmount(invoice.refunded_amount, invoice.currency)}
+								</span>
+							</div>
+							<div className="flex items-center justify-between pt-1">
+								<span className="text-sm text-t3">Net</span>
+								<span className="text-sm font-semibold text-foreground tabular-nums">
+									{formatSignedAmount(
+										invoice.total - invoice.refunded_amount,
+										invoice.currency,
+									)}
+								</span>
+							</div>
+						</>
+					)}
+				</div>
+			</SheetSection>
 
-			{/* Footer */}
-			<div className="p-4 flex gap-2 border-t border-border/40">
-				<Button variant="secondary" className="flex-1" onClick={closeSheet}>
-					Close
-				</Button>
+			<SheetSection withSeparator={false}>
+				<div className="space-y-3">
+					<InfoRow
+						icon={<HashIcon size={16} weight="duotone" />}
+						label="Invoice ID"
+						value={
+							<MiniCopyButton
+								text={invoice.id}
+								innerClassName="text-sm text-t1 font-mono"
+							/>
+						}
+					/>
+					<InfoRow
+						icon={<CreditCardIcon size={16} weight="duotone" />}
+						label="Stripe ID"
+						value={
+							<MiniCopyButton
+								text={invoice.stripe_id}
+								innerClassName="text-sm text-t1 font-mono"
+							/>
+						}
+					/>
+					<InfoRow
+						icon={<CalendarBlankIcon size={16} weight="duotone" />}
+						label="Created"
+						value={
+							<MiniCopyButton
+								text={format(new Date(invoice.created_at), "MMM d, yyyy HH:mm")}
+								innerClassName="text-sm text-t1"
+							/>
+						}
+					/>
+				</div>
+			</SheetSection>
+
+			<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
 				<Button
-					variant="primary"
+					variant="secondary"
 					className="flex-1"
 					onClick={handleViewInvoice}
 				>
 					<ArrowSquareOutIcon size={16} className="mr-1.5" />
-					View Invoice
+					Open Invoice
 				</Button>
+				{canRefund && (
+					<Button
+						variant="primary"
+						className="flex-1"
+						onClick={() => setRefundDialogOpen(true)}
+					>
+						<ArrowCounterClockwiseIcon size={16} className="mr-1.5" />
+						Refund Invoice
+					</Button>
+				)}
 			</div>
+			{canRefund && (
+				<RefundInvoiceDialog
+					open={refundDialogOpen}
+					onOpenChange={setRefundDialogOpen}
+					invoice={invoice}
+				/>
+			)}
 		</div>
 	);
 }
@@ -289,13 +338,11 @@ function LineItemGroupRow({
 	formatAmount,
 	formatPeriod,
 	currency,
-	showDescriptions,
 }: {
 	group: LineItemGroup;
 	formatAmount: (amount: number, currency: string) => string;
 	formatPeriod: (startMs: number | null, endMs: number | null) => string | null;
 	currency: string;
-	showDescriptions: boolean;
 }) {
 	const isSingleItem = group.items.length === 1;
 	const firstItem = group.items[0];
@@ -331,20 +378,19 @@ function LineItemGroupRow({
 				{/* Group header with label and total */}
 				<div className="flex items-start justify-between gap-2">
 					<div className="flex flex-col min-w-0 flex-1 gap-0.5">
-						{showDescriptions ? (
+						<div className="flex items-center gap-1.5">
+							<span className="text-sm text-t1">{group.label}</span>
+							{totalQuantity > 0 && (
+								<Badge
+									variant="muted"
+									className="text-[10px] px-1.5 py-0 text-t3"
+								>
+									Qty: {totalQuantity}
+								</Badge>
+							)}
+						</div>
+						{firstItem.description && (
 							<span className="text-xs text-t3">{firstItem.description}</span>
-						) : (
-							<div className="flex items-center gap-1.5">
-								<span className="text-sm text-t1">{group.label}</span>
-								{totalQuantity > 0 && (
-									<Badge
-										variant="muted"
-										className="text-[10px] px-1.5 py-0 text-t3"
-									>
-										Qty: {totalQuantity}
-									</Badge>
-								)}
-							</div>
 						)}
 						{period && <span className="text-xs text-t4">{period}</span>}
 					</div>
@@ -353,7 +399,6 @@ function LineItemGroupRow({
 					</span>
 				</div>
 
-				{/* Tier breakdown - each row has own hover */}
 				<div className="mt-1 ml-3 flex flex-col gap-0.5">
 					{group.items.map((item) => (
 						<TierRow
@@ -362,7 +407,6 @@ function LineItemGroupRow({
 							hoverTexts={getLineItemHoverTexts(item)}
 							formatAmount={formatAmount}
 							currency={currency}
-							showDescriptions={showDescriptions}
 						/>
 					))}
 				</div>
@@ -379,26 +423,25 @@ function LineItemGroupRow({
 			<div className="flex flex-col py-1">
 				<div className="flex items-start justify-between gap-2">
 					<div className="flex flex-col min-w-0 flex-1 gap-0.5">
-						{showDescriptions ? (
+						<div className="flex items-center gap-1.5">
+							<span className="text-sm text-t1">{group.label}</span>
+							{(!group.isBasePrice && firstItem.total_quantity) ||
+							(group.isBasePrice &&
+								firstItem.stripe_quantity &&
+								firstItem.stripe_quantity > 1) ? (
+								<Badge
+									variant="muted"
+									className="text-[10px] px-1.5 py-0 text-t3"
+								>
+									Qty:{" "}
+									{group.isBasePrice
+										? firstItem.stripe_quantity
+										: firstItem.total_quantity}
+								</Badge>
+							) : null}
+						</div>
+						{firstItem.description && (
 							<span className="text-xs text-t3">{firstItem.description}</span>
-						) : (
-							<div className="flex items-center gap-1.5">
-								<span className="text-sm text-t1">{group.label}</span>
-								{(!group.isBasePrice && firstItem.total_quantity) ||
-								(group.isBasePrice &&
-									firstItem.stripe_quantity &&
-									firstItem.stripe_quantity > 1) ? (
-									<Badge
-										variant="muted"
-										className="text-[10px] px-1.5 py-0 text-t3"
-									>
-										Qty:{" "}
-										{group.isBasePrice
-											? firstItem.stripe_quantity
-											: firstItem.total_quantity}
-									</Badge>
-								) : null}
-							</div>
 						)}
 						{period && <span className="text-xs text-t4">{period}</span>}
 					</div>
@@ -448,23 +491,18 @@ function TierRow({
 	hoverTexts,
 	formatAmount,
 	currency,
-	showDescriptions,
 }: {
 	item: InvoiceLineItem;
 	hoverTexts: { key: string; value: string }[];
 	formatAmount: (amount: number, currency: string) => string;
 	currency: string;
-	showDescriptions: boolean;
 }) {
 	const isRefund = item.direction === "refund";
-	const quantityLabel = item.total_quantity ? `${item.total_quantity}` : "";
 
 	return (
 		<AdminHover asChild texts={hoverTexts}>
 			<div className="flex items-center justify-between text-xs text-t3">
-				<span>
-					{showDescriptions ? item.description : `${quantityLabel} units`}
-				</span>
+				<span>{item.description}</span>
 				<span
 					className={cn(
 						"tabular-nums",

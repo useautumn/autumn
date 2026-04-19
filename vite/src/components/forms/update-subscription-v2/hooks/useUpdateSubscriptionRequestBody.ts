@@ -18,8 +18,8 @@ export function buildUpdateSubscriptionOptions({
 	initialBackendQuantities,
 }: {
 	prepaidItems: PrepaidItemInput[];
-	prepaidOptions: Record<string, number>;
-	initialPrepaidOptions: Record<string, number>;
+	prepaidOptions: Record<string, number | undefined>;
+	initialPrepaidOptions: Record<string, number | undefined>;
 	initialBackendQuantities: Record<string, number>;
 }): { feature_id: string; quantity: number }[] {
 	const getFeatureId = ({ item }: { item: PrepaidItemInput }) =>
@@ -116,6 +116,10 @@ export function useUpdateSubscriptionRequestBody({
 			items,
 			cancelAction,
 			billingBehavior,
+			resetBillingCycle,
+			refundBehavior,
+			refundAmount,
+			noBillingChanges,
 		} = formValues;
 
 		const base = {
@@ -128,13 +132,19 @@ export function useUpdateSubscriptionRequestBody({
 
 		// For cancel actions, only include cancellation-related fields
 		if (cancelAction) {
+			const isRefund = refundBehavior === "refund";
 			return {
 				...base,
 				cancel_action: cancelAction,
 				billing_behavior:
-					cancelAction === "cancel_immediately"
+					cancelAction === "cancel_immediately" && !isRefund
 						? billingBehavior || undefined
 						: undefined,
+				refund_last_payment:
+					cancelAction === "cancel_immediately" && isRefund
+						? refundAmount || "prorated"
+						: undefined,
+				no_billing_changes: noBillingChanges || undefined,
 			};
 		}
 
@@ -160,6 +170,8 @@ export function useUpdateSubscriptionRequestBody({
 			items: items && items.length > 0 ? items : undefined,
 			version: version !== initialVersion ? version : undefined,
 			billing_behavior: billingBehavior || undefined,
+			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
+			no_billing_changes: noBillingChanges || undefined,
 		};
 	}, [
 		form.store,

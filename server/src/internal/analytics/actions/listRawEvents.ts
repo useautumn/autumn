@@ -89,11 +89,12 @@ export const listRawEvents = async ({
 	// Calculate billing cycle dates if needed
 	const billingCycleResult =
 		isBillingCycle && !params.aggregateAll && params.customer
-			? ((await getBillingCycleStartDate(
-					params.customer,
+			? ((await getBillingCycleStartDate({
+					customer: params.customer,
 					db,
-					intervalType as "1bc" | "3bc",
-				)) as BillingCycleResult | null)
+					intervalType: intervalType as "1bc" | "3bc",
+					ctx,
+				})) as BillingCycleResult | null)
 			: null;
 
 	// Calculate date range

@@ -1,86 +1,25 @@
-import type {
-	AutumnBillingPlan,
-	UpdateSubscriptionBillingContext,
-	UpdateSubscriptionV1Params,
-} from "@autumn/shared";
+import type { AutumnBillingPlan } from "@autumn/shared";
 import {
 	cusProductToPrices,
 	ErrCode,
+	isOneOffPrice,
 	isPrepaidPrice,
-	nullish,
-	priceToFeature,
 	RecaseError,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { billingPlanToNewActiveCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToNewActiveCustomerProduct";
-
-const checkInputFeatureQuantitiesAreValid = ({
-	ctx,
-	params,
-	autumnBillingPlan,
-	billingContext,
-}: {
-	ctx: AutumnContext;
-	params: UpdateSubscriptionV1Params;
-	autumnBillingPlan: AutumnBillingPlan;
-	billingContext: UpdateSubscriptionBillingContext;
-}) => {
-	const targetCustomerProduct =
-		billingPlanToNewActiveCustomerProduct({
-			autumnBillingPlan,
-		}) ?? billingContext.customerProduct;
-
-	if (!targetCustomerProduct) return;
-
-	const prepaidPrices = cusProductToPrices({
-		cusProduct: targetCustomerProduct,
-	}).filter(isPrepaidPrice);
-
-	for (const option of params.feature_quantities ?? []) {
-		if (nullish(option.quantity)) continue;
-
-		const targetPrepaidPrice = prepaidPrices.find((p) => {
-			const priceFeature = priceToFeature({
-				price: p,
-				features: ctx.features,
-				errorOnNotFound: false,
-			});
-			return priceFeature?.id === option.feature_id;
-		});
-
-		if (!targetPrepaidPrice) {
-			throw new RecaseError({
-				message: `Invalid feature quantity passed in (feature ID: ${option.feature_id}). This feature has no prepaid price on the updated product.`,
-			});
-		}
-	}
-};
 
 export const handleFeatureQuantityErrors = ({
-	ctx,
-	billingContext,
 	autumnBillingPlan,
-	params,
 }: {
-	ctx: AutumnContext;
-	billingContext: UpdateSubscriptionBillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
-	params: UpdateSubscriptionV1Params;
 }) => {
-	// 1. Check if param feature IDs are valid
-	checkInputFeatureQuantitiesAreValid({
-		ctx,
-		autumnBillingPlan,
-		billingContext,
-		params,
-	});
-
 	const newCustomerProduct = autumnBillingPlan.insertCustomerProducts?.[0];
 	if (!newCustomerProduct) return;
 
 	const newPrices = cusProductToPrices({ cusProduct: newCustomerProduct });
-	const prepaidPrices = newPrices.filter(isPrepaidPrice);
+	const prepaidPrices = newPrices.filter(
+		(p) => isPrepaidPrice(p) && !isOneOffPrice(p),
+	);
 
 	if (prepaidPrices.length === 0) return;
 

@@ -1,11 +1,10 @@
 import {
-	cusEntsToGrantedBalance,
-	cusEntsToPrepaidQuantity,
-	cusEntsToUsage,
+	type ApiBalanceV1,
 	type DbUsageAlert,
 	type Feature,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
+	getApiBalance,
 	WebhookEventType,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -14,36 +13,66 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 const wasThresholdCrossed = ({
 	alert,
-	oldUsage,
-	newUsage,
-	oldGrantedBalance,
-	newGrantedBalance,
+	oldApiBalance,
+	newApiBalance,
 }: {
 	alert: DbUsageAlert;
-	oldUsage: number;
-	newUsage: number;
-	oldGrantedBalance: number;
-	newGrantedBalance: number;
+	oldApiBalance: ApiBalanceV1;
+	newApiBalance: ApiBalanceV1;
 }) => {
 	if (alert.threshold_type === "usage") {
-		const shldAlert = oldUsage < alert.threshold && newUsage >= alert.threshold;
+		const shldAlert =
+			oldApiBalance.usage < alert.threshold &&
+			newApiBalance.usage >= alert.threshold;
 
 		return shldAlert;
 	}
 
+	if (alert.threshold_type === "remaining_percentage") {
+		if (oldApiBalance.granted <= 0 || newApiBalance.granted <= 0) return false;
+
+		const currentRemainingPercentage = new Decimal(newApiBalance.remaining)
+			.div(newApiBalance.granted)
+			.mul(100)
+			.toNumber();
+
+		const oldRemainingPercentage = new Decimal(oldApiBalance.remaining)
+			.div(oldApiBalance.granted)
+			.mul(100)
+			.toNumber();
+
+		return (
+			currentRemainingPercentage < alert.threshold &&
+			oldRemainingPercentage >= alert.threshold
+		);
+	}
+
+	if (alert.threshold_type === "remaining") {
+		const currentRemaining = newApiBalance.remaining;
+		const oldRemaining = oldApiBalance.remaining;
+
+		return (
+			currentRemaining < alert.threshold && oldRemaining >= alert.threshold
+		);
+	}
+
 	// usage_percentage
-	if (oldGrantedBalance <= 0 || newGrantedBalance <= 0) return false;
+	if (alert.threshold_type === "usage_percentage") {
+		if (oldApiBalance.granted <= 0 || newApiBalance.granted <= 0) return false;
 
-	const oldPercentage = new Decimal(oldUsage)
-		.div(oldGrantedBalance)
-		.mul(100)
-		.toNumber();
-	const newPercentage = new Decimal(newUsage)
-		.div(newGrantedBalance)
-		.mul(100)
-		.toNumber();
+		const oldPercentage = new Decimal(oldApiBalance.usage)
+			.div(oldApiBalance.granted)
+			.mul(100)
+			.toNumber();
+		const newPercentage = new Decimal(newApiBalance.usage)
+			.div(newApiBalance.granted)
+			.mul(100)
+			.toNumber();
 
-	return oldPercentage < alert.threshold && newPercentage >= alert.threshold;
+		return oldPercentage < alert.threshold && newPercentage >= alert.threshold;
+	}
+
+	return false;
 };
 
 const processAlerts = async ({
@@ -85,29 +114,25 @@ const processAlerts = async ({
 		entity,
 	});
 
-	const oldUsage = cusEntsToUsage({ cusEnts: oldCustomerEntitlements });
-	const newUsage = cusEntsToUsage({ cusEnts: newCustomerEntitlements });
-
-	const oldGrantedBalance = new Decimal(
-		cusEntsToGrantedBalance({ cusEnts: oldCustomerEntitlements }),
-	)
-		.add(cusEntsToPrepaidQuantity({ cusEnts: oldCustomerEntitlements }))
-		.toNumber();
-
-	const newGrantedBalance = new Decimal(
-		cusEntsToGrantedBalance({ cusEnts: newCustomerEntitlements }),
-	)
-		.add(cusEntsToPrepaidQuantity({ cusEnts: newCustomerEntitlements }))
-		.toNumber();
+	const { data: oldApiBalance } = getApiBalance({
+		ctx,
+		fullCus: oldFullCus,
+		cusEnts: oldCustomerEntitlements,
+		feature,
+	});
+	const { data: newApiBalance } = getApiBalance({
+		ctx,
+		fullCus: newFullCus,
+		cusEnts: newCustomerEntitlements,
+		feature,
+	});
 
 	for (const alert of matchingAlerts) {
 		if (
 			!wasThresholdCrossed({
 				alert,
-				oldUsage,
-				newUsage,
-				oldGrantedBalance,
-				newGrantedBalance,
+				oldApiBalance,
+				newApiBalance,
 			})
 		)
 			continue;

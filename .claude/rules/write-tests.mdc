@@ -53,7 +53,9 @@ s.track({ featureId: TestFeature.Messages, value: 50, timeout: 2000 })
 |---|---|---|
 | Endpoint | V1 `/attach` | V2 `/billing.attach` |
 | Extra params | none | `planSchedule`, `items` |
-| Use for | Legacy tests, simple setup | New billing tests |
+| Use for | Legacy tests, simple setup | Scenario setup for billing tests |
+
+For the action under test, prefer direct client calls like `autumnV2_2.billing.previewAttach<AttachParamsV1Input>(...)`, `autumnV2_2.billing.attach<AttachParamsV1Input>(...)`, and `autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>(...)`.
 
 ### 5. Prepaid Quantity: Inclusive vs Exclusive of `includedUsage`
 
@@ -138,15 +140,18 @@ tiers: [{ to: 500, amount: 10 }, { to: "inf", amount: 5 }]
 
 ```typescript
 // WRONG — multiple attaches in test body
-const { autumnV1 } = await initScenario({ actions: [] });
-await autumnV1.billing.attach({ product_id: pro.id }); // should be setup
-await autumnV1.billing.attach({ product_id: addon.id }); // the actual test
+const { autumnV2_2 } = await initScenario({ actions: [] });
+await autumnV2_2.billing.attach<AttachParamsV1Input>({ plan_id: pro.id }); // should be setup
+await autumnV2_2.billing.attach<AttachParamsV1Input>({ plan_id: addon.id }); // the actual test
 
 // RIGHT — prerequisite in initScenario, only tested action in body
-const { autumnV1 } = await initScenario({
+const { autumnV2_2 } = await initScenario({
   actions: [s.billing.attach({ productId: pro.id })],
 });
-await autumnV1.billing.attach({ customer_id: customerId, product_id: addon.id });
+await autumnV2_2.billing.attach<AttachParamsV1Input>({
+  customer_id: customerId,
+  plan_id: addon.id,
+});
 ```
 
 ### 19. Type Check After Writing Tests
@@ -173,13 +178,16 @@ Always ask the user for permission before running any test command. The user lik
 
 ### 22. Use the Correct Param Types Per API Client Version
 
-Each client version (`autumnV1`, `autumnV2`, `autumnV2_1`) expects different input/output types. Always pass the right types as generics and for local variables.
+Each client version (`autumnV1`, `autumnV2`, `autumnV2_1`, `autumnV2_2`) expects different input/output types. Always pass the right types as generics and for local variables.
+
+Billing endpoints are not strongly typed enough on their own. ALWAYS supply explicit generics on `billing.previewAttach(...)`, `billing.attach(...)`, and `subscriptions.update(...)`.
 
 | Client | API version | Attach input | Attach output | Update subscription input |
 |--------|------------|--------------|---------------|--------------------------|
 | `autumnV1` | V1 (`/attach`, `/billing.attach`) | `AttachParamsV0Input` | `ApiCustomerV3` | `UpdateSubscriptionV0Params` |
 | `autumnV2` | V2 (`/billing.attach`) | `AttachParamsV1Input` | `ApiCustomer` | `UpdateSubscriptionV1Params` |
 | `autumnV2_1` | V2.1 (`/attach`, `/update_subscription`) | `AttachParamsV1Input` | `ApiCustomerV5` | `UpdateSubscriptionV1ParamsInput` |
+| `autumnV2_2` | V2.2 (`/attach`, `/update_subscription`) | `AttachParamsV1Input` | `ApiCustomerV5` | `UpdateSubscriptionV1ParamsInput` |
 
 Key differences between `AttachParamsV0Input` and `AttachParamsV1Input`:
 - V0 (`autumnV1`): uses `product_id` + `options: [{ feature_id, quantity }]`
@@ -202,14 +210,20 @@ const params: AttachParamsV1Input = {
 };
 await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-// ✅ CORRECT — autumnV2_1 uses V1-style attach/update-subscription params
-await autumnV2_1.billing.attach<AttachParamsV1Input>({
+// ✅ CORRECT — autumnV2_2 uses V1-style attach/update-subscription params
+await autumnV2_2.billing.previewAttach<AttachParamsV1Input>({
   customer_id: customerId,
   plan_id: pro.id,
   feature_quantities: [{ feature_id: "messages", quantity: 200 }],
 });
 
-await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+await autumnV2_2.billing.attach<AttachParamsV1Input>({
+  customer_id: customerId,
+  plan_id: pro.id,
+  feature_quantities: [{ feature_id: "messages", quantity: 200 }],
+});
+
+await autumnV2_2.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
   customer_id: customerId,
   plan_id: pro.id,
   redirect_mode: "always",
@@ -219,4 +233,32 @@ await autumnV2_1.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
 await autumnV1.billing.attach({ customer_id, plan_id: pro.id, feature_quantities: [...] });
 ```
 
-Gotcha: if a test uses V1-style `attach` / `update_subscription` params like `plan_id`, `feature_quantities`, or `redirect_mode`, use `autumnV2_1`, not `autumnV2`.
+Gotcha: if a test uses V1-style `attach` / `update_subscription` params like `plan_id`, `feature_quantities`, or `redirect_mode`, prefer `autumnV2_2` and keep the explicit generic on the billing call.
+
+### 23. Prefer `autumnV2_2` + `expectBalanceCorrect` for Balance Assertions
+
+When a test is validating balances and the latest API version can be used, prefer `autumnV2_2` and assert with `@server/tests/integration/utils/expectBalanceCorrect.ts`.
+
+- Use `autumnV2_2.customers.get<ApiCustomerV5>(customerId)` where possible for latest-version balance assertions
+- Prefer `expectBalanceCorrect(...)` over older balance helpers when validating balance buckets, breakdowns, or rollovers
+- Keep using older clients only when the endpoint/param shape under test specifically requires them
+
+### 24. `autumnV2_2` Does NOT Return Negative `remaining`
+
+For `ApiCustomerV5` / `autumnV2_2` balance responses:
+
+- `remaining` does not go below `0`
+- To assert overage, inspect `usage` (and breakdown buckets) instead of expecting negative `remaining`
+
+```typescript
+// ❌ WRONG - latest API does not expose negative remaining
+expect(customer.balances.messages.remaining).toBe(-50)
+
+// ✅ RIGHT - assert remaining floor + overage usage
+expectBalanceCorrect({
+  customer,
+  featureId: TestFeature.Messages,
+  remaining: 0,
+  usage: 150,
+})
+```

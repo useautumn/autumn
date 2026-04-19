@@ -94,7 +94,7 @@ export function ProrationConfig() {
 
 	return (
 		<AreaCheckbox
-			title="Configure proration behaviour"
+			title="Configure proration behavior"
 			checked={true}
 			// disabled={true}
 		>

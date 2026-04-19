@@ -7,10 +7,38 @@ import {
 	Infinite,
 	type ProductItem,
 	ProductItemType,
+	TierBehavior,
 } from "@autumn/shared";
 import { notNullish } from "@/utils/genUtils";
 import { getFeature } from "../entitlementUtils";
 import { getItemType, intervalIsNone } from "../productItemUtils";
+
+const isVolumeFlatAmountItem = (item: ProductItem): boolean => {
+	if (item.tier_behavior !== TierBehavior.VolumeBased) return false;
+	if (!item.tiers || item.tiers.length === 0) return false;
+	return (
+		item.tiers.every((t) => t.amount === 0) &&
+		item.tiers.some((t) => (t.flat_amount ?? 0) > 0)
+	);
+};
+
+const formatFlatAmountTierRange = ({
+	item,
+	currency,
+}: {
+	item: ProductItem;
+	currency: string;
+}): string => {
+	const tiers = item.tiers;
+	if (!tiers) return "";
+	const format = (amount: number) => formatAmount({ currency, amount });
+
+	if (tiers.length === 1) return format(tiers[0].flat_amount ?? 0);
+
+	const first = tiers[0].flat_amount ?? 0;
+	const last = tiers[tiers.length - 1].flat_amount ?? 0;
+	return `${format(first)} - ${format(last)}`;
+};
 
 // Can probably delete this...
 const getPaidFeatureString = ({
@@ -22,6 +50,26 @@ const getPaidFeatureString = ({
 	currency?: string;
 	features: Feature[];
 }) => {
+	const feature = features.find((f: Feature) => f.id === item.feature_id);
+
+	if (isVolumeFlatAmountItem(item)) {
+		let result = formatFlatAmountTierRange({ item, currency });
+		result += ` for ${feature?.name}`;
+
+		if (!intervalIsNone(item.interval)) {
+			const intervalStr = formatInterval({
+				interval: item.interval ?? undefined,
+				intervalCount: item.interval_count ?? undefined,
+			});
+			result += ` ${intervalStr}`;
+		}
+
+		if (item.included_usage) {
+			return `${item.included_usage} ${feature?.name} free, then ${result}`;
+		}
+		return result;
+	}
+
 	let amountStr = "";
 
 	if (item.price) {
@@ -44,8 +92,6 @@ const getPaidFeatureString = ({
 		})}`;
 	}
 
-	const feature = features.find((f: Feature) => f.id === item.feature_id);
-
 	amountStr += ` per ${item.billing_units! > 1 ? item.billing_units : ""} ${
 		feature?.name
 	}`;
@@ -60,9 +106,8 @@ const getPaidFeatureString = ({
 
 	if (item.included_usage) {
 		return `${item.included_usage} ${feature?.name} free, then ${amountStr}`;
-	} else {
-		return amountStr;
 	}
+	return amountStr;
 };
 
 const getFixedPriceString = ({
