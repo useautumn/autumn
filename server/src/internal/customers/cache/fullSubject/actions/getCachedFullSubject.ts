@@ -1,9 +1,11 @@
 import { type FullSubject, normalizedToFullSubject } from "@autumn/shared";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
+import { applyLiveAggregatedBalances } from "../balances/applyLiveAggregatedBalances.js";
 import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
 import {
@@ -93,12 +95,14 @@ export const getCachedFullSubject = async ({
 		return undefined;
 	}
 
+	const isCustomerSubject = !entityId;
 	const balances = await getCachedFeatureBalancesBatch({
 		orgId: org.id,
 		env,
 		customerId,
 		featureIds: cached.meteredFeatures,
 		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,
+		includeAggregated: isCustomerSubject,
 	});
 
 	if (!balances || balances.length !== cached.meteredFeatures.length) {
@@ -120,7 +124,16 @@ export const getCachedFullSubject = async ({
 			customerEntitlements: balances.flatMap((balance) => balance.balances),
 		});
 
-		return normalizedToFullSubject({ normalized });
+		if (isCustomerSubject) {
+			applyLiveAggregatedBalances({
+				normalized,
+				featureBalances: balances,
+			});
+		}
+
+		const fullSubject = normalizedToFullSubject({ normalized });
+		await lazyResetSubjectEntitlements({ ctx, fullSubject });
+		return fullSubject;
 	} catch (error) {
 		logger.warn(
 			`[getCachedFullSubject] Failed to hydrate cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,

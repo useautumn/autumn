@@ -15,15 +15,10 @@ local function build_shared_subject_balance_key(params)
 end
 
 local function decode_subject_balance(raw_value)
-  if is_nil(raw_value) then
-    return nil
-  end
-
-  local decoded = cjson.decode(raw_value)
+  local decoded = safe_decode(raw_value)
   if type(decoded) ~= 'table' then
     return nil
   end
-
   return decoded
 end
 

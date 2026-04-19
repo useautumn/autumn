@@ -91,6 +91,7 @@ const buildNormalized = (): NormalizedFullSubject =>
 				customerPrice: null,
 				customerProductOptions: [],
 				customerProductQuantity: 1,
+				isEntityLevel: false,
 			},
 		],
 		customer_prices: [],

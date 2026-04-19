@@ -41,6 +41,9 @@ const subjectBalanceToFullCustomerEntitlement = ({
 }: {
 	subjectBalance: SubjectBalance;
 }): FullCustomerEntitlement => {
+	const replaceables = getArrayEntries<Replaceable>({
+		value: subjectBalance.replaceables,
+	});
 	const rollovers = getArrayEntries<SubjectBalance["rollovers"][number]>({
 		value: subjectBalance.rollovers,
 	});
@@ -66,7 +69,7 @@ const subjectBalanceToFullCustomerEntitlement = ({
 		external_id: subjectBalance.external_id,
 		customer_id: subjectBalance.customer_id,
 		entitlement: subjectBalance.entitlement,
-		replaceables: [] as Replaceable[],
+		replaceables,
 		rollovers: [...rollovers].sort(
 			(left, right) =>
 				getRolloverSortValue({ rollover: left }) -

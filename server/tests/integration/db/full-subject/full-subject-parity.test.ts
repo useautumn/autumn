@@ -52,10 +52,10 @@ describe(`${chalk.yellowBright("fullSubject db parity")}`, () => {
 					ctx,
 					customerId: scenario.ids.customerId,
 				});
-				const normalized = await getFullSubjectNormalized({
+				const { normalized } = (await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
-				});
+				}))!;
 
 				expect(fullSubject).toBeDefined();
 				expect(normalized).toBeDefined();

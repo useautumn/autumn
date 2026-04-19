@@ -2,100 +2,82 @@ import type { NormalizedFullSubject } from "@autumn/shared";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
+import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
+import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "../../config/fullSubjectCacheConfig.js";
 import { normalizedToCachedFullSubject } from "../../fullSubjectCacheModel.js";
-import { getOrInitFullSubjectViewEpoch } from "../invalidate/getOrInitFullSubjectViewEpoch.js";
 import type { SetCachedFullSubjectResult } from "./fullSubjectWriteTypes.js";
-import {
-	appendCachedFullSubjectViewWrite,
-	releaseCachedFullSubjectViewWrite,
-	reserveCachedFullSubjectViewWrite,
-} from "./setCachedFullSubjectView.js";
-import { appendSharedFullSubjectBalanceWrite } from "./setSharedFullSubjectBalances.js";
+import { buildSharedBalanceWrites } from "./setSharedFullSubjectBalances.js";
 
 export type { SetCachedFullSubjectResult } from "./fullSubjectWriteTypes.js";
 
 export const setCachedFullSubject = async ({
 	ctx,
 	normalized,
-	fetchTimeMs,
 	fetchedSubjectViewEpoch,
-	overwrite = false,
 }: {
 	ctx: AutumnContext;
 	normalized: NormalizedFullSubject;
-	fetchTimeMs: number;
 	fetchedSubjectViewEpoch: number;
-	overwrite?: boolean;
 }): Promise<SetCachedFullSubjectResult> => {
-	const { logger } = ctx;
+	const { logger, org, env } = ctx;
 	const { customerId, entityId } = normalized;
-	const currentSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
-		ctx,
-		customerId,
-	});
-	if (currentSubjectViewEpoch !== fetchedSubjectViewEpoch) {
-		return "STALE_WRITE";
-	}
+
 	const cached = normalizedToCachedFullSubject({
 		normalized,
-		subjectViewEpoch: currentSubjectViewEpoch,
+		subjectViewEpoch: fetchedSubjectViewEpoch,
 	});
-	const subjectViewReservation = await reserveCachedFullSubjectViewWrite({
-		ctx,
+
+	const subjectKey = buildFullSubjectKey({
+		orgId: org.id,
+		env,
 		customerId,
 		entityId,
-		fetchTimeMs,
-		overwrite,
 	});
-
-	if (subjectViewReservation.status !== "OK") {
-		return subjectViewReservation.status;
-	}
-
-	const latestSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
-		ctx,
+	const epochKey = buildFullSubjectViewEpochKey({
+		orgId: org.id,
+		env,
 		customerId,
 	});
-	if (latestSubjectViewEpoch !== fetchedSubjectViewEpoch) {
-		await releaseCachedFullSubjectViewWrite({
-			reservation: subjectViewReservation.reservation,
-		});
-		return "STALE_WRITE";
+
+	const balanceWrites = buildSharedBalanceWrites({
+		orgId: org.id,
+		env,
+		customerId,
+		customerEntitlements: normalized.customer_entitlements,
+		aggregatedCustomerEntitlements:
+			normalized.entity_aggregations?.aggregated_customer_entitlements ?? [],
+	});
+
+	const keys: string[] = [subjectKey, epochKey];
+	for (const { balanceKey } of balanceWrites) {
+		keys.push(balanceKey);
 	}
 
-	const result = await tryRedisWrite(async () => {
-		const multi = redisV2.multi();
+	const argv: string[] = [
+		String(fetchedSubjectViewEpoch),
+		String(FULL_SUBJECT_CACHE_TTL_SECONDS),
+		JSON.stringify(cached),
+		String(balanceWrites.length),
+	];
 
-		await appendSharedFullSubjectBalanceWrite({
-			ctx,
-			multi,
-			normalized,
-			meteredFeatures: cached.meteredFeatures,
-			overwrite,
-			ttlSeconds: FULL_SUBJECT_CACHE_TTL_SECONDS,
-		});
-		appendCachedFullSubjectViewWrite({
-			multi,
-			subjectKey: subjectViewReservation.subjectKey,
-			cached,
-			ttlSeconds: FULL_SUBJECT_CACHE_TTL_SECONDS,
-		});
+	for (const { fields } of balanceWrites) {
+		const fieldEntries = Object.entries(fields);
+		argv.push(String(fieldEntries.length));
+		for (const [fieldName, fieldValue] of fieldEntries) {
+			argv.push(fieldName, fieldValue);
+		}
+	}
 
-		await multi.exec();
-		return "OK" as const;
-	}, redisV2);
+	const result = await tryRedisWrite(
+		() => redisV2.setCachedFullSubject(keys.length, ...keys, ...argv),
+		redisV2,
+	);
 
 	const subjectLabel = entityId ? `${customerId}:${entityId}` : customerId;
-	try {
-		logger.info(
-			`[setCachedFullSubject] ${subjectLabel}: ${result ?? "FAILED"}, balances=${cached.meteredFeatures.length}`,
-		);
-	} finally {
-		await releaseCachedFullSubjectViewWrite({
-			reservation: subjectViewReservation.reservation,
-		});
-	}
+	logger.info(
+		`[setCachedFullSubject] ${subjectLabel}: ${result ?? "FAILED"}, balances=${cached.meteredFeatures.length}`,
+	);
 
 	return result ?? "FAILED";
 };

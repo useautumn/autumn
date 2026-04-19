@@ -112,19 +112,10 @@ declare module "ioredis" {
 			overwrite: string,
 			pathIndexJson: string,
 		): Promise<"STALE_WRITE" | "CACHE_EXISTS" | "OK">;
-		reserveFullSubjectWrite(
-			subjectKey: string,
-			reserveKey: string,
-			guardKey: string,
-			token: string,
-			reserveTtl: string,
-			overwrite: string,
-			fetchTimeMs: string,
-		): Promise<"CACHE_EXISTS" | "RESERVED" | "STALE_WRITE">;
-		releaseFullSubjectReservation(
-			reserveKey: string,
-			token: string,
-		): Promise<"RELEASED" | "SKIPPED">;
+		setCachedFullSubject(
+			numKeys: number,
+			...args: string[]
+		): Promise<"OK" | "CACHE_EXISTS" | "STALE_WRITE">;
 		resetCustomerEntitlements(
 			cacheKey: string,
 			paramsJson: string,
@@ -137,6 +128,10 @@ declare module "ioredis" {
 			cacheKey: string,
 			paramsJson: string,
 		): Promise<string>;
+		adjustSubjectBalance(
+			balanceKey: string,
+			paramsJson: string,
+		): Promise<string>;
 		updateCustomerData(cacheKey: string, paramsJson: string): Promise<string>;
 		updateFullSubjectCustomerDataV2(
 			subjectKey: string,
@@ -147,6 +142,18 @@ declare module "ioredis" {
 		updateFullSubjectEntityDataV2(
 			subjectKey: string,
 			updatesJson: string,
+			cacheTtlSeconds: string,
+			nowMs: string,
+		): Promise<string>;
+		updateFullSubjectCustomerProductV2(
+			subjectKey: string,
+			paramsJson: string,
+			cacheTtlSeconds: string,
+			nowMs: string,
+		): Promise<string>;
+		upsertInvoiceInFullSubjectV2(
+			subjectKey: string,
+			invoiceJson: string,
 			cacheTtlSeconds: string,
 			nowMs: string,
 		): Promise<string>;

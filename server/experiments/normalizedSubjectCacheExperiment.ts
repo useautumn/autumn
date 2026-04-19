@@ -267,9 +267,11 @@ const generateNormalized = (): NormalizedFullSubject => {
 					},
 				},
 				rollovers: [] as any,
+				replaceables: [] as any,
 				customerPrice: null as any,
 				customerProductOptions: [] as any,
 				customerProductQuantity: customerProduct.quantity,
+				isEntityLevel: false,
 			} as SubjectBalance);
 		}
 	}

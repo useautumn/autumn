@@ -33,6 +33,7 @@ interface SubjectBalanceUpdate {
  * Syncs deduction updates to the V2 FullSubject balance hashes.
  * Groups updates by featureId and pipelines one Lua call per feature.
  * Fire-and-forget — failures are logged but don't propagate.
+ * Intentionally does not mutate cache_version; DB-side flows own version bumps.
  */
 export const syncDeductionUpdatesToFullSubjectCache = async ({
 	ctx,

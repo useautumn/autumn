@@ -6,9 +6,7 @@ import { redisV2 } from "@/external/redis/initRedisV2.js";
 import { getOrInitFullSubjectViewEpoch } from "@/internal/customers/cache/fullSubject/actions/invalidate/getOrInitFullSubjectViewEpoch.js";
 import type { CachedFullSubject } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
 import {
-	buildFullSubjectGuardKey,
 	buildFullSubjectKey,
-	buildFullSubjectReserveKey,
 	buildFullSubjectViewEpochKey,
 	buildSharedFullSubjectBalanceKey,
 	getCachedFullSubject,
@@ -45,18 +43,6 @@ const cleanupKeys = async ({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			customerId,
-		}),
-		buildFullSubjectReserveKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			entityId,
-		}),
-		buildFullSubjectGuardKey({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			entityId,
 		}),
 	];
 
@@ -112,16 +98,15 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 			ctx,
 			scenario,
 			run: async ({ scenario }) => {
-				const normalized = await getFullSubjectNormalized({
+				const { normalized } = (await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
-				});
+				}))!;
 				expect(normalized).toBeDefined();
 
 				const result = await setCachedFullSubject({
 					ctx,
 					normalized: normalized!,
-					fetchTimeMs: Date.now(),
 					fetchedSubjectViewEpoch: await getCurrentViewEpoch({
 						customerId: scenario.ids.customerId,
 					}),
@@ -172,17 +157,16 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 			scenario,
 			run: async ({ scenario }) => {
 				const entityId = scenario.ids.entityIds[0]!;
-				const normalized = await getFullSubjectNormalized({
+				const { normalized } = (await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
 					entityId,
-				});
+				}))!;
 				expect(normalized).toBeDefined();
 
 				const result = await setCachedFullSubject({
 					ctx,
 					normalized: normalized!,
-					fetchTimeMs: Date.now(),
 					fetchedSubjectViewEpoch: await getCurrentViewEpoch({
 						customerId: scenario.ids.customerId,
 					}),
@@ -238,15 +222,17 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 			run: async ({ scenario }) => {
 				const customerId = scenario.ids.customerId;
 				const entityId = scenario.ids.entityIds[0]!;
-				const customerNormalized = await getFullSubjectNormalized({
-					ctx,
-					customerId,
-				});
-				const entityNormalized = await getFullSubjectNormalized({
-					ctx,
-					customerId,
-					entityId,
-				});
+				const { normalized: customerNormalized } =
+					(await getFullSubjectNormalized({
+						ctx,
+						customerId,
+					}))!;
+				const { normalized: entityNormalized } =
+					(await getFullSubjectNormalized({
+						ctx,
+						customerId,
+						entityId,
+					}))!;
 
 				expect(customerNormalized).toBeDefined();
 				expect(entityNormalized).toBeDefined();
@@ -268,7 +254,6 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					await setCachedFullSubject({
 						ctx,
 						normalized: customerNormalized!,
-						fetchTimeMs: Date.now(),
 						fetchedSubjectViewEpoch,
 					}),
 				).toBe("OK");
@@ -285,13 +270,19 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					),
 				).toBe(0);
 
+				await invalidateCachedFullSubject({
+					ctx,
+					customerId,
+					source: "integration-test-overwrite",
+				});
+
 				expect(
 					await setCachedFullSubject({
 						ctx,
 						normalized: entityNormalized!,
-						fetchTimeMs: Date.now(),
-						fetchedSubjectViewEpoch,
-						overwrite: true,
+						fetchedSubjectViewEpoch: await getCurrentViewEpoch({
+							customerId,
+						}),
 					}),
 				).toBe("OK");
 
@@ -327,17 +318,16 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 			scenario,
 			run: async ({ scenario }) => {
 				const entityId = scenario.ids.entityIds[0]!;
-				const normalized = await getFullSubjectNormalized({
+				const { normalized } = (await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
 					entityId,
-				});
+				}))!;
 				expect(normalized).toBeDefined();
 
 				const result = await setCachedFullSubject({
 					ctx,
 					normalized: normalized!,
-					fetchTimeMs: Date.now(),
 					fetchedSubjectViewEpoch: await getCurrentViewEpoch({
 						customerId: scenario.ids.customerId,
 					}),
@@ -387,15 +377,14 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 			ctx,
 			scenario,
 			run: async ({ scenario }) => {
-				const normalized = await getFullSubjectNormalized({
+				const { normalized } = (await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
-				});
+				}))!;
 				expect(normalized).toBeDefined();
 				const result = await setCachedFullSubject({
 					ctx,
 					normalized: normalized!,
-					fetchTimeMs: Date.now(),
 					fetchedSubjectViewEpoch: await getCurrentViewEpoch({
 						customerId: scenario.ids.customerId,
 					}),
@@ -441,15 +430,14 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 			ctx,
 			scenario,
 			run: async ({ scenario }) => {
-				const normalized = await getFullSubjectNormalized({
+				const { normalized } = (await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
-				});
+				}))!;
 				expect(normalized).toBeDefined();
 				const result = await setCachedFullSubject({
 					ctx,
 					normalized: normalized!,
-					fetchTimeMs: Date.now(),
 					fetchedSubjectViewEpoch: await getCurrentViewEpoch({
 						customerId: scenario.ids.customerId,
 					}),
@@ -485,15 +473,14 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 			ctx,
 			scenario,
 			run: async ({ scenario }) => {
-				const normalized = await getFullSubjectNormalized({
+				const { normalized } = (await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
-				});
+				}))!;
 				expect(normalized).toBeDefined();
 				const result = await setCachedFullSubject({
 					ctx,
 					normalized: normalized!,
-					fetchTimeMs: Date.now(),
 					fetchedSubjectViewEpoch: await getCurrentViewEpoch({
 						customerId: scenario.ids.customerId,
 					}),
@@ -517,7 +504,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 		});
 	});
 
-	test("existing subject skips write when overwrite is false", async () => {
+	test("existing subject skips write (CACHE_EXISTS)", async () => {
 		const scenario = buildCustomerWithInvoicesAndSubscriptionsScenario({
 			ctx,
 			name: "fullsubject-cache-skip-existing",
@@ -527,16 +514,15 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 			ctx,
 			scenario,
 			run: async ({ scenario }) => {
-				const normalized = await getFullSubjectNormalized({
+				const { normalized } = (await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
-				});
+				}))!;
 				expect(normalized).toBeDefined();
 
 				const firstResult = await setCachedFullSubject({
 					ctx,
 					normalized: normalized!,
-					fetchTimeMs: Date.now(),
 					fetchedSubjectViewEpoch: await getCurrentViewEpoch({
 						customerId: scenario.ids.customerId,
 					}),
@@ -556,7 +542,6 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				const secondResult = await setCachedFullSubject({
 					ctx,
 					normalized: normalized!,
-					fetchTimeMs: Date.now(),
 					fetchedSubjectViewEpoch: await getCurrentViewEpoch({
 						customerId: scenario.ids.customerId,
 					}),

@@ -154,6 +154,7 @@ describe("sanitizeCachedSubjectBalance", () => {
 		},
 		customerProductOptions: null,
 		customerProductQuantity: 1,
+		isEntityLevel: false,
 	});
 
 	test("should coerce rollovers from {} to []", () => {

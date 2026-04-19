@@ -95,6 +95,7 @@ const buildSubjectBalance = ({ index }: { index: number }) => ({
 	customerPrice: null,
 	customerProductOptions: null,
 	customerProductQuantity: 1,
+	isEntityLevel: false,
 });
 
 const buildCachedFullSubject = (): CachedFullSubject => {

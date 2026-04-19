@@ -129,6 +129,9 @@ export const getApiBalanceV2 = ({
 			})
 		: undefined;
 
+	// console.log("customerEntitlements", customerEntitlements);
+	// console.log("aggregatedFeatureBalance", aggregatedFeatureBalance);
+
 	if (customerEntitlements.length === 0) {
 		return {
 			data: mergeAggregatedBalanceIntoApiBalanceV2({

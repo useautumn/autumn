@@ -83,10 +83,10 @@ describe(`${chalk.yellowBright("fullSubject mixed shapes")}`, () => {
 			ctx,
 			scenario,
 			run: async ({ scenario }) => {
-				const normalized = await getFullSubjectNormalized({
+				const { normalized } = (await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
-				});
+				}))!;
 				const fullSubject = await getFullSubject({
 					ctx,
 					customerId: scenario.ids.customerId,
@@ -110,10 +110,10 @@ describe(`${chalk.yellowBright("fullSubject mixed shapes")}`, () => {
 			ctx,
 			scenario,
 			run: async ({ scenario }) => {
-				const normalized = await getFullSubjectNormalized({
+				const { normalized } = (await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
-				});
+				}))!;
 				const fullSubject = await getFullSubject({
 					ctx,
 					customerId: scenario.ids.customerId,

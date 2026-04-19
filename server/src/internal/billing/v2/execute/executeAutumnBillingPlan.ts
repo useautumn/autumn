@@ -3,7 +3,6 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { invoiceActions } from "@/internal/invoices/actions";
@@ -74,13 +73,12 @@ export const executeAutumnBillingPlan = async ({
 		newCusProducts: insertCustomerProducts,
 	});
 
-	// 3. Update customer product (DB + cache)
+	// 3. Update customer product (DB only)
 	if (updateCustomerProduct) {
 		const { customerProduct, updates } = updateCustomerProduct;
 
-		await customerProductActions.updateDbAndCache({
+		await CusProductService.update({
 			ctx,
-			customerId: autumnBillingPlan.customerId,
 			cusProductId: customerProduct.id,
 			updates,
 		});

@@ -1,5 +1,6 @@
 import type { CheckParams, FullSubject, TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { updateCustomerData } from "@/internal/customers/actions/updateCustomerData.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
 import { getOrCreateCachedFullSubject } from "../getOrCreateCachedFullSubject.js";
 import { getCachedPartialFullSubject } from "./getCachedPartialFullSubject.js";
@@ -33,6 +34,11 @@ export const getOrCreateCachedPartialFullSubject = async ({
 			logger.debug(
 				`[getOrCreateCachedPartialFullSubject] Cache hit: ${customerId}`,
 			);
+			await updateCustomerData({
+				ctx,
+				fullSubject: cached,
+				customerData: params.customer_data,
+			});
 			return cached;
 		}
 	}

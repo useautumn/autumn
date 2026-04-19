@@ -26,6 +26,8 @@ export const getApiCustomerByRollout = async ({
 			source,
 		});
 
+		// console.log("fullSubject", fullSubject);
+
 		return getApiCustomerV2({
 			ctx,
 			fullSubject,

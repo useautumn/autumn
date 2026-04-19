@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import { updateCachedEntityData } from "@/internal/customers/cache/fullSubject/actions/updateCachedEntityData.js";
 import { getFullSubject } from "@/internal/customers/repos/getFullSubject/getFullSubject.js";
 
 export const updateEntity = async ({
@@ -52,6 +53,13 @@ export const updateEntity = async ({
 			db: ctx.db,
 			internalId: entity.internal_id,
 			update: filteredUpdates,
+		});
+
+		await updateCachedEntityData({
+			ctx,
+			customerId,
+			entityId,
+			updates: filteredUpdates,
 		});
 	}
 
