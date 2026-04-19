@@ -9,9 +9,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -665,6 +666,8 @@ class UpdateSubscriptionParamsTypedDict(TypedDict):
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     cancel_action: NotRequired[BillingUpdateCancelAction]
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
+    billing_cycle_anchor: Literal["now"]
+    r"""Reset the billing cycle anchor immediately with 'now'"""
     no_billing_changes: NotRequired[bool]
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
     recalculate_balances: NotRequired[BillingUpdateRecalculateBalancesTypedDict]
@@ -705,6 +708,12 @@ class UpdateSubscriptionParams(BaseModel):
     cancel_action: Optional[BillingUpdateCancelAction] = None
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
+    billing_cycle_anchor: Annotated[
+        Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
+        pydantic.Field(alias="billing_cycle_anchor"),
+    ] = "now"
+    r"""Reset the billing cycle anchor immediately with 'now'"""
+
     no_billing_changes: Optional[bool] = None
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
 
@@ -725,6 +734,7 @@ class UpdateSubscriptionParams(BaseModel):
                 "redirect_mode",
                 "subscription_id",
                 "cancel_action",
+                "billing_cycle_anchor",
                 "no_billing_changes",
                 "recalculate_balances",
             ]
@@ -878,3 +888,9 @@ class BillingUpdateResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    UpdateSubscriptionParams.model_rebuild()
+except NameError:
+    pass

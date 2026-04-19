@@ -9,13 +9,15 @@
 			"scripts",
 			"apps/checkout",
 			"apps/docs",
+			"apps/website",
 			"apps/sdk-test",
 			"packages/atmn",
 			"packages/atmn-tests",
 			"packages/sdk",
 			"packages/autumn-js",
 			"packages/openapi",
-			"packages/ksuid"
+			"packages/ksuid",
+			"packages/stripe-sync"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",
@@ -33,7 +35,8 @@
 			"@orpc/openapi-client": "^1.0.0",
 			"@tanstack/react-query": "5.85.6",
 			"decimal.js": "10.5.0",
-			"vite": "7.3.1",
+			"postgres": "3.4.7",
+			"vite": "7.3.2",
 			"vite-tsconfig-paths": "6.1.1"
 		}
 	},
@@ -97,6 +100,7 @@
 		"svix:push": "infisical run --env=dev -- bun packages/openapi/scripts/svixPush.ts",
 		"svix:push:prod": "infisical run --env=prod -- bun packages/openapi/scripts/svixPush.ts",
 		"docs:pull": "bun -F @autumn/docs pull",
+		"site": "cd apps/website && bun dev && cd ../..",
 		"docs": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build",
 		"ts": "bun -F @autumn/server ts && bun -F autumn-js ts && bun -F @autumn/openapi ts && bun -F atmn ts && bun -F checkout ts",
@@ -107,7 +111,9 @@
 		"js:publish": "bun js:build && cd packages/autumn-js && npm publish",
 		"js:publish-beta": "bun js:build && cd packages/autumn-js && npm publish --tag beta",
 		"js:publish-dry": "bun js:build && cd packages/autumn-js && npm publish --dry-run",
-		"js:version": "git fetch --tags origin && git tag -l 'autumn-js-v*' --sort=-v:refname | head -1"
+		"js:version": "git fetch --tags origin && git tag -l 'autumn-js-v*' --sort=-v:refname | head -1",
+		"stripe-sync:migrate": "bun packages/stripe-sync/scripts/migrate.ts",
+		"stripe-sync:migrate:prod": "NODE_ENV=production infisical run --env=prod -- bun packages/stripe-sync/scripts/migrate.ts"
 	},
 	"dependencies": {
 		"@aws-sdk/client-sqs": "^3.985.0",

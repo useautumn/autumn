@@ -11,6 +11,7 @@ import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
+import { parseSkipOverageSubmissionFlag } from "@/internal/misc/featureFlags/parseSkipOverageSubmission";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
 
@@ -84,7 +85,10 @@ export const processConsumablePricesForInvoiceCreated = async ({
 				}),
 		});
 
-	const skipOverageSubmission = ctx.org.config.skip_overage_submission;
+	const skipOverageSubmission = parseSkipOverageSubmissionFlag({
+		org: ctx.org,
+		customerId: eventContext.fullCustomer.id,
+	});
 	if (lineItems.length > 0 && !skipOverageSubmission) {
 		await createStripeInvoiceItems({
 			ctx,

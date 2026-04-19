@@ -9,7 +9,7 @@ import { z } from "zod/v4";
 import { RefundBehaviorSchema } from "@/components/forms/update-subscription-v2/types/refundBehaviourSchema";
 
 export const UpdateSubscriptionFormSchema = z.object({
-	prepaidOptions: z.record(z.string(), z.number().nonnegative()),
+	prepaidOptions: z.record(z.string(), z.number().nonnegative().optional()),
 
 	trialLength: z.number().positive().nullable(),
 	trialDuration: z.enum(FreeTrialDuration),
@@ -23,7 +23,10 @@ export const UpdateSubscriptionFormSchema = z.object({
 
 	cancelAction: CancelActionSchema.nullable(),
 	billingBehavior: BillingBehaviorSchema.nullable(),
+	resetBillingCycle: z.boolean(),
 	refundBehavior: RefundBehaviorSchema.nullable(),
+	refundAmount: z.enum(["prorated", "full"]).nullable(),
+	noBillingChanges: z.boolean(),
 });
 
 export type UpdateSubscriptionForm = z.infer<

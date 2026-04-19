@@ -1,68 +1,72 @@
-import chalk from "chalk";
 import type { Context, Next } from "hono";
-import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
-import {
-	addAppContextToLogs,
-	addExtrasToLogs,
-} from "@/utils/logging/addContextToLogs";
-import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
+import { logRequestResult } from "./requestLogging/logRequestResult.js";
 
-/**
- * Logs response details asynchronously without blocking
- */
-const logResponse = async ({
-	ctx,
-	c,
-	skipUrls,
-	durationMs,
+export const parseCustomerIdFromUrl = ({
+	url,
 }: {
-	ctx: AutumnContext;
-	c: Context<HonoEnv>;
-	skipUrls: string[];
-	durationMs: number;
-}) => {
-	try {
-		if (skipUrls.includes(c.req.path)) return;
-
-		ctx.logger = addExtrasToLogs({
-			logger: ctx.logger,
-			extras: ctx.extraLogs,
-		});
-
-		let responseBody: Record<string, unknown> | null = null;
-		if (c.req.path.includes("/v1")) {
-			const contentType = c.res.headers.get("content-type");
-			if (contentType?.includes("application/json")) {
-				try {
-					const clonedResponse = c.res.clone();
-					responseBody = await clonedResponse.json();
-				} catch (_error) {}
-			}
-		}
-
-		const log = c.res.status === 200 ? ctx.logger.info : ctx.logger.warn;
-		const statusColor = c.res.status === 200 ? chalk.green : chalk.yellow;
-
-		log(
-			`[${statusColor(c.res.status)}] ${c.req.path} (${ctx.org?.slug}) ${durationMs}ms`,
-			{
-				statusCode: c.res.status,
-				durationMs,
-				res: responseBody,
-			},
-		);
-
-		if (
-			Object.keys(ctx.extraLogs).length > 0 &&
-			process.env.NODE_ENV === "development"
-		) {
-			const maskedLogs = maskExtraLogs(ctx.extraLogs);
-			ctx.logger.debug(`EXTRA LOGS: ${JSON.stringify(maskedLogs, null, 2)}`);
-		}
-	} catch (error) {
-		console.error("Failed to log response to logtail");
-		console.error(error);
+	url: string;
+}): string | undefined => {
+	if (!url.startsWith("/v1")) {
+		return undefined;
 	}
+
+	const cleanUrl = url.split("?")[0].replace(/^\/+|\/+$/g, "");
+	const segments = cleanUrl.split("/");
+	const customersIndex = segments.indexOf("customers");
+
+	if (customersIndex !== -1 && segments[customersIndex + 1]) {
+		return segments[customersIndex + 1];
+	}
+
+	return undefined;
+};
+
+const extractCustomerIdFromBody = ({
+	body,
+	path,
+	method,
+}: {
+	body: Record<string, unknown>;
+	path: string;
+	method: string;
+}): string | undefined => {
+	const isCreateCustomerPath =
+		path.startsWith("/v1/customers") &&
+		method === "POST" &&
+		!path.includes("customers.get_or_create") &&
+		!path.includes("customers.");
+	return (isCreateCustomerPath ? body?.id : body?.customer_id) as
+		| string
+		| undefined;
+};
+
+export const parseCustomerIdFromBody = async (
+	c: Context<HonoEnv>,
+): Promise<
+	{ customerId: string | undefined; sendEvent: boolean | undefined } | undefined
+> => {
+	const method = c.req.method;
+	if (method === "POST" || method === "PUT" || method === "PATCH") {
+		try {
+			const body = await c.req.json();
+
+			return {
+				customerId: extractCustomerIdFromBody({
+					body,
+					path: c.req.path,
+					method,
+				}),
+				sendEvent: body?.send_event,
+			};
+		} catch (_error) {
+			// Body might not be JSON, that's okay
+			return undefined;
+		}
+	}
+
+	return undefined;
 };
 
 /**
@@ -101,7 +105,7 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const durationMs = Date.now() - finalCtx.timestamp;
 
 	Promise.resolve()
-		.then(() => logResponse({ ctx: finalCtx, c, skipUrls, durationMs }))
+		.then(() => logRequestResult({ ctx: finalCtx, c, skipUrls, durationMs }))
 		.catch((error) => {
 			console.error("Failed to log response to logtail");
 			console.error(error);

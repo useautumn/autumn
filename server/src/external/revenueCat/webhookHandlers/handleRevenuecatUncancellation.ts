@@ -1,13 +1,8 @@
 import type { WebhookUnCancellation } from "@puzzmo/revenue-cat-webhook-types";
-import {
-	CusProductStatus,
-	ErrCode,
-	ProcessorType,
-	RecaseError,
-} from "@shared/index";
+import { ErrCode, ProcessorType, RecaseError } from "@shared/index";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 
 export const handleUncancellation = async ({
 	event,
@@ -16,13 +11,13 @@ export const handleUncancellation = async ({
 	event: WebhookUnCancellation;
 	ctx: RevenueCatWebhookContext;
 }) => {
-	const { db } = ctx;
+	const { logger } = ctx;
 	const { product_id, original_app_user_id, app_user_id } = event;
 
-	const { product, cusProducts } = await resolveRevenuecatResources({
+	const { product, customer, cusProducts } = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
-		customerId: original_app_user_id ?? app_user_id,
+		customerId: app_user_id ?? original_app_user_id,
 	});
 
 	const cusProduct = cusProducts.find(
@@ -31,22 +26,19 @@ export const handleUncancellation = async ({
 			cp.processor?.type === ProcessorType.RevenueCat,
 	);
 
-	if (cusProduct) {
-		await CusProductService.update({
-			ctx,
-			cusProductId: cusProduct.id,
-			updates: {
-				canceled_at: null,
-				canceled: false,
-				ended_at: null,
-				status: CusProductStatus.Active,
-			},
-		});
-	} else {
+	if (!cusProduct) {
 		throw new RecaseError({
 			message: "Cus product not found",
 			code: ErrCode.CusProductNotFound,
 			statusCode: 404,
 		});
 	}
+
+	await customerProductActions.uncancel({
+		ctx,
+		customerProduct: cusProduct,
+		fullCustomer: customer,
+	});
+
+	logger.info(`Uncancelled cus_product ${cusProduct.id}`);
 };

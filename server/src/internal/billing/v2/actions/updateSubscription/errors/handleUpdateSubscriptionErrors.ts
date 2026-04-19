@@ -10,7 +10,6 @@ import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/han
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
-import { handleFeatureQuantityErrors } from "./handleFeatureQuantityErrors";
 import {
 	checkTrialRemovalWithOneOffItems,
 	handleOneOffErrors,
@@ -18,6 +17,7 @@ import {
 import { handleProductTypeTransitionErrors } from "./handleProductTypeTransitionErrors";
 import { handleUncancelErrors } from "./handleUncancelErrors";
 import { handleUpdateCheckoutErrors } from "./handleUpdateCheckoutErrors";
+import { handleUpdateSubscriptionBillingCycleAnchorErrors } from "./handleUpdateSubscriptionBillingCycleAnchorErrors";
 
 export const handleUpdateSubscriptionErrors = async ({
 	ctx,
@@ -46,13 +46,10 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 2. Product type transition errors
 	handleProductTypeTransitionErrors({ billingContext, autumnBillingPlan });
 
-	// 3. Feature quantity errors (prepaid prices must have options)
-	handleFeatureQuantityErrors({
-		ctx,
-		billingContext,
-		autumnBillingPlan,
-		params,
-	});
+	// // 3. Feature quantity errors (recurring prepaid prices must have options)
+	// handleFeatureQuantityErrors({
+	// 	autumnBillingPlan,
+	// });
 
 	// 4. Custom plan errors
 	handleCustomPlanErrors({ ctx, billingContext, autumnBillingPlan, params });
@@ -77,9 +74,12 @@ export const handleUpdateSubscriptionErrors = async ({
 		params,
 	});
 
-	// 10. Update checkout errors
+	// 10. Billing cycle anchor errors
+	handleUpdateSubscriptionBillingCycleAnchorErrors({ billingContext });
+
+	// 11. Update checkout errors
 	handleUpdateCheckoutErrors({ billingContext });
 
-	// 11. Stripe billing plan errors (validate Stripe resources)
+	// 12. Stripe billing plan errors (validate Stripe resources)
 	handleStripeBillingPlanErrors({ billingContext });
 };

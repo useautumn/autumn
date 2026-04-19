@@ -1,53 +1,48 @@
-import { CalendarIcon, LightningIcon } from "@phosphor-icons/react";
 import {
 	AdvancedSection,
-	AdvancedToggleRow,
+	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
-import { cn } from "@/lib/utils";
+import { Switch } from "@/components/ui/switch";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function UpdateSubscriptionAdvancedSection() {
-	const { form, formValues } = useUpdateSubscriptionFormContext();
-	const { billingBehavior } = formValues;
+	const { form, formValues, formContext } =
+		useUpdateSubscriptionFormContext();
+	const { billingBehavior, resetBillingCycle } = formValues;
+	const { customerProduct } = formContext;
 
+	const hasActiveSubscription =
+		(customerProduct.subscription_ids?.length ?? 0) > 0;
 	const isProrate = billingBehavior !== "none";
-	const isNextCycleOnly = billingBehavior === "none";
 
-	const hasCustomSettings = isNextCycleOnly;
-	const customSettingsTooltip = isNextCycleOnly
-		? "Proration: Next Cycle Only"
-		: "";
+	if (!hasActiveSubscription) return null;
 
 	return (
-		<AdvancedSection
-			hasCustomSettings={hasCustomSettings}
-			customSettingsTooltip={customSettingsTooltip}
-		>
-			<AdvancedToggleRow label="Proration Behaviour">
-				<IconCheckbox
-					icon={<LightningIcon />}
-					iconOrientation="left"
-					variant="secondary"
-					size="sm"
-					checked={isProrate}
-					onCheckedChange={() => form.setFieldValue("billingBehavior", null)}
-					className={cn("rounded-r-none", !isProrate && "border-r-0")}
-				>
-					Prorate
-				</IconCheckbox>
-				<IconCheckbox
-					icon={<CalendarIcon />}
-					iconOrientation="left"
-					variant="secondary"
-					size="sm"
-					checked={isNextCycleOnly}
-					onCheckedChange={() => form.setFieldValue("billingBehavior", "none")}
-					className={cn("rounded-l-none", !isNextCycleOnly && "border-l-0")}
-				>
-					Next Cycle Only
-				</IconCheckbox>
-			</AdvancedToggleRow>
+		<AdvancedSection>
+			<ConfigRow
+				title="Prorate Changes"
+				description="Prorate price differences when changing plans mid-cycle"
+				action={
+					<Switch
+						checked={isProrate}
+						onCheckedChange={(checked) =>
+							form.setFieldValue("billingBehavior", checked ? null : "none")
+						}
+					/>
+				}
+			/>
+			<ConfigRow
+				title="Reset Billing Cycle"
+				description="Restart the billing cycle from today"
+				action={
+					<Switch
+						checked={resetBillingCycle}
+						onCheckedChange={(checked) =>
+							form.setFieldValue("resetBillingCycle", !!checked)
+						}
+					/>
+				}
+			/>
 		</AdvancedSection>
 	);
 }

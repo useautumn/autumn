@@ -34,6 +34,7 @@ export type SearchableSelectProps<T> = {
 	triggerClassName?: string;
 	contentClassName?: string;
 	defaultOpen?: boolean;
+	footer?: ReactNode;
 };
 
 export function SearchableSelect<T>({
@@ -53,6 +54,7 @@ export function SearchableSelect<T>({
 	triggerClassName,
 	contentClassName,
 	defaultOpen = false,
+	footer,
 }: SearchableSelectProps<T>) {
 	const [open, setOpen] = useState(false);
 
@@ -179,6 +181,7 @@ export function SearchableSelect<T>({
 									</CommandGroup>
 								</CommandList>
 							</Command>
+							{footer}
 						</motion.div>
 					</PopoverContent>
 				)}

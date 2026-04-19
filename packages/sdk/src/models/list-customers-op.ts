@@ -122,6 +122,10 @@ export type ListCustomersAutoTopup = {
    * Optional rate limit to cap how often auto top-ups occur.
    */
   purchaseLimit?: ListCustomersPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
 };
 
 export type ListCustomersSpendLimit = {
@@ -140,14 +144,16 @@ export type ListCustomersSpendLimit = {
 };
 
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export const ListCustomersThresholdType = {
   Usage: "usage",
   UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
 } as const;
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type ListCustomersThresholdType = OpenEnum<
   typeof ListCustomersThresholdType
@@ -155,7 +161,7 @@ export type ListCustomersThresholdType = OpenEnum<
 
 export type ListCustomersUsageAlert = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**
@@ -163,11 +169,11 @@ export type ListCustomersUsageAlert = {
    */
   enabled: boolean;
   /**
-   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
    */
   threshold: number;
   /**
-   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: ListCustomersThresholdType;
   /**
@@ -605,11 +611,13 @@ export const ListCustomersAutoTopup$inboundSchema: z.ZodMiniType<
     purchase_limit: types.optional(
       z.lazy(() => ListCustomersPurchaseLimit$inboundSchema),
     ),
+    invoice_mode: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "purchase_limit": "purchaseLimit",
+      "invoice_mode": "invoiceMode",
     });
   }),
 );

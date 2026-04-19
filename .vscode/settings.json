@@ -36,7 +36,7 @@
 		".claude": true,
 		".codex": true,
 		".agents": true,
-		// ".cursor": true,
+		".cursor": true,
 		".mcp.json": true,
 		".zed": true
 	}

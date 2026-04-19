@@ -5,14 +5,21 @@ import {
 	notNullish,
 	ProcessorType,
 	RecaseError,
+	shouldForwardCustomerMetadata,
 	type UpdateCustomerParamsV1,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import {
+	autumnToStripeCustomerMetadata,
+	STRIPE_MAX_KEY_LENGTH,
+} from "@/external/stripe/customers/utils/autumnToStripeMetadata";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
-import { updateCachedCustomerData } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerData.js";
+import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { CusService } from "@/internal/customers/CusService";
+import { invalidateCachedFullSubject } from "../../cache/fullSubject/actions/invalidate/invalidateFullSubject";
+import { updateCachedCustomerData } from "../../cusUtils/fullCustomerCacheUtils/updateCachedCustomerData";
+import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
 
 export const updateCustomer = async ({
 	ctx,
@@ -20,7 +27,10 @@ export const updateCustomer = async ({
 }: {
 	ctx: AutumnContext;
 	params: UpdateCustomerParamsV1;
-}) => {
+}): Promise<{
+	oldCustomer: Customer;
+	apiCustomer: Record<string, unknown>;
+}> => {
 	const { db, org, env, logger } = ctx;
 	const {
 		customer_id: customerId,
@@ -77,14 +87,27 @@ export const updateCustomer = async ({
 		);
 	}
 
-	// Check if customer email is being changed
 	const oldMetadata = originalCustomer.metadata || {};
 	const newMetadata = newCusData.metadata || {};
+	const deletedMetadataKeys: string[] = [];
 	for (const key in newMetadata) {
 		if (newMetadata[key] === null) {
+			deletedMetadataKeys.push(key);
 			delete newMetadata[key];
 			delete oldMetadata[key];
 		}
+	}
+	const mergedMetadata = { ...oldMetadata, ...newMetadata };
+
+	const hasMetadataChanges =
+		Object.keys(newMetadata).length > 0 || deletedMetadataKeys.length > 0;
+	const forwardMetadata =
+		shouldForwardCustomerMetadata({ org }) && hasMetadataChanges;
+
+	const stripeMetadataDeletions: Record<string, ""> = {};
+	for (const key of deletedMetadataKeys) {
+		if (!key.startsWith("autumn_"))
+			stripeMetadataDeletions[key.slice(0, STRIPE_MAX_KEY_LENGTH)] = "";
 	}
 
 	const stripeUpdate: Stripe.CustomerUpdateParams = {
@@ -97,6 +120,12 @@ export const updateCustomer = async ({
 			originalCustomer.name !== newCusData.name && notNullish(newCusData.name)
 				? newCusData.name
 				: undefined,
+		...(forwardMetadata && {
+			metadata: {
+				...autumnToStripeCustomerMetadata({ metadata: mergedMetadata }),
+				...stripeMetadataDeletions,
+			},
+		}),
 	};
 
 	if (Object.keys(stripeUpdate).length > 0 && stripeId) {
@@ -104,20 +133,24 @@ export const updateCustomer = async ({
 		await stripeCli.customers.update(stripeId, stripeUpdate);
 	}
 
-	// Prepare update data
+	// Prepare update data — only include defined billing control fields
+	const billingControlUpdates: Partial<Customer> = {};
+	if (billing_controls) {
+		if (billing_controls.auto_topups !== undefined)
+			billingControlUpdates.auto_topups = billing_controls.auto_topups;
+		if (billing_controls.spend_limits !== undefined)
+			billingControlUpdates.spend_limits = billing_controls.spend_limits;
+		if (billing_controls.usage_alerts !== undefined)
+			billingControlUpdates.usage_alerts = billing_controls.usage_alerts;
+		if (billing_controls.overage_allowed !== undefined)
+			billingControlUpdates.overage_allowed = billing_controls.overage_allowed;
+	}
+
 	const updateData: Partial<Customer> = {
 		...newCusData,
 		id: newCustomerId,
-		metadata: {
-			...oldMetadata,
-			...newMetadata,
-		},
-		...(billing_controls && {
-			auto_topups: billing_controls.auto_topups,
-			spend_limits: billing_controls.spend_limits,
-			usage_alerts: billing_controls.usage_alerts,
-			overage_allowed: billing_controls.overage_allowed,
-		}),
+		metadata: mergedMetadata,
+		...billingControlUpdates,
 	};
 
 	if (newStripeId) {
@@ -136,7 +169,8 @@ export const updateCustomer = async ({
 		update: updateData,
 	});
 
-	const originalCustomerId = originalCustomer.id || originalCustomer.internal_id;
+	const originalCustomerId =
+		originalCustomer.id || originalCustomer.internal_id;
 	const updatedCustomerId = newCustomerId ?? customerId;
 
 	if (updatedCustomerId !== originalCustomerId) {
@@ -145,7 +179,6 @@ export const updateCustomer = async ({
 			customerId: originalCustomerId,
 			source: "updateCustomer:id_changed",
 		});
-		return updatedCustomerId;
 	}
 
 	await updateCachedCustomerData({
@@ -154,5 +187,28 @@ export const updateCustomer = async ({
 		updates: updateData,
 	});
 
-	return updatedCustomerId;
+	ctx.skipCache = true;
+	const resolvedCustomerId = newCustomerId ?? customerId;
+
+	const apiCustomer = await getApiCustomerByRollout({
+		ctx,
+		customerId: resolvedCustomerId,
+		source: "updateCustomer",
+	});
+
+	if (billing_controls?.auto_topups) {
+		triggerAutoTopUpsOnEnabled({
+			ctx,
+			oldCustomer: originalCustomer,
+			newAutoTopups: billing_controls.auto_topups,
+			customerId: resolvedCustomerId,
+		}).catch((err) =>
+			ctx.logger.error("triggerAutoTopUpsOnEnabled failed: ", { error: err }),
+		);
+	}
+
+	return {
+		oldCustomer: originalCustomer,
+		apiCustomer,
+	};
 };

@@ -26,15 +26,13 @@ export const eventsListParamsSchema = z.object({
 	customRange: z.union([listEventsCustomRangeSchema, z.undefined()]).optional(),
 });
 
-export const listEventsPropertiesSchema = z.object({});
-
 export const listEventsListSchema = z.object({
 	id: z.string(),
 	timestamp: z.number(),
 	featureId: z.string(),
 	customerId: z.string(),
 	value: z.number(),
-	properties: listEventsPropertiesSchema,
+	properties: z.record(z.string(), z.any()),
 });
 
 export const listEventsResponseSchema = z.object({

@@ -131,9 +131,6 @@ TAKEHOME.md
 .openlogs
 
 
-.cursor/*.log
-
-
 # project context (personal working state)
 .context/
 

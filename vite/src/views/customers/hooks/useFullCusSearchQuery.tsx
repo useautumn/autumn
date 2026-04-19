@@ -21,6 +21,7 @@ export const useFullCusSearchQuery = () => {
 			queryStates.status,
 			queryStates.version,
 			queryStates.none,
+			queryStates.processor,
 			queryStates.q,
 		]),
 		queryFn: async ({ signal }) => {
@@ -34,6 +35,7 @@ export const useFullCusSearchQuery = () => {
 						status: queryStates.status,
 						version: queryStates.version,
 						none: queryStates.none,
+						processor: queryStates.processor,
 					},
 				},
 				{ signal },

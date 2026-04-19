@@ -1,26 +1,21 @@
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import {
 	CACHE_CUSTOMER_VERSION,
 	CACHE_GUARD_TTL_MS,
 	CACHE_TTL_SECONDS,
 } from "./cacheConfig.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 // ============================================================================
-// SHARED LUA FUNCTIONS
+// SHARED LUA FUNCTIONS (imported as text — works with both Bun and esbuild)
 // ============================================================================
 
-// Load cache key utilities and inject version constants
-const CACHE_KEY_UTILS_RAW = readFileSync(
-	join(__dirname, "luaUtils/cacheKeyUtils.lua"),
-	"utf-8",
-);
+import CACHE_KEY_UTILS_RAW from "./luaUtils/cacheKeyUtils.lua";
+import CACHE_BALANCE_UTILS from "./luaUtils/storeBalances.lua";
+import LOAD_BALANCES from "./luaUtils/loadBalances.lua";
+import FILTER_BALANCE_UTILS from "./luaUtils/filterBalanceUtils.lua";
+import ACCUMULATOR_UTILS from "./luaUtils/accumulatorUtils.lua";
+import SUBSCRIPTION_UTILS from "./luaUtils/apiSubscriptionUtils.lua";
+import GET_CUSTOMER_ENTITY_UTILS from "./luaUtils/getCustomerEntityUtils.lua";
 
-// Inject cache version and TTL constants into cache key utils
 const CACHE_KEY_UTILS = CACHE_KEY_UTILS_RAW.replace(
 	"{CUSTOMER_VERSION}",
 	CACHE_CUSTOMER_VERSION,
@@ -28,158 +23,49 @@ const CACHE_KEY_UTILS = CACHE_KEY_UTILS_RAW.replace(
 	.replace("{TTL_SECONDS}", CACHE_TTL_SECONDS.toString())
 	.replace("{GUARD_TTL_MS}", CACHE_GUARD_TTL_MS.toString());
 
-// Load balance storage utilities
-const CACHE_BALANCE_UTILS = readFileSync(
-	join(__dirname, "luaUtils/storeBalances.lua"),
-	"utf-8",
-);
-
-// Load shared balance loading function (used by customer, entity, and deduction scripts)
-const LOAD_BALANCES = readFileSync(
-	join(__dirname, "luaUtils/loadBalances.lua"),
-	"utf-8",
-);
-
-// Load balance filter utilities (used by deduction scripts for filtered balance operations)
-const FILTER_BALANCE_UTILS = readFileSync(
-	join(__dirname, "luaUtils/filterBalanceUtils.lua"),
-	"utf-8",
-);
-
-// Load accumulator utilities (used by deduction scripts for collecting deltas/state changes)
-const ACCUMULATOR_UTILS = readFileSync(
-	join(__dirname, "luaUtils/accumulatorUtils.lua"),
-	"utf-8",
-);
-
-// Load shared subscription utilities (used by customer and entity scripts)
-const SUBSCRIPTION_UTILS = readFileSync(
-	join(__dirname, "luaUtils/apiSubscriptionUtils.lua"),
-	"utf-8",
-);
-
-// Load shared customer/entity getter utilities
-const GET_CUSTOMER_ENTITY_UTILS = readFileSync(
-	join(__dirname, "luaUtils/getCustomerEntityUtils.lua"),
-	"utf-8",
-);
-
 // ============================================================================
 // CUSTOMER SCRIPTS
 // ============================================================================
 
-// Load shared validation function
-const CHECK_CACHE_EXISTS = readFileSync(
-	join(__dirname, "cusLuaScripts/checkCacheExists.lua"),
-	"utf-8",
-);
+import CHECK_CACHE_EXISTS from "./cusLuaScripts/checkCacheExists.lua";
+import getCustomerScript from "./cusLuaScripts/getCustomer.lua";
+import setCustomerScript from "./cusLuaScripts/setCustomer.lua";
+import setSubscriptionsScript from "./cusLuaScripts/setSubscriptions.lua";
+import setCustomerDetailsScript from "./cusLuaScripts/setCustomerDetails.lua";
+import setInvoicesScript from "./cusLuaScripts/setInvoices.lua";
+import setGrantedBalanceScript from "./cusLuaScripts/setGrantedBalance.lua";
+import deleteCustomerScript from "./cusLuaScripts/deleteCustomer.lua";
+import batchDeleteCustomersScript from "./cusLuaScripts/batchDeleteCustomers.lua";
 
-// Prepend cache key utils, loadBalances, subscription utils, and getter utils to GET_CUSTOMER_SCRIPT
-const getCustomerScript = readFileSync(
-	join(__dirname, "cusLuaScripts/getCustomer.lua"),
-	"utf-8",
-);
 export const GET_CUSTOMER_SCRIPT = `${CACHE_KEY_UTILS}\n${LOAD_BALANCES}\n${SUBSCRIPTION_UTILS}\n${GET_CUSTOMER_ENTITY_UTILS}\n${getCustomerScript}`;
-
-// Prepend cache key utils and validation function to SET_CUSTOMER_SCRIPT
-const setCustomerScript = readFileSync(
-	join(__dirname, "cusLuaScripts/setCustomer.lua"),
-	"utf-8",
-);
 export const SET_CUSTOMER_SCRIPT = `${CACHE_KEY_UTILS}\n${CACHE_BALANCE_UTILS}\n${CHECK_CACHE_EXISTS}\n${setCustomerScript}`;
-
-// Prepend cache key utils to SET_SUBSCRIPTIONS_SCRIPT
-const setSubscriptionsScript = readFileSync(
-	join(__dirname, "cusLuaScripts/setSubscriptions.lua"),
-	"utf-8",
-);
 export const SET_SUBSCRIPTIONS_SCRIPT = `${CACHE_KEY_UTILS}\n${setSubscriptionsScript}`;
-
-// Legacy export for backwards compatibility
-const SET_CUSTOMER_PRODUCTS_SCRIPT = SET_SUBSCRIPTIONS_SCRIPT;
-
-// Prepend cache key utils to SET_CUSTOMER_DETAILS_SCRIPT
-const setCustomerDetailsScript = readFileSync(
-	join(__dirname, "cusLuaScripts/setCustomerDetails.lua"),
-	"utf-8",
-);
 export const SET_CUSTOMER_DETAILS_SCRIPT = `${CACHE_KEY_UTILS}\n${setCustomerDetailsScript}`;
-
-// Prepend cache key utils to SET_INVOICES_SCRIPT
-const setInvoicesScript = readFileSync(
-	join(__dirname, "cusLuaScripts/setInvoices.lua"),
-	"utf-8",
-);
 export const SET_INVOICES_SCRIPT = `${CACHE_KEY_UTILS}\n${setInvoicesScript}`;
-
-// Prepend cache key utils to SET_GRANTED_BALANCE_SCRIPT
-const setGrantedBalanceScript = readFileSync(
-	join(__dirname, "cusLuaScripts/setGrantedBalance.lua"),
-	"utf-8",
-);
 export const SET_GRANTED_BALANCE_SCRIPT = `${CACHE_KEY_UTILS}\n${setGrantedBalanceScript}`;
-
-// Prepend cache key utils to DELETE_CUSTOMER_SCRIPT
-const deleteCustomerScript = readFileSync(
-	join(__dirname, "cusLuaScripts/deleteCustomer.lua"),
-	"utf-8",
-);
 export const DELETE_CUSTOMER_SCRIPT = `${CACHE_KEY_UTILS}\n${deleteCustomerScript}`;
-
-// Prepend cache key utils to BATCH_DELETE_CUSTOMERS_SCRIPT
-const batchDeleteCustomersScript = readFileSync(
-	join(__dirname, "cusLuaScripts/batchDeleteCustomers.lua"),
-	"utf-8",
-);
 export const BATCH_DELETE_CUSTOMERS_SCRIPT = `${CACHE_KEY_UTILS}\n${batchDeleteCustomersScript}`;
 
 // ============================================================================
 // ENTITY SCRIPTS
 // ============================================================================
 
-// Load shared validation function
-const CHECK_ENTITY_CACHE_EXISTS = readFileSync(
-	join(__dirname, "entityLuaScripts/checkEntityCacheExists.lua"),
-	"utf-8",
-);
+import CHECK_ENTITY_CACHE_EXISTS from "./entityLuaScripts/checkEntityCacheExists.lua";
+import getEntityScript from "./entityLuaScripts/getEntity.lua";
+import setEntityScript from "./entityLuaScripts/setEntity.lua";
+import setEntitiesBatchScript from "./entityLuaScripts/setEntitiesBatch.lua";
+import setEntityProductsScript from "./entityLuaScripts/setEntityProducts.lua";
 
-// Prepend cache key utils, loadBalances, subscription utils, and getter utils to GET_ENTITY_SCRIPT
-const getEntityScript = readFileSync(
-	join(__dirname, "entityLuaScripts/getEntity.lua"),
-	"utf-8",
-);
 export const GET_ENTITY_SCRIPT = `${CACHE_KEY_UTILS}\n${LOAD_BALANCES}\n${SUBSCRIPTION_UTILS}\n${GET_CUSTOMER_ENTITY_UTILS}\n${getEntityScript}`;
-
-// Prepend cache key utils and validation function to SET_ENTITY_SCRIPT
-const setEntityScript = readFileSync(
-	join(__dirname, "entityLuaScripts/setEntity.lua"),
-	"utf-8",
-);
 const SET_ENTITY_SCRIPT = `${CACHE_KEY_UTILS}\n${CACHE_BALANCE_UTILS}\n${CHECK_ENTITY_CACHE_EXISTS}\n${setEntityScript}`;
-
-// Prepend cache key utils and balance utils to SET_ENTITIES_BATCH_SCRIPT
-const setEntitiesBatchScript = readFileSync(
-	join(__dirname, "entityLuaScripts/setEntitiesBatch.lua"),
-	"utf-8",
-);
 export const SET_ENTITIES_BATCH_SCRIPT = `${CACHE_KEY_UTILS}\n${CACHE_BALANCE_UTILS}\n${setEntitiesBatchScript}`;
-
-// Prepend cache key utils to SET_ENTITY_PRODUCTS_SCRIPT
-const setEntityProductsScript = readFileSync(
-	join(__dirname, "entityLuaScripts/setEntityProducts.lua"),
-	"utf-8",
-);
 export const SET_ENTITY_PRODUCTS_SCRIPT = `${CACHE_KEY_UTILS}\n${setEntityProductsScript}`;
 
 // ============================================================================
 // DEDUCTION SCRIPTS
 // ============================================================================
 
-// Load batchDeduction script
-const batchDeduction = readFileSync(
-	join(__dirname, "deductionLuaScripts/batchDeduction.lua"),
-	"utf-8",
-);
+import batchDeduction from "./deductionLuaScripts/batchDeduction.lua";
 
 export function getBatchDeductionScript(): string {
 	return `${CACHE_KEY_UTILS}\n${LOAD_BALANCES}\n${FILTER_BALANCE_UTILS}\n${ACCUMULATOR_UTILS}\n${SUBSCRIPTION_UTILS}\n${GET_CUSTOMER_ENTITY_UTILS}\n${batchDeduction}`;

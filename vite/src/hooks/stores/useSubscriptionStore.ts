@@ -24,7 +24,8 @@ export const useEntity = () => {
 	// Find the full entity object
 	const entity = entities.find(
 		(e: Entity) =>
-			e.id === selectedEntityId || e.internal_id === selectedEntityId,
+			e != null &&
+			(e.id === selectedEntityId || e.internal_id === selectedEntityId),
 	);
 
 	// Sync query param to store on mount/change

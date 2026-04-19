@@ -25,6 +25,14 @@ export const ListCustomersV2ParamsSchema = createPaginationParamsSchema({
 	search: z.string().optional().meta({
 		description: "Search customers by id, name, or email",
 	}),
+
+	processors: z
+		.array(z.enum(["stripe", "revenuecat", "vercel"]))
+		.optional()
+		.meta({
+			description:
+				"Filter by customer processor type (stripe, revenuecat, vercel)",
+		}),
 });
 
 export type ListCustomersV2Params = z.infer<typeof ListCustomersV2ParamsSchema>;

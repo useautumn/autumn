@@ -1,6 +1,5 @@
 // Schemas
 import * as schemas from "./db/schema";
-export { schemas };
 
 export * from "./api/apiUtils";
 // Billing common schemas
@@ -12,6 +11,8 @@ export * from "./api/billing/common/billingResponse";
 export * from "./api/billing/common/cancelAction";
 export * from "./api/billing/common/customizePlan/customizePlanV1";
 export * from "./api/billing/common/customLineItem";
+export * from "./api/billing/createSchedule/createScheduleParamsV0";
+export * from "./api/billing/createSchedule/createScheduleResponse";
 export * from "./api/billing/openBillingPortal/openBillingPortalParamsV1";
 export * from "./api/billing/openBillingPortal/openBillingPortalResponse";
 export * from "./api/billing/updateSubscription/previewUpdateSubscriptionResponse";
@@ -22,6 +23,8 @@ export * from "./api/customers/components/customerExpand/customerExpand";
 export * from "./api/models";
 // API VERSIONING SYSTEM
 export * from "./api/versionUtils/versionUtils";
+// Webhook Schemas + WebhookEventType enum
+export * from "./api/webhooks/index";
 // Auth Models
 export * from "./db/auth-schema";
 export * from "./enums/APIVersion";
@@ -30,8 +33,6 @@ export * from "./enums/ErrCode";
 export * from "./enums/LoggerAction";
 // ENUMS
 export * from "./enums/SuccessCode";
-// Webhook Schemas + WebhookEventType enum
-export * from "./api/webhooks/index";
 // Internal API (checkout app, dashboard)
 export * from "./internal/index";
 // ANALYTICS MODELS
@@ -55,6 +56,7 @@ export * from "./models/cusModels/billingControls/purchaseLimitInterval";
 export * from "./models/cusModels/cusModels";
 // Processor Models
 export * from "./models/processorModels/processorModels";
+export { schemas };
 
 // Cus response
 
@@ -178,6 +180,7 @@ export * from "./models/rewardModels/rewardModels/rewardTable";
 export * from "./models/rewardModels/rewardProgramModels/rewardProgramEnums";
 export * from "./models/rewardModels/rewardProgramModels/rewardProgramModels";
 export * from "./models/rewardModels/rewardProgramModels/rewardProgramTable";
+export * from "./models/scheduleModels/scheduleTable";
 export * from "./models/subModels/subModels";
 export * from "./models/subModels/subTable";
 export * from "./types";

@@ -174,6 +174,10 @@ export const getCachedFullCustomer = async ({
 		data: parsed,
 	});
 
+	// if (fullCustomer.entities?.[0] === null) {
+	// 	fullCustomer.entities = fullCustomer.entities?.filter((e) => e !== null);
+	// }
+
 	if (entityId) {
 		fullCustomer.entity = fullCustomer.entities?.find((e) => e.id === entityId);
 	} else {

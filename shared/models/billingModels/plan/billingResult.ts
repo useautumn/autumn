@@ -5,8 +5,11 @@ export interface StripeBillingPlanResult {
 	deferred?: boolean;
 	stripeInvoice?: Stripe.Invoice;
 	stripeSubscription?: Stripe.Subscription;
-	stripeCheckoutSession?: Stripe.Checkout.Session;
+	stripeCheckoutSession?:
+		| Stripe.Checkout.Session
+		| (Pick<Stripe.Checkout.Session, "id"> & { url?: string | null });
 	stripeInvoiceItems?: Stripe.InvoiceItem[];
+	stripeRefund?: Stripe.Refund;
 	requiredAction?: {
 		code: PaymentFailureCode;
 		reason: string;

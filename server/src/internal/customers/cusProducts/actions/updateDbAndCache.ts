@@ -1,6 +1,6 @@
 import type { InsertCustomerProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct.js";
+import { updateCachedCustomerProductV2 } from "../../cache/fullSubject/actions/updateCachedCustomerProduct.js";
 import { CusProductService } from "../CusProductService.js";
 
 /**
@@ -37,15 +37,4 @@ export const updateCustomerProductDbAndCache = async ({
 			updates,
 		}),
 	]);
-
-	// if (result?.error === "cache_miss") {
-	// 	ctx.logger.info(
-	// 		`[updateCustomerProductDbAndCache] cache_miss for cusProduct ${cusProductId}, rebuilding cache from DB`,
-	// 	);
-	// 	await getOrSetCachedFullCustomer({
-	// 		ctx,
-	// 		customerId,
-	// 		source: "updateDbAndCache:cache_miss_fallback",
-	// 	});
-	// }
 };

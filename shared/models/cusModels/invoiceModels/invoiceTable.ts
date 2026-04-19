@@ -1,4 +1,4 @@
-import { sql, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
+import { type InferInsertModel, type InferSelectModel, sql } from "drizzle-orm";
 import {
 	foreignKey,
 	index,
@@ -28,6 +28,8 @@ export const invoices = pgTable(
 		status: text("status").notNull().default("draft"),
 		hosted_invoice_url: text("hosted_invoice_url"),
 		total: numeric({ mode: "number" }).notNull().default(0),
+		amount_paid: numeric({ mode: "number" }),
+		refunded_amount: numeric({ mode: "number" }).notNull().default(0),
 		currency: text("currency").notNull().default("usd"),
 		discounts: jsonb("discounts").$type<InvoiceDiscount>().array().default([]),
 		items: jsonb("items").$type<InvoiceItem>().array().default([]),

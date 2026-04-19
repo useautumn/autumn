@@ -93,6 +93,16 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 
 	route({
 		method: "POST",
+		url: "/billing.create_schedule",
+	}),
+
+	route({
+		method: "POST",
+		url: "/billing.open_customer_portal",
+	}),
+
+	route({
+		method: "POST",
 		url: "/balances.create",
 	}),
 

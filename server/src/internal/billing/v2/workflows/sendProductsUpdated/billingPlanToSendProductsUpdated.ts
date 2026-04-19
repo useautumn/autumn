@@ -19,11 +19,19 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext";
+import {
+	getExpiredUpdatedCustomerProducts,
+	getUpdateCustomerProducts,
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { workflows } from "@/queue/workflows.js";
 
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+type UpdateCustomerProductUpdates = NonNullable<
+	NonNullable<AutumnBillingPlan["updateCustomerProduct"]>["updates"]
+>;
 
 /** Check if any scheduled product in the list is paid (not free) */
 const hasPaidScheduledProduct = ({
@@ -46,11 +54,7 @@ const getUpdateScenario = ({
 	updates,
 	insertCustomerProducts,
 }: {
-	updates: {
-		canceled?: boolean | null;
-		canceled_at?: number | null;
-		ended_at?: number | null;
-	};
+	updates: UpdateCustomerProductUpdates;
 	insertCustomerProducts: FullCusProduct[];
 }): AttachScenario | null => {
 	// Cancel: canceled=true with timestamps set
@@ -71,6 +75,10 @@ const getUpdateScenario = ({
 		updates.ended_at === null
 	) {
 		return AttachScenario.Renew;
+	}
+
+	if (updates.options != null) {
+		return AttachScenario.UpdatePrepaidQuantity;
 	}
 
 	return null;
@@ -109,21 +117,6 @@ const getInsertScenario = ({
  * Get the expired product from the billing plan's updateCustomerProduct.
  * Returns the customer product if it's being set to "expired" status.
  */
-const getExpiredProduct = ({
-	updateCustomerProduct,
-}: {
-	updateCustomerProduct: AutumnBillingPlan["updateCustomerProduct"];
-}): FullCusProduct | undefined => {
-	if (!updateCustomerProduct) return undefined;
-
-	// Check if the update is setting the status to "expired"
-	if (updateCustomerProduct.updates.status === CusProductStatus.Expired) {
-		return updateCustomerProduct.customerProduct;
-	}
-
-	return undefined;
-};
-
 // ============================================================================
 // MAIN FUNCTION
 // ============================================================================
@@ -141,13 +134,12 @@ export const billingPlanToSendProductsUpdated = async ({
 
 	const { fullCustomer } = billingContext;
 	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
-	const { insertCustomerProducts, updateCustomerProduct } = autumnBillingPlan;
-
-	// Get the expired product from updateCustomerProduct (if status is being set to "expired")
-	const expiredProduct = getExpiredProduct({ updateCustomerProduct });
+	const { insertCustomerProducts } = autumnBillingPlan;
+	const updateCustomerProducts = getUpdateCustomerProducts({ autumnBillingPlan });
+	const expiredProducts = getExpiredUpdatedCustomerProducts({ autumnBillingPlan });
 
 	// A. Handle cancel/uncancel webhook for updateCustomerProduct
-	if (updateCustomerProduct) {
+	for (const updateCustomerProduct of updateCustomerProducts) {
 		const scenario = getUpdateScenario({
 			updates: updateCustomerProduct.updates,
 			insertCustomerProducts,
@@ -175,8 +167,12 @@ export const billingPlanToSendProductsUpdated = async ({
 	}
 
 	// B. Queue webhooks for inserted products (excluding scheduled ones)
-	for (const cusProduct of insertCustomerProducts) {
-		if (isCustomerProductScheduled(cusProduct)) continue;
+	const activeInsertCustomerProducts = insertCustomerProducts.filter(
+		(cusProduct) => !isCustomerProductScheduled(cusProduct),
+	);
+
+	for (const [index, cusProduct] of activeInsertCustomerProducts.entries()) {
+		const expiredProduct = expiredProducts[index];
 
 		const scenario = getInsertScenario({
 			insertedProduct: cusProduct,

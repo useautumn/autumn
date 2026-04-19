@@ -272,6 +272,7 @@ export const processMessage = async ({
 	try {
 		await executeJob();
 	} catch (error) {
+		const errorLogger = workerCtx?.logger ?? workerLogger;
 		// Sync jobs: re-throw infrastructure errors so the message stays in SQS.
 		// Application errors (RecaseError, InternalError) are swallowed — they
 		// won't fix on retry. DB errors (connection, timeout) will.
@@ -281,7 +282,7 @@ export const processMessage = async ({
 			isRetryableDbError({ error })
 		) {
 			Sentry.captureException(error);
-			workerLogger.error(`[${job.name}] Retryable DB error, keeping in SQS`, {
+			errorLogger.error(`[${job.name}] Retryable DB error, keeping in SQS`, {
 				jobName: job.name,
 				error:
 					error instanceof Error
@@ -293,7 +294,7 @@ export const processMessage = async ({
 
 		Sentry.captureException(error);
 		if (error instanceof Error) {
-			workerLogger.error(`Failed to process SQS job: ${job.name}`, {
+			errorLogger.error(`Failed to process SQS job: ${job.name}`, {
 				jobName: job.name,
 				error: {
 					message: error.message,
@@ -304,13 +305,14 @@ export const processMessage = async ({
 	} finally {
 		if (workerCtx && Object.keys(workerCtx.extraLogs).length > 0) {
 			const maskedLogs = maskExtraLogs(workerCtx.extraLogs);
-			workerLogger.info(`[${job.name}] Finished`, {
+			const finalLogger = workerCtx.logger ?? workerLogger;
+			finalLogger.info(`[${job.name}] Finished`, {
 				extras: maskedLogs,
 				done: true,
 			});
 
 			if (process.env.NODE_ENV === "development") {
-				workerLogger.debug(
+				finalLogger.debug(
 					`FINISHED PROCESSING JOB ${job.name}, EXTRA LOGS: ${JSON.stringify(maskedLogs, null, 2)}`,
 				);
 			}

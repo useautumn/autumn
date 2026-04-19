@@ -5,8 +5,8 @@ import { CusProductStatus } from "@shared/models/cusProductModels/cusProductEnum
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import {
 	ACTIVE_STATUSES,
-	CusProductService,
 } from "@/internal/customers/cusProducts/CusProductService";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 import { resolveRevenuecatResources } from "../misc/resolveRevenuecatResources";
 
@@ -17,10 +17,10 @@ export const handleBillingIssue = async ({
 	event: WebhookBillingIssue;
 	ctx: RevenueCatWebhookContext;
 }) => {
-	const { db, logger } = ctx;
+	const { logger } = ctx;
 	const { product_id, app_user_id } = event;
 
-	const { product, cusProducts } = await resolveRevenuecatResources({
+	const { product, customer, cusProducts } = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
@@ -47,12 +47,10 @@ export const handleBillingIssue = async ({
 	}
 
 	if (ACTIVE_STATUSES.includes(curSameProduct.status)) {
-		await CusProductService.update({
+		await customerProductActions.markPastDue({
 			ctx,
-			cusProductId: curSameProduct.id,
-			updates: {
-				status: CusProductStatus.PastDue,
-			},
+			customerProduct: curSameProduct,
+			fullCustomer: customer,
 		});
 
 		return { success: true };

@@ -1,0 +1,50 @@
+---
+title: "Post-mortem: Database outage caused by collation migration locking conflict"
+description: "Post-mortem write up of an outage that affected a number of requests between 15:00 and 16:00 UTC, 15th March 2026."
+date: "2026-03-15"
+author: "Ayush, Autumn Co-Founder"
+slug: "post-mortem-database-outage-caused-by-collation-migration-locking-conflict"
+image: "/images/blog/post-mortem-database-outage-caused-by-collation-migration-locking-conflict.png"
+---
+
+On Sunday March 15, 2026 from 15:00 to 16:15 GMT, approximately 10% of API requests to Autumn failed due to a database outage caused by a collation migration on our production database.
+
+## Timeline
+
+-   **~15:00** — Collation changes applied to `customer_entitlements` and `customer_products`. DB CPU spikes, queries begin failing.
+    
+-   **15:05** — Issue identified. Attempted rollback via `ALTER TABLE` but blocked by active queries holding locks, causing repeated deadlocks.
+    
+-   **15:20** — Attempted code-level fix: updated the main customer query to explicitly cast collation, hoping to force index usage without a schema rollback.
+    
+-   **15:48** — With help from PlanetScale support, shut down all application connections, reverted collation changes, and ran `ANALYZE` to rebuild planner statistics.
+    
+-   **16:15** — Full recovery confirmed across both regions. All APIs and dashboard operational.
+    
+
+## What happened
+
+We were optimizing our most frequently run queries and discovered that several indexes weren't being used due to a collation mismatch between parent and child tables (customers.internal\_id uses COLLATE "C" for KSUID ordering, but FK columns like customer\_entitlements.internal\_customer\_id used the default collation). Postgres can't use indexes across this mismatch, so our most frequent query was taking ~150ms when it should have been &lt;10ms.
+
+After changing the collation on customer\_entitlements, we saw CPU drop by 30% and much faster query times. To prevent this issue in the future, we decided to align collations across all related tables. There were 4 tables to change, in this order:
+
+1.  customer\_entitlements
+    
+2.  customer\_products
+    
+3.  entities
+    
+4.  customers
+    
+
+After changing collation on the first two tables, our main query's performance dropped dramatically due to missing indexes, and this made our DB CPU spike and queries fail. We tried to reverse the changes, but the ALTER TABLE needs an exclusive lock on the table, and there were always active queries holding locks — causing repeated deadlocks.
+
+## Resolution
+
+We first tried to push a code-level fix (aligning collations in the query SQL itself), but this didn't take effect fast enough with the DB under heavy load. Ultimately, we shut down all application connections, reversed the collation changes, ran ANALYZE to rebuild planner statistics, and restarted. Queries returned to normal immediately and CPU leveled off.
+
+## Prevention & Remediation
+
+All future column/schema migrations will be done using the duplicate-dual-write-cutover pattern. Instead of altering a column in place (which requires an exclusive lock and a full table rewrite), we create a new column with the desired type, dual-write to both columns, backfill existing rows in small batches, create indexes concurrently, then cut over.
+
+More generally, we will be adding a status page to improve transparency when we have issues. We are also considering making a change to our `check` and `track` SDKs that would enable them to fail-open by default, so that in an outage there is no disruption to paying customers.

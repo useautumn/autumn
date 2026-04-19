@@ -39,6 +39,8 @@ export const InvoiceSchema = z.object({
 
 	// Total amount of the invoice
 	total: z.number(),
+	amount_paid: z.number().nullish(),
+	refunded_amount: z.number().default(0),
 	currency: z.string(),
 	receipt_url: z.string().nullish(),
 	discounts: z.array(InvoiceDiscountSchema),

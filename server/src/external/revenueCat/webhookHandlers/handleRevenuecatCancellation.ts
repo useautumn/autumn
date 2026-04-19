@@ -2,7 +2,7 @@ import type { WebhookCancellation } from "@puzzmo/revenue-cat-webhook-types";
 import { ErrCode, RecaseError } from "@shared/index";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 
 export const handleCancellation = async ({
@@ -12,14 +12,14 @@ export const handleCancellation = async ({
 	event: WebhookCancellation;
 	ctx: RevenueCatWebhookContext;
 }) => {
-	const { db, logger } = ctx;
+	const { logger } = ctx;
 	const { product_id, original_app_user_id, app_user_id, expiration_at_ms } =
 		event;
 
-	const { product, cusProducts } = await resolveRevenuecatResources({
+	const { product, customer, cusProducts } = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
-		customerId: original_app_user_id ?? app_user_id,
+		customerId: app_user_id ?? original_app_user_id,
 	});
 
 	const { curSameProduct } = getExistingCusProducts({
@@ -35,14 +35,11 @@ export const handleCancellation = async ({
 		});
 	}
 
-	await CusProductService.update({
+	await customerProductActions.cancel({
 		ctx,
-		cusProductId: curSameProduct.id,
-		updates: {
-			canceled_at: Date.now(),
-			canceled: true,
-			ended_at: expiration_at_ms,
-		},
+		customerProduct: curSameProduct,
+		fullCustomer: customer,
+		endedAt: expiration_at_ms,
 	});
 
 	logger.info(

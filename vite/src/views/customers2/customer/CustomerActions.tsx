@@ -2,6 +2,7 @@ import type { Feature, FullCusProduct } from "@autumn/shared";
 import { AppEnv, FeatureUsageType, ProcessorType } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
+	ArrowsClockwiseIcon,
 	BracketsSquareIcon,
 	CaretDownIcon,
 	LinkIcon,
@@ -25,6 +26,7 @@ import {
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
@@ -59,6 +61,7 @@ export function CustomerActions() {
 	const { stripeAccount } = useOrgStripeQuery();
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
+	const setSheet = useSheetStore((s) => s.setSheet);
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
 
@@ -157,6 +160,19 @@ export function CustomerActions() {
 						<BracketsSquareIcon />
 						Show customer object
 					</DropdownMenuItem>
+					{stripeCustomerId &&
+						customer?.processor?.type === ProcessorType.Stripe && (
+							<DropdownMenuItem
+								onClick={() => {
+									setSheet({ type: "sync-stripe" });
+									setActionsOpen(false);
+								}}
+								className="flex gap-2"
+							>
+								<ArrowsClockwiseIcon />
+								Sync from Stripe
+							</DropdownMenuItem>
+						)}
 					<DropdownMenuItem
 						onClick={handleOpenBillingPortal}
 						className="flex gap-2"
@@ -186,6 +202,20 @@ export function CustomerActions() {
 								Open in Stripe
 							</DropdownMenuItem>
 						)}
+					{isAdmin && (
+						<DropdownMenuItem
+							onClick={() => {
+								window.open(
+									`https://i.useautumn.com/customers/${customer?.internal_id}`,
+									"_blank",
+								);
+							}}
+							className="flex gap-2"
+						>
+							<ArrowSquareOutIcon className="size-3.5" />
+							Open in Admin Panel
+						</DropdownMenuItem>
+					)}
 					{isAdmin &&
 						masterStripeAccount?.id &&
 						stripeAccount?.id &&

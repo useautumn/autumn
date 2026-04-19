@@ -30,8 +30,13 @@ export const SelectGroupByDropdown = ({
 	const navigate = useNavigate();
 	const location = useLocation();
 
-	const { groupFilter, setGroupFilter, availableGroupValues, entityNames } =
-		useAnalyticsContext();
+	const {
+		groupFilter,
+		setGroupFilter,
+		availableGroupValues,
+		entityNames,
+		customerNames,
+	} = useAnalyticsContext();
 
 	const currentGroupBy = searchParams.get("group_by") || "";
 	const customerId = searchParams.get("customer_id");
@@ -242,7 +247,11 @@ export const SelectGroupByDropdown = ({
 								const displayValue =
 									value === "AUTUMN_RESERVED"
 										? "Other values"
-										: (entityNames?.[value] ?? value);
+										: currentGroupBy === "entity_id"
+											? (entityNames?.[value] ?? value)
+											: currentGroupBy === "customer_id"
+												? (customerNames?.[value] ?? value)
+												: value;
 								return (
 									<DropdownMenuItem
 										key={value}

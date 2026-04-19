@@ -42,7 +42,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       List of usage alert configurations per feature.
       <Expandable title="properties">
         <DynamicParamField body="feature_id" type="string">
-          The feature ID this alert applies to. If omitted, the alert applies globally.
+          The feature ID this alert applies to.
         </DynamicParamField>
 
         <DynamicParamField body="enabled" type="boolean">
@@ -50,11 +50,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
         </DynamicParamField>
 
         <DynamicParamField body="threshold" type="number" required>
-          The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+          The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
         </DynamicParamField>
 
-        <DynamicParamField body="threshold_type" type="'usage' | 'usage_percentage'" required>
-          Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+        <DynamicParamField body="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'" required>
+          Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
         </DynamicParamField>
 
         <DynamicParamField body="name" type="string">
@@ -156,6 +156,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
               </Expandable>
             </DynamicParamField>
 
+            <DynamicParamField body="invoice_mode" type="boolean">
+              When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+            </DynamicParamField>
+
           </Expandable>
         </DynamicParamField>
 
@@ -181,7 +185,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           List of usage alert configurations per feature.
           <Expandable title="properties">
             <DynamicParamField body="feature_id" type="string">
-              The feature ID this alert applies to. If omitted, the alert applies globally.
+              The feature ID this alert applies to.
             </DynamicParamField>
 
             <DynamicParamField body="enabled" type="boolean">
@@ -189,11 +193,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
             </DynamicParamField>
 
             <DynamicParamField body="threshold" type="number" required>
-              The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+              The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
             </DynamicParamField>
 
-            <DynamicParamField body="threshold_type" type="'usage' | 'usage_percentage'" required>
-              Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+            <DynamicParamField body="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'" required>
+              Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
             </DynamicParamField>
 
             <DynamicParamField body="name" type="string">
@@ -1193,7 +1197,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       List of usage alert configurations per feature.
       <Expandable title="properties">
         <DynamicResponseField name="feature_id" type="string">
-          The feature ID this alert applies to. If omitted, the alert applies globally.
+          The feature ID this alert applies to.
         </DynamicResponseField>
 
         <DynamicResponseField name="enabled" type="boolean">
@@ -1201,11 +1205,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
         </DynamicResponseField>
 
         <DynamicResponseField name="threshold" type="number">
-          The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+          The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
         </DynamicResponseField>
 
-        <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage'">
-          Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+        <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'">
+          Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
         </DynamicResponseField>
 
         <DynamicResponseField name="name" type="string">

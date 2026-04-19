@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 
 import { useMemo } from "react";
+import { ScheduledPlanGuard } from "@/components/forms/create-schedule/components/ScheduledPlanGuard";
 import {
 	EditPlanSection,
 	UpdateSubscriptionAdvancedSection,
@@ -13,6 +14,7 @@ import {
 	type UpdateSubscriptionForm,
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
+	UpdateSubscriptionPlanOptions,
 	UpdateSubscriptionPreviewSection,
 	useUpdateSubscriptionFormContext,
 } from "@/components/forms/update-subscription-v2";
@@ -86,6 +88,7 @@ function SheetContent() {
 				</div>
 
 				<EditPlanSection />
+				<UpdateSubscriptionPlanOptions />
 				<UpdateSubscriptionAdvancedSection />
 				<UpdateSubscriptionPreviewSection />
 				<UpdateSubscriptionFooter />
@@ -191,26 +194,28 @@ export function SubscriptionUpdateSheet2() {
 	}
 
 	return (
-		<UpdateSubscriptionFormProvider
-			formContext={formContext}
-			originalItems={productV2?.items as ProductItem[] | undefined}
-			defaultOverrides={defaultOverrides}
-			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
-			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
-			onInvoiceCreated={(invoiceId) => {
-				const invoiceLink = getStripeInvoiceLink({
-					stripeInvoice: { stripe_id: invoiceId },
-					env,
-					accountId: stripeAccount?.id,
-				});
-				window.open(invoiceLink, "_blank");
-			}}
-			onCheckoutRedirect={(checkoutUrl) => {
-				window.location.href = checkoutUrl;
-			}}
-			onSuccess={closeSheet}
-		>
-			<SheetContent />
-		</UpdateSubscriptionFormProvider>
+		<ScheduledPlanGuard>
+			<UpdateSubscriptionFormProvider
+				formContext={formContext}
+				originalItems={productV2?.items as ProductItem[] | undefined}
+				defaultOverrides={defaultOverrides}
+				onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
+				onPlanEditorClose={() => setIsInlineEditorOpen(false)}
+				onInvoiceCreated={(invoiceId) => {
+					const invoiceLink = getStripeInvoiceLink({
+						stripeInvoice: { stripe_id: invoiceId },
+						env,
+						accountId: stripeAccount?.id,
+					});
+					window.open(invoiceLink, "_blank");
+				}}
+				onCheckoutRedirect={(checkoutUrl) => {
+					window.location.href = checkoutUrl;
+				}}
+				onSuccess={closeSheet}
+			>
+				<SheetContent />
+			</UpdateSubscriptionFormProvider>
+		</ScheduledPlanGuard>
 	);
 }

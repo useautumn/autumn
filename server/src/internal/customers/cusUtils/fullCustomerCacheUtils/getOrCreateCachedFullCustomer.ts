@@ -9,6 +9,7 @@ import { customerActions } from "@/internal/customers/actions/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { CusService } from "../../CusService.js";
 import { updateCustomerDetails } from "../cusUtils.js";
+import { hydrateFullCustomerSchedule } from "../getFullCustomerSchedule.js";
 import { getCachedFullCustomer } from "./getCachedFullCustomer.js";
 import { setCachedFullCustomer } from "./setCachedFullCustomer.js";
 
@@ -105,6 +106,11 @@ export const getOrCreateCachedFullCustomer = async ({
 			}
 		}
 	}
+
+	fullCustomer = await hydrateFullCustomerSchedule({
+		ctx,
+		fullCustomer,
+	});
 
 	// 6. Set cache (await to ensure it's ready before Redis deduction)
 	if (!skipCache && setCache) {

@@ -6,12 +6,13 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
+import { computeRefundPlan } from "@/internal/billing/v2/compute/finalize/computeRefundPlan";
 
 /**
- * Finalizes the update subscription billing plan by processing line items
- * and applying update-subscription-specific guards.
+ * Finalizes the update subscription billing plan by processing line items,
+ * applying update-subscription-specific guards, and computing refund preview.
  */
-export const finalizeUpdateSubscriptionPlan = ({
+export const finalizeUpdateSubscriptionPlan = async ({
 	ctx,
 	plan,
 	billingContext,
@@ -21,7 +22,7 @@ export const finalizeUpdateSubscriptionPlan = ({
 	plan: AutumnBillingPlan;
 	billingContext: UpdateSubscriptionBillingContext;
 	params: UpdateSubscriptionV1Params;
-}): AutumnBillingPlan => {
+}): Promise<AutumnBillingPlan> => {
 	// Finalize line items (shared logic)
 	plan.lineItems = finalizeLineItems({
 		ctx,
@@ -35,10 +36,15 @@ export const finalizeUpdateSubscriptionPlan = ({
 		plan.lineItems = [];
 	}
 
-	// Guard: if proration_behavior is 'none', clear line items (skip proration charges)
-	if (params.proration_behavior === "none") {
-		plan.lineItems = [];
-	}
+	// Filter refund line items and compute the refund plan
+	const { lineItems: filteredLineItems, refundPlan } = await computeRefundPlan({
+		ctx,
+		billingContext,
+		lineItems: plan.lineItems ?? [],
+	});
+
+	plan.lineItems = filteredLineItems;
+	plan.refundPlan = refundPlan;
 
 	return plan;
 };

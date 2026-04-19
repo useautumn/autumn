@@ -78,6 +78,10 @@ export type CustomerAutoTopup = {
    * Optional rate limit to cap how often auto top-ups occur.
    */
   purchaseLimit?: CustomerPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
 };
 
 export type CustomerSpendLimit = {
@@ -96,20 +100,22 @@ export type CustomerSpendLimit = {
 };
 
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export const CustomerThresholdType = {
   Usage: "usage",
   UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
 } as const;
 /**
- * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
  */
 export type CustomerThresholdType = OpenEnum<typeof CustomerThresholdType>;
 
 export type CustomerUsageAlert = {
   /**
-   * The feature ID this alert applies to. If omitted, the alert applies globally.
+   * The feature ID this alert applies to.
    */
   featureId?: string | undefined;
   /**
@@ -117,11 +123,11 @@ export type CustomerUsageAlert = {
    */
   enabled: boolean;
   /**
-   * The threshold value that triggers the alert. For usage, this is an absolute count. For usage_percentage, this is a percentage (0-100).
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
    */
   threshold: number;
   /**
-   * Whether the threshold is an absolute usage count or a percentage of the usage allowance.
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
    */
   thresholdType: CustomerThresholdType;
   /**
@@ -653,11 +659,13 @@ export const CustomerAutoTopup$inboundSchema: z.ZodMiniType<
     purchase_limit: types.optional(
       z.lazy(() => CustomerPurchaseLimit$inboundSchema),
     ),
+    invoice_mode: types.optional(types.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "feature_id": "featureId",
       "purchase_limit": "purchaseLimit",
+      "invoice_mode": "invoiceMode",
     });
   }),
 );

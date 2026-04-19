@@ -5,10 +5,11 @@ import {
 	type ProductV2,
 } from "@autumn/shared";
 import { useMemo } from "react";
-import { BillingBehaviorSection } from "@/components/forms/cancel-subscription/components/BillingBehaviorSection";
+import { CancelAdvancedSection } from "@/components/forms/cancel-subscription/components/CancelAdvancedSection";
 import { CancelFooter } from "@/components/forms/cancel-subscription/components/CancelFooter";
 import { CancelModeSection } from "@/components/forms/cancel-subscription/components/CancelModeSection";
 import { CancelPreviewSection } from "@/components/forms/cancel-subscription/components/CancelPreviewSection";
+import { RefundBehaviorSection } from "@/components/forms/cancel-subscription/components/RefundBehaviorSection";
 import {
 	type UpdateSubscriptionFormContext,
 	UpdateSubscriptionFormProvider,
@@ -22,6 +23,7 @@ import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
+import { ScheduledPlanGuard } from "@/components/forms/create-schedule/components/ScheduledPlanGuard";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
@@ -69,7 +71,8 @@ function SheetContent() {
 				)}
 
 				<CancelModeSection />
-				<BillingBehaviorSection />
+				<RefundBehaviorSection />
+				<CancelAdvancedSection />
 				<CancelPreviewSection />
 				<CancelFooter />
 			</div>
@@ -134,13 +137,15 @@ export function SubscriptionCancelSheet() {
 	}
 
 	return (
-		<UpdateSubscriptionFormProvider
-			formContext={formContext}
-			originalItems={undefined}
-			defaultOverrides={{ cancelAction: defaultCancelAction }}
-			onSuccess={closeSheet}
-		>
-			<SheetContent />
-		</UpdateSubscriptionFormProvider>
+		<ScheduledPlanGuard>
+			<UpdateSubscriptionFormProvider
+				formContext={formContext}
+				originalItems={undefined}
+				defaultOverrides={{ cancelAction: defaultCancelAction }}
+				onSuccess={closeSheet}
+			>
+				<SheetContent />
+			</UpdateSubscriptionFormProvider>
+		</ScheduledPlanGuard>
 	);
 }

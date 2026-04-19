@@ -194,7 +194,10 @@ export const EditPlanHeader = () => {
 						{hasRCMapping && (
 							<Tooltip>
 								<TooltipTrigger>
-									<IconBadge variant="muted" icon={<RevenueCatIcon size={14} />}>
+									<IconBadge
+										variant="muted"
+										icon={<RevenueCatIcon size={14} />}
+									>
 										RC
 									</IconBadge>
 								</TooltipTrigger>
@@ -209,8 +212,7 @@ export const EditPlanHeader = () => {
 									<IconBadge
 										variant="muted"
 										icon={<TriangleIcon size={12} weight="fill" />}
-									>
-									</IconBadge>
+									></IconBadge>
 								</TooltipTrigger>
 								<TooltipContent>
 									This plan is linked to Vercel Marketplace

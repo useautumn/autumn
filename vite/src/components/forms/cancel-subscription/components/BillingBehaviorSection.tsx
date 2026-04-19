@@ -11,14 +11,18 @@ export function BillingBehaviorSection() {
 	const { customerProduct } = formContext;
 
 	const cancelAction = formValues.cancelAction;
+	const noBillingChanges = formValues.noBillingChanges;
 	const billingBehavior = formValues.billingBehavior ?? "prorate_immediately";
 
 	// Only show billing behavior options when:
 	// 1. Cancel action is "cancel_immediately"
 	// 2. Product is NOT free or one-off (has recurring billing)
+	// 3. "No billing changes" is not enabled
 	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
 	const showBillingBehavior =
-		cancelAction === "cancel_immediately" && !isFreeOrOneOff;
+		cancelAction === "cancel_immediately" &&
+		!isFreeOrOneOff &&
+		!noBillingChanges;
 
 	return (
 		<AnimatePresence initial={false}>
@@ -30,7 +34,7 @@ export function BillingBehaviorSection() {
 					transition={COLLAPSE_TRANSITION}
 					style={{ overflow: "hidden" }}
 				>
-					<SheetSection title="Billing Behavior" withSeparator>
+					<SheetSection title="Proration Behavior" withSeparator>
 						<div className="space-y-4">
 							<div className="flex w-full items-center gap-4">
 								<PanelButton
@@ -58,12 +62,10 @@ export function BillingBehaviorSection() {
 									icon={<CalendarCheckIcon size={18} weight="duotone" />}
 								/>
 								<div className="flex-1">
-									<div className="text-body-highlight mb-1">
-										Next cycle only
-									</div>
-									<div className="text-body-secondary leading-tight">
-										No charges or credits issued. Access ends immediately.
-									</div>
+								<div className="text-body-highlight mb-1">None</div>
+								<div className="text-body-secondary leading-tight">
+									No charges or credits issued. Access ends immediately.
+								</div>
 								</div>
 							</div>
 						</div>
