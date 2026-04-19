@@ -241,6 +241,7 @@ const buildCustomerProduct = ({
 	entityId?: string | null;
 	subscriptionStripeIds?: string[];
 }): DbCustomerProduct => ({
+	billing_cycle_anchor_resets_at: null,
 	id: `cp_${key}_${suffix}`,
 	internal_customer_id: customer.internal_id,
 	internal_product_id: product.internal_id,
@@ -385,6 +386,8 @@ const buildInvoice = ({
 	product: DbProduct;
 	internalEntityId?: string | null;
 }): InvoiceRow => ({
+	amount_paid: 1000,
+	refunded_amount: 0,
 	id: `inv_${key}_${suffix}`,
 	created_at: now,
 	product_ids: [product.id],
