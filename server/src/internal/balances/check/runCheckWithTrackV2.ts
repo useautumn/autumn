@@ -1,4 +1,5 @@
 import {
+	ApiVersion,
 	CheckResponseV3Schema,
 	ErrCode,
 	FeatureType,
@@ -82,6 +83,7 @@ export const runCheckWithTrackV2 = async ({
 			ctx,
 			body: trackBody,
 			featureDeductions,
+			apiVersion: ApiVersion.V2_1,
 		});
 
 		checkData.apiBalance = response.balance ?? undefined;

@@ -8,6 +8,7 @@ import {
 import { UTCDate } from "@date-fns/utc";
 import { format } from "date-fns";
 import type { RepoContext } from "@/db/repoContext";
+import { invalidateCustomerEntitlementBalance } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateCustomerEntitlementBalance.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
@@ -22,7 +23,7 @@ import { resetShortDurationCustomerEntitlement } from "./resetShortDurationCusto
 
 const shortDurations = [EntInterval.Minute, EntInterval.Hour, EntInterval.Day];
 
-export const resetCustomerEntitlement = async ({
+const resetCustomerEntitlementInDb = async ({
 	ctx,
 	cusEnt,
 	updatedCusEnts,
@@ -179,4 +180,31 @@ export const resetCustomerEntitlement = async ({
 			`Failed to reset ${cusEnt.id} | ${cusEnt.customer_id} | ${cusEnt.feature_id}, error: ${error}`,
 		);
 	}
+};
+
+export const resetCustomerEntitlement = async ({
+	ctx,
+	cusEnt,
+	updatedCusEnts,
+	persistFreeOverage = false,
+}: {
+	ctx: CronContext;
+	cusEnt: ResetCusEnt;
+	updatedCusEnts: ResetCusEnt[];
+	persistFreeOverage?: boolean;
+}) => {
+	const result = await resetCustomerEntitlementInDb({
+		ctx,
+		cusEnt,
+		updatedCusEnts,
+		persistFreeOverage,
+	});
+	await invalidateCustomerEntitlementBalance({
+		orgId: cusEnt.customer.org_id,
+		env: cusEnt.customer.env,
+		customerId: cusEnt.customer_id ?? "",
+		featureId: cusEnt.entitlement.feature.id,
+		customerEntitlementId: cusEnt.id,
+	});
+	return result;
 };

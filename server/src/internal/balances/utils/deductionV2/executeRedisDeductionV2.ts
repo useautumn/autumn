@@ -25,6 +25,7 @@ import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullS
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
+import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
 import { prepareDeductionOptionsV2 } from "./prepareDeductionOptionsV2.js";
 import { prepareFeatureDeductionV2 } from "./prepareFeatureDeductionV2.js";
 import { rollbackDeductionV2 } from "./rollbackDeductionV2.js";
@@ -185,6 +186,11 @@ export const executeRedisDeductionV2 = async ({
 		const mutationLogs = Array.isArray(resultJson.mutation_logs)
 			? resultJson.mutation_logs
 			: [];
+		const modifiedCustomerEntitlementIds = Array.isArray(
+			resultJson.modified_customer_entitlement_ids,
+		)
+			? resultJson.modified_customer_entitlement_ids
+			: Object.keys(updates);
 
 		logDeductionUpdatesV2({
 			ctx,
@@ -197,15 +203,18 @@ export const executeRedisDeductionV2 = async ({
 		allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
 		allMutationLogs = [...allMutationLogs, ...mutationLogs];
 
-		for (const ced of customerEntitlementDeductions) {
-			if (!updates[ced.customer_entitlement_id]) continue;
-			if (!allModifiedCusEntIdsByFeatureId[ced.feature_id]) {
-				allModifiedCusEntIdsByFeatureId[ced.feature_id] = [];
-			}
-			allModifiedCusEntIdsByFeatureId[ced.feature_id].push(
-				ced.customer_entitlement_id,
-			);
-		}
+		const syncState = normalizeDeductionSyncStateV2({
+			customerEntitlements,
+			updates,
+			mutationLogs,
+			modifiedCustomerEntitlementIds,
+			syncUpdates: {},
+			modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
+		});
+		Object.assign(
+			allModifiedCusEntIdsByFeatureId,
+			syncState.modifiedCusEntIdsByFeatureId,
+		);
 
 		const oldFullCustomer = fullSubjectToFullCustomer({
 			fullSubject: oldFullSubject,

@@ -48,16 +48,15 @@ describe(`${chalk.yellowBright("fullSubject cache rollout staleness")}`, () => {
 			ctx,
 			scenario,
 			run: async ({ scenario }) => {
-				const normalized = await getFullSubjectNormalized({
+				const fetchResult = await getFullSubjectNormalized({
 					ctx,
 					customerId: scenario.ids.customerId,
 				});
-				expect(normalized).toBeDefined();
+				expect(fetchResult).toBeDefined();
 
 				const result = await setCachedFullSubject({
 					ctx,
-					normalized: normalized!,
-					fetchTimeMs: Date.now(),
+					normalized: fetchResult!.normalized,
 					fetchedSubjectViewEpoch: 0,
 				});
 				expect(result).toBe("OK");

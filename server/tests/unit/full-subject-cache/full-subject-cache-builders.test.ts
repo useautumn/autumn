@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	buildFullSubjectBalanceKey,
-	buildFullSubjectGuardKey,
 	buildFullSubjectKey,
-	buildFullSubjectReserveKey,
 	buildFullSubjectViewEpochKey,
 	buildSharedFullSubjectBalanceKey,
 } from "@/internal/customers/cache/fullSubject/index.js";
@@ -26,22 +24,6 @@ describe("fullSubject cache key builders", () => {
 				featureId: "feat",
 			}),
 		).toBe("{cus}:org:test:full_subject:balances:feat");
-
-		expect(
-			buildFullSubjectReserveKey({
-				orgId: "org",
-				env: "test",
-				customerId: "cus",
-			}),
-		).toBe("{cus}:org:test:full_subject:reserve");
-
-		expect(
-			buildFullSubjectGuardKey({
-				orgId: "org",
-				env: "test",
-				customerId: "cus",
-			}),
-		).toBe("{cus}:org:test:full_subject:guard");
 
 		expect(
 			buildFullSubjectViewEpochKey({
@@ -80,23 +62,5 @@ describe("fullSubject cache key builders", () => {
 				featureId: "feat",
 			}),
 		).toBe("{cus}:org:test:entity:ent:full_subject:balances:feat");
-
-		expect(
-			buildFullSubjectReserveKey({
-				orgId: "org",
-				env: "test",
-				customerId: "cus",
-				entityId: "ent",
-			}),
-		).toBe("{cus}:org:test:entity:ent:full_subject:reserve");
-
-		expect(
-			buildFullSubjectGuardKey({
-				orgId: "org",
-				env: "test",
-				customerId: "cus",
-				entityId: "ent",
-			}),
-		).toBe("{cus}:org:test:entity:ent:full_subject:guard");
 	});
 });

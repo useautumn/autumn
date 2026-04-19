@@ -16,5 +16,7 @@ export const clearCusEntsFromCache = async ({
 
 	if (customersToDelete.length === 0) return;
 
-	await batchDeleteCachedFullCustomers({ customers: customersToDelete });
+	await batchDeleteCachedFullCustomers({
+		customers: customersToDelete,
+	});
 };

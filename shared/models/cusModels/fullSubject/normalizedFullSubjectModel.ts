@@ -1,5 +1,6 @@
 import type { AggregatedFeatureBalance } from "../../cusProductModels/cusEntModels/aggregatedCusEnt.js";
 import type { EntityBalance } from "../../cusProductModels/cusEntModels/cusEntModels.js";
+import type { Replaceable } from "../../cusProductModels/cusEntModels/replaceableTable.js";
 import type { DbRollover } from "../../cusProductModels/cusEntModels/rolloverModels/rolloverTable.js";
 import type { FullCustomerPrice } from "../../cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { DbCustomerPrice } from "../../cusProductModels/cusPriceModels/cusPriceTable.js";
@@ -49,10 +50,12 @@ export type SubjectBalance = {
 	customer_id?: string | null;
 
 	entitlement: EntitlementWithFeature;
+	replaceables: Replaceable[];
 	rollovers: DbRollover[];
 	customerPrice: FullCustomerPrice | null;
 	customerProductOptions: FeatureOptions | null;
 	customerProductQuantity: number;
+	isEntityLevel: boolean;
 };
 
 export type EntityAggregations = {

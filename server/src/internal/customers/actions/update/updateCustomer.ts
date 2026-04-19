@@ -10,6 +10,8 @@ import {
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
+import { updateCachedCustomerData } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerData.js";
 import { CusService } from "@/internal/customers/CusService";
 
 export const updateCustomer = async ({
@@ -134,5 +136,23 @@ export const updateCustomer = async ({
 		update: updateData,
 	});
 
-	return newCustomerId ?? customerId;
+	const originalCustomerId = originalCustomer.id || originalCustomer.internal_id;
+	const updatedCustomerId = newCustomerId ?? customerId;
+
+	if (updatedCustomerId !== originalCustomerId) {
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId: originalCustomerId,
+			source: "updateCustomer:id_changed",
+		});
+		return updatedCustomerId;
+	}
+
+	await updateCachedCustomerData({
+		ctx,
+		customerId: originalCustomerId,
+		updates: updateData,
+	});
+
+	return updatedCustomerId;
 };

@@ -56,6 +56,7 @@ export const updateNextResetAtV2 = async ({
 		ctx,
 		id: targetCusEnt.id,
 		updates: { next_reset_at: nextResetAt },
+		incrementCacheVersion: false,
 	});
 
 	await updateSubjectBalanceCache({

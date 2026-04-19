@@ -4,7 +4,7 @@ import {
 	type NormalizedFullSubject,
 	SubjectType,
 } from "@autumn/shared";
-import { appendSharedFullSubjectBalanceWrite } from "@/internal/customers/cache/fullSubject/actions/setCachedFullSubject/setSharedFullSubjectBalances.js";
+import { buildSharedBalanceWrites } from "@/internal/customers/cache/fullSubject/actions/setCachedFullSubject/setSharedFullSubjectBalances.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 
 const buildNormalized = (): NormalizedFullSubject =>
@@ -84,9 +84,11 @@ const buildNormalized = (): NormalizedFullSubject =>
 					},
 				},
 				rollovers: [],
+				replaceables: [],
 				customerPrice: null,
 				customerProductOptions: null,
 				customerProductQuantity: 1,
+				isEntityLevel: false,
 			},
 		],
 		customer_prices: [],
@@ -100,77 +102,29 @@ const buildNormalized = (): NormalizedFullSubject =>
 		entity_aggregations: undefined,
 	}) as NormalizedFullSubject;
 
-const createMultiRecorder = () => {
-	const operations: Array<{ type: string; args: unknown[] }> = [];
-
-	const multi = {
-		hset: (...args: unknown[]) => {
-			operations.push({ type: "hset", args });
-			return multi;
-		},
-		expire: (...args: unknown[]) => {
-			operations.push({ type: "expire", args });
-			return multi;
-		},
-		del: (...args: unknown[]) => {
-			operations.push({ type: "del", args });
-			return multi;
-		},
-		set: (...args: unknown[]) => {
-			operations.push({ type: "set", args });
-			return multi;
-		},
-	};
-
-	return { multi, operations };
-};
-
 describe("setSharedFullSubjectBalances", () => {
-	test("writes shared balance hashes without meta-key writes or deletes", async () => {
+	test("builds shared balance writes without meta-key writes", () => {
 		const normalized = buildNormalized();
-		const { multi, operations } = createMultiRecorder();
 
-		await appendSharedFullSubjectBalanceWrite({
-			ctx: {
-				org: {
-					id: "org_1",
-				},
-				env: AppEnv.Live,
-			} as never,
-			multi: multi as never,
-			normalized,
-			meteredFeatures: ["messages"],
-			overwrite: true,
-			ttlSeconds: 60,
+		const writes = buildSharedBalanceWrites({
+			orgId: "org_1",
+			env: AppEnv.Live,
+			customerId: "cus_1",
+			customerEntitlements: normalized.customer_entitlements,
+			aggregatedCustomerEntitlements: [],
 		});
 
-		expect(operations).toEqual([
-			{
-				type: "hset",
-				args: [
-					buildSharedFullSubjectBalanceKey({
-						orgId: "org_1",
-						env: AppEnv.Live,
-						customerId: "cus_1",
-						featureId: "messages",
-					}),
-					{
-						cus_ent_1: JSON.stringify(normalized.customer_entitlements[0]),
-					},
-				],
-			},
-			{
-				type: "expire",
-				args: [
-					buildSharedFullSubjectBalanceKey({
-						orgId: "org_1",
-						env: AppEnv.Live,
-						customerId: "cus_1",
-						featureId: "messages",
-					}),
-					60,
-				],
-			},
-		]);
+		expect(writes).toHaveLength(1);
+		expect(writes[0].balanceKey).toBe(
+			buildSharedFullSubjectBalanceKey({
+				orgId: "org_1",
+				env: AppEnv.Live,
+				customerId: "cus_1",
+				featureId: "messages",
+			}),
+		);
+		expect(writes[0].fields).toEqual({
+			cus_ent_1: JSON.stringify(normalized.customer_entitlements[0]),
+		});
 	});
 });

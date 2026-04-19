@@ -84,6 +84,7 @@ export const updateIncludedGrantV2 = async ({
 			ctx,
 			id: targetCusEnt.id,
 			updates: { entities: newEntities },
+			incrementCacheVersion: false,
 		});
 
 		await updateSubjectBalanceCache({
@@ -98,6 +99,7 @@ export const updateIncludedGrantV2 = async ({
 			ctx,
 			id: targetCusEnt.id,
 			updates: { adjustment: requiredAdjustment },
+			incrementCacheVersion: false,
 		});
 
 		await updateSubjectBalanceCache({

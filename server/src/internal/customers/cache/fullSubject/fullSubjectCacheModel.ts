@@ -27,7 +27,18 @@ export const normalizedToCachedFullSubject = ({
 			existingMembership;
 	}
 
-	const meteredFeatures = Object.keys(customerEntitlementIdsByFeatureId);
+	const meteredFeatureSet = new Set(
+		Object.keys(customerEntitlementIdsByFeatureId),
+	);
+
+	for (const aggregatedCustomerEntitlement of normalized.entity_aggregations
+		?.aggregated_customer_entitlements ?? []) {
+		if (aggregatedCustomerEntitlement.feature_id) {
+			meteredFeatureSet.add(aggregatedCustomerEntitlement.feature_id);
+		}
+	}
+
+	const meteredFeatures = [...meteredFeatureSet];
 
 	return {
 		subjectType: normalized.subjectType,

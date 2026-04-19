@@ -252,6 +252,40 @@ local function queue_rollover_update(params)
   })
 end
 
+local function collect_modified_customer_entitlement_ids(params)
+  local context = params.context
+  local extra_customer_entitlement_ids =
+    safe_table(params.extra_customer_entitlement_ids)
+  local modified_customer_entitlement_ids = {}
+  local seen_modified_customer_entitlement_ids = {}
+
+  for _, customer_entitlement_id in ipairs(context.pending_writes or {}) do
+    if not is_nil(customer_entitlement_id)
+        and not seen_modified_customer_entitlement_ids[customer_entitlement_id]
+    then
+      seen_modified_customer_entitlement_ids[customer_entitlement_id] = true
+      table.insert(
+        modified_customer_entitlement_ids,
+        customer_entitlement_id
+      )
+    end
+  end
+
+  for _, customer_entitlement_id in ipairs(extra_customer_entitlement_ids) do
+    if not is_nil(customer_entitlement_id)
+        and not seen_modified_customer_entitlement_ids[customer_entitlement_id]
+    then
+      seen_modified_customer_entitlement_ids[customer_entitlement_id] = true
+      table.insert(
+        modified_customer_entitlement_ids,
+        customer_entitlement_id
+      )
+    end
+  end
+
+  return modified_customer_entitlement_ids
+end
+
 local function update_in_memory_rollover(params)
   update_in_memory_rollover_mutation({
     target = params.target,

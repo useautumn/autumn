@@ -46,7 +46,6 @@ export const deleteCachedFullCustomer = async ({
 			customerId,
 			entityId,
 			source,
-			skipGuard,
 		}),
 	];
 

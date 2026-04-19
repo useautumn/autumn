@@ -42,6 +42,7 @@
     {
       updates: { [cus_ent_id]: { balance, additional_balance, adjustment, entities, deducted, additional_deducted } },
       rollover_updates: { [rollover_id]: { balance, usage, entities } },
+      modified_customer_entitlement_ids: string[],
       remaining: number,
       error: string | null,
       feature_id: string | null
@@ -82,6 +83,7 @@ if #customer_entitlement_deductions == 0 then
   return cjson.encode({
     updates = {},
     rollover_updates = {},
+    modified_customer_entitlement_ids = empty_logs,
     mutation_logs = empty_logs,
     remaining = 0,
     error = cjson.null,
@@ -101,6 +103,7 @@ if #(context.missing_customer_entitlement_ids or {}) > 0 then
     error = 'SUBJECT_BALANCE_NOT_FOUND',
     updates = {},
     rollover_updates = {},
+    modified_customer_entitlement_ids = empty_logs,
     mutation_logs = empty_logs,
     remaining = 0,
     logs = context.logs,
@@ -122,6 +125,7 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
       error = unwind_result.error,
       updates = {},
       rollover_updates = {},
+      modified_customer_entitlement_ids = empty_logs,
       mutation_logs = context.mutation_logs or cjson.decode('[]'),
       remaining = 0,
       logs = context.logs,
@@ -181,6 +185,11 @@ for _, cus_ent_id in ipairs(unwind_modified_cus_ent_ids) do
   end
 end
 
+local modified_customer_entitlement_ids = collect_modified_customer_entitlement_ids({
+  context = context,
+  extra_customer_entitlement_ids = unwind_modified_cus_ent_ids,
+})
+
 logger.log("  remaining_amount: %s", tostring(remaining_amount or "nil"))
 logger.log("  is_refund: %s", tostring(remaining_amount < 0 or false))
 local mutation_logs = context.mutation_logs
@@ -194,6 +203,7 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
     feature_id = feature_id,
     remaining = remaining_amount,
     updates = {},
+    modified_customer_entitlement_ids = empty_logs,
     mutation_logs = mutation_logs,
     logs = context.logs
   })
@@ -216,6 +226,7 @@ then
       remaining = 0,
       updates = {},
       rollover_updates = rollover_updates,
+      modified_customer_entitlement_ids = modified_customer_entitlement_ids,
       mutation_logs = mutation_logs,
       logs = context.logs
     })
@@ -242,11 +253,17 @@ end
 -- Apply all pending writes to Redis (only after validation passes)
 apply_pending_writes(routing_key, context)
 
+update_aggregated_balances({
+  context = context,
+  mutation_logs = mutation_logs,
+})
+
 logger.log("=== LUA DEDUCTION END ===")
 
 return cjson.encode({
   updates = updates,
   rollover_updates = rollover_updates,
+  modified_customer_entitlement_ids = modified_customer_entitlement_ids,
   mutation_logs = mutation_logs,
   remaining = remaining_amount,
   error = cjson.null,

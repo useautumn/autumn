@@ -26,6 +26,7 @@ const rolloverShapeSpec: ShapeSpec = {
 };
 
 const subjectBalanceShapeSpec: ShapeSpec = {
+	replaceables: "array",
 	rollovers: { items: rolloverShapeSpec },
 	entities: "nullable_record",
 	entitlement: entitlementShapeSpec,

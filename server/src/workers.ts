@@ -1,17 +1,14 @@
-// Suppress BullMQ eviction policy warnings BEFORE any imports
-const originalWarn = console.warn;
-console.warn = (...args: unknown[]) => {
-	const msg = args.join(" ");
-	if (msg.includes("Eviction policy")) {
-		return;
-	}
-	originalWarn.apply(console, args);
-};
-
 import "dotenv/config";
 import cluster from "node:cluster";
 
 import { initInfisical } from "./external/infisical/initInfisical.js";
+import { logger } from "./external/logtail/logtailUtils.js";
+import {
+	startAllEdgeConfigPolling,
+	stopAllEdgeConfigPolling,
+} from "./internal/misc/edgeConfig/edgeConfigRegistry.js";
+import "./internal/misc/requestBlocks/requestBlockStore.js";
+import "./internal/misc/rollouts/rolloutConfigStore.js";
 
 // Number of worker processes (defaults to CPU cores)
 const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 3 : 4;
@@ -21,18 +18,15 @@ let isShuttingDown = false;
 
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
+if (!process.env.SQS_QUEUE_URL?.trim()) {
+	throw new Error("SQS_QUEUE_URL is required for workers startup");
+}
+
 if (cluster.isPrimary) {
 	await initInfisical();
 
 	// const { initHatchetWorker } = await import("./queue/initWorkers.js");
 	// await initHatchetWorker();
-
-	// Check if queue is configured before starting workers
-	if (!process.env.SQS_QUEUE_URL && !process.env.QUEUE_URL) {
-		console.log("⏭️  No queue configured. Skipping workers startup.");
-		console.log("   Set either SQS_QUEUE_URL or QUEUE_URL to enable workers.");
-		process.exit(0);
-	}
 
 	console.log(`Starting ${NUM_PROCESSES} worker processes`);
 
@@ -100,20 +94,13 @@ if (cluster.isPrimary) {
 } else {
 	// Worker process
 	const startupStartedAt = Date.now();
-	const queueImplementation = process.env.SQS_QUEUE_URL ? "SQS" : "BullMQ";
+	const queueImplementation = "SQS";
 	startMemoryMonitor("worker", 60_000);
+	await startAllEdgeConfigPolling({ logger });
 
-	// Auto-detect which queue implementation to use
-	if (process.env.SQS_QUEUE_URL) {
-		const { initWorkers } = await import("./queue/initWorkers.js");
-		await initWorkers({ startupStartedAt, queueImplementation });
-		// SQS implementation handles its own SIGTERM/SIGINT
-	} else if (process.env.QUEUE_URL) {
-		const { initWorkers } = await import("./queue/bullmq/initBullMqWorkers.js");
-		await initWorkers({ startupStartedAt, queueImplementation });
-		// BullMQ implementation handles its own SIGTERM/SIGINT
-	} else {
-		console.error("No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL");
-		process.exit(1);
-	}
+	process.once("exit", stopAllEdgeConfigPolling);
+
+	const { initWorkers } = await import("./queue/initWorkers.js");
+	await initWorkers({ startupStartedAt, queueImplementation });
+	// SQS implementation handles its own SIGTERM/SIGINT
 }

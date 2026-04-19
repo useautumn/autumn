@@ -3,6 +3,71 @@ import { type SQL, sql } from "drizzle-orm";
 import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 
+const getCustomerOrEntityCTE = ({
+	orgId,
+	env,
+	entityId,
+	entityOnlyLookup,
+	customerFilter,
+	customerPagination,
+}: {
+	orgId: string;
+	env: AppEnv;
+	entityId?: string;
+	entityOnlyLookup: boolean;
+	customerFilter: SQL;
+	customerPagination: SQL;
+}): SQL => {
+	if (entityOnlyLookup && entityId) {
+		return sql`
+		WITH entity_record AS (
+			SELECT e.*
+			FROM entities e
+			WHERE e.org_id = ${orgId}
+				AND e.env = ${env}
+				AND (e.id = ${entityId} OR e.internal_id = ${entityId})
+			LIMIT 1
+		),
+		subject_customer_records AS (
+			SELECT c.*
+			FROM customers c
+			WHERE c.internal_id = (SELECT internal_customer_id FROM entity_record LIMIT 1)
+		)`;
+	}
+
+	if (entityId) {
+		return sql`
+		WITH subject_customer_records AS (
+			SELECT *
+			FROM customers c
+			WHERE c.org_id = ${orgId}
+				AND c.env = ${env}
+				${customerFilter}
+			${customerPagination}
+		),
+		entity_record AS (
+			SELECT e.*
+			FROM entities e
+			WHERE e.internal_customer_id IN (
+				SELECT internal_id
+				FROM subject_customer_records
+			)
+				AND (e.id = ${entityId} OR e.internal_id = ${entityId})
+			LIMIT 1
+		)`;
+	}
+
+	return sql`
+		WITH subject_customer_records AS (
+			SELECT *
+			FROM customers c
+			WHERE c.org_id = ${orgId}
+				AND c.env = ${env}
+				${customerFilter}
+			${customerPagination}
+		)`;
+};
+
 export const getFullSubjectQuery = ({
 	orgId,
 	env,
@@ -51,53 +116,14 @@ export const getFullSubjectQuery = ({
 			OFFSET ${offset}
 		`;
 
-	let leadingCtes: SQL;
-	if (entityOnlyLookup) {
-		leadingCtes = sql`
-		WITH entity_record AS (
-			SELECT e.*
-			FROM entities e
-			WHERE e.org_id = ${orgId}
-				AND e.env = ${env}
-				AND (e.id = ${entityId} OR e.internal_id = ${entityId})
-			LIMIT 1
-		),
-		subject_customer_records AS (
-			SELECT c.*
-			FROM customers c
-			WHERE c.internal_id = (SELECT internal_customer_id FROM entity_record LIMIT 1)
-		)`;
-	} else if (entityId) {
-		leadingCtes = sql`
-		WITH subject_customer_records AS (
-			SELECT *
-			FROM customers c
-			WHERE c.org_id = ${orgId}
-				AND c.env = ${env}
-				${customerFilter}
-			${customerPagination}
-		),
-		entity_record AS (
-			SELECT e.*
-			FROM entities e
-			WHERE e.internal_customer_id IN (
-				SELECT internal_id
-				FROM subject_customer_records
-			)
-				AND (e.id = ${entityId} OR e.internal_id = ${entityId})
-			LIMIT 1
-		)`;
-	} else {
-		leadingCtes = sql`
-		WITH subject_customer_records AS (
-			SELECT *
-			FROM customers c
-			WHERE c.org_id = ${orgId}
-				AND c.env = ${env}
-				${customerFilter}
-			${customerPagination}
-		)`;
-	}
+	const leadingCtes = getCustomerOrEntityCTE({
+		orgId,
+		env,
+		entityId,
+		entityOnlyLookup,
+		customerFilter,
+		customerPagination,
+	});
 
 	const customerProductEntityFilter = entityId
 		? sql`AND (cp.internal_entity_id = (SELECT internal_id FROM entity_record LIMIT 1)
@@ -124,10 +150,6 @@ export const getFullSubjectQuery = ({
 			AND (
 				ce.internal_entity_id IS NULL
 				OR ce.internal_entity_id = (SELECT internal_id FROM entity_record LIMIT 1)
-				OR (
-					jsonb_typeof(ce.entities) = 'object'
-					AND ce.entities ? (SELECT id FROM entity_record LIMIT 1)
-				)
 			)
 		`
 		: sql`AND ce.internal_entity_id IS NULL`;
@@ -224,6 +246,12 @@ export const getFullSubjectQuery = ({
 			FROM rollovers ro
 			WHERE ro.cus_ent_id IN (SELECT id FROM all_cus_ent_ids)
 				AND (ro.expires_at IS NULL OR ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+		),
+
+		cus_replaceables AS (
+			SELECT rep.*
+			FROM replaceables rep
+			WHERE rep.cus_ent_id IN (SELECT id FROM all_cus_ent_ids)
 		),
 
 		cus_prices AS (
@@ -345,7 +373,27 @@ export const getFullSubjectQuery = ({
 
 			COALESCE(
 				(
-					SELECT json_agg(row_to_json(ro))
+					SELECT json_agg(row_to_json(rep) ORDER BY rep.created_at ASC, rep.id ASC)
+					FROM cus_replaceables rep
+					WHERE rep.cus_ent_id IN (
+						SELECT ce.id
+						FROM cus_entitlements ce
+						WHERE ce.internal_customer_id = scr.internal_id
+						UNION ALL
+						SELECT ece.id
+						FROM extra_cus_entitlements ece
+						WHERE ece.internal_customer_id = scr.internal_id
+					)
+				),
+				'[]'::json
+			) AS replaceables,
+
+			COALESCE(
+				(
+					SELECT json_agg(
+						row_to_json(ro)
+						ORDER BY ro.expires_at ASC NULLS LAST, ro.id ASC
+					)
 					FROM cus_rollovers ro
 					WHERE ro.cus_ent_id IN (
 						SELECT ce.id

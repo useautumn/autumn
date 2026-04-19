@@ -18,12 +18,6 @@ export const getApiEntityByRollout = async ({
 	source?: string;
 	withAutumnId?: boolean;
 }): Promise<ApiEntityV2> => {
-	console.log(
-		"Getting api entity by rollout",
-		{ customerId, entityId },
-		"rollout enabled",
-		isFullSubjectRolloutEnabled({ ctx }),
-	);
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 		const fullSubject = await getOrSetCachedFullSubject({
 			ctx,

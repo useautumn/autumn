@@ -1,6 +1,7 @@
+import { orgToFeaturesByOrgEnv } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { batchDeleteCachedFullCustomers } from "../cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers";
+import { batchInvalidateCachedFullSubjects } from "../cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects";
 import { deleteCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 
 export const handleClearCustomerCache = createRoute({
@@ -21,12 +22,20 @@ export const handleClearCustomerCache = createRoute({
 		}
 
 		if (customer_ids) {
-			await batchDeleteCachedFullCustomers({
-				customers: customer_ids.map((id) => ({
-					customerId: id,
-					orgId: ctx.org.id,
-					env: ctx.env,
-				})),
+			const customersToDelete = customer_ids.map((id) => ({
+				customerId: id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			}));
+			const featuresByOrgEnv = orgToFeaturesByOrgEnv({
+				org: ctx.org,
+				env: ctx.env,
+				features: ctx.features,
+			});
+
+			await batchInvalidateCachedFullSubjects({
+				customers: customersToDelete,
+				featuresByOrgEnv,
 			});
 		}
 

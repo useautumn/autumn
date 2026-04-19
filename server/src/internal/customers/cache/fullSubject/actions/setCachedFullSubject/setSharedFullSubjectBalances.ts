@@ -1,24 +1,28 @@
-import type { NormalizedFullSubject } from "@autumn/shared";
-import type { redisV2 } from "@/external/redis/initRedisV2.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type {
+	AggregatedFeatureBalance,
+	NormalizedFullSubject,
+} from "@autumn/shared";
 import { featureBalancesToHashFields } from "../../balances/featureBalancesToHashFields.js";
 import { buildSharedFullSubjectBalanceKey } from "../../builders/buildSharedFullSubjectBalanceKey.js";
+import { AGGREGATED_BALANCE_FIELD } from "../../config/fullSubjectCacheConfig.js";
 
-type SharedBalanceWrite = {
+export type SharedBalanceWrite = {
 	balanceKey: string;
 	fields: Record<string, string>;
 };
 
-const buildSharedBalanceWrites = ({
+export const buildSharedBalanceWrites = ({
 	orgId,
 	env,
 	customerId,
 	customerEntitlements,
+	aggregatedCustomerEntitlements,
 }: {
 	orgId: string;
 	env: string;
 	customerId: string;
 	customerEntitlements: NormalizedFullSubject["customer_entitlements"];
+	aggregatedCustomerEntitlements: AggregatedFeatureBalance[];
 }): SharedBalanceWrite[] => {
 	const balancesByFeatureId = new Map<string, typeof customerEntitlements>();
 
@@ -29,56 +33,33 @@ const buildSharedBalanceWrites = ({
 		balancesByFeatureId.set(customerEntitlement.feature_id, existingBalances);
 	}
 
-	return Array.from(balancesByFeatureId.entries()).map(
-		([featureId, balances]) => {
-			return {
-				balanceKey: buildSharedFullSubjectBalanceKey({
-					orgId,
-					env,
-					customerId,
-					featureId,
-				}),
-				fields: featureBalancesToHashFields({ balances }),
-			};
-		},
-	);
-};
+	const aggregatedByFeatureId = new Map<string, AggregatedFeatureBalance>();
+	for (const aggregated of aggregatedCustomerEntitlements) {
+		aggregatedByFeatureId.set(aggregated.feature_id, aggregated);
+	}
 
-export const appendSharedFullSubjectBalanceWrite = async ({
-	ctx,
-	multi,
-	normalized,
-	meteredFeatures: _meteredFeatures,
-	overwrite,
-	ttlSeconds,
-}: {
-	ctx: AutumnContext;
-	multi: ReturnType<typeof redisV2.multi>;
-	normalized: NormalizedFullSubject;
-	meteredFeatures: string[];
-	overwrite: boolean;
-	ttlSeconds: number;
-}) => {
-	const { org, env } = ctx;
-	const { customerId } = normalized;
-	const balanceWrites = buildSharedBalanceWrites({
-		orgId: org.id,
-		env,
-		customerId,
-		customerEntitlements: normalized.customer_entitlements,
-	});
+	const allFeatureIds = new Set([
+		...balancesByFeatureId.keys(),
+		...aggregatedByFeatureId.keys(),
+	]);
 
-	for (const { balanceKey, fields } of balanceWrites) {
-		if (Object.keys(fields).length > 0) {
-			if (overwrite) {
-				multi.hset(balanceKey, fields);
-			} else {
-				for (const [field, value] of Object.entries(fields)) {
-					multi.hsetnx(balanceKey, field, value);
-				}
-			}
+	return Array.from(allFeatureIds).map((featureId) => {
+		const balances = balancesByFeatureId.get(featureId) ?? [];
+		const fields = featureBalancesToHashFields({ balances });
+
+		const aggregated = aggregatedByFeatureId.get(featureId);
+		if (aggregated) {
+			fields[AGGREGATED_BALANCE_FIELD] = JSON.stringify(aggregated);
 		}
 
-		multi.expire(balanceKey, ttlSeconds);
-	}
+		return {
+			balanceKey: buildSharedFullSubjectBalanceKey({
+				orgId,
+				env,
+				customerId,
+				featureId,
+			}),
+			fields,
+		};
+	});
 };

@@ -1,5 +1,5 @@
 import { redisV2 } from "@/external/redis/initRedisV2.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { RepoContext } from "@/db/repoContext.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -11,7 +11,7 @@ export const updateSubjectBalanceCache = async ({
 	customerEntitlementId,
 	updates,
 }: {
-	ctx: AutumnContext;
+	ctx: RepoContext;
 	customerId: string;
 	featureId: string;
 	customerEntitlementId: string;
@@ -30,6 +30,8 @@ export const updateSubjectBalanceCache = async ({
 		featureId,
 	});
 
+	// Runtime FullSubject cache patches must not mutate cache_version.
+	// cache_version is a DB-side stale-sync guard owned by lifecycle/billing flows.
 	await tryRedisWrite(
 		() =>
 			redisV2.updateSubjectBalances(

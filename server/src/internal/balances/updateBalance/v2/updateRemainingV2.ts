@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeRedisDeductionV2 } from "@/internal/balances/utils/deductionV2/executeRedisDeductionV2.js";
-import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
+import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
 import { buildCustomerEntitlementFilters } from "../../utils/buildCustomerEntitlementFilters.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handleUpdateBalanceDeductionErrorV2 } from "./handleUpdateBalanceDeductionErrorV2.js";
@@ -72,14 +72,17 @@ export const updateRemainingV2 = async ({
 	const rolloverIds = Object.keys(rolloverUpdates);
 
 	if (cusEntIds.length > 0 || rolloverIds.length > 0) {
-		globalSyncBatchingManagerV3.addSyncItem({
-			customerId: fullSubject.customerId,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			cusEntIds,
-			rolloverIds,
-			entityId: fullSubject.entityId,
-			modifiedCusEntIdsByFeatureId,
+		await syncItemV4({
+			ctx,
+			payload: {
+				customerId: fullSubject.customerId,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				timestamp: Date.now(),
+				rolloverIds,
+				entityId: fullSubject.entityId,
+				modifiedCusEntIdsByFeatureId,
+			},
 		});
 	}
 

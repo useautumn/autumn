@@ -15,20 +15,22 @@ import {
 } from "../../../_luaScripts/luaScripts.js";
 import {
 	ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
+	ADJUST_SUBJECT_BALANCE_SCRIPT,
 	APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
 	CLAIM_LOCK_RECEIPT_SCRIPT,
 	DEDUCT_FROM_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
-	RELEASE_FULL_SUBJECT_RESERVATION_SCRIPT,
-	RESERVE_FULL_SUBJECT_WRITE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	SET_CACHED_FULL_SUBJECT_SCRIPT,
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
+	UPDATE_CACHED_INVOICE_V2_SCRIPT,
 	UPDATE_CUSTOMER_DATA_SCRIPT,
 	UPDATE_CUSTOMER_DATA_V2_SCRIPT,
-	UPDATE_ENTITY_DATA_V2_SCRIPT,
 	UPDATE_CUSTOMER_ENTITLEMENTS_SCRIPT,
 	UPDATE_CUSTOMER_PRODUCT_SCRIPT,
+	UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT,
+	UPDATE_ENTITY_DATA_V2_SCRIPT,
 	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
 	UPDATE_SUBJECT_BALANCES_SCRIPT,
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
@@ -127,14 +129,8 @@ export const registerRedisCommands = ({
 		lua: SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
-	redisInstance.defineCommand("reserveFullSubjectWrite", {
-		numberOfKeys: 3,
-		lua: RESERVE_FULL_SUBJECT_WRITE_SCRIPT,
-	});
-
-	redisInstance.defineCommand("releaseFullSubjectReservation", {
-		numberOfKeys: 1,
-		lua: RELEASE_FULL_SUBJECT_RESERVATION_SCRIPT,
+	redisInstance.defineCommand("setCachedFullSubject", {
+		lua: SET_CACHED_FULL_SUBJECT_SCRIPT,
 	});
 
 	redisInstance.defineCommand("resetCustomerEntitlements", {
@@ -162,6 +158,16 @@ export const registerRedisCommands = ({
 		lua: UPDATE_ENTITY_DATA_V2_SCRIPT,
 	});
 
+	redisInstance.defineCommand("updateFullSubjectCustomerProductV2", {
+		numberOfKeys: 1,
+		lua: UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT,
+	});
+
+	redisInstance.defineCommand("upsertInvoiceInFullSubjectV2", {
+		numberOfKeys: 1,
+		lua: UPDATE_CACHED_INVOICE_V2_SCRIPT,
+	});
+
 	redisInstance.defineCommand("appendEntityToCustomer", {
 		numberOfKeys: 1,
 		lua: APPEND_ENTITY_TO_CUSTOMER_SCRIPT,
@@ -180,6 +186,11 @@ export const registerRedisCommands = ({
 	redisInstance.defineCommand("adjustCustomerEntitlementBalance", {
 		numberOfKeys: 1,
 		lua: ADJUST_CUSTOMER_ENTITLEMENT_BALANCE_SCRIPT,
+	});
+
+	redisInstance.defineCommand("adjustSubjectBalance", {
+		numberOfKeys: 1,
+		lua: ADJUST_SUBJECT_BALANCE_SCRIPT,
 	});
 
 	redisInstance.defineCommand("updateCustomerProduct", {

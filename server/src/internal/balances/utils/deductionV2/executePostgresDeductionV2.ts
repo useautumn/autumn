@@ -20,6 +20,7 @@ import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullS
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
+import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
 import { prepareDeductionOptionsV2 } from "./prepareDeductionOptionsV2.js";
 import { prepareFeatureDeductionV2 } from "./prepareFeatureDeductionV2.js";
 import { rollbackDeductionV2 } from "./rollbackDeductionV2.js";
@@ -87,6 +88,7 @@ export const executePostgresDeductionV2 = async ({
 		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 	}> => {
 		let allUpdates: Record<string, DeductionUpdate> = {};
+		let allSyncUpdates: Record<string, DeductionUpdate> = {};
 		let allRolloverOverwrites: RolloverOverwrite[] = [];
 		let allMutationLogs: MutationLogItem[] = [];
 		const allModifiedCusEntIdsByFeatureId: Record<string, string[]> = {};
@@ -154,6 +156,7 @@ export const executePostgresDeductionV2 = async ({
 			}
 
 			const { updates, rollover_updates, mutation_logs } = resultJson;
+
 			logDeductionUpdatesV2({
 				ctx,
 				fullSubject,
@@ -166,15 +169,18 @@ export const executePostgresDeductionV2 = async ({
 				allRolloverOverwrites = [...allRolloverOverwrites, ...rollover_updates];
 			}
 
-			for (const ced of customerEntitlementDeductions) {
-				if (!updates[ced.customer_entitlement_id]) continue;
-				if (!allModifiedCusEntIdsByFeatureId[ced.feature_id]) {
-					allModifiedCusEntIdsByFeatureId[ced.feature_id] = [];
-				}
-				allModifiedCusEntIdsByFeatureId[ced.feature_id].push(
-					ced.customer_entitlement_id,
-				);
-			}
+			const syncState = normalizeDeductionSyncStateV2({
+				customerEntitlements,
+				updates,
+				mutationLogs: mutation_logs ?? [],
+				syncUpdates: allSyncUpdates,
+				modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
+			});
+			allSyncUpdates = syncState.syncUpdates;
+			Object.assign(
+				allModifiedCusEntIdsByFeatureId,
+				syncState.modifiedCusEntIdsByFeatureId,
+			);
 
 			const oldFullCustomer = fullSubjectToFullCustomer({
 				fullSubject: oldFullSubject,
@@ -274,7 +280,7 @@ export const executePostgresDeductionV2 = async ({
 			ctx,
 			customerId,
 			fullSubject: oldFullSubject,
-			cusEntUpdates: allUpdates,
+			cusEntUpdates: allSyncUpdates,
 			rolloverOverwrites: allRolloverOverwrites,
 			modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
 		});

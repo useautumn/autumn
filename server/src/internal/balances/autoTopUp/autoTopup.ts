@@ -6,6 +6,7 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan.js";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult.js";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan.js";
+import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
 import { buildAutoTopUpLockKey } from "./helpers/autoTopUpUtils.js";
@@ -96,6 +97,18 @@ export const autoTopup = async ({
 				source: "autoTopup",
 			});
 			return;
+		}
+
+		// Manually update cached options here since we're not refreshing cache.
+		const customerProductUpdate = autumnBillingPlan.updateCustomerProduct;
+		if (customerProductUpdate?.updates.options) {
+			const cusProductId = customerProductUpdate.customerProduct.id;
+			await updateCachedCustomerProductV2({
+				ctx,
+				customerId,
+				customerProductId: cusProductId,
+				updates: customerProductUpdate.updates,
+			});
 		}
 
 		const durationMs = Math.round(performance.now() - start);

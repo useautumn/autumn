@@ -1,4 +1,4 @@
-import { ErrCode, InternalError, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -66,12 +66,12 @@ export const fetchLockReceipt = async ({
 		),
 	]);
 
-	if (rawReceiptV1 && rawReceiptV2) {
-		throw new InternalError({
-			message: `Lock receipt found in both Redis stores for ID: ${lockId}`,
-			code: "lock_receipt_found_in_both_stores",
-		});
-	}
+	// if (rawReceiptV1 && rawReceiptV2) {
+	// 	throw new InternalError({
+	// 		message: `Lock receipt found in both Redis stores for ID: ${lockId}`,
+	// 		code: "lock_receipt_found_in_both_stores",
+	// 	});
+	// }
 
 	const rawReceipt = rawReceiptV2 ?? rawReceiptV1;
 	const source: LockReceiptSource = rawReceiptV2 ? "redis_v2" : "redis_v1";

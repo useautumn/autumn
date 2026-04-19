@@ -84,6 +84,11 @@ const LOCK_UNWIND_UTILS = readFileSync(
 	"utf-8",
 );
 
+const LOCK_UNWIND_UTILS_V2 = readFileSync(
+	join(FULL_SUBJECT_DEDUCTION_DIR, "lock", "unwindLockV2.lua"),
+	"utf-8",
+);
+
 // ============================================================================
 // FULL CUSTOMER KEY BUILDER LUA (version interpolated from TS config)
 // ============================================================================
@@ -167,22 +172,13 @@ const setFullCustomerCacheScript = readFileSync(
 export const SET_FULL_CUSTOMER_CACHE_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
 ${setFullCustomerCacheScript}`;
 
-const reserveFullSubjectWriteScript = readFileSync(
-	join(FULL_SUBJECT_DIR, "reserveFullSubjectWrite.lua"),
+const setCachedFullSubjectScript = readFileSync(
+	join(FULL_SUBJECT_DIR, "setCachedFullSubject.lua"),
 	"utf-8",
 );
 
-/** Reserve a FullSubject write so only one non-overwrite writer proceeds. */
-export const RESERVE_FULL_SUBJECT_WRITE_SCRIPT = reserveFullSubjectWriteScript;
-
-const releaseFullSubjectReservationScript = readFileSync(
-	join(FULL_SUBJECT_DIR, "releaseFullSubjectReservation.lua"),
-	"utf-8",
-);
-
-/** Release a FullSubject write reservation if the token still matches. */
-export const RELEASE_FULL_SUBJECT_RESERVATION_SCRIPT =
-	releaseFullSubjectReservationScript;
+/** Atomically set a FullSubject cache: subject view + all balance hashes. */
+export const SET_CACHED_FULL_SUBJECT_SCRIPT = setCachedFullSubjectScript;
 
 const updateCustomerDataV2Script = readFileSync(
 	join(FULL_SUBJECT_DIR, "updateCustomerDataV2.lua"),
@@ -199,6 +195,38 @@ const updateEntityDataV2Script = readFileSync(
 
 /** Atomically update top-level entity fields in the cached FullSubject. */
 export const UPDATE_ENTITY_DATA_V2_SCRIPT = updateEntityDataV2Script;
+
+const updateCachedInvoiceV2Script = readFileSync(
+	join(FULL_SUBJECT_DIR, "updateCachedInvoice.lua"),
+	"utf-8",
+);
+
+/** Atomically upsert an invoice in the cached FullSubject invoices array. */
+export const UPDATE_CACHED_INVOICE_V2_SCRIPT = updateCachedInvoiceV2Script;
+
+const UPDATE_CUSTOMER_PRODUCT_DIR = join(
+	FULL_SUBJECT_DIR,
+	"updateCustomerProduct",
+);
+
+const updateCustomerProductOptionsScript = readFileSync(
+	join(UPDATE_CUSTOMER_PRODUCT_DIR, "updateCustomerProductOptions.lua"),
+	"utf-8",
+);
+
+const updateCustomerProductV2MainScript = readFileSync(
+	join(UPDATE_CUSTOMER_PRODUCT_DIR, "updateCustomerProductV2.lua"),
+	"utf-8",
+);
+
+/** Atomically update customer product fields in the cached FullSubject. */
+export const UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT = `${updateCustomerProductOptionsScript}
+${updateCustomerProductV2MainScript}`;
+
+const adjustSubjectBalanceMainScript = readFileSync(
+	join(FULL_SUBJECT_DIR, "adjustSubjectBalance.lua"),
+	"utf-8",
+);
 
 // ============================================================================
 // RESET CUSTOMER ENTITLEMENTS SCRIPT (deprecated — kept for backward compat)
@@ -344,6 +372,11 @@ const SPEND_LIMIT_UTILS_V2 = readFileSync(
 	"utf-8",
 );
 
+const UPDATE_AGGREGATED_BALANCES = readFileSync(
+	join(FULL_SUBJECT_DEDUCTION_DIR, "updateAggregatedBalances.lua"),
+	"utf-8",
+);
+
 const DEDUCT_FROM_SUBJECT_BALANCES_MAIN = readFileSync(
 	join(FULL_SUBJECT_DEDUCTION_DIR, "deductFromSubjectBalances.lua"),
 	"utf-8",
@@ -365,23 +398,53 @@ ${RUN_DEDUCTION_ON_CONTEXT_V2}
 ${MUTATION_ITEM_UTILS}
 ${LOCK_RECEIPT_UTILS}
 ${LOCK_STATE_UTILS}
-${LOCK_UNWIND_UTILS}
+${LOCK_UNWIND_UTILS_V2}
+${UPDATE_AGGREGATED_BALANCES}
 ${DEDUCT_FROM_SUBJECT_BALANCES_MAIN}`;
 
 // ============================================================================
 // UPDATE SUBJECT BALANCES SCRIPT (V2 cache — per-feature hash updates)
 // ============================================================================
 
+const UPDATE_SUBJECT_BALANCES_DIR = join(
+	FULL_SUBJECT_DIR,
+	"updateSubjectBalances",
+);
+
+const UPDATE_CONTEXT_UTILS = readFileSync(
+	join(UPDATE_SUBJECT_BALANCES_DIR, "updateContextUtils.lua"),
+	"utf-8",
+);
+
+const APPLY_FIELD_UPDATES = readFileSync(
+	join(UPDATE_SUBJECT_BALANCES_DIR, "applyFieldUpdates.lua"),
+	"utf-8",
+);
+
 const UPDATE_SUBJECT_BALANCES_MAIN = readFileSync(
-	join(FULL_SUBJECT_DIR, "updateSubjectBalances.lua"),
+	join(UPDATE_SUBJECT_BALANCES_DIR, "updateSubjectBalances.lua"),
 	"utf-8",
 );
 
 /**
+ * Lua script for atomically adjusting one SubjectBalance.balance entry in a
+ * per-feature hash. Emits entity-level mutation logs so aggregated balances
+ * stay in sync.
+ */
+export const ADJUST_SUBJECT_BALANCE_SCRIPT = `${LUA_UTILS}
+${UPDATE_CONTEXT_UTILS}
+${UPDATE_AGGREGATED_BALANCES}
+${adjustSubjectBalanceMainScript}`;
+
+/**
  * Lua script for atomically updating SubjectBalance entries in a single
  * per-feature balance hash. Supports scalar updates, rollover ops,
- * replaceable ops, and expected_next_reset_at guard.
+ * replaceable ops, expected_next_reset_at guard, and entity-level
+ * aggregated balance propagation.
  * Called once per feature via pipeline.
  */
 export const UPDATE_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
+${UPDATE_CONTEXT_UTILS}
+${APPLY_FIELD_UPDATES}
+${UPDATE_AGGREGATED_BALANCES}
 ${UPDATE_SUBJECT_BALANCES_MAIN}`;

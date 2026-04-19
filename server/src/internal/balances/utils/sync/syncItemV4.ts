@@ -1,4 +1,5 @@
 import {
+	type AppEnv,
 	type EntityBalance,
 	type EntityRolloverBalance,
 	type SubjectBalance,
@@ -8,6 +9,7 @@ import { sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
+import { refreshEntityAggregateCache } from "./refreshEntityAggregateCache.js";
 
 const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
@@ -61,7 +63,7 @@ interface SyncItemV4 {
 	customerId: string;
 	entityId?: string;
 	orgId: string;
-	env: string;
+	env: AppEnv;
 	timestamp: number;
 	rolloverIds?: string[];
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
@@ -151,6 +153,7 @@ export const syncItemV4 = async ({
 			customerId,
 			featureId,
 			customerEntitlementIds,
+			readMaster: true,
 		});
 
 		if (!result) {
@@ -237,4 +240,17 @@ export const syncItemV4 = async ({
 	logger.info(
 		`[SYNC V4] (${customerId}) Done: ${updateCount} cus_ents, ${rolloverUpdateCount} rollovers updated`,
 	);
+
+	const hasEntityLevel = allSubjectBalances.some(
+		(subjectBalance) => subjectBalance.isEntityLevel,
+	);
+	if (hasEntityLevel) {
+		await refreshEntityAggregateCache({
+			ctx,
+			customerId,
+			orgId,
+			env,
+			featureIds: Object.keys(modifiedCusEntIdsByFeatureId),
+		});
+	}
 };

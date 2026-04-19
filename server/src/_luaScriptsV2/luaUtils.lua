@@ -21,6 +21,19 @@ local function is_nil(val)
   return val == nil or val == cjson.null
 end
 
+local function is_absent(val)
+  return val == nil or val == cjson.null or val == false
+end
+
+local function safe_decode(raw)
+  if raw == nil or raw == false or raw == cjson.null then
+    return nil
+  end
+  local ok, decoded = pcall(cjson.decode, raw)
+  if not ok then return nil end
+  return decoded
+end
+
 local function sorted_keys(tbl)
   local keys = {}
   for k in pairs(tbl) do

@@ -19,7 +19,9 @@ export const updateCachedEntityData = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	entityId: string;
-	updates: Partial<Pick<Entity, "spend_limits" | "usage_alerts" | "overage_allowed">>;
+	updates: Partial<
+		Pick<Entity, "spend_limits" | "usage_alerts" | "overage_allowed">
+	>;
 }): Promise<void> => {
 	if (Object.keys(updates).length === 0) return;
 
