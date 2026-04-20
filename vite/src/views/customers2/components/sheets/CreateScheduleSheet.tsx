@@ -6,7 +6,7 @@ import type {
 } from "@autumn/shared";
 import { CusProductStatus, mapToProductItems } from "@autumn/shared";
 import { motion } from "motion/react";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	AttachFormProvider,
@@ -281,6 +281,7 @@ function ScheduleEditSheet({
 			entityId={undefined}
 			initialProductId={editingPlanValue?.productId ?? undefined}
 			initialSchedulePlan={editingPlanValue}
+			disablePreview
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
 			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
 			onSuccess={onCancel}
@@ -384,7 +385,20 @@ export function CreateScheduleSheet() {
 		[fullCustomer, schedule, products, scopeEntityId],
 	);
 
-	const formKey = `${scopeEntityId ?? "customer"}-${schedule?.id ?? "new"}`;
+	// Only update the schedule ID portion of the key when the user explicitly
+	// changes scope. Without this, the customer query invalidation after an
+	// invoice mutation causes schedule?.id to change (undefined → real ID),
+	// which remounts the form provider and resets SendInvoiceStage's local
+	// completedInvoiceUrl state, bouncing the user back to the draft/finalize view.
+	const previousScopeRef = useRef(scopeEntityId);
+	const scheduleIdForKeyRef = useRef(schedule?.id ?? "new");
+
+	if (previousScopeRef.current !== scopeEntityId) {
+		previousScopeRef.current = scopeEntityId;
+		scheduleIdForKeyRef.current = schedule?.id ?? "new";
+	}
+
+	const formKey = `${scopeEntityId ?? "customer"}-${scheduleIdForKeyRef.current}`;
 
 	return (
 		<CreateScheduleFormProvider

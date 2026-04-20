@@ -104,6 +104,7 @@ interface AttachFormProviderProps {
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 	initialSchedulePlan?: SchedulePlan | null;
+	disablePreview?: boolean;
 	children: ReactNode;
 }
 
@@ -135,6 +136,7 @@ export function AttachFormProvider({
 	onCheckoutRedirect,
 	onSuccess,
 	initialSchedulePlan,
+	disablePreview,
 	children,
 }: AttachFormProviderProps) {
 	const [showPlanEditor, setShowPlanEditor] = useState(false);
@@ -382,7 +384,10 @@ export function AttachFormProvider({
 		isFreeToPaidTransition,
 	});
 
-	const previewQuery = useAttachPreview({ requestBody });
+	const previewQuery = useAttachPreview({
+		requestBody,
+		enabled: disablePreview ? false : undefined,
+	});
 
 	const previewPrepaidOptions = useMemo(() => {
 		const incoming = previewQuery.data?.incoming;
