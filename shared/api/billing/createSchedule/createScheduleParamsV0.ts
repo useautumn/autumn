@@ -1,4 +1,6 @@
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
+import { InvoiceModeParamsSchema } from "@api/billing/common/invoiceModeParams";
+import { RedirectModeSchema } from "@api/billing/common/redirectMode";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { z } from "zod/v4";
@@ -70,6 +72,14 @@ export const CreateScheduleParamsV0Schema = z
 			.meta({
 				description: "Ordered phase definitions for the schedule.",
 			}),
+		invoice_mode: InvoiceModeParamsSchema.optional().meta({
+			description:
+				"Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.",
+		}),
+		redirect_mode: RedirectModeSchema.default("if_required").meta({
+			description:
+				"Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.",
+		}),
 	})
 	.refine(
 		(data) => {

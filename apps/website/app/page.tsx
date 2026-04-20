@@ -1,7 +1,6 @@
 import ElasticRecoil from "@/components/elastic-footer";
 import HomeSections from "@/components/home-sections";
 import Navbar from "@/components/navbar";
-import Preloader from "@/components/preloader";
 import type { PageStyle } from "@/lib/types";
 
 export default function Home() {
@@ -12,7 +11,6 @@ export default function Home() {
 				{ "--page-pad": "max(2.5rem, calc((100vw - 1440px) / 2))" } as PageStyle
 			}
 		>
-			<Preloader />
 			<ElasticRecoil>
 				<div className="relative z-10 bg-[#000000] min-h-screen">
 					<div className="relative w-full px-4 md:px-(--page-pad) pt-5">

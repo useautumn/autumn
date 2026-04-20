@@ -31,7 +31,8 @@ export const setupCreateScheduleBillingContext = async ({
 			feature_quantities: plan.feature_quantities,
 			version: plan.version,
 		})),
-		redirect_mode: "if_required",
+		invoice_mode: params.invoice_mode,
+		redirect_mode: params.redirect_mode ?? "if_required",
 	} satisfies MultiAttachParamsV0;
 
 	const billingContext = await setupImmediateMultiProductBillingContext({

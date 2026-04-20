@@ -45,7 +45,7 @@ const autumnTheme = {
 	"hljs-punctuation": { color: "#BFBFBF" },
 };
 
-const TOTAL_LINES = 16;
+const TOTAL_LINES = 19;
 const LINE_HEIGHT = 24;
 
 const codeContent = `// Your entire billing integration

@@ -1671,20 +1671,16 @@ test.concurrent(`${chalk.yellowBright("create-schedule: rejects invalid timing a
 			actions: [],
 		});
 
-	await expectAutumnError({
-		errMessage: "Please attach a payment method before creating a schedule.",
-		func: async () => {
-			await autumnNoPm.billing.createSchedule({
-				customer_id: noPmCustomerId,
-				phases: [
-					{
-						starts_at: Date.now(),
-						plans: [{ plan_id: pro.id }],
-					},
-				],
-			});
-		},
+	const noPmResult = await autumnNoPm.billing.createSchedule({
+		customer_id: noPmCustomerId,
+		phases: [
+			{
+				starts_at: Date.now(),
+				plans: [{ plan_id: pro.id }],
+			},
+		],
 	});
+	expect(noPmResult.payment_url).toBeTruthy();
 });
 
 test.concurrent(`${chalk.yellowBright("create-schedule: hydrates schedules on the full customer")}`, async () => {
