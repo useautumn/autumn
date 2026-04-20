@@ -1,9 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv, type ProductItem, type ProductV2 } from "@autumn/shared";
-import {
-	getItemUnitPrice,
-	getPlanPriceLabel,
-} from "@/components/forms/create-schedule/components/SchedulePlanRow";
+import { getSchedulePlanPriceProduct } from "@/components/forms/create-schedule/components/SchedulePlanRow";
+import { getProductPriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 
 function makeProduct({
 	id = "prod_1",
@@ -66,29 +64,25 @@ const freeFeatureItem: ProductItem = {
 	interval: null,
 } as ProductItem;
 
-describe("getItemUnitPrice", () => {
-	test("returns price for base price item", () => {
-		expect(getItemUnitPrice(basePriceItem)).toBe(15);
-	});
-
-	test("returns price for feature item with direct price", () => {
-		expect(getItemUnitPrice(featurePriceViaPrice)).toBe(10);
-	});
-
-	test("returns tiers[0].amount for single-tier feature item", () => {
-		expect(getItemUnitPrice(featurePriceViaTiers)).toBe(10);
-	});
-
-	test("returns null for multi-tier feature item", () => {
-		expect(getItemUnitPrice(multiTierItem)).toBeNull();
-	});
-
-	test("returns null for free feature item", () => {
-		expect(getItemUnitPrice(freeFeatureItem)).toBeNull();
-	});
-});
-
 describe("getPlanPriceLabel", () => {
+	const getPlanPriceLabel = ({
+		product,
+		customItems,
+	}: {
+		product: ProductV2;
+		customItems?: ProductItem[] | null;
+	}) => {
+		const priceProduct = getSchedulePlanPriceProduct({ product, customItems });
+		const priceDisplay = getProductPriceDisplay({
+			product: priceProduct,
+			currency: "USD",
+		});
+
+		return priceDisplay.type === "free"
+			? "Free"
+			: `${priceDisplay.formattedPrice} ${priceDisplay.intervalText}`;
+	};
+
 	test("returns Free when no priced items", () => {
 		const product = makeProduct({ items: [freeFeatureItem] });
 		expect(getPlanPriceLabel({ product })).toBe("Free");
@@ -98,39 +92,24 @@ describe("getPlanPriceLabel", () => {
 		const product = makeProduct({ items: [basePriceItem] });
 		const label = getPlanPriceLabel({ product });
 		expect(label).toContain("15");
-		expect(label).toContain("/month");
+		expect(label).toContain("per month");
 	});
 
-	test("sums base price + feature price with prepaid quantity", () => {
-		const product = makeProduct({
-			items: [basePriceItem, featurePriceViaTiers],
-		});
-		const label = getPlanPriceLabel({
-			product,
-			prepaidOptions: { users: 5 },
-		});
-		expect(label).toContain("65");
-		expect(label).toContain("/month");
-	});
-
-	test("uses single-tier amount for feature items with tiers", () => {
-		const product = makeProduct({ items: [featurePriceViaTiers] });
-		const label = getPlanPriceLabel({
-			product,
-			prepaidOptions: { users: 3 },
-		});
-		expect(label).toContain("30");
-	});
-
-	test("multiplies by 1 when feature has no prepaid option", () => {
+	test("uses base price display when plan also has priced features", () => {
 		const product = makeProduct({
 			items: [basePriceItem, featurePriceViaTiers],
 		});
 		const label = getPlanPriceLabel({ product });
-		expect(label).toContain("25");
+		expect(label).toContain("15");
+		expect(label).toContain("per month");
 	});
 
-	test("skips multi-tier items (cannot compute fixed total)", () => {
+	test("returns Free when plan only has priced feature items", () => {
+		const product = makeProduct({ items: [featurePriceViaTiers] });
+		expect(getPlanPriceLabel({ product })).toBe("Free");
+	});
+
+	test("uses base price even when priced feature is multi-tier", () => {
 		const product = makeProduct({ items: [basePriceItem, multiTierItem] });
 		const label = getPlanPriceLabel({ product });
 		expect(label).toContain("15");
@@ -142,18 +121,13 @@ describe("getPlanPriceLabel", () => {
 			{ ...basePriceItem, price: 20 } as ProductItem,
 			featurePriceViaTiers,
 		];
-		const label = getPlanPriceLabel({
-			product,
-			customItems,
-			prepaidOptions: { users: 5 },
-		});
-		expect(label).toContain("70");
+		const label = getPlanPriceLabel({ product, customItems });
+		expect(label).toContain("20");
+		expect(label).toContain("per month");
 	});
 
-	test("returns Free when customItems has no priced items", () => {
+	test("returns Free when customItems only has priced features", () => {
 		const product = makeProduct({ items: [basePriceItem] });
-		expect(
-			getPlanPriceLabel({ product, customItems: [freeFeatureItem] }),
-		).toBe("Free");
+		expect(getPlanPriceLabel({ product, customItems: [featurePriceViaPrice] })).toBe("Free");
 	});
 });
