@@ -183,3 +183,57 @@ export function useCreateScheduleRequestBody({
 		[customerId, entityId, phases, products, features, nowMs],
 	);
 }
+
+export function useBuildCreateScheduleRequestBody({
+	customerId,
+	entityId,
+	products,
+	features,
+	nowMs,
+	getPhases,
+}: {
+	customerId: string | undefined;
+	entityId: string | undefined;
+	products: ProductV2[];
+	features: Feature[];
+	nowMs?: number;
+	getPhases: () => SchedulePhase[];
+}) {
+	return useMemo(
+		() =>
+			({
+				useInvoice,
+				enableProductImmediately,
+				finalizeInvoice,
+			}: {
+				useInvoice?: boolean;
+				enableProductImmediately?: boolean;
+				finalizeInvoice?: boolean;
+			} = {}): CreateScheduleParamsV0 | null => {
+				const requestBody = buildCreateScheduleRequestBody({
+					customerId,
+					entityId,
+					phases: getPhases(),
+					products,
+					features,
+					nowMs,
+				});
+
+				if (!requestBody) return null;
+
+				if (useInvoice) {
+					return {
+						...requestBody,
+						invoice_mode: {
+							enabled: true,
+							enable_plan_immediately: enableProductImmediately ?? true,
+							finalize: finalizeInvoice ?? true,
+						},
+					};
+				}
+
+				return requestBody;
+			},
+		[customerId, entityId, products, features, nowMs, getPhases],
+	);
+}

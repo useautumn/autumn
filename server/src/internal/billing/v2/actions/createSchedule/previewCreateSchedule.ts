@@ -1,10 +1,10 @@
 import type {
-	BillingPreviewResponse,
+	AttachPreviewResponse,
 	CreateScheduleParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
-import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
+import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
 import { handleCreateScheduleErrors } from "./errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
@@ -16,7 +16,7 @@ export const previewCreateSchedule = async ({
 }: {
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
-}): Promise<BillingPreviewResponse> => {
+}): Promise<AttachPreviewResponse> => {
 	const billingContext = await setupCreateScheduleBillingContext({
 		ctx,
 		params,
@@ -40,5 +40,5 @@ export const previewCreateSchedule = async ({
 
 	const billingPlan = { autumn: autumnBillingPlan, stripe: stripeBillingPlan };
 
-	return billingPlanToPreviewResponse({ ctx, billingContext, billingPlan });
+	return billingPlanToAttachPreview({ ctx, billingContext, billingPlan });
 };
