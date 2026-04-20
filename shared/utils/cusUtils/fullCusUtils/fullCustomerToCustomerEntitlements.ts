@@ -1,3 +1,4 @@
+import { isEntityCusEnt } from "@utils/cusEntUtils/cusEntUtils.js";
 import type { Entity } from "../../../models/cusModels/entityModels/entityModels.js";
 import type { FullCustomer } from "../../../models/cusModels/fullCusModel.js";
 import type { CustomerEntitlementFilters } from "../../../models/cusProductModels/cusEntModels/cusEntModels.js";
@@ -104,6 +105,14 @@ export const fullCustomerToCustomerEntitlements = ({
 				(cusEnt.external_id ?? cusEnt.id) ===
 				customerEntitlementFilters.balanceId,
 		);
+	}
+
+	// When disable_pooled_balance is enabled and we're scoped to an entity, drop
+	// customer-level (shared pool) cusEnts so the returned balances reflect
+	// only the entity's own pool. Matches the filter in prepareFeatureDeduction
+	// so the deduction path and reporting stay consistent.
+	if (fullCustomer.entity?.id && fullCustomer.config?.disable_pooled_balance) {
+		cusEnts = cusEnts.filter((ce) => isEntityCusEnt({ cusEnt: ce }));
 	}
 
 	return cusEnts as FullCusEntWithFullCusProduct[];
