@@ -46,7 +46,6 @@ export const customers = pgTable(
 		spend_limits: jsonb().$type<DbSpendLimit[]>(),
 		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
 		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
-		ignore_past_due: boolean("ignore_past_due").default(false),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),
