@@ -281,3 +281,26 @@ export const customerProductHasPrepaidPrice = (
 	const prices = cusProductToPrices({ cusProduct: customerProduct });
 	return prices.some((price) => isPrepaidPrice(price));
 };
+
+// ============================================================================
+// AGGREGATE CHECKS
+// ============================================================================
+
+/** Returns true if any customer product is active (or trialing), has a subscription, and is paid recurring. */
+export const hasActivePaidSubscription = ({
+	customerProducts,
+}: {
+	customerProducts: FullCusProduct[];
+}): boolean => {
+	return customerProducts.some((customerProduct) => {
+		const hasActiveOrTrialingStatus =
+			ACTIVE_STATUSES.includes(customerProduct.status) ||
+			customerProduct.status === CusProductStatus.Trialing;
+
+		if (!hasActiveOrTrialingStatus) return false;
+		if (!customerProduct.subscription_ids?.length) return false;
+
+		const prices = cusProductToPrices({ cusProduct: customerProduct });
+		return !isOneOffProduct({ prices }) && !isFreeProduct({ prices });
+	});
+};
