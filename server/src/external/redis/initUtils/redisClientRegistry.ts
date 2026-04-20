@@ -40,7 +40,6 @@ export const getRegionalRedis = (region: string): Redis => {
 	if (!hasRedisConfig) {
 		return primaryRedis;
 	}
-
 	if (region === currentRegion) {
 		return primaryRedis;
 	}
