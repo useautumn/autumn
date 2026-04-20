@@ -5,6 +5,7 @@ export * from "./classifyCustomerProduct/cpBuilder";
 export * from "./convertCusProduct";
 export * from "./convertCusProduct/cusProductToConvertedFeatureOptions";
 export * from "./convertCusProduct/cusProductToFeatureOptions";
+export * from "./convertCusProduct/customerProductsToRecurringActiveAndScheduled";
 export * from "./convertCusProduct/customerProductsToStripeSubscriptionIds";
 export * from "./cusProductConstants";
 export * from "./cusProductUtils";

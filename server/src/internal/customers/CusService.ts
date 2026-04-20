@@ -59,6 +59,7 @@ export class CusService {
 		allowNotFound = false,
 		withEvents = false,
 		explain = false,
+		skipReset = false,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -70,6 +71,7 @@ export class CusService {
 		allowNotFound?: boolean;
 		withEvents?: boolean;
 		explain?: boolean;
+		skipReset?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -170,7 +172,7 @@ export class CusService {
 
 					fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
 				}
-				if (!usedReplica) {
+				if (!usedReplica && !skipReset) {
 					// Skip reset only when executeWithHealthTracking explicitly chose the
 					// replica. Lazy reset writes themselves go through dbGeneral.
 					await resetCustomerEntitlements({

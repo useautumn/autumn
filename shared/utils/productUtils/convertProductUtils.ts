@@ -63,7 +63,9 @@ export const entToOptions = ({
 	options: FeatureOptions[];
 }) => {
 	return options.find(
-		(option) => option.internal_feature_id === ent.internal_feature_id,
+		(option) =>
+			option.internal_feature_id === ent.internal_feature_id ||
+			(ent.feature_id && option.feature_id === ent.feature_id),
 	);
 };
 

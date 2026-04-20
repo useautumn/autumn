@@ -20,6 +20,7 @@ import { BillingOverageAllowedSheet } from "../components/sheets/BillingOverageA
 import { BillingSpendLimitSheet } from "../components/sheets/BillingSpendLimitSheet";
 import { BillingUsageAlertSheet } from "../components/sheets/BillingUsageAlertSheet";
 import { CheckBalanceSheet } from "../components/sheets/CheckBalanceSheet";
+import { CreateScheduleSheet } from "../components/sheets/CreateScheduleSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
 import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
@@ -84,6 +85,10 @@ export function CustomerSheets() {
 				return <RecordUsageSheet />;
 			case "check-balance":
 				return <CheckBalanceSheet />;
+			case "create-schedule":
+			case "create-schedule-review":
+			case "create-schedule-send-invoice":
+				return <CreateScheduleSheet />;
 			default:
 				return null;
 		}

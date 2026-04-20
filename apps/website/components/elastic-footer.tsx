@@ -137,7 +137,7 @@ export default function ElasticRecoil({ children }: LayoutProps) {
 		<div className="relative w-full overflow-hidden">
 			{showFooter && <AnimatedFooterImage />}
 			<motion.div style={{ y }} className="relative z-10 bg-black">
-				{children as any}
+				{children}
 			</motion.div>
 		</div>
 	);

@@ -252,11 +252,41 @@ export function InvoiceDetailSheet({
 
 				{/* Invoice Total */}
 				<SheetSection withSeparator={true}>
-					<div className="flex items-center justify-between">
-						<span className="text-sm font-medium text-foreground">Total</span>
-						<span className="text-sm font-semibold text-foreground tabular-nums">
-							{formatSignedAmount(invoice.total, invoice.currency)}
-						</span>
+					<div className="space-y-2">
+						<div className="flex items-center justify-between">
+							<span className="text-sm font-medium text-foreground">Total</span>
+							<span className="text-sm font-semibold text-foreground tabular-nums">
+								{formatSignedAmount(invoice.total, invoice.currency)}
+							</span>
+						</div>
+						{invoice.amount_paid != null &&
+							invoice.amount_paid !== invoice.total && (
+								<div className="flex items-center justify-between">
+									<span className="text-sm text-t2">Amount Paid</span>
+									<span className="text-sm tabular-nums text-t2">
+										{formatSignedAmount(invoice.amount_paid, invoice.currency)}
+									</span>
+								</div>
+							)}
+						{invoice.refunded_amount > 0 && (
+							<>
+								<div className="flex items-center justify-between">
+									<span className="text-sm text-t3">Refunded</span>
+									<span className="text-sm text-amber-500 tabular-nums">
+										-{formatAmount(invoice.refunded_amount, invoice.currency)}
+									</span>
+								</div>
+								<div className="flex items-center justify-between pt-1">
+									<span className="text-sm text-t3">Net</span>
+									<span className="text-sm font-semibold text-foreground tabular-nums">
+										{formatSignedAmount(
+											invoice.total - invoice.refunded_amount,
+											invoice.currency,
+										)}
+									</span>
+								</div>
+							</>
+						)}
 					</div>
 				</SheetSection>
 

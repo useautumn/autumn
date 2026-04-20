@@ -122,45 +122,51 @@ export const MiniCopyButton = ({
 	text,
 	side = "right",
 	innerClassName = "",
+	iconOrientation = "right",
 	children,
 	...props
 }: CopyButtonProps) => {
 	const { copied, handleCopy } = useCopyAnimation({ text });
 
+	const copyIcon = (
+		<TooltipProvider>
+			<Tooltip open={copied} onOpenChange={() => {}}>
+				<TooltipTrigger asChild>
+					<IconButton
+						variant="skeleton"
+						{...props}
+						iconOrientation="right"
+						icon={<AnimatedCopyIcon copied={copied} />}
+						onClick={handleCopy}
+						className={cn(
+							"opacity-0 group-hover:opacity-100 cursor-pointer px-0!",
+							copied && "opacity-100",
+						)}
+					/>
+				</TooltipTrigger>
+				<TooltipContent
+					side={side}
+					sideOffset={8}
+					className="bg-background text-body p-2 py-1 border rounded-lg shadow-sm"
+				>
+					<div className="flex items-center gap-1">
+						<span className="text-xs font-medium">Copied!</span>
+					</div>
+				</TooltipContent>
+			</Tooltip>
+		</TooltipProvider>
+	);
+
 	return (
 		<div className="flex items-center gap-1 w-fit max-w-full group text-t3">
+			{iconOrientation === "left" && copyIcon}
 			{children}
 			<span
 				className={cn("text-sm text-tiny-id w-full truncate", innerClassName)}
 			>
 				{text}
 			</span>
-			<TooltipProvider>
-				<Tooltip open={copied} onOpenChange={() => {}}>
-					<TooltipTrigger asChild>
-						<IconButton
-							variant="skeleton"
-							{...props}
-							iconOrientation="right"
-							icon={<AnimatedCopyIcon copied={copied} />}
-							onClick={handleCopy}
-							className={cn(
-								"opacity-0 group-hover:opacity-100 cursor-pointer px-0!",
-								copied && "opacity-100",
-							)}
-						/>
-					</TooltipTrigger>
-					<TooltipContent
-						side={side}
-						sideOffset={8}
-						className="bg-background text-body p-2 py-1 border rounded-lg shadow-sm"
-					>
-						<div className="flex items-center gap-1">
-							<span className="text-xs font-medium">Copied!</span>
-						</div>
-					</TooltipContent>
-				</Tooltip>
-			</TooltipProvider>
+			{iconOrientation === "right" && copyIcon}
 		</div>
 	);
 };

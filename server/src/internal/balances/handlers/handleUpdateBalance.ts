@@ -1,12 +1,8 @@
 import {
-	ErrCode,
 	findFeatureById,
 	notNullish,
-	nullish,
-	RecaseError,
 	UpdateBalanceParamsV0Schema,
 } from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/runUpdateBalanceV2";
 import { runUpdateUsage } from "@/internal/balances/updateBalance/runUpdateUsage";
@@ -32,15 +28,6 @@ export const handleUpdateBalance = createRoute({
 
 		const targetBalance = params.remaining ?? params.current_balance;
 
-		if (notNullish(params.included_grant) && nullish(targetBalance)) {
-			throw new RecaseError({
-				message:
-					"'remaining' is required when updating granted balance",
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-
 		let fullCustomer = await getOrSetCachedFullCustomer({
 			ctx,
 			customerId: params.customer_id,
@@ -59,7 +46,6 @@ export const handleUpdateBalance = createRoute({
 		}
 
 		if (notNullish(params.included_grant)) {
-
 			ctx.logger.info(
 				`updating granted balance for feature ${params.feature_id} to ${params.included_grant}`,
 			);

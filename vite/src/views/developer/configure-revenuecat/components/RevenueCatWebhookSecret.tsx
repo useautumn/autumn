@@ -1,4 +1,11 @@
-import { CopyableSpan } from "@/components/general/CopyablePre";
+import {
+	CodeGroup,
+	CodeGroupCodeSolidColour,
+	CodeGroupContent,
+	CodeGroupCopyButton,
+	CodeGroupList,
+	CodeGroupTab,
+} from "@/components/v2/CodeGroup";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 
@@ -23,11 +30,26 @@ export const RevenueCatWebhookSecret = ({
 				value in the RevenueCat console.
 			</p>
 			{webhookSecret ? (
-				<CopyableSpan
-					text={webhookSecret}
-					className="my-1 leading-6 px-2"
-					copySize={18}
-				/>
+				<CodeGroup value={env}>
+					<CodeGroupList>
+						<CodeGroupTab value={env}>
+							{env === "live" ? "Live" : "Sandbox"}
+						</CodeGroupTab>
+						<CodeGroupCopyButton
+							className="h-full"
+							onCopy={() => navigator.clipboard.writeText(webhookSecret)}
+						/>
+					</CodeGroupList>
+					<CodeGroupContent
+						value={env}
+						copyText={webhookSecret}
+						className="p-2 border-t-0"
+					>
+						<CodeGroupCodeSolidColour className="text-primary">
+							{webhookSecret}
+						</CodeGroupCodeSolidColour>
+					</CodeGroupContent>
+				</CodeGroup>
 			) : (
 				<Skeleton className="h-10 w-full" />
 			)}

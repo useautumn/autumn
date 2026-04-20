@@ -28,7 +28,11 @@ export const deleteCachedFullCustomer = async ({
 
 	if (redis.status !== "ready" || !customerId) return;
 
-	const cacheKey = buildFullCustomerCacheKey({ orgId: org.id, env, customerId });
+	const cacheKey = buildFullCustomerCacheKey({
+		orgId: org.id,
+		env,
+		customerId,
+	});
 	const regions = getConfiguredRegions();
 	const guardTimestamp = Date.now().toString();
 
