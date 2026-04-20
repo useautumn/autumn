@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import {
 	ArrowLeft,
@@ -17,6 +18,7 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { DefaultView } from "../../DefaultView";
 import LoadingScreen from "../../general/LoadingScreen";
@@ -42,10 +44,12 @@ interface OAuthClient {
 
 export const OAuthClientsView = () => {
 	const navigate = useNavigate();
+	const env = useEnv();
 	const { isAdmin, isPending } = useAdmin();
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [editingClient, setEditingClient] = useState<OAuthClient | null>(null);
+	const adminBasePath = env === AppEnv.Sandbox ? "/sandbox/admin" : "/admin";
 
 	const axiosInstance = useAxiosInstance();
 
@@ -132,7 +136,7 @@ export const OAuthClientsView = () => {
 						variant="secondary"
 						size="sm"
 						icon={<ArrowLeft className="w-4 h-4" />}
-						onClick={() => navigate("/admin")}
+						onClick={() => navigate(adminBasePath)}
 					/>
 					<div>
 						<h1 className="text-lg font-semibold text-foreground">

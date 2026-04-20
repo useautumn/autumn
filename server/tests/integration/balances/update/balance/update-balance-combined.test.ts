@@ -152,13 +152,14 @@ test.concurrent(`${chalk.yellowBright("update-combined2: current_balance + next_
 	// Update current_balance and push next_reset_at to 30 days
 	const newResetAt2 = Date.now() + 30 * 24 * 60 * 60 * 1000; // 30 days
 
-	await autumnV2.balances.update({
+	const updateParams = {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		current_balance: 200,
 		next_reset_at: newResetAt2,
 		customer_entitlement_id: cusEntId,
-	});
+	};
+	await autumnV2.balances.update(updateParams);
 
 	const customer2 = await autumnV2.customers.get<ApiCustomer>(customerId);
 	expect(customer2.balances[TestFeature.Messages]).toMatchObject({
@@ -174,9 +175,7 @@ test.concurrent(`${chalk.yellowBright("update-combined2: current_balance + next_
 	});
 	expect(check2.balance?.reset?.resets_at).toBeCloseTo(newResetAt2, -3);
 
-	// Verify DB sync
-	await new Promise((resolve) => setTimeout(resolve, 2000));
-
+	// Verify immediate DB sync (no retry window / sleep)
 	const customerFromDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",
 	});

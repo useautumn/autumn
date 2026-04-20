@@ -60,6 +60,7 @@ export const tryRedisWrite = async <T>(
 		}
 
 		const result = await operation();
+
 		return (result === undefined ? true : result) as T extends void
 			? true
 			: T | null;

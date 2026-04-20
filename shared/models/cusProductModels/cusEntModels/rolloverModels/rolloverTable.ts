@@ -57,3 +57,5 @@ export const rollovers = pgTable(
 export type Rollover = z.infer<typeof RolloverSchema>;
 export type InsertRollover = typeof rollovers.$inferInsert;
 export type EntityRolloverBalance = z.infer<typeof EntityRolloverBalanceSchema>;
+export type DbRollover = typeof rollovers.$inferSelect;
+export type InsertDbRollover = typeof rollovers.$inferInsert;

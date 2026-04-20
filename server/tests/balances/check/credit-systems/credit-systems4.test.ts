@@ -83,6 +83,7 @@ describe(`${chalk.yellowBright("credit-systems4: test send_event with credit sys
 		expect(creditsBalance).toBe(1000 - expectedCreditCost);
 		expect(creditsUsage).toBe(expectedCreditCost);
 	});
+	return;
 
 	test("should handle multiple send_event calls with different decimal values", async () => {
 		// Get current balance

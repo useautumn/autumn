@@ -10,9 +10,11 @@ import type { Redis } from "ioredis";
 import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
 import { resetCustomerEntitlements } from "../../actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
+import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
 import { buildFullCustomerCacheKey } from "./fullCustomerCacheConfig.js";
 
 /**
@@ -144,9 +146,32 @@ export const getCachedFullCustomer = async ({
 
 	if (!cached) return undefined;
 
+	const parsed = JSON.parse(cached);
+	const cachedAt = parsed._cachedAt as number | undefined;
+	delete parsed._cachedAt;
+
+	if (
+		ctx.rolloutSnapshot &&
+		isSnapshotCacheStale({
+			snapshot: ctx.rolloutSnapshot,
+			cachedAt,
+		})
+	) {
+		ctx.logger.warn(
+			`[getCachedFullCustomer] Stale rollout cache for ${customerId}, evicting`,
+		);
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId,
+			source: "stale-rollout",
+			skipGuard: true,
+		});
+		return undefined;
+	}
+
 	const fullCustomer = normalizeFromSchema<FullCustomer>({
 		schema: FullCustomerSchema,
-		data: JSON.parse(cached),
+		data: parsed,
 	});
 
 	// if (fullCustomer.entities?.[0] === null) {

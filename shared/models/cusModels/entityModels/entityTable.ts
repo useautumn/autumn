@@ -65,5 +65,10 @@ export const entities = pgTable(
 			table.internal_customer_id,
 			sql`${table.internal_id} DESC`,
 		),
+		index("idx_entities_org_env_id").on(
+			table.org_id,
+			table.env,
+			table.id,
+		),
 	],
 );
