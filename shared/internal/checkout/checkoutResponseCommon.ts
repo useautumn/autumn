@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { AttachPreviewResponseSchema } from "../../api/billing/common/attachPreviewResponse";
+import { BillingPreviewResponseSchema } from "../../api/billing/common/billingPreviewResponse";
 import { BillingResponseSchema } from "../../api/billing/common/billingResponse";
 import { PreviewUpdateSubscriptionResponseSchema } from "../../api/billing/updateSubscription/previewUpdateSubscriptionResponse";
 import {
@@ -25,6 +26,7 @@ export const CheckoutEntitySchema = z.object({
 
 export const CheckoutPreviewSchema = z.union([
 	AttachPreviewResponseSchema,
+	BillingPreviewResponseSchema,
 	PreviewUpdateSubscriptionResponseSchema,
 ]);
 

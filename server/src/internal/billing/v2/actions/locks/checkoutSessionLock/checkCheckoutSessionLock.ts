@@ -1,4 +1,4 @@
-import type { AttachBillingContext, BillingPlan } from "@autumn/shared";
+import type { BillingContext, BillingPlan } from "@autumn/shared";
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { CreateAutumnCheckoutResult } from "@/internal/billing/v2/common/createAutumnCheckout";
@@ -13,7 +13,7 @@ import { checkoutSessionLock } from "./checkoutSessionLock";
  * - Lock exists + non-checkout mode → throws 423
  * - No lock → returns null (proceed)
  */
-export const checkCheckoutSessionLock = async ({
+export const checkCheckoutSessionLock = async <T extends BillingContext>({
 	ctx,
 	params,
 	billingContext,
@@ -21,9 +21,9 @@ export const checkCheckoutSessionLock = async ({
 }: {
 	ctx: AutumnContext;
 	params: unknown;
-	billingContext: AttachBillingContext;
+	billingContext: T;
 	billingPlan: BillingPlan;
-}): Promise<CreateAutumnCheckoutResult<AttachBillingContext> | null> => {
+}): Promise<CreateAutumnCheckoutResult<T> | null> => {
 	const customerId =
 		billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id;
 	const paramsHash = hashJson({ value: params });
@@ -62,7 +62,7 @@ export const checkCheckoutSessionLock = async ({
 	}
 
 	ctx.logger.info(
-		`Blocking non-checkout attach for customer ${customerId} — checkout session ${existingLock.checkoutSessionId} still active`,
+		`Blocking non-checkout billing action for customer ${customerId} — checkout session ${existingLock.checkoutSessionId} still active`,
 	);
 	throw new RecaseError({
 		message: "A checkout session is already in progress for this customer",

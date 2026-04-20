@@ -66,20 +66,27 @@ export const CreateScheduleParamsV0Schema = z
 		entity_id: z.string().optional().meta({
 			description: "Optional entity ID for an entity-scoped schedule.",
 		}),
+		invoice_mode: InvoiceModeParamsSchema.optional().meta({
+			description:
+				"Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.",
+		}),
+		success_url: z.string().optional().meta({
+			description: "URL to redirect to after successful checkout.",
+		}),
+		checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
+			description:
+				"Additional parameters to pass into the creation of the Stripe checkout session.",
+		}),
+		redirect_mode: RedirectModeSchema.default("if_required").meta({
+			description:
+				"Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.",
+		}),
 		phases: z
 			.tuple([CreateSchedulePhaseSchema])
 			.rest(CreateSchedulePhaseSchema)
 			.meta({
 				description: "Ordered phase definitions for the schedule.",
 			}),
-		invoice_mode: InvoiceModeParamsSchema.optional().meta({
-			description:
-				"Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately.",
-		}),
-		redirect_mode: RedirectModeSchema.default("if_required").meta({
-			description:
-				"Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.",
-		}),
 	})
 	.refine(
 		(data) => {

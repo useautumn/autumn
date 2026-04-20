@@ -10,7 +10,6 @@ export const handleCreateScheduleErrors = ({
 	billingContext,
 }: {
 	billingContext: CreateScheduleBillingContext;
-	isPreview?: boolean;
 }) => {
 	const { currentEpochMs, immediatePhase } = billingContext;
 
