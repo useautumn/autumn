@@ -152,8 +152,8 @@ export const updateCustomer = async ({
 		? {
 				config: {
 					...(originalCustomer.config ?? {}),
-					...(config.block_shared_pool !== undefined && {
-						block_shared_pool: config.block_shared_pool,
+					...(config.disable_pooled_balance !== undefined && {
+						disable_pooled_balance: config.disable_pooled_balance,
 					}),
 				},
 			}

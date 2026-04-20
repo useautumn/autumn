@@ -76,7 +76,7 @@ export const API_CUSTOMER_V5_EXAMPLE = {
 		},
 	},
 	config: {
-		block_shared_pool: false,
+		disable_pooled_balance: false,
 	},
 };
 
@@ -99,12 +99,9 @@ export const BaseApiCustomerV5Schema = BaseApiCustomerSchema.extend({
 	}),
 	config: z
 		.object({
-			block_shared_pool: z
-				.boolean()
-				.optional()
-				.meta({
-					description: "Whether to block the shared pool for the customer.",
-				}),
+			disable_pooled_balance: z.boolean().optional().meta({
+				description: "Whether to block the shared pool for the customer.",
+			}),
 		})
 		.optional()
 		.meta({
