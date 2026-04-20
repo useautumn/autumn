@@ -1,273 +1,196 @@
-import { beforeAll, describe, expect, test } from "bun:test";
-import {
-	type AppEnv,
-	CouponDurationType,
-	type CreateReward,
-	type CreateRewardProgram,
-	ErrCode,
-	type Organization,
-	type ReferralCode,
-	RewardReceivedBy,
-	type RewardRedemption,
-	RewardTriggerEvent,
-	RewardType,
-} from "@autumn/shared";
-import { TestFeature } from "@tests/setup/v2Features.js";
+import { expect, test } from "bun:test";
+import { ErrCode, type RewardRedemption } from "@autumn/shared";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { referralPrograms } from "@tests/utils/fixtures/referralPrograms";
+import { rewards } from "@tests/utils/fixtures/rewards";
 import { timeout } from "@tests/utils/genUtils.js";
-import { createReferralProgram } from "@tests/utils/productUtils.js";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addDays } from "date-fns";
 import type { Stripe } from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import AutumnError from "@/external/autumn/autumnCli.js";
 
-const testCase = "referrals1";
+/**
+ * Referrals1: Checkout-triggered referrals with percentage discount
+ *
+ * Setup:
+ * - Main customer attached to proWithTrial
+ * - 3 redeemers + 1 alternate (same fingerprint as main)
+ * - Reward: 100% off for 1 month
+ * - Program: checkout trigger, referrer only, max 2 redemptions
+ *
+ * Flow:
+ * 1. Create referral code (idempotent)
+ * 2. Own customer / same fingerprint can't redeem
+ * 3. 3 redeemers redeem code, 1st can't redeem again
+ * 4. Redeemers attach pro → triggers reward (only first 2 within max_redemptions)
+ * 5. Advance clock → verify discount on invoice
+ */
 
-const proWithTrial = constructProduct({
-	id: "pro",
-	items: [constructFeatureItem({ featureId: TestFeature.Words })],
-	type: "pro",
-	trial: true,
-});
-
-const pro = constructProduct({
-	id: "proNoTrial",
-	items: [constructFeatureItem({ featureId: TestFeature.Words })],
-	type: "pro",
-});
-
-// Reward: 100% discount for 1 month
-const monthOffReward: CreateReward = {
-	id: `${testCase}MonthOff`,
-
-	name: "Month Off",
-	type: RewardType.PercentageDiscount,
-	promo_codes: [],
-	discount_config: {
-		discount_value: 100,
-		duration_type: CouponDurationType.Months,
-		duration_value: 1,
-		apply_to_all: true,
-		price_ids: [],
-	},
-};
-
-// Referral program: triggers on checkout, applies to pro and proWithTrial
-const onCheckoutProgram: CreateRewardProgram = {
-	id: `${testCase}OnCheckout`,
-	when: RewardTriggerEvent.Checkout,
-	product_ids: [proWithTrial.id, pro.id],
-	internal_reward_id: monthOffReward.id,
-	max_redemptions: 2,
-	received_by: RewardReceivedBy.Referrer,
-};
-
-describe(`${chalk.yellowBright(
-	"referrals1: Testing referrals (on checkout)",
-)}`, () => {
+test(`${chalk.yellowBright("referrals1: checkout-triggered referrals with percentage discount")}`, async () => {
 	const mainCustomerId = "main-referral-1";
 	const alternateCustomerId = "alternate-referral-1";
 	const redeemers = ["referral1-r1", "referral1-r2", "referral1-r3"];
-	const autumn: AutumnInt = new AutumnInt();
-	let stripeCli: Stripe;
-	let testClockId: string;
-	let referralCode: ReferralCode;
 
-	const redemptions: RewardRedemption[] = [];
-	let mainCustomer: any;
-	let db: DrizzleCli;
-	let org: Organization;
-	let env: AppEnv;
+	// Products
+	const proWithTrial = products.proWithTrial({
+		id: "pro",
+		items: [items.monthlyWords({ includedUsage: 0 })],
+	});
+	const pro = products.pro({
+		id: "proNoTrial",
+		items: [items.monthlyWords({ includedUsage: 0 })],
+	});
 
-	beforeAll(async () => {
-		stripeCli = ctx.stripeCli;
-		db = ctx.db;
-		org = ctx.org;
-		env = ctx.env;
+	// Reward & referral program
+	const reward = rewards.monthOff();
+	const program = referralPrograms.onCheckoutReferrer({
+		rewardId: reward.id,
+		productIds: [proWithTrial.id, pro.id],
+		maxRedemptions: 2,
+	});
 
-		await initProductsV0({
-			ctx,
-			products: [proWithTrial, pro],
-			prefix: testCase,
-			customerId: mainCustomerId,
-		});
-
-		// Create referral program - product IDs are already prefixed by initProductsV0
-		const referralProgram: CreateRewardProgram = {
-			...onCheckoutProgram,
-			product_ids: [proWithTrial.id, pro.id],
-		};
-
-		await createReferralProgram({
-			db,
-			orgId: org.id,
-			env,
-			autumn: new AutumnInt({ secretKey: ctx.orgSecretKey }),
-			reward: monthOffReward,
-			rewardProgram: referralProgram,
-		});
-
-		const res = await initCustomerV3({
-			ctx,
-			customerId: mainCustomerId,
-			customerData: { fingerprint: "main-referral-1" },
-			attachPm: "success",
-		});
-
-		mainCustomer = res.customer;
-		testClockId = res.testClockId;
-
-		await autumn.attach({
-			customer_id: mainCustomerId,
-			product_id: proWithTrial.id,
-		});
-
-		const batchCreate = [];
-		for (const redeemer of redeemers) {
-			batchCreate.push(
-				initCustomerV3({
-					ctx,
-					customerId: redeemer,
-					attachPm: "success",
-				}),
-			);
-		}
-
-		batchCreate.push(
-			initCustomerV3({
-				ctx,
-				customerId: alternateCustomerId,
-				customerData: { fingerprint: "main-referral-1" },
-				attachPm: "success",
+	// Setup: each other customer gets its own test clock to avoid Stripe's 3-per-clock limit
+	const { autumnV1, testClockId, referralCode, customer } = await initScenario({
+		customerId: mainCustomerId,
+		setup: [
+			s.customer({
+				paymentMethod: "success",
+				testClock: true,
+				data: { fingerprint: mainCustomerId },
 			}),
+			s.products({ list: [proWithTrial, pro] }),
+			s.referralProgram({ reward, program }),
+			s.otherCustomers([
+				{
+					id: redeemers[0],
+					paymentMethod: "success",
+					distinctTestClock: true,
+				},
+				{
+					id: redeemers[1],
+					paymentMethod: "success",
+					distinctTestClock: true,
+				},
+				{
+					id: redeemers[2],
+					paymentMethod: "success",
+					distinctTestClock: true,
+				},
+				{
+					id: alternateCustomerId,
+					paymentMethod: "success",
+					data: { fingerprint: mainCustomerId },
+					distinctTestClock: true,
+				},
+			]),
+		],
+		actions: [
+			s.attach({ productId: proWithTrial.id }),
+			s.referral.createCode(),
+		],
+	});
+
+	// 1. Code should exist and be idempotent
+	expect(referralCode!.code).toBeDefined();
+
+	const referralCode2 = await autumnV1.referrals.createCode({
+		customerId: mainCustomerId,
+		referralId: program.id,
+	});
+	expect(referralCode2.code).toBe(referralCode!.code);
+
+	// 2. Own customer can't redeem, same fingerprint can't either
+	try {
+		await autumnV1.referrals.redeem({
+			customerId: mainCustomerId,
+			code: referralCode!.code,
+		});
+		throw new Error("Own customer should not be able to redeem code");
+	} catch (error) {
+		expect(error).toBeInstanceOf(AutumnError);
+		expect((error as AutumnError).code).toBe(
+			ErrCode.CustomerCannotRedeemOwnCode,
 		);
-		await Promise.all(batchCreate);
-	});
+	}
 
-	test("should create code once", async () => {
-		referralCode = await autumn.referrals.createCode({
-			customerId: mainCustomerId,
-			referralId: onCheckoutProgram.id,
+	try {
+		await autumnV1.referrals.redeem({
+			customerId: alternateCustomerId,
+			code: referralCode!.code,
+		});
+		throw new Error(
+			"Own customer (same fingerprint) should not be able to redeem code",
+		);
+	} catch (error) {
+		expect(error).toBeInstanceOf(AutumnError);
+		expect((error as AutumnError).code).toBe(
+			ErrCode.CustomerCannotRedeemOwnCode,
+		);
+	}
+
+	// 3. Redeemers redeem code, 1st can't redeem again
+	const redemptions: RewardRedemption[] = [];
+	for (const redeemer of redeemers) {
+		const redemption = await autumnV1.referrals.redeem({
+			customerId: redeemer,
+			code: referralCode!.code,
+		});
+		redemptions.push(redemption);
+	}
+
+	try {
+		await autumnV1.referrals.redeem({
+			customerId: redeemers[0],
+			code: referralCode!.code,
+		});
+		throw new Error("Should not be able to redeem again");
+	} catch (error) {
+		expect(error).toBeInstanceOf(AutumnError);
+		expect((error as AutumnError).code).toBe(
+			ErrCode.CustomerAlreadyRedeemedReferralCode,
+		);
+	}
+
+	// 4. Redeemers attach pro → triggers reward (only first 2 within max_redemptions)
+	for (let i = 0; i < redeemers.length; i++) {
+		await autumnV1.attach({
+			customer_id: redeemers[i],
+			product_id: pro.id,
 		});
 
-		expect(referralCode.code).toBeDefined();
+		await timeout(10000);
 
-		// Get referral code again
-		const referralCode2 = await autumn.referrals.createCode({
-			customerId: mainCustomerId,
-			referralId: onCheckoutProgram.id,
-		});
+		const redemption = await autumnV1.redemptions.get(redemptions[i].id);
+		const count = i + 1;
 
-		expect(referralCode2.code).toBe(referralCode.code);
-	});
-
-	test("should fail if same customer tries to redeem code again", async () => {
-		try {
-			await autumn.referrals.redeem({
-				customerId: mainCustomerId,
-				code: referralCode.code,
-			});
-			throw new Error("Own customer should not be able to redeem code");
-		} catch (error) {
-			expect(error).toBeInstanceOf(AutumnError);
-			expect((error as AutumnError).code).toBe(
-				ErrCode.CustomerCannotRedeemOwnCode,
-			);
+		if (count > program.max_redemptions!) {
+			expect(redemption.triggered).toBe(false);
+			expect(redemption.applied).toBe(false);
+		} else {
+			expect(redemption.triggered).toBe(true);
+			expect(redemption.applied).toBe(i === 0);
 		}
 
-		try {
-			await autumn.referrals.redeem({
-				customerId: alternateCustomerId,
-				code: referralCode.code,
-			});
-			throw new Error(
-				"Own customer (same fingerprint) should not be able to redeem code",
-			);
-		} catch (error) {
-			expect(error).toBeInstanceOf(AutumnError);
-			expect((error as AutumnError).code).toBe(
-				ErrCode.CustomerCannotRedeemOwnCode,
-			);
-		}
+		// Check stripe customer has discount
+		const stripeCus = (await ctx.stripeCli.customers.retrieve(
+			customer!.processor?.id,
+		)) as Stripe.Customer;
+		expect(stripeCus.discount).not.toBe(null);
+	}
+
+	// 5. Advance clock → verify discount on invoice
+	const advanceTo = addDays(addDays(new Date(), 7), 4);
+	await advanceTestClock({
+		testClockId: testClockId!,
+		advanceTo: advanceTo.getTime(),
+		stripeCli: ctx.stripeCli,
 	});
 
-	test("should create redemption for each redeemer and fail if redeemed again", async () => {
-		for (const redeemer of redeemers) {
-			const redemption: RewardRedemption = await autumn.referrals.redeem({
-				customerId: redeemer,
-				code: referralCode.code,
-			});
-
-			redemptions.push(redemption);
-		}
-
-		// Try redeem for redeemer1 again
-		try {
-			await autumn.referrals.redeem({
-				customerId: redeemers[0],
-				code: referralCode.code,
-			});
-			throw new Error("Should not be able to redeem again");
-		} catch (error) {
-			expect(error).toBeInstanceOf(AutumnError);
-			expect((error as AutumnError).code).toBe(
-				ErrCode.CustomerAlreadyRedeemedReferralCode,
-			);
-		}
-	});
-
-	test("should be triggered (and applied) when redeemers check out", async () => {
-		for (let i = 0; i < redeemers.length; i++) {
-			const redeemer = redeemers[i];
-
-			await autumn.attach({
-				customer_id: redeemer,
-				product_id: pro.id,
-			});
-
-			await timeout(5000);
-
-			// Get redemption object
-			const redemption = await autumn.redemptions.get(redemptions[i].id);
-
-			// Check if redemption is triggered
-			const count = i + 1;
-
-			if (count > onCheckoutProgram.max_redemptions!) {
-				expect(redemption.triggered).toBe(false);
-				expect(redemption.applied).toBe(false);
-			} else {
-				expect(redemption.triggered).toBe(true);
-				expect(redemption.applied).toBe(i === 0);
-			}
-
-			// Check stripe customer
-			const stripeCus = (await stripeCli.customers.retrieve(
-				mainCustomer.processor?.id,
-			)) as Stripe.Customer;
-
-			expect(stripeCus.discount).not.toBe(null);
-		}
-	});
-
-	let curTime = new Date();
-	test("customer should have discount for first purchase", async () => {
-		curTime = addDays(addDays(curTime, 7), 4);
-		await advanceTestClock({
-			testClockId,
-			advanceTo: curTime.getTime(),
-			stripeCli,
-		});
-
-		// 1. Get invoice
-		const { invoices } = await autumn.customers.get(mainCustomerId);
-		expect(invoices.length).toBe(2);
-		expect(invoices[0].total).toBe(0);
-	});
+	const { invoices } = await autumnV1.customers.get(mainCustomerId);
+	expect(invoices.length).toBe(2);
+	expect(invoices[0].total).toBe(0);
 });

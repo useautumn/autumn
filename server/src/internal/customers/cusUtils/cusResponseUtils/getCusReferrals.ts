@@ -4,7 +4,7 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
+import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 
 export const getCusReferrals = async ({
 	db,
@@ -19,10 +19,9 @@ export const getCusReferrals = async ({
 		return undefined;
 	}
 
-	const referred = await RewardRedemptionService.getByReferrer({
+	const referred = await redemptionRepo.getByReferrer({
 		db,
 		internalCustomerId: fullCus.internal_id,
-		withCustomer: true,
 		withRewardProgram: true,
 		limit: 100,
 	});
