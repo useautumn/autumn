@@ -11,7 +11,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
-import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
@@ -26,15 +25,11 @@ export function AttachFooter() {
 		formValues,
 	} = useAttachFormContext();
 
-	const { org } = useOrg();
-	const ownStripeAccount = org?.stripe_connection !== "default";
 	const { isEndOfCycleSelected } = usePlanScheduleField();
 
 	const invoiceDisabledReason = isEndOfCycleSelected
 		? "Invoices are not available for end of cycle changes as there is no immediate charge to invoice"
-		: !ownStripeAccount
-			? "Connect your own Stripe account to send invoices"
-			: null;
+		: null;
 
 	const hasProductSelected = !!formValues.productId;
 	const isLoading = previewQuery.isLoading;
