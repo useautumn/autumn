@@ -32,7 +32,8 @@ export const products = pgTable(
 		group: text().default(""),
 		version: numeric({ mode: "number" }).notNull().default(1),
 		processor: jsonb().$type<ProductProcessor>().default(sql`null`),
-		base_variant_id: text("base_variant_id"),
+		internal_parent_product_id: text("internal_parent_product_id"),
+		variant_id: text("variant_id"),
 		archived: boolean("archived").notNull().default(false),
 	},
 	(table) => [
@@ -49,9 +50,9 @@ export const products = pgTable(
 		),
 		unique("unique_product").on(
 			table.org_id,
-			table.id,
 			table.env,
-			table.version,
+			table.internal_parent_product_id,
+			table.variant_id,
 		),
 	],
 );

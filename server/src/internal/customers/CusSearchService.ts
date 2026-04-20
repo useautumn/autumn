@@ -160,7 +160,7 @@ export class CusSearchService {
 			const versionSelections = filters.version.filter(Boolean);
 			productVersionFilters = versionSelections.map((selection) => {
 				const [productId, version] = selection.split(":");
-				return { productId, version: parseInt(version) };
+				return { productId, version: Number.parseFloat(version) };
 			});
 		}
 

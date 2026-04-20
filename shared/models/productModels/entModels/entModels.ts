@@ -31,6 +31,9 @@ export const EntitlementSchema = z.object({
 	usage_limit: z.number().nullable().optional().default(null),
 
 	rollover: RolloverConfigSchema.nullish(),
+
+	variant_action: z.string().nullable().optional(),
+	base_entitlement_id: z.string().nullable().optional(),
 });
 
 export const CreateEntitlementSchema = z.object({

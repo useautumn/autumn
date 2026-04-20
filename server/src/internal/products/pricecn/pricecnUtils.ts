@@ -383,9 +383,9 @@ export const toPricecnProduct = async ({
 	const freeTrial = fullProduct.free_trial;
 
 	let baseVariant = null;
-	if (fullProduct.base_variant_id) {
+	if (fullProduct.internal_parent_product_id) {
 		baseVariant = otherProducts.find(
-			(p) => p.id === fullProduct.base_variant_id,
+			(p) => p.internal_id === fullProduct.internal_parent_product_id,
 		);
 	}
 
@@ -397,7 +397,9 @@ export const toPricecnProduct = async ({
 	let intervalGroup = null;
 	if (
 		baseVariant ||
-		otherProducts.some((p) => p.base_variant_id === product.id)
+		otherProducts.some(
+			(p) => p.internal_parent_product_id === product.internal_id,
+		)
 	) {
 		const intervalSet = getLargestInterval({ prices: fullProduct.prices });
 		intervalGroup = intervalSet?.interval;
