@@ -15,7 +15,6 @@ export type RunCheckWithRolloutResult =
 			checkData: null;
 			response: Record<string, unknown>;
 	  };
-
 export const runCheckWithRollout = async ({
 	ctx,
 	body,
