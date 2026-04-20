@@ -28,6 +28,10 @@ export const triggerAutoTopUp = async ({
 			featureId: relevantFeature.id,
 		});
 
+		console.log(
+			`resolved, feature ${relevantFeature.id}, balance below threshold: ${resolved?.balanceBelowThreshold}, customerEntitlement balance: ${resolved?.customerEntitlement.balance}`,
+		);
+
 		if (!resolved?.balanceBelowThreshold) continue;
 
 		// Enqueue the auto top-up job

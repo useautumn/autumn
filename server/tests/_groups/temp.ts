@@ -5,10 +5,9 @@ export const temp: TestGroup = {
 	description: "Failed tests to triage and fix",
 	tier: "domain",
 	paths: [
-		"integration/balances/track/basic/track-event-name.test.ts",
-		"integration/balances/track/basic/track-credit-system.test.ts",
+		"integration/balances/auto-topup/auto-topup-concurrent.test.ts",
+		"integration/balances/auto-topup/auto-topup-basic.test.ts",
 		"integration/balances/auto-topup/auto-topup-edge-cases.test.ts",
-		"integration/balances/reset/persist-free-overage-on.test.ts",
-		"integration/balances/lock/check-with-lock-expiry.test.ts",
+		"integration/balances/auto-topup/auto-topup-failure-modes.test.ts",
 	],
 };

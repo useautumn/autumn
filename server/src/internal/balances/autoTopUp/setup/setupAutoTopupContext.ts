@@ -27,7 +27,10 @@ const getAutoTopupFullCustomer = async ({
 	ctx: AutumnContext;
 	customerId: string;
 }): Promise<FullCustomer | undefined> => {
-	console.log("customerId", customerId);
+	// console.log(`GETTING AUTO TOP UP CUSTOMER ${customerId}`);
+	// console.log(
+	// 	`IS FULL SUBJECT ROLLOUT ENABLED: ${isFullSubjectRolloutEnabled({ ctx })}`,
+	// );
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 		const cachedFullSubject = await getCachedFullSubject({
 			ctx,
@@ -65,6 +68,7 @@ const getAutoTopupFullCustomer = async ({
 	let fullCustomer = await getCachedFullCustomer({ ctx, customerId });
 
 	if (!fullCustomer) {
+		console.log(`NO CACHED FULL CUSTOMER, FETCHING FROM DB`);
 		fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
