@@ -1,19 +1,16 @@
 import {
 	AffectedResource,
 	ApiVersion,
-	type CheckParams,
+	applyResponseVersionChanges,
 	CheckParamsSchema,
 	CheckQuerySchema,
 	type CheckResponseV3,
 	type ParsedCheckParams,
 } from "@autumn/shared";
-import { isRetryableDbError } from "@/db/dbUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
-import { getCheckData } from "./checkUtils/getCheckData.js";
-import { getRetryableCheckFallbackResponse } from "./checkUtils/getRetryableCheckFallbackResponse.js";
+import { getCheckDataOrFallbackResponse } from "./checkUtils/getCheckDataOrFallbackResponse.js";
 import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
-import { transformCheckResponse } from "./checkUtils/transformCheckResponse.js";
 import { getCheckPreview } from "./getCheckPreview.js";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 import { runCheckWithTrack } from "./runCheckWithTrack.js";
@@ -56,25 +53,15 @@ export const handleCheck = createRoute({
 		const requiredBalance =
 			required_balance ?? required_quantity ?? DEFAULT_REQUIRED_BALANCE;
 
-		let checkData: Awaited<ReturnType<typeof getCheckData>>;
-		try {
-			checkData = await getCheckData({
-				ctx,
-				body: body as CheckParams & { feature_id: string },
-				requiredBalance,
-			});
-		} catch (error) {
-			if (!isRetryableDbError({ error })) {
-				throw error;
-			}
+		const checkDataResult = await getCheckDataOrFallbackResponse({
+			ctx,
+			body,
+			requiredBalance,
+		});
 
-			return c.json(
-				getRetryableCheckFallbackResponse({
-					ctx,
-					body,
-					requiredBalance,
-				}),
-			);
+		const { checkData, fallbackResponse } = checkDataResult;
+		if (!checkData) {
+			return c.json(fallbackResponse);
 		}
 
 		let response: CheckResponseV3;
@@ -102,18 +89,21 @@ export const handleCheck = createRoute({
 				})
 			: undefined;
 
-		const transformedResponse = transformCheckResponse({
+		const transformedResponse = applyResponseVersionChanges<CheckResponseV3>({
+			input: response,
+			targetVersion: ctx.apiVersion,
+			resource: AffectedResource.Check,
+			legacyData: {
+				noCusEnts:
+					checkData.apiBalance === undefined && checkData.apiFlag === undefined,
+				featureToUse: checkData.featureToUse,
+			},
 			ctx,
-			response,
-			featureToUse: checkData.featureToUse,
-			noCusEnts:
-				checkData.apiBalance === undefined && checkData.apiFlag === undefined,
 		});
 
 		return c.json({
 			...transformedResponse,
 			preview,
-			// lock_id: body.lock?.lock_id ?? undefined,
 		});
 	},
 });
