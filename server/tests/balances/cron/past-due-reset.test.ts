@@ -4,14 +4,14 @@ import {
 	CusProductStatus,
 	customerEntitlements,
 	customerProducts,
-	customers,
 	type LimitedItem,
 	ProductItemInterval,
+	type ProductV2,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { and, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
@@ -24,26 +24,45 @@ import { findCustomerEntitlement } from "../utils/findCustomerEntitlement";
  * Builds a fresh free product with a monthly-reset feature item. We construct
  * a new product object per describe block because `initProductsV0` mutates the
  * product id (prefixing it), and we want to isolate each test customer.
+ *
+ * `ignorePastDue` controls the product-level `config.ignore_past_due` flag —
+ * this replaces the former customer-level `customers.ignore_past_due` column,
+ * which no longer exists.
  */
-const buildFreeProduct = () => {
+const buildFreeProduct = ({
+	ignorePastDue,
+}: {
+	ignorePastDue: boolean;
+}): ProductV2 => {
 	const item = constructFeatureItem({
 		featureId: TestFeature.Messages,
 		includedUsage: 100,
 		interval: ProductItemInterval.Month,
 	}) as LimitedItem;
 
-	return constructProduct({
+	const product = constructProduct({
 		items: [item],
 		type: "free",
 		isDefault: false,
-	});
+	}) as ProductV2;
+
+	// The product-level `config.ignore_past_due` flag is what the cron reads
+	// now (via `products.config->>'ignore_past_due'`). We attach it here so
+	// it flows through `autumn.products.create` (CreateProductV2Params.config).
+	product.config = { ignore_past_due: ignorePastDue };
+
+	return product;
 };
 
 /**
  * Shared setup: creates a customer via initCustomerV3, registers a fresh free
- * product scoped to that customer, attaches the product, then moves the
- * resulting customer_entitlement's next_reset_at into the past and patches
- * the customer_product status + customers.ignore_past_due flag.
+ * product scoped to that customer with the requested product-level
+ * `config.ignore_past_due`, attaches the product, then moves the resulting
+ * customer_entitlement's next_reset_at into the past and patches the
+ * customer_product status.
+ *
+ * NOTE: `ignore_past_due` is now a product-level flag set at product creation
+ * time via the public API. There is no customer-level flag anymore.
  */
 const setupPastDueScenario = async ({
 	customerId,
@@ -54,9 +73,12 @@ const setupPastDueScenario = async ({
 	productStatus: CusProductStatus;
 	ignorePastDue: boolean;
 }) => {
-	const product = buildFreeProduct();
+	const product = buildFreeProduct({ ignorePastDue });
 	const autumn = new AutumnInt({ version: ApiVersion.V1_2 });
 
+	// initProductsV0 → createProducts → autumn.products.create, which accepts
+	// `config` on CreateProductV2Params. This persists the flag into
+	// products.config without any direct SQL.
 	await initProductsV0({
 		ctx,
 		products: [product],
@@ -101,18 +123,6 @@ const setupPastDueScenario = async ({
 		.set({ status: productStatus })
 		.where(eq(customerProducts.id, cusEnt!.customer_product_id!));
 
-	// Patch the customers.ignore_past_due flag for this org + customer.
-	await ctx.db
-		.update(customers)
-		.set({ ignore_past_due: ignorePastDue })
-		.where(
-			and(
-				eq(customers.id, customerId),
-				eq(customers.org_id, ctx.org.id),
-				eq(customers.env, ctx.env),
-			),
-		);
-
 	return cusEnt!;
 };
 
@@ -129,7 +139,7 @@ describe(`${chalk.yellowBright("past-due-reset: past_due product WITHOUT ignore_
 		cusEntId = cusEnt.id;
 	});
 
-	test("getActiveResetPassed should NOT return cusEnt for past_due product when ignore_past_due is false", async () => {
+	test("getActiveResetPassed should NOT return cusEnt for past_due product when product.config.ignore_past_due is false", async () => {
 		const resetCusEnts = await CusEntService.getActiveResetPassed({
 			db: ctx.db,
 		});
@@ -152,7 +162,7 @@ describe(`${chalk.yellowBright("past-due-reset: past_due product WITH ignore_pas
 		cusEntId = cusEnt.id;
 	});
 
-	test("getActiveResetPassed SHOULD return cusEnt for past_due product when ignore_past_due is true", async () => {
+	test("getActiveResetPassed SHOULD return cusEnt for past_due product when product.config.ignore_past_due is true", async () => {
 		const resetCusEnts = await CusEntService.getActiveResetPassed({
 			db: ctx.db,
 		});
@@ -176,7 +186,7 @@ describe(`${chalk.yellowBright("past-due-reset: active product is always include
 		cusEntId = cusEnt.id;
 	});
 
-	test("getActiveResetPassed SHOULD return cusEnt for active product regardless of ignore_past_due", async () => {
+	test("getActiveResetPassed SHOULD return cusEnt for active product regardless of product.config.ignore_past_due", async () => {
 		const resetCusEnts = await CusEntService.getActiveResetPassed({
 			db: ctx.db,
 		});

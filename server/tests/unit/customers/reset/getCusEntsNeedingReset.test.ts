@@ -3,10 +3,12 @@ import {
 	CusProductStatus,
 	type FullCustomer,
 	type FullCustomerPrice,
+	type FullProduct,
 } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { customers } from "@tests/utils/fixtures/db/customers";
+import { products } from "@tests/utils/fixtures/db/products";
 import chalk from "chalk";
 import { getCusEntsNeedingReset } from "@/internal/customers/actions/resetCustomerEntitlements/getCusEntsNeedingReset.js";
 
@@ -15,6 +17,7 @@ const NOW = 1_700_000_000_000;
 const PAST = NOW - 1000;
 const FUTURE = NOW + 60_000;
 const CUS_PROD_ID = "cus_prod_test";
+const PRODUCT_ID = "prod_test";
 
 const buildFullCustomer = ({
 	productStatus,
@@ -53,23 +56,27 @@ const buildFullCustomer = ({
 			]
 		: [];
 
+	// Build a FullProduct with the plan-level ignore_past_due flag. The
+	// shared fixture `products.createFull` defaults config.ignore_past_due
+	// to false, so we spread + override to flip it on.
+	const baseProduct = products.createFull({ id: PRODUCT_ID });
+	const product: FullProduct = {
+		...baseProduct,
+		config: { ...baseProduct.config, ignore_past_due: ignorePastDue },
+	};
+
 	const cusProduct = customerProducts.create({
 		id: CUS_PROD_ID,
+		productId: PRODUCT_ID,
 		customerEntitlements: [cusEnt],
 		customerPrices,
 		status: productStatus,
+		product,
 	});
 
-	const fullCus = customers.create({
+	return customers.create({
 		customerProducts: [cusProduct],
 	});
-
-	// The shared fixture omits `ignore_past_due`; splice it in so the function
-	// under test sees the flag we actually want to exercise.
-	return {
-		...fullCus,
-		ignore_past_due: ignorePastDue,
-	} as FullCustomer;
 };
 
 describe(chalk.yellowBright("getCusEntsNeedingReset"), () => {
@@ -110,6 +117,9 @@ describe(chalk.yellowBright("getCusEntsNeedingReset"), () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0].customer_product?.status).toBe(CusProductStatus.PastDue);
+		expect(
+			result[0].customer_product?.product?.config?.ignore_past_due,
+		).toBe(true);
 	});
 
 	test("skips cusEnt when product is Expired even with ignore_past_due true", () => {

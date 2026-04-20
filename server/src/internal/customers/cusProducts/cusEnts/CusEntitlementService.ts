@@ -14,9 +14,11 @@ import {
 	type FullCustomerEntitlement,
 	features,
 	type InsertCustomerEntitlement,
+	products,
 	type ResetCusEnt,
 } from "@autumn/shared";
 import { and, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { unionAll } from "drizzle-orm/pg-core";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -157,9 +159,34 @@ export class CusEntService {
 		let offset = 0;
 		let hasMore = true;
 
+		// Shared projection across all three UNION ALL branches. Keeping the
+		// column list identical across branches is required for UNION ALL and
+		// lets the existing mapper below consume each row uniformly.
+		const baseSelect = {
+			customer_entitlements: customerEntitlements,
+			entitlements: entitlements,
+			features: features,
+			customers: customers,
+			customer_products: customerProducts,
+		};
+
+		// Common reset predicates applied in every branch: next_reset_at has
+		// passed and the entitlement has not expired.
+		const commonResetPredicates = () =>
+			and(
+				lt(customerEntitlements.next_reset_at, customDateUnix ?? Date.now()),
+				or(
+					isNull(customerEntitlements.expires_at),
+					gt(customerEntitlements.expires_at, Date.now()),
+				),
+			);
+
 		while (hasMore) {
-			const data = await db
-				.select()
+			// Branch 1: cusEnts with no customer_product. Left-join to
+			// customer_products on a false predicate so the row shape matches
+			// the other branches (customer_products columns come back NULL).
+			const branch1 = db
+				.select(baseSelect)
 				.from(customerEntitlements)
 				.innerJoin(
 					entitlements,
@@ -173,33 +200,75 @@ export class CusEntService {
 					customers,
 					eq(customerEntitlements.internal_customer_id, customers.internal_id),
 				)
-				.leftJoin(
+				.leftJoin(customerProducts, sql`false`)
+				.where(
+					and(
+						isNull(customerEntitlements.customer_product_id),
+						commonResetPredicates(),
+					),
+				);
+
+			// Branch 2: cusEnts on active customer_products.
+			const branch2 = db
+				.select(baseSelect)
+				.from(customerEntitlements)
+				.innerJoin(
+					entitlements,
+					eq(customerEntitlements.entitlement_id, entitlements.id),
+				)
+				.innerJoin(
+					features,
+					eq(entitlements.internal_feature_id, features.internal_id),
+				)
+				.innerJoin(
+					customers,
+					eq(customerEntitlements.internal_customer_id, customers.internal_id),
+				)
+				.innerJoin(
 					customerProducts,
 					sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
 				)
 				.where(
 					and(
-						or(
-							isNull(customerEntitlements.customer_product_id),
-							eq(customerProducts.status, CusProductStatus.Active),
-							// Include past_due products when the customer opted into ignore_past_due
-							and(
-								eq(customerProducts.status, CusProductStatus.PastDue),
-								eq(customers.ignore_past_due, true),
-							),
-						),
-						lt(
-							customerEntitlements.next_reset_at,
-							customDateUnix ?? Date.now(),
-						),
-
-						// Customer entitlement has not expired
-						or(
-							isNull(customerEntitlements.expires_at),
-							gt(customerEntitlements.expires_at, Date.now()),
-						),
+						eq(customerProducts.status, CusProductStatus.Active),
+						commonResetPredicates(),
 					),
+				);
+
+			// Branch 3: cusEnts on past_due customer_products whose product
+			// opted into ignore_past_due via products.config.
+			const branch3 = db
+				.select(baseSelect)
+				.from(customerEntitlements)
+				.innerJoin(
+					entitlements,
+					eq(customerEntitlements.entitlement_id, entitlements.id),
 				)
+				.innerJoin(
+					features,
+					eq(entitlements.internal_feature_id, features.internal_id),
+				)
+				.innerJoin(
+					customers,
+					eq(customerEntitlements.internal_customer_id, customers.internal_id),
+				)
+				.innerJoin(
+					customerProducts,
+					sql`${customerEntitlements.customer_product_id} COLLATE "C" = ${customerProducts.id}`,
+				)
+				.innerJoin(
+					products,
+					eq(customerProducts.internal_product_id, products.internal_id),
+				)
+				.where(
+					and(
+						eq(customerProducts.status, CusProductStatus.PastDue),
+						sql`(${products.config}->>'ignore_past_due')::boolean = true`,
+						commonResetPredicates(),
+					),
+				);
+
+			const data = await unionAll(branch1, branch2, branch3)
 				.limit(batchSize)
 				.offset(offset);
 
