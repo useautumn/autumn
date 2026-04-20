@@ -1,12 +1,12 @@
 server/src/internal/customers/actions/update/updateCustomer.ts
   f1f547b33567ea40 39,156
-server/src/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.ts
-  f1f547b33567ea40 88,90
 server/tests/integration/crud/customers/customer-config.test.ts
   f1f547b33567ea40 1-7,9-10,12-25,27,29-30,32,35-36,38-47,49-51,53-56,58-59,61,64,66-71,73-74,76-78,80-82,85-86,88-89,91-94,96-100,102-104,106-107,109-111,113-116,118,120-121,123-125,127-130,132-136,138-143,145-157,159-160,162-167,169-172,174
   d7862f8a40b1fb7d 28,33,62,65,83,95,119,126,131,161
 shared/api/common/customerData.ts
   f1f547b33567ea40 61
+server/src/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.ts
+  f1f547b33567ea40 88,90
 ---
 {
   "schema_version": "authorship/3.0.0",
