@@ -12,6 +12,7 @@ import {
 	useMemo,
 	useState,
 } from "react";
+import type { SendInvoiceSubmitParams } from "@/components/forms/shared/SendInvoiceStage";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
@@ -27,7 +28,7 @@ import {
 import { useCreateScheduleMutation } from "../hooks/useCreateScheduleMutation";
 import { useCreateSchedulePreview } from "../hooks/useCreateSchedulePreview";
 import {
-	buildCreateScheduleRequestBody,
+	useBuildCreateScheduleRequestBody,
 	useCreateScheduleRequestBody,
 } from "../hooks/useCreateScheduleRequestBody";
 import { useSchedulePhaseHandlers } from "../hooks/useSchedulePhaseHandlers";
@@ -67,7 +68,12 @@ interface CreateScheduleFormContextValue {
 
 	isPending: boolean;
 	handleSubmit: () => void;
+	handleInvoiceSubmit: (params: SendInvoiceSubmitParams) => Promise<{
+		stripeId: string | undefined;
+		hostedInvoiceUrl: string | null | undefined;
+	}>;
 	preview: BillingPreviewResponse | null | undefined;
+	previewQuery: { data: BillingPreviewResponse | null | undefined };
 	isPreviewLoading: boolean;
 	error: Error | null;
 	onScopeChange?: (entityId: string | undefined) => void;
@@ -97,7 +103,8 @@ export function CreateScheduleFormProvider({
 	onScopeChange,
 	children,
 }: CreateScheduleFormProviderProps) {
-	const nowMs = nowMsProp ?? Date.now();
+	const [nowMsFallback] = useState(Date.now);
+	const nowMs = nowMsProp ?? nowMsFallback;
 	const form = useCreateScheduleForm({ initialValues });
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
@@ -128,18 +135,19 @@ export function CreateScheduleFormProvider({
 		handlePlanEditSave,
 	} = useSchedulePhaseHandlers({ form, nowMs, editingPlan, setEditingPlan });
 
-	const buildRequestBody = useCallback(
-		() =>
-			buildCreateScheduleRequestBody({
-				customerId,
-				entityId,
-				phases: form.store.state.values.phases,
-				products,
-				features,
-				nowMs,
-			}),
-		[customerId, entityId, form.store, products, features, nowMs],
+	const getPhases = useCallback(
+		() => form.store.state.values.phases,
+		[form.store],
 	);
+
+	const buildRequestBody = useBuildCreateScheduleRequestBody({
+		customerId,
+		entityId,
+		products,
+		features,
+		nowMs,
+		getPhases,
+	});
 
 	const previewRequestBody = useCreateScheduleRequestBody({
 		customerId,
@@ -165,12 +173,15 @@ export function CreateScheduleFormProvider({
 		error: previewError,
 	} = useCreateSchedulePreview({ requestBody: previewRequestBody });
 
-	const { handleSubmit, isPending } = useCreateScheduleMutation({
-		customerId,
-		buildRequestBody,
-		onCheckoutRedirect,
-		onSuccess,
-	});
+	const { handleSubmit, handleInvoiceSubmit, isPending } =
+		useCreateScheduleMutation({
+			customerId,
+			buildRequestBody,
+			onCheckoutRedirect,
+			onSuccess,
+		});
+
+	const previewQuery = useMemo(() => ({ data: preview }), [preview]);
 
 	const value = useMemo<CreateScheduleFormContextValue>(
 		() => ({
@@ -194,7 +205,9 @@ export function CreateScheduleFormProvider({
 			handlePlanEditSave,
 			isPending,
 			handleSubmit,
+			handleInvoiceSubmit,
 			preview,
+			previewQuery,
 			isPreviewLoading,
 			error: phaseTimingError ? new Error(phaseTimingError) : previewError,
 			onScopeChange,
@@ -220,7 +233,9 @@ export function CreateScheduleFormProvider({
 			handlePlanEditSave,
 			isPending,
 			handleSubmit,
+			handleInvoiceSubmit,
 			preview,
+			previewQuery,
 			isPreviewLoading,
 			phaseTimingError,
 			previewError,

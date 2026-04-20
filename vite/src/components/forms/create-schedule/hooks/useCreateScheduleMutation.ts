@@ -14,7 +14,11 @@ export function useCreateScheduleMutation({
 	onSuccess,
 }: {
 	customerId: string | undefined;
-	buildRequestBody: () => CreateScheduleParamsV0 | null;
+	buildRequestBody: (params?: {
+		useInvoice?: boolean;
+		enableProductImmediately?: boolean;
+		finalizeInvoice?: boolean;
+	}) => CreateScheduleParamsV0 | null;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
@@ -22,10 +26,22 @@ export function useCreateScheduleMutation({
 	const queryClient = useQueryClient();
 
 	const mutation = useMutation({
-		mutationFn: async () => {
+		mutationFn: async ({
+			useInvoice,
+			enableProductImmediately,
+			finalizeInvoice,
+		}: {
+			useInvoice?: boolean;
+			enableProductImmediately?: boolean;
+			finalizeInvoice?: boolean;
+		}) => {
 			if (!customerId) throw new Error("Customer ID is required");
 
-			const requestBody = buildRequestBody();
+			const requestBody = buildRequestBody({
+				useInvoice,
+				enableProductImmediately,
+				finalizeInvoice,
+			});
 			if (!requestBody) throw new Error("Failed to build request body");
 
 			const response = await axiosInstance.post<CreateScheduleResponse>(
@@ -33,16 +49,22 @@ export function useCreateScheduleMutation({
 				requestBody,
 			);
 
-			return response.data;
+			return { data: response.data, useInvoice };
 		},
-		onSuccess: (data) => {
-			if (data?.payment_url) {
+		onSuccess: ({ data, useInvoice }) => {
+			if (useInvoice) {
+				if (data?.invoice) {
+					toast.success("Invoice created successfully");
+				}
+			} else if (data?.payment_url) {
 				onCheckoutRedirect?.(data.payment_url);
 			} else {
 				toast.success("Schedule created successfully");
 			}
 
-			onSuccess?.();
+			if (!useInvoice) {
+				onSuccess?.();
+			}
 
 			if (customerId) {
 				queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
@@ -56,9 +78,32 @@ export function useCreateScheduleMutation({
 		},
 	});
 
+	const handleSubmit = () => {
+		mutation.mutate({});
+	};
+
+	const handleInvoiceSubmit = async ({
+		enableProductImmediately,
+		finalizeInvoice,
+	}: {
+		enableProductImmediately: boolean;
+		finalizeInvoice: boolean;
+	}) => {
+		const result = await mutation.mutateAsync({
+			useInvoice: true,
+			enableProductImmediately,
+			finalizeInvoice,
+		});
+		return {
+			stripeId: result.data?.invoice?.stripe_id,
+			hostedInvoiceUrl: result.data?.invoice?.hosted_invoice_url,
+		};
+	};
+
 	return {
 		mutation,
-		handleSubmit: () => mutation.mutate(),
+		handleSubmit,
+		handleInvoiceSubmit,
 		isPending: mutation.isPending,
 	};
 }

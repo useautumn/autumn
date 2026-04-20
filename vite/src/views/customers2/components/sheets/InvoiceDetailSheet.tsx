@@ -228,8 +228,9 @@ export function InvoiceDetailSheet() {
 				</SheetSection>
 			))}
 
+			{/* Invoice Total */}
 			<SheetSection withSeparator={true}>
-				<div className="flex flex-col gap-1.5">
+				<div className="space-y-2">
 					<div className="flex items-center justify-between">
 						<span className="text-sm font-medium text-foreground">Total</span>
 						<span className="text-sm font-semibold text-foreground tabular-nums">
@@ -245,6 +246,25 @@ export function InvoiceDetailSheet() {
 								</span>
 							</div>
 						)}
+					{invoice.refunded_amount > 0 && (
+						<>
+							<div className="flex items-center justify-between">
+								<span className="text-sm text-t3">Refunded</span>
+								<span className="text-sm text-amber-500 tabular-nums">
+									-{formatAmount(invoice.refunded_amount, invoice.currency)}
+								</span>
+							</div>
+							<div className="flex items-center justify-between pt-1">
+								<span className="text-sm text-t3">Net</span>
+								<span className="text-sm font-semibold text-foreground tabular-nums">
+									{formatSignedAmount(
+										invoice.total - invoice.refunded_amount,
+										invoice.currency,
+									)}
+								</span>
+							</div>
+						</>
+					)}
 				</div>
 			</SheetSection>
 

@@ -23,11 +23,17 @@ export const CreateScheduleResponseSchema = z.object({
 	entity_id: z.string().nullable().meta({
 		description: "The entity ID for the schedule, or null when customer-level.",
 	}),
-	schedule_id: z.string().meta({
-		description: "The ID of the created schedule.",
+	status: z.enum(["created", "pending_payment"]).meta({
+		description:
+			"Whether the schedule is fully created or waiting for payment or confirmation to complete.",
+	}),
+	schedule_id: z.string().nullable().meta({
+		description:
+			"The ID of the created schedule. Null when the schedule is waiting on Autumn checkout confirmation.",
 	}),
 	phases: z.array(CreateScheduleResponsePhaseSchema).meta({
-		description: "Persisted phases in ascending starts_at order.",
+		description:
+			"Persisted phases in ascending starts_at order. Empty when waiting on Autumn checkout confirmation.",
 	}),
 	invoice: BillingResponseSchema.shape.invoice,
 	payment_url: BillingResponseSchema.shape.payment_url,
