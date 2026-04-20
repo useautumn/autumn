@@ -11,7 +11,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import { saveLockReceipt } from "@/internal/balances/utils/lock/saveLockReceipt.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
@@ -232,7 +231,7 @@ export const executePostgresDeductionV2 = async ({
 						featureId: feature.id,
 						entityId,
 						items: mutation_logs ?? [],
-						redisInstance: redisV2,
+						redisInstance: ctx.redisV2,
 					});
 				}
 			} catch (error) {

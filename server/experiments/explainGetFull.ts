@@ -1,9 +1,9 @@
 import { AppEnv, CusProductStatus } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import {
-	initDrizzle,
-	prodTestCustomerId,
-	prodTestOrgId,
+    initDrizzle,
+    prodTestCustomerId,
+    prodTestOrgId,
 } from "./experimentEnv";
 const { getFullCusQuery } = await import(
 	"../src/internal/customers/getFullCusQuery"
@@ -34,7 +34,7 @@ const main = async () => {
 		withTrialsUsed: false,
 		withSubs: true,
 		withEvents: false,
-		cusProductLimit: 15,
+		cusProductLimit: 10,
 	});
 
 	// Run the actual query to measure wall-clock time

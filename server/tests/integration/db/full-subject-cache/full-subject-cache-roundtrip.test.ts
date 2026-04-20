@@ -2,7 +2,6 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { normalizedToFullSubject } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import { getOrInitFullSubjectViewEpoch } from "@/internal/customers/cache/fullSubject/actions/invalidate/getOrInitFullSubjectViewEpoch.js";
 import type { CachedFullSubject } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
 import {
@@ -36,7 +35,7 @@ const cleanupKeys = async ({
 		customerId,
 		entityId,
 	});
-	const subjectRaw = (await redisV2.get(subjectKey)) as string | null;
+	const subjectRaw = (await ctx.redisV2.get(subjectKey)) as string | null;
 	const keys = [
 		subjectKey,
 		buildFullSubjectViewEpochKey({
@@ -60,7 +59,7 @@ const cleanupKeys = async ({
 		}
 	}
 
-	await redisV2.del(...keys);
+	await ctx.redisV2.del(...keys);
 };
 
 afterEach(async () => {});
@@ -78,7 +77,7 @@ const getSharedBalanceHash = async ({
 	customerId: string;
 	featureId: string;
 }) =>
-	redisV2.hgetall(
+	ctx.redisV2.hgetall(
 		buildSharedFullSubjectBalanceKey({
 			orgId: ctx.org.id,
 			env: ctx.env,
@@ -113,7 +112,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				});
 				expect(result).toBe("OK");
 
-				const subjectRaw = await redisV2.get(
+				const subjectRaw = await ctx.redisV2.get(
 					buildFullSubjectKey({
 						orgId: ctx.org.id,
 						env: ctx.env,
@@ -172,7 +171,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					}),
 				});
 				expect(result).toBe("OK");
-				const subjectRaw = await redisV2.get(
+				const subjectRaw = await ctx.redisV2.get(
 					buildFullSubjectKey({
 						orgId: ctx.org.id,
 						env: ctx.env,
@@ -265,7 +264,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 
 				expect(Object.keys(hashBeforeEntityWrite).length).toBeGreaterThan(0);
 				expect(
-					await redisV2.exists(
+					await ctx.redisV2.exists(
 						`{${customerId}}:${ctx.org.id}:${ctx.env}:full_subject:shared_balances`,
 					),
 				).toBe(0);
@@ -296,7 +295,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				}
 
 				expect(
-					await redisV2.exists(
+					await ctx.redisV2.exists(
 						`{${customerId}}:${ctx.org.id}:${ctx.env}:full_subject:shared_balances`,
 					),
 				).toBe(0);
@@ -334,7 +333,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				});
 				expect(result).toBe("OK");
 
-				await redisV2.incr(
+				await ctx.redisV2.incr(
 					buildFullSubjectViewEpochKey({
 						orgId: ctx.org.id,
 						env: ctx.env,
@@ -396,10 +395,10 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					env: ctx.env,
 					customerId: scenario.ids.customerId,
 				});
-				const subjectRaw = (await redisV2.get(subjectKey)) as string | null;
+				const subjectRaw = (await ctx.redisV2.get(subjectKey)) as string | null;
 				const subject = JSON.parse(subjectRaw!) as CachedFullSubject;
 
-				await redisV2.del(
+				await ctx.redisV2.del(
 					buildSharedFullSubjectBalanceKey({
 						orgId: ctx.org.id,
 						env: ctx.env,
@@ -444,7 +443,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				});
 				expect(result).toBe("OK");
 
-				await redisV2.del(
+				await ctx.redisV2.del(
 					buildFullSubjectKey({
 						orgId: ctx.org.id,
 						env: ctx.env,
@@ -534,7 +533,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					env: ctx.env,
 					customerId: scenario.ids.customerId,
 				});
-				const firstSubjectRaw = (await redisV2.get(subjectKey)) as
+				const firstSubjectRaw = (await ctx.redisV2.get(subjectKey)) as
 					| string
 					| null;
 				expect(firstSubjectRaw).toBeDefined();
@@ -548,7 +547,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				});
 				expect(secondResult).toBe("CACHE_EXISTS");
 
-				const secondSubjectRaw = (await redisV2.get(subjectKey)) as
+				const secondSubjectRaw = (await ctx.redisV2.get(subjectKey)) as
 					| string
 					| null;
 				expect(secondSubjectRaw).toEqual(firstSubjectRaw);

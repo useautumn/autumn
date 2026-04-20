@@ -1,4 +1,3 @@
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { ResetCusEntParam } from "@/internal/balances/utils/sql/client.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
@@ -45,7 +44,7 @@ export const resetSubjectCache = async ({
 	if (resets.length === 0) return;
 
 	try {
-		const { org, env } = ctx;
+		const { org, env, redisV2 } = ctx;
 
 		const updatesByFeatureId: Record<string, SubjectBalanceUpdate[]> = {};
 

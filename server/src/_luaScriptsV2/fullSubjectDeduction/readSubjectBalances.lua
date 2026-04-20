@@ -1,18 +1,10 @@
 -- ============================================================================
 -- READ SUBJECT BALANCES
--- Functions to read shared SubjectBalance payloads from Redis hashes
+-- Functions to read shared SubjectBalance payloads from Redis hashes.
+-- Balance keys are built by the TS caller and passed in via
+-- params.balance_keys_by_feature_id to keep this script portable across
+-- Redis/Dragonfly cluster modes (no key construction inside Lua).
 -- ============================================================================
-
-local function build_shared_subject_balance_key(params)
-  return '{'
-      .. params.customer_id
-      .. '}:'
-      .. params.org_id
-      .. ':'
-      .. params.env
-      .. ':full_subject:shared_balances:'
-      .. params.feature_id
-end
 
 local function decode_subject_balance(raw_value)
   local decoded = safe_decode(raw_value)
@@ -26,30 +18,29 @@ local function read_subject_balances(params)
   local balances_by_id = {}
   local missing_customer_entitlement_ids = {}
   local entries_by_balance_key = {}
+  local balance_keys_by_feature_id = safe_table(params.balance_keys_by_feature_id)
 
   for _, ent_obj in ipairs(params.customer_entitlement_deductions or {}) do
     local customer_entitlement_id = ent_obj.customer_entitlement_id
     local feature_id = ent_obj.feature_id
 
     if customer_entitlement_id and feature_id then
-      local balance_key = build_shared_subject_balance_key({
-        org_id = params.org_id,
-        env = params.env,
-        customer_id = params.customer_id,
-        feature_id = feature_id,
-      })
+      local balance_key = balance_keys_by_feature_id[feature_id]
+      if not balance_key then
+        table.insert(missing_customer_entitlement_ids, customer_entitlement_id)
+      else
+        if entries_by_balance_key[balance_key] == nil then
+          entries_by_balance_key[balance_key] = {
+            feature_id = feature_id,
+            customer_entitlement_ids = {},
+          }
+        end
 
-      if entries_by_balance_key[balance_key] == nil then
-        entries_by_balance_key[balance_key] = {
-          feature_id = feature_id,
-          customer_entitlement_ids = {},
-        }
+        table.insert(
+          entries_by_balance_key[balance_key].customer_entitlement_ids,
+          customer_entitlement_id
+        )
       end
-
-      table.insert(
-        entries_by_balance_key[balance_key].customer_entitlement_ids,
-        customer_entitlement_id
-      )
     end
   end
 

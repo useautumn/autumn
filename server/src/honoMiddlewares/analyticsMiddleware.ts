@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
 import { logRequestResult } from "./requestLogging/logRequestResult.js";
 
@@ -80,6 +81,11 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const customerId = ctx.customerId;
 	const entityId = ctx.entityId;
 
+	const fullSubjectBucket =
+		customerId && ctx.rolloutSnapshot?.customerBucket !== undefined
+			? (ctx.rolloutSnapshot.customerBucket ?? undefined)
+			: undefined;
+
 	ctx.logger = addAppContextToLogs({
 		logger: ctx.logger,
 		appContext: {
@@ -92,6 +98,10 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			user_id: ctx.userId || undefined,
 			user_email: ctx.user?.email || undefined,
 			api_version: ctx.apiVersion?.semver,
+			full_subject_bucket: fullSubjectBucket ?? undefined,
+			full_subject_rollout_enabled: customerId
+				? isFullSubjectRolloutEnabled({ ctx })
+				: undefined,
 		},
 	});
 

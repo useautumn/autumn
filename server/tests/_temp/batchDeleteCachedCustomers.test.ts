@@ -67,12 +67,12 @@ test.concurrent(`${chalk.yellowBright("batchDeleteCachedFullCustomers: leaves fu
 		featureId: TestFeature.Messages,
 	});
 
-	expect(await redisV2.exists(primarySubjectKey)).toBe(1);
-	expect(await redisV2.exists(otherSubjectKey)).toBe(1);
-	expect(await redisV2.exists(sharedBalanceKey)).toBe(1);
-	expect(await redisV2.exists(otherSharedBalanceKey)).toBe(1);
+	expect(await ctx.redisV2.exists(primarySubjectKey)).toBe(1);
+	expect(await ctx.redisV2.exists(otherSubjectKey)).toBe(1);
+	expect(await ctx.redisV2.exists(sharedBalanceKey)).toBe(1);
+	expect(await ctx.redisV2.exists(otherSharedBalanceKey)).toBe(1);
 
-	await redisV2.unlink(otherSubjectKey);
+	await ctx.redisV2.unlink(otherSubjectKey);
 
 	await batchDeleteCachedFullCustomers({
 		customers: [
@@ -81,10 +81,10 @@ test.concurrent(`${chalk.yellowBright("batchDeleteCachedFullCustomers: leaves fu
 		],
 	});
 
-	expect(await redisV2.exists(primarySubjectKey)).toBe(1);
-	expect(await redisV2.exists(otherSubjectKey)).toBe(0);
-	expect(await redisV2.exists(sharedBalanceKey)).toBe(1);
-	expect(await redisV2.exists(otherSharedBalanceKey)).toBe(1);
+	expect(await ctx.redisV2.exists(primarySubjectKey)).toBe(1);
+	expect(await ctx.redisV2.exists(otherSubjectKey)).toBe(0);
+	expect(await ctx.redisV2.exists(sharedBalanceKey)).toBe(1);
+	expect(await ctx.redisV2.exists(otherSharedBalanceKey)).toBe(1);
 
 	const primaryFromDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",

@@ -1,4 +1,4 @@
-import { redisV2 } from "@/external/redis/initRedisV2.js";
+import type { Redis } from "ioredis";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildSharedFullSubjectBalanceKey } from "../../builders/buildSharedFullSubjectBalanceKey.js";
 import { AGGREGATED_BALANCE_FIELD } from "../../config/fullSubjectCacheConfig.js";
@@ -9,12 +9,14 @@ export const invalidateCustomerEntitlementBalance = async ({
 	customerId,
 	featureId,
 	customerEntitlementId,
+	redisV2,
 }: {
 	orgId: string;
 	env: string;
 	customerId: string;
 	featureId: string;
 	customerEntitlementId: string;
+	redisV2: Redis;
 }): Promise<void> => {
 	if (
 		!orgId ||

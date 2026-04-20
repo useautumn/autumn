@@ -31,6 +31,8 @@ export type LogAppContext = {
 	user_id?: string;
 	user_email?: string;
 	api_version: string;
+	full_subject_bucket?: number;
+	full_subject_rollout_enabled?: boolean;
 };
 
 /** Stripe webhook event context */

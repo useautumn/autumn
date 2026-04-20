@@ -1,5 +1,4 @@
 import type { Entity } from "@autumn/shared";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { updateEntityInCache } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/updateEntityInCache.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -37,7 +36,7 @@ export const updateCachedEntityData = async ({
 		);
 	});
 
-	const { org, env, logger } = ctx;
+	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
 		orgId: org.id,
 		env,

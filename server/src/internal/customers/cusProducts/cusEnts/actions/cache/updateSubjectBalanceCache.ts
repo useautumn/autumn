@@ -1,4 +1,3 @@
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
@@ -23,6 +22,7 @@ export const updateSubjectBalanceCache = async ({
 		next_reset_at?: number | null;
 	};
 }) => {
+	const { redisV2 } = ctx;
 	const balanceKey = buildSharedFullSubjectBalanceKey({
 		orgId: ctx.org.id,
 		env: ctx.env,

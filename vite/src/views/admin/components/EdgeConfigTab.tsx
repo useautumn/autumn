@@ -5,6 +5,7 @@ import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
+import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
 import { StripeSyncDialog } from "./StripeSyncDialog";
 
 export function EdgeConfigTab() {
@@ -14,6 +15,7 @@ export function EdgeConfigTab() {
 	const [customerBlockOpen, setCustomerBlockOpen] = useState(false);
 	const [orgLimitsOpen, setOrgLimitsOpen] = useState(false);
 	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
+	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -108,6 +110,23 @@ export function EdgeConfigTab() {
 						Edit
 					</Button>
 				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-t1">V2 Redis Instance</div>
+						<div className="text-xs text-t3">
+							Switch the active V2 Redis between primary, canary, and dragonfly
+							at runtime.
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setRedisV2CacheOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
 			</div>
 
 			<FeatureFlagsDialog
@@ -138,6 +157,11 @@ export function EdgeConfigTab() {
 			<StripeSyncDialog
 				open={stripeSyncOpen}
 				onOpenChange={setStripeSyncOpen}
+			/>
+
+			<RedisV2CacheDialog
+				open={redisV2CacheOpen}
+				onOpenChange={setRedisV2CacheOpen}
 			/>
 		</div>
 	);

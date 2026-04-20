@@ -5,6 +5,7 @@ import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsCo
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
+import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
 import { handleGetInvoiceLineItems } from "./handleGetInvoiceLineItems";
@@ -18,6 +19,7 @@ import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureF
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
+import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
 import { handleGetRollouts } from "./rollouts/handleGetRollouts";
@@ -66,6 +68,14 @@ honoAdminRouter.get("/stripe-sync-config", ...handleGetAdminStripeSyncConfig);
 honoAdminRouter.put(
 	"/stripe-sync-config",
 	...handleUpsertAdminStripeSyncConfig,
+);
+honoAdminRouter.get(
+	"/redis-v2-cache-config",
+	...handleGetAdminRedisV2CacheConfig,
+);
+honoAdminRouter.put(
+	"/redis-v2-cache-config",
+	...handleUpsertAdminRedisV2CacheConfig,
 );
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);

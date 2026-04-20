@@ -1,4 +1,3 @@
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
@@ -11,6 +10,7 @@ export const incrementFullSubjectViewEpoch = async ({
 	ctx: AutumnContext;
 	customerId: string;
 }): Promise<number | null> => {
+	const { redisV2 } = ctx;
 	const epochKey = buildFullSubjectViewEpochKey({
 		orgId: ctx.org.id,
 		env: ctx.env,

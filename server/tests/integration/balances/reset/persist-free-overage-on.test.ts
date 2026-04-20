@@ -156,6 +156,7 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (cache): lazy reset de
 			customerEntitlementId: cusEnt!.id,
 			field: "balance",
 			value: -50,
+			redisV2: ctx.redisV2,
 		});
 		await expireCusEntForReset({
 			ctx,

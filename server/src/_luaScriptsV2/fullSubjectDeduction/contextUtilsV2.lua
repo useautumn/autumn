@@ -24,6 +24,7 @@ local function init_context(params)
     env = params.env,
     customer_id = params.customer_id,
     customer_entitlement_deductions = params.customer_entitlement_deductions,
+    balance_keys_by_feature_id = params.balance_keys_by_feature_id,
   })
 
   local context = {

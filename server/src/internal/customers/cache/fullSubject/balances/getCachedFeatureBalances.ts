@@ -1,5 +1,5 @@
 import type { AggregatedFeatureBalance, SubjectBalance } from "@autumn/shared";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildSharedFullSubjectBalanceKey } from "../builders/buildSharedFullSubjectBalanceKey.js";
 import { AGGREGATED_BALANCE_FIELD } from "../config/fullSubjectCacheConfig.js";
@@ -16,12 +16,15 @@ export type FeatureBalanceResult = {
 };
 
 const readFeatureBalancesFromMaster = async ({
+	ctx,
 	balanceKey,
 	customerEntitlementIds,
 }: {
+	ctx: AutumnContext;
 	balanceKey: string;
 	customerEntitlementIds: string[];
 }): Promise<(string | null)[] | null> => {
+	const { redisV2 } = ctx;
 	const multi = redisV2.multi();
 	multi.hmget(balanceKey, ...customerEntitlementIds);
 	const multiResults = await multi.exec();
@@ -34,22 +37,21 @@ const readFeatureBalancesFromMaster = async ({
 };
 
 export const getCachedFeatureBalance = async ({
-	orgId,
-	env,
+	ctx,
 	customerId,
 	featureId,
 	customerEntitlementIds,
 	readMaster = false,
 }: {
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	customerId: string;
 	featureId: string;
 	customerEntitlementIds: string[];
 	readMaster?: boolean;
 }): Promise<FeatureBalanceResult | undefined> => {
+	const { org, env, redisV2 } = ctx;
 	const balanceKey = buildSharedFullSubjectBalanceKey({
-		orgId,
+		orgId: org.id,
 		env,
 		customerId,
 		featureId,
@@ -63,6 +65,7 @@ export const getCachedFeatureBalance = async ({
 		? await tryRedisRead(
 				() =>
 					readFeatureBalancesFromMaster({
+						ctx,
 						balanceKey,
 						customerEntitlementIds,
 					}),
@@ -96,15 +99,13 @@ export const getCachedFeatureBalance = async ({
 };
 
 export const getCachedFeatureBalancesBatch = async ({
-	orgId,
-	env,
+	ctx,
 	customerId,
 	featureIds,
 	customerEntitlementIdsByFeatureId,
 	includeAggregated = false,
 }: {
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	customerId: string;
 	featureIds: string[];
 	customerEntitlementIdsByFeatureId: Record<string, string[]>;
@@ -112,6 +113,7 @@ export const getCachedFeatureBalancesBatch = async ({
 }): Promise<FeatureBalanceResult[] | undefined> => {
 	if (featureIds.length === 0) return [];
 
+	const { org, env, redisV2 } = ctx;
 	const pipeline = redisV2.pipeline();
 	for (const featureId of featureIds) {
 		const customerEntitlementIds =
@@ -121,7 +123,7 @@ export const getCachedFeatureBalancesBatch = async ({
 			: customerEntitlementIds;
 		pipeline.hmget(
 			buildSharedFullSubjectBalanceKey({
-				orgId,
+				orgId: org.id,
 				env,
 				customerId,
 				featureId,

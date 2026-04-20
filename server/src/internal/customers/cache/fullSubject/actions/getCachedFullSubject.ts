@@ -1,5 +1,4 @@
 import { type FullSubject, normalizedToFullSubject } from "@autumn/shared";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
@@ -28,7 +27,7 @@ export const getCachedFullSubject = async ({
 	entityId?: string;
 	source?: string;
 }): Promise<FullSubject | undefined> => {
-	const { org, env, logger } = ctx;
+	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
 		orgId: org.id,
 		env,
@@ -97,8 +96,7 @@ export const getCachedFullSubject = async ({
 
 	const isCustomerSubject = !entityId;
 	const balances = await getCachedFeatureBalancesBatch({
-		orgId: org.id,
-		env,
+		ctx,
 		customerId,
 		featureIds: cached.meteredFeatures,
 		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,

@@ -1,5 +1,4 @@
 import type { NormalizedFullSubject } from "@autumn/shared";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
@@ -20,7 +19,7 @@ export const setCachedFullSubject = async ({
 	normalized: NormalizedFullSubject;
 	fetchedSubjectViewEpoch: number;
 }): Promise<SetCachedFullSubjectResult> => {
-	const { logger, org, env } = ctx;
+	const { logger, org, env, redisV2 } = ctx;
 	const { customerId, entityId } = normalized;
 
 	const cached = normalizedToCachedFullSubject({
