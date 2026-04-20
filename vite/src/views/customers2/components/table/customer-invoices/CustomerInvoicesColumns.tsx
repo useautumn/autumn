@@ -52,6 +52,7 @@ export const CustomerInvoicesColumns = [
 				<CustomerInvoiceStatus
 					status={invoice.status}
 					total={invoice.total}
+					amountPaid={invoice.amount_paid}
 					refundedAmount={invoice.refunded_amount}
 				/>
 			);

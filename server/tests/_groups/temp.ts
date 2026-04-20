@@ -2,13 +2,16 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Create schedule unit tests",
+	description: "Failed tests to triage and fix",
 	tier: "domain",
 	paths: [
-		"unit/billing/create-schedule/create-schedule-params.spec.ts",
-		"unit/billing/create-schedule/compute-create-schedule-plan.spec.ts",
-		"unit/billing/create-schedule/normalize-create-schedule-phases.spec.ts",
-		"unit/billing/create-schedule/validate-create-schedule-phase-plans.spec.ts",
-		"integration/billing/create-schedule/create-schedule-basic.test.ts",
+		"integration/billing/update-subscription/free-trial/update-paid-trials.test.ts",
+		"integration/billing/update-subscription/free-trial/update-paid-to-free-trials.test.ts",
+
+		"integration/billing/legacy/attach/downgrade/legacy-downgrade-merged-clock.test.ts",
+		"integration/billing/legacy/attach/downgrade/legacy-downgrade-merged-schedule.test.ts",
+		"integration/billing/stripe-webhooks/subscription-updated/subscription-updated-uncancel.test.ts",
+		"integration/billing/stripe-webhooks/subscription-updated/subscription-updated-past-due.test.ts",
+		"integration/billing/stripe-webhooks/invoice-created/invoice-created-entity-consumable.test.ts",
 	],
 };

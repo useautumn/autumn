@@ -112,10 +112,12 @@ export const formatTiers = ({
 export const getFeatureItemDisplay = ({
 	item,
 	feature,
+	entityFeature,
 	fullDisplay = false,
 }: {
 	item: ProductItem;
 	feature?: Feature;
+	entityFeature?: Feature;
 	fullDisplay?: boolean;
 }): DisplayResult => {
 	if (!feature) {
@@ -130,17 +132,34 @@ export const getFeatureItemDisplay = ({
 
 	const primaryText = getIncludedUsageText(item, feature);
 
-	// Determine secondary text (interval display)
+	// Determine secondary text: per-entity scope + interval.
+	// e.g. "per user per month" when entity_feature_id is set, otherwise "per month".
 	let secondaryText: string | undefined;
 	if (fullDisplay) {
+		const parts: string[] = [];
+
+		if (item.entity_feature_id && entityFeature) {
+			const entityName = getFeatureName({
+				feature: entityFeature,
+				units: 1,
+			});
+			if (entityName) {
+				parts.push(`per ${entityName}`);
+			}
+		}
+
 		const intervalDisplay = getIntervalDisplay(item);
 		if (intervalDisplay) {
-			secondaryText = intervalDisplay;
+			parts.push(intervalDisplay);
 		} else if (
 			isSingleUseFeature(feature) &&
 			item.included_usage !== Infinite
 		) {
-			secondaryText = "one-off";
+			parts.push("one-off");
+		}
+
+		if (parts.length > 0) {
+			secondaryText = parts.join(" ");
 		}
 	}
 
@@ -294,11 +313,16 @@ export const getProductItemDisplay = ({
 	amountFormatOptions?: Intl.NumberFormatOptions;
 }): DisplayResult => {
 	const findFeature = () => features.find((f) => f.id === item.feature_id);
+	const findEntityFeature = () =>
+		item.entity_feature_id
+			? features.find((f) => f.id === item.entity_feature_id)
+			: undefined;
 
 	if (isFeatureItem(item)) {
 		return getFeatureItemDisplay({
 			item,
 			feature: findFeature(),
+			entityFeature: findEntityFeature(),
 			fullDisplay,
 		});
 	}
