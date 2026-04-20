@@ -75,6 +75,9 @@ export const API_CUSTOMER_V5_EXAMPLE = {
 			feature_id: "advanced_workflows",
 		},
 	},
+	config: {
+		block_shared_pool: false,
+	},
 };
 
 // V5 base customer - uses V1 subscriptions (single array with status field) and V1 balances
@@ -94,6 +97,19 @@ export const BaseApiCustomerV5Schema = BaseApiCustomerSchema.extend({
 		description:
 			"Boolean feature flags keyed by feature ID, showing enabled access for on/off features.",
 	}),
+	config: z
+		.object({
+			block_shared_pool: z
+				.boolean()
+				.optional()
+				.meta({
+					description: "Whether to block the shared pool for the customer.",
+				}),
+		})
+		.optional()
+		.meta({
+			description: "Configuration for the customer.",
+		}),
 }).meta({
 	examples: [API_CUSTOMER_V5_EXAMPLE],
 });
