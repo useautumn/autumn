@@ -1,8 +1,9 @@
 import type { Redis } from "ioredis";
-import { createRedisClient } from "./createRedisClient.js";
+import { createDisabledRedis, createRedisClient } from "./createRedisClient.js";
 import {
 	currentRegion,
 	getCacheUrlForRegion,
+	hasRedisConfig,
 	PRIMARY_REGION,
 	primaryCacheUrl,
 } from "./redisConfig.js";
@@ -11,14 +12,19 @@ if (process.env.CACHE_BACKUP_URL?.trim()) {
 	console.log(
 		`[Redis] Using CACHE_BACKUP_URL for all regions (primary region: ${currentRegion})`,
 	);
+} else if (!hasRedisConfig) {
+	console.warn("[Redis] No Redis URL configured. Running in Postgres-only mode.");
 } else if (primaryCacheUrl && getCacheUrlForRegion({ region: currentRegion })) {
 	console.log(`Using regional cache: ${currentRegion}`);
 }
 
-const primaryRedis = createRedisClient({
-	cacheUrl: primaryCacheUrl!,
-	region: currentRegion,
-});
+const primaryRedis =
+	hasRedisConfig && primaryCacheUrl
+		? createRedisClient({
+				cacheUrl: primaryCacheUrl,
+				region: currentRegion,
+			})
+		: createDisabledRedis();
 
 /**
  * The active Redis instance. All consumer code imports this.
@@ -31,6 +37,9 @@ const regionalRedisInstances: Map<string, Redis> = new Map();
 
 /** Get Redis instance for a specific region (lazy-loaded) */
 export const getRegionalRedis = (region: string): Redis => {
+	if (!hasRedisConfig) {
+		return primaryRedis;
+	}
 	if (region === currentRegion) {
 		return primaryRedis;
 	}

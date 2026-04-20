@@ -1,8 +1,15 @@
-import type { AppEnv, EventInsert, Price } from "@autumn/shared";
+import type {
+	ApiVersion,
+	AppEnv,
+	EventInsert,
+	Price,
+	TrackParams,
+} from "@autumn/shared";
 import { SendMessageCommand } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
+import { getSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import type {
 	BatchResetCusEntsPayload,
@@ -52,6 +59,12 @@ export interface Payloads {
 	[JobName.InsertEventBatch]: {
 		events: EventInsert[];
 	};
+	[JobName.Track]: {
+		orgId: string;
+		env: AppEnv;
+		apiVersion: ApiVersion;
+		body: TrackParams;
+	};
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
 	[JobName.SendProductsUpdated]: SendProductsUpdatedPayload;
@@ -88,6 +101,7 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	messageDeduplicationId,
 	generateDeduplicationId,
 	delayMs,
+	queueUrl,
 }: {
 	jobName: T;
 	payload: Payloads[T];
@@ -95,13 +109,15 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	messageDeduplicationId?: string;
 	generateDeduplicationId?: boolean;
 	delayMs?: number;
+	queueUrl?: string;
 }) => {
-	if (process.env.SQS_QUEUE_URL) {
-		const { getSqsClient, QUEUE_URL } = await import("./initSqs.js");
+	const resolvedQueueUrl = queueUrl || process.env.SQS_QUEUE_URL;
+
+	if (resolvedQueueUrl) {
 		const sqsClient = getSqsClient();
 
 		// SQS implementation
-		const isFifoQueue = QUEUE_URL.endsWith(".fifo");
+		const isFifoQueue = resolvedQueueUrl.endsWith(".fifo");
 		const messageId =
 			generateDeduplicationId === false ? undefined : generateId("job");
 		const message = {
@@ -120,7 +136,7 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 			Bun.hash(messageId ?? generateId("dedup")).toString();
 
 		const command = new SendMessageCommand({
-			QueueUrl: QUEUE_URL,
+			QueueUrl: resolvedQueueUrl,
 			MessageBody: JSON.stringify(message),
 			...(delaySeconds && { DelaySeconds: delaySeconds }),
 			// FIFO queues require MessageGroupId. Content-based deduplication uses the body.

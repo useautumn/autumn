@@ -1,7 +1,8 @@
 import { RedisStore } from "@hono-rate-limiter/redis";
 import type { Context } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
-import { redis } from "@/external/redis/initRedis";
+import { logger } from "@/external/logtail/logtailUtils.js";
+import { redis, shouldUseRedis } from "@/external/redis/initRedis";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import {
 	RATE_LIMIT_CONFIGS,
@@ -20,6 +21,20 @@ export const setRateLimitKeyInContext = (c: Context, key: string): void => {
 	(c as Context & { rateLimitKey: string }).rateLimitKey = key;
 };
 
+const RATE_LIMIT_WARNING_INTERVAL_MS = 30_000;
+let lastRateLimitBypassWarningAt = 0;
+
+const warnRateLimitBypass = () => {
+	const now = Date.now();
+	if (now - lastRateLimitBypassWarningAt < RATE_LIMIT_WARNING_INTERVAL_MS)
+		return;
+
+	lastRateLimitBypassWarningAt = now;
+	logger.warn(
+		"[rate-limit] Redis unavailable; bypassing distributed rate limiting",
+	);
+};
+
 export const rateLimitFactory = ({
 	limit,
 	windowMs,
@@ -27,34 +42,51 @@ export const rateLimitFactory = ({
 }: Pick<RateLimitConfig, "limit" | "windowMs" | "notInRedis">): ReturnType<
 	typeof rateLimiter
 > => {
-	return rateLimiter({
+	const options = {
 		windowMs,
 		limit,
-		standardHeaders: "draft-6",
+		standardHeaders: "draft-6" as const,
 		keyGenerator: getRateLimitKeyFromContext,
-		store: notInRedis
-			? undefined
-			: new RedisStore({
-					client: {
-						scriptLoad: (script: string) =>
-							redis.script("LOAD", script) as Promise<string>,
-						evalsha: <TArgs extends unknown[], TData = unknown>(
-							sha: string,
-							keys: string[],
-							args: TArgs,
-						): Promise<TData> => {
-							return redis.evalsha(
-								sha,
-								keys.length,
-								...keys,
-								...(args as (string | number | Buffer)[]),
-							) as Promise<TData>;
-						},
-						decr: (key: string) => redis.decr(key),
-						del: (key: string) => redis.del(key),
+	};
+
+	if (notInRedis) {
+		return rateLimiter(options);
+	}
+
+	let redisLimiter: ReturnType<typeof rateLimiter> | null = null;
+
+	return async (c, next) => {
+		if (!shouldUseRedis()) {
+			warnRateLimitBypass();
+			return next();
+		}
+
+		redisLimiter ??= rateLimiter({
+			...options,
+			store: new RedisStore({
+				client: {
+					scriptLoad: (script: string) =>
+						redis.script("LOAD", script) as Promise<string>,
+					evalsha: <TArgs extends unknown[], TData = unknown>(
+						sha: string,
+						keys: string[],
+						args: TArgs,
+					): Promise<TData> => {
+						return redis.evalsha(
+							sha,
+							keys.length,
+							...keys,
+							...(args as (string | number | Buffer)[]),
+						) as Promise<TData>;
 					},
-				}),
-	});
+					decr: (key: string) => redis.decr(key),
+					del: (key: string) => redis.del(key),
+				},
+			}),
+		});
+
+		return redisLimiter(c, next);
+	};
 };
 
 // Create rate limiters from central config
