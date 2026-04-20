@@ -154,6 +154,7 @@ export * from "./models/productModels/priceModels/priceModels";
 export * from "./models/productModels/priceModels/priceTable";
 export * from "./models/productModels/priceModels/priceTable";
 // 5. Product Models
+export * from "./models/productModels/productConfig/productConfig";
 export * from "./models/productModels/productEnums";
 export * from "./models/productModels/productModels";
 export * from "./models/productModels/productRelations";

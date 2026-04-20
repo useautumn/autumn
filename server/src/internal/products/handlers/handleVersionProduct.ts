@@ -48,10 +48,22 @@ export const handleVersionProductV2 = async ({
 		`Updating product ${latestProduct.id} version from ${curVersion} to ${newVersion}`,
 	);
 
+	// Deep-merge `config` so partial patches (e.g. `{ config: { ignore_past_due: true } }`)
+	// don't clobber other fields that might be added to ProductConfig later.
+	// Mirrors the same merge semantics used in the non-versioning update path
+	// (see updateProductDetails.ts). With only one field today this is a
+	// no-op in practice; the guard is here so that future fields in
+	// ProductConfig survive partial-update versioning without silent drops.
+	const mergedConfig =
+		newProductV2.config !== undefined
+			? { ...latestProduct.config, ...newProductV2.config }
+			: latestProduct.config;
+
 	const newProduct = constructProduct({
 		productData: CreateProductV2ParamsSchema.parse({
 			...latestProduct,
 			...newProductV2,
+			config: mergedConfig,
 		}),
 		version: newVersion,
 		orgId: org.id,
