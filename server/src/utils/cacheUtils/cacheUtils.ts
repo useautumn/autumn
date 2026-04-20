@@ -1,5 +1,30 @@
 import type { Redis } from "ioredis";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis } from "@/external/redis/initRedis.js";
+
+const REDIS_WARNING_INTERVAL_MS = 30_000;
+const lastRedisWarningAtBySource = new Map<string, number>();
+
+const warnRedisUnavailable = ({
+	source,
+	error,
+}: {
+	source: string;
+	error?: unknown;
+}) => {
+	const now = Date.now();
+	const lastWarningAt = lastRedisWarningAtBySource.get(source) ?? 0;
+	if (now - lastWarningAt < REDIS_WARNING_INTERVAL_MS) return;
+
+	lastRedisWarningAtBySource.set(source, now);
+	logger.warn(
+		{
+			source,
+			error: error instanceof Error ? error.message : undefined,
+		},
+		"[redis] operation unavailable",
+	);
+};
 
 /**
  * Executes a Redis SET ... NX and routes the three possible outcomes to callbacks:
@@ -24,13 +49,15 @@ export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
 
 	try {
 		if (targetRedis.status !== "ready") {
+			warnRedisUnavailable({ source: "tryRedisNx:not-ready" });
 			return await onRedisUnavailable();
 		}
 
 		const result = await operation();
 		if (result === "OK") return await onSuccess();
 		return await onKeyAlreadyExists();
-	} catch {
+	} catch (error) {
+		warnRedisUnavailable({ source: "tryRedisNx:error", error });
 		return await onRedisUnavailable();
 	}
 };
@@ -52,6 +79,7 @@ export const tryRedisWrite = async <T>(
 
 	try {
 		if (targetRedis.status !== "ready") {
+			warnRedisUnavailable({ source: "tryRedisWrite:not-ready" });
 			return null as T extends void ? true : T | null;
 		}
 
@@ -59,7 +87,8 @@ export const tryRedisWrite = async <T>(
 		return (result === undefined ? true : result) as T extends void
 			? true
 			: T | null;
-	} catch {
+	} catch (error) {
+		warnRedisUnavailable({ source: "tryRedisWrite:error", error });
 		return null as T extends void ? true : T | null;
 	}
 };
@@ -80,12 +109,14 @@ export const tryRedisRead = async <T>(
 
 	try {
 		if (targetRedis.status !== "ready") {
+			warnRedisUnavailable({ source: "tryRedisRead:not-ready" });
 			return null;
 		}
 
 		const result = await operation();
 		return result;
-	} catch {
+	} catch (error) {
+		warnRedisUnavailable({ source: "tryRedisRead:error", error });
 		return null;
 	}
 };

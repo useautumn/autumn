@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import type { FullCustomer } from "@autumn/shared";
+import { CustomerNotFoundError, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 const mockState = {
@@ -165,5 +165,27 @@ describe("full customer cache Redis gating", () => {
 		expect(mockState.cacheWrites).toBe(0);
 		expect(mockState.dbCalls).toBe(1);
 		expect(mockState.createCalls).toBe(1);
+	});
+
+	test("getOrCreateCachedFullCustomer honors skipCreate when Redis is unavailable and DB misses", async () => {
+		mockState.shouldUseRedis = false;
+		mockState.dbResult = undefined;
+
+		await expect(
+			getOrCreateCachedFullCustomer({
+				ctx: makeCtx(),
+				params: {
+					customer_id: "missing-customer",
+					feature_id: "messages",
+				},
+				source: "unit-test",
+				skipCreate: true,
+			}),
+		).rejects.toBeInstanceOf(CustomerNotFoundError);
+
+		expect(mockState.cacheReads).toBe(0);
+		expect(mockState.cacheWrites).toBe(0);
+		expect(mockState.dbCalls).toBe(1);
+		expect(mockState.createCalls).toBe(0);
 	});
 });

@@ -1,6 +1,7 @@
 import { RedisStore } from "@hono-rate-limiter/redis";
 import type { Context } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis, shouldUseRedis } from "@/external/redis/initRedis";
 import {
 	parseCustomerIdFromBody,
@@ -22,6 +23,20 @@ const getRateLimitKeyFromContext = (c: Context): string => {
 // Helper to set rate limit key in context
 export const setRateLimitKeyInContext = (c: Context, key: string): void => {
 	(c as Context & { rateLimitKey: string }).rateLimitKey = key;
+};
+
+const RATE_LIMIT_WARNING_INTERVAL_MS = 30_000;
+let lastRateLimitBypassWarningAt = 0;
+
+const warnRateLimitBypass = () => {
+	const now = Date.now();
+	if (now - lastRateLimitBypassWarningAt < RATE_LIMIT_WARNING_INTERVAL_MS)
+		return;
+
+	lastRateLimitBypassWarningAt = now;
+	logger.warn(
+		"[rate-limit] Redis unavailable; bypassing distributed rate limiting",
+	);
 };
 
 export const rateLimitFactory = ({
@@ -46,6 +61,8 @@ export const rateLimitFactory = ({
 
 	return async (c, next) => {
 		if (!shouldUseRedis()) {
+			// Distributed rate limiting depends on Redis. In degraded mode we fail open.
+			warnRateLimitBypass();
 			return next();
 		}
 
