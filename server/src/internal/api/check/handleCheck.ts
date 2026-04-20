@@ -1,19 +1,19 @@
 import {
 	AffectedResource,
 	ApiVersion,
-	applyResponseVersionChanges,
 	type CheckParams,
 	CheckParamsSchema,
 	CheckQuerySchema,
 	type CheckResponseV3,
-	CheckResponseV3Schema,
 	type ParsedCheckParams,
 } from "@autumn/shared";
 import { isRetryableDbError } from "@/db/dbUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
+import { getRetryableCheckFallbackResponse } from "./checkUtils/getRetryableCheckFallbackResponse.js";
 import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
+import { transformCheckResponse } from "./checkUtils/transformCheckResponse.js";
 import { getCheckPreview } from "./getCheckPreview.js";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
 import { runCheckWithTrack } from "./runCheckWithTrack.js";
@@ -68,33 +68,13 @@ export const handleCheck = createRoute({
 				throw error;
 			}
 
-			const fallbackResponse = CheckResponseV3Schema.parse({
-				allowed: true,
-				customer_id: customer_id || "",
-				entity_id: entity_id,
-				required_balance: requiredBalance,
-				balance: null,
-				flag: null,
-			});
-
-			const featureToUse = ctx.features.find(
-				(feature) => feature.id === body.feature_id,
+			return c.json(
+				getRetryableCheckFallbackResponse({
+					ctx,
+					body,
+					requiredBalance,
+				}),
 			);
-
-			const transformedFallbackResponse = featureToUse
-				? applyResponseVersionChanges<CheckResponseV3>({
-						input: fallbackResponse,
-						targetVersion: ctx.apiVersion,
-						resource: AffectedResource.Check,
-						legacyData: {
-							noCusEnts: false,
-							featureToUse,
-						},
-						ctx,
-					})
-				: fallbackResponse;
-
-			return c.json(transformedFallbackResponse);
 		}
 
 		let response: CheckResponseV3;
@@ -122,17 +102,12 @@ export const handleCheck = createRoute({
 				})
 			: undefined;
 
-		// Version changes will transform V3 -> V2 -> V1 -> V0 based on target API version
-		const transformedResponse = applyResponseVersionChanges<CheckResponseV3>({
-			input: response,
-			targetVersion: ctx.apiVersion,
-			resource: AffectedResource.Check,
-			legacyData: {
-				noCusEnts:
-					checkData.apiBalance === undefined && checkData.apiFlag === undefined,
-				featureToUse: checkData.featureToUse,
-			},
+		const transformedResponse = transformCheckResponse({
 			ctx,
+			response,
+			featureToUse: checkData.featureToUse,
+			noCusEnts:
+				checkData.apiBalance === undefined && checkData.apiFlag === undefined,
 		});
 
 		return c.json({
