@@ -54,6 +54,18 @@ export const CustomerDataSchema = z
 			description: "Billing controls for the customer (auto top-ups, etc.)",
 		}),
 
+		config: z
+			.object({
+				block_shared_pool: z.boolean().optional().meta({
+					description:
+						"Whether to block this customer from the shared feature pool.",
+				}),
+			})
+			.optional()
+			.meta({
+				description: "Miscellaneous configurations for the customer.",
+			}),
+
 		internal_options: CreateCustomerInternalOptionsSchema.optional().meta({
 			internal: true,
 		}),

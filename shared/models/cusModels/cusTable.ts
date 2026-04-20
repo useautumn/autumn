@@ -20,6 +20,10 @@ import type {
 	DbUsageAlert,
 } from "./billingControls/customerBillingControls.js";
 
+export type CustomerConfig = {
+	block_shared_pool?: boolean;
+};
+
 export type CustomerProcessor = {
 	type: "stripe";
 	id: string;
@@ -46,6 +50,7 @@ export const customers = pgTable(
 		spend_limits: jsonb().$type<DbSpendLimit[]>(),
 		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
 		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
+		config: jsonb().$type<CustomerConfig>().default({}),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),
