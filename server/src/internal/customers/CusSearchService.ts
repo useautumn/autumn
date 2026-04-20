@@ -43,6 +43,7 @@ const customerProductFields = {
 	canceled_at: customerProducts.canceled_at,
 	status: customerProducts.status,
 	trial_ends_at: customerProducts.trial_ends_at,
+	created_at: customerProducts.created_at,
 };
 
 const productFields = {
