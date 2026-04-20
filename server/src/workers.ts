@@ -18,10 +18,6 @@ let isShuttingDown = false;
 
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
-if (!process.env.SQS_QUEUE_URL?.trim()) {
-	throw new Error("SQS_QUEUE_URL is required for workers startup");
-}
-
 if (cluster.isPrimary) {
 	await initInfisical();
 
