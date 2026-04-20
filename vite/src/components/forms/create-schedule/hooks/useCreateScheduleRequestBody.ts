@@ -9,9 +9,10 @@ import { productItemsToPlanItemsV1 } from "@autumn/shared";
 import { useMemo } from "react";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 
-type CreatePlanItemParams = Omit<ApiPlanItemV1, "reset" | "price"> & {
+type CreatePlanItemParams = Omit<ApiPlanItemV1, "reset" | "price" | "rollover"> & {
 	reset?: ApiPlanItemV1["reset"];
 	price?: ApiPlanItemV1["price"];
+	rollover?: ApiPlanItemV1["rollover"];
 };
 
 import {
@@ -23,6 +24,7 @@ import {
 function sanitizeForCreateParams({
 	reset,
 	price,
+	rollover,
 	...rest
 }: ApiPlanItemV1): CreatePlanItemParams {
 	const sanitizedPrice = price
@@ -35,10 +37,20 @@ function sanitizeForCreateParams({
 			})()
 		: undefined;
 
+	const sanitizedRollover = rollover
+		? {
+				max: rollover.max ?? undefined,
+				max_percentage: rollover.max_percentage ?? undefined,
+				expiry_duration_type: rollover.expiry_duration_type,
+				expiry_duration_length: rollover.expiry_duration_length ?? undefined,
+			}
+		: undefined;
+
 	return {
 		...rest,
 		...(reset ? { reset } : {}),
 		...(sanitizedPrice ? { price: sanitizedPrice } : {}),
+		...(sanitizedRollover ? { rollover: sanitizedRollover } : {}),
 	};
 }
 
