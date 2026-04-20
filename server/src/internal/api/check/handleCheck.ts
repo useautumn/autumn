@@ -77,7 +77,24 @@ export const handleCheck = createRoute({
 				flag: null,
 			});
 
-			return c.json(fallbackResponse);
+			const featureToUse = ctx.features.find(
+				(feature) => feature.id === body.feature_id,
+			);
+
+			const transformedFallbackResponse = featureToUse
+				? applyResponseVersionChanges<CheckResponseV3>({
+						input: fallbackResponse,
+						targetVersion: ctx.apiVersion,
+						resource: AffectedResource.Check,
+						legacyData: {
+							noCusEnts: false,
+							featureToUse,
+						},
+						ctx,
+					})
+				: fallbackResponse;
+
+			return c.json(transformedFallbackResponse);
 		}
 
 		let response: CheckResponseV3;
