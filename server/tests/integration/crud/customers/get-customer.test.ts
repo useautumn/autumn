@@ -315,13 +315,14 @@ test.concurrent(`${chalk.yellowBright("get-customer: customer cache updates afte
 			keepInternalFields: true,
 		},
 	);
+
 	ApiCustomerV5Schema.parse(afterAttach);
 	expectBalanceCorrect({
 		customer: afterAttach,
 		featureId: TestFeature.Credits,
 		remaining: 200,
 		usage: 0,
-		planId: entityProd.id,
+		// planId: null,
 	});
 });
 

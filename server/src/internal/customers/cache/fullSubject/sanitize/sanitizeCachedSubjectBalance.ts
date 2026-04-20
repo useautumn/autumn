@@ -1,44 +1,17 @@
-import type { SubjectBalance } from "@autumn/shared";
-import { type ShapeSpec, sanitizeShape } from "./sanitizeCacheShapeUtils.js";
+import { type SubjectBalance, SubjectBalanceSchema } from "@autumn/shared";
+import { normalizeFromSchema } from "./normalizeFromSchema.js";
 
-const featureShapeSpec: ShapeSpec = {
-	event_names: "array",
-};
-
-const entitlementShapeSpec: ShapeSpec = {
-	feature: featureShapeSpec,
-};
-
-const priceConfigShapeSpec: ShapeSpec = {
-	usage_tiers: "array",
-};
-
-const priceShapeSpec: ShapeSpec = {
-	config: priceConfigShapeSpec,
-};
-
-const customerPriceShapeSpec: ShapeSpec = {
-	price: priceShapeSpec,
-};
-
-const rolloverShapeSpec: ShapeSpec = {
-	entities: "record",
-};
-
-const subjectBalanceShapeSpec: ShapeSpec = {
-	replaceables: "array",
-	rollovers: { items: rolloverShapeSpec },
-	entities: "nullable_record",
-	entitlement: entitlementShapeSpec,
-	customerPrice: customerPriceShapeSpec,
-};
-
+/**
+ * Repair a `SubjectBalance` read from Redis so Upstash cjson null-drops and
+ * empty-collection swaps are reversed before the value reaches downstream
+ * Zod validators (e.g. the webhook / API response schemas).
+ */
 export const sanitizeCachedSubjectBalance = ({
 	subjectBalance,
 }: {
 	subjectBalance: SubjectBalance;
 }): SubjectBalance =>
-	sanitizeShape<SubjectBalance>({
-		value: subjectBalance,
-		spec: subjectBalanceShapeSpec,
+	normalizeFromSchema<SubjectBalance>({
+		schema: SubjectBalanceSchema,
+		data: subjectBalance,
 	});

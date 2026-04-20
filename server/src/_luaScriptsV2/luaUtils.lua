@@ -42,3 +42,7 @@ local function sorted_keys(tbl)
   table.sort(keys)
   return keys
 end
+
+local function new_empty_array()
+  return cjson.decode('[]')
+end

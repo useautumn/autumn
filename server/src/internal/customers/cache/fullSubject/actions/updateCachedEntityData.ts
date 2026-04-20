@@ -1,6 +1,7 @@
 import type { Entity } from "@autumn/shared";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { updateEntityInCache } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/updateEntityInCache.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { logAlertEvent } from "@/utils/logging/logAlertEvent.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
@@ -24,6 +25,17 @@ export const updateCachedEntityData = async ({
 	>;
 }): Promise<void> => {
 	if (Object.keys(updates).length === 0) return;
+
+	updateEntityInCache({
+		ctx,
+		customerId,
+		idOrInternalId: entityId,
+		updates,
+	}).catch((error) => {
+		ctx.logger.error(
+			`[updateCachedEntityData] V1 cache update failed for ${customerId}:${entityId}: ${error}`,
+		);
+	});
 
 	const { org, env, logger } = ctx;
 	const subjectKey = buildFullSubjectKey({

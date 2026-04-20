@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { updateCachedCustomerData } from "@/internal/customers/cache/fullSubject/index.js";
+import { updateCachedCustomerData as updateCachedCustomerDataV1 } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/updateCachedCustomerData.js";
 
 export const updateCustomerData = async ({
 	ctx,
@@ -50,11 +51,18 @@ export const updateCustomerData = async ({
 
 	Object.assign(fullSubject.customer, updates);
 
-	await updateCachedCustomerData({
-		ctx,
-		customerId: idOrInternalId,
-		updates,
-	});
+	await Promise.all([
+		updateCachedCustomerData({
+			ctx,
+			customerId: idOrInternalId,
+			updates,
+		}),
+		updateCachedCustomerDataV1({
+			ctx,
+			customerId: idOrInternalId,
+			updates,
+		}),
+	]);
 
 	return true;
 };

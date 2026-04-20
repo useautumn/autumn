@@ -79,11 +79,16 @@ export const getOrCreateCachedFullSubject = async ({
 		});
 	}
 
-	await updateCustomerData({
+	const customerDataUpdated = await updateCustomerData({
 		ctx,
 		fullSubject,
 		customerData,
 	});
+
+	if (customerDataUpdated && normalizedResult) {
+		normalizedResult.normalized.customer = fullSubject.customer;
+		normalizedResult.fullSubject.customer = fullSubject.customer;
+	}
 
 	if (entityId && !fullSubject.entity) {
 		const newEntity = await autoCreateEntity({

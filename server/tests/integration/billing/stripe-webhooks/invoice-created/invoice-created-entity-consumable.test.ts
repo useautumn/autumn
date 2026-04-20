@@ -65,7 +65,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created entity: regular renewal -
 		],
 		actions: [
 			s.attach({ productId: pro.id, entityIndex: 0 }),
-			s.track({ featureId: TestFeature.Messages, value: 500 }),
+			s.track({ featureId: TestFeature.Messages, value: 500, entityIndex: 0 }),
 		],
 	});
 

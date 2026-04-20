@@ -3,7 +3,11 @@ import { redisV2 } from "@/external/redis/initRedisV2.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildSharedFullSubjectBalanceKey } from "../builders/buildSharedFullSubjectBalanceKey.js";
 import { AGGREGATED_BALANCE_FIELD } from "../config/fullSubjectCacheConfig.js";
-import { sanitizeCachedSubjectBalance } from "../sanitize/index.js";
+import { roundSubjectBalance } from "../roundCacheBalance.js";
+import {
+	sanitizeCachedAggregatedFeatureBalance,
+	sanitizeCachedSubjectBalance,
+} from "../sanitize/index.js";
 
 export type FeatureBalanceResult = {
 	featureId: string;
@@ -77,8 +81,10 @@ export const getCachedFeatureBalance = async ({
 		try {
 			const parsedBalance = JSON.parse(entryJson) as SubjectBalance;
 			balances.push(
-				sanitizeCachedSubjectBalance({
-					subjectBalance: parsedBalance,
+				roundSubjectBalance({
+					subjectBalance: sanitizeCachedSubjectBalance({
+						subjectBalance: parsedBalance,
+					}),
 				}),
 			);
 		} catch {
@@ -142,7 +148,10 @@ export const getCachedFeatureBalancesBatch = async ({
 			const aggregatedJson = allValues.pop() ?? null;
 			if (aggregatedJson) {
 				try {
-					aggregated = JSON.parse(aggregatedJson) as AggregatedFeatureBalance;
+					const parsed = JSON.parse(aggregatedJson) as AggregatedFeatureBalance;
+					aggregated = sanitizeCachedAggregatedFeatureBalance({
+						aggregated: parsed,
+					});
 				} catch {
 					// Malformed _aggregated is non-fatal; fall back to subject string value
 				}
@@ -160,7 +169,11 @@ export const getCachedFeatureBalancesBatch = async ({
 			try {
 				const parsedBalance = JSON.parse(entryJson) as SubjectBalance;
 				balances.push(
-					sanitizeCachedSubjectBalance({ subjectBalance: parsedBalance }),
+					roundSubjectBalance({
+						subjectBalance: sanitizeCachedSubjectBalance({
+							subjectBalance: parsedBalance,
+						}),
+					}),
 				);
 			} catch {
 				return undefined;

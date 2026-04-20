@@ -1,10 +1,10 @@
 {
   "id": "get-cus-multi-ent-v2",
-  "created_at": 1776094834653,
+  "created_at": 1776681093029,
   "name": "get-cus-multi-ent-v2",
   "email": "get-cus-multi-ent-v2@example.com",
   "fingerprint": null,
-  "stripe_id": "cus_UKRUjVsG2UM9eG",
+  "stripe_id": "cus_UMz5mvPwIP5PS3",
   "env": "sandbox",
   "metadata": {},
   "send_email_receipts": false,
@@ -15,25 +15,13 @@
       "group": "get-cus-multi-ent-v2",
       "status": "active",
       "canceled_at": null,
-      "started_at": 1776094833000,
+      "started_at": 1776681092000,
       "is_default": false,
       "is_add_on": false,
       "version": 1,
-      "current_period_start": 1776094833000,
-      "current_period_end": 1778686833000,
+      "current_period_start": 1776681092000,
+      "current_period_end": 1779273092000,
       "items": [
-        {
-          "type": "price",
-          "feature_id": null,
-          "feature": null,
-          "interval": "month",
-          "interval_count": 1,
-          "price": 20,
-          "display": {
-            "primary_text": "$20",
-            "secondary_text": "per month"
-          }
-        },
         {
           "type": "feature",
           "feature_id": "dashboard",
@@ -83,45 +71,14 @@
       "group": "get-cus-multi-ent-v2",
       "status": "active",
       "canceled_at": null,
-      "started_at": 1776094847266,
+      "started_at": 1776681113920,
       "is_default": false,
       "is_add_on": false,
       "version": 1,
       "current_period_start": null,
       "current_period_end": null,
-      "items": [
-        {
-          "type": "feature",
-          "feature_id": "credits",
-          "feature_type": "single_use",
-          "feature": {
-            "id": "credits",
-            "name": "Credits",
-            "type": "credit_system",
-            "display": {
-              "singular": "Credits",
-              "plural": "Credits"
-            },
-            "credit_schema": [
-              {
-                "metered_feature_id": "action1",
-                "credit_cost": 0.2
-              },
-              {
-                "metered_feature_id": "action2",
-                "credit_cost": 0.6
-              }
-            ]
-          },
-          "included_usage": 200,
-          "interval": "month",
-          "reset_usage_when_enabled": true,
-          "display": {
-            "primary_text": "200 Credits"
-          }
-        }
-      ],
-      "quantity": 2
+      "items": [],
+      "quantity": 1
     }
   ],
   "features": {
@@ -135,7 +92,7 @@
       "balance": 90,
       "usage": 10,
       "included_usage": 100,
-      "next_reset_at": 1778686833000,
+      "next_reset_at": 1779273092000,
       "overage_allowed": false,
       "breakdown": [
         {
@@ -144,7 +101,7 @@
           "balance": 90,
           "usage": 10,
           "included_usage": 100,
-          "next_reset_at": 1778686833000,
+          "next_reset_at": 1779273092000,
           "expires_at": null,
           "overage_allowed": false
         }
@@ -154,36 +111,14 @@
       "id": "credits",
       "type": "single_use",
       "name": "Credits",
-      "interval": "month",
+      "interval": null,
       "interval_count": 1,
       "unlimited": false,
       "balance": 400,
       "usage": 0,
       "included_usage": 400,
-      "next_reset_at": 1778686833000,
+      "next_reset_at": null,
       "overage_allowed": false,
-      "breakdown": [
-        {
-          "interval": "month",
-          "interval_count": 1,
-          "balance": 200,
-          "usage": 0,
-          "included_usage": 200,
-          "next_reset_at": 1778686833000,
-          "expires_at": null,
-          "overage_allowed": false
-        },
-        {
-          "interval": "month",
-          "interval_count": 1,
-          "balance": 200,
-          "usage": 0,
-          "included_usage": 200,
-          "next_reset_at": 1778686833000,
-          "expires_at": null,
-          "overage_allowed": false
-        }
-      ],
       "credit_schema": [
         {
           "feature_id": "action1",
@@ -226,12 +161,12 @@
       "product_ids": [
         "cus-lvl_get-cus-multi-ent-v2"
       ],
-      "stripe_id": "in_1TLmbJ6GVhMpZYlMf5hdUuSY",
+      "stripe_id": "in_1TOF756GVhH8pLcDfKcFgsHu",
       "status": "paid",
       "total": 20,
       "currency": "usd",
-      "created_at": 1776094833000,
-      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3CJDaKtrWTXrrHak4MK0tm8cNRC"
+      "created_at": 1776681092000,
+      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3CcNrtgUERTv8MnmpqncpHXIwRk"
     }
   ]
 }

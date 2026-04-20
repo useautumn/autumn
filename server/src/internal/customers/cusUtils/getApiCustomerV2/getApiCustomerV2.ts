@@ -6,7 +6,7 @@ import {
 	type FullSubject,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCustomerExpand } from "../apiCusUtils/getApiCustomerExpand.js";
+import { getApiCustomerExpandV2 } from "../apiCusUtils/getApiCustomerExpandV2.js";
 import { getApiCustomerBaseV2 } from "./getApiCustomerBaseV2.js";
 
 /**
@@ -36,9 +36,9 @@ export const getApiCustomerV2 = async ({
 			: undefined,
 	};
 
-	const apiCustomerExpand = await getApiCustomerExpand({
+	const apiCustomerExpand = await getApiCustomerExpandV2({
 		ctx,
-		customerId: fullSubject.customer.id || fullSubject.customer.internal_id,
+		fullSubject,
 	});
 
 	const apiCustomer: ApiCustomerV5 = {

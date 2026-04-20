@@ -76,18 +76,16 @@ local lock = params.lock
 local unwind_value = params.unwind_value
 local lock_receipt_key = params.lock_receipt_key
 
-local empty_logs = cjson.decode('[]')
-
 -- Initialize context with in-memory state from Redis
 if #customer_entitlement_deductions == 0 then
   return cjson.encode({
     updates = {},
     rollover_updates = {},
-    modified_customer_entitlement_ids = empty_logs,
-    mutation_logs = empty_logs,
+    modified_customer_entitlement_ids = new_empty_array(),
+    mutation_logs = new_empty_array(),
     remaining = 0,
     error = cjson.null,
-    logs = empty_logs,
+    logs = new_empty_array(),
   })
 end
 
@@ -103,8 +101,8 @@ if #(context.missing_customer_entitlement_ids or {}) > 0 then
     error = 'SUBJECT_BALANCE_NOT_FOUND',
     updates = {},
     rollover_updates = {},
-    modified_customer_entitlement_ids = empty_logs,
-    mutation_logs = empty_logs,
+    modified_customer_entitlement_ids = new_empty_array(),
+    mutation_logs = new_empty_array(),
     remaining = 0,
     logs = context.logs,
     missing_customer_entitlement_ids = context.missing_customer_entitlement_ids,
@@ -125,7 +123,7 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
       error = unwind_result.error,
       updates = {},
       rollover_updates = {},
-      modified_customer_entitlement_ids = empty_logs,
+      modified_customer_entitlement_ids = new_empty_array(),
       mutation_logs = context.mutation_logs or cjson.decode('[]'),
       remaining = 0,
       logs = context.logs,
@@ -203,7 +201,7 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
     feature_id = feature_id,
     remaining = remaining_amount,
     updates = {},
-    modified_customer_entitlement_ids = empty_logs,
+    modified_customer_entitlement_ids = new_empty_array(),
     mutation_logs = mutation_logs,
     logs = context.logs
   })
