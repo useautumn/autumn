@@ -1,4 +1,3 @@
-import { formatMs } from "@autumn/shared";
 import type Stripe from "stripe";
 import { handleStripeSubscriptionCanceled } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/tasks/handleStripeSubscriptionCanceled/handleStripeSubscriptionCanceled.js";
 import { syncAutumnSubscription } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/tasks/syncAutumnSubscription.js";
@@ -22,10 +21,6 @@ export const handleStripeSubscriptionUpdated = async ({
 			ctx,
 			event,
 		});
-
-	ctx.logger.debug(
-		`Received subscription updated event, now: ${formatMs(subscriptionUpdatedContext?.nowMs)}`,
-	);
 
 	if (!subscriptionUpdatedContext) {
 		ctx.logger.warn(
