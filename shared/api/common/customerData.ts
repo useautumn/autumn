@@ -58,7 +58,7 @@ export const CustomerDataSchema = z
 			.object({
 				disable_pooled_balance: z.boolean().optional().meta({
 					description:
-						"Whether to block this customer from the shared feature pool.",
+						"Whether to disable the shared customer-level pool for entities.",
 				}),
 			})
 			.optional()
