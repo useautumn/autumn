@@ -1,16 +1,8 @@
-import {
-	ErrCode,
-	findFeatureById,
-	notNullish,
-	nullish,
-	RecaseError,
-	UpdateBalanceParamsV0Schema,
-} from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+import { findFeatureById, UpdateBalanceParamsV0Schema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { updateBalanceV1 } from "@/internal/balances/updateBalance/updateBalanceV1.js";
 import { updateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
 export const handleUpdateBalance = createRoute({
 	body: UpdateBalanceParamsV0Schema.extend({}),
@@ -28,15 +20,6 @@ export const handleUpdateBalance = createRoute({
 		}
 
 		const targetBalance = params.remaining ?? params.current_balance;
-
-		if (notNullish(params.included_grant) && nullish(targetBalance)) {
-			throw new RecaseError({
-				message:
-					"'remaining' is required when updating granted balance",
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
 
 		if (isFullSubjectRolloutEnabled({ ctx })) {
 			await updateBalanceV2({ ctx, params, targetBalance });

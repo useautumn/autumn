@@ -45,17 +45,16 @@ const autumnTheme = {
 	"hljs-punctuation": { color: "#BFBFBF" },
 };
 
-const TOTAL_LINES = 21;
+const TOTAL_LINES = 19;
 const LINE_HEIGHT = 24;
 
 const codeContent = `// Your entire billing integration
-const { allowed, remaining } = await
-autumn.check({
-  featureId: "ai_tokens"
+const { allowed } = await check({
+	featureId: "ai_tokens"
 });
 
 if (allowed) {
-  await autumn.track({
+  await track({
     featureId: "ai_tokens",
     value: 1024
   });
@@ -118,7 +117,7 @@ export default function AutumnConfig({
 			setDisplayed(fullCode.slice(0, displayed.length + 1));
 		}, TYPING_SPEED);
 		return () => clearTimeout(timer);
-	}, [displayed, done, started]);
+	}, [displayed, done, started, fullCode]);
 
 	// Blinking cursor after done
 	useEffect(() => {

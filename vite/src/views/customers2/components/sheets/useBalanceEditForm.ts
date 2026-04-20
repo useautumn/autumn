@@ -50,6 +50,7 @@ export function useBalanceEditForm({
 			grantedAndPurchasedBalance: grantedAndPurchasedBalance ?? null,
 			nextResetAt: selectedCusEnt.next_reset_at ?? null,
 			addValue: null,
+			updateGrantedBalance: true,
 		} as BalanceEditForm,
 		validators: {
 			onChange: BalanceEditFormSchema,

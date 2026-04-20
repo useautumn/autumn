@@ -5,9 +5,13 @@ export const temp: TestGroup = {
 	description: "Failed tests to triage and fix",
 	tier: "domain",
 	paths: [
-		"integration/balances/auto-topup/auto-topup-concurrent.test.ts",
-		"integration/balances/auto-topup/auto-topup-basic.test.ts",
-		"integration/balances/auto-topup/auto-topup-edge-cases.test.ts",
-		"integration/balances/auto-topup/auto-topup-failure-modes.test.ts",
+		"integration/billing/update-subscription/free-trial/update-paid-trials.test.ts",
+		"integration/billing/update-subscription/free-trial/update-paid-to-free-trials.test.ts",
+
+		"integration/billing/legacy/attach/downgrade/legacy-downgrade-merged-clock.test.ts",
+		"integration/billing/legacy/attach/downgrade/legacy-downgrade-merged-schedule.test.ts",
+		"integration/billing/stripe-webhooks/subscription-updated/subscription-updated-uncancel.test.ts",
+		"integration/billing/stripe-webhooks/subscription-updated/subscription-updated-past-due.test.ts",
+		"integration/billing/stripe-webhooks/invoice-created/invoice-created-entity-consumable.test.ts",
 	],
 };
