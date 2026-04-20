@@ -86,7 +86,7 @@ export const getApiCustomerBase = async ({
 			overage_allowed: fullCus.overage_allowed ?? undefined,
 		},
 		config: {
-			block_shared_pool: fullCus.config?.block_shared_pool,
+			disable_pooled_balance: fullCus.config?.disable_pooled_balance,
 		},
 
 		invoices:

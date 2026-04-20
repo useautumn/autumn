@@ -56,7 +56,7 @@ export const CustomerDataSchema = z
 
 		config: z
 			.object({
-				block_shared_pool: z.boolean().optional().meta({
+				disable_pooled_balance: z.boolean().optional().meta({
 					description:
 						"Whether to block this customer from the shared feature pool.",
 				}),

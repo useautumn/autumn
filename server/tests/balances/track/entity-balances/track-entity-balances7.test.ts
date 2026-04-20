@@ -9,9 +9,9 @@ import chalk from "chalk";
 import { setCustomerOverageAllowed } from "../../../integration/balances/utils/overage-allowed-utils/customerOverageAllowedUtils.js";
 
 /**
- * track-entity-balances7: block_shared_pool
+ * track-entity-balances7: disable_pooled_balance
  *
- * When customer.config.block_shared_pool is true and a deduction is scoped
+ * When customer.config.disable_pooled_balance is true and a deduction is scoped
  * to an entity, the entity must NOT fall back into the shared customer pool.
  *
  * Three deterministic branches:
@@ -54,7 +54,7 @@ test.concurrent(`${chalk.yellowBright("track-entity-balances7-reject: entity ove
 			s.deleteCustomer({ customerId }),
 			s.customer({
 				testClock: false,
-				data: { config: { block_shared_pool: true } },
+				data: { config: { disable_pooled_balance: true } },
 			}),
 			s.products({ list: [freeProd] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
@@ -111,7 +111,7 @@ test.concurrent(`${chalk.yellowBright("track-entity-balances7-cap: entity caps a
 			s.deleteCustomer({ customerId }),
 			s.customer({
 				testClock: false,
-				data: { config: { block_shared_pool: true } },
+				data: { config: { disable_pooled_balance: true } },
 			}),
 			s.products({ list: [freeProd] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
@@ -169,7 +169,7 @@ test.concurrent(`${chalk.yellowBright("track-entity-balances7-overage: entity go
 			s.deleteCustomer({ customerId }),
 			s.customer({
 				testClock: false,
-				data: { config: { block_shared_pool: true } },
+				data: { config: { disable_pooled_balance: true } },
 			}),
 			s.products({ list: [freeProd] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),

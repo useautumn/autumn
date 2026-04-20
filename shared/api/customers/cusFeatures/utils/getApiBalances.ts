@@ -29,11 +29,11 @@ export const getApiBalances = async ({
 		entity: fullCus.entity,
 	});
 
-	// When block_shared_pool is enabled and we're scoped to an entity, drop
+	// When disable_pooled_balance is enabled and we're scoped to an entity, drop
 	// customer-level (shared pool) cusEnts so the returned balances reflect
 	// only the entity's own pool. Matches the filter in prepareFeatureDeduction
 	// so the deduction path and reporting stay consistent.
-	if (fullCus.entity?.id && fullCus.config?.block_shared_pool) {
+	if (fullCus.entity?.id && fullCus.config?.disable_pooled_balance) {
 		allCusEnts = allCusEnts.filter((ce) => isEntityCusEnt({ cusEnt: ce }));
 	}
 

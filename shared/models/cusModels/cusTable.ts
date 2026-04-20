@@ -21,7 +21,7 @@ import type {
 } from "./billingControls/customerBillingControls.js";
 
 export type CustomerConfig = {
-	block_shared_pool?: boolean;
+	disable_pooled_balance?: boolean;
 };
 
 export type CustomerProcessor = {

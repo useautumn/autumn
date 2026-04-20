@@ -29,7 +29,7 @@ export const CustomerSchema = z.object({
 	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
 	config: z
 		.object({
-			block_shared_pool: z.boolean().optional(),
+			disable_pooled_balance: z.boolean().optional(),
 		})
 		.nullish(),
 });

@@ -63,7 +63,7 @@ export const prepareFeatureDeduction = ({
 		customerEntitlementFilters,
 	});
 
-	if (fullCustomer.entity?.id && fullCustomer.config?.block_shared_pool) {
+	if (fullCustomer.entity?.id && fullCustomer.config?.disable_pooled_balance) {
 		cusEnts = cusEnts.filter((ce) => isEntityCusEnt({ cusEnt: ce }));
 	}
 
