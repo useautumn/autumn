@@ -1,7 +1,7 @@
 import { RedisStore } from "@hono-rate-limiter/redis";
 import type { Context } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
-import { redis } from "@/external/redis/initRedis";
+import { redis, shouldUseRedis } from "@/external/redis/initRedis";
 import {
 	parseCustomerIdFromBody,
 	parseCustomerIdFromUrl,
@@ -31,34 +31,50 @@ export const rateLimitFactory = ({
 }: Pick<RateLimitConfig, "limit" | "windowMs" | "notInRedis">): ReturnType<
 	typeof rateLimiter
 > => {
-	return rateLimiter({
+	const options = {
 		windowMs,
 		limit,
-		standardHeaders: "draft-6",
+		standardHeaders: "draft-6" as const,
 		keyGenerator: getRateLimitKeyFromContext,
-		store: notInRedis
-			? undefined
-			: new RedisStore({
-					client: {
-						scriptLoad: (script: string) =>
-							redis.script("LOAD", script) as Promise<string>,
-						evalsha: <TArgs extends unknown[], TData = unknown>(
-							sha: string,
-							keys: string[],
-							args: TArgs,
-						): Promise<TData> => {
-							return redis.evalsha(
-								sha,
-								keys.length,
-								...keys,
-								...(args as (string | number | Buffer)[]),
-							) as Promise<TData>;
-						},
-						decr: (key: string) => redis.decr(key),
-						del: (key: string) => redis.del(key),
+	};
+
+	if (notInRedis) {
+		return rateLimiter(options);
+	}
+
+	let redisLimiter: ReturnType<typeof rateLimiter> | null = null;
+
+	return async (c, next) => {
+		if (!shouldUseRedis()) {
+			return next();
+		}
+
+		redisLimiter ??= rateLimiter({
+			...options,
+			store: new RedisStore({
+				client: {
+					scriptLoad: (script: string) =>
+						redis.script("LOAD", script) as Promise<string>,
+					evalsha: <TArgs extends unknown[], TData = unknown>(
+						sha: string,
+						keys: string[],
+						args: TArgs,
+					): Promise<TData> => {
+						return redis.evalsha(
+							sha,
+							keys.length,
+							...keys,
+							...(args as (string | number | Buffer)[]),
+						) as Promise<TData>;
 					},
-				}),
-	});
+					decr: (key: string) => redis.decr(key),
+					del: (key: string) => redis.del(key),
+				},
+			}),
+		});
+
+		return redisLimiter(c, next);
+	};
 };
 
 // Create rate limiters from central config

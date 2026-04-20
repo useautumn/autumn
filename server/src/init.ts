@@ -23,7 +23,11 @@ import "./internal/misc/customerBlocks/customerBlockStore.js";
 import "./internal/misc/edgeConfig/orgLimitsStore.js";
 import "./internal/misc/stripeSync/stripeSyncStore.js";
 import { closeStripeSyncEngine } from "@autumn/stripe-sync";
-import { warmupRegionalRedis } from "./external/redis/initRedis.js";
+import {
+	startRedisMonitor,
+	stopRedisMonitor,
+	warmupRegionalRedis,
+} from "./external/redis/initRedis.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -40,9 +44,10 @@ const init = async () => {
 	initPgHealthMonitor({ client: clientCritical });
 	console.timeEnd("init:pg-health-monitor");
 
-	console.time("init:redis-warmup");
-	await Promise.all([warmupRegionalRedis()]);
-	console.timeEnd("init:redis-warmup");
+	startRedisMonitor();
+	void warmupRegionalRedis().catch((error) => {
+		logger.warn("[Redis] Warmup failed", { error });
+	});
 	await startAllEdgeConfigPolling({ logger });
 
 	const PORT = process.env.SERVER_PORT
@@ -115,6 +120,7 @@ async function gracefulShutdown() {
 			await otelSdk.shutdown();
 		}
 		shutdownPgHealthMonitor();
+		stopRedisMonitor();
 		stopAllEdgeConfigPolling();
 		await Promise.all([
 			client.end(),

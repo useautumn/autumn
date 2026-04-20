@@ -1,6 +1,5 @@
 import type { Redis } from "ioredis";
 import { redis } from "@/external/redis/initRedis.js";
-import { logger } from "../../external/logtail/logtailUtils.js";
 
 /**
  * Executes a Redis SET ... NX and routes the three possible outcomes to callbacks:
@@ -25,15 +24,13 @@ export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
 
 	try {
 		if (targetRedis.status !== "ready") {
-			logger.error("Redis not ready, skipping NX write");
 			return await onRedisUnavailable();
 		}
 
 		const result = await operation();
 		if (result === "OK") return await onSuccess();
 		return await onKeyAlreadyExists();
-	} catch (error) {
-		logger.error(`Redis NX write failed: ${error}`);
+	} catch {
 		return await onRedisUnavailable();
 	}
 };
@@ -55,7 +52,6 @@ export const tryRedisWrite = async <T>(
 
 	try {
 		if (targetRedis.status !== "ready") {
-			logger.error("Redis not ready, skipping write");
 			return null as T extends void ? true : T | null;
 		}
 
@@ -63,8 +59,7 @@ export const tryRedisWrite = async <T>(
 		return (result === undefined ? true : result) as T extends void
 			? true
 			: T | null;
-	} catch (error) {
-		logger.error(`Redis write failed: ${error}`);
+	} catch {
 		return null as T extends void ? true : T | null;
 	}
 };
@@ -85,14 +80,12 @@ export const tryRedisRead = async <T>(
 
 	try {
 		if (targetRedis.status !== "ready") {
-			logger.error("Redis not ready, skipping read");
 			return null;
 		}
 
 		const result = await operation();
 		return result;
-	} catch (error) {
-		logger.error(`Redis read failed: ${error}`);
+	} catch {
 		return null;
 	}
 };
