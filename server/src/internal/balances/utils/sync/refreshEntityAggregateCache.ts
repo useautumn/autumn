@@ -1,5 +1,4 @@
 import type { AppEnv } from "@autumn/shared";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { AGGREGATED_BALANCE_FIELD } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
@@ -34,6 +33,7 @@ export const refreshEntityAggregateCache = async ({
 		if (aggregated.length === 0) return;
 
 		const affectedFeatureIds = new Set(featureIds);
+		const { redisV2 } = ctx;
 		const pipeline = redisV2.pipeline();
 		let writeCount = 0;
 

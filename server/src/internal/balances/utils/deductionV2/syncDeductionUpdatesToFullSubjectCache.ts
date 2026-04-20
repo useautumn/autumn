@@ -1,5 +1,4 @@
 import type { EntityRolloverBalance, FullSubject } from "@autumn/shared";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
@@ -75,7 +74,7 @@ export const syncDeductionUpdatesToFullSubjectCache = async ({
 				customerEntitlement.next_reset_at ?? null;
 		}
 
-		const { org, env } = ctx;
+		const { org, env, redisV2 } = ctx;
 
 		// Group updates by featureId and build per-feature update arrays
 		const updatesByFeatureId: Record<string, SubjectBalanceUpdate[]> = {};

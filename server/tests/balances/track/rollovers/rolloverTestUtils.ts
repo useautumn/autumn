@@ -54,6 +54,7 @@ export const resetAndGetCusEnt = async ({
 			customerId: customer.id ?? "",
 			featureId,
 			customerEntitlementId: resetCusEnt.id,
+			redisV2: ctx.redisV2,
 		});
 
 		await clearCusEntsFromCache({

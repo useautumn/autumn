@@ -1,4 +1,3 @@
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
@@ -14,7 +13,7 @@ export const invalidateCachedFullSubjectExact = async ({
 	ctx: AutumnContext;
 	source?: string;
 }): Promise<void> => {
-	const { org, env, logger } = ctx;
+	const { org, env, logger, redisV2 } = ctx;
 	if (!customerId || redisV2.status !== "ready") return;
 
 	const subjectKey = buildFullSubjectKey({

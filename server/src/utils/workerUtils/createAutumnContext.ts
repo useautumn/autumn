@@ -8,6 +8,7 @@ import {
 
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
@@ -57,6 +58,7 @@ export const createWorkerAutumnContext = async ({
 		db,
 		dbGeneral: db,
 		logger,
+		redisV2: resolveRedisV2(),
 		expand: [],
 
 		id: workerId,
