@@ -8,6 +8,7 @@ import { syncSubscriptionItemMetadataFromCheckout } from "@/external/stripe/webh
 import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateBillingPlanFromCheckout";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
+import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
@@ -70,6 +71,12 @@ export const handleCheckoutSessionMetadataV2 = async ({
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
 		stripeInvoice: checkoutContext.stripeInvoice,
+	});
+
+	await persistDeferredCreateSchedule({
+		ctx,
+		billingContext: updatedDeferredData.billingContext,
+		billingPlan: updatedDeferredData.billingPlan,
 	});
 
 	// Clear checkout session lock now that customer_product rows exist

@@ -9,9 +9,10 @@ import { productItemsToPlanItemsV1 } from "@autumn/shared";
 import { useMemo } from "react";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 
-type CreatePlanItemParams = Omit<ApiPlanItemV1, "reset" | "price"> & {
+type CreatePlanItemParams = Omit<ApiPlanItemV1, "reset" | "price" | "rollover"> & {
 	reset?: ApiPlanItemV1["reset"];
 	price?: ApiPlanItemV1["price"];
+	rollover?: ApiPlanItemV1["rollover"];
 };
 
 import {
@@ -23,6 +24,7 @@ import {
 function sanitizeForCreateParams({
 	reset,
 	price,
+	rollover,
 	...rest
 }: ApiPlanItemV1): CreatePlanItemParams {
 	const sanitizedPrice = price
@@ -35,10 +37,20 @@ function sanitizeForCreateParams({
 			})()
 		: undefined;
 
+	const sanitizedRollover = rollover
+		? {
+				max: rollover.max ?? undefined,
+				max_percentage: rollover.max_percentage ?? undefined,
+				expiry_duration_type: rollover.expiry_duration_type,
+				expiry_duration_length: rollover.expiry_duration_length ?? undefined,
+			}
+		: undefined;
+
 	return {
 		...rest,
 		...(reset ? { reset } : {}),
 		...(sanitizedPrice ? { price: sanitizedPrice } : {}),
+		...(sanitizedRollover ? { rollover: sanitizedRollover } : {}),
 	};
 }
 
@@ -181,5 +193,59 @@ export function useCreateScheduleRequestBody({
 				nowMs,
 			}),
 		[customerId, entityId, phases, products, features, nowMs],
+	);
+}
+
+export function useBuildCreateScheduleRequestBody({
+	customerId,
+	entityId,
+	products,
+	features,
+	nowMs,
+	getPhases,
+}: {
+	customerId: string | undefined;
+	entityId: string | undefined;
+	products: ProductV2[];
+	features: Feature[];
+	nowMs?: number;
+	getPhases: () => SchedulePhase[];
+}) {
+	return useMemo(
+		() =>
+			({
+				useInvoice,
+				enableProductImmediately,
+				finalizeInvoice,
+			}: {
+				useInvoice?: boolean;
+				enableProductImmediately?: boolean;
+				finalizeInvoice?: boolean;
+			} = {}): CreateScheduleParamsV0 | null => {
+				const requestBody = buildCreateScheduleRequestBody({
+					customerId,
+					entityId,
+					phases: getPhases(),
+					products,
+					features,
+					nowMs,
+				});
+
+				if (!requestBody) return null;
+
+				if (useInvoice) {
+					return {
+						...requestBody,
+						invoice_mode: {
+							enabled: true,
+							enable_plan_immediately: enableProductImmediately ?? true,
+							finalize: finalizeInvoice ?? true,
+						},
+					};
+				}
+
+				return requestBody;
+			},
+		[customerId, entityId, products, features, nowMs, getPhases],
 	);
 }
