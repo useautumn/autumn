@@ -1,5 +1,6 @@
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
+import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
@@ -38,6 +39,9 @@ export const API_PLAN_V1_EXAMPLE = {
 	env: "sandbox",
 	archived: false,
 	baseVariantId: null,
+	config: {
+		ignore_past_due: false,
+	},
 };
 
 export const ApiPlanV1Schema = z.object({
@@ -111,6 +115,10 @@ export const ApiPlanV1Schema = z.object({
 	base_variant_id: z.string().nullable().meta({
 		description:
 			"If this is a variant, the ID of the base plan it was created from.",
+	}),
+
+	config: ProductConfigSchema.meta({
+		description: "Miscellaneous plan-level configuration flags.",
 	}),
 
 	customer_eligibility: CustomerEligibilitySchema.optional(),
