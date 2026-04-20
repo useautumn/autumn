@@ -32,11 +32,10 @@ export const CustomerInvoicesColumns = [
 		accessorKey: "total",
 		cell: ({ row }: { row: Row<CustomerInvoice> }) => {
 			const invoice = row.original;
-			const displayTotal = invoice.amount_paid ?? invoice.total;
 			const discountAmount = getTotalDiscountAmount(invoice);
 			return (
 				<div>
-					{displayTotal.toFixed(2)} {invoice.currency.toUpperCase()}
+					{invoice.total.toFixed(2)} {invoice.currency.toUpperCase()}
 					{discountAmount > 0 && (
 						<span className="text-t3"> (-{discountAmount.toFixed(2)})</span>
 					)}
@@ -52,8 +51,8 @@ export const CustomerInvoicesColumns = [
 			return (
 				<CustomerInvoiceStatus
 					status={invoice.status}
-					amountPaid={invoice.amount_paid}
 					total={invoice.total}
+					amountPaid={invoice.amount_paid}
 					refundedAmount={invoice.refunded_amount}
 				/>
 			);

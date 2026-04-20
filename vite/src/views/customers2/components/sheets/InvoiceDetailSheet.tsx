@@ -70,7 +70,6 @@ export function InvoiceDetailSheet() {
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 	const { customer } = useCusQuery();
 
-
 	const productGroups = useMemo(() => {
 		// Step 1: bucket line items by product_id
 		const byProduct = new Map<string, InvoiceLineItem[]>();
@@ -194,7 +193,7 @@ export function InvoiceDetailSheet() {
 					<div className="flex items-center gap-2">
 						<span>Invoice</span>
 						<CustomerInvoiceStatus
-							status={invoice.status ?? "paid"}
+							status={invoice.status ?? InvoiceStatus.Paid}
 							amountPaid={invoice.amount_paid}
 							total={invoice.total}
 							refundedAmount={invoice.refunded_amount}
@@ -237,33 +236,15 @@ export function InvoiceDetailSheet() {
 							{formatSignedAmount(invoice.total, invoice.currency)}
 						</span>
 					</div>
-					{invoice.amount_paid != null && invoice.amount_paid !== invoice.total && (
-						<div className="flex items-center justify-between">
-							<span className="text-sm text-t2">Amount Paid</span>
-							<span className="text-sm tabular-nums text-t2">
-								{formatSignedAmount(invoice.amount_paid, invoice.currency)}
-							</span>
-						</div>
-					)}
-					{invoice.refunded_amount > 0 && (
-						<>
+					{invoice.amount_paid != null &&
+						invoice.amount_paid !== invoice.total && (
 							<div className="flex items-center justify-between">
-								<span className="text-sm text-t3">Refunded</span>
-								<span className="text-sm text-amber-500 tabular-nums">
-									-{formatAmount(invoice.refunded_amount, invoice.currency)}
+								<span className="text-sm text-t2">Amount Paid</span>
+								<span className="text-sm tabular-nums text-t2">
+									{formatSignedAmount(invoice.amount_paid, invoice.currency)}
 								</span>
 							</div>
-							<div className="flex items-center justify-between pt-1">
-								<span className="text-sm text-t3">Net</span>
-								<span className="text-sm font-semibold text-foreground tabular-nums">
-									{formatSignedAmount(
-										invoice.total - invoice.refunded_amount,
-										invoice.currency,
-									)}
-								</span>
-							</div>
-						</>
-					)}
+						)}
 				</div>
 			</SheetSection>
 
