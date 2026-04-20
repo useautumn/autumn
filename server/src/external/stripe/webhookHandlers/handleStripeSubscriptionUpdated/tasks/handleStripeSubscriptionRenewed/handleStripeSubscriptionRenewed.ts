@@ -61,8 +61,13 @@ export const handleStripeSubscriptionRenewed = async ({
 		return;
 	}
 
-	// PASS 1: Update customer products and handle scheduled products
-	for (const customerProduct of customerProducts) {
+	// PASS 1: Update customer products and handle scheduled products.
+	// Iterate over a snapshot: `trackCustomerProductDeletion` (called below when
+	// a scheduled default product is deleted alongside the main product's
+	// renewal) splices `customerProducts` in place, which would otherwise
+	// invalidate the for-of cursor and skip subsequent entries (e.g. an add-on
+	// that sits after the main product in the array).
+	for (const customerProduct of [...customerProducts]) {
 		// Skip if not active or not on this subscription
 
 		const { valid } = cp(customerProduct)

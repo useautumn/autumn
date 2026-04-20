@@ -11,7 +11,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { attachToInsertParams } from "@/internal/products/productUtils.js";
-import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { deleteCachedFullCustomer } from "../../customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 
 export const migrateRevenueCatCustomer = async ({
 	ctx,
@@ -87,7 +87,7 @@ export const migrateRevenueCatCustomer = async ({
 		),
 	});
 
-	await deleteCachedApiCustomer({
+	await deleteCachedFullCustomer({
 		customerId,
 		ctx,
 		source: `migrateRevenueCatCustomer, deleting customer cache`,

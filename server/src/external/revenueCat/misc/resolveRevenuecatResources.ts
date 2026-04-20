@@ -9,6 +9,7 @@ import {
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
+import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { ProductService } from "@/internal/products/ProductService";
 import { getOrCreateCustomer } from "../../../internal/customers/cusUtils/getOrCreateCustomer";
 
@@ -87,8 +88,11 @@ export const resolveRevenuecatResources = async ({
 			cp.processor?.type === ProcessorType.RevenueCat || cp.product.is_default,
 	);
 
-	// Set customer ID in context for cache refresh middleware
 	ctx.customerId = customer.id ?? "";
+	ctx.rolloutSnapshot = computeRolloutSnapshot({
+		orgId: ctx.org.id,
+		customerId: ctx.customerId,
+	});
 
 	return { product, customer, cusProducts };
 };

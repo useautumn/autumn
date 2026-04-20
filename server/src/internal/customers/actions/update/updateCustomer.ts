@@ -2,7 +2,6 @@ import {
 	type Customer,
 	CustomerAlreadyExistsError,
 	CustomerNotFoundError,
-	type FullCustomer,
 	notNullish,
 	ProcessorType,
 	RecaseError,
@@ -18,8 +17,10 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { CusService } from "@/internal/customers/CusService";
-import { getOrSetCachedFullCustomer } from "../../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer";
+import { invalidateCachedFullSubject } from "../../cache/fullSubject/actions/invalidate/invalidateFullSubject";
+import { updateCachedCustomerData as updateCachedCustomerDataV2 } from "../../cache/fullSubject/actions/updateCachedCustomerData";
 import { updateCachedCustomerData } from "../../cusUtils/fullCustomerCacheUtils/updateCachedCustomerData";
+import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
 
 export const updateCustomer = async ({
 	ctx,
@@ -29,13 +30,14 @@ export const updateCustomer = async ({
 	params: UpdateCustomerParamsV1;
 }): Promise<{
 	oldCustomer: Customer;
-	newFullCustomer: FullCustomer;
+	apiCustomer: Record<string, unknown>;
 }> => {
 	const { db, org, env, logger } = ctx;
 	const {
 		customer_id: customerId,
 		new_customer_id: newCustomerId,
 		billing_controls,
+		config,
 		...newCusData
 	} = params;
 
@@ -146,11 +148,24 @@ export const updateCustomer = async ({
 			billingControlUpdates.overage_allowed = billing_controls.overage_allowed;
 	}
 
+	// Merge config partially so omitted keys don't clobber existing ones
+	const configUpdate = config
+		? {
+				config: {
+					...(originalCustomer.config ?? {}),
+					...(config.disable_pooled_balance !== undefined && {
+						disable_pooled_balance: config.disable_pooled_balance,
+					}),
+				},
+			}
+		: {};
+
 	const updateData: Partial<Customer> = {
 		...newCusData,
 		id: newCustomerId,
 		metadata: mergedMetadata,
 		...billingControlUpdates,
+		...configUpdate,
 	};
 
 	if (newStripeId) {
@@ -169,30 +184,53 @@ export const updateCustomer = async ({
 		update: updateData,
 	});
 
-	await updateCachedCustomerData({
-		ctx,
-		customerId: originalCustomer.id || originalCustomer.internal_id,
-		newCustomerId: newCustomerId ?? undefined,
-		updates: updateData,
-	});
+	const originalCustomerId =
+		originalCustomer.id || originalCustomer.internal_id;
+	const updatedCustomerId = newCustomerId ?? customerId;
+
+	if (updatedCustomerId !== originalCustomerId) {
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId: originalCustomerId,
+			source: "updateCustomer:id_changed",
+		});
+	}
+
+	await Promise.all([
+		updateCachedCustomerData({
+			ctx,
+			customerId: originalCustomerId,
+			updates: updateData,
+		}),
+		updateCachedCustomerDataV2({
+			ctx,
+			customerId: originalCustomerId,
+			updates: updateData,
+		}),
+	]);
 
 	ctx.skipCache = true;
-	const fullCustomer = await getOrSetCachedFullCustomer({
+	const resolvedCustomerId = newCustomerId ?? customerId;
+
+	const apiCustomer = await getApiCustomerByRollout({
 		ctx,
-		customerId: newCustomerId ?? customerId,
+		customerId: resolvedCustomerId,
 		source: "updateCustomer",
 	});
 
-	triggerAutoTopUpsOnEnabled({
-		ctx,
-		oldCustomer: originalCustomer,
-		fullCustomer,
-	}).catch((err) =>
-		ctx.logger.error("triggerAutoTopUpsOnEnabled failed: ", { error: err }),
-	);
+	if (billing_controls?.auto_topups) {
+		triggerAutoTopUpsOnEnabled({
+			ctx,
+			oldCustomer: originalCustomer,
+			newAutoTopups: billing_controls.auto_topups,
+			customerId: resolvedCustomerId,
+		}).catch((err) =>
+			ctx.logger.error("triggerAutoTopUpsOnEnabled failed: ", { error: err }),
+		);
+	}
 
 	return {
 		oldCustomer: originalCustomer,
-		newFullCustomer: fullCustomer,
+		apiCustomer,
 	};
 };

@@ -9,10 +9,17 @@ import {
 	type FullProduct,
 } from "@autumn/shared";
 import type Stripe from "stripe";
-import { logger } from "@/external/logtail/logtailUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeCustomers } from "../stripe/customers";
 import { customers } from "./customers";
+
+const createTestLogger = () => ({
+	debug: () => {},
+	info: () => {},
+	warn: () => {},
+	error: () => {},
+	child: () => createTestLogger(),
+});
 
 /**
  * Create an organization fixture
@@ -40,7 +47,7 @@ const create = ({
 		org: org ?? createOrg(),
 		apiVersion: new ApiVersionClass(ApiVersion.V1_2),
 		env: AppEnv.Sandbox,
-		logger: logger,
+		logger: createTestLogger(),
 	}) as unknown as AutumnContext;
 
 /**

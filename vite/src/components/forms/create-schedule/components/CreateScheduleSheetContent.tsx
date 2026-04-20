@@ -13,7 +13,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
-import { useOrg } from "@/hooks/common/useOrg";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -156,17 +155,12 @@ export function CreateScheduleReviewContent() {
 	const { setSheet } = useSheetStore();
 	const hasSchedule = useHasSchedule();
 
-	const { org } = useOrg();
-	const ownStripeAccount = org?.stripe_connection !== "default";
-
 	const confirmLabel = getConfirmLabel({ preview });
 	const isZeroAmount = preview && preview.total <= 0;
 
-	const invoiceDisabledReason = !ownStripeAccount
-		? "Connect your own Stripe account to send invoices"
-		: isZeroAmount
-			? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
-			: null;
+	const invoiceDisabledReason = isZeroAmount
+		? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
+		: null;
 
 	const isDisabled = isPreviewLoading || !!error;
 

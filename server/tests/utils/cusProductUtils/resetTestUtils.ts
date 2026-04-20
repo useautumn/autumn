@@ -1,8 +1,15 @@
-import { customerEntitlements, type FullCustomer } from "@autumn/shared";
+import {
+	customerEntitlements,
+	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
+} from "@autumn/shared";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
 import { redis } from "@/external/redis/initRedis.js";
+import { redisV2 } from "@/external/redis/initRedisV2.js";
+import { CusService } from "@/internal/customers/CusService.js";
+import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 
 /**
@@ -61,8 +68,46 @@ export const setCachedCusEntField = async ({
 	}
 };
 
+/** Patch next_reset_at on a SubjectBalance in the V2 shared balance hash. */
+export const setCachedSubjectBalanceField = async ({
+	orgId,
+	env,
+	customerId,
+	featureId,
+	customerEntitlementId,
+	field,
+	value,
+}: {
+	orgId: string;
+	env: string;
+	customerId: string;
+	featureId: string;
+	customerEntitlementId: string;
+	field: string;
+	value: number | string | null;
+}): Promise<void> => {
+	const balanceKey = buildSharedFullSubjectBalanceKey({
+		orgId,
+		env,
+		customerId,
+		featureId,
+	});
+
+	const raw = await redisV2.hget(balanceKey, customerEntitlementId);
+	if (!raw) return;
+
+	const subjectBalance = JSON.parse(raw);
+	subjectBalance[field] = value;
+	await redisV2.hset(
+		balanceKey,
+		customerEntitlementId,
+		JSON.stringify(subjectBalance),
+	);
+};
+
 /**
- * Expire a cusEnt's next_reset_at in both Postgres and Redis cache,
+ * Expire a cusEnt's next_reset_at in Postgres and both Redis caches
+ * (legacy FullCustomer + V2 subject balance hash),
  * so the next read triggers a lazy reset. Returns the cusEnt for assertions.
  */
 export const expireCusEntForReset = async ({
@@ -96,7 +141,7 @@ export const expireCusEntForReset = async ({
 		.set({ next_reset_at: pastTime })
 		.where(eq(customerEntitlements.id, cusEnt.id));
 
-	// Update Redis cache
+	// Update legacy FullCustomer Redis cache
 	await setCachedCusEntField({
 		orgId: ctx.org.id,
 		env: ctx.env,
@@ -106,5 +151,78 @@ export const expireCusEntForReset = async ({
 		value: pastTime,
 	});
 
+	// Update V2 subject balance hash
+	await setCachedSubjectBalanceField({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		customerId,
+		featureId,
+		customerEntitlementId: cusEnt.id,
+		field: "next_reset_at",
+		value: pastTime,
+	});
+
 	return cusEnt;
+};
+
+/**
+ * Expire ALL cusEnts for a given feature in Postgres and both Redis caches.
+ * Use this for entity-level features where multiple cusEnts share the same feature_id.
+ */
+export const expireAllCusEntsForReset = async ({
+	ctx,
+	customerId,
+	featureId,
+	pastTimeMs,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	featureId: string;
+	pastTimeMs?: number;
+}) => {
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer,
+		featureId,
+	});
+
+	if (cusEnts.length === 0) {
+		throw new Error(
+			`No cusEnts found for customer=${customerId} feature=${featureId}`,
+		);
+	}
+
+	const pastTime = pastTimeMs ?? Date.now() - 1000;
+
+	for (const cusEnt of cusEnts) {
+		await ctx.db
+			.update(customerEntitlements)
+			.set({ next_reset_at: pastTime })
+			.where(eq(customerEntitlements.id, cusEnt.id));
+
+		await setCachedCusEntField({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			cusEntId: cusEnt.id,
+			field: "next_reset_at",
+			value: pastTime,
+		});
+
+		await setCachedSubjectBalanceField({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			featureId,
+			customerEntitlementId: cusEnt.id,
+			field: "next_reset_at",
+			value: pastTime,
+		});
+	}
+
+	return cusEnts;
 };

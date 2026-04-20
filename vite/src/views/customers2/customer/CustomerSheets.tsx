@@ -12,6 +12,7 @@ import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/Su
 import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
 import { SubscriptionUpdateSheet } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
+
 import { BalanceCreateSheet } from "../components/sheets/BalanceCreateSheet";
 import { BalanceDeleteSheet } from "../components/sheets/BalanceDeleteSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
@@ -46,6 +47,8 @@ export function CustomerSheets() {
 			case "attach-review":
 			case "attach-send-invoice":
 				return <AttachProductSheet />;
+			// case "attach-product-v2":
+			// 	return <AttachProductSheetV3 />;
 			case "subscription-detail":
 				return <SubscriptionDetailSheet />;
 			case "subscription-update":

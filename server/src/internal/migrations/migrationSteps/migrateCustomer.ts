@@ -8,7 +8,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { CusService } from "@/internal/customers/CusService.js";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { CusProductService } from "../../customers/cusProducts/CusProductService.js";
 import { createMigrationCustomerLogger } from "../migrationUtils/createMigrationCustomerLogger.js";
 import { migrateRevenueCatCustomer } from "./migrateRevenuecatCustomer.js";
@@ -93,7 +93,7 @@ export const migrateCustomer = async ({
 				fullCus.customer_products = latestCusProducts;
 			}
 
-			await deleteCachedApiCustomer({
+			await deleteCachedFullCustomer({
 				customerId: fullCus.id ?? "",
 				ctx,
 			});

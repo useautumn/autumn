@@ -29,3 +29,6 @@ export const freeTrials = pgTable(
 		index("idx_free_trials_internal_product_id").on(table.internal_product_id),
 	],
 );
+
+export type DbFreeTrial = typeof freeTrials.$inferSelect;
+export type InsertDbFreeTrial = typeof freeTrials.$inferInsert;

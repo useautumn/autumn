@@ -6,12 +6,14 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { redis } from "@/external/redis/initRedis.js";
-import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
-import { batchDeleteCachedCustomers } from "@/internal/customers/cusUtils/apiCusCacheUtils/batchDeleteCachedCustomers.js";
-import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
+import { redisV2 } from "@/external/redis/initRedisV2.js";
+import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
+import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
+import { batchDeleteCachedFullCustomers } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers.js";
 
-test.concurrent(`${chalk.yellowBright("batchDeleteCachedCustomers: clears full customer cache + path index after V2 get")}`, async () => {
+test.concurrent(`${chalk.yellowBright("batchDeleteCachedFullCustomers: leaves full-subject cache untouched after V2 get")}`, async () => {
 	test.skipIf(redis.status !== "ready");
+	test.skipIf(redisV2.status !== "ready");
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 50 });
 	const freeProd = products.base({ id: "free", items: [messagesItem] });
@@ -42,43 +44,47 @@ test.concurrent(`${chalk.yellowBright("batchDeleteCachedCustomers: clears full c
 	const orgId = ctx.org.id;
 	const env = ctx.env;
 
-	const primaryFullKey = buildFullCustomerCacheKey({
+	const primarySubjectKey = buildFullSubjectKey({
 		orgId,
 		env,
 		customerId,
 	});
-	const otherFullKey = buildFullCustomerCacheKey({
+	const otherSubjectKey = buildFullSubjectKey({
 		orgId,
 		env,
 		customerId: otherEntry.id,
 	});
-	const primaryPathKey = buildPathIndexKey({
+	const sharedBalanceKey = buildSharedFullSubjectBalanceKey({
 		orgId,
 		env,
 		customerId,
+		featureId: TestFeature.Messages,
 	});
-	const otherPathKey = buildPathIndexKey({
+	const otherSharedBalanceKey = buildSharedFullSubjectBalanceKey({
 		orgId,
 		env,
 		customerId: otherEntry.id,
+		featureId: TestFeature.Messages,
 	});
 
-	expect(await redis.call("EXISTS", primaryFullKey)).toBe(1);
-	expect(await redis.call("EXISTS", otherFullKey)).toBe(1);
-	expect(await redis.call("EXISTS", primaryPathKey)).toBe(1);
-	expect(await redis.call("EXISTS", otherPathKey)).toBe(1);
+	expect(await redisV2.exists(primarySubjectKey)).toBe(1);
+	expect(await redisV2.exists(otherSubjectKey)).toBe(1);
+	expect(await redisV2.exists(sharedBalanceKey)).toBe(1);
+	expect(await redisV2.exists(otherSharedBalanceKey)).toBe(1);
 
-	await batchDeleteCachedCustomers({
+	await redisV2.unlink(otherSubjectKey);
+
+	await batchDeleteCachedFullCustomers({
 		customers: [
 			{ orgId, env, customerId },
 			{ orgId, env, customerId: otherEntry.id },
 		],
 	});
 
-	expect(await redis.call("EXISTS", primaryFullKey)).toBe(0);
-	expect(await redis.call("EXISTS", otherFullKey)).toBe(0);
-	expect(await redis.call("EXISTS", primaryPathKey)).toBe(0);
-	expect(await redis.call("EXISTS", otherPathKey)).toBe(0);
+	expect(await redisV2.exists(primarySubjectKey)).toBe(1);
+	expect(await redisV2.exists(otherSubjectKey)).toBe(0);
+	expect(await redisV2.exists(sharedBalanceKey)).toBe(1);
+	expect(await redisV2.exists(otherSharedBalanceKey)).toBe(1);
 
 	const primaryFromDb = await autumnV2.customers.get<ApiCustomer>(customerId, {
 		skip_cache: "true",

@@ -2,6 +2,7 @@ import {
 	FeatureNotFoundError,
 	type LockParams,
 	RecaseError,
+	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -72,3 +73,23 @@ export const getTrackEventNameDeductions = ({
 
 	return featureDeductions;
 };
+
+export const getTrackFeatureDeductionsForBody = ({
+	ctx,
+	body,
+}: {
+	ctx: AutumnContext;
+	body: TrackParams;
+}) =>
+	body.feature_id
+		? getTrackFeatureDeductions({
+				ctx,
+				featureId: body.feature_id,
+				lock: body.lock,
+				value: body.value,
+			})
+		: getTrackEventNameDeductions({
+				ctx,
+				eventName: body.event_name!,
+				value: body.value,
+			});

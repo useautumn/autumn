@@ -1,6 +1,8 @@
 import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { BatchResetCusEntsPayload } from "@/queue/workflows.js";
+// import { getFullSubject } from "../../repos/getFullSubject/getFullSubject.js";
+// import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { CusService } from "../../CusService.js";
 
 /**
@@ -24,13 +26,22 @@ export const batchResetCustomerEntitlements = async ({
 		const batch = resets.slice(i, i + BATCH_SIZE);
 
 		await Promise.all(
-			batch.map((reset) =>
-				CusService.getFull({
+			batch.map(async (reset) => {
+				await CusService.getFull({
 					ctx,
 					idOrInternalId: reset.internalCustomerId,
 					inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
-				}),
-			),
+				});
+
+				// V2 subject cache path: triggers lazyResetSubjectEntitlements
+				// if (isFullSubjectRolloutEnabled({ ctx })) {
+				// 	await getFullSubject({
+				// 		ctx,
+				// 		customerId: reset.internalCustomerId,
+				// 		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+				// 	});
+				// }
+			}),
 		);
 	}
 };
