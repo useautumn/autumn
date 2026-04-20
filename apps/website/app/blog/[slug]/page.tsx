@@ -85,9 +85,11 @@ export default async function BlogPostPage({ params }: { params: BlogParams }) {
 						{post.title}
 					</h1>
 					{post.description && (
-						<p className="text-[14px] md:text-[16px] leading-5 text-[#FFFFFF99] font-light font-sans">
-							{post.description}
-						</p>
+						<p
+							className="text-[14px] md:text-[16px] leading-5 text-[#FFFFFF99] font-light font-sans [&_a]:text-[#9564ff] [&_a:hover]:text-[#b08aff] [&_a]:underline [&_a]:underline-offset-2 [&_a]:transition-colors"
+							// biome-ignore lint/security/noDangerouslySetInnerHtml: blog descriptions are trusted frontmatter content
+							dangerouslySetInnerHTML={{ __html: post.description }}
+						/>
 					)}
 				</header>
 

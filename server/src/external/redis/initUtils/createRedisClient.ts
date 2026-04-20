@@ -29,3 +29,24 @@ export const createRedisClient = ({
 };
 
 export const createRedisConnection = createRedisClient;
+
+export const createDisabledRedis = (): Redis =>
+	new Proxy(
+		{},
+		{
+			get(_target, prop) {
+				if (prop === "status") return "end";
+				if (prop === "defineCommand") return () => undefined;
+				if (prop === "on" || prop === "once") return () => undefined;
+				if (prop === "connect" || prop === "quit") {
+					return async () => undefined;
+				}
+				if (prop === "disconnect") {
+					return () => undefined;
+				}
+				return async () => {
+					throw new Error("Redis is not configured");
+				};
+			},
+		},
+	) as Redis;

@@ -5,6 +5,7 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
+	isEntityCusEnt,
 	orgToInStatuses,
 	type SharedContext,
 	scopeExpandForCtx,
@@ -22,11 +23,19 @@ export const getApiBalances = async ({
 	balances: Record<string, ApiBalanceV1>;
 	flags: Record<string, ApiFlagV0>;
 }> => {
-	const allCusEnts = fullCustomerToCustomerEntitlements({
+	let allCusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer: fullCus,
 		inStatuses: orgToInStatuses({ org: ctx.org }),
 		entity: fullCus.entity,
 	});
+
+	// When disable_pooled_balance is enabled and we're scoped to an entity, drop
+	// customer-level (shared pool) cusEnts so the returned balances reflect
+	// only the entity's own pool. Matches the filter in prepareFeatureDeduction
+	// so the deduction path and reporting stay consistent.
+	if (fullCus.entity?.id && fullCus.config?.disable_pooled_balance) {
+		allCusEnts = allCusEnts.filter((ce) => isEntityCusEnt({ cusEnt: ce }));
+	}
 
 	const featureToCusEnt: Record<string, FullCusEntWithFullCusProduct[]> = {};
 	for (const cusEnt of allCusEnts) {
