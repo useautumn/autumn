@@ -10,9 +10,9 @@ import {
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/SubscriptionCancelSheet";
 import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
-import { SubscriptionUpdateSheet2 } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet2";
+import { SubscriptionUpdateSheet } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet";
 import { AttachProductSheet } from "../components/sheets/AttachProductSheet";
-import { AttachProductSheetV3 } from "../components/sheets/AttachProductSheetV3";
+
 import { BalanceCreateSheet } from "../components/sheets/BalanceCreateSheet";
 import { BalanceDeleteSheet } from "../components/sheets/BalanceDeleteSheet";
 import { BalanceEditSheet } from "../components/sheets/BalanceEditSheet";
@@ -25,7 +25,6 @@ import { CreateScheduleSheet } from "../components/sheets/CreateScheduleSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
 import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
-import { SubscriptionUpdateSheet } from "../components/sheets/SubscriptionUpdateSheet";
 import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
 import { SHEET_ANIMATION } from "./customerAnimations";
 
@@ -45,15 +44,16 @@ export function CustomerSheets() {
 	const renderSheet = () => {
 		switch (sheetType) {
 			case "attach-product":
+			case "attach-review":
+			case "attach-send-invoice":
 				return <AttachProductSheet />;
-			case "attach-product-v2":
-				return <AttachProductSheetV3 />;
+			// case "attach-product-v2":
+			// 	return <AttachProductSheetV3 />;
 			case "subscription-detail":
 				return <SubscriptionDetailSheet />;
 			case "subscription-update":
+			case "subscription-update-send-invoice":
 				return <SubscriptionUpdateSheet />;
-			case "subscription-update-v2":
-				return <SubscriptionUpdateSheet2 />;
 			case "subscription-cancel":
 				return <SubscriptionCancelSheet />;
 			case "subscription-uncancel":
@@ -89,6 +89,8 @@ export function CustomerSheets() {
 			case "check-balance":
 				return <CheckBalanceSheet />;
 			case "create-schedule":
+			case "create-schedule-review":
+			case "create-schedule-send-invoice":
 				return <CreateScheduleSheet />;
 			default:
 				return null;

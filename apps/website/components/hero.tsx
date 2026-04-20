@@ -27,7 +27,6 @@ const getLoggedInHintCookie = () => {
 
 export default function Hero() {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const heroTlRef = useRef<gsap.core.Timeline | null>(null);
 	const [displayedText, setDisplayedText] = useState("");
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -68,20 +67,11 @@ export default function Hero() {
 			}, 150);
 		};
 
-		window.addEventListener("preloader:complete", startTypewriter, {
-			once: true,
-		});
+		startTypewriter();
 		return () => {
-			window.removeEventListener("preloader:complete", startTypewriter);
 			if (timeoutId) clearTimeout(timeoutId);
 			if (intervalId) clearInterval(intervalId);
 		};
-	}, []);
-
-	useEffect(() => {
-		const handler = () => heroTlRef.current?.play();
-		window.addEventListener("preloader:complete", handler, { once: true });
-		return () => window.removeEventListener("preloader:complete", handler);
 	}, []);
 
 	useGSAP(
@@ -106,11 +96,8 @@ export default function Hero() {
 			gsap.set(".hero-cta", { opacity: 0, scale: 0.95 });
 
 			const tl = gsap.timeline({
-				paused: true,
 				defaults: { overwrite: "auto" },
 			});
-			heroTlRef.current = tl;
-
 			tl.to(".hero-root", { opacity: 1, duration: 0.3, ease: "none" })
 
 				.to(".hero-bg", {
@@ -205,7 +192,6 @@ export default function Hero() {
 						<div className="relative z-10 translate-y-16 w-full flex justify-center">
 							<AutumnConfig
 								initialDelay={200}
-								awaitEvent="preloader:complete"
 							/>
 						</div>
 					</div>

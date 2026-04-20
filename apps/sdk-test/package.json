@@ -14,7 +14,7 @@
   "dependencies": {
     "atmn": "workspace:*",
     "autumn-js": "workspace:*",
-    "better-auth": "^1.4.12",
+    "better-auth": "catalog:",
     "kysely": "^0.28.11",
     "next": "16.1.6",
     "pg": "^8.18.0",

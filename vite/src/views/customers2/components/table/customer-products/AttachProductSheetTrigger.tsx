@@ -1,4 +1,3 @@
-import { getFeatureName } from "@autumn/shared";
 import {
 	CalendarBlankIcon,
 	CaretDownIcon,
@@ -12,34 +11,24 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import {
 	useIsAttachingProduct,
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
 
 export function AttachProductSheetTrigger() {
 	const { setSheet } = useSheetStore();
 	const isAttachingProduct = useIsAttachingProduct();
-	const { entity } = useEntity();
-	const features = useFeaturesQuery();
 	const hasSchedule = useHasSchedule();
 
-	const feature = features.features.find((f) => f.id === entity?.feature_id);
-
 	const handleAttachClick = () => {
-		setSheet({ type: "attach-product-v2" });
+		setSheet({ type: "attach-product" });
 	};
 
 	const handleCreateSchedule = () => {
 		setSheet({ type: "create-schedule" });
 	};
-
-	const entitySuffix = entity
-		? ` to ${getFeatureName({ feature, plural: false, capitalize: false })}`
-		: "";
 
 	return (
 		<div
@@ -55,7 +44,7 @@ export function AttachProductSheetTrigger() {
 				onClick={handleAttachClick}
 			>
 				<PlusIcon className="size-3.5" />
-				Attach Plan{entitySuffix}
+				Attach Plan
 			</Button>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>

@@ -5,6 +5,8 @@ import type {
 	BillingPlan,
 	BillingResult,
 	CheckoutAction,
+	CreateScheduleBillingContext,
+	CreateScheduleParamsV0,
 	UpdateSubscriptionBillingContext,
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -24,7 +26,10 @@ export interface CreateAutumnCheckoutResult<T extends BillingContext> {
  * but redirect_mode is "always", requiring user confirmation before billing).
  */
 export async function createAutumnCheckout<
-	T extends AttachBillingContext | UpdateSubscriptionBillingContext,
+	T extends
+		| AttachBillingContext
+		| CreateScheduleBillingContext
+		| UpdateSubscriptionBillingContext,
 >({
 	ctx,
 	action,
@@ -34,7 +39,7 @@ export async function createAutumnCheckout<
 }: {
 	ctx: AutumnContext;
 	action: CheckoutAction;
-	params: AttachParamsV1 | UpdateSubscriptionV1Params;
+	params: AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params;
 	billingContext: T;
 	billingPlan: BillingPlan;
 }): Promise<CreateAutumnCheckoutResult<T>> {

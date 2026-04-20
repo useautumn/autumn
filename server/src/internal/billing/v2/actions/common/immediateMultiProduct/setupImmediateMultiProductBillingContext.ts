@@ -1,5 +1,6 @@
 import {
 	BillingVersion,
+	type InvoiceMode,
 	isOneOffProduct,
 	isProductPaidAndRecurring,
 	type MultiAttachBillingContext,
@@ -27,11 +28,17 @@ import {
 const setupImmediateMultiProductCheckoutMode = ({
 	paymentMethod,
 	redirectMode,
+	invoiceMode,
 }: {
 	paymentMethod?: Stripe.PaymentMethod;
 	redirectMode?: MultiAttachParamsV0["redirect_mode"];
+	invoiceMode?: InvoiceMode;
 }) => {
 	if (redirectMode === "never") {
+		return null;
+	}
+
+	if (invoiceMode) {
 		return null;
 	}
 
@@ -239,6 +246,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		checkoutMode: setupImmediateMultiProductCheckoutMode({
 			paymentMethod,
 			redirectMode: params.redirect_mode,
+			invoiceMode,
 		}),
 		billingVersion: BillingVersion.V2,
 		successUrl:
