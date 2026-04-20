@@ -25,6 +25,7 @@ const regionToCacheUrl: Record<string, string | undefined> = cacheBackupUrl
 export const primaryCacheUrl =
 	regionToCacheUrl[currentRegion] || process.env.CACHE_URL || cacheBackupUrl;
 
+export const hasRedisConfig = Boolean(primaryCacheUrl);
 /** Get all regions that have configured cache URLs */
 export const getConfiguredRegions = (): string[] => {
 	return ALL_REGIONS.filter((region) => regionToCacheUrl[region]);

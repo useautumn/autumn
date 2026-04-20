@@ -50,11 +50,16 @@ export const handleCheck = createRoute({
 		const requiredBalance =
 			required_balance ?? required_quantity ?? DEFAULT_REQUIRED_BALANCE;
 
-		const { checkData, response } = await runCheckWithRollout({
+		const result = await runCheckWithRollout({
 			ctx,
 			body,
 			requiredBalance,
 		});
+		if (!result.checkData) {
+			return c.json(result.response);
+		}
+
+		const { checkData, response } = result;
 
 		const preview = with_preview
 			? await getCheckPreview({
