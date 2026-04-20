@@ -36,12 +36,13 @@ const createMockFullCustomer = (
 	processor: { type: "stripe", id: "cus_stripe_test" },
 	processors: null,
 	metadata: {},
+	config: {},
 	customer_products: [],
 	entities: [],
 	extra_customer_entitlements: [],
 	send_email_receipts: true,
 	...overrides,
-});
+} as FullCustomer);
 
 const createMockInvoicePaidContext = (
 	paymentIntentId?: string,

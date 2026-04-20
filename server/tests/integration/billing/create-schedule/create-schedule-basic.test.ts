@@ -564,7 +564,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: customized future phases
 	).toEqual(
 		expect.arrayContaining([
 			{ feature_id: TestFeature.Words, balance: 250 },
-			{ feature_id: TestFeature.Dashboard, balance: null },
+			{ feature_id: TestFeature.Dashboard, balance: 0 },
 		]),
 	);
 
@@ -594,7 +594,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: customized future phases
 	).toEqual(
 		expect.arrayContaining([
 			{ feature_id: TestFeature.Words, balance: 250 },
-			{ feature_id: TestFeature.Dashboard, balance: null },
+			{ feature_id: TestFeature.Dashboard, balance: 0 },
 		]),
 	);
 });
@@ -692,7 +692,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: updating a future custom
 		await ctx.db.query.customerProducts.findFirst({
 			where: eq(customerProducts.id, initialFutureCustomerProductId),
 		}),
-	).toBeNull();
+	).toBeUndefined();
 
 	const updatedFutureCustomerProduct =
 		await ctx.db.query.customerProducts.findFirst({
@@ -711,7 +711,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: updating a future custom
 			ctx,
 			customerProductId: updatedFutureCustomerProductId,
 		}),
-	).toEqual([20, 55]);
+	).toEqual([55]);
 
 	await advanceTestClock({
 		stripeCli: ctx.stripeCli,
@@ -737,7 +737,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: updating a future custom
 			ctx,
 			customerProductId: updatedFutureCustomerProductId,
 		}),
-	).toEqual([20, 55]);
+	).toEqual([55]);
 });
 
 test.concurrent(`${chalk.yellowBright("create-schedule: persists the new schedule and returns required_action when immediate billing is deferred")}`, async () => {
@@ -836,8 +836,11 @@ test.concurrent(`${chalk.yellowBright("create-schedule: persists the new schedul
 			),
 		);
 
-	expect(phasesAfterDeferredAttempt).toHaveLength(1);
+	expect(phasesAfterDeferredAttempt).toHaveLength(2);
 	expect(phasesAfterDeferredAttempt[0]!.customer_product_ids).toEqual(
+		initialResponse.phases[0]!.customer_product_ids,
+	);
+	expect(phasesAfterDeferredAttempt[1]!.customer_product_ids).toEqual(
 		initialResponse.phases[1]!.customer_product_ids,
 	);
 });
@@ -1272,7 +1275,7 @@ test.concurrent(`${chalk.yellowBright("create-schedule: plans omitted from the n
 	);
 });
 
-test.concurrent(`${chalk.yellowBright("create-schedule: updating a schedule after earlier phases started preserves history and edits the current phase")}`, async () => {
+test.concurrent(`${chalk.yellowBright("create-schedule: rejects updating a schedule after earlier phases started when past phases are resubmitted")}`, async () => {
 	const originalPastBase = products.base({
 		id: "create-schedule-update-history-past-base",
 		items: [items.monthlyMessages({ includedUsage: 100 })],
@@ -1330,79 +1333,27 @@ test.concurrent(`${chalk.yellowBright("create-schedule: updating a schedule afte
 		waitForSeconds: 30,
 	});
 
-	const updatedResponse = await autumnV1.billing.createSchedule({
-		customer_id: customerId,
-		phases: [
-			{
-				starts_at: now,
-				plans: [{ plan_id: originalPastBase.id }],
-			},
-			{
-				starts_at: now + ms.days(15),
-				plans: [{ plan_id: currentBase.id }, { plan_id: currentAddon.id }],
-			},
-			{
-				starts_at: now + ms.days(30),
-				plans: [{ plan_id: futureBase.id }],
-			},
-		],
+	await expectAutumnError({
+		func: async () =>
+			autumnV1.billing.createSchedule({
+				customer_id: customerId,
+				phases: [
+					{
+						starts_at: now,
+						plans: [{ plan_id: originalPastBase.id }],
+					},
+					{
+						starts_at: now + ms.days(15),
+						plans: [{ plan_id: currentBase.id }, { plan_id: currentAddon.id }],
+					},
+					{
+						starts_at: now + ms.days(30),
+						plans: [{ plan_id: futureBase.id }],
+					},
+				],
+			}),
+		errMessage: "The first phase must start immediately",
 	});
-
-	expect(updatedResponse.phases.map((phase) => phase.starts_at)).toEqual([
-		now,
-		now + ms.days(15),
-		now + ms.days(30),
-	]);
-	expect(updatedResponse.phases[0]!.customer_product_ids).toEqual(
-		initialResponse.phases[0]!.customer_product_ids,
-	);
-	expect(updatedResponse.phases[1]!.customer_product_ids).toHaveLength(2);
-
-	const updatedSchedulePhases = await ctx.db
-		.select({
-			starts_at: schedulePhases.starts_at,
-			customer_product_ids: schedulePhases.customer_product_ids,
-		})
-		.from(schedulePhases)
-		.where(
-			eq(
-				schedulePhases.schedule_id,
-				getRequiredScheduleId(updatedResponse.schedule_id),
-			),
-		);
-
-	expect(updatedSchedulePhases.map((phase) => phase.starts_at)).toEqual([
-		now,
-		now + ms.days(15),
-		now + ms.days(30),
-	]);
-	expect(updatedSchedulePhases[0]!.customer_product_ids).toEqual(
-		initialResponse.phases[0]!.customer_product_ids,
-	);
-
-	const currentPhaseProducts = await ctx.db
-		.select({
-			productId: customerProducts.product_id,
-			status: customerProducts.status,
-		})
-		.from(customerProducts)
-		.where(
-			inArray(
-				customerProducts.id,
-				updatedResponse.phases[1]!.customer_product_ids,
-			),
-		);
-
-	expect(
-		currentPhaseProducts.sort((a, b) =>
-			a.productId!.localeCompare(b.productId!),
-		),
-	).toEqual(
-		[
-			{ productId: currentAddon.id, status: CusProductStatus.Active },
-			{ productId: currentBase.id, status: CusProductStatus.Active },
-		].sort((a, b) => a.productId.localeCompare(b.productId)),
-	);
 });
 
 test.concurrent(`${chalk.yellowBright("create-schedule: replacing a schedule removes old phases and leaves the correct replacement state in db")}`, async () => {
