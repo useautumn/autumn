@@ -9,6 +9,10 @@ export const metadata: Metadata = {
 		"Thoughts on billing infrastructure, usage-based pricing, and building for AI startups.",
 };
 
+function stripHtml(html: string) {
+	return html.replace(/<[^>]*>/g, "");
+}
+
 function formatDate(dateString: string | null) {
 	if (!dateString) return "";
 	return new Date(dateString).toLocaleDateString("en-US", {
@@ -56,9 +60,9 @@ export default function BlogListingPage() {
 									{post.title}
 								</h2>
 								{post.description && (
-									<p className="text-[14px] md:text-[16px] leading-5 text-[#FFFFFF99] font-light font-sans">
-										{post.description}
-									</p>
+								<p className="text-[14px] md:text-[16px] leading-5 text-[#FFFFFF99] font-light font-sans">
+									{stripHtml(post.description)}
+								</p>
 								)}
 							</div>
 							{post.image && (
