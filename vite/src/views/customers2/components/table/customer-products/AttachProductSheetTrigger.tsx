@@ -11,7 +11,7 @@ export function AttachProductSheetTrigger() {
 	const isAttachingProduct = useIsAttachingProduct();
 
 	const handleClick = () => {
-		setSheet({ type: "attach-product-v2" });
+		setSheet({ type: "attach-product" });
 	};
 	return (
 		<Button
