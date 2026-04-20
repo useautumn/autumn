@@ -20,11 +20,12 @@ const create = ({
 	processor: { type: "stripe", id: "cus_stripe_test" },
 	processors: null,
 	metadata: {},
+	config: {},
 	customer_products: customerProducts,
 	entities: [],
 	extra_customer_entitlements: [],
 	send_email_receipts: false,
-});
+} as FullCustomer);
 
 // ═══════════════════════════════════════════════════════════════════
 // EXPORT
