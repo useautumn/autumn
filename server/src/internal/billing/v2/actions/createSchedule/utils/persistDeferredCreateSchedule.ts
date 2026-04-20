@@ -9,7 +9,8 @@ import { persistCreateSchedule } from "./persistCreateSchedule";
 const isCreateScheduleBillingContext = (
 	billingContext: BillingContext,
 ): billingContext is CreateScheduleBillingContext =>
-	"immediatePhase" in billingContext && "scheduledPhaseContexts" in billingContext;
+	"immediatePhase" in billingContext &&
+	"scheduledPhaseContexts" in billingContext;
 
 const buildDeferredSchedulePhases = ({
 	billingContext,
@@ -47,7 +48,9 @@ const buildDeferredSchedulePhases = ({
 	});
 
 	if (currentIndex !== allCustomerProductIds.length) {
-		throw new Error("Deferred create_schedule phases did not match billing plan");
+		throw new Error(
+			"Deferred create_schedule phases did not match billing plan",
+		);
 	}
 
 	return phases;
