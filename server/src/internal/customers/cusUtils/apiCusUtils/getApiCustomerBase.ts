@@ -85,6 +85,9 @@ export const getApiCustomerBase = async ({
 			usage_alerts: fullCus.usage_alerts ?? undefined,
 			overage_allowed: fullCus.overage_allowed ?? undefined,
 		},
+		config: {
+			block_shared_pool: fullCus.config?.block_shared_pool,
+		},
 
 		invoices:
 			fullCus.invoices && ctx.expand.includes(CustomerExpand.Invoices)
