@@ -4,10 +4,10 @@ import {
 	FeatureUsageType,
 } from "@autumn/shared";
 import { BarcodeIcon, CoinsIcon } from "@phosphor-icons/react";
-import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { BooleanIcon } from "@/components/v2/icons/AutumnIcons";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 export function NewFeatureType({
 	feature,
@@ -106,11 +106,11 @@ export function NewFeatureType({
 				</div>
 
 				{showBooleanWarning && (
-					<WarningBox>
+					<InfoBox variant="warning">
 						Boolean features don't have prices or limits so you will skip the
 						next step of the onboarding. It is recommended to create a metered
 						feature in this step.
-					</WarningBox>
+					</InfoBox>
 				)}
 			</div>
 		</SheetSection>
