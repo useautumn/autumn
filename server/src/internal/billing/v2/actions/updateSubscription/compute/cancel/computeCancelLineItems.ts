@@ -18,6 +18,9 @@ export const computeCancelLineItems = ({
 }): LineItem[] => {
 	if (billingContext.cancelAction !== "cancel_immediately") return [];
 
+	// Full refund refunds the entire last charge — no proration line items needed
+	if (billingContext.refundLastPayment === "full") return [];
+
 	const { allLineItems } = buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: [],

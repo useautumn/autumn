@@ -7,7 +7,7 @@ function BlogHeading({
 	...props
 }: {
 	as: ElementType;
-	children?: Iterable<ReactNode> | ReactNode;
+	children?: ReactNode;
 } & ComponentPropsWithoutRef<"h1">) {
 	return (
 		<Tag {...props} className="scroll-mt-24">
@@ -50,7 +50,7 @@ export const mdxComponents = {
 				className="text-[#9564ff] hover:text-[#b08aff] underline underline-offset-2 transition-colors"
 				{...props}
 			>
-				{children as any}
+				{children}
 			</Link>
 		);
 	},

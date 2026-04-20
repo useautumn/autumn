@@ -6,6 +6,7 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
+import { hydrateCustomerWithSchedules } from "../getFullCustomerSchedule.js";
 import { getApiCustomerBase } from "./getApiCustomerBase.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
@@ -21,10 +22,15 @@ export const getApiCustomer = async ({
 	fullCustomer: FullCustomer;
 	withAutumnId?: boolean;
 }): Promise<ApiCustomerV5> => {
+	const hydratedCustomer = await hydrateCustomerWithSchedules({
+		ctx,
+		fullCustomer,
+	});
+
 	// Get base ApiCustomer (subscriptions, balances, invoices)
 	const { apiCustomer: baseCustomer, legacyData } = await getApiCustomerBase({
 		ctx,
-		fullCus: fullCustomer,
+		fullCus: hydratedCustomer,
 		withAutumnId,
 	});
 

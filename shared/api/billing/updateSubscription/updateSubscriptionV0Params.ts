@@ -6,6 +6,7 @@ import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
 import { CancelActionSchema } from "../common/cancelAction";
 import { RedirectModeSchema } from "../common/redirectMode";
+import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 
 export const ExtUpdateSubscriptionV0ParamsSchema =
 	BillingParamsBaseV0Schema.extend({
@@ -25,6 +26,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		// - 'prorate_immediately' (default): Invoice line items are charged immediately
 		// - 'next_cycle_only': Do NOT create any charges due to the update
 		billing_behavior: BillingBehaviorSchema.optional(),
+		refund_last_payment: RefundLastPaymentSchema.optional(),
 		billing_cycle_anchor: BillingCycleAnchorSchema.optional(),
 
 		processor_subscription_id: z.string().nullable().optional(),
@@ -91,6 +93,21 @@ export const UpdateSubscriptionV0ParamsSchema =
 			{
 				message:
 					"Cannot pass free_trial when cancel_action is 'cancel_end_of_cycle'.",
+			},
+		)
+		.refine((data) => !(data.refund_last_payment && data.billing_behavior), {
+			message:
+				"Cannot pass both billing_behavior and refund_last_payment. Use billing_behavior for invoice credits/proration, or refund_last_payment for direct refunds.",
+		})
+		.refine(
+			(data) =>
+				!(
+					data.refund_last_payment &&
+					data.cancel_action !== "cancel_immediately"
+				),
+			{
+				message:
+					"refund_last_payment requires cancel_action to be 'cancel_immediately'.",
 			},
 		);
 
