@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions";
-import { getApiCustomer } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomer";
 
 export const handleUpdateCustomer = createRoute({
 	body: UpdateCustomerParamsV0Schema,
@@ -21,7 +20,7 @@ export const handleUpdateCustomer = createRoute({
 		const { customer_id } = c.req.param();
 
 		const params = c.req.valid("json");
-		const { oldCustomer, newFullCustomer } = await customerActions.update({
+		const { apiCustomer } = await customerActions.update({
 			ctx,
 			params: {
 				customer_id,
@@ -30,11 +29,6 @@ export const handleUpdateCustomer = createRoute({
 			},
 		});
 
-		const customerDetails = await getApiCustomer({
-			ctx,
-			fullCustomer: newFullCustomer,
-		});
-
-		return c.json(customerDetails);
+		return c.json(apiCustomer);
 	},
 });

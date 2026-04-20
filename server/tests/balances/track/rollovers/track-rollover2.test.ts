@@ -83,6 +83,10 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item 
 		});
 
 		await autumn.entities.create(customerId, entities);
+
+		for (const entity of entities) {
+			await autumn.entities.get(customerId, entity.id); // set cache
+		}
 	});
 
 	const entity1Id = entities[0].id;

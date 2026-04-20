@@ -2,6 +2,7 @@ import type { Customer } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { clearCusEntsFromCache } from "@/cron/resetCron/clearCusEntsFromCache";
 import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
+import { invalidateCustomerEntitlementBalance } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateCustomerEntitlementBalance";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
@@ -47,7 +48,17 @@ export const resetAndGetCusEnt = async ({
 	});
 
 	if (!skipCacheDeletion) {
-		await clearCusEntsFromCache({ cusEnts: [resetCusEnt] });
+		await invalidateCustomerEntitlementBalance({
+			orgId: customer.org_id,
+			env: customer.env,
+			customerId: customer.id ?? "",
+			featureId,
+			customerEntitlementId: resetCusEnt.id,
+		});
+
+		await clearCusEntsFromCache({
+			cusEnts: [resetCusEnt],
+		});
 	}
 
 	if (updatedCusEnt) {

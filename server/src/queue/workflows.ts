@@ -3,7 +3,7 @@ import { logger } from "better-auth";
 import { createSchedule } from "@/external/aws/eventbridge/eventBridgeUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { JobName } from "./JobName.js";
-import { addTaskToQueue, runHatchetWorkflow } from "./queueUtils.js";
+import { addTaskToQueue } from "./queueUtils.js";
 
 // ============ Payload Types ============
 
@@ -173,14 +173,7 @@ const triggerWorkflow = async <T extends WorkflowName>({
 }) => {
 	const config = workflowRegistry[name];
 
-	if (config.runner === "hatchet") {
-		await runHatchetWorkflow({
-			workflowName: config.jobName as JobName.VerifyCacheConsistency,
-			payload: payload as VerifyCacheConsistencyPayload,
-			delayMs: options?.delayMs,
-			metadata: options?.metadata,
-		});
-	} else if (config.runner === "eventbridge") {
+	if (config.runner === "eventbridge") {
 		if (!options?.scheduleAt || !options?.scheduleName) {
 			throw new Error(
 				`scheduleAt and scheduleName are required for eventbridge workflow: ${name}`,

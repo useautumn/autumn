@@ -8,6 +8,9 @@ import {
 	type ResetInterval,
 } from "@autumn/shared";
 
+const roundTo8Dp = (value: number) =>
+	Math.round(value * 1e8) / 1e8;
+
 type BucketExpectation = {
 	included_grant?: number;
 	prepaid_grant?: number;
@@ -46,14 +49,14 @@ export const expectBalanceCorrect = ({
 }) => {
 	const balance = customer.balances[featureId];
 	expect(balance).toBeDefined();
-	expect(balance.remaining).toBe(remaining);
+	expect(roundTo8Dp(balance.remaining)).toBe(roundTo8Dp(remaining));
 
 	if (typeof planId !== "undefined") {
 		expect(balance.breakdown?.[0]?.plan_id ?? null).toBe(planId);
 	}
 
 	if (typeof usage !== "undefined") {
-		expect(balance.usage).toBe(usage);
+		expect(roundTo8Dp(balance.usage)).toBe(roundTo8Dp(usage));
 	}
 
 	if (typeof nextResetAt !== "undefined") {

@@ -23,6 +23,8 @@ export * from "./balanceUtils/rollovers/cusEntsToRolloverBalance";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverGranted";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
+export * from "./classifyCusEnt/cusEntsHaveUnlimited";
+export * from "./classifyCusEnt/cusEntsHaveUsageAllowed";
 // Classify utils
 export * from "./classifyCusEntUtils";
 // Convert utils barrel

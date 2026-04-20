@@ -1,5 +1,5 @@
+import type { AppEnv } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
 import {
 	getConfiguredRegions,
 	getRegionalRedis,
@@ -14,7 +14,7 @@ import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard
 
 type CustomerToDelete = {
 	orgId: string;
-	env: string;
+	env: AppEnv;
 	customerId: string;
 };
 
@@ -119,7 +119,6 @@ export const batchDeleteCachedFullCustomers = async ({
 	customers,
 }: {
 	customers: CustomerToDelete[];
-	logger?: Logger;
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
 
