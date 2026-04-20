@@ -36,6 +36,9 @@ import { instrumentRedis } from "../../utils/otel/instrumentRedis.js";
 // Region constants
 const REGION_US_EAST_2 = "us-east-2";
 const REGION_US_WEST_2 = "us-west-2";
+const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
+const REDIS_PROBE_INTERVAL_MS = 2_000;
+const REDIS_PROBE_TIMEOUT_MS = 500;
 
 // All configured regions
 const ALL_REGIONS = [REGION_US_EAST_2, REGION_US_WEST_2] as const;
@@ -44,6 +47,11 @@ const ALL_REGIONS = [REGION_US_EAST_2, REGION_US_WEST_2] as const;
 export const currentRegion = process.env.AWS_REGION || REGION_US_WEST_2;
 
 const cacheBackupUrl = process.env.CACHE_BACKUP_URL?.trim();
+export const hasRedisConfig = Boolean(
+	process.env.CACHE_URL ||
+		process.env.CACHE_URL_US_EAST ||
+		process.env.CACHE_BACKUP_URL?.trim(),
+);
 
 // Map of region to cache URL. When CACHE_BACKUP_URL is set, all regions use it (failover / single backup endpoint).
 const regionToCacheUrl: Record<string, string | undefined> = cacheBackupUrl
@@ -61,6 +69,66 @@ export const getConfiguredRegions = (): string[] => {
 	return ALL_REGIONS.filter((region) => regionToCacheUrl[region]);
 };
 
+type RedisAvailabilityState = "healthy" | "degraded";
+
+type RedisAvailabilitySnapshot = {
+	configured: boolean;
+	state: RedisAvailabilityState;
+	status: string;
+};
+
+let redisMonitorInterval: ReturnType<typeof setInterval> | null = null;
+let redisTickInFlight = false;
+
+let redisAvailabilityState: RedisAvailabilityState = "degraded";
+
+const withTimeout = async <T>({
+	timeoutMs,
+	fn,
+}: {
+	timeoutMs: number;
+	fn: () => Promise<T>;
+}): Promise<T> => {
+	let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+	try {
+		return await Promise.race([
+			fn(),
+			new Promise<never>((_, reject) => {
+				timeoutId = setTimeout(
+					() => reject(new Error(`timed out after ${timeoutMs}ms`)),
+					timeoutMs,
+				);
+				timeoutId.unref?.();
+			}),
+		]);
+	} finally {
+		clearTimeout(timeoutId);
+	}
+};
+
+const attachRedisErrorHandler = ({
+	redisInstance,
+	label,
+	logErrors = true,
+}: {
+	redisInstance: Redis;
+	label: string;
+	logErrors?: boolean;
+}) => {
+	let lastErrorAt = 0;
+
+	redisInstance.on("error", (error) => {
+		if (!logErrors) return;
+
+		const now = Date.now();
+		if (now - lastErrorAt < REDIS_ERROR_LOG_INTERVAL_MS) return;
+		lastErrorAt = now;
+
+		console.error(`[Redis] ${label}:`, error.message);
+	});
+};
+
 /** Wait for a Redis instance to be ready */
 const waitForRedisReady = (
 	instance: Redis,
@@ -68,25 +136,42 @@ const waitForRedisReady = (
 	timeoutMs = 10000,
 ): Promise<void> => {
 	return new Promise((resolve, reject) => {
+		if (!hasRedisConfig) {
+			resolve();
+			return;
+		}
+
 		if (instance.status === "ready") {
 			resolve();
 			return;
 		}
 
 		const timeout = setTimeout(() => {
+			cleanup();
 			reject(new Error(`Redis connection timeout for region ${region}`));
 		}, timeoutMs);
 
-		instance.once("ready", () => {
+		const cleanup = () => {
+			clearTimeout(timeout);
+			instance.off("ready", handleReady);
+			instance.off("error", handleError);
+		};
+
+		const handleReady = () => {
+			cleanup();
 			clearTimeout(timeout);
 			console.log(`[Redis] ${region}: connected`);
 			resolve();
-		});
+		};
 
-		instance.once("error", (err) => {
-			clearTimeout(timeout);
+		const handleError = (err: unknown) => {
+			cleanup();
 			reject(err);
-		});
+		};
+
+		instance.on("ready", handleReady);
+		instance.on("error", handleError);
+		void instance.connect().catch(handleError);
 	});
 };
 
@@ -239,14 +324,20 @@ const configureRedisInstance = (redisInstance: Redis): Redis => {
 		lua: CLAIM_LOCK_RECEIPT_SCRIPT,
 	});
 
-	redisInstance.on("error", (error) => {
-		console.error(`[Redis] Connection error:`, error.message);
+	attachRedisErrorHandler({
+		redisInstance,
+		label: "Connection error",
 	});
 
 	return redisInstance;
 };
 
 /** Create a Redis connection for a specific region */
+const getTlsOptions = () =>
+	process.env.CACHE_CERT && !cacheBackupUrl
+		? { ca: process.env.CACHE_CERT }
+		: undefined;
+
 const createRedisConnection = ({
 	cacheUrl,
 	region,
@@ -255,12 +346,14 @@ const createRedisConnection = ({
 	region: string;
 }): Redis => {
 	const instance = new Redis(cacheUrl, {
-		tls:
-			process.env.CACHE_CERT && !cacheBackupUrl
-				? { ca: process.env.CACHE_CERT }
-				: undefined,
+		connectTimeout: 500,
+		tls: getTlsOptions(),
 		family: 4,
 		keepAlive: 10000,
+		enableOfflineQueue: false,
+		lazyConnect: true,
+		maxRetriesPerRequest: null,
+		retryStrategy: () => null,
 	});
 	// instrumentRedis must run first so its defineCommand patch
 	// is in place when configureRedisInstance registers Lua commands.
@@ -269,22 +362,49 @@ const createRedisConnection = ({
 	return instance;
 };
 
+const createDisabledRedis = (): Redis =>
+	new Proxy(
+		{},
+		{
+			get(_target, prop) {
+				if (prop === "status") return "end";
+				if (prop === "defineCommand") return () => undefined;
+				if (prop === "on" || prop === "once") return () => undefined;
+				if (prop === "connect" || prop === "quit") {
+					return async () => undefined;
+				}
+				if (prop === "disconnect") {
+					return () => undefined;
+				}
+				return async () => {
+					throw new Error("Redis is not configured");
+				};
+			},
+		},
+	) as Redis;
+
 // Primary Redis instance (current region or default)
 const primaryCacheUrl =
 	regionToCacheUrl[currentRegion] || process.env.CACHE_URL || cacheBackupUrl;
-
 if (cacheBackupUrl) {
 	console.log(
 		`[Redis] Using CACHE_BACKUP_URL for all regions (primary region: ${currentRegion})`,
+	);
+} else if (!hasRedisConfig) {
+	console.warn(
+		"[Redis] No Redis URL configured. Running in Postgres-only mode.",
 	);
 } else if (primaryCacheUrl && regionToCacheUrl[currentRegion]) {
 	console.log(`Using regional cache: ${currentRegion}`);
 }
 
-const primaryRedis = createRedisConnection({
-	cacheUrl: primaryCacheUrl!,
-	region: currentRegion,
-});
+const primaryRedis =
+	hasRedisConfig && primaryCacheUrl
+		? createRedisConnection({
+				cacheUrl: primaryCacheUrl,
+				region: currentRegion,
+			})
+		: createDisabledRedis();
 
 /**
  * The active Redis instance. All consumer code imports this.
@@ -295,11 +415,100 @@ const primaryRedis = createRedisConnection({
  */
 export const redis: Redis = primaryRedis;
 
+const setRedisAvailabilityState = (state: RedisAvailabilityState) => {
+	if (redisAvailabilityState === state) return;
+
+	redisAvailabilityState = state;
+	console[state === "healthy" ? "info" : "warn"](
+		state === "healthy"
+			? "[Redis] Recovered"
+			: "[Redis] Unavailable, skipping Redis-backed features",
+	);
+};
+
+const pingRedisClient = async () => {
+	if (redis.status !== "ready") {
+		return false;
+	}
+
+	const pong = await withTimeout({
+		timeoutMs: REDIS_PROBE_TIMEOUT_MS,
+		fn: () => redis.ping(),
+	});
+
+	return redis.status === "ready" && pong === "PONG";
+};
+
+const tryReconnectRedis = async () => {
+	if (redis.status === "ready" || redis.status === "connecting") return;
+
+	try {
+		redis.disconnect(false);
+		await redis.connect();
+	} catch {
+		// Let the next probe decide whether we recovered.
+	}
+};
+
+const tickRedisAvailability = async () => {
+	if (!hasRedisConfig) return;
+
+	try {
+		if (await pingRedisClient()) {
+			setRedisAvailabilityState("healthy");
+			return;
+		}
+	} catch {}
+
+	await tryReconnectRedis();
+	setRedisAvailabilityState(
+		(await pingRedisClient().catch(() => false)) ? "healthy" : "degraded",
+	);
+};
+
+export const startRedisMonitor = () => {
+	if (redisMonitorInterval) return;
+
+	void tickRedisAvailability();
+
+	redisMonitorInterval = setInterval(async () => {
+		if (redisTickInFlight) return;
+		redisTickInFlight = true;
+		try {
+			await tickRedisAvailability();
+		} finally {
+			redisTickInFlight = false;
+		}
+	}, REDIS_PROBE_INTERVAL_MS);
+};
+
+export const stopRedisMonitor = () => {
+	if (redisMonitorInterval) {
+		clearInterval(redisMonitorInterval);
+		redisMonitorInterval = null;
+	}
+};
+
+export const shouldUseRedis = () =>
+	hasRedisConfig && redisAvailabilityState === "healthy";
+
+export const getRedisAvailability = (): RedisAvailabilitySnapshot => {
+	return {
+		configured: hasRedisConfig,
+		state: redisAvailabilityState,
+		status: redis.status,
+	};
+};
+
 // Lazy-loaded regional Redis instances for cross-region sync
 const regionalRedisInstances: Map<string, Redis> = new Map();
 
 /** Get Redis instance for a specific region (lazy-loaded) */
 export const getRegionalRedis = (region: string): Redis => {
+	if (!hasRedisConfig) {
+		return primaryRedis;
+	}
+
 	// If requesting current region, return primary instance
 	if (region === currentRegion) {
 		return primaryRedis;

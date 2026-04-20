@@ -64,7 +64,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		apiVersion: new ApiVersionClass(LATEST_VERSION),
 
 		// Auth (will be populated by auth middleware)
-		org: undefined as any,
+		org: undefined as never,
 		features: [],
 		userId: undefined,
 		authType: AuthType.Unknown,
