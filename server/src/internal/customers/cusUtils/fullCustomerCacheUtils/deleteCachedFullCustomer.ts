@@ -3,6 +3,7 @@ import {
 	getRegionalRedis,
 	redis,
 } from "@/external/redis/initRedis.js";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import {
 	buildFullCustomerCacheKey,
@@ -14,19 +15,21 @@ import {
  * @param skipGuard - If true, skips setting the guard key. Default false (guard is set). Use skipGuard: true when deleting cache before a fresh Postgres read.
  */
 export const deleteCachedFullCustomer = async ({
-	customerId,
 	ctx,
+	customerId,
+	entityId,
 	source,
 	skipGuard = false,
 }: {
-	customerId: string;
 	ctx: AutumnContext;
+	customerId: string;
+	entityId?: string;
 	source?: string;
 	skipGuard?: boolean;
 }): Promise<void> => {
 	const { org, env, logger } = ctx;
 
-	if (redis.status !== "ready" || !customerId) return;
+	if (!customerId) return;
 
 	const cacheKey = buildFullCustomerCacheKey({
 		orgId: org.id,
@@ -35,6 +38,24 @@ export const deleteCachedFullCustomer = async ({
 	});
 	const regions = getConfiguredRegions();
 	const guardTimestamp = Date.now().toString();
+	const customerLabel = entityId ? `${customerId}:${entityId}` : customerId;
+
+	const invalidationPromises: Promise<void>[] = [
+		invalidateCachedFullSubject({
+			ctx,
+			customerId,
+			entityId,
+			source,
+		}),
+	];
+
+	if (redis.status !== "ready") {
+		logger.warn(
+			`[deleteCachedFullCustomer] primary redis not_ready, skipping fullCustomer invalidation for ${customerLabel}`,
+		);
+		await Promise.all(invalidationPromises);
+		return;
+	}
 
 	// Delete from all regions in parallel
 	const deletePromises = regions.map(async (region) => {
@@ -57,14 +78,14 @@ export const deleteCachedFullCustomer = async ({
 			);
 
 			logger.info(
-				`[deleteCachedFullCustomer] ${region}: ${result}, customer: ${customerId}, source: ${source}`,
+				`[deleteCachedFullCustomer] ${region}: ${result}, customer: ${customerLabel}, source: ${source}`,
 			);
 		} catch (error) {
 			logger.error(
-				`[deleteCachedFullCustomer] ${region}: error, customer: ${customerId}, source: ${source}, error: ${error}`,
+				`[deleteCachedFullCustomer] ${region}: error, customer: ${customerLabel}, source: ${source}, error: ${error}`,
 			);
 		}
 	});
 
-	await Promise.all(deletePromises);
+	await Promise.all([...deletePromises, ...invalidationPromises]);
 };

@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import { LogOut, Shield } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -6,15 +7,18 @@ import {
 	DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { authClient, useSession } from "@/lib/auth-client";
+import { useEnv } from "@/utils/envUtils";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { AdminOnly } from "@/views/admin/components/AdminOnly";
 
 export const AdminDropdownItems = () => {
 	const { data, isPending } = useSession();
+	const env = useEnv();
 
 	const [stopImpersonatingLoading, setStopImpersonatingLoading] =
 		useState(false);
 	const isImpersonating = notNullish(data?.session?.impersonatedBy);
+	const adminPath = env === AppEnv.Sandbox ? "/sandbox/admin" : "/admin";
 
 	if (isPending) return null;
 	return (
@@ -42,7 +46,7 @@ export const AdminDropdownItems = () => {
 			)}
 			<DropdownMenuItem
 				onClick={() => {
-					window.location.href = "/admin";
+					window.location.href = adminPath;
 				}}
 			>
 				<div className="flex justify-between w-full items-center gap-2 text-t2">

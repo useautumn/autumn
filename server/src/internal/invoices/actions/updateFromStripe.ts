@@ -29,6 +29,10 @@ export const updateInvoiceFromStripe = async ({
 				amount: stripeInvoice.total,
 				currency: stripeInvoice.currency,
 			}),
+			amount_paid: stripeToAtmnAmount({
+				amount: stripeInvoice.amount_paid,
+				currency: stripeInvoice.currency,
+			}),
 		},
 	});
 

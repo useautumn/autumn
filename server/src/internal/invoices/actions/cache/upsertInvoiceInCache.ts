@@ -1,6 +1,7 @@
 import type { Invoice } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { upsertCachedInvoiceV2 } from "@/internal/customers/cache/fullSubject/index.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
@@ -26,6 +27,19 @@ export const upsertInvoiceInCache = async ({
 	invoice: Invoice;
 }): Promise<UpsertInvoiceResult | null> => {
 	const { org, env, logger } = ctx;
+
+	try {
+		await upsertCachedInvoiceV2({
+			ctx,
+			customerId,
+			invoice,
+		});
+	} catch (error) {
+		logger.warn(
+			`[upsertInvoiceInCache] FullSubject upsert failed for customer ${customerId}, invoice ${invoice.stripe_id}`,
+			error,
+		);
+	}
 
 	try {
 		if (!customerId) {

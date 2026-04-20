@@ -3,10 +3,6 @@ import type { Context } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis, shouldUseRedis } from "@/external/redis/initRedis";
-import {
-	parseCustomerIdFromBody,
-	parseCustomerIdFromUrl,
-} from "@/honoMiddlewares/analyticsMiddleware";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import {
 	RATE_LIMIT_CONFIGS,
@@ -61,7 +57,6 @@ export const rateLimitFactory = ({
 
 	return async (c, next) => {
 		if (!shouldUseRedis()) {
-			// Distributed rate limiting depends on Redis. In degraded mode we fail open.
 			warnRateLimitBypass();
 			return next();
 		}
@@ -104,13 +99,13 @@ const limiters = Object.fromEntries(
 
 export const getLimiterForType = (type: RateLimitType) => limiters[type];
 
-export const getRateLimitKey = async ({
+export const getRateLimitKey = ({
 	c,
 	rateLimitType,
 }: {
 	c: Context<HonoEnv>;
 	rateLimitType: RateLimitType;
-}): Promise<string> => {
+}): string => {
 	const ctx = c.get("ctx");
 	const orgId = ctx.org?.id;
 	const env = ctx.env;
@@ -122,16 +117,8 @@ export const getRateLimitKey = async ({
 		case RateLimitScope.Org:
 			return baseKey;
 
-		case RateLimitScope.Customer: {
-			const res = await parseCustomerIdFromBody(c);
-			return `${baseKey}:${res?.customerId}`;
-		}
-
-		case RateLimitScope.CustomerWithUrlFallback: {
-			const res = await parseCustomerIdFromBody(c);
-			const urlCustomerId = parseCustomerIdFromUrl({ url: c.req.path });
-			const customerId = res?.customerId || urlCustomerId;
-			return `${baseKey}:${customerId}`;
-		}
+		case RateLimitScope.Customer:
+		case RateLimitScope.CustomerWithUrlFallback:
+			return `${baseKey}:${ctx.customerId}`;
 	}
 };

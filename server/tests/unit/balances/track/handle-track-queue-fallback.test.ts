@@ -18,8 +18,8 @@ mock.module("@/queue/queueUtils.js", () => ({
 	},
 }));
 
-mock.module("@/internal/balances/track/runTrackV2.js", () => ({
-	runTrackV2: async (args: Record<string, unknown>) => {
+mock.module("@/internal/balances/track/runTrackWithRollout.js", () => ({
+	runTrackWithRollout: async (args: Record<string, unknown>) => {
 		mockState.runTrackCalls.push(args);
 		return { ok: true };
 	},

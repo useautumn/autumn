@@ -54,10 +54,8 @@ export const initPgHealthMonitor = ({
 }: {
 	client: postgres.Sql;
 }): void => {
-	console.time("db:health-monitor-init");
 	probeClient = client;
 	logger.info("[PgHealthMonitor] Initialized", { type: "pg_health_init" });
-	console.timeEnd("db:health-monitor-init");
 };
 
 /**

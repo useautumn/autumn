@@ -1,5 +1,11 @@
 import type { Feature, FullCustomer } from "@autumn/shared";
 import { type FinalizeLockParamsV0, findFeatureById } from "@autumn/shared";
+import type { Redis } from "ioredis";
+import {
+	currentRegion,
+	getRegionalRedis,
+	redis,
+} from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	fetchLockReceipt,
@@ -15,6 +21,7 @@ import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCu
 export type FinalizeLockContext = {
 	receipt: LockReceipt;
 	lockReceiptKey: string;
+	redisInstance: Redis;
 	fullCustomer: FullCustomer;
 	feature: Feature;
 	lockValue: number;
@@ -60,9 +67,15 @@ export const buildFinalizeLockContext = async ({
 		errorOnNotFound: true,
 	});
 
+	const redisInstance =
+		receipt.region && receipt.region !== currentRegion
+			? getRegionalRedis(receipt.region)
+			: redis;
+
 	return {
 		receipt,
 		lockReceiptKey,
+		redisInstance,
 		fullCustomer,
 		feature,
 		lockValue,

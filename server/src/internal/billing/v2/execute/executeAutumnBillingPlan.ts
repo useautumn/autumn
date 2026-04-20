@@ -2,12 +2,11 @@ import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
+import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import {
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
-import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { invoiceActions } from "@/internal/invoices/actions";
@@ -38,8 +37,12 @@ export const executeAutumnBillingPlan = async ({
 		customFreeTrial,
 		insertCustomerEntitlements,
 	} = autumnBillingPlan;
-	const updateCustomerProducts = getUpdateCustomerProducts({ autumnBillingPlan });
-	const deleteCustomerProducts = getDeleteCustomerProducts({ autumnBillingPlan });
+	const updateCustomerProducts = getUpdateCustomerProducts({
+		autumnBillingPlan,
+	});
+	const deleteCustomerProducts = getDeleteCustomerProducts({
+		autumnBillingPlan,
+	});
 
 	if (customEntitlements) {
 		await EntitlementService.insert({
@@ -78,13 +81,12 @@ export const executeAutumnBillingPlan = async ({
 		newCusProducts: insertCustomerProducts,
 	});
 
-	// 3. Update customer product (DB + cache)
+	// 3. Update customer product (DB only)
 	for (const { customerProduct, updates } of updateCustomerProducts) {
-		await customerProductActions.updateDbAndCache({
+		await CusProductService.update({
 			ctx,
-			customerId: autumnBillingPlan.customerId,
 			cusProductId: customerProduct.id,
-			updates,
+			updates: updates,
 		});
 	}
 

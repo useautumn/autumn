@@ -26,7 +26,9 @@ export const createEdgeConfigStore = <T>({
 	s3Key,
 	schema,
 	defaultValue,
-	pollIntervalMs = ms.seconds(10),
+	pollIntervalMs = process.env.NODE_ENV === "development"
+		? ms.seconds(1)
+		: ms.seconds(10),
 	s3Client: injectedS3Client,
 }: {
 	s3Key: string;

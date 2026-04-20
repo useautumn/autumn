@@ -1,6 +1,11 @@
-import { type AppEnv, CusProductStatus, ms } from "@autumn/shared";
+import {
+	type AppEnv,
+	CusProductStatus,
+	ms,
+	orgToFeaturesByOrgEnv,
+} from "@autumn/shared";
+import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
-import { batchDeleteCachedFullCustomers } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers";
 import { ProductService } from "@/internal/products/ProductService";
 import type { CronContext } from "../utils/CronContext";
 import {
@@ -39,7 +44,7 @@ export const runProductCron = async ({
 
 			const resultsByOrgEnv = await groupByOrgEnv({ results, cronContext });
 
-			for (const { ctx, rows } of resultsByOrgEnv) {
+			for (const { ctx, org, features, rows } of resultsByOrgEnv) {
 				const defaultProducts = await ProductService.listDefault({
 					db: ctx.db,
 					orgId: ctx.org.id,
@@ -57,12 +62,20 @@ export const runProductCron = async ({
 							},
 						})),
 					});
-					await batchDeleteCachedFullCustomers({
-						customers: rows.map((row) => ({
-							orgId: row.customer.org_id,
-							env: row.customer.env as AppEnv,
-							customerId: row.customer.id ?? "",
-						})),
+					const customersToDelete = rows.map((row) => ({
+						orgId: row.customer.org_id,
+						env: row.customer.env as AppEnv,
+						customerId: row.customer.id ?? "",
+					}));
+					const featuresByOrgEnv = orgToFeaturesByOrgEnv({
+						org,
+						env: ctx.env,
+						features,
+					});
+
+					await batchInvalidateCachedFullSubjects({
+						customers: customersToDelete,
+						featuresByOrgEnv,
 					});
 					console.log(`Expired ${rows.length} customer products`);
 					continue;
