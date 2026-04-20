@@ -4,12 +4,13 @@ import {
 	TrackParamsSchema,
 	TrackQuerySchema,
 } from "@autumn/shared";
+import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { runTrackV2 } from "@/internal/balances/track/runTrackV2.js";
-import {
-	getTrackEventNameDeductions,
-	getTrackFeatureDeductions,
-} from "@/internal/balances/track/utils/getFeatureDeductions.js";
+import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
+import { getQueuedTrackResponse } from "@/internal/balances/track/utils/getQueuedTrackResponse.js";
+import { JobName } from "@/queue/JobName.js";
+import { addTaskToQueue } from "@/queue/queueUtils.js";
 
 export const handleTrack = createRoute({
 	query: TrackQuerySchema,
@@ -21,27 +22,35 @@ export const handleTrack = createRoute({
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
+		const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 
-		// Build feature deductions
-		const featureDeductions = body.feature_id
-			? getTrackFeatureDeductions({
-					ctx,
-					featureId: body.feature_id,
-					lock: body.lock,
-					value: body.value,
-				})
-			: getTrackEventNameDeductions({
-					ctx,
-					eventName: body.event_name!,
-					value: body.value,
-				});
+		if (!shouldUseRedis()) {
+			const queueUrl = process.env.TRACK_SQS_QUEUE_URL;
+			if (!queueUrl) {
+				throw new Error("TRACK_SQS_QUEUE_URL is not configured");
+			}
 
-		return c.json(
-			await runTrackV2({
-				ctx,
-				body,
-				featureDeductions,
-			}),
-		);
+			await addTaskToQueue({
+				jobName: JobName.Track,
+				queueUrl,
+				messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}`,
+				messageDeduplicationId: body.idempotency_key,
+				payload: {
+					orgId: ctx.org.id,
+					env: ctx.env,
+					apiVersion: ctx.apiVersion.value,
+					body,
+				},
+			});
+
+			return c.json(
+				getQueuedTrackResponse({
+					ctx,
+					body,
+				}),
+			);
+		}
+
+		return c.json(await runTrackV2({ ctx, body, featureDeductions }));
 	},
 });
