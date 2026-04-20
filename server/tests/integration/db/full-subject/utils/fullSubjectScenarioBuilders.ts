@@ -75,6 +75,9 @@ const buildCustomer = ({
 	ctx: TestContext;
 	key: string;
 }): DbCustomer => ({
+	config: {
+		disable_pooled_balance: false,
+	},
 	internal_id: `cus_int_${key}`,
 	org_id: ctx.org.id,
 	created_at: now,
