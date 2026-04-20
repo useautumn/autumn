@@ -1,229 +1,243 @@
 import type {
 	FrontendProduct,
 	FullCusProduct,
+	ProductItem,
 	ProductV2,
 } from "@autumn/shared";
-import { ArrowLeft } from "@phosphor-icons/react";
+
 import { useMemo } from "react";
-import { UpdateProductActions } from "@/components/forms/attach-product/update-product-actions";
-import { UpdateProductPrepaidOptions } from "@/components/forms/attach-product/update-product-prepaid-options";
-import { UpdateProductSummary } from "@/components/forms/attach-product/update-product-summary";
+import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import {
-	type UseAttachProductForm,
-	useAttachProductForm,
-} from "@/components/forms/attach-product/use-attach-product-form";
-import { useUpdateSubscriptionBodyBuilder } from "@/components/forms/update-subscription/use-update-subscription-body-builder";
-import { useUpdateSubscriptionPreview } from "@/components/forms/update-subscription/use-update-subscription-preview";
-import { FormWrapper } from "@/components/general/form/form-wrapper";
-import { Button } from "@/components/v2/buttons/Button";
-import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
+	EditPlanSection,
+	UpdateSubscriptionAdvancedSection,
+	UpdateSubscriptionFooter,
+	type UpdateSubscriptionForm,
+	type UpdateSubscriptionFormContext,
+	UpdateSubscriptionFormProvider,
+	UpdateSubscriptionPlanOptions,
+	UpdateSubscriptionPreviewSection,
+	useUpdateSubscriptionFormContext,
+} from "@/components/forms/update-subscription-v2";
+import { getSupportedFormOverridesFromProductCustomization } from "@/components/forms/update-subscription-v2/utils/subscriptionCustomization";
+import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
+import {
+	LayoutGroup,
+	SheetHeader,
+} from "@/components/v2/sheets/SharedSheetComponents";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
-import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
-import { ScheduledPlanGuard } from "@/components/forms/create-schedule/components/ScheduledPlanGuard";
+import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
-const FormContent = ({
-	productV2,
-	cusProduct,
-	form,
-	customizedProduct,
-}: {
-	productV2: ProductV2;
-	cusProduct: FullCusProduct;
-	form: UseAttachProductForm;
-	customizedProduct: FrontendProduct | undefined;
-}) => {
-	const { customer } = useCusQuery();
-	const customerId = customer?.id ?? customer?.internal_id;
-	const product = customizedProduct?.id
-		? customizedProduct
-		: (productV2 ?? undefined);
-	const entityId = cusProduct?.entity_id ?? undefined;
-
-	const prepaidOptions = form.state.values.prepaidOptions;
-	const initialPrepaidOptions =
-		form.options.defaultValues?.prepaidOptions ?? {};
-
-	const { updateSubscriptionBody } = useUpdateSubscriptionBodyBuilder({
-		customerId,
-		product: productV2,
-		entityId,
-		prepaidOptions: prepaidOptions ?? undefined,
-		version: product?.version,
-	});
-
-	const previewQuery = useUpdateSubscriptionPreview({
-		body: updateSubscriptionBody,
-		enabled: !!(customerId && product),
-	});
-
-	const { prepaidItems, isLoading } = usePrepaidItems({
-		product,
-	});
-
-	if (isLoading) {
-		return null;
-	}
-
-	if (prepaidItems.length > 0) {
-		const hasUnsetPrepaidQuantity = prepaidItems.some((item) => {
-			const quantity = prepaidOptions?.[item.feature_id as string];
-			return quantity === undefined || quantity === null;
-		});
-
-		if (hasUnsetPrepaidQuantity) {
-			return null;
-		}
-
-		const hasQuantityChanges = prepaidItems.some((item) => {
-			const currentQuantity = prepaidOptions?.[item.feature_id as string];
-			const initialQuantity =
-				initialPrepaidOptions?.[item.feature_id as string];
-			return currentQuantity !== initialQuantity;
-		});
-
-		if (!hasQuantityChanges && !customizedProduct?.id) {
-			return null;
-		}
-	}
+function SendInvoiceContent() {
+	const { formContext, isPending, handleInvoiceUpdate, previewQuery } =
+		useUpdateSubscriptionFormContext();
+	const { customerProduct } = formContext;
+	const { stripeAccount } = useOrgStripeQuery();
+	const env = useEnv();
+	const { setSheet } = useSheetStore();
+	const itemId = useSheetStore((s) => s.itemId);
 
 	return (
-		<>
-			<UpdateProductSummary
-				previewData={previewQuery.data}
-				isLoading={previewQuery.isLoading}
-				product={product}
-				form={form}
-			/>
-			<UpdateProductActions
-				product={product}
-				customerId={customerId}
-				entityId={entityId}
-				previewData={previewQuery.data}
-				isPreviewLoading={previewQuery.isLoading}
-				form={form}
-			/>
-		</>
+		<LayoutGroup>
+			<div className="flex flex-col h-full overflow-y-auto">
+				<SendInvoiceStageWithPreview
+					productName={customerProduct.product.name}
+					previewQuery={previewQuery}
+					isPending={isPending}
+					onSubmit={handleInvoiceUpdate}
+					stripeAccount={stripeAccount}
+					env={env}
+					onBack={() => setSheet({ type: "subscription-update", itemId })}
+				/>
+			</div>
+		</LayoutGroup>
 	);
-};
+}
 
-function SheetContent({
-	cusProduct,
-	productV2,
-	itemId,
-	customizedProduct,
-}: {
-	cusProduct: FullCusProduct;
-	productV2: ProductV2;
-	itemId: string | null;
-	customizedProduct: FrontendProduct | undefined;
-}) {
-	const product = customizedProduct?.id
-		? customizedProduct
-		: (productV2 ?? undefined);
-	const { prepaidItems } = usePrepaidItems({ product });
+function EditContent() {
+	const {
+		formContext,
+		hasNoBillingChanges,
+		showPlanEditor,
+		productWithFormItems,
+		handlePlanEditorSave,
+		handlePlanEditorCancel,
+	} = useUpdateSubscriptionFormContext();
 
-	const initialPrepaidOptions = useMemo(
-		() =>
-			backendToDisplayQuantity({
-				backendOptions: cusProduct.options,
-				prepaidItems,
-			}),
-		[cusProduct.options, prepaidItems],
-	);
-
-	const form = useAttachProductForm({
-		initialProductId: cusProduct?.product.id ?? undefined,
-		initialPrepaidOptions,
-	});
+	const { customerProduct } = formContext;
 
 	return (
-		<FormWrapper form={form}>
-			<div className="flex flex-col h-full">
+		<LayoutGroup>
+			<div className="flex flex-col h-full overflow-y-auto">
 				<SheetHeader
 					title="Update Subscription"
-					description={`Update ${cusProduct.product.name} for this customer`}
+					description={`Update ${customerProduct.product.name} for this customer`}
 					breadcrumbs={[
 						{
-							name: `${cusProduct.product.name}`,
+							name: customerProduct.product.name,
 							sheet: "subscription-detail",
 						},
 					]}
-					itemId={itemId}
+					itemId={customerProduct.id}
 				/>
 
-				<div className="flex-1 overflow-y-auto">
-					<form.Subscribe
-						selector={(state) => ({
-							prepaidOptions: state.values.prepaidOptions,
-						})}
-					>
-						{() => (
-							<>
-								{prepaidItems.length > 0 && (
-									<UpdateProductPrepaidOptions form={form} />
-								)}
-								<FormContent
-									productV2={productV2}
-									cusProduct={cusProduct}
-									form={form}
-									customizedProduct={customizedProduct}
-								/>
-							</>
-						)}
-					</form.Subscribe>
+				<div
+					className={cn(
+						"grid px-4 transition-[grid-template-rows] duration-200 ease-out",
+						!hasNoBillingChanges && "delay-75",
+					)}
+					style={{
+						gridTemplateRows: hasNoBillingChanges ? "1fr" : "0fr",
+					}}
+				>
+					<div className="overflow-hidden">
+						<div
+							className={cn(
+								"pt-4 transition-opacity duration-150",
+								hasNoBillingChanges ? "opacity-100 delay-75" : "opacity-0",
+							)}
+						>
+							<InfoBox variant="success" classNames={{ infoBox: "w-full" }}>
+								No changes to billing will be made
+							</InfoBox>
+						</div>
+					</div>
 				</div>
+
+				<EditPlanSection />
+				<UpdateSubscriptionPlanOptions />
+				<UpdateSubscriptionAdvancedSection />
+				<UpdateSubscriptionPreviewSection />
+				<UpdateSubscriptionFooter />
+
+				{productWithFormItems && (
+					<InlinePlanEditor
+						product={productWithFormItems}
+						onSave={handlePlanEditorSave}
+						onCancel={handlePlanEditorCancel}
+						isOpen={showPlanEditor}
+					/>
+				)}
 			</div>
-		</FormWrapper>
+		</LayoutGroup>
+	);
+}
+
+function SheetContent() {
+	const sheetType = useSheetStore((s) => s.type);
+
+	return sheetType === "subscription-update-send-invoice" ? (
+		<SendInvoiceContent />
+	) : (
+		<EditContent />
 	);
 }
 
 export function SubscriptionUpdateSheet() {
 	const itemId = useSheetStore((s) => s.itemId);
-	const setSheet = useSheetStore((s) => s.setSheet);
 	const sheetData = useSheetStore((s) => s.data);
+	const { closeSheet } = useSheetStore();
+	const { customer } = useCusQuery();
+	const { setIsInlineEditorOpen } = useCustomerContext();
 
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+	const { prepaidItems } = usePrepaidItems({ product: productV2 });
 
+	const { data: productData } = useProductVersionQuery({
+		productId: productV2?.id,
+	});
+
+	const numVersions = productData?.numVersions ?? productV2?.version ?? 1;
+	const currentVersion = cusProduct?.product?.version ?? 1;
 	const customizedProduct = sheetData?.customizedProduct as
 		| FrontendProduct
 		| undefined;
+
+	const defaultOverrides = useMemo((): Partial<UpdateSubscriptionForm> => {
+		if (!productV2) return {};
+		return getSupportedFormOverridesFromProductCustomization({
+			customizedProduct,
+			baseProduct: productV2 as FrontendProduct,
+			currentVersion,
+		});
+	}, [customizedProduct, productV2, currentVersion]);
+
+	const formContext = useMemo(
+		(): UpdateSubscriptionFormContext | null =>
+			cusProduct && productV2
+				? {
+						customerId: customer?.id ?? customer?.internal_id,
+						product: productV2 as ProductV2,
+						entityId: cusProduct?.entity_id ?? undefined,
+						customerProduct: cusProduct as FullCusProduct,
+						prepaidItems,
+						numVersions,
+						currentVersion,
+					}
+				: null,
+		[
+			customer,
+			cusProduct,
+			productV2,
+			prepaidItems,
+			numVersions,
+			currentVersion,
+		],
+	);
 
 	if (!cusProduct) {
 		return (
 			<div className="flex flex-col h-full">
 				<SheetHeader
-					title="Update Plan"
-					description="Loading plan information..."
-				>
-					<Button
-						variant="skeleton"
-						size="sm"
-						onClick={() => setSheet({ type: "subscription-detail", itemId })}
-						className="mt-2 w-fit"
-					>
-						<ArrowLeft size={16} />
-						Back to Details
-					</Button>
-				</SheetHeader>
+					title="Update Subscription"
+					description="Loading subscription..."
+				/>
+				<div className="p-4 text-sm text-t3">Loading...</div>
 			</div>
 		);
 	}
 
 	if (!productV2) {
-		return null;
+		return (
+			<div className="flex flex-col h-full">
+				<SheetHeader
+					title="Update Subscription"
+					description="Loading product..."
+				/>
+				<div className="p-4 text-sm text-t3">Loading product data...</div>
+			</div>
+		);
+	}
+
+	if (!formContext) {
+		return (
+			<div className="flex flex-col h-full">
+				<SheetHeader title="Update Subscription" description="Loading..." />
+				<div className="p-4 text-sm text-t3">Loading...</div>
+			</div>
+		);
 	}
 
 	return (
-		<ScheduledPlanGuard>
-			<SheetContent
-				cusProduct={cusProduct}
-				productV2={productV2}
-				itemId={itemId}
-				customizedProduct={customizedProduct}
-			/>
-		</ScheduledPlanGuard>
+		<UpdateSubscriptionFormProvider
+			formContext={formContext}
+			originalItems={productV2?.items as ProductItem[] | undefined}
+			defaultOverrides={defaultOverrides}
+			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
+			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
+			onCheckoutRedirect={(checkoutUrl) => {
+				window.location.href = checkoutUrl;
+			}}
+			onSuccess={closeSheet}
+		>
+			<SheetContent />
+		</UpdateSubscriptionFormProvider>
 	);
 }

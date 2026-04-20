@@ -83,7 +83,13 @@ interface UpdateSubscriptionFormContextValue {
 	// Mutation
 	isPending: boolean;
 	handleConfirm: () => void;
-	handleInvoiceUpdate: (params: { enableProductImmediately: boolean }) => void;
+	handleInvoiceUpdate: (params: {
+		enableProductImmediately: boolean;
+		finalizeInvoice: boolean;
+	}) => Promise<{
+		stripeId: string | undefined;
+		hostedInvoiceUrl: string | null | undefined;
+	}>;
 }
 
 const UpdateSubscriptionFormReactContext =
@@ -95,7 +101,6 @@ interface UpdateSubscriptionFormProviderProps {
 	defaultOverrides?: Partial<UpdateSubscriptionForm>;
 	onPlanEditorOpen?: () => void;
 	onPlanEditorClose?: () => void;
-	onInvoiceCreated?: (invoiceId: string) => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 	children: ReactNode;
@@ -128,7 +133,6 @@ export function UpdateSubscriptionFormProvider({
 	defaultOverrides,
 	onPlanEditorOpen,
 	onPlanEditorClose,
-	onInvoiceCreated,
 	onCheckoutRedirect,
 	onSuccess,
 	children,
@@ -296,7 +300,6 @@ export function UpdateSubscriptionFormProvider({
 		useUpdateSubscriptionMutation({
 			updateSubscriptionFormContext: formContext,
 			buildRequestBody,
-			onInvoiceCreated,
 			onCheckoutRedirect,
 			onSuccess,
 		});

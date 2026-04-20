@@ -1,0 +1,42 @@
+---
+title: "Rate Limits"
+description: "Default API rate limits and how to request increases"
+---
+
+Autumn enforces rate limits to ensure reliable performance for all users. Limits are applied per **organization** or per **customer**, depending on the endpoint.
+
+## Default Limits
+
+| Endpoint Group | Limit | Window | Scope |
+|---|---|---|---|
+| **Check / Entitled / Get Customer** | 10,000 requests | 1 second | Per customer |
+| **Track / Usage / Balance updates** | 10,000 requests | 1 second | Per customer |
+| **Attach / Cancel / Billing operations** | 30 requests | 1 minute | Per customer |
+| **Events (list / aggregate / query)** | 5 requests | 1 second | Per customer |
+| **List Customers** | 5 requests | 1 second | Per organization |
+| **All other endpoints** | 25 requests | 1 second | Per organization |
+
+## Scopes
+
+- **Per customer** -- the limit applies independently to each customer you make requests for. For example, tracking usage for `customer_a` and `customer_b` each get their own 10,000 req/s allowance.
+- **Per organization** -- the limit is shared across all requests from your API key, regardless of which customer the request is for.
+
+## What happens when you hit a limit
+
+When a rate limit is exceeded, the API returns a `429 Too Many Requests` response. Your application should back off and retry after the rate limit window resets.
+
+## Preview endpoints are not rate limited
+
+Preview endpoints like `/v1/attach/preview`, `/v1/billing.preview_attach`, and `/v1/billing.preview_update` are **not** subject to rate limits. You can call these freely to display pricing previews to your users.
+
+## Requesting higher limits
+
+The default limits are designed to handle the vast majority of use cases. If your application requires higher throughput, we can increase rate limits for your organization on a case-by-case basis.
+
+Reach out to us on [Discord](https://discord.gg/STqxY92zuS) or email **support@useautumn.com** and include:
+
+- Your organization name
+- Which endpoint group needs a higher limit
+- The throughput you need
+
+We typically respond within a few hours.
