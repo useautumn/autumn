@@ -27,7 +27,6 @@ export const CustomerSchema = z.object({
 	spend_limits: z.array(DbSpendLimitSchema).nullish(),
 	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
 	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
-	ignore_past_due: z.boolean().default(false),
 });
 
 export type Customer = z.infer<typeof CustomerSchema>;
