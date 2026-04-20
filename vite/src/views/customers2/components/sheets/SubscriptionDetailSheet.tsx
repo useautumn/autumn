@@ -20,7 +20,6 @@ import {
 	XCircle,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useEffect } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -28,10 +27,7 @@ import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
-import {
-	usePrepaidItems,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
+import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 
@@ -42,7 +38,6 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
-import { UpdatePlanButton } from "./UpdatePlanButton";
 
 export function SubscriptionDetailSheet() {
 	const { customer } = useCusQuery();
@@ -50,15 +45,6 @@ export function SubscriptionDetailSheet() {
 	const env = useEnv();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const resetProductStore = useProductStore((s) => s.reset);
-	const sheetType = useSheetStore((s) => s.type);
-	// Get edited product from store
-
-	const storeProduct = useProductStore((s) => s.product);
-
-	// Check if there are changes in the product store
-	const showUpdateProduct = storeProduct?.id;
-
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 
@@ -67,15 +53,6 @@ export function SubscriptionDetailSheet() {
 
 	const isExpired = cusProduct?.status === CusProductStatus.Expired;
 	const isCanceled = cusProduct?.canceled;
-
-	useEffect(() => {
-		if (
-			sheetType !== "subscription-detail" &&
-			sheetType !== "subscription-update"
-		) {
-			resetProductStore();
-		}
-	}, [sheetType, resetProductStore]);
 
 	// Check for prepaid items in the product (must be called before any returns)
 	const { prepaidItems } = usePrepaidItems({ product: productV2 ?? undefined });
@@ -109,7 +86,7 @@ export function SubscriptionDetailSheet() {
 	};
 
 	const handleUpdateSubscription = () => {
-		setSheet({ type: "subscription-update-v2", itemId });
+		setSheet({ type: "subscription-update", itemId });
 	};
 
 	const handleViewStripe = () => {
@@ -306,12 +283,6 @@ export function SubscriptionDetailSheet() {
 					)}
 				</div>
 			</SheetSection>
-
-			{showUpdateProduct && (
-				<div className="flex justify-end p-2">
-					<UpdatePlanButton cusProduct={cusProduct} />
-				</div>
-			)}
 
 			{!isExpired && !isScheduled && (
 				<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
