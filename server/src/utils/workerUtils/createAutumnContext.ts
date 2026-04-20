@@ -9,6 +9,7 @@ import {
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 
 export const createWorkerAutumnContext = async ({
@@ -46,6 +47,8 @@ export const createWorkerAutumnContext = async ({
 		createdAt: org.created_at || Date.now(),
 	});
 
+	const rolloutSnapshot = computeRolloutSnapshot({ orgId: org.id });
+
 	return {
 		org,
 		env,
@@ -63,5 +66,6 @@ export const createWorkerAutumnContext = async ({
 		timestamp: Date.now(),
 		skipCache: false,
 		extraLogs: {},
+		rolloutSnapshot,
 	} satisfies AutumnContext;
 };

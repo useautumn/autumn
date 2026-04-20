@@ -41,3 +41,6 @@ export const customerPrices = pgTable(
 		index("idx_customer_prices_price_id").on(table.price_id),
 	],
 );
+
+export type DbCustomerPrice = typeof customerPrices.$inferSelect;
+export type InsertDbCustomerPrice = typeof customerPrices.$inferInsert;

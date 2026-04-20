@@ -399,6 +399,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-6: customer-level lock=120
 		required_balance: 120,
 		lock: { enabled: true, lock_id: lockKey },
 	});
+	// return;
 
 	await autumnV2_1.balances.finalize({
 		lock_id: lockKey,
@@ -418,6 +419,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-6: customer-level lock=120
 		customerId,
 		entities[0].id,
 	);
+
 	expectBalanceCorrect({
 		customer: ent1,
 		featureId: TestFeature.Messages,

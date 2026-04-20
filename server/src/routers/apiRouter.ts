@@ -15,6 +15,7 @@ import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddlewar
 import { refreshProductsCacheMiddleware } from "../honoMiddlewares/refreshProductsCacheMiddleware.js";
 import { requestBlockMiddleware } from "../honoMiddlewares/requestBlockMiddleware.js";
 import { responseFilterMiddleware } from "../honoMiddlewares/responseFilter/responseFilterMiddleware.js";
+import { rolloutMiddleware } from "../honoMiddlewares/rolloutMiddleware.js";
 import { secretKeyMiddleware } from "../honoMiddlewares/secretKeyMiddleware.js";
 import type { HonoEnv } from "../honoUtils/HonoEnv.js";
 import {
@@ -45,6 +46,7 @@ apiRouter.use("*", responseFilterMiddleware);
 apiRouter.use("*", secretKeyMiddleware);
 apiRouter.use("*", requestBlockMiddleware);
 apiRouter.use("*", orgConfigMiddleware);
+apiRouter.use("*", rolloutMiddleware);
 apiRouter.use("*", apiVersionMiddleware);
 apiRouter.use("*", refreshCacheMiddleware);
 apiRouter.use("*", refreshProductsCacheMiddleware);

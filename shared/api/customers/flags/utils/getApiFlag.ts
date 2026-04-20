@@ -36,12 +36,13 @@ export const getApiFlag = ({
 		: undefined;
 
 	const primaryCustomerEntitlement = cusEnts[0];
+	const apiId =
+		primaryCustomerEntitlement.external_id ?? primaryCustomerEntitlement.id;
 
 	return {
 		data: {
 			object: "flag",
-			id:
-				primaryCustomerEntitlement.external_id ?? primaryCustomerEntitlement.id,
+			id: apiId,
 			plan_id: cusEntsToPlanId({ cusEnts }),
 			expires_at: primaryCustomerEntitlement.expires_at,
 			feature_id: feature.id,

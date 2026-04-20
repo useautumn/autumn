@@ -5,6 +5,7 @@ import {
 	type ResetCusEntParam,
 	resetCusEnts,
 } from "@/internal/balances/utils/sql/client.js";
+import { resetSubjectCache } from "../resetCustomerEntitlementsV2/resetSubjectCache.js";
 import { applyResetResults } from "./applyResetResults.js";
 import { executeResetCache } from "./executeResetCache.js";
 import { getCusEntsNeedingReset } from "./getCusEntsNeedingReset.js";
@@ -101,12 +102,13 @@ export const resetCustomerEntitlements = async ({
 		// Only needed when we actually wrote to DB — skipped means cache was
 		// already updated by the winning request.
 		if (Object.keys(applied).length > 0) {
-			// Build map of cusEntId -> old next_reset_at for the optimistic guard
 			const oldNextResetAts: Record<string, number> = {};
+			const customerEntitlementFeatureIds: Record<string, string> = {};
 			for (const cusEnt of cusEntsNeedingReset) {
 				if (cusEnt.next_reset_at) {
 					oldNextResetAts[cusEnt.id] = cusEnt.next_reset_at;
 				}
+				customerEntitlementFeatureIds[cusEnt.id] = cusEnt.feature_id;
 			}
 
 			await executeResetCache({
@@ -115,6 +117,15 @@ export const resetCustomerEntitlements = async ({
 				resets,
 				oldNextResetAts,
 				clearingMap,
+			});
+
+			await resetSubjectCache({
+				ctx,
+				customerId,
+				resets,
+				oldNextResetAts,
+				clearingMap,
+				customerEntitlementFeatureIds,
 			});
 
 			logger.info(

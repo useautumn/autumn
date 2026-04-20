@@ -80,28 +80,22 @@ export function RefundInvoiceDialog({
 				toast.error("Please enter a valid refund amount");
 				return;
 			}
-			if (parsed > remainingRefundable) {
-				toast.error("Refund amount cannot exceed remaining refundable balance");
+			if (parsed > refundableAmount) {
+				toast.error("Refund amount cannot exceed the amount paid");
 				return;
 			}
 		}
 		refundMutation.mutate();
 	};
 
-	const fmt = ({ amount: amt }: { amount: number }) =>
-		formatAmount({
-			amount: amt,
-			currency: invoice.currency,
-			minFractionDigits: 2,
-			amountFormatOptions: { currencyDisplay: "narrowSymbol" },
-		});
-
-	const refundDisplay =
-		mode === "full"
-			? fmt({ amount: remainingRefundable })
-			: amount
-				? fmt({ amount: Number.parseFloat(amount) || 0 })
-				: fmt({ amount: 0 });
+	const formattedRefundable = formatAmount({
+		amount: refundableAmount,
+		currency: invoice.currency,
+		minFractionDigits: 2,
+		amountFormatOptions: {
+			currencyDisplay: "narrowSymbol",
+		},
+	});
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -109,8 +103,7 @@ export function RefundInvoiceDialog({
 				<DialogHeader>
 					<DialogTitle>Refund Invoice</DialogTitle>
 					<DialogDescription>
-						Amount paid: {fmt({ amount: refundableAmount })}{" "}
-						{invoice.currency.toUpperCase()}
+						Amount paid: {formattedRefundable} {invoice.currency.toUpperCase()}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -139,26 +132,13 @@ export function RefundInvoiceDialog({
 								type="number"
 								min="0.01"
 								step="0.01"
-								max={remainingRefundable}
+								max={refundableAmount}
 								placeholder="0.00"
 								value={amount}
 								onChange={(e) => setAmount(e.target.value)}
 							/>
 						</div>
 					)}
-
-					<div className="flex flex-col gap-1 border-t border-border/40 pt-3">
-						{alreadyRefunded > 0 && (
-							<div className="flex justify-between text-xs text-t3">
-								<span>Previously refunded</span>
-								<span>{fmt({ amount: alreadyRefunded })}</span>
-							</div>
-						)}
-						<div className="flex justify-between text-sm font-medium text-foreground">
-							<span>Refund amount</span>
-							<span>{refundDisplay}</span>
-						</div>
-					</div>
 				</div>
 
 				<DialogFooter>

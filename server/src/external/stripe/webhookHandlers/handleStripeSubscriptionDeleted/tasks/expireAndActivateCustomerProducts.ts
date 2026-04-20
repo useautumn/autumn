@@ -36,7 +36,13 @@ export const expireAndActivateCustomerProducts = async ({
 	);
 
 	const expiredCustomerProducts: FullCusProduct[] = [];
-	for (const customerProduct of customerProducts) {
+	// Iterate over a snapshot: `expireAndActivateWithTracking` may insert a
+	// default product, and `trackCustomerProductDeletion` below splices the
+	// paid scheduled product out. Both mutate `customerProducts` in place,
+	// which would otherwise invalidate the for-of cursor and cause elements to
+	// be skipped or re-iterated (see the add-on skip bug in the renewal
+	// handler).
+	for (const customerProduct of [...customerProducts]) {
 		// 1. If not on stripe subscription, skip
 		const onStripeSubscription = isCustomerProductOnStripeSubscription({
 			customerProduct,

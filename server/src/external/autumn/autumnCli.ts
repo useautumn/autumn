@@ -42,6 +42,7 @@ import {
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
+import { timeout } from "@tests/utils/genUtils";
 
 export default class AutumnError extends Error {
 	message: string;
@@ -527,6 +528,10 @@ export class AutumnInt {
 			},
 		) => {
 			const data = await this.patch(`/customers/${customerId}`, updates);
+
+			if (updates.billing_controls?.auto_topups) {
+				await timeout(2000);
+			}
 			return data;
 		},
 
