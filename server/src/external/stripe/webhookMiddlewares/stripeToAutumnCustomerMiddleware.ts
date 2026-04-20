@@ -1,5 +1,6 @@
 import { RELEVANT_STATUSES } from "@autumn/shared";
 import type { Context, Next } from "hono";
+import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { CusService } from "../../../internal/customers/CusService";
 import type {
 	StripeWebhookContext,
@@ -56,5 +57,17 @@ export const stripeToAutumnCustomerMiddleware = async (
 ) => {
 	const ctx = c.get("ctx") as StripeWebhookContext;
 	await getAutumnCustomerId({ ctx });
+
+	const customerId =
+		ctx.fullCustomer?.id || ctx.fullCustomer?.internal_id || undefined;
+
+	if (customerId) {
+		ctx.customerId = customerId;
+		ctx.rolloutSnapshot = computeRolloutSnapshot({
+			orgId: ctx.org.id,
+			customerId,
+		});
+	}
+
 	await next();
 };

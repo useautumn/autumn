@@ -7,11 +7,6 @@ import type {
 } from "@autumn/shared";
 import { SendMessageCommand } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
-import { isHatchetEnabled } from "@/external/hatchet/initHatchet.js";
-import {
-	type VerifyCacheInput,
-	verifyCacheConsistency,
-} from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { getSqsClient } from "./initSqs.js";
@@ -48,6 +43,18 @@ export interface Payloads {
 		timestamp: number;
 		cusEntIds: string[];
 		rolloverIds?: string[];
+		entityId?: string;
+	};
+	[JobName.SyncBalanceBatchV4]: {
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		region?: string;
+		timestamp: number;
+		cusEntIds: string[];
+		rolloverIds?: string[];
+		entityId?: string;
+		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 	};
 	[JobName.InsertEventBatch]: {
 		events: EventInsert[];
@@ -156,50 +163,4 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	}
 
 	throw new Error("No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL");
-};
-
-// Hatchet workflow payloads
-interface HatchetPayloads {
-	[JobName.VerifyCacheConsistency]: VerifyCacheInput;
-}
-
-const hatchetWorkflows = {
-	[JobName.VerifyCacheConsistency]: verifyCacheConsistency,
-};
-
-/**
- * Run a Hatchet workflow (optionally with a delay)
- * Silently skips if Hatchet is not configured
- */
-export const runHatchetWorkflow = async <T extends keyof HatchetPayloads>({
-	workflowName,
-	metadata,
-	payload,
-	delayMs,
-}: {
-	workflowName: T;
-	metadata?: Record<string, string>;
-	payload: HatchetPayloads[T];
-	/** Delay in milliseconds before the workflow runs */
-	delayMs?: number;
-}) => {
-	if (!isHatchetEnabled) return;
-
-	const workflow = hatchetWorkflows[workflowName];
-
-	if (!workflow) {
-		throw new Error(`No Hatchet workflow registered for: ${workflowName}`);
-	}
-
-	if (delayMs) {
-		// workflow.delay() takes duration in seconds
-		const delaySeconds = Math.floor(delayMs / 1000);
-		await workflow.delay(delaySeconds, payload, {
-			additionalMetadata: {
-				...(metadata ?? {}),
-			},
-		});
-	} else {
-		await workflow.run(payload);
-	}
 };

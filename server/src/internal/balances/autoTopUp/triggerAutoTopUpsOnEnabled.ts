@@ -1,25 +1,26 @@
-import type { Customer, FullCustomer } from "@autumn/shared";
+import type { AutoTopup, Customer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { triggerAutoTopUp } from "./triggerAutoTopUp";
+import { enqueueAutoTopupWithBurstSuppression } from "./helpers/enqueueAutoTopupWithBurstSuppression";
 
 /** Triggers an auto top-up for the first feature that transitions to enabled. */
 export const triggerAutoTopUpsOnEnabled = async ({
 	ctx,
 	oldCustomer,
-	fullCustomer,
+	newAutoTopups,
+	customerId,
 }: {
 	ctx: AutumnContext;
 	oldCustomer: Customer;
-	fullCustomer: FullCustomer;
+	newAutoTopups: AutoTopup[];
+	customerId: string;
 }) => {
-	for (const autoTopup of fullCustomer.auto_topups || []) {
+	for (const autoTopup of newAutoTopups) {
 		if (!autoTopup.enabled) continue;
 
 		const originalAutoTopup = oldCustomer.auto_topups?.find(
 			(at) => at.feature_id === autoTopup.feature_id,
 		);
 
-		// Only trigger if it didn't exist previously or was disabled
 		if (originalAutoTopup?.enabled) continue;
 
 		const feature = ctx.features.find((f) => f.id === autoTopup.feature_id);
@@ -30,11 +31,10 @@ export const triggerAutoTopUpsOnEnabled = async ({
 			continue;
 		}
 
-		// Trigger for the first transitioning feature only, to avoid billing lock contention
-		await triggerAutoTopUp({
+		await enqueueAutoTopupWithBurstSuppression({
 			ctx,
-			newFullCus: fullCustomer,
-			feature,
+			customerId,
+			featureId: feature.id,
 		});
 		break;
 	}

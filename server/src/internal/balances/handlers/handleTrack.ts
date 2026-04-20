@@ -6,7 +6,7 @@ import {
 } from "@autumn/shared";
 import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { runTrackV2 } from "@/internal/balances/track/runTrackV2.js";
+import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 import { queueTrack } from "@/internal/balances/track/utils/queueTrack.js";
 
@@ -32,6 +32,12 @@ export const handleTrack = createRoute({
 			}
 		}
 
-		return c.json(await runTrackV2({ ctx, body, featureDeductions }));
+		return c.json(
+			await runTrackWithRollout({
+				ctx,
+				body,
+				featureDeductions,
+			}),
+		);
 	},
 });

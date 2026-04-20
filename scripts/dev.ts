@@ -9,9 +9,15 @@ const worktreeNum =
 		: 1;
 const portOffset = (worktreeNum - 1) * 100;
 
-const VITE_PORT = 3000 + portOffset;
-const SERVER_PORT = 8080 + portOffset;
-const CHECKOUT_PORT = 3001 + portOffset;
+const VITE_PORT = process.env.VITE_PORT
+	? Number.parseInt(process.env.VITE_PORT, 10)
+	: 3000 + portOffset;
+const SERVER_PORT = process.env.SERVER_PORT
+	? Number.parseInt(process.env.SERVER_PORT, 10)
+	: 8080 + portOffset;
+const CHECKOUT_PORT = process.env.CHECKOUT_PORT
+	? Number.parseInt(process.env.CHECKOUT_PORT, 10)
+	: 3001 + portOffset;
 const skipWorkers = worktreeNum > 1;
 const isProductionMode = process.argv.includes("--production");
 

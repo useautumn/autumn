@@ -2,6 +2,7 @@
 export enum RedisDeductionErrorCode {
 	CustomerNotFound = "CUSTOMER_NOT_FOUND",
 	NoCustomerProducts = "NO_CUSTOMER_PRODUCTS",
+	SubjectBalanceNotFound = "SUBJECT_BALANCE_NOT_FOUND",
 	InsufficientBalance = "INSUFFICIENT_BALANCE",
 	PaidAllocated = "PAID_ALLOCATED",
 	SkipCache = "SKIP_CACHE",
@@ -12,6 +13,7 @@ export enum RedisDeductionErrorCode {
 export const FALLBACK_ERROR_CODES = [
 	RedisDeductionErrorCode.CustomerNotFound,
 	RedisDeductionErrorCode.NoCustomerProducts,
+	RedisDeductionErrorCode.SubjectBalanceNotFound,
 	RedisDeductionErrorCode.PaidAllocated,
 	RedisDeductionErrorCode.SkipCache,
 ] as const;

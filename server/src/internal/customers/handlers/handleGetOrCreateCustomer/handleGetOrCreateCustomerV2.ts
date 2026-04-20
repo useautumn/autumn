@@ -4,8 +4,8 @@ import {
 	CustomerDataSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { getApiCustomer } from "../../cusUtils/apiCusUtils/getApiCustomer.js";
-import { getOrCreateCachedFullCustomer } from "../../cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
+import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
 export const handleGetOrCreateCustomerV2 = createRoute({
 	resource: AffectedResource.Customer,
@@ -19,7 +19,7 @@ export const handleGetOrCreateCustomerV2 = createRoute({
 		const customerData = CustomerDataSchema.parse(createCusParams);
 		const customerId = createCusParams.customer_id;
 
-		const fullCustomer = await getOrCreateCachedFullCustomer({
+		const apiCustomer = await getOrCreateApiCustomerByRollout({
 			ctx,
 			params: {
 				customer_id: customerId,
@@ -28,16 +28,13 @@ export const handleGetOrCreateCustomerV2 = createRoute({
 				entity_data: createCusParams.entity_data,
 			},
 			source: "handleGetOrCreateCustomerV2",
-		});
-
-		const apiCustomer = await getApiCustomer({
-			ctx,
-			fullCustomer,
 			withAutumnId: createCusParams.with_autumn_id,
 		});
 
 		const duration = Date.now() - start;
-		ctx.logger.debug(`[post-customer] duration: ${duration}ms`);
+		ctx.logger.debug(
+			`[post-customer] path=${isFullSubjectRolloutEnabled({ ctx }) ? "v2" : "v1"} duration: ${duration}ms`,
+		);
 
 		return c.json(apiCustomer);
 	},

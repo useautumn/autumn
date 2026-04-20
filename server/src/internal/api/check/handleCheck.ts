@@ -8,12 +8,10 @@ import {
 	type ParsedCheckParams,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { runCheckWithRollout } from "@/internal/balances/check/index.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
-import { getCheckDataOrFallbackResponse } from "./checkUtils/getCheckDataOrFallbackResponse.js";
-import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 import { getCheckPreview } from "./getCheckPreview.js";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
-import { runCheckWithTrack } from "./runCheckWithTrack.js";
 
 const DEFAULT_REQUIRED_BALANCE = 1;
 export const handleCheck = createRoute({
@@ -37,7 +35,6 @@ export const handleCheck = createRoute({
 			entity_id,
 			required_quantity,
 			required_balance,
-			send_event,
 			with_preview,
 		} = body;
 
@@ -53,31 +50,16 @@ export const handleCheck = createRoute({
 		const requiredBalance =
 			required_balance ?? required_quantity ?? DEFAULT_REQUIRED_BALANCE;
 
-		const checkDataResult = await getCheckDataOrFallbackResponse({
+		const result = await runCheckWithRollout({
 			ctx,
 			body,
 			requiredBalance,
 		});
-
-		const { checkData, fallbackResponse } = checkDataResult;
-		if (!checkData) {
-			return c.json(fallbackResponse);
+		if (!result.checkData) {
+			return c.json(result.response);
 		}
 
-		let response: CheckResponseV3;
-		if (send_event || body.lock?.enabled) {
-			response = await runCheckWithTrack({
-				ctx,
-				body,
-				requiredBalance,
-				checkData,
-			});
-		} else {
-			response = await getV2CheckResponse({
-				checkData,
-				requiredBalance,
-			});
-		}
+		const { checkData, response } = result;
 
 		const preview = with_preview
 			? await getCheckPreview({
@@ -89,6 +71,7 @@ export const handleCheck = createRoute({
 				})
 			: undefined;
 
+		// Version changes will transform V3 -> V2 -> V1 -> V0 based on target API version
 		const transformedResponse = applyResponseVersionChanges<CheckResponseV3>({
 			input: response,
 			targetVersion: ctx.apiVersion,
@@ -104,6 +87,7 @@ export const handleCheck = createRoute({
 		return c.json({
 			...transformedResponse,
 			preview,
+			// lock_id: body.lock?.lock_id ?? undefined,
 		});
 	},
 });

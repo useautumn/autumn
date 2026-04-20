@@ -3,6 +3,7 @@ import { addAppContextToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { DrizzleCli } from "../db/initDrizzle.js";
 import type { Logger } from "../external/logtail/logtailUtils.js";
 import type { AutumnContext } from "../honoUtils/HonoEnv.js";
+import { computeRolloutSnapshot } from "../internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "../internal/orgs/OrgService.js";
 import { generateId } from "../utils/genUtils.js";
 
@@ -50,6 +51,11 @@ export const createWorkerContext = async ({
 		},
 	});
 
+	const rolloutSnapshot = computeRolloutSnapshot({
+		orgId: org.id,
+		customerId,
+	});
+
 	const ctx: AutumnContext = {
 		org,
 		env,
@@ -68,6 +74,7 @@ export const createWorkerContext = async ({
 		expand: [],
 		skipCache: true,
 		extraLogs: {},
+		rolloutSnapshot,
 	};
 
 	return ctx;

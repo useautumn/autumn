@@ -19,6 +19,10 @@ import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsCo
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
+import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
+import { handleGetRollouts } from "./rollouts/handleGetRollouts";
+import { handleUpdateRollout } from "./rollouts/handleUpdateRollout";
+import { handleUpdateRolloutOrg } from "./rollouts/handleUpdateRolloutOrg";
 
 export const honoAdminRouter = new Hono<HonoEnv>();
 
@@ -67,3 +71,14 @@ honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
 honoAdminRouter.get("/oauth-clients", ...handleListOAuthClients);
 honoAdminRouter.post("/invoice-line-items", ...handleGetInvoiceLineItems);
+
+honoAdminRouter.get("/rollouts", ...handleGetRollouts);
+honoAdminRouter.put("/rollouts/:rollout_id", ...handleUpdateRollout);
+honoAdminRouter.put(
+	"/rollouts/:rollout_id/orgs/:org_id",
+	...handleUpdateRolloutOrg,
+);
+honoAdminRouter.delete(
+	"/rollouts/:rollout_id/orgs/:org_id",
+	...handleDeleteRolloutOrg,
+);

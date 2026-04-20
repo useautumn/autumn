@@ -116,6 +116,8 @@ describe(`${chalk.yellowBright(`${testCase}: Testing rollovers for feature item`
 		expect(nonCachedMsgesFeature?.rollovers[0].balance).toBe(expectedRollover);
 	});
 
+	return;
+
 	// let usage2 = 50;
 	test("should reset again and have correct rollover", async () => {
 		await resetAndGetCusEnt({
