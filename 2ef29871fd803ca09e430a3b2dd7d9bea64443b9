@@ -1,0 +1,99 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "2ef29871fd803ca09e430a3b2dd7d9bea64443b9",
+  "prompts": {
+    "0d353de43bc346ce": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2540b9fa1ffen94qSx1tPxk1iC",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 169,
+      "overriden_lines": 0
+    },
+    "205722b00b3955fe": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_254051b60ffe2l2ZgCijb0MaGz",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 34,
+      "overriden_lines": 0
+    },
+    "47dbc230ae7a7b24": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2540b47afffe1MWy2DJYYP8fI9",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 89,
+      "overriden_lines": 0
+    },
+    "7b7a999388e300be": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_254d02390ffeZ9NGJ0weV7M8eX",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 1085,
+      "overriden_lines": 0
+    },
+    "80f60c27113b7477": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2540ad166ffeNSS8bo1hAOfRXa",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    },
+    "81f83dc3b3610b5b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_254046e11ffelhItjPrrZMGtH4",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    },
+    "9f9ed1fae4ceceb6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_25404c35bffej3Jsf8x0i2JNNP",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 196,
+      "overriden_lines": 0
+    }
+  }
+}
