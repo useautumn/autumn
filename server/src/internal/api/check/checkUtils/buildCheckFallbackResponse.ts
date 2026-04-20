@@ -1,12 +1,14 @@
 import {
+	AffectedResource,
+	applyResponseVersionChanges,
 	type CheckParams,
+	type CheckResponseV3,
 	CheckResponseV3Schema,
 	type ParsedCheckParams,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { transformCheckResponse } from "./transformCheckResponse.js";
+import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 
-export const getRetryableCheckFallbackResponse = ({
+export const buildCheckFallbackResponse = ({
 	ctx,
 	body,
 	requiredBalance,
@@ -29,11 +31,15 @@ export const getRetryableCheckFallbackResponse = ({
 	);
 
 	return featureToUse
-		? transformCheckResponse({
+		? applyResponseVersionChanges<CheckResponseV3>({
+				input: fallbackResponse,
+				targetVersion: ctx.apiVersion,
+				resource: AffectedResource.Check,
+				legacyData: {
+					noCusEnts: false,
+					featureToUse,
+				},
 				ctx,
-				response: fallbackResponse,
-				featureToUse,
-				noCusEnts: false,
 			})
 		: fallbackResponse;
 };
