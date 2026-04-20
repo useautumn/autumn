@@ -7,7 +7,16 @@ import {
 	trace,
 } from "@opentelemetry/api";
 import type { Command, Redis } from "ioredis";
-import { otelConfig } from "./otelConfig.js";
+import { otelConfig } from "@/utils/otel/otelConfig.js";
+import { emitRedisSlowLog } from "./emitRedisSlowLog.js";
+import {
+	parseRedisKeyContext,
+	type RedisKeyContext,
+} from "./parseRedisKeyContext.js";
+import {
+	type ResolvedThresholds,
+	resolveThresholds,
+} from "./redisSlowlogConfig.js";
 
 const TRACER_NAME = "autumn.redis";
 const INSTRUMENTED = new WeakSet<object>();
@@ -27,14 +36,61 @@ const SKIP_COMMANDS = new Set([
 	"disconnect",
 	"cluster",
 	"command",
+	// SCRIPT LOAD / FLUSH / EXISTS fires rarely on connection bootstrap and
+	// can spike into 100s of ms — noise that swamps the slowlog.
+	"script",
 	// Custom Lua commands are traced via defineCommand wrapper,
 	// so skip the underlying evalsha/eval to avoid double-spanning.
 	"evalsha",
 	"eval",
 ]);
 
+type SpanContext = {
+	span: Span;
+	startedAt: number;
+	thresholds: ResolvedThresholds;
+	keyContext: RedisKeyContext;
+	operation: string;
+	region?: string;
+	key?: string;
+};
+
 /** Ends a span safely — never throws. */
-const finalizeSpan = ({ span, error }: { span: Span; error?: unknown }) => {
+const finalizeSpan = ({
+	spanCtx,
+	error,
+}: {
+	spanCtx: SpanContext;
+	error?: unknown;
+}) => {
+	const { span, startedAt, thresholds, keyContext, operation, region, key } =
+		spanCtx;
+	try {
+		const durationMs = performance.now() - startedAt;
+		span.setAttribute("db.redis.duration_ms", durationMs);
+
+		if (durationMs > thresholds.slowMs) {
+			span.setAttribute("db.redis.slow", true);
+			span.setAttribute(
+				"db.redis.breach_ratio",
+				thresholds.slowMs > 0 ? durationMs / thresholds.slowMs : 0,
+			);
+		}
+
+		if (durationMs > thresholds.severeMs) {
+			emitRedisSlowLog({
+				operation,
+				durationMs,
+				thresholds,
+				keyContext,
+				region,
+				key,
+			});
+		}
+	} catch {
+		// swallow — never mask application results
+	}
+
 	try {
 		if (error) {
 			span.setStatus({ code: SpanStatusCode.ERROR });
@@ -54,16 +110,63 @@ const finalizeSpan = ({ span, error }: { span: Span; error?: unknown }) => {
 
 /**
  * Extracts the first key argument from a Redis command's args.
- * For most commands, args[0] is the key. Returns undefined for
+ * For most commands, args[0] is the key. Custom Lua commands registered
+ * without `numberOfKeys` (e.g. `setCachedFullSubject`) pass the key count
+ * as args[0] and the first real key at args[1]. Returns undefined for
  * keyless commands or evalsha (where args[0] is a SHA hash).
  */
-const extractKey = ({ args }: { args: unknown[] }): string | undefined => {
+export const extractKey = ({
+	args,
+}: {
+	args: unknown[];
+}): string | undefined => {
 	if (args.length === 0) return undefined;
 
-	const firstArg = args[0];
-	if (typeof firstArg === "string") return firstArg;
-	if (Buffer.isBuffer(firstArg)) return firstArg.toString("utf8");
+	const candidate = typeof args[0] === "number" ? args[1] : args[0];
+	if (typeof candidate === "string") return candidate;
+	if (Buffer.isBuffer(candidate)) return candidate.toString("utf8");
 	return undefined;
+};
+
+/** Truncates a key for `db.statement` (Axiom trace attribute size limit). */
+const truncateKey = (key: string): string =>
+	key.length > 200 ? `${key.slice(0, 200)}...` : key;
+
+/**
+ * Applies SLO threshold + key-context attributes to a fresh span.
+ * Isolated in a try/catch so partial-enrichment failures don't prevent
+ * the command from running.
+ */
+const enrichSpan = ({
+	span,
+	operation,
+	region,
+	key,
+}: {
+	span: Span;
+	operation: string;
+	region?: string;
+	key?: string;
+}): {
+	thresholds: ResolvedThresholds;
+	keyContext: RedisKeyContext;
+} => {
+	const thresholds = resolveThresholds({ operation, redisRegion: region });
+	span.setAttribute("db.redis.slow_ms", thresholds.slowMs);
+	span.setAttribute("db.redis.base_slow_ms", thresholds.baseSlowMs);
+	span.setAttribute("db.redis.region_baseline_ms", thresholds.regionBaselineMs);
+	span.setAttribute("db.redis.severe_ms", thresholds.severeMs);
+
+	const keyContext = parseRedisKeyContext({ key });
+	if (keyContext.orgId) span.setAttribute("db.redis.org_id", keyContext.orgId);
+	if (keyContext.customerId)
+		span.setAttribute("db.redis.customer_id", keyContext.customerId);
+	if (keyContext.entityId)
+		span.setAttribute("db.redis.entity_id", keyContext.entityId);
+	if (keyContext.generation)
+		span.setAttribute("db.redis.cache_gen", keyContext.generation);
+
+	return { thresholds, keyContext };
 };
 
 /** Wraps a custom command method created by defineCommand with a traced version. */
@@ -86,19 +189,39 @@ const wrapCustomCommand = ({
 
 	// biome-ignore lint: dynamic property assignment for custom redis commands
 	(redis as any)[name] = function (this: Redis, ...args: unknown[]) {
-		let span: Span;
+		let spanCtx: SpanContext;
 		try {
-			span = tracer.startSpan(`redis.${name}`, {
+			const span = tracer.startSpan(`redis.${name}`, {
 				kind: SpanKind.CLIENT,
 			});
 			span.setAttribute("db.system", "redis");
 			span.setAttribute("db.operation", name);
 			if (region) span.setAttribute("db.redis.region", region);
+
+			const key = extractKey({ args });
+			if (key) span.setAttribute("db.statement", truncateKey(key));
+
+			const { thresholds, keyContext } = enrichSpan({
+				span,
+				operation: name,
+				region,
+				key,
+			});
+
+			spanCtx = {
+				span,
+				startedAt: performance.now(),
+				thresholds,
+				keyContext,
+				operation: name,
+				region,
+				key,
+			};
 		} catch {
 			return original.apply(this, args);
 		}
 
-		const activeContext = trace.setSpan(context.active(), span);
+		const activeContext = trace.setSpan(context.active(), spanCtx.span);
 
 		try {
 			const result = context.with(activeContext, () =>
@@ -108,20 +231,20 @@ const wrapCustomCommand = ({
 			if (result && typeof (result as Promise<unknown>).then === "function") {
 				return (result as Promise<unknown>).then(
 					(val) => {
-						finalizeSpan({ span });
+						finalizeSpan({ spanCtx });
 						return val;
 					},
 					(err) => {
-						finalizeSpan({ span, error: err });
+						finalizeSpan({ spanCtx, error: err });
 						throw err;
 					},
 				);
 			}
 
-			finalizeSpan({ span });
+			finalizeSpan({ spanCtx });
 			return result;
 		} catch (err) {
-			finalizeSpan({ span, error: err });
+			finalizeSpan({ spanCtx, error: err });
 			throw err;
 		}
 	};
@@ -167,32 +290,39 @@ export const instrumentRedis = ({
 			return originalSendCommand.call(this, command, stream);
 		}
 
-		let span: Span;
+		let spanCtx: SpanContext;
 		try {
-			span = tracer.startSpan(`redis.${commandName}`, {
+			const span = tracer.startSpan(`redis.${commandName}`, {
 				kind: SpanKind.CLIENT,
 			});
 			span.setAttribute("db.system", "redis");
 			span.setAttribute("db.operation", commandName.toUpperCase());
+			if (region) span.setAttribute("db.redis.region", region);
 
-			if (region) {
-				span.setAttribute("db.redis.region", region);
-			}
+			const key = extractKey({ args: command?.args ?? [] });
+			if (key) span.setAttribute("db.statement", truncateKey(key));
 
-			const key = extractKey({
-				args: command?.args ?? [],
+			const { thresholds, keyContext } = enrichSpan({
+				span,
+				operation: commandName,
+				region,
+				key,
 			});
-			if (key) {
-				span.setAttribute(
-					"db.statement",
-					key.length > 200 ? `${key.slice(0, 200)}...` : key,
-				);
-			}
+
+			spanCtx = {
+				span,
+				startedAt: performance.now(),
+				thresholds,
+				keyContext,
+				operation: commandName,
+				region,
+				key,
+			};
 		} catch {
 			return originalSendCommand.call(this, command, stream);
 		}
 
-		const activeContext = trace.setSpan(context.active(), span);
+		const activeContext = trace.setSpan(context.active(), spanCtx.span);
 
 		try {
 			const result = context.with(activeContext, () =>
@@ -202,20 +332,20 @@ export const instrumentRedis = ({
 			if (result && typeof (result as Promise<unknown>).then === "function") {
 				return (result as Promise<unknown>).then(
 					(val) => {
-						finalizeSpan({ span });
+						finalizeSpan({ spanCtx });
 						return val;
 					},
 					(err) => {
-						finalizeSpan({ span, error: err });
+						finalizeSpan({ spanCtx, error: err });
 						throw err;
 					},
 				);
 			}
 
-			finalizeSpan({ span });
+			finalizeSpan({ spanCtx });
 			return result;
 		} catch (err) {
-			finalizeSpan({ span, error: err });
+			finalizeSpan({ spanCtx, error: err });
 			throw err;
 		}
 	};

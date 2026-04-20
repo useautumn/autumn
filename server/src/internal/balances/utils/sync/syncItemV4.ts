@@ -7,7 +7,7 @@ import {
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
 import { refreshEntityAggregateCache } from "./refreshEntityAggregateCache.js";
 
@@ -49,7 +49,7 @@ const handleSyncPostgresError = async ({
 		`[SYNC V4] (${customerId}) Sync conflict detected: ${code}, cus_ent: ${cusEntId}. Invalidating cache.`,
 	);
 
-	await invalidateCachedFullSubject({
+	await deleteCachedFullCustomer({
 		ctx,
 		customerId,
 		entityId,

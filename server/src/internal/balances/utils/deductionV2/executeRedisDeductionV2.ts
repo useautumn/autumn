@@ -4,7 +4,8 @@ import {
 	fullSubjectToFullCustomer,
 } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { currentRegion, redis } from "@/external/redis/initRedis.js";
+import { currentRegion } from "@/external/redis/initRedis.js";
+import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
@@ -150,7 +151,8 @@ export const executeRedisDeductionV2 = async ({
 			lock_receipt_key: lockReceiptKey ?? null,
 		};
 
-		const targetRedis = redisInstance ?? redis;
+		const targetRedis = redisInstance ?? redisV2;
+
 		const result = await tryRedisWrite(
 			() =>
 				targetRedis.deductFromSubjectBalances(
