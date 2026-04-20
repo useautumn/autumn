@@ -18,6 +18,7 @@ import {
 
 // Edge config modules self-register on import
 import "./internal/misc/requestBlocks/requestBlockStore.js";
+import "./internal/misc/rollouts/rolloutConfigStore.js";
 import "./internal/misc/featureFlags/featureFlagStore.js";
 import "./internal/misc/customerBlocks/customerBlockStore.js";
 import "./internal/misc/edgeConfig/orgLimitsStore.js";
@@ -31,59 +32,50 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
 
-const init = async () => {
-	console.time("init:create-hono-app");
+const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	const app = createHonoApp();
-	console.timeEnd("init:create-hono-app");
 
-	console.time("init:pg-health-monitor");
 	initPgHealthMonitor({ client: clientCritical });
-	console.timeEnd("init:pg-health-monitor");
 
-	console.time("init:redis-warmup");
-	await Promise.all([warmupRegionalRedis()]);
-	console.timeEnd("init:redis-warmup");
+	await warmupRegionalRedis();
 	await startAllEdgeConfigPolling({ logger });
 
 	const PORT = process.env.SERVER_PORT
 		? Number.parseInt(process.env.SERVER_PORT)
 		: 8080;
 
-	console.time("init:setup-server");
 	const requestListener = getRequestListener(app.fetch);
 	const server = http.createServer(requestListener);
 
 	server.keepAliveTimeout = 120000;
 	server.headersTimeout = 120000;
-	console.timeEnd("init:setup-server");
 
-	console.time("init:server-listen");
-	server.listen(PORT, "0.0.0.0", () => {
-		console.timeEnd("init:server-listen");
-		console.log(`Server running on port ${PORT}`);
-		startMemoryMonitor("server", 60_000);
+	await new Promise<void>((resolve) => {
+		server.listen(PORT, "0.0.0.0", () => {
+			const startupDurationMs = Date.now() - startupStartedAt;
+			console.log(
+				`Server running on port ${PORT} (${startupDurationMs}ms startup)`,
+			);
+			startMemoryMonitor("server", 60_000);
+			resolve();
+		});
 	});
 };
 
 if (process.env.NODE_ENV === "development") {
-	console.time("init:dev-total");
-	init();
+	await init({ startupStartedAt: Date.now() });
 	registerShutdownHandlers();
-	console.timeEnd("init:dev-total");
 } else {
 	const numCPUs = os.cpus().length;
 
 	if (cluster.isPrimary) {
-		console.time("init:master-start");
 		console.log(`Master ${process.pid} is running`);
 		console.log("Number of CPUs", numCPUs);
 
 		const numWorkers = 3;
 
 		for (let i = 0; i < numWorkers; i++) {
-			console.time(`init:worker-fork-${i}`);
 			cluster.fork();
-			console.timeEnd(`init:worker-fork-${i}`);
 		}
 
 		cluster.on("exit", (worker, _code, _signal) => {
@@ -92,12 +84,9 @@ if (process.env.NODE_ENV === "development") {
 		});
 
 		registerShutdownHandlers();
-		console.timeEnd("init:master-start");
 	} else {
-		console.time(`init:worker-${process.pid}-total`);
-		init();
+		await init({ startupStartedAt: Date.now() });
 		registerShutdownHandlers();
-		console.timeEnd(`init:worker-${process.pid}-total`);
 	}
 }
 

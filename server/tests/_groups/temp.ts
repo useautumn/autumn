@@ -2,7 +2,7 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Create schedule unit tests",
+	description: "Failed tests to triage and fix",
 	tier: "domain",
 	paths: [
 		"integration/billing/update-subscription/free-trial/update-paid-trials.test.ts",

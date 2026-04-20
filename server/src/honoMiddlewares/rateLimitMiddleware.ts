@@ -31,7 +31,7 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		}
 
 		// 2. Get rate limit key based on type
-		const rateLimitKey = await getRateLimitKey({ c, rateLimitType });
+		const rateLimitKey = getRateLimitKey({ c, rateLimitType });
 
 		// 3. Store key in context for keyGenerator to access
 		setRateLimitKeyInContext(c as Context, rateLimitKey);

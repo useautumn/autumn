@@ -94,3 +94,9 @@ export const customers = pgTable(
 ).enableRLS();
 
 collatePgColumn(customers.internal_id, "C");
+
+// CREATE INDEX idx_customers_org_env_internal_id
+// ON customers (org_id, env, internal_id DESC);
+
+export type DbCustomer = typeof customers.$inferSelect;
+export type InsertDbCustomer = typeof customers.$inferInsert;

@@ -1,6 +1,7 @@
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type {
 	LogAppContext,
+	LogRedisData,
 	LogRequestContext,
 	LogStripeEventContext,
 	LogWorkflowContext,
@@ -44,6 +45,16 @@ export const addWorkflowToLogs = ({
 	workflowContext: LogWorkflowContext;
 }): Logger => {
 	return logger.child({ context: { workflow: workflowContext } });
+};
+
+export const addRedisToLogs = ({
+	logger,
+	redisData,
+}: {
+	logger: Logger;
+	redisData: LogRedisData;
+}): Logger => {
+	return logger.child({ context: { data: redisData } });
 };
 
 export const addExtrasToLogs = ({

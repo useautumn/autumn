@@ -1,6 +1,7 @@
 import type { InsertCustomerEntitlement } from "@autumn/shared";
-import type { RepoContext } from "@/db/repoContext.js";
 import { redis } from "@/external/redis/initRedis.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { updateSubjectBalanceCache } from "@/internal/customers/cusProducts/cusEnts/actions/cache/updateSubjectBalanceCache.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { CusEntService } from "../CusEntitlementService.js";
@@ -14,13 +15,15 @@ export const updateCusEntDbAndCache = async ({
 	cusEntId,
 	updates,
 	incrementCacheVersion = false,
+	featureId,
 }: {
-	ctx: RepoContext;
+	ctx: AutumnContext;
 	customerId: string;
 	cusEntId: string;
 	updates: Partial<InsertCustomerEntitlement>;
 	incrementCacheVersion?: boolean;
-}) => {
+	featureId: string;
+}): Promise<void> => {
 	await CusEntService.update({
 		ctx,
 		id: cusEntId,
@@ -51,10 +54,25 @@ export const updateCusEntDbAndCache = async ({
 		},
 	];
 
-	await tryRedisWrite(() =>
-		redis.updateCustomerEntitlements(
-			cacheKey,
-			JSON.stringify({ updates: cacheUpdates }),
+	await Promise.all([
+		tryRedisWrite(() =>
+			redis.updateCustomerEntitlements(
+				cacheKey,
+				JSON.stringify({ updates: cacheUpdates }),
+			),
 		),
-	);
+		updateSubjectBalanceCache({
+			ctx,
+			customerId,
+			featureId,
+			customerEntitlementId: cusEntId,
+			updates: {
+				balance: updates.balance,
+				additional_balance: updates.additional_balance,
+				adjustment: updates.adjustment,
+				entities: updates.entities,
+				next_reset_at: updates.next_reset_at,
+			},
+		}),
+	]);
 };

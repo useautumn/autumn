@@ -30,6 +30,7 @@ export const updateCustomerEntitlements = async ({
 			`updating customer entitlement ${customerEntitlement.id} ${balanceChange ? `+${balanceChange}` : updates ? JSON.stringify(updates) : "none"}`,
 		);
 
+		const featureId = customerEntitlement.entitlement.feature.id;
 		// 1. Handle field-level updates (e.g. next_reset_at, adjustment, entities)
 		if (updates) {
 			await customerEntitlementActions.updateDbAndCache({
@@ -38,6 +39,7 @@ export const updateCustomerEntitlements = async ({
 				cusEntId: customerEntitlement.id,
 				updates,
 				incrementCacheVersion: true,
+				featureId,
 			});
 			continue;
 		}
@@ -49,6 +51,7 @@ export const updateCustomerEntitlements = async ({
 				customerId,
 				cusEntId: customerEntitlement.id,
 				delta: balanceChange,
+				featureId,
 			});
 		}
 
