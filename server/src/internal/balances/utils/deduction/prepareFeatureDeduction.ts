@@ -8,7 +8,6 @@ import {
 	getMaxOverage,
 	getRelevantFeatures,
 	isAllocatedCustomerEntitlement,
-	isEntityCusEnt,
 	isFreeCustomerEntitlement,
 	notNullish,
 	orgToInStatuses,
@@ -54,7 +53,7 @@ export const prepareFeatureDeduction = ({
 			});
 
 	// Get customer entitlements for these features (includes both product and loose entitlements)
-	let cusEnts = fullCustomerToCustomerEntitlements({
+	const cusEnts = fullCustomerToCustomerEntitlements({
 		fullCustomer,
 		featureIds: relevantFeatures.map((f) => f.id),
 		reverseOrder: org.config?.reverse_deduction_order,
@@ -62,10 +61,6 @@ export const prepareFeatureDeduction = ({
 		inStatuses: orgToInStatuses({ org }),
 		customerEntitlementFilters,
 	});
-
-	if (fullCustomer.entity?.id && fullCustomer.config?.disable_pooled_balance) {
-		cusEnts = cusEnts.filter((ce) => isEntityCusEnt({ cusEnt: ce }));
-	}
 
 	// Check if ANY relevant feature is unlimited
 	const unlimitedFeatureIds: string[] = [];

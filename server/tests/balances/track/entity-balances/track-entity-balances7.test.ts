@@ -14,12 +14,15 @@ import { setCustomerOverageAllowed } from "../../../integration/balances/utils/o
  * When customer.config.disable_pooled_balance is true and a deduction is scoped
  * to an entity, the entity must NOT fall back into the shared customer pool.
  *
- * Three deterministic branches:
- *   1. reject          — entity overflow throws InsufficientBalance; nothing deducted
+ * Four deterministic branches:
+ *   1. reject           — entity overflow throws InsufficientBalance; nothing deducted
  *   2. cap (no overage) — entity balance caps at 0; customer pool untouched
- *   3. cap + overage   — entity balance goes to -100; customer pool untouched
+ *   3. cap + overage    — entity balance goes to -100; customer pool untouched
+ *   4. entity-attached product — entity has its own plan via `attach(customer_id, entity_id)`;
+ *                                shared customer pool still blocked
  *
  * Shared product: customer pool = 5000, per-entity pool = 500.
+ * Entity-attached product: 500 messages granted directly to the entity.
  */
 
 /**
@@ -38,6 +41,28 @@ const makeFreeProd = () =>
 				entityFeatureId: TestFeature.Users,
 			}),
 		],
+	});
+
+/**
+ * Entity-level free plan. No `entityFeatureId` on the item — instead the plan
+ * is attached directly to an entity via `attach({ customer_id, entity_id })`,
+ * which scopes its balance to that entity through `customer_product.internal_entity_id`.
+ */
+const makeEntityLevelProd = () =>
+	products.base({
+		id: "entity-level",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+/**
+ * Customer-level shared pool product. No per-entity slice — a single 5000-message
+ * pool that any entity would normally fall back into if disable_pooled_balance
+ * weren't set.
+ */
+const makeCustomerPooledProd = () =>
+	products.base({
+		id: "customer-pooled",
+		items: [items.monthlyMessages({ includedUsage: 5000 })],
 	});
 
 // ──────────────────────────────────────────────────────────────────────
@@ -214,4 +239,86 @@ test.concurrent(`${chalk.yellowBright("track-entity-balances7-overage: entity go
 	// Customer pool untouched. Aggregated view = 5000 + (-100) = 4900.
 	const postCustomer = await autumnV1.customers.get(customerId);
 	expect(postCustomer.features[TestFeature.Messages].balance).toBe(4900);
+});
+
+// ──────────────────────────────────────────────────────────────────────
+// Branch 4: entity-attached product (Plan A attached directly to an entity)
+// Confirms the filter works for the *other* way an entity can have a balance:
+// not `X per Entity` (entityFeatureId), but a whole plan attached via
+// attach({ customer_id, entity_id }).
+// ──────────────────────────────────────────────────────────────────────
+test.concurrent(`${chalk.yellowBright("track-entity-balances7-entity-attached: entity-attached plan works with disable_pooled_balance")}`, async () => {
+	const customerId = "track-entity-balances7-entity-attached";
+	const entityId = "ent-1";
+	const pooledProd = makeCustomerPooledProd();
+	const entityProd = makeEntityLevelProd();
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.deleteCustomer({ customerId }),
+			s.customer({
+				testClock: false,
+				data: { config: { disable_pooled_balance: true } },
+			}),
+			s.products({ list: [pooledProd, entityProd] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [],
+	});
+
+	// Attach the pooled product at the customer level. This creates the shared
+	// 5000-message pool that should be blocked from the entity's view.
+	await autumnV1.attach({
+		customer_id: customerId,
+		product_id: pooledProd.id,
+	});
+
+	// Attach the entity-level plan directly to the entity. Grants the entity
+	// its own 500-message balance via customer_product.internal_entity_id.
+	await autumnV1.attach({
+		customer_id: customerId,
+		entity_id: entityId,
+		product_id: entityProd.id,
+	});
+
+	// Verify both attaches landed: customer aggregate view shows 5000 + 500 = 5500.
+	const customerAfterAttach = await autumnV1.customers.get(customerId);
+	expect(customerAfterAttach.features[TestFeature.Messages].balance).toBe(5500);
+
+	// Entity view must show ONLY the entity-attached plan's 500, NOT the 5500
+	// aggregate — the shared pool is blocked by disable_pooled_balance.
+	const preEntity = await autumnV1.entities.get(customerId, entityId);
+	expect(preEntity.features[TestFeature.Messages].balance).toBe(500);
+
+	const preCheck = await autumnV1.check({
+		customer_id: customerId,
+		entity_id: entityId,
+		feature_id: TestFeature.Messages,
+	});
+	expect(preCheck.balance).toBe(500);
+
+	// Track 300 on the entity. Should deduct from the entity's 500 only.
+	await autumnV1.track({
+		customer_id: customerId,
+		entity_id: entityId,
+		feature_id: TestFeature.Messages,
+		value: 300,
+		skip_event: true,
+	});
+
+	// Entity balance = 500 - 300 = 200.
+	const postEntity = await autumnV1.entities.get(customerId, entityId);
+	expect(postEntity.features[TestFeature.Messages].balance).toBe(200);
+
+	const postCheck = await autumnV1.check({
+		customer_id: customerId,
+		entity_id: entityId,
+		feature_id: TestFeature.Messages,
+	});
+	expect(postCheck.balance).toBe(200);
+
+	// Customer pool untouched: aggregated view = 5000 (pooled) + 200 (entity) = 5200.
+	const postCustomer = await autumnV1.customers.get(customerId);
+	expect(postCustomer.features[TestFeature.Messages].balance).toBe(5200);
 });
