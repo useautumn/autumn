@@ -100,7 +100,8 @@ export const BaseApiCustomerV5Schema = BaseApiCustomerSchema.extend({
 	config: z
 		.object({
 			disable_pooled_balance: z.boolean().optional().meta({
-				description: "Whether to block the shared pool for the customer.",
+				description:
+					"Whether to let entities fall back into the shared customer-level pool.",
 			}),
 		})
 		.optional()
