@@ -5,7 +5,6 @@ import {
 	TooltipContent,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
-import { useOrg } from "@/hooks/common/useOrg";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
@@ -44,8 +43,6 @@ export function AttachFooterV3() {
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 
-	const { org } = useOrg();
-	const ownStripeAccount = org?.stripe_connection !== "default";
 	const { isEndOfCycleSelected } = usePlanScheduleField();
 
 	const previewData = previewQuery.data;
@@ -55,11 +52,9 @@ export function AttachFooterV3() {
 
 	const invoiceDisabledReason = isEndOfCycleSelected
 		? "Invoices are not available for end of cycle changes as there is no immediate charge to invoice"
-		: !ownStripeAccount
-			? "Connect your own Stripe account to send invoices"
-			: isZeroAmount
-				? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
-				: null;
+		: isZeroAmount
+			? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
+			: null;
 
 	return (
 		<SheetFooter className="flex flex-col grid-cols-1 mt-0">
