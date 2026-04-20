@@ -64,7 +64,7 @@ const freeFeatureItem: ProductItem = {
 	interval: null,
 } as ProductItem;
 
-describe("getPlanPriceLabel", () => {
+describe("getSchedulePlanPriceProduct + getProductPriceDisplay", () => {
 	const getPlanPriceLabel = ({
 		product,
 		customItems,
