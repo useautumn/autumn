@@ -36,7 +36,7 @@ const plans = [
 		name: "ENTERPRISE",
 		price: "Custom",
 		description: "For compliance, scale, or custom requirements.",
-		features: ["Dedicated support", "Multi-region", "Compliance assistance"],
+		features: ["Dedicated support", "Forward deployed engineer", "Multi-region", "Compliance assistance"],
 		buttonText: "Book a call",
 		href: "https://cal.com/ayrod/a?user=ayrod",
 		isPro: false,

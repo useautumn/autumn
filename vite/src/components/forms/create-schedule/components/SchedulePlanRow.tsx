@@ -8,7 +8,6 @@ import {
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
-import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 
@@ -76,7 +75,6 @@ export function SchedulePlanRow({
 		isPhaseLocked,
 		setEditingPlan,
 	} = useCreateScheduleFormContext();
-	const { setSheet } = useSheetStore();
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
 	if (!plan) return null;
@@ -118,11 +116,6 @@ export function SchedulePlanRow({
 
 	const handleEditClick = () => {
 		setEditingPlan({ phaseIndex, planIndex });
-		setSheet({
-			type: "attach-product-v2",
-			itemId: plan.productId,
-			data: { scheduleEditMode: true },
-		});
 	};
 
 	if (!plan.productId) {

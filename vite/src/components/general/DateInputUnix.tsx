@@ -185,6 +185,9 @@ export const DateInputUnix = ({
 					selected={dateObj}
 					onSelect={handleDaySelect}
 					disabled={disablePastDates && minDay ? { before: minDay } : undefined}
+					captionLayout="dropdown-buttons"
+					fromYear={new Date().getFullYear()}
+					toYear={new Date().getFullYear() + 10}
 				/>
 				{withTime && (
 					<TimePicker
