@@ -6,8 +6,10 @@ import {
 	CheckParamsSchema,
 	CheckQuerySchema,
 	type CheckResponseV3,
+	CheckResponseV3Schema,
 	type ParsedCheckParams,
 } from "@autumn/shared";
+import { isRetryableDbError } from "@/db/dbUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
 import { getCheckData } from "./checkUtils/getCheckData.js";
@@ -54,11 +56,29 @@ export const handleCheck = createRoute({
 		const requiredBalance =
 			required_balance ?? required_quantity ?? DEFAULT_REQUIRED_BALANCE;
 
-		const checkData = await getCheckData({
-			ctx,
-			body: body as CheckParams & { feature_id: string },
-			requiredBalance,
-		});
+		let checkData: Awaited<ReturnType<typeof getCheckData>>;
+		try {
+			checkData = await getCheckData({
+				ctx,
+				body: body as CheckParams & { feature_id: string },
+				requiredBalance,
+			});
+		} catch (error) {
+			if (!isRetryableDbError({ error })) {
+				throw error;
+			}
+
+			const fallbackResponse = CheckResponseV3Schema.parse({
+				allowed: true,
+				customer_id: customer_id || "",
+				entity_id: entity_id,
+				required_balance: requiredBalance,
+				balance: null,
+				flag: null,
+			});
+
+			return c.json(fallbackResponse);
+		}
 
 		let response: CheckResponseV3;
 		if (send_event || body.lock?.enabled) {
