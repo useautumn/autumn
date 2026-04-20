@@ -38,7 +38,6 @@ const initCustomer = ({
 		spend_limits: customerData?.billing_controls?.spend_limits,
 		usage_alerts: customerData?.billing_controls?.usage_alerts,
 		overage_allowed: customerData?.billing_controls?.overage_allowed,
-		ignore_past_due: customerData?.config?.ignore_past_due ?? false,
 	};
 };
 
