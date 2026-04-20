@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 
 function BlogHeading({
@@ -45,13 +44,13 @@ export const mdxComponents = {
 			);
 		}
 		return (
-			<Link
+			<a
 				href={href || "#"}
 				className="text-[#9564ff] hover:text-[#b08aff] underline underline-offset-2 transition-colors"
 				{...props}
 			>
 				{children}
-			</Link>
+			</a>
 		);
 	},
 	pre: ({ children, ...props }: ComponentPropsWithoutRef<"pre">) => (
