@@ -1,4 +1,4 @@
-import { AppEnv, type SharedContext } from "../../index.js";
+import { AppEnv, type Feature, type SharedContext } from "../../index.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type { Organization } from "../../models/orgModels/orgTable.js";
 
@@ -44,4 +44,25 @@ export const orgDisableStripeWrites = ({ ctx }: { ctx: SharedContext }) => {
 
 export const orgPersistFreeOverage = ({ org }: { org: Organization }) => {
 	return org.config.persist_free_overage ?? false;
+};
+
+export const orgToFeaturesByOrgEnv = ({
+	org,
+	env,
+	features,
+}: {
+	org: Organization;
+	env: AppEnv;
+	features: Feature[];
+}) => {
+	return {
+		[`${org.id}:${env}`]: features,
+	};
+};
+export const shouldForwardCustomerMetadata = ({
+	org,
+}: {
+	org: Organization;
+}) => {
+	return org.config.forward_customer_metadata;
 };

@@ -1,5 +1,6 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
+import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
@@ -14,6 +15,8 @@ export type LockReceipt = {
 	region?: string | null;
 	items: MutationLogItem[];
 };
+
+export type LockReceiptSource = "redis_v1" | "redis_v2";
 
 const normalizeLockReceiptItems = ({
 	items,
@@ -50,9 +53,28 @@ export const fetchLockReceipt = async ({
 		lockKey: hashedKey,
 	});
 
-	const rawReceipt = await tryRedisRead(
-		() => redis.call("JSON.GET", lockReceiptKey, "$") as Promise<string | null>,
-	);
+	const [rawReceiptV1, rawReceiptV2] = await Promise.all([
+		tryRedisRead(
+			() =>
+				redis.call("JSON.GET", lockReceiptKey, "$") as Promise<string | null>,
+			redis,
+		),
+		tryRedisRead(
+			() =>
+				redisV2.call("JSON.GET", lockReceiptKey, "$") as Promise<string | null>,
+			redisV2,
+		),
+	]);
+
+	// if (rawReceiptV1 && rawReceiptV2) {
+	// 	throw new InternalError({
+	// 		message: `Lock receipt found in both Redis stores for ID: ${lockId}`,
+	// 		code: "lock_receipt_found_in_both_stores",
+	// 	});
+	// }
+
+	const rawReceipt = rawReceiptV2 ?? rawReceiptV1;
+	const source: LockReceiptSource = rawReceiptV2 ? "redis_v2" : "redis_v1";
 
 	if (!rawReceipt) {
 		throw new RecaseError({
@@ -91,5 +113,6 @@ export const fetchLockReceipt = async ({
 	return {
 		receipt,
 		lockReceiptKey,
+		source,
 	};
 };

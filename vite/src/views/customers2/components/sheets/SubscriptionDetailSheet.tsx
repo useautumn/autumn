@@ -20,7 +20,6 @@ import {
 	XCircle,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useEffect } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -28,10 +27,7 @@ import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
-import {
-	usePrepaidItems,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
+import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 
@@ -42,7 +38,6 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
-import { UpdatePlanButton } from "./UpdatePlanButton";
 
 export function SubscriptionDetailSheet() {
 	const { customer } = useCusQuery();
@@ -50,15 +45,6 @@ export function SubscriptionDetailSheet() {
 	const env = useEnv();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const resetProductStore = useProductStore((s) => s.reset);
-	const sheetType = useSheetStore((s) => s.type);
-	// Get edited product from store
-
-	const storeProduct = useProductStore((s) => s.product);
-
-	// Check if there are changes in the product store
-	const showUpdateProduct = storeProduct?.id;
-
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 
@@ -67,15 +53,6 @@ export function SubscriptionDetailSheet() {
 
 	const isExpired = cusProduct?.status === CusProductStatus.Expired;
 	const isCanceled = cusProduct?.canceled;
-
-	useEffect(() => {
-		if (
-			sheetType !== "subscription-detail" &&
-			sheetType !== "subscription-update"
-		) {
-			resetProductStore();
-		}
-	}, [sheetType, resetProductStore]);
 
 	// Check for prepaid items in the product (must be called before any returns)
 	const { prepaidItems } = usePrepaidItems({ product: productV2 ?? undefined });
@@ -109,7 +86,7 @@ export function SubscriptionDetailSheet() {
 	};
 
 	const handleUpdateSubscription = () => {
-		setSheet({ type: "subscription-update-v2", itemId });
+		setSheet({ type: "subscription-update", itemId });
 	};
 
 	const handleViewStripe = () => {
@@ -137,21 +114,19 @@ export function SubscriptionDetailSheet() {
 	};
 
 	return (
-		<div className="flex flex-col h-full">
+		<div className="flex flex-col h-full overflow-y-auto">
 			<SheetHeader
 				title={`${cusProduct.product.name ?? "Subscription Details"}`}
 				description={`Subscription details for ${cusProduct.product.name}`}
 			/>
 
-			<div className="flex-1 overflow-y-auto min-h-0">
-				{/* Plan Items */}
-				{productV2?.items && productV2.items.length > 0 && (
-					<SheetSection>
-						{productV2 && (
-							<div className="flex gap-2 justify-between items-center h-6 mb-3">
-								<BasePriceDisplay product={productV2} readOnly={true} />
-							</div>
-						)}
+			{productV2?.items && productV2.items.length > 0 && (
+				<SheetSection>
+					{productV2 && (
+						<div className="flex gap-2 justify-between items-center h-6 mb-3">
+							<BasePriceDisplay product={productV2} readOnly={true} />
+						</div>
+					)}
 
 					<div className="space-y-2">
 						{productV2.items.map((item: ProductItem, index: number) => {
@@ -171,153 +146,146 @@ export function SubscriptionDetailSheet() {
 								/>
 							);
 						})}
-						</div>
-					</SheetSection>
-				)}
-				{/* Product Information */}
-				<SheetSection withSeparator={true}>
-					<div className="flex gap-2 justify-between overflow-hidden">
-						<div className="space-y-3 min-w-0 overflow-hidden">
-							<InfoRow
-								icon={<CubeIcon size={16} weight="duotone" />}
-								label="Plan"
-								value={cusProduct.product.name}
-							/>
-							<InfoRow
-								icon={<HashIcon size={16} />}
-								label="ID"
-								value={cusProduct.product_id}
-								mono
-							/>
-							<InfoRow
-								icon={<GitBranchIcon size={16} />}
-								label="Version"
-								value={cusProduct.product.version}
-							/>
-							{cusProduct.quantity && cusProduct.quantity > 1 && (
-								<InfoRow
-									icon={<Info size={16} weight="duotone" />}
-									label="Quantity"
-									value={cusProduct.quantity.toString()}
-								/>
-							)}
-							{cusProduct.external_id && (
-								<InfoRow
-									icon={<TagIcon size={16} weight="duotone" />}
-									label="Sub ID"
-									value={cusProduct.external_id}
-									mono
-								/>
-							)}
-							{cusProduct.subscription_ids?.length > 0 && (
-								<div className="flex items-center gap-2 min-w-0 overflow-hidden">
-									<div className="text-t4/60 shrink-0">
-										<CreditCardIcon size={16} />
-									</div>
-									<div className="flex min-w-0 items-center overflow-hidden">
-										<div className="text-t3 text-sm font-medium w-20 shrink-0 whitespace-nowrap">
-											Stripe ID
-										</div>
-										<div className="min-w-0 overflow-hidden">
-											<MiniCopyButton
-												text={cusProduct.subscription_ids[0]}
-												innerClassName="text-sm text-t1 font-mono truncate"
-											/>
-										</div>
-									</div>
-									<IconButton
-										variant="secondary"
-										onClick={handleViewStripe}
-										icon={<ArrowSquareOutIcon size={16} weight="duotone" />}
-										className="shrink-0"
-									>
-										View Stripe
-									</IconButton>
-								</div>
-							)}
-						</div>
 					</div>
 				</SheetSection>
-				{/* Entity Information */}
-				{entity && (
-					<SheetSection>
-						<div className="space-y-3">
+			)}
+
+			<SheetSection withSeparator={true}>
+				<div className="flex gap-2 justify-between overflow-hidden">
+					<div className="space-y-3 min-w-0 overflow-hidden">
+						<InfoRow
+							icon={<CubeIcon size={16} weight="duotone" />}
+							label="Plan"
+							value={cusProduct.product.name}
+						/>
+						<InfoRow
+							icon={<HashIcon size={16} />}
+							label="ID"
+							value={cusProduct.product_id}
+							mono
+						/>
+						<InfoRow
+							icon={<GitBranchIcon size={16} />}
+							label="Version"
+							value={cusProduct.product.version}
+						/>
+						{cusProduct.quantity && cusProduct.quantity > 1 && (
 							<InfoRow
-								icon={<SubtractIcon size={16} weight="duotone" />}
-								label="Entity"
-								value={entity.name || entity.id || entity.internal_id}
+								icon={<Info size={16} weight="duotone" />}
+								label="Quantity"
+								value={cusProduct.quantity.toString()}
 							/>
+						)}
+						{cusProduct.external_id && (
 							<InfoRow
-								icon={<HashIcon size={16} weight="duotone" />}
-								label="Entity ID"
-								value={entity.id || entity.internal_id}
+								icon={<TagIcon size={16} weight="duotone" />}
+								label="Sub ID"
+								value={cusProduct.external_id}
 								mono
 							/>
-						</div>
-					</SheetSection>
-				)}
-				{/* Status & Dates */}
+						)}
+						{cusProduct.subscription_ids?.length > 0 && (
+							<div className="flex items-center gap-2 min-w-0 overflow-hidden">
+								<div className="text-t4/60 shrink-0">
+									<CreditCardIcon size={16} />
+								</div>
+								<div className="flex min-w-0 items-center overflow-hidden">
+									<div className="text-t3 text-sm font-medium w-20 shrink-0 whitespace-nowrap">
+										Stripe ID
+									</div>
+									<div className="min-w-0 overflow-hidden">
+										<MiniCopyButton
+											text={cusProduct.subscription_ids[0]}
+											innerClassName="text-sm text-t1 font-mono truncate"
+										/>
+									</div>
+								</div>
+								<IconButton
+									variant="secondary"
+									onClick={handleViewStripe}
+									icon={<ArrowSquareOutIcon size={16} weight="duotone" />}
+									className="shrink-0"
+								>
+									View Stripe
+								</IconButton>
+							</div>
+						)}
+					</div>
+				</div>
+			</SheetSection>
+
+			{entity && (
 				<SheetSection>
 					<div className="space-y-3">
 						<InfoRow
-							icon={<HeartbeatIcon size={16} weight="duotone" />}
-							label="Status"
-							value={
-								<CustomerProductsStatus
-									status={cusProduct.status}
-									canceled={cusProduct.canceled}
-									canceled_at={cusProduct.canceled_at ?? undefined}
-									trialing={
-										isCustomerProductTrialing(cusProduct, {
-											nowMs: Date.now(),
-										}) || false
-									}
-									trial_ends_at={cusProduct.trial_ends_at ?? undefined}
-								/>
-							}
+							icon={<SubtractIcon size={16} weight="duotone" />}
+							label="Entity"
+							value={entity.name || entity.id || entity.internal_id}
 						/>
-
 						<InfoRow
-							icon={<CalendarBlankIcon size={16} weight="duotone" />}
-							label="Started"
-							value={formatDate(cusProduct.starts_at)}
+							icon={<HashIcon size={16} weight="duotone" />}
+							label="Entity ID"
+							value={entity.id || entity.internal_id}
+							mono
 						/>
-
-						{cusProduct.trial_ends_at && (
-							<InfoRow
-								icon={<TimerIcon size={16} weight="duotone" />}
-								label="Trial Ends"
-								value={formatDate(cusProduct.trial_ends_at)}
-							/>
-						)}
-
-						{cusProduct.canceled_at && (
-							<InfoRow
-								icon={<XCircle size={16} weight="duotone" />}
-								label="Canceled"
-								value={formatDate(cusProduct.canceled_at)}
-							/>
-						)}
-
-						{cusProduct.ended_at && (
-							<InfoRow
-								icon={<XCircle size={16} weight="duotone" />}
-								label="Ended"
-								value={formatDate(cusProduct.ended_at)}
-							/>
-						)}
 					</div>
 				</SheetSection>
-				{showUpdateProduct && (
-					<div className="flex justify-end p-2">
-						<UpdatePlanButton cusProduct={cusProduct} />
-					</div>
-				)}
-			</div>
+			)}
 
-			{/* Fixed Footer */}
+			<SheetSection>
+				<div className="space-y-3">
+					<InfoRow
+						icon={<HeartbeatIcon size={16} weight="duotone" />}
+						label="Status"
+						value={
+							<CustomerProductsStatus
+								status={cusProduct.status}
+								canceled={cusProduct.canceled}
+								canceled_at={cusProduct.canceled_at ?? undefined}
+								trialing={
+									isCustomerProductTrialing(cusProduct, {
+										nowMs: Date.now(),
+									}) || false
+								}
+								trial_ends_at={cusProduct.trial_ends_at ?? undefined}
+							/>
+						}
+					/>
+
+					<InfoRow
+						icon={<CalendarBlankIcon size={16} weight="duotone" />}
+						label="Started"
+						value={formatDate(cusProduct.starts_at)}
+					/>
+
+					{cusProduct.trial_ends_at && (
+						<InfoRow
+							icon={<TimerIcon size={16} weight="duotone" />}
+							label="Trial Ends"
+							value={formatDate(cusProduct.trial_ends_at)}
+						/>
+					)}
+
+					{cusProduct.canceled_at && (
+						<InfoRow
+							icon={<XCircle size={16} weight="duotone" />}
+							label="Canceled"
+							value={formatDate(cusProduct.canceled_at)}
+						/>
+					)}
+
+					{cusProduct.ended_at && (
+						<InfoRow
+							icon={<XCircle size={16} weight="duotone" />}
+							label="Ended"
+							value={formatDate(cusProduct.ended_at)}
+						/>
+					)}
+				</div>
+			</SheetSection>
+
 			{!isExpired && !isScheduled && (
-				<div className="p-4 flex gap-2 border-t border-border/40">
+				<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
 					{isCanceled ? (
 						<Button
 							variant="secondary"

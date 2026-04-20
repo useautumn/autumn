@@ -4,12 +4,17 @@ import type {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
+type FullAggregatedFeatureBalanceWithOptionsPrepaid =
+	FullAggregatedFeatureBalance & {
+		prepaid_grant_from_options?: number;
+	};
+
 export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 	apiBalance,
 	aggregatedFeatureBalance,
 }: {
 	apiBalance: ApiBalanceV1;
-	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
+	aggregatedFeatureBalance?: FullAggregatedFeatureBalanceWithOptionsPrepaid;
 }): ApiBalanceV1 => {
 	if (!aggregatedFeatureBalance) return apiBalance;
 
@@ -24,20 +29,37 @@ export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 			breakdown: apiBalance.breakdown ?? [],
 		};
 	}
-
 	const aggregatedAllowance = aggregatedFeatureBalance.allowance_total ?? 0;
+	const aggregatedPrepaidGrantFromOptions =
+		aggregatedFeatureBalance.prepaid_grant_from_options ?? 0;
 	const aggregatedAdjustment = aggregatedFeatureBalance.adjustment ?? 0;
 	const aggregatedBalance = aggregatedFeatureBalance.balance ?? 0;
+	const aggregatedRolloverBalance =
+		aggregatedFeatureBalance.rollover_balance ?? 0;
+	const aggregatedRolloverUsage = aggregatedFeatureBalance.rollover_usage ?? 0;
 
 	// Aggregate rows do not retain the full per-entity/per-product breakdown, so
 	// the top-level summary is merged from the coarse aggregate values only.
 	const granted = new Decimal(aggregatedAllowance)
+		.add(aggregatedPrepaidGrantFromOptions)
 		.add(aggregatedAdjustment)
 		.toNumber();
 
-	const remaining = Decimal.max(0, new Decimal(aggregatedBalance)).toNumber();
+	// Main remaining is floored at 0 (matches legacy behaviour). Rollover
+	// remaining is added on top, since rollover balances are independent of
+	// main balance sign.
+	const mainRemaining = Decimal.max(
+		0,
+		new Decimal(aggregatedBalance),
+	).toNumber();
+	const remaining = new Decimal(mainRemaining)
+		.add(aggregatedRolloverBalance)
+		.toNumber();
 
-	const usage = new Decimal(granted).sub(aggregatedBalance);
+	// Usage mirrors the entity-view formula: (granted - main balance) + rollover usage.
+	const usage = new Decimal(granted)
+		.sub(aggregatedBalance)
+		.add(aggregatedRolloverUsage);
 
 	return {
 		...apiBalance,

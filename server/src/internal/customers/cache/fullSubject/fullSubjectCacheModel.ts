@@ -1,4 +1,18 @@
-import type { NormalizedFullSubject } from "@autumn/shared";
+import {
+	CusProductSchema,
+	CustomerSchema,
+	EntitlementWithFeatureSchema,
+	EntityAggregationsSchema,
+	EntitySchema,
+	FreeTrialSchema,
+	InvoiceSchema,
+	type NormalizedFullSubject,
+	PriceSchema,
+	ProductSchema,
+	SubjectFlagSchema,
+	SubscriptionSchema,
+} from "@autumn/shared";
+import { z } from "zod/v4";
 
 export type CachedFullSubject = Omit<
 	NormalizedFullSubject,
@@ -9,6 +23,45 @@ export type CachedFullSubject = Omit<
 	customerEntitlementIdsByFeatureId: Record<string, string[]>;
 	subjectViewEpoch: number;
 };
+
+/**
+ * Schema mirror of `CachedFullSubject` used by the cache-hole-filling walker
+ * ({@link normalizeFromSchema}) to locate nullable positions in cached
+ * payloads. Not a validator — runtime type above is the source of truth.
+ *
+ * Sub-shapes intentionally reuse existing shared schemas (CusProductSchema
+ * mirrors DbCustomerProduct, etc.). Mismatches at non-nullable positions
+ * are harmless: the walker only fills undefined at nullable positions and
+ * passes through unknown keys.
+ */
+export const CachedFullSubjectSchema = z.object({
+	subjectType: z.enum(["customer", "entity"]),
+	customerId: z.string(),
+	internalCustomerId: z.string(),
+	entityId: z.string().optional(),
+	internalEntityId: z.string().optional(),
+
+	customer: CustomerSchema,
+	entity: EntitySchema.optional(),
+
+	customer_products: z.array(CusProductSchema),
+	flags: z.record(z.string(), SubjectFlagSchema),
+
+	products: z.array(ProductSchema),
+	entitlements: z.array(EntitlementWithFeatureSchema),
+	prices: z.array(PriceSchema),
+	free_trials: z.array(FreeTrialSchema),
+
+	subscriptions: z.array(SubscriptionSchema),
+	invoices: z.array(InvoiceSchema),
+
+	entity_aggregations: EntityAggregationsSchema.optional(),
+
+	_cachedAt: z.number(),
+	meteredFeatures: z.array(z.string()),
+	customerEntitlementIdsByFeatureId: z.record(z.string(), z.array(z.string())),
+	subjectViewEpoch: z.number(),
+});
 
 export const normalizedToCachedFullSubject = ({
 	normalized,
@@ -27,7 +80,18 @@ export const normalizedToCachedFullSubject = ({
 			existingMembership;
 	}
 
-	const meteredFeatures = Object.keys(customerEntitlementIdsByFeatureId);
+	const meteredFeatureSet = new Set(
+		Object.keys(customerEntitlementIdsByFeatureId),
+	);
+
+	for (const aggregatedCustomerEntitlement of normalized.entity_aggregations
+		?.aggregated_customer_entitlements ?? []) {
+		if (aggregatedCustomerEntitlement.feature_id) {
+			meteredFeatureSet.add(aggregatedCustomerEntitlement.feature_id);
+		}
+	}
+
+	const meteredFeatures = [...meteredFeatureSet];
 
 	return {
 		subjectType: normalized.subjectType,

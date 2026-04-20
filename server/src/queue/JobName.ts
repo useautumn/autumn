@@ -18,6 +18,7 @@ export enum JobName {
 	SyncBalanceBatch = "sync-balance-batch",
 	SyncBalanceBatchV2 = "sync-balance-batch-v2",
 	SyncBalanceBatchV3 = "sync-balance-batch-v3",
+	SyncBalanceBatchV4 = "sync-balance-batch-v4",
 	InsertEventBatch = "insert-event-batch",
 
 	ClearCreditSystemCustomerCache = "clear-credit-system-customer-cache",

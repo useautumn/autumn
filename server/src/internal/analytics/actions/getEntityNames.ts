@@ -1,13 +1,10 @@
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
+import { escapeChString } from "../clickhouseUtils.js";
 
 type EntityNameRow = {
 	id: string;
 	name: string;
 };
-
-/** Escapes a string for safe use in a ClickHouse string literal (single-quoted). */
-const escapeChString = ({ value }: { value: string }): string =>
-	value.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
 
 /** Looks up entity names from the entities datasource by their IDs. Returns a map of id -> name (or id if name is null/empty). */
 export const getEntityNames = async ({

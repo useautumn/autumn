@@ -9,6 +9,7 @@ import {
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
+import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
@@ -41,11 +42,23 @@ export const handleRenewal = async ({
 
 	const now = Date.now();
 
-	// If same product exists and is active, this is just a renewal - nothing to do
+	// If same product exists and is active, this is just a renewal - send webhook only
 	if (curSameProduct && ACTIVE_STATUSES.includes(curSameProduct.status)) {
 		logger.info(
-			`Renewal for existing active product ${product.id}, no action needed`,
+			`Renewal for existing active product ${product.id}, sending webhook`,
 		);
+
+		// Send webhook for simple renewal (no state change)
+		await addProductsUpdatedWebhookTask({
+			ctx,
+			internalCustomerId: curSameProduct.internal_customer_id,
+			org,
+			env,
+			customerId: customer.id || "",
+			scenario: AttachScenario.Renew,
+			cusProduct: curSameProduct,
+		});
+
 		return { success: true };
 	} else if (
 		curSameProduct &&
@@ -61,6 +74,18 @@ export const handleRenewal = async ({
 				status: CusProductStatus.Active,
 			},
 		});
+
+		// Send webhook for past_due → active recovery
+		await addProductsUpdatedWebhookTask({
+			ctx,
+			internalCustomerId: curSameProduct.internal_customer_id,
+			org,
+			env,
+			customerId: customer.id || "",
+			scenario: AttachScenario.Renew,
+			cusProduct: curSameProduct,
+		});
+
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);
 		return { success: true };
 	}
@@ -94,6 +119,17 @@ export const handleRenewal = async ({
 			},
 		});
 
+		// Send webhook for the expired product
+		await addProductsUpdatedWebhookTask({
+			ctx,
+			internalCustomerId: curMainProduct.internal_customer_id,
+			org,
+			env,
+			customerId: customer.id || "",
+			scenario: AttachScenario.Expired,
+			cusProduct: curMainProduct,
+		});
+
 		logger.info(`Expired old cus_product: ${curMainProduct.id}`);
 	} else if (curSameProduct) {
 		// Reactivate the same product if it was expired/cancelled
@@ -106,6 +142,17 @@ export const handleRenewal = async ({
 				ended_at: null,
 				canceled: false,
 			},
+		});
+
+		// Send webhook for reactivation
+		await addProductsUpdatedWebhookTask({
+			ctx,
+			internalCustomerId: curSameProduct.internal_customer_id,
+			org,
+			env,
+			customerId: customer.id || "",
+			scenario: AttachScenario.Renew,
+			cusProduct: curSameProduct,
 		});
 
 		logger.info(`Reactivated cus_product: ${curSameProduct.id}`);
@@ -137,6 +184,7 @@ export const handleRenewal = async ({
 			},
 			product,
 		),
+		sendWebhook: true,
 	});
 
 	logger.info(

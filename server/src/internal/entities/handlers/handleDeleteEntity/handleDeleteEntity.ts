@@ -15,7 +15,7 @@ import {
 	replaceEntityInCusEnt,
 } from "../../../customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils.js";
 import { RepService } from "../../../customers/cusProducts/cusEnts/RepService.js";
-import { cancelSubsForEntity } from "./cancelSubsForEntity.js";
+import { cancelSubsForEntity } from "../../actions/deleteEntity/cancelEntitySubscriptions.js";
 
 export const handleDeleteEntity = createRoute({
 	handler: async (c) => {
@@ -139,7 +139,7 @@ export const handleDeleteEntity = createRoute({
 		// Cancel any subs
 		await cancelSubsForEntity({
 			ctx,
-			cusProducts,
+			fullCustomer: fullCus,
 			entity,
 		});
 

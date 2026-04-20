@@ -50,6 +50,8 @@ export function ShowCustomerObjectSheet({
 			return data;
 		},
 		enabled: open && !!customer_id,
+		gcTime: 0,
+		staleTime: 0,
 	});
 
 	const formattedJson = data ? JSON.stringify(data, null, 2) : "";

@@ -1,5 +1,6 @@
 import {
 	type AutumnBillingPlan,
+	type LineItem,
 	type UpdateSubscriptionBillingContext,
 	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
@@ -11,6 +12,7 @@ import { computeCancelPlan } from "@/internal/billing/v2/actions/updateSubscript
 import { computeCustomPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlan";
 import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/finalizeUpdateSubscriptionPlan";
 import { computeUpdateQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
+import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeFieldUpdates } from "./computeFieldUpdates";
 
 /**
@@ -55,9 +57,10 @@ export const computeUpdateSubscriptionPlan = async ({
 				customPrices: [],
 				customEntitlements: [],
 				customFreeTrial: undefined,
-				lineItems: [],
+				lineItems: computeAnchorResetLineItems({ ctx, billingContext }),
 				updateCustomerEntitlements: undefined,
 			};
+
 			break;
 	}
 
@@ -75,7 +78,7 @@ export const computeUpdateSubscriptionPlan = async ({
 	// Apply cancel plan if cancelAction is set in context
 	plan = computeCancelPlan({ ctx, billingContext, plan });
 
-	plan = finalizeUpdateSubscriptionPlan({
+	plan = await finalizeUpdateSubscriptionPlan({
 		ctx,
 		plan,
 		billingContext,
@@ -83,4 +86,26 @@ export const computeUpdateSubscriptionPlan = async ({
 	});
 
 	return plan;
+};
+
+/** Computes refund + charge line items when billing cycle anchor is being reset. */
+const computeAnchorResetLineItems = ({
+	ctx,
+	billingContext,
+}: {
+	ctx: AutumnContext;
+	billingContext: UpdateSubscriptionBillingContext;
+}): LineItem[] => {
+	if (billingContext.requestedBillingCycleAnchor !== "now") return [];
+
+	const { customerProduct } = billingContext;
+
+	const { allLineItems } = buildAutumnLineItems({
+		ctx,
+		deletedCustomerProduct: customerProduct,
+		newCustomerProducts: [customerProduct],
+		billingContext,
+	});
+
+	return allLineItems;
 };

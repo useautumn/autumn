@@ -25,10 +25,11 @@ const getBillingType = (
 	item: ProductItem,
 ): "included" | "prepaid" | "paid" | "none" => {
 	// Check if it's included/free (no price, no usage model, and no tiers)
+	// Note: price_config is excluded — it's an internal backend field (Stripe IDs)
+	// that can linger on edited items and shouldn't affect UI classification.
 	if (
 		!item.price &&
 		!item.usage_model &&
-		!item.price_config &&
 		(!item.tiers || item.tiers.length === 0)
 	) {
 		return "included";
@@ -43,7 +44,6 @@ const getBillingType = (
 	if (
 		item.usage_model === UsageModel.PayPerUse ||
 		item.price ||
-		item.price_config ||
 		(item.tiers?.length || 0) > 0
 	) {
 		return "paid";

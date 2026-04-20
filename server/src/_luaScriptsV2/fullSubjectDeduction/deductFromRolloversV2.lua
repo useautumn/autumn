@@ -82,8 +82,6 @@ local function deduct_from_rollovers(params)
     if not rollover_data then
       logger.log("  Rollover %s not found in context", rollover_id)
     else
-      local base_path = rollover_data.base_path
-
       -- Convert remaining (feature units) to credits for this rollover
       local remaining_credits = remaining * credit_cost
 
@@ -101,11 +99,8 @@ local function deduct_from_rollovers(params)
           rollover_id, target_entity_id, balance, credit_cost, to_change)
 
         if to_change > 0 then
-          local entity_path = base_path .. '["entities"]["' .. target_entity_id .. '"]'
-
           queue_rollover_update({
             context = context,
-            path = entity_path,
             deduct_amount = to_change,
             rollover_id = rollover_id,
             entity_id = target_entity_id,
@@ -147,11 +142,8 @@ local function deduct_from_rollovers(params)
             rollover_id, entity_key, balance, credit_cost, to_change)
 
           if to_change > 0 then
-            local entity_path = base_path .. '["entities"]["' .. entity_key .. '"]'
-
             queue_rollover_update({
               context = context,
-              path = entity_path,
               deduct_amount = to_change,
               rollover_id = rollover_id,
               entity_id = entity_key,
@@ -185,7 +177,6 @@ local function deduct_from_rollovers(params)
         if to_change > 0 then
           queue_rollover_update({
             context = context,
-            path = base_path,
             deduct_amount = to_change,
             rollover_id = rollover_id,
             entity_id = nil,

@@ -1,0 +1,138 @@
+---
+title: "Talking about billing with 30 YC founders"
+date: "2025-01-22"
+author: "Ayush, Autumn Co-Founder"
+slug: "talking-about-billing-with-30-yc-founders"
+image: "/images/blog/talking-about-billing-with-30-yc-founders.jpeg"
+featured: true
+---
+
+We were in YC’s F24 batch and pivoted the day before demo day (story coming soon). Since then we’ve been in the idea maze and spoke to 30 very kind YC (and some non YC) founders/leaders about their billing systems.
+
+Why billing? This space is big and crowded for sure. But I used to work for a payments company and I find this stuff to be super interesting.
+
+We’re writing our learnings from this as an exercise both to start drawing interest in what we’re doing but also as a source of truth as we continue learning.
+
+##### How do people manage billing?
+
+As you can expect this depends on the stage of company and their billing model. Will distill it to these
+
+**Seed Stage Companies**
+
+_Sales-led:_
+
+-   Use Stripe for invoicing with manual setup
+    
+-   Sometimes use simple, cheap tools for quick proposal generation in high-volume scenarios
+    
+
+_Product-led:_
+
+-   Rely on Stripe billing and payment links
+    
+-   Implement feature flags and entitlements directly in code
+    
+
+**Series A Companies**
+
+_Sales-led:_
+
+-   Have automated invoicing flows, integrated with CRM
+    
+-   Use data tools for revenue data organization
+    
+
+_Product-led:_
+
+-   Some adopt billing tools like Orb or Metronome. Although usually noting that they used it because Stripes offering was bad _at the time_
+    
+-   Maintain simple, code-based entitlement systems
+    
+
+**Series B-C Companies**
+
+_Sales-led:_
+
+-   Finance teams take ownership of contract and pricing setup
+    
+
+_Product-led:_
+
+-   Maintain custom admin panels for feature management in bespoke contracts
+    
+-   Update pricing once or twice yearly to experiment with optimization
+    
+-   Focus on metrics such as paywall conversion rates
+    
+
+**Key learnings:**
+
+-   Stripe is everywhere (as expected) and getting better. It wasn’t loved but it was fine.
+    
+-   Entitlement management is useful for later stage sales led companies, but also for earlier-stage companies managing both product-led + sales led models.
+    
+-   When a company was using a vendor, the push came either from finance wanting better data for revenue reporting, or CTOs wanting to save dev time on billing infra. No one (apart from one ex-intercom founder) really cared about experimenting with pricing as a lever to drive more revenue. Standard practice was just looking at competition and charging a market rate.
+    
+
+##### So what were the pain points?
+
+As good as Stripe is, there were pain points that did come up repeatedly:
+
+-   Managing credit-based billing systems. There is no good tool out there for this today.
+    
+-   Chasing up invoices that haven’t been paid. AI seems like a no-brainer here, but definitely a bunch of solutions already.
+    
+-   Revenue recognition from Stripe. Usually around Series A there needs to be a big clean up for investors. People don’t enter the right contract terms in Stripe when they’re first starting out which leads to messy data.
+    
+-   Maintaining a billing system and making pricing changes. Especially if supporting multiple versions (grandfathering) and moving people between plans.
+    
+-   Dealing with custom contracts for sales-led and product-led teams. Stripe doesn’t seem to have great tooling for this, creating free trials etc.
+    
+-   People had tried third-party billing software but dropped them when they couldn’t support a specific nuance of their pricing model (eg dealing with upgrade / downgrade pro rata meters differently)
+    
+
+We didn’t get the sense that many people would switch to a whole new billing system to solve any one of these problems. Something that is plugged into their existing system may work better?
+
+##### **Lots of people have tried this**
+
+As soon as we started looking into this space it was immediately clear that there were a lot of people in this space—and a lot of people who had tried and failed.
+
+Honestly it doesn’t faze us much anymore. This seems to be the state of SaaS markets in general and is the sign of a big market. From the people we spoke to who failed:
+
+-   Stripe billing has got pretty good recently and means it was hard to find customers who were interested in switching. Finding a customer is also super timing dependant and so will rely on a strong brand and inbound motion.
+    
+-   Easier to get a few small customers who are starting out but moving up-market is hard, especially for a seed-stage company.
+    
+
+A random learning is that people seem to be pretty salty about their old ideas that have failed. Didn’t seem very self-reflective on what they could have done better or differently. Just said the idea was stupid.
+
+##### **What do we think?**
+
+We’re still forming our opinion on the space so this is a braindump of our current thoughts on the space. As much as we hope, it’s unlikely this’ll be a rocketship from day 1.
+
+But we are seeing more companies opt for off-the-shelf software like Clerk and Supabase. Greater preference for staying lean and moving faster.
+
+Most companies are not going to switch from Stripe or another billing provider for this. These software are very engrained into the codebase and are generally ‘good enough’. And so while usage based pricing is increasing it’s still Stripe capturing the market share. We really need to think about our GTM. Who it’s for and how we get in:
+
+-   Having a modular suite of interconnected sales &lt;&gt; billing &lt;&gt; finance tools could be the way to wedge-in and expand within a larger company. Entitlement management seems like a great part of the stack to control.
+    
+-   Or we could grow a brand for startups and make it super easy to implement billing.
+    
+-   Or we could be the best ever billing provider for some type of company (eg credit companies)
+    
+
+There is also some growing dissent with Stripe as they get bigger and bigger. Implementation effort is pretty tough and summarised well by [t3.gg](http://t3.gg/) here. In our view our approach makes this way easier.
+
+##### **More generally**
+
+Different people working on the same idea with different initial conditions can have massively different results. Eg Pylon were the 13th team to have the same insight they did, but they’re killing it. I think there’s some alpha in making a product people really love with a great brand around it.
+
+We’re excited to have signed a fast growing, high profile AI startup already and will try to ride their growth wave with them. Maybe that’s the winning strategy over trying to time larger companies into switching billing systems and the one we’re leaning towards. But maybe we’ll kick ourselves down the line for not focusing up-market. What we build will likely look different (more horizontal earlier, more vertical for up-market).
+
+We were previously working on fintech onboarding software selling to compliance teams. Contract sizes were bigger there but also was super slow. For whatever reason right now we’re having a lot more fun exploring this and talking to people about it. It feels like a problem we can become obsessed with, do our best work, and execute well.
+
+TLDR: we're going to keep going and are excited.
+
+Shoutout to Granola for making it a lot easier to keep track of our notes and learnings from customer discovery
+
+Will check in next month to see what’s changed about what we think!

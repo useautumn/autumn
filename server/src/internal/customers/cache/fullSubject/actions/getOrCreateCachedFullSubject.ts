@@ -2,7 +2,6 @@ import {
 	type CheckParams,
 	type FullSubject,
 	fullCustomerToFullSubject,
-	normalizedToFullSubject,
 	SubjectType,
 	type TrackParams,
 } from "@autumn/shared";
@@ -27,7 +26,6 @@ export const getOrCreateCachedFullSubject = async ({
 	source?: string;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
-	const fetchTimeMs = Date.now();
 	const {
 		customer_id: customerId,
 		customer_data: customerData,
@@ -36,7 +34,7 @@ export const getOrCreateCachedFullSubject = async ({
 	} = params;
 
 	let fullSubject: FullSubject | undefined;
-	let normalized: Awaited<ReturnType<typeof getFullSubjectNormalized>>;
+	let normalizedResult: Awaited<ReturnType<typeof getFullSubjectNormalized>>;
 	let setCache = true;
 	let fetchedSubjectViewEpoch = 0;
 
@@ -59,13 +57,13 @@ export const getOrCreateCachedFullSubject = async ({
 			ctx,
 			customerId,
 		});
-		normalized = await getFullSubjectNormalized({
+		normalizedResult = await getFullSubjectNormalized({
 			ctx,
 			customerId,
 			entityId,
 		});
-		if (normalized) {
-			fullSubject = normalizedToFullSubject({ normalized });
+		if (normalizedResult) {
+			fullSubject = normalizedResult.fullSubject;
 		}
 	}
 
@@ -81,11 +79,16 @@ export const getOrCreateCachedFullSubject = async ({
 		});
 	}
 
-	await updateCustomerData({
+	const customerDataUpdated = await updateCustomerData({
 		ctx,
 		fullSubject,
 		customerData,
 	});
+
+	if (customerDataUpdated && normalizedResult) {
+		normalizedResult.normalized.customer = fullSubject.customer;
+		normalizedResult.fullSubject.customer = fullSubject.customer;
+	}
 
 	if (entityId && !fullSubject.entity) {
 		const newEntity = await autoCreateEntity({
@@ -108,24 +111,23 @@ export const getOrCreateCachedFullSubject = async ({
 	}
 
 	if (!skipCache && setCache) {
-		if (!normalized) {
-			normalized = await getFullSubjectNormalized({
+		if (!normalizedResult) {
+			normalizedResult = await getFullSubjectNormalized({
 				ctx,
 				customerId: fullSubject.customer.id || fullSubject.customer.internal_id,
 				entityId: fullSubject.entity?.id || entityId,
 			});
 		}
 
-		if (normalized) {
+		if (normalizedResult) {
 			await setCachedFullSubject({
 				ctx,
-				normalized,
-				fetchTimeMs,
+				normalized: normalizedResult.normalized,
 				fetchedSubjectViewEpoch,
 			}).catch((error) =>
 				logger.error(`Failed to set full subject cache: ${error}`),
 			);
-			fullSubject = normalizedToFullSubject({ normalized });
+			fullSubject = normalizedResult.fullSubject;
 		}
 	}
 

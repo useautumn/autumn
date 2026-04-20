@@ -1,8 +1,8 @@
 --[[
-  Lua Script: Deduct from Customer Entitlements in Redis
+  Lua Script: Deduct from Subject Balances in Redis
 
-  Uses JSON.NUMINCRBY for atomic incremental updates.
-  Reads CURRENT balance from Redis before each calculation to avoid stale reads.
+  Reads shared SubjectBalance payloads from per-feature Redis hashes and
+  writes back only the touched customer_entitlement fields.
 
   Deduction Order (mirrors SQL performDeduction.sql):
     1. Deduct from rollovers first (oldest first by expires_at)
@@ -10,23 +10,21 @@
     3. Pass 2: Allow negative if usage_allowed
 
   Helper functions are prepended via string interpolation from:
-    - fullCustomerKeyBuilders.lua (build_path_index_key, etc.)
     - luaUtils.lua (safe_table, safe_number, sorted_keys, is_nil)
-    - fullCustomerUtils.lua (find_entitlement, find_entitlement_from_index, build_entity_path, etc.)
-    - readBalances.lua (read_current_balance, read_current_entity_balance, read_current_entities, read_rollover_data)
-    - contextUtils.lua (init_context, queue_balance_update, apply_pending_writes)
-    - deductFromRollovers.lua (deduct_from_rollovers)
-    - deductFromMainBalance.lua (calculate_change, deduct_from_main_balance)
-    - getTotalBalance.lua (get_total_balance)
+    - readSubjectBalances.lua
+    - contextUtilsV2.lua
+    - deductFromRolloversV2.lua
+    - deductFromMainBalanceV2.lua
+    - getTotalBalance.lua
 
-  KEYS[1] = FullCustomer cache key (used for cluster slot routing)
+  KEYS[1] = shared balance routing key (used for cluster slot routing)
 
   ARGV[1] = JSON params:
     {
       org_id: string,
       env: string,
       customer_id: string,
-      sorted_entitlements: [{ customer_entitlement_id, credit_cost, feature_id, entity_feature_id, usage_allowed, min_balance, max_balance }],
+      customer_entitlement_deductions: [{ customer_entitlement_id, credit_cost, feature_id, entity_feature_id, usage_allowed, min_balance, max_balance }],
       spend_limit_by_feature_id: { [feature_id]: { feature_id, enabled, overage_limit } } | null,
       usage_based_cus_ent_ids_by_feature_id: { [feature_id]: string[] } | null,
       amount_to_deduct: number | null,
@@ -44,6 +42,7 @@
     {
       updates: { [cus_ent_id]: { balance, additional_balance, adjustment, entities, deducted, additional_deducted } },
       rollover_updates: { [rollover_id]: { balance, usage, entities } },
+      modified_customer_entitlement_ids: string[],
       remaining: number,
       error: string | null,
       feature_id: string | null
@@ -53,16 +52,16 @@
 -- ============================================================================
 -- MAIN SCRIPT
 -- ============================================================================
-local cache_key = KEYS[1]
+local routing_key = KEYS[1]
 local params = cjson.decode(ARGV[1])
 
--- Extract org/env/customer for path index key construction
 local org_id = params.org_id
 local env = params.env
 local customer_id = params.customer_id
 
 -- Extract parameters
-local sorted_entitlements = params.sorted_entitlements or {}
+local customer_entitlement_deductions =
+  params.customer_entitlement_deductions or {}
 local spend_limit_by_feature_id = params.spend_limit_by_feature_id
 local usage_based_cus_ent_ids_by_feature_id = params.usage_based_cus_ent_ids_by_feature_id
 local amount_to_deduct = params.amount_to_deduct
@@ -77,55 +76,38 @@ local lock = params.lock
 local unwind_value = params.unwind_value
 local lock_receipt_key = params.lock_receipt_key
 
--- Compute overage_behavior_is_allow once
-local overage_behavior_is_allow = alter_granted_balance or overage_behaviour == 'allow'
-
-local empty_logs = cjson.decode('[]')
-
--- Check if customer exists
-local key_exists = redis.call('EXISTS', cache_key)
-if key_exists == 0 then
-  return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
-end
-
--- Build path index key and check existence (fast path vs fallback)
-local pathidx_key = build_path_index_key(org_id, env, customer_id)
-local has_pathidx = redis.call('EXISTS', pathidx_key) == 1
-
--- Only decode full customer if path index is NOT available (fallback)
-local full_customer = nil
-if not has_pathidx then
-  local full_customer_json = redis.call('JSON.GET', cache_key, '.')
-  if not full_customer_json then
-    return cjson.encode({ error = 'CUSTOMER_NOT_FOUND', updates = {}, rollover_updates = {}, mutation_logs = empty_logs, remaining = 0 })
-  end
-
-  full_customer = cjson.decode(full_customer_json)
-
-  if not full_customer.customer_products then
-    return cjson.encode({
-      error = 'NO_CUSTOMER_PRODUCTS',
-      updates = {},
-      rollover_updates = {},
-      mutation_logs = empty_logs,
-      remaining = 0
-    })
-  end
-end
-
 -- Initialize context with in-memory state from Redis
-local customer_entitlement_ids = {}
-for _, ent_obj in ipairs(sorted_entitlements) do
-  table.insert(customer_entitlement_ids, ent_obj.customer_entitlement_id)
+if #customer_entitlement_deductions == 0 then
+  return cjson.encode({
+    updates = {},
+    rollover_updates = {},
+    modified_customer_entitlement_ids = new_empty_array(),
+    mutation_logs = new_empty_array(),
+    remaining = 0,
+    error = cjson.null,
+    logs = new_empty_array(),
+  })
 end
 
 local context = init_context({
-  cache_key = cache_key,
-  customer_entitlement_ids = customer_entitlement_ids,
-  full_customer = full_customer,
-  pathidx_key = pathidx_key,
-  has_pathidx = has_pathidx,
+  org_id = org_id,
+  env = env,
+  customer_id = customer_id,
+  customer_entitlement_deductions = customer_entitlement_deductions,
 })
+
+if #(context.missing_customer_entitlement_ids or {}) > 0 then
+  return cjson.encode({
+    error = 'SUBJECT_BALANCE_NOT_FOUND',
+    updates = {},
+    rollover_updates = {},
+    modified_customer_entitlement_ids = new_empty_array(),
+    mutation_logs = new_empty_array(),
+    remaining = 0,
+    logs = context.logs,
+    missing_customer_entitlement_ids = context.missing_customer_entitlement_ids,
+  })
+end
 
 local unwind_modified_cus_ent_ids = {}
 
@@ -141,6 +123,7 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
       error = unwind_result.error,
       updates = {},
       rollover_updates = {},
+      modified_customer_entitlement_ids = new_empty_array(),
       mutation_logs = context.mutation_logs or cjson.decode('[]'),
       remaining = 0,
       logs = context.logs,
@@ -168,7 +151,7 @@ logger.log("  target_entity_id: %s", tostring(target_entity_id or "nil"))
 logger.log("  overage_behaviour: %s", tostring(overage_behaviour or "nil"))
 local deduction_result = run_deduction_on_context({
   context = context,
-  sorted_entitlements = sorted_entitlements,
+  customer_entitlement_deductions = customer_entitlement_deductions,
   spend_limit_by_feature_id = spend_limit_by_feature_id,
   usage_based_cus_ent_ids_by_feature_id = usage_based_cus_ent_ids_by_feature_id,
   rollovers = rollovers,
@@ -200,6 +183,11 @@ for _, cus_ent_id in ipairs(unwind_modified_cus_ent_ids) do
   end
 end
 
+local modified_customer_entitlement_ids = collect_modified_customer_entitlement_ids({
+  context = context,
+  extra_customer_entitlement_ids = unwind_modified_cus_ent_ids,
+})
+
 logger.log("  remaining_amount: %s", tostring(remaining_amount or "nil"))
 logger.log("  is_refund: %s", tostring(remaining_amount < 0 or false))
 local mutation_logs = context.mutation_logs
@@ -213,6 +201,7 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
     feature_id = feature_id,
     remaining = remaining_amount,
     updates = {},
+    modified_customer_entitlement_ids = new_empty_array(),
     mutation_logs = mutation_logs,
     logs = context.logs
   })
@@ -235,6 +224,7 @@ then
       remaining = 0,
       updates = {},
       rollover_updates = rollover_updates,
+      modified_customer_entitlement_ids = modified_customer_entitlement_ids,
       mutation_logs = mutation_logs,
       logs = context.logs
     })
@@ -259,13 +249,19 @@ then
 end
 
 -- Apply all pending writes to Redis (only after validation passes)
-apply_pending_writes(cache_key, context)
+apply_pending_writes(routing_key, context)
+
+update_aggregated_balances({
+  context = context,
+  mutation_logs = mutation_logs,
+})
 
 logger.log("=== LUA DEDUCTION END ===")
 
 return cjson.encode({
   updates = updates,
   rollover_updates = rollover_updates,
+  modified_customer_entitlement_ids = modified_customer_entitlement_ids,
   mutation_logs = mutation_logs,
   remaining = remaining_amount,
   error = cjson.null,

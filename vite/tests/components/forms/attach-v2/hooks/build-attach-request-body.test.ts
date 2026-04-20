@@ -16,7 +16,10 @@ function makeProduct({ items }: { items: ProductV2["items"] }): ProductV2 {
 	};
 }
 
-const baseParams = {
+const baseParams: Omit<
+	Parameters<typeof buildAttachRequestBody>[0],
+	"product" | "prepaidOptions"
+> = {
 	customerId: "cus_123",
 	entityId: undefined,
 	items: null,
@@ -26,9 +29,18 @@ const baseParams = {
 	trialEnabled: false,
 	trialCardRequired: false,
 	planSchedule: null,
-	billingBehavior: null,
+	prorationBehavior: null,
+	redirectMode: "if_required",
 	newBillingSubscription: false,
+	resetBillingCycle: false,
 	discounts: [],
+	noBillingChanges: false,
+	carryOverBalances: false,
+	carryOverBalanceFeatureIds: [],
+	carryOverUsages: false,
+	carryOverUsageFeatureIds: [],
+	customLineItems: [],
+	isFreeToPaidTransition: false,
 };
 
 describe("buildAttachRequestBody — billing_units handling", () => {

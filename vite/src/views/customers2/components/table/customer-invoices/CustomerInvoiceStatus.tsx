@@ -23,14 +23,51 @@ const statusConfig = {
 	},
 };
 
+const getRefundStatus = ({
+	refundableAmount,
+	refundedAmount,
+}: {
+	refundableAmount: number;
+	refundedAmount: number;
+}): { color: string; label: string } | null => {
+	if (refundedAmount <= 0) return null;
+	if (refundedAmount >= refundableAmount) {
+		return {
+			color: "bg-amber-500 dark:bg-amber-600",
+			label: "Fully Refunded",
+		};
+	}
+	return {
+		color: "bg-amber-400 dark:bg-amber-500",
+		label: "Partially Refunded",
+	};
+};
+
 export function CustomerInvoiceStatus({
 	status,
+	total,
+	amountPaid,
+	refundedAmount,
 }: {
 	status: InvoiceStatus | null | undefined;
+	total?: number;
+	amountPaid?: number | null;
+	refundedAmount?: number;
 }) {
 	if (!status) return null;
 
-	const config = statusConfig[status];
+	// Check for refund status first (only for paid invoices)
+	const refundStatus =
+		status === InvoiceStatus.Paid &&
+		total !== undefined &&
+		refundedAmount !== undefined
+			? getRefundStatus({
+					refundableAmount: Math.abs(amountPaid ?? total),
+					refundedAmount,
+				})
+			: null;
+
+	const config = refundStatus ?? statusConfig[status];
 	if (!config) return <div>{status}</div>;
 
 	return (

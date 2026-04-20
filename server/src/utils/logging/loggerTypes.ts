@@ -47,6 +47,22 @@ export type LogWorkflowContext = {
 	name: string; // workflow / job name
 };
 
+/** Redis slow-command context - goes under context.redis.data (map field) */
+export type LogRedisData = {
+	operation: string;
+	duration_ms: number;
+	slow_ms: number;
+	base_slow_ms: number;
+	region_baseline_ms: number;
+	severe_ms: number;
+	breach_ratio: number;
+	region?: string;
+	key?: string;
+	org_id?: string;
+	customer_id?: string;
+	entity_id?: string;
+};
+
 export type AlertSeverity = "warning" | "error" | "critical";
 
 export type AlertCategory =

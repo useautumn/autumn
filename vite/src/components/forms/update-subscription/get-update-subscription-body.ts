@@ -5,7 +5,6 @@ import type {
 	FeatureOptions,
 	ProductItem,
 	ProductV2,
-	RefundBehavior,
 } from "@autumn/shared";
 
 export const getUpdateSubscriptionBody = ({
@@ -40,7 +39,7 @@ export const getUpdateSubscriptionBody = ({
 	// Cancel action fields
 	cancelAction?: CancelAction | null;
 	billingBehavior?: BillingBehavior | null;
-	refundBehavior?: RefundBehavior | null;
+	refundBehavior?: string | null;
 }) => {
 	// For cancel actions, only include cancellation-related fields
 	if (cancelAction) {

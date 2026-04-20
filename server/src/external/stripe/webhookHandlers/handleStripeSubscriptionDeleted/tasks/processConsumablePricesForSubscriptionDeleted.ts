@@ -9,6 +9,7 @@ import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/provider
 import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling";
 import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { parseSkipOverageSubmissionFlag } from "@/internal/misc/featureFlags/parseSkipOverageSubmission";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
 /**
@@ -82,7 +83,10 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 			// No cusEntFilter - bill all consumable entitlements on cancellation
 		});
 
-	const skipOverageSubmission = ctx.org.config.skip_overage_submission;
+	const skipOverageSubmission = parseSkipOverageSubmissionFlag({
+		org: ctx.org,
+		customerId: eventContext.fullCustomer.id,
+	});
 	if (lineItems.length > 0 && !skipOverageSubmission) {
 		// 2. Create, finalize, and pay a single invoice with all line items
 		const invoiceLines = lineItemsToInvoiceAddLinesParams({ lineItems });

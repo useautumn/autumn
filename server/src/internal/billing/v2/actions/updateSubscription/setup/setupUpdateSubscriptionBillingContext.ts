@@ -11,6 +11,7 @@ import { setupDefaultProductContext } from "@/internal/billing/v2/actions/update
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities";
+import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupCancelAction } from "@/internal/billing/v2/setup/setupCancelMode";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
@@ -26,6 +27,7 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"version",
 	"customize",
 	"cancel_action",
+	"billing_cycle_anchor",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
 
 /**
@@ -62,7 +64,20 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		fullProduct,
 		currentCustomerProduct: customerProduct,
 		contextOverride,
+		initializeUndefinedQuantities: true,
 	});
+
+	const billingRelatedFields = Object.keys(params).filter((key) =>
+		FIELDS_WITH_BILLING_CHANGES.includes(
+			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
+		),
+	);
+
+	const skipBillingChanges =
+		orgDisableStripeWrites({ ctx }) ||
+		params.no_billing_changes === true ||
+		params.processor_subscription_id !== undefined ||
+		billingRelatedFields.length === 0;
 
 	const {
 		stripeSubscription,
@@ -76,6 +91,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		fullCustomer,
 		targetCustomerProduct: customerProduct,
 		contextOverride,
+		skipBillingChanges,
+		product: fullProduct,
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
@@ -96,6 +113,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		newFullProduct: fullProduct,
 		trialContext,
 		currentEpochMs,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 	});
 
 	// 4. Trial ends at overrides reset cycle anchor
@@ -119,12 +137,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	const cancelAction = setupCancelAction({ params });
-
-	const billingRelatedFields = Object.keys(params).filter((key) =>
-		FIELDS_WITH_BILLING_CHANGES.includes(
-			key as (typeof FIELDS_WITH_BILLING_CHANGES)[number],
-		),
-	);
 
 	let checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
@@ -154,6 +166,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		defaultProduct,
 		cancelAction,
 		recalculateBalances: params.recalculate_balances?.enabled === true,
+		refundLastPayment: params.refund_last_payment,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
@@ -163,6 +176,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		requestedProrationBehavior: params.proration_behavior,
 
 		invoiceMode,
 		featureQuantities,
@@ -177,12 +192,14 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			? contextOverride.billingVersion
 			: (customerProduct.billing_version ?? BillingVersion.V2),
 
-		skipBillingChanges:
-			orgDisableStripeWrites({ ctx }) ||
-			params.no_billing_changes === true ||
-			params.processor_subscription_id !== undefined ||
-			billingRelatedFields.length === 0,
+		skipBillingChanges,
 
 		checkoutMode,
+
+		anchorResetRefund: setupAnchorResetRefund({
+			billingCycleAnchor: params.billing_cycle_anchor,
+			prorationBehavior: params.proration_behavior,
+			outgoingCustomerProduct: customerProduct,
+		}),
 	};
 };

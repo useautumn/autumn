@@ -23,6 +23,8 @@ import {
 	type CreateCustomerParamsV0Input,
 	type CreateEntityParams,
 	type CreateRewardProgram,
+	type CreateScheduleParamsV0Input,
+	type CreateScheduleResponse,
 	type CustomerBillingControlsParams,
 	CustomerExpand,
 	type DeleteBalanceParamsV0,
@@ -40,6 +42,7 @@ import {
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
+import { timeout } from "@tests/utils/genUtils";
 
 export default class AutumnError extends Error {
 	message: string;
@@ -525,6 +528,29 @@ export class AutumnInt {
 			},
 		) => {
 			const data = await this.patch(`/customers/${customerId}`, updates);
+
+			if (updates.billing_controls?.auto_topups) {
+				await timeout(2000);
+			}
+			return data;
+		},
+
+		/** Uses the RPC route POST /customers.update (handleUpdateCustomerV2) */
+		updateRpc: async (
+			customerId: string,
+			updates: {
+				new_customer_id?: string;
+				name?: string;
+				email?: string;
+				send_email_receipts?: boolean;
+				metadata?: Record<string, unknown>;
+				billing_controls?: CustomerBillingControlsParams;
+			},
+		) => {
+			const data = await this.post(`/customers.update`, {
+				customer_id: customerId,
+				...updates,
+			});
 			return data;
 		},
 
@@ -1022,6 +1048,26 @@ export class AutumnInt {
 
 		setupPayment: async (params: SetupPaymentParamsV1) => {
 			const data = await this.post(`/billing.setup_payment`, params);
+			return data;
+		},
+
+		/** Create a billing schedule through the internal RPC API. */
+		createSchedule: async <
+			TInput = CreateScheduleParamsV0Input,
+			TResponse = CreateScheduleResponse,
+		>(
+			params: TInput,
+			{ timeout }: { timeout?: number } = {},
+		): Promise<TResponse> => {
+			const data = await this.post(`/billing.create_schedule`, params);
+
+			const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
+			const defaultTimeout = concurrency > 1 ? 5000 : 4000;
+			const finalTimeout = timeout ?? defaultTimeout;
+			if (finalTimeout) {
+				await new Promise((resolve) => setTimeout(resolve, finalTimeout));
+			}
+
 			return data;
 		},
 

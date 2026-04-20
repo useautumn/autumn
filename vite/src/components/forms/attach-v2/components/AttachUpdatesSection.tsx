@@ -1,35 +1,18 @@
 import { formatAmount } from "@autumn/shared";
 import { MinusCircleIcon, PlusCircleIcon } from "@phosphor-icons/react";
-import { motion } from "motion/react";
 import { getPreviewCreditAmount } from "@/components/forms/shared/previewCreditUtils";
-import {
-	STAGGER_CONTAINER,
-	STAGGER_ITEM,
-	STAGGER_ITEM_LAYOUT,
-} from "@/components/forms/update-subscription-v2/constants/animationConstants";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-	LAYOUT_TRANSITION,
-	SheetSection,
-} from "@/components/v2/sheets/SharedSheetComponents";
+import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
 function AttachUpdatesSkeleton() {
 	return (
 		<SheetSection withSeparator={false}>
-			<motion.div
-				initial="hidden"
-				animate="visible"
-				variants={STAGGER_CONTAINER}
-			>
-				<motion.div variants={STAGGER_ITEM}>
-					<div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-						<Skeleton className="h-4 w-4 rounded-full shrink-0" />
-						<Skeleton className="h-4 w-48" />
-					</div>
-				</motion.div>
-			</motion.div>
+			<div className="flex items-center gap-2 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+				<Skeleton className="h-4 w-4 rounded-full shrink-0" />
+				<Skeleton className="h-4 w-48" />
+			</div>
 		</SheetSection>
 	);
 }
@@ -88,46 +71,32 @@ export function AttachUpdatesSection() {
 		});
 	};
 
+	const infoContent = (
+		<InfoBox variant="note">
+			<span>
+				Attaching{" "}
+				<PlusCircleIcon
+					weight="fill"
+					className="text-green-500 size-3.5 inline align-middle mr-1"
+				/>
+				<span className="text-foreground font-medium">{product.name}</span>
+				{outgoing.length > 0 && <> and removing {renderOutgoingPlans()}</>}
+				{hasCreditIndicator && (
+					<>
+						. This update includes{" "}
+						<span className="text-foreground font-medium">
+							{formattedCreditAmount}
+						</span>{" "}
+						in invoice credits.
+					</>
+				)}
+			</span>
+		</InfoBox>
+	);
+
 	return (
 		<SheetSection withSeparator={false} className="pb-0">
-			<motion.div
-				layout="position"
-				transition={{ layout: LAYOUT_TRANSITION }}
-				initial="hidden"
-				animate="visible"
-				variants={STAGGER_CONTAINER}
-			>
-				<motion.div
-					layout="position"
-					transition={{ layout: LAYOUT_TRANSITION }}
-					variants={STAGGER_ITEM_LAYOUT}
-				>
-					<InfoBox variant="note">
-						<span className="leading-6">
-							Attaching{" "}
-							<PlusCircleIcon
-								weight="fill"
-								className="text-green-500 size-3.5 inline align-middle mr-1"
-							/>
-							<span className="text-foreground font-medium">
-								{product.name}
-							</span>
-							{outgoing.length > 0 && (
-								<> and removing {renderOutgoingPlans()}</>
-							)}
-							{hasCreditIndicator && (
-								<>
-									. This update includes{" "}
-									<span className="text-foreground font-medium">
-										{formattedCreditAmount}
-									</span>{" "}
-									in invoice credits.
-								</>
-							)}
-						</span>
-					</InfoBox>
-				</motion.div>
-			</motion.div>
+			{infoContent}
 		</SheetSection>
 	);
 }

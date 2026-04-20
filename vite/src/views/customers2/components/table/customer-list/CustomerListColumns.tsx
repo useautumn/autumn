@@ -157,7 +157,7 @@ export const createCustomerListColumns = (): ColumnDef<
 					{customer.id ? (
 						<MiniCopyButton text={customer.id} />
 					) : (
-						<span className="px-1 text-t3">NULL</span>
+						<span className="px-1 text-t3">PENDING</span>
 					)}
 				</div>
 			);
@@ -169,9 +169,11 @@ export const createCustomerListColumns = (): ColumnDef<
 		accessorKey: "email",
 		size: 120,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
+			const email = row.original.email;
+			if (!email) return null;
 			return (
 				<div className="truncate">
-					<MiniCopyButton text={row.original.email ?? ""} />
+					<MiniCopyButton text={email} />
 				</div>
 			);
 		},

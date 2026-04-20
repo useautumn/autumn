@@ -9,9 +9,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -774,6 +775,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""URL to redirect to after successful checkout."""
     new_billing_subscription: NotRequired[bool]
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
+    billing_cycle_anchor: Literal["now"]
+    r"""Reset the billing cycle anchor immediately with 'now'."""
     plan_schedule: NotRequired[AttachPlanSchedule]
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
     checkout_session_params: NotRequired[Dict[str, Any]]
@@ -788,6 +791,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""Whether to carry over usages from the previous plan."""
     metadata: NotRequired[Dict[str, str]]
     r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
+    no_billing_changes: NotRequired[bool]
+    r"""If true, skips any billing changes for the attach operation."""
 
 
 class AttachParams(BaseModel):
@@ -830,6 +835,12 @@ class AttachParams(BaseModel):
     new_billing_subscription: Optional[bool] = None
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
 
+    billing_cycle_anchor: Annotated[
+        Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
+        pydantic.Field(alias="billing_cycle_anchor"),
+    ] = "now"
+    r"""Reset the billing cycle anchor immediately with 'now'."""
+
     plan_schedule: Optional[AttachPlanSchedule] = None
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
 
@@ -851,6 +862,9 @@ class AttachParams(BaseModel):
     metadata: Optional[Dict[str, str]] = None
     r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
 
+    no_billing_changes: Optional[bool] = None
+    r"""If true, skips any billing changes for the attach operation."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -866,6 +880,7 @@ class AttachParams(BaseModel):
                 "discounts",
                 "success_url",
                 "new_billing_subscription",
+                "billing_cycle_anchor",
                 "plan_schedule",
                 "checkout_session_params",
                 "custom_line_items",
@@ -873,6 +888,7 @@ class AttachParams(BaseModel):
                 "carry_over_balances",
                 "carry_over_usages",
                 "metadata",
+                "no_billing_changes",
             ]
         )
         serialized = handler(self)
@@ -1024,3 +1040,9 @@ class AttachResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    AttachParams.model_rebuild()
+except NameError:
+    pass

@@ -4,9 +4,8 @@ import {
 	BillingInterval,
 	type CusProduct,
 	CusProductStatus,
-	cusProductToPrices,
-	isFreeProduct,
-	isOneOffProduct,
+	type FullCusProduct,
+	hasActivePaidSubscription,
 	type PlanTiming,
 } from "@autumn/shared";
 import { useEffect, useMemo } from "react";
@@ -15,13 +14,15 @@ import { useAttachFormContext } from "../context/AttachFormProvider";
 import {
 	getNoChargesDisabledReason,
 	isNoChargesAllowedForAttach,
-	normalizeAttachBillingBehavior,
-} from "../utils/attachBillingBehaviorRules";
+	normalizeAttachProrationBehavior,
+} from "../utils/attachProrationBehaviorRules";
 
-/** Encapsulates planSchedule + billingBehavior derived state and mutations. */
+/** Encapsulates planSchedule + prorationBehavior derived state and mutations. */
 export function usePlanScheduleField() {
-	const { form, formValues, previewQuery } = useAttachFormContext();
-	const { planSchedule, billingBehavior, newBillingSubscription } = formValues;
+	const { form, formValues, previewQuery, isFreeToPaidTransition } =
+		useAttachFormContext();
+	const { planSchedule, prorationBehavior, newBillingSubscription } =
+		formValues;
 	const previewData = previewQuery.data;
 	const { customer } = useCusQuery();
 
@@ -37,21 +38,25 @@ export function usePlanScheduleField() {
 		[customer?.customer_products],
 	);
 
-	const hasPaidRecurringSubscription = useMemo(
+	const hasActiveProductWithTrial = useMemo(
 		() =>
 			((customer?.customer_products ?? []) as CusProduct[]).some(
-				(customerProduct) => {
-					const hasActiveOrTrialingStatus =
-						ACTIVE_STATUSES.includes(customerProduct.status) ||
-						customerProduct.status === CusProductStatus.Trialing;
-
-					if (!hasActiveOrTrialingStatus) return false;
-					if (!customerProduct.subscription_ids?.length) return false;
-
-					const prices = cusProductToPrices({ cusProduct: customerProduct });
-					return !isOneOffProduct({ prices }) && !isFreeProduct({ prices });
-				},
+				(cp) =>
+					(ACTIVE_STATUSES.includes(cp.status) ||
+						cp.status === CusProductStatus.Trialing) &&
+					cp.subscription_ids &&
+					cp.subscription_ids.length > 0 &&
+					!!cp.free_trial_id,
 			),
+		[customer?.customer_products],
+	);
+
+	const hasPaidRecurringSubscription = useMemo(
+		() =>
+			hasActivePaidSubscription({
+				customerProducts: (customer?.customer_products ??
+					[]) as FullCusProduct[],
+			}),
 		[customer?.customer_products],
 	);
 
@@ -69,8 +74,6 @@ export function usePlanScheduleField() {
 
 	const isDirectPaidTransition =
 		hasOutgoing && isPaidRecurringAttach && isOutgoingPaidRecurring;
-	const isFreeToPaidTransition =
-		hasOutgoing && isPaidRecurringAttach && !isOutgoingPaidRecurring;
 
 	const canChooseBillingCycle =
 		isPaidRecurringAttach &&
@@ -91,19 +94,24 @@ export function usePlanScheduleField() {
 		? "immediate"
 		: (planSchedule ?? defaultPlanSchedule);
 
-	const showBillingBehavior =
-		hasActiveSubscription && effectivePlanSchedule === "immediate";
+	const showProrationRow =
+		hasActiveSubscription &&
+		!hasActiveProductWithTrial &&
+		!isFreeToPaidTransition;
+	const showProrationBehavior =
+		showProrationRow && effectivePlanSchedule === "immediate";
 	const isNoChargesAllowed = isNoChargesAllowedForAttach({
 		newBillingSubscription,
 		blocksNextCycleOnly: isFreeToPaidTransition,
 	});
-	const normalizedBillingBehavior = normalizeAttachBillingBehavior({
-		billingBehavior,
+	const normalizedProrationBehavior = normalizeAttachProrationBehavior({
+		prorationBehavior,
 		newBillingSubscription,
 		blocksNextCycleOnly: isFreeToPaidTransition,
 	});
-	const effectiveBillingBehavior =
-		normalizedBillingBehavior ?? "prorate_immediately";
+	const effectiveProrationBehavior =
+		normalizedProrationBehavior ??
+		(isNoChargesAllowed ? "none" : "prorate_immediately");
 	const noChargesDisabledReason = getNoChargesDisabledReason({
 		newBillingSubscription,
 		blocksNextCycleOnly: isFreeToPaidTransition,
@@ -111,10 +119,10 @@ export function usePlanScheduleField() {
 
 	const hasCustomSchedule =
 		planSchedule !== null && planSchedule !== defaultPlanSchedule;
-	const hasCustomBilling =
-		showBillingBehavior &&
-		normalizedBillingBehavior !== null &&
-		normalizedBillingBehavior !== "prorate_immediately";
+	const hasCustomProration =
+		showProrationBehavior &&
+		normalizedProrationBehavior !== null &&
+		normalizedProrationBehavior !== "none";
 
 	const isImmediateSelected = effectivePlanSchedule === "immediate";
 	const isEndOfCycleSelected = effectivePlanSchedule === "end_of_cycle";
@@ -126,16 +134,28 @@ export function usePlanScheduleField() {
 	}, [canChooseBillingCycle, form, newBillingSubscription]);
 
 	useEffect(() => {
-		if (billingBehavior !== "none") return;
+		if (showProrationBehavior) return;
+		if (prorationBehavior === null) return;
+		form.setFieldValue("prorationBehavior", null);
+	}, [showProrationBehavior, prorationBehavior, form]);
+
+	useEffect(() => {
+		if (!showProrationBehavior) return;
+		if (prorationBehavior !== null) return;
+		if (!isNoChargesAllowed) return;
+		form.setFieldValue("prorationBehavior", "none");
+	}, [showProrationBehavior, prorationBehavior, isNoChargesAllowed, form]);
+
+	useEffect(() => {
+		if (prorationBehavior !== "none") return;
 		if (isNoChargesAllowed) return;
-		form.setFieldValue("billingBehavior", null);
-	}, [billingBehavior, form, isNoChargesAllowed]);
+		form.setFieldValue("prorationBehavior", null);
+	}, [prorationBehavior, form, isNoChargesAllowed]);
 
 	const handleScheduleChange = (value: PlanTiming) => {
 		form.setFieldValue("planSchedule", value);
-		// Reset billing behavior when switching away from immediate
 		if (value !== "immediate") {
-			form.setFieldValue("billingBehavior", null);
+			form.setFieldValue("prorationBehavior", null);
 		}
 	};
 
@@ -146,20 +166,20 @@ export function usePlanScheduleField() {
 	}) => {
 		form.setFieldValue("newBillingSubscription", createNewCycle);
 		form.setFieldValue(
-			"billingBehavior",
-			normalizeAttachBillingBehavior({
-				billingBehavior,
+			"prorationBehavior",
+			normalizeAttachProrationBehavior({
+				prorationBehavior,
 				newBillingSubscription: createNewCycle,
 				blocksNextCycleOnly: isFreeToPaidTransition,
 			}),
 		);
 	};
 
-	const handleBillingBehaviorChange = (value: BillingBehavior) => {
+	const handleProrationBehaviorChange = (value: BillingBehavior) => {
 		form.setFieldValue(
-			"billingBehavior",
-			normalizeAttachBillingBehavior({
-				billingBehavior: value,
+			"prorationBehavior",
+			normalizeAttachProrationBehavior({
+				prorationBehavior: value,
 				newBillingSubscription,
 				blocksNextCycleOnly: isFreeToPaidTransition,
 			}),
@@ -173,16 +193,17 @@ export function usePlanScheduleField() {
 		canChooseBillingCycle,
 		defaultPlanSchedule,
 		effectivePlanSchedule,
-		showBillingBehavior,
-		effectiveBillingBehavior,
+		showProrationRow,
+		showProrationBehavior,
+		effectiveProrationBehavior,
 		hasCustomSchedule,
-		hasCustomBilling,
+		hasCustomProration,
 		isImmediateSelected,
 		isEndOfCycleSelected,
 		isNoChargesAllowed,
 		noChargesDisabledReason,
 		handleScheduleChange,
 		handleBillingCycleChange,
-		handleBillingBehaviorChange,
+		handleProrationBehaviorChange,
 	};
 }

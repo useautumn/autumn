@@ -1,5 +1,5 @@
 import { Redis } from "ioredis";
-import { instrumentRedis } from "../../../utils/otel/instrumentRedis.js";
+import { instrumentRedis } from "../otel/instrumentRedis.js";
 import { cacheBackupUrl } from "./redisConfig.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 

@@ -64,7 +64,7 @@ interface UpdateSubscriptionFormContextValue {
 
 	// Derived values
 	originalItems: ProductItem[] | undefined;
-	initialPrepaidOptions: Record<string, number>;
+	initialPrepaidOptions: Record<string, number | undefined>;
 	changedPrepaidOptions: Record<string, number> | undefined;
 	productWithFormItems: FrontendProduct | undefined;
 	isVersionReady: boolean;
@@ -83,7 +83,13 @@ interface UpdateSubscriptionFormContextValue {
 	// Mutation
 	isPending: boolean;
 	handleConfirm: () => void;
-	handleInvoiceUpdate: (params: { enableProductImmediately: boolean }) => void;
+	handleInvoiceUpdate: (params: {
+		enableProductImmediately: boolean;
+		finalizeInvoice: boolean;
+	}) => Promise<{
+		stripeId: string | undefined;
+		hostedInvoiceUrl: string | null | undefined;
+	}>;
 }
 
 const UpdateSubscriptionFormReactContext =
@@ -95,7 +101,6 @@ interface UpdateSubscriptionFormProviderProps {
 	defaultOverrides?: Partial<UpdateSubscriptionForm>;
 	onPlanEditorOpen?: () => void;
 	onPlanEditorClose?: () => void;
-	onInvoiceCreated?: (invoiceId: string) => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 	children: ReactNode;
@@ -128,7 +133,6 @@ export function UpdateSubscriptionFormProvider({
 	defaultOverrides,
 	onPlanEditorOpen,
 	onPlanEditorClose,
-	onInvoiceCreated,
 	onCheckoutRedirect,
 	onSuccess,
 	children,
@@ -232,7 +236,10 @@ export function UpdateSubscriptionFormProvider({
 		for (const [featureId, quantity] of Object.entries(
 			normalizedPrepaidOptions,
 		)) {
-			if (quantity !== initialPrepaidOptions[featureId]) {
+			if (
+				quantity !== undefined &&
+				quantity !== initialPrepaidOptions[featureId]
+			) {
 				changed[featureId] = quantity;
 			}
 		}
@@ -268,7 +275,8 @@ export function UpdateSubscriptionFormProvider({
 		hasChanges &&
 		!hasBillingChanges &&
 		!hasPrepaidQuantityChanges &&
-		!isVersionLoading;
+		!isVersionLoading &&
+		!normalizedFormValues.resetBillingCycle;
 
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext: formContext,
@@ -292,7 +300,6 @@ export function UpdateSubscriptionFormProvider({
 		useUpdateSubscriptionMutation({
 			updateSubscriptionFormContext: formContext,
 			buildRequestBody,
-			onInvoiceCreated,
 			onCheckoutRedirect,
 			onSuccess,
 		});
@@ -337,25 +344,6 @@ export function UpdateSubscriptionFormProvider({
 					form.setFieldValue(field, value);
 				},
 			});
-
-			const currentPrepaidOptions = form.store.state.values.prepaidOptions;
-			const updatedPrepaidOptions = { ...currentPrepaidOptions };
-			let hasNewPrepaidItems = false;
-
-			for (const item of draftProduct.items) {
-				if (
-					item.usage_model === "prepaid" &&
-					item.feature_id &&
-					updatedPrepaidOptions[item.feature_id] === undefined
-				) {
-					updatedPrepaidOptions[item.feature_id] = 0;
-					hasNewPrepaidItems = true;
-				}
-			}
-
-			if (hasNewPrepaidItems) {
-				form.setFieldValue("prepaidOptions", updatedPrepaidOptions);
-			}
 
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();

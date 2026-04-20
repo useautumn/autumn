@@ -4,6 +4,7 @@ import {
 	type Feature,
 	FeatureNotFoundError,
 	findFeatureById,
+	fullSubjectToFullCustomer,
 	getFeatureToUseForCheck,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -13,6 +14,7 @@ import {
 } from "@/internal/customers/cache/fullSubject/index.js";
 import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
+import { triggerAutoTopUp } from "../autoTopUp/triggerAutoTopUp.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 
 const getFeatureAndCreditSystems = ({
@@ -73,6 +75,8 @@ export const getCheckDataV2 = async ({
 				source: "getCheckDataV2",
 			});
 
+	// console.log("Full subject", fullSubject);
+
 	const apiSubject = await getApiSubject({
 		ctx,
 		fullSubject,
@@ -95,6 +99,15 @@ export const getCheckDataV2 = async ({
 		features: ctx.features,
 		featureId: featureToUseMin.id,
 		errorOnNotFound: true,
+	});
+
+	// Trigger auto top-up
+	triggerAutoTopUp({
+		ctx,
+		newFullCus: fullSubjectToFullCustomer({ fullSubject }),
+		feature: featureToUse,
+	}).catch((error) => {
+		ctx.logger.error(`[getCheckData] Failed to trigger auto top-up: ${error}`);
 	});
 
 	return {

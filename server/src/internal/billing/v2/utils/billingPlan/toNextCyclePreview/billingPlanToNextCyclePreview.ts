@@ -1,5 +1,6 @@
 import {
 	type BillingContext,
+	type BillingInterval,
 	type BillingPlan,
 	type BillingPreviewResponse,
 	cp,
@@ -9,9 +10,11 @@ import {
 	getSmallestInterval,
 	hasCustomerProductEnded,
 } from "@autumn/shared";
+import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
 import { billingPlanToNextCycleLineItems } from "./billingPlanToNextCycleLineItems";
+import { computeScheduledAnchorResetPreview } from "./computeScheduledAnchorResetPreview";
 
 export type NextCyclePreviewDebug = {
 	allCustomerProducts: FullCusProduct[];
@@ -90,7 +93,6 @@ export const billingPlanToNextCyclePreview = ({
 		};
 	}
 
-	// Return undefined if there's no recurring interval (not a subscription)
 	if (!smallestInterval) {
 		return {
 			nextCycle: undefined,
@@ -102,14 +104,31 @@ export const billingPlanToNextCyclePreview = ({
 		};
 	}
 
-	// Calculate next cycle start
-	const nextCycleStart = getCycleEnd({
-		anchor: anchorMs,
-		interval: smallestInterval.interval,
-		intervalCount: smallestInterval.intervalCount,
-		now: billingContext.currentEpochMs,
-		floor: anchorMs,
-	});
+	const isScheduledAnchorReset =
+		typeof billingContext.requestedBillingCycleAnchor === "number";
+
+	let nextCycleStart: number;
+	let lineItemsBillingContext: BillingContext = billingContext;
+	let prorationRatio: Decimal | undefined;
+
+	if (isScheduledAnchorReset) {
+		const result = computeScheduledAnchorResetPreview({
+			billingContext,
+			interval: smallestInterval.interval as BillingInterval,
+			intervalCount: smallestInterval.intervalCount,
+		});
+		nextCycleStart = result.nextCycleStart;
+		prorationRatio = result.prorationRatio;
+		lineItemsBillingContext = result.lineItemsBillingContext;
+	} else {
+		nextCycleStart = getCycleEnd({
+			anchor: anchorMs,
+			interval: smallestInterval.interval,
+			intervalCount: smallestInterval.intervalCount,
+			now: billingContext.currentEpochMs,
+			floor: anchorMs,
+		});
+	}
 
 	const filteredCustomerProducts = customerProducts.filter(
 		(customerProduct) => {
@@ -126,14 +145,31 @@ export const billingPlanToNextCyclePreview = ({
 		};
 	}
 
-	const { previewLineItems, previewUsageLineItems, subtotal, total } =
+	let { previewLineItems, previewUsageLineItems, subtotal, total } =
 		billingPlanToNextCycleLineItems({
 			ctx,
 			customerProducts: filteredCustomerProducts,
 			autumnBillingPlan: billingPlan.autumn,
-			billingContext,
+			billingContext: lineItemsBillingContext,
 			nextCycleStart,
 		});
+
+	if (prorationRatio) {
+		previewLineItems = previewLineItems.map((item) => ({
+			...item,
+			subtotal: prorationRatio.mul(item.subtotal).toDecimalPlaces(2).toNumber(),
+			total: prorationRatio.mul(item.total).toDecimalPlaces(2).toNumber(),
+			discounts: item.discounts?.map((discount) => ({
+				...discount,
+				amount_off: prorationRatio
+					.mul(discount.amount_off)
+					.toDecimalPlaces(2)
+					.toNumber(),
+			})),
+		}));
+		subtotal = prorationRatio.mul(subtotal).toDecimalPlaces(2).toNumber();
+		total = prorationRatio.mul(total).toDecimalPlaces(2).toNumber();
+	}
 
 	return {
 		nextCycle: {

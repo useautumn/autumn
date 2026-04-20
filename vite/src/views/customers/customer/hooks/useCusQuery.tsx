@@ -41,10 +41,15 @@ export const useCusQuery = ({ enabled = true }: { enabled?: boolean } = {}) => {
 	const { features, isLoading: featuresLoading } = useFeaturesQuery();
 
 	const customer = data?.customer || cachedCustomer;
+	const schedule = data?.customer?.schedule;
+	const testClockFrozenTimeMs: number | undefined =
+		data?.test_clock_frozen_time_ms ?? undefined;
 	const cusWithCacheLoading = cachedCustomer ? false : customerLoading;
 
 	return {
-		customer: customer,
+		customer,
+		schedule,
+		testClockFrozenTimeMs,
 		entities: customer?.entities,
 		products,
 		features,

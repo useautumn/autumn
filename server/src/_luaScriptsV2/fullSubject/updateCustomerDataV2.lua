@@ -36,6 +36,10 @@ if not current_raw then
 end
 
 local cached = cjson.decode(current_raw)
+if not cached or not cached.customer then
+  return cjson.encode({ success = false, cache_miss = true })
+end
+
 local updated_fields = {}
 
 for field_name, field_value in pairs(updates) do

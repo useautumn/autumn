@@ -2,7 +2,6 @@ import {
 	CustomerNotFoundError,
 	EntityNotFoundError,
 	type FullSubject,
-	normalizedToFullSubject,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
@@ -22,7 +21,6 @@ export const getOrSetCachedFullSubject = async ({
 	source?: string;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
-	const fetchTimeMs = Date.now();
 
 	if (!skipCache) {
 		const cached = await getCachedFullSubject({
@@ -48,25 +46,39 @@ export const getOrSetCachedFullSubject = async ({
 		customerId,
 	});
 
-	const normalized = await getFullSubjectNormalized({
+	const result = await getFullSubjectNormalized({
 		ctx,
 		customerId,
 		entityId,
 	});
 
-	if (!normalized) {
+	if (!result) {
 		if (entityId) throw new EntityNotFoundError({ entityId });
 		throw new CustomerNotFoundError({ customerId });
 	}
+
+	const { normalized, fullSubject } = result;
 
 	if (!skipCache) {
 		await setCachedFullSubject({
 			ctx,
 			normalized,
-			fetchTimeMs,
 			fetchedSubjectViewEpoch,
 		});
+
+		// Re-read from cache instead of returning the DB-fetched fullSubject.
+		// Balance hash fields use HSETNX, so in-flight Lua deduction patches
+		// survive the setCachedFullSubject write. The DB data may be stale
+		// (e.g. entity view rebuilt before sync completes), but the balance
+		// hash reflects the true Redis state.
+		const freshCached = await getCachedFullSubject({
+			ctx,
+			customerId,
+			entityId,
+			source: `${source}:post-set`,
+		});
+		if (freshCached) return freshCached;
 	}
 
-	return normalizedToFullSubject({ normalized });
+	return fullSubject;
 };

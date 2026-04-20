@@ -15,6 +15,7 @@ import {
 	type FullSubject,
 	type NormalizedFullSubject,
 	normalizedToFullSubject,
+	type Replaceable,
 	type SubjectBalance,
 	type SubjectFlag,
 	type SubjectQueryRow,
@@ -47,6 +48,12 @@ export const subjectQueryRowToNormalized = ({
 		const existing = rolloversByCusEntId.get(rollover.cus_ent_id) ?? [];
 		existing.push(rollover);
 		rolloversByCusEntId.set(rollover.cus_ent_id, existing);
+	}
+	const replaceablesByCusEntId = new Map<string, Replaceable[]>();
+	for (const replaceable of row.replaceables) {
+		const existing = replaceablesByCusEntId.get(replaceable.cus_ent_id) ?? [];
+		existing.push(replaceable);
+		replaceablesByCusEntId.set(replaceable.cus_ent_id, existing);
 	}
 
 	const customerProductsById = new Map(
@@ -143,6 +150,11 @@ export const subjectQueryRowToNormalized = ({
 				? customerProductsById.get(customerEntitlement.customer_product_id)
 				: undefined;
 
+			const isEntityLevel = !!(
+				customerEntitlement.internal_entity_id ||
+				customerProduct?.internal_entity_id
+			);
+
 			meteredCustomerEntitlements.push({
 				...customerEntitlement,
 				internal_feature_id: catalogEntitlement.internal_feature_id,
@@ -153,6 +165,7 @@ export const subjectQueryRowToNormalized = ({
 				cache_version: customerEntitlement.cache_version ?? 0,
 				entities: customerEntitlement.entities ?? null,
 				entitlement: catalogEntitlement as EntitlementWithFeature,
+				replaceables: replaceablesByCusEntId.get(customerEntitlement.id) ?? [],
 				rollovers: rolloversByCusEntId.get(customerEntitlement.id) ?? [],
 				customerPrice: resolveCustomerPrice({
 					customerEntitlement,
@@ -163,6 +176,7 @@ export const subjectQueryRowToNormalized = ({
 					entitlement: catalogEntitlement as EntitlementWithFeature,
 				}),
 				customerProductQuantity: customerProduct?.quantity ?? 1,
+				isEntityLevel,
 			});
 		}
 	};

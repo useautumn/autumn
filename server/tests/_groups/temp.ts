@@ -2,14 +2,16 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Overage allowed billing control tests",
+	description: "Failed tests to triage and fix",
 	tier: "domain",
 	paths: [
-		"integration/balances/check/overage-allowed/",
-		"integration/balances/track/overage-allowed/",
-		"integration/crud/customers/customer-billing-controls.test.ts",
-		"integration/crud/entities/update-entity-billing-controls.test.ts",
-		"integration/balances/reset/persist-free-overage-on.test.ts",
-		"integration/balances/reset/persist-free-overage-off.test.ts",
+		"integration/billing/update-subscription/free-trial/update-paid-trials.test.ts",
+		"integration/billing/update-subscription/free-trial/update-paid-to-free-trials.test.ts",
+
+		"integration/billing/legacy/attach/downgrade/legacy-downgrade-merged-clock.test.ts",
+		"integration/billing/legacy/attach/downgrade/legacy-downgrade-merged-schedule.test.ts",
+		"integration/billing/stripe-webhooks/subscription-updated/subscription-updated-uncancel.test.ts",
+		"integration/billing/stripe-webhooks/subscription-updated/subscription-updated-past-due.test.ts",
+		"integration/billing/stripe-webhooks/invoice-created/invoice-created-entity-consumable.test.ts",
 	],
 };

@@ -7,6 +7,9 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 // https://vite.dev/config/
 export default defineConfig({
+	define: {
+		__APP_ENV__: JSON.stringify(process.env.VITE_APP_ENV || ""),
+	},
 	esbuild: {
 		pure: ["console.log"],
 	},
@@ -22,8 +25,13 @@ export default defineConfig({
 	],
 
 	resolve: {
+		dedupe: ["react", "react-dom"],
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
+
+			// Force all packages to use the same React version
+			react: path.resolve(__dirname, "./node_modules/react"),
+			"react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
 
 			// Workspace packages
 			"autumn-js/react": path.resolve(

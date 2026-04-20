@@ -17,8 +17,12 @@ export const logStripeBillingPlan = ({
 		customerProducts: billingContext.fullCustomer.customer_products,
 	});
 
-	const { invoiceAction, subscriptionAction, ...restBillingPlan } =
+	const { invoiceAction, subscriptionAction, refundAction, ...restBillingPlan } =
 		stripeBillingPlan;
+
+	const refund = refundAction
+		? `${refundAction.amountInCents} cents from charge ${refundAction.chargeId} (invoice ${refundAction.stripeInvoiceId})`
+		: undefined;
 
 	// const subscription =
 	// 	subscriptionAction?.type === "create" || subscriptionAction?.type === "update"
@@ -42,6 +46,7 @@ export const logStripeBillingPlan = ({
 					(line) =>
 						`${line.description}: ${line.amount ?? line.price_data?.unit_amount}`,
 				),
+				refund,
 			},
 		},
 	});

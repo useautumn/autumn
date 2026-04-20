@@ -1,7 +1,6 @@
 import { CurrencyCircleDollarIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Badge } from "@/components/v2/badges/Badge";
-import { useEnv } from "@/utils/envUtils";
 import {
 	useArpc,
 	useCustomerLeaderboard,
@@ -18,8 +17,6 @@ import { RevenueByProductChart } from "./RevenueByProductChart";
 import { RevenueProductShareChart } from "./RevenueProductShareChart";
 
 export const RevenueMetricsSection = () => {
-	const env = useEnv();
-
 	const [granularity, setGranularity] = useState<"day" | "month" | "year">(
 		"month",
 	);
@@ -30,8 +27,6 @@ export const RevenueMetricsSection = () => {
 	const invoiceStatus = useInvoiceStatus();
 	const leaderboard = useCustomerLeaderboard();
 	const estimatedMrr = useEstimatedMrr();
-
-	if (env !== "live") return null;
 
 	return (
 		<div className="flex flex-col gap-4 pb-6">

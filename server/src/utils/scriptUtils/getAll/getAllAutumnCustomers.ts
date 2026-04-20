@@ -144,6 +144,36 @@ export const getAllFullCusProducts = async ({
 	return allData;
 };
 
+/** Async generator that yields batches of customer rows using cursor-based pagination. */
+export async function* getAllCustomerRows({
+	db,
+	orgId,
+	env,
+	pageSize = 500,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+	pageSize?: number;
+}) {
+	let lastCustomerId: string | undefined;
+
+	while (true) {
+		const batch = await getCustomerBatch({
+			db,
+			orgId,
+			env,
+			lastCustomerId,
+			pageSize,
+		});
+
+		if (batch.length === 0) break;
+
+		yield batch;
+		lastCustomerId = batch[batch.length - 1].internal_id;
+	}
+}
+
 export const getCustomerBatch = async ({
 	db,
 	orgId,

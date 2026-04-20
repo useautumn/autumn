@@ -1,21 +1,36 @@
+import type { Variants } from "motion/react";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
-import { ACCORDION_ITEM } from "./AdvancedSection";
+import { ConfigRow } from "../ConfigRow";
+
+const ACCORDION_EASE = [0.32, 0.72, 0, 1] as const;
+
+const ACCORDION_ITEM: Variants = {
+	hidden: {
+		opacity: 0,
+		y: -4,
+		transition: { duration: 0.12, ease: ACCORDION_EASE },
+	},
+	visible: {
+		opacity: 1,
+		y: 0,
+		transition: { duration: 0.25, ease: ACCORDION_EASE },
+	},
+};
 
 /** A standard toggle row inside an AdvancedSection accordion. */
 export function AdvancedToggleRow({
 	label,
+	description,
 	children,
 }: {
 	label: string;
+	description?: string;
 	children: ReactNode;
 }) {
 	return (
 		<motion.div variants={ACCORDION_ITEM}>
-			<div className="flex items-center justify-between px-3 h-10 rounded-xl input-base">
-				<span className="text-sm text-t2">{label}</span>
-				<div className="flex">{children}</div>
-			</div>
+			<ConfigRow title={label} description={description} action={children} />
 		</motion.div>
 	);
 }

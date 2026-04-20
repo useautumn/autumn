@@ -1,4 +1,9 @@
-import type { BillingContext, FullCusProduct } from "@autumn/shared";
+import type {
+	BillingContext,
+	FullCusProduct,
+	LineItem,
+	UpdateCustomerEntitlement,
+} from "@autumn/shared";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { customerProductToLineItems } from "../../utils/lineItems/customerProductToLineItems";
@@ -8,43 +13,56 @@ export const buildAutumnLineItems = ({
 	ctx,
 	newCustomerProducts,
 	deletedCustomerProduct,
+	deletedCustomerProducts,
 	billingContext,
 	includeArrearLineItems = false,
 }: {
 	ctx: AutumnContext;
 	newCustomerProducts: FullCusProduct[];
 	deletedCustomerProduct?: FullCusProduct;
+	deletedCustomerProducts?: FullCusProduct[];
 	billingContext: BillingContext;
 	includeArrearLineItems?: boolean;
 }) => {
 	const { logger } = ctx;
+	const customerProductsToDelete = [
+		...(deletedCustomerProduct ? [deletedCustomerProduct] : []),
+		...(deletedCustomerProducts ?? []),
+	];
 
 	// For now, update subscription doesn't charge for existing usage.
-	let { lineItems: arrearLineItems, updateCustomerEntitlements } =
-		deletedCustomerProduct && includeArrearLineItems
-			? customerProductToArrearLineItems({
-					ctx,
-					customerProduct: deletedCustomerProduct,
-					billingContext,
-					options: {
-						includePeriodDescription: true,
-						updateNextResetAt: true,
-					},
-				})
-			: { lineItems: [], updateCustomerEntitlements: [] };
+	let arrearLineItems: LineItem[] = [];
+	const updateCustomerEntitlements: UpdateCustomerEntitlement[] = [];
+	if (includeArrearLineItems) {
+		for (const customerProduct of customerProductsToDelete) {
+			const arrearResult = customerProductToArrearLineItems({
+				ctx,
+				customerProduct,
+				billingContext,
+				options: {
+					includePeriodDescription: true,
+					updateNextResetAt: true,
+				},
+			});
+			arrearLineItems.push(...arrearResult.lineItems);
+			updateCustomerEntitlements.push(
+				...arrearResult.updateCustomerEntitlements,
+			);
+		}
+	}
 
 	arrearLineItems = arrearLineItems.filter((lineItem) => lineItem.amount !== 0);
 
 	// Get line items for ongoing cus product
-	const deletedLineItems = deletedCustomerProduct
-		? customerProductToLineItems({
-				ctx,
-				customerProduct: deletedCustomerProduct,
-				billingContext,
-				direction: "refund",
-				priceFilters: { excludeOneOffPrices: true },
-			})
-		: [];
+	const deletedLineItems = customerProductsToDelete.flatMap((customerProduct) =>
+		customerProductToLineItems({
+			ctx,
+			customerProduct,
+			billingContext,
+			direction: "refund",
+			priceFilters: { excludeOneOffPrices: true },
+		}),
+	);
 
 	const newLineItems = newCustomerProducts.flatMap((newCustomerProduct) =>
 		customerProductToLineItems({
@@ -55,8 +73,6 @@ export const buildAutumnLineItems = ({
 		}),
 	);
 
-	// Combine all line items - trial filtering and unchanged price filtering
-	// will be handled in finalizeUpdateSubscriptionPlan
 	const allLineItems = [
 		...arrearLineItems,
 		...deletedLineItems,

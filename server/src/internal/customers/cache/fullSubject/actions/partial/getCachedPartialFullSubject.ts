@@ -2,9 +2,11 @@ import type { FullSubject } from "@autumn/shared";
 import { normalizedToFullSubject } from "@autumn/shared";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
+import { applyLiveAggregatedBalances } from "../../balances/applyLiveAggregatedBalances.js";
 import { getCachedFeatureBalancesBatch } from "../../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { filterNormalizedFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
@@ -12,6 +14,7 @@ import {
 	type CachedFullSubject,
 	cachedFullSubjectToNormalized,
 } from "../../fullSubjectCacheModel.js";
+import { sanitizeCachedFullSubject } from "../../sanitize/index.js";
 import { getOrInitFullSubjectViewEpoch } from "../invalidate/getOrInitFullSubjectViewEpoch.js";
 import { invalidateCachedFullSubject } from "../invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "../invalidate/invalidateFullSubjectExact.js";
@@ -61,7 +64,10 @@ export const getCachedPartialFullSubject = async ({
 
 	let cached: CachedFullSubject;
 	try {
-		cached = JSON.parse(cachedRaw) as CachedFullSubject;
+		const parsedCached = JSON.parse(cachedRaw) as CachedFullSubject;
+		cached = sanitizeCachedFullSubject({
+			cachedFullSubject: parsedCached,
+		});
 	} catch (error) {
 		logger.warn(
 			`[getCachedPartialFullSubject] Failed to parse cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
@@ -116,12 +122,14 @@ export const getCachedPartialFullSubject = async ({
 		cached.meteredFeatures.includes(featureId),
 	);
 
+	const isCustomerSubject = !entityId;
 	const featureBalances = await getCachedFeatureBalancesBatch({
 		orgId: org.id,
 		env,
 		customerId,
 		featureIds: meteredFeatureIdsToFetch,
 		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,
+		includeAggregated: isCustomerSubject,
 	});
 
 	if (
@@ -144,13 +152,35 @@ export const getCachedPartialFullSubject = async ({
 		(featureBalance) => featureBalance.balances,
 	);
 
-	const normalized = filterNormalizedFullSubjectByFeatureIds({
-		normalized: cachedFullSubjectToNormalized({
-			cached,
-			customerEntitlements,
-		}),
-		featureIds,
-	});
+	try {
+		const normalized = filterNormalizedFullSubjectByFeatureIds({
+			normalized: cachedFullSubjectToNormalized({
+				cached,
+				customerEntitlements,
+			}),
+			featureIds,
+		});
 
-	return normalizedToFullSubject({ normalized });
+		if (isCustomerSubject) {
+			applyLiveAggregatedBalances({
+				normalized,
+				featureBalances,
+			});
+		}
+
+		const fullSubject = normalizedToFullSubject({ normalized });
+		await lazyResetSubjectEntitlements({ ctx, fullSubject, normalized });
+		return fullSubject;
+	} catch (error) {
+		logger.warn(
+			`[getCachedPartialFullSubject] Failed to hydrate cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
+		);
+		await invalidateCachedFullSubjectExact({
+			ctx,
+			customerId,
+			entityId,
+			source: "partial-hydrate-failed",
+		});
+		return undefined;
+	}
 };

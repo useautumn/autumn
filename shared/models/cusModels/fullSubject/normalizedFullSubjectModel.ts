@@ -1,9 +1,22 @@
-import type { AggregatedFeatureBalance } from "../../cusProductModels/cusEntModels/aggregatedCusEnt.js";
-import type { EntityBalance } from "../../cusProductModels/cusEntModels/cusEntModels.js";
+import { z } from "zod/v4";
+import {
+	type AggregatedFeatureBalance,
+	AggregatedFeatureBalanceSchema,
+} from "../../cusProductModels/cusEntModels/aggregatedCusEnt.js";
+import {
+	type EntityBalance,
+	FullCustomerEntitlementSchema,
+} from "../../cusProductModels/cusEntModels/cusEntModels.js";
+import type { Replaceable } from "../../cusProductModels/cusEntModels/replaceableTable.js";
 import type { DbRollover } from "../../cusProductModels/cusEntModels/rolloverModels/rolloverTable.js";
 import type { FullCustomerPrice } from "../../cusProductModels/cusPriceModels/cusPriceModels.js";
+import { FullCustomerPriceSchema } from "../../cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { DbCustomerPrice } from "../../cusProductModels/cusPriceModels/cusPriceTable.js";
-import type { FeatureOptions } from "../../cusProductModels/cusProductModels.js";
+import {
+	CusProductSchema,
+	type FeatureOptions,
+	FeatureOptionsSchema,
+} from "../../cusProductModels/cusProductModels.js";
 import type { DbCustomerProduct } from "../../cusProductModels/cusProductTable.js";
 import type { EntitlementWithFeature } from "../../productModels/entModels/entModels.js";
 import type { DbFreeTrial } from "../../productModels/freeTrialModels/freeTrialTable.js";
@@ -14,6 +27,22 @@ import type { Customer } from "../cusModels.js";
 import type { Entity } from "../entityModels/entityModels.js";
 import type { Invoice } from "../invoiceModels/invoiceModels.js";
 import type { SubjectType } from "./fullSubjectModel.js";
+
+/**
+ * Schema mirror of the `SubjectFlag` shape. Used by the cached-payload
+ * schema walker to know where nullable positions are.
+ */
+export const SubjectFlagSchema = z.object({
+	featureId: z.string(),
+	internalFeatureId: z.string(),
+	entitlementId: z.string(),
+	customerEntitlementId: z.string(),
+	customerProductId: z.string().nullable(),
+	internalCustomerId: z.string(),
+	internalEntityId: z.string().nullable(),
+	expiresAt: z.number().nullable(),
+	externalId: z.string().nullable(),
+});
 
 export type SubjectFlag = {
 	featureId: string;
@@ -26,6 +55,21 @@ export type SubjectFlag = {
 	expiresAt: number | null;
 	externalId: string | null;
 };
+
+/**
+ * Schema mirror of `SubjectBalance`. Extends `FullCustomerEntitlementSchema`
+ * with the helper fields attached during normalization (customerPrice,
+ * customerProductOptions, customerProductQuantity, isEntityLevel).
+ *
+ * Used by the cache-hole-filling walker; this is not a validator — the
+ * runtime `SubjectBalance` type below is the source of truth.
+ */
+export const SubjectBalanceSchema = FullCustomerEntitlementSchema.extend({
+	customerPrice: FullCustomerPriceSchema.nullable(),
+	customerProductOptions: FeatureOptionsSchema.nullable(),
+	customerProductQuantity: z.number(),
+	isEntityLevel: z.boolean(),
+});
 
 export type SubjectBalance = {
 	id: string;
@@ -49,11 +93,22 @@ export type SubjectBalance = {
 	customer_id?: string | null;
 
 	entitlement: EntitlementWithFeature;
+	replaceables: Replaceable[];
 	rollovers: DbRollover[];
 	customerPrice: FullCustomerPrice | null;
 	customerProductOptions: FeatureOptions | null;
 	customerProductQuantity: number;
+	isEntityLevel: boolean;
 };
+
+/**
+ * Schema mirror of `EntityAggregations`. Reuses `CusProductSchema` as the Zod
+ * mirror of `DbCustomerProduct` for the aggregated customer products array.
+ */
+export const EntityAggregationsSchema = z.object({
+	aggregated_customer_products: z.array(CusProductSchema),
+	aggregated_customer_entitlements: z.array(AggregatedFeatureBalanceSchema),
+});
 
 export type EntityAggregations = {
 	aggregated_customer_products: DbCustomerProduct[];

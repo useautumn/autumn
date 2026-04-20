@@ -21,8 +21,14 @@ export const expireEndedCustomerProducts = async ({
 
 	const expiredCustomerProducts: FullCusProduct[] = [];
 
-	for (const customerProduct of customerProducts) {
-		if (!hasCustomerProductEnded(customerProduct, { nowMs })) continue;
+	// Iterate over a snapshot: `expireAndActivateWithTracking` may insert a
+	// default product (via `trackCustomerProductInsertion`), which `push`es
+	// onto `customerProducts`. Without the snapshot the for-of would then
+	// iterate the newly inserted default product as an extra pass.
+	for (const customerProduct of [...customerProducts]) {
+		const shouldExpire = hasCustomerProductEnded(customerProduct, { nowMs });
+
+		if (!shouldExpire) continue;
 
 		logger.info(
 			`Expiring product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,

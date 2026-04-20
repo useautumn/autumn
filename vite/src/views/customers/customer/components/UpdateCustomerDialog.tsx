@@ -8,50 +8,59 @@ import {
 	DialogFooter,
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
+import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
+import { Input } from "@/components/v2/inputs/Input";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useCusQuery } from "../hooks/useCusQuery";
 import { CustomerConfig } from "./CustomerConfig";
 
 const UpdateCustomerDialog = ({
 	selectedCustomer,
-	open,
 	setOpen,
 }: {
 	selectedCustomer: Customer;
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }) => {
-	// const { cusMutate } = useCustomerContext();
 	const { customer: curCustomer, refetch } = useCusQuery();
 	const [customer, setCustomer] = useState<CreateCustomer>(curCustomer);
+	const [stripeId, setStripeId] = useState(
+		selectedCustomer.processor?.id ?? "",
+	);
 
 	const [loading, setLoading] = useState(false);
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance({ env });
 	const navigate = useNavigate();
 
-	// useEffect(() => {
-	//   setCustomer(selectedCustomer);
-	// }, [open]);
+	const stripeIdChanged = stripeId !== (selectedCustomer.processor?.id ?? "");
 
 	const handleAddClicked = async () => {
 		try {
 			setLoading(true);
+
+			const data: Record<string, unknown> = {
+				id: customer.id || undefined,
+				name: customer.name || null,
+				email: customer.email || null,
+				fingerprint: customer.fingerprint || null,
+			};
+
+			if (stripeIdChanged) {
+				data.stripe_id = stripeId || null;
+			}
+
 			await CusService.updateCustomer({
 				axios: axiosInstance,
 				customer_id: selectedCustomer.id || selectedCustomer.internal_id,
-				data: {
-					id: customer.id || undefined,
-					name: customer.name || null,
-					email: customer.email || null,
-					fingerprint: customer.fingerprint || null,
-				},
+				data,
 			});
 
-			toast.success(`Successfully updated customer`);
+			toast.success("Successfully updated customer");
 			setOpen(false);
 			await refetch();
 
@@ -74,6 +83,23 @@ const UpdateCustomerDialog = ({
 				setCustomer={setCustomer}
 				isUpdate={true}
 			/>
+
+			<div>
+				<FieldLabel>Stripe Customer ID</FieldLabel>
+				<Input
+					value={stripeId}
+					onChange={(e) => setStripeId(e.target.value)}
+					placeholder="cus_..."
+				/>
+			</div>
+
+			{stripeIdChanged && (
+				<InfoBox variant="warning">
+					Changing the Stripe Customer ID will break existing subscription
+					links. You can sync from Stripe again after updating (Actions → Sync
+					from Stripe).
+				</InfoBox>
+			)}
 
 			<DialogFooter>
 				<Button

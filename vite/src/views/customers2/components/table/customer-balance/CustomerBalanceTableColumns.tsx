@@ -15,8 +15,10 @@ import {
 } from "@autumn/shared";
 import {
 	BoxArrowDownIcon,
+	BracketsSquareIcon,
 	CaretRightIcon,
 	MoneyWavyIcon,
+	PulseIcon,
 	WalletIcon,
 } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
@@ -189,8 +191,6 @@ function SubRowUsageCell({
 		return <span className="text-t4">Unlimited</span>;
 	}
 
-	
-
 	const { balance, allowance, rolloverBalance } = getIndividualEntValues({
 		ent,
 		entityId,
@@ -361,17 +361,21 @@ function BarCell({
 function BalanceActionsCell({
 	row,
 	onDeleteClick,
+	onRecordUsageClick,
+	onCheckBalanceClick,
 }: {
 	row: Row<CustomerBalanceRowData>;
 	onDeleteClick?: (balance: FullCusEntWithFullCusProduct) => void;
+	onRecordUsageClick?: (balance: FullCusEntWithFullCusProduct) => void;
+	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) {
+	const isParentRow = row.depth === 0;
 	const canDelete =
-		!row.getCanExpand() &&
-		canDeleteCustomerBalance({
-			balance: row.original,
-		});
+		!row.getCanExpand() && canDeleteCustomerBalance({ balance: row.original });
+	const canRecordUsage = isParentRow && !!onRecordUsageClick;
+	const canCheckBalance = isParentRow && !!onCheckBalanceClick;
 
-	if (!canDelete || !onDeleteClick) return null;
+	if (!canDelete && !canRecordUsage && !canCheckBalance) return null;
 
 	return (
 		<div className="flex justify-end">
@@ -384,17 +388,45 @@ function BalanceActionsCell({
 					align="end"
 					onClick={(event) => event.stopPropagation()}
 				>
-					<DropdownMenuItem
-						onClick={(event) => {
-							event.stopPropagation();
-							onDeleteClick(row.original);
-						}}
-					>
-						<div className="flex w-full items-center justify-between gap-2 text-sm">
-							Delete
-							<Trash size={12} className="text-t3" />
-						</div>
-					</DropdownMenuItem>
+					{canRecordUsage && (
+						<DropdownMenuItem
+							onClick={(event) => {
+								event.stopPropagation();
+								onRecordUsageClick(row.original);
+							}}
+						>
+							<div className="flex w-full items-center justify-between gap-2 text-sm">
+								Record usage
+								<PulseIcon size={12} className="text-t3" />
+							</div>
+						</DropdownMenuItem>
+					)}
+					{canCheckBalance && (
+						<DropdownMenuItem
+							onClick={(event) => {
+								event.stopPropagation();
+								onCheckBalanceClick(row.original);
+							}}
+						>
+							<div className="flex w-full items-center justify-between gap-2 text-sm">
+								Check balance
+								<BracketsSquareIcon size={12} className="text-t3" />
+							</div>
+						</DropdownMenuItem>
+					)}
+					{canDelete && onDeleteClick && (
+						<DropdownMenuItem
+							onClick={(event) => {
+								event.stopPropagation();
+								onDeleteClick(row.original);
+							}}
+						>
+							<div className="flex w-full items-center justify-between gap-2 text-sm">
+								Delete
+								<Trash size={12} className="text-t3" />
+							</div>
+						</DropdownMenuItem>
+					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
 		</div>
@@ -408,11 +440,15 @@ export const CustomerBalanceTableColumns = ({
 	entityId,
 	entities = [],
 	onDeleteClick,
+	onRecordUsageClick,
+	onCheckBalanceClick,
 }: {
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
 	entities?: Entity[];
 	onDeleteClick?: (balance: FullCusEntWithFullCusProduct) => void;
+	onRecordUsageClick?: (balance: FullCusEntWithFullCusProduct) => void;
+	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) => [
 	{
 		header: "Feature",
@@ -530,7 +566,12 @@ export const CustomerBalanceTableColumns = ({
 		header: "",
 		size: 44,
 		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
-			<BalanceActionsCell row={row} onDeleteClick={onDeleteClick} />
+			<BalanceActionsCell
+				row={row}
+				onDeleteClick={onDeleteClick}
+				onRecordUsageClick={onRecordUsageClick}
+				onCheckBalanceClick={onCheckBalanceClick}
+			/>
 		),
 	},
 ];

@@ -52,6 +52,14 @@ export default function App() {
 			Sentry.setTags({
 				org_id: data.session.activeOrganizationId ?? "unknown_org",
 			});
+
+			const isLocal = window.location.hostname === "localhost";
+			const extras = isLocal ? "" : "; domain=.useautumn.com; Secure";
+			if (data?.user) {
+				document.cookie = `logged_in_hint=1; path=/; max-age=604800; SameSite=Lax${extras}`;
+			} else {
+				document.cookie = `logged_in_hint=; path=/; max-age=0; SameSite=Lax${extras}`;
+			}
 		}
 	}, [data]);
 	return (

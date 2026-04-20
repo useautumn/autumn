@@ -14,10 +14,8 @@ export const listEventNames = async ({
 	ctx: AutumnContext;
 	limit?: number;
 }): Promise<EventNameWithCount[]> => {
-	const { org, env, logger } = ctx;
+	const { org, env } = ctx;
 	const pipes = getTinybirdPipes();
-
-	const startTime = performance.now();
 
 	const result = await pipes.listEventNames({
 		org_id: org.id,
@@ -25,10 +23,6 @@ export const listEventNames = async ({
 		limit,
 	});
 
-	logger.debug("Listed event names", {
-		queryMs: Math.round(performance.now() - startTime),
-		count: result.data.length,
-	});
 
 	return result.data;
 };

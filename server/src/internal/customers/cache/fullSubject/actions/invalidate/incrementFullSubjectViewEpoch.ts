@@ -2,6 +2,7 @@ import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
+import { FULL_SUBJECT_EPOCH_TTL_SECONDS } from "../../config/fullSubjectCacheConfig.js";
 
 export const incrementFullSubjectViewEpoch = async ({
 	ctx,
@@ -18,5 +19,9 @@ export const incrementFullSubjectViewEpoch = async ({
 
 	const nextEpoch = await tryRedisWrite(() => redisV2.incr(epochKey), redisV2);
 	if (nextEpoch === null || nextEpoch === undefined) return null;
+	await tryRedisWrite(
+		() => redisV2.expire(epochKey, FULL_SUBJECT_EPOCH_TTL_SECONDS),
+		redisV2,
+	);
 	return nextEpoch;
 };

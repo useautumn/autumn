@@ -76,6 +76,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		id,
 		timestamp,
 		isPublic: false,
+		useReplicaDb: false,
 		apiVersion: new ApiVersionClass(LATEST_VERSION),
 
 		// Auth (will be populated by auth middleware)

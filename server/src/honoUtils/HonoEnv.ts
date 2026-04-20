@@ -38,6 +38,7 @@ export type RequestContext = {
 	// Info
 	id: string;
 	isPublic: boolean;
+	useReplicaDb?: boolean;
 	authType: AuthType;
 	apiVersion: ApiVersionClass;
 	timestamp: number;

@@ -38,6 +38,7 @@ import {
 	getEmptyApiBalanceV2,
 	mergeAggregatedBalanceIntoApiBalanceV2,
 } from "./apiBalanceV2Utils.js";
+import { roundApiBalance } from "./roundApiBalance.js";
 
 const getApiBalanceBreakdownItemV2 = ({
 	fullSubject,
@@ -129,6 +130,9 @@ export const getApiBalanceV2 = ({
 			})
 		: undefined;
 
+	// console.log("customerEntitlements", customerEntitlements);
+	// console.log("aggregatedFeatureBalance", aggregatedFeatureBalance);
+
 	if (customerEntitlements.length === 0) {
 		return {
 			data: mergeAggregatedBalanceIntoApiBalanceV2({
@@ -216,29 +220,29 @@ export const getApiBalanceV2 = ({
 		entityId,
 	});
 
-	return {
-		data: mergeAggregatedBalanceIntoApiBalanceV2({
-			apiBalance: {
-				object: "balance",
-				feature_id: feature.id,
-				feature: apiFeature,
-				granted: new Decimal(totalGranted).add(totalRolloverGranted).toNumber(),
-				remaining: new Decimal(totalRemaining)
-					.add(totalRolloverBalance)
-					.add(totalUnused)
-					.toNumber(),
-				usage: new Decimal(totalUsage)
-					.add(totalRolloverUsage)
-					.sub(totalUnused)
-					.toNumber(),
-				unlimited,
-				overage_allowed: usageAllowed ?? false,
-				max_purchase: totalMaxPurchase,
-				next_reset_at: nextResetAt,
-				breakdown: breakdownItems,
-				rollovers: totalRollovers,
-			},
-			aggregatedFeatureBalance,
-		}),
-	};
+	const merged = mergeAggregatedBalanceIntoApiBalanceV2({
+		apiBalance: {
+			object: "balance",
+			feature_id: feature.id,
+			feature: apiFeature,
+			granted: new Decimal(totalGranted).add(totalRolloverGranted).toNumber(),
+			remaining: new Decimal(totalRemaining)
+				.add(totalRolloverBalance)
+				.add(totalUnused)
+				.toNumber(),
+			usage: new Decimal(totalUsage)
+				.add(totalRolloverUsage)
+				.sub(totalUnused)
+				.toNumber(),
+			unlimited,
+			overage_allowed: usageAllowed ?? false,
+			max_purchase: totalMaxPurchase,
+			next_reset_at: nextResetAt,
+			breakdown: breakdownItems,
+			rollovers: totalRollovers,
+		},
+		aggregatedFeatureBalance,
+	});
+
+	return { data: roundApiBalance({ apiBalance: merged }) };
 };
