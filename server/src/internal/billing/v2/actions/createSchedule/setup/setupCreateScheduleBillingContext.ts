@@ -1,10 +1,10 @@
 import {
+	type CheckoutMode,
+	type CreateScheduleBillingContext,
+	type CreateScheduleParamsV0,
 	isOneOffProduct,
 	isProductPaidAndRecurring,
-	type CheckoutMode,
-	CreateScheduleBillingContext,
-	CreateScheduleParamsV0,
-	MultiAttachParamsV0,
+	type MultiAttachParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
@@ -41,8 +41,7 @@ const setupCreateScheduleCheckoutMode = ({
 		isProductPaidAndRecurring,
 	);
 	const shouldUseStripeCheckout =
-		hasOneOffProduct ||
-		(!hasExistingSubscription && hasPaidRecurringProduct);
+		hasOneOffProduct || (!hasExistingSubscription && hasPaidRecurringProduct);
 
 	if (
 		!billingContext.invoiceMode &&
