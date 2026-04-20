@@ -3,6 +3,8 @@ import type {
 	AttachParamsV1,
 	AttachPreviewResponse,
 	Checkout,
+	CreateScheduleBillingContext,
+	CreateScheduleParamsV0,
 	PreviewUpdateSubscriptionResponse,
 	UpdateSubscriptionBillingContext,
 	UpdateSubscriptionV1Params,
@@ -23,6 +25,15 @@ export type CheckoutActionTypeMap = {
 		checkout: BaseCheckoutForAction<CheckoutAction.Attach, AttachParamsV1>;
 		params: AttachParamsV1;
 		billingContext: AttachBillingContext;
+		preview: AttachPreviewResponse;
+	};
+	[CheckoutAction.CreateSchedule]: {
+		checkout: BaseCheckoutForAction<
+			CheckoutAction.CreateSchedule,
+			CreateScheduleParamsV0
+		>;
+		params: CreateScheduleParamsV0;
+		billingContext: CreateScheduleBillingContext;
 		preview: AttachPreviewResponse;
 	};
 	[CheckoutAction.UpdateSubscription]: {
@@ -62,9 +73,10 @@ export type PreviewCheckoutActionArgs<TAction extends CheckoutAction> = {
 export type PreviewCheckoutAnyActionArgs = {
 	ctx: AutumnContext;
 	checkout: Checkout;
-	params: AttachParamsV1 | UpdateSubscriptionV1Params;
+	params: AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params;
 };
 
 export type PreviewCheckoutAnyActionResult =
 	| PreviewCheckoutActionResult<CheckoutAction.Attach>
+	| PreviewCheckoutActionResult<CheckoutAction.CreateSchedule>
 	| PreviewCheckoutActionResult<CheckoutAction.UpdateSubscription>;

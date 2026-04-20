@@ -1,4 +1,7 @@
-import type {
+import {
+	isOneOffProduct,
+	isProductPaidAndRecurring,
+	type CheckoutMode,
 	CreateScheduleBillingContext,
 	CreateScheduleParamsV0,
 	MultiAttachParamsV0,
@@ -8,6 +11,57 @@ import { setupImmediateMultiProductBillingContext } from "../../common/immediate
 import { normalizeCreateSchedulePhases } from "../errors/normalizeCreateSchedulePhases";
 import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
+
+type CreateScheduleCheckoutModeContext = Pick<
+	CreateScheduleBillingContext,
+	| "fullProducts"
+	| "paymentMethod"
+	| "stripeSubscription"
+	| "trialContext"
+	| "invoiceMode"
+>;
+
+const setupCreateScheduleCheckoutMode = ({
+	billingContext,
+	redirectMode,
+}: {
+	billingContext: CreateScheduleCheckoutModeContext;
+	redirectMode: CreateScheduleParamsV0["redirect_mode"];
+}): CheckoutMode => {
+	if (redirectMode === "never") {
+		return null;
+	}
+
+	const hasPaymentMethod = !!billingContext.paymentMethod;
+	const hasExistingSubscription = !!billingContext.stripeSubscription;
+	const hasOneOffProduct = billingContext.fullProducts.some((product) =>
+		isOneOffProduct({ prices: product.prices }),
+	);
+	const hasPaidRecurringProduct = billingContext.fullProducts.some(
+		isProductPaidAndRecurring,
+	);
+	const shouldUseStripeCheckout =
+		hasOneOffProduct ||
+		(!hasExistingSubscription && hasPaidRecurringProduct);
+
+	if (
+		!billingContext.invoiceMode &&
+		!hasPaymentMethod &&
+		shouldUseStripeCheckout
+	) {
+		const noCardRequiredTrial =
+			billingContext.trialContext?.trialEndsAt &&
+			billingContext.trialContext.cardRequired === false;
+
+		return noCardRequiredTrial ? null : "stripe_checkout";
+	}
+
+	if (redirectMode === "always") {
+		return shouldUseStripeCheckout ? "stripe_checkout" : "autumn_checkout";
+	}
+
+	return null;
+};
 
 /** Build billing context for the immediate phase. */
 export const setupCreateScheduleBillingContext = async ({
@@ -32,6 +86,8 @@ export const setupCreateScheduleBillingContext = async ({
 			version: plan.version,
 		})),
 		invoice_mode: params.invoice_mode,
+		success_url: params.success_url,
+		checkout_session_params: params.checkout_session_params,
 		redirect_mode: params.redirect_mode ?? "if_required",
 	} satisfies MultiAttachParamsV0;
 
@@ -62,6 +118,10 @@ export const setupCreateScheduleBillingContext = async ({
 
 	return {
 		...billingContext,
+		checkoutMode: setupCreateScheduleCheckoutMode({
+			billingContext,
+			redirectMode: params.redirect_mode,
+		}),
 		customPrices: [
 			...(billingContext.customPrices ?? []),
 			...scheduledCustomPrices,
