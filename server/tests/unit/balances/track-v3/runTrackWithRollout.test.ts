@@ -12,7 +12,7 @@ describe("runTrackWithRollout", () => {
 		).toBe(false);
 	});
 
-	test("keeps track v3 disabled even when v2-cache rollout is enabled", () => {
+	test("enables track v3 when v2-cache rollout is enabled", () => {
 		expect(
 			shouldUseTrackV3({
 				ctx: {
@@ -26,6 +26,6 @@ describe("runTrackWithRollout", () => {
 					},
 				} as never,
 			}),
-		).toBe(false);
+		).toBe(true);
 	});
 });

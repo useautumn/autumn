@@ -30,5 +30,13 @@ export const createBalanceParamsV0ToPlanItemV0 = ({
 				}
 			: null,
 		price: null,
+		rollover: params.rollover
+			? {
+					max: params.rollover.max ?? null,
+					max_percentage: params.rollover.max_percentage ?? null,
+					expiry_duration_type: params.rollover.duration,
+					expiry_duration_length: params.rollover.length,
+				}
+			: undefined,
 	};
 };

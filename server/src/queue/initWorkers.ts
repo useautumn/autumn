@@ -13,6 +13,7 @@ import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { verifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
 import { generateId } from "@/utils/genUtils.js";
+import { withTimeout } from "@/utils/withTimeout.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
@@ -40,27 +41,6 @@ const HEARTBEAT_INTERVAL_MS = ms.minutes(5);
 const ZERO_MESSAGE_ALERT_THRESHOLD = 20; // ~20 min of 0 messages
 
 // ============ Helper Functions ============
-
-const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
-	new Promise((resolve, reject) => {
-		const timeout = setTimeout(() => {
-			reject(new Error(`Processing timed out after ${timeoutMs}ms`));
-		}, timeoutMs);
-
-		if (timeout.unref) {
-			timeout.unref();
-		}
-
-		promise
-			.then((result) => {
-				clearTimeout(timeout);
-				resolve(result);
-			})
-			.catch((error) => {
-				clearTimeout(timeout);
-				reject(error);
-			});
-	});
 
 const logPrefix = ({ queueUrl }: { queueUrl: string }) =>
 	`[SQS Worker ${process.pid}][${queueUrl.split("/").pop()}]`;
@@ -209,7 +189,11 @@ const startPollingLoop = async ({
 		if (isMigration) {
 			await processMessage({ message, db });
 		} else {
-			await withTimeout(processMessage({ message, db }), MESSAGE_TIMEOUT_MS);
+			await withTimeout({
+				timeoutMs: MESSAGE_TIMEOUT_MS,
+				timeoutMessage: `Processing timed out after ${MESSAGE_TIMEOUT_MS}ms`,
+				fn: () => processMessage({ message, db }),
+			});
 		}
 
 		messagesProcessed++;
