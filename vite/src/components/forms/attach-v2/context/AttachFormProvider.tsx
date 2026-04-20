@@ -82,7 +82,13 @@ interface AttachFormContextValue {
 
 	isPending: boolean;
 	handleConfirm: () => void;
-	handleInvoiceAttach: (params: { enableProductImmediately: boolean }) => void;
+	handleInvoiceAttach: (params: {
+		enableProductImmediately: boolean;
+		finalizeInvoice: boolean;
+	}) => Promise<{
+		stripeId: string | undefined;
+		hostedInvoiceUrl: string | null | undefined;
+	}>;
 }
 
 const AttachFormReactContext = createContext<AttachFormContextValue | null>(
@@ -95,10 +101,10 @@ interface AttachFormProviderProps {
 	initialProductId?: string;
 	onPlanEditorOpen?: () => void;
 	onPlanEditorClose?: () => void;
-	onInvoiceCreated?: (invoiceId: string) => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 	initialSchedulePlan?: SchedulePlan | null;
+	disablePreview?: boolean;
 	children: ReactNode;
 }
 
@@ -127,10 +133,10 @@ export function AttachFormProvider({
 	initialProductId,
 	onPlanEditorOpen,
 	onPlanEditorClose,
-	onInvoiceCreated,
 	onCheckoutRedirect,
 	onSuccess,
 	initialSchedulePlan,
+	disablePreview,
 	children,
 }: AttachFormProviderProps) {
 	const [showPlanEditor, setShowPlanEditor] = useState(false);
@@ -378,7 +384,10 @@ export function AttachFormProvider({
 		isFreeToPaidTransition,
 	});
 
-	const previewQuery = useAttachPreview({ requestBody });
+	const previewQuery = useAttachPreview({
+		requestBody,
+		enabled: disablePreview ? false : undefined,
+	});
 
 	const previewPrepaidOptions = useMemo(() => {
 		const incoming = previewQuery.data?.incoming;
@@ -404,7 +413,6 @@ export function AttachFormProvider({
 	const { handleConfirm, handleInvoiceAttach, isPending } = useAttachMutation({
 		customerId,
 		buildRequestBody,
-		onInvoiceCreated,
 		onCheckoutRedirect,
 		onSuccess,
 	});

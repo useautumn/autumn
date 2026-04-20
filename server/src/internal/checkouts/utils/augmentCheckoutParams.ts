@@ -3,6 +3,7 @@ import {
 	type Checkout,
 	CheckoutAction,
 	type ConfirmCheckoutParams,
+	type CreateScheduleParamsV0,
 	ErrCode,
 	RecaseError,
 	type UpdateSubscriptionV1Params,
@@ -19,7 +20,7 @@ export function augmentCheckoutParams({
 }: {
 	checkout: Checkout;
 	body: ConfirmCheckoutParams;
-}): AttachParamsV1 | UpdateSubscriptionV1Params;
+}): AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params;
 
 export function augmentCheckoutParams({
 	checkout,
@@ -41,9 +42,17 @@ export function augmentCheckoutParams({
 	checkout,
 	body,
 }: {
+	checkout: CheckoutForAction<CheckoutAction.CreateSchedule>;
+	body: ConfirmCheckoutParams;
+}): CheckoutParamsForAction<CheckoutAction.CreateSchedule>;
+
+export function augmentCheckoutParams({
+	checkout,
+	body,
+}: {
 	checkout: Checkout;
 	body: ConfirmCheckoutParams;
-}): AttachParamsV1 | UpdateSubscriptionV1Params {
+}): AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params {
 	const mergeFeatureQuantities = ({
 		originalFeatureQuantities,
 	}: {
@@ -88,6 +97,8 @@ export function augmentCheckoutParams({
 				}),
 			};
 		}
+		case CheckoutAction.CreateSchedule:
+			return checkout.params as CreateScheduleParamsV0;
 		default:
 			throw new RecaseError({
 				message: "Unsupported checkout action",

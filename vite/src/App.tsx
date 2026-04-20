@@ -53,15 +53,12 @@ export default function App() {
 				org_id: data.session.activeOrganizationId ?? "unknown_org",
 			});
 
-			// Set a non-httpOnly hint cookie so the landing page can detect login state.
-			// In production this is handled server-side on .useautumn.com domain.
-			if (window.location.hostname === "localhost") {
-				if (data?.user) {
-					document.cookie =
-						"logged_in_hint=1; path=/; max-age=604800; SameSite=Lax";
-				} else {
-					document.cookie = "logged_in_hint=; path=/; max-age=0; SameSite=Lax";
-				}
+			const isLocal = window.location.hostname === "localhost";
+			const extras = isLocal ? "" : "; domain=.useautumn.com; Secure";
+			if (data?.user) {
+				document.cookie = `logged_in_hint=1; path=/; max-age=604800; SameSite=Lax${extras}`;
+			} else {
+				document.cookie = `logged_in_hint=; path=/; max-age=0; SameSite=Lax${extras}`;
 			}
 		}
 	}, [data]);

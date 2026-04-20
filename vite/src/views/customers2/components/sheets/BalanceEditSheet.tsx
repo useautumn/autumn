@@ -13,7 +13,9 @@ import { ClockCountdownIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
 import { toast } from "sonner";
+import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { DateInputUnix } from "@/components/general/DateInputUnix";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
@@ -26,7 +28,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getBackendErr, notNullish } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useCustomerContext } from "../../customer/CustomerContext";
 import { BalanceEditPreviews } from "./BalanceEditPreviews";
 import { GrantedBalancePopover } from "./GrantedBalancePopover";
@@ -463,6 +464,11 @@ function SetBalanceFields({
 /* ─── Add Balance Mode ─── */
 
 function AddBalanceFields({ form }: { form: BalanceEditFormInstance }) {
+	const updateGrantedBalance = useStore(
+		form.store,
+		(s) => s.values.updateGrantedBalance,
+	);
+
 	return (
 		<div className="flex flex-col gap-3">
 			<form.Field name="addValue">
@@ -482,9 +488,18 @@ function AddBalanceFields({ form }: { form: BalanceEditFormInstance }) {
 					/>
 				)}
 			</form.Field>
-			<InfoBox variant="note">
-				Current and total granted balance will both be updated.
-			</InfoBox>
+			<ConfigRow
+				title="Also Update Granted Balance"
+				description="Increase the total granted balance by the same amount"
+				action={
+					<Switch
+						checked={updateGrantedBalance}
+						onCheckedChange={(checked) =>
+							form.setFieldValue("updateGrantedBalance", !!checked)
+						}
+					/>
+				}
+			/>
 		</div>
 	);
 }
@@ -551,9 +566,6 @@ function SubmitButton({
 				if (values.mode === "set") {
 					const grantedBalanceInput = computeGrantedBalanceInput({
 						newGPB: values.grantedAndPurchasedBalance ?? 0,
-						defaultGPB:
-							form.options.defaultValues?.grantedAndPurchasedBalance ?? 0,
-						defaultBalance: form.options.defaultValues?.balance ?? 0,
 						prepaidAllowance: form.prepaidAllowance,
 					});
 
@@ -566,18 +578,29 @@ function SubmitButton({
 							feature_id: featureId,
 							current_balance: targetBalance,
 							included_grant: grantedBalanceInput ?? undefined,
-							granted_balance: grantedBalanceInput ?? undefined,
 							customer_entitlement_id: selectedCusEnt.id,
 							entity_id: entityId ?? undefined,
 							next_reset_at: values.nextResetAt ?? undefined,
 						}),
 					);
 				} else {
+					const addAmount = parseFloat(String(values.addValue));
+					const defaultGPB =
+						form.options.defaultValues?.grantedAndPurchasedBalance ?? 0;
+					const newGPB = defaultGPB + addAmount;
+					const grantedBalanceInput = values.updateGrantedBalance
+						? computeGrantedBalanceInput({
+								newGPB,
+								prepaidAllowance: form.prepaidAllowance,
+							})
+						: undefined;
+
 					promises.push(
 						axiosInstance.post("/v1/balances/update", {
 							customer_id: customer.id || customer.internal_id,
 							feature_id: featureId,
-							add_to_balance: parseFloat(String(values.addValue)),
+							add_to_balance: addAmount,
+							included_grant: grantedBalanceInput,
 							customer_entitlement_id: selectedCusEnt.id,
 							entity_id: entityId ?? undefined,
 						}),

@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
@@ -59,6 +60,12 @@ export const executeDeferredBillingPlan = async ({
 		stripeInvoice: stripeBillingResult.stripeInvoice ?? stripeInvoice,
 		stripeInvoiceItems: stripeBillingResult.stripeInvoiceItems,
 		autumnInvoice: stripeBillingResult.autumnInvoice,
+	});
+
+	await persistDeferredCreateSchedule({
+		ctx,
+		billingContext,
+		billingPlan,
 	});
 
 	await MetadataService.delete({ db, id: metadata.id });

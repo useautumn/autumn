@@ -1,11 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import {
-	IconArrowLeft,
-	IconArrowRight,
-	IconQuotes,
-	PixelatedPattern,
-} from "@/app/constant";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { IconArrowLeft, IconArrowRight, IconQuotes } from "@/app/constant";
 
 const testimonialsData = [
 	{
@@ -51,7 +47,7 @@ const Testimonials = () => {
 	const [canScrollLeft, setCanScrollLeft] = useState(false);
 	const [canScrollRight, setCanScrollRight] = useState(true);
 
-	const handleScroll = () => {
+	const handleScroll = useCallback(() => {
 		if (scrollRef.current) {
 			const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
 			setCanScrollLeft(scrollLeft > 0);
@@ -63,7 +59,8 @@ const Testimonials = () => {
 				progressRef.current.style.transform = `translateX(${progress}%)`;
 			}
 		}
-	};
+	}, []);
+
 	useEffect(() => {
 		if (videoRef.current) {
 			videoRef.current.playbackRate = 0.4;
@@ -74,7 +71,7 @@ const Testimonials = () => {
 		handleScroll();
 		window.addEventListener("resize", handleScroll);
 		return () => window.removeEventListener("resize", handleScroll);
-	}, []);
+	}, [handleScroll]);
 
 	const scrollByAmount = (amount: number) => {
 		if (scrollRef.current) {
@@ -97,6 +94,7 @@ const Testimonials = () => {
 							onClick={() => scrollByAmount(-400)}
 							disabled={!canScrollLeft}
 							className="group p-1.5 bg-transparent cursor-pointer flex items-center justify-center transition-all duration-300 border border-[#292929]"
+							type="button"
 							aria-label="Previous testimonials"
 						>
 							<IconArrowLeft
@@ -109,6 +107,7 @@ const Testimonials = () => {
 							onClick={() => scrollByAmount(400)}
 							disabled={!canScrollRight}
 							className="group p-1.5 bg-transparent cursor-pointer flex items-center justify-center transition-all duration-300 border border-[#292929]"
+							type="button"
 							aria-label="Next testimonials"
 						>
 							<IconArrowRight
@@ -119,7 +118,7 @@ const Testimonials = () => {
 					</div>
 				</div>
 
-				<div className="border-t border-[#1A1A1A] w-full"></div>
+				<div className="border-t border-[#1A1A1A] w-full" />
 
 				<div className="px-0 xl:pl-22.75">
 					<div
@@ -133,7 +132,6 @@ const Testimonials = () => {
 								key={testimonial.id}
 								className="group cursor-pointer shrink-0 w-[300px] sm:w-[300px] md:w-[360px] snap-start min-h-[360px] flex flex-col justify-between p-4 sm:p-10 border-l border-r border-b border-[#1A1A1A] transition-all duration-300 relative overflow-hidden"
 							>
-								{/* Hover Pixelated Pattern (Masked) */}
 								<div className="absolute inset-x-0 bottom-0 h-[120%] pointer-events-none z-0 overflow-hidden">
 									<div className="absolute inset-0 opacity-0 translate-y-6 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out pointer-events-none z-0 hidden md:block">
 										<video
@@ -147,7 +145,6 @@ const Testimonials = () => {
 										/>
 									</div>
 								</div>
-								{/* Purple Glow Gradient Overlay */}
 								<div className="absolute inset-x-0 bottom-0 h-[70%] bg-[linear-gradient(to_bottom,rgba(10,10,10,0)_0%,rgba(135,82,250,0.15)_40%,rgba(135,82,250,0.45)_70%,rgba(135,82,250,0.85)_90%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-0" />
 								<div className="relative z-10 flex flex-col h-full justify-start">
 									<IconQuotes className="w-8 h-8 text-[#4C4C4C] opacity-60 group-hover:text-[#9564FF] group-hover:opacity-100 transition-colors duration-500 mb-6" />
@@ -162,7 +159,7 @@ const Testimonials = () => {
 						))}
 					</div>
 				</div>
-				<div className="border-t border-[#1A1A1A] w-full"></div>
+				<div className="border-t border-[#1A1A1A] w-full" />
 
 				<div className="flex md:hidden justify-end px-4 mt-6">
 					<div className="flex items-center gap-4">
@@ -170,6 +167,7 @@ const Testimonials = () => {
 							onClick={() => scrollByAmount(-400)}
 							disabled={!canScrollLeft}
 							className="p-1.5 bg-transparent flex items-center justify-center border border-[#292929]"
+							type="button"
 							aria-label="Previous testimonials"
 						>
 							<IconArrowLeft
@@ -182,6 +180,7 @@ const Testimonials = () => {
 							onClick={() => scrollByAmount(400)}
 							disabled={!canScrollRight}
 							className="p-1.5 bg-transparent flex items-center justify-center border border-[#292929]"
+							type="button"
 							aria-label="Next testimonials"
 						>
 							<IconArrowRight
@@ -196,25 +195,25 @@ const Testimonials = () => {
 						<div
 							ref={progressRef}
 							className="absolute left-0 top-0 h-full bg-[#8752FA] w-[84px] rounded-full"
-							style={{ transform: `translateX(0%)` }}
-						></div>
+							style={{ transform: "translateX(0%)" }}
+						/>
 					</div>
 				</div>
 			</div>
 
 			<style jsx global>{`
-        .hide-scrollbar::-webkit-scrollbar {
-          display: none;
-        }
-        .arrow-corners {
-          transform-box: fill-box;
-          transform-origin: center;
-          transition: transform 0.25s ease;
-        }
-        .group:hover .arrow-corners {
-          transform: scale(1.4);
-        }
-      `}</style>
+				.hide-scrollbar::-webkit-scrollbar {
+					display: none;
+				}
+				.arrow-corners {
+					transform-box: fill-box;
+					transform-origin: center;
+					transition: transform 0.25s ease;
+				}
+				.group:hover .arrow-corners {
+					transform: scale(1.4);
+				}
+			`}</style>
 		</section>
 	);
 };

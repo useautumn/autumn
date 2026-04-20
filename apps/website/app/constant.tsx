@@ -1227,7 +1227,7 @@ export const faqData = [
 		id: 6,
 		question: "Can you handle our event volume?",
 		answer:
-			"Yes. Autumn supports 10,000+ events per second per end customer. We've processed millions of billing events daily for AI companies at scale. If you have specific requirements, reach out—we'll walk through your architecture.",
+			"Yes. Autumn supports 10,000+ events per second per end customer. We've processed millions of billing events daily for AI companies at scale. If you have specific requirements, reach out—we'll walk through our architecture.",
 	},
 	{
 		id: 7,
