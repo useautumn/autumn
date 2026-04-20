@@ -191,7 +191,8 @@ export default function AutumnConfig({
 						src="/images/hero/cross.svg"
 						width={11}
 						height={11}
-						alt="Box"
+						alt=""
+						role="presentation"
 						style={{ width: "auto", height: "auto" }}
 						className="w-full h-[11px] object-fill object-left"
 					/>
