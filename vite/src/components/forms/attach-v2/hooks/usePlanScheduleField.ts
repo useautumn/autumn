@@ -4,9 +4,8 @@ import {
 	BillingInterval,
 	type CusProduct,
 	CusProductStatus,
-	cusProductToPrices,
-	isFreeProduct,
-	isOneOffProduct,
+	type FullCusProduct,
+	hasActivePaidSubscription,
 	type PlanTiming,
 } from "@autumn/shared";
 import { useEffect, useMemo } from "react";
@@ -54,19 +53,10 @@ export function usePlanScheduleField() {
 
 	const hasPaidRecurringSubscription = useMemo(
 		() =>
-			((customer?.customer_products ?? []) as CusProduct[]).some(
-				(customerProduct) => {
-					const hasActiveOrTrialingStatus =
-						ACTIVE_STATUSES.includes(customerProduct.status) ||
-						customerProduct.status === CusProductStatus.Trialing;
-
-					if (!hasActiveOrTrialingStatus) return false;
-					if (!customerProduct.subscription_ids?.length) return false;
-
-					const prices = cusProductToPrices({ cusProduct: customerProduct });
-					return !isOneOffProduct({ prices }) && !isFreeProduct({ prices });
-				},
-			),
+			hasActivePaidSubscription({
+				customerProducts: (customer?.customer_products ??
+					[]) as FullCusProduct[],
+			}),
 		[customer?.customer_products],
 	);
 
