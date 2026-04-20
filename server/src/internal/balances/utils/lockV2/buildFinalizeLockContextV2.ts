@@ -1,7 +1,6 @@
 import type { Feature, FullSubject } from "@autumn/shared";
 import { type FinalizeLockParamsV0, findFeatureById } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { LockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import {
@@ -62,7 +61,7 @@ export const buildFinalizeLockContextV2 = async ({
 	return {
 		receipt,
 		lockReceiptKey,
-		redisInstance: redisV2,
+		redisInstance: ctx.redisV2,
 		fullSubject,
 		feature,
 		lockValue,

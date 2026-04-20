@@ -1,5 +1,4 @@
 import type { Customer } from "@autumn/shared";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { logAlertEvent } from "@/utils/logging/logAlertEvent.js";
@@ -21,7 +20,7 @@ export const updateCachedCustomerData = async ({
 }): Promise<void> => {
 	if (Object.keys(updates).length === 0) return;
 
-	const { org, env, logger } = ctx;
+	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
 		orgId: org.id,
 		env,

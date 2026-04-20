@@ -1,4 +1,3 @@
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
@@ -22,9 +21,9 @@ export const invalidateSharedBalanceFields = async ({
 	ctx: AutumnContext;
 	customerId: string;
 }): Promise<void> => {
+	const { org, env, redisV2 } = ctx;
 	if (!customerId || redisV2.status !== "ready") return;
 
-	const { org, env } = ctx;
 	const subjectKey = buildFullSubjectKey({ orgId: org.id, env, customerId });
 
 	const cachedRaw = await tryRedisRead(() => redisV2.get(subjectKey), redisV2);
@@ -46,7 +45,7 @@ async function deleteFieldsFromManifest({
 	customerId: string;
 	cachedRaw: string;
 }) {
-	const { org, env, logger } = ctx;
+	const { org, env, logger, redisV2 } = ctx;
 
 	let manifest: CachedFullSubject;
 	try {
@@ -93,7 +92,7 @@ async function deleteAllBalanceKeys({
 	ctx: AutumnContext;
 	customerId: string;
 }) {
-	const { org, env, features, logger } = ctx;
+	const { org, env, features, logger, redisV2 } = ctx;
 	if (features.length === 0) return;
 
 	const pipeline = redisV2.pipeline();

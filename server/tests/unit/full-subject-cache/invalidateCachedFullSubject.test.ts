@@ -7,7 +7,6 @@ import {
 	test,
 } from "bun:test";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import {
 	buildFullSubjectKey,
 	buildFullSubjectViewEpochKey,
@@ -58,9 +57,9 @@ describeDb("invalidateCachedFullSubject", () => {
 	});
 
 	afterEach(async () => {
-		const customerKeys = await redisV2.keys(`{${scenario.ids.customerId}}:*`);
+		const customerKeys = await ctx.redisV2.keys(`{${scenario.ids.customerId}}:*`);
 		if (customerKeys.length > 0) {
-			await redisV2.unlink(...customerKeys);
+			await ctx.redisV2.unlink(...customerKeys);
 		}
 
 		await cleanupFullSubjectScenario({ ctx, scenario });
@@ -91,11 +90,11 @@ describeDb("invalidateCachedFullSubject", () => {
 			source: "invalidateCachedFullSubjectTest",
 		});
 
-		expect(await redisV2.exists(customerKey)).toBe(0);
-		expect(await redisV2.exists(entityAKey)).toBe(0);
-		expect(await redisV2.exists(entityBKey)).toBe(1);
+		expect(await ctx.redisV2.exists(customerKey)).toBe(0);
+		expect(await ctx.redisV2.exists(entityAKey)).toBe(0);
+		expect(await ctx.redisV2.exists(entityBKey)).toBe(1);
 		expect(
-			await redisV2.get(
+			await ctx.redisV2.get(
 				buildFullSubjectViewEpochKey({
 					orgId: ctx.org.id,
 					env: ctx.env,
@@ -130,9 +129,9 @@ describeDb("invalidateCachedFullSubject", () => {
 			source: "invalidateCachedFullSubjectTest",
 		});
 
-		expect(await redisV2.exists(entityAKey)).toBe(1);
-		expect(await redisV2.exists(entityBKey)).toBe(1);
-		expect(await redisV2.get(epochKey)).toBe("1");
+		expect(await ctx.redisV2.exists(entityAKey)).toBe(1);
+		expect(await ctx.redisV2.exists(entityBKey)).toBe(1);
+		expect(await ctx.redisV2.get(epochKey)).toBe("1");
 	});
 
 	test("sibling entity cache becomes stale after direct entity invalidation", async () => {
@@ -150,7 +149,7 @@ describeDb("invalidateCachedFullSubject", () => {
 			source: "invalidateCachedFullSubjectTest",
 		});
 
-		expect(await redisV2.exists(entityBKey)).toBe(1);
+		expect(await ctx.redisV2.exists(entityBKey)).toBe(1);
 
 		const cachedEntityB = await getCachedFullSubject({
 			ctx,

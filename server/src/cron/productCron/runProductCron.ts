@@ -76,6 +76,7 @@ export const runProductCron = async ({
 					await batchInvalidateCachedFullSubjects({
 						customers: customersToDelete,
 						featuresByOrgEnv,
+						redisV2: ctx.redisV2,
 					});
 					console.log(`Expired ${rows.length} customer products`);
 					continue;

@@ -11,7 +11,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { addSeconds } from "date-fns";
 import { redis } from "@/external/redis/initRedis";
-import { redisV2 } from "@/external/redis/initRedisV2";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt";
@@ -203,7 +202,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-4: no expires_at sets T
 	});
 
 	const { lockReceiptKey, source } = await fetchLockReceipt({ ctx, lockId: customerId });
-	const redisInstance = source === "redis_v2" ? redisV2 : redis;
+	const redisInstance = source === "redis_v2" ? ctx.redisV2 : redis;
 
 	const expireAt = await redisInstance.expiretime(lockReceiptKey);
 	const expectedTtl = beforeCheck + 24 * 60 * 60;
@@ -240,7 +239,7 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-5: expires_at set, TTL 
 	});
 
 	const { lockReceiptKey, source } = await fetchLockReceipt({ ctx, lockId: customerId });
-	const redisInstance = source === "redis_v2" ? redisV2 : redis;
+	const redisInstance = source === "redis_v2" ? ctx.redisV2 : redis;
 
 	const expireAt = await redisInstance.expiretime(lockReceiptKey);
 	const expectedTtl = Math.ceil(expiresAt / 1000) + 60 * 60;

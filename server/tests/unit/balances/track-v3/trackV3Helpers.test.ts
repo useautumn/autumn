@@ -191,7 +191,8 @@ const buildCtx = (): AutumnContext =>
 		expand: [],
 		skipCache: false,
 		extraLogs: {},
-	}) as AutumnContext;
+		redisV2: {} as never,
+	}) as unknown as AutumnContext;
 
 const buildFeatureDeduction = (): FeatureDeduction =>
 	({

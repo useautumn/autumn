@@ -36,6 +36,7 @@ export const handleClearCustomerCache = createRoute({
 			await batchInvalidateCachedFullSubjects({
 				customers: customersToDelete,
 				featuresByOrgEnv,
+				redisV2: ctx.redisV2,
 			});
 		}
 

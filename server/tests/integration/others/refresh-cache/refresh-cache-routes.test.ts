@@ -2,7 +2,6 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { Hono } from "hono";
 import { redis } from "@/external/redis/initRedis.js";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import { baseMiddleware } from "@/honoMiddlewares/baseMiddleware.js";
 import {
 	REFRESH_CACHE_ROUTE_CONFIGS,
@@ -174,9 +173,9 @@ describeDb("refreshCacheMiddleware routes", () => {
 	});
 
 	afterAll(async () => {
-		const customerKeys = await redisV2.keys(`{${scenario.ids.customerId}}:*`);
+		const customerKeys = await ctx.redisV2.keys(`{${scenario.ids.customerId}}:*`);
 		if (customerKeys.length > 0) {
-			await redisV2.unlink(...customerKeys);
+			await ctx.redisV2.unlink(...customerKeys);
 		}
 		const oldCacheKey = buildFullCustomerCacheKey({
 			orgId: ctx.org.id,
@@ -242,8 +241,8 @@ describeDb("refreshCacheMiddleware routes", () => {
 		});
 
 		expect(await redis.exists(oldCacheKey)).toBe(0);
-		expect(await redisV2.exists(customerSubjectKey)).toBe(0);
-		expect(await redisV2.get(epochKey)).toBe("1");
+		expect(await ctx.redisV2.exists(customerSubjectKey)).toBe(0);
+		expect(await ctx.redisV2.get(epochKey)).toBe("1");
 
 		if (touchedEntityId) {
 			const touchedEntityKey = buildFullSubjectKey({
@@ -252,17 +251,17 @@ describeDb("refreshCacheMiddleware routes", () => {
 				customerId: scenario.ids.customerId,
 				entityId: touchedEntityId,
 			});
-			expect(await redisV2.exists(touchedEntityKey)).toBe(0);
+			expect(await ctx.redisV2.exists(touchedEntityKey)).toBe(0);
 
 			const untouchedEntityKey =
 				touchedEntityId === scenario.ids.entityIds[0]
 					? entityBSubjectKey
 					: entityASubjectKey;
-			expect(await redisV2.exists(untouchedEntityKey)).toBe(1);
+			expect(await ctx.redisV2.exists(untouchedEntityKey)).toBe(1);
 			return;
 		}
 
-		expect(await redisV2.exists(entityASubjectKey)).toBe(1);
-		expect(await redisV2.exists(entityBSubjectKey)).toBe(1);
+		expect(await ctx.redisV2.exists(entityASubjectKey)).toBe(1);
+		expect(await ctx.redisV2.exists(entityBSubjectKey)).toBe(1);
 	});
 });

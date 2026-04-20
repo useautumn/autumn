@@ -9,6 +9,7 @@ import {
 } from "./internal/misc/edgeConfig/edgeConfigRegistry.js";
 import "./internal/misc/requestBlocks/requestBlockStore.js";
 import "./internal/misc/rollouts/rolloutConfigStore.js";
+import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
 
 // Number of worker processes (defaults to CPU cores)
 const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 3 : 4;

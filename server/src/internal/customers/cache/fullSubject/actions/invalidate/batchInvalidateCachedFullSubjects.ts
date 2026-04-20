@@ -1,5 +1,5 @@
 import type { AppEnv, Feature } from "@autumn/shared";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
+import type { Redis } from "ioredis";
 import { batchDeleteCachedFullCustomers } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
@@ -22,9 +22,11 @@ type FeaturesByOrgEnv = Record<string, Feature[]>;
 export const batchInvalidateCachedFullSubjects = async ({
 	customers,
 	featuresByOrgEnv,
+	redisV2,
 }: {
 	customers: BatchInvalidateCustomer[];
 	featuresByOrgEnv: FeaturesByOrgEnv;
+	redisV2: Redis;
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
 

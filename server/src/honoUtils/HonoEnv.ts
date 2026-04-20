@@ -7,6 +7,7 @@ import type {
 	Organization,
 } from "@autumn/shared";
 import type { User } from "better-auth";
+import type { Redis } from "ioredis";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { OidcClaims } from "@/external/vercel/misc/vercelAuth.js";
@@ -34,6 +35,10 @@ export type RequestContext = {
 	db: DrizzleCli;
 	dbGeneral: DrizzleCli;
 	logger: Logger;
+	/** V2 Redis instance for this request. Populated by every ctx-building
+	 *  middleware/worker via resolveRedisV2. Never import the singleton directly
+	 *  in request-path code. */
+	redisV2: Redis;
 
 	// Info
 	id: string;
