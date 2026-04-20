@@ -3,6 +3,7 @@ import type { Context } from "hono";
 import { clientCritical } from "@/db/initDrizzle.js";
 import { getPgHealthState } from "@/db/pgHealthMonitor.js";
 import { getRedisAvailability } from "@/external/redis/initRedis.js";
+import { withTimeout } from "@/utils/withTimeout.js";
 import type { HonoEnv } from "./HonoEnv.js";
 
 const POSTGRES_TIMEOUT_MS = 1_000;
@@ -10,18 +11,13 @@ const READY_CHECK_TOKEN = process.env.READY_CHECK_TOKEN?.trim();
 
 const checkPostgresReady = async () => {
 	const query = clientCritical`SELECT 1`;
-	let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
 	try {
-		await Promise.race([
-			query,
-			new Promise<never>((_, reject) => {
-				timeoutId = setTimeout(() => {
-					void query.cancel();
-					reject(new Error(`timed out after ${POSTGRES_TIMEOUT_MS}ms`));
-				}, POSTGRES_TIMEOUT_MS);
-			}),
-		]);
+		await withTimeout({
+			timeoutMs: POSTGRES_TIMEOUT_MS,
+			fn: () => query,
+			onTimeout: () => query.cancel(),
+		});
 
 		return {
 			ok: true,
@@ -33,8 +29,6 @@ const checkPostgresReady = async () => {
 			error: error instanceof Error ? error.message : "unknown postgres error",
 			...getPgHealthState(),
 		};
-	} finally {
-		clearTimeout(timeoutId);
 	}
 };
 

@@ -28,6 +28,7 @@ import {
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
 } from "../../_luaScriptsV2/luaScriptsV2.js";
 import { instrumentRedis } from "../../utils/otel/instrumentRedis.js";
+import { withTimeout } from "../../utils/withTimeout.js";
 
 // if (!process.env.CACHE_URL) {
 // 	throw new Error("CACHE_URL (redis) is not set");
@@ -81,31 +82,6 @@ let redisMonitorInterval: ReturnType<typeof setInterval> | null = null;
 let redisTickInFlight = false;
 
 let redisAvailabilityState: RedisAvailabilityState = "degraded";
-
-const withTimeout = async <T>({
-	timeoutMs,
-	fn,
-}: {
-	timeoutMs: number;
-	fn: () => Promise<T>;
-}): Promise<T> => {
-	let timeoutId: ReturnType<typeof setTimeout> | undefined;
-
-	try {
-		return await Promise.race([
-			fn(),
-			new Promise<never>((_, reject) => {
-				timeoutId = setTimeout(
-					() => reject(new Error(`timed out after ${timeoutMs}ms`)),
-					timeoutMs,
-				);
-				timeoutId.unref?.();
-			}),
-		]);
-	} finally {
-		clearTimeout(timeoutId);
-	}
-};
 
 const attachRedisErrorHandler = ({
 	redisInstance,
