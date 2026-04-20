@@ -26,28 +26,30 @@ export const handleTrack = createRoute({
 
 		if (!shouldUseRedis()) {
 			const queueUrl = process.env.TRACK_SQS_QUEUE_URL;
-			if (!queueUrl) {
-				throw new Error("TRACK_SQS_QUEUE_URL is not configured");
+			if (queueUrl) {
+				await addTaskToQueue({
+					jobName: JobName.Track,
+					queueUrl,
+					messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}`,
+					messageDeduplicationId: body.idempotency_key,
+					payload: {
+						orgId: ctx.org.id,
+						env: ctx.env,
+						apiVersion: ctx.apiVersion.value,
+						body,
+					},
+				});
+
+				return c.json(
+					getQueuedTrackResponse({
+						ctx,
+						body,
+					}),
+				);
 			}
 
-			await addTaskToQueue({
-				jobName: JobName.Track,
-				queueUrl,
-				messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}`,
-				messageDeduplicationId: body.idempotency_key,
-				payload: {
-					orgId: ctx.org.id,
-					env: ctx.env,
-					apiVersion: ctx.apiVersion.value,
-					body,
-				},
-			});
-
-			return c.json(
-				getQueuedTrackResponse({
-					ctx,
-					body,
-				}),
+			ctx.logger.warn(
+				"[track] Redis unavailable and TRACK_SQS_QUEUE_URL is unset; falling back to synchronous track",
 			);
 		}
 

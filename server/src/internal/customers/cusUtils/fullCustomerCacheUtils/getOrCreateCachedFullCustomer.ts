@@ -56,10 +56,6 @@ export const getOrCreateCachedFullCustomer = async ({
 			logger.debug(`[getOrCreateCachedFullCustomer] Cache hit: ${customerId}`);
 			setCache = false;
 		}
-
-		if (skipCreate && !fullCustomer) {
-			throw new CustomerNotFoundError({ customerId });
-		}
 	}
 
 	// 2. Try DB if not in cache (CusService.getFull handles lazy reset internally)
@@ -72,6 +68,10 @@ export const getOrCreateCachedFullCustomer = async ({
 			expand: [CustomerExpand.Invoices],
 			allowNotFound: true,
 		});
+	}
+
+	if (skipCreate && !fullCustomer) {
+		throw new CustomerNotFoundError({ customerId: customerId || "" });
 	}
 
 	// 3. Create if not found

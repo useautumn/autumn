@@ -39,6 +39,9 @@ const makeCtx = ({ apiVersion }: { apiVersion: ApiVersion }) =>
 		},
 		env: AppEnv.Sandbox,
 		apiVersion: new ApiVersionClass(apiVersion),
+		logger: {
+			warn: () => {},
+		},
 		features: [
 			{
 				id: "messages",
@@ -125,22 +128,21 @@ describe("handleTrack queue fallback", () => {
 		});
 	});
 
-	test("fails clearly when Redis is unavailable and TRACK_SQS_QUEUE_URL is unset", async () => {
+	test("falls back to synchronous track when Redis is unavailable and TRACK_SQS_QUEUE_URL is unset", async () => {
 		delete process.env.TRACK_SQS_QUEUE_URL;
 
-		await expect(
-			wrappedHandler(
-				makeContext({
-					apiVersion: ApiVersion.V2_1,
-					body: {
-						customer_id: "cus_123",
-						feature_id: "messages",
-					},
-				}),
-			),
-		).rejects.toThrow("TRACK_SQS_QUEUE_URL is not configured");
+		const response = await wrappedHandler(
+			makeContext({
+				apiVersion: ApiVersion.V2_1,
+				body: {
+					customer_id: "cus_123",
+					feature_id: "messages",
+				},
+			}),
+		);
 
 		expect(mockState.queueCalls).toHaveLength(0);
-		expect(mockState.runTrackCalls).toHaveLength(0);
+		expect(mockState.runTrackCalls).toHaveLength(1);
+		expect(response.status).toBe(200);
 	});
 });
