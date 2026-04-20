@@ -9,6 +9,7 @@ import {
 import type { Context, Next } from "hono";
 import { db, dbGeneral } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs";
@@ -71,6 +72,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		db,
 		dbGeneral,
 		logger: childLogger,
+		redisV2: resolveRedisV2(),
 
 		// Request info
 		id,

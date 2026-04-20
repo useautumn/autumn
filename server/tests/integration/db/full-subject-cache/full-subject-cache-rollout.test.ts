@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import {
 	buildFullSubjectKey,
 	getCachedFullSubject,
@@ -78,7 +77,7 @@ describe(`${chalk.yellowBright("fullSubject cache rollout staleness")}`, () => {
 
 				expect(cached).toBeUndefined();
 
-				const subjectExists = await redisV2.get(
+				const subjectExists = await ctx.redisV2.get(
 					buildFullSubjectKey({
 						orgId: ctx.org.id,
 						env: ctx.env,

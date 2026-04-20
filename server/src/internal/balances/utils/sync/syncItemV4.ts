@@ -148,8 +148,7 @@ export const syncItemV4 = async ({
 		modifiedCusEntIdsByFeatureId,
 	)) {
 		const result = await getCachedFeatureBalance({
-			orgId,
-			env,
+			ctx,
 			customerId,
 			featureId,
 			customerEntitlementIds,

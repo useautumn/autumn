@@ -1,5 +1,4 @@
 import type { RepoContext } from "@/db/repoContext.js";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -24,6 +23,7 @@ export const adjustSubjectBalanceCache = async ({
 	delta: number;
 }): Promise<AdjustSubjectBalanceCacheResult | null> => {
 	try {
+		const { redisV2 } = ctx;
 		const balanceKey = buildSharedFullSubjectBalanceKey({
 			orgId: ctx.org.id,
 			env: ctx.env,

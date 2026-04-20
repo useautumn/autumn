@@ -1,6 +1,5 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
@@ -46,6 +45,7 @@ export const fetchLockReceipt = async ({
 	ctx: AutumnContext;
 	lockId: string;
 }) => {
+	const { redisV2 } = ctx;
 	const hashedKey = Bun.hash(lockId).toString();
 	const lockReceiptKey = buildLockReceiptKey({
 		orgId: ctx.org.id,

@@ -1,5 +1,4 @@
 import type { Invoice } from "@autumn/shared";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { logAlertEvent } from "@/utils/logging/logAlertEvent.js";
@@ -38,7 +37,7 @@ export const upsertCachedInvoiceV2 = async ({
 		return null;
 	}
 
-	const { org, env, logger } = ctx;
+	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
 		orgId: org.id,
 		env,

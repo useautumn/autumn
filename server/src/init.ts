@@ -23,6 +23,7 @@ import "./internal/misc/featureFlags/featureFlagStore.js";
 import "./internal/misc/customerBlocks/customerBlockStore.js";
 import "./internal/misc/edgeConfig/orgLimitsStore.js";
 import "./internal/misc/stripeSync/stripeSyncStore.js";
+import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
 import { closeStripeSyncEngine } from "@autumn/stripe-sync";
 import {
 	startRedisMonitor,

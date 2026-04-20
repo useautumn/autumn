@@ -6,8 +6,8 @@ import {
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
+import type { Redis } from "ioredis";
 import { redis } from "@/external/redis/initRedis.js";
-import { redisV2 } from "@/external/redis/initRedisV2.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
@@ -77,6 +77,7 @@ export const setCachedSubjectBalanceField = async ({
 	customerEntitlementId,
 	field,
 	value,
+	redisV2,
 }: {
 	orgId: string;
 	env: string;
@@ -85,6 +86,7 @@ export const setCachedSubjectBalanceField = async ({
 	customerEntitlementId: string;
 	field: string;
 	value: number | string | null;
+	redisV2: Redis;
 }): Promise<void> => {
 	const balanceKey = buildSharedFullSubjectBalanceKey({
 		orgId,
@@ -160,6 +162,7 @@ export const expireCusEntForReset = async ({
 		customerEntitlementId: cusEnt.id,
 		field: "next_reset_at",
 		value: pastTime,
+		redisV2: ctx.redisV2,
 	});
 
 	return cusEnt;
@@ -221,6 +224,7 @@ export const expireAllCusEntsForReset = async ({
 			customerEntitlementId: cusEnt.id,
 			field: "next_reset_at",
 			value: pastTime,
+			redisV2: ctx.redisV2,
 		});
 	}
 
