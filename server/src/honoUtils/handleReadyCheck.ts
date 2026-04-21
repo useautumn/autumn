@@ -3,21 +3,17 @@ import type { Context } from "hono";
 import { clientCritical } from "@/db/initDrizzle.js";
 import { getPgHealthState } from "@/db/pgHealthMonitor.js";
 import { getRedisAvailability } from "@/external/redis/initRedis.js";
-import { withTimeout } from "@/utils/withTimeout.js";
 import type { HonoEnv } from "./HonoEnv.js";
 
 const POSTGRES_TIMEOUT_MS = 1_000;
 const READY_CHECK_TOKEN = process.env.READY_CHECK_TOKEN?.trim();
 
 const checkPostgresReady = async () => {
-	const query = clientCritical`SELECT 1`;
-
 	try {
-		await withTimeout({
-			timeoutMs: POSTGRES_TIMEOUT_MS,
-			fn: () => query,
-			onTimeout: () => query.cancel(),
-		});
+		await clientCritical.query({
+			text: "SELECT 1",
+			query_timeout: POSTGRES_TIMEOUT_MS,
+		} as { text: string; query_timeout: number });
 
 		return {
 			ok: true,

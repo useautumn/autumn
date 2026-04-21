@@ -10,6 +10,7 @@ import {
 	initPgHealthMonitor,
 	shutdownPgHealthMonitor,
 } from "./db/pgHealthMonitor.js";
+import { getRedactedDatabaseUrls } from "./db/redactDatabaseUrl.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import {
 	startAllEdgeConfigPolling,
@@ -38,6 +39,8 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 checkEnvVars();
 
 const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
+	logger.info(getRedactedDatabaseUrls(), "DB URLs");
+
 	const app = createHonoApp();
 
 	initPgHealthMonitor({ client: clientCritical });
