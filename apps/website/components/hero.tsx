@@ -76,37 +76,18 @@ export default function Hero() {
 
 	useGSAP(
 		() => {
-			gsap.set(".hero-root", { opacity: 0 });
+			const tl = gsap.timeline({
+				defaults: { overwrite: "auto" },
+			});
 
-			gsap.set(".hero-bg", {
+			tl.from(".hero-bg", {
 				opacity: 0,
 				filter: "blur(6px) brightness(1)",
 				scale: 0.97,
 				transformOrigin: "center top",
-			});
-
-			gsap.set(".hero-reveal", {
-				opacity: 0,
-				y: 25,
-				filter: "blur(12px)",
-				scale: 0.96,
-				transformOrigin: "center bottom",
-			});
-
-			gsap.set(".hero-cta", { opacity: 0, scale: 0.95 });
-
-			const tl = gsap.timeline({
-				defaults: { overwrite: "auto" },
-			});
-			tl.to(".hero-root", { opacity: 1, duration: 0.3, ease: "none" })
-
-				.to(".hero-bg", {
-					opacity: 1,
-					filter: "blur(0px) brightness(1)",
-					scale: 1,
-					duration: 0.4,
-					ease: "power2.out",
-				})
+				duration: 0.4,
+				ease: "power2.out",
+			})
 
 				.to(".hero-bg", {
 					filter: "blur(0px) brightness(1.6)",
@@ -120,13 +101,14 @@ export default function Hero() {
 					ease: "power2.out",
 				})
 
-				.to(
+				.from(
 					".hero-reveal",
 					{
-						opacity: 1,
-						y: 0,
-						filter: "blur(0px)",
-						scale: 1,
+						opacity: 0,
+						y: 25,
+						filter: "blur(12px)",
+						scale: 0.96,
+						transformOrigin: "center bottom",
 						duration: 1.1,
 						stagger: 0.1,
 						ease: "power3.out",
@@ -134,11 +116,11 @@ export default function Hero() {
 					"-=0.2",
 				)
 
-				.to(
+				.from(
 					".hero-cta",
 					{
-						opacity: 1,
-						scale: 1,
+						opacity: 0,
+						scale: 0.95,
 						duration: 0.3,
 						stagger: 0.06,
 						ease: "back.out(1.5)",
@@ -151,7 +133,7 @@ export default function Hero() {
 
 	return (
 		<div ref={containerRef}>
-			<div className="relative hero-root opacity-0 flex flex-col items-stretch pb-0 md:pb-12 mb-0 bg-[#0F0F0F]">
+			<div className="relative hero-root flex flex-col items-stretch pb-0 md:pb-12 mb-0 bg-[#0F0F0F]">
 				<div className="flex justify-between">
 					<div className="flex flex-col gap-6 px-4 xl:px-22.75 py-8 bg-[#0F0F0F] mt-26">
 						<h4 className="hero-reveal relative uppercase font-mono tracking-[-2%] text-[12px] md:text-sm leading-sm text-white md:text-[#FFFFFF99] bg-[#2c2c2d] w-fit p-2 min-h-[30px] md:min-h-[36px] flex items-center">
@@ -165,14 +147,14 @@ export default function Hero() {
 						<div className="flex flex-col gap-6 w-full px-0 lg:px-0">
 							<h1 className="hero-reveal text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-5%] md:leading-14 font-sans">
 								<span className="text-[#FFFFFF99] font-normal">
-									The drop-in billing layer for
+									Drop-in credits and billing for
 								</span>{" "}
-								<span className="text-white block md:inline">AI startups</span>
+								<span className="text-white block md:inline">AI agents</span>
 							</h1>
 							<p className="hero-reveal tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
 								Stop rebuilding usage limits, credit ledgers and payment logic.{" "}
 								<span className="text-white font-light">
-									Autumn is your customer database
+									Autumn is the customer database
 								</span>{" "}
 								that scales from your first user to your largest contract.
 							</p>
@@ -239,7 +221,7 @@ export default function Hero() {
 								<div className="relative overflow-hidden flex items-center gap-1.5 md:gap-2.5 border-r border-[#292929] text-white cursor-pointer justify-between py-2 px-3 md:px-4 md:py-3.5 md:w-50 font-sans bg-[#0F0F0F] hover:bg-[#FFFFFF1F] transition-colors duration-300">
 									<CTALines />
 									<span className="relative z-10 tracking-[-2%] text-[12px] uppercase md:normal-case md:text-[16px] whitespace-nowrap">
-										Book a call
+										Get a demo
 									</span>
 									<span className="relative z-10 scale-100">
 										<IconCTADocs />
