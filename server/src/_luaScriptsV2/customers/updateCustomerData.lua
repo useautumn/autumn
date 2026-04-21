@@ -19,7 +19,8 @@
         auto_topups?: array | null,
         spend_limits?: array | null,
         usage_alerts?: array | null,
-        overage_allowed?: array | null
+        overage_allowed?: array | null,
+        config?: object | null
       }
     }
 
@@ -129,6 +130,15 @@ if updates.overage_allowed ~= nil then
     redis.call('JSON.SET', cache_key, '$.overage_allowed', cjson.encode(updates.overage_allowed))
   end
   table.insert(updated_fields, 'overage_allowed')
+end
+
+if updates.config ~= nil then
+  if is_nil(updates.config) then
+    redis.call('JSON.SET', cache_key, '$.config', 'null')
+  else
+    redis.call('JSON.SET', cache_key, '$.config', cjson.encode(updates.config))
+  end
+  table.insert(updated_fields, 'config')
 end
 
 return cjson.encode({ success = true, updated_fields = updated_fields })
