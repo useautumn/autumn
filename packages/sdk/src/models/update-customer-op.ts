@@ -165,6 +165,16 @@ export type UpdateCustomerBillingControlsRequest = {
   overageAllowed?: Array<UpdateCustomerOverageAllowedRequest> | undefined;
 };
 
+/**
+ * Miscellaneous configurations for the customer.
+ */
+export type UpdateCustomerConfigRequest = {
+  /**
+   * Whether to disable the shared customer-level pool for entities.
+   */
+  disablePooledBalance?: boolean | undefined;
+};
+
 export type UpdateCustomerParams = {
   /**
    * ID of the customer to update
@@ -198,6 +208,10 @@ export type UpdateCustomerParams = {
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls?: UpdateCustomerBillingControlsRequest | undefined;
+  /**
+   * Miscellaneous configurations for the customer.
+   */
+  config?: UpdateCustomerConfigRequest | undefined;
   /**
    * Your unique identifier for the customer
    */
@@ -362,6 +376,51 @@ export type UpdateCustomerBillingControlsResponse = {
    * List of overage allowed controls per feature. When enabled, usage can exceed balance.
    */
   overageAllowed?: Array<UpdateCustomerOverageAllowedResponse> | undefined;
+};
+
+export type UpdateCustomerPhase = {
+  /**
+   * The persisted phase ID.
+   */
+  id: string;
+  /**
+   * When this phase starts, in epoch milliseconds.
+   */
+  startsAt: number;
+  /**
+   * Customer products materialized for this phase.
+   */
+  customerProductIds: Array<string>;
+  /**
+   * Timestamp of phase creation in milliseconds since epoch.
+   */
+  createdAt: number;
+};
+
+/**
+ * The customer's persisted schedule, if one exists.
+ */
+export type UpdateCustomerSchedule = {
+  /**
+   * The persisted schedule ID.
+   */
+  id: string;
+  /**
+   * The customer ID this schedule belongs to.
+   */
+  customerId: string;
+  /**
+   * The entity ID this schedule belongs to, or null.
+   */
+  entityId: string | null;
+  /**
+   * Timestamp of schedule creation in milliseconds since epoch.
+   */
+  createdAt: number;
+  /**
+   * Persisted phases in ascending starts_at order.
+   */
+  phases: Array<UpdateCustomerPhase>;
 };
 
 /**
@@ -552,6 +611,16 @@ export type UpdateCustomerFlags = {
 };
 
 /**
+ * Configuration for the customer.
+ */
+export type UpdateCustomerConfigResponse = {
+  /**
+   * Whether to disable the shared customer-level pool for entities.
+   */
+  disablePooledBalance?: boolean | undefined;
+};
+
+/**
  * OK
  */
 export type UpdateCustomerResponse = {
@@ -596,6 +665,10 @@ export type UpdateCustomerResponse = {
    */
   billingControls: UpdateCustomerBillingControlsResponse;
   /**
+   * The customer's persisted schedule, if one exists.
+   */
+  schedule?: UpdateCustomerSchedule | undefined;
+  /**
    * Active and scheduled recurring plans that this customer has attached.
    */
   subscriptions: Array<UpdateCustomerSubscription>;
@@ -611,6 +684,10 @@ export type UpdateCustomerResponse = {
    * Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
    */
   flags: { [k: string]: UpdateCustomerFlags };
+  /**
+   * Configuration for the customer.
+   */
+  config?: UpdateCustomerConfigResponse | undefined;
 };
 
 /** @internal */
@@ -860,6 +937,36 @@ export function updateCustomerBillingControlsRequestToJSON(
 }
 
 /** @internal */
+export type UpdateCustomerConfigRequest$Outbound = {
+  disable_pooled_balance?: boolean | undefined;
+};
+
+/** @internal */
+export const UpdateCustomerConfigRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerConfigRequest$Outbound,
+  UpdateCustomerConfigRequest
+> = z.pipe(
+  z.object({
+    disablePooledBalance: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      disablePooledBalance: "disable_pooled_balance",
+    });
+  }),
+);
+
+export function updateCustomerConfigRequestToJSON(
+  updateCustomerConfigRequest: UpdateCustomerConfigRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerConfigRequest$outboundSchema.parse(
+      updateCustomerConfigRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateCustomerParams$Outbound = {
   customer_id: string;
   name?: string | null | undefined;
@@ -869,6 +976,7 @@ export type UpdateCustomerParams$Outbound = {
   stripe_id?: string | null | undefined;
   send_email_receipts?: boolean | undefined;
   billing_controls?: UpdateCustomerBillingControlsRequest$Outbound | undefined;
+  config?: UpdateCustomerConfigRequest$Outbound | undefined;
   new_customer_id?: string | undefined;
 };
 
@@ -887,6 +995,9 @@ export const UpdateCustomerParams$outboundSchema: z.ZodMiniType<
     sendEmailReceipts: z.optional(z.boolean()),
     billingControls: z.optional(
       z.lazy(() => UpdateCustomerBillingControlsRequest$outboundSchema),
+    ),
+    config: z.optional(
+      z.lazy(() => UpdateCustomerConfigRequest$outboundSchema),
     ),
     newCustomerId: z.optional(z.string()),
   }),
@@ -1115,6 +1226,67 @@ export function updateCustomerBillingControlsResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerPhase$inboundSchema: z.ZodMiniType<
+  UpdateCustomerPhase,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    starts_at: types.number(),
+    customer_product_ids: z.array(types.string()),
+    created_at: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "starts_at": "startsAt",
+      "customer_product_ids": "customerProductIds",
+      "created_at": "createdAt",
+    });
+  }),
+);
+
+export function updateCustomerPhaseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerPhase, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerPhase$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerPhase' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerSchedule$inboundSchema: z.ZodMiniType<
+  UpdateCustomerSchedule,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    customer_id: types.string(),
+    entity_id: types.nullable(types.string()),
+    created_at: types.number(),
+    phases: z.array(z.lazy(() => UpdateCustomerPhase$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "customer_id": "customerId",
+      "entity_id": "entityId",
+      "created_at": "createdAt",
+    });
+  }),
+);
+
+export function updateCustomerScheduleFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerSchedule, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerSchedule$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerSchedule' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerStatus$inboundSchema: z.ZodMiniType<
   UpdateCustomerStatus,
   unknown
@@ -1317,6 +1489,31 @@ export function updateCustomerFlagsFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerConfigResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerConfigResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    disable_pooled_balance: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "disable_pooled_balance": "disablePooledBalance",
+    });
+  }),
+);
+
+export function updateCustomerConfigResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerConfigResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerConfigResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerConfigResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerResponse,
   unknown
@@ -1334,6 +1531,9 @@ export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
     billing_controls: z.lazy(() =>
       UpdateCustomerBillingControlsResponse$inboundSchema
     ),
+    schedule: types.optional(
+      z.lazy(() => UpdateCustomerSchedule$inboundSchema),
+    ),
     subscriptions: z.array(
       z.lazy(() => UpdateCustomerSubscription$inboundSchema),
     ),
@@ -1342,6 +1542,9 @@ export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
     flags: z.record(
       z.string(),
       z.lazy(() => UpdateCustomerFlags$inboundSchema),
+    ),
+    config: types.optional(
+      z.lazy(() => UpdateCustomerConfigResponse$inboundSchema),
     ),
   }),
   z.transform((v) => {

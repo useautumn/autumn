@@ -153,6 +153,16 @@ export type CustomerDataBillingControls = {
 };
 
 /**
+ * Miscellaneous configurations for the customer.
+ */
+export type CustomerDataConfig = {
+  /**
+   * Whether to disable the shared customer-level pool for entities.
+   */
+  disablePooledBalance?: boolean | undefined;
+};
+
+/**
  * Customer details to set when creating a customer
  */
 export type CustomerData = {
@@ -192,6 +202,10 @@ export type CustomerData = {
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls?: CustomerDataBillingControls | undefined;
+  /**
+   * Miscellaneous configurations for the customer.
+   */
+  config?: CustomerDataConfig | undefined;
 };
 
 /** @internal */
@@ -426,6 +440,34 @@ export function customerDataBillingControlsToJSON(
 }
 
 /** @internal */
+export type CustomerDataConfig$Outbound = {
+  disable_pooled_balance?: boolean | undefined;
+};
+
+/** @internal */
+export const CustomerDataConfig$outboundSchema: z.ZodMiniType<
+  CustomerDataConfig$Outbound,
+  CustomerDataConfig
+> = z.pipe(
+  z.object({
+    disablePooledBalance: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      disablePooledBalance: "disable_pooled_balance",
+    });
+  }),
+);
+
+export function customerDataConfigToJSON(
+  customerDataConfig: CustomerDataConfig,
+): string {
+  return JSON.stringify(
+    CustomerDataConfig$outboundSchema.parse(customerDataConfig),
+  );
+}
+
+/** @internal */
 export type CustomerData$Outbound = {
   name?: string | null | undefined;
   email?: string | null | undefined;
@@ -436,6 +478,7 @@ export type CustomerData$Outbound = {
   auto_enable_plan_id?: string | undefined;
   send_email_receipts?: boolean | undefined;
   billing_controls?: CustomerDataBillingControls$Outbound | undefined;
+  config?: CustomerDataConfig$Outbound | undefined;
 };
 
 /** @internal */
@@ -455,6 +498,7 @@ export const CustomerData$outboundSchema: z.ZodMiniType<
     billingControls: z.optional(
       z.lazy(() => CustomerDataBillingControls$outboundSchema),
     ),
+    config: z.optional(z.lazy(() => CustomerDataConfig$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

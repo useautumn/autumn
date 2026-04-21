@@ -145,6 +145,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="config" type="object">
+  Miscellaneous configurations for the customer.
+  <Expandable title="properties">
+    <DynamicParamField body="disable_pooled_balance" type="boolean">
+      Whether to disable the shared customer-level pool for entities.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="new_customer_id" type="string">
   New ID for the customer
 </DynamicParamField>
@@ -288,6 +298,50 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
         <DynamicResponseField name="enabled" type="boolean">
           Whether overage is allowed for this feature.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="schedule" type="object">
+  The customer's persisted schedule, if one exists.
+  <Expandable title="properties">
+    <DynamicResponseField name="id" type="string">
+      The persisted schedule ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_id" type="string">
+      The customer ID this schedule belongs to.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="entity_id" type="string | null">
+      The entity ID this schedule belongs to, or null.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="created_at" type="number">
+      Timestamp of schedule creation in milliseconds since epoch.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="phases" type="object[]">
+      Persisted phases in ascending starts_at order.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string">
+          The persisted phase ID.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="starts_at" type="number">
+          When this phase starts, in epoch milliseconds.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="customer_product_ids" type="string[]">
+          Customer products materialized for this phase.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="created_at" type="number">
+          Timestamp of phase creation in milliseconds since epoch.
         </DynamicResponseField>
 
       </Expandable>
@@ -1210,6 +1264,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicResponseField>
 
+<DynamicResponseField name="config" type="object">
+  Configuration for the customer.
+  <Expandable title="properties">
+    <DynamicResponseField name="disable_pooled_balance" type="boolean">
+      Whether to disable the shared customer-level pool for entities.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
 
 <ResponseExample>
 ```json 200
@@ -1279,6 +1343,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       "expires_at": null,
       "feature_id": "advanced_workflows"
     }
+  },
+  "config": {
+    "disable_pooled_balance": false
   }
 }
 ```
