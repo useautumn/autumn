@@ -34,8 +34,6 @@ export const queueTrack = async ({
 
 	ctx.logger.warn("[track] Redis unavailable, queued track fallback", {
 		type: "track_queue_fallback",
-		customer_id: body.customer_id,
-		entity_id: body.entity_id,
 		feature_id: body.feature_id,
 		event_name: body.event_name,
 		env: ctx.env,

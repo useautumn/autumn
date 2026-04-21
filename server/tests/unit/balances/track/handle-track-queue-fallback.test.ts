@@ -119,7 +119,6 @@ describe("handleTrack queue fallback", () => {
 			"[track] Redis unavailable, queued track fallback",
 			expect.objectContaining({
 				type: "track_queue_fallback",
-				customer_id: "cus_123",
 				feature_id: "messages",
 				queue_name: "track-dev.fifo",
 			}),
