@@ -179,6 +179,13 @@ components:
               description: List of overage allowed controls per feature. When enabled, usage
                 can exceed balance.
           description: Billing controls for the customer (auto top-ups, etc.)
+        config:
+          type: object
+          properties:
+            disable_pooled_balance:
+              type: boolean
+              description: Whether to disable the shared customer-level pool for entities.
+          description: Miscellaneous configurations for the customer.
       title: CustomerData
       description: Customer details to set when creating a customer
     CustomerExpand:
@@ -367,6 +374,55 @@ components:
               description: List of overage allowed controls per feature. When enabled, usage
                 can exceed balance.
           description: Billing controls for the customer (auto top-ups, etc.)
+        schedule:
+          type: object
+          properties:
+            id:
+              type: string
+              description: The persisted schedule ID.
+            customer_id:
+              type: string
+              description: The customer ID this schedule belongs to.
+            entity_id:
+              anyOf:
+                - type: string
+                - type: "null"
+              description: The entity ID this schedule belongs to, or null.
+            created_at:
+              type: number
+              description: Timestamp of schedule creation in milliseconds since epoch.
+            phases:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: The persisted phase ID.
+                  starts_at:
+                    type: number
+                    description: When this phase starts, in epoch milliseconds.
+                  customer_product_ids:
+                    type: array
+                    items:
+                      type: string
+                    description: Customer products materialized for this phase.
+                  created_at:
+                    type: number
+                    description: Timestamp of phase creation in milliseconds since epoch.
+                required:
+                  - id
+                  - starts_at
+                  - customer_product_ids
+                  - created_at
+              description: Persisted phases in ascending starts_at order.
+          required:
+            - id
+            - customer_id
+            - entity_id
+            - created_at
+            - phases
+          description: The customer's persisted schedule, if one exists.
         subscriptions:
           type: array
           items:
@@ -589,6 +645,13 @@ components:
                 feature_id: dashboard
           description: Boolean feature flags keyed by feature ID, showing enabled access
             for on/off features.
+        config:
+          type: object
+          properties:
+            disable_pooled_balance:
+              type: boolean
+              description: Whether to disable the shared customer-level pool for entities.
+          description: Configuration for the customer.
         invoices:
           type: array
           items:
@@ -866,6 +929,8 @@ components:
               plan_id: pro_plan
               expires_at: null
               feature_id: advanced_workflows
+          config:
+            disable_pooled_balance: false
     Plan:
       type: object
       properties:
@@ -1569,6 +1634,9 @@ paths:
         @param billingControls - Billing controls for the customer (auto
         top-ups, etc.) (optional)
 
+        @param config - Miscellaneous configurations for the customer.
+        (optional)
+
         @param expand - Fields to expand in the returned customer response, such
         as subscriptions.plan, purchases.plan, balances.feature, or
         flags.feature. (optional)
@@ -1751,6 +1819,13 @@ paths:
                       description: List of overage allowed controls per feature. When enabled, usage
                         can exceed balance.
                   description: Billing controls for the customer (auto top-ups, etc.)
+                config:
+                  type: object
+                  properties:
+                    disable_pooled_balance:
+                      type: boolean
+                      description: Whether to disable the shared customer-level pool for entities.
+                  description: Miscellaneous configurations for the customer.
                 expand:
                   type: array
                   items:
@@ -1831,6 +1906,15 @@ paths:
                 search:
                   type: string
                   description: Search customers by id, name, or email
+                processors:
+                  type: array
+                  items:
+                    enum:
+                      - stripe
+                      - revenuecat
+                      - vercel
+                    type: string
+                  description: Filter by customer processor type (stripe, revenuecat, vercel)
               title: ListCustomersParams
               examples:
                 - limit: 10
@@ -2019,6 +2103,55 @@ paths:
                               description: List of overage allowed controls per feature. When enabled, usage
                                 can exceed balance.
                           description: Billing controls for the customer (auto top-ups, etc.)
+                        schedule:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The persisted schedule ID.
+                            customer_id:
+                              type: string
+                              description: The customer ID this schedule belongs to.
+                            entity_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: The entity ID this schedule belongs to, or null.
+                            created_at:
+                              type: number
+                              description: Timestamp of schedule creation in milliseconds since epoch.
+                            phases:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id:
+                                    type: string
+                                    description: The persisted phase ID.
+                                  starts_at:
+                                    type: number
+                                    description: When this phase starts, in epoch milliseconds.
+                                  customer_product_ids:
+                                    type: array
+                                    items:
+                                      type: string
+                                    description: Customer products materialized for this phase.
+                                  created_at:
+                                    type: number
+                                    description: Timestamp of phase creation in milliseconds since epoch.
+                                required:
+                                  - id
+                                  - starts_at
+                                  - customer_product_ids
+                                  - created_at
+                              description: Persisted phases in ascending starts_at order.
+                          required:
+                            - id
+                            - customer_id
+                            - entity_id
+                            - created_at
+                            - phases
+                          description: The customer's persisted schedule, if one exists.
                         subscriptions:
                           type: array
                           items:
@@ -2242,6 +2375,13 @@ paths:
                                 feature_id: dashboard
                           description: Boolean feature flags keyed by feature ID, showing enabled access
                             for on/off features.
+                        config:
+                          type: object
+                          properties:
+                            disable_pooled_balance:
+                              type: boolean
+                              description: Whether to disable the shared customer-level pool for entities.
+                          description: Configuration for the customer.
                       required:
                         - id
                         - name
@@ -2312,6 +2452,8 @@ paths:
                               plan_id: pro_plan
                               expires_at: null
                               feature_id: advanced_workflows
+                          config:
+                            disable_pooled_balance: false
                     description: Array of items for current page
                   has_more:
                     type: boolean
@@ -2397,6 +2539,8 @@ paths:
                             plan_id: pro_plan
                             expires_at: null
                             feature_id: advanced_workflows
+                        config:
+                          disable_pooled_balance: false
                     has_more: false
                     offset: 0
                     total: 1
@@ -2583,6 +2727,13 @@ paths:
                       description: List of overage allowed controls per feature. When enabled, usage
                         can exceed balance.
                   description: Billing controls for the customer (auto top-ups, etc.)
+                config:
+                  type: object
+                  properties:
+                    disable_pooled_balance:
+                      type: boolean
+                      description: Whether to disable the shared customer-level pool for entities.
+                  description: Miscellaneous configurations for the customer.
                 new_customer_id:
                   $ref: "#/components/schemas/CustomerId"
                   description: New ID for the customer
@@ -2771,6 +2922,55 @@ paths:
                         description: List of overage allowed controls per feature. When enabled, usage
                           can exceed balance.
                     description: Billing controls for the customer (auto top-ups, etc.)
+                  schedule:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: The persisted schedule ID.
+                      customer_id:
+                        type: string
+                        description: The customer ID this schedule belongs to.
+                      entity_id:
+                        anyOf:
+                          - type: string
+                          - type: "null"
+                        description: The entity ID this schedule belongs to, or null.
+                      created_at:
+                        type: number
+                        description: Timestamp of schedule creation in milliseconds since epoch.
+                      phases:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The persisted phase ID.
+                            starts_at:
+                              type: number
+                              description: When this phase starts, in epoch milliseconds.
+                            customer_product_ids:
+                              type: array
+                              items:
+                                type: string
+                              description: Customer products materialized for this phase.
+                            created_at:
+                              type: number
+                              description: Timestamp of phase creation in milliseconds since epoch.
+                          required:
+                            - id
+                            - starts_at
+                            - customer_product_ids
+                            - created_at
+                        description: Persisted phases in ascending starts_at order.
+                    required:
+                      - id
+                      - customer_id
+                      - entity_id
+                      - created_at
+                      - phases
+                    description: The customer's persisted schedule, if one exists.
                   subscriptions:
                     type: array
                     items:
@@ -2994,6 +3194,13 @@ paths:
                           feature_id: dashboard
                     description: Boolean feature flags keyed by feature ID, showing enabled access
                       for on/off features.
+                  config:
+                    type: object
+                    properties:
+                      disable_pooled_balance:
+                        type: boolean
+                        description: Whether to disable the shared customer-level pool for entities.
+                    description: Configuration for the customer.
                 required:
                   - id
                   - name
@@ -3064,6 +3271,8 @@ paths:
                         plan_id: pro_plan
                         expires_at: null
                         feature_id: advanced_workflows
+                    config:
+                      disable_pooled_balance: false
       x-speakeasy-name-override: update
       parameters:
         - *a1
@@ -11177,6 +11386,28 @@ paths:
                     - interval
                   description: Reset configuration for the balance. If not provided, the balance
                     is a one-time grant that never resets.
+                rollover:
+                  type: object
+                  properties:
+                    max:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    max_percentage:
+                      anyOf:
+                        - type: number
+                        - type: "null"
+                    duration:
+                      enum:
+                        - month
+                        - forever
+                      type: string
+                      default: month
+                    length:
+                      type: number
+                  required:
+                    - length
+                  description: Rollover configuration for the balance.
                 expires_at:
                   type: number
                   description: Unix timestamp (milliseconds) when the balance expires. Mutually

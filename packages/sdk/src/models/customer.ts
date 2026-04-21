@@ -169,6 +169,51 @@ export type CustomerBillingControls = {
   overageAllowed?: Array<CustomerOverageAllowed> | undefined;
 };
 
+export type Phase = {
+  /**
+   * The persisted phase ID.
+   */
+  id: string;
+  /**
+   * When this phase starts, in epoch milliseconds.
+   */
+  startsAt: number;
+  /**
+   * Customer products materialized for this phase.
+   */
+  customerProductIds: Array<string>;
+  /**
+   * Timestamp of phase creation in milliseconds since epoch.
+   */
+  createdAt: number;
+};
+
+/**
+ * The customer's persisted schedule, if one exists.
+ */
+export type Schedule = {
+  /**
+   * The persisted schedule ID.
+   */
+  id: string;
+  /**
+   * The customer ID this schedule belongs to.
+   */
+  customerId: string;
+  /**
+   * The entity ID this schedule belongs to, or null.
+   */
+  entityId: string | null;
+  /**
+   * Timestamp of schedule creation in milliseconds since epoch.
+   */
+  createdAt: number;
+  /**
+   * Persisted phases in ascending starts_at order.
+   */
+  phases: Array<Phase>;
+};
+
 /**
  * Current status of the subscription.
  */
@@ -354,6 +399,16 @@ export type Flags = {
    * The full feature object if expanded.
    */
   feature?: CustomerFeature | undefined;
+};
+
+/**
+ * Configuration for the customer.
+ */
+export type CustomerConfig = {
+  /**
+   * Whether to disable the shared customer-level pool for entities.
+   */
+  disablePooledBalance?: boolean | undefined;
 };
 
 export type Invoice = {
@@ -568,6 +623,10 @@ export type Customer = {
    */
   billingControls: CustomerBillingControls;
   /**
+   * The customer's persisted schedule, if one exists.
+   */
+  schedule?: Schedule | undefined;
+  /**
    * Active and scheduled recurring plans that this customer has attached.
    */
   subscriptions: Array<Subscription>;
@@ -583,6 +642,10 @@ export type Customer = {
    * Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
    */
   flags: { [k: string]: Flags };
+  /**
+   * Configuration for the customer.
+   */
+  config?: CustomerConfig | undefined;
   /**
    * Invoices for this customer.
    */
@@ -810,6 +873,61 @@ export function customerBillingControlsFromJSON(
 }
 
 /** @internal */
+export const Phase$inboundSchema: z.ZodMiniType<Phase, unknown> = z.pipe(
+  z.object({
+    id: types.string(),
+    starts_at: types.number(),
+    customer_product_ids: z.array(types.string()),
+    created_at: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "starts_at": "startsAt",
+      "customer_product_ids": "customerProductIds",
+      "created_at": "createdAt",
+    });
+  }),
+);
+
+export function phaseFromJSON(
+  jsonString: string,
+): SafeParseResult<Phase, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Phase$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Phase' from JSON`,
+  );
+}
+
+/** @internal */
+export const Schedule$inboundSchema: z.ZodMiniType<Schedule, unknown> = z.pipe(
+  z.object({
+    id: types.string(),
+    customer_id: types.string(),
+    entity_id: types.nullable(types.string()),
+    created_at: types.number(),
+    phases: z.array(z.lazy(() => Phase$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "customer_id": "customerId",
+      "entity_id": "entityId",
+      "created_at": "createdAt",
+    });
+  }),
+);
+
+export function scheduleFromJSON(
+  jsonString: string,
+): SafeParseResult<Schedule, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Schedule$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Schedule' from JSON`,
+  );
+}
+
+/** @internal */
 export const CustomerStatus$inboundSchema: z.ZodMiniType<
   CustomerStatus,
   unknown
@@ -1000,6 +1118,31 @@ export function flagsFromJSON(
     jsonString,
     (x) => Flags$inboundSchema.parse(JSON.parse(x)),
     `Failed to parse 'Flags' from JSON`,
+  );
+}
+
+/** @internal */
+export const CustomerConfig$inboundSchema: z.ZodMiniType<
+  CustomerConfig,
+  unknown
+> = z.pipe(
+  z.object({
+    disable_pooled_balance: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "disable_pooled_balance": "disablePooledBalance",
+    });
+  }),
+);
+
+export function customerConfigFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerConfig, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerConfig$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerConfig' from JSON`,
   );
 }
 
@@ -1214,10 +1357,12 @@ export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
     metadata: z.record(z.string(), z.any()),
     send_email_receipts: types.boolean(),
     billing_controls: z.lazy(() => CustomerBillingControls$inboundSchema),
+    schedule: types.optional(z.lazy(() => Schedule$inboundSchema)),
     subscriptions: z.array(z.lazy(() => Subscription$inboundSchema)),
     purchases: z.array(z.lazy(() => Purchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
     flags: z.record(z.string(), z.lazy(() => Flags$inboundSchema)),
+    config: types.optional(z.lazy(() => CustomerConfig$inboundSchema)),
     invoices: types.optional(z.array(z.lazy(() => Invoice$inboundSchema))),
     entities: types.optional(z.array(z.lazy(() => Entity$inboundSchema))),
     trials_used: types.optional(

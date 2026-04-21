@@ -34,6 +34,13 @@ export const SubscriptionStatus = {
  */
 export type SubscriptionStatus = ClosedEnum<typeof SubscriptionStatus>;
 
+export const Processor = {
+  Stripe: "stripe",
+  Revenuecat: "revenuecat",
+  Vercel: "vercel",
+} as const;
+export type Processor = ClosedEnum<typeof Processor>;
+
 export type ListCustomersParams = {
   /**
    * Number of items to skip
@@ -55,6 +62,10 @@ export type ListCustomersParams = {
    * Search customers by id, name, or email
    */
   search?: string | undefined;
+  /**
+   * Filter by customer processor type (stripe, revenuecat, vercel)
+   */
+  processors?: Array<Processor> | undefined;
 };
 
 /**
@@ -213,6 +224,51 @@ export type ListCustomersBillingControls = {
    * List of overage allowed controls per feature. When enabled, usage can exceed balance.
    */
   overageAllowed?: Array<ListCustomersOverageAllowed> | undefined;
+};
+
+export type ListCustomersPhase = {
+  /**
+   * The persisted phase ID.
+   */
+  id: string;
+  /**
+   * When this phase starts, in epoch milliseconds.
+   */
+  startsAt: number;
+  /**
+   * Customer products materialized for this phase.
+   */
+  customerProductIds: Array<string>;
+  /**
+   * Timestamp of phase creation in milliseconds since epoch.
+   */
+  createdAt: number;
+};
+
+/**
+ * The customer's persisted schedule, if one exists.
+ */
+export type ListCustomersSchedule = {
+  /**
+   * The persisted schedule ID.
+   */
+  id: string;
+  /**
+   * The customer ID this schedule belongs to.
+   */
+  customerId: string;
+  /**
+   * The entity ID this schedule belongs to, or null.
+   */
+  entityId: string | null;
+  /**
+   * Timestamp of schedule creation in milliseconds since epoch.
+   */
+  createdAt: number;
+  /**
+   * Persisted phases in ascending starts_at order.
+   */
+  phases: Array<ListCustomersPhase>;
 };
 
 /**
@@ -402,6 +458,16 @@ export type ListCustomersFlags = {
   feature?: ListCustomersFeature | undefined;
 };
 
+/**
+ * Configuration for the customer.
+ */
+export type ListCustomersConfig = {
+  /**
+   * Whether to disable the shared customer-level pool for entities.
+   */
+  disablePooledBalance?: boolean | undefined;
+};
+
 export type ListCustomersList = {
   /**
    * Your unique identifier for the customer.
@@ -444,6 +510,10 @@ export type ListCustomersList = {
    */
   billingControls: ListCustomersBillingControls;
   /**
+   * The customer's persisted schedule, if one exists.
+   */
+  schedule?: ListCustomersSchedule | undefined;
+  /**
    * Active and scheduled recurring plans that this customer has attached.
    */
   subscriptions: Array<ListCustomersSubscription>;
@@ -459,6 +529,10 @@ export type ListCustomersList = {
    * Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
    */
   flags: { [k: string]: ListCustomersFlags };
+  /**
+   * Configuration for the customer.
+   */
+  config?: ListCustomersConfig | undefined;
 };
 
 /**
@@ -524,12 +598,18 @@ export const SubscriptionStatus$outboundSchema: z.ZodMiniEnum<
 > = z.enum(SubscriptionStatus);
 
 /** @internal */
+export const Processor$outboundSchema: z.ZodMiniEnum<typeof Processor> = z.enum(
+  Processor,
+);
+
+/** @internal */
 export type ListCustomersParams$Outbound = {
   offset: number;
   limit: number;
   plans?: Array<ListCustomersPlan$Outbound> | undefined;
   subscription_status?: string | undefined;
   search?: string | undefined;
+  processors?: Array<string> | undefined;
 };
 
 /** @internal */
@@ -543,6 +623,7 @@ export const ListCustomersParams$outboundSchema: z.ZodMiniType<
     plans: z.optional(z.array(z.lazy(() => ListCustomersPlan$outboundSchema))),
     subscriptionStatus: z.optional(SubscriptionStatus$outboundSchema),
     search: z.optional(z.string()),
+    processors: z.optional(z.array(Processor$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -762,6 +843,67 @@ export function listCustomersBillingControlsFromJSON(
 }
 
 /** @internal */
+export const ListCustomersPhase$inboundSchema: z.ZodMiniType<
+  ListCustomersPhase,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    starts_at: types.number(),
+    customer_product_ids: z.array(types.string()),
+    created_at: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "starts_at": "startsAt",
+      "customer_product_ids": "customerProductIds",
+      "created_at": "createdAt",
+    });
+  }),
+);
+
+export function listCustomersPhaseFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersPhase, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersPhase$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersPhase' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListCustomersSchedule$inboundSchema: z.ZodMiniType<
+  ListCustomersSchedule,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    customer_id: types.string(),
+    entity_id: types.nullable(types.string()),
+    created_at: types.number(),
+    phases: z.array(z.lazy(() => ListCustomersPhase$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "customer_id": "customerId",
+      "entity_id": "entityId",
+      "created_at": "createdAt",
+    });
+  }),
+);
+
+export function listCustomersScheduleFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersSchedule, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersSchedule$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersSchedule' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListCustomersStatus$inboundSchema: z.ZodMiniType<
   ListCustomersStatus,
   unknown
@@ -964,6 +1106,31 @@ export function listCustomersFlagsFromJSON(
 }
 
 /** @internal */
+export const ListCustomersConfig$inboundSchema: z.ZodMiniType<
+  ListCustomersConfig,
+  unknown
+> = z.pipe(
+  z.object({
+    disable_pooled_balance: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "disable_pooled_balance": "disablePooledBalance",
+    });
+  }),
+);
+
+export function listCustomersConfigFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersConfig, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersConfig$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersConfig' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListCustomersList$inboundSchema: z.ZodMiniType<
   ListCustomersList,
   unknown
@@ -979,12 +1146,14 @@ export const ListCustomersList$inboundSchema: z.ZodMiniType<
     metadata: z.record(z.string(), z.any()),
     send_email_receipts: types.boolean(),
     billing_controls: z.lazy(() => ListCustomersBillingControls$inboundSchema),
+    schedule: types.optional(z.lazy(() => ListCustomersSchedule$inboundSchema)),
     subscriptions: z.array(
       z.lazy(() => ListCustomersSubscription$inboundSchema),
     ),
     purchases: z.array(z.lazy(() => ListCustomersPurchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
     flags: z.record(z.string(), z.lazy(() => ListCustomersFlags$inboundSchema)),
+    config: types.optional(z.lazy(() => ListCustomersConfig$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

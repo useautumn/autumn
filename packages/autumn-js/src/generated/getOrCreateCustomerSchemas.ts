@@ -16,6 +16,10 @@ export const getOrCreateCustomerOverageAllowedSchema = z.object({
 	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const getOrCreateCustomerConfigSchema = z.object({
+	disablePooledBalance: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
 export const getOrCreateCustomerPurchaseLimitOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.number(),
@@ -76,6 +80,10 @@ export const getOrCreateCustomerBillingControlsOutboundSchema = z.object({
 		.optional(),
 });
 
+export const getOrCreateCustomerConfigOutboundSchema = z.object({
+	disable_pooled_balance: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
 export const getOrCreateCustomerParamsOutboundSchema = z.object({
 	customer_id: z.string().nullable(),
 	name: z.union([z.string(), z.undefined()]).optional().nullable(),
@@ -91,6 +99,9 @@ export const getOrCreateCustomerParamsOutboundSchema = z.object({
 	send_email_receipts: z.union([z.boolean(), z.undefined()]).optional(),
 	billing_controls: z
 		.union([getOrCreateCustomerBillingControlsOutboundSchema, z.undefined()])
+		.optional(),
+	config: z
+		.union([getOrCreateCustomerConfigOutboundSchema, z.undefined()])
 		.optional(),
 	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
@@ -157,5 +168,6 @@ export const getOrCreateCustomerParamsSchema = z.object({
 	billingControls: z
 		.union([getOrCreateCustomerBillingControlsSchema, z.undefined()])
 		.optional(),
+	config: z.union([getOrCreateCustomerConfigSchema, z.undefined()]).optional(),
 	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
