@@ -39,6 +39,7 @@ export const runTrackWithRollout = async ({
 			}
 
 			const queuedResponse = await queueTrack({ ctx, body });
+
 			if (queuedResponse) return queuedResponse;
 
 			throw error;

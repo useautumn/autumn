@@ -55,10 +55,12 @@ export const getOrCreateCachedFullSubject = async ({
 	}
 
 	if (!fullSubject && customerId) {
-		fetchedSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
-			ctx,
-			customerId,
-		});
+		fetchedSubjectViewEpoch = useRedis
+			? await getOrInitFullSubjectViewEpoch({
+					ctx,
+					customerId,
+				})
+			: 0;
 		normalizedResult = await getFullSubjectNormalized({
 			ctx,
 			customerId,

@@ -47,10 +47,12 @@ export const getOrSetCachedPartialFullSubject = async ({
 	logger.debug(
 		`[getOrSetCachedPartialFullSubject] Cache miss for ${customerId}${entityId ? `:${entityId}` : ""}, fetching from DB, source: ${source}`,
 	);
-	const fetchedSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
-		ctx,
-		customerId,
-	});
+	const fetchedSubjectViewEpoch = useRedis
+		? await getOrInitFullSubjectViewEpoch({
+				ctx,
+				customerId,
+			})
+		: 0;
 
 	const result = await getFullSubjectNormalized({
 		ctx,
