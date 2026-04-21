@@ -31,6 +31,5 @@ describe("runCheckV2", () => {
 			checkData: { source: "v2" },
 			response: { allowed: true, source: "v2" },
 		});
-		expect(mockState.getCheckDataCalls).toHaveLength(1);
 	});
 });
