@@ -40,6 +40,15 @@ export const getCheckDataOrFallbackResponse = async ({
 			throw error;
 		}
 
+		ctx.logger.warn("[check] Returning fail-open fallback response", {
+			type: "check_fail_open_fallback",
+			error,
+			customer_id: body.customer_id,
+			entity_id: body.entity_id,
+			feature_id: body.feature_id,
+			required_balance: requiredBalance,
+		});
+
 		return {
 			checkData: null,
 			fallbackResponse: buildCheckFallbackResponse({
