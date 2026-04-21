@@ -53,6 +53,7 @@ export * from "./productUtils/priceUtils";
 export * from "./productV2Utils/mapToProductV2";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils";
 export * from "./productV2Utils/productItemUtils/getItemType";
+export * from "./productV2Utils/productItemUtils/sortPlanItems";
 // Item utils
 export * from "./productV2Utils/productItemUtils/mapToItem";
 export * from "./productV2Utils/productItemUtils/productItemUtils";

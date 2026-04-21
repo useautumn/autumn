@@ -84,6 +84,7 @@ export const initDrizzle = ({
 
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	maxConnections: 5,
+	connectTimeout: 2,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",

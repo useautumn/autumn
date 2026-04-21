@@ -3,6 +3,8 @@ import { instrumentRedis } from "../otel/instrumentRedis.js";
 import { cacheBackupUrl } from "./redisConfig.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
+const REDIS_COMMAND_TIMEOUT_MS = 500;
+
 /** Create a Redis connection for a specific region */
 export const createRedisClient = ({
 	cacheUrl,
@@ -18,6 +20,7 @@ export const createRedisClient = ({
 				: undefined,
 		family: 4,
 		keepAlive: 10000,
+		commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
 	});
 
 	// instrumentRedis must run first so its defineCommand patch
