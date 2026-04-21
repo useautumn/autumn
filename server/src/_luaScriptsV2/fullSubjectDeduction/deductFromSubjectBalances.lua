@@ -18,6 +18,13 @@
     - getTotalBalance.lua
 
   KEYS[1] = shared balance routing key (used for cluster slot routing)
+  KEYS[2] = lock receipt key, or "" when no lock is in play
+  KEYS[3..N] = per-feature shared balance hash keys; params.balance_key_index_by_feature_id
+              maps feature_id → the index (3..N) of the key for that feature
+
+  All Redis keys the script touches MUST be declared in KEYS[] so Upstash (and
+  Redis Cluster) can apply key-based locking / slot routing. Do not reconstruct
+  keys from ARGV inside the script.
 
   ARGV[1] = JSON params:
     {
@@ -25,6 +32,7 @@
       env: string,
       customer_id: string,
       customer_entitlement_deductions: [{ customer_entitlement_id, credit_cost, feature_id, entity_feature_id, usage_allowed, min_balance, max_balance }],
+      balance_key_index_by_feature_id: { [feature_id]: number },
       spend_limit_by_feature_id: { [feature_id]: { feature_id, enabled, overage_limit } } | null,
       usage_based_cus_ent_ids_by_feature_id: { [feature_id]: string[] } | null,
       amount_to_deduct: number | null,
@@ -55,6 +63,27 @@
 local routing_key = KEYS[1]
 local params = cjson.decode(ARGV[1])
 
+-- Resolve keys from KEYS[] (never from ARGV) so every key the script touches
+-- is declared for key-based locking.
+local lock_receipt_key_from_keys = KEYS[2]
+if lock_receipt_key_from_keys == '' then
+  lock_receipt_key_from_keys = nil
+end
+
+-- Rebuild balance_keys_by_feature_id by dereferencing KEYS via the index map.
+-- Downstream helpers (readSubjectBalances, contextUtilsV2, updateAggregatedBalances)
+-- read this table off params/context.
+local balance_keys_by_feature_id = {}
+local balance_key_index_by_feature_id =
+  params.balance_key_index_by_feature_id or {}
+for feature_id_value, key_index in pairs(balance_key_index_by_feature_id) do
+  local resolved_key = KEYS[key_index]
+  if resolved_key and resolved_key ~= '' then
+    balance_keys_by_feature_id[feature_id_value] = resolved_key
+  end
+end
+params.balance_keys_by_feature_id = balance_keys_by_feature_id
+
 local org_id = params.org_id
 local env = params.env
 local customer_id = params.customer_id
@@ -74,7 +103,7 @@ local overage_behaviour = params.overage_behaviour or 'cap'
 local feature_id = params.feature_id
 local lock = params.lock
 local unwind_value = params.unwind_value
-local lock_receipt_key = params.lock_receipt_key
+local lock_receipt_key = lock_receipt_key_from_keys
 
 -- Initialize context with in-memory state from Redis
 if #customer_entitlement_deductions == 0 then
@@ -211,12 +240,12 @@ end
 if not is_nil(lock)
     and not is_nil(lock.enabled)
     and lock.enabled
-    and not is_nil(lock.redis_receipt_key)
+    and not is_nil(lock_receipt_key_from_keys)
 then
   -- Check if lock receipt already exists; if so, reject without applying writes
   local existing_receipt = nil
-  if redis.call('EXISTS', lock.redis_receipt_key) == 1 then
-    existing_receipt = load_lock_receipt(lock.redis_receipt_key)
+  if redis.call('EXISTS', lock_receipt_key_from_keys) == 1 then
+    existing_receipt = load_lock_receipt(lock_receipt_key_from_keys)
   end
   if not is_nil(existing_receipt) then
     return cjson.encode({
@@ -232,7 +261,7 @@ then
   end
 
   save_lock_receipt_from_updates({
-    lock_receipt_key = lock.redis_receipt_key,
+    lock_receipt_key = lock_receipt_key_from_keys,
     receipt = {
       lock_id = lock.lock_id or cjson.null,
       hashed_key = lock.hashed_key or cjson.null,
