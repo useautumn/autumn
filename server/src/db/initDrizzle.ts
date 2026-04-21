@@ -5,31 +5,57 @@ dotenv.config();
 import { schemas as schema } from "@autumn/shared";
 import { instrumentDrizzleClient } from "@kubiks/otel-drizzle";
 
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import type { SQLWrapper } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg, { type PoolConfig } from "pg";
 import { otelConfig } from "../utils/otel/otelConfig.js";
+
+type AutumnDb = Omit<ReturnType<typeof drizzle<typeof schema>>, "execute"> & {
+	execute: <TRow = Record<string, unknown>>(
+		query: string | SQLWrapper,
+	) => Promise<TRow[]>;
+};
+
+const normalizeExecuteRows = <TRow>(result: unknown): TRow[] => {
+	if (result && typeof result === "object" && "rows" in result) {
+		return (result as { rows: TRow[] }).rows;
+	}
+
+	return result as TRow[];
+};
 
 /** Creates a Drizzle pool with the given configuration. */
 export const initDrizzle = ({
 	maxConnections = 10,
 	replica = false,
 	connectTimeout = 5,
+	poolConfig,
 }: {
 	maxConnections?: number;
 	replica?: boolean;
 	/** Connect timeout in seconds */
 	connectTimeout?: number;
+	poolConfig?: PoolConfig;
 } = {}) => {
 	const dbUrl =
 		(replica ? process.env.DATABASE_REPLICA_URL : process.env.DATABASE_URL) ??
 		"";
 
-	const client = postgres(dbUrl, {
+	const client = new pg.Pool({
+		connectionString: dbUrl,
+		...poolConfig,
 		max: maxConnections,
-		connect_timeout: connectTimeout,
+		connectionTimeoutMillis:
+			connectTimeout === undefined ? undefined : connectTimeout * 1000,
 	});
 
-	const db = drizzle(client, { schema });
+	const drizzleDb = drizzle(client, { schema });
+	const execute = drizzleDb.execute.bind(drizzleDb);
+	const db = Object.assign(drizzleDb, {
+		execute: async <TRow = Record<string, unknown>>(
+			query: string | SQLWrapper,
+		) => normalizeExecuteRows<TRow>(await execute(query)),
+	}) as unknown as AutumnDb;
 
 	if (otelConfig.drizzle) {
 		instrumentDrizzleClient(db);
@@ -39,7 +65,11 @@ export const initDrizzle = ({
 };
 
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
-	// connectTimeout: 10,
+	maxConnections: 5,
+	poolConfig: {
+		application_name: "autumn-critical",
+		query_timeout: 2_000,
+	},
 });
 
 // -- General pool: used by all other endpoints --

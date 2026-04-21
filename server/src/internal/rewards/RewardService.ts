@@ -96,8 +96,10 @@ export class RewardService {
 		db: DrizzleCli;
 		data: Reward | Reward[];
 	}) {
-		const results = await db.insert(rewards).values(data as Reward);
-		return results as Reward[];
+		return (await db
+			.insert(rewards)
+			.values(data as Reward)
+			.returning()) as Reward[];
 	}
 
 	static async list({
