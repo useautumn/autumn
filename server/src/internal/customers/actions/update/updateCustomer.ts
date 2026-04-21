@@ -37,7 +37,6 @@ export const updateCustomer = async ({
 		customer_id: customerId,
 		new_customer_id: newCustomerId,
 		billing_controls,
-		config,
 		...newCusData
 	} = params;
 
@@ -148,24 +147,11 @@ export const updateCustomer = async ({
 			billingControlUpdates.overage_allowed = billing_controls.overage_allowed;
 	}
 
-	// Merge config partially so omitted keys don't clobber existing ones
-	const configUpdate = config
-		? {
-				config: {
-					...(originalCustomer.config ?? {}),
-					...(config.disable_pooled_balance !== undefined && {
-						disable_pooled_balance: config.disable_pooled_balance,
-					}),
-				},
-			}
-		: {};
-
 	const updateData: Partial<Customer> = {
 		...newCusData,
 		id: newCustomerId,
 		metadata: mergedMetadata,
 		...billingControlUpdates,
-		...configUpdate,
 	};
 
 	if (newStripeId) {

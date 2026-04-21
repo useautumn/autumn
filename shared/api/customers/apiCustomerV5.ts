@@ -75,9 +75,6 @@ export const API_CUSTOMER_V5_EXAMPLE = {
 			feature_id: "advanced_workflows",
 		},
 	},
-	config: {
-		disable_pooled_balance: false,
-	},
 };
 
 // V5 base customer - uses V1 subscriptions (single array with status field) and V1 balances
@@ -97,17 +94,6 @@ export const BaseApiCustomerV5Schema = BaseApiCustomerSchema.extend({
 		description:
 			"Boolean feature flags keyed by feature ID, showing enabled access for on/off features.",
 	}),
-	config: z
-		.object({
-			disable_pooled_balance: z.boolean().optional().meta({
-				description:
-					"Whether to let entities fall back into the shared customer-level pool.",
-			}),
-		})
-		.optional()
-		.meta({
-			description: "Configuration for the customer.",
-		}),
 }).meta({
 	examples: [API_CUSTOMER_V5_EXAMPLE],
 });

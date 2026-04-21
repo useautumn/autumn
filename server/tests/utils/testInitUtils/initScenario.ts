@@ -9,7 +9,7 @@ import {
 	type RewardRedemption,
 } from "@autumn/shared";
 import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
-import type { CustomerData } from "@autumn/shared";
+import type { CustomerData } from "autumn-js";
 import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods.js";

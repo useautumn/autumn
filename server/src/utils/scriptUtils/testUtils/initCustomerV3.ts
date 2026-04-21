@@ -1,5 +1,6 @@
-import { ApiVersion, type CustomerData } from "@autumn/shared";
+import { ApiVersion } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
+import type { CustomerData } from "autumn-js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { attachPaymentMethod } from "../initCustomer.js";
@@ -74,7 +75,6 @@ export const initCustomerV3 = async ({
 		fingerprint: customerData?.fingerprint,
 		stripe_id: stripeCus.id,
 		send_email_receipts: sendEmailReceipts,
-		config: customerData?.config,
 		internalOptions: {
 			disable_defaults: !withDefault,
 			// Only pass default_group when defaults are enabled
