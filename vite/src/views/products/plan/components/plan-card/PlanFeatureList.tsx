@@ -1,4 +1,11 @@
-import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
+import {
+	type ProductItem,
+	productV2ToFeatureItems,
+	sortPlanItems,
+	splitBooleanItems,
+} from "@autumn/shared";
+import { useMemo } from "react";
+import { CollapsedBooleanItems } from "@/components/forms/shared/plan-items/CollapsedBooleanItems";
 import {
 	useProduct,
 	useSheet,
@@ -9,6 +16,16 @@ import { AddFeatureRow } from "./AddFeatureRow";
 import { DummyPlanFeatureRow } from "./DummyPlanFeatureRow";
 import { PlanFeatureRow } from "./PlanFeatureRow";
 
+function EntityGroupHeader({ entityFeatureId }: { entityFeatureId: string }) {
+	const { features } = useFeaturesQuery();
+	const feature = features.find((f) => f.id === entityFeatureId);
+	return (
+		<div className="text-sm font-medium text-body-secondary px-2 pt-2">
+			{feature?.name || entityFeatureId}
+		</div>
+	);
+}
+
 export const PlanFeatureList = ({
 	allowAddFeature = true,
 }: {
@@ -16,25 +33,27 @@ export const PlanFeatureList = ({
 }) => {
 	const { product, setProduct } = useProduct();
 	const { sheetType, itemId, setSheet } = useSheet();
-	const { features } = useFeaturesQuery();
 
 	const isCreatingFeature = sheetType === "new-feature" || itemId === "new";
 	const isAddButtonDisabled =
 		isCreatingFeature || sheetType === "select-feature";
 
+	const filteredItems = useMemo(
+		() => (product ? productV2ToFeatureItems({ items: product.items }) : []),
+		[product],
+	);
+	const sortedItems = useMemo(
+		() => sortPlanItems({ items: filteredItems }),
+		[filteredItems],
+	);
+	const { visibleItems, collapsedBooleanItems } = useMemo(
+		() => splitBooleanItems({ items: sortedItems }),
+		[sortedItems],
+	);
+
 	if (!product) return null;
 
-	const filteredItems = productV2ToFeatureItems({ items: product.items });
-
-	const groupedItems = filteredItems.reduce(
-		(acc, item) => {
-			const key = item.entity_feature_id || "no_entity";
-			if (!acc[key]) acc[key] = [];
-			acc[key].push(item);
-			return acc;
-		},
-		{} as Record<string, ProductItem[]>,
-	);
+	const hasEntityItems = sortedItems.some((i) => i.entity_feature_id);
 
 	const handleDelete = (item: ProductItem) => {
 		if (!product.items) return;
@@ -73,41 +92,52 @@ export const PlanFeatureList = ({
 		);
 	}
 
-	const groups = Object.entries(groupedItems).sort(([keyA], [keyB]) => {
-		if (keyA === "no_entity") return -1;
-		if (keyB === "no_entity") return 1;
-		return 0;
-	});
-	const hasEntityFeatureIds = groups.some(([key]) => key !== "no_entity");
+	const renderFeatureRow = (item: ProductItem) => {
+		const itemIndex = product.items?.indexOf(item) ?? -1;
+		return (
+			<PlanFeatureRow
+				key={item.entitlement_id || item.price_id || itemIndex}
+				item={item}
+				index={itemIndex}
+				onDelete={handleDelete}
+			/>
+		);
+	};
+
+	const renderVisibleItems = () => {
+		const elements: React.ReactNode[] = [];
+		let lastEntityId: string | null | undefined;
+
+		for (const item of visibleItems) {
+			if (
+				hasEntityItems &&
+				item.entity_feature_id &&
+				item.entity_feature_id !== lastEntityId
+			) {
+				elements.push(
+					<EntityGroupHeader
+						key={`header-${item.entity_feature_id}`}
+						entityFeatureId={item.entity_feature_id}
+					/>,
+				);
+			}
+			lastEntityId = item.entity_feature_id;
+			elements.push(renderFeatureRow(item));
+		}
+
+		return elements;
+	};
 
 	return (
 		<div className="space-y-2">
-			{groups.map(([entityFeatureId, items]) => {
-				const feature = features.find((f) => f.id === entityFeatureId);
-				const showHeader =
-					hasEntityFeatureIds && entityFeatureId !== "no_entity";
+			{renderVisibleItems()}
 
-				return (
-					<div key={entityFeatureId} className="space-y-2">
-						{showHeader && (
-							<div className="text-sm font-medium text-body-secondary px-2 pt-2">
-								{feature?.name || entityFeatureId}
-							</div>
-						)}
-						{items.map((item: ProductItem) => {
-							const itemIndex = product.items?.indexOf(item) ?? -1;
-							return (
-								<PlanFeatureRow
-									key={item.entitlement_id || item.price_id || itemIndex}
-									item={item}
-									index={itemIndex}
-									onDelete={handleDelete}
-								/>
-							);
-						})}
-					</div>
-				);
-			})}
+			{collapsedBooleanItems.length > 0 && (
+				<CollapsedBooleanItems
+					items={collapsedBooleanItems}
+					renderItem={(item) => renderFeatureRow(item)}
+				/>
+			)}
 
 			{allowAddFeature &&
 				(isCreatingNewFeature ? (
