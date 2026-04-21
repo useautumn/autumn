@@ -1,6 +1,8 @@
 import {
 	cusProductToProduct,
 	type FullCustomer,
+	isCustomerProductFree,
+	isFreeProduct,
 	notNullish,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
@@ -23,7 +25,17 @@ export const setupUpdateSubscriptionProductContext = async ({
 }) => {
 	const { productContext } = contextOverride;
 
-	if (productContext) return productContext;
+	if (productContext) {
+		return {
+			customerProduct: productContext.customerProduct,
+			fullProduct: productContext.fullProduct,
+			customPrices: productContext.customPrices,
+			customEnts: productContext.customEnts,
+			isUpdatingFreeCustomerProduct:
+				isCustomerProductFree(productContext.customerProduct) ||
+				isFreeProduct({ prices: productContext.fullProduct.prices }),
+		};
+	}
 
 	const targetCustomerProduct = findTargetCustomerProduct({
 		params,
@@ -55,10 +67,15 @@ export const setupUpdateSubscriptionProductContext = async ({
 		customizePlan: params.customize,
 	});
 
+	const isUpdatingFreeCustomerProduct =
+		isCustomerProductFree(targetCustomerProduct) ||
+		isFreeProduct({ prices: customFullProduct.prices });
+
 	return {
 		customerProduct: targetCustomerProduct,
 		fullProduct: customFullProduct,
 		customPrices,
 		customEnts,
+		isUpdatingFreeCustomerProduct,
 	};
 };
