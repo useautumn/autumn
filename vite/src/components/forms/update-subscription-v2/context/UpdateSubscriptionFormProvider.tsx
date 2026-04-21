@@ -272,11 +272,12 @@ export function UpdateSubscriptionFormProvider({
 	const hasPrepaidQuantityChanges = changedPrepaidOptions !== undefined;
 	const isVersionLoading = isVersionChanged && !isVersionReady;
 	const hasNoBillingChanges =
-		hasChanges &&
-		!hasBillingChanges &&
-		!hasPrepaidQuantityChanges &&
-		!isVersionLoading &&
-		!normalizedFormValues.resetBillingCycle;
+		normalizedFormValues.noBillingChanges ||
+		(hasChanges &&
+			!hasBillingChanges &&
+			!hasPrepaidQuantityChanges &&
+			!isVersionLoading &&
+			!normalizedFormValues.resetBillingCycle);
 
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext: formContext,
