@@ -81,7 +81,8 @@ export const useHasChanges = () => {
 		return (
 			!comparison.itemsSame ||
 			!comparison.detailsSame ||
-			!comparison.freeTrialsSame
+			!comparison.freeTrialsSame ||
+			!comparison.configSame
 		);
 	}, [product, baseProduct, features]);
 };
