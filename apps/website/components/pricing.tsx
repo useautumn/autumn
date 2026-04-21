@@ -48,7 +48,7 @@ export default function Pricing() {
 		<>
 			<div
 				id="pricing"
-				className="min-h-screen relative flex w-full lg:w-[calc(100%+calc(var(--page-pad)*2))] lg:-ml-(--page-pad) items-center justify-center lg:py-24 pb-3"
+				className="min-h-screen relative flex w-full lg:w-[calc(100%+calc(var(--page-pad)*2))] lg:-ml-(--page-pad) items-center justify-center lg:py-24 pb-3 scroll-mt-16"
 			>
 				{/* Desktop Background */}
 				<Image
