@@ -39,6 +39,7 @@ export const BaseApiCustomerSchema = z.object({
 		description: "Billing controls for the customer (auto top-ups, etc.)",
 	}),
 	schedule: ApiCustomerScheduleSchema.optional().meta({
+		internal: true,
 		description: "The customer's persisted schedule, if one exists.",
 	}),
 });

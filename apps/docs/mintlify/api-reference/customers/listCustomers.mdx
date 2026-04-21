@@ -189,50 +189,6 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       </Expandable>
     </DynamicResponseField>
 
-    <DynamicResponseField name="schedule" type="object">
-      The customer's persisted schedule, if one exists.
-      <Expandable title="properties">
-        <DynamicResponseField name="id" type="string">
-          The persisted schedule ID.
-        </DynamicResponseField>
-
-        <DynamicResponseField name="customer_id" type="string">
-          The customer ID this schedule belongs to.
-        </DynamicResponseField>
-
-        <DynamicResponseField name="entity_id" type="string | null">
-          The entity ID this schedule belongs to, or null.
-        </DynamicResponseField>
-
-        <DynamicResponseField name="created_at" type="number">
-          Timestamp of schedule creation in milliseconds since epoch.
-        </DynamicResponseField>
-
-        <DynamicResponseField name="phases" type="object[]">
-          Persisted phases in ascending starts_at order.
-          <Expandable title="properties">
-            <DynamicResponseField name="id" type="string">
-              The persisted phase ID.
-            </DynamicResponseField>
-
-            <DynamicResponseField name="starts_at" type="number">
-              When this phase starts, in epoch milliseconds.
-            </DynamicResponseField>
-
-            <DynamicResponseField name="customer_product_ids" type="string[]">
-              Customer products materialized for this phase.
-            </DynamicResponseField>
-
-            <DynamicResponseField name="created_at" type="number">
-              Timestamp of phase creation in milliseconds since epoch.
-            </DynamicResponseField>
-
-          </Expandable>
-        </DynamicResponseField>
-
-      </Expandable>
-    </DynamicResponseField>
-
     <DynamicResponseField name="subscriptions" type="object[]">
       Active and scheduled recurring plans that this customer has attached.
       <Expandable title="properties">
