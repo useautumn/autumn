@@ -1,7 +1,8 @@
-import type { CheckResponseV3, ParsedCheckParams } from "@autumn/shared";
+import type { ParsedCheckParams } from "@autumn/shared";
+import { Result } from "better-result";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getCheckFailOpenFallback } from "@/internal/api/check/checkUtils/getCheckFailOpenFallback.js";
 import type { CheckData } from "@/internal/api/check/checkTypes/CheckData.js";
+import { getCheckFailOpenFallback } from "@/internal/api/check/checkUtils/getCheckFailOpenFallback.js";
 import {
 	isFullSubjectRolloutEnabled,
 	isRetryableFullSubjectRolloutError,
@@ -9,16 +10,8 @@ import {
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 import { runCheckLegacyFlow } from "./runCheckLegacyFlow.js";
 import { runCheckV2 } from "./runCheckV2.js";
+import type { RunCheckResult } from "./types.js";
 
-export type RunCheckWithRolloutResult =
-	| {
-			checkData: CheckData | CheckDataV2;
-			response: CheckResponseV3;
-	  }
-	| {
-			checkData: null;
-			response: Record<string, unknown>;
-	  };
 export const runCheckWithRollout = async ({
 	ctx,
 	body,
@@ -27,29 +20,34 @@ export const runCheckWithRollout = async ({
 	ctx: AutumnContext;
 	body: ParsedCheckParams;
 	requiredBalance: number;
-}): Promise<RunCheckWithRolloutResult> => {
+}): Promise<RunCheckResult<CheckData | CheckDataV2>> => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		try {
-			return await runCheckV2({
-				ctx,
-				body,
-				requiredBalance,
-			});
-		} catch (error) {
-			if (!isRetryableFullSubjectRolloutError({ error })) {
-				throw error;
-			}
-
-			return {
-				checkData: null,
-				response: getCheckFailOpenFallback({
+		const result = await Result.tryPromise({
+			try: () =>
+				runCheckV2({
 					ctx,
 					body,
 					requiredBalance,
-					error,
-				}) as Record<string, unknown>,
-			};
+				}),
+			catch: (error) => error,
+		});
+
+		if (Result.isOk(result)) return result.value;
+
+		const error = result.error;
+		if (!isRetryableFullSubjectRolloutError({ error })) {
+			throw error;
 		}
+
+		return {
+			checkData: null,
+			response: getCheckFailOpenFallback({
+				ctx,
+				body,
+				requiredBalance,
+				error,
+			}) as Record<string, unknown>,
+		};
 	}
 
 	return runCheckLegacyFlow({
