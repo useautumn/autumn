@@ -1,0 +1,35 @@
+vite/src/views/customers/customer/hooks/useCusQuery.tsx
+  98d5430a0526fe8d 11-31,60-84,89-107,112-119,121,124,127,130
+vite/src/components/forms/create-schedule/hooks/useHasSchedule.ts
+  98d5430a0526fe8d 5
+vite/src/views/customers2/components/sheets/CreateScheduleSheet.tsx
+  98d5430a0526fe8d 362
+server/src/internal/customers/cusUtils/apiCusUtils/getApiCustomer.ts
+  98d5430a0526fe8d 13-16,30
+server/src/internal/customers/internalCusRouter.ts
+  98d5430a0526fe8d 6,21
+server/src/internal/customers/internalHandlers/handleGetCustomerSchedule.ts
+  98d5430a0526fe8d 1-58
+server/src/internal/customers/internalHandlers/handleGetCustomer.ts
+  98d5430a0526fe8d 7-11,30-34,37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "e1353837d0406a0e036cc45c22cc9f3ccb810b62",
+  "prompts": {
+    "98d5430a0526fe8d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_24fcc7713ffec4VWIATzNVa2Ri",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 155,
+      "total_deletions": 49,
+      "accepted_lines": 155,
+      "overriden_lines": 0
+    }
+  }
+}
