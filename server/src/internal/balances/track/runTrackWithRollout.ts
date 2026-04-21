@@ -1,4 +1,5 @@
 import type { ApiVersion, TrackParams, TrackResponseV3 } from "@autumn/shared";
+import { Result } from "better-result";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	isFullSubjectRolloutEnabled,
@@ -26,24 +27,29 @@ export const runTrackWithRollout = async ({
 	apiVersion?: ApiVersion;
 }): Promise<TrackResponseV3> => {
 	if (shouldUseTrackV3({ ctx })) {
-		try {
-			return await runTrackV3({
-				ctx,
-				body,
-				featureDeductions,
-				apiVersion,
-			});
-		} catch (error) {
-			if (!isRetryableFullSubjectRolloutError({ error })) {
-				throw error;
-			}
+		const result = await Result.tryPromise({
+			try: () =>
+				runTrackV3({
+					ctx,
+					body,
+					featureDeductions,
+					apiVersion,
+				}),
+			catch: (error) => error,
+		});
 
-			const queuedResponse = await queueTrack({ ctx, body });
+		if (Result.isOk(result)) return result.value;
 
-			if (queuedResponse) return queuedResponse;
-
+		const error = result.error;
+		if (!isRetryableFullSubjectRolloutError({ error })) {
 			throw error;
 		}
+
+		const queuedResponse = await queueTrack({ ctx, body });
+
+		if (queuedResponse) return queuedResponse;
+
+		throw error;
 	}
 
 	return runTrackV2({
