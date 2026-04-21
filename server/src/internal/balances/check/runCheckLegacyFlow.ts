@@ -1,13 +1,10 @@
-import type {
-	CheckParams,
-	CheckResponseV3,
-	ParsedCheckParams,
-} from "@autumn/shared";
+import type { CheckParams, ParsedCheckParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckData } from "@/internal/api/check/checkTypes/CheckData.js";
 import { getCheckDataOrFallbackResponse } from "@/internal/api/check/checkUtils/getCheckDataOrFallbackResponse.js";
 import { getV2CheckResponse } from "@/internal/api/check/checkUtils/getV2CheckResponse.js";
 import { runCheckWithTrack } from "@/internal/api/check/runCheckWithTrack.js";
+import type { RunCheckResult } from "./types.js";
 
 export const runCheckLegacyFlow = async ({
 	ctx,
@@ -17,16 +14,7 @@ export const runCheckLegacyFlow = async ({
 	ctx: AutumnContext;
 	body: ParsedCheckParams;
 	requiredBalance: number;
-}): Promise<
-	| {
-			checkData: CheckData;
-			response: CheckResponseV3;
-	  }
-	| {
-			checkData: null;
-			response: Record<string, unknown>;
-	  }
-> => {
+}): Promise<RunCheckResult<CheckData>> => {
 	const { checkData, fallbackResponse } = await getCheckDataOrFallbackResponse({
 		ctx,
 		body: body as CheckParams & { feature_id: string },

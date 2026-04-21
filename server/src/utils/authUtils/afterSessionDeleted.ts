@@ -1,9 +1,6 @@
-import type { GenericEndpointContext } from "@better-auth/core";
-import type { BetterAuthOptions, Session } from "better-auth";
-
 export const afterSessionDeleted = async (
-	_session: Session,
-	context: GenericEndpointContext<BetterAuthOptions> | null,
+	_session: unknown,
+	context: any,
 ) => {
 	try {
 		if (!context) return;
