@@ -42,7 +42,7 @@ await autumn.balances.trackTokens({
 ```typescript OpenRouter (nested path)
 await autumn.balances.trackTokens({
   customerId: "cus_123",
-  modelId: "openrouter/anthropic/claude-opus-4-6",
+  modelId: "openrouter/anthropic/claude-opus-4.6",
   inputTokens: 2000,
   outputTokens: 1000
 });
@@ -67,7 +67,7 @@ await autumn.balances.trackTokens({
 </DynamicParamField>
 
 <DynamicParamField body="modelId" type="string" required>
-  The AI model in `provider/model` format, matching keys from [Models.dev](https://models.dev) (e.g., `anthropic/claude-opus-4-6`, `openai/gpt-4o`, `openrouter/anthropic/claude-opus-4-6`).
+  The AI model in `provider/model` format, matching keys from [Models.dev](https://models.dev) (e.g., `anthropic/claude-opus-4-6`, `openai/gpt-4o`, `openrouter/anthropic/claude-opus-4.6`).
 </DynamicParamField>
 
 <DynamicParamField body="input_tokens" type="number" required>
