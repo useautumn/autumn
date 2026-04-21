@@ -24,6 +24,7 @@ const CRITICAL_ROUTES = [
 	// RPC equivalents
 	{ method: "POST", url: "/balances.check" },
 	{ method: "POST", url: "/balances.track" },
+	{ method: "POST", url: "/balances.finalize" },
 	{ method: "POST", url: "/customers.get_or_create" },
 	{ method: "POST", url: "/entities.get" },
 ];
