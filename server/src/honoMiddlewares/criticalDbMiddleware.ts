@@ -19,11 +19,13 @@ const CRITICAL_ROUTES = [
 	// Get or create customer
 	{ method: "POST", url: "/customers" },
 	{ method: "GET", url: "/customers/:customer_id" },
+	{ method: "GET", url: "/customers/:customer_id/entities/:entity_id" },
 
 	// RPC equivalents
 	{ method: "POST", url: "/balances.check" },
 	{ method: "POST", url: "/balances.track" },
 	{ method: "POST", url: "/customers.get_or_create" },
+	{ method: "POST", url: "/entities.get" },
 ];
 
 /** Swaps ctx.db to the critical pool for latency-sensitive endpoints. */

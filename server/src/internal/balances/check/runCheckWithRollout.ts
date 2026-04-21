@@ -1,7 +1,11 @@
 import type { CheckResponseV3, ParsedCheckParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getCheckFailOpenFallback } from "@/internal/api/check/checkUtils/getCheckFailOpenFallback.js";
 import type { CheckData } from "@/internal/api/check/checkTypes/CheckData.js";
-import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import {
+	isFullSubjectRolloutEnabled,
+	isRetryableFullSubjectRolloutError,
+} from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 import { runCheckLegacyFlow } from "./runCheckLegacyFlow.js";
 import { runCheckV2 } from "./runCheckV2.js";
@@ -25,11 +29,27 @@ export const runCheckWithRollout = async ({
 	requiredBalance: number;
 }): Promise<RunCheckWithRolloutResult> => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		return runCheckV2({
-			ctx,
-			body,
-			requiredBalance,
-		});
+		try {
+			return await runCheckV2({
+				ctx,
+				body,
+				requiredBalance,
+			});
+		} catch (error) {
+			if (!isRetryableFullSubjectRolloutError({ error })) {
+				throw error;
+			}
+
+			return {
+				checkData: null,
+				response: getCheckFailOpenFallback({
+					ctx,
+					body,
+					requiredBalance,
+					error,
+				}) as Record<string, unknown>,
+			};
+		}
 	}
 
 	return runCheckLegacyFlow({
