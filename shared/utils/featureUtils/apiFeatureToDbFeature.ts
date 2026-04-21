@@ -154,6 +154,8 @@ export const featureV1ToDbFeature = ({
 
 	const modelMarkups =
 		apiFeature.model_markups ?? originalFeature?.model_markups ?? null;
+	const isAiCreditSystem =
+		modelMarkups != null && Object.keys(modelMarkups).length > 0;
 
 	return {
 		internal_id: originalFeature?.internal_id ?? "",
@@ -171,7 +173,7 @@ export const featureV1ToDbFeature = ({
 				: (originalFeature?.archived ?? false),
 		event_names: eventNames ?? [],
 		model_markups: modelMarkups,
-		is_ai_credit_system: modelMarkups != null,
+		is_ai_credit_system: isAiCreditSystem,
 	} satisfies Feature;
 };
 

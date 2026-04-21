@@ -165,6 +165,10 @@ export const getCreditCost = async ({
 	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return amount;
 	}
+	// If tracking the credit system feature itself, 1:1 mapping
+	if (featureId === creditSystem.id) {
+		return amount;
+	}
 	if (creditSystem.is_ai_credit_system) {
 		if (!tokens || !modelName) {
 			throw new RecaseError({

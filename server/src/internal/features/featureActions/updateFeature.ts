@@ -180,7 +180,8 @@ export const updateFeature = async ({
 	const isAiCreditSystem =
 		effectiveType === FeatureType.CreditSystem &&
 		(updates.model_markups !== undefined
-			? updates.model_markups != null
+			? updates.model_markups != null &&
+				Object.keys(updates.model_markups).length > 0
 			: feature.is_ai_credit_system);
 
 	const newConfig =
