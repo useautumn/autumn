@@ -1,9 +1,4 @@
-import {
-	FeatureSchema,
-	FeatureType,
-	ResetInterval,
-	RolloverConfigSchema,
-} from "@autumn/shared";
+import { FeatureSchema, FeatureType, ResetInterval } from "@autumn/shared";
 import { z } from "zod/v4";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
 
@@ -33,11 +28,6 @@ export const ExtCreateBalanceParamsSchema = BalanceParamsBaseSchema.extend({
 			description:
 				"Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.",
 		}),
-
-	rollover: RolloverConfigSchema.optional().meta({
-		description: "Rollover configuration for the balance.",
-	}),
-
 	expires_at: z.number().optional().meta({
 		description:
 			"Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.",
