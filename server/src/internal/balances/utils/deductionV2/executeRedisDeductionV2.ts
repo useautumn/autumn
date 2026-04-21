@@ -9,8 +9,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
+import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
-import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
@@ -125,28 +125,23 @@ export const executeRedisDeductionV2 = async ({
 			continue;
 		}
 
-		const balanceKeysByFeatureId: Record<string, string> = {};
-		for (const deductionEntry of customerEntitlementDeductions) {
-			const targetFeatureId =
-				(deductionEntry as { feature_id?: string }).feature_id ?? feature.id;
-			if (!balanceKeysByFeatureId[targetFeatureId]) {
-				balanceKeysByFeatureId[targetFeatureId] = buildSharedFullSubjectBalanceKey(
-					{
-						orgId: org.id,
-						env,
-						customerId,
-						featureId: targetFeatureId,
-					},
-				);
-			}
-		}
+		const { keys, balanceKeyIndexByFeatureId } =
+			buildDeductFromSubjectBalancesKeys({
+				orgId: org.id,
+				env,
+				customerId,
+				routingKey,
+				lockReceiptKey: preparedLock?.redis_receipt_key ?? lockReceiptKey,
+				customerEntitlementDeductions,
+				fallbackFeatureId: feature.id,
+			});
 
 		const luaParams = {
 			org_id: org.id,
 			env,
 			customer_id: customerId,
 			customer_entitlement_deductions: customerEntitlementDeductions,
-			balance_keys_by_feature_id: balanceKeysByFeatureId,
+			balance_key_index_by_feature_id: balanceKeyIndexByFeatureId,
 			spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 			usage_based_cus_ent_ids_by_feature_id:
 				usageBasedCusEntIdsByFeatureId ?? null,
@@ -165,7 +160,6 @@ export const executeRedisDeductionV2 = async ({
 					}
 				: null,
 			unwind_value: unwindValue ?? null,
-			lock_receipt_key: lockReceiptKey ?? null,
 		};
 
 		const targetRedis = redisInstance ?? ctx.redisV2;
@@ -173,7 +167,8 @@ export const executeRedisDeductionV2 = async ({
 		const result = await tryRedisWrite(
 			() =>
 				targetRedis.deductFromSubjectBalances(
-					routingKey,
+					keys.length,
+					...keys,
 					JSON.stringify(luaParams),
 				),
 			redisInstance,
