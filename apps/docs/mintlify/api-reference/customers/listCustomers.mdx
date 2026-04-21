@@ -35,6 +35,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   Search customers by id, name, or email
 </DynamicParamField>
 
+<DynamicParamField body="processors" type="('stripe' | 'revenuecat' | 'vercel')[]">
+  Filter by customer processor type (stripe, revenuecat, vercel)
+</DynamicParamField>
+
 
 ### Response
 
@@ -1099,6 +1103,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       </Expandable>
     </DynamicResponseField>
 
+    <DynamicResponseField name="config" type="object">
+      Configuration for the customer.
+      <Expandable title="properties">
+        <DynamicResponseField name="disable_pooled_balance" type="boolean">
+          Whether to disable the shared customer-level pool for entities.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
   </Expandable>
 </DynamicResponseField>
 
@@ -1197,6 +1211,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           "expires_at": null,
           "feature_id": "advanced_workflows"
         }
+      },
+      "config": {
+        "disable_pooled_balance": false
       }
     }
   ],
