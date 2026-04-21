@@ -98,15 +98,28 @@ const main = async () => {
 		console.log(`Updated ${criticalRole} in ${env}:`);
 		console.log(result.rows[0]?.rolconfig ?? []);
 
-		console.log("Verified via DATABASE_CRITICAL_URL:");
-		for (const key of Object.keys(ROLE_SETTINGS)) {
-			const verifyResult = await client.query<Record<string, string>>(`SHOW ${key}`);
-			console.log(`${key}=${verifyResult.rows[0]?.[key]}`);
+		await client.end();
+
+		const verifyClient = new Pool({
+			connectionString: criticalDatabaseUrl,
+			max: 1,
+		});
+
+		try {
+			console.log("Verified in a new DATABASE_CRITICAL_URL session:");
+			for (const key of Object.keys(ROLE_SETTINGS)) {
+				const verifyResult = await verifyClient.query<Record<string, string>>(
+					`SHOW ${key}`,
+				);
+				console.log(`${key}=${verifyResult.rows[0]?.[key]}`);
+			}
+		} finally {
+			await verifyClient.end();
 		}
 
 		console.log("Restart app connections for existing pools to pick this up.");
 	} finally {
-		await client.end();
+		await client.end().catch(() => {});
 	}
 };
 
