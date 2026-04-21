@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 
 const mockState = {
 	legacyCalls: [] as Record<string, unknown>[],
@@ -30,6 +30,10 @@ mock.module("@/internal/balances/check/runCheckV2.js", () => ({
 }));
 
 import { runCheckWithRollout } from "@/internal/balances/check/runCheckWithRollout.js";
+
+afterEach(() => {
+	mockState.v2Error = null;
+});
 
 const rolloutCtx = {
 	apiVersion: { value: "2025-02-01" },
