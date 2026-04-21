@@ -47,7 +47,7 @@ export const initDrizzle = ({
 	maxConnections?: number;
 	replica?: boolean;
 	/** Connect timeout in seconds */
-	connectTimeout?: number;
+	connectTimeout?: number | null;
 	poolConfig?: PoolConfig;
 } = {}) => {
 	const dbUrl =
@@ -59,7 +59,7 @@ export const initDrizzle = ({
 		...poolConfig,
 		max: maxConnections,
 		connectionTimeoutMillis:
-			connectTimeout === undefined ? undefined : connectTimeout * 1000,
+			connectTimeout === null ? undefined : connectTimeout * 1000,
 	});
 
 	const drizzleDb = drizzle(client, { schema });
@@ -98,7 +98,7 @@ export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 // -- Replica pool: used as fallback when primary is degraded --
 // Only created if DATABASE_REPLICA_URL is configured.
 const replicaResult = process.env.DATABASE_REPLICA_URL
-	? initDrizzle({ replica: true, maxConnections: 5, connectTimeout: undefined })
+	? initDrizzle({ replica: true, maxConnections: 5, connectTimeout: null })
 	: null;
 export const dbReplica = replicaResult?.db ?? null;
 export const clientReplica = replicaResult?.client ?? null;

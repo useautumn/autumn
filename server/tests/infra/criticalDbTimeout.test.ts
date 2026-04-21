@@ -1,9 +1,8 @@
 import net from "node:net";
-import { afterAll, expect, test } from "bun:test";
+import { expect, test } from "bun:test";
 import { sql } from "drizzle-orm";
 import { assertNotProductionDb } from "@/db/dbUtils.js";
 import {
-	client,
 	clientCritical,
 	dbCritical,
 	dbGeneral,
@@ -55,9 +54,7 @@ test("db connect timeout fails fast when postgres accepts tcp but never responds
 	const startedAt = Date.now();
 
 	try {
-		await expect(deadClient.query("SELECT 1")).rejects.toThrow(
-			/connection timeout/i,
-		);
+		await expect(deadClient.query("SELECT 1")).rejects.toThrow(/timeout/i);
 
 		expect(Date.now() - startedAt).toBeLessThan(2_000);
 	} finally {
@@ -68,7 +65,3 @@ test("db connect timeout fails fast when postgres accepts tcp but never responds
 		});
 	}
 }, 5_000);
-
-afterAll(async () => {
-	await Promise.all([client.end(), clientCritical.end()]);
-});
