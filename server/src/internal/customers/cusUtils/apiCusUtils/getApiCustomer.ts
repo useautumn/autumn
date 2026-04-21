@@ -6,12 +6,14 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
-import { hydrateCustomerWithSchedules } from "../getFullCustomerSchedule.js";
 import { getApiCustomerBase } from "./getApiCustomerBase.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
 /**
- * Transform FullCustomer to ApiCustomer with expand fields and version changes applied
+ * Transform FullCustomer to ApiCustomer with expand fields and version changes applied.
+ *
+ * Note: schedule is not included on the API customer. Consumers that need it
+ * should call the dedicated schedule endpoint.
  */
 export const getApiCustomer = async ({
 	ctx,
@@ -22,15 +24,10 @@ export const getApiCustomer = async ({
 	fullCustomer: FullCustomer;
 	withAutumnId?: boolean;
 }): Promise<ApiCustomerV5> => {
-	const hydratedCustomer = await hydrateCustomerWithSchedules({
-		ctx,
-		fullCustomer,
-	});
-
 	// Get base ApiCustomer (subscriptions, balances, invoices)
 	const { apiCustomer: baseCustomer, legacyData } = await getApiCustomerBase({
 		ctx,
-		fullCus: hydratedCustomer,
+		fullCus: fullCustomer,
 		withAutumnId,
 	});
 
