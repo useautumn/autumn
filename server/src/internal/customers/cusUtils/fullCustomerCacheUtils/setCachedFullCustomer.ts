@@ -1,4 +1,4 @@
-import type { FullCustomer } from "@autumn/shared";
+import { type FullCustomer, isBooleanCusEnt } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildPathIndex } from "@/internal/customers/cache/pathIndex/buildPathIndex.js";
@@ -10,6 +10,61 @@ import {
 } from "./fullCustomerCacheConfig.js";
 
 type SetCacheResult = "OK" | "STALE_WRITE" | "CACHE_EXISTS" | "FAILED";
+
+const BOOLEAN_ENTITLEMENT_LIMIT_ORG_ID = "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF";
+const MAX_BOOLEAN_CUSTOMER_ENTITLEMENTS_PER_PRODUCT = 3;
+
+const limitBooleanCustomerEntitlementsPerCustomerProduct = ({
+	fullCustomer,
+	orgId,
+}: {
+	fullCustomer: FullCustomer;
+	orgId: string;
+}): FullCustomer => {
+	if (orgId !== BOOLEAN_ENTITLEMENT_LIMIT_ORG_ID) return fullCustomer;
+
+	let hasChanges = false;
+	const customerProducts = fullCustomer.customer_products.map(
+		(customerProduct) => {
+			let booleanCustomerEntitlementCount = 0;
+			let customerProductHasChanges = false;
+
+			const customerEntitlements = customerProduct.customer_entitlements.filter(
+				(customerEntitlement) => {
+					const isBooleanCustomerEntitlement = isBooleanCusEnt({
+						cusEnt: customerEntitlement,
+					});
+
+					if (!isBooleanCustomerEntitlement) return true;
+
+					if (
+						booleanCustomerEntitlementCount >=
+						MAX_BOOLEAN_CUSTOMER_ENTITLEMENTS_PER_PRODUCT
+					) {
+						hasChanges = true;
+						customerProductHasChanges = true;
+						return false;
+					}
+
+					booleanCustomerEntitlementCount += 1;
+					return true;
+				},
+			);
+
+			if (!customerProductHasChanges) return customerProduct;
+			return {
+				...customerProduct,
+				customer_entitlements: customerEntitlements,
+			};
+		},
+	);
+
+	if (!hasChanges) return fullCustomer;
+	return {
+		...fullCustomer,
+		customer_products: customerProducts,
+	};
+};
 
 /**
  * Set FullCustomer in Redis cache
@@ -31,13 +86,20 @@ export const setCachedFullCustomer = async ({
 	overwrite?: boolean;
 }): Promise<SetCacheResult> => {
 	const { org, env, logger } = ctx;
+	const fullCustomerForCache =
+		limitBooleanCustomerEntitlementsPerCustomerProduct({
+			fullCustomer,
+			orgId: org.id,
+		});
 
 	const cacheKey = buildFullCustomerCacheKey({
 		orgId: org.id,
 		env,
 		customerId,
 	});
-	const pathIndexEntries = buildPathIndex({ fullCustomer });
+	const pathIndexEntries = buildPathIndex({
+		fullCustomer: fullCustomerForCache,
+	});
 	const pathIndexJson = JSON.stringify(pathIndexEntries);
 
 	const result = await tryRedisWrite(async () => {
@@ -48,7 +110,7 @@ export const setCachedFullCustomer = async ({
 			customerId,
 			String(fetchTimeMs),
 			String(FULL_CUSTOMER_CACHE_TTL_SECONDS),
-			JSON.stringify(fullCustomer),
+			JSON.stringify(fullCustomerForCache),
 			String(overwrite),
 			pathIndexJson,
 		);
@@ -67,7 +129,7 @@ export const setCachedFullCustomer = async ({
 		extras: {
 			setCache: {
 				result,
-				fullCustomer,
+				fullCustomer: fullCustomerForCache,
 			},
 		},
 	});
