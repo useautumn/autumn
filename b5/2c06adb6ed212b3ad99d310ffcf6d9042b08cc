@@ -1,0 +1,40 @@
+server/tests/integration/balances/create/create-balance-with-rollover.test.ts
+  b3d35cd7472ea690 142-178
+vite/src/views/products/plan/components/edit-plan-feature/advanced-settings/RolloverConfigForm.tsx
+  d5df1a27355fee09 134,139-142,145
+server/src/internal/balances/createBalance/validateCreateBalance.ts
+  b3d35cd7472ea690 3,10,16,63-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "b52c06adb6ed212b3ad99d310ffcf6d9042b08cc",
+  "prompts": {
+    "b3d35cd7472ea690": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "8ddc94f6-3b45-44be-8984-d763fe95529d",
+        "model": "claude-opus-4-7-thinking-high"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 60,
+      "total_deletions": 1,
+      "accepted_lines": 59,
+      "overriden_lines": 0
+    },
+    "d5df1a27355fee09": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2509fc63affebYOTpa58Wot3ej",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 6,
+      "total_deletions": 7,
+      "accepted_lines": 6,
+      "overriden_lines": 0
+    }
+  }
+}
