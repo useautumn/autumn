@@ -1,0 +1,23 @@
+shared/api/customers/apiCustomerV5.ts
+  c38fe2a78532f009 104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "d05efa9475210b3148a50ea6a3554548257db3d7",
+  "prompts": {
+    "c38fe2a78532f009": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2508cf20dffeuQjN5eFVxqADRU",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 2,
+      "total_deletions": 2,
+      "accepted_lines": 2,
+      "overriden_lines": 0
+    }
+  }
+}
