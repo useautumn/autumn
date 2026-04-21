@@ -1,6 +1,6 @@
 import type { CheckResponseV3, ParsedCheckParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { buildCheckFallbackResponse } from "@/internal/api/check/checkUtils/buildCheckFallbackResponse.js";
+import { getCheckFailOpenFallback } from "@/internal/api/check/checkUtils/getCheckFailOpenFallback.js";
 import type { CheckData } from "@/internal/api/check/checkTypes/CheckData.js";
 import {
 	isFullSubjectRolloutEnabled,
@@ -40,19 +40,13 @@ export const runCheckWithRollout = async ({
 				throw error;
 			}
 
-			ctx.logger.warn("[check] Returning fail-open fallback response", {
-				type: "check_fail_open_fallback",
-				error,
-				feature_id: body.feature_id,
-				required_balance: requiredBalance,
-			});
-
 			return {
 				checkData: null,
-				response: buildCheckFallbackResponse({
+				response: getCheckFailOpenFallback({
 					ctx,
 					body,
 					requiredBalance,
+					error,
 				}) as Record<string, unknown>,
 			};
 		}
