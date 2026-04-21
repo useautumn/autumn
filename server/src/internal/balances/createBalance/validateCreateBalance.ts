@@ -1,16 +1,19 @@
 import {
 	type CreateBalanceParamsV0,
+	type EntInterval,
 	ErrCode,
 	type Feature,
 	FeatureType,
 	type FullCustomer,
 	isContUseFeature,
 	RecaseError,
+	ResetInterval,
 	ValidateCreateBalanceParamsSchema,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase";
+import { getNextResetAt } from "@/utils/timeUtils";
 
 export const validateCreateBalanceParams = async ({
 	ctx,
@@ -55,6 +58,25 @@ export const validateCreateBalanceParams = async ({
 		throw new RecaseError({
 			message: `Rollover cannot be provided for one-time balances`,
 		});
+	}
+
+	if (
+		params.rollover &&
+		params.expires_at &&
+		params.reset?.interval &&
+		params.reset.interval !== ResetInterval.OneOff
+	) {
+		const nextResetAt = getNextResetAt({
+			curReset: null,
+			interval: params.reset.interval as unknown as EntInterval,
+			intervalCount: params.reset.interval_count,
+		});
+
+		if (nextResetAt > params.expires_at) {
+			throw new RecaseError({
+				message: `expires_at (${new Date(params.expires_at).toISOString()}) occurs before the next rollover event (${new Date(nextResetAt).toISOString()})`,
+			});
+		}
 	}
 
 	if (params.balance_id) {
