@@ -68,7 +68,7 @@ export const setupUpdateSubscriptionProductContext = async ({
 	});
 
 	const isUpdatingFreeCustomerProduct =
-		isCustomerProductFree(targetCustomerProduct) ||
+		isCustomerProductFree(targetCustomerProduct) &&
 		isFreeProduct({ prices: customFullProduct.prices });
 
 	return {
