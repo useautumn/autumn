@@ -59,10 +59,7 @@ export class MigrationService {
 			const lockResult = await txDb.execute<{ acquired: boolean }>(
 				sql`SELECT pg_try_advisory_xact_lock(${lockId}) as acquired`,
 			);
-			const lockRows = Array.isArray(lockResult)
-				? lockResult
-				: (lockResult as any).rows;
-			const lockAcquired = lockRows[0]?.acquired;
+			const lockAcquired = lockResult[0]?.acquired;
 
 			if (!lockAcquired) {
 				throw new RecaseError({
