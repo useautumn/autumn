@@ -3,6 +3,7 @@ import {
 	EntityNotFoundError,
 	type FullSubject,
 } from "@autumn/shared";
+import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
@@ -24,8 +25,9 @@ export const getOrSetCachedPartialFullSubject = async ({
 	source?: string;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
+	const useRedis = !skipCache && shouldUseRedis();
 
-	if (!skipCache) {
+	if (useRedis) {
 		const cached = await getCachedPartialFullSubject({
 			ctx,
 			customerId,
@@ -63,7 +65,7 @@ export const getOrSetCachedPartialFullSubject = async ({
 
 	const { normalized, fullSubject } = result;
 
-	if (!skipCache) {
+	if (useRedis) {
 		await setCachedFullSubject({
 			ctx,
 			normalized,
