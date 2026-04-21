@@ -1,0 +1,25 @@
+server/src/internal/balances/autoTopUp/autoTopupContext.ts
+  eafbce9206dba602 11-13
+server/src/internal/balances/autoTopUp/setup/setupAutoTopupContext.ts
+  eafbce9206dba602 64-65,136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "c8c88dc382521baf1b68884dfbd60455807f6346",
+  "prompts": {
+    "eafbce9206dba602": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_24f798c24ffex5IvgsNtKgLMiu",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 425,
+      "overriden_lines": 0
+    }
+  }
+}
