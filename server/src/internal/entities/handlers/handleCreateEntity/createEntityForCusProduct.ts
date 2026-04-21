@@ -17,6 +17,7 @@ import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/
 import { getReps } from "@/internal/balances/utils/paidAllocatedFeature/createPaidAllocatedInvoice/handleProratedUpgrade.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { findLinkedCusEnts } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils/findCusEntUtils.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
@@ -47,7 +48,7 @@ const updateLinkedCusEnt = async ({
 			};
 			delete newEntities[replaceableId];
 		} else {
-			const balance = linkedCusEnt.entitlement.allowance!;
+			const balance = linkedCusEnt.entitlement.allowance ?? 0; // cannot be null, must be 0 in unlimited case.
 			newEntities[entity.id] = {
 				id: entity.id,
 				balance,
@@ -205,6 +206,13 @@ export const createEntityForCusProduct = async ({
 				linkedCusEnt,
 				inputEntities,
 				entityToReplacement,
+			});
+		}
+
+		if (linkedCusEnts.length > 0) {
+			await deleteCachedFullCustomer({
+				ctx,
+				customerId: customer.id ?? "",
 			});
 		}
 	}

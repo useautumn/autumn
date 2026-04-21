@@ -5,7 +5,8 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
-import { ClosedEnum } from "../types/enums.js";
+import * as openEnums from "../types/enums.js";
+import { ClosedEnum, OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -257,6 +258,10 @@ export type PreviewAttachRollover = {
    * Max rollover units. Omit for unlimited rollover.
    */
   max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
   /**
    * When rolled over units expire.
    */
@@ -520,6 +525,10 @@ export type PreviewAttachParams = {
    */
   newBillingSubscription?: boolean | undefined;
   /**
+   * Reset the billing cycle anchor immediately with 'now'.
+   */
+  billingCycleAnchor?: "now" | undefined;
+  /**
    * When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
    */
   planSchedule?: PreviewAttachPlanSchedule | undefined;
@@ -543,6 +552,14 @@ export type PreviewAttachParams = {
    * Whether to carry over usages from the previous plan.
    */
   carryOverUsages?: PreviewAttachCarryOverUsages | undefined;
+  /**
+   * Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+   */
+  metadata?: { [k: string]: string } | undefined;
+  /**
+   * If true, skips any billing changes for the attach operation.
+   */
+  noBillingChanges?: boolean | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -749,6 +766,14 @@ export type PreviewAttachIncoming = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
 
 export type PreviewAttachOutgoingFeatureQuantity = {
@@ -776,7 +801,23 @@ export type PreviewAttachOutgoing = {
    * When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately.
    */
   effectiveAt: number | null;
+  /**
+   * When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled.
+   */
+  canceledAt: number | null;
+  /**
+   * When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire.
+   */
+  expiresAt: number | null;
 };
+
+export const PreviewAttachCheckoutType = {
+  StripeCheckout: "stripe_checkout",
+  AutumnCheckout: "autumn_checkout",
+} as const;
+export type PreviewAttachCheckoutType = OpenEnum<
+  typeof PreviewAttachCheckoutType
+>;
 
 /**
  * OK
@@ -786,9 +827,6 @@ export type PreviewAttachResponse = {
    * The ID of the customer.
    */
   customerId: string;
-  /**
-   * List of line items for the current billing period.
-   */
   lineItems: Array<PreviewAttachLineItem>;
   /**
    * The total amount in cents before discounts for the current billing period.
@@ -818,6 +856,14 @@ export type PreviewAttachResponse = {
    * Products or subscription changes being removed or ended.
    */
   outgoing: Array<PreviewAttachOutgoing>;
+  /**
+   * Whether the customer will be redirected to a checkout page if attach is called.
+   */
+  redirectToCheckout: boolean;
+  /**
+   * The type of checkout that will be used if the customer is redirected to a checkout page.
+   */
+  checkoutType: PreviewAttachCheckoutType | null;
 };
 
 /** @internal */
@@ -1083,6 +1129,7 @@ export const PreviewAttachExpiryDurationType$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type PreviewAttachRollover$Outbound = {
   max?: number | undefined;
+  max_percentage?: number | undefined;
   expiry_duration_type: string;
   expiry_duration_length?: number | undefined;
 };
@@ -1094,11 +1141,13 @@ export const PreviewAttachRollover$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
     expiryDurationType: PreviewAttachExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      maxPercentage: "max_percentage",
       expiryDurationType: "expiry_duration_type",
       expiryDurationLength: "expiry_duration_length",
     });
@@ -1418,12 +1467,15 @@ export type PreviewAttachParams$Outbound = {
   discounts?: Array<PreviewAttachAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   new_billing_subscription?: boolean | undefined;
+  billing_cycle_anchor?: "now" | undefined;
   plan_schedule?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<PreviewAttachCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
   carry_over_balances?: PreviewAttachCarryOverBalances$Outbound | undefined;
   carry_over_usages?: PreviewAttachCarryOverUsages$Outbound | undefined;
+  metadata?: { [k: string]: string } | undefined;
+  no_billing_changes?: boolean | undefined;
 };
 
 /** @internal */
@@ -1456,6 +1508,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     ),
     successUrl: z.optional(z.string()),
     newBillingSubscription: z.optional(z.boolean()),
+    billingCycleAnchor: z.optional(z.literal("now")),
     planSchedule: z.optional(PreviewAttachPlanSchedule$outboundSchema),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
@@ -1468,6 +1521,8 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     carryOverUsages: z.optional(
       z.lazy(() => PreviewAttachCarryOverUsages$outboundSchema),
     ),
+    metadata: z.optional(z.record(z.string(), z.string())),
+    noBillingChanges: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1481,12 +1536,14 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       subscriptionId: "subscription_id",
       successUrl: "success_url",
       newBillingSubscription: "new_billing_subscription",
+      billingCycleAnchor: "billing_cycle_anchor",
       planSchedule: "plan_schedule",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",
       carryOverBalances: "carry_over_balances",
       carryOverUsages: "carry_over_usages",
+      noBillingChanges: "no_billing_changes",
     });
   }),
 );
@@ -1803,12 +1860,16 @@ export const PreviewAttachIncoming$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewAttachIncomingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );
@@ -1862,12 +1923,16 @@ export const PreviewAttachOutgoing$inboundSchema: z.ZodMiniType<
       z.lazy(() => PreviewAttachOutgoingFeatureQuantity$inboundSchema),
     ),
     effective_at: types.nullable(types.number()),
+    canceled_at: types.nullable(types.number()),
+    expires_at: types.nullable(types.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
       "plan_id": "planId",
       "feature_quantities": "featureQuantities",
       "effective_at": "effectiveAt",
+      "canceled_at": "canceledAt",
+      "expires_at": "expiresAt",
     });
   }),
 );
@@ -1881,6 +1946,12 @@ export function previewAttachOutgoingFromJSON(
     `Failed to parse 'PreviewAttachOutgoing' from JSON`,
   );
 }
+
+/** @internal */
+export const PreviewAttachCheckoutType$inboundSchema: z.ZodMiniType<
+  PreviewAttachCheckoutType,
+  unknown
+> = openEnums.inboundSchema(PreviewAttachCheckoutType);
 
 /** @internal */
 export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
@@ -1899,12 +1970,16 @@ export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
     expand: types.optional(z.array(types.string())),
     incoming: z.array(z.lazy(() => PreviewAttachIncoming$inboundSchema)),
     outgoing: z.array(z.lazy(() => PreviewAttachOutgoing$inboundSchema)),
+    redirect_to_checkout: types.boolean(),
+    checkout_type: types.nullable(PreviewAttachCheckoutType$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       "customer_id": "customerId",
       "line_items": "lineItems",
       "next_cycle": "nextCycle",
+      "redirect_to_checkout": "redirectToCheckout",
+      "checkout_type": "checkoutType",
     });
   }),
 );

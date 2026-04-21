@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	index,
 	jsonb,
 	numeric,
 	pgTable,
@@ -40,6 +41,12 @@ export const products = pgTable(
 			foreignColumns: [organizations.id],
 			name: "products_org_id_fkey",
 		}).onDelete("cascade"),
+		index("idx_products_org_env_id_version").on(
+			table.org_id,
+			table.env,
+			table.id,
+			table.version,
+		),
 		unique("unique_product").on(
 			table.org_id,
 			table.id,
@@ -48,3 +55,6 @@ export const products = pgTable(
 		),
 	],
 );
+
+export type DbProduct = typeof products.$inferSelect;
+export type InsertDbProduct = typeof products.$inferInsert;

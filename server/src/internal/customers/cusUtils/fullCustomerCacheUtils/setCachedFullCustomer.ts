@@ -1,10 +1,10 @@
 import type { FullCustomer } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { buildPathIndex } from "@/internal/customers/cache/pathIndex/buildPathIndex.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
 import {
-	buildFullCustomerCacheGuardKey,
 	buildFullCustomerCacheKey,
 	FULL_CUSTOMER_CACHE_TTL_SECONDS,
 } from "./fullCustomerCacheConfig.js";
@@ -37,20 +37,22 @@ export const setCachedFullCustomer = async ({
 		env,
 		customerId,
 	});
-	const guardKey = buildFullCustomerCacheGuardKey({
-		orgId: org.id,
-		env,
-		customerId,
-	});
+	const pathIndexEntries = buildPathIndex({ fullCustomer });
+	const pathIndexJson = JSON.stringify(pathIndexEntries);
+
+	const payload = { ...fullCustomer, _cachedAt: Date.now() };
 
 	const result = await tryRedisWrite(async () => {
 		return await redis.setFullCustomerCache(
-			guardKey,
 			cacheKey,
+			org.id,
+			env,
+			customerId,
 			String(fetchTimeMs),
 			String(FULL_CUSTOMER_CACHE_TTL_SECONDS),
-			JSON.stringify(fullCustomer),
+			JSON.stringify(payload),
 			String(overwrite),
+			pathIndexJson,
 		);
 	});
 

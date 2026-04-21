@@ -3,10 +3,11 @@ import {
 	type EntInterval,
 	type EntityBalance,
 	type FullCusEntWithFullCusProduct,
-	type FullCustomerEntitlement,
+	type FullCusEntWithProduct,
 	getStartingBalance,
 	isLifetimeEntitlement,
 	isUnlimitedEntitlement,
+	orgPersistFreeOverage,
 	type Rollover,
 } from "@autumn/shared";
 import { logger } from "better-auth";
@@ -25,7 +26,10 @@ export type ResetUpdates = {
 
 export type ProcessResetResult = {
 	updates: ResetUpdates;
-	rolloverInsert?: { rows: Rollover[]; fullCusEnt: FullCustomerEntitlement };
+	rolloverInsert?: {
+		rows: Rollover[];
+		fullCusEnt: FullCusEntWithProduct;
+	};
 };
 
 /** Processes a single cusEnt reset. Returns updates + optional rollover insert, or null if skipped. */
@@ -82,9 +86,11 @@ export const processReset = async ({
 	});
 
 	// Compute reset balance update
+	const persistFreeOverage = orgPersistFreeOverage({ org: ctx.org });
 	const resetBalanceUpdate = getResetBalancesUpdate({
 		cusEnt,
 		allowance: resetBalance,
+		persistFreeOverage,
 	});
 
 	const updates: ResetUpdates =
@@ -105,7 +111,7 @@ export const processReset = async ({
 				};
 
 	let rolloverInsert:
-		| { rows: Rollover[]; fullCusEnt: FullCustomerEntitlement }
+		| { rows: Rollover[]; fullCusEnt: FullCusEntWithProduct }
 		| undefined;
 
 	if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {

@@ -195,8 +195,7 @@ export const handleProductsUpdated = async ({
 		`sending customer.products.updated webhook, customer ID: ${data.customerId}, entity ID: ${fullCus.entity?.id || "none"}`,
 	);
 	await sendSvixEvent({
-		org,
-		env,
+		ctx,
 		eventType: "customer.products.updated",
 		data: {
 			scenario,

@@ -8,7 +8,10 @@ import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
 import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
 
 <Note>
-  The attach endpoint subscribes a customer to a plan. It handles new subscriptions, upgrades, and downgrades automatically. For modifying an existing subscription (like changing quantities or canceling), use [update](/api-reference/billing/billingUpdate) instead.
+    The attach endpoint subscribes a customer to a plan. It handles new
+    subscriptions, upgrades, and downgrades automatically. For modifying an
+    existing subscription (like changing quantities or canceling), use
+    [update](/api-reference/billing/billingUpdate) instead.
 </Note>
 
 ### Common Use Cases
@@ -17,40 +20,59 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 ```typescript Subscribe to a plan
 const response = await autumn.billing.attach({
-  customerId: "cus_123",
-  planId: "pro_plan"
+    customerId: "cus_123",
+    planId: "pro_plan",
 });
 
 if (response.paymentUrl) {
-  // Redirect customer to checkout
-  window.location.href = response.paymentUrl;
+    // Redirect customer to checkout
+    window.location.href = response.paymentUrl;
 }
 ```
 
 ```typescript Custom pricing
 const response = await autumn.billing.attach({
-  customerId: "cus_123",
-  planId: "enterprise_plan",
-  customize: {
-    price: {
-      amount: 99900, // $999.00
-      interval: "month"
-    }
-  }
+    customerId: "cus_123",
+    planId: "enterprise_plan",
+    customize: {
+        price: {
+            amount: 999, // $999
+            interval: "month",
+        },
+    },
 });
 ```
 
 ```typescript Attach plan with prepaid quantities
 const response = await autumn.billing.attach({
-  customerId: "cus_123",
-  planId: "team_plan",
-  featureQuantities: [
-    { featureId: "seats", quantity: 5 }
-  ]
+    customerId: "cus_123",
+    planId: "team_plan",
+    featureQuantities: [{ featureId: "seats", quantity: 5 }],
+});
+```
+
+```typescript Pass metadata to Stripe subscription
+const response = await autumn.billing.attach({
+    customerId: "cus_123",
+    planId: "pro_plan",
+    checkoutSessionParams: {
+        subscriptionData: {
+            metadata: {
+                userId: "internal-user-id",
+                source: "upgrade-flow",
+            },
+        },
+    },
 });
 ```
 
 </CodeGroup>
+
+### Stripe checkout session params
+
+Use `checkoutSessionParams` to pass additional data to the Stripe checkout session. Values you provide are deep-merged with Autumn's internal parameters, so your fields are preserved alongside ones Autumn sets automatically (like `trial_end` or internal metadata).
+
+This is useful for attaching custom metadata to the Stripe subscription created during checkout — for example, linking subscriptions to internal user IDs or tracking the source of the purchase.
 
 ### Body Parameters
 
@@ -203,6 +225,10 @@ const response = await autumn.billing.attach({
               Max rollover units. Omit for unlimited rollover.
             </DynamicParamField>
 
+            <DynamicParamField body="max_percentage" type="number">
+              Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+            </DynamicParamField>
+
             <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
               When rolled over units expire.
             </DynamicParamField>
@@ -290,6 +316,10 @@ const response = await autumn.billing.attach({
   Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
 </DynamicParamField>
 
+<DynamicParamField body="billing_cycle_anchor" type="any">
+  Reset the billing cycle anchor immediately with 'now'.
+</DynamicParamField>
+
 <DynamicParamField body="plan_schedule" type="'immediate' | 'end_of_cycle'">
   When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
 </DynamicParamField>
@@ -342,6 +372,14 @@ const response = await autumn.billing.attach({
     </DynamicParamField>
 
   </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="metadata.{key}" type="string">
+  Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+</DynamicParamField>
+
+<DynamicParamField body="no_billing_changes" type="boolean">
+  If true, skips any billing changes for the attach operation.
 </DynamicParamField>
 
 

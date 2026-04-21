@@ -1,5 +1,4 @@
 import { type GroupedPermission, groupAndFormatScopes } from "@autumn/shared";
-import { clearOrgCache } from "@/hooks/common/useOrg";
 import {
 	Check,
 	ChevronDown,
@@ -147,7 +146,6 @@ export const Consent = () => {
 			await authClient.organization.setActive({
 				organizationId: orgId,
 			});
-			clearOrgCache();
 			window.location.reload();
 		} catch (_) {
 			toast.error("Failed to switch organization");

@@ -99,7 +99,7 @@ export function generateItemChanges({
 	originalItems: ProductItem[] | undefined;
 	updatedItems: ProductItem[] | null;
 	features?: Feature[];
-	prepaidOptions?: Record<string, number>;
+	prepaidOptions?: Record<string, number | undefined>;
 }): ItemEdit[] {
 	if (!updatedItems || !originalItems) return [];
 

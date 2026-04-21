@@ -9,6 +9,7 @@ import { OnboardingLayout } from "./app/OnboardingLayout";
 import { useSession } from "./lib/auth-client";
 import { identifyUser } from "./utils/posthogTracking";
 import { AdminView } from "./views/admin/AdminView";
+import { EdgeConfigView } from "./views/admin/edge-config/EdgeConfigView";
 import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
 import { OAuthClientsView } from "./views/admin/oauth/OAuthClientsView";
 import { AcceptInvitation } from "./views/auth/AcceptInvitation";
@@ -51,6 +52,14 @@ export default function App() {
 			Sentry.setTags({
 				org_id: data.session.activeOrganizationId ?? "unknown_org",
 			});
+
+			const isLocal = window.location.hostname === "localhost";
+			const extras = isLocal ? "" : "; domain=.useautumn.com; Secure";
+			if (data?.user) {
+				document.cookie = `logged_in_hint=1; path=/; max-age=604800; SameSite=Lax${extras}`;
+			} else {
+				document.cookie = `logged_in_hint=; path=/; max-age=0; SameSite=Lax${extras}`;
+			}
 		}
 	}, [data]);
 	return (
@@ -71,7 +80,14 @@ export default function App() {
 					<Route path="*" element={<DefaultView />} />
 					<Route path="/settings" element={<OrgSettingsView />} />
 					<Route path="/admin" element={<AdminView />} />
+					<Route path="/sandbox/admin" element={<AdminView />} />
 					<Route path="/admin/oauth" element={<OAuthClientsView />} />
+					<Route path="/sandbox/admin/oauth" element={<OAuthClientsView />} />
+					<Route path="/admin/edge-config" element={<EdgeConfigView />} />
+					<Route
+						path="/sandbox/admin/edge-config"
+						element={<EdgeConfigView />}
+					/>
 					<Route
 						path="/impersonate-redirect"
 						element={<ImpersonateRedirect />}
@@ -122,8 +138,8 @@ export default function App() {
 					/>
 					<Route path="/dev" element={<DevScreen />} />
 					<Route path="/sandbox/dev" element={<DevScreen />} />
-					<Route path="/events" element={<AnalyticsView />} />
-					<Route path="/sandbox/events" element={<AnalyticsView />} />
+					<Route path="/analytics" element={<AnalyticsView />} />
+					<Route path="/sandbox/analytics" element={<AnalyticsView />} />
 					<Route path="/dev/cli" element={<Otp />} />
 					<Route path="/sandbox/dev/cli" element={<Otp />} />
 				</Route>

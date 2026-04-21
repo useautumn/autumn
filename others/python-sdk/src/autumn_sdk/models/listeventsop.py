@@ -5,7 +5,7 @@ from autumn_sdk.types import BaseModel, UNSET_SENTINEL
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -18,7 +18,7 @@ class ListEventsGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.1"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -89,6 +89,8 @@ class EventsListParamsTypedDict(TypedDict):
     r"""Number of items to return. Default 100, max 1000."""
     customer_id: NotRequired[str]
     r"""Filter events by customer ID"""
+    entity_id: NotRequired[str]
+    r"""Filter events by entity ID (e.g., per-seat or per-resource)"""
     feature_id: NotRequired[ListEventsFeatureIDTypedDict]
     r"""Filter by specific feature ID(s)"""
     custom_range: NotRequired[ListEventsCustomRangeTypedDict]
@@ -105,6 +107,9 @@ class EventsListParams(BaseModel):
     customer_id: Optional[str] = None
     r"""Filter events by customer ID"""
 
+    entity_id: Optional[str] = None
+    r"""Filter events by entity ID (e.g., per-seat or per-resource)"""
+
     feature_id: Optional[ListEventsFeatureID] = None
     r"""Filter by specific feature ID(s)"""
 
@@ -114,7 +119,14 @@ class EventsListParams(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["offset", "limit", "customer_id", "feature_id", "custom_range"]
+            [
+                "offset",
+                "limit",
+                "customer_id",
+                "entity_id",
+                "feature_id",
+                "custom_range",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -130,14 +142,6 @@ class EventsListParams(BaseModel):
         return m
 
 
-class ListEventsPropertiesTypedDict(TypedDict):
-    r"""Event properties (JSONB)"""
-
-
-class ListEventsProperties(BaseModel):
-    r"""Event properties (JSONB)"""
-
-
 class ListEventsListTypedDict(TypedDict):
     id: str
     r"""Event ID (KSUID)"""
@@ -149,8 +153,8 @@ class ListEventsListTypedDict(TypedDict):
     r"""Customer identifier"""
     value: float
     r"""Event value/count"""
-    properties: ListEventsPropertiesTypedDict
-    r"""Event properties (JSONB)"""
+    properties: Dict[str, Any]
+    r"""Event properties (JSON)"""
 
 
 class ListEventsList(BaseModel):
@@ -169,8 +173,8 @@ class ListEventsList(BaseModel):
     value: float
     r"""Event value/count"""
 
-    properties: ListEventsProperties
-    r"""Event properties (JSONB)"""
+    properties: Dict[str, Any]
+    r"""Event properties (JSON)"""
 
 
 class ListEventsResponseTypedDict(TypedDict):

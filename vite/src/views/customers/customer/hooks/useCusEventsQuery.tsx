@@ -1,41 +1,40 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 type IntervalType = "7d" | "30d" | "90d";
 
+/**
+ * Fetches raw events via POST /query/raw (same endpoint as the analytics page).
+ */
 export const useCusEventsQuery = ({
 	interval,
-	limit,
 	customerId,
 }: {
 	interval?: IntervalType;
-	limit?: number;
 	/** External customer ID override. Falls back to the internal `customer_id` URL param. */
 	customerId?: string;
 } = {}) => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const { customer_id } = useParams();
 
 	const id = customerId ?? customer_id;
 
 	const fetcher = async () => {
-		const params = new URLSearchParams();
-		if (interval) params.set("interval", interval);
-		if (limit) params.set("limit", limit.toString());
-
-		const queryString = params.toString();
-		const url = `/customers/${id}/events${queryString ? `?${queryString}` : ""}`;
-
-		const { data } = await axiosInstance.get(url);
+		const { data } = await axiosInstance.post("/query/raw", {
+			customer_id: id,
+			interval: interval ?? "30d",
+		});
 		return data;
 	};
 
 	const { data, isLoading, isFetching, error } = useQuery({
-		queryKey: ["customer_events", id, interval, limit],
+		queryKey: buildKey(["customer_events", id, interval]),
 		queryFn: fetcher,
 		enabled: !!id,
 	});
 
-	return { events: data?.events, isLoading, isFetching, error };
+	return { events: data?.rawEvents?.data, isLoading, isFetching, error };
 };

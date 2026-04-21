@@ -67,6 +67,11 @@ export const validateSchedulePhases = async ({
 
 		if (!actualPhase) continue;
 
+		expect(
+			actualPhase.billing_cycle_anchor ?? undefined,
+			`Expected schedule phase ${i} billing_cycle_anchor to be ${expectedPhase.billing_cycle_anchor ?? "undefined"}`,
+		).toBe(expectedPhase.billing_cycle_anchor ?? undefined);
+
 		const expectedItems = (expectedPhase.items ?? []).map((item) =>
 			normalizeExpectedPhaseItem({ item }),
 		);

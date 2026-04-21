@@ -9,9 +9,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -25,7 +26,7 @@ class AttachGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.1"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -368,6 +369,8 @@ class AttachRolloverTypedDict(TypedDict):
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
     expiry_duration_length: NotRequired[float]
     r"""Number of periods before expiry."""
 
@@ -381,12 +384,15 @@ class AttachRollover(BaseModel):
     max: Optional[float] = None
     r"""Max rollover units. Omit for unlimited rollover."""
 
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
     expiry_duration_length: Optional[float] = None
     r"""Number of periods before expiry."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["max", "expiry_duration_length"])
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
         serialized = handler(self)
         m = {}
 
@@ -769,6 +775,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""URL to redirect to after successful checkout."""
     new_billing_subscription: NotRequired[bool]
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
+    billing_cycle_anchor: Literal["now"]
+    r"""Reset the billing cycle anchor immediately with 'now'."""
     plan_schedule: NotRequired[AttachPlanSchedule]
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
     checkout_session_params: NotRequired[Dict[str, Any]]
@@ -781,6 +789,10 @@ class AttachParamsTypedDict(TypedDict):
     r"""Whether to carry over balances from the previous plan."""
     carry_over_usages: NotRequired[AttachCarryOverUsagesTypedDict]
     r"""Whether to carry over usages from the previous plan."""
+    metadata: NotRequired[Dict[str, str]]
+    r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
+    no_billing_changes: NotRequired[bool]
+    r"""If true, skips any billing changes for the attach operation."""
 
 
 class AttachParams(BaseModel):
@@ -823,6 +835,12 @@ class AttachParams(BaseModel):
     new_billing_subscription: Optional[bool] = None
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
 
+    billing_cycle_anchor: Annotated[
+        Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
+        pydantic.Field(alias="billing_cycle_anchor"),
+    ] = "now"
+    r"""Reset the billing cycle anchor immediately with 'now'."""
+
     plan_schedule: Optional[AttachPlanSchedule] = None
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
 
@@ -841,6 +859,12 @@ class AttachParams(BaseModel):
     carry_over_usages: Optional[AttachCarryOverUsages] = None
     r"""Whether to carry over usages from the previous plan."""
 
+    metadata: Optional[Dict[str, str]] = None
+    r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
+
+    no_billing_changes: Optional[bool] = None
+    r"""If true, skips any billing changes for the attach operation."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -856,12 +880,15 @@ class AttachParams(BaseModel):
                 "discounts",
                 "success_url",
                 "new_billing_subscription",
+                "billing_cycle_anchor",
                 "plan_schedule",
                 "checkout_session_params",
                 "custom_line_items",
                 "processor_subscription_id",
                 "carry_over_balances",
                 "carry_over_usages",
+                "metadata",
+                "no_billing_changes",
             ]
         )
         serialized = handler(self)
@@ -1013,3 +1040,9 @@ class AttachResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    AttachParams.model_rebuild()
+except NameError:
+    pass

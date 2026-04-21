@@ -9,6 +9,7 @@ import {
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -44,6 +45,7 @@ function CreateProductSheet({
 
 	const axiosInstance = useAxiosInstance();
 	const navigate = useNavigate();
+	const { invalidate } = useProductsQuery();
 
 	const handleCreateClicked = async () => {
 		const productName = product.name?.trim() || "";
@@ -59,6 +61,8 @@ function CreateProductSheet({
 				axiosInstance,
 				product,
 			);
+
+			invalidate();
 
 			if (onSuccess) {
 				await onSuccess(newProduct);

@@ -59,6 +59,10 @@ export type CustomerDataAutoTopup = {
    * Optional rate limit to cap how often auto top-ups occur.
    */
   purchaseLimit?: CustomerDataPurchaseLimit | undefined;
+  /**
+   * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
+   */
+  invoiceMode?: boolean | undefined;
 };
 
 export type CustomerDataSpendLimit = {
@@ -77,6 +81,56 @@ export type CustomerDataSpendLimit = {
 };
 
 /**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const CustomerDataThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type CustomerDataThresholdType = ClosedEnum<
+  typeof CustomerDataThresholdType
+>;
+
+export type CustomerDataUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: CustomerDataThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type CustomerDataOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
  * Billing controls for the customer (auto top-ups, etc.)
  */
 export type CustomerDataBillingControls = {
@@ -88,6 +142,14 @@ export type CustomerDataBillingControls = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<CustomerDataSpendLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<CustomerDataUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<CustomerDataOverageAllowed> | undefined;
 };
 
 /**
@@ -176,6 +238,7 @@ export type CustomerDataAutoTopup$Outbound = {
   threshold: number;
   quantity: number;
   purchase_limit?: CustomerDataPurchaseLimit$Outbound | undefined;
+  invoice_mode?: boolean | undefined;
 };
 
 /** @internal */
@@ -191,11 +254,13 @@ export const CustomerDataAutoTopup$outboundSchema: z.ZodMiniType<
     purchaseLimit: z.optional(
       z.lazy(() => CustomerDataPurchaseLimit$outboundSchema),
     ),
+    invoiceMode: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       purchaseLimit: "purchase_limit",
+      invoiceMode: "invoice_mode",
     });
   }),
 );
@@ -242,9 +307,83 @@ export function customerDataSpendLimitToJSON(
 }
 
 /** @internal */
+export const CustomerDataThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof CustomerDataThresholdType
+> = z.enum(CustomerDataThresholdType);
+
+/** @internal */
+export type CustomerDataUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const CustomerDataUsageAlert$outboundSchema: z.ZodMiniType<
+  CustomerDataUsageAlert$Outbound,
+  CustomerDataUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: CustomerDataThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function customerDataUsageAlertToJSON(
+  customerDataUsageAlert: CustomerDataUsageAlert,
+): string {
+  return JSON.stringify(
+    CustomerDataUsageAlert$outboundSchema.parse(customerDataUsageAlert),
+  );
+}
+
+/** @internal */
+export type CustomerDataOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const CustomerDataOverageAllowed$outboundSchema: z.ZodMiniType<
+  CustomerDataOverageAllowed$Outbound,
+  CustomerDataOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function customerDataOverageAllowedToJSON(
+  customerDataOverageAllowed: CustomerDataOverageAllowed,
+): string {
+  return JSON.stringify(
+    CustomerDataOverageAllowed$outboundSchema.parse(customerDataOverageAllowed),
+  );
+}
+
+/** @internal */
 export type CustomerDataBillingControls$Outbound = {
   auto_topups?: Array<CustomerDataAutoTopup$Outbound> | undefined;
   spend_limits?: Array<CustomerDataSpendLimit$Outbound> | undefined;
+  usage_alerts?: Array<CustomerDataUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<CustomerDataOverageAllowed$Outbound> | undefined;
 };
 
 /** @internal */
@@ -259,11 +398,19 @@ export const CustomerDataBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => CustomerDataSpendLimit$outboundSchema)),
     ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => CustomerDataUsageAlert$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => CustomerDataOverageAllowed$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       autoTopups: "auto_topups",
       spendLimits: "spend_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
     });
   }),
 );

@@ -253,6 +253,10 @@ export type SetupPaymentRollover = {
    */
   max?: number | undefined;
   /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
    * When rolled over units expire.
    */
   expiryDurationType: SetupPaymentExpiryDurationType;
@@ -456,6 +460,10 @@ export type SetupPaymentParams = {
    */
   successUrl?: string | undefined;
   /**
+   * Reset the billing cycle anchor immediately with 'now'.
+   */
+  billingCycleAnchor?: "now" | undefined;
+  /**
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
@@ -475,6 +483,14 @@ export type SetupPaymentParams = {
    * Whether to carry over usages from the previous plan.
    */
   carryOverUsages?: SetupPaymentCarryOverUsages | undefined;
+  /**
+   * Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
+   */
+  metadata?: { [k: string]: string } | undefined;
+  /**
+   * If true, skips any billing changes for the attach operation.
+   */
+  noBillingChanges?: boolean | undefined;
 };
 
 /**
@@ -756,6 +772,7 @@ export const SetupPaymentExpiryDurationType$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type SetupPaymentRollover$Outbound = {
   max?: number | undefined;
+  max_percentage?: number | undefined;
   expiry_duration_type: string;
   expiry_duration_length?: number | undefined;
 };
@@ -767,11 +784,13 @@ export const SetupPaymentRollover$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
     expiryDurationType: SetupPaymentExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      maxPercentage: "max_percentage",
       expiryDurationType: "expiry_duration_type",
       expiryDurationLength: "expiry_duration_length",
     });
@@ -1040,11 +1059,14 @@ export type SetupPaymentParams$Outbound = {
   subscription_id?: string | undefined;
   discounts?: Array<SetupPaymentAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
+  billing_cycle_anchor?: "now" | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<SetupPaymentCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
   carry_over_balances?: SetupPaymentCarryOverBalances$Outbound | undefined;
   carry_over_usages?: SetupPaymentCarryOverUsages$Outbound | undefined;
+  metadata?: { [k: string]: string } | undefined;
+  no_billing_changes?: boolean | undefined;
 };
 
 /** @internal */
@@ -1067,6 +1089,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       z.array(z.lazy(() => SetupPaymentAttachDiscount$outboundSchema)),
     ),
     successUrl: z.optional(z.string()),
+    billingCycleAnchor: z.optional(z.literal("now")),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
       z.array(z.lazy(() => SetupPaymentCustomLineItem$outboundSchema)),
@@ -1078,6 +1101,8 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     carryOverUsages: z.optional(
       z.lazy(() => SetupPaymentCarryOverUsages$outboundSchema),
     ),
+    metadata: z.optional(z.record(z.string(), z.string())),
+    noBillingChanges: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1088,11 +1113,13 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       prorationBehavior: "proration_behavior",
       subscriptionId: "subscription_id",
       successUrl: "success_url",
+      billingCycleAnchor: "billing_cycle_anchor",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",
       carryOverBalances: "carry_over_balances",
       carryOverUsages: "carry_over_usages",
+      noBillingChanges: "no_billing_changes",
     });
   }),
 );

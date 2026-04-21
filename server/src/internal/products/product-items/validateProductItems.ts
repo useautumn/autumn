@@ -1,6 +1,5 @@
 import {
 	type AppEnv,
-	EntInterval,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -258,6 +257,28 @@ const validateProductItem = ({
 			}
 		}
 
+		// Validate rollover max_percentage
+		if (notNullish(rollover.max_percentage)) {
+			if (rollover.max_percentage <= 0 || rollover.max_percentage > 100) {
+				throw new RecaseError({
+					message:
+						"Rollover max_percentage must be between 0 (exclusive) and 100 (inclusive)",
+					code: ErrCode.InvalidInputs,
+					statusCode: StatusCodes.BAD_REQUEST,
+				});
+			}
+		}
+
+		// max and max_percentage are mutually exclusive
+		if (notNullish(rollover.max) && notNullish(rollover.max_percentage)) {
+			throw new RecaseError({
+				message:
+					"Rollover max and max_percentage are mutually exclusive. Set one or the other, not both.",
+				code: ErrCode.InvalidInputs,
+				statusCode: StatusCodes.BAD_REQUEST,
+			});
+		}
+
 		// Validate rollover length for monthly durations
 		if (rollover.duration === RolloverExpiryDurationType.Month) {
 			if (typeof rollover.length !== "number" || rollover.length < 0) {
@@ -327,20 +348,6 @@ export const validateProductItems = ({
 		const entInterval = itemToEntInterval({ item });
 		const intervalCount = item.interval_count || 1;
 
-		if (isFeaturePriceItem(item) && entInterval === EntInterval.Lifetime) {
-			const otherItem = newItems.find((i: any, index2: any) => {
-				return i.feature_id === item.feature_id && index2 !== index;
-			});
-
-			if (otherItem && isFeaturePriceItem(otherItem)) {
-				throw new RecaseError({
-					message: `If feature is lifetime and paid, can't have any other features`,
-					code: ErrCode.InvalidInputs,
-					statusCode: StatusCodes.BAD_REQUEST,
-				});
-			}
-		}
-
 		// Boolean duplicate
 		if (isBooleanFeatureItem(item)) {
 			const otherItem = newItems.find((i: any, index2: any) => {
@@ -377,14 +384,6 @@ export const validateProductItems = ({
 		if (isFeatureItem(otherItem) && isFeatureItem(item)) {
 			throw new RecaseError({
 				message: `You're trying to create two items for the same feature (${item.feature_id}) with the same interval. Please make them into one item.`,
-				code: ErrCode.InvalidInputs,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		if (isFeatureItem(otherItem)) {
-			throw new RecaseError({
-				message: `You have a usage-based price for for this feature (${item.feature_id}). If you're looking to create an overage item (eg. 100 free, then $0.5 thereafter), you should add it to the existing item.`,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

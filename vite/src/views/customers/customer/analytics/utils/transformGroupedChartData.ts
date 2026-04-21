@@ -92,9 +92,11 @@ export function transformGroupedData({
 		return events;
 	}
 
-	// Handle special case for customer_id (not a property)
+	// Handle special case for column-based operators (not a property)
 	const groupByColumn =
-		groupBy === "customer_id" ? "customer_id" : `properties.${groupBy}`;
+		groupBy === "customer_id" || groupBy === "entity_id"
+			? groupBy
+			: `properties.${groupBy}`;
 
 	// Check if data has the group_by column
 	const hasGroupColumn = events.meta.some((m) => m.name === groupByColumn);
@@ -174,11 +176,15 @@ export function generateChartConfig({
 	features,
 	groupBy,
 	originalColors,
+	entityNames,
+	customerNames,
 }: {
 	events: EventsData;
 	features: Feature[];
 	groupBy: string | null;
 	originalColors: string[];
+	entityNames?: Record<string, string>;
+	customerNames?: Record<string, string>;
 }): ChartSeriesConfig[] {
 	const colorsToUse = groupBy ? CHART_COLORS : originalColors;
 
@@ -211,8 +217,16 @@ export function generateChartConfig({
 		const groupValue = parts[parts.length - 1];
 
 		const featureName = getFeatureName({ key: featureKey, features });
-		const displayGroupValue =
-			groupValue === "AUTUMN_RESERVED" ? "Other values" : groupValue;
+		let displayGroupValue: string;
+		if (groupValue === "AUTUMN_RESERVED") {
+			displayGroupValue = "Other values";
+		} else if (groupBy === "entity_id" && entityNames?.[groupValue]) {
+			displayGroupValue = entityNames[groupValue];
+		} else if (groupBy === "customer_id" && customerNames?.[groupValue]) {
+			displayGroupValue = customerNames[groupValue];
+		} else {
+			displayGroupValue = groupValue;
+		}
 
 		config.push({
 			xKey: "period",

@@ -4,6 +4,7 @@ import {
 	type BillingPlan,
 	type Checkout,
 	CheckoutAction,
+	type CreateScheduleParamsV0,
 	ErrCode,
 	RecaseError,
 	type UpdateSubscriptionV1Params,
@@ -11,6 +12,7 @@ import {
 import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
+import { previewCreateScheduleWithContext } from "@/internal/billing/v2/actions/createSchedule/previewCreateSchedule";
 import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 import type {
@@ -38,6 +40,14 @@ export async function previewCheckoutAction({
 	ctx,
 	checkout,
 	params,
+}: PreviewCheckoutActionArgs<CheckoutAction.CreateSchedule>): Promise<
+	PreviewCheckoutActionResult<CheckoutAction.CreateSchedule>
+>;
+
+export async function previewCheckoutAction({
+	ctx,
+	checkout,
+	params,
 }: PreviewCheckoutActionArgs<CheckoutAction.UpdateSubscription>): Promise<
 	PreviewCheckoutActionResult<CheckoutAction.UpdateSubscription>
 >;
@@ -49,7 +59,7 @@ export async function previewCheckoutAction({
 }: {
 	ctx: AutumnContext;
 	checkout: Checkout;
-	params: AttachParamsV1 | UpdateSubscriptionV1Params;
+	params: AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params;
 }): Promise<PreviewCheckoutAnyActionResult> {
 	let billingPlan: BillingPlan | undefined;
 
@@ -79,6 +89,23 @@ export async function previewCheckoutAction({
 			return {
 				billingContext: attachResult.billingContext,
 				preview,
+			};
+		}
+		case CheckoutAction.CreateSchedule: {
+			const createScheduleResult = await previewCreateScheduleWithContext({
+				ctx,
+				params: params as CreateScheduleParamsV0,
+			});
+
+			billingPlan = createScheduleResult.billingPlan;
+
+			if (!billingPlan) {
+				break;
+			}
+
+			return {
+				billingContext: createScheduleResult.billingContext,
+				preview: createScheduleResult.preview,
 			};
 		}
 		case CheckoutAction.UpdateSubscription: {

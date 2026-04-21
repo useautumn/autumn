@@ -1,4 +1,7 @@
 export const ErrCode = {
+	// Billing
+	PlanAlreadyAttached: "plan_already_attached",
+
 	// Idempotency
 	IdempotencyKeyAlreadyExists: "idempotency_key_already_exists",
 	IdempotencyKeyNotFound: "idempotency_key_not_found",
@@ -25,6 +28,7 @@ export const ErrCode = {
 	InvalidRequest: "invalid_request",
 	InvalidExpand: "invalid_expand",
 	InvalidOptions: "invalid_options",
+	RequestTemporarilyDisabled: "request_temporarily_disabled",
 
 	// Org
 	OrgNotFound: "org_not_found",
@@ -178,4 +182,7 @@ export const ErrCode = {
 
 	// Products
 	ProductNotFound: "product_not_found",
+
+	// Maintenance
+	UnderMaintenance: "under_maintenance",
 };

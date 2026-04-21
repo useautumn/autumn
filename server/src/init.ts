@@ -11,7 +11,25 @@ import {
 	shutdownPgHealthMonitor,
 } from "./db/pgHealthMonitor.js";
 import { logger } from "./external/logtail/logtailUtils.js";
-import { warmupRegionalRedis } from "./external/redis/initRedis.js";
+import {
+	startAllEdgeConfigPolling,
+	stopAllEdgeConfigPolling,
+} from "./internal/misc/edgeConfig/edgeConfigRegistry.js";
+
+// Edge config modules self-register on import
+import "./internal/misc/requestBlocks/requestBlockStore.js";
+import "./internal/misc/rollouts/rolloutConfigStore.js";
+import "./internal/misc/featureFlags/featureFlagStore.js";
+import "./internal/misc/customerBlocks/customerBlockStore.js";
+import "./internal/misc/edgeConfig/orgLimitsStore.js";
+import "./internal/misc/stripeSync/stripeSyncStore.js";
+import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
+import { closeStripeSyncEngine } from "@autumn/stripe-sync";
+import {
+	startRedisMonitor,
+	stopRedisMonitor,
+	warmupRegionalRedis,
+} from "./external/redis/initRedis.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -19,11 +37,16 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
 
-const init = async () => {
+const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	const app = createHonoApp();
 
 	initPgHealthMonitor({ client: clientCritical });
-	await Promise.all([warmupRegionalRedis()]);
+
+	startRedisMonitor();
+	void warmupRegionalRedis().catch((error) => {
+		logger.warn("[Redis] Warmup failed", { error });
+	});
+	await startAllEdgeConfigPolling({ logger });
 
 	const PORT = process.env.SERVER_PORT
 		? Number.parseInt(process.env.SERVER_PORT)
@@ -35,14 +58,20 @@ const init = async () => {
 	server.keepAliveTimeout = 120000;
 	server.headersTimeout = 120000;
 
-	server.listen(PORT, "0.0.0.0", () => {
-		console.log(`Server running on port ${PORT}`);
-		startMemoryMonitor("server", 60_000);
+	await new Promise<void>((resolve) => {
+		server.listen(PORT, "0.0.0.0", () => {
+			const startupDurationMs = Date.now() - startupStartedAt;
+			console.log(
+				`Server running on port ${PORT} (${startupDurationMs}ms startup)`,
+			);
+			startMemoryMonitor("server", 60_000);
+			resolve();
+		});
 	});
 };
 
 if (process.env.NODE_ENV === "development") {
-	init();
+	await init({ startupStartedAt: Date.now() });
 	registerShutdownHandlers();
 } else {
 	const numCPUs = os.cpus().length;
@@ -51,7 +80,7 @@ if (process.env.NODE_ENV === "development") {
 		console.log(`Master ${process.pid} is running`);
 		console.log("Number of CPUs", numCPUs);
 
-		const numWorkers = 2;
+		const numWorkers = 3;
 
 		for (let i = 0; i < numWorkers; i++) {
 			cluster.fork();
@@ -64,7 +93,7 @@ if (process.env.NODE_ENV === "development") {
 
 		registerShutdownHandlers();
 	} else {
-		init();
+		await init({ startupStartedAt: Date.now() });
 		registerShutdownHandlers();
 	}
 }
@@ -83,10 +112,13 @@ async function gracefulShutdown() {
 			await otelSdk.shutdown();
 		}
 		shutdownPgHealthMonitor();
+		stopRedisMonitor();
+		stopAllEdgeConfigPolling();
 		await Promise.all([
 			client.end(),
 			clientCritical.end(),
 			clientReplica?.end(),
+			closeStripeSyncEngine(),
 		]);
 		console.log("Shutdown complete. Exiting process.");
 		process.exit(0);

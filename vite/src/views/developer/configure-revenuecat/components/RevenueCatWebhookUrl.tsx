@@ -40,7 +40,7 @@ export const RevenueCatWebhookUrl = ({
 				<CodeGroupContent
 					value={env}
 					copyText={webhookUrl}
-					className="border-t w-fit"
+					className="p-2 border-t-0"
 				>
 					<CodeGroupCodeSolidColour className="text-primary whitespace-nowrap">
 						{webhookUrl}

@@ -27,7 +27,7 @@ class CheckGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.1"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -475,22 +475,25 @@ RolloverDuration = Union[
 
 
 class CheckRolloverTypedDict(TypedDict):
-    max: Nullable[float]
     length: float
+    max: NotRequired[Nullable[float]]
+    max_percentage: NotRequired[Nullable[float]]
     duration: NotRequired[RolloverDuration]
 
 
 class CheckRollover(BaseModel):
-    max: Nullable[float]
-
     length: float
+
+    max: OptionalNullable[float] = UNSET
+
+    max_percentage: OptionalNullable[float] = UNSET
 
     duration: Optional[RolloverDuration] = "month"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["duration"])
-        nullable_fields = set(["max"])
+        optional_fields = set(["max", "max_percentage", "duration"])
+        nullable_fields = set(["max", "max_percentage"])
         serialized = handler(self)
         m = {}
 
@@ -807,6 +810,7 @@ ProductScenario = Union[
         "new",
         "renew",
         "upgrade",
+        "update_prepaid_quantity",
         "downgrade",
         "cancel",
         "expired",
@@ -817,7 +821,7 @@ ProductScenario = Union[
 r"""Scenario for when this product is used in attach flows"""
 
 
-class CheckPropertiesTypedDict(TypedDict):
+class PropertiesTypedDict(TypedDict):
     is_free: bool
     r"""True if the product has no base price or usage prices"""
     is_one_off: bool
@@ -830,7 +834,7 @@ class CheckPropertiesTypedDict(TypedDict):
     r"""True if the product can be updated after creation (only applicable if there are prepaid recurring prices)"""
 
 
-class CheckProperties(BaseModel):
+class Properties(BaseModel):
     is_free: bool
     r"""True if the product has no base price or usage prices"""
 
@@ -899,7 +903,7 @@ class ProductTypedDict(TypedDict):
     r"""ID of the base variant this product is derived from"""
     scenario: NotRequired[ProductScenario]
     r"""Scenario for when this product is used in attach flows"""
-    properties: NotRequired[CheckPropertiesTypedDict]
+    properties: NotRequired[PropertiesTypedDict]
 
 
 class Product(BaseModel):
@@ -942,7 +946,7 @@ class Product(BaseModel):
     scenario: Optional[ProductScenario] = None
     r"""Scenario for when this product is used in attach flows"""
 
-    properties: Optional[CheckProperties] = None
+    properties: Optional[Properties] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

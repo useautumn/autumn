@@ -1,7 +1,6 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerEntitlementActions } from "@/internal/customers/cusProducts/cusEnts/actions";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService";
 
 /**
@@ -9,9 +8,11 @@ import { RepService } from "@/internal/customers/cusProducts/cusEnts/RepService"
  */
 export const updateCustomerEntitlements = async ({
 	ctx,
+	customerId,
 	updates,
 }: {
 	ctx: AutumnContext;
+	customerId: string;
 	updates: AutumnBillingPlan["updateCustomerEntitlements"];
 }) => {
 	const { logger } = ctx;
@@ -29,27 +30,28 @@ export const updateCustomerEntitlements = async ({
 			`updating customer entitlement ${customerEntitlement.id} ${balanceChange ? `+${balanceChange}` : updates ? JSON.stringify(updates) : "none"}`,
 		);
 
+		const featureId = customerEntitlement.entitlement.feature.id;
 		// 1. Handle field-level updates (e.g. next_reset_at, adjustment, entities)
 		if (updates) {
-			await CusEntService.update({
+			await customerEntitlementActions.updateDbAndCache({
 				ctx,
-				id: customerEntitlement.id,
+				customerId,
+				cusEntId: customerEntitlement.id,
 				updates,
+				incrementCacheVersion: true,
+				featureId,
 			});
 			continue;
 		}
 
 		// 2. Handle balance change (DB + cache)
 		if (balanceChange !== 0) {
-			const customerId =
-				customerEntitlement.customer_id ??
-				customerEntitlement.internal_customer_id;
-
 			await customerEntitlementActions.adjustBalanceDbAndCache({
 				ctx,
 				customerId,
 				cusEntId: customerEntitlement.id,
 				delta: balanceChange,
+				featureId,
 			});
 		}
 

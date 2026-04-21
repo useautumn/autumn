@@ -21,6 +21,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   Filter events by customer ID
 </DynamicParamField>
 
+<DynamicParamField body="entity_id" type="string">
+  Filter events by entity ID (e.g., per-seat or per-resource)
+</DynamicParamField>
+
 <DynamicParamField body="feature_id" type="string">
   Filter by specific feature ID(s)
 </DynamicParamField>
@@ -66,7 +70,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
     </DynamicResponseField>
 
     <DynamicResponseField name="properties" type="object">
-      Event properties (JSONB)
+      Event properties (JSON)
     </DynamicResponseField>
 
   </Expandable>

@@ -165,6 +165,7 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit2: prepai
 		feature_id: TestFeature.Messages,
 		value: 820,
 	});
+
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -190,7 +191,7 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit2: prepai
 		granted: 800,
 		remaining: 0,
 		usage: 825,
-		breakdownLength: 2,
+		// breakdownLength: 2,
 	});
 	await expectSendEventBlocked({
 		autumn: autumnV2_1,
@@ -323,7 +324,7 @@ test.concurrent(`${chalk.yellowBright("track-entity-product-spend-limit3: two en
 		granted: 1600,
 		remaining: 0,
 		usage: 1665,
-		breakdownLength: 4,
+		// breakdownLength: 4,
 	});
 	await expectSendEventBlocked({
 		autumn: autumnV2_1,

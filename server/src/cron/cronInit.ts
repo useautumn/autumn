@@ -10,11 +10,26 @@ import type { CronContext } from "./utils/CronContext.js";
 
 const { db, client } = initDrizzle();
 
+const logCronHeartbeat = () => {
+	logger.info(
+		{
+			type: "cron_heartbeat",
+			cron: {
+				pid: process.pid,
+				timezone: "UTC",
+			},
+		},
+		"Cron heartbeat",
+	);
+};
+
 const main = async () => {
 	if (process.env.DISABLE_CRON === "true") {
 		console.log(`Cron disabled!`);
 		return;
 	}
+
+	logCronHeartbeat();
 
 	const ctx: CronContext = {
 		db,

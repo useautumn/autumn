@@ -13,6 +13,7 @@ import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { verifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
 import { generateId } from "@/utils/genUtils.js";
+import { withTimeout } from "@/utils/withTimeout.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
@@ -27,6 +28,7 @@ const MAX_MESSAGES_BEFORE_RECYCLE = 50_000;
 
 // Idle self-kill — exit if worker processes 0 messages for this many consecutive intervals
 const IDLE_SELF_KILL_THRESHOLD = 5; // ~5 min of 0 messages (5 * 60s)
+const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 
 // Per-message processing timeout — must be under VisibilityTimeout (30s)
 const MESSAGE_TIMEOUT_MS = 25_000;
@@ -39,17 +41,6 @@ const HEARTBEAT_INTERVAL_MS = ms.minutes(5);
 const ZERO_MESSAGE_ALERT_THRESHOLD = 20; // ~20 min of 0 messages
 
 // ============ Helper Functions ============
-
-const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
-	Promise.race([
-		promise,
-		new Promise<never>((_, reject) =>
-			setTimeout(
-				() => reject(new Error(`Processing timed out after ${timeoutMs}ms`)),
-				timeoutMs,
-			),
-		),
-	]);
 
 const logPrefix = ({ queueUrl }: { queueUrl: string }) =>
 	`[SQS Worker ${process.pid}][${queueUrl.split("/").pop()}]`;
@@ -124,6 +115,7 @@ const startPollingLoop = async ({
 			consecutiveZeroMessageIntervals++;
 
 			if (
+				shouldIdleSelfKill &&
 				consecutiveZeroMessageIntervals >= IDLE_SELF_KILL_THRESHOLD &&
 				totalMessagesProcessed > 0 &&
 				activeMigrationJobs === 0
@@ -197,7 +189,11 @@ const startPollingLoop = async ({
 		if (isMigration) {
 			await processMessage({ message, db });
 		} else {
-			await withTimeout(processMessage({ message, db }), MESSAGE_TIMEOUT_MS);
+			await withTimeout({
+				timeoutMs: MESSAGE_TIMEOUT_MS,
+				timeoutMessage: `Processing timed out after ${MESSAGE_TIMEOUT_MS}ms`,
+				fn: () => processMessage({ message, db }),
+			});
 		}
 
 		messagesProcessed++;
@@ -282,8 +278,6 @@ const startPollingLoop = async ({
 		return null;
 	};
 
-	console.log(`${prefix} Started polling ${queueUrl}`);
-
 	const statsInterval = setInterval(logStatsAndCheckZeroMessages, 60000);
 
 	let sqs = getSqsClientFn();
@@ -362,7 +356,13 @@ const startPollingLoop = async ({
  * Initialize SQS pollers for this process.
  * cluster.fork() in workers.ts handles multi-process parallelism.
  */
-export const initWorkers = async () => {
+export const initWorkers = async ({
+	startupStartedAt,
+	queueImplementation,
+}: {
+	startupStartedAt: number;
+	queueImplementation: string;
+}) => {
 	const { db } = initDrizzle({ maxConnections: 10 });
 	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
 	await warmupRegionalRedis();
@@ -374,7 +374,10 @@ export const initWorkers = async () => {
 
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {
-			setTimeout(() => process.exit(0), 5000);
+			const shutdownTimeout = setTimeout(() => process.exit(0), 5000);
+			if (shutdownTimeout.unref) {
+				shutdownTimeout.unref();
+			}
 		} else {
 			process.exit(0);
 		}
@@ -384,6 +387,11 @@ export const initWorkers = async () => {
 	process.on("SIGINT", shutdown);
 
 	abortController = new AbortController();
+
+	const startupDurationMs = Date.now() - startupStartedAt;
+	console.log(
+		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
+	);
 
 	await startPollingLoop({
 		db,

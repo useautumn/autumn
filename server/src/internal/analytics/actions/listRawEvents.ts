@@ -64,6 +64,7 @@ const convertPipeRowToClickHouseFormat = (
 
 export type ListRawEventsParams = {
 	customer_id?: string;
+	entity_id?: string;
 	interval?: string;
 	customer?: FullCustomer;
 	aggregateAll?: boolean;
@@ -88,11 +89,12 @@ export const listRawEvents = async ({
 	// Calculate billing cycle dates if needed
 	const billingCycleResult =
 		isBillingCycle && !params.aggregateAll && params.customer
-			? ((await getBillingCycleStartDate(
-					params.customer,
+			? ((await getBillingCycleStartDate({
+					customer: params.customer,
 					db,
-					intervalType as "1bc" | "3bc",
-				)) as BillingCycleResult | null)
+					intervalType: intervalType as "1bc" | "3bc",
+					ctx,
+				})) as BillingCycleResult | null)
 			: null;
 
 	// Calculate date range
@@ -114,27 +116,26 @@ export const listRawEvents = async ({
 		start_date: finalStartDate,
 		end_date: finalEndDate,
 		customer_id: params.aggregateAll ? undefined : params.customer_id,
+		entity_id: params.entity_id,
 		event_names: params.event_name ? [params.event_name] : undefined,
 		limit: params.limit ?? DEFAULT_LIMIT,
 		offset: 0,
 	};
 
-	ctx.logger.debug("Listing raw events via Tinybird pipe", {
-		customerId: params.customer_id,
-		aggregateAll: params.aggregateAll,
-		startDate: finalStartDate,
-		endDate: finalEndDate,
-		limit: pipeParams.limit,
-	});
+	// ctx.logger.debug("Listing raw events via Tinybird pipe", {
+	// 	customerId: params.customer_id,
+	// 	aggregateAll: params.aggregateAll,
+	// 	startDate: finalStartDate,
+	// 	endDate: finalEndDate,
+	// 	limit: pipeParams.limit,
+	// });
 
-	const startTime = performance.now();
 	const result = await pipes.listEventsPaginated(pipeParams);
-	const queryDuration = performance.now() - startTime;
 
-	ctx.logger.debug("Raw events result", {
-		queryMs: Math.round(queryDuration),
-		rowCount: result.data.length,
-	});
+	// ctx.logger.debug("Raw events result", {
+	// 	queryMs: Math.round(performance.now() - startTime),
+	// 	rowCount: result.data.length,
+	// });
 
 	// Convert to ClickHouseResult format for backwards compatibility
 	const data = result.data.map(convertPipeRowToClickHouseFormat);

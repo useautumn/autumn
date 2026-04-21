@@ -27,8 +27,6 @@ export const handleMultiAttachErrors = async ({
 	await handleSubscriptionIdErrors({
 		db,
 		internalCustomerId: billingContext.fullCustomer.internal_id,
-		subscriptionIds: billingContext.productContexts.map(
-			(pc) => pc.externalId,
-		),
+		subscriptionIds: billingContext.productContexts.map((pc) => pc.externalId),
 	});
 };

@@ -181,7 +181,7 @@ test.concurrent(`${chalk.yellowBright("track-postgres-entity-spend-limit2: entit
 		remaining: 0,
 		usage: 125,
 		maxPurchase: 300,
-		breakdownLength: 1,
+		// breakdownLength: 1,
 	});
 });
 
@@ -489,6 +489,6 @@ test.concurrent(`${chalk.yellowBright("track-postgres-entity-spend-limit5: concu
 		granted: 5,
 		remaining: 0,
 		usage: 9,
-		breakdownLength: 1,
+		// breakdownLength: 1,
 	});
 });

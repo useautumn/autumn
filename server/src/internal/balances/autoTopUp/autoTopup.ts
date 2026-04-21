@@ -1,3 +1,4 @@
+import { AppEnv } from "@autumn/shared";
 import { withLock } from "@/external/redis/redisUtils.js";
 import { voidStripeInvoiceIfOpen } from "@/external/stripe/invoices/operations/voidStripeInvoiceIfOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -5,6 +6,7 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan.js";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult.js";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan.js";
+import { updateCachedCustomerProductV2 } from "@/internal/customers/cache/fullSubject/actions/updateCachedCustomerProduct.js";
 import type { AutoTopUpPayload } from "@/queue/workflows.js";
 import { computeAutoTopupPlan } from "./compute/computeAutoTopupPlan.js";
 import { buildAutoTopUpLockKey } from "./helpers/autoTopUpUtils.js";
@@ -31,6 +33,13 @@ export const autoTopup = async ({
 			`========= RUNNING AUTO TOPUP FOR CUSTOMER ${customerId} AND FEATURE ${featureId} ========`,
 		);
 
+		if (org.config.disabled_auto_topup && env === AppEnv.Live) {
+			logger.info(
+				`[autoTopup] Auto top-up is disabled for organization ${org.id}, skipping`,
+			);
+			return;
+		}
+
 		// 1. Setup — fetch full customer, auto-topup config, cusEnt, Stripe context
 		const autoTopupContext = await setupAutoTopupContext({ ctx, payload });
 
@@ -55,6 +64,14 @@ export const autoTopup = async ({
 			billingContext: autoTopupContext,
 		});
 
+		if (org.config.dryrun_autotopups) {
+			logger.info(
+				`[autoTopup] Dry run enabled, skipping recordAutoTopupAttempt`,
+				{ extras: ctx.extraLogs },
+			);
+			return;
+		}
+
 		let billingResult: Awaited<ReturnType<typeof executeBillingPlan>>;
 		billingResult = await executeBillingPlan({
 			ctx,
@@ -70,13 +87,28 @@ export const autoTopup = async ({
 			billingResult,
 		});
 
-		if (billingResult.stripe?.stripeInvoice?.status !== "paid") {
+		const isInvoiceMode = Boolean(autoTopupContext.invoiceMode);
+		const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
+
+		if (!isInvoiceMode && invoiceStatus !== "paid") {
 			await voidStripeInvoiceIfOpen({
 				ctx,
 				stripeInvoice: billingResult.stripe?.stripeInvoice,
 				source: "autoTopup",
 			});
 			return;
+		}
+
+		// Manually update cached options here since we're not refreshing cache.
+		const customerProductUpdate = autumnBillingPlan.updateCustomerProduct;
+		if (customerProductUpdate?.updates.options) {
+			const cusProductId = customerProductUpdate.customerProduct.id;
+			await updateCachedCustomerProductV2({
+				ctx,
+				customerId,
+				customerProductId: cusProductId,
+				updates: customerProductUpdate.updates,
+			});
 		}
 
 		const durationMs = Math.round(performance.now() - start);

@@ -15,8 +15,14 @@ import type { ExternalProcessors } from "../genModels/processorSchemas.js";
 import { organizations } from "../orgModels/orgTable.js";
 import type {
 	AutoTopup,
+	DbOverageAllowed,
 	DbSpendLimit,
+	DbUsageAlert,
 } from "./billingControls/customerBillingControls.js";
+
+export type CustomerConfig = {
+	disable_pooled_balance?: boolean;
+};
 
 export type CustomerProcessor = {
 	type: "stripe";
@@ -42,6 +48,9 @@ export const customers = pgTable(
 		send_email_receipts: boolean("send_email_receipts").default(false),
 		auto_topups: jsonb().$type<AutoTopup[]>(),
 		spend_limits: jsonb().$type<DbSpendLimit[]>(),
+		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
+		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
+		config: jsonb().$type<CustomerConfig>().default({}),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),
@@ -59,6 +68,33 @@ export const customers = pgTable(
 		index("idx_customers_org_env_fingerprint")
 			.on(table.org_id, table.env, table.fingerprint)
 			.where(sql`${table.fingerprint} IS NOT NULL`),
+		index("idx_customers_processor_id").on(sql`(${table.processor} ->> 'id')`),
+		index("idx_customers_composite").on(table.org_id, table.env, table.id),
+		index("idx_customers_org_env_internal_id").on(
+			table.org_id,
+			table.env,
+			sql`${table.internal_id} DESC`,
+		),
+		index("idx_customers_email_trgm")
+			.using("gin", sql`${table.email} gin_trgm_ops`)
+			.where(sql`${table.email} IS NOT NULL`),
+		index("idx_customers_name_trgm")
+			.using("gin", sql`${table.name} gin_trgm_ops`)
+			.where(sql`${table.name} IS NOT NULL`),
+		index("idx_customers_id_trgm")
+			.using("gin", sql`${table.id} gin_trgm_ops`)
+			.where(sql`${table.id} IS NOT NULL`),
+		index("idx_customers_org_id_env_created_at").on(
+			table.org_id,
+			table.env,
+			sql`${table.created_at} DESC`,
+		),
+		index("idx_customers_processors_revenuecat").on(
+			sql`(${table.processors} ->> 'revenuecat')`,
+		),
+		index("idx_customers_processors_vercel").on(
+			sql`(${table.processors} ->> 'vercel')`,
+		),
 	],
 ).enableRLS();
 
@@ -66,3 +102,6 @@ collatePgColumn(customers.internal_id, "C");
 
 // CREATE INDEX idx_customers_org_env_internal_id
 // ON customers (org_id, env, internal_id DESC);
+
+export type DbCustomer = typeof customers.$inferSelect;
+export type InsertDbCustomer = typeof customers.$inferInsert;

@@ -1,10 +1,11 @@
 import { Tinybird } from "@chronark/zod-bird";
-import { z } from "zod"; // zod-bird requires zod v3, not zod/v4
 import { createAggregateGroupablePipe } from "./pipes/aggregateGroupablePipe.js";
 import { createAggregatePipe } from "./pipes/aggregatePipe.js";
 import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
+import { createEstimatedMrrPipe } from "./pipes/estimatedMrrPipe.js";
 import { createListEventNamesPipe } from "./pipes/listEventNamesPipe.js";
 import { createListEventsPaginatedPipe } from "./pipes/listEventsPaginatedPipe.js";
+import { z } from "./tinybirdZod.js";
 
 const TINYBIRD_API_URL = process.env.TINYBIRD_API_URL;
 const TINYBIRD_TOKEN = process.env.TINYBIRD_TOKEN;
@@ -47,6 +48,7 @@ export const tinybirdPipes = tinybirdClient
 			aggregate: createAggregatePipe(tinybirdClient),
 			aggregateSimple: createAggregateSimplePipe(tinybirdClient),
 			aggregateGroupable: createAggregateGroupablePipe(tinybirdClient),
+			estimatedMrr: createEstimatedMrrPipe(tinybirdClient),
 			listEventNames: createListEventNamesPipe(tinybirdClient),
 			listEventsPaginated: createListEventsPaginatedPipe(tinybirdClient),
 		}
@@ -92,6 +94,8 @@ export type {
 	AggregatePipeRow,
 	AggregateSimplePipeParams,
 	AggregateSimplePipeRow,
+	EstimatedMrrPipeParams,
+	EstimatedMrrPipeRow,
 	ListEventNamesPipeParams,
 	ListEventNamesPipeRow,
 	ListEventsPaginatedPipeParams,

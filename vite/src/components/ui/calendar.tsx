@@ -10,6 +10,10 @@ function Calendar({
 	showOutsideDays = true,
 	...props
 }: React.ComponentProps<typeof DayPicker>) {
+	const hasDropdown =
+		props.captionLayout === "dropdown" ||
+		props.captionLayout === "dropdown-buttons";
+
 	return (
 		<DayPicker
 			showOutsideDays={showOutsideDays}
@@ -18,7 +22,16 @@ function Calendar({
 				months: "flex flex-col sm:flex-row gap-2",
 				month: "flex flex-col gap-4",
 				caption: "flex justify-center pt-1 relative items-center w-full",
-				caption_label: "text-sm font-medium",
+				caption_label: cn(
+					"text-sm font-medium",
+					hasDropdown && "hidden",
+				),
+				caption_dropdowns: "flex items-center gap-1",
+				dropdown:
+					"appearance-none bg-transparent text-sm font-medium cursor-pointer border rounded-md px-1.5 py-0.5 hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring",
+				dropdown_month: "[&>span]:hidden",
+				dropdown_year: "[&>span]:hidden",
+				vhidden: "hidden",
 				nav: "flex items-center gap-1",
 				nav_button: cn(
 					buttonVariants({ variant: "outline" }),

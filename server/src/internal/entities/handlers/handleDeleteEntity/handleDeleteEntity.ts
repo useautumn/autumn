@@ -15,7 +15,7 @@ import {
 	replaceEntityInCusEnt,
 } from "../../../customers/cusProducts/cusEnts/cusEntUtils/linkedCusEntUtils.js";
 import { RepService } from "../../../customers/cusProducts/cusEnts/RepService.js";
-import { cancelSubsForEntity } from "./cancelSubsForEntity.js";
+import { cancelSubsForEntity } from "../../actions/deleteEntity/cancelEntitySubscriptions.js";
 
 export const handleDeleteEntity = createRoute({
 	handler: async (c) => {
@@ -107,13 +107,7 @@ export const handleDeleteEntity = createRoute({
 				}
 
 				await CusEntService.update({
-					ctx: {
-						db,
-						logger,
-						org,
-						env,
-						customerId: customer_id,
-					},
+					ctx: { ...ctx, customerId: customer_id },
 					id: linkedCusEnt.id,
 					updates: {
 						entities: newEntities,
@@ -123,13 +117,7 @@ export const handleDeleteEntity = createRoute({
 
 			if (!replaceable) {
 				await CusEntService.increment({
-					ctx: {
-						db,
-						logger,
-						org,
-						env,
-						customerId: customer_id,
-					},
+					ctx: { ...ctx, customerId: customer_id },
 					id: mainCusEnt.id,
 					amount: 1,
 				});
@@ -139,7 +127,7 @@ export const handleDeleteEntity = createRoute({
 		// Cancel any subs
 		await cancelSubsForEntity({
 			ctx,
-			cusProducts,
+			fullCustomer: fullCus,
 			entity,
 		});
 

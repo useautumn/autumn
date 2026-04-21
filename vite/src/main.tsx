@@ -20,6 +20,15 @@ Sentry.init({
 	sendDefaultPii: true,
 });
 
+declare const __APP_ENV__: string;
+if (__APP_ENV__ === "prod") {
+	document.title = "Autumn (P)";
+} else if (__APP_ENV__ === "staging") {
+	document.title = "Autumn (S)";
+} else if (__APP_ENV__ === "dev") {
+	document.title = "Autumn (Dev)";
+}
+
 const queryClient = new QueryClient({
 	defaultOptions: {
 		queries: {

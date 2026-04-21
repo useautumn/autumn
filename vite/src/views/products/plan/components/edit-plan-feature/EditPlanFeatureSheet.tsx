@@ -39,13 +39,11 @@ export function EditPlanFeatureSheet({
 	const hasItemChanges = useHasItemChanges();
 	const [editFeatureOpen, setEditFeatureOpen] = useState(false);
 
-	// Infer initial mode from tier data: if any tier has flat_amount > 0, default to flat
-	const [volumePricingMode, setVolumePricingMode] = useState<VolumePricingMode>(
-		() => {
-			const hasFlatAmount = item?.tiers?.some((t) => t.flat_amount != null);
-			return hasFlatAmount ? "flat" : "per_unit";
-		},
-	);
+	const volumePricingMode: VolumePricingMode = item?.tiers?.some(
+		(t) => t.flat_amount != null,
+	)
+		? "flat"
+		: "per_unit";
 
 	const isVolumeBased = item?.tier_behavior === TierBehavior.VolumeBased;
 	const isMultiTier = (item?.tiers?.length ?? 0) > 1;
@@ -55,9 +53,7 @@ export function EditPlanFeatureSheet({
 		const newBehavior = val as TierBehavior;
 		const newItem = { ...item, tier_behavior: newBehavior };
 
-		// When switching away from volume-based, reset mode and clear flat_amount
 		if (newBehavior !== TierBehavior.VolumeBased) {
-			setVolumePricingMode("per_unit");
 			if (newItem.tiers) {
 				newItem.tiers = newItem.tiers.map((tier) => ({
 					...tier,
@@ -70,23 +66,16 @@ export function EditPlanFeatureSheet({
 	};
 
 	const handleVolumePricingModeChange = (mode: VolumePricingMode) => {
-		setVolumePricingMode(mode);
-		if (!item?.tiers) {
-			console.log("[VolumeModeChange] no tiers, returning early");
-			return;
-		}
+		if (!item?.tiers) return;
 
-		// Migrate tier amounts so the diff is detectable and the UI reflects the new mode
 		const migratedTiers = item.tiers.map((tier) => {
 			if (mode === "flat") {
-				// Copy per-unit amount into flat_amount, zero out amount
 				return {
 					...tier,
 					flat_amount: tier.flat_amount ?? tier.amount,
 					amount: 0,
 				};
 			}
-			// Copy flat_amount into amount, clear flat_amount
 			return {
 				...tier,
 				amount: tier.amount !== 0 ? tier.amount : (tier.flat_amount ?? 0),
@@ -94,10 +83,6 @@ export function EditPlanFeatureSheet({
 			};
 		});
 
-		console.log(
-			"[VolumeModeChange] migratedTiers AFTER:",
-			JSON.stringify(migratedTiers),
-		);
 		setItem({ ...item, tiers: migratedTiers });
 	};
 

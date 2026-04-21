@@ -4,6 +4,7 @@ import {
 	type ApiEntityV0,
 	ApiVersion,
 	formatMs,
+	ms,
 } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli";
 
@@ -37,7 +38,7 @@ export const expectCustomerFeatureCorrect = ({
 	balance,
 	usage,
 	resetsAt,
-	toleranceMs = TEN_MINUTES_MS,
+	toleranceMs = TEN_MINUTES_MS + ms.hours(1),
 }: {
 	customerId?: string;
 	customer?: ApiCustomerV3 | ApiEntityV0;

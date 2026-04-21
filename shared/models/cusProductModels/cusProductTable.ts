@@ -40,6 +40,7 @@ export const customerProducts = pgTable(
 		product_id: text("product_id"),
 		free_trial_id: text("free_trial_id"),
 		trial_ends_at: numeric({ mode: "number" }),
+		billing_cycle_anchor_resets_at: numeric({ mode: "number" }),
 		collection_method: text("collection_method").default(
 			"charge_automatically",
 		),
@@ -89,6 +90,13 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_on_internal_entity_id").on(
 			table.internal_entity_id,
 		),
+		index("idx_customer_products_on_internal_product_id").on(
+			table.internal_product_id,
+		),
+		index("idx_customer_products_subscription_ids").using(
+			"gin",
+			table.subscription_ids,
+		),
 	],
 );
 
@@ -96,3 +104,5 @@ collatePgColumn(customerProducts.id, "C");
 
 export type CustomerProduct = InferSelectModel<typeof customerProducts>;
 export type InsertCustomerProduct = InferInsertModel<typeof customerProducts>;
+export type DbCustomerProduct = InferSelectModel<typeof customerProducts>;
+export type InsertDbCustomerProduct = InferInsertModel<typeof customerProducts>;

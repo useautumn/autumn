@@ -25,7 +25,7 @@ class GetPlanGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.1"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -473,6 +473,8 @@ class GetPlanRolloverTypedDict(TypedDict):
     r"""Maximum rollover units. Null for unlimited rollover."""
     expiry_duration_type: GetPlanExpiryDurationType
     r"""When rolled over units expire."""
+    max_percentage: NotRequired[Nullable[float]]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
     expiry_duration_length: NotRequired[float]
     r"""Number of periods before expiry."""
 
@@ -486,13 +488,16 @@ class GetPlanRollover(BaseModel):
     expiry_duration_type: GetPlanExpiryDurationType
     r"""When rolled over units expire."""
 
+    max_percentage: OptionalNullable[float] = UNSET
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
     expiry_duration_length: Optional[float] = None
     r"""Number of periods before expiry."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["expiry_duration_length"])
-        nullable_fields = set(["max"])
+        optional_fields = set(["max_percentage", "expiry_duration_length"])
+        nullable_fields = set(["max", "max_percentage"])
         serialized = handler(self)
         m = {}
 

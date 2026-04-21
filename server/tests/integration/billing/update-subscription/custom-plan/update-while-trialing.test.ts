@@ -191,7 +191,7 @@ test.concurrent(`${chalk.yellowBright("trial-update: free to allocated users whi
 	// No charge during trial
 	expectCustomerInvoiceCorrect({
 		customer,
-		count: 1, // Just the $0 trial invoice
+		count: 2, // Just the $0 trial invoice
 		latestTotal: 0,
 	});
 

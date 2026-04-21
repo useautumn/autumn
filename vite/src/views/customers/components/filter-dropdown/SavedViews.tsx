@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/popover";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { useCustomersQueryStates } from "../../hooks/useCustomersQueryStates";
+import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 
 interface SavedView {
 	id: string;
@@ -33,7 +33,7 @@ export const SavedViews = ({
 	mutateViews: any;
 	setDropdownOpen: (open: boolean) => void;
 }) => {
-	const { setFilters } = useCustomersQueryStates();
+	const { setFilters } = useCustomerFilters();
 	const axiosInstance = useAxiosInstance();
 	const [deletingViewId, setDeletingViewId] = useState<string | null>(null);
 
@@ -47,12 +47,14 @@ export const SavedViews = ({
 			const statusParam = params.get("status") || "";
 			const versionParam = params.get("version") || "";
 			const noneParam = params.get("none");
+			const processorParam = params.get("processor") || "";
 
 			setFilters({
 				q: params.get("q") || "",
 				status: statusParam ? statusParam.split(",").filter(Boolean) : [],
 				version: versionParam ? versionParam.split(",").filter(Boolean) : [],
 				none: noneParam === "true",
+				processor: processorParam ? processorParam.split(",").filter(Boolean) : [],
 			});
 
 			toast.success(`Applied filters from ${view.name} view`);

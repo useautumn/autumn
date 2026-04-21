@@ -1,0 +1,24 @@
+{
+	"name": "@autumn/stripe-sync",
+	"version": "1.0.0",
+	"description": "Stripe-to-Postgres sync engine wrapper for Autumn",
+	"type": "module",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts",
+			"default": "./src/index.ts"
+		}
+	},
+	"private": true,
+	"dependencies": {
+		"@supabase/stripe-sync-engine": "^0.48.5",
+		"pg": "^8.20.0",
+		"stripe": "catalog:"
+	},
+	"devDependencies": {
+		"@types/pg": "^8.20.0"
+	}
+}

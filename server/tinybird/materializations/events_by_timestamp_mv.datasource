@@ -13,8 +13,8 @@ SCHEMA >
     `value` Nullable(Decimal(38, 19)),
     `properties` Nullable(String),
     `idempotency_key` Nullable(String),
-    `entity_id` Nullable(String)
+    `entity_id` String DEFAULT ''
 
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
-ENGINE_SORTING_KEY "org_id, env, timestamp, id, customer_id, event_name"
+ENGINE_SORTING_KEY "org_id, env, timestamp, id, customer_id, entity_id, event_name"

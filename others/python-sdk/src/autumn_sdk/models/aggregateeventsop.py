@@ -18,7 +18,7 @@ class AggregateEventsGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.1"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -85,29 +85,38 @@ class AggregateEventsCustomRange(BaseModel):
 
 
 class EventsAggregateParamsTypedDict(TypedDict):
-    customer_id: str
-    r"""Customer ID to aggregate events for"""
     feature_id: AggregateEventsFeatureIDTypedDict
     r"""Feature ID(s) to aggregate events for"""
+    customer_id: NotRequired[str]
+    r"""Customer ID to aggregate events for"""
+    entity_id: NotRequired[str]
+    r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
     group_by: NotRequired[str]
-    r"""Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys"""
+    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" to group by those columns"""
     range: NotRequired[Range]
     r"""Time range to aggregate events for. Either range or custom_range must be provided"""
     bin_size: NotRequired[BinSize]
     r"""Size of the time bins to aggregate events for. Defaults to hour if range is 24h, otherwise day"""
     custom_range: NotRequired[AggregateEventsCustomRangeTypedDict]
     r"""Custom time range to aggregate events for. If provided, range must not be provided"""
+    filter_by: NotRequired[Dict[str, str]]
+    r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
+    max_groups: NotRequired[int]
+    r"""Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9"""
 
 
 class EventsAggregateParams(BaseModel):
-    customer_id: str
-    r"""Customer ID to aggregate events for"""
-
     feature_id: AggregateEventsFeatureID
     r"""Feature ID(s) to aggregate events for"""
 
+    customer_id: Optional[str] = None
+    r"""Customer ID to aggregate events for"""
+
+    entity_id: Optional[str] = None
+    r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
+
     group_by: Optional[str] = None
-    r"""Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys"""
+    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" to group by those columns"""
 
     range: Optional[Range] = None
     r"""Time range to aggregate events for. Either range or custom_range must be provided"""
@@ -118,9 +127,26 @@ class EventsAggregateParams(BaseModel):
     custom_range: Optional[AggregateEventsCustomRange] = None
     r"""Custom time range to aggregate events for. If provided, range must not be provided"""
 
+    filter_by: Optional[Dict[str, str]] = None
+    r"""Filter events by property values, e.g. {\"model\": \"gpt-4\", \"region\": \"us\"}. Maximum 5 filters."""
+
+    max_groups: Optional[int] = None
+    r"""Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9"""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["group_by", "range", "bin_size", "custom_range"])
+        optional_fields = set(
+            [
+                "customer_id",
+                "entity_id",
+                "group_by",
+                "range",
+                "bin_size",
+                "custom_range",
+                "filter_by",
+                "max_groups",
+            ]
+        )
         serialized = handler(self)
         m = {}
 

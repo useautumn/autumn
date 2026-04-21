@@ -17,6 +17,25 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 
+/** Flattens filter_by into indexed filter_key_N / filter_value_N params for Tinybird pipes */
+const buildFilterParams = ({
+	filter_by,
+}: {
+	filter_by?: Record<string, string>;
+}): Record<string, string> => {
+	const params: Record<string, string> = {};
+	if (!filter_by) return params;
+
+	const entries = Object.entries(filter_by).slice(0, 5);
+	for (let i = 0; i < entries.length; i++) {
+		const [key, value] = entries[i];
+		validatePropertyPathForJSON({ propertyKey: key });
+		params[`filter_key_${i}`] = key;
+		params[`filter_value_${i}`] = value;
+	}
+	return params;
+};
+
 const DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
 
 /** Validates and sanitizes timezone string to prevent injection */
@@ -72,11 +91,12 @@ const calculateDateRange = async ({
 	);
 
 	if (isBillingCycle && !params.aggregateAll && params.customer) {
-		const billingCycleResult = (await getBillingCycleStartDate(
-			params.customer,
+		const billingCycleResult = (await getBillingCycleStartDate({
+			customer: params.customer,
 			db,
-			intervalType as "1bc" | "3bc" | "last_cycle",
-		)) as BillingCycleResult | null;
+			intervalType: intervalType as "1bc" | "3bc" | "last_cycle",
+			ctx,
+		})) as BillingCycleResult | null;
 
 		if (billingCycleResult?.startDate && billingCycleResult?.endDate) {
 			return {
@@ -211,7 +231,12 @@ const formatSimpleResults = ({
 	return { meta, rows: data.length, data };
 };
 
-/** Formats groupable pipe results (with grouping) into unpivoted format */
+/**
+ * Formats groupable pipe results using per-bin ranking.
+ * The Tinybird pipe already ranks per-bin and buckets overflow into AUTUMN_RESERVED.
+ * This function trusts that ranking — each bin keeps its own top N groups,
+ * so different bins can show different entities.
+ */
 const formatGroupableResults = ({
 	rows,
 	eventNames,
@@ -228,12 +253,13 @@ const formatGroupableResults = ({
 	startDate: string;
 	endDate: string;
 	binSize: string;
+	maxGroups?: number;
 }): ClickHouseResult => {
 	const allPeriods = generateAllPeriods({ startDate, endDate, binSize });
-	// groupBy already comes with "properties." prefix from frontend
 	const groupByColumn = groupBy;
 
-	// Collect all unique group values from the results
+	// Collect all unique group values across all bins (for backfilling zeros).
+	// Each bin may have a different set of top-N groups, so the union can exceed N.
 	const allGroupValues = new Set<string>();
 	for (const row of rows) {
 		if (row.group_value) {
@@ -257,7 +283,7 @@ const formatGroupableResults = ({
 		dataMap.set(period, groupMap);
 	}
 
-	// Fill in actual data
+	// Fill in actual data directly from the pipe output
 	for (const row of rows) {
 		if (!row.group_value) continue;
 
@@ -272,7 +298,8 @@ const formatGroupableResults = ({
 				eventName: row.event_name,
 				noCount,
 			});
-			record[columnName] = new Decimal(row.total_value)
+			record[columnName] = new Decimal(record[columnName] ?? 0)
+				.plus(new Decimal(row.total_value))
 				.toDecimalPlaces(10)
 				.toNumber();
 		}
@@ -290,13 +317,14 @@ const formatGroupableResults = ({
 		}
 	}
 
-	// Sort by period then group value (but put "Other" last within each period)
+	// Sort by period then group value (put AUTUMN_RESERVED last within each period)
 	data.sort((a, b) => {
 		const periodCompare = String(a.period).localeCompare(String(b.period));
 		if (periodCompare !== 0) return periodCompare;
-		// Put "Other" last
-		const aIsOther = a[groupByColumn] === "Other";
-		const bIsOther = b[groupByColumn] === "Other";
+		const aIsOther =
+			a[groupByColumn] === "AUTUMN_RESERVED" || a[groupByColumn] === "Other";
+		const bIsOther =
+			b[groupByColumn] === "AUTUMN_RESERVED" || b[groupByColumn] === "Other";
 		if (aIsOther && !bIsOther) return 1;
 		if (!aIsOther && bIsOther) return -1;
 		return String(a[groupByColumn]).localeCompare(String(b[groupByColumn]));
@@ -339,12 +367,16 @@ export const aggregate = async ({
 	if (params.group_by) {
 		// Use aggregate_groupable pipe for grouped queries
 		// Determine group_column and property_key based on group_by value
-		let groupColumn: "property" | "customer_id";
+		let groupColumn: "property" | "customer_id" | "entity_id";
 		let propertyKey: string;
 
 		if (params.group_by === "customer_id") {
 			// Special case: group by customer_id column directly
 			groupColumn = "customer_id";
+			propertyKey = "";
+		} else if (params.group_by === "entity_id") {
+			// Special case: group by entity_id column directly
+			groupColumn = "entity_id";
 			propertyKey = "";
 		} else if (params.group_by.startsWith("properties.")) {
 			// Standard case: group by a property value
@@ -356,7 +388,9 @@ export const aggregate = async ({
 			propertyKey = params.group_by;
 		}
 
-		validatePropertyPathForJSON({ propertyKey });
+		if (groupColumn === "property") {
+			validatePropertyPathForJSON({ propertyKey });
+		}
 
 		const pipeParams = {
 			org_id: org.id,
@@ -367,13 +401,12 @@ export const aggregate = async ({
 			bin_size: binSize,
 			timezone,
 			customer_id: params.aggregateAll ? undefined : params.customer_id,
+			entity_id: params.entity_id,
 			group_column: groupColumn,
 			property_key: propertyKey,
+			...buildFilterParams({ filter_by: params.filter_by }),
+			max_groups: params.max_groups,
 		};
-
-		// ctx.logger.debug("Calling Tinybird aggregate_groupable pipe", {
-		// 	pipeParams,
-		// });
 
 		const result = await pipes.aggregateGroupable(pipeParams);
 
@@ -391,8 +424,8 @@ export const aggregate = async ({
 			startDate,
 			endDate,
 			binSize,
+			maxGroups: params.max_groups,
 		});
-
 	} else {
 		// Use aggregate_simple pipe for ungrouped queries
 		const pipeParams = {
@@ -404,6 +437,8 @@ export const aggregate = async ({
 			bin_size: binSize,
 			timezone,
 			customer_id: params.aggregateAll ? undefined : params.customer_id,
+			entity_id: params.entity_id,
+			...buildFilterParams({ filter_by: params.filter_by }),
 		};
 
 		const result = await pipes.aggregateSimple(pipeParams);

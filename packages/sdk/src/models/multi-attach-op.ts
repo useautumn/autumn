@@ -241,6 +241,10 @@ export type MultiAttachRollover = {
    */
   max?: number | undefined;
   /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
    * When rolled over units expire.
    */
   expiryDurationType: MultiAttachExpiryDurationType;
@@ -435,6 +439,56 @@ export type MultiAttachSpendLimit = {
 };
 
 /**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export const MultiAttachThresholdType = {
+  Usage: "usage",
+  UsagePercentage: "usage_percentage",
+  Remaining: "remaining",
+  RemainingPercentage: "remaining_percentage",
+} as const;
+/**
+ * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+ */
+export type MultiAttachThresholdType = ClosedEnum<
+  typeof MultiAttachThresholdType
+>;
+
+export type MultiAttachUsageAlert = {
+  /**
+   * The feature ID this alert applies to.
+   */
+  featureId?: string | undefined;
+  /**
+   * Whether this usage alert is enabled.
+   */
+  enabled?: boolean | undefined;
+  /**
+   * The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+   */
+  threshold: number;
+  /**
+   * Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+   */
+  thresholdType: MultiAttachThresholdType;
+  /**
+   * Optional user-defined label to distinguish multiple alerts on the same feature.
+   */
+  name?: string | undefined;
+};
+
+export type MultiAttachOverageAllowed = {
+  /**
+   * The feature ID this overage allowed control applies to.
+   */
+  featureId: string;
+  /**
+   * Whether overage is allowed for this feature.
+   */
+  enabled?: boolean | undefined;
+};
+
+/**
  * Billing controls for the entity.
  */
 export type MultiAttachBillingControls = {
@@ -442,6 +496,14 @@ export type MultiAttachBillingControls = {
    * List of overage spend limits per feature.
    */
   spendLimits?: Array<MultiAttachSpendLimit> | undefined;
+  /**
+   * List of usage alert configurations per feature.
+   */
+  usageAlerts?: Array<MultiAttachUsageAlert> | undefined;
+  /**
+   * List of overage allowed controls per feature. When enabled, usage can exceed balance.
+   */
+  overageAllowed?: Array<MultiAttachOverageAllowed> | undefined;
 };
 
 export type MultiAttachEntityData = {
@@ -811,6 +873,7 @@ export const MultiAttachExpiryDurationType$outboundSchema: z.ZodMiniEnum<
 /** @internal */
 export type MultiAttachRollover$Outbound = {
   max?: number | undefined;
+  max_percentage?: number | undefined;
   expiry_duration_type: string;
   expiry_duration_length?: number | undefined;
 };
@@ -822,11 +885,13 @@ export const MultiAttachRollover$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
     expiryDurationType: MultiAttachExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
     return remap$(v, {
+      maxPercentage: "max_percentage",
       expiryDurationType: "expiry_duration_type",
       expiryDurationLength: "expiry_duration_length",
     });
@@ -1117,8 +1182,82 @@ export function multiAttachSpendLimitToJSON(
 }
 
 /** @internal */
+export const MultiAttachThresholdType$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachThresholdType
+> = z.enum(MultiAttachThresholdType);
+
+/** @internal */
+export type MultiAttachUsageAlert$Outbound = {
+  feature_id?: string | undefined;
+  enabled: boolean;
+  threshold: number;
+  threshold_type: string;
+  name?: string | undefined;
+};
+
+/** @internal */
+export const MultiAttachUsageAlert$outboundSchema: z.ZodMiniType<
+  MultiAttachUsageAlert$Outbound,
+  MultiAttachUsageAlert
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    enabled: z._default(z.boolean(), true),
+    threshold: z.number(),
+    thresholdType: MultiAttachThresholdType$outboundSchema,
+    name: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      thresholdType: "threshold_type",
+    });
+  }),
+);
+
+export function multiAttachUsageAlertToJSON(
+  multiAttachUsageAlert: MultiAttachUsageAlert,
+): string {
+  return JSON.stringify(
+    MultiAttachUsageAlert$outboundSchema.parse(multiAttachUsageAlert),
+  );
+}
+
+/** @internal */
+export type MultiAttachOverageAllowed$Outbound = {
+  feature_id: string;
+  enabled: boolean;
+};
+
+/** @internal */
+export const MultiAttachOverageAllowed$outboundSchema: z.ZodMiniType<
+  MultiAttachOverageAllowed$Outbound,
+  MultiAttachOverageAllowed
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    enabled: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function multiAttachOverageAllowedToJSON(
+  multiAttachOverageAllowed: MultiAttachOverageAllowed,
+): string {
+  return JSON.stringify(
+    MultiAttachOverageAllowed$outboundSchema.parse(multiAttachOverageAllowed),
+  );
+}
+
+/** @internal */
 export type MultiAttachBillingControls$Outbound = {
   spend_limits?: Array<MultiAttachSpendLimit$Outbound> | undefined;
+  usage_alerts?: Array<MultiAttachUsageAlert$Outbound> | undefined;
+  overage_allowed?: Array<MultiAttachOverageAllowed$Outbound> | undefined;
 };
 
 /** @internal */
@@ -1130,10 +1269,18 @@ export const MultiAttachBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => MultiAttachSpendLimit$outboundSchema)),
     ),
+    usageAlerts: z.optional(
+      z.array(z.lazy(() => MultiAttachUsageAlert$outboundSchema)),
+    ),
+    overageAllowed: z.optional(
+      z.array(z.lazy(() => MultiAttachOverageAllowed$outboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       spendLimits: "spend_limits",
+      usageAlerts: "usage_alerts",
+      overageAllowed: "overage_allowed",
     });
   }),
 );

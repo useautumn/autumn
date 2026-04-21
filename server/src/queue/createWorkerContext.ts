@@ -2,7 +2,9 @@ import { type AppEnv, AuthType, createdAtToVersion } from "@autumn/shared";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs.js";
 import type { DrizzleCli } from "../db/initDrizzle.js";
 import type { Logger } from "../external/logtail/logtailUtils.js";
+import { resolveRedisV2 } from "../external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "../honoUtils/HonoEnv.js";
+import { computeRolloutSnapshot } from "../internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "../internal/orgs/OrgService.js";
 import { generateId } from "../utils/genUtils.js";
 
@@ -38,6 +40,11 @@ export const createWorkerContext = async ({
 		createdAt: org.created_at ?? Date.now(),
 	});
 
+	const rolloutSnapshot = computeRolloutSnapshot({
+		orgId: org.id,
+		customerId,
+	});
+
 	const workerLogger = addAppContextToLogs({
 		logger: logger,
 		appContext: {
@@ -47,6 +54,12 @@ export const createWorkerContext = async ({
 			env: env,
 			auth_type: AuthType.Worker,
 			api_version: apiVersion.semver,
+			full_subject_bucket: customerId
+				? (rolloutSnapshot.customerBucket ?? undefined)
+				: undefined,
+			full_subject_rollout_enabled: customerId
+				? rolloutSnapshot.enabled
+				: undefined,
 		},
 	});
 
@@ -59,6 +72,7 @@ export const createWorkerContext = async ({
 		db,
 		dbGeneral: db,
 		logger: workerLogger,
+		redisV2: resolveRedisV2(),
 
 		id: generateId("job"),
 		timestamp: Date.now(),
@@ -68,6 +82,7 @@ export const createWorkerContext = async ({
 		expand: [],
 		skipCache: true,
 		extraLogs: {},
+		rolloutSnapshot,
 	};
 
 	return ctx;

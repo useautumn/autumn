@@ -64,7 +64,7 @@ interface UpdateSubscriptionFormContextValue {
 
 	// Derived values
 	originalItems: ProductItem[] | undefined;
-	initialPrepaidOptions: Record<string, number>;
+	initialPrepaidOptions: Record<string, number | undefined>;
 	changedPrepaidOptions: Record<string, number> | undefined;
 	productWithFormItems: FrontendProduct | undefined;
 	isVersionReady: boolean;
@@ -83,7 +83,13 @@ interface UpdateSubscriptionFormContextValue {
 	// Mutation
 	isPending: boolean;
 	handleConfirm: () => void;
-	handleInvoiceUpdate: (params: { enableProductImmediately: boolean }) => void;
+	handleInvoiceUpdate: (params: {
+		enableProductImmediately: boolean;
+		finalizeInvoice: boolean;
+	}) => Promise<{
+		stripeId: string | undefined;
+		hostedInvoiceUrl: string | null | undefined;
+	}>;
 }
 
 const UpdateSubscriptionFormReactContext =
@@ -95,7 +101,6 @@ interface UpdateSubscriptionFormProviderProps {
 	defaultOverrides?: Partial<UpdateSubscriptionForm>;
 	onPlanEditorOpen?: () => void;
 	onPlanEditorClose?: () => void;
-	onInvoiceCreated?: (invoiceId: string) => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 	children: ReactNode;
@@ -128,7 +133,6 @@ export function UpdateSubscriptionFormProvider({
 	defaultOverrides,
 	onPlanEditorOpen,
 	onPlanEditorClose,
-	onInvoiceCreated,
 	onCheckoutRedirect,
 	onSuccess,
 	children,
@@ -169,27 +173,6 @@ export function UpdateSubscriptionFormProvider({
 	const initialPrepaidOptions = defaultValues?.prepaidOptions ?? {};
 	const initialBillingBehavior = defaultValues?.billingBehavior ?? null;
 
-	const hasChanges = useHasSubscriptionChanges({
-		formValues,
-		initialPrepaidOptions,
-		initialBillingBehavior,
-		prepaidItems,
-		customerProduct,
-		currentVersion,
-		originalItems,
-		features,
-	});
-
-	const changedPrepaidOptions = useMemo(() => {
-		const changed: Record<string, number> = {};
-		for (const [featureId, quantity] of Object.entries(prepaidOptions)) {
-			if (quantity !== initialPrepaidOptions[featureId]) {
-				changed[featureId] = quantity;
-			}
-		}
-		return Object.keys(changed).length > 0 ? changed : undefined;
-	}, [prepaidOptions, initialPrepaidOptions]);
-
 	const productWithFormItems = useMemo((): FrontendProduct | undefined => {
 		if (!effectiveProduct) return undefined;
 
@@ -202,6 +185,66 @@ export function UpdateSubscriptionFormProvider({
 			formValues,
 		});
 	}, [effectiveProduct, formValues]);
+
+	const currentPrepaidItems = useMemo(
+		() =>
+			(productWithFormItems?.items ?? []).filter(
+				(item) => item.usage_model === "prepaid" && item.feature_id,
+			),
+		[productWithFormItems?.items],
+	);
+
+	const normalizedPrepaidOptions = useMemo(() => {
+		const normalizedOptions = { ...prepaidOptions };
+
+		for (const item of currentPrepaidItems) {
+			if (!item.feature_id) continue;
+
+			const minQuantity =
+				typeof item.included_usage === "number" ? item.included_usage : 0;
+			const currentQuantity = normalizedOptions[item.feature_id];
+
+			if (currentQuantity === undefined || currentQuantity < minQuantity) {
+				normalizedOptions[item.feature_id] = minQuantity;
+			}
+		}
+
+		return normalizedOptions;
+	}, [prepaidOptions, currentPrepaidItems]);
+
+	const normalizedFormValues = useMemo(
+		() => ({
+			...formValues,
+			prepaidOptions: normalizedPrepaidOptions,
+		}),
+		[formValues, normalizedPrepaidOptions],
+	);
+
+	const hasChanges = useHasSubscriptionChanges({
+		formValues: normalizedFormValues,
+		initialPrepaidOptions,
+		initialBillingBehavior,
+		prepaidItems,
+		customerProduct,
+		currentVersion,
+		originalItems,
+		features,
+	});
+
+	const changedPrepaidOptions = useMemo(() => {
+		const changed: Record<string, number> = {};
+		for (const [featureId, quantity] of Object.entries(
+			normalizedPrepaidOptions,
+		)) {
+			if (
+				quantity !== undefined &&
+				quantity !== initialPrepaidOptions[featureId]
+			) {
+				changed[featureId] = quantity;
+			}
+		}
+		return Object.keys(changed).length > 0 ? changed : undefined;
+	}, [normalizedPrepaidOptions, initialPrepaidOptions]);
 
 	const baseProduct = useMemo((): FrontendProduct | undefined => {
 		if (!product) return undefined;
@@ -217,9 +260,9 @@ export function UpdateSubscriptionFormProvider({
 
 		return getProductWithSupportedFormValues({
 			baseProduct: base,
-			formValues,
+			formValues: normalizedFormValues,
 		});
-	}, [effectiveProduct, formValues]);
+	}, [effectiveProduct, normalizedFormValues]);
 
 	const hasBillingChanges = useHasBillingChanges({
 		baseProduct: baseProduct as FrontendProduct,
@@ -232,11 +275,13 @@ export function UpdateSubscriptionFormProvider({
 		hasChanges &&
 		!hasBillingChanges &&
 		!hasPrepaidQuantityChanges &&
-		!isVersionLoading;
+		!isVersionLoading &&
+		!normalizedFormValues.resetBillingCycle;
 
 	const { buildRequestBody } = useUpdateSubscriptionRequestBody({
 		updateSubscriptionFormContext: formContext,
 		form,
+		currentPrepaidItems,
 	});
 
 	// Build the preview body reactively — formValues triggers recomputation,
@@ -255,7 +300,6 @@ export function UpdateSubscriptionFormProvider({
 		useUpdateSubscriptionMutation({
 			updateSubscriptionFormContext: formContext,
 			buildRequestBody,
-			onInvoiceCreated,
 			onCheckoutRedirect,
 			onSuccess,
 		});
@@ -301,25 +345,6 @@ export function UpdateSubscriptionFormProvider({
 				},
 			});
 
-			const currentPrepaidOptions = form.store.state.values.prepaidOptions;
-			const updatedPrepaidOptions = { ...currentPrepaidOptions };
-			let hasNewPrepaidItems = false;
-
-			for (const item of draftProduct.items) {
-				if (
-					item.usage_model === "prepaid" &&
-					item.feature_id &&
-					updatedPrepaidOptions[item.feature_id] === undefined
-				) {
-					updatedPrepaidOptions[item.feature_id] = 0;
-					hasNewPrepaidItems = true;
-				}
-			}
-
-			if (hasNewPrepaidItems) {
-				form.setFieldValue("prepaidOptions", updatedPrepaidOptions);
-			}
-
 			setShowPlanEditor(false);
 			onPlanEditorClose?.();
 		},
@@ -340,7 +365,7 @@ export function UpdateSubscriptionFormProvider({
 		() => ({
 			formContext,
 			form,
-			formValues,
+			formValues: normalizedFormValues,
 			features,
 			trialState,
 			originalItems,

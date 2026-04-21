@@ -4,6 +4,7 @@ import {
 	type FeatureOptions,
 	type FullCusProduct,
 	type FullCustomerPrice,
+	orgPersistFreeOverage,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -64,6 +65,7 @@ export const handlePrepaidPrices = async ({
 	const resetUpdate = getResetBalancesUpdate({
 		cusEnt,
 		allowance: newAllowance,
+		persistFreeOverage: orgPersistFreeOverage({ org }),
 	});
 
 	// console.log("--------------------------------");
@@ -120,7 +122,7 @@ export const handlePrepaidPrices = async ({
 		await RolloverService.insert({
 			ctx,
 			rows: rolloverUpdate.toInsert,
-			fullCusEnt: cusEnt,
+			fullCusEnt: { ...cusEnt, customer_product: cusProduct },
 		});
 	}
 

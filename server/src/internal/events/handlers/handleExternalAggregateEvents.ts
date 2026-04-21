@@ -23,56 +23,87 @@ export const handleExternalAggregateEvents = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
-		const { customer_id, feature_id, group_by, range, bin_size, custom_range } =
-			c.req.valid("json");
-
-		console.log("handleAggregateEvents", {
+		const {
 			customer_id,
+			entity_id,
 			feature_id,
 			group_by,
 			range,
 			bin_size,
 			custom_range,
+			filter_by,
+			max_groups,
+		} = c.req.valid("json");
+
+		console.log("handleAggregateEvents", {
+			customer_id,
+			entity_id,
+			feature_id,
+			group_by,
+			range,
+			bin_size,
+			custom_range,
+			filter_by,
 		});
 
-		const customer = await CusService.getFull({
-			ctx,
-			idOrInternalId: customer_id,
-			withSubs: true,
-		});
+		let customer: Awaited<ReturnType<typeof CusService.getFull>> | undefined;
+		let aggregateAll = false;
 
-		if (!customer) {
-			throw new CustomerNotFoundError({ customerId: customer_id });
+		if (customer_id) {
+			customer = await CusService.getFull({
+				ctx,
+				idOrInternalId: customer_id,
+				withSubs: true,
+			});
+
+			if (!customer) {
+				throw new CustomerNotFoundError({ customerId: customer_id });
+			}
+		} else {
+			aggregateAll = true;
 		}
 
 		const featureIds = Array.isArray(feature_id) ? feature_id : [feature_id];
+
+		// Map special $-prefixed group_by operators to their column names
+		let resolvedGroupBy = group_by;
+		if (group_by === "$customer_id") {
+			resolvedGroupBy = "customer_id";
+		} else if (group_by === "$entity_id") {
+			resolvedGroupBy = "entity_id";
+		}
 
 		const [eventsResult, total] = await Promise.all([
 			eventActions.aggregate({
 				ctx,
 				params: {
-					aggregateAll: false,
+					aggregateAll,
 					interval: range,
 					event_names: featureIds,
 					customer_id: customer_id,
+					entity_id,
 					no_count: true,
 					customer,
-					group_by,
+					group_by: resolvedGroupBy,
 					bin_size: bin_size ?? "day",
 					custom_range,
 					enforceGroupLimit: true,
+					filter_by,
+					max_groups,
 				},
 			}),
 			eventActions.getCountAndSum({
 				ctx,
 				params: {
-					aggregateAll: false,
+					aggregateAll,
 					interval: range,
 					event_names: featureIds,
 					customer_id: customer_id,
+					entity_id,
 					customer,
 					custom_range,
 					bin_size: bin_size ?? "day",
+					filter_by,
 				},
 			}),
 		]);
@@ -93,14 +124,14 @@ export const handleExternalAggregateEvents = createRoute({
 			(event) => event.period <= currentTime,
 		) as AggregatedEventRow[];
 
-		if (group_by) {
+		if (resolvedGroupBy) {
 			const ungroupedData = usageList as ProcessedEventRow[];
 
 			const { groupValues, featureNames } = collectGroupingMetadata(
 				ungroupedData,
-				group_by,
+				resolvedGroupBy,
 			);
-			const grouped = buildGroupedTimeseries(ungroupedData, group_by);
+			const grouped = buildGroupedTimeseries(ungroupedData, resolvedGroupBy);
 			backfillMissingGroupValues(grouped, groupValues, featureNames);
 
 			usageList = Array.from(grouped.values()) as AggregatedEventRow[];
@@ -112,7 +143,7 @@ export const handleExternalAggregateEvents = createRoute({
 			grouped_values?: Record<string, Record<string, number>>;
 		}[];
 
-		if (group_by) {
+		if (resolvedGroupBy) {
 			v1List = usageList.map(({ period, ...groupedValues }) => {
 				const values: Record<string, number> = {};
 				const grouped_values: Record<string, Record<string, number>> = {};

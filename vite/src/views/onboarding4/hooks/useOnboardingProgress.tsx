@@ -2,8 +2,10 @@ import type { FullCustomer, ProductV2 } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { create } from "zustand";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+const isDev = import.meta.env.DEV;
 const REFETCH_INTERVAL = 5000;
 const DISMISSED_STORAGE_KEY = "autumn_products_onboarding_dismissed";
 
@@ -54,33 +56,38 @@ interface OnboardingProgress {
  */
 export const useOnboardingProgress = (): OnboardingProgress => {
 	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
 	const { isDismissed, dismiss, show } = useOnboardingDismissedStore();
 
 	// Products query
 	const { data: productsData, isLoading: productsLoading } = useQuery<{
 		products: ProductV2[];
 	}>({
-		queryKey: ["onboarding-products"],
+		queryKey: buildKey(["onboarding-products"]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.get("/products/products");
 			return data;
 		},
-		refetchInterval: (query) => {
-			const hasValidProduct = query.state.data?.products?.some((p) => {
-				const items = p.items ?? [];
-				const hasPrice = items.some((i) => i.price != null || i.tiers != null);
-				const hasFeature = items.some((i) => i.feature_id != null);
-				return hasPrice && hasFeature;
-			});
-			return hasValidProduct ? false : REFETCH_INTERVAL;
-		},
+		refetchInterval: isDev
+			? false
+			: (query) => {
+					const hasValidProduct = query.state.data?.products?.some((p) => {
+						const items = p.items ?? [];
+						const hasPrice = items.some(
+							(i) => i.price != null || i.tiers != null,
+						);
+						const hasFeature = items.some((i) => i.feature_id != null);
+						return hasPrice && hasFeature;
+					});
+					return hasValidProduct ? false : REFETCH_INTERVAL;
+				},
 	});
 
 	// Customers query
 	const { data: customersData, isLoading: customersLoading } = useQuery<{
 		fullCustomers: FullCustomer[];
 	}>({
-		queryKey: ["onboarding-customers"],
+		queryKey: buildKey(["onboarding-customers"]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.post(
 				"/customers/all/full_customers",
@@ -88,17 +95,20 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 			);
 			return data;
 		},
-		refetchInterval: (query) => {
-			const hasCustomers = (query.state.data?.fullCustomers?.length ?? 0) > 0;
-			return hasCustomers ? false : REFETCH_INTERVAL;
-		},
+		refetchInterval: isDev
+			? false
+			: (query) => {
+					const hasCustomers =
+						(query.state.data?.fullCustomers?.length ?? 0) > 0;
+					return hasCustomers ? false : REFETCH_INTERVAL;
+				},
 	});
 
 	// Events query
 	const { data: eventsData, isLoading: eventsLoading } = useQuery<{
 		rawEvents: { data: unknown[] };
 	}>({
-		queryKey: ["onboarding-events"],
+		queryKey: buildKey(["onboarding-events"]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.post("/query/raw", {
 				customer_id: null,
@@ -106,10 +116,13 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 			});
 			return data;
 		},
-		refetchInterval: (query) => {
-			const hasEvents = (query.state.data?.rawEvents?.data?.length ?? 0) > 0;
-			return hasEvents ? false : REFETCH_INTERVAL;
-		},
+		refetchInterval: isDev
+			? false
+			: (query) => {
+					const hasEvents =
+						(query.state.data?.rawEvents?.data?.length ?? 0) > 0;
+					return hasEvents ? false : REFETCH_INTERVAL;
+				},
 	});
 
 	// Compute completion status directly from query data

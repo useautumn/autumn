@@ -52,8 +52,31 @@ export function CustomerBalanceTable({
 				fullCustomer: customer,
 				entityId,
 				entities: customer?.entities || [],
+				onDeleteClick: (balance) =>
+					setSheet({
+						type: "balance-delete",
+						data: {
+							balance,
+						},
+					}),
+				onRecordUsageClick: (balance) =>
+					setSheet({
+						type: "record-usage",
+						data: {
+							featureId: balance.entitlement.feature.id,
+							featureName: balance.entitlement.feature.name,
+						},
+					}),
+				onCheckBalanceClick: (balance) =>
+					setSheet({
+						type: "check-balance",
+						data: {
+							featureId: balance.entitlement.feature.id,
+							featureName: balance.entitlement.feature.name,
+						},
+					}),
 			}),
-		[customer, entityId],
+		[customer, entityId, setSheet],
 	);
 
 	const table = useCustomerTable<CustomerBalanceRowData>({

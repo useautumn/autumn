@@ -9,6 +9,11 @@ import { instrumentStripe } from "@server/utils/otel/instrumentStripe.js";
 import "dotenv/config";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import Stripe from "stripe";
+import {
+	buildMasterCacheKey,
+	buildPlatformCacheKey,
+} from "./clientCache/cacheKeyUtils.js";
+import { getOrCreateStripeClient } from "./clientCache/stripeClientCache.js";
 import { getConnectWebhookSecret } from "./connectUtils.js";
 
 export const initMasterStripe = (params?: {
@@ -34,17 +39,24 @@ export const initMasterStripe = (params?: {
 		secretKey = process.env.STRIPE_SANDBOX_SECRET_KEY;
 	}
 
-	// if (!params) {
-	// 	return new Stripe(secretKey);
-	// }
+	const cacheKey = buildMasterCacheKey({
+		env: params?.env,
+		accountId: params?.accountId,
+		legacyVersion: params?.legacyVersion,
+		secretKey,
+	});
 
-	return instrumentStripe({
-		client: new Stripe(secretKey, {
-			stripeAccount: params?.accountId,
-			apiVersion: params?.legacyVersion
-				? ("2025-02-24.acacia" as any)
-				: undefined,
-		}),
+	return getOrCreateStripeClient({
+		cacheKey,
+		create: () =>
+			instrumentStripe({
+				client: new Stripe(secretKey, {
+					stripeAccount: params?.accountId,
+					apiVersion: params?.legacyVersion
+						? ("2025-02-24.acacia" as any)
+						: undefined,
+				}),
+			}),
 	});
 };
 
@@ -78,18 +90,31 @@ export const initPlatformStripe = ({
 		});
 	}
 
-	const decrypted = decryptData(encrypted);
-	if (!decrypted) {
-		throw new InternalError({
-			message: `Failed to decrypt master organization's Stripe secret key`,
-		});
-	}
+	const cacheKey = buildPlatformCacheKey({
+		masterOrgId: masterOrg.id,
+		env,
+		accountId,
+		legacyVersion,
+		encryptedKey: encrypted,
+	});
 
-	return instrumentStripe({
-		client: new Stripe(decrypted, {
-			stripeAccount: accountId || undefined,
-			apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
-		}),
+	return getOrCreateStripeClient({
+		cacheKey,
+		create: () => {
+			const decrypted = decryptData(encrypted);
+			if (!decrypted) {
+				throw new InternalError({
+					message: "Failed to decrypt master organization's Stripe secret key",
+				});
+			}
+
+			return instrumentStripe({
+				client: new Stripe(decrypted, {
+					stripeAccount: accountId || undefined,
+					apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
+				}),
+			});
+		},
 	});
 };
 

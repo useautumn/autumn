@@ -14,15 +14,18 @@ import {
 	prepareTimeseriesChartData,
 	type TimeseriesData,
 } from "./customerUsageAnalyticsUtils";
+import { cn } from "@/lib/utils";
 
 export function CustomerUsageAnalyticsChart({
 	timeseriesEvents,
 	events = [],
 	daysToShow = 7,
+	isLoading = false,
 }: {
 	timeseriesEvents?: TimeseriesData;
 	events?: Event[];
 	daysToShow?: number;
+	isLoading?: boolean;
 }) {
 	const isSheetOpen = useIsSheetOpen();
 
@@ -63,23 +66,28 @@ export function CustomerUsageAnalyticsChart({
 	return (
 		<ChartContainer
 			config={chartConfig}
-			className="h-full pt-3 pr-2 w-full relative bg-interactive-secondary dark:bg-card border rounded-lg"
+			className={cn(
+				"h-full pt-3 pr-2 w-full relative border rounded-lg transition-colors duration-200",
+				eventNames.length === 0 ? "bg-transparent border-dashed" : "bg-interactive-secondary",
+			)}
 		>
 			<BarChart
 				// accessibilityLayer
 				data={chartData}
-				className="[&_.recharts-cartesian-grid-bg]:fill-white dark:[&_.recharts-cartesian-grid-bg]:fill-gray-900 [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px] absolute top-1"
+				className={cn("[&_.recharts-cartesian-grid-bg]:fill-white dark:[&_.recharts-cartesian-grid-bg]:fill-gray-900 [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px] absolute top-1",
+					isLoading && "animate-pulse")}
 				barCategoryGap={4}
 			>
+				{eventNames.length > 0 && !isLoading && (
 				<CartesianGrid
 					vertical={false}
 					className="fill-white dark:fill-gray-900"
 					stroke="var(--chart-grid-stroke)"
 					strokeWidth={1}
 					strokeDasharray="2 2"
-					// verticalPoints={[20]}
 					horizontalPoints={[5, 50, 100, 150, 200]}
 				/>
+			)}
 				<XAxis
 					dataKey="date"
 					tickLine={false}

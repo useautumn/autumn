@@ -2,6 +2,7 @@ import {
 	cusEntToStartingBalance,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToOverageAllowedByFeatureId,
 	fullCustomerToSpendLimitByFeatureId,
 	fullCustomerToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
@@ -85,6 +86,20 @@ export const prepareFeatureDeduction = async ({
 			fullCustomer,
 			featureIds: effectiveFeatureIds,
 		});
+	const overageAllowedByFeatureId = fullCustomerToOverageAllowedByFeatureId({
+		fullCustomer,
+		featureIds: effectiveFeatureIds,
+	});
+
+	// For each feature, check if any cusEnt already has native usage_allowed
+	// (from pay-per-use pricing). If so, overage_allowed: enabled: true
+	// should NOT force usage_allowed on other cusEnts — the native overage
+	// mechanism (with max_purchase) already handles it.
+	const nativeUsageAllowedFeatureIds = new Set(
+		cusEnts
+			.filter((ce) => ce.usage_allowed)
+			.map((ce) => ce.entitlement.feature.id),
+	);
 
 	// Compute credit cost once per customer entitlement
 	const creditCostByEntitlementId = new Map<string, number>();
@@ -119,12 +134,27 @@ export const prepareFeatureDeduction = async ({
 			const isFreeAllocatedUsageAllowed =
 				isFreeAllocated && overageBehaviour !== "reject";
 
+			const overageAllowedControl =
+				overageAllowedByFeatureId[ce.entitlement.feature.id];
+
+			let effectiveUsageAllowed =
+				ce.usage_allowed || isFreeAllocatedUsageAllowed;
+
+			if (
+				overageAllowedControl?.enabled === true &&
+				!nativeUsageAllowedFeatureIds.has(ce.entitlement.feature.id)
+			) {
+				effectiveUsageAllowed = true;
+			} else if (overageAllowedControl?.enabled === false) {
+				effectiveUsageAllowed = false;
+			}
+
 			return {
 				customer_entitlement_id: ce.id,
 				credit_cost: creditCost,
 				feature_id: ce.entitlement.feature.id,
 				entity_feature_id: ce.entitlement.entity_feature_id ?? null,
-				usage_allowed: ce.usage_allowed || isFreeAllocatedUsageAllowed,
+				usage_allowed: effectiveUsageAllowed,
 				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
 				max_balance: resetBalance,
 			};

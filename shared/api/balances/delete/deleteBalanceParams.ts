@@ -13,6 +13,10 @@ export const DeleteBalanceParamsV0Schema = z.object({
 	balance_id: z.string().optional().meta({
 		description: "The ID of the balance to delete.",
 	}),
+	recalculate_balances: z.boolean().optional().meta({
+		description:
+			"If true, deduct the deleted balance's remaining amount from the customer's other balances for the same feature after deletion.",
+	}),
 
 	interval: z.enum(ResetInterval).optional().meta({
 		description:

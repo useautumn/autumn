@@ -6,8 +6,8 @@ import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 const testCase = "rate-limit-list-products";
 
-// ListProducts rate limit is 20 per second per org
-const LIST_PRODUCTS_RATE_LIMIT = 20;
+// Products route falls back to the General bucket at 10 per second per org
+const GENERAL_RATE_LIMIT = 10;
 
 /**
  * Test: Rate limit on GET /products endpoint
@@ -19,7 +19,7 @@ test(`${chalk.yellowBright(testCase)}`, async () => {
 	});
 
 	// Fire off more requests than the rate limit allows
-	const requestCount = LIST_PRODUCTS_RATE_LIMIT + 5;
+	const requestCount = GENERAL_RATE_LIMIT + 5;
 
 	const results = await Promise.allSettled(
 		Array.from({ length: requestCount }, () => autumnV1.get("/products")),

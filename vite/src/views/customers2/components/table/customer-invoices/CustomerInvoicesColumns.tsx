@@ -47,11 +47,20 @@ export const CustomerInvoicesColumns = [
 		header: "Status",
 		accessorKey: "status",
 		cell: ({ row }: { row: Row<CustomerInvoice> }) => {
-			return <CustomerInvoiceStatus status={row.original.status} />;
+			const invoice = row.original;
+			return (
+				<CustomerInvoiceStatus
+					status={invoice.status}
+					total={invoice.total}
+					amountPaid={invoice.amount_paid}
+					refundedAmount={invoice.refunded_amount}
+				/>
+			);
 		},
 	},
 	createDateTimeColumn<CustomerInvoice>({
 		header: "Created At",
 		accessorKey: "created_at",
+		withYear: true,
 	}),
 ];

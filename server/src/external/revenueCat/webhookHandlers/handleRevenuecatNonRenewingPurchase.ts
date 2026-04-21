@@ -63,6 +63,7 @@ export const handleNonRenewingPurchase = async ({
 			},
 			product,
 		),
+		sendWebhook: true,
 	});
 
 	logger.info(

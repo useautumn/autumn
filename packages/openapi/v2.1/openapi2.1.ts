@@ -3,6 +3,7 @@ import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
 	ApiBalanceV1Schema,
 	ApiCustomerV5Schema,
+	ApiEventsListParamsSchema,
 	ApiPlanV1Schema,
 	AttachParamsV1Schema,
 	AttachPreviewResponseSchema,
@@ -15,6 +16,7 @@ import {
 	CustomerDataSchema,
 	CustomerExpandEnum,
 	CustomerIdSchema,
+	LATEST_VERSION,
 	PreviewUpdateSubscriptionResponseSchema,
 	SetupPaymentParamsV1Schema,
 	SetupPaymentResponseV1Schema,
@@ -35,10 +37,13 @@ import {
 } from "../utils/openapiTransform/index.js";
 import { registerInternalSchemas } from "../utils/registerInternalSchemas.js";
 import { v2_1ContractRouter } from "./contracts/index.js";
+import { injectWebhooks } from "./webhooks/injectWebhooks.js";
 
 const generator = new OpenAPIGenerator({
 	schemaConverters: [new ZodToJsonSchemaConverter()],
 });
+
+const OPENAPI_DOC_VERSION = LATEST_VERSION;
 
 /**
  * Generates the OpenAPI document with all transformations applied.
@@ -67,11 +72,12 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(CheckResponseV3Schema);
 	registerInternalSchemas(TrackResponseV3Schema);
 	registerInternalSchemas(CustomerDataSchema);
+	registerInternalSchemas(ApiEventsListParamsSchema);
 
 	const openApiDocument = (await generator.generate(v2_1ContractRouter, {
 		info: {
 			title: "Autumn API",
-			version: "2.1.0",
+			version: OPENAPI_DOC_VERSION,
 		},
 		commonSchemas: {
 			CustomerId: {
@@ -108,9 +114,16 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 		],
 	})) as Record<string, unknown>;
 
-	applySpeakeasySettings({ openApiDocument, version: "2.1" });
-	injectGlobalHeaderParameters({ openApiDocument, version: "2.1" });
+	applySpeakeasySettings({
+		openApiDocument,
+		version: OPENAPI_DOC_VERSION,
+	});
+	injectGlobalHeaderParameters({
+		openApiDocument,
+		version: OPENAPI_DOC_VERSION,
+	});
 	removeInternalFields({ openApiDocument });
+	injectWebhooks({ openApiDocument });
 
 	return openApiDocument;
 }

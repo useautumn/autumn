@@ -27,7 +27,7 @@ class UpdateCustomerGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.1"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -106,6 +106,8 @@ class UpdateCustomerAutoTopupRequestTypedDict(TypedDict):
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[UpdateCustomerPurchaseLimitRequestTypedDict]
     r"""Optional rate limit to cap how often auto top-ups occur."""
+    invoice_mode: NotRequired[bool]
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
 
 class UpdateCustomerAutoTopupRequest(BaseModel):
@@ -124,9 +126,12 @@ class UpdateCustomerAutoTopupRequest(BaseModel):
     purchase_limit: Optional[UpdateCustomerPurchaseLimitRequest] = None
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
+    invoice_mode: Optional[bool] = None
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "purchase_limit"])
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
         serialized = handler(self)
         m = {}
 
@@ -177,6 +182,92 @@ class UpdateCustomerSpendLimitRequest(BaseModel):
         return m
 
 
+UpdateCustomerThresholdTypeRequestBody = Literal[
+    "usage",
+    "usage_percentage",
+    "remaining",
+    "remaining_percentage",
+]
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+
+class UpdateCustomerUsageAlertRequestBodyTypedDict(TypedDict):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+    threshold_type: UpdateCustomerThresholdTypeRequestBody
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+    feature_id: NotRequired[str]
+    r"""The feature ID this alert applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage alert is enabled."""
+    name: NotRequired[str]
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+
+class UpdateCustomerUsageAlertRequestBody(BaseModel):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+
+    threshold_type: UpdateCustomerThresholdTypeRequestBody
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+    feature_id: Optional[str] = None
+    r"""The feature ID this alert applies to."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage alert is enabled."""
+
+    name: Optional[str] = None
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdateCustomerOverageAllowedRequestTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether overage is allowed for this feature."""
+
+
+class UpdateCustomerOverageAllowedRequest(BaseModel):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether overage is allowed for this feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdateCustomerBillingControlsRequestTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
@@ -184,6 +275,10 @@ class UpdateCustomerBillingControlsRequestTypedDict(TypedDict):
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[UpdateCustomerSpendLimitRequestTypedDict]]
     r"""List of overage spend limits per feature."""
+    usage_alerts: NotRequired[List[UpdateCustomerUsageAlertRequestBodyTypedDict]]
+    r"""List of usage alert configurations per feature."""
+    overage_allowed: NotRequired[List[UpdateCustomerOverageAllowedRequestTypedDict]]
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
 
 class UpdateCustomerBillingControlsRequest(BaseModel):
@@ -195,9 +290,17 @@ class UpdateCustomerBillingControlsRequest(BaseModel):
     spend_limits: Optional[List[UpdateCustomerSpendLimitRequest]] = None
     r"""List of overage spend limits per feature."""
 
+    usage_alerts: Optional[List[UpdateCustomerUsageAlertRequestBody]] = None
+    r"""List of usage alert configurations per feature."""
+
+    overage_allowed: Optional[List[UpdateCustomerOverageAllowedRequest]] = None
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["auto_topups", "spend_limits"])
+        optional_fields = set(
+            ["auto_topups", "spend_limits", "usage_alerts", "overage_allowed"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -371,6 +474,8 @@ class UpdateCustomerAutoTopupResponseTypedDict(TypedDict):
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[UpdateCustomerPurchaseLimitResponseTypedDict]
     r"""Optional rate limit to cap how often auto top-ups occur."""
+    invoice_mode: NotRequired[bool]
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
 
 class UpdateCustomerAutoTopupResponse(BaseModel):
@@ -389,9 +494,12 @@ class UpdateCustomerAutoTopupResponse(BaseModel):
     purchase_limit: Optional[UpdateCustomerPurchaseLimitResponse] = None
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
+    invoice_mode: Optional[bool] = None
+    r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enabled", "purchase_limit"])
+        optional_fields = set(["enabled", "purchase_limit", "invoice_mode"])
         serialized = handler(self)
         m = {}
 
@@ -442,6 +550,95 @@ class UpdateCustomerSpendLimitResponse(BaseModel):
         return m
 
 
+UpdateCustomerThresholdTypeResponse = Union[
+    Literal[
+        "usage",
+        "usage_percentage",
+        "remaining",
+        "remaining_percentage",
+    ],
+    UnrecognizedStr,
+]
+r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+
+class UpdateCustomerUsageAlertResponseTypedDict(TypedDict):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+    threshold_type: UpdateCustomerThresholdTypeResponse
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+    feature_id: NotRequired[str]
+    r"""The feature ID this alert applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether this usage alert is enabled."""
+    name: NotRequired[str]
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+
+class UpdateCustomerUsageAlertResponse(BaseModel):
+    threshold: float
+    r"""The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100)."""
+
+    threshold_type: UpdateCustomerThresholdTypeResponse
+    r"""Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance."""
+
+    feature_id: Optional[str] = None
+    r"""The feature ID this alert applies to."""
+
+    enabled: Optional[bool] = True
+    r"""Whether this usage alert is enabled."""
+
+    name: Optional[str] = None
+    r"""Optional user-defined label to distinguish multiple alerts on the same feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "enabled", "name"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdateCustomerOverageAllowedResponseTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+    enabled: NotRequired[bool]
+    r"""Whether overage is allowed for this feature."""
+
+
+class UpdateCustomerOverageAllowedResponse(BaseModel):
+    feature_id: str
+    r"""The feature ID this overage allowed control applies to."""
+
+    enabled: Optional[bool] = False
+    r"""Whether overage is allowed for this feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["enabled"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdateCustomerBillingControlsResponseTypedDict(TypedDict):
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
@@ -449,6 +646,10 @@ class UpdateCustomerBillingControlsResponseTypedDict(TypedDict):
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[UpdateCustomerSpendLimitResponseTypedDict]]
     r"""List of overage spend limits per feature."""
+    usage_alerts: NotRequired[List[UpdateCustomerUsageAlertResponseTypedDict]]
+    r"""List of usage alert configurations per feature."""
+    overage_allowed: NotRequired[List[UpdateCustomerOverageAllowedResponseTypedDict]]
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
 
 
 class UpdateCustomerBillingControlsResponse(BaseModel):
@@ -460,9 +661,17 @@ class UpdateCustomerBillingControlsResponse(BaseModel):
     spend_limits: Optional[List[UpdateCustomerSpendLimitResponse]] = None
     r"""List of overage spend limits per feature."""
 
+    usage_alerts: Optional[List[UpdateCustomerUsageAlertResponse]] = None
+    r"""List of usage alert configurations per feature."""
+
+    overage_allowed: Optional[List[UpdateCustomerOverageAllowedResponse]] = None
+    r"""List of overage allowed controls per feature. When enabled, usage can exceed balance."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["auto_topups", "spend_limits"])
+        optional_fields = set(
+            ["auto_topups", "spend_limits", "usage_alerts", "overage_allowed"]
+        )
         serialized = handler(self)
         m = {}
 

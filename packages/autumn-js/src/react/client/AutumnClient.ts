@@ -4,6 +4,7 @@ import type {
 	BillingUpdateResponse,
 	CreateReferralCodeResponse,
 	Customer,
+	GetEntityResponse,
 	ListEventsResponse,
 	ListPlansResponse,
 	MultiAttachResponse,
@@ -23,6 +24,7 @@ export type AutumnClientConfig = {
 	backendUrl?: string;
 	pathPrefix: string;
 	includeCredentials?: boolean;
+	headers?: Record<string, string>;
 };
 
 export const createAutumnClient = (
@@ -32,6 +34,7 @@ export const createAutumnClient = (
 		backendUrl: config.backendUrl,
 		pathPrefix: config.pathPrefix,
 		includeCredentials: config.includeCredentials,
+		headers: config.headers,
 	});
 
 	return {
@@ -103,6 +106,11 @@ export const createAutumnClient = (
 		aggregateEvents: (params) =>
 			http.request<AggregateEventsResponse>({
 				route: "aggregateEvents",
+				body: params,
+			}),
+		getEntity: (params) =>
+			http.request<GetEntityResponse>({
+				route: "getEntity",
 				body: params,
 			}),
 	};

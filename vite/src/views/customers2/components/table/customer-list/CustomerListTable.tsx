@@ -6,11 +6,12 @@ import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
-import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
+import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { FULL_CUSTOMERS_QUERY_KEY } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useCustomerListColumns } from "@/views/customers2/hooks/useCustomerListColumns";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
@@ -38,7 +39,8 @@ export function CustomerListTable({
 		env === AppEnv.Sandbox ? "calc(100vh - 174px)" : "calc(100vh - 134px)";
 
 	const { features } = useFeaturesQuery();
-	const { queryStates } = useCustomersQueryStates();
+	const { queryStates } = useCustomerFilters();
+	const buildKey = useQueryKeyFactory();
 
 	// Subscribe to full_customers query to get reactive updates
 	// Query key must match useFullCusSearchQuery for proper cache sharing
@@ -47,15 +49,16 @@ export function CustomerListTable({
 		isLoading: isFullCustomersLoading,
 		isFetching: isFullCustomersFetching,
 	} = useQuery<{ fullCustomers: FullCustomer[] }>({
-		queryKey: [
+		queryKey: buildKey([
 			FULL_CUSTOMERS_QUERY_KEY,
 			queryStates.page,
 			queryStates.pageSize,
 			queryStates.status,
 			queryStates.version,
 			queryStates.none,
+			queryStates.processor,
 			queryStates.q,
-		],
+		]),
 		// Placeholder queryFn - actual fetching is done by useFullCusSearchQuery
 		queryFn: () => Promise.resolve({ fullCustomers: [] }),
 		// Don't fetch - just subscribe to existing data from useFullCusSearchQuery
@@ -138,7 +141,8 @@ export function CustomerListTable({
 	const hasFilters =
 		queryStates.status.length > 0 ||
 		queryStates.version.length > 0 ||
-		queryStates.none;
+		queryStates.none ||
+		queryStates.processor.length > 0;
 	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
 
 	// Only show empty state if org has NO customers (no filters/search active and no results)

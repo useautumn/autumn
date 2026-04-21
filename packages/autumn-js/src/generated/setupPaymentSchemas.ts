@@ -90,6 +90,7 @@ export const setupPaymentProrationOutboundSchema = z.object({
 
 export const setupPaymentRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -165,6 +166,7 @@ export const setupPaymentParamsOutboundSchema = z.object({
 		.union([z.array(setupPaymentAttachDiscountOutboundSchema), z.undefined()])
 		.optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
+	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
@@ -178,6 +180,10 @@ export const setupPaymentParamsOutboundSchema = z.object({
 	carry_over_usages: z
 		.union([setupPaymentCarryOverUsagesOutboundSchema, z.undefined()])
 		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
+	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -229,6 +235,7 @@ export const setupPaymentExpiryDurationTypeSchema = closedEnumSchema;
 
 export const setupPaymentRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: setupPaymentExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -286,6 +293,7 @@ export const setupPaymentParamsSchema = z.object({
 		.union([z.array(setupPaymentAttachDiscountSchema), z.undefined()])
 		.optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
+	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
@@ -299,4 +307,8 @@ export const setupPaymentParamsSchema = z.object({
 	carryOverUsages: z
 		.union([setupPaymentCarryOverUsagesSchema, z.undefined()])
 		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
+	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 });

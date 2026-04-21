@@ -6,16 +6,23 @@
   2. Checks if cache already exists (skip if so, unless overwrite is true)
   3. Sets the cache using JSON.SET
   4. Sets TTL on the cache key
+  5. Replaces the path index Hash (DEL + HSET + EXPIRE)
+
+  All keys are constructed internally from orgId/env/customerId using the
+  prepended key builder functions.
 
   KEYS:
-    [1] guardKey - stale-write guard key to check
-    [2] cacheKey - cache key to set
+    [1] cacheKey - used for cluster slot routing only
 
   ARGV:
-    [1] fetchTimeMs - timestamp when data was fetched from Postgres
-    [2] cacheTtl - TTL in seconds for the cache key
-    [3] serializedData - JSON string of the FullCustomer data
-    [4] overwrite - "1" to overwrite existing cache, "0" to skip if exists
+    [1] orgId
+    [2] env
+    [3] customerId
+    [4] fetchTimeMs - timestamp when data was fetched from Postgres
+    [5] cacheTtl - TTL in seconds for the cache key
+    [6] serializedData - JSON string of the FullCustomer data
+    [7] overwrite - "true" to overwrite existing cache, "false" to skip if exists
+    [8] pathIndexJson - JSON object mapping field names to values for HSET (e.g. {"ent:id1":"{...}", ...})
 
   Returns:
     "STALE_WRITE" = guard exists with newer timestamp, write blocked
@@ -23,12 +30,18 @@
     "OK" = cache set successfully
 ]]
 
-local guardKey = KEYS[1]
-local cacheKey = KEYS[2]
-local fetchTimeMs = tonumber(ARGV[1])
-local cacheTtl = tonumber(ARGV[2])
-local serializedData = ARGV[3]
-local overwrite = ARGV[4] == "true"
+local org_id = ARGV[1]
+local env = ARGV[2]
+local customer_id = ARGV[3]
+local fetchTimeMs = tonumber(ARGV[4])
+local cacheTtl = tonumber(ARGV[5])
+local serializedData = ARGV[6]
+local overwrite = ARGV[7] == "true"
+local pathIndexJson = ARGV[8]
+
+local guardKey = build_guard_key(org_id, env, customer_id)
+local cacheKey = build_full_customer_cache_key(org_id, env, customer_id)
+local pathIdxKey = build_path_index_key(org_id, env, customer_id)
 
 -- Check if guard exists (deletion happened recently)
 -- Skip check if either value is nil/null/falsey
@@ -51,5 +64,20 @@ end
 -- Set the cache using JSON.SET
 redis.call("JSON.SET", cacheKey, "$", serializedData)
 redis.call("EXPIRE", cacheKey, cacheTtl)
+
+-- Atomically replace the path index Hash
+if pathIndexJson and pathIndexJson ~= "" then
+    local entries = cjson.decode(pathIndexJson)
+    redis.call("DEL", pathIdxKey)
+    local args = {}
+    for k, v in pairs(entries) do
+        args[#args + 1] = k
+        args[#args + 1] = v
+    end
+    if #args > 0 then
+        redis.call("HSET", pathIdxKey, unpack(args))
+        redis.call("EXPIRE", pathIdxKey, cacheTtl)
+    end
+end
 
 return "OK"

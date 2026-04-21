@@ -47,3 +47,6 @@ export const features = pgTable(
 );
 
 collatePgColumn(features.internal_id, "C");
+
+export type DbFeature = typeof features.$inferSelect;
+export type InsertDbFeature = typeof features.$inferInsert;

@@ -74,18 +74,19 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs1: action track depletes cre
 	});
 
 	// Action1 costs 0.2 credits per unit
-	// Track 850 units of action1 → 850 × 0.2 = 170 credits deducted
-	// Balance: 200 - 170 = 30 → AT threshold (>= 30) → does NOT trigger
+	// Track 845 units → 845 × 0.2 = 169 credits deducted
+	// Balance: 200 - 169 = 31 → strictly above threshold (30) → does NOT trigger
+	// (exact threshold uses <= in code, so landing on 30 would fire auto top-up)
 	const action1Cost = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
-		amount: 850,
+		amount: 845,
 	});
 
 	await autumnV2_1.track({
 		customer_id: customerId,
 		feature_id: TestFeature.Action1,
-		value: 850,
+		value: 845,
 	});
 
 	await timeout(AUTO_TOPUP_WAIT_MS);
@@ -93,13 +94,10 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs1: action track depletes cre
 	const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const midCredits = mid.balances[TestFeature.Credits]?.remaining;
 	const expectedMid = new Decimal(200).sub(action1Cost).toNumber();
-	expect(midCredits).toBe(expectedMid); // 30, no top-up
+	expect(midCredits).toBe(expectedMid); // 31, no top-up
 
-	// Now track 100 units of action2 → 100 × 0.6 = 60 credits deducted
-	// Balance: 30 - 60 = -30... but balance can't go negative with prepaid
-	// Actually, the deduction will bring it below threshold → auto top-up fires
-	// Let's track a smaller amount: 10 units of action1 → 10 × 0.2 = 2 credits
-	// Balance: 30 - 2 = 28 → below threshold (28 < 30) → auto top-up fires → balance = 28 + 100 = 128
+	// Track 10 units of action1 → 10 × 0.2 = 2 credits
+	// Balance: 31 - 2 = 29 → 29 <= threshold → auto top-up fires → 29 + 100 = 129
 	const action1CostSmall = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,

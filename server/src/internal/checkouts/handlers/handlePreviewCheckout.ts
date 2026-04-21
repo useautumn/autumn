@@ -9,6 +9,10 @@ import { augmentCheckoutParams } from "../utils/augmentCheckoutParams";
 import { previewCheckoutAction } from "../utils/previewCheckoutAction/previewCheckoutAction";
 
 const getAdjustableFeatureIds = ({ checkout }: { checkout: Checkout }) => {
+	if (!("feature_quantities" in checkout.params)) {
+		return [];
+	}
+
 	return (
 		checkout.params.feature_quantities
 			?.filter((featureQuantity) => featureQuantity.adjustable === true)

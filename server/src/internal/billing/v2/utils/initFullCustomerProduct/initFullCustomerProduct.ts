@@ -73,7 +73,7 @@ export const initFullCustomerProduct = ({
 		.paid()
 		.recurring();
 
-	if (!isPaidRecurring) {
+	if (!isPaidRecurring && !initOptions?.keepSubscriptionIds) {
 		newFullCustomerProduct.subscription_ids = [];
 		newFullCustomerProduct.scheduled_ids = [];
 	}

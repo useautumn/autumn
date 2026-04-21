@@ -3,6 +3,7 @@ import {
 	FeatureUsageType,
 } from "../models/featureModels/featureEnums.js";
 import type { Feature } from "../models/featureModels/featureModels.js";
+import { TierBehavior } from "../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { Infinite } from "../models/productModels/productEnums.js";
 import type { ProductItem } from "../models/productV2Models/productItemModels/productItemModels.js";
 import { formatAmount } from "./common/formatUtils/formatAmount.js";
@@ -28,6 +29,7 @@ interface FormatTiersParams {
 	item: ProductItem;
 	currency?: string | null;
 	amountFormatOptions?: Intl.NumberFormatOptions;
+	useFlatAmount?: boolean;
 }
 
 // ============================================================================
@@ -66,6 +68,16 @@ const isSingleUseFeature = (feature: Feature): boolean => {
 	return feature.config?.usage_type === FeatureUsageType.Single;
 };
 
+/** Volume-based tiers where pricing is a flat amount per tier band (not per-unit). */
+const isVolumeFlatAmountItem = (item: ProductItem): boolean => {
+	if (item.tier_behavior !== TierBehavior.VolumeBased) return false;
+	if (!item.tiers || item.tiers.length === 0) return false;
+	return (
+		item.tiers.every((t) => t.amount === 0) &&
+		item.tiers.some((t) => (t.flat_amount ?? 0) > 0)
+	);
+};
+
 // ============================================================================
 // Tier Formatting
 // ============================================================================
@@ -74,6 +86,7 @@ export const formatTiers = ({
 	item,
 	currency,
 	amountFormatOptions,
+	useFlatAmount = false,
 }: FormatTiersParams): string | undefined => {
 	const tiers = item.tiers;
 	if (!tiers) return undefined;
@@ -81,12 +94,15 @@ export const formatTiers = ({
 	const format = (amount: number) =>
 		formatAmount({ currency, amount, amountFormatOptions });
 
+	const getAmount = (tier: (typeof tiers)[number]) =>
+		useFlatAmount ? (tier.flat_amount ?? 0) : tier.amount;
+
 	if (tiers.length === 1) {
-		return format(tiers[0].amount);
+		return format(getAmount(tiers[0]));
 	}
 
-	const firstPrice = tiers[0].amount;
-	const lastPrice = tiers[tiers.length - 1].amount;
+	const firstPrice = getAmount(tiers[0]);
+	const lastPrice = getAmount(tiers[tiers.length - 1]);
 
 	return `${format(firstPrice)} - ${format(lastPrice)}`;
 };
@@ -98,10 +114,12 @@ export const formatTiers = ({
 export const getFeatureItemDisplay = ({
 	item,
 	feature,
+	entityFeature,
 	fullDisplay = false,
 }: {
 	item: ProductItem;
 	feature?: Feature;
+	entityFeature?: Feature;
 	fullDisplay?: boolean;
 }): DisplayResult => {
 	if (!feature) {
@@ -116,17 +134,34 @@ export const getFeatureItemDisplay = ({
 
 	const primaryText = getIncludedUsageText(item, feature);
 
-	// Determine secondary text (interval display)
+	// Determine secondary text: per-entity scope + interval.
+	// e.g. "per user per month" when entity_feature_id is set, otherwise "per month".
 	let secondaryText: string | undefined;
 	if (fullDisplay) {
+		const parts: string[] = [];
+
+		if (item.entity_feature_id && entityFeature) {
+			const entityName = getFeatureName({
+				feature: entityFeature,
+				units: 1,
+			});
+			if (entityName) {
+				parts.push(`per ${entityName}`);
+			}
+		}
+
 		const intervalDisplay = getIntervalDisplay(item);
 		if (intervalDisplay) {
-			secondaryText = intervalDisplay;
+			parts.push(intervalDisplay);
 		} else if (
 			isSingleUseFeature(feature) &&
 			item.included_usage !== Infinite
 		) {
-			secondaryText = "one-off";
+			parts.push("one-off");
+		}
+
+		if (parts.length > 0) {
+			secondaryText = parts.join(" ");
 		}
 	}
 
@@ -248,6 +283,21 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	if (hasIncludedUsage) {
+		if (isVolumeFlatAmountItem(item)) {
+			const flatPriceStr =
+				formatTiers({
+					item,
+					currency,
+					amountFormatOptions,
+					useFlatAmount: true,
+				}) ?? "";
+			const featureName = getFeatureName({ feature, units: 2 });
+			return {
+				primary_text: includedUsageStr,
+				secondary_text:
+					`then ${flatPriceStr} for ${featureName} ${intervalStr}`.trim(),
+			};
+		}
 		return {
 			primary_text: includedUsageStr,
 			secondary_text:
@@ -286,11 +336,16 @@ export const getProductItemDisplay = ({
 	amountFormatOptions?: Intl.NumberFormatOptions;
 }): DisplayResult => {
 	const findFeature = () => features.find((f) => f.id === item.feature_id);
+	const findEntityFeature = () =>
+		item.entity_feature_id
+			? features.find((f) => f.id === item.entity_feature_id)
+			: undefined;
 
 	if (isFeatureItem(item)) {
 		return getFeatureItemDisplay({
 			item,
 			feature: findFeature(),
+			entityFeature: findEntityFeature(),
 			fullDisplay,
 		});
 	}

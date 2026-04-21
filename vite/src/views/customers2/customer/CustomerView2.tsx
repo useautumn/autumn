@@ -1,11 +1,18 @@
 "use client";
 
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, ProcessorType } from "@autumn/shared";
+import { ClockIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
-import { useHasChanges } from "@/hooks/stores/useProductStore";
+import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -18,6 +25,7 @@ import { useOnboardingVisibility } from "@/views/onboarding4/hooks/useOnboarding
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { useCusQuery } from "../../customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "../../customers/customer/hooks/useCusReferralQuery";
+import { CustomerBillingControlsSection } from "../components/CustomerBillingControlsSection";
 import { CustomerPlansSection } from "../components/CustomerPlansSection";
 import { CustomerFeatureUsageTable } from "../components/table/customer-feature-usage/CustomerFeatureUsageTable";
 import { CustomerInvoicesTable } from "../components/table/customer-invoices/CustomerInvoicesTable";
@@ -30,16 +38,18 @@ import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export default function CustomerView2() {
-	const { customer, isLoading: cusLoading } = useCusQuery();
+	const {
+		customer,
+		schedule,
+		testClockFrozenTimeMs,
+		isLoading: cusLoading,
+	} = useCusQuery();
 
 	useCusReferralQuery();
 	const { entityId, setEntityId } = useEntity();
 
 	const sheetType = useSheetStore((s) => s.type);
 	const closeProductSheet = useSheetStore((s) => s.closeSheet);
-	const sheetData = useSheetStore((s) => s.data);
-	const hasChanges = useHasChanges();
-	const hasCustomizedProduct = !!sheetData?.customizedProduct;
 	const isMobile = useIsMobile();
 	const [isInlineEditorOpen, setIsInlineEditorOpen] = useState(false);
 
@@ -64,6 +74,10 @@ export default function CustomerView2() {
 			</ErrorScreen>
 		);
 	}
+
+	const isRevenueCatCustomer = customer.customer_products.some(
+		(cp) => cp.processor?.type === ProcessorType.RevenueCat,
+	);
 
 	return (
 		<CustomerContext.Provider
@@ -101,28 +115,93 @@ export default function CustomerView2() {
 										<CustomerBreadcrumbs />
 									</div>
 									<div className="flex items-center justify-between w-full pt-2 gap-2">
-										<h3
-											className={`text-md font-semibold truncate min-w-0 ${
-												customer.name
-													? "text-t1"
-													: customer.email
-														? "text-t3"
-														: "text-t4 font-mono font-medium!"
-											}`}
-										>
-											{customer.name || customer.email || customer.id}
-										</h3>
+										<div className="flex items-center gap-2 min-w-0">
+											<h3
+												className={`text-md font-semibold truncate min-w-0 ${
+													customer.name
+														? "text-t1"
+														: customer.email
+															? "text-t3"
+															: "text-t4 font-mono font-medium!"
+												}`}
+											>
+												{customer.name || customer.email || customer.id}
+											</h3>
+											{Boolean(customer.processors?.vercel) && (
+												<TooltipProvider>
+													<Tooltip delayDuration={0}>
+														<TooltipTrigger>
+															<svg
+																fill="currentColor"
+																xmlns="http://www.w3.org/2000/svg"
+																viewBox="0 0 1155 1000"
+																className="w-3 h-3 text-black dark:text-white"
+															>
+																<title>Vercel Marketplace Customer</title>
+																<path d="m577.3 0 577.4 1000H0z" />
+															</svg>
+														</TooltipTrigger>
+														<TooltipContent>
+															<span>Vercel Marketplace Customer</span>
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											)}
+											{isRevenueCatCustomer && (
+												<TooltipProvider>
+													<Tooltip delayDuration={0}>
+														<TooltipTrigger>
+															<span className="text-[#ff5f45] dark:text-[#ff8b78]">
+																<RevenueCatIcon size={12} />
+															</span>
+														</TooltipTrigger>
+														<TooltipContent>
+															<span>RevenueCat Customer</span>
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											)}
+											{testClockFrozenTimeMs != null && (
+												<TooltipProvider>
+													<Tooltip delayDuration={0}>
+														<TooltipTrigger asChild>
+															<span className="flex shrink-0 items-center justify-center size-5 rounded-md bg-orange-500/15">
+																<ClockIcon
+																	size={12}
+																	weight="bold"
+																	className="text-orange-500"
+																/>
+															</span>
+														</TooltipTrigger>
+														<TooltipContent>
+															Test clock:{" "}
+															{new Date(testClockFrozenTimeMs).toLocaleString(
+																undefined,
+																{
+																	month: "short",
+																	day: "numeric",
+																	year: "numeric",
+																	hour: "numeric",
+																	minute: "2-digit",
+																},
+															)}
+														</TooltipContent>
+													</Tooltip>
+												</TooltipProvider>
+											)}
+										</div>
 
 										<CustomerPageDetails />
 									</div>
 								</div>
 								<SelectedEntityDetails />
 							</div>
-							<div className="flex flex-col gap-12 w-full">
+							<div className="flex flex-col gap-16 w-full">
 								<CustomerPlansSection />
 								<CustomerFeatureUsageTable />
-								<CustomerUsageAnalyticsTable />
-								<CustomerInvoicesTable />
+								{!entityId && <CustomerUsageAnalyticsTable />}
+								<CustomerBillingControlsSection />
+								{!entityId && <CustomerInvoicesTable />}
 							</div>
 						</div>
 					</div>
@@ -137,7 +216,7 @@ export default function CustomerView2() {
 										className="fixed inset-0 bg-white/60 dark:bg-black/60"
 										style={{ zIndex: 40 }}
 										onMouseDown={() => {
-											!hasCustomizedProduct && closeProductSheet();
+											closeProductSheet();
 										}}
 									/>
 								)}

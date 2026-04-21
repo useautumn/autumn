@@ -9,8 +9,7 @@ import {
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
-import { getOrSetCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
+import { getApiCustomerByRollout } from "../actions/getApiCustomerByRollout.js";
 
 export const handleGetCustomerV2 = createRoute({
 	versionedQuery: {
@@ -32,8 +31,6 @@ export const handleGetCustomerV2 = createRoute({
 			});
 		}
 
-		// SIDE EFFECT
-		// !ctx.org.config.disable_v1_invoices &&
 		if (
 			backwardsChangeActive({
 				apiVersion: ctx.apiVersion,
@@ -45,17 +42,10 @@ export const handleGetCustomerV2 = createRoute({
 
 		const start = Date.now();
 
-		// Get FullCustomer from cache or DB
-		const fullCustomer = await getOrSetCachedFullCustomer({
+		const customer = await getApiCustomerByRollout({
 			ctx,
 			customerId,
 			source: "handleGetCustomerV2",
-		});
-
-		// Transform to ApiCustomer with version changes
-		const customer = await getApiCustomer({
-			ctx,
-			fullCustomer,
 			withAutumnId: with_autumn_id,
 		});
 

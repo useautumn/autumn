@@ -1,4 +1,5 @@
 import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
+import { useQueryClient } from "@tanstack/react-query";
 import {
 	ChevronDown,
 	Monitor,
@@ -9,7 +10,7 @@ import {
 	Sun,
 } from "lucide-react";
 import { useState } from "react";
-import { useSearchParams } from "react-router";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Button } from "@/components/ui/button";
@@ -26,13 +27,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/contexts/ThemeProvider";
-import { clearOrgCache, useOrg } from "@/hooks/common/useOrg";
+import { setLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import {
 	authClient,
 	useListOrganizations,
 	useSession,
 } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
@@ -70,8 +73,8 @@ export const OrgDropdown = () => {
 			<>
 				<ManageOrg open={manageOpen} setOpen={setManageOpen} />
 				<div className="h-7 w-32 px-4 flex items-center gap-2">
-					<Skeleton className="min-w-5 h-5 bg-stone-200" />
-					<Skeleton className="w-32 h-5 bg-stone-200" />
+					<Skeleton className="min-w-5 h-5" />
+					<Skeleton className="w-32 h-5" />
 				</div>
 			</>
 		);
@@ -97,7 +100,7 @@ export const OrgDropdown = () => {
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								"shimmer-hover p-0.5 gap-2 rounded-md hover:bg-stone-200/60 justify-start items-center transition-all duration-200 cursor-pointer",
+								"bg-transparent! shimmer-hover p-0.5 gap-2 rounded-md justify-start items-center transition-all duration-200 cursor-pointer",
 								expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5",
 							)}
 							variant="ghost"
@@ -232,40 +235,60 @@ export const OrgDropdown = () => {
 	);
 };
 
-export const handleSwitchOrg = async (
-	orgId: string,
-	setLoading?: (loading: boolean) => void,
-	setSearchParams?: (searchParams: URLSearchParams) => void,
-) => {
-	setLoading?.(true);
+/** Switches the active org via client-side state update (no page reload). */
+export const useOrgSwitch = () => {
+	const queryClient = useQueryClient();
+	const navigate = useNavigate();
+	const axiosInstance = useAxiosInstance();
+	const env = useEnv();
 
-	try {
-		setSearchParams?.(new URLSearchParams());
-		window.history.replaceState(null, "", window.location.pathname);
+	return async ({
+		orgId,
+		setLoading,
+	}: {
+		orgId: string;
+		setLoading?: (loading: boolean) => void;
+	}) => {
+		setLoading?.(true);
+		try {
+			await authClient.organization.setActive({
+				organizationId: orgId,
+			});
 
-		await authClient.organization.setActive({
-			organizationId: orgId,
-		});
+			const { data: newOrg } = await axiosInstance.get("/organization");
 
-		clearOrgCache();
-		window.location.reload();
-	} catch (error: any) {
-		toast.error(error.message);
-	} finally {
-		setLoading?.(false);
-	}
+			if (newOrg?.id) setLastSwitchedOrgId(newOrg.id);
+
+			queryClient.setQueryData(["org", env], newOrg);
+			queryClient.invalidateQueries({ queryKey: ["org"] });
+
+			if (
+				newOrg &&
+				!newOrg.deployed &&
+				!window.location.pathname.includes("/sandbox")
+			) {
+				const pathname = window.location.pathname;
+				const search = window.location.search;
+				navigate(`/sandbox${pathname}${search}`);
+			}
+		} catch (error: any) {
+			toast.error(error.message);
+		} finally {
+			setLoading?.(false);
+		}
+	};
 };
 
 const SwitchOrgItem = ({ org, setDropdownOpen }: any) => {
 	const [loading, setLoading] = useState(false);
-	const [_, setSearchParams] = useSearchParams();
+	const switchOrg = useOrgSwitch();
 
 	return (
 		<DropdownMenuItem
 			key={org.id}
 			onClick={async (e) => {
 				e.preventDefault();
-				await handleSwitchOrg(org.id, setLoading, setSearchParams);
+				await switchOrg({ orgId: org.id, setLoading });
 				setDropdownOpen(false);
 			}}
 			shimmer={loading}

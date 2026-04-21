@@ -2,6 +2,7 @@ import type { Customer } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { clearCusEntsFromCache } from "@/cron/resetCron/clearCusEntsFromCache";
 import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
+import { invalidateCustomerEntitlementBalance } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateCustomerEntitlementBalance";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
@@ -12,12 +13,14 @@ export const resetAndGetCusEnt = async ({
 	productGroup,
 	featureId,
 	skipCacheDeletion = false,
+	persistFreeOverage = false,
 }: {
 	ctx: TestContext;
 	customer: Customer;
 	productGroup: string;
 	featureId: string;
 	skipCacheDeletion?: boolean;
+	persistFreeOverage?: boolean;
 }) => {
 	const { db } = ctx;
 	// Run reset cusEnt on ...
@@ -41,10 +44,22 @@ export const resetAndGetCusEnt = async ({
 		ctx,
 		cusEnt: resetCusEnt,
 		updatedCusEnts: [],
+		persistFreeOverage,
 	});
 
 	if (!skipCacheDeletion) {
-		await clearCusEntsFromCache({ cusEnts: [resetCusEnt] });
+		await invalidateCustomerEntitlementBalance({
+			orgId: customer.org_id,
+			env: customer.env,
+			customerId: customer.id ?? "",
+			featureId,
+			customerEntitlementId: resetCusEnt.id,
+			redisV2: ctx.redisV2,
+		});
+
+		await clearCusEntsFromCache({
+			cusEnts: [resetCusEnt],
+		});
 	}
 
 	if (updatedCusEnt) {

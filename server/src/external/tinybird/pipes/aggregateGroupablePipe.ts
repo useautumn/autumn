@@ -1,5 +1,5 @@
 import type { Tinybird } from "@chronark/zod-bird";
-import { z } from "zod";
+import { z } from "../tinybirdZod.js";
 
 /** Response schema for the aggregate_groupable pipe */
 export const aggregateGroupablePipeResponseSchema = z.object({
@@ -27,8 +27,22 @@ export const aggregateGroupablePipeParamsSchema = z.object({
 	bin_size: z.string(),
 	timezone: z.string(),
 	customer_id: z.string().optional(),
-	group_column: z.enum(["property", "customer_id"]).default("property"),
-	property_key: z.string().optional(), // the property name without 'properties.' prefix (not needed when group_column is "customer_id")
+	entity_id: z.string().optional(),
+	group_column: z
+		.enum(["property", "customer_id", "entity_id"])
+		.default("property"),
+	property_key: z.string().optional(), // the property name without 'properties.' prefix (not needed when group_column is "customer_id" or "entity_id")
+	filter_key_0: z.string().optional(),
+	filter_value_0: z.string().optional(),
+	filter_key_1: z.string().optional(),
+	filter_value_1: z.string().optional(),
+	filter_key_2: z.string().optional(),
+	filter_value_2: z.string().optional(),
+	filter_key_3: z.string().optional(),
+	filter_value_3: z.string().optional(),
+	filter_key_4: z.string().optional(),
+	filter_value_4: z.string().optional(),
+	max_groups: z.number().int().min(1).max(250).optional(),
 });
 
 export type AggregateGroupablePipeParams = z.infer<

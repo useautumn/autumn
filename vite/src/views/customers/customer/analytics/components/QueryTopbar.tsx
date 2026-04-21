@@ -14,6 +14,7 @@ import {
 
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { CustomerComboBox } from "./CustomerComboBox";
+import { SelectEntityDropdown } from "./SelectEntityDropdown";
 import { SelectFeatureDropdown } from "./SelectFeatureDropdown";
 import { SelectGroupByDropdown } from "./SelectGroupByDropdown";
 
@@ -107,6 +108,7 @@ export const QueryTopbar = () => {
 	return (
 		<div className="flex items-center py-0 h-full gap-2">
 			<CustomerComboBox />
+			{customer?.entities?.length > 0 && <SelectEntityDropdown />}
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<IconButton
@@ -181,9 +183,7 @@ export const QueryTopbar = () => {
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<SelectFeatureDropdown />
-			{propertyKeys && propertyKeys.length > 0 && (
-				<SelectGroupByDropdown propertyKeys={propertyKeys} />
-			)}
+			<SelectGroupByDropdown propertyKeys={propertyKeys ?? []} />
 		</div>
 	);
 };

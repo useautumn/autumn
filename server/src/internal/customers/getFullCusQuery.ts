@@ -1,11 +1,18 @@
-import type {
-	AppEnv,
-	CusProductStatus,
-	ListCustomersV2Params,
+import {
+	type AppEnv,
+	type CusProductStatus,
+	type ListCustomersV2Params,
+	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 
-const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
+const buildOptimizedCusProductsCTE = ({
+	inStatuses,
+	cusProductLimit,
+}: {
+	inStatuses?: CusProductStatus[];
+	cusProductLimit: number;
+}) => {
 	const withStatusFilter = () => {
 		return inStatuses
 			? sql`AND cp.status = ANY(ARRAY[${sql.join(
@@ -14,6 +21,11 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
 				)}])`
 			: sql``;
 	};
+
+	const relevantStatusFirst = sql`CASE WHEN cp.status = ANY(ARRAY[${sql.join(
+		RELEVANT_STATUSES.map((status) => sql`${status}`),
+		sql`, `,
+	)}]) THEN 0 ELSE 1 END`;
 
 	return sql`
     customer_products_with_prices AS (
@@ -80,11 +92,19 @@ const buildOptimizedCusProductsCTE = (inStatuses?: CusProductStatus[]) => {
       ) ft_data ON true
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
       ${withStatusFilter()}
+      ORDER BY ${relevantStatusFirst}, prod.is_add_on ASC, cp.created_at DESC
+      LIMIT ${cusProductLimit}
     )
   `;
 };
 
-const buildEntitiesCTE = (withEntities: boolean) => {
+const buildEntitiesCTE = ({
+	withEntities,
+	entitiesLimit,
+}: {
+	withEntities: boolean;
+	entitiesLimit: number;
+}) => {
 	if (!withEntities) {
 		return sql``;
 	}
@@ -93,14 +113,14 @@ const buildEntitiesCTE = (withEntities: boolean) => {
     customer_entities AS (
       SELECT 
         COALESCE(
-          json_agg(row_to_json(e) ORDER BY e.internal_id DESC),
+          json_agg(row_to_json(e) ORDER BY e.internal_id DESC) FILTER (WHERE e.internal_id IS NOT NULL),
           '[]'::json
         ) AS entities
       FROM (
         SELECT * FROM entities e
         WHERE e.internal_customer_id = (SELECT internal_id FROM customer_record)
         ORDER BY e.internal_id DESC
-        LIMIT 1000
+        LIMIT ${entitiesLimit}
       ) e
     )
   `;
@@ -213,13 +233,19 @@ const buildExtraEntitlementsCTE = () => {
                 WHERE ro.cus_ent_id = ce.id
               )
             )
+            ORDER BY ce.id DESC
           ) FILTER (WHERE ce.id IS NOT NULL),
           '[]'::json
         ) AS extra_customer_entitlements
-      FROM customer_entitlements ce
-      WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
-        AND ce.customer_product_id IS NULL
-        AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+      FROM (
+        SELECT *
+        FROM customer_entitlements ce
+        WHERE ce.internal_customer_id = (SELECT internal_id FROM customer_record)
+          AND ce.customer_product_id IS NULL
+          AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+        ORDER BY ce.id DESC
+        LIMIT 30
+      ) ce
     )
   `;
 };
@@ -252,18 +278,33 @@ const buildInvoicesCTE = (hasEntityCTE: boolean) => {
   `;
 };
 
-export const getFullCusQuery = (
-	idOrInternalId: string,
-	orgId: string,
-	env: AppEnv,
-	inStatuses: CusProductStatus[],
-	includeInvoices: boolean,
-	withEntities: boolean,
-	withTrialsUsed: boolean,
-	withSubs: boolean,
-	withEvents: boolean,
-	entityId?: string,
-) => {
+export const getFullCusQuery = ({
+	idOrInternalId,
+	orgId,
+	env,
+	inStatuses,
+	includeInvoices,
+	withEntities,
+	withTrialsUsed,
+	withSubs,
+	withEvents,
+	entityId,
+	cusProductLimit,
+	entitiesLimit = 300,
+}: {
+	idOrInternalId: string;
+	orgId: string;
+	env: AppEnv;
+	inStatuses: CusProductStatus[];
+	includeInvoices: boolean;
+	withEntities: boolean;
+	withTrialsUsed: boolean;
+	withSubs: boolean;
+	withEvents: boolean;
+	entityId?: string;
+	cusProductLimit: number;
+	entitiesLimit?: number;
+}) => {
 	const sqlChunks: SQL[] = [];
 
 	// Step 1: Get customer record
@@ -283,7 +324,7 @@ export const getFullCusQuery = (
 	// Step 2: Get entities
 	if (withEntities) {
 		sqlChunks.push(sql`, `);
-		sqlChunks.push(buildEntitiesCTE(withEntities));
+		sqlChunks.push(buildEntitiesCTE({ withEntities, entitiesLimit }));
 	}
 
 	// Step 3: Get entity
@@ -295,7 +336,7 @@ export const getFullCusQuery = (
 	// Add customer products CTE
 	sqlChunks.push(sql`, `);
 	// sqlChunks.push(buildCusProductsCTE(inStatuses));
-	sqlChunks.push(buildOptimizedCusProductsCTE(inStatuses));
+	sqlChunks.push(buildOptimizedCusProductsCTE({ inStatuses, cusProductLimit }));
 
 	// Conditionally add trials used CTE
 	if (withTrialsUsed) {
@@ -414,7 +455,9 @@ export const getPaginatedFullCusQuery = ({
 	entityId: _entityId,
 	internalCustomerIds,
 	plans,
+	processors,
 	search,
+	cusProductLimit,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -429,7 +472,9 @@ export const getPaginatedFullCusQuery = ({
 	entityId?: string;
 	internalCustomerIds?: string[];
 	plans?: ListCustomersV2Params["plans"];
+	processors?: ListCustomersV2Params["processors"];
 	search?: string;
+	cusProductLimit: number;
 }) => {
 	const withStatusFilter = () => {
 		return inStatuses?.length
@@ -440,48 +485,20 @@ export const getPaginatedFullCusQuery = ({
 			: sql``;
 	};
 
-	const withCustomerProductFilter = () => {
-		const hasPlansFilter = plans && plans.length > 0;
-
-		// Only filter customers by plans, not by status
-		// Status filtering is applied to customer_products, not to exclude customers
-		// This allows customers with only loose entitlements (no customer_products) to be included
-		if (!hasPlansFilter) return sql``;
-
-		const planConditions = plans.map((plan) => {
-			if (plan.versions && plan.versions.length > 0) {
-				return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
-					plan.versions.map((v) => sql`${v}`),
-					sql`, `,
-				)}))`;
-			}
-			return sql`p_filter.id = ${plan.id}`;
-		});
-
-		return sql`AND EXISTS (
-			SELECT 1 FROM customer_products cp_filter
-			JOIN products p_filter ON cp_filter.internal_product_id = p_filter.internal_id
-			WHERE cp_filter.internal_customer_id = c.internal_id
-				AND (${sql.join(planConditions, sql` OR `)})
-		)`;
-	};
-
-	const withSearchFilter = () => {
-		if (!search) return sql``;
-		const pattern = `%${search}%`;
-		return sql`AND (
-			c.id ILIKE ${pattern}
-			OR c.name ILIKE ${pattern}
-			OR c.email ILIKE ${pattern}
-		)`;
-	};
+	const customerListFilterSql = getCustomerListFilterSql({
+		internalCustomerIds,
+		inStatuses,
+		plans,
+		processors,
+		search,
+	});
 
 	// ADDITION: Unconditionally add extra entitlements CTE (305-308)
 	// This matches the style of the rest of the CTE construction blocks.
 	// Extra entitlements are those without a customer_product_id (loose entitlements)
 	const extraEntitlementsCTE = sql`, extra_customer_entitlements AS (
     SELECT
-      ce.internal_customer_id,
+      cr.internal_id AS internal_customer_id,
       COALESCE(
         json_agg(
           to_jsonb(ce.*) || jsonb_build_object(
@@ -516,11 +533,17 @@ export const getPaginatedFullCusQuery = ({
         ) FILTER (WHERE ce.id IS NOT NULL),
         '[]'::json
       ) AS extra_customer_entitlements
-    FROM customer_entitlements ce
-    WHERE ce.internal_customer_id IN (SELECT internal_id FROM customer_records)
-      AND ce.customer_product_id IS NULL
-      AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-    GROUP BY ce.internal_customer_id
+    FROM customer_records cr
+    LEFT JOIN LATERAL (
+      SELECT *
+      FROM customer_entitlements ce
+      WHERE ce.internal_customer_id = cr.internal_id
+        AND ce.customer_product_id IS NULL
+        AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+      ORDER BY ce.id DESC
+      LIMIT 30
+    ) ce ON true
+    GROUP BY cr.internal_id
   )`;
 
 	return sql`
@@ -529,16 +552,7 @@ export const getPaginatedFullCusQuery = ({
       FROM customers c
       WHERE c.org_id = ${orgId}
         AND c.env = ${env}
-      ${
-				internalCustomerIds && internalCustomerIds.length > 0
-					? sql`AND c.internal_id IN (${sql.join(
-							internalCustomerIds.map((id) => sql`${id}`),
-							sql`, `,
-						)})`
-					: sql``
-			}
-      ${withCustomerProductFilter()}
-      ${withSearchFilter()}
+	      ${customerListFilterSql}
       ORDER BY c.created_at DESC
       LIMIT ${limit} OFFSET ${offset}
     ),
@@ -551,7 +565,15 @@ export const getPaginatedFullCusQuery = ({
         ce_data.customer_entitlements,
         ft_data.free_trial
 
-      FROM customer_products cp
+      FROM customer_records cr
+      JOIN LATERAL (
+        SELECT *
+        FROM customer_products cp
+        WHERE cp.internal_customer_id = cr.internal_id
+        ${withStatusFilter()}
+        ORDER BY (SELECT p.is_add_on FROM products p WHERE p.internal_id = cp.internal_product_id) ASC, cp.created_at DESC
+        LIMIT ${cusProductLimit}
+      ) cp ON true
       JOIN products prod ON cp.internal_product_id = prod.internal_id
       LEFT JOIN LATERAL (
         SELECT COALESCE(
@@ -605,8 +627,6 @@ export const getPaginatedFullCusQuery = ({
         FROM free_trials ft
         WHERE ft.id = cp.free_trial_id
       ) ft_data ON true
-      WHERE cp.internal_customer_id IN (SELECT internal_id FROM customer_records) 
-      ${withStatusFilter()}
     ),
     
     customer_products_aggregated AS (
@@ -669,14 +689,20 @@ export const getPaginatedFullCusQuery = ({
 			withEntities
 				? sql`, customer_entities AS (
       SELECT 
-        e.internal_customer_id,
+        cr.internal_id AS internal_customer_id,
         COALESCE(
-          json_agg(row_to_json(e) ORDER BY e.internal_id DESC),
+          json_agg(row_to_json(e) ORDER BY e.internal_id DESC) FILTER (WHERE e.internal_id IS NOT NULL),
           '[]'::json
         ) AS entities
-      FROM entities e
-      WHERE e.internal_customer_id IN (SELECT internal_id FROM customer_records)
-      GROUP BY e.internal_customer_id
+      FROM customer_records cr
+      LEFT JOIN LATERAL (
+        SELECT *
+        FROM entities e
+        WHERE e.internal_customer_id = cr.internal_id
+        ORDER BY e.internal_id DESC
+        LIMIT 300
+      ) e ON true
+      GROUP BY cr.internal_id
     )`
 				: sql``
 		}
@@ -744,4 +770,113 @@ export const getPaginatedFullCusQuery = ({
     LEFT JOIN extra_customer_entitlements ece ON ece.internal_customer_id = cr.internal_id
     ORDER BY cr.created_at DESC
   `;
+};
+
+export const hasCustomerListFilters = ({
+	internalCustomerIds,
+	inStatuses: _inStatuses,
+	plans,
+	processors,
+	search,
+}: {
+	internalCustomerIds?: string[];
+	inStatuses?: CusProductStatus[];
+	plans?: ListCustomersV2Params["plans"];
+	processors?: ListCustomersV2Params["processors"];
+	search?: string;
+}) => {
+	return Boolean(
+		(internalCustomerIds && internalCustomerIds.length > 0) ||
+			(plans && plans.length > 0) ||
+			(processors && processors.length > 0) ||
+			search?.trim(),
+	);
+};
+
+export const getCustomerListFilterSql = ({
+	internalCustomerIds,
+	inStatuses,
+	plans,
+	processors,
+	search,
+}: {
+	internalCustomerIds?: string[];
+	inStatuses?: CusProductStatus[];
+	plans?: ListCustomersV2Params["plans"];
+	processors?: ListCustomersV2Params["processors"];
+	search?: string;
+}) => {
+	const filters = [];
+
+	if (internalCustomerIds && internalCustomerIds.length > 0) {
+		filters.push(
+			sql`AND c.internal_id IN (${sql.join(
+				internalCustomerIds.map((id) => sql`${id}`),
+				sql`, `,
+			)})`,
+		);
+	}
+
+	if (plans && plans.length > 0) {
+		const planConditions = plans.map((plan) => {
+			if (plan.versions && plan.versions.length > 0) {
+				return sql`(p_filter.id = ${plan.id} AND p_filter.version IN (${sql.join(
+					plan.versions.map((version) => sql`${version}`),
+					sql`, `,
+				)}))`;
+			}
+
+			return sql`p_filter.id = ${plan.id}`;
+		});
+
+		filters.push(sql`AND EXISTS (
+			SELECT 1
+			FROM customer_products cp_filter
+			JOIN products p_filter ON cp_filter.internal_product_id = p_filter.internal_id
+			WHERE cp_filter.internal_customer_id = c.internal_id
+				${
+					inStatuses?.length
+						? sql`AND cp_filter.status = ANY(ARRAY[${sql.join(
+								inStatuses.map((status) => sql`${status}`),
+								sql`, `,
+							)}])`
+						: sql``
+				}
+				AND (${sql.join(planConditions, sql` OR `)})
+		)`);
+	}
+
+	const trimmedSearch = search?.trim();
+	if (trimmedSearch) {
+		const pattern = `%${trimmedSearch}%`;
+		filters.push(sql`AND (
+			c.id ILIKE ${pattern}
+			OR c.name ILIKE ${pattern}
+			OR c.email ILIKE ${pattern}
+		)`);
+	}
+
+	if (processors && processors.length > 0) {
+		const processorConditions = processors
+			.map((proc) => {
+				if (proc === "stripe") return sql`(c.processor->>'id' IS NOT NULL)`;
+				if (proc === "revenuecat")
+					return sql`EXISTS (
+						SELECT 1
+						FROM customer_products cp_processor
+						WHERE cp_processor.internal_customer_id = c.internal_id
+							AND cp_processor.processor->>'type' = 'revenuecat'
+					)`;
+				if (proc === "vercel")
+					return sql`(c.processors->>'vercel' IS NOT NULL)`;
+				return null;
+			})
+			.filter((c): c is SQL => c !== null);
+
+		if (processorConditions.length > 0) {
+			filters.push(sql`AND (${sql.join(processorConditions, sql` OR `)})`);
+		}
+	}
+
+	return sql.join(filters, sql` `);
 };

@@ -1,21 +1,23 @@
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
 import {
+	addCusProductToCusEnt,
 	customerPriceToCustomerEntitlement,
 	type FeatureOptions,
-	type FullCustomerEntitlement,
 	findCusPriceByFeature,
 	findFeatureByInternalId,
 	findFeatureOptionsByFeature,
 	InternalError,
 	isOneOffPrice,
+	isPrepaidPrice,
 	type LineItem,
 	RecaseError,
+	type UpdateCustomerEntitlement,
+	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeFeatureOptionsChange } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeFeatureOptionsChange";
 import { getLineItemBillingPeriod } from "@/internal/billing/v2/utils/lineItems/getLineItemBillingPeriod";
 import { calculateUpdateQuantityDifferences } from "./calculateUpdateQuantityDifferences";
-import { calculateUpdateQuantityEntitlementChange } from "./calculateUpdateQuantityEntitlementChange";
+import { computeUpdateQuantityCustomerEntitlementChanges } from "./computeUpdateQuantityCustomerEntitlementChanges";
 import { computeUpdateQuantityLineItems } from "./computeUpdateQuantityLineItems";
 
 /**
@@ -41,8 +43,7 @@ export const computeUpdateQuantityDetails = ({
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 }): {
 	featureId: string;
-	customerEntitlement: FullCustomerEntitlement;
-	customerEntitlementBalanceChange: number;
+	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 	lineItems: LineItem[];
 	updatedOptions: FeatureOptions;
 } => {
@@ -78,7 +79,9 @@ export const computeUpdateQuantityDetails = ({
 
 	const customerPrice = findCusPriceByFeature({
 		internalFeatureId: internalFeatureId,
-		cusPrices: customerProduct.customer_prices,
+		cusPrices: customerProduct.customer_prices.filter((cp) =>
+			isPrepaidPrice(cp.price),
+		),
 		errorOnNotFound: true,
 	});
 
@@ -94,13 +97,10 @@ export const computeUpdateQuantityDetails = ({
 		errorOnNotFound: true,
 	});
 
-	const { customerEntitlementBalanceChange } =
-		calculateUpdateQuantityEntitlementChange({
-			quantityDifferenceForEntitlements:
-				quantityDifferences.quantityDifferenceForEntitlements,
-			customerPrice,
-			customerEntitlement,
-		});
+	const cusEntWithCusProduct = addCusProductToCusEnt({
+		cusEnt: customerEntitlement,
+		cusProduct: customerProduct,
+	});
 
 	updatedOptions = computeFeatureOptionsChange({
 		previousOptions,
@@ -109,6 +109,14 @@ export const computeUpdateQuantityDetails = ({
 			quantityDifferences.quantityDifferenceForEntitlements,
 		customerPrice,
 	});
+
+	const updateCustomerEntitlements =
+		computeUpdateQuantityCustomerEntitlementChanges({
+			ctx,
+			updateSubscriptionContext,
+			quantityDifference: quantityDifferences.quantityDifferenceForEntitlements,
+			customerEntitlement: cusEntWithCusProduct,
+		});
 
 	if (!billingCycleAnchorMs) {
 		throw new InternalError({
@@ -140,8 +148,7 @@ export const computeUpdateQuantityDetails = ({
 
 	return {
 		featureId,
-		customerEntitlement,
-		customerEntitlementBalanceChange,
+		updateCustomerEntitlements,
 		lineItems,
 		updatedOptions,
 	};

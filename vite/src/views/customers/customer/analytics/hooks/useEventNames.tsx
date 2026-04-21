@@ -1,5 +1,6 @@
-import { ErrCode } from "@autumn/shared";
-import { usePostSWR } from "@/services/useAxiosSwr.js";
+import { useQuery } from "@tanstack/react-query";
+import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export type EventNameWithCount = {
 	event_name: string;
@@ -7,17 +8,15 @@ export type EventNameWithCount = {
 };
 
 export const useEventNames = (limit?: number) => {
-	const { data, isLoading, error } = usePostSWR({
-		method: "get",
-		url: `/query/event_names/list${limit ? `?limit=${limit}` : ""}`,
-		queryKey: ["query-event-names-list", limit],
-		options: {
-			refreshInterval: 0,
-			onError: (error) => {
-				if (error.code === ErrCode.ClickHouseDisabled) {
-					return error;
-				}
-			},
+	const axiosInstance = useAxiosInstance();
+	const buildKey = useQueryKeyFactory();
+
+	const { data, isLoading, error } = useQuery({
+		queryKey: buildKey(["query-event-names-list", limit]),
+		queryFn: async () => {
+			const url = `/query/event_names/list${limit ? `?limit=${limit}` : ""}`;
+			const { data } = await axiosInstance.get(url);
+			return data;
 		},
 	});
 

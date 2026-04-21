@@ -8,10 +8,12 @@ from autumn_sdk.types import (
     OptionalNullable,
     UNSET,
     UNSET_SENTINEL,
+    UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -25,7 +27,7 @@ class PreviewAttachGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.1"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -368,6 +370,8 @@ class PreviewAttachRolloverTypedDict(TypedDict):
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
     expiry_duration_length: NotRequired[float]
     r"""Number of periods before expiry."""
 
@@ -381,12 +385,15 @@ class PreviewAttachRollover(BaseModel):
     max: Optional[float] = None
     r"""Max rollover units. Omit for unlimited rollover."""
 
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
     expiry_duration_length: Optional[float] = None
     r"""Number of periods before expiry."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["max", "expiry_duration_length"])
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
         serialized = handler(self)
         m = {}
 
@@ -769,6 +776,8 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""URL to redirect to after successful checkout."""
     new_billing_subscription: NotRequired[bool]
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
+    billing_cycle_anchor: Literal["now"]
+    r"""Reset the billing cycle anchor immediately with 'now'."""
     plan_schedule: NotRequired[PreviewAttachPlanSchedule]
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
     checkout_session_params: NotRequired[Dict[str, Any]]
@@ -781,6 +790,10 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""Whether to carry over balances from the previous plan."""
     carry_over_usages: NotRequired[PreviewAttachCarryOverUsagesTypedDict]
     r"""Whether to carry over usages from the previous plan."""
+    metadata: NotRequired[Dict[str, str]]
+    r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
+    no_billing_changes: NotRequired[bool]
+    r"""If true, skips any billing changes for the attach operation."""
 
 
 class PreviewAttachParams(BaseModel):
@@ -823,6 +836,12 @@ class PreviewAttachParams(BaseModel):
     new_billing_subscription: Optional[bool] = None
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
 
+    billing_cycle_anchor: Annotated[
+        Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
+        pydantic.Field(alias="billing_cycle_anchor"),
+    ] = "now"
+    r"""Reset the billing cycle anchor immediately with 'now'."""
+
     plan_schedule: Optional[PreviewAttachPlanSchedule] = None
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
 
@@ -841,6 +860,12 @@ class PreviewAttachParams(BaseModel):
     carry_over_usages: Optional[PreviewAttachCarryOverUsages] = None
     r"""Whether to carry over usages from the previous plan."""
 
+    metadata: Optional[Dict[str, str]] = None
+    r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
+
+    no_billing_changes: Optional[bool] = None
+    r"""If true, skips any billing changes for the attach operation."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -856,12 +881,15 @@ class PreviewAttachParams(BaseModel):
                 "discounts",
                 "success_url",
                 "new_billing_subscription",
+                "billing_cycle_anchor",
                 "plan_schedule",
                 "checkout_session_params",
                 "custom_line_items",
                 "processor_subscription_id",
                 "carry_over_balances",
                 "carry_over_usages",
+                "metadata",
+                "no_billing_changes",
             ]
         )
         serialized = handler(self)
@@ -1257,6 +1285,10 @@ class PreviewAttachIncomingTypedDict(TypedDict):
     r"""The feature quantity selections associated with this plan change."""
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
     plan: NotRequired[PlanTypedDict]
 
 
@@ -1270,12 +1302,18 @@ class PreviewAttachIncoming(BaseModel):
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
 
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
+
     plan: Optional[Plan] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["plan"])
-        nullable_fields = set(["effective_at"])
+        nullable_fields = set(["effective_at", "canceled_at", "expires_at"])
         serialized = handler(self)
         m = {}
 
@@ -1320,6 +1358,10 @@ class PreviewAttachOutgoingTypedDict(TypedDict):
     r"""The feature quantity selections associated with this plan change."""
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
     plan: NotRequired[PlanTypedDict]
 
 
@@ -1333,12 +1375,18 @@ class PreviewAttachOutgoing(BaseModel):
     effective_at: Nullable[float]
     r"""When this change takes effect, in milliseconds since the Unix epoch, or null if it applies immediately."""
 
+    canceled_at: Nullable[float]
+    r"""When this plan was canceled, in milliseconds since the Unix epoch, or null if it is not canceled."""
+
+    expires_at: Nullable[float]
+    r"""When this plan expires, in milliseconds since the Unix epoch, or null if it does not expire."""
+
     plan: Optional[Plan] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["plan"])
-        nullable_fields = set(["effective_at"])
+        nullable_fields = set(["effective_at", "canceled_at", "expires_at"])
         serialized = handler(self)
         m = {}
 
@@ -1361,13 +1409,21 @@ class PreviewAttachOutgoing(BaseModel):
         return m
 
 
+PreviewAttachCheckoutType = Union[
+    Literal[
+        "stripe_checkout",
+        "autumn_checkout",
+    ],
+    UnrecognizedStr,
+]
+
+
 class PreviewAttachResponseTypedDict(TypedDict):
     r"""OK"""
 
     customer_id: str
     r"""The ID of the customer."""
     line_items: List[PreviewAttachLineItemTypedDict]
-    r"""List of line items for the current billing period."""
     subtotal: float
     r"""The total amount in cents before discounts for the current billing period."""
     total: float
@@ -1378,6 +1434,10 @@ class PreviewAttachResponseTypedDict(TypedDict):
     r"""Products or subscription changes being added or updated."""
     outgoing: List[PreviewAttachOutgoingTypedDict]
     r"""Products or subscription changes being removed or ended."""
+    redirect_to_checkout: bool
+    r"""Whether the customer will be redirected to a checkout page if attach is called."""
+    checkout_type: Nullable[PreviewAttachCheckoutType]
+    r"""The type of checkout that will be used if the customer is redirected to a checkout page."""
     next_cycle: NotRequired[PreviewAttachNextCycleTypedDict]
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
     expand: NotRequired[List[str]]
@@ -1391,7 +1451,6 @@ class PreviewAttachResponse(BaseModel):
     r"""The ID of the customer."""
 
     line_items: List[PreviewAttachLineItem]
-    r"""List of line items for the current billing period."""
 
     subtotal: float
     r"""The total amount in cents before discounts for the current billing period."""
@@ -1408,6 +1467,12 @@ class PreviewAttachResponse(BaseModel):
     outgoing: List[PreviewAttachOutgoing]
     r"""Products or subscription changes being removed or ended."""
 
+    redirect_to_checkout: bool
+    r"""Whether the customer will be redirected to a checkout page if attach is called."""
+
+    checkout_type: Nullable[PreviewAttachCheckoutType]
+    r"""The type of checkout that will be used if the customer is redirected to a checkout page."""
+
     next_cycle: Optional[PreviewAttachNextCycle] = None
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
 
@@ -1417,15 +1482,30 @@ class PreviewAttachResponse(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["next_cycle", "expand"])
+        nullable_fields = set(["checkout_type"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
+
+
+try:
+    PreviewAttachParams.model_rebuild()
+except NameError:
+    pass

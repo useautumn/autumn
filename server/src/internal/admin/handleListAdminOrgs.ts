@@ -1,6 +1,7 @@
 import { member, organizations, user } from "@autumn/shared";
 import { and, desc, eq, gt, gte, ilike, inArray, lt, or } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
+import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
 
 export const handleListAdminOrgs = createRoute({
 	handler: async (c) => {
@@ -8,14 +9,21 @@ export const handleListAdminOrgs = createRoute({
 		const { db } = ctx;
 
 		const { search, after: afterQuery, before: beforeQuery } = c.req.query();
+		const trimmedSearch = search?.trim();
+		const searchTerm = trimmedSearch ? trimmedSearch : undefined;
 
-		let after,
-			before:
-				| {
-						id: string;
-						createdAt: Date;
-				  }
-				| undefined;
+		let after:
+			| {
+					id: string;
+					createdAt: Date;
+			  }
+			| undefined;
+		let before:
+			| {
+					id: string;
+					createdAt: Date;
+			  }
+			| undefined;
 
 		if (afterQuery) {
 			after = {
@@ -34,11 +42,11 @@ export const handleListAdminOrgs = createRoute({
 			.from(organizations)
 			.where(
 				and(
-					search
+					searchTerm
 						? or(
-								ilike(organizations.name, `%${search as string}%`),
-								ilike(organizations.id, `%${search as string}%`),
-								ilike(organizations.slug, `%${search as string}%`),
+								eq(organizations.id, searchTerm),
+								ilike(organizations.name, `%${searchTerm}%`),
+								ilike(organizations.slug, `%${searchTerm}%`),
 							)
 						: undefined,
 					after
@@ -69,6 +77,18 @@ export const handleListAdminOrgs = createRoute({
 			.limit(21);
 
 		const orgIds = orgs.map((org) => org.id);
+		let requestBlockConfig = {
+			orgs: {} as Record<
+				string,
+				{ blockAll: boolean; blockedEndpoints: unknown[] }
+			>,
+		};
+
+		try {
+			requestBlockConfig = await getRequestBlockConfigFromSource();
+		} catch {
+			// Admin list should still render even if S3 is unavailable.
+		}
 
 		const memberships = await db
 			.select()
@@ -82,6 +102,11 @@ export const handleListAdminOrgs = createRoute({
 				users: memberships
 					.filter((membership) => membership.member.organizationId === org.id)
 					.map((membership) => membership.user),
+				requestBlockSummary: {
+					blockAll: requestBlockConfig.orgs[org.id]?.blockAll ?? false,
+					ruleCount:
+						requestBlockConfig.orgs[org.id]?.blockedEndpoints.length ?? 0,
+				},
 			})),
 			hasNextPage: orgs.length > 20,
 		});

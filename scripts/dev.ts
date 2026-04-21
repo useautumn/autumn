@@ -9,10 +9,24 @@ const worktreeNum =
 		: 1;
 const portOffset = (worktreeNum - 1) * 100;
 
-const VITE_PORT = 3000 + portOffset;
-const SERVER_PORT = 8080 + portOffset;
-const CHECKOUT_PORT = 3001 + portOffset;
+const VITE_PORT = process.env.VITE_PORT
+	? Number.parseInt(process.env.VITE_PORT, 10)
+	: 3000 + portOffset;
+const SERVER_PORT = process.env.SERVER_PORT
+	? Number.parseInt(process.env.SERVER_PORT, 10)
+	: 8080 + portOffset;
+const CHECKOUT_PORT = process.env.CHECKOUT_PORT
+	? Number.parseInt(process.env.CHECKOUT_PORT, 10)
+	: 3001 + portOffset;
 const skipWorkers = worktreeNum > 1;
+const isProductionMode = process.argv.includes("--production");
+
+const envFile = process.env.ENV_FILE ?? ".env";
+const viteAppEnv = envFile.includes(".env.prod")
+	? "prod"
+	: envFile.includes(".env.staging")
+		? "staging"
+		: "dev";
 
 /**
  * Read environment variable from .env file
@@ -110,6 +124,8 @@ async function startDev() {
 
 		if (worktreeNum > 1) {
 			console.log(`Starting worktree ${worktreeNum} (no workers)...\n`);
+		} else if (isProductionMode) {
+			console.log("Starting local servers with NODE_ENV=production...\n");
 		} else {
 			console.log("Starting development servers...\n");
 		}
@@ -142,10 +158,12 @@ async function startDev() {
 		} else {
 			const names = ["server"];
 			const colors = ["green"];
+			const serverScript = isProductionMode ? "dev:prod" : "dev";
+			const workersScript = isProductionMode ? "workers:prod" : "workers:dev";
 			const cmds = [
 				isWindows
-					? `"cd server && set SERVER_PORT=${SERVER_PORT} && bun dev"`
-					: `"cd server && SERVER_PORT=${SERVER_PORT} bun dev"`,
+					? `"cd server && set SERVER_PORT=${SERVER_PORT} && bun ${serverScript}"`
+					: `"cd server && SERVER_PORT=${SERVER_PORT} bun ${serverScript}"`,
 			];
 
 			if (!skipWorkers) {
@@ -153,8 +171,8 @@ async function startDev() {
 				colors.push("yellow");
 				cmds.push(
 					isWindows
-						? `"cd server && bun workers:dev"`
-						: `"cd server && bun workers:dev"`,
+						? `"cd server && bun ${workersScript}"`
+						: `"cd server && bun ${workersScript}"`,
 				);
 			}
 
@@ -178,11 +196,12 @@ async function startDev() {
 
 		const concurrentlyProc = Bun.spawn(shellArgs, {
 			cwd: projectRoot,
-			env: {
-				...process.env,
-				VITE_PORT: VITE_PORT.toString(),
-				SERVER_PORT: SERVER_PORT.toString(),
-				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
+		env: {
+			...process.env,
+			VITE_PORT: VITE_PORT.toString(),
+			SERVER_PORT: SERVER_PORT.toString(),
+			CHECKOUT_PORT: CHECKOUT_PORT.toString(),
+			VITE_APP_ENV: viteAppEnv,
 				...(worktreeNum > 1 && {
 					CLIENT_URL: `http://localhost:${VITE_PORT}`,
 					BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
@@ -192,7 +211,12 @@ async function startDev() {
 			},
 			stdout: "inherit",
 			stderr: "inherit",
-			onExit(proc, exitCode, signalCode, error) {
+			onExit(
+				_proc: unknown,
+				exitCode: number | null,
+				_signalCode: number | null,
+				error: Error | null,
+			) {
 				if (error) {
 					console.error("Failed to start development servers:", error);
 					process.exit(1);

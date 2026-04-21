@@ -1,3 +1,5 @@
+import { AppEnv } from "@autumn/shared";
+import { useQuery } from "@tanstack/react-query";
 import {
 	ArrowLeft,
 	Globe,
@@ -15,7 +17,8 @@ import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { useAxiosSWR } from "@/services/useAxiosSwr";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { DefaultView } from "../../DefaultView";
 import LoadingScreen from "../../general/LoadingScreen";
@@ -41,14 +44,21 @@ interface OAuthClient {
 
 export const OAuthClientsView = () => {
 	const navigate = useNavigate();
+	const env = useEnv();
 	const { isAdmin, isPending } = useAdmin();
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [editDialogOpen, setEditDialogOpen] = useState(false);
 	const [editingClient, setEditingClient] = useState<OAuthClient | null>(null);
+	const adminBasePath = env === AppEnv.Sandbox ? "/sandbox/admin" : "/admin";
 
-	const { data, isLoading, mutate } = useAxiosSWR({
-		url: "/admin/oauth-clients",
-		withAuth: true,
+	const axiosInstance = useAxiosInstance();
+
+	const { data, isLoading, refetch } = useQuery({
+		queryKey: ["admin-oauth-clients"],
+		queryFn: async () => {
+			const { data } = await axiosInstance.get("/admin/oauth-clients");
+			return data;
+		},
 	});
 
 	const clients: OAuthClient[] = data?.clients || [];
@@ -67,7 +77,7 @@ export const OAuthClientsView = () => {
 				return;
 			}
 			toast.success("OAuth client deleted");
-			mutate();
+			refetch();
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to delete client"));
 		}
@@ -99,7 +109,7 @@ export const OAuthClientsView = () => {
 					description: "Copy this now - it won't be shown again!",
 				});
 			}
-			mutate();
+			refetch();
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to rotate secret"));
 		}
@@ -126,7 +136,7 @@ export const OAuthClientsView = () => {
 						variant="secondary"
 						size="sm"
 						icon={<ArrowLeft className="w-4 h-4" />}
-						onClick={() => navigate("/admin")}
+						onClick={() => navigate(adminBasePath)}
 					/>
 					<div>
 						<h1 className="text-lg font-semibold text-foreground">
@@ -142,7 +152,7 @@ export const OAuthClientsView = () => {
 						variant="secondary"
 						size="sm"
 						icon={<RefreshCw className="w-4 h-4" />}
-						onClick={() => mutate()}
+						onClick={() => refetch()}
 						disabled={isLoading}
 					>
 						Refresh
@@ -311,7 +321,7 @@ export const OAuthClientsView = () => {
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
 				onSuccess={() => {
-					mutate();
+					refetch();
 					setCreateDialogOpen(false);
 				}}
 			/>
@@ -322,7 +332,7 @@ export const OAuthClientsView = () => {
 				onOpenChange={setEditDialogOpen}
 				client={editingClient}
 				onSuccess={() => {
-					mutate();
+					refetch();
 					setEditDialogOpen(false);
 					setEditingClient(null);
 				}}

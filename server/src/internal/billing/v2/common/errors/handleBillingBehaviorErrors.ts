@@ -38,6 +38,9 @@ export const handleProrationBehaviorErrors = ({
 	// Only validate when proration_behavior is 'none' (defer charges)
 	if (params.proration_behavior !== "none") return;
 
+	// When anchor reset + none is used, charges are expected (full new plan price)
+	if (billingContext.requestedBillingCycleAnchor === "now") return;
+
 	const { autumn: autumnBillingPlan } = billingPlan;
 
 	// Check 1: Free -> Paid transition

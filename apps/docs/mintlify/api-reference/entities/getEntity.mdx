@@ -249,6 +249,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
                   Maximum rollover units. Null for unlimited rollover.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="max_percentage" type="number | null">
+                  Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                </DynamicResponseField>
+
                 <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'">
                   When rolled over units expire.
                 </DynamicResponseField>
@@ -575,6 +579,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
               <Expandable title="properties">
                 <DynamicResponseField name="max" type="number | null">
                   Maximum rollover units. Null for unlimited rollover.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="max_percentage" type="number | null">
+                  Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
                 </DynamicResponseField>
 
                 <DynamicResponseField name="expiry_duration_type" type="'month' | 'forever'">
@@ -962,6 +970,46 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
         <DynamicResponseField name="overage_limit" type="number">
           Maximum allowed overage spend for the target feature.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="usage_alerts" type="object[]">
+      List of usage alert configurations per feature.
+      <Expandable title="properties">
+        <DynamicResponseField name="feature_id" type="string">
+          The feature ID this alert applies to.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="enabled" type="boolean">
+          Whether this usage alert is enabled.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="threshold" type="number">
+          The threshold value that triggers the alert. For usage or remaining, this is an absolute count. For usage_percentage or remaining_percentage, this is a percentage (0-100).
+        </DynamicResponseField>
+
+        <DynamicResponseField name="threshold_type" type="'usage' | 'usage_percentage' | 'remaining' | 'remaining_percentage'">
+          Whether the threshold is an absolute count or a percentage of the usage allowance or remaining balance.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="name" type="string">
+          Optional user-defined label to distinguish multiple alerts on the same feature.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="overage_allowed" type="object[]">
+      List of overage allowed controls per feature. When enabled, usage can exceed balance.
+      <Expandable title="properties">
+        <DynamicResponseField name="feature_id" type="string">
+          The feature ID this overage allowed control applies to.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="enabled" type="boolean">
+          Whether overage is allowed for this feature.
         </DynamicResponseField>
 
       </Expandable>

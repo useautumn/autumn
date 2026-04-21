@@ -72,7 +72,11 @@ export const getApiEntityBase = async ({
 		purchases: apiPurchases,
 		balances: apiBalances,
 		flags: apiFlags,
-		billing_controls: { spend_limits: entity.spend_limits ?? undefined },
+		billing_controls: {
+			spend_limits: entity.spend_limits ?? undefined,
+			usage_alerts: entity.usage_alerts ?? undefined,
+			overage_allowed: entity.overage_allowed ?? undefined,
+		},
 	} satisfies ApiEntityV2);
 
 	return {

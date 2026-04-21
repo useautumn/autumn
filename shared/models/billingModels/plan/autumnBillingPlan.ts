@@ -39,27 +39,27 @@ export const UpdateCustomerEntitlementSchema = z.object({
 	insertReplaceables: z.array(z.custom<InsertReplaceable>()).optional(),
 });
 
+export const CustomerProductUpdateSchema = z.object({
+	customerProduct: FullCusProductSchema,
+	updates: z.object({
+		options: z.array(FeatureOptionsSchema).optional(),
+		status: z.enum(CusProductStatus).optional(),
+		billing_cycle_anchor_resets_at: z.number().nullish(),
+		// Cancel fields (nullish to support uncancel - setting to null)
+		canceled: z.boolean().nullish(),
+		canceled_at: z.number().nullish(),
+		ended_at: z.number().nullish(),
+		scheduled_ids: z.array(z.string()).optional(),
+		subscription_ids: z.array(z.string()).optional(),
+	}),
+});
+
 export const AutumnBillingPlanSchema = z.object({
 	customerId: z.string(),
 	insertCustomerProducts: z.array(FullCusProductSchema),
 
-	updateCustomerProduct: z
-		.object({
-			customerProduct: FullCusProductSchema,
-			updates: z.object({
-				options: z.array(FeatureOptionsSchema).optional(),
-				status: z.enum(CusProductStatus).optional(),
-				// Cancel fields (nullish to support uncancel - setting to null)
-				canceled: z.boolean().nullish(),
-				canceled_at: z.number().nullish(),
-				ended_at: z.number().nullish(),
-
-				scheduled_ids: z.array(z.string()).optional(),
-
-				subscription_ids: z.array(z.string()).optional(),
-			}),
-		})
-		.optional(),
+	updateCustomerProduct: CustomerProductUpdateSchema.optional(),
+	updateCustomerProducts: z.array(CustomerProductUpdateSchema).optional(),
 
 	updateByStripeScheduleId: z
 		.object({
@@ -69,6 +69,7 @@ export const AutumnBillingPlanSchema = z.object({
 		.optional(),
 
 	deleteCustomerProduct: FullCusProductSchema.optional(), // Scheduled product to delete (e.g., when updating while canceling)
+	deleteCustomerProducts: z.array(FullCusProductSchema).optional(),
 
 	customPrices: z.array(PriceSchema).optional(), // Custom prices to insert
 	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
@@ -87,6 +88,19 @@ export const AutumnBillingPlanSchema = z.object({
 	// Upsert operations (populated during webhook handling, e.g., checkout.session.completed)
 	upsertSubscription: SubscriptionSchema.optional(),
 	upsertInvoice: z.custom<InsertInvoice>().optional(),
+
+	/** Refund plan computed by computeRefundPlan: the amount to refund and source invoice */
+	refundPlan: z
+		.object({
+			amount: z.number(),
+			invoice: z.object({
+				stripe_id: z.string(),
+				total: z.number(),
+				current_refunded_amount: z.number(),
+				currency: z.string(),
+			}),
+		})
+		.optional(),
 });
 
 export type AutumnBillingPlan = z.infer<typeof AutumnBillingPlanSchema>;

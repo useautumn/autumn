@@ -9,9 +9,10 @@ from autumn_sdk.types import (
     UNSET_SENTINEL,
     UnrecognizedStr,
 )
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
+from pydantic.functional_validators import AfterValidator
 from typing import List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
@@ -25,7 +26,7 @@ class BillingUpdateGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.1"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -368,6 +369,8 @@ class BillingUpdateRolloverTypedDict(TypedDict):
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
     expiry_duration_length: NotRequired[float]
     r"""Number of periods before expiry."""
 
@@ -381,12 +384,15 @@ class BillingUpdateRollover(BaseModel):
     max: Optional[float] = None
     r"""Max rollover units. Omit for unlimited rollover."""
 
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
     expiry_duration_length: Optional[float] = None
     r"""Number of periods before expiry."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["max", "expiry_duration_length"])
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
         serialized = handler(self)
         m = {}
 
@@ -623,6 +629,20 @@ BillingUpdateCancelAction = Literal[
 r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
 
+class BillingUpdateRecalculateBalancesTypedDict(TypedDict):
+    r"""Controls whether balances should be recalculated during the subscription update."""
+
+    enabled: bool
+    r"""If true, recalculates balances during the subscription update. Only applicable when updating feature quantities."""
+
+
+class BillingUpdateRecalculateBalances(BaseModel):
+    r"""Controls whether balances should be recalculated during the subscription update."""
+
+    enabled: bool
+    r"""If true, recalculates balances during the subscription update. Only applicable when updating feature quantities."""
+
+
 class UpdateSubscriptionParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -646,8 +666,12 @@ class UpdateSubscriptionParamsTypedDict(TypedDict):
     r"""A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan."""
     cancel_action: NotRequired[BillingUpdateCancelAction]
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
+    billing_cycle_anchor: Literal["now"]
+    r"""Reset the billing cycle anchor immediately with 'now'"""
     no_billing_changes: NotRequired[bool]
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
+    recalculate_balances: NotRequired[BillingUpdateRecalculateBalancesTypedDict]
+    r"""Controls whether balances should be recalculated during the subscription update."""
 
 
 class UpdateSubscriptionParams(BaseModel):
@@ -684,8 +708,17 @@ class UpdateSubscriptionParams(BaseModel):
     cancel_action: Optional[BillingUpdateCancelAction] = None
     r"""Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation."""
 
+    billing_cycle_anchor: Annotated[
+        Annotated[Optional[Literal["now"]], AfterValidator(validate_const("now"))],
+        pydantic.Field(alias="billing_cycle_anchor"),
+    ] = "now"
+    r"""Reset the billing cycle anchor immediately with 'now'"""
+
     no_billing_changes: Optional[bool] = None
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
+
+    recalculate_balances: Optional[BillingUpdateRecalculateBalances] = None
+    r"""Controls whether balances should be recalculated during the subscription update."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -701,7 +734,9 @@ class UpdateSubscriptionParams(BaseModel):
                 "redirect_mode",
                 "subscription_id",
                 "cancel_action",
+                "billing_cycle_anchor",
                 "no_billing_changes",
+                "recalculate_balances",
             ]
         )
         serialized = handler(self)
@@ -853,3 +888,9 @@ class BillingUpdateResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+try:
+    UpdateSubscriptionParams.model_rebuild()
+except NameError:
+    pass

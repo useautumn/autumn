@@ -1,0 +1,38 @@
+{
+	"name": "@autumn/website",
+	"version": "0.1.0",
+	"private": true,
+	"scripts": {
+		"dev": "next dev -p 3004",
+		"build": "next build",
+		"start": "next start",
+		"lint": "eslint"
+	},
+	"dependencies": {
+		"@gsap/react": "^2.1.2",
+		"@vercel/analytics": "^2.0.1",
+		"framer-motion": "^12.38.0",
+		"gray-matter": "^4.0.3",
+		"gsap": "^3.15.0",
+		"lottie-react": "^2.4.1",
+		"lottie-web": "^5.13.0",
+		"matter-js": "^0.20.0",
+		"motion": "^12.38.0",
+		"next": "16.2.4",
+		"next-mdx-remote": "^6.0.0",
+		"ngrok": "^5.0.0-beta.2",
+		"react": "19.2.4",
+		"react-dom": "19.2.4",
+		"react-syntax-highlighter": "^16.1.1",
+		"@types/react": "^19.2.14"
+	},
+	"devDependencies": {
+		"@tailwindcss/postcss": "^4.2.2",
+		"@tailwindcss/typography": "^0.5.19",
+		"@types/react-syntax-highlighter": "^15.5.13",
+		"eslint": "^10.2.0",
+		"eslint-config-next": "16.2.1",
+		"tailwindcss": "^4.2.2",
+		"typescript": "^6.0.2"
+	}
+}

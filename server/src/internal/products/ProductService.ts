@@ -26,6 +26,7 @@ import {
 	sql,
 } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
+import type { Logger } from "@/external/logtail/logtailUtils";
 import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
 import { buildProductsCacheKey, PRODUCTS_CACHE_TTL } from "./productCacheUtils";
 import { getLatestProducts, isFreeProduct } from "./productUtils";
@@ -91,6 +92,39 @@ export class ProductService {
 		const latestProducts = getLatestProducts(fullProducts);
 
 		return latestProducts;
+	}
+
+	static async getByStripeProductIds({
+		db,
+		stripeProductIds,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		stripeProductIds: string[];
+		orgId: string;
+		env: AppEnv;
+	}) {
+		if (!stripeProductIds || stripeProductIds.length === 0)
+			return {} as Record<string, Product>;
+
+		const rows = (await db.query.products.findMany({
+			where: and(
+				sql`${products.processor} ->> 'id' = ANY(ARRAY[${sql.join(
+					stripeProductIds.map((id) => sql`${id}`),
+					sql`, `,
+				)}])`,
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+			),
+		})) as Product[];
+
+		const byStripeProductId: Record<string, Product> = {};
+		for (const row of rows) {
+			const stripeId = row.processor?.id;
+			if (stripeId) byStripeProductId[stripeId] = row;
+		}
+		return byStripeProductId;
 	}
 
 	static async getByInternalId({
@@ -372,6 +406,8 @@ export class ProductService {
 		env,
 		version,
 		allowNotFound = false,
+		logResult = false,
+		logger,
 	}: {
 		db: DrizzleCli;
 		idOrInternalId: string;
@@ -379,6 +415,8 @@ export class ProductService {
 		env: AppEnv;
 		version?: number;
 		allowNotFound?: boolean;
+		logResult?: boolean;
+		logger?: Logger;
 	}) {
 		const data = (await db.query.products.findFirst({
 			where: and(
@@ -404,6 +442,20 @@ export class ProductService {
 		})) as FullProduct;
 
 		parseFreeTrials({ product: data });
+
+		// if (logResult && logger) {
+		// 	logger.info("full product:", {
+		// 		data: {
+		// 			result: data,
+		// 			params: {
+		// 				idOrInternalId,
+		// 				orgId,
+		// 				env,
+		// 				version,
+		// 			},
+		// 		},
+		// 	});
+		// }
 
 		if (!data) {
 			if (allowNotFound) return null as unknown as FullProduct;

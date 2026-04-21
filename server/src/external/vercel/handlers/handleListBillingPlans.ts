@@ -3,8 +3,9 @@ import {
 	type FullProduct,
 	formatAmount,
 	getProductItemDisplay,
+	isFixedPrice,
+	isPrepaidPrice,
 	isPriceItem,
-	isUsagePrice,
 	mapToProductV2,
 	type Organization,
 	productV2ToBasePrice,
@@ -14,7 +15,6 @@ import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { parseVercelPrepaidQuantities } from "@/external/vercel/misc/vercelInvoicing.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { sortProductsByPrice } from "../../../internal/products/productUtils/sortProductUtils.js";
@@ -167,7 +167,13 @@ const listVercelPlansForOrg = async ({
 	// 2. Get rid of products that are archived
 	// 3. Get rid of products that are one off, only if they are not free
 	const filteredProducts = products
-		.filter((p) => !p.prices.some((price) => isUsagePrice({ price })))
+		.filter(
+			(p) =>
+				// If the product has any prices that are not fixed or prepaid, filter it out
+				!p.prices.some(
+					(price) => !isFixedPrice(price) && !isPrepaidPrice(price),
+				),
+		)
 		.filter(
 			(p) =>
 				!p.is_add_on &&
@@ -245,10 +251,7 @@ export const handleListBillingPlansPerInstall = createRoute({
 			);
 		}
 
-		const customer = await CusService.getByVercelId({
-			ctx,
-			vercelInstallationId: integrationConfigurationId,
-		});
+		const { fullCustomer: customer } = ctx;
 
 		// Parse metadata from query params
 		let metadata: Record<string, any> = {};

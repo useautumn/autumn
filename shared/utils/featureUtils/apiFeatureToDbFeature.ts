@@ -201,14 +201,16 @@ export const dbToApiFeatureV1 = ({
 			dbFeature.type === FeatureType.CreditSystem ||
 			dbFeature.config?.usage_type === FeatureUsageType.Single,
 
-		credit_schema: dbFeature.config?.schema?.map(
-			(schema: CreditSchemaItem) => ({
-				metered_feature_id: schema.metered_feature_id,
-				credit_cost: schema.credit_amount,
-			}),
-		),
+		credit_schema: Array.isArray(dbFeature.config?.schema)
+			? dbFeature.config.schema.map((schema: CreditSchemaItem) => ({
+					metered_feature_id: schema.metered_feature_id,
+					credit_cost: schema.credit_amount,
+				}))
+			: undefined,
 		model_markups: dbFeature.model_markups ?? undefined,
-		event_names: dbFeature.event_names,
+		event_names: Array.isArray(dbFeature.event_names)
+			? dbFeature.event_names
+			: [],
 		archived: dbFeature.archived,
 
 		display: dbFeature.display

@@ -52,11 +52,11 @@ export const PlanItemSchema = z.object({
     }),
     tiers: z.array(UsageTierSchema).optional().meta({
     description:
-    "Tiered pricing. Each tier's 'to' does NOT include included amount. Either 'amount' or 'tiers' is required.",
+    "Tiered pricing.  Either 'amount' or 'tiers' is required.",
     }),
     tier_behavior: z.union([z.literal("graduated"), z.literal("volume")]).optional(),
     
-    interval: z.union([z.literal("week"), z.literal("month"), z.literal("quarter"), z.literal("semi_annual"), z.literal("year")]).meta({
+    interval: z.union([z.literal("one_off"), z.literal("week"), z.literal("month"), z.literal("quarter"), z.literal("semi_annual"), z.literal("year")]).meta({
     description:
     "Billing interval. For consumable features, should match reset.interval.",
     }),
@@ -176,7 +176,7 @@ export const PlanSchema = z.object({
 // Type aliases for literal unions
 export type ResetInterval = "one_off" | "minute" | "hour" | "day" | "week" | "month" | "quarter" | "semi_annual" | "year";
 export type RolloverExpiryDurationType = "month" | "forever";
-export type BillingInterval = "week" | "month" | "quarter" | "semi_annual" | "year";
+export type BillingInterval = "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 export type PlanPriceInterval = "one_off" | "week" | "month" | "quarter" | "semi_annual" | "year";
 export type BillingMethod = "prepaid" | "usage_based";
 export type OnIncrease = "prorate" | "charge_immediately";
@@ -245,88 +245,67 @@ type PriceWithAmount = PriceBaseFields & {
   tiers?: never;
 };
 
-// Price with graduated tiered pricing (no flat amount per tier)
-type PriceWithGraduatedTiers = PriceBaseFields & {
+// Price with tiered pricing (no flat amount)
+type PriceWithTiers = PriceBaseFields & {
   /** Cannot have flat amount when using tiers */
   amount?: never;
-  /** Graduated tiered pricing: each tier's amount applies only to units within that tier */
+  /** Tiered pricing structure based on usage ranges */
   tiers: Array<{ to: number | "inf"; amount: number }>;
-  /** Graduated: each tier's rate applies only to usage within that tier */
-  tierBehavior: "graduated";
+  /** Required when tiers is defined: how tiers are applied */
+  tierBehaviour: "graduated" | "volume";
 };
-
-// Price with volume tiered pricing (flat amount per tier)
-type PriceWithVolumeTiers = Omit<PriceBaseFields, "billingMethod"> & {
-  /** Volume pricing does not support usage_based billing — use 'prepaid' */
-  billingMethod: Exclude<BillingMethod, "usage_based">;
-  /** Cannot have flat amount when using tiers */
-  amount?: never;
-  /** Volume tiered pricing: the tier the total usage falls into applies to all units */
-  tiers: Array<{ to: number | "inf"; amount: number; flatAmount?: number }>;
-  /** Volume: the rate of the tier the total usage falls into applies to all units */
-  tierBehavior: "volume";
-};
-
-type PriceWithTiers = PriceWithGraduatedTiers | PriceWithVolumeTiers;
 
 // Price must have either amount OR tiers (not both, not neither)
 type PriceAmountOrTiers = PriceWithAmount | PriceWithTiers;
 
-// Price when reset IS defined - interval is forbidden
-type PriceWithoutInterval = PriceAmountOrTiers & {
-  /** Cannot have interval when using top-level reset */
-  interval?: never;
-  intervalCount?: never;
-};
-
-// Price when reset is NOT defined - interval is required
-type PriceWithInterval = PriceAmountOrTiers & {
-  /** Billing interval - required when no top-level reset */
-  interval: BillingInterval;
+// Price type - interval is optional (omit for one-off/non-recurring)
+type Price = PriceAmountOrTiers & {
+  /** Billing interval - omit for one-off pricing */
+  interval?: BillingInterval;
   /** Number of intervals between billing cycles (default: 1) */
   intervalCount?: number;
 };
 
 /**
- * Plan item with top-level reset configuration.
- * Use this for free allocations or features that reset but aren't priced per-use.
+ * Plan item with a reset cycle (e.g. 100 messages per month).
+ * Cannot have price — reset and price are mutually exclusive.
  */
 export type PlanItemWithReset = PlanItemBaseFields & {
-  /** Reset configuration for usage limits */
+  /** Reset configuration for the included allowance */
   reset: ResetConfig;
-  /** Optional pricing (cannot have price.interval when using top-level reset) */
-  price?: PriceWithoutInterval;
+  /** Cannot have price when using reset — use price.interval instead */
+  price?: never;
 };
 
 /**
- * Plan item with pricing that includes interval configuration.
- * Use this for usage-based pricing where interval determines billing cycle.
+ * Plan item with usage-based pricing (e.g. $0.10/message, billed monthly).
+ * price.interval encodes the billing cycle, so reset is not allowed.
  */
-export type PlanItemWithPriceInterval = PlanItemBaseFields & {
-  /** Cannot have top-level reset when using price.interval */
+export type PlanItemWithPrice = PlanItemBaseFields & {
+  /** Cannot have reset when using price — price.interval encodes the billing cycle */
   reset?: never;
-  /** Pricing configuration with billing interval */
-  price: PriceWithInterval;
+  /** Pricing configuration */
+  price: Price;
 };
 
 /**
- * Plan item without any reset configuration.
- * Use this for continuous-use features (like seats) that don't reset.
+ * Plan item with no reset and no price.
+ * Use for continuous-use or boolean features (e.g. seats, feature flags).
  */
 export type PlanItemNoReset = PlanItemBaseFields & {
   /** No reset for continuous-use features */
   reset?: never;
-  /** Pricing with required interval (since no top-level reset) */
-  price?: PriceWithInterval;
+  /** No price for free/boolean features */
+  price?: never;
 };
 
 /**
- * Plan item configuration with mutually exclusive reset patterns:
- * - PlanItemWithReset: Top-level reset (for free allocations)
- * - PlanItemWithPriceInterval: price.interval (for usage-based pricing billing cycle)
- * - PlanItemNoReset: No reset (for continuous-use features like seats)
+ * Plan item configuration. reset and price are mutually exclusive:
+ * - PlanItemWithReset: included allowance that resets on an interval (e.g. 100/month free)
+ * - PlanItemWithPrice: usage-based pricing with its own billing cycle
+ * - PlanItemNoReset: no reset, no price (continuous-use or boolean features)
  */
-export type PlanItem = PlanItemWithReset | PlanItemWithPriceInterval | PlanItemNoReset;
+export type PlanItem = PlanItemWithReset | PlanItemWithPrice | PlanItemNoReset;
 
 
 // Override Plan type to use PlanItem discriminated union

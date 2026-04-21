@@ -6,6 +6,8 @@ alwaysApply: true
 
 Zod Schemas → ORPC Contracts → OpenAPI Spec → Speakeasy SDKs → autumn-js Wrapper → React Hooks
 
+Webhook Zod Schemas → Webhook Registry → OpenAPI Spec (injected) + Svix Event Types
+
 Run `bun api` from root to execute the full pipeline.
 
 ---
@@ -35,6 +37,8 @@ All contracts aggregated in `packages/openapi/v2.1/contracts/index.ts`.
 **Entry point:** `packages/openapi/v2.1/openapi2.1.ts`
 
 Steps: Register internal schemas → Generate via ORPC → Apply Speakeasy settings → Inject global headers → Remove internal fields.
+
+The generated SDK/OpenAPI `x-api-version` default must come from `LATEST_VERSION` in `shared/api/versionUtils/ApiVersion.ts` and currently resolves to `2.2.0`.
 
 ---
 
@@ -150,7 +154,32 @@ When writing documentation examples for React hooks or the TypeScript SDK, alway
 
 ---
 
-## 6. Testing (sdk-test)
+## 6. Webhook Pipeline
+
+**Registry:** `shared/api/webhooks/webhookRegistry.ts`
+
+Each webhook is defined as a `WebhookDefinition` with `eventType`, `operationId`, `title`, `schema` (Zod), `description`, and `group`. Schemas live in `shared/api/webhooks/`.
+
+### OpenAPI injection
+
+`packages/openapi/v2.1/webhooks/injectWebhooks.ts` reads the registry and injects `webhooks` entries into the generated OpenAPI document. Only definitions with a Zod schema are included.
+
+### Svix sync
+
+`packages/openapi/scripts/svixPush.ts` pushes event types to Svix (create or update). It does **not** delete event types missing from the registry.
+
+### Adding a new webhook event
+
+1. **Create schema** in `shared/api/webhooks/` (Zod schema with `.meta()` descriptions)
+2. **Add to registry** in `shared/api/webhooks/webhookRegistry.ts`
+3. **Add to `WebhookEventType`** enum in `shared/api/webhooks/webhookEventType.ts`
+4. **Re-export** from `shared/api/webhooks/index.ts`
+5. **Regenerate** via `bun api` (webhooks are injected into the OpenAPI spec automatically)
+6. **Push to Svix** via `bun run --cwd packages/openapi scripts/svixPush.ts`
+
+---
+
+## 7. Testing (sdk-test)
 
 **Location:** `apps/sdk-test/`
 
@@ -158,7 +187,7 @@ Scenario pages organized by provider: `scenarios/core/`, `scenarios/better-auth/
 
 ---
 
-## Adding a New Route
+## Adding a New API Route
 
 1. **Add contract** in `packages/openapi/v2.1/contracts/`
 2. **Add to router** in `packages/openapi/v2.1/contracts/index.ts`
@@ -182,3 +211,7 @@ Scenario pages organized by provider: `scenarios/core/`, `scenarios/better-auth/
 | React client | `packages/autumn-js/src/react/client/AutumnClient.ts` |
 | React hooks | `packages/autumn-js/src/react/hooks/` |
 | SDK tests | `apps/sdk-test/` |
+| Webhook schemas | `shared/api/webhooks/` |
+| Webhook registry | `shared/api/webhooks/webhookRegistry.ts` |
+| Webhook OpenAPI injection | `packages/openapi/v2.1/webhooks/injectWebhooks.ts` |
+| Svix push script | `packages/openapi/scripts/svixPush.ts` |

@@ -1,5 +1,7 @@
 import { execAsyncQuiet } from "./exec.js";
+import { patchPySdkHooks } from "./patchPySdkHooks.js";
 import { patchPythonSdkGlobalDefaults } from "./patchPythonSdk.js";
+import { patchTsSdkHooks } from "./patchTsSdkHooks.js";
 
 /**
  * Generates the TypeScript SDK using Speakeasy and builds it (quiet mode for parallel).
@@ -15,6 +17,8 @@ async function generateTypeScriptSdkQuiet({
 		cwd: speakeasySdkDir,
 		label: "TypeScript SDK generation",
 	});
+
+	patchTsSdkHooks({ speakeasySdkDir });
 
 	await execAsyncQuiet({
 		command: "bun",
@@ -42,6 +46,7 @@ async function generatePythonSdkQuiet({
 	});
 
 	patchPythonSdkGlobalDefaults({ pythonSdkDir });
+	patchPySdkHooks({ pythonSdkDir });
 }
 
 /**

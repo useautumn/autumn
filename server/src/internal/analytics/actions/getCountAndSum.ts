@@ -11,6 +11,7 @@ import { format, startOfDay, startOfHour, sub } from "date-fns";
 import { Decimal } from "decimal.js";
 import { getClickhouseClient } from "@/external/tinybird/initClickhouse.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 import { getBillingCycleStartDate } from "../analyticsUtils.js";
 
 const DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
@@ -51,11 +52,12 @@ const calculateDateRange = async ({
 
 	const billingCycleResult =
 		isBillingCycle && !params.aggregateAll && params.customer
-			? ((await getBillingCycleStartDate(
-					params.customer,
+			? ((await getBillingCycleStartDate({
+					customer: params.customer,
 					db,
-					intervalType as "1bc" | "3bc" | "last_cycle",
-				)) as BillingCycleResult | null)
+					intervalType: intervalType as "1bc" | "3bc" | "last_cycle",
+					ctx,
+				})) as BillingCycleResult | null)
 			: null;
 
 	if (billingCycleResult?.startDate && billingCycleResult?.endDate) {
@@ -93,12 +95,26 @@ export const getCountAndSum = async ({
 
 	const { startDate, endDate } = await calculateDateRange({ ctx, params });
 
+	// Build dynamic filter_by clauses using native JSON sub-column access
+	let filterBySql = "";
+	const filterByParams: Record<string, string> = {};
+	if (params.filter_by) {
+		const entries = Object.entries(params.filter_by).slice(0, 5);
+		for (let i = 0; i < entries.length; i++) {
+			const [key, value] = entries[i];
+			validatePropertyPathForJSON({ propertyKey: key });
+			filterBySql += `\n\t\t\tAND properties.${key}::String = {filter_value_${i}:String}`;
+			filterByParams[`filter_value_${i}`] = value;
+		}
+	}
+
 	const query = `
 		WITH customer_events AS (
 			SELECT *
 			FROM events
 			WHERE org_id = {org_id:String} AND env = {env:String}
 			${params.aggregateAll ? "" : "AND customer_id = {customer_id:String}"}
+			${params.entity_id ? "AND entity_id = {entity_id:String}" : ""}${filterBySql}
 		)
 		SELECT
 			e.event_name,
@@ -125,9 +141,11 @@ export const getCountAndSum = async ({
 			org_id: org.id,
 			env,
 			customer_id: params.customer_id,
+			entity_id: params.entity_id,
 			start_date: startDate,
 			end_date: endDate,
 			event_names: params.event_names,
+			...filterByParams,
 		},
 		format: "JSON",
 	});

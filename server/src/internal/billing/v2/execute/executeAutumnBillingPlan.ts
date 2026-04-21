@@ -3,7 +3,10 @@ import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
-import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import {
+	getDeleteCustomerProducts,
+	getUpdateCustomerProducts,
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { invoiceActions } from "@/internal/invoices/actions";
@@ -29,13 +32,17 @@ export const executeAutumnBillingPlan = async ({
 	const { db } = ctx;
 	const {
 		insertCustomerProducts,
-		updateCustomerProduct,
-		deleteCustomerProduct,
 		customPrices,
 		customEntitlements,
 		customFreeTrial,
 		insertCustomerEntitlements,
 	} = autumnBillingPlan;
+	const updateCustomerProducts = getUpdateCustomerProducts({
+		autumnBillingPlan,
+	});
+	const deleteCustomerProducts = getDeleteCustomerProducts({
+		autumnBillingPlan,
+	});
 
 	if (customEntitlements) {
 		await EntitlementService.insert({
@@ -74,20 +81,17 @@ export const executeAutumnBillingPlan = async ({
 		newCusProducts: insertCustomerProducts,
 	});
 
-	// 3. Update customer product (DB + cache)
-	if (updateCustomerProduct) {
-		const { customerProduct, updates } = updateCustomerProduct;
-
-		await customerProductActions.updateDbAndCache({
+	// 3. Update customer product (DB only)
+	for (const { customerProduct, updates } of updateCustomerProducts) {
+		await CusProductService.update({
 			ctx,
-			customerId: autumnBillingPlan.customerId,
 			cusProductId: customerProduct.id,
-			updates,
+			updates: updates,
 		});
 	}
 
 	// 4. Delete scheduled customer product (e.g., when updating while canceling)
-	if (deleteCustomerProduct) {
+	for (const deleteCustomerProduct of deleteCustomerProducts) {
 		ctx.logger.debug(
 			`[executeAutumnBillingPlan] deleting scheduled customer product: ${deleteCustomerProduct.product.id}`,
 		);
@@ -100,6 +104,7 @@ export const executeAutumnBillingPlan = async ({
 	// 5. Update entitlement balances
 	await updateCustomerEntitlements({
 		ctx,
+		customerId: autumnBillingPlan.customerId,
 		updates: autumnBillingPlan.updateCustomerEntitlements,
 	});
 

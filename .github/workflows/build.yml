@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - staging
+      - dev
       
   workflow_dispatch:
     inputs:
@@ -14,8 +15,7 @@ on:
         default: 'manual'
 
 env:
-  AWS_REGION: us-west-2  # Change to your AWS region
-  ECR_REPOSITORY: autumn  # Change to your ECR repository name
+  AWS_REGION: us-west-2
 
 jobs:
   checks:
@@ -75,6 +75,13 @@ jobs:
           echo "branch=$SAFE_BRANCH" >> $GITHUB_OUTPUT
           echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
           
+          # Select ECR repository based on branch
+          if [ "$BRANCH_NAME" = "dev" ]; then
+            echo "ecr_repo=autumn-staging" >> $GITHUB_OUTPUT
+          else
+            echo "ecr_repo=autumn" >> $GITHUB_OUTPUT
+          fi
+          
           # Set custom tag if provided
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
             echo "custom_tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
@@ -86,6 +93,7 @@ jobs:
       - name: Build and push Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ steps.meta.outputs.ecr_repo }}
           IMAGE_TAG_SHA: ${{ steps.meta.outputs.sha }}
           IMAGE_TAG_BRANCH: ${{ steps.meta.outputs.branch }}
         run: |
@@ -108,13 +116,14 @@ jobs:
       - name: Output image details
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ steps.meta.outputs.ecr_repo }}
           IMAGE_TAG_SHA: ${{ steps.meta.outputs.sha }}
           IMAGE_TAG_BRANCH: ${{ steps.meta.outputs.branch }}
         run: |
           COMBINED_TAG="${IMAGE_TAG_BRANCH}-${IMAGE_TAG_SHA}"
-          echo "✅ Image pushed successfully!"
-          echo "📦 Repository: ${ECR_REGISTRY}/${ECR_REPOSITORY}"
-          echo "🏷️  Tag: ${COMBINED_TAG}"
+          echo "Image pushed successfully!"
+          echo "Repository: ${ECR_REGISTRY}/${ECR_REPOSITORY}"
+          echo "Tag: ${COMBINED_TAG}"
 
       - name: Auto-deploy fix branches
         if: github.ref == 'refs/heads/main'
@@ -129,15 +138,29 @@ jobs:
           BRANCH_NAME=$(echo "$PR_DATA" | jq -r '.[0].headRefName // empty')
           
           if [[ "$BRANCH_NAME" == fix/* ]]; then
-            echo "🚀 Detected merged fix/ branch: $BRANCH_NAME"
-            echo "🔄 Triggering auto-deploy..."
+            echo "Detected merged fix/ branch: $BRANCH_NAME"
+            echo "Triggering auto-deploy..."
             
             curl -X POST "$DEPLOY_URL/api/deploy/github" \
               -H "Content-Type: application/json" \
               -H "x-deploy-secret: $DEPLOY_SECRET" \
               -d "{\"commitSha\": \"$COMMIT_SHA\", \"deploymentType\": \"server\"}"
             
-            echo "✅ Auto-deploy triggered!"
+            echo "Auto-deploy triggered!"
           else
-            echo "ℹ️ Not a fix/ branch (branch: ${BRANCH_NAME:-direct push}), skipping auto-deploy"
+            echo "Not a fix/ branch (branch: ${BRANCH_NAME:-direct push}), skipping auto-deploy"
           fi
+
+      - name: Auto-deploy staging
+        if: github.ref == 'refs/heads/dev'
+        env:
+          DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
+          DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          echo "Deploying to staging..."
+          curl -X POST "$DEPLOY_URL/api/deploy/github/staging" \
+            -H "Content-Type: application/json" \
+            -H "x-deploy-secret: $DEPLOY_SECRET" \
+            -d "{\"commitSha\": \"$COMMIT_SHA\"}"
+          echo "Staging deploy triggered!"

@@ -49,6 +49,7 @@ export function TableBody() {
 							"text-t3 transition-none h-12 py-4 relative",
 							rowClassName,
 							isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
+							(onRowClick || rowHref) && "cursor-pointer",
 						)}
 						data-state={row.getIsSelected() && "selected"}
 						key={row.id}

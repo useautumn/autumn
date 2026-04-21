@@ -19,13 +19,12 @@ export const eventsListParamsSchema = z.object({
 	offset: z.union([z.number(), z.undefined()]).optional(),
 	limit: z.union([z.number(), z.undefined()]).optional(),
 	customerId: z.union([z.string(), z.undefined()]).optional(),
+	entityId: z.union([z.string(), z.undefined()]).optional(),
 	featureId: z
 		.union([z.string(), z.array(z.string()), z.undefined()])
 		.optional(),
 	customRange: z.union([listEventsCustomRangeSchema, z.undefined()]).optional(),
 });
-
-export const listEventsPropertiesSchema = z.object({});
 
 export const listEventsListSchema = z.object({
 	id: z.string(),
@@ -33,7 +32,7 @@ export const listEventsListSchema = z.object({
 	featureId: z.string(),
 	customerId: z.string(),
 	value: z.number(),
-	properties: listEventsPropertiesSchema,
+	properties: z.record(z.string(), z.any()),
 });
 
 export const listEventsResponseSchema = z.object({
@@ -58,6 +57,7 @@ export const eventsListParamsOutboundSchema = z.object({
 	offset: z.number(),
 	limit: z.number(),
 	customer_id: z.union([z.string(), z.undefined()]).optional(),
+	entity_id: z.union([z.string(), z.undefined()]).optional(),
 	feature_id: z
 		.union([z.string(), z.array(z.string()), z.undefined()])
 		.optional(),

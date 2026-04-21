@@ -14,6 +14,7 @@ SCHEMA >
     `status`                   String              `json:$.status`,
     `hosted_invoice_url`       Nullable(String)    `json:$.hosted_invoice_url`,
     `total`                    Nullable(Float64)   `json:$.total`,
+    `refunded_amount`          Nullable(Float64)   `json:$.refunded_amount`,
     `currency`                 String              `json:$.currency`,
     `discounts`                String              `json:$.discounts`,
     `items`                    String              `json:$.items`,

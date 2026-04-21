@@ -1,4 +1,5 @@
 import type { Customer } from "@autumn/shared";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -13,7 +14,6 @@ import {
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
-import { useCusSearchQuery } from "../../hooks/useCusSearchQuery";
 
 export const DeleteCustomerDialog = ({
 	customer,
@@ -30,7 +30,7 @@ export const DeleteCustomerDialog = ({
 		deleteStripe: false,
 		deleteCustomer: false,
 	});
-	const { refetch } = useCusSearchQuery();
+	const queryClient = useQueryClient();
 	const navigate = useNavigate();
 	const axiosInstance = useAxiosInstance();
 	const env = useEnv();
@@ -50,7 +50,10 @@ export const DeleteCustomerDialog = ({
 				`/v1/customers/${customer.id || customer.internal_id}?delete_in_stripe=${deleteStripe}`,
 			);
 
-			await refetch();
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ["customers"] }),
+				queryClient.invalidateQueries({ queryKey: ["full_customers"] }),
+			]);
 			setOpen(false);
 			toast.success("Customer deleted");
 			if (redirect) {

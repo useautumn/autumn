@@ -7,7 +7,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 export function useAttachMutation({
 	customerId,
 	buildRequestBody,
-	onInvoiceCreated,
 	onCheckoutRedirect,
 	onSuccess,
 }: {
@@ -15,8 +14,8 @@ export function useAttachMutation({
 	buildRequestBody: (params?: {
 		useInvoice?: boolean;
 		enableProductImmediately?: boolean;
+		finalizeInvoice?: boolean;
 	}) => AttachParamsV0 | null;
-	onInvoiceCreated?: (invoiceId: string) => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
@@ -27,9 +26,11 @@ export function useAttachMutation({
 		mutationFn: async ({
 			useInvoice,
 			enableProductImmediately,
+			finalizeInvoice,
 		}: {
 			useInvoice?: boolean;
 			enableProductImmediately?: boolean;
+			finalizeInvoice?: boolean;
 		}) => {
 			if (!customerId) {
 				throw new Error("Customer ID is required");
@@ -38,6 +39,7 @@ export function useAttachMutation({
 			const requestBody = buildRequestBody({
 				useInvoice,
 				enableProductImmediately,
+				finalizeInvoice,
 			});
 
 			if (!requestBody) {
@@ -54,17 +56,17 @@ export function useAttachMutation({
 		onSuccess: ({ data, useInvoice }) => {
 			if (useInvoice) {
 				if (data?.invoice) {
-					onInvoiceCreated?.(data.invoice.stripe_id);
 					toast.success("Invoice created successfully");
 				}
 			} else if (data?.payment_url) {
 				onCheckoutRedirect?.(data.payment_url);
-				toast.success("Redirecting to complete payment...");
 			} else {
 				toast.success("Product attached successfully");
 			}
 
-			onSuccess?.();
+			if (!useInvoice) {
+				onSuccess?.();
+			}
 
 			if (customerId) {
 				queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
@@ -82,15 +84,22 @@ export function useAttachMutation({
 		mutation.mutate({ useInvoice: false });
 	};
 
-	const handleInvoiceAttach = ({
+	const handleInvoiceAttach = async ({
 		enableProductImmediately,
+		finalizeInvoice,
 	}: {
 		enableProductImmediately: boolean;
+		finalizeInvoice: boolean;
 	}) => {
-		mutation.mutate({
+		const result = await mutation.mutateAsync({
 			useInvoice: true,
 			enableProductImmediately,
+			finalizeInvoice,
 		});
+		return {
+			stripeId: result.data?.invoice?.stripe_id,
+			hostedInvoiceUrl: result.data?.invoice?.hosted_invoice_url,
+		};
 	};
 
 	return {

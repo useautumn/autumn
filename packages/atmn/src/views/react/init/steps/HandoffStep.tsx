@@ -1,9 +1,14 @@
-import { MultiSelect, TextInput } from "@inkjs/ui";
 import { Box, Text, useApp } from "ink";
+import TextInput from "ink-text-input";
 import open from "open";
 import React, { useState } from "react";
 import { useClipboard, useCreateSkills } from "../../../../lib/hooks/index.js";
-import { SelectMenu, StatusLine, StepHeader } from "../../components/index.js";
+import {
+	MultiSelect,
+	SelectMenu,
+	StatusLine,
+	StepHeader,
+} from "../../components/index.js";
 
 // System prompt for AI integration - will be copied to clipboard
 const SYSTEM_PROMPT = `You are an expert AI assistant that helps users set up Autumn, a billing and entitlements layer over Stripe. The user has already installed Autumn Skills ready for you to use the load skill tool.
@@ -167,7 +172,12 @@ export function HandoffStep({
 				<Box flexDirection="column">
 					<StatusLine
 						status="success"
-						message="You're all set - next, run atmn push when you're ready to sync your config."
+						message={
+							<Text>
+								You're all set - next, run <Text color="cyan">atmn push</Text>{" "}
+								when you're ready to sync your config.
+							</Text>
+						}
 					/>
 					<Box marginTop={1} flexDirection="column" gap={0}>
 						<Text dimColor>
@@ -234,7 +244,7 @@ export function HandoffStep({
 						<Text color="gray">{">"} </Text>
 						<TextInput
 							placeholder={process.cwd()}
-							defaultValue={customPath}
+							value={customPath}
 							onChange={setCustomPath}
 							onSubmit={handleCustomPathSubmit}
 						/>
@@ -300,11 +310,16 @@ export function HandoffStep({
 	// Manual exit
 	if (state === "manual_exit") {
 		const finalMessage =
-			lastNextStepChoice === "docs"
-				? "You're all set - we're opening the docs now for you."
-				: lastNextStepChoice === "copy"
-					? "You're all set - paste the prompt we copied into your agent of choice to get started."
-					: "You're all set - next, run atmn push when you're ready to sync your config.";
+			lastNextStepChoice === "docs" ? (
+				"You're all set - we're opening the docs now for you."
+			) : lastNextStepChoice === "copy" ? (
+				"You're all set - paste the prompt we copied into your agent of choice to get started."
+			) : (
+				<Text>
+					You're all set - next, run <Text color="cyan">atmn push</Text> when
+					you're ready to sync your config.
+				</Text>
+			);
 
 		return (
 			<Box flexDirection="column" marginBottom={1}>

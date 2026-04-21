@@ -14,13 +14,22 @@ export interface Env {
    */
   AUTUMN_X_API_VERSION?: string | undefined;
 
+  /**
+   * Sets the failOpen parameter for all supported operations
+   */
+  AUTUMN_FAIL_OPEN?: boolean | undefined;
+
   AUTUMN_DEBUG?: boolean | undefined;
 }
 
 export const envSchema: z.ZodMiniType<Env, unknown> = z.object({
   AUTUMN_SECRET_KEY: z.optional(z.string()),
 
-  AUTUMN_X_API_VERSION: z._default(z.string(), "2.1"),
+  AUTUMN_X_API_VERSION: z._default(z.string(), "2.2.0"),
+  AUTUMN_FAIL_OPEN: z.pipe(
+    z._default(z.enum(["true", "false"]), "true"),
+    z.transform(v => v === "true"),
+  ),
 
   AUTUMN_DEBUG: z.optional(z.coerce.boolean()),
 });
@@ -74,6 +83,9 @@ export function fillGlobals(options: SDKOptions): SDKOptions {
 
   if (typeof envVars.AUTUMN_X_API_VERSION !== "undefined") {
     clone.xApiVersion ??= envVars.AUTUMN_X_API_VERSION;
+  }
+  if (typeof envVars.AUTUMN_FAIL_OPEN !== "undefined") {
+    clone.failOpen ??= envVars.AUTUMN_FAIL_OPEN;
   }
 
   return clone;

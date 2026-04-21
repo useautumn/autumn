@@ -89,7 +89,7 @@ For supported JavaScript runtimes, please consult [RUNTIMES.md](RUNTIMES.md).
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.1",
+  xApiVersion: "2.2.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -124,7 +124,7 @@ import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
-  xApiVersion: "2.1",
+  xApiVersion: "2.2.0",
 });
 
 async function run() {
@@ -251,12 +251,15 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
 @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+@param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now'. (optional)
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
+@param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 * [multiAttach](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
@@ -316,12 +319,15 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
 @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+@param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now'. (optional)
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
+@param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 * [previewMultiAttach](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -379,7 +385,9 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
 * [previewUpdate](docs/sdks/billing/README.md#previewupdate) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
@@ -403,7 +411,9 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
@@ -679,12 +689,15 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
 @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+@param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now'. (optional)
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
+@param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 - [`billingMultiAttach`](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
@@ -745,12 +758,15 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
 @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+@param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now'. (optional)
 @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+@param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
+@param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 - [`billingPreviewMultiAttach`](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -796,7 +812,9 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 - [`billingSetupPayment`](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
@@ -833,7 +851,9 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
+@param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
+@param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
 - [`check`](docs/sdks/autumn/README.md#check) - Checks whether a customer currently has enough balance to use a feature.
@@ -1102,7 +1122,7 @@ To change the default retry strategy for a single API call, simply provide a ret
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.1",
+  xApiVersion: "2.2.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1145,7 +1165,7 @@ const autumn = new Autumn({
     },
     retryConnectionErrors: false,
   },
-  xApiVersion: "2.1",
+  xApiVersion: "2.2.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1182,7 +1202,7 @@ import * as models from "@useautumn/sdk";
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.1",
+  xApiVersion: "2.2.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1241,7 +1261,7 @@ import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
   serverURL: "https://api.useautumn.com",
-  xApiVersion: "2.1",
+  xApiVersion: "2.2.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 

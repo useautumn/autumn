@@ -1,16 +1,13 @@
-import type { BillingBehavior } from "@autumn/shared";
+import type { BillingBehavior, CancelAction } from "@autumn/shared";
 import {
 	AppEnv,
 	type CreateFreeTrial,
+	type FeatureOptions,
 	type ProductItem,
 	type ProductV2,
-	UsageModel,
 } from "@autumn/shared";
 import { useMemo } from "react";
-import type {
-	CancelActionValue,
-	RefundBehaviorValue,
-} from "@/components/forms/update-subscription-v2/updateSubscriptionFormSchema";
+import type { RefundBehaviorValue } from "@/components/forms/update-subscription-v2/types/refundBehaviourSchema";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useHasChanges, useProductStore } from "@/hooks/stores/useProductStore";
 import { useEnv } from "@/utils/envUtils";
@@ -22,7 +19,7 @@ interface UpdateSubscriptionBodyBuilderParams {
 	productId?: string;
 	product?: ProductV2;
 	entityId?: string;
-	prepaidOptions?: Record<string, number>;
+	prepaidOptions?: Record<string, number | undefined>;
 	version?: number;
 	useInvoice?: boolean;
 	enableProductImmediately?: boolean;
@@ -33,7 +30,7 @@ interface UpdateSubscriptionBodyBuilderParams {
 	items?: ProductItem[] | null;
 
 	// Cancel action fields
-	cancelAction?: CancelActionValue | null;
+	cancelAction?: CancelAction | null;
 	billingBehavior?: BillingBehavior | null;
 	refundBehavior?: RefundBehaviorValue | null;
 }
@@ -78,28 +75,9 @@ export function useUpdateSubscriptionBodyBuilder(
 				mergedParams.version ??
 				(storeProduct?.id ? storeProduct.version : undefined);
 
-			// Convert prepaidOptions to options array
-			const options = mergedParams.prepaidOptions
-				? Object.entries(mergedParams.prepaidOptions).map(
-						([featureId, quantity]) => {
-							const prepaidItem = product?.items.find(
-								(item) =>
-									item.feature_id === featureId &&
-									item.usage_model === UsageModel.Prepaid,
-							);
-
-							const includedUsage =
-								prepaidItem && typeof prepaidItem.included_usage === "number"
-									? prepaidItem.included_usage
-									: 0;
-
-							return {
-								feature_id: featureId,
-								quantity: (quantity || 0) + includedUsage,
-							};
-						},
-					)
-				: [];
+			const options = buildLegacyUpdateSubscriptionOptions({
+				prepaidOptions: mergedParams.prepaidOptions,
+			});
 
 			// Build the body using getUpdateSubscriptionBody (includes freeTrial support)
 			return getUpdateSubscriptionBody({
@@ -132,4 +110,19 @@ export function useUpdateSubscriptionBodyBuilder(
 	);
 
 	return { updateSubscriptionBody, buildUpdateSubscriptionBody };
+}
+
+export function buildLegacyUpdateSubscriptionOptions({
+	prepaidOptions,
+}: {
+	prepaidOptions?: Record<string, number | undefined>;
+}): FeatureOptions[] {
+	if (!prepaidOptions) return [];
+
+	return Object.entries(prepaidOptions)
+		.filter((entry): entry is [string, number] => entry[1] !== undefined)
+		.map(([featureId, quantity]) => ({
+			feature_id: featureId,
+			quantity,
+		}));
 }

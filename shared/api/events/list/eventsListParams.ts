@@ -5,6 +5,11 @@ export const ApiEventsListParamsSchema = createPaginationParamsSchema({
 	defaultLimit: 100,
 }).extend({
 	customer_id: z.string().optional().describe("Filter events by customer ID"),
+	entity_id: z
+		.string()
+		.min(1)
+		.optional()
+		.describe("Filter events by entity ID (e.g., per-seat or per-resource)"),
 	feature_id: z
 		.string()
 		.min(1)
@@ -25,6 +30,17 @@ export const ApiEventsListParamsSchema = createPaginationParamsSchema({
 		})
 		.optional()
 		.describe("Filter events by time range"),
+	filter_by: z
+		.record(z.string(), z.string())
+		.refine((val) => Object.keys(val).length <= 5, {
+			message: "filter_by supports a maximum of 5 filters",
+		})
+		.optional()
+		.meta({
+			internal: true,
+			description:
+				'Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.',
+		}),
 });
 
 export type ApiEventsListParams = z.infer<typeof ApiEventsListParamsSchema>;

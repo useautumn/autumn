@@ -1,18 +1,22 @@
 DESCRIPTION >
-    Aggregate queries with grouping by a property key or customer_id.
-    Uses PER-BIN TOP 9 groups + "AUTUMN_RESERVED" bucket (10 max total per bin).
-    Each time bin shows its own top 9 groups, not global top 9.
+    Aggregate queries with grouping by a property key, customer_id, or entity_id.
+    Uses PER-BIN TOP N groups + "AUTUMN_RESERVED" bucket ((N+1) max total per bin).
+    N is controlled by the max_groups parameter (default 9).
+    Each time bin shows its own top N groups, not global top N.
     Returns unpivoted data: (period, event_name, group_value, total_value, _truncated)
-    _truncated is true only if at least one bin has more than 9 unique values.
+    _truncated is true only if at least one bin has more than max_groups unique values.
     Frontend maps "AUTUMN_RESERVED" to "Other values" for display.
     Parameters:
-      - group_column: 'customer_id' to group by customer, 'property' (default) to group by property_key
+      - group_column: 'customer_id' to group by customer, 'entity_id' to group by entity, 'property' (default) to group by property_key
+      - max_groups: maximum number of distinct groups to show per bin (default 9, remainder bucketed into AUTUMN_RESERVED)
 
 TOKEN "aggregate_groupable_read" READ
 
 NODE base
 DESCRIPTION >
     Aggregate raw data by period, event_name, and group_value.
+    Excludes rows with empty/null group values to prevent irrelevant events
+    from polluting the top-N and "Other" buckets.
 SQL >
     %
     SELECT
@@ -26,6 +30,8 @@ SQL >
         event_name,
         {% if String(group_column, 'property') == 'customer_id' %}
         customer_id as group_value,
+        {% elif String(group_column, 'property') == 'entity_id' %}
+        entity_id as group_value,
         {% else %}
         {{ column('properties.' + String(property_key, '')) }}::String as group_value,
         {% end %}
@@ -39,6 +45,30 @@ SQL >
         AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
         {% if defined(customer_id) and String(customer_id, '') != '' %}
         AND customer_id = {{ String(customer_id) }}
+        {% end %}
+        {% if defined(entity_id) and String(entity_id, '') != '' %}
+        AND entity_id = {{ String(entity_id) }}
+        {% end %}
+        {% if defined(filter_key_0) and String(filter_key_0, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_0, '')) }}::String = {{ String(filter_value_0, '') }}
+        {% end %}
+        {% if defined(filter_key_1) and String(filter_key_1, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_1, '')) }}::String = {{ String(filter_value_1, '') }}
+        {% end %}
+        {% if defined(filter_key_2) and String(filter_key_2, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_2, '')) }}::String = {{ String(filter_value_2, '') }}
+        {% end %}
+        {% if defined(filter_key_3) and String(filter_key_3, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_3, '')) }}::String = {{ String(filter_value_3, '') }}
+        {% end %}
+        {% if defined(filter_key_4) and String(filter_key_4, '') != '' %}
+        AND {{ column('properties.' + String(filter_key_4, '')) }}::String = {{ String(filter_value_4, '') }}
+        {% end %}
+        {% if String(group_column, 'property') == 'entity_id' %}
+        AND entity_id IS NOT NULL AND entity_id != ''
+        {% elif String(group_column, 'property') == 'property' %}
+        AND {{ column('properties.' + String(property_key, '')) }}::String IS NOT NULL
+        AND {{ column('properties.' + String(property_key, '')) }}::String != ''
         {% end %}
     GROUP BY period, event_name, group_value
 
@@ -54,12 +84,13 @@ SQL >
 NODE endpoint
 TYPE endpoint
 SQL >
+    %
     SELECT
         period,
         event_name,
-        if(rn <= 9, group_value, 'AUTUMN_RESERVED') as group_value,
+        if(rn <= {{ Int32(max_groups, 9) }}, group_value, 'AUTUMN_RESERVED') as group_value,
         sum(total_value) as total_value,
-        max(rn) > 9 as _truncated
+        max(rn) > {{ Int32(max_groups, 9) }} as _truncated
     FROM ranked
     GROUP BY period, event_name, group_value
     ORDER BY period, event_name, group_value

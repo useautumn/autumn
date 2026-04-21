@@ -141,9 +141,9 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			overage_allowed: true,
 		});
 
-		// // CRITICAL: Wait for Redis → Postgres sync before attaching new product
-		// // Without this, attach would rebuild cache from stale Postgres data
-		// await timeout(2000);
+		// CRITICAL: Wait for Redis → Postgres sync before attaching new product
+		// Without this, attach would rebuild cache from stale Postgres data
+		await timeout(4000);
 	});
 
 	test("attach lifetime prepaid product (after sync)", async () => {
@@ -191,7 +191,7 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 			purchased_balance: 0,
 		});
 
-		await timeout(2000);
+		await timeout(4000);
 	});
 
 	test("track 150: should deduct from lifetime prepaid, NOT add to overage", async () => {
@@ -301,7 +301,7 @@ describe(`${chalk.yellowBright("track-breakdown-sync: track→attach race condit
 	});
 
 	test("verify DB sync with skip_cache=true", async () => {
-		await timeout(2000);
+		await timeout(4000);
 
 		const customer = await autumnV2.customers.get<ApiCustomer>(customerId, {
 			skip_cache: "true",

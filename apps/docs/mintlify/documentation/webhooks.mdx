@@ -60,36 +60,64 @@ Fired when a customer's product or plan changes. The `scenario` field indicates 
 }
 ```
 
-### customer.threshold_reached
+### balances.limit_reached
 
-Fired when a customer reaches a usage threshold for a feature. This is useful for notifying users before they hit hard limits.
+Fired when a customer hits a usage limit for a feature. A limit can be the included allowance, a max purchase cap, or a spend limit.
 
-| Threshold Type | Description |
-|----------------|-------------|
-| `limit_reached` | Customer has reached their usage limit |
-| `allowance_used` | Customer has exhausted their allowance |
-
-In most cases, these events will fire at the same time, as the included allowance is the same as the user's usage limit. However, you may have a feature with a different included allowance and a different "max purchase" limit. 
-
-Eg: 100 API calls included, then 0.1 per API call, with a maximum purchase limit of 1000 API calls.
+| Limit Type | Description |
+|------------|-------------|
+| `included` | Customer has exhausted their included allowance |
+| `max_purchase` | Customer has reached the maximum purchase cap for overage |
+| `spend_limit` | Customer has hit their configured spend limit |
 
 **Example payload:**
 
 ```json expandable
 {
-  "type": "customer.threshold_reached",
+  "type": "balances.limit_reached",
   "data": {
-    "threshold_type": "limit_reached",
-    "customer": {
-      "id": "user_123",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "balances": { ... }
-    },
-    "feature": {
-      "id": "api_calls",
-      "name": "API Calls",
-      "type": "metered"
+    "customer_id": "user_123",
+    "feature_id": "api_calls",
+    "limit_type": "included"
+  }
+}
+```
+
+For entity-scoped usage, the payload will also include an `entity_id`:
+
+```json expandable
+{
+  "type": "balances.limit_reached",
+  "data": {
+    "customer_id": "user_123",
+    "feature_id": "api_calls",
+    "entity_id": "team_456",
+    "limit_type": "max_purchase"
+  }
+}
+```
+
+### balances.usage_alert_triggered
+
+Fired when a customer crosses a configured usage alert threshold. Usage alerts let you monitor when customers approach or exceed specific usage levels for a feature.
+
+| Alert Threshold Type | Description |
+|---------------------|-------------|
+| `usage` | An absolute usage count was crossed |
+| `usage_percentage` | A percentage of the usage allowance was crossed |
+
+**Example payload:**
+
+```json expandable
+{
+  "type": "balances.usage_alert_triggered",
+  "data": {
+    "customer_id": "user_123",
+    "feature_id": "api_calls",
+    "usage_alert": {
+      "name": "80% usage warning",
+      "threshold": 80,
+      "threshold_type": "usage_percentage"
     }
   }
 }

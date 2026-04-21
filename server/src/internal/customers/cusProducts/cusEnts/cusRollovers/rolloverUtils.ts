@@ -1,6 +1,11 @@
 import {
+	cusEntToStartingBalance,
 	type EntityRolloverBalance,
+	entToOptions,
+	type FullCusEntWithFullCusProduct,
+	type FullCusEntWithProduct,
 	type FullCustomerEntitlement,
+	getStartingBalance,
 	type Rollover,
 	type RolloverConfig,
 	RolloverExpiryDurationType,
@@ -77,12 +82,21 @@ const calculateNextExpiry = (nextResetAt: number, config: RolloverConfig) => {
 	return addMonths(nextResetAt, config.length).getTime();
 };
 
+function hasFullCusProduct(
+	cusEnt: FullCusEntWithProduct,
+): cusEnt is FullCusEntWithFullCusProduct {
+	return (
+		cusEnt.customer_product != null &&
+		"customer_prices" in cusEnt.customer_product
+	);
+}
+
 export function performMaximumClearing({
 	rows,
 	cusEnt,
 }: {
 	rows: Rollover[];
-	cusEnt: FullCustomerEntitlement;
+	cusEnt: FullCusEntWithProduct;
 }) {
 	const rolloverConfig = cusEnt.entitlement.rollover;
 
@@ -90,26 +104,34 @@ export function performMaximumClearing({
 		return { toDelete: [], toUpdate: [] };
 	}
 
-	if (rolloverConfig.max == null) {
-		return { toDelete: [], toUpdate: [] };
+	let effectiveMax: number | null = rolloverConfig.max ?? null;
+	if (rolloverConfig.max_percentage != null) {
+		let startingBalance: number;
+
+		if (hasFullCusProduct(cusEnt)) {
+			startingBalance = cusEntToStartingBalance({ cusEnt });
+		} else {
+			const options = entToOptions({
+				ent: cusEnt.entitlement,
+				options: cusEnt.customer_product?.options ?? [],
+			});
+			startingBalance = getStartingBalance({
+				entitlement: cusEnt.entitlement,
+				options,
+				productQuantity: cusEnt.customer_product?.quantity ?? 1,
+			});
+		}
+
+		effectiveMax = new Decimal(startingBalance)
+			.mul(rolloverConfig.max_percentage)
+			.div(100)
+			.floor()
+			.toNumber();
 	}
 
-	const total = 0;
-	const toDelete: string[] = [];
-	const toUpdate: Rollover[] = [];
-
-	// look through each row
-	// if entityMode is true, then look through each entity
-	// otherwise look at balance
-
-	// sort by the oldest first
-	// add the balance of the oldest to the total
-	// if the total is greater than or equal to the max, then:
-	// subtract the max from the total, if theres a difference then instantiate the updated row object and push to toUpdate
-	// if theres no difference, then push to toDelete
-	// move to the next row
-	// if the total is less than the max, then
-	// move to the next row
+	if (effectiveMax == null) {
+		return { toDelete: [], toUpdate: [] };
+	}
 
 	rows.sort((a, b) => {
 		if (a.expires_at && b.expires_at) return a.expires_at - b.expires_at;
@@ -126,7 +148,7 @@ export function performMaximumClearing({
 			(acc, row) => acc + row.balance,
 			0,
 		);
-		let toDeduct = new Decimal(totalRolloverBalance).sub(rolloverConfig.max);
+		let toDeduct = new Decimal(totalRolloverBalance).sub(effectiveMax);
 
 		if (toDeduct.lt(0)) return { toDelete: [], toUpdate: [] };
 
@@ -152,79 +174,77 @@ export function performMaximumClearing({
 		}
 
 		return { toDelete, toUpdate };
-	} else {
-		const allEntityIds = new Set<string>();
-		rows.forEach((row) => {
-			if (row.entities && Array.isArray(row.entities)) {
-				row.entities.forEach((entity: any) => {
-					if (entity.id) {
-						allEntityIds.add(entity.id);
-					}
-				});
-			}
-		});
+	}
 
-		const entityTotals = new Map<string, number>();
-		allEntityIds.forEach((id) => {
-			entityTotals.set(id, 0);
-		});
-		const entityIdToTotal: Record<string, number> = {};
-		rows.forEach((row) => {
-			for (const entityId in row.entities) {
-				entityIdToTotal[entityId] =
-					(entityIdToTotal[entityId] || 0) + row.entities[entityId].balance;
-			}
-		});
-
-		const toUpdate: Rollover[] = [];
-		const toDelete: string[] = [];
-
-		// Non entity mode
-		for (const row of rows) {
-			const update = structuredClone(row);
-			let shouldUpdate = false;
-
-			for (const entityId in entityIdToTotal) {
-				const entityTotal = entityIdToTotal[entityId];
-				const toDeduct = new Decimal(entityTotal).sub(rolloverConfig.max);
-
-				if (toDeduct.lte(0) || !row.entities[entityId]) continue;
-
-				const curBalance = new Decimal(row.entities[entityId].balance);
-				let newBalance = curBalance;
-
-				if (curBalance.gte(toDeduct)) {
-					newBalance = newBalance.sub(toDeduct);
-					entityIdToTotal[entityId] = 0;
-					shouldUpdate = true;
-					update.entities[entityId] = {
-						id: entityId,
-						balance: newBalance.toNumber(),
-						usage: 0,
-					};
-				} else {
-					newBalance = new Decimal(0);
-					entityIdToTotal[entityId] = toDeduct.sub(curBalance).toNumber();
-					shouldUpdate = true;
-					update.entities[entityId] = {
-						id: entityId,
-						balance: 0,
-						usage: 0,
-					};
+	const allEntityIds = new Set<string>();
+	rows.forEach((row) => {
+		if (row.entities && Array.isArray(row.entities)) {
+			row.entities.forEach((entity: any) => {
+				if (entity.id) {
+					allEntityIds.add(entity.id);
 				}
-			}
-			// If all keys are 0, then delete the row
-			if (
-				Object.values(update.entities).every(
-					(entity: EntityRolloverBalance) => entity.balance === 0,
-				)
-			) {
-				toDelete.push(row.id);
-			} else if (shouldUpdate) {
-				toUpdate.push(update);
+			});
+		}
+	});
+
+	const entityTotals = new Map<string, number>();
+	allEntityIds.forEach((id) => {
+		entityTotals.set(id, 0);
+	});
+	const entityIdToTotal: Record<string, number> = {};
+	rows.forEach((row) => {
+		for (const entityId in row.entities) {
+			entityIdToTotal[entityId] =
+				(entityIdToTotal[entityId] || 0) + row.entities[entityId].balance;
+		}
+	});
+
+	const toUpdate: Rollover[] = [];
+	const toDelete: string[] = [];
+
+	for (const row of rows) {
+		const update = structuredClone(row);
+		let shouldUpdate = false;
+
+		for (const entityId in entityIdToTotal) {
+			const entityTotal = entityIdToTotal[entityId];
+			const toDeduct = new Decimal(entityTotal).sub(effectiveMax);
+
+			if (toDeduct.lte(0) || !row.entities[entityId]) continue;
+
+			const curBalance = new Decimal(row.entities[entityId].balance);
+			let newBalance = curBalance;
+
+			if (curBalance.gte(toDeduct)) {
+				newBalance = newBalance.sub(toDeduct);
+				entityIdToTotal[entityId] = 0;
+				shouldUpdate = true;
+				update.entities[entityId] = {
+					id: entityId,
+					balance: newBalance.toNumber(),
+					usage: 0,
+				};
+			} else {
+				newBalance = new Decimal(0);
+				entityIdToTotal[entityId] = toDeduct.sub(curBalance).toNumber();
+				shouldUpdate = true;
+				update.entities[entityId] = {
+					id: entityId,
+					balance: 0,
+					usage: 0,
+				};
 			}
 		}
-
-		return { toDelete, toUpdate };
+		if (
+			Object.values(update.entities).every(
+				(entity: EntityRolloverBalance) => entity.balance === 0,
+			)
+		) {
+			toDelete.push(row.id);
+		} else if (shouldUpdate) {
+			toUpdate.push(update);
+		}
 	}
+
+	return { toDelete, toUpdate };
 }

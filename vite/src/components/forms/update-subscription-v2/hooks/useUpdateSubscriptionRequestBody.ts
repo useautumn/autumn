@@ -1,90 +1,106 @@
-import {
-	type ProductItem,
-	type UpdateSubscriptionV0Params,
-	UsageModel,
-} from "@autumn/shared";
+import type { ProductItem, UpdateSubscriptionV0Params } from "@autumn/shared";
 import { useCallback } from "react";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
 import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
+
+type PrepaidItemInput = {
+	feature_id?: string | null;
+	feature?: { internal_id?: string } | null;
+	included_usage?: number | "inf" | null;
+};
 
 /** Pure function to build update subscription options from prepaid form values. Extracted for testability. */
 export function buildUpdateSubscriptionOptions({
 	prepaidItems,
 	prepaidOptions,
 	initialPrepaidOptions,
-	items,
+	initialBackendQuantities,
 }: {
-	prepaidItems: {
-		feature_id?: string | null;
-		feature?: { internal_id?: string } | null;
-		included_usage?: number | "inf" | null;
-	}[];
-	prepaidOptions: Record<string, number>;
-	initialPrepaidOptions: Record<string, number>;
-	items?: ProductItem[] | null;
+	prepaidItems: PrepaidItemInput[];
+	prepaidOptions: Record<string, number | undefined>;
+	initialPrepaidOptions: Record<string, number | undefined>;
+	initialBackendQuantities: Record<string, number>;
 }): { feature_id: string; quantity: number }[] {
-	const options = prepaidItems
+	const getFeatureId = ({ item }: { item: PrepaidItemInput }) =>
+		item.feature_id ?? item.feature?.internal_id ?? "";
+
+	const getIncludedUsage = ({ item }: { item?: PrepaidItemInput | null }) =>
+		typeof item?.included_usage === "number" ? item.included_usage : 0;
+
+	const normalizeQuantity = ({
+		quantity,
+		includedUsage,
+	}: {
+		quantity: number;
+		includedUsage: number;
+	}) => Math.max(quantity, includedUsage);
+
+	const getPurchasedQuantity = ({
+		totalQuantity,
+		includedUsage,
+	}: {
+		totalQuantity: number;
+		includedUsage: number;
+	}) => Math.max(0, totalQuantity - includedUsage);
+
+	return prepaidItems
 		.map((item) => {
-			const featureId = item.feature_id ?? item.feature?.internal_id ?? "";
+			const featureId = getFeatureId({ item });
 			const inputQuantity = prepaidOptions[featureId];
-			const initialQuantity = initialPrepaidOptions[featureId];
-			const includedUsage =
-				typeof item.included_usage === "number" ? item.included_usage : 0;
+			const initialQuantity = initialPrepaidOptions[featureId] ?? 0;
+			const normalizedInputQuantity =
+				inputQuantity === undefined || inputQuantity === null
+					? undefined
+					: normalizeQuantity({
+							quantity: inputQuantity,
+							includedUsage: getIncludedUsage({ item }),
+						});
+			const currentIncludedUsage = getIncludedUsage({ item });
+			const purchasedQuantityChanged =
+				getPurchasedQuantity({
+					totalQuantity: normalizedInputQuantity ?? initialQuantity,
+					includedUsage: currentIncludedUsage,
+				}) !== (initialBackendQuantities[featureId] ?? 0);
 
 			if (
-				inputQuantity !== undefined &&
-				inputQuantity !== null &&
+				normalizedInputQuantity !== undefined &&
+				normalizedInputQuantity !== null &&
 				featureId &&
-				inputQuantity !== initialQuantity
+				(normalizedInputQuantity !== initialQuantity ||
+					purchasedQuantityChanged)
 			) {
 				return {
 					feature_id: featureId,
-					quantity: inputQuantity + includedUsage,
+					quantity: normalizedInputQuantity,
 				};
 			}
 			return null;
 		})
 		.filter((o): o is { feature_id: string; quantity: number } => o !== null);
-
-	if (items && items.length > 0) {
-		const existingFeatureIds = new Set(options.map((o) => o.feature_id));
-
-		for (const item of items) {
-			if (
-				item.usage_model === UsageModel.Prepaid &&
-				item.feature_id &&
-				!existingFeatureIds.has(item.feature_id)
-			) {
-				const inputQuantity = prepaidOptions[item.feature_id];
-				const includedUsage =
-					typeof item.included_usage === "number" ? item.included_usage : 0;
-
-				if (inputQuantity !== undefined && inputQuantity !== null) {
-					options.push({
-						feature_id: item.feature_id,
-						quantity: inputQuantity + includedUsage,
-					});
-				}
-			}
-		}
-	}
-
-	return options;
 }
 
 export function useUpdateSubscriptionRequestBody({
 	updateSubscriptionFormContext,
 	form,
+	currentPrepaidItems,
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
 	form: UseUpdateSubscriptionForm;
+	currentPrepaidItems: ProductItem[];
 }) {
-	const { customerId, product, entityId, customerProduct, prepaidItems } =
+	const { customerId, product, entityId, customerProduct } =
 		updateSubscriptionFormContext;
 
 	const initialPrepaidOptions =
 		form.options.defaultValues?.prepaidOptions ?? {};
+	const initialBackendQuantities = customerProduct.options.reduce(
+		(acc, option) => {
+			acc[option.feature_id] = option.quantity;
+			return acc;
+		},
+		{} as Record<string, number>,
+	);
 	const initialVersion = form.options.defaultValues?.version;
 
 	const buildRequestBody = useCallback((): UpdateSubscriptionV0Params => {
@@ -100,6 +116,10 @@ export function useUpdateSubscriptionRequestBody({
 			items,
 			cancelAction,
 			billingBehavior,
+			resetBillingCycle,
+			refundBehavior,
+			refundAmount,
+			noBillingChanges,
 		} = formValues;
 
 		const base = {
@@ -112,21 +132,27 @@ export function useUpdateSubscriptionRequestBody({
 
 		// For cancel actions, only include cancellation-related fields
 		if (cancelAction) {
+			const isRefund = refundBehavior === "refund";
 			return {
 				...base,
 				cancel_action: cancelAction,
 				billing_behavior:
-					cancelAction === "cancel_immediately"
+					cancelAction === "cancel_immediately" && !isRefund
 						? billingBehavior || undefined
 						: undefined,
+				refund_last_payment:
+					cancelAction === "cancel_immediately" && isRefund
+						? refundAmount || "prorated"
+						: undefined,
+				no_billing_changes: noBillingChanges || undefined,
 			};
 		}
 
 		const options = buildUpdateSubscriptionOptions({
-			prepaidItems,
+			prepaidItems: currentPrepaidItems,
 			prepaidOptions,
 			initialPrepaidOptions,
-			items,
+			initialBackendQuantities,
 		});
 
 		const freeTrial = getFreeTrial({
@@ -144,6 +170,8 @@ export function useUpdateSubscriptionRequestBody({
 			items: items && items.length > 0 ? items : undefined,
 			version: version !== initialVersion ? version : undefined,
 			billing_behavior: billingBehavior || undefined,
+			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
+			no_billing_changes: noBillingChanges || undefined,
 		};
 	}, [
 		form.store,
@@ -152,9 +180,11 @@ export function useUpdateSubscriptionRequestBody({
 		entityId,
 		customerProduct.id,
 		customerProduct.internal_product_id,
+		customerProduct.options,
 		initialVersion,
-		prepaidItems,
+		currentPrepaidItems,
 		initialPrepaidOptions,
+		initialBackendQuantities,
 	]);
 
 	return { buildRequestBody };

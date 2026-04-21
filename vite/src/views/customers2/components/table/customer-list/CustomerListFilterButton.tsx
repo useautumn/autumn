@@ -12,27 +12,29 @@ import {
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { cn } from "@/lib/utils";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
+import { ProcessorSubMenu } from "@/views/customers/components/filter-dropdown/ProcessorSubMenu";
 import { ProductsSubMenu } from "@/views/customers/components/filter-dropdown/ProductsSubMenu";
 import { SaveViewPopover } from "@/views/customers/components/filter-dropdown/SavedViewPopover";
 import { SavedViews } from "@/views/customers/components/filter-dropdown/SavedViews";
-import { useCustomersQueryStates } from "@/views/customers/hooks/useCustomersQueryStates";
+import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 
 export function CustomerListFilterButton() {
-	const { queryStates, setFilters } = useCustomersQueryStates();
+	const { queryStates, setFilters } = useCustomerFilters();
 	const [open, setOpen] = useState(false);
 
 	const hasActiveFilters =
 		queryStates.status.length > 0 ||
 		queryStates.version.length > 0 ||
-		queryStates.none;
+		queryStates.none ||
+		queryStates.processor.length > 0;
 
 	const { data, refetch: refetchSavedViews } = useSavedViewsQuery();
 
 	const views = data?.views || [];
 
 	const clearFilters = () => {
-		setFilters({ status: [], version: [], none: false });
+		setFilters({ status: [], version: [], none: false, processor: [] });
 	};
 
 	const closeFilterModal = () => {
@@ -62,6 +64,7 @@ export function CustomerListFilterButton() {
 				<DropdownMenuGroup className="p-1">
 					<FilterStatusSubMenu />
 					<ProductsSubMenu />
+					<ProcessorSubMenu />
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator className="m-0" />
 				{views.length > 0 && (

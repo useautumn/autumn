@@ -37,6 +37,11 @@ let probeClient: postgres.Sql | null = null;
 let failureCount = 0;
 let windowStartedAt = Date.now();
 
+const resetFailureWindow = (now = Date.now()) => {
+	failureCount = 0;
+	windowStartedAt = now;
+};
+
 /** Get the current DB health state. */
 export const getDbHealth = (): PgHealth => state;
 
@@ -93,8 +98,7 @@ const switchToDegraded = (): void => {
 		thresholdCount: FAILURE_THRESHOLD,
 	});
 
-	failureCount = 0;
-	windowStartedAt = Date.now();
+	resetFailureWindow();
 
 	startProbe();
 };
@@ -103,8 +107,7 @@ const switchToHealthy = (): void => {
 	if (state === PgHealth.Healthy) return;
 
 	state = PgHealth.Healthy;
-	failureCount = 0;
-	windowStartedAt = Date.now();
+	resetFailureWindow();
 	firstProbeSuccessAt = null;
 
 	logger.info("[PgHealthMonitor] RECOVERED to HEALTHY", {
@@ -250,8 +253,7 @@ export const getPgHealthState = (): {
 /** Force DEGRADED state (for testing). Does NOT start the recovery probe. */
 export const forceDegraded = (): void => {
 	state = PgHealth.Degraded;
-	failureCount = 0;
-	windowStartedAt = Date.now();
+	resetFailureWindow();
 	logger.info("[PgHealthMonitor] FORCE DEGRADED (test)", {
 		type: "pg_health_force",
 	});
@@ -260,8 +262,7 @@ export const forceDegraded = (): void => {
 /** Force HEALTHY state and stop any active probe (for testing). */
 export const forceHealthy = (): void => {
 	state = PgHealth.Healthy;
-	failureCount = 0;
-	windowStartedAt = Date.now();
+	resetFailureWindow();
 	firstProbeSuccessAt = null;
 	stopProbe();
 	logger.info("[PgHealthMonitor] FORCE HEALTHY (test)", {

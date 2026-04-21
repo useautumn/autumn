@@ -25,6 +25,10 @@ export const billingUpdateInvoiceModeSchema = z.object({
 	finalize: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const billingUpdateRecalculateBalancesSchema = z.object({
+	enabled: z.boolean(),
+});
+
 export const billingUpdateInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -78,6 +82,7 @@ export const billingUpdateProrationOutboundSchema = z.object({
 
 export const billingUpdateRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -122,6 +127,10 @@ export const billingUpdateInvoiceModeOutboundSchema = z.object({
 	finalize: z.boolean(),
 });
 
+export const billingUpdateRecalculateBalancesOutboundSchema = z.object({
+	enabled: z.boolean(),
+});
+
 export const updateSubscriptionParamsOutboundSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -140,7 +149,11 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 	redirect_mode: z.string(),
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	cancel_action: z.union([z.string(), z.undefined()]).optional(),
+	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
+	recalculate_balances: z
+		.union([billingUpdateRecalculateBalancesOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -194,6 +207,7 @@ export const billingUpdateExpiryDurationTypeSchema = closedEnumSchema;
 
 export const billingUpdateRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: billingUpdateExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -260,7 +274,11 @@ export const updateSubscriptionParamsSchema = z.object({
 	cancelAction: z
 		.union([billingUpdateCancelActionSchema, z.undefined()])
 		.optional(),
+	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
+	recalculateBalances: z
+		.union([billingUpdateRecalculateBalancesSchema, z.undefined()])
+		.optional(),
 });
 
 export const billingUpdateCodeSchema = openEnumSchema;

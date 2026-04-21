@@ -3,6 +3,7 @@ export type {
 	ClientAttachParams as AttachParams,
 	ClientCheckParams as CheckParams,
 	ClientCreateReferralCodeParams as CreateReferralCodeParams,
+	ClientGetEntityParams as GetEntityClientParams,
 	ClientGetOrCreateCustomerParams as GetOrCreateCustomerClientParams,
 	ClientListEventsParams as ListEventsParams,
 	ClientListPlansParams as ListPlansParams,

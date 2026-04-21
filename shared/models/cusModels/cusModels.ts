@@ -3,7 +3,9 @@ import { AppEnv } from "../genModels/genEnums.js";
 import { ExternalProcessorsSchema } from "../genModels/processorSchemas.js";
 import {
 	AutoTopupSchema,
+	DbOverageAllowedSchema,
 	DbSpendLimitSchema,
+	DbUsageAlertSchema,
 } from "./billingControls/customerBillingControls.js";
 
 export const CustomerSchema = z.object({
@@ -23,6 +25,13 @@ export const CustomerSchema = z.object({
 	send_email_receipts: z.boolean().default(false),
 	auto_topups: z.array(AutoTopupSchema).nullish(),
 	spend_limits: z.array(DbSpendLimitSchema).nullish(),
+	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
+	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
+	config: z
+		.object({
+			disable_pooled_balance: z.boolean().optional(),
+		})
+		.nullish(),
 });
 
 export type Customer = z.infer<typeof CustomerSchema>;

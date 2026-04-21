@@ -1,16 +1,12 @@
 import { ErrCode } from "@autumn/shared";
-import {
-	ArrowSquareOutIcon,
-	ChartBarIcon,
-	DatabaseIcon,
-} from "@phosphor-icons/react";
+import { ChartBarIcon, DatabaseIcon } from "@phosphor-icons/react";
 import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { EmptyState } from "@/components/v2/empty-states/EmptyState";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
+import { useEnv } from "@/utils/envUtils";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
@@ -21,6 +17,7 @@ import {
 	useAnalyticsData,
 	useRawAnalyticsData,
 } from "./hooks/useAnalyticsData";
+import { RevenueMetricsSection } from "./revenue/RevenueMetricsSection";
 import { extractPropertyKeys } from "./utils/extractPropertyKeys";
 import {
 	generateChartConfig,
@@ -41,6 +38,9 @@ export const AnalyticsView = () => {
 	const gridRef = useRef<AgGridReact>(null);
 	const navigate = useNavigate();
 
+	const env = useEnv();
+	const { flags, isLoading: isFeatureFlagsLoading } = useFeatureFlags();
+
 	const customerId = searchParams.get("customer_id");
 
 	const {
@@ -52,6 +52,8 @@ export const AnalyticsView = () => {
 		bcExclusionFlag,
 		groupBy,
 		truncated,
+		entityNames,
+		customerNames,
 	} = useAnalyticsData({ hasCleared });
 
 	// Show toast when data is truncated due to too many unique group values
@@ -79,9 +81,11 @@ export const AnalyticsView = () => {
 			return [];
 		}
 
-		// Handle special case for customer_id (not a property)
+		// Handle special case for column-based operators (not a property)
 		const groupByColumn =
-			groupBy === "customer_id" ? "customer_id" : `properties.${groupBy}`;
+			groupBy === "customer_id" || groupBy === "entity_id"
+				? groupBy
+				: `properties.${groupBy}`;
 		const uniqueValues = new Set<string>();
 
 		for (const row of events.data) {
@@ -110,9 +114,11 @@ export const AnalyticsView = () => {
 		// Apply frontend filter if a group filter is selected
 		let filteredEvents = events;
 		if (groupBy && groupFilter) {
-			// Handle special case for customer_id (not a property)
+			// Handle special case for column-based operators (not a property)
 			const groupByColumn =
-				groupBy === "customer_id" ? "customer_id" : `properties.${groupBy}`;
+				groupBy === "customer_id" || groupBy === "entity_id"
+					? groupBy
+					: `properties.${groupBy}`;
 			const filteredData = events.data.filter(
 				(row: Record<string, string | number>) =>
 					String(row[groupByColumn]) === groupFilter,
@@ -136,13 +142,25 @@ export const AnalyticsView = () => {
 			features,
 			groupBy,
 			originalColors: colors,
+			entityNames,
+			customerNames,
 		});
 
 		return { chartData: transformed, chartConfig: config };
-	}, [events, features, groupBy, groupFilter]);
+	}, [events, features, groupBy, groupFilter, entityNames, customerNames]);
 
 	useEffect(() => {
-		if (error?.response?.data?.code === ErrCode.ClickHouseDisabled) {
+		if (
+			(
+				error as {
+					response?: {
+						data?: {
+							code?: string;
+						};
+					};
+				}
+			)?.response?.data?.code === ErrCode.TinybirdDisabled
+		) {
 			setClickHouseDisabled(true);
 		}
 	}, [error]);
@@ -150,39 +168,15 @@ export const AnalyticsView = () => {
 	if (clickHouseDisabled) {
 		return (
 			<div className="flex flex-col items-center justify-center h-full">
-				<h3 className="text-sm text-t2 font-bold">ClickHouse is disabled</h3>
+				<h3 className="text-sm text-t2 font-bold">Tinybird is disabled</h3>
 			</div>
 		);
 	}
 
-	// Show empty state if no actual analytics events (check rawEvents and totalRows)
-	const hasNoData =
-		!rawQueryLoading &&
-		(!rawEvents || !rawEvents.data || rawEvents.data.length === 0) &&
-		totalRows === 0;
-
-	if (hasNoData) {
-		return (
-			<EmptyState
-				type="analytics"
-				actionButton={
-					<IconButton
-						variant="secondary"
-						iconOrientation="right"
-						icon={<ArrowSquareOutIcon size={16} />}
-						onClick={() => {
-							window.open(
-								"https://docs.useautumn.com/documentation/getting-started/gating",
-								"_blank",
-							);
-						}}
-					>
-						Docs
-					</IconButton>
-				}
-			/>
-		);
-	}
+	const showRevenueMetrics =
+		env === "live" &&
+		!isFeatureFlagsLoading &&
+		!flags.maintenanceModes.analytics.disableRevenueMetrics;
 
 	return (
 		<AnalyticsContext.Provider
@@ -222,10 +216,13 @@ export const AnalyticsView = () => {
 				groupFilter,
 				setGroupFilter,
 				availableGroupValues,
+				entityNames,
+				customerNames,
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-4 sm:px-10 pt-4 sm:pt-8">
 				<OnboardingGuide />
+				{showRevenueMetrics && <RevenueMetricsSection />}
 				<div className="max-h-[400px] min-h-[400px] pb-6 shrink-0">
 					<div className="flex justify-between pb-4 h-10">
 						<div className="text-t3 text-md flex gap-2 items-center">

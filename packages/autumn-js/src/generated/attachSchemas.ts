@@ -96,6 +96,7 @@ export const attachProrationOutboundSchema = z.object({
 
 export const attachRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -176,6 +177,7 @@ export const attachParamsOutboundSchema = z.object({
 		.optional(),
 	success_url: z.union([z.string(), z.undefined()]).optional(),
 	new_billing_subscription: z.union([z.boolean(), z.undefined()]).optional(),
+	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	plan_schedule: z.union([z.string(), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
@@ -190,6 +192,10 @@ export const attachParamsOutboundSchema = z.object({
 	carry_over_usages: z
 		.union([attachCarryOverUsagesOutboundSchema, z.undefined()])
 		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
+	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -241,6 +247,7 @@ export const attachExpiryDurationTypeSchema = closedEnumSchema;
 
 export const attachRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
 	expiryDurationType: attachExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
@@ -298,6 +305,7 @@ export const attachParamsSchema = z.object({
 		.optional(),
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
 	newBillingSubscription: z.union([z.boolean(), z.undefined()]).optional(),
+	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	planSchedule: z.union([attachPlanScheduleSchema, z.undefined()]).optional(),
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
@@ -312,6 +320,10 @@ export const attachParamsSchema = z.object({
 	carryOverUsages: z
 		.union([attachCarryOverUsagesSchema, z.undefined()])
 		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
+	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const attachCodeSchema = openEnumSchema;

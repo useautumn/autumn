@@ -9,7 +9,7 @@ import {
 	type RewardRedemption,
 } from "@autumn/shared";
 import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
-import type { CustomerData } from "autumn-js";
+import type { CustomerData } from "@autumn/shared";
 import { addHours, addMonths } from "date-fns";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods.js";
@@ -1011,7 +1011,9 @@ export async function initScenario(params: {
 	autumnV0: AutumnInt;
 	autumnV1: AutumnInt;
 	autumnV1Beta: AutumnInt;
+	/** @deprecated Use autumnV2_2 instead */
 	autumnV2: AutumnInt;
+	/** @deprecated Use autumnV2_2 instead */
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	testClockId: string | undefined;
@@ -1035,7 +1037,9 @@ export async function initScenario(params: {
 	autumnV0: AutumnInt;
 	autumnV1: AutumnInt;
 	autumnV1Beta: AutumnInt;
+	/** @deprecated Use autumnV2_2 instead */
 	autumnV2: AutumnInt;
+	/** @deprecated Use autumnV2_2 instead */
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	testClockId: undefined;

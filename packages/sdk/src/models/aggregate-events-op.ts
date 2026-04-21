@@ -62,13 +62,17 @@ export type EventsAggregateParams = {
   /**
    * Customer ID to aggregate events for
    */
-  customerId: string;
+  customerId?: string | undefined;
+  /**
+   * Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)
+   */
+  entityId?: string | undefined;
   /**
    * Feature ID(s) to aggregate events for
    */
   featureId: string | Array<string>;
   /**
-   * Property to group events by. If provided, each key in the response will be an object with distinct groups as the keys
+   * Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" to group by those columns
    */
   groupBy?: string | undefined;
   /**
@@ -83,6 +87,14 @@ export type EventsAggregateParams = {
    * Custom time range to aggregate events for. If provided, range must not be provided
    */
   customRange?: AggregateEventsCustomRange | undefined;
+  /**
+   * Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.
+   */
+  filterBy?: { [k: string]: string } | undefined;
+  /**
+   * Maximum number of distinct group values to return per time bin when using group_by. Remaining values are bundled into an 'Other' bucket. Defaults to 9
+   */
+  maxGroups?: number | undefined;
 };
 
 export type AggregateEventsList = {
@@ -175,12 +187,15 @@ export function aggregateEventsCustomRangeToJSON(
 
 /** @internal */
 export type EventsAggregateParams$Outbound = {
-  customer_id: string;
+  customer_id?: string | undefined;
+  entity_id?: string | undefined;
   feature_id: string | Array<string>;
   group_by?: string | undefined;
   range?: string | undefined;
   bin_size: string;
   custom_range?: AggregateEventsCustomRange$Outbound | undefined;
+  filter_by?: { [k: string]: string } | undefined;
+  max_groups?: number | undefined;
 };
 
 /** @internal */
@@ -189,7 +204,8 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
   EventsAggregateParams
 > = z.pipe(
   z.object({
-    customerId: z.string(),
+    customerId: z.optional(z.string()),
+    entityId: z.optional(z.string()),
     featureId: smartUnion([z.string(), z.array(z.string())]),
     groupBy: z.optional(z.string()),
     range: z.optional(Range$outboundSchema),
@@ -197,14 +213,19 @@ export const EventsAggregateParams$outboundSchema: z.ZodMiniType<
     customRange: z.optional(
       z.lazy(() => AggregateEventsCustomRange$outboundSchema),
     ),
+    filterBy: z.optional(z.record(z.string(), z.string())),
+    maxGroups: z.optional(z.int()),
   }),
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
+      entityId: "entity_id",
       featureId: "feature_id",
       groupBy: "group_by",
       binSize: "bin_size",
       customRange: "custom_range",
+      filterBy: "filter_by",
+      maxGroups: "max_groups",
     });
   }),
 );

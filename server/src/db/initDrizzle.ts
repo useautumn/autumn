@@ -38,20 +38,19 @@ export const initDrizzle = ({
 	return { db, client };
 };
 
-// -- Critical pool: used by check, track, getOrCreateCustomer --
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
-	connectTimeout: 2,
+	// connectTimeout: 10,
 });
 
 // -- General pool: used by all other endpoints --
 export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
-	connectTimeout: 5,
+	// connectTimeout: 5,
 });
 
 // -- Replica pool: used as fallback when primary is degraded --
 // Only created if DATABASE_REPLICA_URL is configured.
 const replicaResult = process.env.DATABASE_REPLICA_URL
-	? initDrizzle({ replica: true, maxConnections: 5, connectTimeout: 2 })
+	? initDrizzle({ replica: true, maxConnections: 5, connectTimeout: undefined })
 	: null;
 export const dbReplica = replicaResult?.db ?? null;
 export const clientReplica = replicaResult?.client ?? null;

@@ -1,3 +1,5 @@
+import { LATEST_VERSION } from "@autumn/shared";
+
 /**
  * Applies Speakeasy-specific settings to the OpenAPI document.
  * - Adds bearer token security scheme (`secretKey`)
@@ -6,7 +8,7 @@
  */
 export function applySpeakeasySettings({
 	openApiDocument,
-	version = "2.1",
+	version = LATEST_VERSION,
 }: {
 	openApiDocument: Record<string, unknown>;
 	version?: string;
@@ -49,6 +51,16 @@ export function applySpeakeasySettings({
 				schema: {
 					type: "string",
 					default: version,
+				},
+				"x-speakeasy-globals-hidden": true,
+			},
+			{
+				name: "fail-open",
+				in: "header",
+				required: false,
+				schema: {
+					type: "boolean",
+					default: true,
 				},
 				"x-speakeasy-globals-hidden": true,
 			},
