@@ -24,6 +24,19 @@ const normalizeExecuteRows = <TRow>(result: unknown): TRow[] => {
 	return result as TRow[];
 };
 
+const normalizeDbExecute = <
+	TDb extends { execute: (query: string | SQLWrapper) => Promise<unknown> },
+>(
+	db: TDb,
+) => {
+	const execute = db.execute.bind(db);
+	return Object.assign(db, {
+		execute: async <TRow = Record<string, unknown>>(
+			query: string | SQLWrapper,
+		) => normalizeExecuteRows<TRow>(await execute(query)),
+	});
+};
+
 /** Creates a Drizzle pool with the given configuration. */
 export const initDrizzle = ({
 	maxConnections = 10,
@@ -50,12 +63,17 @@ export const initDrizzle = ({
 	});
 
 	const drizzleDb = drizzle(client, { schema });
-	const execute = drizzleDb.execute.bind(drizzleDb);
-	const db = Object.assign(drizzleDb, {
-		execute: async <TRow = Record<string, unknown>>(
-			query: string | SQLWrapper,
-		) => normalizeExecuteRows<TRow>(await execute(query)),
-	}) as unknown as AutumnDb;
+	const transaction = drizzleDb.transaction.bind(drizzleDb);
+	const db = normalizeDbExecute(drizzleDb) as unknown as AutumnDb;
+	const normalizedTransaction: typeof drizzleDb.transaction = ((
+		fn,
+		config,
+	) =>
+		transaction(
+			(tx) => fn(normalizeDbExecute(tx) as typeof tx),
+			config,
+		)) as typeof drizzleDb.transaction;
+	db.transaction = normalizedTransaction as typeof db.transaction;
 
 	if (otelConfig.drizzle) {
 		instrumentDrizzleClient(db);
