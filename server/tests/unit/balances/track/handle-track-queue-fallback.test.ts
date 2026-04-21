@@ -6,6 +6,7 @@ const mockState = {
 	shouldUseRedis: true,
 	queueCalls: [] as Record<string, unknown>[],
 	runTrackCalls: [] as Record<string, unknown>[],
+	warnCalls: [] as unknown[][],
 };
 
 mock.module("@/external/redis/initRedis.js", () => ({
@@ -40,7 +41,9 @@ const makeCtx = ({ apiVersion }: { apiVersion: ApiVersion }) =>
 		env: AppEnv.Sandbox,
 		apiVersion: new ApiVersionClass(apiVersion),
 		logger: {
-			warn: () => {},
+			warn: (...args: unknown[]) => {
+				mockState.warnCalls.push(args);
+			},
 		},
 		features: [
 			{
@@ -87,6 +90,7 @@ describe("handleTrack queue fallback", () => {
 		mockState.shouldUseRedis = false;
 		mockState.queueCalls = [];
 		mockState.runTrackCalls = [];
+		mockState.warnCalls = [];
 	});
 
 	afterEach(() => {
@@ -111,6 +115,14 @@ describe("handleTrack queue fallback", () => {
 
 		expect(mockState.queueCalls).toHaveLength(1);
 		expect(mockState.runTrackCalls).toHaveLength(0);
+		expect(mockState.warnCalls).toContainEqual([
+			"[track] Redis unavailable, queued track fallback",
+			expect.objectContaining({
+				type: "track_queue_fallback",
+				feature_id: "messages",
+				queue_name: "track-dev.fifo",
+			}),
+		]);
 		expect(mockState.queueCalls[0]).toMatchObject({
 			jobName: JobName.Track,
 			queueUrl:

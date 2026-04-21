@@ -32,6 +32,14 @@ export const queueTrack = async ({
 		},
 	});
 
+	ctx.logger.warn("[track] Redis unavailable, queued track fallback", {
+		type: "track_queue_fallback",
+		feature_id: body.feature_id,
+		event_name: body.event_name,
+		env: ctx.env,
+		queue_name: queueUrl.split("/").pop(),
+	});
+
 	return getQueuedTrackResponse({
 		ctx,
 		body,

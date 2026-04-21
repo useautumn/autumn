@@ -4,8 +4,8 @@ import { config } from "dotenv";
 let hasLoadedLocalEnv = false;
 const shouldLogLocalEnvLoading = false;
 
-export const loadLocalEnv = () => {
-	if (hasLoadedLocalEnv) return;
+export const loadLocalEnv = ({ force = false }: { force?: boolean } = {}) => {
+	if (hasLoadedLocalEnv && !force) return;
 	hasLoadedLocalEnv = true;
 
 	const processDir = process.cwd();

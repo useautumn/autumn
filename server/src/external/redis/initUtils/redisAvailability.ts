@@ -20,7 +20,11 @@ let redisTickInFlight = false;
 let lastAvailabilityLogAt = 0;
 
 const setRedisAvailabilityState = (state: RedisAvailabilityState) => {
-	if (redisAvailabilityState === state) return;
+	const shouldLog =
+		redisAvailabilityState !== state ||
+		(state === "degraded" &&
+			Date.now() - lastAvailabilityLogAt >= REDIS_ERROR_LOG_INTERVAL_MS);
+	if (!shouldLog) return;
 
 	redisAvailabilityState = state;
 
@@ -32,6 +36,7 @@ const setRedisAvailabilityState = (state: RedisAvailabilityState) => {
 		state === "healthy"
 			? "[Redis] Recovered"
 			: "[Redis] Unavailable, skipping Redis-backed features",
+		{ redisStatus: redis.status },
 	);
 };
 

@@ -32,6 +32,6 @@ if (isUnitTest()) {
 } else {
 	console.log("--- Setup integration tests ---");
 	await loadInfisicalSecrets();
-	loadLocalEnv();
+	loadLocalEnv({ force: true });
 	console.log("--- Setup integration tests complete ---");
 }

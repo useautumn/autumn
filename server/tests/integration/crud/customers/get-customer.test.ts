@@ -60,9 +60,11 @@ test.concurrent(`${chalk.yellowBright("get-customer: multi-entity customer retur
 	const cusV1 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	ApiCustomerV3Schema.parse(cusV1);
 	expect(cusV1.products.length).toBeGreaterThan(0);
-	const cusV1Prod = cusV1.products[0];
-	expect(cusV1Prod.current_period_start).toBeNumber();
-	expect(cusV1Prod.current_period_end).toBeNumber();
+	const cusV1Prod = cusV1.products.find(
+		(product) => product.id === cusLevelProd.id,
+	);
+	expect(cusV1Prod?.current_period_start).toBeNumber();
+	expect(cusV1Prod?.current_period_end).toBeNumber();
 	expect(cusV1.features[TestFeature.Messages]).toMatchObject({
 		id: TestFeature.Messages,
 		balance: 90,
@@ -79,9 +81,11 @@ test.concurrent(`${chalk.yellowBright("get-customer: multi-entity customer retur
 	});
 	ApiCustomerV5Schema.parse(cusV2_1);
 	expect(cusV2_1.subscriptions.length).toBeGreaterThan(0);
-	const cusV2_1Sub = cusV2_1.subscriptions[0];
-	expect(cusV2_1Sub.current_period_start).toBeNumber();
-	expect(cusV2_1Sub.current_period_end).toBeNumber();
+	const cusV2_1Sub = cusV2_1.subscriptions.find(
+		(subscription) => subscription.plan_id === cusLevelProd.id,
+	);
+	expect(cusV2_1Sub?.current_period_start).toBeNumber();
+	expect(cusV2_1Sub?.current_period_end).toBeNumber();
 	expectFlagCorrect({
 		customer: cusV2_1,
 		featureId: TestFeature.Dashboard,
@@ -103,9 +107,11 @@ test.concurrent(`${chalk.yellowBright("get-customer: multi-entity customer retur
 	});
 	ApiCustomerV5Schema.parse(cusV2_2);
 	expect(cusV2_2.subscriptions.length).toBeGreaterThan(0);
-	const cusV2_2Sub = cusV2_2.subscriptions[0];
-	expect(cusV2_2Sub.current_period_start).toBeNumber();
-	expect(cusV2_2Sub.current_period_end).toBeNumber();
+	const cusV2_2Sub = cusV2_2.subscriptions.find(
+		(subscription) => subscription.plan_id === cusLevelProd.id,
+	);
+	expect(cusV2_2Sub?.current_period_start).toBeNumber();
+	expect(cusV2_2Sub?.current_period_end).toBeNumber();
 	expectFlagCorrect({
 		customer: cusV2_2,
 		featureId: TestFeature.Dashboard,
