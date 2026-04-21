@@ -3,6 +3,7 @@ import {
 	EntityNotFoundError,
 	type FullSubject,
 } from "@autumn/shared";
+import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
@@ -21,8 +22,9 @@ export const getOrSetCachedFullSubject = async ({
 	source?: string;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
+	const useRedis = !skipCache && shouldUseRedis();
 
-	if (!skipCache) {
+	if (useRedis) {
 		const cached = await getCachedFullSubject({
 			ctx,
 			customerId,
@@ -41,10 +43,12 @@ export const getOrSetCachedFullSubject = async ({
 	logger.debug(
 		`[getOrSetCachedFullSubject] Cache miss for ${customerId}${entityId ? `:${entityId}` : ""}, fetching from DB, source: ${source}`,
 	);
-	const fetchedSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
-		ctx,
-		customerId,
-	});
+	const fetchedSubjectViewEpoch = useRedis
+		? await getOrInitFullSubjectViewEpoch({
+				ctx,
+				customerId,
+			})
+		: 0;
 
 	const result = await getFullSubjectNormalized({
 		ctx,
@@ -59,7 +63,7 @@ export const getOrSetCachedFullSubject = async ({
 
 	const { normalized, fullSubject } = result;
 
-	if (!skipCache) {
+	if (useRedis) {
 		await setCachedFullSubject({
 			ctx,
 			normalized,

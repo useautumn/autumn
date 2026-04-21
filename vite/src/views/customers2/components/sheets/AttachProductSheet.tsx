@@ -315,7 +315,7 @@ function SelectContent() {
 
 					{entityId ? (
 						<div className="pt-2">
-							<InfoBox variant="info">
+							<InfoBox variant="note">
 								Attaching plan to entity{" "}
 								<span className="font-semibold">
 									{fullEntity?.name || fullEntity?.id}
@@ -324,7 +324,7 @@ function SelectContent() {
 						</div>
 					) : entities.length > 0 ? (
 						<div className="pt-2">
-							<InfoBox variant="info">
+							<InfoBox variant="note">
 								Attaching plan to customer - all entities will get access
 							</InfoBox>
 						</div>

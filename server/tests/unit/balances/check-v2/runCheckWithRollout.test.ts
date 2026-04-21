@@ -1,8 +1,10 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, describe, expect, mock, test } from "bun:test";
 
 const mockState = {
 	legacyCalls: [] as Record<string, unknown>[],
 	v2Calls: [] as Record<string, unknown>[],
+	v2Error: null as unknown,
+	warnCalls: [] as unknown[][],
 };
 
 mock.module("@/internal/balances/check/runCheckLegacyFlow.js", () => ({
@@ -18,6 +20,8 @@ mock.module("@/internal/balances/check/runCheckLegacyFlow.js", () => ({
 mock.module("@/internal/balances/check/runCheckV2.js", () => ({
 	runCheckV2: async (args: Record<string, unknown>) => {
 		mockState.v2Calls.push(args);
+		if (mockState.v2Error) throw mockState.v2Error;
+
 		return {
 			checkData: { source: "v2" },
 			response: { allowed: true, source: "v2" },
@@ -27,10 +31,31 @@ mock.module("@/internal/balances/check/runCheckV2.js", () => ({
 
 import { runCheckWithRollout } from "@/internal/balances/check/runCheckWithRollout.js";
 
+afterEach(() => {
+	mockState.v2Error = null;
+});
+
+const rolloutCtx = {
+	apiVersion: { value: "2025-02-01" },
+	features: [],
+	logger: {
+		warn: (...args: unknown[]) => mockState.warnCalls.push(args),
+	},
+	rolloutSnapshot: {
+		rolloutId: "v2-cache",
+		enabled: true,
+		percent: 100,
+		previousPercent: 0,
+		changedAt: 1,
+		customerBucket: 10,
+	},
+} as never;
+
 describe("runCheckWithRollout", () => {
 	test("uses the legacy flow when the rollout is off", async () => {
 		mockState.legacyCalls = [];
 		mockState.v2Calls = [];
+		mockState.v2Error = null;
 
 		const result = await runCheckWithRollout({
 			ctx: {
@@ -51,6 +76,7 @@ describe("runCheckWithRollout", () => {
 	test("uses the v2 flow when the full-subject rollout is enabled", async () => {
 		mockState.legacyCalls = [];
 		mockState.v2Calls = [];
+		mockState.v2Error = null;
 
 		const result = await runCheckWithRollout({
 			ctx: {
@@ -73,5 +99,50 @@ describe("runCheckWithRollout", () => {
 			checkData: { source: "v2" },
 			response: { source: "v2" },
 		});
+	});
+
+	test.each([
+		{
+			name: "DB statement timeout",
+			error: Object.assign(new Error("statement timeout"), { code: "57014" }),
+		},
+		{
+			name: "Redis retry exhaustion",
+			error: Object.assign(new Error("redis retries exhausted"), {
+				name: "MaxRetriesPerRequestError",
+			}),
+		},
+		{
+			name: "Redis command timeout",
+			error: new Error("Command timed out"),
+		},
+	])("returns fail-open fallback on $name", async ({ error }) => {
+		mockState.legacyCalls = [];
+		mockState.v2Calls = [];
+		mockState.v2Error = error;
+		mockState.warnCalls = [];
+
+		const result = await runCheckWithRollout({
+			ctx: rolloutCtx,
+			body: { customer_id: "cus_123", feature_id: "messages" } as never,
+			requiredBalance: 1,
+		});
+
+		expect(result).toMatchObject({
+			checkData: null,
+			response: {
+				allowed: true,
+				customer_id: "cus_123",
+				required_balance: 1,
+			},
+		});
+		expect(mockState.warnCalls).toContainEqual([
+			"[check] Returning fail-open fallback response",
+			expect.objectContaining({
+				type: "check_fail_open_fallback",
+				feature_id: "messages",
+				required_balance: 1,
+			}),
+		]);
 	});
 });
