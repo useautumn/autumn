@@ -34,6 +34,7 @@ export const findSimilarItem = ({
 	if (isFeatureItem(item)) {
 		return items.find(
 			(i) =>
+				isFeatureItem(i) &&
 				i.feature_id === item.feature_id &&
 				entIntervalsSame({
 					intervalA: {
@@ -51,6 +52,7 @@ export const findSimilarItem = ({
 	if (isFeaturePriceItem(item)) {
 		return items.find(
 			(i) =>
+				isFeaturePriceItem(i) &&
 				i.feature_id === item.feature_id &&
 				intervalsSame({
 					intervalA: {
