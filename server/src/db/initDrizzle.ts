@@ -42,17 +42,20 @@ export const initDrizzle = ({
 	maxConnections = 10,
 	replica = false,
 	connectTimeout = 5,
+	databaseUrl,
 	poolConfig,
 }: {
 	maxConnections?: number;
 	replica?: boolean;
 	/** Connect timeout in seconds */
 	connectTimeout?: number | null;
+	databaseUrl?: string;
 	poolConfig?: PoolConfig;
 } = {}) => {
-	const dbUrl =
-		(replica ? process.env.DATABASE_REPLICA_URL : process.env.DATABASE_URL) ??
-		"";
+	const envDbUrl = replica
+		? process.env.DATABASE_REPLICA_URL
+		: process.env.DATABASE_URL;
+	const dbUrl = databaseUrl || envDbUrl || "";
 
 	const client = new pg.Pool({
 		connectionString: dbUrl,
@@ -65,10 +68,7 @@ export const initDrizzle = ({
 	const drizzleDb = drizzle(client, { schema });
 	const transaction = drizzleDb.transaction.bind(drizzleDb);
 	const db = normalizeDbExecute(drizzleDb) as unknown as AutumnDb;
-	const normalizedTransaction: typeof drizzleDb.transaction = ((
-		fn,
-		config,
-	) =>
+	const normalizedTransaction: typeof drizzleDb.transaction = ((fn, config) =>
 		transaction(
 			(tx) => fn(normalizeDbExecute(tx) as typeof tx),
 			config,
@@ -84,8 +84,10 @@ export const initDrizzle = ({
 
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	maxConnections: 5,
+	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
+		// Server-side timeout is configured on the DATABASE_CRITICAL_URL role.
 		query_timeout: 2_000,
 	},
 });
