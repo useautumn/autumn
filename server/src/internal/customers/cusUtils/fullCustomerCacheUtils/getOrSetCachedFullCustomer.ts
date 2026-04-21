@@ -6,7 +6,6 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "../../CusService.js";
-import { hydrateFullCustomerSchedule } from "../getFullCustomerSchedule.js";
 import { getCachedFullCustomer } from "./getCachedFullCustomer.js";
 import { setCachedFullCustomer } from "./setCachedFullCustomer.js";
 
@@ -80,16 +79,16 @@ export const getOrSetCachedFullCustomer = async ({
 		}
 	}
 
-	const hydratedFullCustomer = await hydrateFullCustomerSchedule({
-		ctx,
-		fullCustomer,
-	});
+	// const hydratedFullCustomer = await hydrateFullCustomerSchedule({
+	// 	ctx,
+	// 	fullCustomer,
+	// });
 
 	// 3. Set cache (fire and forget)
 	if (!skipCache) {
 		await setCachedFullCustomer({
 			ctx,
-			fullCustomer: hydratedFullCustomer,
+			fullCustomer,
 			customerId,
 			fetchTimeMs,
 			source,
@@ -102,5 +101,5 @@ export const getOrSetCachedFullCustomer = async ({
 		// });
 	}
 
-	return hydratedFullCustomer;
+	return fullCustomer;
 };
