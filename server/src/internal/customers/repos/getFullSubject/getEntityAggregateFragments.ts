@@ -109,18 +109,24 @@ const buildEntityRolloverCtes = ({
 		)
 `;
 
-/**
- * Per-feature/per-entity aggregates sourced strictly from `ce.entities` JSON.
- * This powers the `entities` map in customer-level aggregates and intentionally
- * excludes top-level entity attribution paths.
- */
 const buildEntityEntitiesCtes = ({
 	statusFilter,
 }: {
 	statusFilter: SQL;
 }) => sql`
 		entity_entities_rows AS (
-			-- Product-attached entitlements: aggregate directly from ce.entities keys
+			SELECT
+				ce.internal_feature_id,
+				ce.internal_customer_id,
+				cp.internal_entity_id AS entity_key,
+				ce.balance::numeric AS entity_balance,
+				COALESCE(ce.adjustment, 0)::numeric AS entity_adjustment,
+				COALESCE(ce.additional_balance, 0)::numeric AS entity_additional_balance
+			FROM customer_entitlements ce
+			JOIN entity_cus_products_for_options cp ON ce.customer_product_id = cp.id
+
+			UNION ALL
+
 			SELECT
 				ce.internal_feature_id,
 				ce.internal_customer_id,
@@ -129,16 +135,12 @@ const buildEntityEntitiesCtes = ({
 				COALESCE((kv.entity_value->>'adjustment')::numeric, 0) AS entity_adjustment,
 				COALESCE((kv.entity_value->>'additional_balance')::numeric, 0) AS entity_additional_balance
 			FROM customer_entitlements ce
-			JOIN customer_products cp ON ce.customer_product_id = cp.id
+			JOIN entity_cus_products_for_options cp ON ce.customer_product_id = cp.id
 			CROSS JOIN LATERAL jsonb_each(ce.entities) AS kv(entity_key, entity_value)
-			WHERE ce.internal_customer_id IN (SELECT internal_id FROM subject_customer_records)
-				AND cp.internal_entity_id IS NOT NULL
-				AND jsonb_typeof(ce.entities) = 'object'
-				${statusFilter}
+			WHERE jsonb_typeof(ce.entities) = 'object'
 
 			UNION ALL
 
-			-- Loose entitlements: aggregate directly from ce.entities keys
 			SELECT
 				ce.internal_feature_id,
 				ce.internal_customer_id,
@@ -152,6 +154,21 @@ const buildEntityEntitiesCtes = ({
 				AND ce.customer_product_id IS NULL
 				AND ce.internal_entity_id IS NOT NULL
 				AND jsonb_typeof(ce.entities) = 'object'
+				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+
+			UNION ALL
+
+			SELECT
+				ce.internal_feature_id,
+				ce.internal_customer_id,
+				ce.internal_entity_id AS entity_key,
+				ce.balance::numeric AS entity_balance,
+				COALESCE(ce.adjustment, 0)::numeric AS entity_adjustment,
+				COALESCE(ce.additional_balance, 0)::numeric AS entity_additional_balance
+			FROM customer_entitlements ce
+			WHERE ce.internal_customer_id IN (SELECT internal_id FROM subject_customer_records)
+				AND ce.customer_product_id IS NULL
+				AND ce.internal_entity_id IS NOT NULL
 				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 		),
 
@@ -336,34 +353,6 @@ export const getEntityAggregateFragments = ({
 
 		${buildEntityEntitiesCtes({ statusFilter })},
 
-		entity_aggregate_keys AS (
-			SELECT
-				COALESCE(ebk.internal_feature_id, erk.internal_feature_id) AS internal_feature_id,
-				COALESCE(ebk.internal_customer_id, erk.internal_customer_id) AS internal_customer_id,
-				COALESCE(ebk.entity_key, erk.entity_key) AS entity_key,
-				COALESCE(ebk.balance, 0) AS balance,
-				COALESCE(ebk.adjustment, 0) AS adjustment,
-				COALESCE(ebk.additional_balance, 0) AS additional_balance,
-				COALESCE(erk.rollover_balance, 0) AS rollover_balance,
-				COALESCE(erk.rollover_usage, 0) AS rollover_usage
-			FROM (
-				SELECT
-					internal_feature_id,
-					internal_customer_id,
-					entity_key,
-					SUM(entity_balance) AS balance,
-					SUM(entity_adjustment) AS adjustment,
-					SUM(entity_additional_balance) AS additional_balance
-				FROM entity_balance_rows
-				WHERE entity_key IS NOT NULL
-				GROUP BY internal_feature_id, internal_customer_id, entity_key
-			) ebk
-			FULL OUTER JOIN entity_rollover_keys erk
-				ON erk.internal_feature_id = ebk.internal_feature_id
-				AND erk.internal_customer_id = ebk.internal_customer_id
-				AND erk.entity_key = ebk.entity_key
-		),
-
 		entity_aggregate_map AS (
 			SELECT
 				ejk.internal_feature_id,
@@ -434,7 +423,8 @@ export const getEntityAggregateFragments = ({
 			ce.entitlement_id
 		FROM customer_entitlements ce
 		JOIN customer_products cp ON ce.customer_product_id = cp.id
-		WHERE cp.internal_entity_id IS NOT NULL
+		WHERE ce.internal_customer_id IN (SELECT internal_id FROM subject_customer_records)
+			AND cp.internal_entity_id IS NOT NULL
 			${statusFilter}
 
 		UNION
@@ -442,7 +432,8 @@ export const getEntityAggregateFragments = ({
 			ce.internal_customer_id,
 			ce.entitlement_id
 		FROM customer_entitlements ce
-		WHERE ce.customer_product_id IS NULL
+		WHERE ce.internal_customer_id IN (SELECT internal_id FROM subject_customer_records)
+			AND ce.customer_product_id IS NULL
 			AND ce.internal_entity_id IS NOT NULL
 			AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 	`;

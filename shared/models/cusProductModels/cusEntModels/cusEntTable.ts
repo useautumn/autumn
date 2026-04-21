@@ -93,6 +93,11 @@ export const customerEntitlements = pgTable(
 		index("idx_customer_entitlements_loose_customer_expires")
 			.on(table.internal_customer_id, table.expires_at)
 			.where(sql`${table.customer_product_id} IS NULL`),
+		index("idx_ce_customer_product_entities_object")
+			.on(table.internal_customer_id)
+			.where(
+				sql`${table.customer_product_id} IS NOT NULL AND jsonb_typeof(${table.entities}) = 'object'`,
+			),
 	],
 );
 
