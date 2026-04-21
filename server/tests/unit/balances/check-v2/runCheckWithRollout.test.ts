@@ -164,4 +164,40 @@ describe("runCheckWithRollout", () => {
 			},
 		});
 	});
+
+	test("returns fail-open fallback when the v2 flow hits a redis command timeout", async () => {
+		mockState.legacyCalls = [];
+		mockState.v2Calls = [];
+		mockState.v2Error = new Error("Command timed out");
+		mockState.warnCalls = [];
+
+		const result = await runCheckWithRollout({
+			ctx: {
+				apiVersion: { value: "2025-02-01" },
+				features: [],
+				logger: {
+					warn: (...args: unknown[]) => mockState.warnCalls.push(args),
+				},
+				rolloutSnapshot: {
+					rolloutId: "v2-cache",
+					enabled: true,
+					percent: 100,
+					previousPercent: 0,
+					changedAt: 1,
+					customerBucket: 10,
+				},
+			} as never,
+			body: { customer_id: "cus_123", feature_id: "messages" } as never,
+			requiredBalance: 1,
+		});
+
+		expect(result).toMatchObject({
+			checkData: null,
+			response: {
+				allowed: true,
+				customer_id: "cus_123",
+				required_balance: 1,
+			},
+		});
+	});
 });

@@ -27,4 +27,6 @@ export const isRetryableFullSubjectRolloutError = ({
 	error: unknown;
 }) =>
 	isRetryableDbError({ error }) ||
-	(error instanceof Error && RETRYABLE_REDIS_ERROR_NAMES.has(error.name));
+	(error instanceof Error &&
+		(RETRYABLE_REDIS_ERROR_NAMES.has(error.name) ||
+			error.message === "Command timed out"));
