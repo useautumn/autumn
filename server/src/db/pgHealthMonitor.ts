@@ -1,5 +1,5 @@
 import type { SQL } from "drizzle-orm";
-import type postgres from "postgres";
+import type { Pool } from "pg";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { isConnectionDropError } from "./dbUtils.js";
 import { type DrizzleCli, dbCritical, dbReplica } from "./initDrizzle.js";
@@ -30,7 +30,7 @@ const RECOVERY_STABILITY_MS = 10_000;
 let state: PgHealth = PgHealth.Healthy;
 let probeInterval: ReturnType<typeof setInterval> | null = null;
 let firstProbeSuccessAt: number | null = null;
-let probeClient: postgres.Sql | null = null;
+let probeClient: Pool | null = null;
 
 // Lightweight failure tracking — tumbling window with a counter instead of
 // an array of timestamps. Two numbers, zero allocations per call.
@@ -46,13 +46,13 @@ const resetFailureWindow = (now = Date.now()) => {
 export const getDbHealth = (): PgHealth => state;
 
 /**
- * Initialize the health monitor with a postgres.js client for probing.
+ * Initialize the health monitor with a pg pool for probing.
  * Call once at startup. The probe client should be the critical pool's raw client.
  */
 export const initPgHealthMonitor = ({
 	client,
 }: {
-	client: postgres.Sql;
+	client: Pool;
 }): void => {
 	probeClient = client;
 	logger.info("[PgHealthMonitor] Initialized", { type: "pg_health_init" });
@@ -128,7 +128,7 @@ const startProbe = (): void => {
 		let timeoutId: ReturnType<typeof setTimeout> | undefined;
 		try {
 			await Promise.race([
-				probeClient`SELECT 1`,
+				probeClient.query("SELECT 1"),
 				new Promise<never>((_, reject) => {
 					timeoutId = setTimeout(
 						() => reject(new Error("probe timeout")),
