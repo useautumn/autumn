@@ -4,12 +4,15 @@ import type {
 	FrontendProduct,
 	ProductItem,
 } from "@autumn/shared";
+import { sortPlanItems, splitBooleanItems } from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { LayoutGroup, motion } from "motion/react";
+import { useMemo } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { Button } from "@/components/v2/buttons/Button";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
+import { CollapsedBooleanItems } from "./plan-items/CollapsedBooleanItems";
 import { DeletedItemRow } from "./plan-items/DeletedItemRow";
 import { PlanEditButton } from "./plan-items/PlanEditButton";
 import { PlanItemRow } from "./plan-items/PlanItemRow";
@@ -94,6 +97,15 @@ export function PlanItemsSection({
 				(i) => i.feature_id && !currentFeatureIds.has(i.feature_id),
 			) ?? []);
 
+	const sortedItems = useMemo(
+		() => sortPlanItems({ items: product?.items ?? [] }),
+		[product?.items],
+	);
+	const { visibleItems, collapsedBooleanItems } = useMemo(
+		() => splitBooleanItems({ items: sortedItems }),
+		[sortedItems],
+	);
+
 	const hasItems = (product?.items?.length ?? 0) > 0 || deletedItems.length > 0;
 
 	if (!hasItems) {
@@ -117,6 +129,9 @@ export function PlanItemsSection({
 		readOnly,
 	};
 
+	const itemKey = (item: ProductItem) =>
+		`${item.feature_id ?? ""}-${item.price_id ?? ""}-${item.interval ?? ""}-${item.interval_count ?? ""}`;
+
 	return (
 		<div>
 			<PlanPriceHeader
@@ -130,17 +145,30 @@ export function PlanItemsSection({
 					layout="position"
 					transition={{ layout: LAYOUT_TRANSITION }}
 				>
-					{product?.items?.map((item, index) => (
+					{visibleItems.map((item, index) => (
 						<PlanItemRow
-							key={`${item.feature_id ?? ""}-${item.price_id ?? ""}-${item.interval ?? ""}-${item.interval_count ?? ""}`}
+							key={itemKey(item)}
 							item={item}
 							index={index}
 							{...itemRowProps}
 						/>
 					))}
+					{collapsedBooleanItems.length > 0 && (
+						<CollapsedBooleanItems
+							items={collapsedBooleanItems}
+							renderItem={(item, index) => (
+								<PlanItemRow
+									key={itemKey(item)}
+									item={item}
+									index={visibleItems.length + index}
+									{...itemRowProps}
+								/>
+							)}
+						/>
+					)}
 					{deletedItems.map((item, index) => (
 						<DeletedItemRow
-							key={`deleted-${item.feature_id ?? ""}-${item.price_id ?? ""}-${item.interval ?? ""}-${item.interval_count ?? ""}`}
+							key={`deleted-${itemKey(item)}`}
 							item={item}
 							index={index}
 						/>
