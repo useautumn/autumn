@@ -722,79 +722,6 @@ class UpdateCustomerBillingControlsResponse(BaseModel):
         return m
 
 
-class UpdateCustomerPhaseTypedDict(TypedDict):
-    id: str
-    r"""The persisted phase ID."""
-    starts_at: float
-    r"""When this phase starts, in epoch milliseconds."""
-    customer_product_ids: List[str]
-    r"""Customer products materialized for this phase."""
-    created_at: float
-    r"""Timestamp of phase creation in milliseconds since epoch."""
-
-
-class UpdateCustomerPhase(BaseModel):
-    id: str
-    r"""The persisted phase ID."""
-
-    starts_at: float
-    r"""When this phase starts, in epoch milliseconds."""
-
-    customer_product_ids: List[str]
-    r"""Customer products materialized for this phase."""
-
-    created_at: float
-    r"""Timestamp of phase creation in milliseconds since epoch."""
-
-
-class UpdateCustomerScheduleTypedDict(TypedDict):
-    r"""The customer's persisted schedule, if one exists."""
-
-    id: str
-    r"""The persisted schedule ID."""
-    customer_id: str
-    r"""The customer ID this schedule belongs to."""
-    entity_id: Nullable[str]
-    r"""The entity ID this schedule belongs to, or null."""
-    created_at: float
-    r"""Timestamp of schedule creation in milliseconds since epoch."""
-    phases: List[UpdateCustomerPhaseTypedDict]
-    r"""Persisted phases in ascending starts_at order."""
-
-
-class UpdateCustomerSchedule(BaseModel):
-    r"""The customer's persisted schedule, if one exists."""
-
-    id: str
-    r"""The persisted schedule ID."""
-
-    customer_id: str
-    r"""The customer ID this schedule belongs to."""
-
-    entity_id: Nullable[str]
-    r"""The entity ID this schedule belongs to, or null."""
-
-    created_at: float
-    r"""Timestamp of schedule creation in milliseconds since epoch."""
-
-    phases: List[UpdateCustomerPhase]
-    r"""Persisted phases in ascending starts_at order."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                m[k] = val
-
-        return m
-
-
 UpdateCustomerStatus = Union[
     Literal[
         "active",
@@ -1215,8 +1142,6 @@ class UpdateCustomerResponseTypedDict(TypedDict):
     r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""
     flags: Dict[str, UpdateCustomerFlagsTypedDict]
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
-    schedule: NotRequired[UpdateCustomerScheduleTypedDict]
-    r"""The customer's persisted schedule, if one exists."""
     config: NotRequired[UpdateCustomerConfigResponseTypedDict]
     r"""Configuration for the customer."""
 
@@ -1266,15 +1191,12 @@ class UpdateCustomerResponse(BaseModel):
     flags: Dict[str, UpdateCustomerFlags]
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
 
-    schedule: Optional[UpdateCustomerSchedule] = None
-    r"""The customer's persisted schedule, if one exists."""
-
     config: Optional[UpdateCustomerConfigResponse] = None
     r"""Configuration for the customer."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["schedule", "config"])
+        optional_fields = set(["config"])
         nullable_fields = set(["id", "name", "email", "fingerprint", "stripe_id"])
         serialized = handler(self)
         m = {}

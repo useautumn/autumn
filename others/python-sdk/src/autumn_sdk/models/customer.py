@@ -301,79 +301,6 @@ class CustomerBillingControls(BaseModel):
         return m
 
 
-class PhaseTypedDict(TypedDict):
-    id: str
-    r"""The persisted phase ID."""
-    starts_at: float
-    r"""When this phase starts, in epoch milliseconds."""
-    customer_product_ids: List[str]
-    r"""Customer products materialized for this phase."""
-    created_at: float
-    r"""Timestamp of phase creation in milliseconds since epoch."""
-
-
-class Phase(BaseModel):
-    id: str
-    r"""The persisted phase ID."""
-
-    starts_at: float
-    r"""When this phase starts, in epoch milliseconds."""
-
-    customer_product_ids: List[str]
-    r"""Customer products materialized for this phase."""
-
-    created_at: float
-    r"""Timestamp of phase creation in milliseconds since epoch."""
-
-
-class ScheduleTypedDict(TypedDict):
-    r"""The customer's persisted schedule, if one exists."""
-
-    id: str
-    r"""The persisted schedule ID."""
-    customer_id: str
-    r"""The customer ID this schedule belongs to."""
-    entity_id: Nullable[str]
-    r"""The entity ID this schedule belongs to, or null."""
-    created_at: float
-    r"""Timestamp of schedule creation in milliseconds since epoch."""
-    phases: List[PhaseTypedDict]
-    r"""Persisted phases in ascending starts_at order."""
-
-
-class Schedule(BaseModel):
-    r"""The customer's persisted schedule, if one exists."""
-
-    id: str
-    r"""The persisted schedule ID."""
-
-    customer_id: str
-    r"""The customer ID this schedule belongs to."""
-
-    entity_id: Nullable[str]
-    r"""The entity ID this schedule belongs to, or null."""
-
-    created_at: float
-    r"""Timestamp of schedule creation in milliseconds since epoch."""
-
-    phases: List[Phase]
-    r"""Persisted phases in ascending starts_at order."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                m[k] = val
-
-        return m
-
-
 CustomerStatus = Union[
     Literal[
         "active",
@@ -1158,8 +1085,6 @@ class CustomerTypedDict(TypedDict):
     r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""
     flags: Dict[str, FlagsTypedDict]
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
-    schedule: NotRequired[ScheduleTypedDict]
-    r"""The customer's persisted schedule, if one exists."""
     config: NotRequired[CustomerConfigTypedDict]
     r"""Configuration for the customer."""
     invoices: NotRequired[List[InvoiceTypedDict]]
@@ -1219,9 +1144,6 @@ class Customer(BaseModel):
     flags: Dict[str, Flags]
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
 
-    schedule: Optional[Schedule] = None
-    r"""The customer's persisted schedule, if one exists."""
-
     config: Optional[CustomerConfig] = None
     r"""Configuration for the customer."""
 
@@ -1247,7 +1169,6 @@ class Customer(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
-                "schedule",
                 "config",
                 "invoices",
                 "entities",

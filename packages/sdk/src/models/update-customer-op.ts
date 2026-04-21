@@ -378,51 +378,6 @@ export type UpdateCustomerBillingControlsResponse = {
   overageAllowed?: Array<UpdateCustomerOverageAllowedResponse> | undefined;
 };
 
-export type UpdateCustomerPhase = {
-  /**
-   * The persisted phase ID.
-   */
-  id: string;
-  /**
-   * When this phase starts, in epoch milliseconds.
-   */
-  startsAt: number;
-  /**
-   * Customer products materialized for this phase.
-   */
-  customerProductIds: Array<string>;
-  /**
-   * Timestamp of phase creation in milliseconds since epoch.
-   */
-  createdAt: number;
-};
-
-/**
- * The customer's persisted schedule, if one exists.
- */
-export type UpdateCustomerSchedule = {
-  /**
-   * The persisted schedule ID.
-   */
-  id: string;
-  /**
-   * The customer ID this schedule belongs to.
-   */
-  customerId: string;
-  /**
-   * The entity ID this schedule belongs to, or null.
-   */
-  entityId: string | null;
-  /**
-   * Timestamp of schedule creation in milliseconds since epoch.
-   */
-  createdAt: number;
-  /**
-   * Persisted phases in ascending starts_at order.
-   */
-  phases: Array<UpdateCustomerPhase>;
-};
-
 /**
  * Current status of the subscription.
  */
@@ -664,10 +619,6 @@ export type UpdateCustomerResponse = {
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls: UpdateCustomerBillingControlsResponse;
-  /**
-   * The customer's persisted schedule, if one exists.
-   */
-  schedule?: UpdateCustomerSchedule | undefined;
   /**
    * Active and scheduled recurring plans that this customer has attached.
    */
@@ -1226,67 +1177,6 @@ export function updateCustomerBillingControlsResponseFromJSON(
 }
 
 /** @internal */
-export const UpdateCustomerPhase$inboundSchema: z.ZodMiniType<
-  UpdateCustomerPhase,
-  unknown
-> = z.pipe(
-  z.object({
-    id: types.string(),
-    starts_at: types.number(),
-    customer_product_ids: z.array(types.string()),
-    created_at: types.number(),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "starts_at": "startsAt",
-      "customer_product_ids": "customerProductIds",
-      "created_at": "createdAt",
-    });
-  }),
-);
-
-export function updateCustomerPhaseFromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateCustomerPhase, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateCustomerPhase$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateCustomerPhase' from JSON`,
-  );
-}
-
-/** @internal */
-export const UpdateCustomerSchedule$inboundSchema: z.ZodMiniType<
-  UpdateCustomerSchedule,
-  unknown
-> = z.pipe(
-  z.object({
-    id: types.string(),
-    customer_id: types.string(),
-    entity_id: types.nullable(types.string()),
-    created_at: types.number(),
-    phases: z.array(z.lazy(() => UpdateCustomerPhase$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "customer_id": "customerId",
-      "entity_id": "entityId",
-      "created_at": "createdAt",
-    });
-  }),
-);
-
-export function updateCustomerScheduleFromJSON(
-  jsonString: string,
-): SafeParseResult<UpdateCustomerSchedule, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => UpdateCustomerSchedule$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'UpdateCustomerSchedule' from JSON`,
-  );
-}
-
-/** @internal */
 export const UpdateCustomerStatus$inboundSchema: z.ZodMiniType<
   UpdateCustomerStatus,
   unknown
@@ -1530,9 +1420,6 @@ export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
     send_email_receipts: types.boolean(),
     billing_controls: z.lazy(() =>
       UpdateCustomerBillingControlsResponse$inboundSchema
-    ),
-    schedule: types.optional(
-      z.lazy(() => UpdateCustomerSchedule$inboundSchema),
     ),
     subscriptions: z.array(
       z.lazy(() => UpdateCustomerSubscription$inboundSchema),

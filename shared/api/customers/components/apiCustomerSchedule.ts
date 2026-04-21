@@ -15,22 +15,27 @@ export const ApiCustomerSchedulePhaseSchema = z.object({
 	}),
 });
 
-export const ApiCustomerScheduleSchema = z.object({
-	id: z.string().meta({
-		description: "The persisted schedule ID.",
-	}),
-	customer_id: z.string().meta({
-		description: "The customer ID this schedule belongs to.",
-	}),
-	entity_id: z.string().nullable().meta({
-		description: "The entity ID this schedule belongs to, or null.",
-	}),
-	created_at: z.number().meta({
-		description: "Timestamp of schedule creation in milliseconds since epoch.",
-	}),
-	phases: z.array(ApiCustomerSchedulePhaseSchema).meta({
-		description: "Persisted phases in ascending starts_at order.",
-	}),
-});
+export const ApiCustomerScheduleSchema = z
+	.object({
+		id: z.string().meta({
+			description: "The persisted schedule ID.",
+		}),
+		customer_id: z.string().meta({
+			description: "The customer ID this schedule belongs to.",
+		}),
+		entity_id: z.string().nullable().meta({
+			description: "The entity ID this schedule belongs to, or null.",
+		}),
+		created_at: z.number().meta({
+			description:
+				"Timestamp of schedule creation in milliseconds since epoch.",
+		}),
+		phases: z.array(ApiCustomerSchedulePhaseSchema).meta({
+			description: "Persisted phases in ascending starts_at order.",
+		}),
+	})
+	.meta({
+		internal: true,
+	});
 
 export type ApiCustomerSchedule = z.infer<typeof ApiCustomerScheduleSchema>;

@@ -344,55 +344,6 @@ components:
                   - feature_id
               description: List of overage allowed controls per feature. When enabled, usage can exceed balance.
           description: Billing controls for the customer (auto top-ups, etc.)
-        schedule:
-          type: object
-          properties:
-            id:
-              type: string
-              description: The persisted schedule ID.
-            customer_id:
-              type: string
-              description: The customer ID this schedule belongs to.
-            entity_id:
-              anyOf:
-                - type: string
-                - type: "null"
-              description: The entity ID this schedule belongs to, or null.
-            created_at:
-              type: number
-              description: Timestamp of schedule creation in milliseconds since epoch.
-            phases:
-              type: array
-              items:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    description: The persisted phase ID.
-                  starts_at:
-                    type: number
-                    description: When this phase starts, in epoch milliseconds.
-                  customer_product_ids:
-                    type: array
-                    items:
-                      type: string
-                    description: Customer products materialized for this phase.
-                  created_at:
-                    type: number
-                    description: Timestamp of phase creation in milliseconds since epoch.
-                required:
-                  - id
-                  - starts_at
-                  - customer_product_ids
-                  - created_at
-              description: Persisted phases in ascending starts_at order.
-          required:
-            - id
-            - customer_id
-            - entity_id
-            - created_at
-            - phases
-          description: The customer's persisted schedule, if one exists.
         subscriptions:
           type: array
           items:
@@ -1977,55 +1928,6 @@ paths:
                                   - feature_id
                               description: List of overage allowed controls per feature. When enabled, usage can exceed balance.
                           description: Billing controls for the customer (auto top-ups, etc.)
-                        schedule:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                              description: The persisted schedule ID.
-                            customer_id:
-                              type: string
-                              description: The customer ID this schedule belongs to.
-                            entity_id:
-                              anyOf:
-                                - type: string
-                                - type: "null"
-                              description: The entity ID this schedule belongs to, or null.
-                            created_at:
-                              type: number
-                              description: Timestamp of schedule creation in milliseconds since epoch.
-                            phases:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  id:
-                                    type: string
-                                    description: The persisted phase ID.
-                                  starts_at:
-                                    type: number
-                                    description: When this phase starts, in epoch milliseconds.
-                                  customer_product_ids:
-                                    type: array
-                                    items:
-                                      type: string
-                                    description: Customer products materialized for this phase.
-                                  created_at:
-                                    type: number
-                                    description: Timestamp of phase creation in milliseconds since epoch.
-                                required:
-                                  - id
-                                  - starts_at
-                                  - customer_product_ids
-                                  - created_at
-                              description: Persisted phases in ascending starts_at order.
-                          required:
-                            - id
-                            - customer_id
-                            - entity_id
-                            - created_at
-                            - phases
-                          description: The customer's persisted schedule, if one exists.
                         subscriptions:
                           type: array
                           items:
@@ -2760,55 +2662,6 @@ paths:
                             - feature_id
                         description: List of overage allowed controls per feature. When enabled, usage can exceed balance.
                     description: Billing controls for the customer (auto top-ups, etc.)
-                  schedule:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        description: The persisted schedule ID.
-                      customer_id:
-                        type: string
-                        description: The customer ID this schedule belongs to.
-                      entity_id:
-                        anyOf:
-                          - type: string
-                          - type: "null"
-                        description: The entity ID this schedule belongs to, or null.
-                      created_at:
-                        type: number
-                        description: Timestamp of schedule creation in milliseconds since epoch.
-                      phases:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                              description: The persisted phase ID.
-                            starts_at:
-                              type: number
-                              description: When this phase starts, in epoch milliseconds.
-                            customer_product_ids:
-                              type: array
-                              items:
-                                type: string
-                              description: Customer products materialized for this phase.
-                            created_at:
-                              type: number
-                              description: Timestamp of phase creation in milliseconds since epoch.
-                          required:
-                            - id
-                            - starts_at
-                            - customer_product_ids
-                            - created_at
-                        description: Persisted phases in ascending starts_at order.
-                    required:
-                      - id
-                      - customer_id
-                      - entity_id
-                      - created_at
-                      - phases
-                    description: The customer's persisted schedule, if one exists.
                   subscriptions:
                     type: array
                     items:
