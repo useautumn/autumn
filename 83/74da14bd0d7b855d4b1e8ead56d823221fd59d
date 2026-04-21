@@ -1,0 +1,27 @@
+shared/utils/productV2Utils/mapToProductV2.ts
+  3a8f1d6b7e6caaa9 96
+server/src/internal/products/productV2Utils.ts
+  3a8f1d6b7e6caaa9 100
+vite/src/hooks/stores/useProductStore.ts
+  3a8f1d6b7e6caaa9 84-85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "8374da14bd0d7b855d4b1e8ead56d823221fd59d",
+  "prompts": {
+    "3a8f1d6b7e6caaa9": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c8399198-c8ca-4388-883a-03cc5c5e8eec",
+        "model": "claude-opus-4-7-thinking-high"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 1,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
