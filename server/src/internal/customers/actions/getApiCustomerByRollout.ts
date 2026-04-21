@@ -17,7 +17,7 @@ export const getApiCustomerByRollout = async ({
 	entityId?: string;
 	source?: string;
 	withAutumnId?: boolean;
-}): Promise<Record<string, unknown>> => {
+}) => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 		const fullSubject = await getOrSetCachedFullSubject({
 			ctx,
@@ -26,11 +26,11 @@ export const getApiCustomerByRollout = async ({
 			source,
 		});
 
-		return (await getApiCustomerV2({
+		return getApiCustomerV2({
 			ctx,
 			fullSubject,
 			withAutumnId,
-		})) as Record<string, unknown>;
+		});
 	}
 
 	const fullCustomer = await getOrSetCachedFullCustomer({
