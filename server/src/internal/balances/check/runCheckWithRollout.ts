@@ -29,7 +29,7 @@ export const runCheckWithRollout = async ({
 					body,
 					requiredBalance,
 				}),
-			catch: (error) => error,
+			catch: (error: unknown) => error,
 		});
 
 		if (Result.isOk(result)) return result.value;

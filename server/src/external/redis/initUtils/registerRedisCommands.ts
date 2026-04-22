@@ -110,7 +110,6 @@ export const registerRedisCommands = ({
 	});
 
 	redisInstance.defineCommand("deductFromSubjectBalances", {
-		numberOfKeys: 1,
 		lua: DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
 	});
 
