@@ -10,15 +10,7 @@ import {
 	isVolumeBasedCusEnt,
 } from "@autumn/shared";
 
-/**
- * Pure extraction of auto-topup-relevant objects from a FullCustomer.
- *
- * Intentionally does NOT expose the full cusEnt list for the feature. Paydown is
- * computed at execute time from a LIVE cusEnt read (see `applyAutoTopupRebalance`),
- * not from this snapshot, so there's nothing useful to hand out here.
- *
- * Returns null if any prerequisite is missing.
- */
+/** Pure extraction of auto-topup-relevant objects from a FullCustomer. Returns null if any prerequisite is missing. */
 export const fullCustomerToAutoTopupObjects = ({
 	fullCustomer,
 	featureId,
@@ -64,9 +56,5 @@ export const fullCustomerToAutoTopupObjects = ({
 	const remainingBalance = cusEntsToBalance({ cusEnts, withRollovers: true });
 	const balanceBelowThreshold = remainingBalance <= autoTopupConfig.threshold;
 
-	return {
-		autoTopupConfig,
-		customerEntitlement,
-		balanceBelowThreshold,
-	};
+	return { autoTopupConfig, customerEntitlement, balanceBelowThreshold };
 };
