@@ -85,6 +85,29 @@ export const AutumnBillingPlanSchema = z.object({
 		.array(UpdateCustomerEntitlementSchema)
 		.optional(),
 
+	/**
+	 * Declarative auto top-up rebalance intent.
+	 *
+	 * When present, the executor (post-Stripe-charge) reads LIVE cusEnt balances for
+	 * `featureId`, pays down any existing overage first (bounded by `quantity` and the
+	 * depth of overage), and routes the remainder to the prepaid cusEnt identified by
+	 * `prepaidCustomerEntitlementId`.
+	 *
+	 * Live-read avoids two races inherent to snapshot-based paydown:
+	 *   - Concurrent usage between snapshot and execution being overwritten (data loss).
+	 *   - Concurrent refunds making the snapshot's overage look deeper than it actually is
+	 *     (would produce overcredit).
+	 *
+	 * All writes are atomic SQL `balance + delta` increments via adjustBalanceDbAndCache.
+	 */
+	autoTopupRebalance: z
+		.object({
+			featureId: z.string(),
+			quantity: z.number(),
+			prepaidCustomerEntitlementId: z.string(),
+		})
+		.optional(),
+
 	// Upsert operations (populated during webhook handling, e.g., checkout.session.completed)
 	upsertSubscription: SubscriptionSchema.optional(),
 	upsertInvoice: z.custom<InsertInvoice>().optional(),

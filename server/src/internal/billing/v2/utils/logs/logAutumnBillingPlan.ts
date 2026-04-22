@@ -64,6 +64,10 @@ export const logAutumnBillingPlan = ({
 						item: `${item.description}: ${item.amountAfterDiscounts}`,
 						effectivePeriod: `${formatMs(item.context.effectivePeriod?.start)} - ${formatMs(item.context.effectivePeriod?.end)}`,
 					})) ?? "none",
+
+				autoTopupRebalance: plan.autoTopupRebalance
+					? `feature=${plan.autoTopupRebalance.featureId} qty=${plan.autoTopupRebalance.quantity} prepaidId=${plan.autoTopupRebalance.prepaidCustomerEntitlementId}`
+					: "none",
 			},
 		},
 	});
