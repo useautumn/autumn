@@ -112,6 +112,7 @@ if (process.env.NODE_ENV === "development") {
 }
 
 function registerFatalErrorHandlers() {
+	const exitAfterLog = () => setTimeout(() => process.exit(1), 100);
 	const logFatal = (event: string, error: unknown) => {
 		logger.error(event, {
 			error:
@@ -123,11 +124,11 @@ function registerFatalErrorHandlers() {
 
 	process.on("uncaughtException", (error) => {
 		logFatal("WORKER FATAL uncaughtException", error);
-		process.exit(1);
+		exitAfterLog();
 	});
 	process.on("unhandledRejection", (reason) => {
 		logFatal("WORKER FATAL unhandledRejection", reason);
-		process.exit(1);
+		exitAfterLog();
 	});
 }
 
