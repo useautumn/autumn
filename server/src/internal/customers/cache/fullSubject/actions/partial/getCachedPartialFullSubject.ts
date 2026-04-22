@@ -122,7 +122,7 @@ export const getCachedPartialFullSubject = async ({
 	);
 
 	const isCustomerSubject = !entityId;
-	const featureBalances = await getCachedFeatureBalancesBatch({
+	const featureBalancesOutcome = await getCachedFeatureBalancesBatch({
 		ctx,
 		customerId,
 		featureIds: meteredFeatureIdsToFetch,
@@ -130,12 +130,33 @@ export const getCachedPartialFullSubject = async ({
 		includeAggregated: isCustomerSubject,
 	});
 
-	if (
-		!featureBalances ||
-		featureBalances.length !== meteredFeatureIdsToFetch.length
-	) {
+	if (featureBalancesOutcome.kind === "unavailable") {
+		// Transient Redis failure. DO NOT bump viewEpoch — that would cascade a
+		// rebuild across every pod for this customer. Fall through to DB for
+		// this caller only.
+		logger.warn(
+			`[getCachedPartialFullSubject] Balance batch unavailable for ${customerId}${entityId ? `:${entityId}` : ""}, falling back without invalidation, source: ${source}`,
+		);
+		return undefined;
+	}
+
+	if (featureBalancesOutcome.kind === "missing") {
 		logger.warn(
 			`[getCachedPartialFullSubject] Incomplete cache for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}`,
+		);
+		await invalidateCachedFullSubjectExact({
+			ctx,
+			customerId,
+			entityId,
+			source: "partial-incomplete",
+		});
+		return undefined;
+	}
+
+	const featureBalances = featureBalancesOutcome.value;
+	if (featureBalances.length !== meteredFeatureIdsToFetch.length) {
+		logger.warn(
+			`[getCachedPartialFullSubject] Incomplete cache (length mismatch) for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}`,
 		);
 		await invalidateCachedFullSubjectExact({
 			ctx,

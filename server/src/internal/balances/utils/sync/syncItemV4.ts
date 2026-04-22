@@ -140,7 +140,7 @@ export const syncItemV4 = async ({
 	for (const [featureId, customerEntitlementIds] of Object.entries(
 		modifiedCusEntIdsByFeatureId,
 	)) {
-		const result = await getCachedFeatureBalance({
+		const outcome = await getCachedFeatureBalance({
 			ctx,
 			customerId,
 			featureId,
@@ -148,14 +148,14 @@ export const syncItemV4 = async ({
 			readMaster: true,
 		});
 
-		if (!result) {
+		if (outcome.kind !== "ok") {
 			logger.info(
-				`[SYNC V4] (${customerId}) Cache miss for feature=${featureId}, skipping`,
+				`[SYNC V4] (${customerId}) Cache ${outcome.kind} for feature=${featureId}, skipping`,
 			);
 			return;
 		}
 
-		allSubjectBalances.push(...result.balances);
+		allSubjectBalances.push(...outcome.value.balances);
 	}
 
 	// Build sync entries
