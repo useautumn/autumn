@@ -160,6 +160,7 @@ export const executeRedisDeductionV2 = async ({
 					}
 				: null,
 			unwind_value: unwindValue ?? null,
+			debug: process.env.NODE_ENV !== "production",
 		};
 
 		const targetRedis = redisInstance ?? ctx.redisV2;
@@ -262,6 +263,9 @@ export const executeRedisDeductionV2 = async ({
 				});
 			}
 		} catch (error) {
+			// if (error.message?.includes("declined")) {
+			// 	return;
+			// }
 			if (error instanceof Error && !error?.message?.includes("declined")) {
 				ctx.logger.error(
 					`[executeRedisDeductionV2] Attempting rollback due to error: ${error}`,

@@ -124,6 +124,7 @@ local context = init_context({
   customer_id = customer_id,
   customer_entitlement_deductions = customer_entitlement_deductions,
   balance_keys_by_feature_id = params.balance_keys_by_feature_id,
+  debug = params.debug,
 })
 
 if #(context.missing_customer_entitlement_ids or {}) > 0 then

@@ -7,9 +7,9 @@ import {
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
-import { refreshEntityAggregateCache } from "./refreshEntityAggregateCache.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
+import { globalRefreshEntityAggregateBatchingManager } from "../refreshEntityAggregate/index.js";
 
 const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
@@ -135,8 +135,6 @@ export const syncItemV4 = async ({
 	const {
 		customerId,
 		entityId,
-		orgId,
-		env,
 		rolloverIds,
 		modifiedCusEntIdsByFeatureId,
 	} = payload;
@@ -244,12 +242,16 @@ export const syncItemV4 = async ({
 		(subjectBalance) => subjectBalance.isEntityLevel,
 	);
 	if (hasEntityLevel) {
-		await refreshEntityAggregateCache({
-			ctx,
+		const featureIds = Object.keys(modifiedCusEntIdsByFeatureId);
+		const internalFeatureIds = ctx.features
+			.filter((feature) => featureIds.includes(feature.id))
+			.map((feature) => feature.internal_id);
+
+		globalRefreshEntityAggregateBatchingManager.schedule({
+			orgId: ctx.org.id,
+			env: ctx.env,
 			customerId,
-			orgId,
-			env,
-			featureIds: Object.keys(modifiedCusEntIdsByFeatureId),
+			internalFeatureIds,
 		});
 	}
 };
