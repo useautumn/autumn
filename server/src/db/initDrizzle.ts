@@ -55,6 +55,7 @@ export const initDrizzle = ({
 	const envDbUrl = replica
 		? process.env.DATABASE_REPLICA_URL
 		: process.env.DATABASE_URL;
+
 	const dbUrl = databaseUrl || envDbUrl || "";
 
 	const client = new pg.Pool({

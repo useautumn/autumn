@@ -56,6 +56,13 @@ export interface Payloads {
 		entityId?: string;
 		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 	};
+	[JobName.RefreshEntityAggregate]: {
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		region?: string;
+		internalFeatureIds: string[];
+	};
 	[JobName.InsertEventBatch]: {
 		events: EventInsert[];
 	};
