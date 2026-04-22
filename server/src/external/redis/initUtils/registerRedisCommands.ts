@@ -50,9 +50,7 @@ export const registerRedisCommands = ({
 	supportsUpstashShebang?: boolean;
 }): Redis => {
 	const prepareScript = (script: string): string =>
-		supportsUpstashShebang || !script.startsWith(UPSTASH_KEY_LOCKING_SHEBANG)
-			? script
-			: script.slice(UPSTASH_KEY_LOCKING_SHEBANG.length);
+		supportsUpstashShebang ? `${UPSTASH_KEY_LOCKING_SHEBANG}${script}` : script;
 	const batchDeductionScript = getBatchDeductionScript();
 
 	redisInstance.defineCommand("batchDeduction", {
