@@ -21,6 +21,10 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 }));
 
 import {
+	getRedisAvailability,
+	shouldUseRedis,
+} from "@/external/redis/initRedis.js";
+import {
 	tryRedisNx,
 	tryRedisRead,
 	tryRedisWrite,
@@ -48,6 +52,7 @@ describe("cache utils", () => {
 				error: "boom",
 			},
 		});
+		expect(shouldUseRedis()).toBe(false);
 	});
 
 	test("tryRedisWrite returns null and warns when Redis is not ready", async () => {
@@ -64,6 +69,7 @@ describe("cache utils", () => {
 				error: undefined,
 			},
 		});
+		expect(getRedisAvailability().state).toBe("degraded");
 	});
 
 	test("tryRedisNx falls back and warns when Redis operation throws", async () => {

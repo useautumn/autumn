@@ -4,7 +4,9 @@ import { hasRedisConfig } from "./redisConfig.js";
 
 const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
-const REDIS_PROBE_TIMEOUT_MS = 500;
+const REDIS_PROBE_TIMEOUT_MS = 1_000;
+const REDIS_FAILURES_TO_DEGRADE = 3;
+const REDIS_SUCCESSES_TO_RECOVER = 2;
 
 type RedisAvailabilityState = "healthy" | "degraded";
 
@@ -18,6 +20,8 @@ let redisAvailabilityState: RedisAvailabilityState = "degraded";
 let redisMonitorInterval: ReturnType<typeof setInterval> | null = null;
 let redisTickInFlight = false;
 let lastAvailabilityLogAt = 0;
+let consecutiveFailures = 0;
+let consecutiveSuccesses = 0;
 
 const setRedisAvailabilityState = (state: RedisAvailabilityState) => {
 	const shouldLog =
@@ -38,6 +42,16 @@ const setRedisAvailabilityState = (state: RedisAvailabilityState) => {
 			: "[Redis] Unavailable, skipping Redis-backed features",
 		{ redisStatus: redis.status },
 	);
+};
+
+const recordRedisAvailability = (available: boolean) => {
+	consecutiveSuccesses = available ? consecutiveSuccesses + 1 : 0;
+	consecutiveFailures = available ? 0 : consecutiveFailures + 1;
+
+	if (consecutiveSuccesses >= REDIS_SUCCESSES_TO_RECOVER)
+		setRedisAvailabilityState("healthy");
+	if (consecutiveFailures >= REDIS_FAILURES_TO_DEGRADE)
+		setRedisAvailabilityState("degraded");
 };
 
 const pingRedisClient = async () => {
@@ -70,15 +84,15 @@ const tickRedisAvailability = async () => {
 
 	try {
 		if (await pingRedisClient()) {
-			setRedisAvailabilityState("healthy");
+			recordRedisAvailability(true);
 			return;
 		}
 	} catch {}
 
 	await tryReconnectRedis();
-	setRedisAvailabilityState(
-		(await pingRedisClient().catch(() => false)) ? "healthy" : "degraded",
-	);
+	(await pingRedisClient().catch(() => false))
+		? recordRedisAvailability(true)
+		: recordRedisAvailability(false);
 };
 
 export const startRedisMonitor = () => {
@@ -105,6 +119,14 @@ export const stopRedisMonitor = () => {
 
 export const shouldUseRedis = () =>
 	hasRedisConfig && redisAvailabilityState === "healthy";
+
+export const markRedisCommandSuccess = () => {
+	if (hasRedisConfig) recordRedisAvailability(true);
+};
+
+export const markRedisCommandFailure = () => {
+	if (hasRedisConfig) recordRedisAvailability(false);
+};
 
 export const getRedisAvailability = (): RedisAvailabilitySnapshot => ({
 	configured: hasRedisConfig,
