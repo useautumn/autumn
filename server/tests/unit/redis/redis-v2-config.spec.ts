@@ -5,7 +5,7 @@ import {
 } from "@/external/redis/initUtils/redisV2Config.js";
 
 describe("redis V2 connection config", () => {
-	test("uses a distinct CACHE_V2_URL without the Upstash shebang", () => {
+	test("uses a distinct CACHE_V2_UPSTASH_URL with the Upstash shebang", () => {
 		expect(
 			getRedisV2ConnectionConfig({
 				cacheV2Url: " redis://v2 ",
@@ -15,11 +15,11 @@ describe("redis V2 connection config", () => {
 		).toEqual({
 			cacheUrl: "redis://v2",
 			region: "us-west-2:v2",
-			supportsUpstashShebang: false,
+			supportsUpstashShebang: true,
 		});
 	});
 
-	test("falls back to primary Redis when CACHE_V2_URL is absent or primary", () => {
+	test("falls back to primary Redis when CACHE_V2_UPSTASH_URL is absent or matches primary", () => {
 		expect(
 			getRedisV2ConnectionConfig({
 				cacheV2Url: undefined,
@@ -36,8 +36,9 @@ describe("redis V2 connection config", () => {
 		).toBeNull();
 	});
 
-	test("enables the Upstash shebang only for the canary alternate", () => {
-		expect(supportsUpstashShebangForRedisV2("canary")).toBe(true);
+	test("enables the Upstash shebang only for the upstash instance", () => {
+		expect(supportsUpstashShebangForRedisV2("upstash")).toBe(true);
+		expect(supportsUpstashShebangForRedisV2("redis")).toBe(false);
 		expect(supportsUpstashShebangForRedisV2("dragonfly")).toBe(false);
 	});
 });
