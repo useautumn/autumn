@@ -3,12 +3,15 @@ import { createHash } from "node:crypto";
 const hash = (value: string) =>
 	createHash("sha256").update(value).digest("hex").slice(0, 12);
 
+const mask = (value: string) =>
+	value.length <= 2 ? "***" : `${value[0]}***${value[value.length - 1]}`;
+
 const auth = (url: URL) => {
 	const username = decodeURIComponent(url.username);
 	const password = decodeURIComponent(url.password);
 	if (!username && !password) return "";
 
-	return `${username}${password ? ":***" : ""}@`;
+	return `${username ? mask(username) : ""}${password ? `:${mask(password)}` : ""}@`;
 };
 
 const formatUrl = (value: string) => {
