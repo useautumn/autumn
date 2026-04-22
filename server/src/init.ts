@@ -38,6 +38,8 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
 
+let shuttingDown = false;
+
 const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	logger.info(getRedactedDatabaseUrls(), "DB URLs");
 
@@ -89,8 +91,14 @@ if (process.env.NODE_ENV === "development") {
 			cluster.fork();
 		}
 
-		cluster.on("exit", (worker, _code, _signal) => {
-			logger.error(`WORKER DIED: ${worker.process.pid}`);
+		cluster.on("exit", (worker, code, signal) => {
+			logger.error("WORKER DIED", {
+				pid: worker.process.pid,
+				code,
+				signal,
+				exitedAfterDisconnect: worker.exitedAfterDisconnect,
+			});
+			if (shuttingDown) return;
 			cluster.fork();
 		});
 
@@ -108,6 +116,7 @@ function registerShutdownHandlers() {
 }
 
 async function gracefulShutdown() {
+	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
 		// Flush any buffered OTel spans before shutting down
