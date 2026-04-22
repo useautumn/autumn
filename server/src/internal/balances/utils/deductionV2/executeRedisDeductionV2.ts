@@ -178,7 +178,7 @@ export const executeRedisDeductionV2 = async ({
 		if (!result) {
 			throw new RedisDeductionError({
 				message: "Redis not ready for deduction",
-				code: RedisDeductionErrorCode.SubjectBalanceNotFound,
+				code: RedisDeductionErrorCode.RedisUnavailable,
 			});
 		}
 
