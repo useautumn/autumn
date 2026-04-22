@@ -31,7 +31,7 @@ const main = async () => {
 
 	console.log("--- Running entity aggregate query ---");
 	const start = performance.now();
-	const result = await getEntityAggregateForSync({
+	const parsedResult = await getEntityAggregateForSync({
 		db,
 		orgId,
 		env,
@@ -39,23 +39,19 @@ const main = async () => {
 		internalFeatureIds: features?.map((feature) => feature.internal_id),
 	});
 	const elapsed = performance.now() - start;
-	console.log(`Rows returned: ${result.length}`);
-	console.log(`Wall-clock time: ${elapsed.toFixed(2)}ms`);
-	console.log("Result:", JSON.stringify(result, null, 2));
-	console.log();
+	console.log(`Rows (after schema parse): ${parsedResult.length}`);
+	console.log(`Wall-clock time: ${elapsed.toFixed(2)}ms\n`);
 
-	// Build the same query inline for EXPLAIN ANALYZE
+	// Also fetch raw rows so we can see the output even if schema parse fails
 	const { getEntityAggregateFragments } = await import(
 		"../src/internal/customers/repos/getFullSubject/getEntityAggregateFragments"
 	);
-
-	const statusFilter = sql`AND cp.status = ANY(ARRAY['active', 'past_due', 'scheduled'])`;
-	const entityFragments = getEntityAggregateFragments({
-		statusFilter,
+	const statusFilterRaw = sql`AND cp.status = ANY(ARRAY['active', 'past_due', 'scheduled'])`;
+	const entityFragmentsRaw = getEntityAggregateFragments({
+		statusFilter: statusFilterRaw,
 		internalFeatureIds: features?.map((feature) => feature.internal_id),
 	});
-
-	const query = sql`
+	const rawQuery = sql`
 		WITH subject_customer_records AS (
 			SELECT *
 			FROM customers c
@@ -65,15 +61,36 @@ const main = async () => {
 			ORDER BY (c.id = ${customerId}) DESC
 			LIMIT 1
 		)
-
-		${entityFragments.ctes}
-
+		${entityFragmentsRaw.ctes}
 		SELECT *
 		FROM entity_aggregated_cus_entitlements
 	`;
+	const rawResult = await db.execute(rawQuery);
+	const result = rawResult as unknown as Record<string, unknown>[];
+	console.log(`Raw rows: ${result.length}\n`);
+
+	console.log("--- Entity aggregate output (per feature) ---\n");
+	for (const row of result) {
+		const entities = (row as unknown as { entities?: Record<string, unknown> })
+			.entities;
+		const entityCount = (row as unknown as { entity_count?: number })
+			.entity_count;
+		const entityKeys = entities ? Object.keys(entities) : [];
+
+		console.log(`feature_id: ${row.feature_id}`);
+		console.log(`  internal_feature_id: ${row.internal_feature_id}`);
+		console.log(`  balance: ${row.balance}`);
+		console.log(`  adjustment: ${row.adjustment}`);
+		console.log(`  additional_balance: ${row.additional_balance}`);
+		console.log(`  rollover_balance: ${row.rollover_balance}`);
+		console.log(`  entity_count: ${entityCount}`);
+		console.log(`  entities keys (${entityKeys.length}): ${JSON.stringify(entityKeys)}`);
+		console.log(`  entities: ${JSON.stringify(entities, null, 2)}`);
+		console.log();
+	}
 
 	console.log("--- EXPLAIN (ANALYZE, BUFFERS) ---\n");
-	const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${query}`;
+	const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${rawQuery}`;
 	const explainResult = await db.execute(explainQuery);
 
 	for (const row of explainResult) {

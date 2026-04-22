@@ -236,7 +236,6 @@ describe(`${chalk.yellowBright("fullSubject aggregate options")}`, () => {
 				expect(aggregateMessagesBalance?.allowance_total).toBe(600);
 				expect(aggregateMessagesBalance?.prepaid_grant_from_options).toBe(1000);
 				expect(aggregateMessagesBalance?.balance).toBe(1600);
-				expect(aggregateMessagesBalance?.entity_count).toBe(2);
 			},
 		});
 	});

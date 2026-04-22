@@ -24,7 +24,6 @@ export const AggregatedFeatureBalanceSchema = z.object({
 	rollover_usage: z.number().default(0),
 	unlimited: z.boolean(),
 	usage_allowed: z.boolean(),
-	entity_count: z.number(),
 	entities: z.record(z.string(), AggregatedEntityBalanceSchema).nullish(),
 });
 
