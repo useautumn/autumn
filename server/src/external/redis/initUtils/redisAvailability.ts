@@ -6,6 +6,7 @@ import { hasRedisConfig } from "./redisConfig.js";
 const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
 const REDIS_PROBE_TIMEOUT_MS = 1_000;
+const REDIS_STALE_RECONNECT_MS = 5_000;
 const REDIS_FAILURES_TO_DEGRADE = 3;
 const REDIS_SUCCESSES_TO_RECOVER = 2;
 
@@ -23,19 +24,18 @@ let redisTickInFlight = false;
 let lastAvailabilityLogAt = 0;
 let consecutiveFailures = 0;
 let consecutiveSuccesses = 0;
+let reconnectStartedAt: number | null = null;
 
 const setRedisAvailabilityState = (state: RedisAvailabilityState) => {
 	const previousState = redisAvailabilityState;
+	const now = Date.now();
 	const shouldLog =
 		previousState !== state ||
-		(state === "degraded" &&
-			Date.now() - lastAvailabilityLogAt >= REDIS_ERROR_LOG_INTERVAL_MS);
+		(state === "degraded" && now - lastAvailabilityLogAt >= REDIS_ERROR_LOG_INTERVAL_MS);
 	if (!shouldLog) return;
 
 	redisAvailabilityState = state;
 
-	const now = Date.now();
-	if (now - lastAvailabilityLogAt < REDIS_ERROR_LOG_INTERVAL_MS) return;
 	lastAvailabilityLogAt = now;
 
 	logger[state === "healthy" ? "info" : "warn"](
@@ -79,12 +79,22 @@ const pingRedisClient = async () => {
 };
 
 const tryReconnectRedis = async () => {
-	if (!hasRedisConfig || redis.status === "ready" || redis.status === "connecting")
+	if (!hasRedisConfig || redis.status === "ready") {
+		reconnectStartedAt = null;
 		return;
+	}
+
+	if (redis.status === "connecting" || redis.status === "reconnecting") {
+		reconnectStartedAt ??= Date.now();
+		if (Date.now() - reconnectStartedAt < REDIS_STALE_RECONNECT_MS) return;
+	}
 
 	try {
 		redis.disconnect(false);
-		await redis.connect();
+		await withTimeout({
+			timeoutMs: REDIS_PROBE_TIMEOUT_MS,
+			fn: () => redis.connect(),
+		});
 	} catch {
 		// Let the next probe decide whether we recovered.
 	}
