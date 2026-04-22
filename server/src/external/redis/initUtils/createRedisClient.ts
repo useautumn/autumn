@@ -1,9 +1,8 @@
 import { Redis } from "ioredis";
+import { getRedisCommandTimeoutMs } from "@/internal/misc/redisTimeout/redisTimeoutStore.js";
 import { instrumentRedis } from "../otel/instrumentRedis.js";
 import { cacheBackupUrl } from "./redisConfig.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
-
-const REDIS_COMMAND_TIMEOUT_MS = 500;
 
 /** Create a Redis connection for a specific region */
 export const createRedisClient = ({
@@ -13,6 +12,10 @@ export const createRedisClient = ({
 	cacheUrl: string;
 	region: string;
 }): Redis => {
+	// Read from edge config at construction time. ioredis's commandTimeout is
+	// baked into the client, so changes to the edge config require a pod
+	// restart to take effect on existing connections.
+	const commandTimeoutMs = getRedisCommandTimeoutMs();
 	const instance = new Redis(cacheUrl, {
 		tls:
 			process.env.CACHE_CERT && !cacheBackupUrl
@@ -20,7 +23,7 @@ export const createRedisClient = ({
 				: undefined,
 		family: 4,
 		keepAlive: 10000,
-		commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
+		...(commandTimeoutMs !== null ? { commandTimeout: commandTimeoutMs } : {}),
 	});
 
 	// instrumentRedis must run first so its defineCommand patch
