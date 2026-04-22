@@ -7,18 +7,20 @@ import {
 	redis,
 	waitForRedisReady,
 } from "./initRedis.js";
+import {
+	getAlternateRedisV2ConnectionConfig,
+	getRedisV2ConnectionConfig,
+} from "./initUtils/redisV2Config.js";
 
-const cacheV2Url = process.env.CACHE_V2_URL?.trim();
-const primaryCacheUrl = process.env.CACHE_URL?.trim();
+const redisV2Config = getRedisV2ConnectionConfig({
+	cacheV2Url: process.env.CACHE_V2_URL,
+	primaryCacheUrl: process.env.CACHE_URL,
+	currentRegion,
+});
 
-export const redisV2: Redis =
-	cacheV2Url && cacheV2Url !== primaryCacheUrl
-		? createRedisConnection({
-				cacheUrl: cacheV2Url,
-				region: `${currentRegion}:v2`,
-				supportsUpstashShebang: false,
-			})
-		: redis;
+export const redisV2: Redis = redisV2Config
+	? createRedisConnection(redisV2Config)
+	: redis;
 
 const alternateInstanceUrls: Partial<Record<RedisV2InstanceName, string>> = {
 	canary: process.env.CACHE_V2_CANARY_URL?.trim() || undefined,
@@ -45,11 +47,9 @@ export const getAlternateRedisV2Instance = (
 	const existing = instancePool.get(name);
 	if (existing) return existing;
 
-	const instance = createRedisConnection({
-		cacheUrl,
-		region: `${currentRegion}:v2:${name}`,
-		supportsUpstashShebang: name === "canary",
-	});
+	const instance = createRedisConnection(
+		getAlternateRedisV2ConnectionConfig({ name, cacheUrl, currentRegion })!,
+	);
 	instancePool.set(name, instance);
 	return instance;
 };
