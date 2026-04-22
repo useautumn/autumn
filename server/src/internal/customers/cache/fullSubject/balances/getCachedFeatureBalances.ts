@@ -1,6 +1,6 @@
 import type { AggregatedFeatureBalance, SubjectBalance } from "@autumn/shared";
+import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { runRedisOp } from "@/utils/cacheUtils/runRedisOp.js";
 import { buildSharedFullSubjectBalanceKey } from "../builders/buildSharedFullSubjectBalanceKey.js";
 import { AGGREGATED_BALANCE_FIELD } from "../config/fullSubjectCacheConfig.js";
 import { roundSubjectBalance } from "../roundCacheBalance.js";
@@ -17,12 +17,10 @@ export type FeatureBalanceResult = {
 
 export type FeatureBalanceOutcome =
 	| { kind: "ok"; value: FeatureBalanceResult }
-	| { kind: "unavailable" }
 	| { kind: "missing" };
 
 export type FeatureBalancesBatchOutcome =
 	| { kind: "ok"; value: FeatureBalanceResult[] }
-	| { kind: "unavailable" }
 	| { kind: "missing" };
 
 const readFeatureBalancesFromMaster = async ({
@@ -71,7 +69,7 @@ export const getCachedFeatureBalance = async ({
 		return { kind: "ok", value: { featureId, balances: [] } };
 	}
 
-	const outcome = await runRedisOp({
+	const results = await runRedisOp({
 		operation: () =>
 			readMaster
 				? readFeatureBalancesFromMaster({
@@ -84,9 +82,6 @@ export const getCachedFeatureBalance = async ({
 		redisInstance: redisV2,
 	});
 
-	if (outcome.kind === "unavailable") return { kind: "unavailable" };
-
-	const results = outcome.value;
 	if (!results) return { kind: "missing" };
 
 	const balances: SubjectBalance[] = [];
@@ -144,15 +139,12 @@ export const getCachedFeatureBalancesBatch = async ({
 		);
 	}
 
-	const outcome = await runRedisOp({
+	const results = await runRedisOp({
 		operation: () => pipeline.exec(),
 		source: "getCachedFeatureBalancesBatch",
 		redisInstance: redisV2,
 	});
 
-	if (outcome.kind === "unavailable") return { kind: "unavailable" };
-
-	const results = outcome.value;
 	if (!results) return { kind: "missing" };
 
 	const featureBalances: FeatureBalanceResult[] = [];

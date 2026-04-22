@@ -5,6 +5,7 @@ import {
 	markRedisCommandFailure,
 	markRedisCommandSuccess,
 } from "@/external/redis/initUtils/redisAvailability.js";
+import { RedisUnavailableError } from "./errors.js";
 
 const REDIS_WARNING_INTERVAL_MS = 30_000;
 const lastRedisWarningAtBySource = new Map<string, number>();
@@ -59,15 +60,13 @@ export type UnavailableReason =
 	| "connection"
 	| "other";
 
-export type RedisOpOutcome<T> =
-	| { kind: "ok"; value: T }
-	| { kind: "unavailable"; reason: UnavailableReason; error?: unknown };
-
 /**
- * Runs a Redis operation and returns a discriminated outcome.
- * - Updates the availability state machine on connection errors / timeouts.
- * - Callers can distinguish "genuine value (including null)" from "Redis unavailable",
- *   which the legacy tryRedisRead / tryRedisWrite helpers cannot.
+ * Runs a Redis operation. Returns the operation's value on success; throws
+ * `RedisUnavailableError` on timeout/connection/not-ready failures.
+ *
+ * Callers that want to fail open catch at the request boundary (see
+ * `withRedisFallback`). Callers distinguishing "null value" from "missing"
+ * still inspect the return value — this helper does not interpret nullish.
  */
 export const runRedisOp = async <T>({
 	operation,
@@ -77,19 +76,19 @@ export const runRedisOp = async <T>({
 	operation: () => Promise<T>;
 	source: string;
 	redisInstance?: Redis;
-}): Promise<RedisOpOutcome<T>> => {
+}): Promise<T> => {
 	const targetRedis = redisInstance ?? redis;
 
-	try {
-		if (targetRedis.status !== "ready") {
-			markDefaultRedisAvailability(targetRedis, false);
-			warnRedisUnavailable({ source, reason: "not_ready" });
-			return { kind: "unavailable", reason: "not_ready" };
-		}
+	if (targetRedis.status !== "ready") {
+		markDefaultRedisAvailability(targetRedis, false);
+		warnRedisUnavailable({ source, reason: "not_ready" });
+		throw new RedisUnavailableError({ source, reason: "not_ready" });
+	}
 
+	try {
 		const value = await operation();
 		markDefaultRedisAvailability(targetRedis, true);
-		return { kind: "ok", value };
+		return value;
 	} catch (error) {
 		const classified = classifyErrorReason(targetRedis, error);
 		const reason: UnavailableReason = classified ?? "other";
@@ -97,6 +96,6 @@ export const runRedisOp = async <T>({
 			markDefaultRedisAvailability(targetRedis, false);
 		}
 		warnRedisUnavailable({ source, reason, error });
-		return { kind: "unavailable", reason, error };
+		throw new RedisUnavailableError({ source, reason, cause: error });
 	}
 };
