@@ -23,6 +23,14 @@ const getErrorCode = ({ error }: { error: unknown }): string | null => {
 const getErrorMessage = ({ error }: { error: unknown }): string | null =>
 	error instanceof Error ? error.message : null;
 
+const TRANSIENT_DB_ERROR_MESSAGES = new Set([
+	"timeout exceeded when trying to connect",
+	"Query read timeout",
+	"Connection terminated due to connection timeout",
+	"canceling statement due to lock timeout",
+	"canceling statement due to statement timeout",
+]);
+
 /**
  * PostgreSQL SQLSTATE code prefixes that indicate infrastructure issues.
  * - Class 08: Connection Exception (connection lost, refused, broken pipe)
@@ -63,8 +71,8 @@ const RETRYABLE_PG_CODES = new Set([
  */
 export const isTransientDbError = ({ error }: { error: unknown }): boolean => {
 	const code = getErrorCode({ error });
-	if (getErrorMessage({ error }) === "timeout exceeded when trying to connect")
-		return true;
+	const message = getErrorMessage({ error });
+	if (message && TRANSIENT_DB_ERROR_MESSAGES.has(message)) return true;
 	if (!code) return false;
 
 	if (RETRYABLE_PG_CODES.has(code)) return true;
