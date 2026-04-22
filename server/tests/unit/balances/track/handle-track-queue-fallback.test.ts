@@ -10,6 +10,12 @@ const mockState = {
 };
 
 mock.module("@/external/redis/initRedis.js", () => ({
+	redis: {},
+	shouldUseRedis: () => mockState.shouldUseRedis,
+}));
+
+mock.module("@/external/redis/initRedis", () => ({
+	redis: {},
 	shouldUseRedis: () => mockState.shouldUseRedis,
 }));
 
@@ -94,7 +100,11 @@ describe("handleTrack queue fallback", () => {
 	});
 
 	afterEach(() => {
-		process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
+		if (originalTrackQueueUrl) {
+			process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
+		} else {
+			delete process.env.TRACK_SQS_QUEUE_URL;
+		}
 	});
 
 	test("queues track and returns the legacy success shape when Redis is unavailable", async () => {
