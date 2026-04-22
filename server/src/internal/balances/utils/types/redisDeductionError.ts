@@ -1,5 +1,6 @@
 /** Error codes returned by the Lua deduction script */
 export enum RedisDeductionErrorCode {
+	RedisUnavailable = "REDIS_UNAVAILABLE",
 	CustomerNotFound = "CUSTOMER_NOT_FOUND",
 	NoCustomerProducts = "NO_CUSTOMER_PRODUCTS",
 	SubjectBalanceNotFound = "SUBJECT_BALANCE_NOT_FOUND",
@@ -32,6 +33,10 @@ export class RedisDeductionError extends Error {
 		super(message);
 		this.name = "RedisDeductionError";
 		this.code = code;
+	}
+
+	isRedisUnavailable(): boolean {
+		return this.code === RedisDeductionErrorCode.RedisUnavailable;
 	}
 
 	/** Check if this error should trigger a Postgres fallback */

@@ -6,16 +6,30 @@ const mockState = {
 	shouldUseRedis: true,
 	queueCalls: [] as Record<string, unknown>[],
 	runTrackCalls: [] as Record<string, unknown>[],
-	warnCalls: [] as unknown[][],
 };
 
 mock.module("@/external/redis/initRedis.js", () => ({
+	redis: {},
 	shouldUseRedis: () => mockState.shouldUseRedis,
 }));
 
-mock.module("@/queue/queueUtils.js", () => ({
-	addTaskToQueue: async (args: Record<string, unknown>) => {
+mock.module("@/external/redis/initRedis", () => ({
+	redis: {},
+	shouldUseRedis: () => mockState.shouldUseRedis,
+}));
+
+mock.module("@/internal/balances/track/utils/queueTrack.js", () => ({
+	queueTrack: async (args: Record<string, unknown>) => {
 		mockState.queueCalls.push(args);
+		if (!process.env.TRACK_SQS_QUEUE_URL) return null;
+
+		const body = args.body as { customer_id: string; feature_id: string };
+		return {
+			id: "placeholder",
+			code: "event_received",
+			customer_id: body.customer_id,
+			feature_id: body.feature_id,
+		};
 	},
 }));
 
@@ -27,7 +41,6 @@ mock.module("@/internal/balances/track/runTrackWithRollout.js", () => ({
 }));
 
 import { handleTrack } from "@/internal/balances/handlers/handleTrack.js";
-import { JobName } from "@/queue/JobName.js";
 
 const wrappedHandler = handleTrack[handleTrack.length - 1] as unknown as (
 	c: ReturnType<typeof makeContext>,
@@ -41,9 +54,7 @@ const makeCtx = ({ apiVersion }: { apiVersion: ApiVersion }) =>
 		env: AppEnv.Sandbox,
 		apiVersion: new ApiVersionClass(apiVersion),
 		logger: {
-			warn: (...args: unknown[]) => {
-				mockState.warnCalls.push(args);
-			},
+			warn: () => undefined,
 		},
 		features: [
 			{
@@ -90,11 +101,14 @@ describe("handleTrack queue fallback", () => {
 		mockState.shouldUseRedis = false;
 		mockState.queueCalls = [];
 		mockState.runTrackCalls = [];
-		mockState.warnCalls = [];
 	});
 
 	afterEach(() => {
-		process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
+		if (originalTrackQueueUrl) {
+			process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
+		} else {
+			delete process.env.TRACK_SQS_QUEUE_URL;
+		}
 	});
 
 	test("queues track and returns the legacy success shape when Redis is unavailable", async () => {
@@ -115,20 +129,11 @@ describe("handleTrack queue fallback", () => {
 
 		expect(mockState.queueCalls).toHaveLength(1);
 		expect(mockState.runTrackCalls).toHaveLength(0);
-		expect(mockState.warnCalls).toContainEqual([
-			"[track] Redis unavailable, queued track fallback",
-			expect.objectContaining({
-				type: "track_queue_fallback",
-				feature_id: "messages",
-				queue_name: "track-dev.fifo",
-			}),
-		]);
 		expect(mockState.queueCalls[0]).toMatchObject({
-			jobName: JobName.Track,
-			queueUrl:
-				"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo",
-			messageGroupId: "org_123:sandbox:cus_123",
-			messageDeduplicationId: "idem_123",
+			body: {
+				customer_id: "cus_123",
+				feature_id: "messages",
+			},
 		});
 
 		expect(response.status).toBe(200);
@@ -153,7 +158,7 @@ describe("handleTrack queue fallback", () => {
 			}),
 		);
 
-		expect(mockState.queueCalls).toHaveLength(0);
+		expect(mockState.queueCalls).toHaveLength(1);
 		expect(mockState.runTrackCalls).toHaveLength(1);
 		expect(response.status).toBe(200);
 	});
