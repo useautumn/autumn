@@ -4,13 +4,18 @@ import { instrumentRedis } from "../otel/instrumentRedis.js";
 import { cacheBackupUrl } from "./redisConfig.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
-/** Create a Redis connection for a specific region */
+/** Create a Redis connection for a specific region.
+ *  `supportsUpstashShebang` defaults to true; set false for non-Upstash
+ *  providers (ElastiCache, Dragonfly, self-hosted) that reject the
+ *  `allow-key-locking` shebang flag. */
 export const createRedisClient = ({
 	cacheUrl,
 	region,
+	supportsUpstashShebang = true,
 }: {
 	cacheUrl: string;
 	region: string;
+	supportsUpstashShebang?: boolean;
 }): Redis => {
 	// Read from edge config at construction time. ioredis's commandTimeout is
 	// baked into the client, so changes to the edge config require a pod
@@ -23,13 +28,13 @@ export const createRedisClient = ({
 				: undefined,
 		family: 4,
 		keepAlive: 10000,
-		...(commandTimeoutMs !== null ? { commandTimeout: commandTimeoutMs } : {}),
+		// ...(commandTimeoutMs !== null ? { commandTimeout: commandTimeoutMs } : {}),
 	});
 
 	// instrumentRedis must run first so its defineCommand patch
 	// is in place when commands are registered.
 	instrumentRedis({ redis: instance, region });
-	registerRedisCommands({ redisInstance: instance });
+	registerRedisCommands({ redisInstance: instance, supportsUpstashShebang });
 
 	return instance;
 };
