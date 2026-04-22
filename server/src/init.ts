@@ -76,6 +76,7 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 };
 
 if (process.env.NODE_ENV === "development") {
+	registerFatalErrorHandlers();
 	await init({ startupStartedAt: Date.now() });
 	registerShutdownHandlers();
 } else {
@@ -104,9 +105,30 @@ if (process.env.NODE_ENV === "development") {
 
 		registerShutdownHandlers();
 	} else {
+		registerFatalErrorHandlers();
 		await init({ startupStartedAt: Date.now() });
 		registerShutdownHandlers();
 	}
+}
+
+function registerFatalErrorHandlers() {
+	const logFatal = (event: string, error: unknown) => {
+		logger.error(event, {
+			error:
+				error instanceof Error
+					? { name: error.name, message: error.message, stack: error.stack }
+					: error,
+		});
+	};
+
+	process.on("uncaughtException", (error) => {
+		logFatal("WORKER FATAL uncaughtException", error);
+		process.exit(1);
+	});
+	process.on("unhandledRejection", (reason) => {
+		logFatal("WORKER FATAL unhandledRejection", reason);
+		process.exit(1);
+	});
 }
 
 function registerShutdownHandlers() {
