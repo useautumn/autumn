@@ -1,8 +1,9 @@
 import { Redis } from "ioredis";
-import { getRedisCommandTimeoutMs } from "@/internal/misc/redisTimeout/redisTimeoutStore.js";
 import { instrumentRedis } from "../otel/instrumentRedis.js";
 import { cacheBackupUrl } from "./redisConfig.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
+
+const REDIS_COMMAND_TIMEOUT_MS = 10_000;
 
 /** Create a Redis connection for a specific region.
  *  `supportsUpstashShebang` defaults to true; set false for non-Upstash
@@ -17,10 +18,6 @@ export const createRedisClient = ({
 	region: string;
 	supportsUpstashShebang?: boolean;
 }): Redis => {
-	// Read from edge config at construction time. ioredis's commandTimeout is
-	// baked into the client, so changes to the edge config require a pod
-	// restart to take effect on existing connections.
-	const commandTimeoutMs = getRedisCommandTimeoutMs();
 	const instance = new Redis(cacheUrl, {
 		tls:
 			process.env.CACHE_CERT && !cacheBackupUrl
@@ -28,7 +25,14 @@ export const createRedisClient = ({
 				: undefined,
 		family: 4,
 		keepAlive: 10000,
-		...(commandTimeoutMs !== null ? { commandTimeout: commandTimeoutMs } : {}),
+		commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
+		// Let `commandTimeout` (10s) be the sole bound on how long a command
+		// can wait. `maxRetriesPerRequest: null` disables ioredis's default
+		// "flush pending commands after N reconnect attempts" behavior, which
+		// otherwise aborts commands still in the offline queue on any minor
+		// handshake blip. Under a real brownout, commands still fail via the
+		// `Command timed out` path.
+		maxRetriesPerRequest: null,
 	});
 
 	// instrumentRedis must run first so its defineCommand patch

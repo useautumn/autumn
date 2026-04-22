@@ -1,10 +1,10 @@
 import type { FullSubject } from "@autumn/shared";
 import { normalizedToFullSubject } from "@autumn/shared";
+import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { applyLiveAggregatedBalances } from "../../balances/applyLiveAggregatedBalances.js";
 import { getCachedFeatureBalancesBatch } from "../../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
@@ -14,28 +14,18 @@ import {
 	cachedFullSubjectToNormalized,
 } from "../../fullSubjectCacheModel.js";
 import { sanitizeCachedFullSubject } from "../../sanitize/index.js";
+import { tryOrInvalidate } from "../../tryOrInvalidate.js";
 import { getOrInitFullSubjectViewEpoch } from "../invalidate/getOrInitFullSubjectViewEpoch.js";
 import { invalidateCachedFullSubject } from "../invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "../invalidate/invalidateFullSubjectExact.js";
 
-const invalidatePartialFullSubject = async ({
-	ctx,
+const buildSubjectLabel = ({
 	customerId,
 	entityId,
-	source,
 }: {
-	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
-	source: string;
-}) => {
-	await invalidateCachedFullSubject({
-		ctx,
-		customerId,
-		entityId,
-		source,
-	});
-};
+}) => (entityId ? `${customerId}:${entityId}` : customerId);
 
 export const getCachedPartialFullSubject = async ({
 	ctx,
@@ -50,72 +40,82 @@ export const getCachedPartialFullSubject = async ({
 	featureIds: string[];
 	source?: string;
 }): Promise<FullSubject | undefined> => {
-	const { org, env, logger, redisV2 } = ctx;
+	const { org, env, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
 		orgId: org.id,
 		env,
 		customerId,
 		entityId,
 	});
+	const subjectLabel = buildSubjectLabel({ customerId, entityId });
 
-	const cachedRaw = await tryRedisRead(() => redisV2.get(subjectKey), redisV2);
+	const cachedRaw = await runRedisOp({
+		operation: () => redisV2.get(subjectKey),
+		source: "getCachedPartialFullSubject",
+		redisInstance: redisV2,
+	});
 	if (!cachedRaw) return undefined;
 
-	let cached: CachedFullSubject;
-	try {
-		const parsedCached = JSON.parse(cachedRaw) as CachedFullSubject;
-		cached = sanitizeCachedFullSubject({
-			cachedFullSubject: parsedCached,
-		});
-	} catch (error) {
-		logger.warn(
-			`[getCachedPartialFullSubject] Failed to parse cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
-		);
-		await invalidatePartialFullSubject({
-			ctx,
-			customerId,
-			entityId,
-			source: "partial-parse-failed",
-		});
-		return undefined;
-	}
+	const cached = await tryOrInvalidate({
+		ctx,
+		operation: () =>
+			sanitizeCachedFullSubject({
+				cachedFullSubject: JSON.parse(cachedRaw) as CachedFullSubject,
+			}),
+		invalidate: () =>
+			invalidateCachedFullSubject({
+				ctx,
+				customerId,
+				entityId,
+				source: "partial-parse-failed",
+			}),
+		warnMessage: `[getCachedPartialFullSubject] Failed to parse cached subject for ${subjectLabel}, source: ${source}`,
+	});
+	if (!cached) return undefined;
 
 	const currentSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
 		ctx,
 		customerId,
 	});
-	if (cached.subjectViewEpoch !== currentSubjectViewEpoch) {
-		logger.warn(
-			`[getCachedPartialFullSubject] Stale subject view epoch for ${customerId}${entityId ? `:${entityId}` : ""}, cached=${cached.subjectViewEpoch}, current=${currentSubjectViewEpoch}, source: ${source}`,
-		);
-		await invalidateCachedFullSubjectExact({
-			ctx,
-			customerId,
-			entityId,
-			source: "partial-stale-subject-view-epoch",
-		});
-		return undefined;
-	}
+	const epochOk = await tryOrInvalidate({
+		ctx,
+		operation: () =>
+			cached.subjectViewEpoch === currentSubjectViewEpoch
+				? currentSubjectViewEpoch
+				: undefined,
+		invalidate: () =>
+			invalidateCachedFullSubjectExact({
+				ctx,
+				customerId,
+				entityId,
+				source: "partial-stale-subject-view-epoch",
+			}),
+		warnMessage: `[getCachedPartialFullSubject] Stale subject view epoch for ${subjectLabel}, cached=${cached.subjectViewEpoch}, current=${currentSubjectViewEpoch}, source: ${source}`,
+	});
+	if (epochOk === undefined) return undefined;
 
 	const rolloutSnapshot = getFullSubjectRolloutSnapshot({ ctx });
-	if (
-		rolloutSnapshot &&
-		isSnapshotCacheStale({
-			snapshot: rolloutSnapshot,
-			cachedAt: cached._cachedAt,
-		})
-	) {
-		logger.warn(
-			`[getCachedPartialFullSubject] Stale rollout cache for ${customerId}${entityId ? `:${entityId}` : ""}, evicting`,
-		);
-		await invalidatePartialFullSubject({
-			ctx,
-			customerId,
-			entityId,
-			source: "stale-rollout",
-		});
-		return undefined;
-	}
+	const rolloutOk = await tryOrInvalidate({
+		ctx,
+		operation: () => {
+			const stale =
+				rolloutSnapshot &&
+				isSnapshotCacheStale({
+					snapshot: rolloutSnapshot,
+					cachedAt: cached._cachedAt,
+				});
+			return stale ? undefined : true;
+		},
+		invalidate: () =>
+			invalidateCachedFullSubject({
+				ctx,
+				customerId,
+				entityId,
+				source: "stale-rollout",
+			}),
+		warnMessage: `[getCachedPartialFullSubject] Stale rollout cache for ${subjectLabel}, evicting`,
+	});
+	if (rolloutOk === undefined) return undefined;
 
 	const meteredFeatureIdsToFetch = featureIds.filter((featureId) =>
 		cached.meteredFeatures.includes(featureId),
@@ -130,76 +130,69 @@ export const getCachedPartialFullSubject = async ({
 		includeAggregated: isCustomerSubject,
 	});
 
-	if (featureBalancesOutcome.kind === "unavailable") {
-		// Transient Redis failure. DO NOT bump viewEpoch — that would cascade a
-		// rebuild across every pod for this customer. Fall through to DB for
-		// this caller only.
-		logger.warn(
-			`[getCachedPartialFullSubject] Balance batch unavailable for ${customerId}${entityId ? `:${entityId}` : ""}, falling back without invalidation, source: ${source}`,
-		);
-		return undefined;
-	}
-
-	if (featureBalancesOutcome.kind === "missing") {
-		logger.warn(
-			`[getCachedPartialFullSubject] Incomplete cache for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}`,
-		);
-		await invalidateCachedFullSubjectExact({
+	const invalidateIncomplete = () =>
+		invalidateCachedFullSubjectExact({
 			ctx,
 			customerId,
 			entityId,
 			source: "partial-incomplete",
 		});
-		return undefined;
-	}
 
-	const featureBalances = featureBalancesOutcome.value;
-	if (featureBalances.length !== meteredFeatureIdsToFetch.length) {
-		logger.warn(
-			`[getCachedPartialFullSubject] Incomplete cache (length mismatch) for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}`,
-		);
-		await invalidateCachedFullSubjectExact({
-			ctx,
-			customerId,
-			entityId,
-			source: "partial-incomplete",
-		});
-		return undefined;
-	}
+	const balancesPresent = await tryOrInvalidate({
+		ctx,
+		operation: () =>
+			featureBalancesOutcome.kind === "missing"
+				? undefined
+				: featureBalancesOutcome.value,
+		invalidate: invalidateIncomplete,
+		warnMessage: `[getCachedPartialFullSubject] Incomplete cache for ${subjectLabel}, source: ${source}`,
+	});
+	if (balancesPresent === undefined) return undefined;
+
+	const featureBalances = await tryOrInvalidate({
+		ctx,
+		operation: () =>
+			balancesPresent.length === meteredFeatureIdsToFetch.length
+				? balancesPresent
+				: undefined,
+		invalidate: invalidateIncomplete,
+		warnMessage: `[getCachedPartialFullSubject] Incomplete cache (length mismatch) for ${subjectLabel}, source: ${source}`,
+	});
+	if (featureBalances === undefined) return undefined;
 
 	const customerEntitlements = featureBalances.flatMap(
 		(featureBalance) => featureBalance.balances,
 	);
 
-	try {
-		const normalized = filterNormalizedFullSubjectByFeatureIds({
-			normalized: cachedFullSubjectToNormalized({
-				cached,
-				customerEntitlements,
-			}),
-			featureIds,
-		});
-
-		if (isCustomerSubject) {
-			applyLiveAggregatedBalances({
-				normalized,
-				featureBalances,
+	return tryOrInvalidate({
+		ctx,
+		operation: async () => {
+			const normalized = filterNormalizedFullSubjectByFeatureIds({
+				normalized: cachedFullSubjectToNormalized({
+					cached,
+					customerEntitlements,
+				}),
+				featureIds,
 			});
-		}
 
-		const fullSubject = normalizedToFullSubject({ normalized });
-		await lazyResetSubjectEntitlements({ ctx, fullSubject, normalized });
-		return fullSubject;
-	} catch (error) {
-		logger.warn(
-			`[getCachedPartialFullSubject] Failed to hydrate cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
-		);
-		await invalidateCachedFullSubjectExact({
-			ctx,
-			customerId,
-			entityId,
-			source: "partial-hydrate-failed",
-		});
-		return undefined;
-	}
+			if (isCustomerSubject) {
+				applyLiveAggregatedBalances({
+					normalized,
+					featureBalances,
+				});
+			}
+
+			const fullSubject = normalizedToFullSubject({ normalized });
+			await lazyResetSubjectEntitlements({ ctx, fullSubject, normalized });
+			return fullSubject;
+		},
+		invalidate: () =>
+			invalidateCachedFullSubjectExact({
+				ctx,
+				customerId,
+				entityId,
+				source: "partial-hydrate-failed",
+			}),
+		warnMessage: `[getCachedPartialFullSubject] Failed to hydrate cached subject for ${subjectLabel}, source: ${source}`,
+	});
 };
