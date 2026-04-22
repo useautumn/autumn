@@ -1,0 +1,39 @@
+shared/models/billingModels/plan/autumnBillingPlan.ts
+  eafbce9206dba602 88-110
+server/src/internal/billing/v2/execute/executeAutumnActions/applyAutoTopupRebalance.ts
+  eafbce9206dba602 1-213
+server/tests/unit/balances/auto-topup/apply-auto-topup-rebalance.test.ts
+  eafbce9206dba602 1-661
+server/src/internal/billing/v2/execute/executeAutumnBillingPlan.ts
+  eafbce9206dba602 4,110-120
+server/src/internal/balances/autoTopUp/compute/computeAutoTopupPlan.ts
+  eafbce9206dba602 21,33,76-88,93-98
+server/tests/integration/balances/auto-topup/auto-topup-rebalance.test.ts
+  eafbce9206dba602 23-29,31-34,37-39
+server/src/internal/billing/v2/utils/logs/logAutumnBillingPlan.ts
+  eafbce9206dba602 67-70
+server/src/internal/balances/autoTopUp/setup/setupAutoTopupContext.ts
+  eafbce9206dba602 64
+server/src/internal/balances/autoTopUp/helpers/fullCustomerToAutoTopupObjects.ts
+  eafbce9206dba602 13-21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "bf687ab02c878e983d8f417a9fb37b8478a86670",
+  "prompts": {
+    "eafbce9206dba602": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_24f798c24ffex5IvgsNtKgLMiu",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 1788,
+      "total_deletions": 381,
+      "accepted_lines": 1784,
+      "overriden_lines": 4
+    }
+  }
+}
