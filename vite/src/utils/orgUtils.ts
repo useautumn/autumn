@@ -1,3 +1,3 @@
 export const getOrgLogoUrl = (orgId: string) => {
-	return `${import.meta.env.VITE_SUPABASE_URL}/storage/v1/object/public/autumn/logo/${orgId}`;
+	return `https://autumn-prod-server.s3.us-east-2.amazonaws.com/logos/${orgId}`;
 };
