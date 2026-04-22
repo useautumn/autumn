@@ -17,6 +17,7 @@ import {
 	buildUpdatedOptions,
 	updateCusEntOptionsInline,
 } from "../helpers/autoTopUpUtils.js";
+import { computeRebalancedAutoTopUp } from "./computeRebalancedAutoTopUp.js";
 
 /** Compute the auto top-up billing plan + stripe invoice action. Throws if line item amount is <= 0. */
 export const computeAutoTopupPlan = ({
@@ -72,30 +73,24 @@ export const computeAutoTopupPlan = ({
 		});
 	}
 
-	// C. Build autumn billing plan.
-	//
-	// Balance mutations (paydown overage + prepaid remainder) are NOT emitted as
-	// synchronous updateCustomerEntitlements entries. Instead we emit a declarative
-	// `autoTopupRebalance` intent; the executor reads LIVE cusEnt balances at
-	// post-Stripe time and computes exact paydown/remainder deltas against the live
-	// state. That avoids two races inherent to snapshot-based paydown:
-	//   - Concurrent usage between setup snapshot and exec being overwritten (data loss).
-	//   - Concurrent refunds making the snapshot's overage look deeper than it actually
-	//     is (would produce silent overcredit).
-	//
-	// `options.quantity` still bumps by the FULL topUpPacks here — the customer was
-	// charged for the full quantity, so the purchase ledger should record the full
-	// purchase regardless of where the balance landed.
+	// C. Compute paydown + prepaid remainder deltas from the context's FullCustomer.
+	// Deltas apply atomically at execute time via `balance + delta` SQL increments.
+	const { deltas } = computeRebalancedAutoTopUp({
+		fullCustomer: autoTopupContext.fullCustomer,
+		featureId: feature.id,
+		quantity,
+		prepaidCustomerEntitlementId: customerEntitlement.id,
+	});
+
+	// D. Build autumn billing plan. `options.quantity` bumps by the FULL topUpPacks
+	// because the customer is charged for the full purchase regardless of where the
+	// balance landed.
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId: autoTopupContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [],
 		lineItems: [lineItem],
 		updateCustomerEntitlements: [],
-		autoTopupRebalance: {
-			featureId: feature.id,
-			quantity,
-			prepaidCustomerEntitlementId: customerEntitlement.id,
-		},
+		autoTopupRebalance: { deltas },
 		updateCustomerProduct: {
 			customerProduct: cusProduct,
 			updates: {
@@ -104,7 +99,7 @@ export const computeAutoTopupPlan = ({
 		},
 	};
 
-	// D. Build stripe invoice action (manual — bypassing evaluateStripeBillingPlan)
+	// E. Build stripe invoice action (manual — bypassing evaluateStripeBillingPlan)
 	const addLineParams = lineItemsToInvoiceAddLinesParams({
 		lineItems: [lineItem],
 	});
