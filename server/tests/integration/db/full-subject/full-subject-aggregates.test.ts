@@ -106,7 +106,6 @@ describe(`${chalk.yellowBright("fullSubject aggregates")}`, () => {
 				expect(aggregate.balance).toBe(30);
 				expect(aggregate.adjustment).toBe(0);
 				expect(aggregate.additional_balance).toBe(0);
-				expect(aggregate.entity_count).toBe(2);
 				expect(JSON.stringify(aggregate.feature.id)).toBe(
 					JSON.stringify(scenario.customerEntitlements[1]!.feature_id),
 				);
@@ -157,7 +156,6 @@ describe(`${chalk.yellowBright("fullSubject aggregates")}`, () => {
 				const aggregate = comparable.aggregated_customer_entitlements[0]!;
 				expect(aggregate.allowance_total).toBe(200);
 				expect(aggregate.balance).toBe(30);
-				expect(aggregate.entity_count).toBe(2);
 				expect(aggregate.entities).toMatchObject({
 					[scenario.ids.internalEntityIds[0]!]: {
 						id: scenario.ids.internalEntityIds[0],

@@ -42,7 +42,6 @@ export const logFullCustomer = ({
 		balance: ae.balance,
 		adjustment: ae.adjustment,
 		unlimited: ae.unlimited,
-		entity_count: ae.entity_count,
 		entitlement:
 			"entitlement" in ae
 				? (ae as Record<string, unknown>).entitlement
