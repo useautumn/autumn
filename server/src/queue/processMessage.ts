@@ -2,7 +2,7 @@ import type { Message } from "@aws-sdk/client-sqs";
 import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import type { Logger } from "pino";
-import { isRetryableDbError } from "@/db/dbUtils.js";
+import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -295,7 +295,7 @@ export const processMessage = async ({
 			(job.name === JobName.SyncBalanceBatchV3 ||
 				job.name === JobName.SyncBalanceBatchV4 ||
 				job.name === JobName.RefreshEntityAggregate) &&
-			isRetryableDbError({ error })
+			isTransientDbError({ error })
 		) {
 			Sentry.captureException(error);
 			errorLogger.error(`[${job.name}] Retryable DB error, keeping in SQS`, {
