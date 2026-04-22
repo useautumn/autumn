@@ -31,7 +31,8 @@ const setRedisAvailabilityState = (state: RedisAvailabilityState) => {
 	const now = Date.now();
 	const shouldLog =
 		previousState !== state ||
-		(state === "degraded" && now - lastAvailabilityLogAt >= REDIS_ERROR_LOG_INTERVAL_MS);
+		(state === "degraded" &&
+			now - lastAvailabilityLogAt >= REDIS_ERROR_LOG_INTERVAL_MS);
 	if (!shouldLog) return;
 
 	redisAvailabilityState = state;
@@ -138,8 +139,9 @@ export const stopRedisMonitor = () => {
 	redisMonitorInterval = null;
 };
 
-export const shouldUseRedis = () =>
-	hasRedisConfig && redisAvailabilityState === "healthy";
+// export const shouldUseRedis = () =>
+// 	hasRedisConfig && redisAvailabilityState === "healthy";
+export const shouldUseRedis = () => true;
 
 export const markRedisCommandSuccess = () => {
 	if (hasRedisConfig) recordRedisAvailability(true);
