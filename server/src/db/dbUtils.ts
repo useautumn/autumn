@@ -61,7 +61,7 @@ const RETRYABLE_PG_CODES = new Set([
  * resolve on retry (connection lost, timeout, resource exhaustion, etc.).
  * Returns false for application errors (constraint violations, syntax errors, etc.).
  */
-export const isRetryableDbError = ({ error }: { error: unknown }): boolean => {
+export const isTransientDbError = ({ error }: { error: unknown }): boolean => {
 	const code = getErrorCode({ error });
 	if (getErrorMessage({ error }) === "timeout exceeded when trying to connect")
 		return true;
