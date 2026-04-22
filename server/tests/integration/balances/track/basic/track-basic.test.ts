@@ -1,7 +1,6 @@
 import { expect, test } from "bun:test";
 
 import type { ApiCustomerV3, TrackResponseV2 } from "@autumn/shared";
-import { track } from "@tests/_groups/domains/balances/track";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";

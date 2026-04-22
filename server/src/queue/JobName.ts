@@ -19,6 +19,7 @@ export enum JobName {
 	SyncBalanceBatchV2 = "sync-balance-batch-v2",
 	SyncBalanceBatchV3 = "sync-balance-batch-v3",
 	SyncBalanceBatchV4 = "sync-balance-batch-v4",
+	RefreshEntityAggregate = "refresh-entity-aggregate",
 	InsertEventBatch = "insert-event-batch",
 	Track = "track",
 

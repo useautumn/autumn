@@ -19,7 +19,7 @@ export const getEntityOptionsAggregateFragments = () => {
 				NULLIF(option_row.option_value->>'internal_feature_id', '') AS option_internal_feature_id,
 				NULLIF(option_row.option_value->>'feature_id', '') AS option_feature_id,
 				COALESCE((option_row.option_value->>'quantity')::numeric, 0) AS option_quantity
-			FROM entity_cus_products_for_options ecp
+			FROM entity_cus_products ecp
 			CROSS JOIN LATERAL unnest(
 				COALESCE(ecp.options, ARRAY[]::jsonb[])
 			) AS option_row(option_value)
@@ -35,7 +35,7 @@ export const getEntityOptionsAggregateFragments = () => {
 					* COALESCE((prepaid_price.config->>'billing_units')::numeric, 1)
 					AS prepaid_grant
 			FROM entity_option_rows eor
-			JOIN customer_entitlements ce
+			JOIN entity_level_cus_ents ce
 				ON ce.customer_product_id = eor.customer_product_id
 			JOIN entitlements ent
 				ON ent.id = ce.entitlement_id
@@ -83,4 +83,3 @@ export const getEntityOptionsAggregateFragments = () => {
 		ctes,
 	};
 };
-
