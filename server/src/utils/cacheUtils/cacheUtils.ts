@@ -1,6 +1,10 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis } from "@/external/redis/initRedis.js";
+import {
+	markRedisCommandFailure,
+	markRedisCommandSuccess,
+} from "@/external/redis/initUtils/redisAvailability.js";
 
 const REDIS_WARNING_INTERVAL_MS = 30_000;
 const lastRedisWarningAtBySource = new Map<string, number>();
@@ -49,14 +53,17 @@ export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
 
 	try {
 		if (targetRedis.status !== "ready") {
+			markRedisCommandFailure();
 			warnRedisUnavailable({ source: "tryRedisNx:not-ready" });
 			return await onRedisUnavailable();
 		}
 
 		const result = await operation();
+		markRedisCommandSuccess();
 		if (result === "OK") return await onSuccess();
 		return await onKeyAlreadyExists();
 	} catch (error) {
+		markRedisCommandFailure();
 		warnRedisUnavailable({ source: "tryRedisNx:error", error });
 		return await onRedisUnavailable();
 	}
@@ -79,16 +86,19 @@ export const tryRedisWrite = async <T>(
 
 	try {
 		if (targetRedis.status !== "ready") {
+			markRedisCommandFailure();
 			warnRedisUnavailable({ source: "tryRedisWrite:not-ready" });
 			return null as T extends void ? true : T | null;
 		}
 
 		const result = await operation();
+		markRedisCommandSuccess();
 
 		return (result === undefined ? true : result) as T extends void
 			? true
 			: T | null;
 	} catch (error) {
+		markRedisCommandFailure();
 		warnRedisUnavailable({ source: "tryRedisWrite:error", error });
 		return null as T extends void ? true : T | null;
 	}
@@ -110,13 +120,16 @@ export const tryRedisRead = async <T>(
 
 	try {
 		if (targetRedis.status !== "ready") {
+			markRedisCommandFailure();
 			warnRedisUnavailable({ source: "tryRedisRead:not-ready" });
 			return null;
 		}
 
 		const result = await operation();
+		markRedisCommandSuccess();
 		return result;
 	} catch (error) {
+		markRedisCommandFailure();
 		warnRedisUnavailable({ source: "tryRedisRead:error", error });
 		return null;
 	}
