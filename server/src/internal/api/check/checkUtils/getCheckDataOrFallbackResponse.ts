@@ -1,5 +1,5 @@
 import type { CheckParams, ParsedCheckParams } from "@autumn/shared";
-import { isRetryableDbError } from "@/db/dbUtils.js";
+import { isTransientDbError } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
 import { getCheckFailOpenFallback } from "./getCheckFailOpenFallback.js";
@@ -36,7 +36,7 @@ export const getCheckDataOrFallbackResponse = async ({
 			fallbackResponse: null,
 		};
 	} catch (error) {
-		if (!isRetryableDbError({ error })) {
+		if (!isTransientDbError({ error })) {
 			throw error;
 		}
 
