@@ -79,12 +79,6 @@ export const runRedisOp = async <T>({
 }): Promise<T> => {
 	const targetRedis = redisInstance ?? redis;
 
-	if (targetRedis.status !== "ready") {
-		markDefaultRedisAvailability(targetRedis, false);
-		warnRedisUnavailable({ source, reason: "not_ready" });
-		throw new RedisUnavailableError({ source, reason: "not_ready" });
-	}
-
 	try {
 		const value = await operation();
 		markDefaultRedisAvailability(targetRedis, true);
