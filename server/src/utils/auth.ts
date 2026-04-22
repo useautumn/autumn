@@ -35,6 +35,22 @@ export const auth = betterAuth({
 		schema: schemas,
 	}),
 
+	user: {
+		deleteUser: {
+			enabled: true,
+			sendDeleteAccountVerification: async ({
+				user,
+				url,
+				token,
+			}: {
+				user: User;
+				url: string;
+				token: string;
+			}) => {
+				console.log("Delete account verification", { user, url, token });
+			},
+		},
+	},
 	databaseHooks: {
 		user: {
 			create: {
@@ -54,15 +70,6 @@ export const auth = betterAuth({
 			},
 			delete: {
 				after: afterSessionDeleted,
-			},
-		},
-	},
-	user: {
-		deleteUser: {
-			enabled: true,
-
-			sendDeleteAccountVerification: async ({ user, url, token }) => {
-				console.log("Delete account verification", { url, token });
 			},
 		},
 	},
@@ -184,10 +191,8 @@ export const auth = betterAuth({
 					},
 				},
 			},
-
-			organizationCreation: {
-				disabled: false,
-				afterCreate: async ({
+			organizationHooks: {
+				afterCreateOrganization: async ({
 					organization,
 					user,
 				}: {
