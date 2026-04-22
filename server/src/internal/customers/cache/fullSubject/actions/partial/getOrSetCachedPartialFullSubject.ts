@@ -7,11 +7,49 @@ import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
+import {
+	buildFullSubjectSingleFlightKey,
+	runFullSubjectSingleFlight,
+} from "../fullSubjectSingleFlight.js";
 import { getOrInitFullSubjectViewEpoch } from "../invalidate/getOrInitFullSubjectViewEpoch.js";
 import { setCachedFullSubject } from "../setCachedFullSubject/setCachedFullSubject.js";
 import { getCachedPartialFullSubject } from "./getCachedPartialFullSubject.js";
 
 export const getOrSetCachedPartialFullSubject = async ({
+	ctx,
+	customerId,
+	entityId,
+	featureIds,
+	source,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	entityId?: string;
+	featureIds: string[];
+	source?: string;
+}): Promise<FullSubject> => {
+	const key = buildFullSubjectSingleFlightKey({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		customerId,
+		entityId,
+		variant: "partial",
+	});
+
+	return runFullSubjectSingleFlight({
+		key,
+		load: () =>
+			loadPartialFullSubject({
+				ctx,
+				customerId,
+				entityId,
+				featureIds,
+				source,
+			}),
+	});
+};
+
+const loadPartialFullSubject = async ({
 	ctx,
 	customerId,
 	entityId,
