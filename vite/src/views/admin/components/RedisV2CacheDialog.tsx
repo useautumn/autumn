@@ -22,14 +22,14 @@ import { getBackendErr } from "@/utils/genUtils";
 
 const INSTANCE_OPTIONS = [
 	{
-		value: "primary",
-		label: "Primary",
-		description: "CACHE_V2_URL (or CACHE_URL fallback)",
+		value: "upstash",
+		label: "Upstash",
+		description: "CACHE_V2_UPSTASH_URL (or CACHE_URL fallback)",
 	},
 	{
-		value: "canary",
-		label: "Canary",
-		description: "CACHE_V2_CANARY_URL",
+		value: "redis",
+		label: "Redis",
+		description: "CACHE_V2_REDIS_URL",
 	},
 	{
 		value: "dragonfly",
@@ -49,7 +49,7 @@ type RedisV2CacheConfig = {
 };
 
 const DEFAULT_CONFIG: RedisV2CacheConfig = {
-	activeInstance: "primary",
+	activeInstance: "upstash",
 	configHealthy: false,
 	configConfigured: false,
 	lastSuccessAt: null,
@@ -67,7 +67,7 @@ export function RedisV2CacheDialog({
 	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [config, setConfig] = useState<RedisV2CacheConfig>(DEFAULT_CONFIG);
-	const [selected, setSelected] = useState<InstanceName>("primary");
+	const [selected, setSelected] = useState<InstanceName>("upstash");
 
 	useEffect(() => {
 		if (!open) return;
