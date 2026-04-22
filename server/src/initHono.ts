@@ -83,6 +83,7 @@ export const createHonoApp = () => {
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
 	app.get("/ready/:token", handleReadyCheck);
+	app.get("/", handleHealthCheck);
 
 	// Step 1: OTel HTTP span + base middleware + span enrichment
 	app.use(
@@ -95,8 +96,6 @@ export const createHonoApp = () => {
 	app.use("*", baseMiddleware);
 	app.use("*", replicaDbMiddleware);
 	app.use("*", traceEnrichMiddleware);
-
-	app.get("/", handleHealthCheck);
 
 	// Public endpoint to get OAuth client name (for consent page)
 	app.get("/oauth/client/:client_id", async (c) => {
