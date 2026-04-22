@@ -66,7 +66,9 @@ export const logAutumnBillingPlan = ({
 					})) ?? "none",
 
 				autoTopupRebalance: plan.autoTopupRebalance
-					? `feature=${plan.autoTopupRebalance.featureId} qty=${plan.autoTopupRebalance.quantity} prepaidId=${plan.autoTopupRebalance.prepaidCustomerEntitlementId}`
+					? plan.autoTopupRebalance.deltas
+							.map(({ cusEntId, delta }) => `${cusEntId}: ${delta > 0 ? "+" : ""}${delta}`)
+							.join(", ") || "no-op"
 					: "none",
 			},
 		},
