@@ -13,7 +13,7 @@ import {
 } from "./initUtils/redisV2Config.js";
 
 const redisV2Config = getRedisV2ConnectionConfig({
-	cacheV2Url: process.env.CACHE_V2_URL,
+	cacheV2Url: process.env.CACHE_V2_UPSTASH_URL,
 	primaryCacheUrl: process.env.CACHE_URL,
 	currentRegion,
 });
@@ -23,7 +23,7 @@ export const redisV2: Redis = redisV2Config
 	: redis;
 
 const alternateInstanceUrls: Partial<Record<RedisV2InstanceName, string>> = {
-	canary: process.env.CACHE_V2_CANARY_URL?.trim() || undefined,
+	redis: process.env.CACHE_V2_REDIS_URL?.trim() || undefined,
 	dragonfly: process.env.CACHE_V2_DRAGONFLY_URL?.trim() || undefined,
 };
 
