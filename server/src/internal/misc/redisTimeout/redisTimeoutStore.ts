@@ -10,7 +10,7 @@ import {
 const store = createEdgeConfigStore<RedisTimeoutConfig>({
 	s3Key: ADMIN_REDIS_TIMEOUT_CONFIG_KEY,
 	schema: RedisTimeoutConfigSchema,
-	defaultValue: () => ({ commandTimeoutMs: 500 }),
+	defaultValue: () => ({ commandTimeoutMs: 100000 }),
 	pollIntervalMs: ms.seconds(10),
 });
 

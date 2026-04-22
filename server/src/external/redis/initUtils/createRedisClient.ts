@@ -28,7 +28,7 @@ export const createRedisClient = ({
 				: undefined,
 		family: 4,
 		keepAlive: 10000,
-		// ...(commandTimeoutMs !== null ? { commandTimeout: commandTimeoutMs } : {}),
+		...(commandTimeoutMs !== null ? { commandTimeout: commandTimeoutMs } : {}),
 	});
 
 	// instrumentRedis must run first so its defineCommand patch
