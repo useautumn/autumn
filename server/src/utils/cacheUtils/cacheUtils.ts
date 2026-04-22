@@ -9,6 +9,11 @@ import {
 const REDIS_WARNING_INTERVAL_MS = 30_000;
 const lastRedisWarningAtBySource = new Map<string, number>();
 
+const markDefaultRedisAvailability = (targetRedis: Redis, available: boolean) => {
+	if (targetRedis !== redis) return;
+	available ? markRedisCommandSuccess() : markRedisCommandFailure();
+};
+
 const warnRedisUnavailable = ({
 	source,
 	error,
@@ -53,17 +58,17 @@ export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
 
 	try {
 		if (targetRedis.status !== "ready") {
-			markRedisCommandFailure();
+			markDefaultRedisAvailability(targetRedis, false);
 			warnRedisUnavailable({ source: "tryRedisNx:not-ready" });
 			return await onRedisUnavailable();
 		}
 
 		const result = await operation();
-		markRedisCommandSuccess();
+		markDefaultRedisAvailability(targetRedis, true);
 		if (result === "OK") return await onSuccess();
 		return await onKeyAlreadyExists();
 	} catch (error) {
-		markRedisCommandFailure();
+		markDefaultRedisAvailability(targetRedis, false);
 		warnRedisUnavailable({ source: "tryRedisNx:error", error });
 		return await onRedisUnavailable();
 	}
@@ -86,19 +91,19 @@ export const tryRedisWrite = async <T>(
 
 	try {
 		if (targetRedis.status !== "ready") {
-			markRedisCommandFailure();
+			markDefaultRedisAvailability(targetRedis, false);
 			warnRedisUnavailable({ source: "tryRedisWrite:not-ready" });
 			return null as T extends void ? true : T | null;
 		}
 
 		const result = await operation();
-		markRedisCommandSuccess();
+		markDefaultRedisAvailability(targetRedis, true);
 
 		return (result === undefined ? true : result) as T extends void
 			? true
 			: T | null;
 	} catch (error) {
-		markRedisCommandFailure();
+		markDefaultRedisAvailability(targetRedis, false);
 		warnRedisUnavailable({ source: "tryRedisWrite:error", error });
 		return null as T extends void ? true : T | null;
 	}
@@ -120,16 +125,16 @@ export const tryRedisRead = async <T>(
 
 	try {
 		if (targetRedis.status !== "ready") {
-			markRedisCommandFailure();
+			markDefaultRedisAvailability(targetRedis, false);
 			warnRedisUnavailable({ source: "tryRedisRead:not-ready" });
 			return null;
 		}
 
 		const result = await operation();
-		markRedisCommandSuccess();
+		markDefaultRedisAvailability(targetRedis, true);
 		return result;
 	} catch (error) {
-		markRedisCommandFailure();
+		markDefaultRedisAvailability(targetRedis, false);
 		warnRedisUnavailable({ source: "tryRedisRead:error", error });
 		return null;
 	}

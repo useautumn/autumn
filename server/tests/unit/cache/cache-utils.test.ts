@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 const mockState = {
 	warnings: [] as Array<{ message: string; data?: Record<string, unknown> }>,
 };
+const defaultRedis = { status: "ready" };
 
 mock.module("@/external/logtail/logtailUtils.js", () => ({
 	logger: {
@@ -20,10 +21,21 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 	},
 }));
 
+mock.module("@/external/redis/initUtils/redisConfig.js", () => ({
+	hasRedisConfig: true,
+}));
+mock.module("@/external/redis/initUtils/redisClientRegistry.js", () => ({
+	redis: defaultRedis,
+}));
+mock.module("@/external/redis/initRedis.js", () => ({
+	redis: defaultRedis,
+}));
+
 import {
 	getRedisAvailability,
-	shouldUseRedis,
-} from "@/external/redis/initRedis.js";
+	markRedisCommandFailure,
+	markRedisCommandSuccess,
+} from "@/external/redis/initUtils/redisAvailability.js";
 import {
 	tryRedisNx,
 	tryRedisRead,
@@ -33,6 +45,26 @@ import {
 describe("cache utils", () => {
 	beforeEach(() => {
 		mockState.warnings = [];
+	});
+
+	test("redis availability uses recovery and degradation thresholds", () => {
+		markRedisCommandFailure();
+		markRedisCommandFailure();
+		markRedisCommandFailure();
+		expect(getRedisAvailability().state).toBe("degraded");
+
+		markRedisCommandSuccess();
+		expect(getRedisAvailability().state).toBe("degraded");
+
+		markRedisCommandSuccess();
+		expect(getRedisAvailability().state).toBe("healthy");
+
+		markRedisCommandFailure();
+		markRedisCommandFailure();
+		expect(getRedisAvailability().state).toBe("healthy");
+
+		markRedisCommandFailure();
+		expect(getRedisAvailability().state).toBe("degraded");
 	});
 
 	test("tryRedisRead returns null and warns when Redis operation throws", async () => {
@@ -52,7 +84,6 @@ describe("cache utils", () => {
 				error: "boom",
 			},
 		});
-		expect(shouldUseRedis()).toBe(false);
 	});
 
 	test("tryRedisWrite returns null and warns when Redis is not ready", async () => {
@@ -69,7 +100,6 @@ describe("cache utils", () => {
 				error: undefined,
 			},
 		});
-		expect(getRedisAvailability().state).toBe("degraded");
 	});
 
 	test("tryRedisNx falls back and warns when Redis operation throws", async () => {
@@ -92,5 +122,20 @@ describe("cache utils", () => {
 				error: "boom",
 			},
 		});
+	});
+
+	test("custom Redis failures do not mark default Redis unavailable", async () => {
+		markRedisCommandSuccess();
+		markRedisCommandSuccess();
+		expect(getRedisAvailability().state).toBe("healthy");
+
+		await tryRedisRead(
+			async () => {
+				throw new Error("custom redis failed");
+			},
+			{ status: "ready" } as never,
+		);
+
+		expect(getRedisAvailability().state).toBe("healthy");
 	});
 });
