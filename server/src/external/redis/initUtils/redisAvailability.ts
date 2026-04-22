@@ -1,3 +1,4 @@
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
 import { redis } from "./redisClientRegistry.js";
 import { hasRedisConfig } from "./redisConfig.js";
@@ -24,8 +25,9 @@ let consecutiveFailures = 0;
 let consecutiveSuccesses = 0;
 
 const setRedisAvailabilityState = (state: RedisAvailabilityState) => {
+	const previousState = redisAvailabilityState;
 	const shouldLog =
-		redisAvailabilityState !== state ||
+		previousState !== state ||
 		(state === "degraded" &&
 			Date.now() - lastAvailabilityLogAt >= REDIS_ERROR_LOG_INTERVAL_MS);
 	if (!shouldLog) return;
@@ -36,11 +38,20 @@ const setRedisAvailabilityState = (state: RedisAvailabilityState) => {
 	if (now - lastAvailabilityLogAt < REDIS_ERROR_LOG_INTERVAL_MS) return;
 	lastAvailabilityLogAt = now;
 
-	console[state === "healthy" ? "info" : "warn"](
+	logger[state === "healthy" ? "info" : "warn"](
 		state === "healthy"
 			? "[Redis] Recovered"
 			: "[Redis] Unavailable, skipping Redis-backed features",
-		{ redisStatus: redis.status },
+		{
+			type: "redis_availability_state_set",
+			previousState,
+			state,
+			redisStatus: redis.status,
+			consecutiveFailures,
+			consecutiveSuccesses,
+			failuresToDegrade: REDIS_FAILURES_TO_DEGRADE,
+			successesToRecover: REDIS_SUCCESSES_TO_RECOVER,
+		},
 	);
 };
 

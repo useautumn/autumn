@@ -7,6 +7,7 @@ const defaultRedis = { status: "ready" };
 
 mock.module("@/external/logtail/logtailUtils.js", () => ({
 	logger: {
+		info: () => undefined,
 		warn: (data: Record<string, unknown> | string, message?: string) => {
 			if (typeof data === "string") {
 				mockState.warnings.push({ message: data });
