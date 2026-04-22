@@ -4,7 +4,6 @@ import {
 	type Feature,
 	FeatureType,
 	type FullCustomer,
-	isContUseFeature,
 	RecaseError,
 	ValidateCreateBalanceParamsSchema,
 } from "@autumn/shared";
@@ -39,21 +38,6 @@ export const validateCreateBalanceParams = async ({
 	if (entity && feature.id === entity.feature_id) {
 		throw new RecaseError({
 			message: `Cannot give an entity a balance of its own feature type`,
-		});
-	}
-
-	if (
-		isContUseFeature({ feature }) &&
-		Object.keys(params.rollover || {}).length > 0
-	) {
-		throw new RecaseError({
-			message: `Rollover is not supported for continuous use features`,
-		});
-	}
-
-	if (Object.keys(params.reset || {}).length <= 0 && params.rollover) {
-		throw new RecaseError({
-			message: `Rollover cannot be provided for one-time balances`,
 		});
 	}
 
