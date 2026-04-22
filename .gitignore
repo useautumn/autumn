@@ -132,7 +132,7 @@ TAKEHOME.md
 
 
 # project context (personal working state)
-.context/
+# .context/
 
 # ai-sync: generated files (source of truth is ai/)
 .cursor/

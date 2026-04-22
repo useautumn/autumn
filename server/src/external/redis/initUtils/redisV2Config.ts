@@ -13,9 +13,9 @@ export const getRedisV2ConnectionConfig = ({
 		? {
 				cacheUrl: cacheV2Url.trim(),
 				region: `${currentRegion}:v2`,
-				supportsUpstashShebang: false,
+				supportsUpstashShebang: supportsUpstashShebangForRedisV2("upstash"),
 			}
 		: null;
 
 export const supportsUpstashShebangForRedisV2 = (name: RedisV2InstanceName) =>
-	name === "canary";
+	name === "upstash";
