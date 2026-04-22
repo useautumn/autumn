@@ -8,8 +8,8 @@ import {
 	waitForRedisReady,
 } from "./initRedis.js";
 import {
-	getAlternateRedisV2ConnectionConfig,
 	getRedisV2ConnectionConfig,
+	supportsUpstashShebangForRedisV2,
 } from "./initUtils/redisV2Config.js";
 
 const redisV2Config = getRedisV2ConnectionConfig({
@@ -47,9 +47,11 @@ export const getAlternateRedisV2Instance = (
 	const existing = instancePool.get(name);
 	if (existing) return existing;
 
-	const instance = createRedisConnection(
-		getAlternateRedisV2ConnectionConfig({ name, cacheUrl, currentRegion })!,
-	);
+	const instance = createRedisConnection({
+		cacheUrl,
+		region: `${currentRegion}:v2:${name}`,
+		supportsUpstashShebang: supportsUpstashShebangForRedisV2(name),
+	});
 	instancePool.set(name, instance);
 	return instance;
 };

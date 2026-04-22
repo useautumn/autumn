@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
-	getAlternateRedisV2ConnectionConfig,
 	getRedisV2ConnectionConfig,
+	supportsUpstashShebangForRedisV2,
 } from "@/external/redis/initUtils/redisV2Config.js";
 
 describe("redis V2 connection config", () => {
@@ -37,37 +37,7 @@ describe("redis V2 connection config", () => {
 	});
 
 	test("enables the Upstash shebang only for the canary alternate", () => {
-		expect(
-			getAlternateRedisV2ConnectionConfig({
-				name: "canary",
-				cacheUrl: " redis://canary ",
-				currentRegion: "us-west-2",
-			}),
-		).toEqual({
-			cacheUrl: "redis://canary",
-			region: "us-west-2:v2:canary",
-			supportsUpstashShebang: true,
-		});
-		expect(
-			getAlternateRedisV2ConnectionConfig({
-				name: "dragonfly",
-				cacheUrl: "redis://dragonfly",
-				currentRegion: "us-west-2",
-			}),
-		).toEqual({
-			cacheUrl: "redis://dragonfly",
-			region: "us-west-2:v2:dragonfly",
-			supportsUpstashShebang: false,
-		});
-	});
-
-	test("ignores blank alternate Redis V2 URLs", () => {
-		expect(
-			getAlternateRedisV2ConnectionConfig({
-				name: "canary",
-				cacheUrl: " ",
-				currentRegion: "us-west-2",
-			}),
-		).toBeNull();
+		expect(supportsUpstashShebangForRedisV2("canary")).toBe(true);
+		expect(supportsUpstashShebangForRedisV2("dragonfly")).toBe(false);
 	});
 });
