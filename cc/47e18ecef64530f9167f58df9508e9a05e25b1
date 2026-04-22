@@ -1,0 +1,35 @@
+server/src/internal/billing/v2/utils/logs/logAutumnBillingPlan.ts
+  eafbce9206dba602 69-71
+server/src/internal/balances/autoTopUp/compute/computeRebalancedAutoTopUp.ts
+  eafbce9206dba602 1-120
+server/src/internal/billing/v2/execute/executeAutumnBillingPlan.ts
+  eafbce9206dba602 4,110-111,113,116
+server/tests/unit/balances/auto-topup/compute-rebalanced-auto-topup.test.ts
+  eafbce9206dba602 1-459
+shared/models/billingModels/plan/autumnBillingPlan.ts
+  eafbce9206dba602 89-91,95-100
+server/src/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance.ts
+  eafbce9206dba602 1-36
+server/src/internal/balances/autoTopUp/compute/computeAutoTopupPlan.ts
+  eafbce9206dba602 20,76-87,93,102
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "cc47e18ecef64530f9167f58df9508e9a05e25b1",
+  "prompts": {
+    "eafbce9206dba602": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_24f798c24ffex5IvgsNtKgLMiu",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 661,
+      "total_deletions": 137,
+      "accepted_lines": 1290,
+      "overriden_lines": 0
+    }
+  }
+}
