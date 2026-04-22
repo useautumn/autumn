@@ -3,7 +3,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
+import { runRedisOp } from "@/utils/cacheUtils/runRedisOp.js";
 import { applyLiveAggregatedBalances } from "../balances/applyLiveAggregatedBalances.js";
 import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
@@ -35,7 +35,13 @@ export const getCachedFullSubject = async ({
 		entityId,
 	});
 
-	const cachedRaw = await tryRedisRead(() => redisV2.get(subjectKey), redisV2);
+	const outcome = await runRedisOp({
+		operation: () => redisV2.get(subjectKey),
+		source: "getCachedFullSubject",
+		redisInstance: redisV2,
+	});
+	if (outcome.kind === "unavailable") return undefined;
+	const cachedRaw = outcome.value;
 	if (!cachedRaw) return undefined;
 
 	let cached: CachedFullSubject;

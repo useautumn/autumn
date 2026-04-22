@@ -12,6 +12,9 @@ import { runCheckLegacyFlow } from "./runCheckLegacyFlow.js";
 import { runCheckV2 } from "./runCheckV2.js";
 import type { RunCheckResult } from "./types.js";
 
+const isFailOpenOnRedisDegradedEnabled = () =>
+	process.env.CHECK_FAIL_OPEN_ON_REDIS_DEGRADED !== "false";
+
 export const runCheckWithRollout = async ({
 	ctx,
 	body,
@@ -21,6 +24,28 @@ export const runCheckWithRollout = async ({
 	body: ParsedCheckParams;
 	requiredBalance: number;
 }): Promise<RunCheckResult<CheckData | CheckDataV2>> => {
+	// if (isFailOpenOnRedisDegradedEnabled() && !shouldUseRedis()) {
+	// 	ctx.logger.warn(
+	// 		{
+	// 			customerId: body.customer_id,
+	// 			entityId: body.entity_id,
+	// 			orgId: ctx.org.id,
+	// 			env: ctx.env,
+	// 			feature_id: body.feature_id,
+	// 		},
+	// 		"[check] Redis degraded, failing open",
+	// 	);
+	// 	return {
+	// 		checkData: null,
+	// 		response: getCheckFailOpenFallback({
+	// 			ctx,
+	// 			body,
+	// 			requiredBalance,
+	// 			error: new Error("redis_degraded"),
+	// 		}) as Record<string, unknown>,
+	// 	};
+	// }
+
 	if (isFullSubjectRolloutEnabled({ ctx })) {
 		const result = await Result.tryPromise({
 			try: () =>

@@ -9,7 +9,6 @@ import { sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { globalRefreshEntityAggregateBatchingManager } from "../refreshEntityAggregate/index.js";
 
 const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
@@ -132,12 +131,8 @@ export const syncItemV4 = async ({
 	ctx: AutumnContext;
 	payload: SyncItemV4;
 }): Promise<void> => {
-	const {
-		customerId,
-		entityId,
-		rolloverIds,
-		modifiedCusEntIdsByFeatureId,
-	} = payload;
+	const { customerId, entityId, rolloverIds, modifiedCusEntIdsByFeatureId } =
+		payload;
 	const { db, logger } = ctx;
 
 	// Read targeted balance hashes
@@ -241,17 +236,17 @@ export const syncItemV4 = async ({
 	const hasEntityLevel = allSubjectBalances.some(
 		(subjectBalance) => subjectBalance.isEntityLevel,
 	);
-	if (hasEntityLevel) {
-		const featureIds = Object.keys(modifiedCusEntIdsByFeatureId);
-		const internalFeatureIds = ctx.features
-			.filter((feature) => featureIds.includes(feature.id))
-			.map((feature) => feature.internal_id);
+	// if (hasEntityLevel) {
+	// 	const featureIds = Object.keys(modifiedCusEntIdsByFeatureId);
+	// 	const internalFeatureIds = ctx.features
+	// 		.filter((feature) => featureIds.includes(feature.id))
+	// 		.map((feature) => feature.internal_id);
 
-		globalRefreshEntityAggregateBatchingManager.schedule({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			internalFeatureIds,
-		});
-	}
+	// 	globalRefreshEntityAggregateBatchingManager.schedule({
+	// 		orgId: ctx.org.id,
+	// 		env: ctx.env,
+	// 		customerId,
+	// 		internalFeatureIds,
+	// 	});
+	// }
 };
