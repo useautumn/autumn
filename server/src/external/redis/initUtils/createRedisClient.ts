@@ -26,10 +26,13 @@ export const createRedisClient = ({
 		family: 4,
 		keepAlive: 10000,
 		commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
-		// Fail-open: never buffer commands while disconnected, never retry
-		// failed commands. A dead/slow Redis must not back up requests.
-		enableOfflineQueue: false,
-		maxRetriesPerRequest: 0,
+		// Let `commandTimeout` (10s) be the sole bound on how long a command
+		// can wait. `maxRetriesPerRequest: null` disables ioredis's default
+		// "flush pending commands after N reconnect attempts" behavior, which
+		// otherwise aborts commands still in the offline queue on any minor
+		// handshake blip. Under a real brownout, commands still fail via the
+		// `Command timed out` path.
+		maxRetriesPerRequest: null,
 	});
 
 	// instrumentRedis must run first so its defineCommand patch
