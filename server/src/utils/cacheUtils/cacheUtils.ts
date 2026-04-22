@@ -14,6 +14,12 @@ const markDefaultRedisAvailability = (targetRedis: Redis, available: boolean) =>
 	available ? markRedisCommandSuccess() : markRedisCommandFailure();
 };
 
+const isRedisAvailabilityError = (targetRedis: Redis, error: unknown) => {
+	if (targetRedis.status !== "ready") return true;
+	const message = error instanceof Error ? error.message : String(error);
+	return /ECONN|ETIMEDOUT|timeout|closed|writeable|max retries/i.test(message);
+};
+
 const warnRedisUnavailable = ({
 	source,
 	error,
@@ -68,7 +74,8 @@ export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
 		if (result === "OK") return await onSuccess();
 		return await onKeyAlreadyExists();
 	} catch (error) {
-		markDefaultRedisAvailability(targetRedis, false);
+		if (isRedisAvailabilityError(targetRedis, error))
+			markDefaultRedisAvailability(targetRedis, false);
 		warnRedisUnavailable({ source: "tryRedisNx:error", error });
 		return await onRedisUnavailable();
 	}
@@ -103,7 +110,8 @@ export const tryRedisWrite = async <T>(
 			? true
 			: T | null;
 	} catch (error) {
-		markDefaultRedisAvailability(targetRedis, false);
+		if (isRedisAvailabilityError(targetRedis, error))
+			markDefaultRedisAvailability(targetRedis, false);
 		warnRedisUnavailable({ source: "tryRedisWrite:error", error });
 		return null as T extends void ? true : T | null;
 	}
@@ -134,7 +142,8 @@ export const tryRedisRead = async <T>(
 		markDefaultRedisAvailability(targetRedis, true);
 		return result;
 	} catch (error) {
-		markDefaultRedisAvailability(targetRedis, false);
+		if (isRedisAvailabilityError(targetRedis, error))
+			markDefaultRedisAvailability(targetRedis, false);
 		warnRedisUnavailable({ source: "tryRedisRead:error", error });
 		return null;
 	}

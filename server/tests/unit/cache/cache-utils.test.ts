@@ -139,4 +139,16 @@ describe("cache utils", () => {
 
 		expect(getRedisAvailability().state).toBe("healthy");
 	});
+
+	test("Redis command errors do not mark Redis unavailable", async () => {
+		markRedisCommandSuccess();
+		markRedisCommandSuccess();
+		expect(getRedisAvailability().state).toBe("healthy");
+
+		await tryRedisWrite(async () => {
+			throw new Error("ERR user_script:2: unexpected symbol near '#'");
+		});
+
+		expect(getRedisAvailability().state).toBe("healthy");
+	});
 });
