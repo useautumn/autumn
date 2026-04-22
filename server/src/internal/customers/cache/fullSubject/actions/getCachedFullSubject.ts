@@ -1,9 +1,9 @@
 import { type FullSubject, normalizedToFullSubject } from "@autumn/shared";
+import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { runRedisOp } from "@/utils/cacheUtils/runRedisOp.js";
 import { applyLiveAggregatedBalances } from "../balances/applyLiveAggregatedBalances.js";
 import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
@@ -35,14 +35,12 @@ export const getCachedFullSubject = async ({
 		entityId,
 	});
 
-	const outcome = await runRedisOp({
+	const cachedRaw = await runRedisOp({
 		operation: () => redisV2.get(subjectKey),
 		source: "getCachedFullSubject",
 		redisInstance: redisV2,
 	});
 
-	if (outcome.kind === "unavailable") return undefined;
-	const cachedRaw = outcome.value;
 	if (!cachedRaw) return undefined;
 
 	let cached: CachedFullSubject;
@@ -109,17 +107,6 @@ export const getCachedFullSubject = async ({
 		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,
 		includeAggregated: isCustomerSubject,
 	});
-
-	if (balancesOutcome.kind === "unavailable") {
-		// Redis was unreachable for the balance batch. DO NOT invalidate the
-		// full subject — that would bump viewEpoch and cascade a thundering-herd
-		// rebuild across every pod for this customer. Just let this one caller
-		// fall through to DB; concurrent readers that succeeded keep their cache.
-		logger.warn(
-			`[getCachedFullSubject] Balance batch unavailable for ${customerId}${entityId ? `:${entityId}` : ""}, falling back without invalidation, source: ${source}`,
-		);
-		return undefined;
-	}
 
 	if (balancesOutcome.kind === "missing") {
 		logger.warn(

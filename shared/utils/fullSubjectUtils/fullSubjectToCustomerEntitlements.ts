@@ -1,3 +1,4 @@
+import { isEntityCusEnt } from "../../index.js";
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type { CustomerEntitlementFilters } from "../../models/cusProductModels/cusEntModels/cusEntModels.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
@@ -89,6 +90,15 @@ export const fullSubjectToCustomerEntitlements = ({
 			(customerEntitlement) =>
 				(customerEntitlement.external_id ?? customerEntitlement.id) ===
 				customerEntitlementFilters.balanceId,
+		);
+	}
+
+	if (
+		fullSubject.entity?.id &&
+		fullSubject.customer.config?.disable_pooled_balance
+	) {
+		customerEntitlements = customerEntitlements.filter((ce) =>
+			isEntityCusEnt({ cusEnt: ce }),
 		);
 	}
 
