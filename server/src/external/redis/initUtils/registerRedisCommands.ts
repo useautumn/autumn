@@ -34,14 +34,25 @@ import {
 	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT,
 	UPDATE_SUBJECT_BALANCES_SCRIPT,
 	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT,
+	UPSTASH_KEY_LOCKING_SHEBANG,
 } from "../../../_luaScriptsV2/luaScriptsV2.js";
 
-/** Configure a Redis instance with custom commands */
+/** Configure a Redis instance with custom commands.
+ *  `supportsUpstashShebang` controls whether the `#!lua flags=allow-key-locking`
+ *  shebang is kept on V2 scripts. Upstash requires it for per-key locking;
+ *  other Redis providers (ElastiCache, Dragonfly, self-hosted) reject it with
+ *  `ERR Unexpected flag in script shebang`. Defaults to true. */
 export const registerRedisCommands = ({
 	redisInstance,
+	supportsUpstashShebang = true,
 }: {
 	redisInstance: Redis;
+	supportsUpstashShebang?: boolean;
 }): Redis => {
+	const prepareScript = (script: string): string =>
+		supportsUpstashShebang || !script.startsWith(UPSTASH_KEY_LOCKING_SHEBANG)
+			? script
+			: script.slice(UPSTASH_KEY_LOCKING_SHEBANG.length);
 	const batchDeductionScript = getBatchDeductionScript();
 
 	redisInstance.defineCommand("batchDeduction", {
@@ -110,12 +121,12 @@ export const registerRedisCommands = ({
 	});
 
 	redisInstance.defineCommand("deductFromSubjectBalances", {
-		lua: DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
+		lua: prepareScript(DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT),
 	});
 
 	redisInstance.defineCommand("updateSubjectBalances", {
 		numberOfKeys: 1,
-		lua: UPDATE_SUBJECT_BALANCES_SCRIPT,
+		lua: prepareScript(UPDATE_SUBJECT_BALANCES_SCRIPT),
 	});
 
 	redisInstance.defineCommand("deleteFullCustomerCache", {
@@ -129,7 +140,7 @@ export const registerRedisCommands = ({
 	});
 
 	redisInstance.defineCommand("setCachedFullSubject", {
-		lua: SET_CACHED_FULL_SUBJECT_SCRIPT,
+		lua: prepareScript(SET_CACHED_FULL_SUBJECT_SCRIPT),
 	});
 
 	redisInstance.defineCommand("resetCustomerEntitlements", {
@@ -149,22 +160,22 @@ export const registerRedisCommands = ({
 
 	redisInstance.defineCommand("updateFullSubjectCustomerDataV2", {
 		numberOfKeys: 1,
-		lua: UPDATE_CUSTOMER_DATA_V2_SCRIPT,
+		lua: prepareScript(UPDATE_CUSTOMER_DATA_V2_SCRIPT),
 	});
 
 	redisInstance.defineCommand("updateFullSubjectEntityDataV2", {
 		numberOfKeys: 1,
-		lua: UPDATE_ENTITY_DATA_V2_SCRIPT,
+		lua: prepareScript(UPDATE_ENTITY_DATA_V2_SCRIPT),
 	});
 
 	redisInstance.defineCommand("updateFullSubjectCustomerProductV2", {
 		numberOfKeys: 1,
-		lua: UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT,
+		lua: prepareScript(UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT),
 	});
 
 	redisInstance.defineCommand("upsertInvoiceInFullSubjectV2", {
 		numberOfKeys: 1,
-		lua: UPDATE_CACHED_INVOICE_V2_SCRIPT,
+		lua: prepareScript(UPDATE_CACHED_INVOICE_V2_SCRIPT),
 	});
 
 	redisInstance.defineCommand("appendEntityToCustomer", {
@@ -189,7 +200,7 @@ export const registerRedisCommands = ({
 
 	redisInstance.defineCommand("adjustSubjectBalance", {
 		numberOfKeys: 1,
-		lua: ADJUST_SUBJECT_BALANCE_SCRIPT,
+		lua: prepareScript(ADJUST_SUBJECT_BALANCE_SCRIPT),
 	});
 
 	redisInstance.defineCommand("updateCustomerProduct", {

@@ -67,7 +67,7 @@ const FULL_CUSTOMER_KEY_BUILDERS = FULL_CUSTOMER_KEY_BUILDERS_RAW.replaceAll(
 // runs on the redisV2 instance: it tells Upstash every key the script touches
 // is declared via KEYS[] so per-key locks can be acquired instead of a global
 // serialization lock. See https://upstash.com/docs/redis/features/key-locking
-const UPSTASH_KEY_LOCKING_SHEBANG = "#!lua flags=allow-key-locking\n";
+export const UPSTASH_KEY_LOCKING_SHEBANG = "#!lua flags=allow-key-locking\n";
 
 // ============================================================================
 // MAIN SCRIPT

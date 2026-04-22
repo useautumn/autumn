@@ -47,6 +47,7 @@ export const getAlternateRedisV2Instance = (
 	const instance = createRedisConnection({
 		cacheUrl,
 		region: `${currentRegion}:v2:${name}`,
+		supportsUpstashShebang: false,
 	});
 	instancePool.set(name, instance);
 	return instance;
