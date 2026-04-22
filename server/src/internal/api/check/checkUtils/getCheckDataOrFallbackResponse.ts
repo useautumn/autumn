@@ -1,8 +1,8 @@
 import type { CheckParams, ParsedCheckParams } from "@autumn/shared";
-import { isRetryableDbError } from "@/db/dbUtils.js";
+import { isTransientDbError } from "@/db/dbUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckData } from "../checkTypes/CheckData.js";
-import { buildCheckFallbackResponse } from "./buildCheckFallbackResponse.js";
+import { getCheckFailOpenFallback } from "./getCheckFailOpenFallback.js";
 import { getCheckData } from "./getCheckData.js";
 
 type CheckBody = (CheckParams & { feature_id: string });
@@ -36,23 +36,17 @@ export const getCheckDataOrFallbackResponse = async ({
 			fallbackResponse: null,
 		};
 	} catch (error) {
-		if (!isRetryableDbError({ error })) {
+		if (!isTransientDbError({ error })) {
 			throw error;
 		}
 
-		ctx.logger.warn("[check] Returning fail-open fallback response", {
-			type: "check_fail_open_fallback",
-			error,
-			feature_id: body.feature_id,
-			required_balance: requiredBalance,
-		});
-
 		return {
 			checkData: null,
-			fallbackResponse: buildCheckFallbackResponse({
+			fallbackResponse: getCheckFailOpenFallback({
 				ctx,
 				body,
 				requiredBalance,
+				error,
 			}) as Record<string, unknown>,
 		};
 	}

@@ -2,7 +2,7 @@ import type { Message } from "@aws-sdk/client-sqs";
 import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import type { Logger } from "pino";
-import { isRetryableDbError } from "@/db/dbUtils.js";
+import { isTransientDbError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -10,6 +10,7 @@ import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
+import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
@@ -174,6 +175,20 @@ export const processMessage = async ({
 			return;
 		}
 
+		if (job.name === JobName.RefreshEntityAggregate) {
+			if (!ctx) {
+				workerLogger.error("No context found for refresh entity aggregate job");
+				return;
+			}
+
+			await refreshEntityAggregateCache({
+				ctx,
+				customerId: job.data.customerId,
+				internalFeatureIds: job.data.internalFeatureIds,
+			});
+			return;
+		}
+
 		if (job.name === JobName.InsertEventBatch) {
 			await runInsertEventBatch({
 				db,
@@ -278,8 +293,9 @@ export const processMessage = async ({
 		// won't fix on retry. DB errors (connection, timeout) will.
 		if (
 			(job.name === JobName.SyncBalanceBatchV3 ||
-				job.name === JobName.SyncBalanceBatchV4) &&
-			isRetryableDbError({ error })
+				job.name === JobName.SyncBalanceBatchV4 ||
+				job.name === JobName.RefreshEntityAggregate) &&
+			isTransientDbError({ error })
 		) {
 			Sentry.captureException(error);
 			errorLogger.error(`[${job.name}] Retryable DB error, keeping in SQS`, {

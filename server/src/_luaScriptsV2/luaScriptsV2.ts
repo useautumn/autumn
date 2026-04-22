@@ -63,6 +63,12 @@ const FULL_CUSTOMER_KEY_BUILDERS = FULL_CUSTOMER_KEY_BUILDERS_RAW.replaceAll(
 	FULL_CUSTOMER_CACHE_VERSION,
 );
 
+// Upstash key-based locking opt-in. Must be the FIRST line of any script that
+// runs on the redisV2 instance: it tells Upstash every key the script touches
+// is declared via KEYS[] so per-key locks can be acquired instead of a global
+// serialization lock. See https://upstash.com/docs/redis/features/key-locking
+const UPSTASH_KEY_LOCKING_SHEBANG = "#!lua flags=allow-key-locking\n";
+
 // ============================================================================
 // MAIN SCRIPT
 // ============================================================================
@@ -107,19 +113,19 @@ export const SET_FULL_CUSTOMER_CACHE_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
 ${setFullCustomerCacheScript}`;
 
 /** Atomically set a FullSubject cache: subject view + all balance hashes. */
-export const SET_CACHED_FULL_SUBJECT_SCRIPT = setCachedFullSubjectScript;
+export const SET_CACHED_FULL_SUBJECT_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${setCachedFullSubjectScript}`;
 
 /** Atomically update top-level customer fields in the cached FullSubject. */
-export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = updateCustomerDataV2Script;
+export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${updateCustomerDataV2Script}`;
 
 /** Atomically update top-level entity fields in the cached FullSubject. */
-export const UPDATE_ENTITY_DATA_V2_SCRIPT = updateEntityDataV2Script;
+export const UPDATE_ENTITY_DATA_V2_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${updateEntityDataV2Script}`;
 
 /** Atomically upsert an invoice in the cached FullSubject invoices array. */
-export const UPDATE_CACHED_INVOICE_V2_SCRIPT = updateCachedInvoiceV2Script;
+export const UPDATE_CACHED_INVOICE_V2_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${updateCachedInvoiceV2Script}`;
 
 /** Atomically update customer product fields in the cached FullSubject. */
-export const UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT = `${updateCustomerProductOptionsScript}
+export const UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${updateCustomerProductOptionsScript}
 ${updateCustomerProductV2MainScript}`;
 
 // ============================================================================
@@ -187,7 +193,7 @@ export const UPDATE_CUSTOMER_PRODUCT_SCRIPT = UPDATE_CUSTOMER_PRODUCT_SCRIPT_RAW
  * Reads from per-feature hash fields and writes back touched entitlements.
  * Composed from shared helper modules + V2-specific storage adapters.
  */
-export const DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
+export const DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${LUA_UTILS}
 ${READ_SUBJECT_BALANCES}
 ${CONTEXT_UTILS_V2}
 ${GET_TOTAL_BALANCE}
@@ -211,7 +217,7 @@ ${DEDUCT_FROM_SUBJECT_BALANCES_MAIN}`;
  * per-feature hash. Emits entity-level mutation logs so aggregated balances
  * stay in sync.
  */
-export const ADJUST_SUBJECT_BALANCE_SCRIPT = `${LUA_UTILS}
+export const ADJUST_SUBJECT_BALANCE_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${LUA_UTILS}
 ${UPDATE_CONTEXT_UTILS}
 ${UPDATE_AGGREGATED_BALANCES}
 ${adjustSubjectBalanceMainScript}`;
@@ -223,7 +229,7 @@ ${adjustSubjectBalanceMainScript}`;
  * aggregated balance propagation.
  * Called once per feature via pipeline.
  */
-export const UPDATE_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
+export const UPDATE_SUBJECT_BALANCES_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${LUA_UTILS}
 ${UPDATE_CONTEXT_UTILS}
 ${APPLY_FIELD_UPDATES}
 ${UPDATE_AGGREGATED_BALANCES}

@@ -3,8 +3,13 @@ import {
 	EntityNotFoundError,
 	type FullSubject,
 } from "@autumn/shared";
+import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
+import {
+	buildFullSubjectSingleFlightKey,
+	runFullSubjectSingleFlight,
+} from "./fullSubjectSingleFlight.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
 import { getOrInitFullSubjectViewEpoch } from "./invalidate/getOrInitFullSubjectViewEpoch.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
@@ -20,9 +25,35 @@ export const getOrSetCachedFullSubject = async ({
 	entityId?: string;
 	source?: string;
 }): Promise<FullSubject> => {
-	const { skipCache, logger } = ctx;
+	const key = buildFullSubjectSingleFlightKey({
+		orgId: ctx.org.id,
+		env: ctx.env,
+		customerId,
+		entityId,
+		variant: "full",
+	});
 
-	if (!skipCache) {
+	return runFullSubjectSingleFlight({
+		key,
+		load: () => loadFullSubject({ ctx, customerId, entityId, source }),
+	});
+};
+
+const loadFullSubject = async ({
+	ctx,
+	customerId,
+	entityId,
+	source,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	entityId?: string;
+	source?: string;
+}): Promise<FullSubject> => {
+	const { skipCache, logger } = ctx;
+	const useRedis = !skipCache && shouldUseRedis();
+
+	if (useRedis) {
 		const cached = await getCachedFullSubject({
 			ctx,
 			customerId,
@@ -41,10 +72,12 @@ export const getOrSetCachedFullSubject = async ({
 	logger.debug(
 		`[getOrSetCachedFullSubject] Cache miss for ${customerId}${entityId ? `:${entityId}` : ""}, fetching from DB, source: ${source}`,
 	);
-	const fetchedSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
-		ctx,
-		customerId,
-	});
+	const fetchedSubjectViewEpoch = useRedis
+		? await getOrInitFullSubjectViewEpoch({
+				ctx,
+				customerId,
+			})
+		: 0;
 
 	const result = await getFullSubjectNormalized({
 		ctx,
@@ -59,7 +92,7 @@ export const getOrSetCachedFullSubject = async ({
 
 	const { normalized, fullSubject } = result;
 
-	if (!skipCache) {
+	if (useRedis) {
 		await setCachedFullSubject({
 			ctx,
 			normalized,

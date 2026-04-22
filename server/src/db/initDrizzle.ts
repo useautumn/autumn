@@ -55,6 +55,7 @@ export const initDrizzle = ({
 	const envDbUrl = replica
 		? process.env.DATABASE_REPLICA_URL
 		: process.env.DATABASE_URL;
+
 	const dbUrl = databaseUrl || envDbUrl || "";
 
 	const client = new pg.Pool({
@@ -84,6 +85,7 @@ export const initDrizzle = ({
 
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	maxConnections: 5,
+	connectTimeout: 2,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
