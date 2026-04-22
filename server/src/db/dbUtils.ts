@@ -20,6 +20,9 @@ const getErrorCode = ({ error }: { error: unknown }): string | null => {
 	return typeof code === "string" ? code : null;
 };
 
+const getErrorMessage = ({ error }: { error: unknown }): string | null =>
+	error instanceof Error ? error.message : null;
+
 /**
  * PostgreSQL SQLSTATE code prefixes that indicate infrastructure issues.
  * - Class 08: Connection Exception (connection lost, refused, broken pipe)
@@ -60,6 +63,8 @@ const RETRYABLE_PG_CODES = new Set([
  */
 export const isRetryableDbError = ({ error }: { error: unknown }): boolean => {
 	const code = getErrorCode({ error });
+	if (getErrorMessage({ error }) === "timeout exceeded when trying to connect")
+		return true;
 	if (!code) return false;
 
 	if (RETRYABLE_PG_CODES.has(code)) return true;

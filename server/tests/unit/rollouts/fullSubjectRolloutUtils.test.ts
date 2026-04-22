@@ -10,6 +10,14 @@ describe("fullSubjectRolloutUtils", () => {
 		).toBe(true);
 	});
 
+	test("treats DB connect timeouts without a code as retryable rollout errors", () => {
+		expect(
+			isRetryableFullSubjectRolloutError({
+				error: new Error("timeout exceeded when trying to connect"),
+			}),
+		).toBe(true);
+	});
+
 	test("treats ioredis max retries as a retryable rollout error", () => {
 		expect(
 			isRetryableFullSubjectRolloutError({
