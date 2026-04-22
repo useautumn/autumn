@@ -17,6 +17,7 @@ import {
 	buildUpdatedOptions,
 	updateCusEntOptionsInline,
 } from "../helpers/autoTopUpUtils.js";
+import { rebalanceAutoTopUpOverages } from "./rebalanceAutoTopUpOverages.js";
 
 /** Compute the auto top-up billing plan + stripe invoice action. Returns null if line item amount is <= 0. */
 export const computeAutoTopupPlan = ({
@@ -30,7 +31,8 @@ export const computeAutoTopupPlan = ({
 	stripeBillingPlan: StripeBillingPlan;
 } => {
 	const { org } = ctx;
-	const { autoTopupConfig, customerEntitlement } = autoTopupContext;
+	const { autoTopupConfig, customerEntitlement, customerEntitlements } =
+		autoTopupContext;
 
 	const cusProduct = customerEntitlement.customer_product!;
 	const feature = customerEntitlement.entitlement.feature;
@@ -46,6 +48,14 @@ export const computeAutoTopupPlan = ({
 		cusEnt: customerEntitlement,
 		feature,
 		quantity: topUpPacks,
+	});
+
+	// A.5. Split the top-up quantity: first pay down overage on deferred-safe non-prepaid
+	//      cusEnts, then route the remainder to the prepaid one-off cusEnt below.
+	const { paydownUpdates, remainder } = rebalanceAutoTopUpOverages({
+		customerEntitlements,
+		prepaidCustomerEntitlement: customerEntitlement,
+		quantity,
 	});
 
 	// B. Build line item
@@ -72,16 +82,26 @@ export const computeAutoTopupPlan = ({
 		});
 	}
 
-	// C. Build autumn billing plan
+	// C. Build autumn billing plan.
+	//     - Paydown updates heal overage on non-prepaid cusEnts via +delta changes.
+	//     - Remainder flows to the prepaid cusEnt as a plain +delta.
+	//     - options.quantity still reflects the FULL top-up packs, because the customer
+	//       was charged for the full quantity — the purchase ledger tracks purchases, not
+	//       where the balance landed.
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId: autoTopupContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [],
 		lineItems: [lineItem],
 		updateCustomerEntitlements: [
-			{
-				customerEntitlement,
-				balanceChange: quantity,
-			},
+			...paydownUpdates,
+			...(remainder > 0
+				? [
+						{
+							customerEntitlement,
+							balanceChange: remainder,
+						},
+					]
+				: []),
 		],
 		updateCustomerProduct: {
 			customerProduct: cusProduct,

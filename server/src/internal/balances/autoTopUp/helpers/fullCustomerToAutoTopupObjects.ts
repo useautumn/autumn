@@ -20,6 +20,10 @@ export const fullCustomerToAutoTopupObjects = ({
 }): {
 	autoTopupConfig: AutoTopup;
 	customerEntitlement: FullCusEntWithFullCusProduct;
+	/** All cusEnts for this feature on this customer — includes the prepaid one plus any
+	 * reset-cycle / base / usage-allowed cusEnts. Passed through to the rebalancer so it
+	 * can pay down overage before adding the top-up remainder to the prepaid cusEnt. */
+	customerEntitlements: FullCusEntWithFullCusProduct[];
 	balanceBelowThreshold: boolean;
 } | null => {
 	// 1. Find enabled auto_topup config
@@ -56,5 +60,10 @@ export const fullCustomerToAutoTopupObjects = ({
 	const remainingBalance = cusEntsToBalance({ cusEnts, withRollovers: true });
 	const balanceBelowThreshold = remainingBalance <= autoTopupConfig.threshold;
 
-	return { autoTopupConfig, customerEntitlement, balanceBelowThreshold };
+	return {
+		autoTopupConfig,
+		customerEntitlement,
+		customerEntitlements: cusEnts,
+		balanceBelowThreshold,
+	};
 };
