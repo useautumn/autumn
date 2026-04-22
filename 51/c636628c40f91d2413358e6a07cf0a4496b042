@@ -1,0 +1,23 @@
+server/src/utils/auth.ts
+  87bbab023919d087 38-53,194-195
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "51c636628c40f91d2413358e6a07cf0a4496b042",
+  "prompts": {
+    "87bbab023919d087": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "dc52d820-0175-4231-854d-c41d06967c1f",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    }
+  }
+}
