@@ -329,7 +329,7 @@ const runIteration = async ({
 				if (luaResult.error) {
 					console.log(`    lua error: ${luaResult.error}`);
 				}
-				if (i === 1 && luaResult.logs?.length) {
+				if (luaResult.logs?.length) {
 					console.log(`    lua logs (${luaResult.logs.length} lines):`);
 					for (const line of luaResult.logs) console.log(`      ${line}`);
 				}
