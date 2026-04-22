@@ -17,9 +17,8 @@ import {
 	buildUpdatedOptions,
 	updateCusEntOptionsInline,
 } from "../helpers/autoTopUpUtils.js";
-import { rebalanceAutoTopUpOverages } from "./rebalanceAutoTopUpOverages.js";
 
-/** Compute the auto top-up billing plan + stripe invoice action. Returns null if line item amount is <= 0. */
+/** Compute the auto top-up billing plan + stripe invoice action. Throws if line item amount is <= 0. */
 export const computeAutoTopupPlan = ({
 	ctx,
 	autoTopupContext,
@@ -31,8 +30,7 @@ export const computeAutoTopupPlan = ({
 	stripeBillingPlan: StripeBillingPlan;
 } => {
 	const { org } = ctx;
-	const { autoTopupConfig, customerEntitlement, customerEntitlements } =
-		autoTopupContext;
+	const { autoTopupConfig, customerEntitlement } = autoTopupContext;
 
 	const cusProduct = customerEntitlement.customer_product!;
 	const feature = customerEntitlement.entitlement.feature;
@@ -48,14 +46,6 @@ export const computeAutoTopupPlan = ({
 		cusEnt: customerEntitlement,
 		feature,
 		quantity: topUpPacks,
-	});
-
-	// A.5. Split the top-up quantity: first pay down overage on deferred-safe non-prepaid
-	//      cusEnts, then route the remainder to the prepaid one-off cusEnt below.
-	const { paydownUpdates, remainder } = rebalanceAutoTopUpOverages({
-		customerEntitlements,
-		prepaidCustomerEntitlement: customerEntitlement,
-		quantity,
 	});
 
 	// B. Build line item
@@ -83,26 +73,29 @@ export const computeAutoTopupPlan = ({
 	}
 
 	// C. Build autumn billing plan.
-	//     - Paydown updates heal overage on non-prepaid cusEnts via +delta changes.
-	//     - Remainder flows to the prepaid cusEnt as a plain +delta.
-	//     - options.quantity still reflects the FULL top-up packs, because the customer
-	//       was charged for the full quantity — the purchase ledger tracks purchases, not
-	//       where the balance landed.
+	//
+	// Balance mutations (paydown overage + prepaid remainder) are NOT emitted as
+	// synchronous updateCustomerEntitlements entries. Instead we emit a declarative
+	// `autoTopupRebalance` intent; the executor reads LIVE cusEnt balances at
+	// post-Stripe time and computes exact paydown/remainder deltas against the live
+	// state. That avoids two races inherent to snapshot-based paydown:
+	//   - Concurrent usage between setup snapshot and exec being overwritten (data loss).
+	//   - Concurrent refunds making the snapshot's overage look deeper than it actually
+	//     is (would produce silent overcredit).
+	//
+	// `options.quantity` still bumps by the FULL topUpPacks here — the customer was
+	// charged for the full quantity, so the purchase ledger should record the full
+	// purchase regardless of where the balance landed.
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId: autoTopupContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [],
 		lineItems: [lineItem],
-		updateCustomerEntitlements: [
-			...paydownUpdates,
-			...(remainder > 0
-				? [
-						{
-							customerEntitlement,
-							balanceChange: remainder,
-						},
-					]
-				: []),
-		],
+		updateCustomerEntitlements: [],
+		autoTopupRebalance: {
+			featureId: feature.id,
+			quantity,
+			prepaidCustomerEntitlementId: customerEntitlement.id,
+		},
 		updateCustomerProduct: {
 			customerProduct: cusProduct,
 			updates: {

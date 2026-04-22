@@ -10,7 +10,15 @@ import {
 	isVolumeBasedCusEnt,
 } from "@autumn/shared";
 
-/** Pure extraction of auto-topup-relevant objects from a FullCustomer. Returns null if any prerequisite is missing. */
+/**
+ * Pure extraction of auto-topup-relevant objects from a FullCustomer.
+ *
+ * Intentionally does NOT expose the full cusEnt list for the feature. Paydown is
+ * computed at execute time from a LIVE cusEnt read (see `applyAutoTopupRebalance`),
+ * not from this snapshot, so there's nothing useful to hand out here.
+ *
+ * Returns null if any prerequisite is missing.
+ */
 export const fullCustomerToAutoTopupObjects = ({
 	fullCustomer,
 	featureId,
@@ -20,10 +28,6 @@ export const fullCustomerToAutoTopupObjects = ({
 }): {
 	autoTopupConfig: AutoTopup;
 	customerEntitlement: FullCusEntWithFullCusProduct;
-	/** All cusEnts for this feature on this customer — includes the prepaid one plus any
-	 * reset-cycle / base / usage-allowed cusEnts. Passed through to the rebalancer so it
-	 * can pay down overage before adding the top-up remainder to the prepaid cusEnt. */
-	customerEntitlements: FullCusEntWithFullCusProduct[];
 	balanceBelowThreshold: boolean;
 } | null => {
 	// 1. Find enabled auto_topup config
@@ -63,7 +67,6 @@ export const fullCustomerToAutoTopupObjects = ({
 	return {
 		autoTopupConfig,
 		customerEntitlement,
-		customerEntitlements: cusEnts,
 		balanceBelowThreshold,
 	};
 };

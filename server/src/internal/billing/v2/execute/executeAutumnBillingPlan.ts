@@ -1,6 +1,7 @@
 import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/applyAutoTopupRebalance";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import {
 	getDeleteCustomerProducts,
@@ -105,6 +106,17 @@ export const executeAutumnBillingPlan = async ({
 		customerId: autumnBillingPlan.customerId,
 		updates: autumnBillingPlan.updateCustomerEntitlements,
 	});
+
+	// 5a. Auto top-up rebalance (post-Stripe, live-read paydown).
+	// Reads live cusEnt balances and applies atomic delta increments, so concurrent
+	// usage between the ATU context snapshot and this write is preserved.
+	if (autumnBillingPlan.autoTopupRebalance) {
+		await applyAutoTopupRebalance({
+			ctx,
+			customerId: autumnBillingPlan.customerId,
+			intent: autumnBillingPlan.autoTopupRebalance,
+		});
+	}
 
 	// 6. Upsert subscription (if provided)
 	if (autumnBillingPlan.upsertSubscription) {

@@ -20,17 +20,23 @@ const AUTO_TOPUP_WAIT_MS = 40000;
  * on non-prepaid, non-entity-scoped top-level cusEnts before routing the remainder to
  * the one-off prepaid cusEnt.
  *
- * Paydown is applied as a race-safe `balanceChange` delta (atomic SQL `balance + X`)
- * so concurrent usage recorded between the ATU snapshot and its execution is preserved.
+ * Architecture note: paydown computation runs at EXECUTE time (post-Stripe-charge),
+ * not compute time. The billing plan carries only a declarative intent
+ * (`autoTopupRebalance: { featureId, quantity, prepaidCustomerEntitlementId }`);
+ * `applyAutoTopupRebalance` reads LIVE cusEnt balances (cache → DB fallback) and
+ * applies race-safe atomic delta writes via `adjustBalanceDbAndCache`. This avoids
+ * both the stale-snapshot overwrite race (data loss) and the snapshot-deeper-than-
+ * live overcredit race.
  *
- * Entity-scoped cusEnts are intentionally excluded from paydown — there is no race-safe
- * per-entity atomic increment primitive today. Entity-scoped overage is left in place
- * and the full top-up quantity flows to prepaid as remainder. Adding safe entity paydown
- * is a separate follow-up that requires JSONB-path atomic updates.
+ * Entity-scoped cusEnts are intentionally excluded from paydown — there is no
+ * race-safe per-entity atomic increment primitive today. Entity-scoped overage is
+ * left in place and the full top-up quantity flows to prepaid as remainder. Adding
+ * safe entity paydown is a separate follow-up that requires JSONB-path atomic updates.
  *
  * Each test attaches TWO products:
- *   - Base: `products.base` + `items.lifetimeMessages({ includedUsage })` — the overage'd
- *     cusEnt (`usage_allowed` after enabling overage) that will absorb paydown.
+ *   - Base: `products.base` + `items.lifetimeMessages({ includedUsage })` — the
+ *     overage'd cusEnt (`usage_allowed` after enabling overage) that will absorb
+ *     paydown.
  *   - Top-up: `products.oneOffAddOn` + `items.oneOffMessages` — the one-off prepaid
  *     cusEnt that ATU targets. Starts at 0/0 when attached with `quantity: 0`.
  */

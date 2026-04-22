@@ -61,8 +61,7 @@ export const setupAutoTopupContext = async ({
 		return null;
 	}
 
-	const { autoTopupConfig, customerEntitlement, customerEntitlements } =
-		resolved;
+	const { autoTopupConfig, customerEntitlement } = resolved;
 	const customerPrice = cusEntToCusPrice({
 		cusEnt: customerEntitlement,
 		errorOnNotFound: true,
@@ -133,7 +132,6 @@ export const setupAutoTopupContext = async ({
 		// Auto top-up specific fields
 		autoTopupConfig: normalizedAutoTopupConfig,
 		customerEntitlement,
-		customerEntitlements,
 
 		limitState,
 	};
