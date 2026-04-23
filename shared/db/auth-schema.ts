@@ -3,6 +3,7 @@ import {
 	boolean,
 	foreignKey,
 	index,
+	integer,
 	jsonb,
 	pgTable,
 	text,
@@ -35,6 +36,7 @@ export const user = pgTable(
 		banExpires: timestamp("ban_expires", { withTimezone: true }),
 		createdBy: text("created_by"),
 		lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
+		twoFactorEnabled: boolean("two_factor_enabled").$defaultFn(() => false),
 	},
 	(table) => [
 		index("idx_user_name_trgm")
@@ -261,6 +263,32 @@ export const bannedUser = pgTable("banned_user", {
 	revokedAt: timestamp("revoked_at", { withTimezone: true }),
 }).enableRLS();
 
+export const twoFactor = pgTable("two_factor", {
+	id: text("id").primaryKey(),
+	secret: text("secret").notNull(),
+	backupCodes: text("backup_codes").notNull(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	verified: boolean("verified").$defaultFn(() => true),
+}).enableRLS();
+
+export const passkey = pgTable("passkey", {
+	id: text("id").primaryKey(),
+	name: text("name"),
+	publicKey: text("public_key").notNull(),
+	userId: text("user_id")
+		.notNull()
+		.references(() => user.id, { onDelete: "cascade" }),
+	credentialID: text("credential_i_d").notNull(),
+	counter: integer("counter").notNull(),
+	deviceType: text("device_type").notNull(),
+	backedUp: boolean("backed_up").notNull(),
+	transports: text("transports"),
+	createdAt: timestamp("created_at", { withTimezone: true }),
+	aaguid: text("aaguid"),
+}).enableRLS();
+
 export const authSchema = {
 	user,
 	session,
@@ -275,6 +303,8 @@ export const authSchema = {
 	oauthRefreshToken,
 	oauthAccessToken,
 	oauthConsent,
+	twoFactor,
+	passkey,
 };
 
 export type User = typeof user.$inferSelect;
