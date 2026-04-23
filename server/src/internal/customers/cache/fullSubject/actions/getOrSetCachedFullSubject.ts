@@ -6,40 +6,11 @@ import {
 import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
-import {
-	buildFullSubjectSingleFlightKey,
-	runFullSubjectSingleFlight,
-} from "./fullSubjectSingleFlight.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
 import { getOrInitFullSubjectViewEpoch } from "./invalidate/getOrInitFullSubjectViewEpoch.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
 export const getOrSetCachedFullSubject = async ({
-	ctx,
-	customerId,
-	entityId,
-	source,
-}: {
-	ctx: AutumnContext;
-	customerId: string;
-	entityId?: string;
-	source?: string;
-}): Promise<FullSubject> => {
-	const key = buildFullSubjectSingleFlightKey({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		customerId,
-		entityId,
-		variant: "full",
-	});
-
-	return runFullSubjectSingleFlight({
-		key,
-		load: () => loadFullSubject({ ctx, customerId, entityId, source }),
-	});
-};
-
-const loadFullSubject = async ({
 	ctx,
 	customerId,
 	entityId,

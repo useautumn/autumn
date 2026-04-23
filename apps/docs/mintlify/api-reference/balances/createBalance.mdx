@@ -43,6 +43,20 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="rollover" type="object">
+  Rollover configuration for the balance.
+  <Expandable title="properties">
+    <DynamicParamField body="max" type="number | null" />
+
+    <DynamicParamField body="max_percentage" type="number | null" />
+
+    <DynamicParamField body="duration" type="'month' | 'forever'" />
+
+    <DynamicParamField body="length" type="number" required />
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="expires_at" type="number">
   Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
 </DynamicParamField>

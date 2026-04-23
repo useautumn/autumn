@@ -102,17 +102,41 @@ export type SubjectBalance = {
 };
 
 /**
+ * Identity-only view of a boolean feature aggregated across all entity-level
+ * grants. Sibling of `AggregatedFeatureBalance`, but for booleans — no balance
+ * fields since booleans don't have them. Produced by splitting the entity
+ * aggregate CTE output by feature type.
+ */
+export const AggregatedSubjectFlagSchema = z.object({
+	feature_id: z.string(),
+	internal_feature_id: z.string(),
+	internal_customer_id: z.string(),
+	api_id: z.string(),
+});
+
+export type AggregatedSubjectFlag = {
+	feature_id: string;
+	internal_feature_id: string;
+	internal_customer_id: string;
+	api_id: string;
+};
+
+/**
  * Schema mirror of `EntityAggregations`. Reuses `CusProductSchema` as the Zod
  * mirror of `DbCustomerProduct` for the aggregated customer products array.
  */
 export const EntityAggregationsSchema = z.object({
 	aggregated_customer_products: z.array(CusProductSchema),
 	aggregated_customer_entitlements: z.array(AggregatedFeatureBalanceSchema),
+	aggregated_subject_flags: z
+		.record(z.string(), AggregatedSubjectFlagSchema)
+		.default({}),
 });
 
 export type EntityAggregations = {
 	aggregated_customer_products: DbCustomerProduct[];
 	aggregated_customer_entitlements: AggregatedFeatureBalance[];
+	aggregated_subject_flags: Record<string, AggregatedSubjectFlag>;
 };
 
 /**

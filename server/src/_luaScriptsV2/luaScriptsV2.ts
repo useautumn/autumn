@@ -4,52 +4,53 @@ import { FULL_CUSTOMER_CACHE_VERSION } from "@/internal/customers/cusUtils/fullC
 // HELPER MODULES (imported as text — works with both Bun and esbuild)
 // ============================================================================
 
-import LUA_UTILS from "./luaUtils.lua";
-import FULL_CUSTOMER_UTILS from "./fullCustomer/fullCustomerUtils.lua";
-import READ_BALANCES from "./deductFromCustomerEntitlements/readBalances.lua";
 import CONTEXT_UTILS from "./deductFromCustomerEntitlements/contextUtils.lua";
-import GET_TOTAL_BALANCE from "./deductFromCustomerEntitlements/getTotalBalance.lua";
-import DEDUCT_FROM_ROLLOVERS from "./deductFromCustomerEntitlements/deductFromRollovers.lua";
 import DEDUCT_FROM_MAIN_BALANCE from "./deductFromCustomerEntitlements/deductFromMainBalance.lua";
+import DEDUCT_FROM_ROLLOVERS from "./deductFromCustomerEntitlements/deductFromRollovers.lua";
+import GET_TOTAL_BALANCE from "./deductFromCustomerEntitlements/getTotalBalance.lua";
+import READ_BALANCES from "./deductFromCustomerEntitlements/readBalances.lua";
 import RUN_DEDUCTION_ON_CONTEXT from "./deductFromCustomerEntitlements/runDeductionOnContext.lua";
 import SPEND_LIMIT_UTILS from "./deductFromCustomerEntitlements/spendLimitUtils.lua";
-import MUTATION_ITEM_UTILS from "./deduction/mutationItemUtils.lua";
 import LOCK_RECEIPT_UTILS from "./deduction/lock/lockReceipt.lua";
 import LOCK_STATE_UTILS from "./deduction/lock/lockStateUtils.lua";
 import LOCK_UNWIND_UTILS from "./deduction/lock/unwindLockUtils.lua";
+import MUTATION_ITEM_UTILS from "./deduction/mutationItemUtils.lua";
+import FULL_CUSTOMER_UTILS from "./fullCustomer/fullCustomerUtils.lua";
+import LOCK_RECEIPT_UTILS_V2 from "./fullSubjectDeduction/lock/lockReceiptV2.lua";
 import LOCK_UNWIND_UTILS_V2 from "./fullSubjectDeduction/lock/unwindLockV2.lua";
+import LUA_UTILS from "./luaUtils.lua";
 
 // ============================================================================
 // FULL SUBJECT HELPERS (V2 cache scripts)
 // ============================================================================
 
+import adjustSubjectBalanceMainScript from "./fullSubject/adjustSubjectBalance.lua";
 import setCachedFullSubjectScript from "./fullSubject/setCachedFullSubject.lua";
-import updateCustomerDataV2Script from "./fullSubject/updateCustomerDataV2.lua";
-import updateEntityDataV2Script from "./fullSubject/updateEntityDataV2.lua";
 import updateCachedInvoiceV2Script from "./fullSubject/updateCachedInvoice.lua";
+import updateCustomerDataV2Script from "./fullSubject/updateCustomerDataV2.lua";
 import updateCustomerProductOptionsScript from "./fullSubject/updateCustomerProduct/updateCustomerProductOptions.lua";
 import updateCustomerProductV2MainScript from "./fullSubject/updateCustomerProduct/updateCustomerProductV2.lua";
-import adjustSubjectBalanceMainScript from "./fullSubject/adjustSubjectBalance.lua";
+import updateEntityDataV2Script from "./fullSubject/updateEntityDataV2.lua";
 
 // ============================================================================
 // FULL SUBJECT DEDUCTION HELPERS (V2 cache — per-feature hash balances)
 // ============================================================================
 
-import READ_SUBJECT_BALANCES from "./fullSubjectDeduction/readSubjectBalances.lua";
 import CONTEXT_UTILS_V2 from "./fullSubjectDeduction/contextUtilsV2.lua";
-import DEDUCT_FROM_ROLLOVERS_V2 from "./fullSubjectDeduction/deductFromRolloversV2.lua";
 import DEDUCT_FROM_MAIN_BALANCE_V2 from "./fullSubjectDeduction/deductFromMainBalanceV2.lua";
+import DEDUCT_FROM_ROLLOVERS_V2 from "./fullSubjectDeduction/deductFromRolloversV2.lua";
+import DEDUCT_FROM_SUBJECT_BALANCES_MAIN from "./fullSubjectDeduction/deductFromSubjectBalances.lua";
+import READ_SUBJECT_BALANCES from "./fullSubjectDeduction/readSubjectBalances.lua";
 import RUN_DEDUCTION_ON_CONTEXT_V2 from "./fullSubjectDeduction/runDeductionOnContextV2.lua";
 import SPEND_LIMIT_UTILS_V2 from "./fullSubjectDeduction/spendLimitUtilsV2.lua";
 import UPDATE_AGGREGATED_BALANCES from "./fullSubjectDeduction/updateAggregatedBalances.lua";
-import DEDUCT_FROM_SUBJECT_BALANCES_MAIN from "./fullSubjectDeduction/deductFromSubjectBalances.lua";
 
 // ============================================================================
 // UPDATE SUBJECT BALANCES HELPERS (V2 cache — per-feature hash updates)
 // ============================================================================
 
-import UPDATE_CONTEXT_UTILS from "./fullSubject/updateSubjectBalances/updateContextUtils.lua";
 import APPLY_FIELD_UPDATES from "./fullSubject/updateSubjectBalances/applyFieldUpdates.lua";
+import UPDATE_CONTEXT_UTILS from "./fullSubject/updateSubjectBalances/updateContextUtils.lua";
 import UPDATE_SUBJECT_BALANCES_MAIN from "./fullSubject/updateSubjectBalances/updateSubjectBalances.lua";
 
 // ============================================================================
@@ -67,7 +68,7 @@ const FULL_CUSTOMER_KEY_BUILDERS = FULL_CUSTOMER_KEY_BUILDERS_RAW.replaceAll(
 // runs on the redisV2 instance: it tells Upstash every key the script touches
 // is declared via KEYS[] so per-key locks can be acquired instead of a global
 // serialization lock. See https://upstash.com/docs/redis/features/key-locking
-const UPSTASH_KEY_LOCKING_SHEBANG = "#!lua flags=allow-key-locking\n";
+export const UPSTASH_KEY_LOCKING_SHEBANG = "#!lua flags=allow-key-locking\n";
 
 // ============================================================================
 // MAIN SCRIPT
@@ -113,19 +114,19 @@ export const SET_FULL_CUSTOMER_CACHE_SCRIPT = `${FULL_CUSTOMER_KEY_BUILDERS}
 ${setFullCustomerCacheScript}`;
 
 /** Atomically set a FullSubject cache: subject view + all balance hashes. */
-export const SET_CACHED_FULL_SUBJECT_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${setCachedFullSubjectScript}`;
+export const SET_CACHED_FULL_SUBJECT_SCRIPT = `${setCachedFullSubjectScript}`;
 
 /** Atomically update top-level customer fields in the cached FullSubject. */
-export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${updateCustomerDataV2Script}`;
+export const UPDATE_CUSTOMER_DATA_V2_SCRIPT = `${updateCustomerDataV2Script}`;
 
 /** Atomically update top-level entity fields in the cached FullSubject. */
-export const UPDATE_ENTITY_DATA_V2_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${updateEntityDataV2Script}`;
+export const UPDATE_ENTITY_DATA_V2_SCRIPT = `${updateEntityDataV2Script}`;
 
 /** Atomically upsert an invoice in the cached FullSubject invoices array. */
-export const UPDATE_CACHED_INVOICE_V2_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${updateCachedInvoiceV2Script}`;
+export const UPDATE_CACHED_INVOICE_V2_SCRIPT = `${updateCachedInvoiceV2Script}`;
 
 /** Atomically update customer product fields in the cached FullSubject. */
-export const UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${updateCustomerProductOptionsScript}
+export const UPDATE_CUSTOMER_PRODUCT_V2_SCRIPT = `${updateCustomerProductOptionsScript}
 ${updateCustomerProductV2MainScript}`;
 
 // ============================================================================
@@ -169,20 +170,24 @@ export const UPDATE_CUSTOMER_DATA_SCRIPT = `${LUA_UTILS}
 ${updateCustomerDataMainScript}`;
 
 import APPEND_ENTITY_TO_CUSTOMER_SCRIPT_RAW from "./customers/appendEntityToCustomer.lua";
-export const APPEND_ENTITY_TO_CUSTOMER_SCRIPT = APPEND_ENTITY_TO_CUSTOMER_SCRIPT_RAW;
+export const APPEND_ENTITY_TO_CUSTOMER_SCRIPT =
+	APPEND_ENTITY_TO_CUSTOMER_SCRIPT_RAW;
 
 import UPDATE_ENTITY_IN_CUSTOMER_SCRIPT_RAW from "./customers/updateEntityInCustomer.lua";
-export const UPDATE_ENTITY_IN_CUSTOMER_SCRIPT = UPDATE_ENTITY_IN_CUSTOMER_SCRIPT_RAW;
+export const UPDATE_ENTITY_IN_CUSTOMER_SCRIPT =
+	UPDATE_ENTITY_IN_CUSTOMER_SCRIPT_RAW;
 
 import UPSERT_INVOICE_IN_CUSTOMER_SCRIPT_RAW from "./customers/upsertInvoice.lua";
-export const UPSERT_INVOICE_IN_CUSTOMER_SCRIPT = UPSERT_INVOICE_IN_CUSTOMER_SCRIPT_RAW;
+export const UPSERT_INVOICE_IN_CUSTOMER_SCRIPT =
+	UPSERT_INVOICE_IN_CUSTOMER_SCRIPT_RAW;
 
 // ============================================================================
 // CUSTOMER PRODUCT SCRIPTS
 // ============================================================================
 
 import UPDATE_CUSTOMER_PRODUCT_SCRIPT_RAW from "./customerProducts/updateCustomerProduct.lua";
-export const UPDATE_CUSTOMER_PRODUCT_SCRIPT = UPDATE_CUSTOMER_PRODUCT_SCRIPT_RAW;
+export const UPDATE_CUSTOMER_PRODUCT_SCRIPT =
+	UPDATE_CUSTOMER_PRODUCT_SCRIPT_RAW;
 
 // ============================================================================
 // FULL SUBJECT DEDUCTION SCRIPT (V2 cache — per-feature hash balances)
@@ -193,7 +198,7 @@ export const UPDATE_CUSTOMER_PRODUCT_SCRIPT = UPDATE_CUSTOMER_PRODUCT_SCRIPT_RAW
  * Reads from per-feature hash fields and writes back touched entitlements.
  * Composed from shared helper modules + V2-specific storage adapters.
  */
-export const DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${LUA_UTILS}
+export const DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
 ${READ_SUBJECT_BALANCES}
 ${CONTEXT_UTILS_V2}
 ${GET_TOTAL_BALANCE}
@@ -217,7 +222,7 @@ ${DEDUCT_FROM_SUBJECT_BALANCES_MAIN}`;
  * per-feature hash. Emits entity-level mutation logs so aggregated balances
  * stay in sync.
  */
-export const ADJUST_SUBJECT_BALANCE_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${LUA_UTILS}
+export const ADJUST_SUBJECT_BALANCE_SCRIPT = `${LUA_UTILS}
 ${UPDATE_CONTEXT_UTILS}
 ${UPDATE_AGGREGATED_BALANCES}
 ${adjustSubjectBalanceMainScript}`;
@@ -229,7 +234,7 @@ ${adjustSubjectBalanceMainScript}`;
  * aggregated balance propagation.
  * Called once per feature via pipeline.
  */
-export const UPDATE_SUBJECT_BALANCES_SCRIPT = `${UPSTASH_KEY_LOCKING_SHEBANG}${LUA_UTILS}
+export const UPDATE_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
 ${UPDATE_CONTEXT_UTILS}
 ${APPLY_FIELD_UPDATES}
 ${UPDATE_AGGREGATED_BALANCES}

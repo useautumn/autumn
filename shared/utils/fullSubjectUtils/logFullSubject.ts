@@ -62,7 +62,6 @@ export const logFullSubject = ({
 				feature_id: ae.feature_id,
 				balance: ae.balance,
 				unlimited: ae.unlimited,
-				entity_count: ae.entity_count,
 			})) ?? "N/A",
 	};
 

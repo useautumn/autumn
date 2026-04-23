@@ -6,6 +6,7 @@ import { SubscriptionSchema } from "../../subModels/subModels.js";
 import { CustomerSchema } from "../cusModels.js";
 import { EntitySchema } from "../entityModels/entityModels.js";
 import { InvoiceSchema } from "../invoiceModels/invoiceModels.js";
+import { AggregatedSubjectFlagSchema } from "./normalizedFullSubjectModel.js";
 
 export const SubjectType = {
 	Customer: "customer",
@@ -33,6 +34,9 @@ export const FullSubjectSchema = z.object({
 	aggregated_customer_products: z.array(FullCusProductSchema).optional(),
 	aggregated_customer_entitlements: z
 		.array(FullAggregatedFeatureBalanceSchema)
+		.optional(),
+	aggregated_subject_flags: z
+		.record(z.string(), AggregatedSubjectFlagSchema)
 		.optional(),
 });
 

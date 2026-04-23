@@ -1,6 +1,6 @@
 import type { AggregatedFeatureBalance, SubjectBalance } from "@autumn/shared";
+import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildSharedFullSubjectBalanceKey } from "../builders/buildSharedFullSubjectBalanceKey.js";
 import { AGGREGATED_BALANCE_FIELD } from "../config/fullSubjectCacheConfig.js";
 import { roundSubjectBalance } from "../roundCacheBalance.js";
@@ -14,6 +14,14 @@ export type FeatureBalanceResult = {
 	balances: SubjectBalance[];
 	aggregated?: AggregatedFeatureBalance;
 };
+
+export type FeatureBalanceOutcome =
+	| { kind: "ok"; value: FeatureBalanceResult }
+	| { kind: "missing" };
+
+export type FeatureBalancesBatchOutcome =
+	| { kind: "ok"; value: FeatureBalanceResult[] }
+	| { kind: "missing" };
 
 const readFeatureBalancesFromMaster = async ({
 	ctx,
@@ -48,7 +56,7 @@ export const getCachedFeatureBalance = async ({
 	featureId: string;
 	customerEntitlementIds: string[];
 	readMaster?: boolean;
-}): Promise<FeatureBalanceResult | undefined> => {
+}): Promise<FeatureBalanceOutcome> => {
 	const { org, env, redisV2 } = ctx;
 	const balanceKey = buildSharedFullSubjectBalanceKey({
 		orgId: org.id,
@@ -58,29 +66,28 @@ export const getCachedFeatureBalance = async ({
 	});
 
 	if (customerEntitlementIds.length === 0) {
-		return { featureId, balances: [] };
+		return { kind: "ok", value: { featureId, balances: [] } };
 	}
 
-	const results = readMaster
-		? await tryRedisRead(
-				() =>
-					readFeatureBalancesFromMaster({
+	const results = await runRedisOp({
+		operation: () =>
+			readMaster
+				? readFeatureBalancesFromMaster({
 						ctx,
 						balanceKey,
 						customerEntitlementIds,
-					}),
-				redisV2,
-			)
-		: await tryRedisRead(
-				() => redisV2.hmget(balanceKey, ...customerEntitlementIds),
-				redisV2,
-			);
-	if (!results) return undefined;
+					})
+				: redisV2.hmget(balanceKey, ...customerEntitlementIds),
+		source: "getCachedFeatureBalance",
+		redisInstance: redisV2,
+	});
+
+	if (!results) return { kind: "missing" };
 
 	const balances: SubjectBalance[] = [];
 	for (let i = 0; i < customerEntitlementIds.length; i++) {
 		const entryJson = results[i];
-		if (!entryJson) return undefined;
+		if (!entryJson) return { kind: "missing" };
 		try {
 			const parsedBalance = JSON.parse(entryJson) as SubjectBalance;
 			balances.push(
@@ -91,11 +98,11 @@ export const getCachedFeatureBalance = async ({
 				}),
 			);
 		} catch {
-			return undefined;
+			return { kind: "missing" };
 		}
 	}
 
-	return { featureId, balances };
+	return { kind: "ok", value: { featureId, balances } };
 };
 
 export const getCachedFeatureBalancesBatch = async ({
@@ -110,8 +117,8 @@ export const getCachedFeatureBalancesBatch = async ({
 	featureIds: string[];
 	customerEntitlementIdsByFeatureId: Record<string, string[]>;
 	includeAggregated?: boolean;
-}): Promise<FeatureBalanceResult[] | undefined> => {
-	if (featureIds.length === 0) return [];
+}): Promise<FeatureBalancesBatchOutcome> => {
+	if (featureIds.length === 0) return { kind: "ok", value: [] };
 
 	const { org, env, redisV2 } = ctx;
 	const pipeline = redisV2.pipeline();
@@ -132,8 +139,13 @@ export const getCachedFeatureBalancesBatch = async ({
 		);
 	}
 
-	const results = await tryRedisRead(() => pipeline.exec(), redisV2);
-	if (!results) return undefined;
+	const results = await runRedisOp({
+		operation: () => pipeline.exec(),
+		source: "getCachedFeatureBalancesBatch",
+		redisInstance: redisV2,
+	});
+
+	if (!results) return { kind: "missing" };
 
 	const featureBalances: FeatureBalanceResult[] = [];
 
@@ -141,7 +153,7 @@ export const getCachedFeatureBalancesBatch = async ({
 		const customerEntitlementIds =
 			customerEntitlementIdsByFeatureId[featureIds[i]] ?? [];
 		const allValues = results[i]?.[1] as (string | null)[] | null;
-		if (!allValues) return undefined;
+		if (!allValues) return { kind: "missing" };
 
 		let aggregated: AggregatedFeatureBalance | undefined;
 		let ceValues: (string | null)[];
@@ -163,11 +175,12 @@ export const getCachedFeatureBalancesBatch = async ({
 			ceValues = allValues;
 		}
 
-		if (ceValues.length !== customerEntitlementIds.length) return undefined;
+		if (ceValues.length !== customerEntitlementIds.length)
+			return { kind: "missing" };
 
 		const balances: SubjectBalance[] = [];
 		for (const entryJson of ceValues) {
-			if (!entryJson) return undefined;
+			if (!entryJson) return { kind: "missing" };
 			try {
 				const parsedBalance = JSON.parse(entryJson) as SubjectBalance;
 				balances.push(
@@ -178,7 +191,7 @@ export const getCachedFeatureBalancesBatch = async ({
 					}),
 				);
 			} catch {
-				return undefined;
+				return { kind: "missing" };
 			}
 		}
 
@@ -189,5 +202,5 @@ export const getCachedFeatureBalancesBatch = async ({
 		});
 	}
 
-	return featureBalances;
+	return { kind: "ok", value: featureBalances };
 };

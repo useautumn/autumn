@@ -229,16 +229,15 @@ const wrapCustomCommand = ({
 			);
 
 			if (result && typeof (result as Promise<unknown>).then === "function") {
-				return (result as Promise<unknown>).then(
-					(val) => {
+				(result as Promise<unknown>).then(
+					() => {
 						finalizeSpan({ spanCtx });
-						return val;
 					},
 					(err) => {
 						finalizeSpan({ spanCtx, error: err });
-						throw err;
 					},
 				);
+				return result;
 			}
 
 			finalizeSpan({ spanCtx });
@@ -330,16 +329,15 @@ export const instrumentRedis = ({
 			);
 
 			if (result && typeof (result as Promise<unknown>).then === "function") {
-				return (result as Promise<unknown>).then(
-					(val) => {
+				(result as Promise<unknown>).then(
+					() => {
 						finalizeSpan({ spanCtx });
-						return val;
 					},
 					(err) => {
 						finalizeSpan({ spanCtx, error: err });
-						throw err;
 					},
 				);
+				return result;
 			}
 
 			finalizeSpan({ spanCtx });

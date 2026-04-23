@@ -1,12 +1,9 @@
 import type { ParsedCheckParams } from "@autumn/shared";
-import { Result } from "better-result";
+import { withRedisFallback } from "@/external/redis/utils/withRedisFallback.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckData } from "@/internal/api/check/checkTypes/CheckData.js";
 import { getCheckFailOpenFallback } from "@/internal/api/check/checkUtils/getCheckFailOpenFallback.js";
-import {
-	isFullSubjectRolloutEnabled,
-	isRetryableFullSubjectRolloutError,
-} from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 import { runCheckLegacyFlow } from "./runCheckLegacyFlow.js";
 import { runCheckV2 } from "./runCheckV2.js";
@@ -21,38 +18,26 @@ export const runCheckWithRollout = async ({
 	body: ParsedCheckParams;
 	requiredBalance: number;
 }): Promise<RunCheckResult<CheckData | CheckDataV2>> => {
-	if (isFullSubjectRolloutEnabled({ ctx })) {
-		const result = await Result.tryPromise({
-			try: () =>
-				runCheckV2({
+	if (!isFullSubjectRolloutEnabled({ ctx })) {
+		return runCheckLegacyFlow({ ctx, body, requiredBalance });
+	}
+
+	return await withRedisFallback<RunCheckResult<CheckData | CheckDataV2>>({
+		primary: () => runCheckV2({ ctx, body, requiredBalance }),
+		fallback: (error) => {
+			ctx.logger.warn(
+				{ source: error.source, reason: error.reason },
+				"[check] Redis unavailable, returning fail-open response",
+			);
+			return {
+				checkData: null,
+				response: getCheckFailOpenFallback({
 					ctx,
 					body,
 					requiredBalance,
-				}),
-			catch: (error: unknown) => error,
-		});
-
-		if (Result.isOk(result)) return result.value;
-
-		const error = result.error;
-		if (!isRetryableFullSubjectRolloutError({ error })) {
-			throw error;
-		}
-
-		return {
-			checkData: null,
-			response: getCheckFailOpenFallback({
-				ctx,
-				body,
-				requiredBalance,
-				error,
-			}) as Record<string, unknown>,
-		};
-	}
-
-	return runCheckLegacyFlow({
-		ctx,
-		body,
-		requiredBalance,
+					error,
+				}) as Record<string, unknown>,
+			};
+		},
 	});
 };

@@ -1,9 +1,9 @@
 import { type FullSubject, normalizedToFullSubject } from "@autumn/shared";
+import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { applyLiveAggregatedBalances } from "../balances/applyLiveAggregatedBalances.js";
 import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
@@ -35,7 +35,12 @@ export const getCachedFullSubject = async ({
 		entityId,
 	});
 
-	const cachedRaw = await tryRedisRead(() => redisV2.get(subjectKey), redisV2);
+	const cachedRaw = await runRedisOp({
+		operation: () => redisV2.get(subjectKey),
+		source: "getCachedFullSubject",
+		redisInstance: redisV2,
+	});
+
 	if (!cachedRaw) return undefined;
 
 	let cached: CachedFullSubject;
@@ -95,7 +100,7 @@ export const getCachedFullSubject = async ({
 	}
 
 	const isCustomerSubject = !entityId;
-	const balances = await getCachedFeatureBalancesBatch({
+	const balancesOutcome = await getCachedFeatureBalancesBatch({
 		ctx,
 		customerId,
 		featureIds: cached.meteredFeatures,
@@ -103,9 +108,23 @@ export const getCachedFullSubject = async ({
 		includeAggregated: isCustomerSubject,
 	});
 
-	if (!balances || balances.length !== cached.meteredFeatures.length) {
+	if (balancesOutcome.kind === "missing") {
 		logger.warn(
-			`[getCachedFullSubject] Incomplete cache for ${customerId}${entityId ? `:${entityId}` : ""}: expected ${cached.meteredFeatures.length} balance keys, got ${balances?.length ?? 0}. Rebuilding from DB, source: ${source}`,
+			`[getCachedFullSubject] Incomplete cache for ${customerId}${entityId ? `:${entityId}` : ""}: expected ${cached.meteredFeatures.length} balance keys, rebuilding from DB, source: ${source}`,
+		);
+		await invalidateCachedFullSubjectExact({
+			ctx,
+			customerId,
+			entityId,
+			source: "incomplete-shared-balances",
+		});
+		return undefined;
+	}
+
+	const balances = balancesOutcome.value;
+	if (balances.length !== cached.meteredFeatures.length) {
+		logger.warn(
+			`[getCachedFullSubject] Incomplete cache for ${customerId}${entityId ? `:${entityId}` : ""}: expected ${cached.meteredFeatures.length} balance keys, got ${balances.length}. Rebuilding from DB, source: ${source}`,
 		);
 		await invalidateCachedFullSubjectExact({
 			ctx,

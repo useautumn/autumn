@@ -2,60 +2,39 @@ import { type SQL, sql } from "drizzle-orm";
 import { getEntityOptionsAggregateFragments } from "./getEntityOptionsAggregateFragments.js";
 
 /**
- * Rollover CTEs driven from the shared `entity_product_cus_ents` and
- * `entity_loose_cus_ents` base CTEs — avoids re-scanning `customer_entitlements`
- * and `customer_products` per branch.
+ * Rollover CTEs:
+ *   - entity_rollover_keys: per-entity rollover balances, built ONLY from
+ *     jsonb_each(r.entities). Keys only exist in the map when a rollover row
+ *     explicitly carries a per-entity breakdown.
+ *   - entity_rollover_feature: feature-level rollover totals, summed directly
+ *     off r.balance / r.usage (one add per active rollover).
  */
 const buildEntityRolloverCtes = () => sql`
-		entity_rollover_rows AS (
-			-- Top-level rollover: one row per (rollover × cus_ent).
-			-- entity_key = cp.internal_entity_id for product-attached, ce.internal_entity_id for loose.
-			SELECT
-				ce.internal_feature_id,
-				ce.internal_customer_id,
-				COALESCE(ce.cp_entity_key, ce.internal_entity_id) AS entity_key,
-				r.balance::numeric AS rollover_balance,
-				COALESCE(r.usage, 0)::numeric AS rollover_usage
-			FROM rollovers r
-			JOIN entity_level_cus_ents ce ON r.cus_ent_id = ce.id
-			WHERE (r.expires_at IS NULL OR r.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-
-			UNION ALL
-
-			-- Per-entity rollover from jsonb_each(r.entities).
+		entity_rollover_keys AS (
 			SELECT
 				ce.internal_feature_id,
 				ce.internal_customer_id,
 				kv.entity_key AS entity_key,
-				COALESCE((kv.entity_value->>'balance')::numeric, 0) AS rollover_balance,
-				COALESCE((kv.entity_value->>'usage')::numeric, 0) AS rollover_usage
+				SUM(COALESCE((kv.entity_value->>'balance')::numeric, 0)) AS rollover_balance,
+				SUM(COALESCE((kv.entity_value->>'usage')::numeric, 0)) AS rollover_usage
 			FROM rollovers r
 			JOIN entity_level_cus_ents ce ON r.cus_ent_id = ce.id
 			CROSS JOIN LATERAL jsonb_each(r.entities) AS kv(entity_key, entity_value)
 			WHERE jsonb_typeof(r.entities) = 'object'
 				AND (r.expires_at IS NULL OR r.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-		),
-
-		entity_rollover_keys AS (
-			SELECT
-				internal_feature_id,
-				internal_customer_id,
-				entity_key,
-				SUM(rollover_balance) AS rollover_balance,
-				SUM(rollover_usage) AS rollover_usage
-			FROM entity_rollover_rows
-			WHERE entity_key IS NOT NULL
-			GROUP BY internal_feature_id, internal_customer_id, entity_key
+			GROUP BY ce.internal_feature_id, ce.internal_customer_id, kv.entity_key
 		),
 
 		entity_rollover_feature AS (
 			SELECT
-				internal_feature_id,
-				internal_customer_id,
-				SUM(rollover_balance) AS rollover_balance,
-				SUM(rollover_usage) AS rollover_usage
-			FROM entity_rollover_rows
-			GROUP BY internal_feature_id, internal_customer_id
+				ce.internal_feature_id,
+				ce.internal_customer_id,
+				SUM(r.balance::numeric) AS rollover_balance,
+				SUM(COALESCE(r.usage, 0)::numeric) AS rollover_usage
+			FROM rollovers r
+			JOIN entity_level_cus_ents ce ON r.cus_ent_id = ce.id
+			WHERE (r.expires_at IS NULL OR r.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+			GROUP BY ce.internal_feature_id, ce.internal_customer_id
 		)
 `;
 
@@ -117,7 +96,7 @@ export const getEntityAggregateFragments = ({
 				AND ce.customer_product_id IS NULL
 				AND ce.internal_entity_id IS NOT NULL
 				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-				AND ce.balance != 0
+				AND (ce.balance != 0 OR ce.unlimited IS TRUE)
 				${featureFilter}
 		),
 
@@ -145,65 +124,23 @@ export const getEntityAggregateFragments = ({
 
 		${entityOptionsAggregateFragments.ctes},
 
-		entity_balance_rows AS (
-			-- Top-level: one row per cus_ent (product-attached or loose).
-			-- entity_key = cp.internal_entity_id for product-attached, ce.internal_entity_id for loose.
-			SELECT
-				COALESCE(ce.external_id, ce.id) AS api_id,
-				ce.internal_feature_id,
-				ce.internal_customer_id,
-				ce.feature_id,
-				COALESCE(ent.allowance, 0)::numeric AS allowance,
-				ce.balance::numeric AS balance,
-				COALESCE(ce.adjustment, 0)::numeric AS adjustment,
-				COALESCE(ce.additional_balance, 0)::numeric AS additional_balance,
-				ce.unlimited,
-				ce.usage_allowed,
-				COALESCE(ce.cp_entity_key, ce.internal_entity_id) AS entity_key,
-				ce.balance::numeric AS entity_balance,
-				COALESCE(ce.adjustment, 0)::numeric AS entity_adjustment,
-				COALESCE(ce.additional_balance, 0)::numeric AS entity_additional_balance
-			FROM entity_level_cus_ents ce
-			JOIN entitlements ent ON ce.entitlement_id = ent.id
-
-			UNION ALL
-
-			-- Per-entity: N rows per cus_ent from jsonb_each(ce.entities).
-			-- balance/adj/additional = 0 to avoid double-counting at the aggregate level.
-			SELECT
-				COALESCE(ce.external_id, ce.id) AS api_id,
-				ce.internal_feature_id,
-				ce.internal_customer_id,
-				ce.feature_id,
-				COALESCE(ent.allowance, 0)::numeric AS allowance,
-				0::numeric AS balance,
-				0::numeric AS adjustment,
-				0::numeric AS additional_balance,
-				ce.unlimited,
-				ce.usage_allowed,
-				kv.entity_key AS entity_key,
-				(kv.entity_value->>'balance')::numeric AS entity_balance,
-				COALESCE((kv.entity_value->>'adjustment')::numeric, 0) AS entity_adjustment,
-				COALESCE((kv.entity_value->>'additional_balance')::numeric, 0) AS entity_additional_balance
-			FROM entity_level_cus_ents ce
-			JOIN entitlements ent ON ce.entitlement_id = ent.id
-			CROSS JOIN LATERAL jsonb_each(ce.entities) AS kv(entity_key, entity_value)
-			WHERE jsonb_typeof(ce.entities) = 'object'
-		),
-
 		${buildEntityRolloverCtes()},
 
+		-- Per-entity balance map: built ONLY from jsonb_each(ce.entities) so
+		-- that entities keys reflect real per-entity breakdowns, not every
+		-- product-attached cus_ent. Summed across cus_ents for the same key.
 		entity_balance_keys AS (
 			SELECT
-				internal_feature_id,
-				internal_customer_id,
-				entity_key,
-				SUM(entity_balance) AS balance,
-				SUM(entity_adjustment) AS adjustment,
-				SUM(entity_additional_balance) AS additional_balance
-			FROM entity_balance_rows
-			WHERE entity_key IS NOT NULL
-			GROUP BY internal_feature_id, internal_customer_id, entity_key
+				ce.internal_feature_id,
+				ce.internal_customer_id,
+				kv.entity_key,
+				SUM((kv.entity_value->>'balance')::numeric) AS balance,
+				SUM(COALESCE((kv.entity_value->>'adjustment')::numeric, 0)) AS adjustment,
+				SUM(COALESCE((kv.entity_value->>'additional_balance')::numeric, 0)) AS additional_balance
+			FROM entity_level_cus_ents ce
+			CROSS JOIN LATERAL jsonb_each(ce.entities) AS kv(entity_key, entity_value)
+			WHERE jsonb_typeof(ce.entities) = 'object'
+			GROUP BY ce.internal_feature_id, ce.internal_customer_id, kv.entity_key
 		),
 
 		entity_aggregate_map AS (
@@ -250,21 +187,23 @@ export const getEntityAggregateFragments = ({
 			GROUP BY ejk.internal_feature_id, ejk.internal_customer_id
 		),
 
+		-- Feature-level totals: summed directly off entity_level_cus_ents
+		-- (one add per cus_ent).
 		entity_aggregate_totals AS (
 			SELECT
-				MIN(ebr.api_id) AS api_id,
-				ebr.internal_feature_id,
-				ebr.internal_customer_id,
-				MIN(ebr.feature_id) AS feature_id,
-				SUM(ebr.allowance) AS allowance_total,
-				SUM(ebr.balance) AS balance,
-				SUM(ebr.adjustment) AS adjustment,
-				SUM(ebr.additional_balance) AS additional_balance,
-				BOOL_OR(ebr.unlimited) AS unlimited,
-				BOOL_OR(ebr.usage_allowed) AS usage_allowed,
-				COUNT(DISTINCT ebr.entity_key) FILTER (WHERE ebr.entity_key IS NOT NULL) AS entity_count
-			FROM entity_balance_rows ebr
-			GROUP BY ebr.internal_feature_id, ebr.internal_customer_id
+				MIN(COALESCE(ce.external_id, ce.id)) AS api_id,
+				ce.internal_feature_id,
+				ce.internal_customer_id,
+				MIN(ce.feature_id) AS feature_id,
+				SUM(COALESCE(ent.allowance, 0)::numeric) AS allowance_total,
+				SUM(ce.balance::numeric) AS balance,
+				SUM(COALESCE(ce.adjustment, 0)::numeric) AS adjustment,
+				SUM(COALESCE(ce.additional_balance, 0)::numeric) AS additional_balance,
+				BOOL_OR(ce.unlimited) AS unlimited,
+				BOOL_OR(ce.usage_allowed) AS usage_allowed
+			FROM entity_level_cus_ents ce
+			JOIN entitlements ent ON ce.entitlement_id = ent.id
+			GROUP BY ce.internal_feature_id, ce.internal_customer_id
 		),
 
 		entity_aggregated_cus_entitlements AS (
@@ -282,7 +221,6 @@ export const getEntityAggregateFragments = ({
 				COALESCE(erf.rollover_usage, 0) AS rollover_usage,
 				eat.unlimited,
 				eat.usage_allowed,
-				eat.entity_count,
 				eam.entities
 			FROM entity_aggregate_totals eat
 			LEFT JOIN entity_aggregate_map eam

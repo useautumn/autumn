@@ -165,6 +165,16 @@ export type UpdateCustomerBillingControlsRequest = {
   overageAllowed?: Array<UpdateCustomerOverageAllowedRequest> | undefined;
 };
 
+/**
+ * Miscellaneous configurations for the customer.
+ */
+export type UpdateCustomerConfigRequest = {
+  /**
+   * Whether to disable the shared customer-level pool for entities.
+   */
+  disablePooledBalance?: boolean | undefined;
+};
+
 export type UpdateCustomerParams = {
   /**
    * ID of the customer to update
@@ -198,6 +208,10 @@ export type UpdateCustomerParams = {
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls?: UpdateCustomerBillingControlsRequest | undefined;
+  /**
+   * Miscellaneous configurations for the customer.
+   */
+  config?: UpdateCustomerConfigRequest | undefined;
   /**
    * Your unique identifier for the customer
    */
@@ -552,6 +566,16 @@ export type UpdateCustomerFlags = {
 };
 
 /**
+ * Configuration for the customer.
+ */
+export type UpdateCustomerConfigResponse = {
+  /**
+   * Whether to disable the shared customer-level pool for entities.
+   */
+  disablePooledBalance?: boolean | undefined;
+};
+
+/**
  * OK
  */
 export type UpdateCustomerResponse = {
@@ -611,6 +635,10 @@ export type UpdateCustomerResponse = {
    * Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
    */
   flags: { [k: string]: UpdateCustomerFlags };
+  /**
+   * Configuration for the customer.
+   */
+  config?: UpdateCustomerConfigResponse | undefined;
 };
 
 /** @internal */
@@ -860,6 +888,36 @@ export function updateCustomerBillingControlsRequestToJSON(
 }
 
 /** @internal */
+export type UpdateCustomerConfigRequest$Outbound = {
+  disable_pooled_balance?: boolean | undefined;
+};
+
+/** @internal */
+export const UpdateCustomerConfigRequest$outboundSchema: z.ZodMiniType<
+  UpdateCustomerConfigRequest$Outbound,
+  UpdateCustomerConfigRequest
+> = z.pipe(
+  z.object({
+    disablePooledBalance: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      disablePooledBalance: "disable_pooled_balance",
+    });
+  }),
+);
+
+export function updateCustomerConfigRequestToJSON(
+  updateCustomerConfigRequest: UpdateCustomerConfigRequest,
+): string {
+  return JSON.stringify(
+    UpdateCustomerConfigRequest$outboundSchema.parse(
+      updateCustomerConfigRequest,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateCustomerParams$Outbound = {
   customer_id: string;
   name?: string | null | undefined;
@@ -869,6 +927,7 @@ export type UpdateCustomerParams$Outbound = {
   stripe_id?: string | null | undefined;
   send_email_receipts?: boolean | undefined;
   billing_controls?: UpdateCustomerBillingControlsRequest$Outbound | undefined;
+  config?: UpdateCustomerConfigRequest$Outbound | undefined;
   new_customer_id?: string | undefined;
 };
 
@@ -887,6 +946,9 @@ export const UpdateCustomerParams$outboundSchema: z.ZodMiniType<
     sendEmailReceipts: z.optional(z.boolean()),
     billingControls: z.optional(
       z.lazy(() => UpdateCustomerBillingControlsRequest$outboundSchema),
+    ),
+    config: z.optional(
+      z.lazy(() => UpdateCustomerConfigRequest$outboundSchema),
     ),
     newCustomerId: z.optional(z.string()),
   }),
@@ -1317,6 +1379,31 @@ export function updateCustomerFlagsFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerConfigResponse$inboundSchema: z.ZodMiniType<
+  UpdateCustomerConfigResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    disable_pooled_balance: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "disable_pooled_balance": "disablePooledBalance",
+    });
+  }),
+);
+
+export function updateCustomerConfigResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerConfigResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerConfigResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerConfigResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerResponse,
   unknown
@@ -1342,6 +1429,9 @@ export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
     flags: z.record(
       z.string(),
       z.lazy(() => UpdateCustomerFlags$inboundSchema),
+    ),
+    config: types.optional(
+      z.lazy(() => UpdateCustomerConfigResponse$inboundSchema),
     ),
   }),
   z.transform((v) => {

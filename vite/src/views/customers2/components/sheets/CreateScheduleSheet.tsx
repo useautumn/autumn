@@ -359,7 +359,7 @@ export function getScheduleForScope({
 
 export function CreateScheduleSheet() {
 	const { closeSheet } = useSheetStore();
-	const { customer, testClockFrozenTimeMs } = useCusQuery();
+	const { customer, testClockFrozenTimeMs } = useCusQuery({ schedule: true });
 	const initialEntityId =
 		new URLSearchParams(window.location.search).get("entity_id") ?? undefined;
 	const [scopeEntityId, setScopeEntityId] = useState<string | undefined>(
