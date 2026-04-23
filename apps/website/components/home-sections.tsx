@@ -1,21 +1,17 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect } from "react";
+import FAQ from "./faq";
+import Features from "./features";
+import Footer from "./footer";
 import Hero from "./hero";
+import Pricing from "./pricing";
+import PricingModels from "./pricing-models";
+import Problem from "./problem";
+import ProductionScale from "./production-scale";
 import SectionDivider from "./section-divider";
-
-const ProductionScale = dynamic(
-	() => import("@/components/production-scale"),
-);
-const Problem = dynamic(() => import("@/components/problem"));
-const Solution = dynamic(() => import("@/components/solution"));
-const Features = dynamic(() => import("@/components/features"));
-const PricingModels = dynamic(() => import("@/components/pricing-models"));
-const Testimonials = dynamic(() => import("@/components/testimonials"));
-const Pricing = dynamic(() => import("@/components/pricing"));
-const FAQ = dynamic(() => import("@/components/faq"));
-const Footer = dynamic(() => import("@/components/footer"));
+import Solution from "./solution";
+import Testimonials from "./testimonials";
 
 function scrollToHash() {
 	const hash = window.location.hash;

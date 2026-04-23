@@ -3,15 +3,16 @@
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { motion } from "motion/react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CTALines, IconCTADocs, IconCTAStart } from "@/app/constant";
-import AutumnConfig from "./autumn-config";
 
-// import dynamic from "next/dynamic";
-
-// const AutumnConfig = dynamic(() => import("./autumn-config"), { ssr: false });
+// `AutumnConfig` pulls in `react-syntax-highlighter` + `highlight.js` (~100KB
+// gzipped + meaningful parse cost on mobile). It only renders on `xl+`
+// viewports, so keep it out of the critical path for mobile users entirely.
+const AutumnConfig = dynamic(() => import("./autumn-config"), { ssr: false });
 
 const BADGE_TEXT = "// 100% open source";
 
@@ -27,16 +28,45 @@ const getLoggedInHintCookie = () => {
 
 export default function Hero() {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const [displayedText, setDisplayedText] = useState("");
+	// Start with the final text so SSR/first paint shows "// 100% open source"
+	// immediately. The typewriter effect only runs on fast desktop hydration
+	// (it intentionally clears and re-scrambles this value); everywhere else
+	// the initial text is left alone.
+	const [displayedText, setDisplayedText] = useState(BADGE_TEXT);
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
+	// Gate the xl-only hero visual (background video + AutumnConfig syntax
+	// highlighter) behind an actual viewport check so mobile never downloads
+	// ~100KB of react-syntax-highlighter or 640KB of video that `hidden
+	// xl:block` would otherwise still fetch.
+	const [isXl, setIsXl] = useState(false);
 
 	// Read the hint cookie after mount to avoid SSR/CSR hydration mismatch.
 	useEffect(() => {
 		setIsLoggedIn(getLoggedInHintCookie() === true);
 	}, []);
 
+	useEffect(() => {
+		const mq = window.matchMedia("(min-width: 1280px)");
+		const update = () => setIsXl(mq.matches);
+		update();
+		mq.addEventListener("change", update);
+		return () => mq.removeEventListener("change", update);
+	}, []);
+
 	// Badge typewriter
 	useEffect(() => {
+		// Only run the typewriter scramble on fast desktop hydration. Initial
+		// state is already `BADGE_TEXT`, so bailing here leaves the SSR-rendered
+		// text in place. On mobile, tablets, or slow-hydration desktop this
+		// avoids a jarring "full text -> empty -> scrambled in" flash that
+		// fires many seconds after the page has already been visible.
+		if (
+			window.matchMedia("(max-width: 1023px)").matches ||
+			performance.now() > 300
+		) {
+			return;
+		}
+
 		const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*0123456789";
 		let intervalId: ReturnType<typeof setInterval> | null = null;
 		let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -76,6 +106,26 @@ export default function Hero() {
 
 	useGSAP(
 		() => {
+			// IMPORTANT: do NOT gate `.hero-root` behind opacity:0 here or in JSX.
+			// GSAP ships in a code-split chunk, so if the class were `opacity-0`
+			// by default the hero would stay invisible for the full duration of
+			// the JS chunk download + parse + hydrate on mobile (~several seconds
+			// on Slow 4G). We use `gsap.from()` tweens so the content is visible
+			// by default and only animates if GSAP has loaded by first frame.
+
+			// Skip the entrance animation on non-desktop viewports, or on any
+			// device where hydration landed well after first paint. Running
+			// `.from()` tweens late would visibly hide already-painted content
+			// and animate it back in — a much worse UX than no animation.
+			// Threshold is tight (300ms) so the flash never happens on slow
+			// devices; only near-instant hydration earns the animation.
+			if (
+				window.matchMedia("(max-width: 1023px)").matches ||
+				performance.now() > 300
+			) {
+				return;
+			}
+
 			const tl = gsap.timeline({
 				defaults: { overwrite: "auto" },
 			});
@@ -160,22 +210,32 @@ export default function Hero() {
 							</p>
 						</div>
 					</div>
-					<div className="hero-reveal relative w-[50vw] max-w-[720px] p-16 py-0 mx-auto hidden xl:block">
-						<div className="absolute inset-0 z-0 pointer-events-none">
-							<video
-								src="/images/pricing-models/pricingbg.webm"
-								autoPlay
-								loop
-								muted
-								playsInline
-								className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100"
-							/>
-						</div>
-						<div className="relative z-10 translate-y-16 w-full flex justify-center">
-							<AutumnConfig
-								initialDelay={200}
-							/>
-						</div>
+					{/*
+					  Keep the wrapper itself in the SSR HTML with `hidden xl:block`
+					  so desktop gets the correct half-width hero layout from the
+					  first paint (no post-hydration layout shift). Only the heavy
+					  children (video + AutumnConfig) are client-gated on `isXl`
+					  so mobile never downloads them, and desktop fills the
+					  already-reserved space once it hydrates.
+					*/}
+					<div className="hero-reveal relative w-[50vw] max-w-[720px] min-h-[525px] p-16 py-0 mx-auto hidden xl:block">
+						{isXl && (
+							<>
+								<div className="absolute inset-0 z-0 pointer-events-none">
+									<video
+										src="/images/pricing-models/pricingbg.webm"
+										autoPlay
+										loop
+										muted
+										playsInline
+										className="absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100"
+									/>
+								</div>
+								<div className="relative z-10 translate-y-16 w-full flex justify-center">
+									<AutumnConfig initialDelay={200} />
+								</div>
+							</>
+						)}
 					</div>
 				</div>
 				<div className="border-t border-[#292929]" />
@@ -248,13 +308,22 @@ export default function Hero() {
 				{/* MOBILE VIEW*/}
 				<div className="relative block xl:hidden w-full overflow-hidden  bg-[#0F0F0F] mt-12">
 					<div className="relative overflow-hidden w-full p-7 flex items-center justify-center">
-						<video
-							src="/images/pricing-models/pricingbg.webm"
-							autoPlay
-							loop
-							muted
-							playsInline
-							className="hero-bg absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100"
+						{/*
+						  Mobile hero backdrop: a still frame of the desktop webm
+						  baked into a 63KB webp. The full 625KB looping video
+						  competes with the hero SVG + critical JS for bandwidth on
+						  slow mobile radios, and because this sits behind the
+						  dominant `autumn_mobile.svg` with `mix-blend-screen`, a
+						  static frame reads virtually identically.
+						*/}
+						<Image
+							src="/images/pricing-models/pricingbg-mobile.webp"
+							alt=""
+							aria-hidden="true"
+							fill
+							priority
+							sizes="100vw"
+							className="hero-bg absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100 pointer-events-none select-none"
 						/>
 
 						<div className="hero-reveal relative z-10 w-[96%] sm:w-[90%] max-w-[520px] flex justify-center items-center">

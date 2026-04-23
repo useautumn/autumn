@@ -192,6 +192,18 @@ export default function Navbar({
 	useGSAP(
 		() => {
 			if (!animateIntro) return;
+			// Skip the entrance animation on non-desktop viewports, or when
+			// hydration landed well after first paint. On mobile the GSAP chunk
+			// can arrive many seconds after the server-rendered navbar has
+			// already painted; hiding it with `gsap.set({ opacity: 0 })` at
+			// that point and re-animating it in is a visible flash that's much
+			// worse than no animation.
+			if (
+				window.matchMedia("(max-width: 1023px)").matches ||
+				performance.now() > 300
+			) {
+				return;
+			}
 			gsap.set(".nav-root", { opacity: 0 });
 			gsap.set(".nav-logo", {
 				opacity: 0,
