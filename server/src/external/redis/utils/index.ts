@@ -4,4 +4,4 @@ export {
 	tryRedisOp,
 	type UnavailableReason,
 } from "./runRedisOp.js";
-export { withRedisFallback } from "./withRedisFallback.js";
+export { withRedisFailOpen } from "./withRedisFailOpen.js";

@@ -3,7 +3,6 @@ import {
 	EntityNotFoundError,
 	type FullSubject,
 } from "@autumn/shared";
-import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
@@ -22,7 +21,7 @@ export const getOrSetCachedFullSubject = async ({
 	source?: string;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
-	const useRedis = !skipCache && shouldUseRedis();
+	const useRedis = !skipCache;
 
 	let fetchedSubjectViewEpoch = 0;
 
