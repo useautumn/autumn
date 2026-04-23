@@ -26,7 +26,7 @@ export const AccountSettings = ({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogTrigger asChild></DialogTrigger>
-			<DialogContent className="gap-0 p-0 rounded-xs w-[90%] max-w-[750px] h-[550px] flex flex-col justify-between">
+			<DialogContent className="top-1/2 gap-0 p-0 rounded-xs w-[90%] max-w-[750px] min-h-[420px] max-h-[85vh] flex flex-col justify-between">
 				<div className="flex flex-col gap-6 overflow-hidden h-full">
 					<DialogHeader className="px-6 pt-6">
 						<DialogTitle>Account</DialogTitle>
