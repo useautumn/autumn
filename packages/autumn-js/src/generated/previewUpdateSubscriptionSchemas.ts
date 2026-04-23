@@ -25,6 +25,11 @@ export const previewUpdateInvoiceModeSchema = z.object({
 	finalize: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
+export const previewUpdateAttachDiscountSchema = z.object({
+	rewardId: z.union([z.string(), z.undefined()]).optional(),
+	promotionCode: z.union([z.string(), z.undefined()]).optional(),
+});
+
 export const previewUpdateRecalculateBalancesSchema = z.object({
 	enabled: z.boolean(),
 });
@@ -207,6 +212,11 @@ export const previewUpdateInvoiceModeOutboundSchema = z.object({
 	finalize: z.boolean(),
 });
 
+export const previewUpdateAttachDiscountOutboundSchema = z.object({
+	reward_id: z.union([z.string(), z.undefined()]).optional(),
+	promotion_code: z.union([z.string(), z.undefined()]).optional(),
+});
+
 export const previewUpdateRecalculateBalancesOutboundSchema = z.object({
 	enabled: z.boolean(),
 });
@@ -231,6 +241,9 @@ export const previewUpdateParamsOutboundSchema = z.object({
 	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
 	redirect_mode: z.string(),
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
+	discounts: z
+		.union([z.array(previewUpdateAttachDiscountOutboundSchema), z.undefined()])
+		.optional(),
 	cancel_action: z.union([z.string(), z.undefined()]).optional(),
 	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
@@ -356,6 +369,9 @@ export const previewUpdateParamsSchema = z.object({
 		.union([previewUpdateRedirectModeSchema, z.undefined()])
 		.optional(),
 	subscriptionId: z.union([z.string(), z.undefined()]).optional(),
+	discounts: z
+		.union([z.array(previewUpdateAttachDiscountSchema), z.undefined()])
+		.optional(),
 	cancelAction: z
 		.union([previewUpdateCancelActionSchema, z.undefined()])
 		.optional(),
