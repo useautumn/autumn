@@ -154,7 +154,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec3: quantity < threshold — 
 	// threshold=100, quantity=50 → after top-up, balance will still be below threshold
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
-			threshold: 100,
+			threshold: 130,
 			quantity: 50,
 		}),
 	});
@@ -170,7 +170,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec3: quantity < threshold — 
 
 	const mid = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const midBalance = mid.balances[TestFeature.Messages].remaining;
-	const expectedMid = new Decimal(200).sub(170).add(50).toNumber();
+	const expectedMid = new Decimal(200).sub(170).add(100).toNumber();
 	expect(midBalance).toBe(expectedMid);
 
 	// Round 2: Track just 1 → balance=79 → still below threshold 100 → ANOTHER top-up fires
@@ -184,7 +184,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup ec3: quantity < threshold — 
 
 	const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	const afterBalance = after.balances[TestFeature.Messages].remaining;
-	const expectedAfter = new Decimal(80).sub(1).add(50).toNumber();
+	const expectedAfter = new Decimal(130).sub(1).add(100).toNumber();
 	expect(afterBalance).toBe(expectedAfter);
 });
 

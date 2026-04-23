@@ -10,11 +10,18 @@ interface PriceDisplayProps {
 	currency: string;
 }
 
-export function PriceDisplay({ product, currency }: PriceDisplayProps) {
+type ProductPriceDisplay =
+	| { type: "free" }
+	| { type: "price"; formattedPrice: string; intervalText: string };
+
+export function getProductPriceDisplay({
+	product,
+	currency,
+}: PriceDisplayProps): ProductPriceDisplay {
 	const priceItem = product?.items?.find((i) => isPriceItem(i));
 
 	if (!priceItem || priceItem.price === 0 || priceItem.price === undefined) {
-		return <span className="text-t2">Free</span>;
+		return { type: "free" };
 	}
 
 	const formattedPrice = formatAmount({
@@ -33,10 +40,20 @@ export function PriceDisplay({ product, currency }: PriceDisplayProps) {
 			})
 		: "one-off";
 
+	return { type: "price", formattedPrice, intervalText };
+}
+
+export function PriceDisplay({ product, currency }: PriceDisplayProps) {
+	const priceDisplay = getProductPriceDisplay({ product, currency });
+
+	if (priceDisplay.type === "free") {
+		return <span className="text-t2">Free</span>;
+	}
+
 	return (
 		<span className="flex items-center gap-1">
-			<span className="text-t1 font-semibold">{formattedPrice}</span>
-			<span className="text-t3">{intervalText}</span>
+			<span className="text-t1 font-semibold">{priceDisplay.formattedPrice}</span>
+			<span className="text-t3">{priceDisplay.intervalText}</span>
 		</span>
 	);
 }

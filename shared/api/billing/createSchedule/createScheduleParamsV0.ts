@@ -1,4 +1,6 @@
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
+import { InvoiceModeParamsSchema } from "@api/billing/common/invoiceModeParams";
+import { RedirectModeSchema } from "@api/billing/common/redirectMode";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { z } from "zod/v4";
@@ -63,6 +65,21 @@ export const CreateScheduleParamsV0Schema = z
 		}),
 		entity_id: z.string().optional().meta({
 			description: "Optional entity ID for an entity-scoped schedule.",
+		}),
+		invoice_mode: InvoiceModeParamsSchema.optional().meta({
+			description:
+				"Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.",
+		}),
+		success_url: z.string().optional().meta({
+			description: "URL to redirect to after successful checkout.",
+		}),
+		checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
+			description:
+				"Additional parameters to pass into the creation of the Stripe checkout session.",
+		}),
+		redirect_mode: RedirectModeSchema.default("if_required").meta({
+			description:
+				"Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.",
 		}),
 		phases: z
 			.tuple([CreateSchedulePhaseSchema])

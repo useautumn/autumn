@@ -1,10 +1,12 @@
-import { Globe } from "@phosphor-icons/react";
+import { AppEnv } from "@autumn/shared";
+import { Globe, Sliders } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
+import { useEnv } from "@/utils/envUtils";
 import { AdminOrgTable } from "@/views/admin/AdminOrgTable";
 import { AdminUserTable } from "@/views/admin/AdminUserTable";
 import { DefaultView } from "../DefaultView";
@@ -15,7 +17,9 @@ import { useAdmin } from "./hooks/useAdmin";
 
 export const AdminView = () => {
 	const navigate = useNavigate();
+	const env = useEnv();
 	const { isAdmin, isPending } = useAdmin();
+	const adminBasePath = env === AppEnv.Sandbox ? "/sandbox/admin" : "/admin";
 	const [activeTab, setActiveTab] = useState("orgs");
 
 	if (isPending) {
@@ -31,7 +35,7 @@ export const AdminView = () => {
 	}
 
 	const handleStopImpersonating = async () => {
-		const { data, error } = await authClient.admin.stopImpersonating();
+		const { error } = await authClient.admin.stopImpersonating();
 
 		if (error) {
 			toast.error("Something went wrong");
@@ -46,7 +50,16 @@ export const AdminView = () => {
 			<div className="flex justify-end absolute top-10 right-10 gap-2">
 				<CreateUser />
 				<Button
-					onClick={() => navigate("/admin/oauth")}
+					onClick={() => navigate(`${adminBasePath}/edge-config`)}
+					variant="outline"
+					size="sm"
+					className="w-fit"
+				>
+					<Sliders className="w-4 h-4 mr-1.5" />
+					Rollouts
+				</Button>
+				<Button
+					onClick={() => navigate(`${adminBasePath}/oauth`)}
 					variant="outline"
 					size="sm"
 					className="w-fit"

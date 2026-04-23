@@ -8,6 +8,7 @@ import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
+import { roundCacheBalance } from "@/internal/customers/cache/fullSubject/roundCacheBalance";
 
 // ═══════════════════════════════════════════════════════════════════
 // TRACK-EVENT-NAME1: Track using event_name instead of feature_id (single feature)
@@ -109,13 +110,19 @@ test.concurrent(`${chalk.yellowBright("track-event-name2: track with event_name 
 	expect(trackRes.value).toBe(deductValue);
 	expect(trackRes.balance).toBeNull();
 	expect(trackRes.balances).toBeDefined();
-	expect(trackRes.balances?.[TestFeature.Action1]?.current_balance).toBe(
-		expectedAction1Balance,
+	const currentBalance1 = roundCacheBalance(
+		trackRes.balances?.[TestFeature.Action1]?.current_balance,
 	);
-	expect(trackRes.balances?.[TestFeature.Action1]?.usage).toBe(deductValue);
-	expect(trackRes.balances?.[TestFeature.Action3]?.current_balance).toBe(
-		expectedAction3Balance,
+	expect(currentBalance1).toBe(expectedAction1Balance);
+
+	expect(
+		roundCacheBalance(trackRes.balances?.[TestFeature.Action1]?.usage),
+	).toBe(deductValue);
+
+	const currentBalance = roundCacheBalance(
+		trackRes.balances?.[TestFeature.Action3]?.current_balance,
 	);
+	expect(currentBalance).toBe(expectedAction3Balance);
 	expect(trackRes.balances?.[TestFeature.Action3]?.usage).toBe(deductValue);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

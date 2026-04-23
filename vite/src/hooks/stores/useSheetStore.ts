@@ -10,10 +10,11 @@ export type SheetType =
 	| "new-feature"
 	| "select-feature"
 	| "attach-product"
-	| "attach-product-v2"
+	| "attach-review"
+	| "attach-send-invoice"
 	| "subscription-detail"
 	| "subscription-update"
-	| "subscription-update-v2"
+	| "subscription-update-send-invoice"
 	| "subscription-cancel"
 	| "subscription-uncancel"
 	| "balance-edit"
@@ -32,6 +33,8 @@ export type SheetType =
 	| "record-usage"
 	| "check-balance"
 	| "create-schedule"
+	| "create-schedule-review"
+	| "create-schedule-send-invoice"
 	| null;
 
 // Store state interface
@@ -100,19 +103,13 @@ export const useSheetStore = create<SheetState>((set) => ({
 
 // Convenience selectors for common patterns
 export const useIsSheetOpen = () => useSheetStore((s) => s.type !== null);
-const useIsEditingPlan = () => useSheetStore((s) => s.type === "edit-plan");
-const useIsEditingFeature = () =>
-	useSheetStore((s) => s.type === "edit-feature");
-const useIsCreatingFeature = () =>
-	useSheetStore((s) => s.type === "new-feature" || s.itemId === "new");
 export const useIsAttachingProduct = () =>
-	useSheetStore((s) => s.type === "attach-product");
-const useIsEditingPlanPrice = () =>
-	useSheetStore((s) => s.type === "edit-plan-price");
-const useIsViewingSubscriptionDetail = () =>
-	useSheetStore((s) => s.type === "subscription-detail");
-const useIsUpdatingSubscription = () =>
-	useSheetStore((s) => s.type === "subscription-update");
+	useSheetStore(
+		(s) =>
+			s.type === "attach-product" ||
+			s.type === "attach-review" ||
+			s.type === "attach-send-invoice",
+	);
 
 /**
  * Hook to handle Escape key to close sheet and unfocus active elements

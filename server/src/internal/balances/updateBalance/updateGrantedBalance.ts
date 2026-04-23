@@ -51,6 +51,7 @@ export const updateGrantedBalance = async ({
 		.toNumber();
 
 	const targetCusEnt = cusEnts[0];
+	const targetFeatureId = featureId ?? targetCusEnt.entitlement.feature.id;
 	const isEntityScoped = isEntityScopedCusEnt(targetCusEnt);
 	const entityId = fullCustomer.entity?.id;
 
@@ -83,6 +84,7 @@ export const updateGrantedBalance = async ({
 			customerId: fullCustomer.id ?? "",
 			cusEntId: targetCusEnt.id,
 			updates: { entities: newEntities },
+			featureId: targetFeatureId,
 		});
 
 		targetCusEnt.entities = newEntities;
@@ -92,6 +94,7 @@ export const updateGrantedBalance = async ({
 			customerId: fullCustomer.id ?? "",
 			cusEntId: targetCusEnt.id,
 			updates: { adjustment: requiredAdjustment },
+			featureId: targetFeatureId,
 		});
 
 		targetCusEnt.adjustment = requiredAdjustment;

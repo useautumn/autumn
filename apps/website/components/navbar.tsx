@@ -34,7 +34,7 @@ import { DashboardIconPixel } from "./dashboard-icon-pixel";
 const NAV_LINKS = [
 	{ label: "Docs", href: "https://docs.useautumn.com/welcome", Icon: IconDocs },
 	{ label: "Blog", href: "/blog", Icon: IconBlog },
-	{ label: "Pricing", href: "#pricing", Icon: IconPricing },
+	{ label: "Pricing", href: "/#pricing", Icon: IconPricing },
 	{
 		label: "Discord",
 		href: "https://discord.com/invite/STqxY92zuS",
@@ -110,13 +110,20 @@ NavIconPixel.displayName = "NavIconPixel";
 
 function NavLinkItem({ item }: { item: (typeof NAV_LINKS)[number] }) {
 	const iconRef = useRef<PixelHoverHandle | null>(null);
-	const isAnchor = item.href.startsWith("#");
+	const isAnchor =
+		item.href.startsWith("#") || item.href.startsWith("/#");
 
 	const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
 		if (!isAnchor) return;
-		e.preventDefault();
-		const target = document.querySelector(item.href);
-		if (target) target.scrollIntoView({ behavior: "smooth" });
+		const hash = item.href.startsWith("/#")
+			? item.href.slice(1)
+			: item.href;
+		const el = document.querySelector(hash);
+		if (el) {
+			e.preventDefault();
+			const top = el.getBoundingClientRect().top + window.scrollY - 64;
+			window.scrollTo({ top, behavior: "smooth" });
+		}
 	};
 
 	return (
@@ -185,6 +192,18 @@ export default function Navbar({
 	useGSAP(
 		() => {
 			if (!animateIntro) return;
+			// Skip the entrance animation on non-desktop viewports, or when
+			// hydration landed well after first paint. On mobile the GSAP chunk
+			// can arrive many seconds after the server-rendered navbar has
+			// already painted; hiding it with `gsap.set({ opacity: 0 })` at
+			// that point and re-animating it in is a visible flash that's much
+			// worse than no animation.
+			if (
+				window.matchMedia("(max-width: 1023px)").matches ||
+				performance.now() > 300
+			) {
+				return;
+			}
 			gsap.set(".nav-root", { opacity: 0 });
 			gsap.set(".nav-logo", {
 				opacity: 0,
@@ -335,7 +354,7 @@ export default function Navbar({
 							width={114}
 							height={28}
 							alt="Autumn"
-							loading="lazy"
+							priority
 							className="nav-logo ml-2 block w-[90px] sm:w-[110px] lg:w-[114px] h-auto"
 						/>
 					</Link>
@@ -400,24 +419,33 @@ export default function Navbar({
 				{/* Nav items */}
 				<div className="flex flex-col">
 					{NAV_LINKS.map((item) => {
-						const isAnchor = item.href.startsWith("#");
-						const isExternal = item.href.startsWith("http");
-						return (
-							<Link
-								key={item.label}
-								href={item.href}
-								target={isExternal ? "_blank" : undefined}
-								onClick={
-									isAnchor
-										? (e) => {
+					const isAnchor =
+						item.href.startsWith("#") || item.href.startsWith("/#");
+					const isExternal = item.href.startsWith("http");
+					return (
+						<Link
+							key={item.label}
+							href={item.href}
+							target={isExternal ? "_blank" : undefined}
+							onClick={
+								isAnchor
+									? (e) => {
+											const hash = item.href.startsWith("/#")
+												? item.href.slice(1)
+												: item.href;
+											const el = document.querySelector(hash);
+											setMenuOpen(false);
+											if (el) {
 												e.preventDefault();
-												setMenuOpen(false);
-												const target = document.querySelector(item.href);
-												if (target)
-													target.scrollIntoView({ behavior: "smooth" });
+												const top =
+													el.getBoundingClientRect().top +
+													window.scrollY -
+													64;
+												window.scrollTo({ top, behavior: "smooth" });
 											}
-										: undefined
-								}
+										}
+									: undefined
+							}
 								className="flex items-center gap-4 px-4 py-3.5 border-b border-[#292929] active:bg-[#141414ea] text-[#ffffff99] hover:text-white active:text-white transition-colors text-sm tracking-[-1%]"
 							>
 								<item.Icon className="h-3.5 w-3.5 shrink-0" />

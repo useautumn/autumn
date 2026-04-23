@@ -205,6 +205,7 @@ export const syncItemV3 = async ({
 		ctx,
 		customerId,
 		redisInstance,
+		skipRolloutCheck: true,
 	});
 
 	if (!fullCustomer) {

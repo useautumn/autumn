@@ -2,6 +2,12 @@
   "plugins": {
     "linear": {
       "enabled": true
+    },
+    "redis-development": {
+      "enabled": true
+    },
+    "planetscale": {
+      "enabled": true
     }
   }
 }

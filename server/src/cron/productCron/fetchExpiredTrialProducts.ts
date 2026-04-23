@@ -1,6 +1,8 @@
 import {
 	ACTIVE_STATUSES,
 	type AppEnv,
+	type Feature,
+	type Organization,
 	customerPrices,
 	customerProducts,
 	customers,
@@ -28,6 +30,8 @@ export type ExpiredTrialRow = {
 
 export type OrgEnvExpiredTrials = {
 	ctx: AutumnContext;
+	org: Organization;
+	features: Feature[];
 	rows: ExpiredTrialRow[];
 };
 
@@ -103,7 +107,12 @@ export const groupByOrgEnv = async ({
 			workerId: generateId("product-cron"),
 		});
 
-		groups.push({ ctx, rows });
+		groups.push({
+			ctx,
+			org: ctx.org,
+			features: ctx.features,
+			rows,
+		});
 	}
 
 	return groups;

@@ -14,6 +14,7 @@ import { rateLimiter } from "hono-rate-limiter";
 import { StatusCodes } from "http-status-codes";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import { checkoutActions } from "@/internal/checkouts/actions";
+import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { deleteCheckoutCache } from "../actions/cache";
 import { checkoutRepo } from "../repos/checkoutRepo";
@@ -124,6 +125,10 @@ export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		features: orgWithFeatures.features,
 		isPublic: true,
 		customerId: validCheckout.customer_id,
+		rolloutSnapshot: computeRolloutSnapshot({
+			orgId: orgWithFeatures.org.id,
+			customerId: validCheckout.customer_id,
+		}),
 	});
 
 	// Attach checkout to context for handlers

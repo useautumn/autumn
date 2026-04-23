@@ -34,6 +34,13 @@ export const SubscriptionStatus = {
  */
 export type SubscriptionStatus = ClosedEnum<typeof SubscriptionStatus>;
 
+export const Processor = {
+  Stripe: "stripe",
+  Revenuecat: "revenuecat",
+  Vercel: "vercel",
+} as const;
+export type Processor = ClosedEnum<typeof Processor>;
+
 export type ListCustomersParams = {
   /**
    * Number of items to skip
@@ -55,6 +62,10 @@ export type ListCustomersParams = {
    * Search customers by id, name, or email
    */
   search?: string | undefined;
+  /**
+   * Filter by customer processor type (stripe, revenuecat, vercel)
+   */
+  processors?: Array<Processor> | undefined;
 };
 
 /**
@@ -402,6 +413,16 @@ export type ListCustomersFlags = {
   feature?: ListCustomersFeature | undefined;
 };
 
+/**
+ * Configuration for the customer.
+ */
+export type ListCustomersConfig = {
+  /**
+   * Whether to disable the shared customer-level pool for entities.
+   */
+  disablePooledBalance?: boolean | undefined;
+};
+
 export type ListCustomersList = {
   /**
    * Your unique identifier for the customer.
@@ -459,6 +480,10 @@ export type ListCustomersList = {
    * Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
    */
   flags: { [k: string]: ListCustomersFlags };
+  /**
+   * Configuration for the customer.
+   */
+  config?: ListCustomersConfig | undefined;
 };
 
 /**
@@ -524,12 +549,18 @@ export const SubscriptionStatus$outboundSchema: z.ZodMiniEnum<
 > = z.enum(SubscriptionStatus);
 
 /** @internal */
+export const Processor$outboundSchema: z.ZodMiniEnum<typeof Processor> = z.enum(
+  Processor,
+);
+
+/** @internal */
 export type ListCustomersParams$Outbound = {
   offset: number;
   limit: number;
   plans?: Array<ListCustomersPlan$Outbound> | undefined;
   subscription_status?: string | undefined;
   search?: string | undefined;
+  processors?: Array<string> | undefined;
 };
 
 /** @internal */
@@ -543,6 +574,7 @@ export const ListCustomersParams$outboundSchema: z.ZodMiniType<
     plans: z.optional(z.array(z.lazy(() => ListCustomersPlan$outboundSchema))),
     subscriptionStatus: z.optional(SubscriptionStatus$outboundSchema),
     search: z.optional(z.string()),
+    processors: z.optional(z.array(Processor$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -964,6 +996,31 @@ export function listCustomersFlagsFromJSON(
 }
 
 /** @internal */
+export const ListCustomersConfig$inboundSchema: z.ZodMiniType<
+  ListCustomersConfig,
+  unknown
+> = z.pipe(
+  z.object({
+    disable_pooled_balance: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "disable_pooled_balance": "disablePooledBalance",
+    });
+  }),
+);
+
+export function listCustomersConfigFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersConfig, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersConfig$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersConfig' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListCustomersList$inboundSchema: z.ZodMiniType<
   ListCustomersList,
   unknown
@@ -985,6 +1042,7 @@ export const ListCustomersList$inboundSchema: z.ZodMiniType<
     purchases: z.array(z.lazy(() => ListCustomersPurchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
     flags: z.record(z.string(), z.lazy(() => ListCustomersFlags$inboundSchema)),
+    config: types.optional(z.lazy(() => ListCustomersConfig$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

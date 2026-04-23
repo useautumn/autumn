@@ -104,12 +104,11 @@ function FeatureSelectDropdown({
 }
 
 export function AttachAdvancedSection() {
-	const { form, formValues, features, previewQuery } = useAttachFormContext();
+	const { form, formValues, features } = useAttachFormContext();
 	const {
 		discounts,
 		newBillingSubscription,
 		resetBillingCycle,
-		redirectMode,
 		noBillingChanges,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
@@ -117,8 +116,6 @@ export function AttachAdvancedSection() {
 		carryOverUsageFeatureIds,
 		customLineItems,
 	} = formValues;
-	const checkoutType = previewQuery.data?.checkout_type;
-
 	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | null;
 
@@ -151,9 +148,6 @@ export function AttachAdvancedSection() {
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
 	} = usePlanScheduleField();
-
-	const showRedirectModeRow =
-		checkoutType === "autumn_checkout" || checkoutType === null;
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
@@ -246,45 +240,6 @@ export function AttachAdvancedSection() {
 						}
 					/>
 				</ConfigRow>
-			)}
-
-			{showRedirectModeRow && (
-				<ConfigRow
-					title="Checkout Redirect"
-					description="Control when the customer is redirected to a checkout page"
-					action={
-						<>
-							<IconCheckbox
-								variant="secondary"
-								size="sm"
-								checked={redirectMode === "if_required"}
-								onCheckedChange={() =>
-									form.setFieldValue("redirectMode", "if_required")
-								}
-								className={cn(
-									"min-w-[76px] px-2 text-xs rounded-r-none",
-									redirectMode !== "if_required" && "border-r-0",
-								)}
-							>
-								Auto
-							</IconCheckbox>
-							<IconCheckbox
-								variant="secondary"
-								size="sm"
-								checked={redirectMode === "always"}
-								onCheckedChange={() =>
-									form.setFieldValue("redirectMode", "always")
-								}
-								className={cn(
-									"min-w-[76px] px-2 text-xs rounded-l-none",
-									redirectMode !== "always" && "border-l-0",
-								)}
-							>
-								Always
-							</IconCheckbox>
-						</>
-					}
-				/>
 			)}
 
 			<ConfigRow
@@ -383,6 +338,24 @@ export function AttachAdvancedSection() {
 				/>
 			)}
 
+			{hasActiveSubscription && (
+				<ConfigRow
+					title="Reset Billing Cycle"
+					description="Restart the billing cycle from today"
+					action={
+						<Switch
+							checked={resetBillingCycle}
+							onCheckedChange={(checked) => {
+								form.setFieldValue("resetBillingCycle", !!checked);
+								if (checked) {
+									handleScheduleChange("immediate");
+								}
+							}}
+						/>
+					}
+				/>
+			)}
+
 			<ConfigRow
 				title="Skip Billing"
 				description="Attach the plan without making changes in Stripe"
@@ -451,24 +424,6 @@ export function AttachAdvancedSection() {
 									checked ? "prorate_immediately" : "none",
 								)
 							}
-						/>
-					}
-				/>
-			)}
-
-			{hasActiveSubscription && (
-				<ConfigRow
-					title="Reset Billing Cycle"
-					description="Restart the billing cycle from today"
-					action={
-						<Switch
-							checked={resetBillingCycle}
-							onCheckedChange={(checked) => {
-								form.setFieldValue("resetBillingCycle", !!checked);
-								if (checked) {
-									handleScheduleChange("immediate");
-								}
-							}}
 						/>
 					}
 				/>

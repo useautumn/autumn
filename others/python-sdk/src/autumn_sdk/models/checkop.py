@@ -37,7 +37,7 @@ class CheckGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -80,7 +80,7 @@ class CheckLock(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -150,7 +150,7 @@ class CheckParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -212,7 +212,7 @@ class FlagDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -285,7 +285,7 @@ class CheckFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -332,7 +332,7 @@ class Flag(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -448,7 +448,7 @@ class ProductDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -465,7 +465,7 @@ class ProductDisplay(BaseModel):
         return m
 
 
-RolloverDuration = Union[
+ConfigDuration = Union[
     Literal[
         "month",
         "forever",
@@ -478,7 +478,7 @@ class CheckRolloverTypedDict(TypedDict):
     length: float
     max: NotRequired[Nullable[float]]
     max_percentage: NotRequired[Nullable[float]]
-    duration: NotRequired[RolloverDuration]
+    duration: NotRequired[ConfigDuration]
 
 
 class CheckRollover(BaseModel):
@@ -488,7 +488,7 @@ class CheckRollover(BaseModel):
 
     max_percentage: OptionalNullable[float] = UNSET
 
-    duration: Optional[RolloverDuration] = "month"
+    duration: Optional[ConfigDuration] = "month"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -499,7 +499,7 @@ class CheckRollover(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -539,13 +539,13 @@ CheckOnDecrease = Union[
 ]
 
 
-class ConfigTypedDict(TypedDict):
+class CheckConfigTypedDict(TypedDict):
     rollover: NotRequired[Nullable[CheckRolloverTypedDict]]
     on_increase: NotRequired[Nullable[CheckOnIncrease]]
     on_decrease: NotRequired[Nullable[CheckOnDecrease]]
 
 
-class Config(BaseModel):
+class CheckConfig(BaseModel):
     rollover: OptionalNullable[CheckRollover] = UNSET
 
     on_increase: OptionalNullable[CheckOnIncrease] = UNSET
@@ -561,7 +561,7 @@ class Config(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -613,7 +613,7 @@ class CheckItemTypedDict(TypedDict):
     r"""Used in customer context. Quantity of the feature the customer has prepaid for."""
     next_cycle_quantity: NotRequired[Nullable[float]]
     r"""Used in customer context. Quantity of the feature the customer will prepay for in the next cycle."""
-    config: NotRequired[Nullable[ConfigTypedDict]]
+    config: NotRequired[Nullable[CheckConfigTypedDict]]
     r"""Configuration for rollover and proration behavior of the feature."""
 
 
@@ -668,7 +668,7 @@ class CheckItem(BaseModel):
     next_cycle_quantity: OptionalNullable[float] = UNSET
     r"""Used in customer context. Quantity of the feature the customer will prepay for in the next cycle."""
 
-    config: OptionalNullable[Config] = UNSET
+    config: OptionalNullable[CheckConfig] = UNSET
     r"""Configuration for rollover and proration behavior of the feature."""
 
     @model_serializer(mode="wrap")
@@ -720,7 +720,7 @@ class CheckItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -786,7 +786,7 @@ class CheckFreeTrial(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -859,7 +859,7 @@ class Properties(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -957,7 +957,7 @@ class Product(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1065,7 +1065,7 @@ class CheckResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

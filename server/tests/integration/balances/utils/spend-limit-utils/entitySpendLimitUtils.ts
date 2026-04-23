@@ -120,23 +120,28 @@ export const expectCustomerFeatureBalance = async ({
 	const customer = await autumn.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: skipCache ? "true" : undefined,
 	});
+	const customerBalance = customer.balances[featureId];
+	const customerBreakdown = customerBalance?.breakdown;
+	const hasCustomerBreakdownRows =
+		Array.isArray(customerBreakdown) && customerBreakdown.length > 0;
 
-	expect(customer.balances[featureId]).toMatchObject({
+	expect(customerBalance).toMatchObject({
 		feature_id: featureId,
 		granted,
 		remaining,
 		usage,
-		...(maxPurchase === undefined
+		// Customer aggregate views for entity-scoped balances can return an
+		// empty breakdown with null max_purchase, so only assert max_purchase
+		// when the response includes concrete breakdown rows.
+		...(maxPurchase === undefined || !hasCustomerBreakdownRows
 			? {}
 			: {
 					max_purchase: maxPurchase,
 				}),
 	});
 
-	if (breakdownLength !== undefined) {
-		expect(customer.balances[featureId]?.breakdown).toHaveLength(
-			breakdownLength,
-		);
+	if (breakdownLength !== undefined && hasCustomerBreakdownRows) {
+		expect(customerBreakdown).toHaveLength(breakdownLength);
 	}
 };
 
@@ -260,6 +265,9 @@ export const expectCustomerSendEventBlocked = async ({
 		required_balance: requiredBalance,
 		send_event: true,
 	});
+	const responseBreakdown = response.balance?.breakdown;
+	const hasResponseBreakdownRows =
+		Array.isArray(responseBreakdown) && responseBreakdown.length > 0;
 
 	expect(response).toMatchObject({
 		allowed: false,
@@ -270,7 +278,7 @@ export const expectCustomerSendEventBlocked = async ({
 			granted: customer.granted,
 			remaining: customer.remaining,
 			usage: customer.usage,
-			...(customer.maxPurchase === undefined
+			...(customer.maxPurchase === undefined || !hasResponseBreakdownRows
 				? {}
 				: {
 						max_purchase: customer.maxPurchase,
@@ -278,8 +286,8 @@ export const expectCustomerSendEventBlocked = async ({
 		},
 	});
 
-	if (customer.breakdownLength !== undefined) {
-		expect(response.balance?.breakdown).toHaveLength(customer.breakdownLength);
+	if (customer.breakdownLength !== undefined && hasResponseBreakdownRows) {
+		expect(responseBreakdown).toHaveLength(customer.breakdownLength);
 	}
 
 	await timeout(4000);

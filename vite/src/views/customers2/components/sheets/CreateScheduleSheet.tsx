@@ -5,22 +5,48 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 import { CusProductStatus, mapToProductItems } from "@autumn/shared";
-import { useMemo, useState } from "react";
+import { motion } from "motion/react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { CreateScheduleSheetContent } from "@/components/forms/create-schedule/components/CreateScheduleSheetContent";
+import {
+	AttachFormProvider,
+	AttachPlanSection,
+	AttachProductSelection,
+	useAttachFormContext,
+} from "@/components/forms/attach-v2";
+import {
+	CreateScheduleReviewContent,
+	CreateScheduleSheetContent,
+} from "@/components/forms/create-schedule/components/CreateScheduleSheetContent";
 import {
 	CreateScheduleFormProvider,
 	useCreateScheduleFormContext,
 } from "@/components/forms/create-schedule/context/CreateScheduleFormProvider";
+import type { SchedulePlan } from "@/components/forms/create-schedule/createScheduleFormSchema";
 import {
 	type CreateScheduleForm,
 	EMPTY_SCHEDULE_PLAN,
 } from "@/components/forms/create-schedule/createScheduleFormSchema";
+import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
+import {
+	STAGGER_CONTAINER,
+	STAGGER_ITEM,
+} from "@/components/forms/update-subscription-v2/constants/animationConstants";
+import { Button } from "@/components/v2/buttons/Button";
+import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
+import {
+	LayoutGroup,
+	SheetFooter,
+	SheetHeader,
+	SheetSection,
+} from "@/components/v2/sheets/SharedSheetComponents";
+import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
+import { useEnv } from "@/utils/envUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { AttachProductSheetV3 } from "@/views/customers2/components/sheets/AttachProductSheetV3";
+import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 
 function reconstructCustomItems({
 	cusProduct,
@@ -141,27 +167,176 @@ export function buildInitialValues({
 	};
 }
 
-function CreateScheduleSheetBody() {
-	const sheetType = useSheetStore((s) => s.type);
-	const setSheet = useSheetStore((s) => s.setSheet);
-	const { editingPlanValue, handlePlanEditSave, setEditingPlan } =
-		useCreateScheduleFormContext();
+function ScheduleEditFooter({
+	onCancel,
+	onSave,
+}: {
+	onCancel: () => void;
+	onSave: (plan: SchedulePlan) => void;
+}) {
+	const { formValues, hasCustomizations } = useAttachFormContext();
 
-	return sheetType === "attach-product-v2" ? (
-		<AttachProductSheetV3
-			scheduleEditPlan={editingPlanValue}
-			onScheduleEditCancel={() => {
-				setEditingPlan(null);
-				setSheet({ type: "create-schedule" });
-			}}
-			onScheduleEditSave={(plan) => {
-				handlePlanEditSave({ plan });
-				setSheet({ type: "create-schedule" });
-			}}
-		/>
-	) : (
-		<CreateScheduleSheetContent />
+	const handleSaveToSchedule = () => {
+		onSave({
+			productId: formValues.productId,
+			prepaidOptions: formValues.prepaidOptions,
+			items: formValues.items,
+			isCustom: formValues.isCustom || hasCustomizations,
+			version: formValues.version,
+		});
+	};
+
+	return (
+		<SheetFooter>
+			<Button variant="secondary" onClick={onCancel} className="w-full">
+				Cancel
+			</Button>
+			<Button
+				variant="primary"
+				onClick={handleSaveToSchedule}
+				disabled={!formValues.productId}
+				className="w-full"
+			>
+				Save to Schedule
+			</Button>
+		</SheetFooter>
 	);
+}
+
+function ScheduleEditSheetContent({
+	onCancel,
+	onSave,
+}: {
+	onCancel: () => void;
+	onSave: (plan: SchedulePlan) => void;
+}) {
+	const {
+		formValues,
+		productWithFormItems,
+		showPlanEditor,
+		handlePlanEditorSave,
+		handlePlanEditorCancel,
+	} = useAttachFormContext();
+
+	const hasProductSelected = !!formValues.productId;
+
+	return (
+		<LayoutGroup>
+			<div className="flex flex-col h-full overflow-y-auto">
+				<SheetHeader
+					title="Configure Plan"
+					description="Configure the plan for this schedule phase"
+				/>
+
+				<SheetSection withSeparator={false} className="pb-0">
+					<AttachProductSelection />
+				</SheetSection>
+
+				{hasProductSelected ? (
+					<motion.div
+						initial="hidden"
+						animate="visible"
+						variants={STAGGER_CONTAINER}
+						className="flex flex-col"
+					>
+						<motion.div variants={STAGGER_ITEM}>
+							<AttachPlanSection />
+						</motion.div>
+						<motion.div variants={STAGGER_ITEM}>
+							<ScheduleEditFooter onCancel={onCancel} onSave={onSave} />
+						</motion.div>
+					</motion.div>
+				) : (
+					<ScheduleEditFooter onCancel={onCancel} onSave={onSave} />
+				)}
+
+				{productWithFormItems && (
+					<InlinePlanEditor
+						product={productWithFormItems}
+						onSave={handlePlanEditorSave}
+						onCancel={handlePlanEditorCancel}
+						isOpen={showPlanEditor}
+					/>
+				)}
+			</div>
+		</LayoutGroup>
+	);
+}
+
+function ScheduleEditSheet({
+	editingPlanValue,
+	onCancel,
+	onSave,
+}: {
+	editingPlanValue: SchedulePlan | null;
+	onCancel: () => void;
+	onSave: (plan: SchedulePlan) => void;
+}) {
+	const { customer } = useCusQuery();
+	const { setIsInlineEditorOpen } = useCustomerContext();
+
+	return (
+		<AttachFormProvider
+			customerId={customer?.id ?? customer?.internal_id ?? ""}
+			entityId={undefined}
+			initialProductId={editingPlanValue?.productId ?? undefined}
+			initialSchedulePlan={editingPlanValue}
+			disablePreview
+			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
+			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
+			onSuccess={onCancel}
+		>
+			<ScheduleEditSheetContent onCancel={onCancel} onSave={onSave} />
+		</AttachFormProvider>
+	);
+}
+
+function ScheduleSendInvoiceContent() {
+	const { isPending, handleInvoiceSubmit, previewQuery } =
+		useCreateScheduleFormContext();
+	const { stripeAccount } = useOrgStripeQuery();
+	const env = useEnv();
+	const { setSheet } = useSheetStore();
+
+	return (
+		<SendInvoiceStageWithPreview
+			previewQuery={previewQuery}
+			isPending={isPending}
+			onSubmit={handleInvoiceSubmit}
+			stripeAccount={stripeAccount}
+			env={env}
+			onBack={() => setSheet({ type: "create-schedule-review" })}
+		/>
+	);
+}
+
+function CreateScheduleSheetBody() {
+	const { editingPlan, editingPlanValue, handlePlanEditSave, setEditingPlan } =
+		useCreateScheduleFormContext();
+	const sheetType = useSheetStore((s) => s.type);
+
+	if (editingPlan) {
+		return (
+			<ScheduleEditSheet
+				editingPlanValue={editingPlanValue}
+				onCancel={() => setEditingPlan(null)}
+				onSave={(plan) => {
+					handlePlanEditSave({ plan });
+					setEditingPlan(null);
+				}}
+			/>
+		);
+	}
+
+	if (sheetType === "create-schedule-send-invoice") {
+		return <ScheduleSendInvoiceContent />;
+	}
+
+	if (sheetType === "create-schedule-review") {
+		return <CreateScheduleReviewContent />;
+	}
+
+	return <CreateScheduleSheetContent />;
 }
 
 type EntityWithSchedule = FullCustomer["entities"][number] & {
@@ -184,7 +359,7 @@ export function getScheduleForScope({
 
 export function CreateScheduleSheet() {
 	const { closeSheet } = useSheetStore();
-	const { customer, testClockFrozenTimeMs } = useCusQuery();
+	const { customer, testClockFrozenTimeMs } = useCusQuery({ schedule: true });
 	const initialEntityId =
 		new URLSearchParams(window.location.search).get("entity_id") ?? undefined;
 	const [scopeEntityId, setScopeEntityId] = useState<string | undefined>(
@@ -210,7 +385,20 @@ export function CreateScheduleSheet() {
 		[fullCustomer, schedule, products, scopeEntityId],
 	);
 
-	const formKey = `${scopeEntityId ?? "customer"}-${schedule?.id ?? "new"}`;
+	// Only update the schedule ID portion of the key when the user explicitly
+	// changes scope. Without this, the customer query invalidation after an
+	// invoice mutation causes schedule?.id to change (undefined → real ID),
+	// which remounts the form provider and resets SendInvoiceStage's local
+	// completedInvoiceUrl state, bouncing the user back to the draft/finalize view.
+	const previousScopeRef = useRef(scopeEntityId);
+	const scheduleIdForKeyRef = useRef(schedule?.id ?? "new");
+
+	if (previousScopeRef.current !== scopeEntityId) {
+		previousScopeRef.current = scopeEntityId;
+		scheduleIdForKeyRef.current = schedule?.id ?? "new";
+	}
+
+	const formKey = `${scopeEntityId ?? "customer"}-${scheduleIdForKeyRef.current}`;
 
 	return (
 		<CreateScheduleFormProvider

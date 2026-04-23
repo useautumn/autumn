@@ -54,6 +54,18 @@ export const CustomerDataSchema = z
 			description: "Billing controls for the customer (auto top-ups, etc.)",
 		}),
 
+		config: z
+			.object({
+				disable_pooled_balance: z.boolean().optional().meta({
+					description:
+						"Whether to disable the shared customer-level pool for entities.",
+				}),
+			})
+			.optional()
+			.meta({
+				description: "Miscellaneous configurations for the customer.",
+			}),
+
 		internal_options: CreateCustomerInternalOptionsSchema.optional().meta({
 			internal: true,
 		}),

@@ -1,5 +1,6 @@
 import {
 	type FrontendProductItem,
+	sortPlanItems,
 	type UpdateProductV2Params,
 	UpdateProductV2ParamsSchema,
 } from "@autumn/shared";
@@ -30,9 +31,10 @@ export const updateProduct = async ({
 	}
 
 	try {
+		const sortedItems = sortPlanItems({ items: product.items });
 		const updateData = UpdateProductV2ParamsSchema.parse({
 			...product,
-			items: product.items,
+			items: sortedItems,
 			free_trial: product.free_trial,
 		});
 

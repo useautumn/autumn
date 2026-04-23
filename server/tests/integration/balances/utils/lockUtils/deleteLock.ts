@@ -16,5 +16,8 @@ export const deleteLock = async ({
 		lockKey: hashedKey,
 	});
 
-	await redis.del(redisReceiptKey);
+	await Promise.all([
+		redis.del(redisReceiptKey),
+		ctx.redisV2.del(redisReceiptKey),
+	]);
 };

@@ -7,13 +7,11 @@ import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptio
 export function useUpdateSubscriptionMutation({
 	updateSubscriptionFormContext,
 	buildRequestBody,
-	onInvoiceCreated,
 	onCheckoutRedirect,
 	onSuccess,
 }: {
 	updateSubscriptionFormContext: UpdateSubscriptionFormContext;
 	buildRequestBody: () => Record<string, unknown>;
-	onInvoiceCreated?: (invoiceId: string) => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
 }) {
@@ -25,9 +23,11 @@ export function useUpdateSubscriptionMutation({
 		mutationFn: async ({
 			useInvoice,
 			enableProductImmediately,
+			finalizeInvoice,
 		}: {
 			useInvoice?: boolean;
 			enableProductImmediately?: boolean;
+			finalizeInvoice?: boolean;
 		}) => {
 			if (!customerId) {
 				throw new Error("Customer ID is required");
@@ -38,7 +38,7 @@ export function useUpdateSubscriptionMutation({
 			if (useInvoice) {
 				requestBody.invoice = true;
 				requestBody.enable_product_immediately = enableProductImmediately;
-				requestBody.finalize_invoice = false;
+				requestBody.finalize_invoice = finalizeInvoice ?? false;
 				if (enableProductImmediately === false) {
 					requestBody.force_checkout = true;
 				}
@@ -53,7 +53,6 @@ export function useUpdateSubscriptionMutation({
 		onSuccess: ({ data, useInvoice }) => {
 			if (useInvoice) {
 				if (data?.invoice) {
-					onInvoiceCreated?.(data.invoice.stripe_id);
 					toast.success("Invoice created successfully");
 				}
 			} else if (data?.payment_url) {
@@ -63,7 +62,9 @@ export function useUpdateSubscriptionMutation({
 				toast.success("Subscription updated successfully");
 			}
 
-			onSuccess?.();
+			if (!useInvoice) {
+				onSuccess?.();
+			}
 
 			if (customerId) {
 				queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
@@ -81,15 +82,22 @@ export function useUpdateSubscriptionMutation({
 		mutation.mutate({ useInvoice: false });
 	};
 
-	const handleInvoiceUpdate = ({
+	const handleInvoiceUpdate = async ({
 		enableProductImmediately,
+		finalizeInvoice,
 	}: {
 		enableProductImmediately: boolean;
+		finalizeInvoice: boolean;
 	}) => {
-		mutation.mutate({
+		const result = await mutation.mutateAsync({
 			useInvoice: true,
 			enableProductImmediately,
+			finalizeInvoice,
 		});
+		return {
+			stripeId: result.data?.invoice?.stripe_id,
+			hostedInvoiceUrl: result.data?.invoice?.hosted_invoice_url,
+		};
 	};
 
 	return {

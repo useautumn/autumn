@@ -14,6 +14,7 @@ import {
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { useHasSchedule } from "../hooks/useHasSchedule";
@@ -29,27 +30,22 @@ export function CreateScheduleSheetContent() {
 		entityId,
 		isExistingSchedule,
 		handleAddPhase,
-		handleSubmit,
-		isPending,
-		isPreviewLoading,
 		error,
 		onScopeChange,
 	} = useCreateScheduleFormContext();
-	const { closeSheet } = useSheetStore();
+	const { closeSheet, setSheet } = useSheetStore();
 	const hasSchedule = useHasSchedule();
 	const { customer } = useCusQuery();
 	const entities = (customer as FullCustomer | null)?.entities ?? [];
 	const isDirty = useStore(form.store, (state) => state.isDirty);
 
 	const canSubmit = useStore(form.store, (state) => state.canSubmit);
-	const isDisabled = !canSubmit || isPreviewLoading || !!error;
-	const disabledReason = isPreviewLoading
-		? "Loading preview..."
-		: error
-			? error.message
-			: !canSubmit
-				? "Please fill in all required fields"
-				: null;
+	const isDisabled = !canSubmit || !!error;
+	const disabledReason = error
+		? error.message
+		: !canSubmit
+			? "Please fill in all required fields"
+			: null;
 
 	return (
 		<div className="flex flex-col h-full">
@@ -95,7 +91,7 @@ export function CreateScheduleSheetContent() {
 
 				<SheetSection title="Phases" withSeparator>
 					<div className="space-y-4">
-						{formValues.phases.map((phase, phaseIndex) => (
+						{formValues.phases.map((_phase, phaseIndex) => (
 							<SchedulePhaseCard
 								key={`phase-${phaseIndex}`}
 								phaseIndex={phaseIndex}
@@ -113,8 +109,6 @@ export function CreateScheduleSheetContent() {
 						Add phase
 					</button>
 				</SheetSection>
-
-				<SchedulePreview />
 			</div>
 
 			<SheetFooter>
@@ -126,17 +120,115 @@ export function CreateScheduleSheetContent() {
 						<span className="w-full">
 							<Button
 								variant="primary"
-								onClick={handleSubmit}
-								isLoading={isPending}
+								onClick={() => setSheet({ type: "create-schedule-review" })}
 								disabled={isDisabled}
 								className="w-full"
 							>
-								{hasSchedule ? "Update Schedule" : "Create Schedule"}
+								Preview Changes
 							</Button>
 						</span>
 					</TooltipTrigger>
 					{disabledReason && <TooltipContent>{disabledReason}</TooltipContent>}
 				</Tooltip>
+			</SheetFooter>
+		</div>
+	);
+}
+
+function getConfirmLabel({
+	preview,
+}: {
+	preview: {
+		redirect_to_checkout?: boolean;
+		total: number;
+	} | null | undefined;
+}): string {
+	if (!preview) return "Create Schedule";
+	if (preview.redirect_to_checkout) return "Copy Checkout URL";
+	if (preview.total <= 0) return "Create Schedule";
+	return "Charge Customer";
+}
+
+export function CreateScheduleReviewContent() {
+	const { handleSubmit, isPending, isPreviewLoading, preview, error } =
+		useCreateScheduleFormContext();
+	const { setSheet } = useSheetStore();
+	const hasSchedule = useHasSchedule();
+
+	const confirmLabel = getConfirmLabel({ preview });
+	const isZeroAmount = preview && preview.total <= 0;
+
+	const invoiceDisabledReason = isZeroAmount
+		? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
+		: null;
+
+	const isDisabled = isPreviewLoading || !!error;
+
+	return (
+		<div className="flex flex-col h-full">
+			<SheetHeader
+				title="Review Changes"
+				description={
+					hasSchedule
+						? "Review schedule changes before confirming"
+						: "Review schedule before confirming"
+				}
+				breadcrumbs={[
+					{
+						name: hasSchedule ? "Update Schedule" : "Create Schedule",
+						sheet: "create-schedule",
+					},
+				]}
+			/>
+
+			<div className="flex-1 overflow-y-auto">
+				<SchedulePreview />
+			</div>
+
+			<SheetFooter className="flex flex-col grid-cols-1 mt-0">
+				<div className="flex flex-col gap-2 w-full">
+					<Tooltip>
+						<TooltipTrigger asChild>
+							<span
+								className={cn(
+									"flex w-full",
+									invoiceDisabledReason && "cursor-not-allowed",
+								)}
+							>
+								<Button
+									variant="secondary"
+									className={cn(
+										"w-full",
+										invoiceDisabledReason && "pointer-events-none opacity-50",
+									)}
+									disabled={!invoiceDisabledReason && (isPending || isDisabled)}
+									onClick={() =>
+										setSheet({ type: "create-schedule-send-invoice" })
+									}
+								>
+									Send an Invoice
+								</Button>
+							</span>
+						</TooltipTrigger>
+						{invoiceDisabledReason && (
+							<TooltipContent
+								side="top"
+								className="max-w-(--radix-tooltip-trigger-width)"
+							>
+								{invoiceDisabledReason}
+							</TooltipContent>
+						)}
+					</Tooltip>
+					<Button
+						variant="primary"
+						className="w-full"
+						onClick={handleSubmit}
+						isLoading={isPending}
+						disabled={isDisabled}
+					>
+						{confirmLabel}
+					</Button>
+				</div>
 			</SheetFooter>
 		</div>
 	);

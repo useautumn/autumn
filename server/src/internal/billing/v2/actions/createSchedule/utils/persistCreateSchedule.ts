@@ -83,13 +83,13 @@ const deleteExistingSchedules = async ({
 /** Persist the schedule rows and scheduled customer products. */
 export const persistCreateSchedule = async ({
 	ctx,
-	params,
+	customerId,
 	currentEpochMs,
 	fullCustomer,
 	phases,
 }: {
 	ctx: AutumnContext;
-	params: CreateScheduleParamsV0;
+	customerId: CreateScheduleParamsV0["customer_id"];
 	currentEpochMs: number;
 	fullCustomer: FullCustomer;
 	phases: { startsAt: number; customerProductIds: string[] }[];
@@ -115,7 +115,7 @@ export const persistCreateSchedule = async ({
 			org_id: ctx.org.id,
 			env: ctx.env,
 			internal_customer_id: fullCustomer.internal_id,
-			customer_id: params.customer_id,
+			customer_id: customerId,
 			internal_entity_id: fullCustomer.entity?.internal_id ?? null,
 			entity_id: fullCustomer.entity?.id ?? null,
 			created_at: currentEpochMs,
