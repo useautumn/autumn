@@ -52,6 +52,7 @@ export const getApiCustomerExpandV2 = async ({
 		const entities = await EntityService.list({
 			db: ctx.db,
 			internalCustomerId: fullCus.internal_id,
+			limit: 1000,
 		});
 
 		return entities.map((e) =>

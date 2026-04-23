@@ -125,11 +125,13 @@ export class EntityService {
 		internalCustomerId,
 		inFeatureIds,
 		isDeleted,
+		limit,
 	}: {
 		db: DrizzleCli;
 		internalCustomerId: string;
 		inFeatureIds?: string[];
 		isDeleted?: boolean;
+		limit?: number;
 	}) {
 		return (await db.query.entities.findMany({
 			where: (entities, { eq }) =>
@@ -140,6 +142,7 @@ export class EntityService {
 						: undefined,
 					isDeleted ? eq(entities.deleted, isDeleted) : undefined,
 				),
+			limit,
 		})) as Entity[];
 	}
 
