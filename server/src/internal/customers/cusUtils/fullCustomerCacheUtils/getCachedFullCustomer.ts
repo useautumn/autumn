@@ -126,11 +126,13 @@ export const getCachedFullCustomer = async ({
 	customerId,
 	entityId,
 	redisInstance,
+	skipRolloutCheck = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	redisInstance?: Redis;
+	skipRolloutCheck?: boolean;
 }): Promise<FullCustomer | undefined> => {
 	const { org, env } = ctx;
 	const cacheKey = buildFullCustomerCacheKey({
@@ -151,6 +153,7 @@ export const getCachedFullCustomer = async ({
 	delete parsed._cachedAt;
 
 	if (
+		!skipRolloutCheck &&
 		ctx.rolloutSnapshot &&
 		isSnapshotCacheStale({
 			snapshot: ctx.rolloutSnapshot,
