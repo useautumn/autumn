@@ -188,9 +188,17 @@ export const EditPlanHeader = () => {
 								innerClassName="max-w-30 text-tiny-id truncate"
 							/>
 						)}
-						<IconBadge variant="muted" icon={<UserIcon />}>
-							{counts?.active || 0}
-						</IconBadge>
+						<AdminHover
+							texts={[
+								{ key: "active", value: counts?.active?.toString() || "0" },
+								{ key: "canceled", value: counts?.canceled?.toString() || "0" },
+								{ key: "custom", value: counts?.custom?.toString() || "0" },
+							]}
+						>
+							<IconBadge variant="muted" icon={<UserIcon />}>
+								{counts?.active || 0}
+							</IconBadge>
+						</AdminHover>
 						{hasRCMapping && (
 							<Tooltip>
 								<TooltipTrigger>

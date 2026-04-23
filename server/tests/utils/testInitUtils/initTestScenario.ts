@@ -1,5 +1,4 @@
-import { ApiVersion, type ProductV2 } from "@autumn/shared";
-import type { CustomerData } from "autumn-js";
+import { ApiVersion, type CustomerData, type ProductV2 } from "@autumn/shared";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";

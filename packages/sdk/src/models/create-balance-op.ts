@@ -47,6 +47,22 @@ export type CreateBalanceReset = {
   intervalCount?: number | undefined;
 };
 
+export const CreateBalanceDuration = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+export type CreateBalanceDuration = ClosedEnum<typeof CreateBalanceDuration>;
+
+/**
+ * Rollover configuration for the balance.
+ */
+export type CreateBalanceRollover = {
+  max?: number | null | undefined;
+  maxPercentage?: number | null | undefined;
+  duration?: CreateBalanceDuration | undefined;
+  length: number;
+};
+
 export type CreateBalanceParams = {
   /**
    * The ID of the customer.
@@ -72,6 +88,10 @@ export type CreateBalanceParams = {
    * Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.
    */
   reset?: CreateBalanceReset | undefined;
+  /**
+   * Rollover configuration for the balance.
+   */
+  rollover?: CreateBalanceRollover | undefined;
   /**
    * Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
    */
@@ -125,6 +145,45 @@ export function createBalanceResetToJSON(
 }
 
 /** @internal */
+export const CreateBalanceDuration$outboundSchema: z.ZodMiniEnum<
+  typeof CreateBalanceDuration
+> = z.enum(CreateBalanceDuration);
+
+/** @internal */
+export type CreateBalanceRollover$Outbound = {
+  max?: number | null | undefined;
+  max_percentage?: number | null | undefined;
+  duration: string;
+  length: number;
+};
+
+/** @internal */
+export const CreateBalanceRollover$outboundSchema: z.ZodMiniType<
+  CreateBalanceRollover$Outbound,
+  CreateBalanceRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.nullable(z.number())),
+    maxPercentage: z.optional(z.nullable(z.number())),
+    duration: z._default(CreateBalanceDuration$outboundSchema, "month"),
+    length: z.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+    });
+  }),
+);
+
+export function createBalanceRolloverToJSON(
+  createBalanceRollover: CreateBalanceRollover,
+): string {
+  return JSON.stringify(
+    CreateBalanceRollover$outboundSchema.parse(createBalanceRollover),
+  );
+}
+
+/** @internal */
 export type CreateBalanceParams$Outbound = {
   customer_id: string;
   feature_id: string;
@@ -132,6 +191,7 @@ export type CreateBalanceParams$Outbound = {
   included_grant?: number | undefined;
   unlimited?: boolean | undefined;
   reset?: CreateBalanceReset$Outbound | undefined;
+  rollover?: CreateBalanceRollover$Outbound | undefined;
   expires_at?: number | undefined;
   balance_id?: string | undefined;
 };
@@ -148,6 +208,7 @@ export const CreateBalanceParams$outboundSchema: z.ZodMiniType<
     includedGrant: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
     reset: z.optional(z.lazy(() => CreateBalanceReset$outboundSchema)),
+    rollover: z.optional(z.lazy(() => CreateBalanceRollover$outboundSchema)),
     expiresAt: z.optional(z.number()),
     balanceId: z.optional(z.string()),
   }),

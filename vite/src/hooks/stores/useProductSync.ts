@@ -1,5 +1,5 @@
 import type { FrontendProduct, ProductV2 } from "@autumn/shared";
-import { productV2ToFrontendProduct } from "@autumn/shared";
+import { productV2ToFrontendProduct, sortPlanItems } from "@autumn/shared";
 import { useEffect, useRef } from "react";
 import { useProductStore } from "./useProductStore";
 
@@ -29,8 +29,11 @@ export const useProductSync = ({
 		if (isNewProduct || isProductUpdated) {
 			lastProductRef.current = product;
 
-			// Convert ProductV2 to FrontendProduct
-			const frontendProduct = productV2ToFrontendProduct({ product });
+			const converted = productV2ToFrontendProduct({ product });
+			const frontendProduct: FrontendProduct = {
+				...converted,
+				items: sortPlanItems({ items: converted.items }),
+			};
 
 			// Always update baseProduct to reflect backend state
 			setBaseProduct(frontendProduct);

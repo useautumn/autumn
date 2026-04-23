@@ -50,7 +50,6 @@ export const CustomerPlanEditorBar = () => {
 	const returnToCustomer = () => {
 		// Open the appropriate sheet based on whether we have a subscription ID
 		if (!queryStates.id) {
-			// No subscription ID means we're attaching a new product
 			setSheet({
 				type: "attach-product",
 				itemId: product.id,
@@ -59,7 +58,7 @@ export const CustomerPlanEditorBar = () => {
 		} else {
 			// We have a subscription ID, so we're editing an existing subscription
 			setSheet({
-				type: changesMade ? "subscription-update-v2" : "subscription-detail",
+				type: changesMade ? "subscription-update" : "subscription-detail",
 				itemId: queryStates.id,
 				data: changesMade ? { customizedProduct: product } : null,
 			});

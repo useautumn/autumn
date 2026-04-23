@@ -4,7 +4,9 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cancelLockExpiry } from "@/internal/balances/utils/lock/cancelLockExpiry.js";
 import { claimLockReceipt } from "@/internal/balances/utils/lock/claimLockReceipt.js";
 import { deleteLockReceipt } from "@/internal/balances/utils/lock/deleteLockReceipt.js";
+import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import { buildFinalizeLockContext } from "./buildFinalizeLockContext.js";
+import { runFinalizeLockV2 } from "./runFinalizeLockV2.js";
 import { runRedisFinalizeLock } from "./runRedisFinalizeLock.js";
 
 export const runFinalizeLock = async ({
@@ -14,14 +16,27 @@ export const runFinalizeLock = async ({
 	ctx: AutumnContext;
 	params: FinalizeLockParamsV0;
 }) => {
+	const fetchedReceipt = await fetchLockReceipt({
+		ctx,
+		lockId: params.lock_id,
+	});
+
+	if (fetchedReceipt.source === "redis_v2") {
+		return runFinalizeLockV2({
+			ctx,
+			params,
+			receipt: fetchedReceipt.receipt,
+			lockReceiptKey: fetchedReceipt.lockReceiptKey,
+		});
+	}
+
 	const finalizeLockContext = await buildFinalizeLockContext({ ctx, params });
-	const { lockReceiptKey, receipt, finalValue, lockValue } =
+	const { lockReceiptKey, receipt, finalValue, lockValue, redisInstance } =
 		finalizeLockContext;
 
-	// Claim on the receipt's origin region to prevent cross-region double-claim
-	const { redisInstance } = await claimLockReceipt({
+	await claimLockReceipt({
 		lockReceiptKey,
-		receiptRegion: receipt.region,
+		redisInstance,
 	});
 
 	try {

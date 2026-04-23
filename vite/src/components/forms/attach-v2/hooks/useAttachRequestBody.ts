@@ -261,9 +261,11 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			({
 				useInvoice,
 				enableProductImmediately,
+				finalizeInvoice,
 			}: {
 				useInvoice?: boolean;
 				enableProductImmediately?: boolean;
+				finalizeInvoice?: boolean;
 			} = {}): AttachParamsV0 | null => {
 				if (!requestBody) return null;
 
@@ -272,7 +274,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				if (useInvoice) {
 					body.invoice = true;
 					body.enable_product_immediately = enableProductImmediately;
-					body.finalize_invoice = false;
+					body.finalize_invoice = finalizeInvoice ?? false;
 				}
 
 				return body;

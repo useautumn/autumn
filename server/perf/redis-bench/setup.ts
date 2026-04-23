@@ -69,14 +69,15 @@ async function main() {
 		});
 	});
 
-	const fullCustomer: FullCustomer = {
+	const fullCustomer = {
 		...customers.create({ customerProducts: cusProducts }),
 		id: CUSTOMER_ID,
 		org_id: ORG_ID,
 		env: ENV,
+		config: {},
 		entities: entitiesList,
 		extra_customer_entitlements: [],
-	};
+	} as FullCustomer;
 
 	const serialized = JSON.stringify(fullCustomer);
 	console.log(

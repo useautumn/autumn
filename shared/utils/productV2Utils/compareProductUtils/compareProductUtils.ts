@@ -198,11 +198,7 @@ export const productsAreSame = ({
 
 	if (items1.length !== items2.length) itemsSame = false;
 
-	// console.log(`items1: `, items1);
-	// console.log(`items2: `, items2);
-
 	for (const item of items1) {
-		// console.log(`base item: `, formatItem({ item, features }));
 		const similarItem = findSimilarItem({
 			item,
 			items: items2,
@@ -218,7 +214,6 @@ export const productsAreSame = ({
 
 			continue;
 		}
-		// console.log(`similar item: `, formatItem({ item: similarItem, features }));
 
 		const { same, pricesChanged: pricesChanged_ } = itemsAreSame({
 			item1: item,

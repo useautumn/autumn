@@ -20,6 +20,9 @@ class Balances(BaseSDK):
         reset: Optional[
             Union[models.CreateBalanceReset, models.CreateBalanceResetTypedDict]
         ] = None,
+        rollover: Optional[
+            Union[models.CreateBalanceRollover, models.CreateBalanceRolloverTypedDict]
+        ] = None,
         expires_at: Optional[float] = None,
         balance_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -35,6 +38,7 @@ class Balances(BaseSDK):
         :param included_grant: The initial balance amount to grant. For metered features, this is the number of units the customer can use.
         :param unlimited: If true, the balance has unlimited usage. Cannot be combined with 'included_grant'.
         :param reset: Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.
+        :param rollover: Rollover configuration for the balance.
         :param expires_at: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
         :param balance_id: A unique identifier for this balance. Use this to target the balance in future update / delete calls.
         :param retries: Override the default retry configuration for this method
@@ -59,6 +63,9 @@ class Balances(BaseSDK):
             included_grant=included_grant,
             unlimited=unlimited,
             reset=utils.get_pydantic_model(reset, Optional[models.CreateBalanceReset]),
+            rollover=utils.get_pydantic_model(
+                rollover, Optional[models.CreateBalanceRollover]
+            ),
             expires_at=expires_at,
             balance_id=balance_id,
         )
@@ -133,6 +140,9 @@ class Balances(BaseSDK):
         reset: Optional[
             Union[models.CreateBalanceReset, models.CreateBalanceResetTypedDict]
         ] = None,
+        rollover: Optional[
+            Union[models.CreateBalanceRollover, models.CreateBalanceRolloverTypedDict]
+        ] = None,
         expires_at: Optional[float] = None,
         balance_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
@@ -148,6 +158,7 @@ class Balances(BaseSDK):
         :param included_grant: The initial balance amount to grant. For metered features, this is the number of units the customer can use.
         :param unlimited: If true, the balance has unlimited usage. Cannot be combined with 'included_grant'.
         :param reset: Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.
+        :param rollover: Rollover configuration for the balance.
         :param expires_at: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
         :param balance_id: A unique identifier for this balance. Use this to target the balance in future update / delete calls.
         :param retries: Override the default retry configuration for this method
@@ -172,6 +183,9 @@ class Balances(BaseSDK):
             included_grant=included_grant,
             unlimited=unlimited,
             reset=utils.get_pydantic_model(reset, Optional[models.CreateBalanceReset]),
+            rollover=utils.get_pydantic_model(
+                rollover, Optional[models.CreateBalanceRollover]
+            ),
             expires_at=expires_at,
             balance_id=balance_id,
         )

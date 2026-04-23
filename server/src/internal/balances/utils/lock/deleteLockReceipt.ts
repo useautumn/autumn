@@ -1,5 +1,4 @@
 import type { Redis } from "ioredis";
-import { redis } from "@/external/redis/initRedis.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
 /** Removes a lock receipt from Redis after successful finalize or expiry. */
@@ -8,11 +7,10 @@ export const deleteLockReceipt = async ({
 	redisInstance,
 }: {
 	lockReceiptKey: string;
-	redisInstance?: Redis;
+	redisInstance: Redis;
 }): Promise<void> => {
-	const targetRedis = redisInstance ?? redis;
 	await tryRedisWrite(
-		() => targetRedis.del(lockReceiptKey) as Promise<number>,
+		() => redisInstance.del(lockReceiptKey) as Promise<number>,
 		redisInstance,
 	);
 };

@@ -131,6 +131,7 @@
 						"pages": [
 							"documentation/webhooks",
 							"documentation/fail-open",
+							"documentation/rate-limits",
 							"documentation/external-providers/convex",
 							"documentation/external-providers/revenuecat",
 							"documentation/external-providers/vercel-marketplace"

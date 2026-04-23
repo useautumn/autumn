@@ -50,6 +50,11 @@ export const initInvoiceFromStripe = async ({
 		currency: stripeInvoice.currency,
 	});
 
+	const atmnAmountPaid = stripeToAtmnAmount({
+		amount: stripeInvoice.amount_paid,
+		currency: stripeInvoice.currency,
+	});
+
 	return {
 		id: generateId("inv"),
 		internal_customer_id: internalCustomerId,
@@ -61,6 +66,7 @@ export const initInvoiceFromStripe = async ({
 		status: stripeInvoice.status as string | undefined,
 		internal_entity_id: internalEntityId || null,
 		total: atmnTotal,
+		amount_paid: atmnAmountPaid,
 		currency: stripeInvoice.currency,
 		discounts: getInvoiceDiscounts({ expandedInvoice: stripeInvoice }),
 		items: autumnInvoiceItems,

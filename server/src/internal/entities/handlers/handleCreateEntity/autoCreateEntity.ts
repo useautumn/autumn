@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { EntityService } from "@/internal/api/entities/EntityService.js";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.js";
 import { upsertEntityInCache } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/appendEntityToCache.js";
 
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
@@ -123,13 +124,19 @@ export const autoCreateEntity = async ({
 		}
 	}
 
-	// Add/update entity in full customer cache
 	if (entity) {
-		await upsertEntityInCache({
-			ctx,
-			customerId,
-			entity,
-		});
+		await Promise.all([
+			upsertEntityInCache({
+				ctx,
+				customerId,
+				entity,
+			}),
+			invalidateCachedFullSubject({
+				ctx,
+				customerId,
+				source: "autoCreateEntity",
+			}),
+		]);
 	}
 
 	return entity;

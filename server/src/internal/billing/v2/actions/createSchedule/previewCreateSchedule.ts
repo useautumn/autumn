@@ -1,22 +1,29 @@
 import type {
-	BillingPreviewResponse,
+	AttachPreviewResponse,
+	BillingPlan,
+	CreateScheduleBillingContext,
 	CreateScheduleParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
-import { billingPlanToPreviewResponse } from "@/internal/billing/v2/utils/billingPlanToPreviewResponse";
+import { billingPlanToAttachPreview } from "@/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview";
 import { computeCreateSchedulePlan } from "./compute/computeCreateSchedulePlan";
 import { handleCreateScheduleErrors } from "./errors/handleCreateScheduleErrors";
 import { setupCreateScheduleBillingContext } from "./setup/setupCreateScheduleBillingContext";
 
-/** Preview the immediate-phase billing cost for a create_schedule call. */
-export const previewCreateSchedule = async ({
+type PreviewCreateScheduleResult = {
+	billingContext: CreateScheduleBillingContext;
+	billingPlan: BillingPlan;
+	preview: AttachPreviewResponse;
+};
+
+export const previewCreateScheduleWithContext = async ({
 	ctx,
 	params,
 }: {
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
-}): Promise<BillingPreviewResponse> => {
+}): Promise<PreviewCreateScheduleResult> => {
 	const billingContext = await setupCreateScheduleBillingContext({
 		ctx,
 		params,
@@ -24,7 +31,6 @@ export const previewCreateSchedule = async ({
 
 	handleCreateScheduleErrors({
 		billingContext,
-		isPreview: true,
 	});
 
 	const { autumnBillingPlan } = computeCreateSchedulePlan({
@@ -40,5 +46,29 @@ export const previewCreateSchedule = async ({
 
 	const billingPlan = { autumn: autumnBillingPlan, stripe: stripeBillingPlan };
 
-	return billingPlanToPreviewResponse({ ctx, billingContext, billingPlan });
+	return {
+		billingContext,
+		billingPlan,
+		preview: await billingPlanToAttachPreview({
+			ctx,
+			billingContext,
+			billingPlan,
+		}),
+	};
+};
+
+/** Preview the immediate-phase billing cost for a create_schedule call. */
+export const previewCreateSchedule = async ({
+	ctx,
+	params,
+}: {
+	ctx: AutumnContext;
+	params: CreateScheduleParamsV0;
+}): Promise<AttachPreviewResponse> => {
+	const result = await previewCreateScheduleWithContext({
+		ctx,
+		params,
+	});
+
+	return result.preview;
 };

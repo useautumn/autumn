@@ -1,26 +1,38 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { useEffect } from "react";
+import FAQ from "./faq";
+import Features from "./features";
+import Footer from "./footer";
 import Hero from "./hero";
+import Pricing from "./pricing";
+import PricingModels from "./pricing-models";
+import Problem from "./problem";
+import ProductionScale from "./production-scale";
 import SectionDivider from "./section-divider";
+import Solution from "./solution";
+import Testimonials from "./testimonials";
 
-const ProductionScale = dynamic(() => import("@/components/production-scale"), {
-	ssr: false,
-});
-const Problem = dynamic(() => import("@/components/problem"), { ssr: false });
-const Solution = dynamic(() => import("@/components/solution"), { ssr: false });
-const Features = dynamic(() => import("@/components/features"), { ssr: false });
-const PricingModels = dynamic(() => import("@/components/pricing-models"), {
-	ssr: false,
-});
-const Testimonials = dynamic(() => import("@/components/testimonials"), {
-	ssr: false,
-});
-const Pricing = dynamic(() => import("@/components/pricing"), { ssr: false });
-const FAQ = dynamic(() => import("@/components/faq"), { ssr: false });
-const Footer = dynamic(() => import("@/components/footer"), { ssr: false });
+function scrollToHash() {
+	const hash = window.location.hash;
+	if (!hash) return;
+	const el = document.querySelector(hash);
+	if (!el) return;
+	const top = el.getBoundingClientRect().top + window.scrollY - 64;
+	window.scrollTo({ top, behavior: "smooth" });
+}
 
 export default function HomeSections() {
+	useEffect(() => {
+		if (!window.location.hash) return;
+		const timers = [
+			setTimeout(scrollToHash, 100),
+			setTimeout(scrollToHash, 500),
+			setTimeout(scrollToHash, 1200),
+		];
+		return () => timers.forEach(clearTimeout);
+	}, []);
+
 	return (
 		<>
 			<Hero />

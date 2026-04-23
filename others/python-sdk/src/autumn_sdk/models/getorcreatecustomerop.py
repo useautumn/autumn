@@ -34,7 +34,7 @@ class GetOrCreateCustomerGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -83,7 +83,7 @@ class GetOrCreateCustomerPurchaseLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -134,7 +134,7 @@ class GetOrCreateCustomerAutoTopup(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -170,7 +170,7 @@ class GetOrCreateCustomerSpendLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -225,7 +225,7 @@ class GetOrCreateCustomerUsageAlert(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -256,7 +256,7 @@ class GetOrCreateCustomerOverageAllowed(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -303,7 +303,37 @@ class GetOrCreateCustomerBillingControls(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class GetOrCreateCustomerConfigTypedDict(TypedDict):
+    r"""Miscellaneous configurations for the customer."""
+
+    disable_pooled_balance: NotRequired[bool]
+    r"""Whether to disable the shared customer-level pool for entities."""
+
+
+class GetOrCreateCustomerConfig(BaseModel):
+    r"""Miscellaneous configurations for the customer."""
+
+    disable_pooled_balance: Optional[bool] = None
+    r"""Whether to disable the shared customer-level pool for entities."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["disable_pooled_balance"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -332,6 +362,8 @@ class GetOrCreateCustomerParamsTypedDict(TypedDict):
     r"""Whether to send email receipts to this customer"""
     billing_controls: NotRequired[GetOrCreateCustomerBillingControlsTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
+    config: NotRequired[GetOrCreateCustomerConfigTypedDict]
+    r"""Miscellaneous configurations for the customer."""
     expand: NotRequired[List[str]]
     r"""Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature."""
 
@@ -366,6 +398,9 @@ class GetOrCreateCustomerParams(BaseModel):
     billing_controls: Optional[GetOrCreateCustomerBillingControls] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
+    config: Optional[GetOrCreateCustomerConfig] = None
+    r"""Miscellaneous configurations for the customer."""
+
     expand: Optional[List[str]] = None
     r"""Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature."""
 
@@ -382,6 +417,7 @@ class GetOrCreateCustomerParams(BaseModel):
                 "auto_enable_plan_id",
                 "send_email_receipts",
                 "billing_controls",
+                "config",
                 "expand",
             ]
         )
@@ -393,7 +429,7 @@ class GetOrCreateCustomerParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

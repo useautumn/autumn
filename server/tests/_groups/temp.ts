@@ -2,13 +2,13 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Create schedule unit tests",
+	description: "Failed tests to triage and fix",
 	tier: "domain",
 	paths: [
-		"unit/billing/create-schedule/create-schedule-params.spec.ts",
-		"unit/billing/create-schedule/compute-create-schedule-plan.spec.ts",
-		"unit/billing/create-schedule/normalize-create-schedule-phases.spec.ts",
-		"unit/billing/create-schedule/validate-create-schedule-phase-plans.spec.ts",
-		"integration/billing/create-schedule/create-schedule-basic.test.ts",
+		"balances/check/loose/loose-2.test.ts",
+		"balances/check/loose/entities/entity-loose-2.test.ts",
+		// "balances/track/loose/loose-unlimited.test.ts",
+		// "balances/track/concurrency/concurrent-track6.test.ts",
+		// "integration/balances/lock/check-with-lock-concurrent-stress.test.ts",
 	],
 };

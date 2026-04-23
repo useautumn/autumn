@@ -33,7 +33,7 @@
 		"**/.cursor": true,
 		// "**/.github": true,
 		"**/.superset": true,
-		".claude": true,
+		// ".claude": true,
 		".codex": true,
 		".agents": true,
 		".cursor": true,

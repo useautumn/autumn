@@ -1,7 +1,8 @@
+import { orgToFeaturesByOrgEnv } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
-import { batchDeleteCachedCustomers } from "../cusUtils/apiCusCacheUtils/batchDeleteCachedCustomers";
-import { deleteCachedApiCustomer } from "../cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
+import { batchInvalidateCachedFullSubjects } from "../cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects";
+import { deleteCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 
 export const handleClearCustomerCache = createRoute({
 	body: z.object({
@@ -13,7 +14,7 @@ export const handleClearCustomerCache = createRoute({
 		const { customer_id, customer_ids } = c.req.valid("json");
 
 		if (customer_id) {
-			await deleteCachedApiCustomer({
+			await deleteCachedFullCustomer({
 				customerId: customer_id,
 				ctx,
 				source: `handleClearCustomerCache, deleting single customer cache`,
@@ -21,12 +22,21 @@ export const handleClearCustomerCache = createRoute({
 		}
 
 		if (customer_ids) {
-			await batchDeleteCachedCustomers({
-				customers: customer_ids.map((id) => ({
-					customerId: id,
-					orgId: ctx.org.id,
-					env: ctx.env,
-				})),
+			const customersToDelete = customer_ids.map((id) => ({
+				customerId: id,
+				orgId: ctx.org.id,
+				env: ctx.env,
+			}));
+			const featuresByOrgEnv = orgToFeaturesByOrgEnv({
+				org: ctx.org,
+				env: ctx.env,
+				features: ctx.features,
+			});
+
+			await batchInvalidateCachedFullSubjects({
+				customers: customersToDelete,
+				featuresByOrgEnv,
+				redisV2: ctx.redisV2,
 			});
 		}
 

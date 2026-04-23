@@ -4,7 +4,7 @@
 		"experimentalSpecifier": true
 	},
 	"compilerOptions": {
-		"lib": ["ES2021", "DOM"],
+		"lib": ["ES2021", "DOM", "DOM.Iterable"],
 		"target": "ES2020",
 		"moduleResolution": "bundler",
 		"module": "Preserve",
@@ -13,7 +13,6 @@
     "types": ["bun", "node"],
 		// "declaration": true,
 		"jsx": "react-jsx",
-		"rootDir": ".",
 		"outDir": "./dist",
 		"strict": true,
 		"esModuleInterop": true,

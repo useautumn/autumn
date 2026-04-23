@@ -13,6 +13,7 @@ import { addSeconds } from "date-fns";
 import { redis } from "@/external/redis/initRedis";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey";
+import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt";
 import { timeout } from "@/utils/genUtils";
 import { getCustomerEvents } from "../utils/events/getCustomerEvents";
 
@@ -200,13 +201,10 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-4: no expires_at sets T
 		lock: { enabled: true, lock_id: customerId },
 	});
 
-	const lockReceiptKey = buildLockReceiptKey({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		lockKey: Bun.hash(customerId).toString(),
-	});
+	const { lockReceiptKey, source } = await fetchLockReceipt({ ctx, lockId: customerId });
+	const redisInstance = source === "redis_v2" ? ctx.redisV2 : redis;
 
-	const expireAt = await redis.expiretime(lockReceiptKey);
+	const expireAt = await redisInstance.expiretime(lockReceiptKey);
 	const expectedTtl = beforeCheck + 24 * 60 * 60;
 
 	// TTL should be within 5s of now + 1 day
@@ -240,13 +238,10 @@ test.concurrent(`${chalk.yellowBright("check-lock-expiry-5: expires_at set, TTL 
 		lock: { enabled: true, lock_id: customerId, expires_at: expiresAt },
 	});
 
-	const lockReceiptKey = buildLockReceiptKey({
-		orgId: ctx.org.id,
-		env: ctx.env,
-		lockKey: Bun.hash(customerId).toString(),
-	});
+	const { lockReceiptKey, source } = await fetchLockReceipt({ ctx, lockId: customerId });
+	const redisInstance = source === "redis_v2" ? ctx.redisV2 : redis;
 
-	const expireAt = await redis.expiretime(lockReceiptKey);
+	const expireAt = await redisInstance.expiretime(lockReceiptKey);
 	const expectedTtl = Math.ceil(expiresAt / 1000) + 60 * 60;
 
 	// TTL should be within 5s of expires_at + 1 hour

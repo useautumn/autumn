@@ -35,17 +35,6 @@ export const handleExternalAggregateEvents = createRoute({
 			max_groups,
 		} = c.req.valid("json");
 
-		console.log("handleAggregateEvents", {
-			customer_id,
-			entity_id,
-			feature_id,
-			group_by,
-			range,
-			bin_size,
-			custom_range,
-			filter_by,
-		});
-
 		let customer: Awaited<ReturnType<typeof CusService.getFull>> | undefined;
 		let aggregateAll = false;
 

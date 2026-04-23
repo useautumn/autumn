@@ -1,4 +1,7 @@
-import type { CreateScheduleBillingContext, FullCusProduct } from "@autumn/shared";
+import type {
+	CreateScheduleBillingContext,
+	FullCusProduct,
+} from "@autumn/shared";
 import {
 	CusProductStatus,
 	customerProductHasActiveStatus,
@@ -15,14 +18,15 @@ export const billingContextToRecurringAndScheduled = ({
 	recurringActive: FullCusProduct[];
 	recurringScheduled: FullCusProduct[];
 } => {
-	const internalEntityId =
-		billingContext.fullCustomer.entity?.internal_id;
+	const internalEntityId = billingContext.fullCustomer.entity?.internal_id;
 	const recurringActive: FullCusProduct[] = [];
 	const recurringScheduled: FullCusProduct[] = [];
 
 	for (const customerProduct of billingContext.fullCustomer.customer_products) {
 		if (isCustomerProductOneOff(customerProduct)) continue;
-		if (!isCusProductOnEntity({ cusProduct: customerProduct, internalEntityId }))
+		if (
+			!isCusProductOnEntity({ cusProduct: customerProduct, internalEntityId })
+		)
 			continue;
 
 		if (customerProductHasActiveStatus(customerProduct)) {

@@ -6,7 +6,11 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 
-gsap.registerPlugin(ScrollTrigger);
+// ScrollTrigger touches `window` on import, so defer plugin registration to
+// the client. Doing this at module scope breaks SSR.
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(ScrollTrigger);
+}
 
 const SCRAMBLE_CHARS =
 	"!@#$%^&*()_+-=[]{}|;:,.<>?0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -104,6 +108,18 @@ export default function ProductionScale() {
 
 	useGSAP(
 		() => {
+			// Skip the entrance animation on non-desktop viewports, or when
+			// hydration landed well after first paint. The cards are server-
+			// rendered visible; hiding them via `gsap.set({ opacity: 0 })`
+			// after the user may have already scrolled to/past the section
+			// would cause a visible flash.
+			if (
+				window.matchMedia("(max-width: 1023px)").matches ||
+				performance.now() > 300
+			) {
+				return;
+			}
+
 			const isMobile = window.innerWidth < 768;
 			const cardY = isMobile ? 16 : 30;
 

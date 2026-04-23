@@ -13,6 +13,7 @@ import {
 import type Stripe from "stripe";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import {
@@ -73,6 +74,7 @@ export const createTestContext = async () => {
 		dbGeneral: db,
 		features,
 		logger,
+		redisV2: resolveRedisV2(),
 		orgSecretKey,
 
 		id: generateId("test"),

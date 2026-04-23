@@ -239,16 +239,16 @@ export type ProductDisplay = {
   secondaryText?: string | null | undefined;
 };
 
-export const RolloverDuration = {
+export const ConfigDuration = {
   Month: "month",
   Forever: "forever",
 } as const;
-export type RolloverDuration = OpenEnum<typeof RolloverDuration>;
+export type ConfigDuration = OpenEnum<typeof ConfigDuration>;
 
 export type CheckRollover = {
   max?: number | null | undefined;
   maxPercentage?: number | null | undefined;
-  duration: RolloverDuration;
+  duration: ConfigDuration;
   length: number;
 };
 
@@ -269,7 +269,7 @@ export const CheckOnDecrease = {
 } as const;
 export type CheckOnDecrease = OpenEnum<typeof CheckOnDecrease>;
 
-export type Config = {
+export type CheckConfig = {
   rollover?: CheckRollover | null | undefined;
   onIncrease?: CheckOnIncrease | null | undefined;
   onDecrease?: CheckOnDecrease | null | undefined;
@@ -346,7 +346,7 @@ export type CheckItem = {
   /**
    * Configuration for rollover and proration behavior of the feature.
    */
-  config?: Config | null | undefined;
+  config?: CheckConfig | null | undefined;
 };
 
 /**
@@ -805,10 +805,10 @@ export function productDisplayFromJSON(
 }
 
 /** @internal */
-export const RolloverDuration$inboundSchema: z.ZodMiniType<
-  RolloverDuration,
+export const ConfigDuration$inboundSchema: z.ZodMiniType<
+  ConfigDuration,
   unknown
-> = openEnums.inboundSchema(RolloverDuration);
+> = openEnums.inboundSchema(ConfigDuration);
 
 /** @internal */
 export const CheckRollover$inboundSchema: z.ZodMiniType<
@@ -818,7 +818,7 @@ export const CheckRollover$inboundSchema: z.ZodMiniType<
   z.object({
     max: z.optional(z.nullable(types.number())),
     max_percentage: z.optional(z.nullable(types.number())),
-    duration: z._default(RolloverDuration$inboundSchema, "month"),
+    duration: z._default(ConfigDuration$inboundSchema, "month"),
     length: types.number(),
   }),
   z.transform((v) => {
@@ -851,27 +851,30 @@ export const CheckOnDecrease$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CheckOnDecrease);
 
 /** @internal */
-export const Config$inboundSchema: z.ZodMiniType<Config, unknown> = z.pipe(
-  z.object({
-    rollover: z.optional(z.nullable(z.lazy(() => CheckRollover$inboundSchema))),
-    on_increase: z.optional(z.nullable(CheckOnIncrease$inboundSchema)),
-    on_decrease: z.optional(z.nullable(CheckOnDecrease$inboundSchema)),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "on_increase": "onIncrease",
-      "on_decrease": "onDecrease",
-    });
-  }),
-);
+export const CheckConfig$inboundSchema: z.ZodMiniType<CheckConfig, unknown> = z
+  .pipe(
+    z.object({
+      rollover: z.optional(
+        z.nullable(z.lazy(() => CheckRollover$inboundSchema)),
+      ),
+      on_increase: z.optional(z.nullable(CheckOnIncrease$inboundSchema)),
+      on_decrease: z.optional(z.nullable(CheckOnDecrease$inboundSchema)),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "on_increase": "onIncrease",
+        "on_decrease": "onDecrease",
+      });
+    }),
+  );
 
-export function configFromJSON(
+export function checkConfigFromJSON(
   jsonString: string,
-): SafeParseResult<Config, SDKValidationError> {
+): SafeParseResult<CheckConfig, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Config$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Config' from JSON`,
+    (x) => CheckConfig$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckConfig' from JSON`,
   );
 }
 
@@ -899,7 +902,7 @@ export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
       ),
       quantity: z.optional(z.nullable(types.number())),
       next_cycle_quantity: z.optional(z.nullable(types.number())),
-      config: z.optional(z.nullable(z.lazy(() => Config$inboundSchema))),
+      config: z.optional(z.nullable(z.lazy(() => CheckConfig$inboundSchema))),
     }),
     z.transform((v) => {
       return remap$(v, {

@@ -15,23 +15,20 @@ import type { InsertCusProductParams } from "@/internal/customers/cusProducts/At
 import { ProductService } from "@/internal/products/ProductService.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
-import { deleteCachedApiCustomer } from "../../customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { deleteCachedFullCustomer } from "../../customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { RewardRedemptionService } from "../RewardRedemptionService.js";
 import { ReferralResponseCodes } from "../referralUtils.js";
 import { triggerFreePaidProduct } from "./triggerFreePaidProduct.js";
 
 export const triggerFreeProduct = async ({
 	ctx,
-	req,
 	referralCode,
 	redeemer,
 	redemption,
 	rewardProgram,
 }: {
 	ctx: AutumnContext;
-	req?: ExtendedRequest;
 	referralCode: ReferralCode;
 	redeemer: Customer;
 	redemption: RewardRedemption;
@@ -58,7 +55,6 @@ export const triggerFreeProduct = async ({
 	if (!isFreeProduct(fullProduct.prices) && !isOneOff(fullProduct.prices)) {
 		return await triggerFreePaidProduct({
 			ctx,
-			req,
 			referralCode,
 			redeemer,
 			rewardProgram,
@@ -124,7 +120,7 @@ export const triggerFreeProduct = async ({
 		});
 		logger.info(`✅ Added ${fullProduct.name} to redeemer`);
 
-		await deleteCachedApiCustomer({
+		await deleteCachedFullCustomer({
 			customerId: fullRedeemer.id!,
 			ctx,
 			source: `triggerFreeProduct, deleting redeemer cache`,
@@ -142,7 +138,7 @@ export const triggerFreeProduct = async ({
 			logger,
 		});
 
-		await deleteCachedApiCustomer({
+		await deleteCachedFullCustomer({
 			customerId: fullReferrer.id!,
 			ctx,
 			source: `triggerFreeProduct, deleting referrer cache`,
