@@ -104,6 +104,7 @@ export const isSnapshotCacheStale = ({
 
 	const wasEnabled = snapshot.customerBucket < snapshot.previousPercent;
 	const isEnabled = snapshot.customerBucket < snapshot.percent;
+
 	if (wasEnabled === isEnabled) return false;
 
 	if (!cachedAt) return true;

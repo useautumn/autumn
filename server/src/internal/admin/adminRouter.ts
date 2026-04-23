@@ -22,6 +22,7 @@ import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestB
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
+import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
 import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
 import { handleGetRollouts } from "./rollouts/handleGetRollouts";
 import { handleUpdateRollout } from "./rollouts/handleUpdateRollout";
@@ -90,6 +91,7 @@ honoAdminRouter.put(
 	"/rollouts/:rollout_id/orgs/:org_id",
 	...handleUpdateRolloutOrg,
 );
+honoAdminRouter.delete("/rollouts/:rollout_id", ...handleDeleteRollout);
 honoAdminRouter.delete(
 	"/rollouts/:rollout_id/orgs/:org_id",
 	...handleDeleteRolloutOrg,
