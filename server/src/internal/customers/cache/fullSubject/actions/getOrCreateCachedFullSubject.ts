@@ -58,10 +58,17 @@ export const getOrCreateCachedFullSubject = async ({
 	}
 
 	if (!fullSubject && customerId) {
+		// Probe customer with entity fallback: if the customer exists but the
+		// requested entity doesn't, return a customer-scoped subject so the
+		// downstream autoCreateEntity branch handles the missing entity
+		// (either creating it when entity_data.feature_id is set, or throwing
+		// the descriptive error). This prevents falling through to
+		// createWithDefaults on an already-existing customer.
 		normalizedResult = await getFullSubjectNormalized({
 			ctx,
 			customerId,
 			entityId,
+			allowMissingEntity: true,
 		});
 		if (normalizedResult) {
 			fullSubject = normalizedResult.fullSubject;
