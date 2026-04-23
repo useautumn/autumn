@@ -1,0 +1,25 @@
+server/tests/_temp/temp.test.ts
+  03e6a9d29e620dd5 1-13,15-22,24-137
+server/src/internal/billing/v2/providers/stripe/utils/discounts/filterStripeDiscountsForNextCycle.ts
+  03e6a9d29e620dd5 54-57,59-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "246dd6d4509f973fe103dcd5e771890bacf48b4f",
+  "prompts": {
+    "03e6a9d29e620dd5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_245c3ddacffeT8AVryn1T7SvP9",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 165,
+      "total_deletions": 114,
+      "accepted_lines": 157,
+      "overriden_lines": 0
+    }
+  }
+}
