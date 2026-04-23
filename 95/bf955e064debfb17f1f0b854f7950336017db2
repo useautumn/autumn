@@ -1,0 +1,23 @@
+server/tests/_temp/temp2.test.ts
+  03e6a9d29e620dd5 2,4-9,11-13,16-26,28-31,33-36,38-47,49-55,57-63,65-69,71-72,74-75,77-83,85-105,107-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.2",
+  "base_commit_sha": "95bf955e064debfb17f1f0b854f7950336017db2",
+  "prompts": {
+    "03e6a9d29e620dd5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_245c3ddacffeT8AVryn1T7SvP9",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 105,
+      "total_deletions": 103,
+      "accepted_lines": 92,
+      "overriden_lines": 0
+    }
+  }
+}
