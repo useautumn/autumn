@@ -1,5 +1,4 @@
 import type { CheckParams, FullSubject, TrackParams } from "@autumn/shared";
-import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { updateCustomerData } from "@/internal/customers/actions/updateCustomerData.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
@@ -20,7 +19,7 @@ export const getOrCreateCachedPartialFullSubject = async ({
 	source?: string;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
-	const useRedis = !skipCache && shouldUseRedis();
+	const useRedis = !skipCache;
 	const { customer_id: customerId, entity_id: entityId } = params;
 
 	if (customerId && useRedis) {
