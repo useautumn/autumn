@@ -81,3 +81,19 @@ export const removeRolloutOrg = async ({
 
 	return config;
 };
+
+/**
+ * Delete a rollout entry entirely. Use this instead of setting percent to 0
+ * when you want to reset the staleness window (previousPercent/changedAt)
+ * without triggering cache invalidation for affected customers.
+ */
+export const deleteRollout = async ({
+	rolloutId,
+}: {
+	rolloutId: string;
+}) => {
+	const config = await store.readFromSource();
+	delete config.rollouts[rolloutId];
+	await store.writeToSource({ config });
+	return config;
+};

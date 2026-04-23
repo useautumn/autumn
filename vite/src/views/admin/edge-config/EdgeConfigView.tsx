@@ -141,6 +141,7 @@ const RolloutCard = ({
 	onUpdateGlobal,
 	onUpdateOrg,
 	onDeleteOrg,
+	onDeleteRollout,
 	onAddOrg,
 }: {
 	rolloutId: string;
@@ -168,6 +169,7 @@ const RolloutCard = ({
 		rolloutId: string;
 		orgId: string;
 	}) => void;
+	onDeleteRollout: ({ rolloutId }: { rolloutId: string }) => void;
 	onAddOrg: ({ rolloutId }: { rolloutId: string }) => void;
 }) => {
 	const [expanded, setExpanded] = useState(true);
@@ -239,6 +241,12 @@ const RolloutCard = ({
 						>
 							Save
 						</Button>
+						<IconButton
+							icon={<Trash2 className="w-3.5 h-3.5" />}
+							variant="secondary"
+							size="sm"
+							onClick={() => onDeleteRollout({ rolloutId })}
+						/>
 					</div>
 				</div>
 			</CardHeader>
@@ -376,6 +384,24 @@ export const EdgeConfigView = () => {
 		onError: (error) =>
 			toast.error(getBackendErr(error, "Failed to remove org override")),
 	});
+
+	const deleteRolloutMutation = useMutation({
+		mutationFn: async ({ rolloutId }: { rolloutId: string }) => {
+			await axiosInstance.delete(`/admin/rollouts/${rolloutId}`);
+		},
+		onSuccess: () => {
+			toast.success("Rollout deleted");
+			refetch();
+		},
+		onError: (error) =>
+			toast.error(getBackendErr(error, "Failed to delete rollout")),
+	});
+
+	const handleDeleteRollout = ({ rolloutId }: { rolloutId: string }) => {
+		if (!confirm(`Delete rollout "${rolloutId}"? This resets the staleness window.`))
+			return;
+		deleteRolloutMutation.mutate({ rolloutId });
+	};
 
 	const handleDeleteOrg = ({
 		rolloutId,
@@ -536,6 +562,7 @@ export const EdgeConfigView = () => {
 							updateOrgMutation.mutate({ rolloutId, orgId, percent })
 						}
 						onDeleteOrg={handleDeleteOrg}
+						onDeleteRollout={handleDeleteRollout}
 						onAddOrg={({ rolloutId }) => setAddOrgRolloutId(rolloutId)}
 					/>
 				))}
