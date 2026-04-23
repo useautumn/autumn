@@ -115,7 +115,7 @@ export function EdgeConfigTab() {
 					<div className="flex flex-col gap-0.5">
 						<div className="text-sm font-medium text-t1">V2 Redis Instance</div>
 						<div className="text-xs text-t3">
-							Switch the active V2 Redis between primary, canary, and dragonfly
+							Switch the active V2 Redis between upstash, redis, and dragonfly
 							at runtime.
 						</div>
 					</div>
