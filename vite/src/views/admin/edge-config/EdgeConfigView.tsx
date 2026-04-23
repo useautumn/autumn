@@ -40,8 +40,15 @@ type RolloutEntry = RolloutPercent & {
 	orgs: Record<string, RolloutPercent>;
 };
 
+type RolloutOrg = {
+	id: string;
+	name: string;
+	slug: string;
+};
+
 type RolloutsResponse = {
 	rollouts: Record<string, RolloutEntry>;
+	orgsById: Record<string, RolloutOrg>;
 	configHealthy: boolean;
 	configConfigured: boolean;
 	lastSuccessAt: string | null;
@@ -68,12 +75,14 @@ const formatPercent = (percent: number) => `${percent}%`;
 const RolloutOrgRow = ({
 	rolloutId,
 	orgId,
+	org,
 	orgEntry,
 	onUpdate,
 	onDelete,
 }: {
 	rolloutId: string;
 	orgId: string;
+	org?: RolloutOrg;
 	orgEntry: RolloutPercent;
 	onUpdate: ({
 		rolloutId,
@@ -97,7 +106,12 @@ const RolloutOrgRow = ({
 	return (
 		<div className="grid gap-3 rounded-xl border border-border bg-muted/20 p-3 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-center">
 			<div className="min-w-0">
-				<p className="truncate font-mono text-xs text-foreground">{orgId}</p>
+				<p className="truncate text-sm font-medium text-foreground">
+					{org?.name ?? orgId}
+				</p>
+				<p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+					{org ? `${org.slug} | ${org.id}` : "Unknown org"}
+				</p>
 				<p className="mt-1 text-[11px] text-muted-foreground">
 					prev: {formatPercent(orgEntry.previousPercent)} | changed:{" "}
 					{formatTimestamp(orgEntry.changedAt)}
@@ -143,9 +157,11 @@ const RolloutCard = ({
 	onDeleteOrg,
 	onDeleteRollout,
 	onAddOrg,
+	orgsById,
 }: {
 	rolloutId: string;
 	entry: RolloutEntry;
+	orgsById: Record<string, RolloutOrg>;
 	onUpdateGlobal: ({
 		rolloutId,
 		percent,
@@ -291,6 +307,7 @@ const RolloutCard = ({
 								key={orgId}
 								rolloutId={rolloutId}
 								orgId={orgId}
+								org={orgsById[orgId]}
 								orgEntry={orgEntry}
 								onUpdate={onUpdateOrg}
 								onDelete={onDeleteOrg}
@@ -425,6 +442,7 @@ export const EdgeConfigView = () => {
 	if (!isAdmin) return <DefaultView />;
 
 	const rollouts = data?.rollouts ?? {};
+	const orgsById = data?.orgsById ?? {};
 	const rolloutEntries = Object.entries(rollouts);
 	const rolloutSource = source?.configs.find((config) => config.id === "rollouts");
 
@@ -555,6 +573,7 @@ export const EdgeConfigView = () => {
 						key={rolloutId}
 						rolloutId={rolloutId}
 						entry={entry}
+						orgsById={orgsById}
 						onUpdateGlobal={({ rolloutId, percent }) =>
 							updateGlobalMutation.mutate({ rolloutId, percent })
 						}
