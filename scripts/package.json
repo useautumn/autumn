@@ -15,6 +15,7 @@
 		"dotenv": "^16.5.0",
 		"drizzle-orm": "catalog:",
 		"ink": "^5.1.0",
+		"ioredis": "^5.10.0",
 		"inquirer": "^12.6.3",
 		"p-limit": "^7.2.0",
 		"react": "^18.3.1"

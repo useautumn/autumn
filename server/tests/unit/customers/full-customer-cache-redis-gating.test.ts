@@ -3,7 +3,6 @@ import { CustomerNotFoundError, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 const mockState = {
-	shouldUseRedis: true,
 	cached: undefined as FullCustomer | undefined,
 	dbResult: undefined as FullCustomer | undefined,
 	hydrated: undefined as FullCustomer | undefined,
@@ -14,10 +13,6 @@ const mockState = {
 	createCalls: 0,
 	updateDetailsCalls: 0,
 };
-
-mock.module("@/external/redis/initRedis.js", () => ({
-	shouldUseRedis: () => mockState.shouldUseRedis,
-}));
 
 mock.module("@/internal/customers/CusService.js", () => ({
 	CusService: {
@@ -81,9 +76,9 @@ mock.module("@/internal/customers/cusUtils/cusUtils.js", () => ({
 import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 
-const makeCtx = () =>
+const makeCtx = ({ skipCache = false }: { skipCache?: boolean } = {}) =>
 	({
-		skipCache: false,
+		skipCache,
 		logger: {
 			debug: () => {},
 			info: () => {},
@@ -111,7 +106,6 @@ const makeFullCustomer = (id: string) =>
 
 describe("full customer cache Redis gating", () => {
 	beforeEach(() => {
-		mockState.shouldUseRedis = true;
 		mockState.cached = undefined;
 		mockState.dbResult = undefined;
 		mockState.hydrated = undefined;
@@ -123,36 +117,32 @@ describe("full customer cache Redis gating", () => {
 		mockState.updateDetailsCalls = 0;
 	});
 
-	test("getOrSetCachedFullCustomer skips Redis read/write when shouldUseRedis is false", async () => {
+	test("getOrSetCachedFullCustomer skips Redis read/write when skipCache is true", async () => {
 		const dbCustomer = makeFullCustomer("db-customer");
-		const hydratedCustomer = makeFullCustomer("hydrated-customer");
 
-		mockState.shouldUseRedis = false;
 		mockState.cached = makeFullCustomer("cached-customer");
 		mockState.dbResult = dbCustomer;
-		mockState.hydrated = hydratedCustomer;
 
 		const result = await getOrSetCachedFullCustomer({
-			ctx: makeCtx(),
+			ctx: makeCtx({ skipCache: true }),
 			customerId: "db-customer",
 			source: "unit-test",
 		});
 
-		expect(result).toBe(hydratedCustomer);
+		expect(result).toBe(dbCustomer);
 		expect(mockState.cacheReads).toBe(0);
 		expect(mockState.cacheWrites).toBe(0);
 		expect(mockState.dbCalls).toBe(1);
 	});
 
-	test("getOrCreateCachedFullCustomer still creates when Redis is unavailable and DB misses", async () => {
+	test("getOrCreateCachedFullCustomer still creates when skipCache is true and DB misses", async () => {
 		const createdCustomer = makeFullCustomer("created-customer");
 
-		mockState.shouldUseRedis = false;
 		mockState.dbResult = undefined;
 		mockState.created = createdCustomer;
 
 		const result = await getOrCreateCachedFullCustomer({
-			ctx: makeCtx(),
+			ctx: makeCtx({ skipCache: true }),
 			params: {
 				customer_id: "created-customer",
 				feature_id: "messages",
@@ -167,13 +157,12 @@ describe("full customer cache Redis gating", () => {
 		expect(mockState.createCalls).toBe(1);
 	});
 
-	test("getOrCreateCachedFullCustomer honors skipCreate when Redis is unavailable and DB misses", async () => {
-		mockState.shouldUseRedis = false;
+	test("getOrCreateCachedFullCustomer honors skipCreate when skipCache is true and DB misses", async () => {
 		mockState.dbResult = undefined;
 
 		await expect(
 			getOrCreateCachedFullCustomer({
-				ctx: makeCtx(),
+				ctx: makeCtx({ skipCache: true }),
 				params: {
 					customer_id: "missing-customer",
 					feature_id: "messages",

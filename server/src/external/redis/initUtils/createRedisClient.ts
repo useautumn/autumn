@@ -3,7 +3,8 @@ import { instrumentRedis } from "../otel/instrumentRedis.js";
 import { cacheBackupUrl } from "./redisConfig.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
-const REDIS_COMMAND_TIMEOUT_MS = 10_000;
+const REDIS_COMMAND_TIMEOUT_MS =
+	process.env.NODE_ENV === "production" ? 10_000 : 30_000;
 
 /** Create a Redis connection for a specific region.
  *  `supportsUpstashShebang` defaults to true; set false for non-Upstash
@@ -13,10 +14,12 @@ export const createRedisClient = ({
 	cacheUrl,
 	region,
 	supportsUpstashShebang = true,
+	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
 }: {
 	cacheUrl: string;
 	region: string;
 	supportsUpstashShebang?: boolean;
+	commandTimeout?: number;
 }): Redis => {
 	const instance = new Redis(cacheUrl, {
 		tls:
@@ -25,8 +28,8 @@ export const createRedisClient = ({
 				: undefined,
 		family: 4,
 		keepAlive: 10000,
-		commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
-		// Let `commandTimeout` (10s) be the sole bound on how long a command
+		commandTimeout,
+		// Let `commandTimeout` (default 10s) be the sole bound on how long a command
 		// can wait. `maxRetriesPerRequest: null` disables ioredis's default
 		// "flush pending commands after N reconnect attempts" behavior, which
 		// otherwise aborts commands still in the offline queue on any minor

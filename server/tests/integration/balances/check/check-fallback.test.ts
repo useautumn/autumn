@@ -51,7 +51,7 @@ test(`${chalk.yellowBright("check-fallback: /check returns allowed=true on retry
 
 		const body = (await response.json()) as CheckResponseV3;
 
-		expect(response.status).toBe(200);
+		expect(response.status).toBe(202);
 		expect(body).toEqual({
 			allowed: true,
 			customer_id: customerId,
@@ -106,7 +106,7 @@ test(`${chalk.yellowBright("check-fallback-legacy: /check fallback applies respo
 			}),
 		);
 
-		expect(response.status).toBe(200);
+		expect(response.status).toBe(202);
 		expect(await response.json()).toEqual({
 			allowed: false,
 			code: "feature_found",

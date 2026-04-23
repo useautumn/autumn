@@ -40,12 +40,29 @@ type RolloutEntry = RolloutPercent & {
 	orgs: Record<string, RolloutPercent>;
 };
 
+type RolloutOrg = {
+	id: string;
+	name: string;
+	slug: string;
+};
+
 type RolloutsResponse = {
 	rollouts: Record<string, RolloutEntry>;
+	orgsById: Record<string, RolloutOrg>;
 	configHealthy: boolean;
 	configConfigured: boolean;
 	lastSuccessAt: string | null;
 	error: string | null;
+};
+
+type EdgeConfigSource = {
+	bucket: string;
+	region: string;
+	configs: {
+		id: string;
+		label: string;
+		key: string;
+	}[];
 };
 
 const formatTimestamp = (timestamp: number) => {
@@ -58,12 +75,14 @@ const formatPercent = (percent: number) => `${percent}%`;
 const RolloutOrgRow = ({
 	rolloutId,
 	orgId,
+	org,
 	orgEntry,
 	onUpdate,
 	onDelete,
 }: {
 	rolloutId: string;
 	orgId: string;
+	org?: RolloutOrg;
 	orgEntry: RolloutPercent;
 	onUpdate: ({
 		rolloutId,
@@ -87,7 +106,12 @@ const RolloutOrgRow = ({
 	return (
 		<div className="grid gap-3 rounded-xl border border-border bg-muted/20 p-3 md:grid-cols-[minmax(0,1fr)_220px_auto] md:items-center">
 			<div className="min-w-0">
-				<p className="truncate font-mono text-xs text-foreground">{orgId}</p>
+				<p className="truncate text-sm font-medium text-foreground">
+					{org?.name ?? orgId}
+				</p>
+				<p className="mt-1 truncate font-mono text-[11px] text-muted-foreground">
+					{org ? `${org.slug} | ${org.id}` : "Unknown org"}
+				</p>
 				<p className="mt-1 text-[11px] text-muted-foreground">
 					prev: {formatPercent(orgEntry.previousPercent)} | changed:{" "}
 					{formatTimestamp(orgEntry.changedAt)}
@@ -131,10 +155,13 @@ const RolloutCard = ({
 	onUpdateGlobal,
 	onUpdateOrg,
 	onDeleteOrg,
+	onDeleteRollout,
 	onAddOrg,
+	orgsById,
 }: {
 	rolloutId: string;
 	entry: RolloutEntry;
+	orgsById: Record<string, RolloutOrg>;
 	onUpdateGlobal: ({
 		rolloutId,
 		percent,
@@ -158,6 +185,7 @@ const RolloutCard = ({
 		rolloutId: string;
 		orgId: string;
 	}) => void;
+	onDeleteRollout: ({ rolloutId }: { rolloutId: string }) => void;
 	onAddOrg: ({ rolloutId }: { rolloutId: string }) => void;
 }) => {
 	const [expanded, setExpanded] = useState(true);
@@ -229,6 +257,12 @@ const RolloutCard = ({
 						>
 							Save
 						</Button>
+						<IconButton
+							icon={<Trash2 className="w-3.5 h-3.5" />}
+							variant="secondary"
+							size="sm"
+							onClick={() => onDeleteRollout({ rolloutId })}
+						/>
 					</div>
 				</div>
 			</CardHeader>
@@ -273,6 +307,7 @@ const RolloutCard = ({
 								key={orgId}
 								rolloutId={rolloutId}
 								orgId={orgId}
+								org={orgsById[orgId]}
 								orgEntry={orgEntry}
 								onUpdate={onUpdateOrg}
 								onDelete={onDeleteOrg}
@@ -298,6 +333,13 @@ export const EdgeConfigView = () => {
 		queryKey: ["admin-rollouts"],
 		queryFn: async () => {
 			const { data } = await axiosInstance.get("/admin/rollouts");
+			return data;
+		},
+	});
+	const { data: source } = useQuery<EdgeConfigSource>({
+		queryKey: ["admin-edge-config-sources"],
+		queryFn: async () => {
+			const { data } = await axiosInstance.get("/admin/edge-config-sources");
 			return data;
 		},
 	});
@@ -360,6 +402,24 @@ export const EdgeConfigView = () => {
 			toast.error(getBackendErr(error, "Failed to remove org override")),
 	});
 
+	const deleteRolloutMutation = useMutation({
+		mutationFn: async ({ rolloutId }: { rolloutId: string }) => {
+			await axiosInstance.delete(`/admin/rollouts/${rolloutId}`);
+		},
+		onSuccess: () => {
+			toast.success("Rollout deleted");
+			refetch();
+		},
+		onError: (error) =>
+			toast.error(getBackendErr(error, "Failed to delete rollout")),
+	});
+
+	const handleDeleteRollout = ({ rolloutId }: { rolloutId: string }) => {
+		if (!confirm(`Delete rollout "${rolloutId}"? This resets the staleness window.`))
+			return;
+		deleteRolloutMutation.mutate({ rolloutId });
+	};
+
 	const handleDeleteOrg = ({
 		rolloutId,
 		orgId,
@@ -382,7 +442,9 @@ export const EdgeConfigView = () => {
 	if (!isAdmin) return <DefaultView />;
 
 	const rollouts = data?.rollouts ?? {};
+	const orgsById = data?.orgsById ?? {};
 	const rolloutEntries = Object.entries(rollouts);
+	const rolloutSource = source?.configs.find((config) => config.id === "rollouts");
 
 	return (
 		<div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
@@ -454,6 +516,37 @@ export const EdgeConfigView = () => {
 				</div>
 			</div>
 
+			{source && rolloutSource && (
+				<div className="rounded-lg border border-border bg-muted/20 p-4">
+					<div className="grid gap-3 md:grid-cols-[220px_160px_minmax(0,1fr)]">
+						<div>
+							<div className="text-[11px] font-medium uppercase text-muted-foreground">
+								S3 Bucket
+							</div>
+							<div className="mt-1 font-mono text-xs text-foreground">
+								{source.bucket}
+							</div>
+						</div>
+						<div>
+							<div className="text-[11px] font-medium uppercase text-muted-foreground">
+								Region
+							</div>
+							<div className="mt-1 font-mono text-xs text-foreground">
+								{source.region}
+							</div>
+						</div>
+						<div className="min-w-0">
+							<div className="text-[11px] font-medium uppercase text-muted-foreground">
+								Config Object
+							</div>
+							<div className="mt-1 font-mono text-xs text-foreground">
+								{rolloutSource.key}
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
 			{rolloutEntries.length === 0 && (
 				<Card className="border-dashed">
 					<CardContent className="flex flex-col items-start gap-3 py-6">
@@ -480,6 +573,7 @@ export const EdgeConfigView = () => {
 						key={rolloutId}
 						rolloutId={rolloutId}
 						entry={entry}
+						orgsById={orgsById}
 						onUpdateGlobal={({ rolloutId, percent }) =>
 							updateGlobalMutation.mutate({ rolloutId, percent })
 						}
@@ -487,6 +581,7 @@ export const EdgeConfigView = () => {
 							updateOrgMutation.mutate({ rolloutId, orgId, percent })
 						}
 						onDeleteOrg={handleDeleteOrg}
+						onDeleteRollout={handleDeleteRollout}
 						onAddOrg={({ rolloutId }) => setAddOrgRolloutId(rolloutId)}
 					/>
 				))}

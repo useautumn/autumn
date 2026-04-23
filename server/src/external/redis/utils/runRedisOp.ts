@@ -1,22 +1,10 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis } from "@/external/redis/initRedis.js";
-import {
-	markRedisCommandFailure,
-	markRedisCommandSuccess,
-} from "@/external/redis/initUtils/redisAvailability.js";
 import { RedisUnavailableError } from "./errors.js";
 
 const REDIS_WARNING_INTERVAL_MS = 30_000;
 const lastRedisWarningAtBySource = new Map<string, number>();
-
-const markDefaultRedisAvailability = (
-	targetRedis: Redis,
-	available: boolean,
-) => {
-	if (targetRedis !== redis) return;
-	available ? markRedisCommandSuccess() : markRedisCommandFailure();
-};
 
 const classifyErrorReason = (
 	targetRedis: Redis,
@@ -81,15 +69,35 @@ export const runRedisOp = async <T>({
 
 	try {
 		const value = await operation();
-		markDefaultRedisAvailability(targetRedis, true);
 		return value;
 	} catch (error) {
 		const classified = classifyErrorReason(targetRedis, error);
 		const reason: UnavailableReason = classified ?? "other";
-		if (classified !== null) {
-			markDefaultRedisAvailability(targetRedis, false);
-		}
 		warnRedisUnavailable({ source, reason, error });
 		throw new RedisUnavailableError({ source, reason, cause: error });
+	}
+};
+
+/**
+ * Fail-open variant of `runRedisOp`. On failure: runs `onError`, returns
+ * `undefined`. Use this from mutation/invalidation paths where a Redis
+ * outage shouldn't propagate — the cache goes stale, not the request.
+ */
+export const tryRedisOp = async <T>({
+	operation,
+	source,
+	redisInstance,
+	onError,
+}: {
+	operation: () => Promise<T>;
+	source: string;
+	redisInstance?: Redis;
+	onError?: (error: unknown) => void;
+}): Promise<T | undefined> => {
+	try {
+		return await runRedisOp({ operation, source, redisInstance });
+	} catch (error) {
+		onError?.(error);
+		return undefined;
 	}
 };

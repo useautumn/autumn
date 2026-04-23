@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
+import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
@@ -21,6 +22,7 @@ import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestB
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
+import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
 import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
 import { handleGetRollouts } from "./rollouts/handleGetRollouts";
 import { handleUpdateRollout } from "./rollouts/handleUpdateRollout";
@@ -30,6 +32,7 @@ export const honoAdminRouter = new Hono<HonoEnv>();
 
 honoAdminRouter.get("/users", ...handleListAdminUsers);
 honoAdminRouter.get("/orgs", ...handleListAdminOrgs);
+honoAdminRouter.get("/edge-config-sources", ...handleGetAdminEdgeConfigSources);
 honoAdminRouter.get(
 	"/orgs/:org_id/request-block",
 	...handleGetAdminOrgRequestBlock,
@@ -88,6 +91,7 @@ honoAdminRouter.put(
 	"/rollouts/:rollout_id/orgs/:org_id",
 	...handleUpdateRolloutOrg,
 );
+honoAdminRouter.delete("/rollouts/:rollout_id", ...handleDeleteRollout);
 honoAdminRouter.delete(
 	"/rollouts/:rollout_id/orgs/:org_id",
 	...handleDeleteRolloutOrg,
