@@ -404,6 +404,20 @@ export type BillingUpdateRedirectMode = ClosedEnum<
 >;
 
 /**
+ * A discount to apply. Can be either a reward ID or a promotion code.
+ */
+export type BillingUpdateAttachDiscount = {
+  /**
+   * The ID of the reward to apply as a discount.
+   */
+  rewardId?: string | undefined;
+  /**
+   * The promotion code to apply as a discount.
+   */
+  promotionCode?: string | undefined;
+};
+
+/**
  * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
  */
 export const BillingUpdateCancelAction = {
@@ -469,6 +483,10 @@ export type UpdateSubscriptionParams = {
    * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
    */
   subscriptionId?: string | undefined;
+  /**
+   * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+   */
+  discounts?: Array<BillingUpdateAttachDiscount> | undefined;
   /**
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
@@ -1024,6 +1042,39 @@ export const BillingUpdateRedirectMode$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdateRedirectMode);
 
 /** @internal */
+export type BillingUpdateAttachDiscount$Outbound = {
+  reward_id?: string | undefined;
+  promotion_code?: string | undefined;
+};
+
+/** @internal */
+export const BillingUpdateAttachDiscount$outboundSchema: z.ZodMiniType<
+  BillingUpdateAttachDiscount$Outbound,
+  BillingUpdateAttachDiscount
+> = z.pipe(
+  z.object({
+    rewardId: z.optional(z.string()),
+    promotionCode: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      rewardId: "reward_id",
+      promotionCode: "promotion_code",
+    });
+  }),
+);
+
+export function billingUpdateAttachDiscountToJSON(
+  billingUpdateAttachDiscount: BillingUpdateAttachDiscount,
+): string {
+  return JSON.stringify(
+    BillingUpdateAttachDiscount$outboundSchema.parse(
+      billingUpdateAttachDiscount,
+    ),
+  );
+}
+
+/** @internal */
 export const BillingUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
   typeof BillingUpdateCancelAction
 > = z.enum(BillingUpdateCancelAction);
@@ -1063,6 +1114,7 @@ export type UpdateSubscriptionParams$Outbound = {
   proration_behavior?: string | undefined;
   redirect_mode: string;
   subscription_id?: string | undefined;
+  discounts?: Array<BillingUpdateAttachDiscount$Outbound> | undefined;
   cancel_action?: string | undefined;
   billing_cycle_anchor?: "now" | undefined;
   no_billing_changes?: boolean | undefined;
@@ -1094,6 +1146,9 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       "if_required",
     ),
     subscriptionId: z.optional(z.string()),
+    discounts: z.optional(
+      z.array(z.lazy(() => BillingUpdateAttachDiscount$outboundSchema)),
+    ),
     cancelAction: z.optional(BillingUpdateCancelAction$outboundSchema),
     billingCycleAnchor: z.optional(z.literal("now")),
     noBillingChanges: z.optional(z.boolean()),
