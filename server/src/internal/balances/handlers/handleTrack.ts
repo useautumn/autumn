@@ -4,12 +4,11 @@ import {
 	TrackParamsSchema,
 	TrackQuerySchema,
 } from "@autumn/shared";
+import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { runTrackV2 } from "@/internal/balances/track/runTrackV2.js";
-import {
-	getTrackEventNameDeductions,
-	getTrackFeatureDeductions,
-} from "@/internal/balances/track/utils/getFeatureDeductions.js";
+import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
+import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
+import { queueTrack } from "@/internal/balances/track/utils/queueTrack.js";
 
 export const handleTrack = createRoute({
 	query: TrackQuerySchema,
@@ -21,23 +20,20 @@ export const handleTrack = createRoute({
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
+		const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 
-		// Build feature deductions
-		const featureDeductions = body.feature_id
-			? getTrackFeatureDeductions({
-					ctx,
-					featureId: body.feature_id,
-					lock: body.lock,
-					value: body.value,
-				})
-			: getTrackEventNameDeductions({
-					ctx,
-					eventName: body.event_name!,
-					value: body.value,
-				});
+		if (!shouldUseRedis()) {
+			const queuedResponse = await queueTrack({
+				ctx,
+				body,
+			});
+			if (queuedResponse) {
+				return c.json(queuedResponse);
+			}
+		}
 
 		return c.json(
-			await runTrackV2({
+			await runTrackWithRollout({
 				ctx,
 				body,
 				featureDeductions,

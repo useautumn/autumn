@@ -8,7 +8,7 @@ import { createProducts } from "@tests/utils/productUtils.js";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { and, eq, inArray } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { deleteCachedApiCustomer } from "../../../internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer";
+import { deleteCachedFullCustomer } from "../../../internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 
 export const createSharedProducts = async ({
 	products,
@@ -50,7 +50,7 @@ export const createSharedProducts = async ({
 	const clearCache = [];
 	for (const customer of deletedCustomers) {
 		clearCache.push(
-			deleteCachedApiCustomer({
+			deleteCachedFullCustomer({
 				customerId: customer.id ?? "",
 				ctx,
 				source: "createSharedProducts",

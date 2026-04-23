@@ -10,8 +10,7 @@ import {
 	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { getApiCustomer } from "../../cusUtils/apiCusUtils/getApiCustomer.js";
-import { getOrCreateCachedFullCustomer } from "../../cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
+import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
 
 export const handlePostCustomer = createRoute({
 	versionedQuery: {
@@ -53,7 +52,7 @@ export const handlePostCustomer = createRoute({
 
 		const customerData = CustomerDataSchema.parse(createCusParams);
 
-		const fullCustomer = await getOrCreateCachedFullCustomer({
+		const apiCustomer = await getOrCreateApiCustomerByRollout({
 			ctx,
 			params: {
 				customer_id: createCusParams.id,
@@ -62,11 +61,6 @@ export const handlePostCustomer = createRoute({
 				entity_data: createCusParams.entity_data,
 			},
 			source: "handlePostCustomer",
-		});
-
-		const apiCustomer = await getApiCustomer({
-			ctx,
-			fullCustomer,
 			withAutumnId: with_autumn_id,
 		});
 

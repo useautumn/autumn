@@ -11,6 +11,7 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import {
 	expireCusEntForReset,
 	setCachedCusEntField,
+	setCachedSubjectBalanceField,
 } from "@tests/utils/cusProductUtils/resetTestUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -146,6 +147,16 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (cache): lazy reset de
 			cusEntId: cusEnt!.id,
 			field: "balance",
 			value: -50,
+		});
+		await setCachedSubjectBalanceField({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			featureId: TestFeature.Messages,
+			customerEntitlementId: cusEnt!.id,
+			field: "balance",
+			value: -50,
+			redisV2: ctx.redisV2,
 		});
 		await expireCusEntForReset({
 			ctx,

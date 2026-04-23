@@ -4,6 +4,7 @@ import type { Context, Next } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
+import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
 
@@ -29,6 +30,11 @@ export const vercelSeederMiddleware = async (
 			env: ctx.env ?? AppEnv.Sandbox,
 		});
 	}
+
+	ctx.rolloutSnapshot = computeRolloutSnapshot({
+		orgId: ctx.org?.id,
+		customerId: ctx.customerId,
+	});
 
 	ctx.logger = addAppContextToLogs({
 		logger: ctx.logger,

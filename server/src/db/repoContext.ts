@@ -1,4 +1,5 @@
 import type { AppEnv } from "@autumn/shared";
+import type { Redis } from "ioredis";
 import type { Logger } from "@/external/logtail/logtailUtils";
 import type { DrizzleCli } from "./initDrizzle.js";
 
@@ -10,5 +11,6 @@ export interface RepoContext {
 
 	db: DrizzleCli;
 	logger: Logger;
+	redisV2: Redis;
 	customerId?: string;
 }

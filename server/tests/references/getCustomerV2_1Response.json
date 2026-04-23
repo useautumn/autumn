@@ -1,0 +1,111 @@
+{
+  "id": "get-cus-multi-ent-v2",
+  "name": "get-cus-multi-ent-v2",
+  "email": "get-cus-multi-ent-v2@example.com",
+  "created_at": 1776681093029,
+  "fingerprint": null,
+  "stripe_id": "cus_UMz5mvPwIP5PS3",
+  "env": "sandbox",
+  "metadata": {},
+  "send_email_receipts": false,
+  "billing_controls": {},
+  "subscriptions": [
+    {
+      "id": "cus_prod_3CcNrGiJGlmGt6kWD0DmRWURUQw",
+      "plan_id": "cus-lvl_get-cus-multi-ent-v2",
+      "auto_enable": false,
+      "add_on": false,
+      "status": "active",
+      "past_due": false,
+      "canceled_at": null,
+      "expires_at": null,
+      "trial_ends_at": null,
+      "started_at": 1776681092000,
+      "current_period_start": 1776681092000,
+      "current_period_end": 1779273092000,
+      "quantity": 1
+    },
+    {
+      "id": "cus_prod_3CcNtXszM7noCNIdjl9H6gs8hdj",
+      "plan_id": "ent-prod_get-cus-multi-ent-v2",
+      "auto_enable": false,
+      "add_on": false,
+      "status": "active",
+      "past_due": false,
+      "canceled_at": null,
+      "expires_at": null,
+      "trial_ends_at": null,
+      "started_at": 1776681113920,
+      "current_period_start": null,
+      "current_period_end": null,
+      "quantity": 1
+    }
+  ],
+  "purchases": [],
+  "balances": {
+    "messages": {
+      "object": "balance",
+      "feature_id": "messages",
+      "granted": 100,
+      "remaining": 90,
+      "usage": 10,
+      "unlimited": false,
+      "overage_allowed": false,
+      "max_purchase": null,
+      "next_reset_at": 1779273092000,
+      "breakdown": [
+        {
+          "object": "balance_breakdown",
+          "id": "cus_ent_3CcNrCvPuPFhzyhShn1g64uZeJ6",
+          "plan_id": "cus-lvl_get-cus-multi-ent-v2",
+          "included_grant": 100,
+          "prepaid_grant": 0,
+          "remaining": 90,
+          "usage": 10,
+          "unlimited": false,
+          "reset": {
+            "interval": "month",
+            "resets_at": 1779273092000
+          },
+          "price": null,
+          "expires_at": null,
+          "overage": 0
+        }
+      ]
+    },
+    "credits": {
+      "object": "balance",
+      "feature_id": "credits",
+      "granted": 400,
+      "remaining": 400,
+      "usage": 0,
+      "unlimited": false,
+      "overage_allowed": false,
+      "max_purchase": null,
+      "next_reset_at": null,
+      "breakdown": []
+    }
+  },
+  "flags": {
+    "dashboard": {
+      "object": "flag",
+      "id": "cus_ent_3CcNrCFvKwLC3y0XoUiLazztjwy",
+      "plan_id": "cus-lvl_get-cus-multi-ent-v2",
+      "expires_at": null,
+      "feature_id": "dashboard"
+    }
+  },
+  "invoices": [
+    {
+      "plan_ids": [
+        "cus-lvl_get-cus-multi-ent-v2"
+      ],
+      "stripe_id": "in_1TOF756GVhH8pLcDfKcFgsHu",
+      "status": "paid",
+      "total": 20,
+      "currency": "usd",
+      "created_at": 1776681092000,
+      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3CcNrtgUERTv8MnmpqncpHXIwRk"
+    }
+  ]
+}

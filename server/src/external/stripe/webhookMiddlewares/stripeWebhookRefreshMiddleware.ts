@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type {
 	StripeWebhookContext,
 	StripeWebhookHonoEnv,
@@ -94,7 +94,7 @@ export const stripeWebhookRefreshMiddleware = async (
 				return;
 			}
 
-			await deleteCachedApiCustomer({
+			await deleteCachedFullCustomer({
 				customerId: customer.id!,
 				ctx,
 				source: `stripeWebhookRefreshMiddleware: ${eventType}`,
