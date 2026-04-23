@@ -28,6 +28,7 @@ const FIELDS_WITH_BILLING_CHANGES = [
 	"customize",
 	"cancel_action",
 	"billing_cycle_anchor",
+	"discounts",
 ] as const satisfies (keyof UpdateSubscriptionV1Params)[];
 
 /**
@@ -97,6 +98,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		fullCustomer,
 		targetCustomerProduct: customerProduct,
 		contextOverride,
+		params,
 		skipBillingChanges,
 		product: fullProduct,
 		skipSubscriptionFetching: isUpdatingFreeCustomerProduct,
