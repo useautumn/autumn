@@ -93,3 +93,27 @@ export const runRedisOp = async <T>({
 		throw new RedisUnavailableError({ source, reason, cause: error });
 	}
 };
+
+/**
+ * Fail-open variant of `runRedisOp`. On failure: runs `onError`, returns
+ * `undefined`. Use this from mutation/invalidation paths where a Redis
+ * outage shouldn't propagate — the cache goes stale, not the request.
+ */
+export const tryRedisOp = async <T>({
+	operation,
+	source,
+	redisInstance,
+	onError,
+}: {
+	operation: () => Promise<T>;
+	source: string;
+	redisInstance?: Redis;
+	onError?: (error: unknown) => void;
+}): Promise<T | undefined> => {
+	try {
+		return await runRedisOp({ operation, source, redisInstance });
+	} catch (error) {
+		onError?.(error);
+		return undefined;
+	}
+};
