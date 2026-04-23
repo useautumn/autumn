@@ -5,7 +5,9 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
 import lottie, { type AnimationItem } from "lottie-web";
 import { useEffect, useRef } from "react";
 
-gsap.registerPlugin(ScrollTrigger);
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(ScrollTrigger);
+}
 
 export default function SolutionAnimation() {
 	const containerRef = useRef<HTMLDivElement | null>(null);
