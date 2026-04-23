@@ -17,7 +17,6 @@ if [ "$OS" = "Darwin" ]; then
   BREW_NEEDED=()
   command -v psql             >/dev/null 2>&1 || BREW_NEEDED+=(postgresql@18)
   command -v redis-stack-server >/dev/null 2>&1 || BREW_NEEDED+=(redis-stack)
-  command -v clickhouse       >/dev/null 2>&1 || BREW_NEEDED+=(clickhouse)
   command -v java             >/dev/null 2>&1 || BREW_NEEDED+=(openjdk)
 
   # redis-stack lives in the redis-stack tap
@@ -88,20 +87,6 @@ else
     sudo apt-get update -qq
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "${APT_NEEDED[@]}"
   fi
-
-  if ! command -v clickhouse-server >/dev/null 2>&1; then
-    log "Installing ClickHouse from official apt repo"
-    sudo mkdir -p /etc/apt/keyrings
-    curl -fsSL 'https://packages.clickhouse.com/rpm/lts/repodata/repomd.xml.key' -o /tmp/clickhouse.asc
-    sudo gpg --batch --yes -o /etc/apt/keyrings/clickhouse.gpg --dearmor /tmp/clickhouse.asc
-    rm -f /tmp/clickhouse.asc
-    echo 'deb [signed-by=/etc/apt/keyrings/clickhouse.gpg] https://packages.clickhouse.com/deb stable main' \
-      | sudo tee /etc/apt/sources.list.d/clickhouse.list >/dev/null
-    sudo apt-get update -qq
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq \
-      -o Dpkg::Options::='--force-confnew' \
-      clickhouse-server clickhouse-client
-  fi
 fi
 
 # =============================================================
@@ -152,6 +137,40 @@ fi
 if [ ! -d node_modules ]; then
   log "Installing workspace dependencies"
   bun install --frozen-lockfile
+fi
+
+# =============================================================
+# Tinybird Forward CLI (installs tb -> ~/.local/bin/tb)
+# =============================================================
+export PATH="$HOME/.local/bin:$PATH"
+if ! command -v tb >/dev/null 2>&1; then
+  log "Installing Tinybird Forward CLI (~/.local/bin/tb)"
+  curl -sSL https://tinybird.co | sh
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# =============================================================
+# Docker runtime check (needed for `tb local`)
+# =============================================================
+if ! command -v docker >/dev/null 2>&1; then
+  log "WARNING: docker CLI not found. Tinybird Local requires a Docker runtime."
+  if [ "$OS" = "Darwin" ]; then
+    log "         Install Docker Desktop, OrbStack, or colima before running bun dev:agent."
+  else
+    log "         Install Docker Engine (https://docs.docker.com/engine/install/) before running bun dev:agent."
+  fi
+else
+  # Pre-pull image so first `tb local start` is fast. Non-fatal on failure
+  # (daemon may not be running at bootstrap time — that's fine).
+  if docker info >/dev/null 2>&1; then
+    if ! docker image inspect tinybirdco/tinybird-local:latest >/dev/null 2>&1; then
+      log "Pre-pulling tinybirdco/tinybird-local image"
+      docker pull tinybirdco/tinybird-local:latest >/dev/null || \
+        log "WARNING: docker pull failed — 'tb local start' will retry later"
+    fi
+  else
+    log "Docker daemon not reachable right now — skipping pre-pull (tb local start will pull on first run)"
+  fi
 fi
 
 log "Bootstrap complete. Run: bun dev:agent"

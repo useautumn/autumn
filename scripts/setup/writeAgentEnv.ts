@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { copyFileSync, existsSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(import.meta.dir, "..", "..");
@@ -17,8 +17,40 @@ const genUrlSafeBase64 = ({ bytes }: { bytes: number }): string =>
 const serverPort = process.env.AGENT_SERVER_PORT ?? "8080";
 const vitePort = process.env.AGENT_VITE_PORT ?? "3000";
 
+const TINYBIRD_API_URL =
+	process.env.TINYBIRD_API_URL ?? "http://localhost:7181";
+const TINYBIRD_CLICKHOUSE_URL =
+	process.env.TINYBIRD_CLICKHOUSE_URL ?? "http://localhost:7182";
+const TINYBIRD_TOKEN = process.env.TINYBIRD_TOKEN ?? "";
+
+const upsertEnvLine = ({
+	content,
+	key,
+	value,
+}: {
+	content: string;
+	key: string;
+	value: string;
+}): string => {
+	const line = `${key}=${value}`;
+	const re = new RegExp(`^${key}=.*$`, "m");
+	if (re.test(content)) return content.replace(re, line);
+	return content.endsWith("\n") ? `${content}${line}\n` : `${content}\n${line}\n`;
+};
+
 if (existsSync(serverEnvPath)) {
-	console.log("[writeAgentEnv] server/.env already exists — skipping generation");
+	// File exists — just refresh Tinybird creds (token rotates if the
+	// local container is recreated, so we always upsert these).
+	let content = readFileSync(serverEnvPath, "utf8");
+	content = upsertEnvLine({ content, key: "TINYBIRD_API_URL", value: TINYBIRD_API_URL });
+	content = upsertEnvLine({
+		content,
+		key: "TINYBIRD_CLICKHOUSE_URL",
+		value: TINYBIRD_CLICKHOUSE_URL,
+	});
+	content = upsertEnvLine({ content, key: "TINYBIRD_TOKEN", value: TINYBIRD_TOKEN });
+	writeFileSync(serverEnvPath, content);
+	console.log("[writeAgentEnv] server/.env already exists — refreshed TINYBIRD_* only");
 } else {
 	const passThrough = [
 		"STRIPE_SANDBOX_CLIENT_ID",
@@ -61,8 +93,10 @@ AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=x
 AWS_SECRET_ACCESS_KEY=x
 
-# ClickHouse (local)
-TINYBIRD_CLICKHOUSE_URL=http://localhost:8123
+# Tinybird Local (container managed by 'tb local'; token rotates on container recreate)
+TINYBIRD_API_URL=${TINYBIRD_API_URL}
+TINYBIRD_CLICKHOUSE_URL=${TINYBIRD_CLICKHOUSE_URL}
+TINYBIRD_TOKEN=${TINYBIRD_TOKEN}
 
 # App URLs
 BETTER_AUTH_URL=http://localhost:${serverPort}

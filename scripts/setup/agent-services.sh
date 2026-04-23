@@ -5,18 +5,19 @@ log() { echo "[agent-services] $*"; }
 
 OS="$(uname -s)"
 
+# Make sure `tb` installed by bootstrap is on PATH
+export PATH="$HOME/.local/bin:$PATH"
+
 # =============================================================
-# 1. Start postgres + redis + clickhouse (OS-specific)
+# 1. Start postgres + redis (OS-specific)
 # =============================================================
 log "Starting system services"
 
 if [ "$OS" = "Darwin" ]; then
   brew services start postgresql@18  >/dev/null 2>&1 || true
   brew services start redis-stack    >/dev/null 2>&1 || true
-  brew services start clickhouse     >/dev/null 2>&1 || true
 else
   sudo service postgresql            start >/dev/null 2>&1 || true
-  sudo service clickhouse-server     start >/dev/null 2>&1 || true
 
   # redis-stack-server ships a systemd unit but no SysV init script.
   # Try `service` first (works when systemd is the init), then fall back
@@ -69,7 +70,110 @@ if ! pgrep -f 'elasticmq.*\.jar' >/dev/null 2>&1; then
 fi
 
 # =============================================================
-# 3. Ensure Postgres DB + role + pg_trgm
+# 3. Tinybird Local (runs in Docker, started/managed by `tb local`)
+# =============================================================
+if ! command -v tb >/dev/null 2>&1; then
+  echo "[agent-services] ERROR: 'tb' CLI not found. Run 'bun agent:bootstrap' first." >&2
+  exit 1
+fi
+
+# Ensure Docker daemon is reachable. On Linux try to start it via service if missing.
+if ! docker info >/dev/null 2>&1; then
+  if [ "$OS" = "Linux" ]; then
+    sudo service docker start >/dev/null 2>&1 || true
+    sleep 2
+  fi
+fi
+if ! docker info >/dev/null 2>&1; then
+  echo "[agent-services] ERROR: Docker daemon is not reachable." >&2
+  if [ "$OS" = "Darwin" ]; then
+    echo "  Start Docker Desktop, OrbStack, or colima and retry." >&2
+  else
+    echo "  Start the Docker daemon (e.g. 'sudo service docker start') and retry." >&2
+  fi
+  exit 1
+fi
+
+# Start Tinybird Local if the HTTP API isn't already reachable.
+# Note: `tb local start` tails the container log indefinitely when the
+# container is already healthy, so we run it in the background and rely
+# on the HTTP readiness poll below as the real "ready" gate. Killing the
+# tb CLI process leaves the container running.
+export TB_VERSION_WARNING=0
+TB_START_LOG="${HOME}/.autumn-agent/logs/tb-local-start.log"
+mkdir -p "$(dirname "$TB_START_LOG")"
+if ! curl -sf -o /dev/null http://localhost:7181/; then
+  log "Starting Tinybird Local (docker container 'tinybird-local', first run may take ~2m)"
+  nohup tb local start >"$TB_START_LOG" 2>&1 &
+  TB_START_PID=$!
+  disown || true
+  TB_READY=0
+  for i in $(seq 1 240); do
+    if curl -sf -o /dev/null http://localhost:7181/; then
+      TB_READY=1
+      break
+    fi
+    # Exit early if the start process died
+    if ! kill -0 "$TB_START_PID" 2>/dev/null; then
+      if curl -sf -o /dev/null http://localhost:7181/; then
+        TB_READY=1
+      fi
+      break
+    fi
+    sleep 1
+  done
+  # Stop the log tailer (container keeps running)
+  kill -TERM "$TB_START_PID" 2>/dev/null || true
+  wait "$TB_START_PID" 2>/dev/null || true
+  if [ "$TB_READY" -eq 0 ]; then
+    echo "[agent-services] ERROR: Tinybird Local API (:7181) did not become ready after 240s." >&2
+    echo "  Tail of $TB_START_LOG:" >&2
+    tail -30 "$TB_START_LOG" >&2 || true
+    exit 1
+  fi
+fi
+
+# =============================================================
+# 4. Stage + deploy Tinybird project into local workspace
+#
+# `tb deploy` walks the current directory tree and registers every
+# datasource/pipe/materialization/connection it finds. The repo's
+# connections/ and copies/ files reference cloud-only secrets
+# (PG_USERNAME, S3 role ARNs) that don't make sense locally, so
+# we stage a subset of the project into a per-agent build dir and
+# deploy from there.
+# =============================================================
+TB_STAGE_DIR="${HOME}/.autumn-agent/tb-local"
+mkdir -p "$TB_STAGE_DIR"
+log "Staging Tinybird project for local deploy"
+rsync -a --delete \
+  --exclude='connections' \
+  --exclude='copies' \
+  --exclude='scripts' \
+  server/tinybird/ "$TB_STAGE_DIR/"
+
+log "Deploying datasources + pipes to Tinybird Local"
+(
+  cd "$TB_STAGE_DIR"
+  tb --local deploy >/tmp/tb-deploy.log 2>&1 || {
+    echo "[agent-services] ERROR: tb deploy failed. Tail of /tmp/tb-deploy.log:" >&2
+    tail -30 /tmp/tb-deploy.log >&2
+    exit 1
+  }
+)
+
+# =============================================================
+# 5. Extract TINYBIRD_* env vars from the local workspace
+# =============================================================
+log "Reading Tinybird Local credentials"
+TB_INFO_JSON="$(cd "$TB_STAGE_DIR" && tb --output json --local info)"
+TINYBIRD_TOKEN="$(echo "$TB_INFO_JSON" | python3 -c 'import sys,json;print(json.load(sys.stdin)["local"]["token"])')"
+TINYBIRD_API_URL="$(echo "$TB_INFO_JSON" | python3 -c 'import sys,json;print(json.load(sys.stdin)["local"]["api"])')"
+TINYBIRD_CLICKHOUSE_URL="$(echo "$TB_INFO_JSON" | python3 -c 'import sys,json;print(json.load(sys.stdin)["local"]["clickhouse"])')"
+export TINYBIRD_TOKEN TINYBIRD_API_URL TINYBIRD_CLICKHOUSE_URL
+
+# =============================================================
+# 6. Ensure Postgres DB + role + pg_trgm
 # =============================================================
 DB_NAME="autumn"
 
@@ -87,12 +191,13 @@ else
 fi
 
 # =============================================================
-# 4. Write env files (no-op if server/.env already exists)
+# 7. Write env files (reads TINYBIRD_* from process.env; always
+#    upserts them into server/.env so token stays fresh across runs)
 # =============================================================
 bun scripts/setup/writeAgentEnv.ts
 
 # =============================================================
-# 5. DB migrations
+# 8. DB migrations
 # =============================================================
 log "Running migrations"
 bun db:generate >/dev/null 2>&1 || true
