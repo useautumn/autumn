@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
+import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
@@ -30,6 +31,7 @@ export const honoAdminRouter = new Hono<HonoEnv>();
 
 honoAdminRouter.get("/users", ...handleListAdminUsers);
 honoAdminRouter.get("/orgs", ...handleListAdminOrgs);
+honoAdminRouter.get("/edge-config-sources", ...handleGetAdminEdgeConfigSources);
 honoAdminRouter.get(
 	"/orgs/:org_id/request-block",
 	...handleGetAdminOrgRequestBlock,

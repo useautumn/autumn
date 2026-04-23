@@ -48,6 +48,16 @@ type RolloutsResponse = {
 	error: string | null;
 };
 
+type EdgeConfigSource = {
+	bucket: string;
+	region: string;
+	configs: {
+		id: string;
+		label: string;
+		key: string;
+	}[];
+};
+
 const formatTimestamp = (timestamp: number) => {
 	if (!timestamp) return "Never";
 	return new Date(timestamp).toLocaleString();
@@ -301,6 +311,13 @@ export const EdgeConfigView = () => {
 			return data;
 		},
 	});
+	const { data: source } = useQuery<EdgeConfigSource>({
+		queryKey: ["admin-edge-config-sources"],
+		queryFn: async () => {
+			const { data } = await axiosInstance.get("/admin/edge-config-sources");
+			return data;
+		},
+	});
 
 	const updateGlobalMutation = useMutation({
 		mutationFn: async ({
@@ -383,6 +400,7 @@ export const EdgeConfigView = () => {
 
 	const rollouts = data?.rollouts ?? {};
 	const rolloutEntries = Object.entries(rollouts);
+	const rolloutSource = source?.configs.find((config) => config.id === "rollouts");
 
 	return (
 		<div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">
@@ -453,6 +471,37 @@ export const EdgeConfigView = () => {
 					</Button>
 				</div>
 			</div>
+
+			{source && rolloutSource && (
+				<div className="rounded-lg border border-border bg-muted/20 p-4">
+					<div className="grid gap-3 md:grid-cols-[220px_160px_minmax(0,1fr)]">
+						<div>
+							<div className="text-[11px] font-medium uppercase text-muted-foreground">
+								S3 Bucket
+							</div>
+							<div className="mt-1 font-mono text-xs text-foreground">
+								{source.bucket}
+							</div>
+						</div>
+						<div>
+							<div className="text-[11px] font-medium uppercase text-muted-foreground">
+								Region
+							</div>
+							<div className="mt-1 font-mono text-xs text-foreground">
+								{source.region}
+							</div>
+						</div>
+						<div className="min-w-0">
+							<div className="text-[11px] font-medium uppercase text-muted-foreground">
+								Config Object
+							</div>
+							<div className="mt-1 font-mono text-xs text-foreground">
+								{rolloutSource.key}
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
 
 			{rolloutEntries.length === 0 && (
 				<Card className="border-dashed">
