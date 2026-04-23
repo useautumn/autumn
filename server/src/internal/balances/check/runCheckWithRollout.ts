@@ -1,5 +1,5 @@
 import type { ParsedCheckParams } from "@autumn/shared";
-import { withRedisFallback } from "@/external/redis/utils/withRedisFallback.js";
+import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckData } from "@/internal/api/check/checkTypes/CheckData.js";
 import { getCheckFailOpenFallback } from "@/internal/api/check/checkUtils/getCheckFailOpenFallback.js";
@@ -22,22 +22,17 @@ export const runCheckWithRollout = async ({
 		return runCheckLegacyFlow({ ctx, body, requiredBalance });
 	}
 
-	return await withRedisFallback<RunCheckResult<CheckData | CheckDataV2>>({
-		primary: () => runCheckV2({ ctx, body, requiredBalance }),
-		fallback: (error) => {
-			ctx.logger.warn(
-				{ source: error.source, reason: error.reason },
-				"[check] Redis unavailable, returning fail-open response",
-			);
-			return {
-				checkData: null,
-				response: getCheckFailOpenFallback({
-					ctx,
-					body,
-					requiredBalance,
-					error,
-				}) as Record<string, unknown>,
-			};
-		},
+	return withRedisFailOpen<RunCheckResult<CheckData | CheckDataV2>>({
+		source: "runCheckWithRollout",
+		run: () => runCheckV2({ ctx, body, requiredBalance }),
+		fallback: (error) => ({
+			checkData: null,
+			response: getCheckFailOpenFallback({
+				ctx,
+				body,
+				requiredBalance,
+				error,
+			}) as Record<string, unknown>,
+		}),
 	});
 };
