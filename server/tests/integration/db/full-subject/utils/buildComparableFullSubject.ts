@@ -148,7 +148,6 @@ const comparableAggregatedEntitlement = (
 	additional_balance: customerEntitlement.additional_balance,
 	unlimited: customerEntitlement.unlimited,
 	usage_allowed: customerEntitlement.usage_allowed,
-	entity_count: customerEntitlement.entity_count,
 	entities: customerEntitlement.entities,
 	feature: {
 		id: customerEntitlement.feature.id,

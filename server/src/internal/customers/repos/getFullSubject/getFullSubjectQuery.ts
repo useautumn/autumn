@@ -232,7 +232,17 @@ export const getFullSubjectQuery = ({
 				ON ce.internal_customer_id = scr.internal_id
 			WHERE ce.customer_product_id IS NULL
 				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-				AND ce.balance != 0
+				AND (
+					ce.balance != 0
+					OR ce.unlimited IS TRUE
+					OR EXISTS (
+						SELECT 1
+						FROM entitlements e
+						JOIN features f ON f.internal_id = e.internal_feature_id
+						WHERE e.id = ce.entitlement_id
+							AND f.type = 'boolean'
+					)
+				)
 				${extraCustomerEntitlementEntityFilter}
 			LIMIT 20
 		),

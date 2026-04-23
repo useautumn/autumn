@@ -50,13 +50,18 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		params,
 	});
 
-	const { customerProduct, fullProduct, customPrices, customEnts } =
-		await setupUpdateSubscriptionProductContext({
-			ctx,
-			fullCustomer,
-			params,
-			contextOverride,
-		});
+	const {
+		customerProduct,
+		fullProduct,
+		customPrices,
+		customEnts,
+		isUpdatingFreeCustomerProduct,
+	} = await setupUpdateSubscriptionProductContext({
+		ctx,
+		fullCustomer,
+		params,
+		contextOverride,
+	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
 		ctx,
@@ -77,7 +82,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		orgDisableStripeWrites({ ctx }) ||
 		params.no_billing_changes === true ||
 		params.processor_subscription_id !== undefined ||
-		billingRelatedFields.length === 0;
+		billingRelatedFields.length === 0 ||
+		isUpdatingFreeCustomerProduct;
 
 	const {
 		stripeSubscription,
@@ -93,6 +99,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		contextOverride,
 		skipBillingChanges,
 		product: fullProduct,
+		skipSubscriptionFetching: isUpdatingFreeCustomerProduct,
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();

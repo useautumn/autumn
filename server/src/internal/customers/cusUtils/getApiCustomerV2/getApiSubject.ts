@@ -12,6 +12,7 @@ const stripAggregations = ({
 		...fullSubject,
 		aggregated_customer_products: undefined,
 		aggregated_customer_entitlements: undefined,
+		aggregated_subject_flags: undefined,
 	};
 };
 

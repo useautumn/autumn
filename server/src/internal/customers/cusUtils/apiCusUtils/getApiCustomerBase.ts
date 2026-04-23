@@ -64,20 +64,6 @@ export const getApiCustomerBase = async ({
 		purchases: apiPurchases,
 		balances: apiBalances,
 		flags: apiFlags,
-		schedule: fullCus.schedule
-			? {
-					id: fullCus.schedule.id,
-					customer_id: fullCus.schedule.customer_id,
-					entity_id: fullCus.schedule.entity_id,
-					created_at: fullCus.schedule.created_at,
-					phases: fullCus.schedule.phases.map((phase) => ({
-						id: phase.id,
-						starts_at: phase.starts_at,
-						customer_product_ids: phase.customer_product_ids,
-						created_at: phase.created_at,
-					})),
-				}
-			: undefined,
 		send_email_receipts: fullCus.send_email_receipts ?? false,
 		billing_controls: {
 			auto_topups: fullCus.auto_topups ?? undefined,
@@ -85,9 +71,11 @@ export const getApiCustomerBase = async ({
 			usage_alerts: fullCus.usage_alerts ?? undefined,
 			overage_allowed: fullCus.overage_allowed ?? undefined,
 		},
-		config: {
-			disable_pooled_balance: fullCus.config?.disable_pooled_balance,
-		},
+		config: fullCus.config
+			? {
+					disable_pooled_balance: fullCus.config.disable_pooled_balance,
+				}
+			: undefined,
 
 		invoices:
 			fullCus.invoices && ctx.expand.includes(CustomerExpand.Invoices)

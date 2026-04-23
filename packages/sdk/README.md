@@ -441,6 +441,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
+@param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 * [list](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
@@ -910,6 +911,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
+@param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 - [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 - [`customersUpdate`](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.

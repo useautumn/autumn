@@ -9,7 +9,7 @@ import { sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { globalRefreshEntityAggregateBatchingManager } from "../refreshEntityAggregate/index.js";
+import { globalRefreshEntityAggregateBatchingManager } from "../refreshEntityAggregate/RefreshEntityAggregateBatchingManager";
 
 const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
@@ -132,12 +132,8 @@ export const syncItemV4 = async ({
 	ctx: AutumnContext;
 	payload: SyncItemV4;
 }): Promise<void> => {
-	const {
-		customerId,
-		entityId,
-		rolloverIds,
-		modifiedCusEntIdsByFeatureId,
-	} = payload;
+	const { customerId, entityId, rolloverIds, modifiedCusEntIdsByFeatureId } =
+		payload;
 	const { db, logger } = ctx;
 
 	// Read targeted balance hashes
@@ -145,7 +141,7 @@ export const syncItemV4 = async ({
 	for (const [featureId, customerEntitlementIds] of Object.entries(
 		modifiedCusEntIdsByFeatureId,
 	)) {
-		const result = await getCachedFeatureBalance({
+		const outcome = await getCachedFeatureBalance({
 			ctx,
 			customerId,
 			featureId,
@@ -153,14 +149,14 @@ export const syncItemV4 = async ({
 			readMaster: true,
 		});
 
-		if (!result) {
+		if (outcome.kind !== "ok") {
 			logger.info(
-				`[SYNC V4] (${customerId}) Cache miss for feature=${featureId}, skipping`,
+				`[SYNC V4] (${customerId}) Cache ${outcome.kind} for feature=${featureId}, skipping`,
 			);
 			return;
 		}
 
-		allSubjectBalances.push(...result.balances);
+		allSubjectBalances.push(...outcome.value.balances);
 	}
 
 	// Build sync entries

@@ -3,15 +3,20 @@ import { instrumentRedis } from "../otel/instrumentRedis.js";
 import { cacheBackupUrl } from "./redisConfig.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
-const REDIS_COMMAND_TIMEOUT_MS = 500;
+const REDIS_COMMAND_TIMEOUT_MS = 10_000;
 
-/** Create a Redis connection for a specific region */
+/** Create a Redis connection for a specific region.
+ *  `supportsUpstashShebang` defaults to true; set false for non-Upstash
+ *  providers (ElastiCache, Dragonfly, self-hosted) that reject the
+ *  `allow-key-locking` shebang flag. */
 export const createRedisClient = ({
 	cacheUrl,
 	region,
+	supportsUpstashShebang = true,
 }: {
 	cacheUrl: string;
 	region: string;
+	supportsUpstashShebang?: boolean;
 }): Redis => {
 	const instance = new Redis(cacheUrl, {
 		tls:
@@ -21,12 +26,19 @@ export const createRedisClient = ({
 		family: 4,
 		keepAlive: 10000,
 		commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
+		// Let `commandTimeout` (10s) be the sole bound on how long a command
+		// can wait. `maxRetriesPerRequest: null` disables ioredis's default
+		// "flush pending commands after N reconnect attempts" behavior, which
+		// otherwise aborts commands still in the offline queue on any minor
+		// handshake blip. Under a real brownout, commands still fail via the
+		// `Command timed out` path.
+		maxRetriesPerRequest: null,
 	});
 
 	// instrumentRedis must run first so its defineCommand patch
 	// is in place when commands are registered.
 	instrumentRedis({ redis: instance, region });
-	registerRedisCommands({ redisInstance: instance });
+	registerRedisCommands({ redisInstance: instance, supportsUpstashShebang });
 
 	return instance;
 };

@@ -131,19 +131,18 @@ export function RolloverConfigForm({
 							<div className="flex items-center gap-1 flex-1">
 								<Input
 									type="number"
-									value={
-										rollover?.max_percentage === 0
-											? ""
-											: (rollover?.max_percentage ?? "")
-									}
+									value={rollover?.max_percentage ?? ""}
 									className="flex-1"
 									placeholder="e.g. 50"
 									onChange={(e) => {
 										const v = e.target.value;
-										const numValue = v === "" ? 0 : parseInt(v) || 0;
+										// Empty input → fall back to the minimum valid percentage (1).
+										// max_percentage must be > 0 and <= 100 per backend validation,
+										// so coercing empty to 0 would produce an unsaveable config.
+										const parsed = v === "" ? 1 : parseInt(v) || 1;
 										setRolloverConfigKey(
 											"max_percentage",
-											Math.min(100, Math.max(0, numValue)),
+											Math.min(100, Math.max(1, parsed)),
 										);
 									}}
 									onClick={(e) => e.stopPropagation()}
