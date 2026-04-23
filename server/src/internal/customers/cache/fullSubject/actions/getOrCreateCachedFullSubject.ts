@@ -12,7 +12,6 @@ import { updateCustomerData } from "@/internal/customers/actions/updateCustomerD
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
-import { getOrInitFullSubjectViewEpoch } from "./invalidate/getOrInitFullSubjectViewEpoch.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
 export const getOrCreateCachedFullSubject = async ({
@@ -41,12 +40,16 @@ export const getOrCreateCachedFullSubject = async ({
 	let fetchedSubjectViewEpoch = 0;
 
 	if (customerId && useRedis) {
-		fullSubject = await getCachedFullSubject({
+		// Pipeline inside getCachedFullSubject already fetches the epoch,
+		// so we reuse it on miss instead of a second round trip.
+		const cachedResult = await getCachedFullSubject({
 			ctx,
 			customerId,
 			entityId,
 			source,
 		});
+		fullSubject = cachedResult.fullSubject;
+		fetchedSubjectViewEpoch = cachedResult.subjectViewEpoch;
 
 		if (fullSubject) {
 			logger.debug(`[getOrCreateCachedFullSubject] Cache hit: ${customerId}`);
@@ -55,12 +58,6 @@ export const getOrCreateCachedFullSubject = async ({
 	}
 
 	if (!fullSubject && customerId) {
-		fetchedSubjectViewEpoch = useRedis
-			? await getOrInitFullSubjectViewEpoch({
-					ctx,
-					customerId,
-				})
-			: 0;
 		normalizedResult = await getFullSubjectNormalized({
 			ctx,
 			customerId,
