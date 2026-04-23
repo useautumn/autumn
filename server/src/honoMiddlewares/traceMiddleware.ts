@@ -1,5 +1,6 @@
 import { context, trace } from "@opentelemetry/api";
 import type { Context, Next } from "hono";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 /**
@@ -17,7 +18,7 @@ export const traceEnrichMiddleware = async (
 
 	const ctx = c.get("ctx");
 
-	const attrs: Record<string, string> = {
+	const attrs: Record<string, string | boolean> = {
 		req_id: ctx.id,
 	};
 
@@ -32,6 +33,7 @@ export const traceEnrichMiddleware = async (
 
 	if (ctx.customerId) {
 		attrs.customer_id = ctx.customerId;
+		attrs.full_subject_rollout_enabled = isFullSubjectRolloutEnabled({ ctx });
 	}
 
 	span.setAttributes(attrs);
