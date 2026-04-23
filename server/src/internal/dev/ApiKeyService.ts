@@ -53,6 +53,7 @@ export class ApiKeyService {
 			env,
 			userId: data.user_id,
 			user: data.user || null,
+			expiresAt: data.expires_at as number | null,
 		};
 
 		return result;
