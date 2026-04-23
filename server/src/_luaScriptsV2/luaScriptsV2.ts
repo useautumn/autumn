@@ -16,6 +16,7 @@ import LOCK_STATE_UTILS from "./deduction/lock/lockStateUtils.lua";
 import LOCK_UNWIND_UTILS from "./deduction/lock/unwindLockUtils.lua";
 import MUTATION_ITEM_UTILS from "./deduction/mutationItemUtils.lua";
 import FULL_CUSTOMER_UTILS from "./fullCustomer/fullCustomerUtils.lua";
+import LOCK_RECEIPT_UTILS_V2 from "./fullSubjectDeduction/lock/lockReceiptV2.lua";
 import LOCK_UNWIND_UTILS_V2 from "./fullSubjectDeduction/lock/unwindLockV2.lua";
 import LUA_UTILS from "./luaUtils.lua";
 
