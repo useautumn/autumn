@@ -125,12 +125,10 @@ describe("full customer cache Redis gating", () => {
 
 	test("getOrSetCachedFullCustomer skips Redis read/write when shouldUseRedis is false", async () => {
 		const dbCustomer = makeFullCustomer("db-customer");
-		const hydratedCustomer = makeFullCustomer("hydrated-customer");
 
 		mockState.shouldUseRedis = false;
 		mockState.cached = makeFullCustomer("cached-customer");
 		mockState.dbResult = dbCustomer;
-		mockState.hydrated = hydratedCustomer;
 
 		const result = await getOrSetCachedFullCustomer({
 			ctx: makeCtx(),
@@ -138,7 +136,7 @@ describe("full customer cache Redis gating", () => {
 			source: "unit-test",
 		});
 
-		expect(result).toBe(hydratedCustomer);
+		expect(result).toBe(dbCustomer);
 		expect(mockState.cacheReads).toBe(0);
 		expect(mockState.cacheWrites).toBe(0);
 		expect(mockState.dbCalls).toBe(1);
