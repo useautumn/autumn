@@ -21,6 +21,16 @@ export const clearMasterOrg = async () => {
 			process.exit(1);
 		}
 
+		const databaseUrl = process.env.DATABASE_URL ?? "";
+		if (databaseUrl.toLowerCase().includes("fancy-duckling")) {
+			console.error(
+				chalk.red(
+					"\n❌ Refusing to run clearMasterOrg against prod-like DATABASE_URL (contains 'fancy-duckling').\n",
+				),
+			);
+			process.exit(1);
+		}
+
 		const org = await clearOrg({
 			orgSlug: process.env.TESTS_ORG ?? "",
 			env: AppEnv.Sandbox,
@@ -48,7 +58,7 @@ export const clearMasterOrg = async () => {
 			);
 
 		// Flush v2 cache (CACHE_V2_URL) if it's a distinct, non-regional connection
-		const cacheV2Url = process.env.CACHE_V2_URL?.trim();
+		const cacheV2Url = process.env.CACHE_V2_UPSTASH_URL?.trim();
 		if (redisV2 !== redis && cacheV2Url) {
 			if (!isRegionalRedisUrl(cacheV2Url)) {
 				await redisV2.flushall();

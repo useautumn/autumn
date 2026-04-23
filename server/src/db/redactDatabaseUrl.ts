@@ -11,7 +11,7 @@ const auth = (url: URL) => {
 	const password = decodeURIComponent(url.password);
 	if (!username && !password) return "";
 
-	return `${username ? mask(username) : ""}${password ? `:${mask(password)}` : ""}@`;
+	return `${username}${password ? `:${mask(password)}` : ""}@`;
 };
 
 const formatUrl = (value: string) => {

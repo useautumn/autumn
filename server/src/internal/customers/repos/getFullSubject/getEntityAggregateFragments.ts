@@ -96,7 +96,7 @@ export const getEntityAggregateFragments = ({
 				AND ce.customer_product_id IS NULL
 				AND ce.internal_entity_id IS NOT NULL
 				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
-				AND ce.balance != 0
+				AND (ce.balance != 0 OR ce.unlimited IS TRUE)
 				${featureFilter}
 		),
 

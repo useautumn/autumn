@@ -7,14 +7,18 @@ const isUnitTest = () => {
 
 const loadInfisicalSecrets = async () => {
 	try {
-		const secrets = execSync("infisical export --env=dev --format=dotenv", {
-			encoding: "utf-8",
-		});
+		const secrets = execSync(
+			"infisical secrets --env=dev --output=dotenv --recursive --silent",
+			{ encoding: "utf-8" },
+		);
 
 		for (const line of secrets.split("\n")) {
 			const match = line.match(/^([^=]+)=(.*)$/);
 			if (match) {
-				process.env[match[1]] = match[2].replace(/^["']|["']$/g, "");
+				const key = match[1];
+				if (process.env[key] !== undefined) continue;
+
+				process.env[key] = match[2].replace(/^["']|["']$/g, "");
 			}
 		}
 	} catch (e) {

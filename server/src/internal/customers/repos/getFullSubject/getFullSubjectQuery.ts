@@ -234,6 +234,7 @@ export const getFullSubjectQuery = ({
 				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 				AND (
 					ce.balance != 0
+					OR ce.unlimited IS TRUE
 					OR EXISTS (
 						SELECT 1
 						FROM entitlements e
