@@ -53,7 +53,7 @@ class CustomerDataPurchaseLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -104,7 +104,7 @@ class CustomerDataAutoTopup(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -140,7 +140,7 @@ class CustomerDataSpendLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -195,7 +195,7 @@ class CustomerDataUsageAlert(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -226,7 +226,7 @@ class CustomerDataOverageAllowed(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -273,7 +273,37 @@ class CustomerDataBillingControls(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CustomerDataConfigTypedDict(TypedDict):
+    r"""Miscellaneous configurations for the customer."""
+
+    disable_pooled_balance: NotRequired[bool]
+    r"""Whether to disable the shared customer-level pool for entities."""
+
+
+class CustomerDataConfig(BaseModel):
+    r"""Miscellaneous configurations for the customer."""
+
+    disable_pooled_balance: Optional[bool] = None
+    r"""Whether to disable the shared customer-level pool for entities."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["disable_pooled_balance"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -303,6 +333,8 @@ class CustomerDataTypedDict(TypedDict):
     r"""Whether to send email receipts to this customer"""
     billing_controls: NotRequired[CustomerDataBillingControlsTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
+    config: NotRequired[CustomerDataConfigTypedDict]
+    r"""Miscellaneous configurations for the customer."""
 
 
 class CustomerData(BaseModel):
@@ -335,6 +367,9 @@ class CustomerData(BaseModel):
     billing_controls: Optional[CustomerDataBillingControls] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
+    config: Optional[CustomerDataConfig] = None
+    r"""Miscellaneous configurations for the customer."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -348,6 +383,7 @@ class CustomerData(BaseModel):
                 "auto_enable_plan_id",
                 "send_email_receipts",
                 "billing_controls",
+                "config",
             ]
         )
         nullable_fields = set(["name", "email", "fingerprint", "metadata", "stripe_id"])
@@ -356,7 +392,7 @@ class CustomerData(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

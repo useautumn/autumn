@@ -37,7 +37,7 @@ class UpdateCustomerGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -86,7 +86,7 @@ class UpdateCustomerPurchaseLimitRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -137,7 +137,7 @@ class UpdateCustomerAutoTopupRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -173,7 +173,7 @@ class UpdateCustomerSpendLimitRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -228,7 +228,7 @@ class UpdateCustomerUsageAlertRequestBody(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -259,7 +259,7 @@ class UpdateCustomerOverageAllowedRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -306,7 +306,37 @@ class UpdateCustomerBillingControlsRequest(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdateCustomerConfigRequestTypedDict(TypedDict):
+    r"""Miscellaneous configurations for the customer."""
+
+    disable_pooled_balance: NotRequired[bool]
+    r"""Whether to disable the shared customer-level pool for entities."""
+
+
+class UpdateCustomerConfigRequest(BaseModel):
+    r"""Miscellaneous configurations for the customer."""
+
+    disable_pooled_balance: Optional[bool] = None
+    r"""Whether to disable the shared customer-level pool for entities."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["disable_pooled_balance"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -332,6 +362,8 @@ class UpdateCustomerParamsTypedDict(TypedDict):
     r"""Whether to send email receipts to this customer"""
     billing_controls: NotRequired[UpdateCustomerBillingControlsRequestTypedDict]
     r"""Billing controls for the customer (auto top-ups, etc.)"""
+    config: NotRequired[UpdateCustomerConfigRequestTypedDict]
+    r"""Miscellaneous configurations for the customer."""
     new_customer_id: NotRequired[str]
     r"""Your unique identifier for the customer"""
 
@@ -361,6 +393,9 @@ class UpdateCustomerParams(BaseModel):
     billing_controls: Optional[UpdateCustomerBillingControlsRequest] = None
     r"""Billing controls for the customer (auto top-ups, etc.)"""
 
+    config: Optional[UpdateCustomerConfigRequest] = None
+    r"""Miscellaneous configurations for the customer."""
+
     new_customer_id: Optional[str] = None
     r"""Your unique identifier for the customer"""
 
@@ -375,6 +410,7 @@ class UpdateCustomerParams(BaseModel):
                 "stripe_id",
                 "send_email_receipts",
                 "billing_controls",
+                "config",
                 "new_customer_id",
             ]
         )
@@ -384,7 +420,7 @@ class UpdateCustomerParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -454,7 +490,7 @@ class UpdateCustomerPurchaseLimitResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -505,7 +541,7 @@ class UpdateCustomerAutoTopupResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -541,7 +577,7 @@ class UpdateCustomerSpendLimitResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -599,7 +635,7 @@ class UpdateCustomerUsageAlertResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -630,7 +666,7 @@ class UpdateCustomerOverageAllowedResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -677,7 +713,7 @@ class UpdateCustomerBillingControlsResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -785,7 +821,7 @@ class UpdateCustomerSubscription(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -838,7 +874,7 @@ class UpdateCustomerPurchase(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -908,7 +944,7 @@ class UpdateCustomerDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -981,7 +1017,7 @@ class UpdateCustomerFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -1028,7 +1064,7 @@ class UpdateCustomerFlags(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1040,6 +1076,36 @@ class UpdateCustomerFlags(BaseModel):
                     or k not in optional_fields
                     or is_nullable_and_explicitly_set
                 ):
+                    m[k] = val
+
+        return m
+
+
+class UpdateCustomerConfigResponseTypedDict(TypedDict):
+    r"""Configuration for the customer."""
+
+    disable_pooled_balance: NotRequired[bool]
+    r"""Whether to disable the shared customer-level pool for entities."""
+
+
+class UpdateCustomerConfigResponse(BaseModel):
+    r"""Configuration for the customer."""
+
+    disable_pooled_balance: Optional[bool] = None
+    r"""Whether to disable the shared customer-level pool for entities."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["disable_pooled_balance"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m
@@ -1076,6 +1142,8 @@ class UpdateCustomerResponseTypedDict(TypedDict):
     r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""
     flags: Dict[str, UpdateCustomerFlagsTypedDict]
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
+    config: NotRequired[UpdateCustomerConfigResponseTypedDict]
+    r"""Configuration for the customer."""
 
 
 class UpdateCustomerResponse(BaseModel):
@@ -1123,16 +1191,30 @@ class UpdateCustomerResponse(BaseModel):
     flags: Dict[str, UpdateCustomerFlags]
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
 
+    config: Optional[UpdateCustomerConfigResponse] = None
+    r"""Configuration for the customer."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
+        optional_fields = set(["config"])
+        nullable_fields = set(["id", "name", "email", "fingerprint", "stripe_id"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                m[k] = val
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
 
         return m

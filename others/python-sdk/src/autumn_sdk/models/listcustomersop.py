@@ -37,7 +37,7 @@ class ListCustomersGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -64,7 +64,7 @@ class ListCustomersPlan(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -80,6 +80,13 @@ SubscriptionStatus = Literal[
 r"""Filter by customer product status. Defaults to active and scheduled"""
 
 
+Processor = Literal[
+    "stripe",
+    "revenuecat",
+    "vercel",
+]
+
+
 class ListCustomersParamsTypedDict(TypedDict):
     offset: NotRequired[int]
     r"""Number of items to skip"""
@@ -91,6 +98,8 @@ class ListCustomersParamsTypedDict(TypedDict):
     r"""Filter by customer product status. Defaults to active and scheduled"""
     search: NotRequired[str]
     r"""Search customers by id, name, or email"""
+    processors: NotRequired[List[Processor]]
+    r"""Filter by customer processor type (stripe, revenuecat, vercel)"""
 
 
 class ListCustomersParams(BaseModel):
@@ -109,17 +118,20 @@ class ListCustomersParams(BaseModel):
     search: Optional[str] = None
     r"""Search customers by id, name, or email"""
 
+    processors: Optional[List[Processor]] = None
+    r"""Filter by customer processor type (stripe, revenuecat, vercel)"""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["offset", "limit", "plans", "subscription_status", "search"]
+            ["offset", "limit", "plans", "subscription_status", "search", "processors"]
         )
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -181,7 +193,7 @@ class ListCustomersPurchaseLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -232,7 +244,7 @@ class ListCustomersAutoTopup(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -268,7 +280,7 @@ class ListCustomersSpendLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -326,7 +338,7 @@ class ListCustomersUsageAlert(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -357,7 +369,7 @@ class ListCustomersOverageAllowed(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -404,7 +416,7 @@ class ListCustomersBillingControls(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -512,7 +524,7 @@ class ListCustomersSubscription(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -565,7 +577,7 @@ class ListCustomersPurchase(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -635,7 +647,7 @@ class ListCustomersDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -708,7 +720,7 @@ class ListCustomersFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -755,7 +767,7 @@ class ListCustomersFlags(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -767,6 +779,36 @@ class ListCustomersFlags(BaseModel):
                     or k not in optional_fields
                     or is_nullable_and_explicitly_set
                 ):
+                    m[k] = val
+
+        return m
+
+
+class ListCustomersConfigTypedDict(TypedDict):
+    r"""Configuration for the customer."""
+
+    disable_pooled_balance: NotRequired[bool]
+    r"""Whether to disable the shared customer-level pool for entities."""
+
+
+class ListCustomersConfig(BaseModel):
+    r"""Configuration for the customer."""
+
+    disable_pooled_balance: Optional[bool] = None
+    r"""Whether to disable the shared customer-level pool for entities."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["disable_pooled_balance"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
                     m[k] = val
 
         return m
@@ -801,6 +843,8 @@ class ListCustomersListTypedDict(TypedDict):
     r"""Feature balances keyed by feature ID, showing usage limits and remaining amounts."""
     flags: Dict[str, ListCustomersFlagsTypedDict]
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
+    config: NotRequired[ListCustomersConfigTypedDict]
+    r"""Configuration for the customer."""
 
 
 class ListCustomersList(BaseModel):
@@ -846,17 +890,31 @@ class ListCustomersList(BaseModel):
     flags: Dict[str, ListCustomersFlags]
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
 
+    config: Optional[ListCustomersConfig] = None
+    r"""Configuration for the customer."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
+        optional_fields = set(["config"])
+        nullable_fields = set(["id", "name", "email", "fingerprint", "stripe_id"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                m[k] = val
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
 
         return m
 

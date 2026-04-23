@@ -52,7 +52,7 @@ test.concurrent(`${chalk.yellowBright("balance-rollover-create-1: loose balance 
 		value: usage,
 	});
 
-	await timeout(2000);
+	await timeout(3000);
 
 	// Trigger a reset (lazy)
 	await expireCusEntForReset({
@@ -130,6 +130,43 @@ test.concurrent(`${chalk.yellowBright("balance-rollover-create-3: rollover on on
 				feature_id: TestFeature.Messages,
 				included_grant: 100,
 				// no reset → one-time balance
+				rollover: {
+					max: 50,
+					length: 1,
+					duration: RolloverExpiryDurationType.Month,
+				},
+			});
+		},
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// BALANCE-ROLLOVER-CREATE-4: Rejection — expires_at before next rollover
+//
+// A rollover event fires at the next reset. If expires_at occurs before
+// that next reset, the rollover would never take effect. The API should
+// reject the request.
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(`${chalk.yellowBright("balance-rollover-create-4: expires_at before next rollover is rejected")}`, async () => {
+	const { customerId, autumnV2_2 } = await initScenario({
+		customerId: "balance-rollover-create-4",
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	// expires_at is 1 day from now, but reset is monthly → next rollover
+	// would be ~1 month from now, well after expiry.
+	const expiresAt = Date.now() + 1000 * 60 * 60 * 24;
+
+	await expectAutumnError({
+		func: async () => {
+			await autumnV2_2.balances.create({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				included_grant: 100,
+				reset: { interval: ResetInterval.Month },
+				expires_at: expiresAt,
 				rollover: {
 					max: 50,
 					length: 1,

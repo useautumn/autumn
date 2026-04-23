@@ -356,6 +356,16 @@ export type Flags = {
   feature?: CustomerFeature | undefined;
 };
 
+/**
+ * Configuration for the customer.
+ */
+export type CustomerConfig = {
+  /**
+   * Whether to disable the shared customer-level pool for entities.
+   */
+  disablePooledBalance?: boolean | undefined;
+};
+
 export type Invoice = {
   /**
    * Array of plan IDs included in this invoice
@@ -583,6 +593,10 @@ export type Customer = {
    * Boolean feature flags keyed by feature ID, showing enabled access for on/off features.
    */
   flags: { [k: string]: Flags };
+  /**
+   * Configuration for the customer.
+   */
+  config?: CustomerConfig | undefined;
   /**
    * Invoices for this customer.
    */
@@ -1004,6 +1018,31 @@ export function flagsFromJSON(
 }
 
 /** @internal */
+export const CustomerConfig$inboundSchema: z.ZodMiniType<
+  CustomerConfig,
+  unknown
+> = z.pipe(
+  z.object({
+    disable_pooled_balance: types.optional(types.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "disable_pooled_balance": "disablePooledBalance",
+    });
+  }),
+);
+
+export function customerConfigFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerConfig, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerConfig$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerConfig' from JSON`,
+  );
+}
+
+/** @internal */
 export const Invoice$inboundSchema: z.ZodMiniType<Invoice, unknown> = z.pipe(
   z.object({
     plan_ids: z.array(types.string()),
@@ -1218,6 +1257,7 @@ export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
     purchases: z.array(z.lazy(() => Purchase$inboundSchema)),
     balances: z.record(z.string(), Balance$inboundSchema),
     flags: z.record(z.string(), z.lazy(() => Flags$inboundSchema)),
+    config: types.optional(z.lazy(() => CustomerConfig$inboundSchema)),
     invoices: types.optional(z.array(z.lazy(() => Invoice$inboundSchema))),
     entities: types.optional(z.array(z.lazy(() => Entity$inboundSchema))),
     trials_used: types.optional(
