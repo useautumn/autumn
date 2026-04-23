@@ -1,5 +1,7 @@
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
 import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
@@ -8,7 +10,18 @@ import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
 import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
 import { StripeSyncDialog } from "./StripeSyncDialog";
 
+type EdgeConfigSource = {
+	bucket: string;
+	region: string;
+	configs: {
+		id: string;
+		label: string;
+		key: string;
+	}[];
+};
+
 export function EdgeConfigTab() {
+	const axiosInstance = useAxiosInstance();
 	const [requestBlockEditOpen, setRequestBlockEditOpen] = useState(false);
 	const [requestBlockRawOpen, setRequestBlockRawOpen] = useState(false);
 	const [featureFlagsOpen, setFeatureFlagsOpen] = useState(false);
@@ -17,8 +30,56 @@ export function EdgeConfigTab() {
 	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
 	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
 
+	const { data: source } = useQuery<EdgeConfigSource>({
+		queryKey: ["admin-edge-config-sources"],
+		queryFn: async () => {
+			const { data } = await axiosInstance.get("/admin/edge-config-sources");
+			return data;
+		},
+	});
+
 	return (
 		<div className="flex flex-col gap-4">
+			{source && (
+				<div className="rounded-lg border border-border bg-muted/20 p-4">
+					<div className="grid gap-3 md:grid-cols-[220px_160px_minmax(0,1fr)]">
+						<div>
+							<div className="text-[11px] font-medium uppercase text-t3">
+								S3 Bucket
+							</div>
+							<div className="mt-1 font-mono text-xs text-t1">
+								{source.bucket}
+							</div>
+						</div>
+						<div>
+							<div className="text-[11px] font-medium uppercase text-t3">
+								Region
+							</div>
+							<div className="mt-1 font-mono text-xs text-t1">
+								{source.region}
+							</div>
+						</div>
+						<div className="min-w-0">
+							<div className="text-[11px] font-medium uppercase text-t3">
+								Config Objects
+							</div>
+							<div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+								{source.configs.map((config) => (
+									<span
+										key={config.id}
+										className="min-w-0 text-xs text-t2"
+										title={config.key}
+									>
+										<span className="text-t3">{config.label}:</span>{" "}
+										<span className="font-mono">{config.key}</span>
+									</span>
+								))}
+							</div>
+						</div>
+					</div>
+				</div>
+			)}
+
 			<div className="rounded-lg border border-border overflow-hidden">
 				<div className="flex items-center justify-between p-4 border-b border-border">
 					<div className="flex flex-col gap-0.5">

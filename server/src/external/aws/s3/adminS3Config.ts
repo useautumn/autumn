@@ -16,3 +16,36 @@ export const getAdminS3Config = () => {
 		region,
 	};
 };
+
+export const getAdminEdgeConfigSources = () => ({
+	...getAdminS3Config(),
+	configs: [
+		{
+			id: "request-block",
+			label: "Request Blocking",
+			key: ADMIN_REQUEST_BLOCK_CONFIG_KEY,
+		},
+		{ id: "rollouts", label: "Rollouts", key: ADMIN_ROLLOUT_CONFIG_KEY },
+		{
+			id: "feature-flags",
+			label: "Feature Flags",
+			key: ADMIN_FEATURE_FLAGS_CONFIG_KEY,
+		},
+		{
+			id: "customer-block",
+			label: "Customer Blocking",
+			key: ADMIN_CUSTOMER_BLOCK_CONFIG_KEY,
+		},
+		{ id: "org-limits", label: "Org Limits", key: ADMIN_ORG_LIMITS_CONFIG_KEY },
+		{
+			id: "redis-v2-cache",
+			label: "V2 Redis Instance",
+			key: ADMIN_REDIS_V2_CACHE_CONFIG_KEY,
+		},
+		{
+			id: "stripe-sync",
+			label: "Stripe Sync",
+			key: "admin/stripe-sync-config.json",
+		},
+	],
+});
