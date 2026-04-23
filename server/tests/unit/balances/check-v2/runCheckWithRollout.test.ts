@@ -146,6 +146,10 @@ describe("runCheckWithRollout", () => {
 				reason: "timeout",
 			}),
 		},
+		{
+			name: "Redis command timeout",
+			error: new Error("Command timed out"),
+		},
 	])("returns fail-open fallback on $name", async ({ error }) => {
 		mockState.v2Error = error;
 
