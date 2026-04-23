@@ -7,7 +7,7 @@ import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
-import { getOrInitFullSubjectViewEpoch } from "./invalidate/getOrInitFullSubjectViewEpoch.js";
+import { rehydrateWithLiveBalances } from "./rehydrateWithLiveBalances.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
 export const getOrSetCachedFullSubject = async ({
@@ -24,13 +24,19 @@ export const getOrSetCachedFullSubject = async ({
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache && shouldUseRedis();
 
+	let fetchedSubjectViewEpoch = 0;
+
 	if (useRedis) {
-		const cached = await getCachedFullSubject({
-			ctx,
-			customerId,
-			entityId,
-			source,
-		});
+		// The pipeline inside getCachedFullSubject already fetches + refreshes
+		// the epoch, so we reuse it on miss instead of a second round trip.
+		const { fullSubject: cached, subjectViewEpoch } =
+			await getCachedFullSubject({
+				ctx,
+				customerId,
+				entityId,
+				source,
+			});
+		fetchedSubjectViewEpoch = subjectViewEpoch;
 
 		if (cached) {
 			logger.debug(
@@ -43,12 +49,6 @@ export const getOrSetCachedFullSubject = async ({
 	logger.debug(
 		`[getOrSetCachedFullSubject] Cache miss for ${customerId}${entityId ? `:${entityId}` : ""}, fetching from DB, source: ${source}`,
 	);
-	const fetchedSubjectViewEpoch = useRedis
-		? await getOrInitFullSubjectViewEpoch({
-				ctx,
-				customerId,
-			})
-		: 0;
 
 	const result = await getFullSubjectNormalized({
 		ctx,
@@ -70,18 +70,15 @@ export const getOrSetCachedFullSubject = async ({
 			fetchedSubjectViewEpoch,
 		});
 
-		// Re-read from cache instead of returning the DB-fetched fullSubject.
-		// Balance hash fields use HSETNX, so in-flight Lua deduction patches
-		// survive the setCachedFullSubject write. The DB data may be stale
-		// (e.g. entity view rebuilt before sync completes), but the balance
-		// hash reflects the true Redis state.
-		const freshCached = await getCachedFullSubject({
+		// We just wrote the subject blob ourselves, so no need to re-read it.
+		// But balance hashes use HSETNX, so any concurrent Lua deduction that
+		// patched a balance in flight survives our write — re-reading the
+		// balance hashes (1 RTT) preserves those patches.
+		const withLiveBalances = await rehydrateWithLiveBalances({
 			ctx,
-			customerId,
-			entityId,
-			source: `${source}:post-set`,
+			normalized,
 		});
-		if (freshCached) return freshCached;
+		if (withLiveBalances) return withLiveBalances;
 	}
 
 	return fullSubject;

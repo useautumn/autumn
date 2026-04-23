@@ -7,14 +7,20 @@ import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { applyLiveAggregatedBalances } from "../balances/applyLiveAggregatedBalances.js";
 import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
+import { buildFullSubjectViewEpochKey } from "../builders/buildFullSubjectViewEpochKey.js";
+import { FULL_SUBJECT_EPOCH_TTL_SECONDS } from "../config/fullSubjectCacheConfig.js";
 import {
 	type CachedFullSubject,
 	cachedFullSubjectToNormalized,
 } from "../fullSubjectCacheModel.js";
 import { sanitizeCachedFullSubject } from "../sanitize/index.js";
-import { getOrInitFullSubjectViewEpoch } from "./invalidate/getOrInitFullSubjectViewEpoch.js";
 import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "./invalidate/invalidateFullSubjectExact.js";
+
+export type GetCachedFullSubjectResult = {
+	fullSubject: FullSubject | undefined;
+	subjectViewEpoch: number;
+};
 
 export const getCachedFullSubject = async ({
 	ctx,
@@ -26,7 +32,7 @@ export const getCachedFullSubject = async ({
 	customerId: string;
 	entityId?: string;
 	source?: string;
-}): Promise<FullSubject | undefined> => {
+}): Promise<GetCachedFullSubjectResult> => {
 	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
 		orgId: org.id,
@@ -34,14 +40,48 @@ export const getCachedFullSubject = async ({
 		customerId,
 		entityId,
 	});
+	const epochKey = buildFullSubjectViewEpochKey({
+		orgId: org.id,
+		env,
+		customerId,
+	});
 
-	const cachedRaw = await runRedisOp({
-		operation: () => redisV2.get(subjectKey),
-		source: "getCachedFullSubject",
+	// Subject + epoch keys share the `{customerId}` hash tag and live on the
+	// same Redis slot, so a single pipeline fetches both in one round trip.
+	// GETEX refreshes the epoch TTL; the trailing SET NX initializes the
+	// epoch to "0" when it's missing, so we never need a fallback RTT.
+	const pipelineResults = await runRedisOp({
+		operation: () =>
+			redisV2
+				.pipeline()
+				.get(subjectKey)
+				.getex(epochKey, "EX", FULL_SUBJECT_EPOCH_TTL_SECONDS)
+				.set(epochKey, "0", "EX", FULL_SUBJECT_EPOCH_TTL_SECONDS, "NX")
+				.exec(),
+		source: "getCachedFullSubject:pipeline",
 		redisInstance: redisV2,
 	});
 
-	if (!cachedRaw) return undefined;
+	const subjectEntry = pipelineResults?.[0];
+	const epochEntry = pipelineResults?.[1];
+	if (subjectEntry?.[0]) throw subjectEntry[0];
+	if (epochEntry?.[0]) throw epochEntry[0];
+
+	const cachedRaw = (subjectEntry?.[1] ?? null) as string | null;
+	const epochRaw = (epochEntry?.[1] ?? null) as string | null;
+
+	// Epoch from the pipeline. If the key was missing, the SET NX above just
+	// initialized it to "0" — treat it as 0 here.
+	const parsedEpoch =
+		epochRaw !== null ? Number.parseInt(epochRaw, 10) : Number.NaN;
+	const currentSubjectViewEpoch = Number.isNaN(parsedEpoch) ? 0 : parsedEpoch;
+
+	if (!cachedRaw) {
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+		};
+	}
 
 	let cached: CachedFullSubject;
 	try {
@@ -59,13 +99,12 @@ export const getCachedFullSubject = async ({
 			entityId,
 			source: "parse-failed",
 		});
-		return undefined;
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+		};
 	}
 
-	const currentSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
-		ctx,
-		customerId,
-	});
 	if (cached.subjectViewEpoch !== currentSubjectViewEpoch) {
 		logger.warn(
 			`[getCachedFullSubject] Stale subject view epoch for ${customerId}${entityId ? `:${entityId}` : ""}, cached=${cached.subjectViewEpoch}, current=${currentSubjectViewEpoch}, source: ${source}`,
@@ -76,7 +115,10 @@ export const getCachedFullSubject = async ({
 			entityId,
 			source: "stale-subject-view-epoch",
 		});
-		return undefined;
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+		};
 	}
 
 	const rolloutSnapshot = getFullSubjectRolloutSnapshot({ ctx });
@@ -96,7 +138,10 @@ export const getCachedFullSubject = async ({
 			entityId,
 			source: "stale-rollout",
 		});
-		return undefined;
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+		};
 	}
 
 	const isCustomerSubject = !entityId;
@@ -118,7 +163,10 @@ export const getCachedFullSubject = async ({
 			entityId,
 			source: "incomplete-shared-balances",
 		});
-		return undefined;
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+		};
 	}
 
 	const balances = balancesOutcome.value;
@@ -132,7 +180,10 @@ export const getCachedFullSubject = async ({
 			entityId,
 			source: "incomplete-shared-balances",
 		});
-		return undefined;
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+		};
 	}
 
 	try {
@@ -150,7 +201,7 @@ export const getCachedFullSubject = async ({
 
 		const fullSubject = normalizedToFullSubject({ normalized });
 		await lazyResetSubjectEntitlements({ ctx, fullSubject });
-		return fullSubject;
+		return { fullSubject, subjectViewEpoch: currentSubjectViewEpoch };
 	} catch (error) {
 		logger.warn(
 			`[getCachedFullSubject] Failed to hydrate cached subject for ${customerId}${entityId ? `:${entityId}` : ""}, source: ${source}, error: ${error}`,
@@ -161,6 +212,9 @@ export const getCachedFullSubject = async ({
 			entityId,
 			source: "hydrate-failed",
 		});
-		return undefined;
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+		};
 	}
 };
