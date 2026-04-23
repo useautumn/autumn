@@ -1,106 +1,108 @@
+/**
+ * TDD scratch test for the post-checkout `once` re-redemption bug.
+ *
+ * Bug: when a customer attaches a plan via Stripe Checkout with a `once`
+ * coupon, `modifyStripeSubscriptionFromCheckout` runs a post-checkout
+ * subscription update that re-sends the resolved discounts via the
+ * `discounts` param. Stripe treats that as a fresh redemption and attaches
+ * a new `di_xxx` to the subscription, so the next renewal invoice applies
+ * the coupon a second time.
+ *
+ * Expected after fix (`discounts: undefined` in the post-checkout update):
+ *  - First (checkout) invoice = $16 (20% off $20)
+ *  - Renewal invoice = $20 (no residual discount)
+ */
+
 import { test } from "bun:test";
-import type { AttachParamsV1Input } from "@autumn/shared";
-import {
-	applySubscriptionDiscount,
-	createPercentCoupon,
-	getStripeSubscription,
-} from "@tests/integration/billing/utils/discounts/discountTestUtils";
-import { TestFeature } from "@tests/setup/v2Features.js";
-import { items } from "@tests/utils/fixtures/items";
-import { products } from "@tests/utils/fixtures/products";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import type { ApiCustomerV3, AttachParamsV1Input } from "@autumn/shared";
+import { createPercentCoupon } from "@tests/integration/billing/utils/discounts/discountTestUtils.js";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect.js";
+import { completeStripeCheckoutFormV2 } from "@tests/utils/browserPool/completeStripeCheckoutFormV2.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { timeout } from "@tests/utils/genUtils.js";
+import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 
-/**
- * Repro for Mintlify multi-entity discount bug.
- *
- * Production sequence (from Axiom logs):
- *  1. Entity 1 attaches pro (upgrade from Hobby) — creates subscription
- *  2. Discount applied to subscription
- *  3. Entity 1 cancels pro (end_of_cycle) — creates subscription schedule
- *  4. Entity 1 uncancels pro — schedule modified
- *  5. Entity 2 attaches pro — subscription update succeeds but schedule
- *     creation/update fails: "Discount di_xxx has exceeded its maximum
- *     number of applications and cannot be reused"
- *
- * The error is in stripeDiscountsToPhaseDiscounts which passes
- * { discount: "di_xxx" } to schedule phases — but the discount is bound
- * to the subscription, not the schedule.
- */
-test(`${chalk.yellowBright("bug repro: entity 2 attach after cancel+uncancel with discount on sub")}`, async () => {
-	const customerId = "multi-ent-cancel-uncancel";
+test(
+	`${chalk.yellowBright("temp integration: once coupon does not re-apply on renewal after checkout")}`,
+	async () => {
+		const customerId = "temp-checkout-once-renewal";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
-
-	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
-	});
-
-	// Step 1: Entity 1 attaches pro
-	const { autumnV2_2, autumnV1, entities } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [pro] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.billing.attach({ productId: pro.id, entityIndex: 0 }),
-		],
-	});
-
-	// Step 2: Apply a discount to entity 1's subscription
-	const { stripeCli, subscription } = await getStripeSubscription({
-		customerId,
-	});
-
-	const coupon = await createPercentCoupon({
-		stripeCli,
-		percentOff: 10,
-	});
-
-	await applySubscriptionDiscount({
-		stripeCli,
-		subscriptionId: subscription.id,
-		couponIds: [coupon.id],
-	});
-
-	// Step 3: Entity 1 cancels pro (end_of_cycle) — creates subscription schedule
-	console.log("Canceling entity 1 pro (end of cycle)...");
-	await autumnV2_2.subscriptions.update({
-		customer_id: customerId,
-		entity_id: entities[0].id,
-		plan_id: pro.id,
-		cancel_action: "cancel_end_of_cycle",
-	});
-
-	await new Promise((resolve) => setTimeout(resolve, 3000));
-
-	// Step 4: Entity 1 uncancels pro — schedule released/modified
-	console.log("Uncanceling entity 1 pro...");
-	await autumnV2_2.subscriptions.update({
-		customer_id: customerId,
-		entity_id: entities[0].id,
-		plan_id: pro.id,
-		cancel_action: "uncancel",
-	});
-
-	await new Promise((resolve) => setTimeout(resolve, 3000));
-
-	// Step 5: Entity 2 attaches pro
-	console.log("Attaching pro to entity 2...");
-	try {
-		const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
-			customer_id: customerId,
-			entity_id: entities[1].id,
-			plan_id: pro.id,
-			redirect_mode: "if_required",
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
-		console.log("Entity 2 result:", JSON.stringify(result, null, 2));
-		console.log(chalk.red("BUG NOT REPRODUCED — entity 2 attach succeeded"));
-	} catch (error: any) {
-		console.log(chalk.green("BUG REPRODUCED — entity 2 attach failed:"));
-		console.log("Error:", JSON.stringify(error, null, 2));
-	}
-});
+
+		// No payment method on the customer → attach will return a checkout URL
+		// instead of charging immediately.
+		const { autumnV1, autumnV2_2, ctx, testClockId } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: true }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		// Stripe `once` 20% coupon — mirrors the merchant's real-world "Free Test"
+		// configuration that originally surfaced this bug.
+		const coupon = await createPercentCoupon({
+			stripeCli: ctx.stripeCli,
+			percentOff: 20,
+			duration: "once",
+		});
+
+		// Attach via V2 billing.attach with the coupon as a discount.
+		// With no payment method, this returns a payment_url for Stripe Checkout.
+		const attachResult = await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			discounts: [{ reward_id: coupon.id }],
+		});
+
+		if (!attachResult.payment_url) {
+			throw new Error(
+				"Expected payment_url from V2 attach (customer has no payment method)",
+			);
+		}
+
+		// Complete the Stripe Checkout form via browser automation.
+		await completeStripeCheckoutFormV2({ url: attachResult.payment_url });
+
+		// Wait for checkout.session.completed webhook + modifyStripeSubscriptionFromCheckout.
+		await timeout(12000);
+
+		// Sanity: first invoice reflects the 20% discount (20 * 0.8 = 16).
+		let customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerInvoiceCorrect({
+			customer,
+			count: 1,
+			latestTotal: 16,
+		});
+
+		if (!testClockId) {
+			throw new Error("Expected testClockId from initScenario");
+		}
+
+		// Advance the test clock to the next renewal. Stripe finalizes the
+		// renewal invoice during this advance.
+		await advanceToNextInvoice({
+			stripeCli: ctx.stripeCli,
+			testClockId,
+		});
+
+		// The renewal invoice must NOT be discounted.
+		// Without the fix: Stripe re-applied the `once` (Autumn re-sent it via
+		// the post-checkout sub update), so this invoice comes in at $16.
+		// With the fix: Stripe consumed the `once` on invoice #1 and the
+		// renewal is the full $20.
+		customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerInvoiceCorrect({
+			customer,
+			count: 2,
+			latestTotal: 20,
+		});
+	},
+);
