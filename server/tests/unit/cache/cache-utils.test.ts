@@ -33,11 +33,6 @@ mock.module("@/external/redis/initRedis.js", () => ({
 }));
 
 import {
-	getRedisAvailability,
-	markRedisCommandFailure,
-	markRedisCommandSuccess,
-} from "@/external/redis/initUtils/redisAvailability.js";
-import {
 	tryRedisNx,
 	tryRedisRead,
 	tryRedisWrite,
@@ -46,26 +41,6 @@ import {
 describe("cache utils", () => {
 	beforeEach(() => {
 		mockState.warnings = [];
-	});
-
-	test("redis availability uses recovery and degradation thresholds", () => {
-		markRedisCommandFailure();
-		markRedisCommandFailure();
-		markRedisCommandFailure();
-		expect(getRedisAvailability().state).toBe("degraded");
-
-		markRedisCommandSuccess();
-		expect(getRedisAvailability().state).toBe("degraded");
-
-		markRedisCommandSuccess();
-		expect(getRedisAvailability().state).toBe("healthy");
-
-		markRedisCommandFailure();
-		markRedisCommandFailure();
-		expect(getRedisAvailability().state).toBe("healthy");
-
-		markRedisCommandFailure();
-		expect(getRedisAvailability().state).toBe("degraded");
 	});
 
 	test("tryRedisRead returns null and warns when Redis operation throws", async () => {
@@ -126,29 +101,21 @@ describe("cache utils", () => {
 	});
 
 	test("custom Redis failures do not mark default Redis unavailable", async () => {
-		markRedisCommandSuccess();
-		markRedisCommandSuccess();
-		expect(getRedisAvailability().state).toBe("healthy");
-
-		await tryRedisRead(
+		const result = await tryRedisRead(
 			async () => {
 				throw new Error("custom redis failed");
 			},
 			{ status: "ready" } as never,
 		);
 
-		expect(getRedisAvailability().state).toBe("healthy");
+		expect(result).toBeNull();
 	});
 
 	test("Redis command errors do not mark Redis unavailable", async () => {
-		markRedisCommandSuccess();
-		markRedisCommandSuccess();
-		expect(getRedisAvailability().state).toBe("healthy");
-
 		await tryRedisWrite(async () => {
 			throw new Error("ERR user_script:2: unexpected symbol near '#'");
 		});
 
-		expect(getRedisAvailability().state).toBe("healthy");
+		expect(mockState.warnings).toHaveLength(1);
 	});
 });

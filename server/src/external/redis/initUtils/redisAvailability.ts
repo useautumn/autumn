@@ -142,14 +142,6 @@ export const stopRedisMonitor = () => {
 export const shouldUseRedis = () =>
 	hasRedisConfig && redisAvailabilityState === "healthy";
 
-export const markRedisCommandSuccess = () => {
-	if (hasRedisConfig) recordRedisAvailability(true);
-};
-
-export const markRedisCommandFailure = () => {
-	if (hasRedisConfig) recordRedisAvailability(false);
-};
-
 export const getRedisAvailability = (): RedisAvailabilitySnapshot => ({
 	configured: hasRedisConfig,
 	state: redisAvailabilityState,
