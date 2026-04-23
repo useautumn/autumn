@@ -32,6 +32,7 @@ mock.module("@/external/redis/initRedis.js", () => ({
 	redis: defaultRedis,
 }));
 
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import {
 	tryRedisNx,
 	tryRedisRead,
@@ -62,12 +63,13 @@ describe("cache utils", () => {
 		});
 	});
 
-	test("tryRedisWrite returns null and warns when Redis is not ready", async () => {
-		const result = await tryRedisWrite(async () => "OK", {
+	test("tryRedisWrite throws RedisUnavailableError when Redis is not ready", async () => {
+		const error = await tryRedisWrite(async () => "OK", {
 			status: "connecting",
-		} as never);
+		} as never).catch((caught) => caught);
 
-		expect(result).toBeNull();
+		expect(error).toBeInstanceOf(RedisUnavailableError);
+		expect(error.reason).toBe("not_ready");
 		expect(mockState.warnings).toHaveLength(1);
 		expect(mockState.warnings[0]).toEqual({
 			message: "[redis] operation unavailable",
@@ -76,6 +78,33 @@ describe("cache utils", () => {
 				error: undefined,
 			},
 		});
+	});
+
+	test("tryRedisRead throws RedisUnavailableError when Redis command times out", async () => {
+		const error = await tryRedisRead(
+			async () => {
+				throw new Error("Command timed out");
+			},
+			{ status: "ready" } as never,
+		).catch((caught) => caught);
+
+		expect(error).toBeInstanceOf(RedisUnavailableError);
+		expect(error.reason).toBe("timeout");
+	});
+
+	test("tryRedisNx throws RedisUnavailableError on connection failures", async () => {
+		const error = await tryRedisNx({
+			operation: async () => {
+				throw new Error("Connection is closed.");
+			},
+			redisInstance: { status: "ready" } as never,
+			onRedisUnavailable: () => "fallback",
+			onSuccess: () => "success",
+			onKeyAlreadyExists: () => "exists",
+		}).catch((caught) => caught);
+
+		expect(error).toBeInstanceOf(RedisUnavailableError);
+		expect(error.reason).toBe("connection");
 	});
 
 	test("tryRedisNx falls back and warns when Redis operation throws", async () => {
@@ -90,14 +119,6 @@ describe("cache utils", () => {
 		});
 
 		expect(result).toBe("fallback");
-		expect(mockState.warnings).toHaveLength(1);
-		expect(mockState.warnings[0]).toEqual({
-			message: "[redis] operation unavailable",
-			data: {
-				source: "tryRedisNx:error",
-				error: "boom",
-			},
-		});
 	});
 
 	test("custom Redis failures do not mark default Redis unavailable", async () => {

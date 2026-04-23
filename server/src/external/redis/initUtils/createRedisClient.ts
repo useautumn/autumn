@@ -13,10 +13,12 @@ export const createRedisClient = ({
 	cacheUrl,
 	region,
 	supportsUpstashShebang = true,
+	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
 }: {
 	cacheUrl: string;
 	region: string;
 	supportsUpstashShebang?: boolean;
+	commandTimeout?: number;
 }): Redis => {
 	const instance = new Redis(cacheUrl, {
 		tls:
@@ -25,8 +27,8 @@ export const createRedisClient = ({
 				: undefined,
 		family: 4,
 		keepAlive: 10000,
-		commandTimeout: REDIS_COMMAND_TIMEOUT_MS,
-		// Let `commandTimeout` (10s) be the sole bound on how long a command
+		commandTimeout,
+		// Let `commandTimeout` (default 10s) be the sole bound on how long a command
 		// can wait. `maxRetriesPerRequest: null` disables ioredis's default
 		// "flush pending commands after N reconnect attempts" behavior, which
 		// otherwise aborts commands still in the offline queue on any minor
