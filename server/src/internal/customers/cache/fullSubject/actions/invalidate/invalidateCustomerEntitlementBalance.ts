@@ -38,11 +38,7 @@ export const invalidateCustomerEntitlementBalance = async ({
 
 	await tryRedisWrite(
 		() =>
-			redisV2.hdel(
-				balanceKey,
-				customerEntitlementId,
-				AGGREGATED_BALANCE_FIELD,
-			),
+			redisV2.hdel(balanceKey, customerEntitlementId, AGGREGATED_BALANCE_FIELD),
 		redisV2,
 	);
 };

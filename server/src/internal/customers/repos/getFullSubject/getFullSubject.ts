@@ -20,11 +20,13 @@ export async function getFullSubject({
 	customerId,
 	entityId,
 	inStatuses = RELEVANT_STATUSES,
+	allowMissingEntity = false,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
 	entityId?: string;
 	inStatuses?: CusProductStatus[];
+	allowMissingEntity?: boolean;
 }): Promise<FullSubject | undefined> {
 	const { db, org, env } = ctx;
 
@@ -35,6 +37,7 @@ export async function getFullSubject({
 			customerId,
 			entityId,
 			inStatuses,
+			allowMissingEntity,
 		}),
 	);
 
@@ -42,6 +45,8 @@ export async function getFullSubject({
 
 	const fullSubject = resultToFullSubject({
 		row: result[0] as unknown as SubjectQueryRow,
+		entityIdRequested: !!entityId,
+		allowMissingEntity,
 	});
 	await lazyResetSubjectEntitlements({ ctx, fullSubject });
 	return fullSubject;
@@ -54,11 +59,13 @@ export async function getFullSubjectNormalized({
 	customerId,
 	entityId,
 	inStatuses = RELEVANT_STATUSES,
+	allowMissingEntity = false,
 }: {
 	ctx: AutumnContext;
 	customerId?: string;
 	entityId?: string;
 	inStatuses?: CusProductStatus[];
+	allowMissingEntity?: boolean;
 }): Promise<
 	{ normalized: NormalizedFullSubject; fullSubject: FullSubject } | undefined
 > {
@@ -71,6 +78,7 @@ export async function getFullSubjectNormalized({
 			customerId,
 			entityId,
 			inStatuses,
+			allowMissingEntity,
 		}),
 	);
 
@@ -78,6 +86,8 @@ export async function getFullSubjectNormalized({
 
 	const normalized = subjectQueryRowToNormalized({
 		row: result[0] as unknown as SubjectQueryRow,
+		entityIdRequested: !!entityId,
+		allowMissingEntity,
 	});
 
 	const fullSubject = normalizedToFullSubject({ normalized });

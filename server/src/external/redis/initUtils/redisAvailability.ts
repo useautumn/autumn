@@ -7,8 +7,8 @@ const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
 const REDIS_PROBE_TIMEOUT_MS = 1_000;
 const REDIS_STALE_RECONNECT_MS = 5_000;
-const REDIS_FAILURES_TO_DEGRADE = 3;
-const REDIS_SUCCESSES_TO_RECOVER = 2;
+const REDIS_FAILURES_TO_DEGRADE = 5;
+const REDIS_SUCCESSES_TO_RECOVER = 3;
 
 type RedisAvailabilityState = "healthy" | "degraded";
 
@@ -139,17 +139,8 @@ export const stopRedisMonitor = () => {
 	redisMonitorInterval = null;
 };
 
-// export const shouldUseRedis = () =>
-// 	hasRedisConfig && redisAvailabilityState === "healthy";
-export const shouldUseRedis = () => true;
-
-export const markRedisCommandSuccess = () => {
-	if (hasRedisConfig) recordRedisAvailability(true);
-};
-
-export const markRedisCommandFailure = () => {
-	if (hasRedisConfig) recordRedisAvailability(false);
-};
+export const shouldUseRedis = () =>
+	hasRedisConfig && redisAvailabilityState === "healthy";
 
 export const getRedisAvailability = (): RedisAvailabilitySnapshot => ({
 	configured: hasRedisConfig,
