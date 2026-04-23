@@ -56,7 +56,7 @@ export const handleCheck = createRoute({
 			requiredBalance,
 		});
 		if (!result.checkData) {
-			return c.json(result.response);
+			return c.json(result.response, 202);
 		}
 
 		const { checkData, response } = result;
