@@ -10,6 +10,9 @@ import { Input } from "@/components/v2/inputs/Input";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
 import { OTPSignIn } from "./components/OTPSignIn";
+import { TwoFactorGate } from "./components/TwoFactorGate";
+
+type TwoFactorMethod = "totp" | "otp";
 
 /**
  * Check if URL has OAuth parameters (from OAuth provider redirect)
@@ -35,6 +38,9 @@ export const SignIn = () => {
 	const [googleLoading, setGoogleLoading] = useState(false);
 	const [sendOtpLoading, setSendOtpLoading] = useState(false);
 	const [otpSent, setOtpSent] = useState(false);
+	const [twoFactorMethods, setTwoFactorMethods] = useState<
+		TwoFactorMethod[] | null
+	>(null);
 
 	const { data: session } = useSession();
 	const navigate = useNavigate();
@@ -66,6 +72,38 @@ export const SignIn = () => {
 			navigate("/", { replace: true });
 		}
 	}, [session, navigate, oauthRedirectUrl]);
+
+	// Preload passkeys via WebAuthn conditional mediation so the browser
+	// can show a native passkey picker as soon as the email field is focused.
+	useEffect(() => {
+		if (otpSent || twoFactorMethods || session) return;
+		if (typeof window === "undefined") return;
+		if (
+			typeof window.PublicKeyCredential === "undefined" ||
+			!window.PublicKeyCredential.isConditionalMediationAvailable
+		) {
+			return;
+		}
+		let cancelled = false;
+		window.PublicKeyCredential.isConditionalMediationAvailable()
+			.then((available) => {
+				if (cancelled || !available) return;
+				void authClient.signIn.passkey({
+					autoFill: true,
+					fetchOptions: {
+						onSuccess: () => {
+							window.location.href = callbackPath;
+						},
+					},
+				});
+			})
+			.catch(() => {
+				/* ignore — passkey autofill is best-effort */
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [otpSent, twoFactorMethods, session, callbackPath]);
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -105,13 +143,20 @@ export const SignIn = () => {
 			const googleNewUserUrl =
 				oauthRedirectUrl || `${frontendUrl}${defaultNewPath}`;
 
-			const { error } = await signIn.social({
+			const { data, error } = await signIn.social({
 				provider: "google",
 				callbackURL: googleCallbackUrl,
 				newUserCallbackURL: googleNewUserUrl,
 			});
 			if (error) {
 				toast.error(error.message || "Failed to sign in with Google");
+				return;
+			}
+			if (data && "twoFactorRedirect" in data && data.twoFactorRedirect) {
+				const methods =
+					(data as { twoFactorMethods?: TwoFactorMethod[] }).twoFactorMethods ??
+					(["totp"] as TwoFactorMethod[]);
+				setTwoFactorMethods(methods);
 			}
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to sign in with Google"));
@@ -138,15 +183,24 @@ export const SignIn = () => {
 					</h1>
 				</div>
 
-				{otpSent && (
-					<OTPSignIn
-						email={email}
+				{twoFactorMethods && (
+					<TwoFactorGate
+						methods={twoFactorMethods}
 						newPath={newPath}
 						callbackPath={callbackPath}
 					/>
 				)}
 
-				{!otpSent && (
+				{!twoFactorMethods && otpSent && (
+					<OTPSignIn
+						email={email}
+						newPath={newPath}
+						callbackPath={callbackPath}
+						onTwoFactorRequired={setTwoFactorMethods}
+					/>
+				)}
+
+				{!twoFactorMethods && !otpSent && (
 					<div className="space-y-6">
 						{/* Google Sign In Button */}
 						<IconButton
@@ -185,7 +239,7 @@ export const SignIn = () => {
 								}}
 								required
 								className="text-base !w-full"
-								autoComplete="email"
+								autoComplete="email webauthn"
 							/>
 
 							{/* Sign In Button */}

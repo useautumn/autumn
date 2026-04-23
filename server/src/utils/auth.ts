@@ -2,6 +2,7 @@ import "dotenv/config";
 
 import { ALL_SCOPES, invitation, schemas } from "@autumn/shared";
 import { oauthProvider } from "@better-auth/oauth-provider";
+import { passkey } from "@better-auth/passkey";
 import { betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
@@ -10,6 +11,7 @@ import {
 	jwt,
 	type Organization,
 	organization,
+	twoFactor,
 } from "better-auth/plugins";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
@@ -26,6 +28,7 @@ import { ADMIN_USER_IDs } from "./constants.js";
 
 export const auth = betterAuth({
 	baseURL: process.env.BETTER_AUTH_URL,
+	appName: "Autumn",
 	telemetry: {
 		enabled: false,
 	},
@@ -202,6 +205,17 @@ export const auth = betterAuth({
 					await afterOrgCreated({ org: organization, user });
 				},
 			},
+		}),
+
+		twoFactor({
+			issuer: "Autumn",
+			allowPasswordless: true,
+		}),
+
+		passkey({
+			rpName: "Autumn",
+			rpID: process.env.PASSKEY_RP_ID || undefined,
+			origin: process.env.PASSKEY_ORIGIN || undefined,
 		}),
 	],
 });

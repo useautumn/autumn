@@ -82,7 +82,9 @@ import {
 	oauthClient,
 	oauthConsent,
 	oauthRefreshToken,
+	passkey,
 	session,
+	twoFactor,
 	user,
 	verification,
 } from "./auth-schema.js";
@@ -129,6 +131,8 @@ export {
 	verification,
 	member,
 	invitation,
+	twoFactor,
+	passkey,
 	// OAuth Provider
 	jwks,
 	oauthClient,

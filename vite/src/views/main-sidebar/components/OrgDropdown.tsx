@@ -40,6 +40,7 @@ import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
 import { AdminDropdownItems } from "./AdminDropdownItems";
+import { AccountSettings } from "./AccountSettings";
 import { CreateNewOrg } from "./CreateNewOrg";
 import { LogOutItem } from "./LogOutItem";
 import { ManageOrg } from "./ManageOrg";
@@ -67,11 +68,16 @@ export const OrgDropdown = () => {
 	useMemberships();
 	const [dropdownOpen, setDropdownOpen] = useState(false);
 	const [manageOpen, setManageOpen] = useState(false);
+	const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
 
 	if (isLoading)
 		return (
 			<>
 				<ManageOrg open={manageOpen} setOpen={setManageOpen} />
+				<AccountSettings
+					open={accountSettingsOpen}
+					setOpen={setAccountSettingsOpen}
+				/>
 				<div className="h-7 w-32 px-4 flex items-center gap-2">
 					<Skeleton className="min-w-5 h-5" />
 					<Skeleton className="w-32 h-5" />
@@ -80,11 +86,23 @@ export const OrgDropdown = () => {
 		);
 
 	if (!org || error)
-		return <ManageOrg open={manageOpen} setOpen={setManageOpen} />;
+		return (
+			<>
+				<ManageOrg open={manageOpen} setOpen={setManageOpen} />
+				<AccountSettings
+					open={accountSettingsOpen}
+					setOpen={setAccountSettingsOpen}
+				/>
+			</>
+		);
 
 	return (
 		<div className={cn("flex px-3")}>
 			<ManageOrg open={manageOpen} setOpen={setManageOpen} />
+			<AccountSettings
+				open={accountSettingsOpen}
+				setOpen={setAccountSettingsOpen}
+			/>
 			<CreateNewOrg dialogType={dialogType} setDialogType={setDialogType} />
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
@@ -125,7 +143,14 @@ export const OrgDropdown = () => {
 					className="border-1 border-zinc-200 shadow-sm w-48"
 				>
 					<AdminDropdownItems />
-					<DropdownMenuItem className="flex justify-between w-full items-center gap-2 text-t2">
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.preventDefault();
+							setAccountSettingsOpen(true);
+							setDropdownOpen(false);
+						}}
+						className="flex justify-between w-full items-center gap-2 text-t2 cursor-pointer"
+					>
 						<div className="flex flex-col">
 							<span>{session?.user?.name}</span>
 							<span className="text-xs text-zinc-500 break-all hyphens-auto">

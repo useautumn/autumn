@@ -32,6 +32,7 @@
 			"@better-auth/core": "1.6.5",
 			"@better-auth/dash": "0.1.6",
 			"@better-auth/oauth-provider": "1.6.5",
+			"@better-auth/passkey": "1.6.5",
 			"better-auth": "1.6.5",
 			"@orpc/contract": "^1.0.0",
 			"@orpc/client": "^1.0.0",
@@ -45,6 +46,7 @@
 	},
 	"overrides": {
 		"@better-auth/core": "1.6.5",
+		"@better-auth/passkey": "1.6.5",
 		"better-auth": "1.6.5",
 		"@modelcontextprotocol/sdk": "1.26.0",
 		"@isaacs/brace-expansion": "5.0.1",
@@ -57,6 +59,7 @@
 	},
 	"resolutions": {
 		"@better-auth/core": "1.6.5",
+		"@better-auth/passkey": "1.6.5",
 		"better-auth": "1.6.5",
 		"@modelcontextprotocol/sdk": "1.26.0",
 		"@isaacs/brace-expansion": "5.0.1",
@@ -124,6 +127,7 @@
 		"@aws-sdk/client-sqs": "^3.985.0",
 		"@better-auth/core": "catalog:",
 		"@better-auth/oauth-provider": "catalog:",
+		"@better-auth/passkey": "catalog:",
 		"@wooorm/starry-night": "^3.8.0",
 		"ag-charts-react": "^12.3.0",
 		"better-auth": "catalog:",

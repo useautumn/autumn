@@ -12,14 +12,18 @@ import {
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
+type TwoFactorMethod = "totp" | "otp";
+
 export const OTPSignIn = ({
 	email,
 	newPath,
 	callbackPath,
+	onTwoFactorRequired,
 }: {
 	email: string;
 	newPath: string;
 	callbackPath: string;
+	onTwoFactorRequired?: (methods: TwoFactorMethod[]) => void;
 }) => {
 	const [otp, setOtp] = useState("");
 	const [resending, setResending] = useState(false);
@@ -48,12 +52,24 @@ export const OTPSignIn = ({
 				return;
 			}
 
-			const user = data.user;
+			if (data && "twoFactorRedirect" in data && data.twoFactorRedirect) {
+				const methods =
+					(data as { twoFactorMethods?: TwoFactorMethod[] }).twoFactorMethods ??
+					(["totp"] as TwoFactorMethod[]);
+				onTwoFactorRequired?.(methods);
+				setVerifying(false);
+				return;
+			}
 
-			console.log("Data:", data);
+			const user = (data as { user?: { createdAt?: string | Date } } | null)
+				?.user;
+
+			if (!user?.createdAt) {
+				window.location.href = callbackPath;
+				return;
+			}
 
 			// Ensure we're comparing UTC timestamps
-
 			const userCreatedAtUTC = new Date(user.createdAt);
 			const nowUTC = new Date();
 			const diffSeconds = differenceInSeconds(nowUTC, userCreatedAtUTC);
@@ -68,7 +84,6 @@ export const OTPSignIn = ({
 		} catch {
 			toast.error("Failed to verify code");
 		}
-		console.log("OTP verified");
 		setVerifying(false);
 	};
 
