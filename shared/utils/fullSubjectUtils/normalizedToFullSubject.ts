@@ -3,6 +3,7 @@ import type {
 	SubjectType,
 } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type {
+	AggregatedSubjectFlag,
 	NormalizedFullSubject,
 	SubjectBalance,
 	SubjectFlag,
@@ -81,14 +82,18 @@ const subjectBalanceToFullCustomerEntitlement = ({
 const subjectFlagToFullCustomerEntitlement = ({
 	subjectFlag,
 	fullEntitlement,
+	internalCustomerId,
+	internalEntityId,
 }: {
 	subjectFlag: SubjectFlag;
 	fullEntitlement: FullCustomerEntitlement["entitlement"];
+	internalCustomerId: string;
+	internalEntityId: string | null;
 }): FullCustomerEntitlement => {
 	return {
 		id: subjectFlag.customerEntitlementId,
-		internal_customer_id: subjectFlag.internalCustomerId,
-		internal_entity_id: subjectFlag.internalEntityId,
+		internal_customer_id: internalCustomerId,
+		internal_entity_id: internalEntityId,
 		internal_feature_id: subjectFlag.internalFeatureId,
 		feature_id: subjectFlag.featureId,
 		customer_product_id: subjectFlag.customerProductId,
@@ -245,6 +250,12 @@ export const normalizedToFullSubject = ({
 		}
 	}
 
+	const customerProductsById = new Map(
+		customerProductsInput.map(
+			(customerProduct) => [customerProduct.id, customerProduct] as const,
+		),
+	);
+
 	const booleanCesByCustomerProductId = new Map<
 		string,
 		FullCustomerEntitlement[]
@@ -255,9 +266,15 @@ export const normalizedToFullSubject = ({
 		const entitlement = entitlementsById.get(flag.entitlementId);
 		if (!entitlement) continue;
 
+		const matchingCustomerProduct = flag.customerProductId
+			? customerProductsById.get(flag.customerProductId)
+			: undefined;
+
 		const fullCustomerEntitlement = subjectFlagToFullCustomerEntitlement({
 			subjectFlag: flag,
 			fullEntitlement: entitlement,
+			internalCustomerId: normalized.internalCustomerId,
+			internalEntityId: matchingCustomerProduct?.internal_entity_id ?? null,
 		});
 
 		if (!flag.customerProductId) {
@@ -300,8 +317,11 @@ export const normalizedToFullSubject = ({
 	let aggregatedCustomerEntitlements:
 		| FullAggregatedFeatureBalance[]
 		| undefined;
+	let aggregatedSubjectFlags: Record<string, AggregatedSubjectFlag> | undefined;
 
 	if (normalized.entity_aggregations) {
+		aggregatedSubjectFlags =
+			normalized.entity_aggregations.aggregated_subject_flags;
 		const entityAgg = normalized.entity_aggregations;
 		const aggregatedCustomerProductsInput = getArrayEntries<
 			NonNullable<
@@ -373,6 +393,9 @@ export const normalizedToFullSubject = ({
 			: {}),
 		...(aggregatedCustomerEntitlements
 			? { aggregated_customer_entitlements: aggregatedCustomerEntitlements }
+			: {}),
+		...(aggregatedSubjectFlags
+			? { aggregated_subject_flags: aggregatedSubjectFlags }
 			: {}),
 	} as FullSubject;
 };

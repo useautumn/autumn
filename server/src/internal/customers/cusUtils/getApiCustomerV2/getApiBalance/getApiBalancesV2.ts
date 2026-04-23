@@ -1,8 +1,10 @@
 import {
+	type AggregatedSubjectFlag,
 	type ApiBalanceV1,
 	type ApiFlagV0,
 	type Feature,
 	FeatureType,
+	findFeatureByInternalId,
 	type FullAggregatedFeatureBalance,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
@@ -19,14 +21,17 @@ type FeatureInput = {
 	feature: Feature;
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 	aggregatedFeatureBalance?: FullAggregatedFeatureBalance;
+	aggregatedSubjectFlag?: AggregatedSubjectFlag;
 };
 
 const getFeatureInputs = ({
 	customerEntitlements,
 	fullSubject,
+	features,
 }: {
 	customerEntitlements: FullCusEntWithFullCusProduct[];
 	fullSubject: FullSubject;
+	features: Feature[];
 }): FeatureInput[] => {
 	const customerEntitlementsByFeatureId: Record<
 		string,
@@ -45,6 +50,8 @@ const getFeatureInputs = ({
 		string,
 		FullAggregatedFeatureBalance
 	> = {};
+	const aggregatedSubjectFlagByFeatureId: Record<string, AggregatedSubjectFlag> =
+		{};
 
 	if (fullSubject.subjectType === "customer") {
 		for (const aggregatedFeatureBalance of fullSubject.aggregated_customer_entitlements ??
@@ -52,11 +59,17 @@ const getFeatureInputs = ({
 			aggregatedFeatureBalanceByFeatureId[aggregatedFeatureBalance.feature_id] =
 				aggregatedFeatureBalance;
 		}
+		for (const [featureId, aggregatedSubjectFlag] of Object.entries(
+			fullSubject.aggregated_subject_flags ?? {},
+		)) {
+			aggregatedSubjectFlagByFeatureId[featureId] = aggregatedSubjectFlag;
+		}
 	}
 
 	const featureIds = new Set([
 		...Object.keys(customerEntitlementsByFeatureId),
 		...Object.keys(aggregatedFeatureBalanceByFeatureId),
+		...Object.keys(aggregatedSubjectFlagByFeatureId),
 	]);
 
 	const featureInputs: FeatureInput[] = [];
@@ -66,9 +79,16 @@ const getFeatureInputs = ({
 			customerEntitlementsByFeatureId[featureId] ?? [];
 		const aggregatedFeatureBalance =
 			aggregatedFeatureBalanceByFeatureId[featureId];
+		const aggregatedSubjectFlag = aggregatedSubjectFlagByFeatureId[featureId];
 		const feature =
 			customerEntitlements[0]?.entitlement.feature ??
-			aggregatedFeatureBalance?.feature;
+			aggregatedFeatureBalance?.feature ??
+			(aggregatedSubjectFlag
+				? findFeatureByInternalId({
+						features,
+						internalId: aggregatedSubjectFlag.internal_feature_id,
+					})
+				: undefined);
 
 		if (!feature) continue;
 
@@ -77,6 +97,7 @@ const getFeatureInputs = ({
 			feature,
 			customerEntitlements,
 			aggregatedFeatureBalance,
+			aggregatedSubjectFlag,
 		});
 	}
 
@@ -102,6 +123,7 @@ export const getApiBalancesV2 = ({
 	const featureInputs = getFeatureInputs({
 		customerEntitlements,
 		fullSubject,
+		features: ctx.features,
 	});
 
 	const apiBalances: Record<string, ApiBalanceV1> = {};
@@ -122,6 +144,7 @@ export const getApiBalancesV2 = ({
 			feature,
 			customerEntitlements,
 			aggregatedFeatureBalance,
+			aggregatedSubjectFlag,
 		} = featureInput;
 
 		if (feature.type === FeatureType.Boolean) {
@@ -129,7 +152,7 @@ export const getApiBalancesV2 = ({
 				ctx: flagScopedCtx,
 				customerEntitlements,
 				feature,
-				aggregatedFeatureBalance,
+				aggregatedSubjectFlag,
 			});
 
 			if (apiFlag) {
