@@ -1,6 +1,8 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis } from "@/external/redis/initRedis.js";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import type { UnavailableReason } from "@/external/redis/utils/runRedisOp.js";
 
 const REDIS_WARNING_INTERVAL_MS = 30_000;
 const lastRedisWarningAtBySource = new Map<string, number>();
@@ -26,6 +28,34 @@ const warnRedisUnavailable = ({
 	);
 };
 
+const classifyRedisUnavailable = (
+	targetRedis: Redis,
+	error?: unknown,
+): UnavailableReason | null => {
+	if (targetRedis.status !== "ready") return "not_ready";
+	const message = error instanceof Error ? error.message : String(error);
+	if (/ETIMEDOUT|timeout|timed out/i.test(message)) return "timeout";
+	if (/ECONN|closed|writeable|max retries/i.test(message)) return "connection";
+	return null;
+};
+
+const throwIfRedisUnavailable = ({
+	targetRedis,
+	source,
+	error,
+}: {
+	targetRedis: Redis;
+	source: string;
+	error?: unknown;
+}) => {
+	warnRedisUnavailable({ source, error });
+
+	const reason = classifyRedisUnavailable(targetRedis, error);
+	if (reason) {
+		throw new RedisUnavailableError({ source, reason, cause: error });
+	}
+};
+
 /**
  * Executes a Redis SET ... NX and routes the three possible outcomes to callbacks:
  * - `"OK"` (key was set) → `onSuccess`
@@ -49,7 +79,10 @@ export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
 
 	try {
 		if (targetRedis.status !== "ready") {
-			warnRedisUnavailable({ source: "tryRedisNx:not-ready" });
+			throwIfRedisUnavailable({
+				targetRedis,
+				source: "tryRedisNx:not-ready",
+			});
 			return await onRedisUnavailable();
 		}
 
@@ -57,7 +90,12 @@ export const tryRedisNx = async <TUnavailable, TSuccess, TExists>({
 		if (result === "OK") return await onSuccess();
 		return await onKeyAlreadyExists();
 	} catch (error) {
-		warnRedisUnavailable({ source: "tryRedisNx:error", error });
+		if (error instanceof RedisUnavailableError) throw error;
+		throwIfRedisUnavailable({
+			targetRedis,
+			source: "tryRedisNx:error",
+			error,
+		});
 		return await onRedisUnavailable();
 	}
 };
@@ -79,7 +117,10 @@ export const tryRedisWrite = async <T>(
 
 	try {
 		if (targetRedis.status !== "ready") {
-			warnRedisUnavailable({ source: "tryRedisWrite:not-ready" });
+			throwIfRedisUnavailable({
+				targetRedis,
+				source: "tryRedisWrite:not-ready",
+			});
 			return null as T extends void ? true : T | null;
 		}
 
@@ -89,7 +130,12 @@ export const tryRedisWrite = async <T>(
 			? true
 			: T | null;
 	} catch (error) {
-		warnRedisUnavailable({ source: "tryRedisWrite:error", error });
+		if (error instanceof RedisUnavailableError) throw error;
+		throwIfRedisUnavailable({
+			targetRedis,
+			source: "tryRedisWrite:error",
+			error,
+		});
 		return null as T extends void ? true : T | null;
 	}
 };
@@ -110,14 +156,22 @@ export const tryRedisRead = async <T>(
 
 	try {
 		if (targetRedis.status !== "ready") {
-			warnRedisUnavailable({ source: "tryRedisRead:not-ready" });
+			throwIfRedisUnavailable({
+				targetRedis,
+				source: "tryRedisRead:not-ready",
+			});
 			return null;
 		}
 
 		const result = await operation();
 		return result;
 	} catch (error) {
-		warnRedisUnavailable({ source: "tryRedisRead:error", error });
+		if (error instanceof RedisUnavailableError) throw error;
+		throwIfRedisUnavailable({
+			targetRedis,
+			source: "tryRedisRead:error",
+			error,
+		});
 		return null;
 	}
 };
