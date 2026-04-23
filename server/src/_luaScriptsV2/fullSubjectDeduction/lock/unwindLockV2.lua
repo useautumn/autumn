@@ -374,10 +374,9 @@ local function unwind_lock_on_context(params)
 
   local receipt = load_lock_receipt(lock_receipt_key)
 
-  local pending_error = require_processing_receipt(receipt)
-  if not is_nil(pending_error) then
-    context.logger.log("[unwind_lock] receipt not in processing state: %s", pending_error)
-    empty_result.error = pending_error
+  if is_nil(receipt) then
+    context.logger.log("[unwind_lock] receipt not found")
+    empty_result.error = 'RESERVATION_NOT_FOUND'
     return empty_result
   end
 

@@ -27,6 +27,7 @@ export const runFinalizeLock = async ({
 			params,
 			receipt: fetchedReceipt.receipt,
 			lockReceiptKey: fetchedReceipt.lockReceiptKey,
+			claimed: fetchedReceipt.claimed,
 		});
 	}
 

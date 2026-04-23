@@ -124,7 +124,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				) as CachedFullSubject;
 				expect(cachedSubject.subjectViewEpoch).toBe(0);
 
-				const cached = await getCachedFullSubject({
+				const { fullSubject: cached } = await getCachedFullSubject({
 					ctx,
 					customerId: scenario.ids.customerId,
 					source: "integration-test",
@@ -184,7 +184,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				) as CachedFullSubject;
 				expect(cachedSubject.subjectViewEpoch).toBe(0);
 
-				const cached = await getCachedFullSubject({
+				const { fullSubject: cached } = await getCachedFullSubject({
 					ctx,
 					customerId: scenario.ids.customerId,
 					entityId,
@@ -341,13 +341,13 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					}),
 				);
 
-				const cached = await getCachedFullSubject({
+				const { fullSubject: cached } = await getCachedFullSubject({
 					ctx,
 					customerId: scenario.ids.customerId,
 					entityId,
 					source: "integration-test",
 				});
-				const partialCached = await getCachedPartialFullSubject({
+				const { fullSubject: partialCached } = await getCachedPartialFullSubject({
 					ctx,
 					customerId: scenario.ids.customerId,
 					entityId,
@@ -407,7 +407,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					}),
 				);
 
-				const cached = await getCachedFullSubject({
+				const { fullSubject: cached } = await getCachedFullSubject({
 					ctx,
 					customerId: scenario.ids.customerId,
 					source: "integration-test",
@@ -451,7 +451,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					}),
 				);
 
-				const cached = await getCachedFullSubject({
+				const { fullSubject: cached } = await getCachedFullSubject({
 					ctx,
 					customerId: scenario.ids.customerId,
 					source: "integration-test",
@@ -492,7 +492,7 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 					source: "integration-test",
 				});
 
-				const cached = await getCachedFullSubject({
+				const { fullSubject: cached } = await getCachedFullSubject({
 					ctx,
 					customerId: scenario.ids.customerId,
 					source: "integration-test",

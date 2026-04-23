@@ -24,7 +24,7 @@ export const getOrCreateCachedPartialFullSubject = async ({
 	const { customer_id: customerId, entity_id: entityId } = params;
 
 	if (customerId && useRedis) {
-		const cached = await getCachedPartialFullSubject({
+		const { fullSubject: cached } = await getCachedPartialFullSubject({
 			ctx,
 			customerId,
 			entityId,

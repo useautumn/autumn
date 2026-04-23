@@ -32,7 +32,7 @@ const getAutoTopupFullCustomer = async ({
 	// 	`IS FULL SUBJECT ROLLOUT ENABLED: ${isFullSubjectRolloutEnabled({ ctx })}`,
 	// );
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		const cachedFullSubject = await getCachedFullSubject({
+		const { fullSubject: cachedFullSubject } = await getCachedFullSubject({
 			ctx,
 			customerId,
 			source: "setupAutoTopupContext",
