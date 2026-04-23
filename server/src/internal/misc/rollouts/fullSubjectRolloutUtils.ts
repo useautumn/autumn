@@ -1,4 +1,5 @@
 import { isTransientDbError } from "@/db/dbUtils.js";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext, RolloutSnapshot } from "@/honoUtils/HonoEnv.js";
 
 export const FULL_SUBJECT_ROLLOUT_ID = "v2-cache";
@@ -26,6 +27,7 @@ export const isRetryableFullSubjectRolloutError = ({
 }: {
 	error: unknown;
 }) =>
+	error instanceof RedisUnavailableError ||
 	isTransientDbError({ error }) ||
 	(error instanceof Error &&
 		(RETRYABLE_REDIS_ERROR_NAMES.has(error.name) ||
