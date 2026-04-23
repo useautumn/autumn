@@ -1,5 +1,5 @@
 import { notNullish, type ResetCusEnt } from "@autumn/shared";
-import { batchDeleteCachedCustomers } from "@/internal/customers/cusUtils/apiCusCacheUtils/batchDeleteCachedCustomers";
+import { batchDeleteCachedFullCustomers } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers";
 
 export const clearCusEntsFromCache = async ({
 	cusEnts,
@@ -16,5 +16,7 @@ export const clearCusEntsFromCache = async ({
 
 	if (customersToDelete.length === 0) return;
 
-	await batchDeleteCachedCustomers({ customers: customersToDelete });
+	await batchDeleteCachedFullCustomers({
+		customers: customersToDelete,
+	});
 };

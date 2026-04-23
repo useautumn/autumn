@@ -102,6 +102,8 @@ export const setCachedFullCustomer = async ({
 	});
 	const pathIndexJson = JSON.stringify(pathIndexEntries);
 
+	const payload = { ...fullCustomer, _cachedAt: Date.now() };
+
 	const result = await tryRedisWrite(async () => {
 		return await redis.setFullCustomerCache(
 			cacheKey,

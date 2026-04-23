@@ -22,7 +22,13 @@ export interface StripeSubscriptionDeletedContext {
 	stripeSubscription: ExpandedStripeSubscription;
 	stripeCustomer: ExpandedStripeCustomer;
 	fullCustomer: FullCustomer;
-	/** Customer products that are on this subscription */
+	/**
+	 * Mutable list of customer products on this subscription. Updated in place
+	 * by the `trackCustomerProduct{Update,Deletion,Insertion}` helpers.
+	 * Callers iterating this array while those helpers may run (directly or
+	 * transitively) must iterate over a snapshot, e.g.
+	 * `for (const cp of [...customerProducts])`, to avoid iterator invalidation.
+	 */
 	customerProducts: FullCusProduct[];
 	/** Current time in ms, respecting test clocks */
 	nowMs: number;

@@ -1,4 +1,4 @@
-import { formatAmount, type ProductItem, type ProductV2 } from "@autumn/shared";
+import type { ProductItem, ProductV2 } from "@autumn/shared";
 import {
 	PackageIcon,
 	PencilSimpleIcon,
@@ -7,55 +7,23 @@ import {
 } from "@phosphor-icons/react";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
+import { PriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
+import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 
-export function getItemUnitPrice(item: ProductItem): number | null {
-	if (item.price != null) return item.price;
-	if (item.tiers?.length === 1) return item.tiers[0].amount ?? null;
-	return null;
-}
-
-export function getPlanPriceLabel({
+export function getSchedulePlanPriceProduct({
 	product,
 	customItems,
-	prepaidOptions,
 }: {
 	product: ProductV2;
 	customItems?: ProductItem[] | null;
-	prepaidOptions?: Record<string, number>;
-}): string | null {
-	const items = customItems ?? product.items;
-	const pricedItems =
-		items?.filter((item) => getItemUnitPrice(item) != null && item.interval) ??
-		[];
-
-	if (pricedItems.length === 0) return "Free";
-
-	const totalAmount = pricedItems.reduce((sum, item) => {
-		const unitPrice = getItemUnitPrice(item) ?? 0;
-		const quantity =
-			item.feature_id && prepaidOptions?.[item.feature_id]
-				? prepaidOptions[item.feature_id]
-				: 1;
-		return sum + unitPrice * quantity;
-	}, 0);
-	const firstItem = pricedItems[0]!;
-	const intervalCount = firstItem.interval_count ?? 1;
-	const intervalLabel =
-		intervalCount === 1
-			? `/${firstItem.interval}`
-			: `/${intervalCount} ${firstItem.interval}s`;
-
-	return `${formatAmount({
-		currency: "USD",
-		amount: totalAmount,
-		amountFormatOptions: {
-			style: "currency",
-			currencyDisplay: "narrowSymbol",
-		},
-	})}${intervalLabel}`;
+}): ProductV2 {
+	return {
+		...product,
+		items: customItems ?? product.items,
+	};
 }
 
 export function SchedulePlanRow({
@@ -75,6 +43,7 @@ export function SchedulePlanRow({
 		isPhaseLocked,
 		setEditingPlan,
 	} = useCreateScheduleFormContext();
+	const { org } = useOrg();
 
 	const plan = formValues.phases[phaseIndex]?.plans[planIndex];
 	if (!plan) return null;
@@ -83,11 +52,10 @@ export function SchedulePlanRow({
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.productId);
 	const hasCustomizations = plan.isCustom;
-	const priceLabel = selectedProduct
-		? getPlanPriceLabel({
+	const priceProduct = selectedProduct
+		? getSchedulePlanPriceProduct({
 				product: selectedProduct,
 				customItems: plan.items,
-				prepaidOptions: plan.prepaidOptions,
 			})
 		: null;
 
@@ -184,8 +152,13 @@ export function SchedulePlanRow({
 							Custom
 						</Badge>
 					)}
-					{priceLabel && (
-						<span className="text-xs text-t3 tabular-nums">{priceLabel}</span>
+					{priceProduct && (
+						<span className="text-xs text-t3 tabular-nums">
+							<PriceDisplay
+								product={priceProduct}
+								currency={org?.default_currency ?? "USD"}
+							/>
+						</span>
 					)}
 				</div>
 				<div

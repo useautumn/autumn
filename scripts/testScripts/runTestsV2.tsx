@@ -732,7 +732,12 @@ function TestRunnerApp({
 						const firstAttemptFailures = result.tests.filter(
 							(t) => t.status === "failed",
 						);
-						const failedTestNames = firstAttemptFailures.map((t) => t.name);
+						const hasUnnamedFailure = firstAttemptFailures.some((test) =>
+							test.name.includes("(unnamed)"),
+						);
+						const failedTestNames = hasUnnamedFailure
+							? []
+							: firstAttemptFailures.map((test) => test.name);
 
 						// Mark this specific file as actively retrying
 						const retryingResult: TestFileResult = {

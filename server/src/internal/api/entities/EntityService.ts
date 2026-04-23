@@ -1,10 +1,11 @@
 import {
+	customers,
 	type Entity,
 	EntityErrorCode,
 	ErrCode,
 	entities,
 } from "@autumn/shared";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { isUniqueConstraintError } from "@/db/dbUtils";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -140,6 +141,39 @@ export class EntityService {
 					isDeleted ? eq(entities.deleted, isDeleted) : undefined,
 				),
 		})) as Entity[];
+	}
+
+	static async listForInvalidation({
+		db,
+		customerId,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		customerId: string;
+		orgId: string;
+		env: string;
+	}) {
+		const rows = await db
+			.select({
+				id: entities.id,
+			})
+			.from(entities)
+			.innerJoin(
+				customers,
+				eq(customers.internal_id, entities.internal_customer_id),
+			)
+			.where(
+				and(
+					eq(customers.id, customerId),
+					eq(customers.org_id, orgId),
+					eq(customers.env, env),
+					isNotNull(entities.id),
+				),
+			)
+			.limit(1000);
+
+		return rows.flatMap((row) => (row.id ? [row.id] : []));
 	}
 
 	static async update({

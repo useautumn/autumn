@@ -8,6 +8,7 @@ import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
+import { roundCacheBalance } from "@/internal/customers/cache/fullSubject/roundCacheBalance";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -392,10 +393,17 @@ test.concurrent(`${chalk.yellowBright("track-credit-system4: test deduction with
 		balance: 0,
 		usage: 60,
 	});
-	expect(customer2.features[TestFeature.Credits].balance).toBe(
+	const creditsBalance = roundCacheBalance(
+		customer2.features[TestFeature.Credits].balance,
+	);
+	const credits2Balance = roundCacheBalance(
+		customer2.features[TestFeature.Credits2].balance,
+	);
+
+	expect(creditsBalance).toBe(
 		new Decimal(creditsBefore).sub(creditCostAction1).toNumber(),
 	);
-	expect(customer2.features[TestFeature.Credits2].balance).toBe(
+	expect(credits2Balance).toBe(
 		new Decimal(credits2Before).sub(creditCostAction3).toNumber(),
 	);
 

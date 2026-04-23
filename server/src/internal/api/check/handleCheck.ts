@@ -2,19 +2,16 @@ import {
 	AffectedResource,
 	ApiVersion,
 	applyResponseVersionChanges,
-	type CheckParams,
 	CheckParamsSchema,
 	CheckQuerySchema,
 	type CheckResponseV3,
 	type ParsedCheckParams,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { runCheckWithRollout } from "@/internal/balances/check/index.js";
 import { parseCheckParamsForLock } from "@/internal/balances/utils/lock/parseCheckParamsForLock.js";
-import { getCheckData } from "./checkUtils/getCheckData.js";
-import { getV2CheckResponse } from "./checkUtils/getV2CheckResponse.js";
 import { getCheckPreview } from "./getCheckPreview.js";
 import { handleProductCheck } from "./handlers/handleProductCheck.js";
-import { runCheckWithTrack } from "./runCheckWithTrack.js";
 
 const DEFAULT_REQUIRED_BALANCE = 1;
 export const handleCheck = createRoute({
@@ -38,7 +35,6 @@ export const handleCheck = createRoute({
 			entity_id,
 			required_quantity,
 			required_balance,
-			send_event,
 			with_preview,
 		} = body;
 
@@ -54,26 +50,16 @@ export const handleCheck = createRoute({
 		const requiredBalance =
 			required_balance ?? required_quantity ?? DEFAULT_REQUIRED_BALANCE;
 
-		const checkData = await getCheckData({
+		const result = await runCheckWithRollout({
 			ctx,
-			body: body as CheckParams & { feature_id: string },
+			body,
 			requiredBalance,
 		});
-
-		let response: CheckResponseV3;
-		if (send_event || body.lock?.enabled) {
-			response = await runCheckWithTrack({
-				ctx,
-				body,
-				requiredBalance,
-				checkData,
-			});
-		} else {
-			response = await getV2CheckResponse({
-				checkData,
-				requiredBalance,
-			});
+		if (!result.checkData) {
+			return c.json(result.response);
 		}
+
+		const { checkData, response } = result;
 
 		const preview = with_preview
 			? await getCheckPreview({

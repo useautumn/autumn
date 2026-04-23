@@ -90,14 +90,6 @@ test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-1: [mixed] entity loc
 		override_value: 10,
 	});
 
-	// delta = 10 - 30 = -20 → restore 20 to ent-1
-	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		remaining: 190,
-	});
-
 	const ent1 = await autumnV2_1.entities.get<ApiCustomerV5>(
 		customerId,
 		entities[0].id,
@@ -118,13 +110,21 @@ test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-1: [mixed] entity loc
 		remaining: 150,
 	});
 
+	await timeout(3000);
+
+	// delta = 10 - 30 = -20 → restore 20 to ent-1
+	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 190,
+	});
+
 	// Events newest-first: finalize(-20), check(30)
 	await expectCustomerEventsCorrect({
 		customerId,
 		events: [{ value: -20 }, { value: 30 }],
 	});
-
-	await timeout(3000);
 
 	const customerDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
@@ -180,14 +180,6 @@ test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-2: [mixed] entity loc
 		override_value: 80,
 	});
 
-	// delta = 80 - 30 = +50 → exhaust ent-1 own (20→0), spill 30 into customer (100→70)
-	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		remaining: 120,
-	});
-
 	const ent1 = await autumnV2_1.entities.get<ApiCustomerV5>(
 		customerId,
 		entities[0].id,
@@ -216,6 +208,14 @@ test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-2: [mixed] entity loc
 
 	await timeout(3000);
 
+	// delta = 80 - 30 = +50 → exhaust ent-1 own (20→0), spill 30 into customer (100→70)
+	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 120,
+	});
+
 	const customerDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",
 	});
@@ -223,364 +223,6 @@ test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-2: [mixed] entity loc
 		customer: customerDb,
 		featureId: TestFeature.Messages,
 		remaining: 120,
-	});
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EQ-3 [Setup A]: customer-level lock=120, confirm=60 — LIFO unwind across entity buckets
-// Check: customer 100→0, ent-1 50→30. Receipt: [customer:100, ent-1:20]. total=80.
-// Confirm delta=60-120=-60 → LIFO: restore 20 to ent-1 (→50), restore 40 to customer (→40).
-// Final: customer=40, ent-1=50, ent-2=50. total=140, ent-1 view=90, ent-2 view=90.
-// ─────────────────────────────────────────────────────────────────────────────
-
-test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-3: [mixed] customer lock=120 confirm=60 — LIFO unwind across entity buckets")}`, async () => {
-	const customerProd = makeCustomerProd();
-	const entityProd = makeEntityProd();
-	const customerId = "lock-eq-3";
-	const lockKey = `${customerId}-lock`;
-
-	const { autumnV2_1, ctx, entities } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false }),
-			s.products({ list: [customerProd, entityProd] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.attach({ productId: customerProd.id }),
-			s.attach({ productId: entityProd.id, entityIndex: 0 }),
-			s.attach({ productId: entityProd.id, entityIndex: 1 }),
-		],
-	});
-
-	await deleteLock({ ctx, lockId: lockKey });
-
-	// No entity_id → customer-level lock, draws customer then ent-1
-	await autumnV2_1.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		required_balance: 120,
-		lock: { enabled: true, lock_id: lockKey },
-	});
-
-	await autumnV2_1.balances.finalize({
-		lock_id: lockKey,
-		action: "confirm",
-		override_value: 60,
-	});
-
-	// delta = 60 - 120 = -60 → LIFO: restore 20 to ent-1 (50→50), restore 40 to customer (0→40)
-	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		remaining: 140,
-	});
-
-	const ent1 = await autumnV2_1.entities.get<ApiCustomerV5>(
-		customerId,
-		entities[0].id,
-	);
-	expectBalanceCorrect({
-		customer: ent1,
-		featureId: TestFeature.Messages,
-		remaining: 90,
-	});
-
-	const ent2 = await autumnV2_1.entities.get<ApiCustomerV5>(
-		customerId,
-		entities[1].id,
-	);
-	expectBalanceCorrect({
-		customer: ent2,
-		featureId: TestFeature.Messages,
-		remaining: 90,
-	});
-
-	// Events newest-first: finalize(-60), check(120)
-	await expectCustomerEventsCorrect({
-		customerId,
-		events: [{ value: -60 }, { value: 120 }],
-	});
-
-	await timeout(3000);
-
-	const customerDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
-		skip_cache: "true",
-	});
-	expectBalanceCorrect({
-		customer: customerDb,
-		featureId: TestFeature.Messages,
-		remaining: 140,
-	});
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EQ-4 [Setup A]: customer-level lock=120, confirm=160 — extra deduction reaches ent-2
-// Check: customer 100→0, ent-1 50→30. Receipt: [customer:100, ent-1:20]. total=80.
-// Confirm delta=160-120=+40 → deduct 30 from ent-1 (→0), 10 from ent-2 (→40).
-// Final: customer=0, ent-1=0, ent-2=40. total=40, ent-1 view=0, ent-2 view=40.
-// ─────────────────────────────────────────────────────────────────────────────
-
-test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-4: [mixed] customer lock=120 confirm=160 — extra deduction reaches ent-2")}`, async () => {
-	const customerProd = makeCustomerProd();
-	const entityProd = makeEntityProd();
-	const customerId = "lock-eq-4";
-	const lockKey = `${customerId}-lock`;
-
-	const { autumnV2_1, ctx, entities } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false }),
-			s.products({ list: [customerProd, entityProd] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.attach({ productId: customerProd.id }),
-			s.attach({ productId: entityProd.id, entityIndex: 0 }),
-			s.attach({ productId: entityProd.id, entityIndex: 1 }),
-		],
-	});
-
-	await deleteLock({ ctx, lockId: lockKey });
-
-	await autumnV2_1.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		required_balance: 120,
-		lock: { enabled: true, lock_id: lockKey },
-	});
-
-	await autumnV2_1.balances.finalize({
-		lock_id: lockKey,
-		action: "confirm",
-		override_value: 160,
-	});
-
-	// delta = 160 - 120 = +40 → exhaust ent-1 remaining 30 (→0), then 10 from ent-2 (→40)
-	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		remaining: 40,
-	});
-
-	const ent1 = await autumnV2_1.entities.get<ApiCustomerV5>(
-		customerId,
-		entities[0].id,
-	);
-	expectBalanceCorrect({
-		customer: ent1,
-		featureId: TestFeature.Messages,
-		remaining: 0,
-	});
-
-	const ent2 = await autumnV2_1.entities.get<ApiCustomerV5>(
-		customerId,
-		entities[1].id,
-	);
-	expectBalanceCorrect({
-		customer: ent2,
-		featureId: TestFeature.Messages,
-		remaining: 40,
-	});
-
-	// Events newest-first: finalize(+40), check(120)
-	await expectCustomerEventsCorrect({
-		customerId,
-		events: [{ value: 40 }, { value: 120 }],
-	});
-
-	await timeout(3000);
-
-	const customerDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
-		skip_cache: "true",
-	});
-	expectBalanceCorrect({
-		customer: customerDb,
-		featureId: TestFeature.Messages,
-		remaining: 40,
-	});
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EQ-5 [Setup B — entity-only]: customer-level lock=80 crosses ent-1→ent-2 boundary,
-// confirm=30 — LIFO unwind back across the boundary.
-// No customer product; only entity products.
-//
-// Initial: ent-1=50, ent-2=50, customer total=100.
-// Check (no entity_id): deduction order ent-1→ent-2.
-//   ent-1: 50→0, ent-2: 50→20. Receipt: [ent-1:50, ent-2:30]. total=20.
-// Confirm delta=30-80=-50 → LIFO: restore 30 to ent-2 (→50), restore 20 to ent-1 (→20).
-// Final: ent-1=20, ent-2=50. total=70, ent-1 view=20, ent-2 view=50.
-// ─────────────────────────────────────────────────────────────────────────────
-
-test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-5: [entity-only] customer lock=80 crosses ent-1→ent-2 boundary, confirm=30 — LIFO unwind crosses back")}`, async () => {
-	const entityProd = makeEntityProd();
-	const customerId = "lock-eq-5";
-	const lockKey = `${customerId}-lock`;
-
-	const { autumnV2_1, ctx, entities } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false }),
-			s.products({ list: [entityProd] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			// No customer-level product — entities only
-			s.attach({ productId: entityProd.id, entityIndex: 0 }),
-			s.attach({ productId: entityProd.id, entityIndex: 1 }),
-		],
-	});
-
-	await deleteLock({ ctx, lockId: lockKey });
-
-	// Customer-level lock, no customer product — draws ent-1 then ent-2
-	await autumnV2_1.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		required_balance: 80,
-		lock: { enabled: true, lock_id: lockKey },
-	});
-
-	await autumnV2_1.balances.finalize({
-		lock_id: lockKey,
-		action: "confirm",
-		override_value: 30,
-	});
-
-	// delta = 30 - 80 = -50 → LIFO: restore 30 to ent-2 (20→50), restore 20 to ent-1 (0→20)
-	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		remaining: 70,
-	});
-
-	const ent1 = await autumnV2_1.entities.get<ApiCustomerV5>(
-		customerId,
-		entities[0].id,
-	);
-	expectBalanceCorrect({
-		customer: ent1,
-		featureId: TestFeature.Messages,
-		remaining: 20,
-	});
-
-	const ent2 = await autumnV2_1.entities.get<ApiCustomerV5>(
-		customerId,
-		entities[1].id,
-	);
-	expectBalanceCorrect({
-		customer: ent2,
-		featureId: TestFeature.Messages,
-		remaining: 50,
-	});
-
-	// Events newest-first: finalize(-50), check(80)
-	await expectCustomerEventsCorrect({
-		customerId,
-		events: [{ value: -50 }, { value: 80 }],
-	});
-
-	await timeout(3000);
-
-	const customerDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
-		skip_cache: "true",
-	});
-	expectBalanceCorrect({
-		customer: customerDb,
-		featureId: TestFeature.Messages,
-		remaining: 70,
-	});
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// EQ-6 [Setup B — entity-only]: customer-level lock=80, confirm=100 — extra deduction
-// deeper into ent-2 after the boundary was already crossed during check.
-//
-// Check: ent-1 50→0, ent-2 50→20. Receipt: [ent-1:50, ent-2:30]. total=20.
-// Confirm delta=100-80=+20 → deduct 20 more from ent-2 (20→0).
-// Final: ent-1=0, ent-2=0. total=0.
-// ─────────────────────────────────────────────────────────────────────────────
-
-test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-6: [entity-only] customer lock=80, confirm=100 — extra deduction goes deeper into ent-2")}`, async () => {
-	const entityProd = makeEntityProd();
-	const customerId = "lock-eq-6";
-	const lockKey = `${customerId}-lock`;
-
-	const { autumnV2_1, ctx, entities } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: false }),
-			s.products({ list: [entityProd] }),
-			s.entities({ count: 2, featureId: TestFeature.Users }),
-		],
-		actions: [
-			s.attach({ productId: entityProd.id, entityIndex: 0 }),
-			s.attach({ productId: entityProd.id, entityIndex: 1 }),
-		],
-	});
-
-	await deleteLock({ ctx, lockId: lockKey });
-
-	await autumnV2_1.check({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		required_balance: 80,
-		lock: { enabled: true, lock_id: lockKey },
-	});
-
-	await autumnV2_1.balances.finalize({
-		lock_id: lockKey,
-		action: "confirm",
-		override_value: 100,
-	});
-
-	// delta = 100 - 80 = +20 → deduct 20 from ent-2 (20→0)
-	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		remaining: 0,
-	});
-
-	const ent1 = await autumnV2_1.entities.get<ApiCustomerV5>(
-		customerId,
-		entities[0].id,
-	);
-	expectBalanceCorrect({
-		customer: ent1,
-		featureId: TestFeature.Messages,
-		remaining: 0,
-	});
-
-	const ent2 = await autumnV2_1.entities.get<ApiCustomerV5>(
-		customerId,
-		entities[1].id,
-	);
-	expectBalanceCorrect({
-		customer: ent2,
-		featureId: TestFeature.Messages,
-		remaining: 0,
-	});
-
-	// Events newest-first: finalize(+20), check(80)
-	await expectCustomerEventsCorrect({
-		customerId,
-		events: [{ value: 20 }, { value: 80 }],
-	});
-
-	await timeout(3000);
-
-	const customerDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
-		skip_cache: "true",
-	});
-	expectBalanceCorrect({
-		customer: customerDb,
-		featureId: TestFeature.Messages,
-		remaining: 0,
 	});
 });
 
@@ -654,12 +296,6 @@ test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-7: [mixed] two concur
 
 	// Confirm A delta=-15 → restore 15 to ent-1 (20→35)
 	// Confirm B delta=+5  → deduct 5 from ent-2 (30→25)
-	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		remaining: 160,
-	});
 
 	const ent1 = await autumnV2_1.entities.get<ApiCustomerV5>(
 		customerId,
@@ -682,6 +318,13 @@ test.concurrent(`${chalk.yellowBright("lock-entity-prod EQ-7: [mixed] two concur
 	});
 
 	await timeout(3000);
+
+	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 160,
+	});
 
 	const customerDb = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
 		skip_cache: "true",

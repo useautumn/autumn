@@ -1,6 +1,7 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 
 /** TTL for vercel installation ID -> customer ID cache (1 day) */
 export const VERCEL_INSTALLATION_CACHE_TTL_SECONDS = 24 * 60 * 60;
@@ -34,6 +35,15 @@ export const vercelCustomerMiddleware = async (
 	});
 
 	ctx.fullCustomer = customer ?? undefined;
+
+	const customerId = customer?.id || customer?.internal_id || undefined;
+	if (customerId) {
+		ctx.customerId = customerId;
+		ctx.rolloutSnapshot = computeRolloutSnapshot({
+			orgId: ctx.org.id,
+			customerId,
+		});
+	}
 
 	await next();
 };

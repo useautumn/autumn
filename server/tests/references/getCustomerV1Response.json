@@ -1,0 +1,172 @@
+{
+  "id": "get-cus-multi-ent-v2",
+  "created_at": 1776681093029,
+  "name": "get-cus-multi-ent-v2",
+  "email": "get-cus-multi-ent-v2@example.com",
+  "fingerprint": null,
+  "stripe_id": "cus_UMz5mvPwIP5PS3",
+  "env": "sandbox",
+  "metadata": {},
+  "send_email_receipts": false,
+  "products": [
+    {
+      "id": "cus-lvl_get-cus-multi-ent-v2",
+      "name": "Cus Lvl get-cus-multi-ent-v2",
+      "group": "get-cus-multi-ent-v2",
+      "status": "active",
+      "canceled_at": null,
+      "started_at": 1776681092000,
+      "is_default": false,
+      "is_add_on": false,
+      "version": 1,
+      "current_period_start": 1776681092000,
+      "current_period_end": 1779273092000,
+      "items": [
+        {
+          "type": "feature",
+          "feature_id": "dashboard",
+          "feature_type": "static",
+          "feature": {
+            "id": "dashboard",
+            "name": "Dashboard",
+            "type": "boolean",
+            "display": {
+              "singular": "Dashboard",
+              "plural": "Dashboard"
+            }
+          },
+          "included_usage": 0,
+          "interval": null,
+          "reset_usage_when_enabled": false,
+          "display": {
+            "primary_text": "Dashboard"
+          }
+        },
+        {
+          "type": "feature",
+          "feature_id": "messages",
+          "feature_type": "single_use",
+          "feature": {
+            "id": "messages",
+            "name": "Messages",
+            "type": "single_use",
+            "display": {
+              "singular": "Messages",
+              "plural": "Messages"
+            }
+          },
+          "included_usage": 100,
+          "interval": "month",
+          "reset_usage_when_enabled": true,
+          "display": {
+            "primary_text": "100 Messages"
+          }
+        }
+      ],
+      "quantity": 1
+    },
+    {
+      "id": "ent-prod_get-cus-multi-ent-v2",
+      "name": "Ent Prod get-cus-multi-ent-v2",
+      "group": "get-cus-multi-ent-v2",
+      "status": "active",
+      "canceled_at": null,
+      "started_at": 1776681113920,
+      "is_default": false,
+      "is_add_on": false,
+      "version": 1,
+      "current_period_start": null,
+      "current_period_end": null,
+      "items": [],
+      "quantity": 1
+    }
+  ],
+  "features": {
+    "messages": {
+      "id": "messages",
+      "type": "single_use",
+      "name": "Messages",
+      "interval": "month",
+      "interval_count": 1,
+      "unlimited": false,
+      "balance": 90,
+      "usage": 10,
+      "included_usage": 100,
+      "next_reset_at": 1779273092000,
+      "overage_allowed": false,
+      "breakdown": [
+        {
+          "interval": "month",
+          "interval_count": 1,
+          "balance": 90,
+          "usage": 10,
+          "included_usage": 100,
+          "next_reset_at": 1779273092000,
+          "expires_at": null,
+          "overage_allowed": false
+        }
+      ]
+    },
+    "credits": {
+      "id": "credits",
+      "type": "single_use",
+      "name": "Credits",
+      "interval": null,
+      "interval_count": 1,
+      "unlimited": false,
+      "balance": 400,
+      "usage": 0,
+      "included_usage": 400,
+      "next_reset_at": null,
+      "overage_allowed": false,
+      "credit_schema": [
+        {
+          "feature_id": "action1",
+          "credit_amount": 0.2
+        },
+        {
+          "feature_id": "action2",
+          "credit_amount": 0.6
+        }
+      ]
+    },
+    "dashboard": {
+      "id": "dashboard",
+      "type": "static",
+      "name": "Dashboard",
+      "interval": null,
+      "interval_count": null,
+      "unlimited": false,
+      "balance": 0,
+      "usage": 0,
+      "included_usage": 0,
+      "next_reset_at": null,
+      "overage_allowed": false,
+      "breakdown": [
+        {
+          "interval": null,
+          "interval_count": null,
+          "balance": 0,
+          "usage": 0,
+          "included_usage": 0,
+          "next_reset_at": null,
+          "expires_at": null,
+          "overage_allowed": false
+        }
+      ]
+    }
+  },
+  "invoices": [
+    {
+      "product_ids": [
+        "cus-lvl_get-cus-multi-ent-v2"
+      ],
+      "stripe_id": "in_1TOF756GVhH8pLcDfKcFgsHu",
+      "status": "paid",
+      "total": 20,
+      "currency": "usd",
+      "created_at": 1776681092000,
+      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3CcNrtgUERTv8MnmpqncpHXIwRk"
+    }
+  ]
+}

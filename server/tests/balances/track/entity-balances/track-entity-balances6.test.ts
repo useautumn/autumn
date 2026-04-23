@@ -92,6 +92,9 @@ describe(`${chalk.yellowBright(`${testCase}: per-entity overage billing`)}`, () 
 			userMessages.included_usage * firstEntities.length,
 		);
 
+		await autumn.entities.get(customerId, user1);
+		await autumn.entities.get(customerId, user2);
+
 		await timeout(5000);
 	});
 

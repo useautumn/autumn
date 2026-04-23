@@ -101,3 +101,7 @@ collatePgColumn(customerEntitlements.internal_customer_id, "C");
 
 export type InsertCustomerEntitlement =
 	typeof customerEntitlements.$inferInsert;
+export type DbCustomerEntitlement =
+	typeof customerEntitlements.$inferSelect;
+export type InsertDbCustomerEntitlement =
+	typeof customerEntitlements.$inferInsert;

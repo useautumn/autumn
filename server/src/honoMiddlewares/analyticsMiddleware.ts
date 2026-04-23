@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
 import { logRequestResult } from "./requestLogging/logRequestResult.js";
 
@@ -77,14 +78,14 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const ctx = c.get("ctx");
 	const skipUrls = ["/v1/customers/all/search"];
 
-	let { customerId } = (await parseCustomerIdFromBody(c)) || {};
-	if (!customerId) {
-		customerId = parseCustomerIdFromUrl({ url: c.req.path });
-	}
+	const customerId = ctx.customerId;
+	const entityId = ctx.entityId;
 
-	ctx.customerId = customerId;
+	const fullSubjectBucket =
+		customerId && ctx.rolloutSnapshot?.customerBucket !== undefined
+			? (ctx.rolloutSnapshot.customerBucket ?? undefined)
+			: undefined;
 
-	// Update logger with enriched context
 	ctx.logger = addAppContextToLogs({
 		logger: ctx.logger,
 		appContext: {
@@ -93,9 +94,14 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			env: ctx.env,
 			auth_type: ctx.authType,
 			customer_id: customerId,
+			entity_id: entityId,
 			user_id: ctx.userId || undefined,
 			user_email: ctx.user?.email || undefined,
 			api_version: ctx.apiVersion?.semver,
+			full_subject_bucket: fullSubjectBucket ?? undefined,
+			full_subject_rollout_enabled: customerId
+				? isFullSubjectRolloutEnabled({ ctx })
+				: undefined,
 		},
 	});
 
@@ -103,14 +109,11 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		`${c.req.method} ${c.req.path} (${ctx.org?.slug}) [${ctx.id}]`,
 	);
 
-	// Execute the request
 	await next();
 
-	// Re-fetch ctx after next() since handlers may have replaced it via c.set("ctx", {...})
 	const finalCtx = c.get("ctx");
 	const durationMs = Date.now() - finalCtx.timestamp;
 
-	// Log response asynchronously without blocking (runs after response is sent)
 	Promise.resolve()
 		.then(() => logRequestResult({ ctx: finalCtx, c, skipUrls, durationMs }))
 		.catch((error) => {

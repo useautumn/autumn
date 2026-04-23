@@ -1,7 +1,13 @@
 import { join } from "node:path";
 import { config } from "dotenv";
 
-export const loadLocalEnv = () => {
+let hasLoadedLocalEnv = false;
+const shouldLogLocalEnvLoading = false;
+
+export const loadLocalEnv = ({ force = false }: { force?: boolean } = {}) => {
+	if (hasLoadedLocalEnv && !force) return;
+	hasLoadedLocalEnv = true;
+
 	const processDir = process.cwd();
 	const serverDir = processDir.includes("server")
 		? processDir
@@ -15,16 +21,20 @@ export const loadLocalEnv = () => {
 	// Load local .env file FIRST - these will take precedence over Infisical
 	const result = config({ path: envPath });
 	if (result.parsed) {
-		// Use stderr so output doesn't pollute stdout for scripts using shell substitution
-		console.error(
-			`📄 Loading ${Object.keys(result.parsed).length} variables from ${envFileName}`,
-		);
+		if (shouldLogLocalEnvLoading) {
+			// Use stderr so output doesn't pollute stdout for scripts using shell substitution
+			console.error(
+				`📄 Loading ${Object.keys(result.parsed).length} variables from ${envFileName}`,
+			);
+		}
 		for (const [key, value] of Object.entries(result.parsed)) {
 			process.env[key] = value;
 		}
 	} else {
-		console.error(
-			`ℹ️  No ${envFileName} file found (using only Infisical secrets)`,
-		);
+		if (shouldLogLocalEnvLoading) {
+			console.error(
+				`ℹ️  No ${envFileName} file found (using only Infisical secrets)`,
+			);
+		}
 	}
 };

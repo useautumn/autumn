@@ -5,31 +5,76 @@ dotenv.config();
 import { schemas as schema } from "@autumn/shared";
 import { instrumentDrizzleClient } from "@kubiks/otel-drizzle";
 
-import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import type { SQLWrapper } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg, { type PoolConfig } from "pg";
 import { otelConfig } from "../utils/otel/otelConfig.js";
+
+type AutumnDb = Omit<ReturnType<typeof drizzle<typeof schema>>, "execute"> & {
+	execute: <TRow = Record<string, unknown>>(
+		query: string | SQLWrapper,
+	) => Promise<TRow[]>;
+};
+
+const normalizeExecuteRows = <TRow>(result: unknown): TRow[] => {
+	if (result && typeof result === "object" && "rows" in result) {
+		return (result as { rows: TRow[] }).rows;
+	}
+
+	return result as TRow[];
+};
+
+const normalizeDbExecute = <
+	TDb extends { execute: (query: string | SQLWrapper) => Promise<unknown> },
+>(
+	db: TDb,
+) => {
+	const execute = db.execute.bind(db);
+	return Object.assign(db, {
+		execute: async <TRow = Record<string, unknown>>(
+			query: string | SQLWrapper,
+		) => normalizeExecuteRows<TRow>(await execute(query)),
+	});
+};
 
 /** Creates a Drizzle pool with the given configuration. */
 export const initDrizzle = ({
 	maxConnections = 10,
 	replica = false,
 	connectTimeout = 5,
+	databaseUrl,
+	poolConfig,
 }: {
 	maxConnections?: number;
 	replica?: boolean;
 	/** Connect timeout in seconds */
-	connectTimeout?: number;
+	connectTimeout?: number | null;
+	databaseUrl?: string;
+	poolConfig?: PoolConfig;
 } = {}) => {
-	const dbUrl =
-		(replica ? process.env.DATABASE_REPLICA_URL : process.env.DATABASE_URL) ??
-		"";
+	const envDbUrl = replica
+		? process.env.DATABASE_REPLICA_URL
+		: process.env.DATABASE_URL;
 
-	const client = postgres(dbUrl, {
+	const dbUrl = databaseUrl || envDbUrl || "";
+
+	const client = new pg.Pool({
+		connectionString: dbUrl,
+		...poolConfig,
 		max: maxConnections,
-		connect_timeout: connectTimeout,
+		connectionTimeoutMillis:
+			connectTimeout === null ? undefined : connectTimeout * 1000,
 	});
 
-	const db = drizzle(client, { schema });
+	const drizzleDb = drizzle(client, { schema });
+	const transaction = drizzleDb.transaction.bind(drizzleDb);
+	const db = normalizeDbExecute(drizzleDb) as unknown as AutumnDb;
+	const normalizedTransaction: typeof drizzleDb.transaction = ((fn, config) =>
+		transaction(
+			(tx) => fn(normalizeDbExecute(tx) as typeof tx),
+			config,
+		)) as typeof drizzleDb.transaction;
+	db.transaction = normalizedTransaction as typeof db.transaction;
 
 	if (otelConfig.drizzle) {
 		instrumentDrizzleClient(db);
@@ -38,27 +83,27 @@ export const initDrizzle = ({
 	return { db, client };
 };
 
-// -- Critical pool: used by check, track, getOrCreateCustomer --
-console.time("db:pool-critical");
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
-	// connectTimeout: 10,
+	maxConnections: 5,
+	connectTimeout: 2,
+	databaseUrl: process.env.DATABASE_CRITICAL_URL,
+	poolConfig: {
+		application_name: "autumn-critical",
+		// Server-side timeout is configured on the DATABASE_CRITICAL_URL role.
+		query_timeout: 2_000,
+	},
 });
-console.timeEnd("db:pool-critical");
 
 // -- General pool: used by all other endpoints --
-console.time("db:pool-general");
 export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	// connectTimeout: 5,
 });
-console.timeEnd("db:pool-general");
 
 // -- Replica pool: used as fallback when primary is degraded --
 // Only created if DATABASE_REPLICA_URL is configured.
-console.time("db:pool-replica");
 const replicaResult = process.env.DATABASE_REPLICA_URL
-	? initDrizzle({ replica: true, maxConnections: 5, connectTimeout: undefined })
+	? initDrizzle({ replica: true, maxConnections: 5, connectTimeout: null })
 	: null;
-console.timeEnd("db:pool-replica");
 export const dbReplica = replicaResult?.db ?? null;
 export const clientReplica = replicaResult?.client ?? null;
 
