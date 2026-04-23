@@ -77,10 +77,16 @@ if ! command -v tb >/dev/null 2>&1; then
   exit 1
 fi
 
-# Ensure Docker daemon is reachable. On Linux try to start it via service if missing.
+# Ensure Docker daemon is reachable. On Linux try systemctl first, then
+# fall back to SysV service. On macOS the user must have Docker Desktop /
+# OrbStack / colima running already.
 if ! docker info >/dev/null 2>&1; then
   if [ "$OS" = "Linux" ]; then
-    sudo service docker start >/dev/null 2>&1 || true
+    if command -v systemctl >/dev/null 2>&1; then
+      sudo systemctl start docker >/dev/null 2>&1 || true
+    else
+      sudo service docker start >/dev/null 2>&1 || true
+    fi
     sleep 2
   fi
 fi
@@ -89,48 +95,66 @@ if ! docker info >/dev/null 2>&1; then
   if [ "$OS" = "Darwin" ]; then
     echo "  Start Docker Desktop, OrbStack, or colima and retry." >&2
   else
-    echo "  Start the Docker daemon (e.g. 'sudo service docker start') and retry." >&2
+    echo "  Start the Docker daemon (e.g. 'sudo systemctl start docker') and retry." >&2
   fi
   exit 1
 fi
 
-# Start Tinybird Local if the HTTP API isn't already reachable.
-# Note: `tb local start` tails the container log indefinitely when the
-# container is already healthy, so we run it in the background and rely
-# on the HTTP readiness poll below as the real "ready" gate. Killing the
-# tb CLI process leaves the container running.
+# Start Tinybird Local. Three cases:
+#   - container exists + running:  no-op (HTTP poll below confirms readiness)
+#   - container exists + stopped:  `docker start tinybird-local` (fast path, ~15s to healthy)
+#   - container doesn't exist:     `tb local start` to create it (first-run only)
+#
+# We avoid `tb local start` when the container already exists because the tb
+# CLI tails container logs indefinitely when it finds a healthy container.
 export TB_VERSION_WARNING=0
 TB_START_LOG="${HOME}/.autumn-agent/logs/tb-local-start.log"
 mkdir -p "$(dirname "$TB_START_LOG")"
-if ! curl -sf -o /dev/null http://localhost:7181/; then
-  log "Starting Tinybird Local (docker container 'tinybird-local', first run may take ~2m)"
-  nohup tb local start >"$TB_START_LOG" 2>&1 &
-  TB_START_PID=$!
-  disown || true
-  TB_READY=0
-  for i in $(seq 1 240); do
-    if curl -sf -o /dev/null http://localhost:7181/; then
-      TB_READY=1
-      break
-    fi
-    # Exit early if the start process died
-    if ! kill -0 "$TB_START_PID" 2>/dev/null; then
-      if curl -sf -o /dev/null http://localhost:7181/; then
-        TB_READY=1
-      fi
-      break
-    fi
-    sleep 1
-  done
-  # Stop the log tailer (container keeps running)
+# NOTE: `docker inspect -f '{{.State.Status}}' missing` emits a bare newline
+# to stdout even with stderr suppressed, so do the existence check first.
+if docker inspect tinybird-local >/dev/null 2>&1; then
+  TB_CONTAINER_STATE="$(docker inspect -f '{{.State.Status}}' tinybird-local)"
+else
+  TB_CONTAINER_STATE="absent"
+fi
+case "$TB_CONTAINER_STATE" in
+  running)
+    ;;
+  absent)
+    log "Creating Tinybird Local container via 'tb local start' (first run may take ~2m)"
+    # tb local start tails logs forever even on create — background it and
+    # gate readiness on HTTP. Killing the tb CLI doesn't kill the container.
+    nohup tb local start >"$TB_START_LOG" 2>&1 &
+    TB_START_PID=$!
+    disown || true
+    ;;
+  *)
+    log "Starting existing Tinybird Local container ('$TB_CONTAINER_STATE' -> running)"
+    docker start tinybird-local >/dev/null
+    ;;
+esac
+
+# Readiness poll. HTTP :7181 comes up before the internal services
+# (clickhouse, redis, events) finish starting — `tb deploy` will refuse
+# to run until the container's docker healthcheck reports "healthy".
+TB_READY=0
+for i in $(seq 1 240); do
+  HEALTH="$(docker inspect -f '{{.State.Health.Status}}' tinybird-local 2>/dev/null || echo 'none')"
+  if [ "$HEALTH" = "healthy" ] && curl -sf -o /dev/null http://localhost:7181/; then
+    TB_READY=1
+    break
+  fi
+  sleep 1
+done
+# Reap the backgrounded tb CLI if we spawned one.
+if [ -n "${TB_START_PID:-}" ]; then
   kill -TERM "$TB_START_PID" 2>/dev/null || true
   wait "$TB_START_PID" 2>/dev/null || true
-  if [ "$TB_READY" -eq 0 ]; then
-    echo "[agent-services] ERROR: Tinybird Local API (:7181) did not become ready after 240s." >&2
-    echo "  Tail of $TB_START_LOG:" >&2
-    tail -30 "$TB_START_LOG" >&2 || true
-    exit 1
-  fi
+fi
+if [ "$TB_READY" -eq 0 ]; then
+  echo "[agent-services] ERROR: Tinybird Local API (:7181) did not become ready after 240s." >&2
+  [ -f "$TB_START_LOG" ] && { echo "  Tail of $TB_START_LOG:" >&2; tail -30 "$TB_START_LOG" >&2 || true; }
+  exit 1
 fi
 
 # =============================================================
