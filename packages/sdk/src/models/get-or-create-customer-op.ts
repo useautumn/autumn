@@ -158,6 +158,16 @@ export type GetOrCreateCustomerBillingControls = {
   overageAllowed?: Array<GetOrCreateCustomerOverageAllowed> | undefined;
 };
 
+/**
+ * Miscellaneous configurations for the customer.
+ */
+export type GetOrCreateCustomerConfig = {
+  /**
+   * Whether to disable the shared customer-level pool for entities.
+   */
+  disablePooledBalance?: boolean | undefined;
+};
+
 export type GetOrCreateCustomerParams = {
   customerId: string | null;
   /**
@@ -196,6 +206,10 @@ export type GetOrCreateCustomerParams = {
    * Billing controls for the customer (auto top-ups, etc.)
    */
   billingControls?: GetOrCreateCustomerBillingControls | undefined;
+  /**
+   * Miscellaneous configurations for the customer.
+   */
+  config?: GetOrCreateCustomerConfig | undefined;
   /**
    * Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
    */
@@ -446,6 +460,34 @@ export function getOrCreateCustomerBillingControlsToJSON(
 }
 
 /** @internal */
+export type GetOrCreateCustomerConfig$Outbound = {
+  disable_pooled_balance?: boolean | undefined;
+};
+
+/** @internal */
+export const GetOrCreateCustomerConfig$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerConfig$Outbound,
+  GetOrCreateCustomerConfig
+> = z.pipe(
+  z.object({
+    disablePooledBalance: z.optional(z.boolean()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      disablePooledBalance: "disable_pooled_balance",
+    });
+  }),
+);
+
+export function getOrCreateCustomerConfigToJSON(
+  getOrCreateCustomerConfig: GetOrCreateCustomerConfig,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerConfig$outboundSchema.parse(getOrCreateCustomerConfig),
+  );
+}
+
+/** @internal */
 export type GetOrCreateCustomerParams$Outbound = {
   customer_id: string | null;
   name?: string | null | undefined;
@@ -457,6 +499,7 @@ export type GetOrCreateCustomerParams$Outbound = {
   auto_enable_plan_id?: string | undefined;
   send_email_receipts?: boolean | undefined;
   billing_controls?: GetOrCreateCustomerBillingControls$Outbound | undefined;
+  config?: GetOrCreateCustomerConfig$Outbound | undefined;
   expand?: Array<string> | undefined;
 };
 
@@ -478,6 +521,7 @@ export const GetOrCreateCustomerParams$outboundSchema: z.ZodMiniType<
     billingControls: z.optional(
       z.lazy(() => GetOrCreateCustomerBillingControls$outboundSchema),
     ),
+    config: z.optional(z.lazy(() => GetOrCreateCustomerConfig$outboundSchema)),
     expand: z.optional(z.array(z.string())),
   }),
   z.transform((v) => {

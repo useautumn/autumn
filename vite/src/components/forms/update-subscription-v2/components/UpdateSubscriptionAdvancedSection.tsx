@@ -6,9 +6,8 @@ import { Switch } from "@/components/ui/switch";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 
 export function UpdateSubscriptionAdvancedSection() {
-	const { form, formValues, formContext } =
-		useUpdateSubscriptionFormContext();
-	const { billingBehavior, resetBillingCycle } = formValues;
+	const { form, formValues, formContext } = useUpdateSubscriptionFormContext();
+	const { billingBehavior, resetBillingCycle, noBillingChanges } = formValues;
 	const { customerProduct } = formContext;
 
 	const hasActiveSubscription =
@@ -27,6 +26,18 @@ export function UpdateSubscriptionAdvancedSection() {
 						checked={isProrate}
 						onCheckedChange={(checked) =>
 							form.setFieldValue("billingBehavior", checked ? null : "none")
+						}
+					/>
+				}
+			/>
+			<ConfigRow
+				title="No Billing Changes"
+				description="Update subscription state without applying Stripe billing changes"
+				action={
+					<Switch
+						checked={noBillingChanges}
+						onCheckedChange={(checked) =>
+							form.setFieldValue("noBillingChanges", !!checked)
 						}
 					/>
 				}
