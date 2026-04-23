@@ -1,95 +1,137 @@
-import { test } from "bun:test";
+/**
+ * TDD scratch tests for the `one_off` reward leakage bug.
+ *
+ * Bug: an existing Stripe discount backed by a `once` coupon (with end=null)
+ * is treated as active in next-cycle previews and billing.previewAttach
+ * responses, even when no coupon is passed in the new request.
+ *
+ * Both tests should FAIL on current `dev` and PASS after the fix to
+ * `filterStripeDiscountsForNextCycle.ts`.
+ */
+
+import { expect, test } from "bun:test";
+import type { StripeDiscountWithCoupon } from "@autumn/shared";
 import {
-	type ApiCustomerV5,
-	type AttachParamsV1Input,
-	RolloverExpiryDurationType,
-} from "@autumn/shared";
-import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
-import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
-import { TestFeature } from "@tests/setup/v2Features";
-import { products } from "@tests/utils/fixtures/products.js";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+	applySubscriptionDiscount,
+	createPercentCoupon,
+	getStripeSubscription,
+} from "@tests/integration/billing/utils/discounts/discountTestUtils";
+import { expectPreviewNextCycleCorrect } from "@tests/integration/billing/utils/expectPreviewNextCycleCorrect";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem.js";
+import { filterStripeDiscountsForNextCycle } from "@/internal/billing/v2/providers/stripe/utils/discounts/filterStripeDiscountsForNextCycle";
 
-test.concurrent(`${chalk.yellowBright("temp: pro annual prepaid credits with rollover carries to pro monthly")}`, async () => {
-	const customerId = "temp-annual-prepaid-rollover";
-	const rolloverConfig = {
-		max_percentage: 50,
-		length: 1,
-		duration: RolloverExpiryDurationType.Month,
-	};
+test.concurrent(
+	`${chalk.yellowBright("temp unit: filterStripeDiscountsForNextCycle excludes existing once discount")}`,
+	() => {
+		const now = Date.now();
+		const nextCycleStart = now + 30 * 24 * 60 * 60 * 1000;
 
-	const annualCreditsItem = constructPrepaidItem({
-		featureId: TestFeature.Credits,
-		includedUsage: 100,
-		billingUnits: 1,
-		price: 0.25,
-		rolloverConfig,
-	});
+		// Mirrors the real-world state reported in the bug:
+		// - discount is already on the subscription (has an id)
+		// - end is null (Stripe doesn't populate end for `once` coupons)
+		// - coupon duration is "once"
+		const existingOnceDiscount = {
+			id: "di_existing_once",
+			end: null,
+			source: {
+				coupon: {
+					id: "coupon_early_bird",
+					object: "coupon",
+					duration: "once",
+					percent_off: 20,
+					amount_off: null,
+					currency: null,
+					valid: true,
+					livemode: false,
+					created: Math.floor(now / 1000),
+					metadata: {},
+					name: "Early Bird",
+					times_redeemed: 1,
+					max_redemptions: null,
+					redeem_by: null,
+					duration_in_months: null,
+					applies_to: undefined,
+				},
+			},
+		} as unknown as StripeDiscountWithCoupon;
 
-	const monthlyCreditsItem = constructPrepaidItem({
-		featureId: TestFeature.Credits,
-		includedUsage: 100,
-		billingUnits: 1,
-		price: 0.25,
-		rolloverConfig,
-	});
+		const result = filterStripeDiscountsForNextCycle({
+			stripeDiscounts: [existingOnceDiscount],
+			currentEpochMs: now,
+			nextCycleStart,
+		});
 
-	const proAnnual = products.proAnnual({
-		id: "pro-annual-rollover",
-		items: [annualCreditsItem],
-	});
+		expect(
+			result.length,
+			"existing `once` discount with end=null must NOT propagate to next cycle",
+		).toBe(0);
+	},
+);
 
-	const pro = products.pro({
-		id: "pro-monthly-rollover",
-		items: [monthlyCreditsItem],
-	});
+test.concurrent(
+	`${chalk.yellowBright("temp integration: existing once discount does not leak into previewAttach next_cycle")}`,
+	async () => {
+		const customerId = "temp-once-discount-leak";
 
-	const { autumnV2_2, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [proAnnual, pro] }),
-		],
-		actions: [
-			s.billing.attach({
-				productId: proAnnual.id,
-				options: [{ feature_id: TestFeature.Credits, quantity: 1500 }],
-			}),
-			// s.track({ featureId: TestFeature.Action1, value: 10, timeout: 2000 }),
-			s.advanceToNextInvoice(),
-		],
-	});
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
 
-	const customerAfterInvoice =
-		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		const premium = products.premium({
+			id: "premium",
+			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
 
-	expectBalanceCorrect({
-		customer: customerAfterInvoice,
-		featureId: TestFeature.Credits,
-		remaining: 1500 + 750,
-		usage: 0,
-		rollovers: [{ balance: 750 }],
-	});
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
 
-	await autumnV2_2.billing.attach<AttachParamsV1Input>({
-		customer_id: customerId,
-		plan_id: pro.id,
-		redirect_mode: "if_required",
-		// feature_quantities: [{ feature_id: TestFeature.Credits, quantity: 750 }],
-	});
+		// Simulate the post-checkout state: a `once` 20% coupon is already
+		// attached to the Stripe subscription (end=null on the discount).
+		const { stripeCli, subscription } = await getStripeSubscription({
+			customerId,
+		});
 
-	const customerAfterSwitch =
-		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		const coupon = await createPercentCoupon({
+			stripeCli,
+			percentOff: 20,
+			duration: "once",
+		});
 
-	expectBalanceCorrect({
-		customer: customerAfterSwitch,
-		featureId: TestFeature.Credits,
-		remaining: 1500 + 750,
-		usage: 0,
-		rollovers: [{ balance: 750 }],
-	});
+		await applySubscriptionDiscount({
+			stripeCli,
+			subscriptionId: subscription.id,
+			couponIds: [coupon.id],
+		});
 
-	await expectStripeSubscriptionCorrect({ ctx, customerId });
-});
+		// No discount passed in the preview request — the once should not
+		// carry over into next-cycle line items or totals.
+		const preview = await autumnV1.billing.previewAttach({
+			customer_id: customerId,
+			product_id: premium.id,
+		});
+
+		const nextCycle = expectPreviewNextCycleCorrect({ preview })!;
+
+		expect(
+			nextCycle.line_items.every(
+				(lineItem) => lineItem.discounts.length === 0,
+			),
+			"no next-cycle line item should carry the consumed once discount",
+		).toBe(true);
+
+		expect(
+			nextCycle.total,
+			"next-cycle total must equal subtotal when no active discount remains",
+		).toBe(nextCycle.subtotal);
+	},
+);
