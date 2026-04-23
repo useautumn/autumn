@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const mockState = {
 	shouldUseRedis: true,
@@ -37,13 +37,16 @@ mock.module("@/internal/balances/check/runCheckV2.js", () => ({
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { runCheckWithRollout } from "@/internal/balances/check/runCheckWithRollout.js";
 
-beforeEach(() => {
+const resetMockState = () => {
 	mockState.shouldUseRedis = true;
 	mockState.legacyCalls = [];
 	mockState.v2Calls = [];
 	mockState.v2Error = null;
 	mockState.warnCalls = [];
-});
+};
+
+beforeEach(resetMockState);
+afterEach(resetMockState);
 
 const rolloutCtx = {
 	apiVersion: { value: "2025-02-01" },
