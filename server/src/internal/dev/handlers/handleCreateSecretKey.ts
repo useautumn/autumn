@@ -1,17 +1,37 @@
-import { AppEnv } from "@autumn/shared";
+import {
+	AppEnv,
+	ErrCode,
+	isScopeSubset,
+	RecaseError,
+	Scopes,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 import { auth } from "@/utils/auth";
 import { captureOrgEvent } from "@/utils/posthog.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { ApiKeyPrefix, createKey } from "../api-keys/apiKeyUtils";
 export const handleCreateSecretKey = createRoute({
+	scopes: [Scopes.ApiKeys.Write],
 	body: z.object({
 		name: z.string().min(1),
+		scopes: z.array(z.string()).optional(),
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, env, org } = ctx;
-		const { name } = c.req.valid("json");
+		const { name, scopes: requestedScopes } = c.req.valid("json");
+
+		// Privilege-escalation guard: a caller may only mint a key with
+		// scopes that are a subset of their own.
+		if (requestedScopes && requestedScopes.length > 0) {
+			if (!isScopeSubset(requestedScopes, ctx.scopes)) {
+				throw new RecaseError({
+					message: "Cannot grant scopes you don't have",
+					code: ErrCode.InsufficientScopes,
+					statusCode: 403,
+				});
+			}
+		}
 
 		// 1. Create API key
 		let prefix = ApiKeyPrefix.Sandbox;
@@ -42,6 +62,10 @@ export const handleCreateSecretKey = createRoute({
 			userId: ctx.user?.id,
 			prefix,
 			meta,
+			scopes:
+				requestedScopes && requestedScopes.length > 0
+					? requestedScopes
+					: null,
 		});
 
 		await captureOrgEvent({

@@ -5,6 +5,7 @@ import {
 	ProductNotFoundError,
 	RecaseError,
 	type UsagePriceConfig,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { MigrationService } from "@/internal/migrations/MigrationService.js";
@@ -23,6 +24,7 @@ import { findPrepaidPrice } from "../prices/priceUtils/findPriceUtils.js";
  * Route: POST /v1/products/migrate - Migrate customers between products
  */
 export const handleMigrateProductV2 = createRoute({
+	scopes: [Scopes.Billing.Write],
 	body: MigrateProductParamsSchema,
 	handler: async (c) => {
 		const body = c.req.valid("json");

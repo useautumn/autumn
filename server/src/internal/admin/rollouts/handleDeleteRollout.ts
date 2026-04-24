@@ -1,8 +1,10 @@
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { deleteRollout } from "@/internal/misc/rollouts/rolloutConfigStore.js";
 
 export const handleDeleteRollout = createRoute({
+	scopes: [Scopes.Superuser],
 	params: z.object({
 		rollout_id: z.string().min(1),
 	}),

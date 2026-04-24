@@ -1,8 +1,9 @@
-import { AffectedResource, CreateScheduleParamsV0Schema } from "@autumn/shared";
+import { AffectedResource, CreateScheduleParamsV0Schema, Scopes } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handlePreviewCreateSchedule = createRoute({
+	scopes: [Scopes.Billing.Read],
 	body: CreateScheduleParamsV0Schema,
 	resource: AffectedResource.MultiAttach,
 	handler: async (c) => {

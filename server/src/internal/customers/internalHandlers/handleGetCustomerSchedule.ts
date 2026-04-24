@@ -1,4 +1,4 @@
-import { CustomerNotFoundError } from "@autumn/shared";
+import { CustomerNotFoundError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "../CusService.js";
@@ -16,6 +16,7 @@ import {
  * lookup on every request.
  */
 export const handleGetCustomerSchedule = createRoute({
+	scopes: [Scopes.Customers.Read],
 	params: z.object({ customer_id: z.string() }),
 	handler: async (c) => {
 		const ctx = c.get("ctx");

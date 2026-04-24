@@ -1,9 +1,10 @@
-import { AffectedResource, MultiAttachParamsV0Schema } from "@autumn/shared";
+import { AffectedResource, MultiAttachParamsV0Schema, Scopes } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingPlanToAttachPreview } from "../utils/billingPlan/billingPlanToAttachPreview";
 
 export const handlePreviewMultiAttach = createRoute({
+	scopes: [Scopes.Billing.Read],
 	versionedBody: {
 		latest: MultiAttachParamsV0Schema,
 	},

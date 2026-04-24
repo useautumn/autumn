@@ -5,6 +5,7 @@ import {
 	type RewardProgram,
 	RewardTriggerEvent,
 	UpdateRewardProgram,
+	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -15,6 +16,7 @@ const UpdateRewardProgramParamsSchema = z.object({
 });
 
 export const handleUpdateRewardProgram = createRoute({
+	scopes: [Scopes.Rewards.Write],
 	params: UpdateRewardProgramParamsSchema,
 	body: UpdateRewardProgram,
 	handler: async (c) => {

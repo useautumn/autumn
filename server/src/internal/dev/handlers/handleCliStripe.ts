@@ -1,4 +1,4 @@
-import { AppEnv, RecaseError } from "@autumn/shared";
+import { AppEnv, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { redis } from "@/external/redis/initRedis";
 import {
@@ -16,6 +16,7 @@ import { encryptData } from "@/utils/encryptUtils";
  * Connects Stripe keys from CLI authentication flow
  */
 export const handleCliStripe = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	body: z.object({
 		stripeTestKey: z.string(),
 		stripeLiveKey: z.string(),

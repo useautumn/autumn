@@ -7,6 +7,7 @@ import {
 	RewardCategory,
 	type RewardRedemption,
 	RewardTriggerEvent,
+	Scopes,
 } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
@@ -19,6 +20,7 @@ import { generateId, notNullish } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
 
 export const handleRedeemReferral = createRoute({
+	scopes: [Scopes.Customers.Write],
 	body: RedeemReferralCodeParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

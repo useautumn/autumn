@@ -1,8 +1,9 @@
-import { invitation, user as userTable } from "@autumn/shared";
+import { invitation, user as userTable, Scopes } from "@autumn/shared";
 import { and, eq, gt } from "drizzle-orm";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handleGetInvites = createRoute({
+	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { userId, db } = ctx;
