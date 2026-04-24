@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import {
 	AppEnv,
 	ErrCode,
@@ -8,8 +8,32 @@ import {
 	type Organization,
 	SubjectType,
 } from "@autumn/shared";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckDataV2 } from "@/internal/balances/check/checkTypes/CheckDataV2.js";
+
+const mockState = {
+	runTrackV3Calls: [] as unknown[],
+	triggerExpireLockReceiptCalls: [] as unknown[],
+	runTrackV3Error: null as unknown,
+};
+
+mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
+	runTrackV3: async (args: unknown) => {
+		mockState.runTrackV3Calls.push(args);
+		if (mockState.runTrackV3Error) throw mockState.runTrackV3Error;
+		return { balance: 10 };
+	},
+}));
+
+mock.module("@/queue/workflows.js", () => ({
+	workflows: {
+		triggerExpireLockReceipt: async (...args: unknown[]) => {
+			mockState.triggerExpireLockReceiptCalls.push(args);
+		},
+	},
+}));
+
 import { runCheckWithTrackV2 } from "@/internal/balances/check/runCheckWithTrackV2.js";
 
 const meteredFeature = {
@@ -78,6 +102,10 @@ const buildCheckData = ({
 
 describe("runCheckWithTrackV2", () => {
 	test("rejects send_event for public requests", async () => {
+		mockState.runTrackV3Calls = [];
+		mockState.triggerExpireLockReceiptCalls = [];
+		mockState.runTrackV3Error = null;
+
 		await expect(
 			runCheckWithTrackV2({
 				ctx: buildCtx({ isPublic: true }),
@@ -96,6 +124,10 @@ describe("runCheckWithTrackV2", () => {
 	});
 
 	test("rejects boolean features", async () => {
+		mockState.runTrackV3Calls = [];
+		mockState.triggerExpireLockReceiptCalls = [];
+		mockState.runTrackV3Error = null;
+
 		await expect(
 			runCheckWithTrackV2({
 				ctx: buildCtx(),
@@ -119,6 +151,10 @@ describe("runCheckWithTrackV2", () => {
 	});
 
 	test("rejects locks for allocated features", async () => {
+		mockState.runTrackV3Calls = [];
+		mockState.triggerExpireLockReceiptCalls = [];
+		mockState.runTrackV3Error = null;
+
 		await expect(
 			runCheckWithTrackV2({
 				ctx: buildCtx(),
@@ -143,5 +179,36 @@ describe("runCheckWithTrackV2", () => {
 			code: ErrCode.InvalidRequest,
 			message: "Lock is not supported for allocated features",
 		});
+	});
+
+	test("rethrows RedisUnavailableError from runTrackV3 before scheduling lock expiry", async () => {
+		mockState.runTrackV3Calls = [];
+		mockState.triggerExpireLockReceiptCalls = [];
+		mockState.runTrackV3Error = new RedisUnavailableError({
+			source: "runTrackV3",
+			reason: "timeout",
+		});
+
+		await expect(
+			runCheckWithTrackV2({
+				ctx: buildCtx(),
+				body: {
+					customer_id: "cus_1",
+					feature_id: "messages",
+					send_event: true,
+					lock: {
+						enabled: true,
+						lock_id: "lock_1",
+						hashed_key: "hash_1",
+						expires_at: new Date().toISOString(),
+					},
+				} as never,
+				requiredBalance: 1,
+				checkData: buildCheckData(),
+			}),
+		).rejects.toBe(mockState.runTrackV3Error);
+
+		expect(mockState.runTrackV3Calls).toHaveLength(1);
+		expect(mockState.triggerExpireLockReceiptCalls).toHaveLength(0);
 	});
 });
