@@ -15,7 +15,6 @@ import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubjec
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import {
 	getTrackIdempotencyKey,
-	handleEventIdempotencyKey,
 } from "../utils/handleEventIdempotencyKey.js";
 import { runRedisTrackV3 } from "./runRedisTrackV3.js";
 
@@ -67,22 +66,10 @@ export const runTrackV3 = async ({
 		body,
 	});
 
-	const redisIdempotencyKey =
-		featureDeductions.length === 1
-			? getTrackIdempotencyKey({
-					idempotencyKey: body.idempotency_key,
-					requestId: ctx.id,
-				})
-			: undefined;
-
-	// Multi-feature/event-name requests with a client key still use the legacy pre-check path.
-	if (body.idempotency_key && !redisIdempotencyKey) {
-		await handleEventIdempotencyKey({
-			ctx,
-			idempotencyKey: body.idempotency_key,
-			customerId: body.customer_id,
-		});
-	}
+	const redisIdempotencyKey = getTrackIdempotencyKey({
+		idempotencyKey: body.idempotency_key,
+		requestId: ctx.id,
+	});
 
 	const response: TrackResponseV3 = await runRedisTrackV3({
 		ctx,

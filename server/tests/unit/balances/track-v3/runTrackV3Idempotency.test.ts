@@ -10,7 +10,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { FeatureDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 
 const mockState = {
-	handleEventIdempotencyKeyCalls: [] as Record<string, unknown>[],
 	runRedisTrackV3Calls: [] as Record<string, unknown>[],
 };
 
@@ -48,9 +47,6 @@ mock.module(
 			idempotencyKey?: string;
 			requestId: string;
 		}) => `track:${idempotencyKey ?? requestId}`,
-		handleEventIdempotencyKey: async (args: Record<string, unknown>) => {
-			mockState.handleEventIdempotencyKeyCalls.push(args);
-		},
 	}),
 );
 
@@ -86,11 +82,10 @@ const buildFeatureDeduction = (featureId: string): FeatureDeduction =>
 
 describe("runTrackV3 idempotency routing", () => {
 	beforeEach(() => {
-		mockState.handleEventIdempotencyKeyCalls = [];
 		mockState.runRedisTrackV3Calls = [];
 	});
 
-	test("uses the pre-check path for multi-feature requests", async () => {
+	test("uses the same request-level key for multi-feature requests", async () => {
 		await runTrackV3({
 			ctx,
 			body: {
@@ -106,9 +101,10 @@ describe("runTrackV3 idempotency routing", () => {
 			apiVersion: ApiVersion.V2_1,
 		});
 
-		expect(mockState.handleEventIdempotencyKeyCalls).toHaveLength(1);
 		expect(mockState.runRedisTrackV3Calls).toHaveLength(1);
-		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBeUndefined();
+		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe(
+			"track:idem_123",
+		);
 	});
 
 	test("uses atomic Redis idempotency for single-feature requests", async () => {
@@ -124,7 +120,6 @@ describe("runTrackV3 idempotency routing", () => {
 			apiVersion: ApiVersion.V2_1,
 		});
 
-		expect(mockState.handleEventIdempotencyKeyCalls).toHaveLength(0);
 		expect(mockState.runRedisTrackV3Calls).toHaveLength(1);
 		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe(
 			"track:idem_123",
@@ -143,7 +138,6 @@ describe("runTrackV3 idempotency routing", () => {
 			apiVersion: ApiVersion.V2_1,
 		});
 
-		expect(mockState.handleEventIdempotencyKeyCalls).toHaveLength(0);
 		expect(mockState.runRedisTrackV3Calls).toHaveLength(1);
 		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe(
 			"track:req_123",
