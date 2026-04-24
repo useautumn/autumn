@@ -33,15 +33,29 @@ const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 // Per-message processing timeout — must be under VisibilityTimeout (30s)
 const MESSAGE_TIMEOUT_MS = 25_000;
 
-// Jobs that can exceed the 30s VisibilityTimeout. We ACK the SQS message
-// before processing so it is never redelivered mid-flight. These jobs must
-// be idempotency-tolerant since a worker crash means the work is lost.
-const LONG_RUNNING_JOBS = new Set<JobName>([
-	JobName.Migration,
-	JobName.RewardMigration,
-	JobName.ClearCreditSystemCustomerCache,
-	JobName.BatchResetCusEnts,
-]);
+type JobOverride = {
+	ackUpfront: true;
+	dispatch: "inline" | "background";
+};
+
+// Jobs whose handlers can exceed the 30s VisibilityTimeout. ACK upfront to
+// avoid redelivery loops; dispatch mode controls whether the poll loop awaits
+// them (inline → preserves backpressure) or fires in background (→ no
+// backpressure; only safe for genuinely rare, low-volume jobs).
+const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
+	// Rare (handful per day); fire-and-forget is safe.
+	[JobName.Migration]: { ackUpfront: true, dispatch: "background" },
+	// Can exceed VisibilityTimeout on large orgs; redelivery causes a
+	// self-amplifying Redis UNLINK storm. Inline so one worker's concurrency
+	// stays capped at the receive batch size.
+	[JobName.ClearCreditSystemCustomerCache]: {
+		ackUpfront: true,
+		dispatch: "inline",
+	},
+};
+
+const getJobOverride = (jobName: string): JobOverride | undefined =>
+	JOB_OVERRIDES[jobName as JobName];
 
 // Stale connection detection
 const EMPTY_POLL_THRESHOLD = 9; // ~3 min of empty polls (9 * 20s wait)
@@ -74,7 +88,7 @@ const startPollingLoop = async ({
 	let messagesProcessed = 0;
 	let totalMessagesProcessed = 0;
 	let lastStatsTime = Date.now();
-	let activeLongRunningJobs = 0;
+	let activeMigrationJobs = 0;
 	let consecutiveEmptyPolls = 0;
 	let lastHeartbeatTime = Date.now();
 	let consecutiveZeroMessageIntervals = 0;
@@ -99,9 +113,9 @@ const startPollingLoop = async ({
 			return;
 		}
 
-		if (activeLongRunningJobs > 0) {
+		if (activeMigrationJobs > 0) {
 			console.log(
-				`${prefix} Recycle deferred at ${totalMessagesProcessed} messages because ${activeLongRunningJobs} long-running job(s) are still running`,
+				`${prefix} Recycle deferred at ${totalMessagesProcessed} messages because ${activeMigrationJobs} migration job(s) are still running`,
 			);
 			return;
 		}
@@ -128,7 +142,7 @@ const startPollingLoop = async ({
 				shouldIdleSelfKill &&
 				consecutiveZeroMessageIntervals >= IDLE_SELF_KILL_THRESHOLD &&
 				totalMessagesProcessed > 0 &&
-				activeLongRunningJobs === 0
+				activeMigrationJobs === 0
 			) {
 				console.log(
 					`${prefix} Idle self-kill: 0 messages for ${consecutiveZeroMessageIntervals} intervals after processing ${totalMessagesProcessed} total. Exiting for cluster respawn.`,
@@ -157,7 +171,7 @@ const startPollingLoop = async ({
 			...(isFifo && { ReceiveRequestAttemptId: generateId("receive") }),
 		});
 
-	const deleteMessageImmediately = async ({
+	const ackMessageUpfront = async ({
 		sqs,
 		message,
 		job,
@@ -167,7 +181,7 @@ const startPollingLoop = async ({
 		job: SqsJob;
 	}) => {
 		logger.info(
-			`Returning success immediately for long-running job ${job.name} (messageId=${message.MessageId})`,
+			`ACKing ${job.name} upfront (messageId=${message.MessageId})`,
 		);
 		await sqs.send(
 			new DeleteMessageCommand({
@@ -189,17 +203,13 @@ const startPollingLoop = async ({
 		if (!isRunning || !message.Body) return null;
 
 		const job: SqsJob = JSON.parse(message.Body);
+		const override = getJobOverride(job.name);
 
-		// Long-running jobs: delete IMMEDIATELY before processing to avoid
-		// visibility-timeout redelivery loops (the handler can take longer than
-		// VisibilityTimeout, so SQS would otherwise re-dispatch the same message
-		// to other workers while the first one is still running).
-		const isLongRunning = LONG_RUNNING_JOBS.has(job.name as JobName);
-		if (isLongRunning) {
-			await deleteMessageImmediately({ sqs, message, job });
+		if (override?.ackUpfront) {
+			await ackMessageUpfront({ sqs, message, job });
 		}
 
-		if (isLongRunning) {
+		if (override) {
 			await processMessage({ message, db });
 		} else {
 			await withTimeout({
@@ -212,8 +222,7 @@ const startPollingLoop = async ({
 		messagesProcessed++;
 		totalMessagesProcessed++;
 
-		// Return delete info (skip long-running jobs - already deleted)
-		if (message.ReceiptHandle && !isLongRunning) {
+		if (message.ReceiptHandle && !override?.ackUpfront) {
 			return { id: message.MessageId!, receiptHandle: message.ReceiptHandle };
 		}
 		return null;
@@ -310,17 +319,18 @@ const startPollingLoop = async ({
 				for (const message of messages) {
 					if (!message.Body) continue;
 					const job: SqsJob = JSON.parse(message.Body);
-					if (LONG_RUNNING_JOBS.has(job.name as JobName)) {
-						activeLongRunningJobs++;
+					const override = getJobOverride(job.name);
+					if (override?.dispatch === "background") {
+						activeMigrationJobs++;
 						handleSingleMessage({ sqs, message, db })
 							.catch((error) => {
 								console.error(
-									`${prefix} Long-running job ${job.name} failed:`,
+									`${prefix} Background job ${job.name} failed:`,
 									error instanceof Error ? error.message : error,
 								);
 								Sentry.captureException(error);
 							})
-							.finally(() => activeLongRunningJobs--);
+							.finally(() => activeMigrationJobs--);
 					} else {
 						regularMessages.push(message);
 					}
