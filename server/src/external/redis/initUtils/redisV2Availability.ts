@@ -1,12 +1,30 @@
-import { redisV2 as redis } from "../initRedisV2.js";
+import {
+	hasRedisV2Config,
+	redisV2,
+} from "../initRedisV2.js";
 import { createRedisAvailability } from "./createRedisAvailability.js";
+import { shouldUseRedis } from "./redisAvailability.js";
+import { redis as primaryRedis } from "./redisClientRegistry.js";
 
-const redisV2Availability = createRedisAvailability({
-	redis,
-	logPrefix: "RedisV2",
-	logType: "redis_v2_availability_state_set",
-});
+const usesPrimaryRedis = redisV2 === primaryRedis;
+const noop = () => {};
+const redisV2Availability = usesPrimaryRedis
+	? {
+			startMonitor: noop,
+			stopMonitor: noop,
+			shouldUseRedis,
+		}
+	: createRedisAvailability({
+			redis: redisV2,
+			hasConfig: hasRedisV2Config,
+			logPrefix: "RedisV2",
+			logType: "redis_v2_availability_state_set",
+		});
 
-export const startRedisV2Monitor = redisV2Availability.startMonitor;
-export const stopRedisV2Monitor = redisV2Availability.stopMonitor;
-export const shouldUseRedisV2 = redisV2Availability.shouldUseRedis;
+const {
+	startMonitor: startRedisV2Monitor,
+	stopMonitor: stopRedisV2Monitor,
+	shouldUseRedis: shouldUseRedisV2,
+} = redisV2Availability;
+
+export { startRedisV2Monitor, stopRedisV2Monitor, shouldUseRedisV2 };

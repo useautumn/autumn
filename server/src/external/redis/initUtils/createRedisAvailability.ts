@@ -1,7 +1,6 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
-import { hasRedisConfig } from "./redisConfig.js";
 
 const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
@@ -20,10 +19,12 @@ export type RedisAvailabilitySnapshot = {
 
 export const createRedisAvailability = ({
 	redis,
+	hasConfig,
 	logPrefix,
 	logType,
 }: {
 	redis: Redis;
+	hasConfig: boolean;
 	logPrefix: string;
 	logType: string;
 }) => {
@@ -86,7 +87,7 @@ export const createRedisAvailability = ({
 	};
 
 	const tryReconnectRedis = async () => {
-		if (!hasRedisConfig || redis.status === "ready") {
+		if (!hasConfig || redis.status === "ready") {
 			reconnectStartedAt = null;
 			return;
 		}
@@ -111,7 +112,7 @@ export const createRedisAvailability = ({
 	};
 
 	const tickRedisAvailability = async () => {
-		if (!hasRedisConfig) return;
+		if (!hasConfig) return;
 
 		try {
 			if (await pingRedisClient()) {
@@ -126,20 +127,24 @@ export const createRedisAvailability = ({
 			: recordRedisAvailability(false);
 	};
 
+	const runTick = async () => {
+		if (redisTickInFlight) return;
+		redisTickInFlight = true;
+		try {
+			await tickRedisAvailability();
+		} finally {
+			redisTickInFlight = false;
+		}
+	};
+
 	return {
 		startMonitor: () => {
 			if (redisMonitorInterval) return;
 
-			void tickRedisAvailability();
+			void runTick();
 
-			redisMonitorInterval = setInterval(async () => {
-				if (redisTickInFlight) return;
-				redisTickInFlight = true;
-				try {
-					await tickRedisAvailability();
-				} finally {
-					redisTickInFlight = false;
-				}
+			redisMonitorInterval = setInterval(() => {
+				void runTick();
 			}, REDIS_PROBE_INTERVAL_MS);
 		},
 		stopMonitor: () => {
@@ -148,9 +153,9 @@ export const createRedisAvailability = ({
 			redisMonitorInterval = null;
 		},
 		shouldUseRedis: () =>
-			hasRedisConfig && redisAvailabilityState === "healthy",
+			hasConfig && redisAvailabilityState === "healthy",
 		getRedisAvailability: (): RedisAvailabilitySnapshot => ({
-			configured: hasRedisConfig,
+			configured: hasConfig,
 			state: redisAvailabilityState,
 			status: redis.status,
 		}),
