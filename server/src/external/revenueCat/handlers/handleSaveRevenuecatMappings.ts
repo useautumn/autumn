@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { RCMappingService } from "../misc/RCMappingService";
 
@@ -8,6 +9,7 @@ const MappingSchema = z.object({
 });
 
 export const handleSaveRCMappings = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	body: z.object({
 		mappings: z.array(MappingSchema),
 	}),

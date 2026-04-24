@@ -1,8 +1,10 @@
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
+import { Scopes } from "@autumn/shared";
 import { ApiKeyService } from "../ApiKeyService";
 import { clearSecretKeyCache } from "../api-keys/cacheApiKeyUtils";
 
 export const handleDeleteSecretKey = createRoute({
+	scopes: [Scopes.ApiKeys.Write],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org } = ctx;

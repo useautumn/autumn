@@ -1,8 +1,9 @@
-import { SetupPaymentParamsV1Schema } from "@autumn/shared";
+import { SetupPaymentParamsV1Schema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { billingActions } from "@/internal/billing/v2/actions";
 
 export const handleSetupPaymentV2 = createRoute({
+	scopes: [Scopes.Billing.Write],
 	body: SetupPaymentParamsV1Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

@@ -730,6 +730,50 @@ export function isScopeSubset(
 	return [...expandScopes(requested)].every((s) => expandedGranted.has(s));
 }
 
+/**
+ * Scope checker with memoised expansion. Call this once per auth
+ * boundary (request, session load, useScopes hook) and pass the result
+ * around instead of re-running `expandScopes` on every check.
+ *
+ * The returned helpers honour meta-scope semantics:
+ *   - `admin` short-circuits `has` / `hasAny` / `hasAll` for product-level
+ *     scopes, but does NOT satisfy `superuser` or `owner`.
+ *   - `superuser` short-circuits everything including product scopes and
+ *     `superuser`-requiring checks.
+ *   - `check(required)` delegates to {@link checkScopes} unchanged, so all
+ *     the nuanced bypass/denial logic from there applies (public, admin,
+ *     owner, superuser, shorthand array / ALL / ANY / ALL+ANY).
+ *
+ * @example
+ *   const { has, hasAny } = makeScopeChecker(ctx.scopes);
+ *   if (!has("customers:write")) throw new RecaseError({ code: ErrCode.InsufficientScopes });
+ */
+export function makeScopeChecker(granted: readonly string[]) {
+	const expanded = expandScopes(granted);
+	const isAdmin = granted.includes("admin") || expanded.has("admin");
+	const isSuperuser =
+		granted.includes("superuser") || expanded.has("superuser");
+
+	const has = (scope: ScopeString): boolean => {
+		if (isSuperuser) return true;
+		// `admin` is a product-level bypass but does NOT grant `owner` /
+		// `superuser` scopes.
+		if (isAdmin) {
+			if (scope === "owner" || scope === "superuser") return false;
+			return true;
+		}
+		return expanded.has(scope);
+	};
+	const hasAny = (scopes: readonly ScopeString[]): boolean =>
+		scopes.some(has);
+	const hasAll = (scopes: readonly ScopeString[]): boolean =>
+		scopes.every(has);
+	const check = (required: RouteScopeRequirement) =>
+		checkScopes(required, granted);
+
+	return { expanded, isAdmin, isSuperuser, has, hasAny, hasAll, check };
+}
+
 // ---------------------------------------------------------------------------
 // Display helpers
 // ---------------------------------------------------------------------------

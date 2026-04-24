@@ -1,4 +1,4 @@
-import { AppEnv, ErrCode } from "@autumn/shared";
+import { AppEnv, ErrCode, Scopes } from "@autumn/shared";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -6,6 +6,7 @@ import { OrgService } from "../OrgService.js";
 import { createConnectAccount } from "../orgUtils/createConnectAccount.js";
 
 export const handleResetDefaultAccount = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, logger, env } = ctx;

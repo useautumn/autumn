@@ -12,6 +12,7 @@ import {
 	type FullProduct,
 	type Price,
 	ProductAlreadyExistsError,
+	Scopes,
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -34,6 +35,7 @@ import { validateDefaultFlag } from "../../../product/actions/validateDefaultFla
  * Route: POST /products - Create a product
  */
 export const handleCreatePlan = createRoute({
+	scopes: [Scopes.Plans.Write],
 	// body: CreateProductV2ParamsSchema,
 	versionedBody: {
 		latest: CreatePlanParamsV1Schema,

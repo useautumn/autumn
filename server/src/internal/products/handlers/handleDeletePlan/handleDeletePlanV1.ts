@@ -1,4 +1,4 @@
-import { AffectedResource } from "@autumn/shared";
+import { AffectedResource, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { deleteProduct } from "../../../product/actions/deleteProduct.js";
@@ -12,6 +12,7 @@ const DeletePlanQuerySchema = z.object({
 });
 
 export const handleDeletePlanV1 = createRoute({
+	scopes: [Scopes.Plans.Write],
 	params: DeletePlanParamsSchema,
 	query: DeletePlanQuerySchema,
 	resource: AffectedResource.Product,

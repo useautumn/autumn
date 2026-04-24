@@ -1,4 +1,5 @@
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 /**
@@ -6,6 +7,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
  * Requires authentication via secret key middleware
  */
 export const handleGetStripeInvoice = createRoute({
+	scopes: [Scopes.Billing.Read],
 	handler: async (c) => {
 		const { org, env } = c.get("ctx");
 		const { stripe_invoice_id } = c.req.param();

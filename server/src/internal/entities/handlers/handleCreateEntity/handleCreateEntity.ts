@@ -4,12 +4,14 @@ import {
 	CreateEntityQuerySchema,
 	type CustomerData,
 	notNullish,
+	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
 import { entityActions } from "../../actions/index.js";
 
 export const handleCreateEntity = createRoute({
+	scopes: [Scopes.Customers.Write],
 	query: CreateEntityQuerySchema,
 	body: CreateEntityParamsV0Schema.or(z.array(CreateEntityParamsV0Schema)),
 	handler: async (c) => {

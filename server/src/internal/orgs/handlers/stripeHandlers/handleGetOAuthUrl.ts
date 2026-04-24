@@ -1,9 +1,10 @@
-import { AppEnv, ErrCode, RecaseError } from "@autumn/shared";
+import { AppEnv, ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { generateOAuthState } from "@/internal/platform/platformBeta/utils/oauthStateUtils.js";
 
 export const handleGetOAuthUrl = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	query: z.object({
 		redirect_url: z.string().optional(),
 	}),

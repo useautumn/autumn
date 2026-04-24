@@ -59,7 +59,7 @@ export const createKey = async ({
 	prefix: string;
 	meta: Record<string, unknown>;
 	userId?: string;
-	scopes?: string[];
+	scopes?: string[] | null;
 }) => {
 	const apiKey = generateApiKey(42, prefix);
 	const hashedKey = hashApiKey(apiKey);

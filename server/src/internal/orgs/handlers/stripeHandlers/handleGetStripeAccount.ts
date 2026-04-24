@@ -1,8 +1,10 @@
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { isStripeConnected } from "../../orgUtils.js";
 
 export const handleGetStripeAccount = createRoute({
+	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org, env, logger } = ctx;

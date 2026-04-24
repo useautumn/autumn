@@ -3,6 +3,7 @@ import {
 	type ListPlatformOrgsQuery,
 	ListPlatformOrgsQuerySchema,
 	organizations,
+	Scopes,
 } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -12,6 +13,7 @@ import { toPlatformOrg } from "./platformOrgUtils.js";
  * Route: GET /platform/orgs - List organizations created by master org
  */
 export const handleListPlatformOrgs = createRoute({
+	scopes: [Scopes.Platform.Read],
 	query: ListPlatformOrgsQuerySchema,
 	handler: async (c) => {
 		const query = c.req.valid("query") as ListPlatformOrgsQuery;

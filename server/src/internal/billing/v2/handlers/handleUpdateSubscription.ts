@@ -4,6 +4,7 @@ import {
 	InternalError,
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
+	Scopes,
 } from "@autumn/shared";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { billingActions } from "@/internal/billing/v2/actions";
@@ -11,6 +12,7 @@ import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
 
 export const handleUpdateSubscription = createRoute({
+	scopes: [Scopes.Billing.Write],
 	versionedBody: {
 		latest: UpdateSubscriptionV1ParamsSchema,
 		[ApiVersion.V1_Beta]: UpdateSubscriptionV0ParamsSchema,

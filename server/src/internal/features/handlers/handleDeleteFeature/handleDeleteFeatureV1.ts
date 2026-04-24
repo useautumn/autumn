@@ -1,10 +1,11 @@
-import { FeatureNotFoundError, RecaseError } from "@autumn/shared";
+import { FeatureNotFoundError, RecaseError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils";
 import { FeatureService } from "@/internal/features/FeatureService";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 
 export const handleDeleteFeatureV1 = createRoute({
+	scopes: [Scopes.Features.Write],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, features } = ctx;

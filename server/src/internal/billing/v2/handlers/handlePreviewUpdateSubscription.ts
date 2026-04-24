@@ -4,12 +4,14 @@ import {
 	InternalError,
 	UpdateSubscriptionV0ParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
+	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { billingPlanToUpdateSubscriptionPreview } from "@/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreview";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handlePreviewUpdateSubscription = createRoute({
+	scopes: [Scopes.Billing.Read],
 	versionedBody: {
 		latest: UpdateSubscriptionV1ParamsSchema,
 		[ApiVersion.V1_Beta]: UpdateSubscriptionV0ParamsSchema,

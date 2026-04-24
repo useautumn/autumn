@@ -1,9 +1,10 @@
-import { AffectedResource, ProductNotFoundError } from "@autumn/shared";
+import { AffectedResource, ProductNotFoundError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { ProductService } from "../ProductService.js";
 
 export const handleGetProductDeleteInfo = createRoute({
+	scopes: [Scopes.Plans.Read],
 	resource: AffectedResource.Product,
 	handler: async (c) => {
 		// 1. Get number of versions

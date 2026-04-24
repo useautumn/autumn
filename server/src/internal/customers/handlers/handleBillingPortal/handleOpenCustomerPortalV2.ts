@@ -1,12 +1,14 @@
 import {
 	CustomerNotFoundError,
 	OpenCustomerPortalParamsV1Schema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { CusService } from "../../CusService";
 import { createBillingPortalSession } from "./createBillingPortalSession";
 
 export const handleOpenCustomerPortalV2 = createRoute({
+	scopes: [Scopes.Billing.Read],
 	body: OpenCustomerPortalParamsV1Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
