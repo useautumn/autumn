@@ -3,6 +3,7 @@ import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
 import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
+import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
@@ -17,6 +18,7 @@ import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
+import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
@@ -67,6 +69,8 @@ honoAdminRouter.put(
 );
 honoAdminRouter.get("/org-limits-config", ...handleGetAdminOrgLimitsConfig);
 honoAdminRouter.put("/org-limits-config", ...handleUpsertAdminOrgLimitsConfig);
+honoAdminRouter.get("/job-queue-config", ...handleGetAdminJobQueueConfig);
+honoAdminRouter.put("/job-queue-config", ...handleUpsertAdminJobQueueConfig);
 honoAdminRouter.get("/stripe-sync-config", ...handleGetAdminStripeSyncConfig);
 honoAdminRouter.put(
 	"/stripe-sync-config",

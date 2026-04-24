@@ -42,6 +42,10 @@ mock.module("@/internal/balances/track/utils/queueTrack.js", () => ({
 	},
 }));
 
+mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
+	shouldUseRedisV2: () => true,
+}));
+
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 
 const ctx = {

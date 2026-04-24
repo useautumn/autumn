@@ -10,6 +10,7 @@ import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
+import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
@@ -172,6 +173,20 @@ export const processMessage = async ({
 			}
 
 			await syncItemV4({ ctx, payload: job.data });
+			return;
+		}
+
+		if (job.name === JobName.Track) {
+			if (!ctx) {
+				workerLogger.error("No context found for track job");
+				return;
+			}
+
+			await runQueuedTrack({
+				ctx,
+				body: job.data.body,
+				apiVersion: job.data.apiVersion,
+			});
 			return;
 		}
 
