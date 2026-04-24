@@ -41,12 +41,10 @@ mock.module(
 	"@/internal/balances/track/v3/trackIdempotencyKey.js",
 	() => ({
 		getTrackIdempotencyKey: ({
-			idempotencyKey,
-			requestId,
+			ctx,
 		}: {
-			idempotencyKey?: string;
-			requestId: string;
-		}) => `track:${idempotencyKey ?? requestId}`,
+			ctx: { id: string };
+		}) => `track:${ctx.id}`,
 	}),
 );
 
@@ -102,9 +100,7 @@ describe("runTrackV3 idempotency routing", () => {
 		});
 
 		expect(mockState.runRedisTrackV3Calls).toHaveLength(1);
-		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe(
-			"track:idem_123",
-		);
+		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe("track:req_123");
 	});
 
 	test("uses atomic Redis idempotency for single-feature requests", async () => {
@@ -121,12 +117,10 @@ describe("runTrackV3 idempotency routing", () => {
 		});
 
 		expect(mockState.runRedisTrackV3Calls).toHaveLength(1);
-		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe(
-			"track:idem_123",
-		);
+		expect(mockState.runRedisTrackV3Calls[0]?.idempotencyKey).toBe("track:req_123");
 	});
 
-	test("falls back to request id when client idempotency key is missing", async () => {
+	test("uses the request id when client idempotency key is missing", async () => {
 		await runTrackV3({
 			ctx,
 			body: {
