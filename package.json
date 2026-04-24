@@ -137,6 +137,7 @@
 	"devDependencies": {
 		"@better-auth/cli": "^1.4.21",
 		"@biomejs/biome": "^2.2.7",
+		"@socketsecurity/bun-security-scanner": "^1.1.2",
 		"@types/node": "^24.9.1",
 		"concurrently": "^9.2.1",
 		"dotenv": "^16.6.1",
