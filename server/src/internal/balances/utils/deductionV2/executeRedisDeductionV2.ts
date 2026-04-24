@@ -107,6 +107,7 @@ export const executeRedisDeductionV2 = async ({
 				orgId: org.id,
 				env,
 				idempotencyKey,
+				slotKey: customerId,
 			}).redisKey
 		: null;
 

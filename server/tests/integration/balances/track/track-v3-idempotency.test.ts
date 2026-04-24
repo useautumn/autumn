@@ -69,6 +69,7 @@ test("track-v3 idempotency is atomic for single-feature requests", async () => {
 					idempotencyKey,
 					requestId: ctx.id,
 				}),
+				slotKey: body.customer_id,
 			});
 			expect(await ctx.redisV2.exists(redisKey)).toBe(1);
 		},

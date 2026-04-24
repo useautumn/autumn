@@ -75,11 +75,12 @@ export const runTrackV3 = async ({
 				})
 			: undefined;
 
-	// Multi-feature/event-name requests still use the legacy pre-check path.
-	if (!redisIdempotencyKey) {
+	// Multi-feature/event-name requests with a client key still use the legacy pre-check path.
+	if (body.idempotency_key && !redisIdempotencyKey) {
 		await handleEventIdempotencyKey({
 			ctx,
 			idempotencyKey: body.idempotency_key,
+			customerId: body.customer_id,
 		});
 	}
 
