@@ -1,5 +1,6 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import { runCheckV2 } from "@/internal/balances/check/runCheckV2.js";
 
 const mockState = {
 	getCheckDataCalls: [] as unknown[],
@@ -9,30 +10,22 @@ const mockState = {
 	runCheckWithTrackError: null as unknown,
 };
 
-mock.module("@/internal/balances/check/getCheckDataV2.js", () => ({
+const deps = {
 	getCheckDataV2: async (args: unknown) => {
 		mockState.getCheckDataCalls.push(args);
 		if (mockState.getCheckDataError) throw mockState.getCheckDataError;
-		return { source: "v2" };
+		return { source: "v2" } as never;
 	},
-}));
-
-mock.module("@/internal/balances/check/getCheckResponseV2.js", () => ({
 	getCheckResponseV2: async (args: unknown) => {
 		mockState.getCheckResponseCalls.push(args);
-		return { allowed: true, source: "v2" };
+		return { allowed: true, source: "v2" } as never;
 	},
-}));
-
-mock.module("@/internal/balances/check/runCheckWithTrackV2.js", () => ({
 	runCheckWithTrackV2: async (args: unknown) => {
 		mockState.runCheckWithTrackCalls.push(args);
 		if (mockState.runCheckWithTrackError) throw mockState.runCheckWithTrackError;
-		return { allowed: true, source: "track" };
+		return { allowed: true, source: "track" } as never;
 	},
-}));
-
-import { runCheckV2 } from "@/internal/balances/check/runCheckV2.js";
+};
 
 describe("runCheckV2", () => {
 	test("returns check data and response", async () => {
@@ -46,6 +39,7 @@ describe("runCheckV2", () => {
 			ctx: {} as never,
 			body: { feature_id: "messages" } as never,
 			requiredBalance: 1,
+			deps,
 		});
 
 		expect(result).toMatchObject({
@@ -69,6 +63,7 @@ describe("runCheckV2", () => {
 				ctx: {} as never,
 				body: { feature_id: "messages" } as never,
 				requiredBalance: 1,
+				deps,
 			}),
 		).rejects.toBe(mockState.getCheckDataError);
 
@@ -95,6 +90,7 @@ describe("runCheckV2", () => {
 					send_event: true,
 				} as never,
 				requiredBalance: 1,
+				deps,
 			}),
 		).rejects.toBe(mockState.runCheckWithTrackError);
 
