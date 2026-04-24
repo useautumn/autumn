@@ -227,16 +227,12 @@ export function useHasItemChanges() {
 				item1: itemDraft.session.draftItem,
 				item2: itemDraft.session.initialItem,
 				features,
-				logDifferences: true,
 			});
 
 			return !same;
 		}
 
 		if (!item || !initialItem) {
-			console.log(
-				"[useHasItemChanges] no item or initialItem, returning false",
-			);
 			return false;
 		}
 
@@ -244,7 +240,6 @@ export function useHasItemChanges() {
 			item1: item,
 			item2: initialItem,
 			features,
-			logDifferences: true,
 		});
 
 		return !same;
