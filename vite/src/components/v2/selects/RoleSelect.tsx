@@ -33,7 +33,7 @@ const ROLE_META: Record<Role, { label: string; description: string }> = {
 	developer: {
 		label: "Developer",
 		description:
-			"Write on customers, features, plans, balances, billing, API keys, and platform. Read organisation and analytics. No access to rewards.",
+			"Write on customers, features, plans, rewards, balances, billing, API keys, and platform. Read organisation and analytics.",
 	},
 	sales: {
 		label: "Sales",
@@ -123,7 +123,7 @@ export function RoleSelect({
 	);
 }
 
+export type { Role };
 // Export the metadata so callers can render role display names without
 // instantiating a dropdown (e.g. for read-only member rows).
 export { ROLE_META };
-export type { Role };

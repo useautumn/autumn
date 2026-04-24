@@ -105,7 +105,16 @@ export const CreateApiKeySheet = ({
 
 	return (
 		<Sheet open={open} onOpenChange={onOpenChange}>
-			<SheetContent side="right" className="sm:max-w-2xl md:max-w-2xl">
+			{/*
+			  Width matches the canonical app-wide sheet width: 28rem
+			  (see `CustomerSheets.tsx` — all inline sheets animate to
+			  28rem on desktop). The Radix Sheet default is narrower; we
+			  set min+max so the content matches the other sheets visually.
+			*/}
+			<SheetContent
+				side="right"
+				className="!w-[28rem] !max-w-[28rem] sm:!w-[28rem] sm:!max-w-[28rem]"
+			>
 				<SheetHeader>
 					<SheetTitle>Create Secret API Key</SheetTitle>
 					<AnimatePresence mode="wait">
@@ -205,7 +214,13 @@ export const CreateApiKeySheet = ({
 					</AnimatePresence>
 				</div>
 
-				<div className="flex justify-end gap-2 border-t border-border/40 p-4">
+				{/*
+				  Footer matches the app-wide sheet pattern
+				  (see `InvoiceDetailSheet.tsx`):
+				    - `sticky bottom-0 p-4 flex gap-2 bg-card`
+				    - Buttons take `flex-1` so they share the row evenly.
+				*/}
+				<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
 					<AnimatePresence mode="wait" initial={false}>
 						{apiKey ? (
 							<motion.div
@@ -218,10 +233,12 @@ export const CreateApiKeySheet = ({
 									bounce: 0.15,
 									duration: 0.2,
 								}}
+								className="flex flex-1"
 							>
 								<Button
+									variant="primary"
 									onClick={() => onOpenChange(false)}
-									className="cursor-pointer"
+									className="flex-1"
 								>
 									Close
 								</Button>
@@ -237,12 +254,12 @@ export const CreateApiKeySheet = ({
 									bounce: 0.15,
 									duration: 0.2,
 								}}
-								className="flex gap-2"
+								className="flex flex-1 gap-2"
 							>
 								<Button
 									variant="secondary"
 									onClick={() => onOpenChange(false)}
-									className="cursor-pointer"
+									className="flex-1"
 									disabled={loading}
 								>
 									Cancel
@@ -251,7 +268,7 @@ export const CreateApiKeySheet = ({
 									isLoading={loading}
 									onClick={handleCreate}
 									variant="primary"
-									className="cursor-pointer"
+									className="flex-1"
 									disabled={!!validationError || !name.trim()}
 								>
 									Create key

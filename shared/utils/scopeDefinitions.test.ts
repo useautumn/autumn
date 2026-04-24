@@ -450,20 +450,40 @@ describe("expandScopes", () => {
 		);
 	});
 
-	test("meta 'admin' passes through as-is", () => {
-		expect([...expandScopes(["admin"])]).toEqual(["admin"]);
+	test("meta 'admin' expands to admin + every modern scope", () => {
+		const expanded = expandScopes(["admin"]);
+		expect(expanded.has("admin")).toBe(true);
+		for (const scope of MODERN_SCOPES) {
+			expect(expanded.has(scope)).toBe(true);
+		}
+		// admin does NOT grant owner or superuser
+		expect(expanded.has("owner" as ScopeString)).toBe(false);
+		expect(expanded.has("superuser" as ScopeString)).toBe(false);
 	});
 
-	test("meta 'superuser' passes through as-is", () => {
-		expect([...expandScopes(["superuser"])]).toEqual(["superuser"]);
+	test("meta 'superuser' expands to superuser + owner + admin + every modern scope", () => {
+		const expanded = expandScopes(["superuser"]);
+		expect(expanded.has("superuser")).toBe(true);
+		expect(expanded.has("owner" as ScopeString)).toBe(true);
+		expect(expanded.has("admin" as ScopeString)).toBe(true);
+		for (const scope of MODERN_SCOPES) {
+			expect(expanded.has(scope)).toBe(true);
+		}
 	});
 
-	test("meta 'public' passes through as-is", () => {
-		expect([...expandScopes(["public"])]).toEqual(["public"]);
+	test("meta 'owner' expands to owner + admin + every modern scope (NOT superuser)", () => {
+		const expanded = expandScopes(["owner"]);
+		expect(expanded.has("owner")).toBe(true);
+		expect(expanded.has("admin" as ScopeString)).toBe(true);
+		expect(expanded.has("superuser" as ScopeString)).toBe(false);
+		for (const scope of MODERN_SCOPES) {
+			expect(expanded.has(scope)).toBe(true);
+		}
 	});
 
-	test("meta 'owner' passes through as-is", () => {
-		expect([...expandScopes(["owner"])]).toEqual(["owner"]);
+	test("meta 'public' passes through as-is and does NOT expand modern scopes", () => {
+		const expanded = expandScopes(["public"]);
+		expect([...expanded]).toEqual(["public"]);
 	});
 
 	test("unknown scopes silently dropped", () => {
@@ -476,19 +496,21 @@ describe("expandScopes", () => {
 		).toEqual(["customers:read"]);
 	});
 
-	test("mixed input expanded correctly", () => {
+	test("mixed input expanded correctly (admin grants every modern scope)", () => {
 		const result = expandScopes([
 			"customers:write",
 			"admin",
 			"junk",
 			"plans:list",
 		]);
-		expect([...result].sort()).toEqual([
-			"admin",
-			"customers:read",
-			"customers:write",
-			"plans:read",
-		]);
+		// admin grants every modern scope; individual write→read expansion
+		// is subsumed by the admin grant.
+		expect(result.has("admin")).toBe(true);
+		for (const scope of MODERN_SCOPES) {
+			expect(result.has(scope)).toBe(true);
+		}
+		// junk dropped.
+		expect(result.has("junk" as ScopeString)).toBe(false);
 	});
 
 	test("all legacy aliases expand to a known modern scope (+ optional read)", () => {
@@ -771,11 +793,32 @@ describe("checkScopes — public bypass", () => {
 	});
 });
 
-describe("checkScopes — admin bypass", () => {
-	test("admin grants customers:write", () => {
+describe("checkScopes — meta-scope hierarchy", () => {
+	// Hierarchy: superuser > owner > admin > product-scopes
+	//
+	// Satisfaction semantics:
+	//   - superuser req → ONLY superuser
+	//   - owner req     → superuser OR owner
+	//   - admin req     → superuser OR owner OR admin
+	//   - product req   → admin / owner / superuser / exact product scope
+
+	test("admin grants every product scope", () => {
 		expect(checkScopes(["customers:write"], ["admin"])).toEqual({
 			allowed: true,
 			missing: [],
+		});
+		expect(
+			checkScopes(
+				["customers:write", "plans:write", "rewards:write"],
+				["admin"],
+			),
+		).toEqual({ allowed: true, missing: [] });
+	});
+
+	test("admin does NOT satisfy owner requirement", () => {
+		expect(checkScopes(["owner"], ["admin"])).toEqual({
+			allowed: false,
+			missing: ["owner"],
 		});
 	});
 
@@ -786,57 +829,48 @@ describe("checkScopes — admin bypass", () => {
 		});
 	});
 
-	test("admin does NOT satisfy owner requirement", () => {
-		expect(checkScopes(["owner"], ["admin"])).toEqual({
-			allowed: false,
-			missing: ["owner"],
+	test("owner satisfies admin requirement (owner > admin)", () => {
+		expect(checkScopes(["admin"], ["owner"])).toEqual({
+			allowed: true,
+			missing: [],
 		});
 	});
 
-	test("admin bypass SKIPPED if ANY mentions superuser (requirementMentions walks ALL+ANY)", () => {
-		// NOTE: `requirementMentions` in the source inspects BOTH ALL and ANY
-		// when deciding whether to skip the admin bypass. So mentioning
-		// `superuser` anywhere — even as one of several ANY alternatives —
-		// disables the admin short-circuit. Admin then falls through to the
-		// expanded-set check, where it does NOT have `superuser` or
-		// `customers:read` literally, so the ANY check fails.
-		expect(
-			checkScopes(
-				{ ANY: ["superuser", "customers:read"] },
-				["admin"],
-			),
-		).toEqual({
-			allowed: false,
-			missing: ["superuser", "customers:read"],
+	test("owner grants every product scope (inherits admin → all products)", () => {
+		expect(checkScopes(["customers:write"], ["owner"])).toEqual({
+			allowed: true,
+			missing: [],
 		});
 	});
 
-	test("admin bypass skipped if ALL contains superuser", () => {
-		const res = checkScopes(
-			{ ALL: ["superuser"] },
-			["admin"],
-		);
-		expect(res.allowed).toBe(false);
-		expect(res.missing).toContain("superuser" as ScopeString);
+	test("owner does NOT satisfy superuser requirement", () => {
+		expect(checkScopes(["superuser"], ["owner"])).toEqual({
+			allowed: false,
+			missing: ["superuser"],
+		});
 	});
 
-	test("admin bypass skipped if ALL contains owner", () => {
-		const res = checkScopes({ ALL: ["owner"] }, ["admin"]);
-		expect(res.allowed).toBe(false);
-		expect(res.missing).toContain("owner" as ScopeString);
+	test("superuser satisfies owner requirement (superuser > owner)", () => {
+		expect(checkScopes(["owner"], ["superuser"])).toEqual({
+			allowed: true,
+			missing: [],
+		});
 	});
 
-	test("admin grants multi-scope shorthand", () => {
-		expect(
-			checkScopes(
-				["customers:write", "plans:write", "rewards:write"],
-				["admin"],
-			),
-		).toEqual({ allowed: true, missing: [] });
+	test("superuser satisfies admin requirement", () => {
+		expect(checkScopes(["admin"], ["superuser"])).toEqual({
+			allowed: true,
+			missing: [],
+		});
 	});
-});
 
-describe("checkScopes — owner & superuser grants", () => {
+	test("superuser grants every product scope", () => {
+		expect(checkScopes(["customers:write"], ["superuser"])).toEqual({
+			allowed: true,
+			missing: [],
+		});
+	});
+
 	test("owner granted, owner required → allowed", () => {
 		expect(checkScopes(["owner"], ["owner"])).toEqual({
 			allowed: true,
@@ -851,21 +885,24 @@ describe("checkScopes — owner & superuser grants", () => {
 		});
 	});
 
-	test("superuser granted does NOT bypass product scope checks (checkScopes has no superuser bypass)", () => {
-		// checkScopes only short-circuits on public and admin (not superuser).
-		// superuser is passed through expandScopes as-is (preserved) but does
-		// not imply customers:write — so this is blocked.
-		expect(checkScopes(["customers:write"], ["superuser"])).toEqual({
-			allowed: false,
-			missing: ["customers:write"],
-		});
+	test("admin satisfies an ANY requirement alongside superuser (via product-scope alternative)", () => {
+		// admin grants `customers:read` via expansion, so the ANY condition
+		// is satisfied by the non-superuser alternative.
+		expect(
+			checkScopes({ ANY: ["superuser", "customers:read"] }, ["admin"]),
+		).toEqual({ allowed: true, missing: [] });
 	});
 
-	test("owner grant does NOT bypass product scope checks", () => {
-		expect(checkScopes(["customers:write"], ["owner"])).toEqual({
-			allowed: false,
-			missing: ["customers:write"],
-		});
+	test("admin denied when ALL requires superuser", () => {
+		const res = checkScopes({ ALL: ["superuser"] }, ["admin"]);
+		expect(res.allowed).toBe(false);
+		expect(res.missing).toContain("superuser" as ScopeString);
+	});
+
+	test("admin denied when ALL requires owner", () => {
+		const res = checkScopes({ ALL: ["owner"] }, ["admin"]);
+		expect(res.allowed).toBe(false);
+		expect(res.missing).toContain("owner" as ScopeString);
 	});
 });
 
@@ -958,15 +995,25 @@ describe("isScopeSubset", () => {
 		expect(isScopeSubset(["customers:write"], ["plans:write"])).toBe(false);
 	});
 
-	test("admin in granted → any requested is a subset (even owner)", () => {
-		expect(isScopeSubset(["owner"], ["admin"])).toBe(true);
+	test("admin in granted: grants every product scope + admin, but NOT owner or superuser", () => {
 		expect(isScopeSubset(["customers:write"], ["admin"])).toBe(true);
-		expect(isScopeSubset(["superuser"], ["admin"])).toBe(true);
+		expect(isScopeSubset(["admin"], ["admin"])).toBe(true);
+		expect(isScopeSubset(["owner"], ["admin"])).toBe(false);
+		expect(isScopeSubset(["superuser"], ["admin"])).toBe(false);
 	});
 
-	test("superuser in granted → any requested is a subset", () => {
+	test("owner in granted: grants every product scope + admin + owner, but NOT superuser", () => {
+		expect(isScopeSubset(["customers:write"], ["owner"])).toBe(true);
+		expect(isScopeSubset(["admin"], ["owner"])).toBe(true);
+		expect(isScopeSubset(["owner"], ["owner"])).toBe(true);
+		expect(isScopeSubset(["superuser"], ["owner"])).toBe(false);
+	});
+
+	test("superuser in granted: grants everything including owner and admin", () => {
 		expect(isScopeSubset(["customers:write"], ["superuser"])).toBe(true);
+		expect(isScopeSubset(["admin"], ["superuser"])).toBe(true);
 		expect(isScopeSubset(["owner"], ["superuser"])).toBe(true);
+		expect(isScopeSubset(["superuser"], ["superuser"])).toBe(true);
 	});
 
 	test("legacy granted covers modern requested", () => {
@@ -992,10 +1039,11 @@ describe("makeScopeChecker", () => {
 		expect(c.has("customers:read")).toBe(false);
 		expect(c.has("customers:write")).toBe(false);
 		expect(c.isAdmin).toBe(false);
+		expect(c.isOwner).toBe(false);
 		expect(c.isSuperuser).toBe(false);
 	});
 
-	test("admin grant — has() true for product scopes", () => {
+	test("admin grant — has() true for every product scope", () => {
 		const c = makeScopeChecker(["admin"]);
 		expect(c.has("customers:read")).toBe(true);
 		expect(c.has("customers:write")).toBe(true);
@@ -1006,33 +1054,56 @@ describe("makeScopeChecker", () => {
 	test("admin grant — has('superuser') → false", () => {
 		const c = makeScopeChecker(["admin"]);
 		expect(c.has("superuser")).toBe(false);
+		expect(c.isSuperuser).toBe(false);
 	});
 
 	test("admin grant — has('owner') → false", () => {
 		const c = makeScopeChecker(["admin"]);
 		expect(c.has("owner")).toBe(false);
+		expect(c.isOwner).toBe(false);
 	});
 
 	test("admin grant — has('admin') → true, isAdmin true", () => {
 		const c = makeScopeChecker(["admin"]);
 		expect(c.has("admin")).toBe(true);
 		expect(c.isAdmin).toBe(true);
+	});
+
+	test("owner grant — has() true for admin + product scopes", () => {
+		const c = makeScopeChecker(["owner"]);
+		expect(c.has("customers:write")).toBe(true);
+		expect(c.has("admin")).toBe(true);
+		expect(c.has("owner")).toBe(true);
+		expect(c.isOwner).toBe(true);
+		// owner is a capability flag — isAdmin is semantic (can satisfy admin reqs)
+		expect(c.isAdmin).toBe(true);
+	});
+
+	test("owner grant — has('superuser') → false (owner does NOT grant superuser)", () => {
+		const c = makeScopeChecker(["owner"]);
+		expect(c.has("superuser")).toBe(false);
 		expect(c.isSuperuser).toBe(false);
 	});
 
-	test("superuser grant — has() true for all", () => {
+	test("superuser grant — has() true for everything", () => {
 		const c = makeScopeChecker(["superuser"]);
 		expect(c.has("customers:write")).toBe(true);
-		expect(c.has("owner")).toBe(true);
 		expect(c.has("admin")).toBe(true);
+		expect(c.has("owner")).toBe(true);
 		expect(c.has("superuser")).toBe(true);
+		expect(c.isAdmin).toBe(true);
+		expect(c.isOwner).toBe(true);
 		expect(c.isSuperuser).toBe(true);
 	});
 
-	test("superuser grant — isAdmin reflects actual admin presence, not superuser", () => {
+	test("role capability flags are SEMANTIC (what the caller can satisfy), not literal grant membership", () => {
+		// A superuser grant SEMANTICALLY makes the caller an admin and an
+		// owner (they can satisfy any admin or owner requirement). The
+		// isAdmin/isOwner booleans reflect capability, not literal grant.
 		const c = makeScopeChecker(["superuser"]);
-		// isAdmin is literal admin check; superuser alone should not set isAdmin true
-		expect(c.isAdmin).toBe(false);
+		expect(c.isAdmin).toBe(true);
+		expect(c.isOwner).toBe(true);
+		expect(c.isSuperuser).toBe(true);
 	});
 
 	test("customers:write expands to include customers:read via has()", () => {
@@ -1144,12 +1215,26 @@ describe("groupScopesByResource", () => {
 		expect(result.get("customers")).toEqual(["read"]);
 	});
 
-	test("openid + admin dropped (meta has no resource)", () => {
+	test("openid dropped; admin grant expands to all modern resources (via hierarchy)", () => {
+		// admin in input now expands to every modern product scope
+		// (superuser > owner > admin > products). Grouping reflects that:
+		// every resource has read+write except analytics (read-only).
 		const result = groupScopesByResource([
 			"openid",
 			"admin",
 			"customers:read",
 		]);
+		// 10 resources: organisation, customers, features, plans, rewards,
+		// balances, billing, analytics, apiKeys, platform
+		expect(result.size).toBe(10);
+		// customers ends up with both read and write (from admin expansion).
+		expect(result.get("customers")).toEqual(["read", "write"]);
+		// analytics is read-only.
+		expect(result.get("analytics")).toEqual(["read"]);
+	});
+
+	test("openid + single modern scope (no meta) — only the literal resource", () => {
+		const result = groupScopesByResource(["openid", "customers:read"]);
 		expect(result.size).toBe(1);
 		expect(result.get("customers")).toEqual(["read"]);
 	});

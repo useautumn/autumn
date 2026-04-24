@@ -1,9 +1,8 @@
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
-import { Scopes } from "@autumn/shared";
 import { OrgService } from "../../OrgService.js";
 
 export const handleGetOrgMembers = createRoute({
-	scopes: [Scopes.Organisation.Read],
+	scopes: [],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org } = ctx;
