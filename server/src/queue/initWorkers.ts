@@ -416,27 +416,28 @@ export const initWorkers = async ({
 	console.log(
 		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
 	);
-	const pollingLoops = [
-		startPollingLoop({
-			db,
-			queueUrl: QUEUE_URL,
-			isFifo: QUEUE_URL.endsWith(".fifo"),
-			getSqsClientFn: getSqsClient,
-			recreateSqsClientFn: recreateSqsClient,
-			shouldPoll: () => isJobQueueEnabled({ queue: JOB_QUEUE_IDS.primary }),
-		}),
-	];
+	const pollingLoops = [];
 
-	const trackQueueUrl = process.env.TRACK_SQS_QUEUE_URL;
-	if (trackQueueUrl) {
+	for (const { queueId, queueUrl } of [
+		{
+			queueId: JOB_QUEUE_IDS.primary,
+			queueUrl: QUEUE_URL,
+		},
+		{
+			queueId: JOB_QUEUE_IDS.track,
+			queueUrl: process.env.TRACK_SQS_QUEUE_URL,
+		},
+	]) {
+		if (!queueUrl) continue;
+
 		pollingLoops.push(
 			startPollingLoop({
 				db,
-				queueUrl: trackQueueUrl,
-				isFifo: trackQueueUrl.endsWith(".fifo"),
+				queueUrl,
+				isFifo: queueUrl.endsWith(".fifo"),
 				getSqsClientFn: getSqsClient,
 				recreateSqsClientFn: recreateSqsClient,
-				shouldPoll: () => isJobQueueEnabled({ queue: JOB_QUEUE_IDS.track }),
+				shouldPoll: () => isJobQueueEnabled({ queue: queueId }),
 			}),
 		);
 	}
