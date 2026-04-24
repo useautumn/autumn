@@ -169,6 +169,104 @@ const enrichSpan = ({
 	return { thresholds, keyContext };
 };
 
+/**
+ * Wraps the `exec()` of an ioredis Pipeline or Multi so the batched round trip
+ * shows up as a single parent span (`redis.pipeline` / `redis.multi`) in
+ * Axiom. Individual command spans continue to fire for each queued command;
+ * this span gives us total batch latency and a command-count attribute so we
+ * can tell at a glance whether a request was pipelined.
+ */
+const wrapPipelineExec = ({
+	pipeline,
+	tracer,
+	region,
+	kind,
+}: {
+	// biome-ignore lint/suspicious/noExplicitAny: ioredis Pipeline/Multi shape varies
+	pipeline: any;
+	tracer: Tracer;
+	region?: string;
+	kind: "pipeline" | "multi";
+}) => {
+	const originalExec = pipeline.exec;
+	if (typeof originalExec !== "function") return;
+
+	pipeline.exec = function patchedExec(this: unknown, ...execArgs: unknown[]) {
+		let spanCtx: SpanContext;
+		try {
+			const span = tracer.startSpan(`redis.${kind}`, {
+				kind: SpanKind.CLIENT,
+			});
+			span.setAttribute("db.system", "redis");
+			span.setAttribute("db.operation", kind.toUpperCase());
+			if (region) span.setAttribute("db.redis.region", region);
+
+			// biome-ignore lint/suspicious/noExplicitAny: ioredis internal queue
+			const queue = (pipeline as any)._queue;
+			const commandCount = Array.isArray(queue)
+				? queue.length
+				: typeof pipeline.length === "number"
+					? pipeline.length
+					: undefined;
+			if (typeof commandCount === "number") {
+				span.setAttribute("db.redis.pipeline.command_count", commandCount);
+			}
+			if (Array.isArray(queue)) {
+				const names = queue
+					// biome-ignore lint/suspicious/noExplicitAny: ioredis internal queue entries
+					.map((q: any) => q?.name)
+					.filter((n: unknown): n is string => typeof n === "string")
+					.slice(0, 20)
+					.join(",");
+				if (names) span.setAttribute("db.redis.pipeline.commands", names);
+			}
+
+			const { thresholds, keyContext } = enrichSpan({
+				span,
+				operation: kind,
+				region,
+			});
+
+			spanCtx = {
+				span,
+				startedAt: performance.now(),
+				thresholds,
+				keyContext,
+				operation: kind,
+				region,
+			};
+		} catch {
+			return originalExec.apply(this, execArgs);
+		}
+
+		const activeContext = trace.setSpan(context.active(), spanCtx.span);
+
+		try {
+			const result = context.with(activeContext, () =>
+				originalExec.apply(this, execArgs),
+			);
+
+			if (result && typeof (result as Promise<unknown>).then === "function") {
+				(result as Promise<unknown>).then(
+					() => {
+						finalizeSpan({ spanCtx });
+					},
+					(err) => {
+						finalizeSpan({ spanCtx, error: err });
+					},
+				);
+				return result;
+			}
+
+			finalizeSpan({ spanCtx });
+			return result;
+		} catch (err) {
+			finalizeSpan({ spanCtx, error: err });
+			throw err;
+		}
+	};
+};
+
 /** Wraps a custom command method created by defineCommand with a traced version. */
 const wrapCustomCommand = ({
 	redis,
@@ -347,6 +445,35 @@ export const instrumentRedis = ({
 			throw err;
 		}
 	};
+
+	// --- Patch pipeline() and multi() so batched exec gets a parent span ---
+	const originalPipeline = redis.pipeline.bind(redis);
+	redis.pipeline = function patchedPipeline(
+		this: Redis,
+		...args: Parameters<Redis["pipeline"]>
+	) {
+		const pipeline = originalPipeline(...args);
+		try {
+			wrapPipelineExec({ pipeline, tracer, region, kind: "pipeline" });
+		} catch {
+			// Fail-open: wrapping failed, pipeline still works
+		}
+		return pipeline;
+	} as Redis["pipeline"];
+
+	const originalMulti = redis.multi.bind(redis);
+	redis.multi = function patchedMulti(
+		this: Redis,
+		...args: Parameters<Redis["multi"]>
+	) {
+		const multi = originalMulti(...args);
+		try {
+			wrapPipelineExec({ pipeline: multi, tracer, region, kind: "multi" });
+		} catch {
+			// Fail-open: wrapping failed, multi still works
+		}
+		return multi;
+	} as Redis["multi"];
 
 	// --- Patch defineCommand so custom Lua commands get named spans ---
 	const originalDefineCommand = redis.defineCommand.bind(redis);
