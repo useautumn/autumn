@@ -69,6 +69,9 @@ export interface Payloads {
 	[JobName.Track]: {
 		orgId: string;
 		env: AppEnv;
+		customerId: string;
+		entityId?: string;
+		requestId: string;
 		apiVersion: ApiVersion;
 		body: TrackParams;
 	};

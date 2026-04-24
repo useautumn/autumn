@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	getRedisV2ConnectionConfig,
+	REDIS_V2_COMMAND_TIMEOUT_MS,
 	supportsUpstashShebangForRedisV2,
 } from "@/external/redis/initUtils/redisV2Config.js";
 
@@ -16,6 +17,7 @@ describe("redis V2 connection config", () => {
 			cacheUrl: "redis://v2",
 			region: "us-west-2:v2",
 			supportsUpstashShebang: true,
+			commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 		});
 	});
 

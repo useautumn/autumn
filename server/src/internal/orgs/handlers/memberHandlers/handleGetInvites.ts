@@ -3,6 +3,7 @@ import { and, eq, gt } from "drizzle-orm";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handleGetInvites = createRoute({
+	scopes: [],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { userId, db } = ctx;

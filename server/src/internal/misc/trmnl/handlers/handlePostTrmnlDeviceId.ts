@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
@@ -12,6 +12,7 @@ const PostTrmnlDeviceIdSchema = z.object({
  * Save TRMNL device configuration for the authenticated organization
  */
 export const handlePostTrmnlDeviceId = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	body: PostTrmnlDeviceIdSchema,
 	handler: async (c) => {
 		const { org } = c.get("ctx");

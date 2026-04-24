@@ -3,14 +3,14 @@ import {
 	ApiVersion,
 	TrackParamsSchema,
 	TrackQuerySchema,
+	Scopes,
 } from "@autumn/shared";
-import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
-import { queueTrack } from "@/internal/balances/track/utils/queueTrack.js";
 
 export const handleTrack = createRoute({
+	scopes: [Scopes.Balances.Write],
 	query: TrackQuerySchema,
 	versionedBody: {
 		latest: TrackParamsSchema,
@@ -21,23 +21,13 @@ export const handleTrack = createRoute({
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 		const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
+		const response = await runTrackWithRollout({
+			ctx,
+			body,
+			featureDeductions,
+		});
+		const status = ctx.extraLogs.trackQueuedForReplay ? 202 : 200;
 
-		if (!shouldUseRedis()) {
-			const queuedResponse = await queueTrack({
-				ctx,
-				body,
-			});
-			if (queuedResponse) {
-				return c.json(queuedResponse);
-			}
-		}
-
-		return c.json(
-			await runTrackWithRollout({
-				ctx,
-				body,
-				featureDeductions,
-			}),
-		);
+		return c.json(response, status);
 	},
 });

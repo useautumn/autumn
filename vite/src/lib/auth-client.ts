@@ -1,3 +1,4 @@
+import { ac, roles } from "@autumn/shared";
 import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import {
 	adminClient,
@@ -10,7 +11,7 @@ export const authClient = createAuthClient({
 	baseURL: import.meta.env.VITE_BACKEND_URL,
 	plugins: [
 		emailOTPClient(),
-		organizationClient(),
+		organizationClient({ ac, roles }),
 		adminClient(),
 		oauthProviderClient(),
 	],

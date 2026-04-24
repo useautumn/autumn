@@ -2,6 +2,7 @@ import {
 	AffectedResource,
 	ErrCode,
 	SetupPaymentParamsV0Schema,
+	Scopes,
 } from "@autumn/shared";
 
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -12,6 +13,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { getOrCreateCustomer } from "../../customers/cusUtils/getOrCreateCustomer.js";
 
 export const handleSetupPayment = createRoute({
+	scopes: [Scopes.Billing.Write],
 	body: SetupPaymentParamsV0Schema,
 	resource: AffectedResource.Customer,
 	handler: async (c) => {

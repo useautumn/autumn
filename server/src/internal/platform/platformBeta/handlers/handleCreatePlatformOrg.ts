@@ -5,6 +5,7 @@ import {
 	organizations,
 	RecaseError,
 	user as userTable,
+	Scopes,
 } from "@autumn/shared";
 import { generateId } from "better-auth";
 import { and, eq } from "drizzle-orm";
@@ -29,6 +30,7 @@ const CreateOrganizationSchema = z.object({
  * - Returns Autumn secret keys
  */
 export const handleCreatePlatformOrg = createRoute({
+	scopes: [Scopes.Platform.Write],
 	body: CreateOrganizationSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

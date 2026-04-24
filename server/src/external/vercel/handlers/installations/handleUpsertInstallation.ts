@@ -1,9 +1,4 @@
-import {
-	AppEnv,
-	type Customer,
-	cusProductToProduct,
-	ProcessorType,
-} from "@autumn/shared";
+import { AppEnv, type Customer, cusProductToProduct, ProcessorType, Scopes } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCustomer } from "@/external/stripe/customers";
 import { createCustomStripeCard } from "@/external/stripe/stripeCardUtils.js";
@@ -20,6 +15,7 @@ import type { VercelUpsertInstallation } from "../../misc/vercelTypes.js";
 import { productToBillingPlan } from "../handleListBillingPlans.js";
 
 export const handleUpsertInstallation = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const body = await c.req.json<VercelUpsertInstallation>();
 		const ctx = c.get("ctx");

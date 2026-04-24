@@ -1,4 +1,4 @@
-import { CusProductStatus, CustomerExpand } from "@autumn/shared";
+import { CusProductStatus, CustomerExpand, Scopes } from "@autumn/shared";
 import { getTestClockFrozenTimeMs } from "@/external/stripe/testClocks/utils/convertStripeTestClock";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
@@ -11,6 +11,7 @@ import { CusService } from "@/internal/customers/CusService";
  * `GET /customers/:customer_id/schedule`.
  */
 export const handleGetCustomer = createRoute({
+	scopes: [Scopes.Customers.Read],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { customer_id } = c.req.param();

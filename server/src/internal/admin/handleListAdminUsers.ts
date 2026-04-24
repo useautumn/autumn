@@ -1,8 +1,9 @@
-import { user } from "@autumn/shared";
+import { user, Scopes } from "@autumn/shared";
 import { and, desc, eq, gt, gte, ilike, lt, or } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 export const handleListAdminUsers = createRoute({
+	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db } = ctx;

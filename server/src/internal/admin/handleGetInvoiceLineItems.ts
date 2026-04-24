@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
@@ -7,6 +8,7 @@ const RequestBodySchema = z.object({
 });
 
 export const handleGetInvoiceLineItems = createRoute({
+	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db } = ctx;

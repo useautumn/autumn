@@ -6,6 +6,7 @@ import {
 	CreateProductSchema,
 } from "@shared/index";
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { FeatureService } from "@/internal/features/FeatureService";
@@ -25,6 +26,7 @@ const OrganisationConfigurationSchema = z.object({
 });
 
 export const handlePushOrganisationConfiguration = createRoute({
+	scopes: { ALL: [Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write] },
 	body: OrganisationConfigurationSchema,
 	handler: async (c) => {
 		const body = c.req.valid("json");

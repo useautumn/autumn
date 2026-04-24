@@ -4,7 +4,12 @@ import { cusEntToCusPrice } from "../cusEntUtils/index.js";
 import { isPayPerUsePrice } from "../productUtils/priceUtils/index.js";
 import { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
 
-/** Extract enabled spend limits for the requested features from a FullSubject. */
+/**
+ * Extract enabled spend limits for the requested features from a FullSubject.
+ *
+ * Entity inherits from the customer per feature_id: entity's entry wins when
+ * present, customer's entry fills any gaps.
+ */
 export const fullSubjectToSpendLimitByFeatureId = ({
 	fullSubject,
 	featureIds,
@@ -12,18 +17,19 @@ export const fullSubjectToSpendLimitByFeatureId = ({
 	fullSubject: FullSubject;
 	featureIds: string[];
 }): Record<string, DbSpendLimit> => {
-	const scopedSpendLimits =
-		fullSubject.entity?.spend_limits ?? fullSubject.customer.spend_limits;
+	const entitySpendLimits = fullSubject.entity?.spend_limits ?? [];
+	const customerSpendLimits = fullSubject.customer.spend_limits ?? [];
 	const spendLimitByFeatureId: Record<string, DbSpendLimit> = {};
 	const uniqueFeatureIds = [...new Set(featureIds)];
 
 	for (const featureId of uniqueFeatureIds) {
-		const spendLimit = scopedSpendLimits?.find(
-			(candidate) =>
-				candidate.feature_id === featureId &&
-				candidate.enabled &&
-				candidate.overage_limit !== undefined,
-		);
+		const isMatch = (candidate: DbSpendLimit) =>
+			candidate.feature_id === featureId &&
+			candidate.enabled &&
+			candidate.overage_limit !== undefined;
+
+		const spendLimit =
+			entitySpendLimits.find(isMatch) ?? customerSpendLimits.find(isMatch);
 
 		if (spendLimit) {
 			spendLimitByFeatureId[featureId] = spendLimit;

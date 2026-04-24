@@ -1,4 +1,4 @@
-import { RecaseError } from "@autumn/shared";
+import { RecaseError, Scopes } from "@autumn/shared";
 import { ErrCode } from "@shared/enums/ErrCode.js";
 import { StatusCodes } from "http-status-codes";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -12,18 +12,21 @@ const createUnsupportedTransferError = () =>
 	});
 
 export const handleCreateResourceTransfer = createRoute({
+	scopes: [Scopes.Public],
 	handler: async () => {
 		throw createUnsupportedTransferError();
 	},
 });
 
 export const handleVerifyResourceTransfer = createRoute({
+	scopes: [Scopes.Public],
 	handler: async () => {
 		throw createUnsupportedTransferError();
 	},
 });
 
 export const handleAcceptResourceTransfer = createRoute({
+	scopes: [Scopes.Public],
 	handler: async () => {
 		throw createUnsupportedTransferError();
 	},

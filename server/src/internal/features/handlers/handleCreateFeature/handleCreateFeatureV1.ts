@@ -5,12 +5,14 @@ import {
 	dbToApiFeatureV1,
 	featureV1ToDbFeature,
 	InternalError,
+	Scopes,
 } from "@autumn/shared";
 import { CreateFeatureV1ParamsSchema } from "@autumn/shared/api/features/crud/createFeatureParams";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { createFeature } from "../../featureActions/createFeature";
 
 export const handleCreateFeatureV1 = createRoute({
+	scopes: [Scopes.Features.Write],
 	versionedBody: {
 		latest: CreateFeatureV1ParamsSchema,
 		[ApiVersion.V1_Beta]: CreateFeatureV0ParamsSchema,

@@ -1,4 +1,4 @@
-import { ProductNotFoundError, queryInteger } from "@autumn/shared";
+import { ProductNotFoundError, queryInteger, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
@@ -13,6 +13,7 @@ const GetProductCountQuerySchema = z.object({
  * Get customer counts for a specific product version
  */
 export const handleGetProductCount = createRoute({
+	scopes: [Scopes.Plans.Read],
 	query: GetProductCountQuerySchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

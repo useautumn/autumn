@@ -5,7 +5,6 @@ import {
 	type FullCustomer,
 	type TrackParams,
 } from "@autumn/shared";
-import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
@@ -40,7 +39,7 @@ export const getOrCreateCachedFullCustomer = async ({
 
 	let fullCustomer: FullCustomer | undefined;
 	const fetchTimeMs = Date.now();
-	const useRedis = !!customerId && !skipCache && shouldUseRedis();
+	const useRedis = !!customerId && !skipCache;
 
 	// 1. Try cache first (getCachedFullCustomer handles lazy reset internally)
 	let setCache = true;

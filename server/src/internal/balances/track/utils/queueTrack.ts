@@ -2,6 +2,7 @@ import type { TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
 import { getQueuedTrackResponse } from "./getQueuedTrackResponse.js";
 
 export const queueTrack = async ({
@@ -23,11 +24,14 @@ export const queueTrack = async ({
 		await addTaskToQueue({
 			jobName: JobName.Track,
 			queueUrl,
-			messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}`,
-			messageDeduplicationId: body.idempotency_key,
+			messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}:${body.entity_id ?? "none"}`,
+			messageDeduplicationId: ctx.id,
 			payload: {
 				orgId: ctx.org.id,
 				env: ctx.env,
+				customerId: body.customer_id,
+				entityId: body.entity_id,
+				requestId: ctx.id,
 				apiVersion: ctx.apiVersion.value,
 				body,
 			},
@@ -39,6 +43,12 @@ export const queueTrack = async ({
 			event_name: body.event_name,
 			env: ctx.env,
 			queue_name: queueUrl.split("/").pop(),
+		});
+		addToExtraLogs({
+			ctx,
+			extras: {
+				trackQueuedForReplay: true,
+			},
 		});
 
 		return getQueuedTrackResponse({
