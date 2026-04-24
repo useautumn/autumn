@@ -33,6 +33,16 @@ const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 // Per-message processing timeout — must be under VisibilityTimeout (30s)
 const MESSAGE_TIMEOUT_MS = 25_000;
 
+// Jobs that can exceed the 30s VisibilityTimeout. We ACK the SQS message
+// before processing so it is never redelivered mid-flight. These jobs must
+// be idempotency-tolerant since a worker crash means the work is lost.
+const LONG_RUNNING_JOBS = new Set<JobName>([
+	JobName.Migration,
+	JobName.RewardMigration,
+	JobName.ClearCreditSystemCustomerCache,
+	JobName.BatchResetCusEnts,
+]);
+
 // Stale connection detection
 const EMPTY_POLL_THRESHOLD = 9; // ~3 min of empty polls (9 * 20s wait)
 const HEARTBEAT_INTERVAL_MS = ms.minutes(5);
@@ -64,7 +74,7 @@ const startPollingLoop = async ({
 	let messagesProcessed = 0;
 	let totalMessagesProcessed = 0;
 	let lastStatsTime = Date.now();
-	let activeMigrationJobs = 0;
+	let activeLongRunningJobs = 0;
 	let consecutiveEmptyPolls = 0;
 	let lastHeartbeatTime = Date.now();
 	let consecutiveZeroMessageIntervals = 0;
@@ -89,9 +99,9 @@ const startPollingLoop = async ({
 			return;
 		}
 
-		if (activeMigrationJobs > 0) {
+		if (activeLongRunningJobs > 0) {
 			console.log(
-				`${prefix} Recycle deferred at ${totalMessagesProcessed} messages because ${activeMigrationJobs} migration job(s) are still running`,
+				`${prefix} Recycle deferred at ${totalMessagesProcessed} messages because ${activeLongRunningJobs} long-running job(s) are still running`,
 			);
 			return;
 		}
@@ -118,7 +128,7 @@ const startPollingLoop = async ({
 				shouldIdleSelfKill &&
 				consecutiveZeroMessageIntervals >= IDLE_SELF_KILL_THRESHOLD &&
 				totalMessagesProcessed > 0 &&
-				activeMigrationJobs === 0
+				activeLongRunningJobs === 0
 			) {
 				console.log(
 					`${prefix} Idle self-kill: 0 messages for ${consecutiveZeroMessageIntervals} intervals after processing ${totalMessagesProcessed} total. Exiting for cluster respawn.`,
@@ -147,7 +157,7 @@ const startPollingLoop = async ({
 			...(isFifo && { ReceiveRequestAttemptId: generateId("receive") }),
 		});
 
-	const deleteMigrationJobImmediately = async ({
+	const deleteMessageImmediately = async ({
 		sqs,
 		message,
 		job,
@@ -157,7 +167,7 @@ const startPollingLoop = async ({
 		job: SqsJob;
 	}) => {
 		logger.info(
-			`Returning success immediately for migration job ${job.data.migrationJobId}`,
+			`Returning success immediately for long-running job ${job.name} (messageId=${message.MessageId})`,
 		);
 		await sqs.send(
 			new DeleteMessageCommand({
@@ -180,13 +190,16 @@ const startPollingLoop = async ({
 
 		const job: SqsJob = JSON.parse(message.Body);
 
-		// Migration jobs: delete IMMEDIATELY before processing (long-running, avoid timeout redelivery)
-		if (job.name === JobName.Migration) {
-			await deleteMigrationJobImmediately({ sqs, message, job });
+		// Long-running jobs: delete IMMEDIATELY before processing to avoid
+		// visibility-timeout redelivery loops (the handler can take longer than
+		// VisibilityTimeout, so SQS would otherwise re-dispatch the same message
+		// to other workers while the first one is still running).
+		const isLongRunning = LONG_RUNNING_JOBS.has(job.name as JobName);
+		if (isLongRunning) {
+			await deleteMessageImmediately({ sqs, message, job });
 		}
 
-		const isMigration = job.name === JobName.Migration;
-		if (isMigration) {
+		if (isLongRunning) {
 			await processMessage({ message, db });
 		} else {
 			await withTimeout({
@@ -199,8 +212,8 @@ const startPollingLoop = async ({
 		messagesProcessed++;
 		totalMessagesProcessed++;
 
-		// Return delete info (skip migration jobs - already deleted)
-		if (message.ReceiptHandle && job.name !== JobName.Migration) {
+		// Return delete info (skip long-running jobs - already deleted)
+		if (message.ReceiptHandle && !isLongRunning) {
 			return { id: message.MessageId!, receiptHandle: message.ReceiptHandle };
 		}
 		return null;
@@ -297,17 +310,17 @@ const startPollingLoop = async ({
 				for (const message of messages) {
 					if (!message.Body) continue;
 					const job: SqsJob = JSON.parse(message.Body);
-					if (job.name === JobName.Migration) {
-						activeMigrationJobs++;
+					if (LONG_RUNNING_JOBS.has(job.name as JobName)) {
+						activeLongRunningJobs++;
 						handleSingleMessage({ sqs, message, db })
 							.catch((error) => {
 								console.error(
-									`${prefix} Migration job failed:`,
+									`${prefix} Long-running job ${job.name} failed:`,
 									error instanceof Error ? error.message : error,
 								);
 								Sentry.captureException(error);
 							})
-							.finally(() => activeMigrationJobs--);
+							.finally(() => activeLongRunningJobs--);
 					} else {
 						regularMessages.push(message);
 					}
