@@ -1,5 +1,5 @@
 import { isTransientDbError } from "@/db/dbUtils.js";
-import { shouldUseRedis } from "@/external/redis/initRedis.js";
+import { shouldUseRedisV2 } from "@/external/redis/initUtils/redisV2Availability.js";
 import { RedisUnavailableError } from "./errors.js";
 import { isTransientRedisError } from "./isTransientRedisError.js";
 
@@ -15,7 +15,7 @@ export const withRedisFailOpen = async <T>({
 	fallback: (error: unknown) => T | Promise<T>;
 }): Promise<T> => {
 	try {
-		if (!shouldUseRedis()) {
+		if (!shouldUseRedisV2()) {
 			throw new RedisUnavailableError({ source, reason: "not_ready" });
 		}
 
