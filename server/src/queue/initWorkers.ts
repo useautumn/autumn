@@ -26,6 +26,7 @@ import { processMessage, type SqsJob } from "./processMessage.js";
 // ============ Shared State ============
 let isRunning = true;
 const abortControllers = new Set<AbortController>();
+export const getAbortControllerCountForTesting = () => abortControllers.size;
 
 // Process recycling — exit after processing this many messages to prevent memory leaks
 const MAX_MESSAGES_BEFORE_RECYCLE = 50_000;
@@ -78,6 +79,11 @@ export const startPollingLoop = async ({
 	const prefix = logPrefix({ queueUrl });
 	let abortController = new AbortController();
 	abortControllers.add(abortController);
+	const replaceAbortController = () => {
+		abortControllers.delete(abortController);
+		abortController = new AbortController();
+		abortControllers.add(abortController);
+	};
 
 	const alertZeroMessages = () => {
 		const minutes = consecutiveZeroMessageIntervals;
@@ -259,8 +265,7 @@ export const startPollingLoop = async ({
 				`${prefix} ${consecutiveEmptyPolls} consecutive empty polls - recreating SQS client`,
 			);
 			consecutiveEmptyPolls = 0;
-			abortController = new AbortController();
-			abortControllers.add(abortController);
+			replaceAbortController();
 			return recreateSqsClientFn();
 		}
 
@@ -285,8 +290,7 @@ export const startPollingLoop = async ({
 		if (consecutiveEmptyPolls >= EMPTY_POLL_THRESHOLD) {
 			console.warn(`${prefix} Repeated errors - recreating SQS client`);
 			consecutiveEmptyPolls = 0;
-			abortController = new AbortController();
-			abortControllers.add(abortController);
+			replaceAbortController();
 			await new Promise((resolve) => setTimeout(resolve, 5000));
 			return recreateSqsClientFn();
 		}
