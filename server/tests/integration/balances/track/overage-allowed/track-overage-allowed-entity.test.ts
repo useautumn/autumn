@@ -215,3 +215,45 @@ test.concurrent(`${chalk.yellowBright("track-entity-overage-4: two entities, dif
 		breakdownLength: 1,
 	});
 });
+
+test.concurrent(`${chalk.yellowBright("track-entity-overage-inherit-1: entity inherits customer enabled:true when entity has no billing control")}`, async () => {
+	const entityProduct = products.base({
+		id: "entity-overage-inherit-track",
+		items: [items.lifetimeMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV2_1, customerId, entities } = await initScenario({
+		customerId: "track-entity-overage-inherit-1",
+		setup: [
+			s.customer({ testClock: false }),
+			s.products({ list: [entityProduct] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [s.attach({ productId: entityProduct.id, entityIndex: 0 })],
+	});
+
+	await setCustomerOverageAllowed({
+		autumn: autumnV2_1,
+		customerId,
+		featureId: TestFeature.Messages,
+		enabled: true,
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		value: 130,
+	});
+
+	await expectEntityFeatureBalance({
+		autumn: autumnV2_1,
+		customerId,
+		entityId: entities[0].id,
+		featureId: TestFeature.Messages,
+		granted: 100,
+		remaining: 0,
+		usage: 130,
+		breakdownLength: 1,
+	});
+});
