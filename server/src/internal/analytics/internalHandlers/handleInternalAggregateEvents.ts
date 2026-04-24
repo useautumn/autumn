@@ -5,6 +5,8 @@ import {
 	type RangeEnum,
 	RecaseError,
 } from "@autumn/shared";
+import { UTCDate } from "@date-fns/utc";
+import { sub } from "date-fns";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
@@ -13,6 +15,13 @@ import { getCustomerNames } from "@/internal/analytics/actions/getCustomerNames.
 import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { eventActions } from "../actions/eventActions.js";
+
+const STANDARD_INTERVAL_DAYS: Record<string, number> = {
+	"24h": 1,
+	"7d": 7,
+	"30d": 30,
+	"90d": 90,
+};
 
 const InternalAggregateEventsSchema = z.object({
 	interval: z.string().nullish(),
@@ -85,21 +94,70 @@ export const handleInternalAggregateEvents = createRoute({
 		// Use provided bin_size, or default based on interval
 		const binSize = bin_size || (interval === "24h" ? "hour" : "day");
 
-		const { formatted: events, truncated } = await eventActions.aggregate({
-			ctx,
-			params: {
-				customer_id: customer_id,
-				entity_id: entity_id,
-				interval: interval as RangeEnum,
-				event_names,
-				bin_size: binSize,
-				aggregateAll,
-				group_by: group_by,
-				customer,
-				timezone: timezone,
-				max_groups,
-			},
-		});
+		// For standard intervals, compute the window once here and pass it as
+		// `custom_range` to both actions. This guarantees the chart (aggregate)
+		// and totals (getCountAndSum) use an identical window so their numbers
+		// stay aligned. Billing-cycle intervals fall through to each action's
+		// own resolution (both use the same `getBillingCycleStartDate`).
+		//
+		// The start is aligned down to the bin boundary (UTC) so the chart's
+		// `hour`-column filter and the totals' `timestamp`-column filter select
+		// the same events — otherwise the chart's first bucket would skip the
+		// sub-hour events the totals include.
+		const standardIntervalDays = interval
+			? STANDARD_INTERVAL_DAYS[interval]
+			: undefined;
+		const now = new UTCDate();
+		const customRange = (() => {
+			if (standardIntervalDays === undefined) return undefined;
+			const unaligned = sub(now, { days: standardIntervalDays });
+			const aligned =
+				binSize === "hour"
+					? new UTCDate(
+							unaligned.getFullYear(),
+							unaligned.getMonth(),
+							unaligned.getDate(),
+							unaligned.getHours(),
+						)
+					: new UTCDate(
+							unaligned.getFullYear(),
+							unaligned.getMonth(),
+							unaligned.getDate(),
+						);
+			return { start: aligned.getTime(), end: now.getTime() };
+		})();
+
+		const [{ formatted: events, truncated }, totals] = await Promise.all([
+			eventActions.aggregate({
+				ctx,
+				params: {
+					customer_id: customer_id,
+					entity_id: entity_id,
+					interval: customRange ? undefined : (interval as RangeEnum),
+					custom_range: customRange,
+					event_names,
+					bin_size: binSize,
+					aggregateAll,
+					group_by: group_by,
+					customer,
+					timezone: timezone,
+					max_groups,
+				},
+			}),
+			eventActions.getCountAndSum({
+				ctx,
+				params: {
+					customer_id: customer_id,
+					entity_id: entity_id,
+					interval: customRange ? undefined : (interval as RangeEnum),
+					custom_range: customRange,
+					event_names,
+					bin_size: binSize,
+					aggregateAll,
+					customer,
+				},
+			}),
+		]);
 
 		// When grouping by entity_id, resolve entity names from ClickHouse
 		let entityNames: Record<string, string> | undefined;
@@ -147,6 +205,7 @@ export const handleInternalAggregateEvents = createRoute({
 		return c.json({
 			customer,
 			events,
+			totals,
 			features,
 			eventNames: event_names,
 			bcExclusionFlag,
