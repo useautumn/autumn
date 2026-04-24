@@ -3,9 +3,11 @@ import {
 	createRedisAvailability,
 	type RedisAvailabilitySnapshot,
 } from "./createRedisAvailability.js";
+import { hasRedisConfig } from "./redisConfig.js";
 
 const redisAvailability = createRedisAvailability({
 	redis,
+	hasConfig: hasRedisConfig,
 	logPrefix: "Redis",
 	logType: "redis_availability_state_set",
 });
