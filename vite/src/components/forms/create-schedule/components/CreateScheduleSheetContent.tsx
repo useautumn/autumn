@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { useHasSchedule } from "../hooks/useHasSchedule";
+import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { SchedulePhaseCard } from "./SchedulePhaseCard";
 import { SchedulePreview } from "./SchedulePreview";
 
@@ -28,7 +29,6 @@ export function CreateScheduleSheetContent() {
 		form,
 		formValues,
 		entityId,
-		isExistingSchedule,
 		handleAddPhase,
 		error,
 		onScopeChange,
@@ -37,7 +37,6 @@ export function CreateScheduleSheetContent() {
 	const hasSchedule = useHasSchedule();
 	const { customer } = useCusQuery();
 	const entities = (customer as FullCustomer | null)?.entities ?? [];
-	const isDirty = useStore(form.store, (state) => state.isDirty);
 
 	const canSubmit = useStore(form.store, (state) => state.canSubmit);
 	const isDisabled = !canSubmit || !!error;
@@ -63,14 +62,6 @@ export function CreateScheduleSheetContent() {
 								const newEntityId =
 									value === CUSTOMER_LEVEL_VALUE ? undefined : value;
 								if (newEntityId === entityId) return;
-								if (isDirty && isExistingSchedule) {
-									if (
-										!window.confirm(
-											"Switching scope will discard unsaved changes. Continue?",
-										)
-									)
-										return;
-								}
 								onScopeChange?.(newEntityId);
 							}}
 							options={[
@@ -182,6 +173,7 @@ export function CreateScheduleReviewContent() {
 			/>
 
 			<div className="flex-1 overflow-y-auto">
+				<CreateScheduleAdvancedSection />
 				<SchedulePreview />
 			</div>
 
