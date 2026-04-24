@@ -59,6 +59,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			entity_id: entityId,
 			user_agent: c.req.header("user-agent"),
 			ip_address: c.req.header("x-forwarded-for"),
+			region: process.env.AWS_REGION,
 			query: c.req.query(),
 			body,
 

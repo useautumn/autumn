@@ -12,6 +12,8 @@ export type LogRequestContext = {
 	user_agent?: string;
 	ip_address?: string;
 
+	region?: string;
+
 	// New fields
 	query: Record<string, string>;
 	body: unknown;
