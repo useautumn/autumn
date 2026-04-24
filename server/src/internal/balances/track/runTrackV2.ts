@@ -51,6 +51,7 @@ export const runTrackV2 = async ({
 				source: "runTrackV2",
 			});
 
+	// If idempotency key is provided, insert event first and skip insertion later
 	if (body.idempotency_key) {
 		await handleEventIdempotencyKey({
 			ctx,
