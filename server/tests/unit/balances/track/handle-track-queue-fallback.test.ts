@@ -111,6 +111,24 @@ describe("track queue fallback", () => {
 		});
 	});
 
+	test("queues track when rollout path hits a raw closed-connection Redis error", async () => {
+		mockState.v3Error = new Error("Connection is closed.");
+
+		const response = await runTrackWithRollout({
+			ctx,
+			body,
+			featureDeductions: [],
+		});
+
+		expect(mockState.queueCommands).toHaveLength(1);
+		expect(response).toEqual({
+			customer_id: "cus_123",
+			entity_id: undefined,
+			value: 2,
+			balance: null,
+		});
+	});
+
 	test("throws retryable Redis failure when queue fallback is unavailable", async () => {
 		const error = new RedisUnavailableError({
 			source: "runTrackV3",
