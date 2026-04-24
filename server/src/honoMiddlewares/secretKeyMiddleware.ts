@@ -75,6 +75,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	// Step 5: Store auth data in context
 	const { org, features, env, userId } = data;
+	const scopes = (data as { scopes?: string[] | null }).scopes ?? [];
 
 	if (features) {
 		features.sort((a: Feature, b: Feature) => {
@@ -89,6 +90,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	ctx.env = env;
 	ctx.userId = userId ?? undefined;
 	ctx.authType = AuthType.SecretKey;
+	ctx.scopes = scopes;
 	if (data?.user) {
 		ctx.user = data.user;
 	}
