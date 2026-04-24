@@ -38,7 +38,7 @@ mock.module(
 );
 
 mock.module(
-	"@/internal/balances/track/utils/handleEventIdempotencyKey.js",
+	"@/internal/balances/track/v3/trackIdempotencyKey.js",
 	() => ({
 		getTrackIdempotencyKey: ({
 			idempotencyKey,

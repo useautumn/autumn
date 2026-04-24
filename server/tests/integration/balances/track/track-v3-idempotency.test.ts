@@ -5,11 +5,10 @@ import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { Decimal } from "decimal.js";
 import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 import {
-	getTrackFeatureIdempotencyKey,
+	getRedisTrackFeatureIdempotencyKey,
 	getTrackIdempotencyKey,
-} from "@/internal/balances/track/utils/handleEventIdempotencyKey.js";
+} from "@/internal/balances/track/v3/trackIdempotencyKey.js";
 import { runTrackV3 } from "@/internal/balances/track/v3/runTrackV3.js";
-import { getRedisIdempotencyKey } from "@/internal/misc/idempotency/checkIdempotencyKey.js";
 import { buildCustomerMeteredScenario } from "../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
 import { withInsertedScenario } from "../../db/full-subject/utils/withInsertedScenario.js";
 
@@ -65,17 +64,15 @@ test("track-v3 idempotency is atomic for single-feature requests", async () => {
 				ctx.apiVersion = originalApiVersion;
 			}
 
-			const { redisKey } = getRedisIdempotencyKey({
+			const { redisKey } = getRedisTrackFeatureIdempotencyKey({
 				orgId: ctx.org.id,
 				env: ctx.env,
-				idempotencyKey: getTrackFeatureIdempotencyKey({
-					trackIdempotencyKey: getTrackIdempotencyKey({
-						idempotencyKey,
-						requestId: ctx.id,
-					}),
-					featureId: TestFeature.Messages,
+				customerId: body.customer_id,
+				trackIdempotencyKey: getTrackIdempotencyKey({
+					idempotencyKey,
+					requestId: ctx.id,
 				}),
-				slotKey: body.customer_id,
+				featureId: TestFeature.Messages,
 			});
 			expect(await ctx.redisV2.exists(redisKey)).toBe(1);
 		},

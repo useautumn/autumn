@@ -7,15 +7,14 @@ import type { Redis } from "ioredis";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
-import { getTrackFeatureIdempotencyKey } from "@/internal/balances/track/utils/handleEventIdempotencyKey.js";
+import {
+	getRedisTrackFeatureIdempotencyKey,
+	TRACK_V3_IDEMPOTENCY_TTL_MS,
+} from "@/internal/balances/track/v3/trackIdempotencyKey.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
-import {
-	getRedisIdempotencyKey,
-	IDEMPOTENCY_TTL_MS,
-} from "@/internal/misc/idempotency/checkIdempotencyKey.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
@@ -133,14 +132,12 @@ export const executeRedisDeductionV2 = async ({
 		}
 
 		const idempotencyRedisKey = idempotencyKey
-			? getRedisIdempotencyKey({
+			? getRedisTrackFeatureIdempotencyKey({
 					orgId: org.id,
 					env,
-					idempotencyKey: getTrackFeatureIdempotencyKey({
-						trackIdempotencyKey: idempotencyKey,
-						featureId: feature.id,
-					}),
-					slotKey: customerId,
+					customerId,
+					trackIdempotencyKey: idempotencyKey,
+					featureId: feature.id,
 				}).redisKey
 			: null;
 
@@ -174,7 +171,7 @@ export const executeRedisDeductionV2 = async ({
 			overage_behaviour: options.overageBehaviour,
 			feature_id: feature.id,
 			idempotency_ttl_ms:
-				idempotencyRedisKey !== null ? IDEMPOTENCY_TTL_MS : null,
+				idempotencyRedisKey !== null ? TRACK_V3_IDEMPOTENCY_TTL_MS : null,
 			lock: preparedLock
 				? {
 						...preparedLock,

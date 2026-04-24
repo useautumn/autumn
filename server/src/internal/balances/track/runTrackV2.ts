@@ -54,8 +54,7 @@ export const runTrackV2 = async ({
 	if (body.idempotency_key) {
 		await handleEventIdempotencyKey({
 			ctx,
-			idempotencyKey: body.idempotency_key,
-			customerId: body.customer_id,
+			body,
 		});
 	}
 
