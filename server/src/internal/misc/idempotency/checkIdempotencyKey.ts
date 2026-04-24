@@ -2,12 +2,28 @@ import { ErrCode, ms, RecaseError } from "@autumn/shared";
 import type { Logger } from "@/external/logtail/logtailUtils";
 import { redis } from "@/external/redis/initRedis.js";
 
-const IDEMPOTENCY_TTL_MS = ms.hours(24);
+export const IDEMPOTENCY_TTL_MS = ms.days(2);
 
 const hashIdempotencyKey = (key: string): string => {
 	const hasher = new Bun.CryptoHasher("sha256");
 	hasher.update(key);
 	return hasher.digest("base64url");
+};
+
+export const getRedisIdempotencyKey = ({
+	orgId,
+	env,
+	idempotencyKey,
+}: {
+	orgId: string;
+	env: string;
+	idempotencyKey: string;
+}) => {
+	const hashedKey = hashIdempotencyKey(idempotencyKey);
+	return {
+		hashedKey,
+		redisKey: `${orgId}:${env}:idempotency:${hashedKey}`,
+	};
 };
 
 /**
@@ -31,8 +47,11 @@ export const checkIdempotencyKey = async ({
 		return;
 	}
 
-	const hashedKey = hashIdempotencyKey(idempotencyKey);
-	const redisKey = `${orgId}:${env}:idempotency:${hashedKey}`;
+	const { hashedKey, redisKey } = getRedisIdempotencyKey({
+		orgId,
+		env,
+		idempotencyKey,
+	});
 
 	try {
 		// Use SET NX (set if not exists) for atomic check-and-set to prevent race conditions

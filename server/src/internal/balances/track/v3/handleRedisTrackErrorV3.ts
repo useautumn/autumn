@@ -47,6 +47,14 @@ export const handleRedisTrackErrorV3 = async ({
 		});
 	}
 
+	if (error.code === RedisDeductionErrorCode.DuplicateIdempotencyKey) {
+		throw new RecaseError({
+			message: `Another request with idempotency key ${body.idempotency_key} has already been received`,
+			code: ErrCode.DuplicateIdempotencyKey,
+			statusCode: 409,
+		});
+	}
+
 	if (error.isRedisUnavailable()) {
 		const queuedResponse = await queueTrack({ ctx, body });
 		if (queuedResponse) return queuedResponse;

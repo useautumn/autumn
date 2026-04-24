@@ -13,7 +13,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
-import { handleEventIdempotencyKey } from "../utils/handleEventIdempotencyKey.js";
+import {
+	getTrackIdempotencyKey,
+	handleEventIdempotencyKey,
+} from "../utils/handleEventIdempotencyKey.js";
 import { runRedisTrackV3 } from "./runRedisTrackV3.js";
 
 const getTrackFullSubject = async ({
@@ -64,10 +67,19 @@ export const runTrackV3 = async ({
 		body,
 	});
 
-	if (body.idempotency_key) {
+	const redisIdempotencyKey =
+		featureDeductions.length === 1
+			? getTrackIdempotencyKey({
+					idempotencyKey: body.idempotency_key,
+					requestId: ctx.id,
+				})
+			: undefined;
+
+	// Multi-feature/event-name requests still use the legacy pre-check path.
+	if (!redisIdempotencyKey) {
 		await handleEventIdempotencyKey({
 			ctx,
-			body,
+			idempotencyKey: body.idempotency_key,
 		});
 	}
 
@@ -77,6 +89,7 @@ export const runTrackV3 = async ({
 		featureDeductions,
 		overageBehavior: body.overage_behavior || "cap",
 		body,
+		idempotencyKey: redisIdempotencyKey,
 	});
 
 	return applyResponseVersionChanges<TrackResponseV3>({
