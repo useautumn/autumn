@@ -83,6 +83,12 @@ export const executeAutumnBillingPlan = async ({
 
 	// 3. Update customer product (DB only)
 	for (const { customerProduct, updates } of updateCustomerProducts) {
+		// Skip empty updates — drizzle throws "No values to set" on empty SET.
+		// This happens when the billing plan registers a customer product update
+		// entry (e.g. for intent=None discount-only flows) but there are no
+		// actual DB columns to change.
+		if (!updates || Object.keys(updates).length === 0) continue;
+
 		await CusProductService.update({
 			ctx,
 			cusProductId: customerProduct.id,

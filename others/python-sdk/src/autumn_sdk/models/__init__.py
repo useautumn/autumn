@@ -105,6 +105,8 @@ if TYPE_CHECKING:
         IntervalTypedDict,
     )
     from .billingupdateop import (
+        BillingUpdateAttachDiscount,
+        BillingUpdateAttachDiscountTypedDict,
         BillingUpdateBasePrice,
         BillingUpdateBasePriceTypedDict,
         BillingUpdateBillingMethod,
@@ -984,6 +986,8 @@ if TYPE_CHECKING:
     )
     from .previewupdateop import (
         Intent,
+        PreviewUpdateAttachDiscount,
+        PreviewUpdateAttachDiscountTypedDict,
         PreviewUpdateBasePrice,
         PreviewUpdateBasePriceTypedDict,
         PreviewUpdateBillingMethod,
@@ -1405,6 +1409,8 @@ __all__ = [
     "BalanceTierBehavior",
     "BalanceType",
     "BalanceTypedDict",
+    "BillingUpdateAttachDiscount",
+    "BillingUpdateAttachDiscountTypedDict",
     "BillingUpdateBasePrice",
     "BillingUpdateBasePriceTypedDict",
     "BillingUpdateBillingMethod",
@@ -2206,6 +2212,8 @@ __all__ = [
     "PreviewMultiAttachUsageLineItemPeriodTypedDict",
     "PreviewMultiAttachUsageLineItemTypedDict",
     "PreviewTypedDict",
+    "PreviewUpdateAttachDiscount",
+    "PreviewUpdateAttachDiscountTypedDict",
     "PreviewUpdateBasePrice",
     "PreviewUpdateBasePriceTypedDict",
     "PreviewUpdateBillingMethod",
@@ -2649,6 +2657,8 @@ _dynamic_imports: dict[str, str] = {
     "BreakdownTypedDict": ".balance",
     "Interval": ".balance",
     "IntervalTypedDict": ".balance",
+    "BillingUpdateAttachDiscount": ".billingupdateop",
+    "BillingUpdateAttachDiscountTypedDict": ".billingupdateop",
     "BillingUpdateBasePrice": ".billingupdateop",
     "BillingUpdateBasePriceTypedDict": ".billingupdateop",
     "BillingUpdateBillingMethod": ".billingupdateop",
@@ -3472,6 +3482,8 @@ _dynamic_imports: dict[str, str] = {
     "PreviewMultiAttachUsageLineItemPeriodTypedDict": ".previewmultiattachop",
     "PreviewMultiAttachUsageLineItemTypedDict": ".previewmultiattachop",
     "Intent": ".previewupdateop",
+    "PreviewUpdateAttachDiscount": ".previewupdateop",
+    "PreviewUpdateAttachDiscountTypedDict": ".previewupdateop",
     "PreviewUpdateBasePrice": ".previewupdateop",
     "PreviewUpdateBasePriceTypedDict": ".previewupdateop",
     "PreviewUpdateBillingMethod": ".previewupdateop",
