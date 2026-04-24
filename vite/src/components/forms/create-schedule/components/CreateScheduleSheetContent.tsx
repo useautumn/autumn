@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 import { useHasSchedule } from "../hooks/useHasSchedule";
+import { CreateScheduleAdvancedSection } from "./CreateScheduleAdvancedSection";
 import { SchedulePhaseCard } from "./SchedulePhaseCard";
 import { SchedulePreview } from "./SchedulePreview";
 
@@ -182,6 +183,7 @@ export function CreateScheduleReviewContent() {
 			/>
 
 			<div className="flex-1 overflow-y-auto">
+				<CreateScheduleAdvancedSection />
 				<SchedulePreview />
 			</div>
 

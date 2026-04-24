@@ -6,7 +6,7 @@ import type {
 } from "@autumn/shared";
 import { CusProductStatus, mapToProductItems } from "@autumn/shared";
 import { motion } from "motion/react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef } from "react";
 import { toast } from "sonner";
 import {
 	AttachFormProvider,
@@ -43,6 +43,7 @@ import {
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -142,6 +143,8 @@ export function buildInitialValues({
 						: { ...EMPTY_SCHEDULE_PLAN };
 				}),
 			})),
+			billingBehavior: null,
+			resetBillingCycle: false,
 		};
 	}
 
@@ -164,6 +167,8 @@ export function buildInitialValues({
 					activePlans.length > 0 ? activePlans : [{ ...EMPTY_SCHEDULE_PLAN }],
 			},
 		],
+		billingBehavior: null,
+		resetBillingCycle: false,
 	};
 }
 
@@ -360,15 +365,10 @@ export function getScheduleForScope({
 export function CreateScheduleSheet() {
 	const { closeSheet } = useSheetStore();
 	const { customer, testClockFrozenTimeMs } = useCusQuery({ schedule: true });
-	const initialEntityId =
-		new URLSearchParams(window.location.search).get("entity_id") ?? undefined;
-	const [scopeEntityId, setScopeEntityId] = useState<string | undefined>(
-		initialEntityId,
-	);
+	const fullCustomer = customer as FullCustomer | undefined;
+	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(fullCustomer);
 
 	const { products } = useProductsQuery();
-
-	const fullCustomer = customer as FullCustomer | undefined;
 	const schedule = getScheduleForScope({
 		customer: fullCustomer,
 		entityId: scopeEntityId,

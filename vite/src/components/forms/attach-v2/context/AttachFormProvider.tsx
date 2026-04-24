@@ -59,6 +59,9 @@ interface AttachFormContextValue {
 	formValues: AttachForm;
 	features: Feature[];
 
+	entityId: string | undefined;
+	onScopeChange?: (entityId: string | undefined) => void;
+
 	product: ProductV2 | undefined;
 	prepaidItems: PrepaidItemWithFeature[];
 	originalItems: ProductItem[] | undefined;
@@ -103,6 +106,7 @@ interface AttachFormProviderProps {
 	onPlanEditorClose?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
+	onScopeChange?: (entityId: string | undefined) => void;
 	initialSchedulePlan?: SchedulePlan | null;
 	disablePreview?: boolean;
 	children: ReactNode;
@@ -135,6 +139,7 @@ export function AttachFormProvider({
 	onPlanEditorClose,
 	onCheckoutRedirect,
 	onSuccess,
+	onScopeChange,
 	initialSchedulePlan,
 	disablePreview,
 	children,
@@ -472,6 +477,8 @@ export function AttachFormProvider({
 			form,
 			formValues,
 			features,
+			entityId,
+			onScopeChange,
 			product: effectiveProduct,
 			prepaidItems,
 			originalItems,
@@ -496,6 +503,8 @@ export function AttachFormProvider({
 			form,
 			formValues,
 			features,
+			entityId,
+			onScopeChange,
 			effectiveProduct,
 			prepaidItems,
 			originalItems,
