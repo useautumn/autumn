@@ -1,49 +1,73 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
+import type { TrackResponseV3 } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 
-const mockState = {
-	shouldUseRedis: true,
-	runTrackV2Calls: [] as Record<string, unknown>[],
-	runTrackV3Calls: [] as Record<string, unknown>[],
-	queueTrackCalls: [] as Record<string, unknown>[],
-	runTrackV3Error: null as unknown,
-	queueTrackResult: undefined as Record<string, unknown> | null | undefined,
+type MockTrackResponse = TrackResponseV3 & {
+	source?: string;
+	queued?: boolean;
 };
-
-mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
-	shouldUseRedisV2: () => mockState.shouldUseRedis,
-}));
-
-mock.module("@/internal/balances/track/runTrackV2.js", () => ({
-	runTrackV2: async (args: Record<string, unknown>) => {
-		mockState.runTrackV2Calls.push(args);
-		return { source: "v2" };
-	},
-}));
-
-mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
-	runTrackV3: async (args: Record<string, unknown>) => {
-		mockState.runTrackV3Calls.push(args);
-		if (mockState.runTrackV3Error) throw mockState.runTrackV3Error;
-		return { source: "v3" };
-	},
-}));
-
-mock.module("@/internal/balances/track/utils/queueTrack.js", () => ({
-	queueTrack: async (args: Record<string, unknown>) => {
-		mockState.queueTrackCalls.push(args);
-		return mockState.queueTrackResult ?? null;
-	},
-}));
 
 import {
 	runTrackWithRollout,
 	shouldUseTrackV3,
 } from "@/internal/balances/track/runTrackWithRollout.js";
 
+const mockState = {
+	runTrackV2Calls: [] as Record<string, unknown>[],
+	runTrackV3Calls: [] as Record<string, unknown>[],
+	queueTrackCalls: [] as Record<string, unknown>[],
+	runTrackV3Error: null as unknown,
+	queueTrackResult: undefined as MockTrackResponse | null | undefined,
+};
+
+const deps = {
+	withRedisFailOpen: async <T>({
+		run,
+		fallback,
+	}: {
+		run: () => Promise<T> | T;
+		fallback: (error: unknown) => Promise<T> | T;
+	}) => {
+		try {
+			return await run();
+		} catch (error) {
+			if (
+				error instanceof RedisUnavailableError ||
+				(error instanceof Error &&
+					error.message === "Connection is closed.")
+			) {
+				return await fallback(error);
+			}
+			throw error;
+		}
+	},
+	runTrackV2: async (args: Record<string, unknown>) => {
+		mockState.runTrackV2Calls.push(args);
+		return {
+			source: "v2",
+			customer_id: "cus_123",
+			value: 1,
+			balance: null,
+		};
+	},
+	runTrackV3: async (args: Record<string, unknown>) => {
+		mockState.runTrackV3Calls.push(args);
+		if (mockState.runTrackV3Error) throw mockState.runTrackV3Error;
+		return {
+			source: "v3",
+			customer_id: "cus_123",
+			value: 1,
+			balance: null,
+		};
+	},
+	queueTrack: async (args: Record<string, unknown>) => {
+		mockState.queueTrackCalls.push(args);
+		return mockState.queueTrackResult ?? null;
+	},
+};
+
 describe("runTrackWithRollout", () => {
 	beforeEach(() => {
-		mockState.shouldUseRedis = true;
 		mockState.runTrackV2Calls = [];
 		mockState.runTrackV3Calls = [];
 		mockState.queueTrackCalls = [];
@@ -85,6 +109,7 @@ describe("runTrackWithRollout", () => {
 			} as never,
 			body: { customer_id: "cus_123", feature_id: "messages" } as never,
 			featureDeductions: [] as never,
+			deps,
 		});
 
 		expect(result).toMatchObject({ source: "v2" });
@@ -98,7 +123,13 @@ describe("runTrackWithRollout", () => {
 			source: "runTrackV3",
 			reason: "timeout",
 		});
-		mockState.queueTrackResult = { queued: true, source: "queued" };
+		mockState.queueTrackResult = {
+			queued: true,
+			source: "queued",
+			customer_id: "cus_123",
+			value: 1,
+			balance: null,
+		};
 
 		const result = await runTrackWithRollout({
 			ctx: {
@@ -113,6 +144,39 @@ describe("runTrackWithRollout", () => {
 			} as never,
 			body: { customer_id: "cus_123", feature_id: "messages" } as never,
 			featureDeductions: [] as never,
+			deps,
+		});
+
+		expect(result).toMatchObject({ queued: true, source: "queued" });
+		expect(mockState.runTrackV2Calls).toHaveLength(0);
+		expect(mockState.runTrackV3Calls).toHaveLength(1);
+		expect(mockState.queueTrackCalls).toHaveLength(1);
+	});
+
+	test("queues fail-open response on closed-connection Redis errors", async () => {
+		mockState.runTrackV3Error = new Error("Connection is closed.");
+		mockState.queueTrackResult = {
+			queued: true,
+			source: "queued",
+			customer_id: "cus_123",
+			value: 1,
+			balance: null,
+		};
+
+		const result = await runTrackWithRollout({
+			ctx: {
+				rolloutSnapshot: {
+					rolloutId: "v2-cache",
+					enabled: true,
+					percent: 100,
+					previousPercent: 0,
+					changedAt: 1,
+					customerBucket: 5,
+				},
+			} as never,
+			body: { customer_id: "cus_123", feature_id: "messages" } as never,
+			featureDeductions: [] as never,
+			deps,
 		});
 
 		expect(result).toMatchObject({ queued: true, source: "queued" });
@@ -142,6 +206,7 @@ describe("runTrackWithRollout", () => {
 				} as never,
 				body: { customer_id: "cus_123", feature_id: "messages" } as never,
 				featureDeductions: [] as never,
+				deps,
 			}),
 		).rejects.toBe(mockState.runTrackV3Error);
 
