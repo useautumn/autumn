@@ -18,16 +18,28 @@ import { featureToCreditSystem } from "@/internal/features/creditSystemUtils.js"
 import { workflows } from "@/queue/workflows.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 
+type RunCheckWithTrackV2Deps = {
+	runTrackV3: typeof runTrackV3;
+	workflows: Pick<typeof workflows, "triggerExpireLockReceipt">;
+};
+
+const defaultDeps: RunCheckWithTrackV2Deps = {
+	runTrackV3,
+	workflows,
+};
+
 export const runCheckWithTrackV2 = async ({
 	ctx,
 	body,
 	requiredBalance,
 	checkData,
+	deps = defaultDeps,
 }: {
 	ctx: AutumnContext;
 	body: ParsedCheckParams;
 	requiredBalance: number;
 	checkData: CheckDataV2;
+	deps?: RunCheckWithTrackV2Deps;
 }) => {
 	if (!body.feature_id) {
 		throw new InternalError({
@@ -79,7 +91,7 @@ export const runCheckWithTrackV2 = async ({
 	let allowed = true;
 
 	try {
-		const response = await runTrackV3({
+		const response = await deps.runTrackV3({
 			ctx,
 			body: trackBody,
 			featureDeductions,
@@ -116,7 +128,7 @@ export const runCheckWithTrackV2 = async ({
 				hashedKey: body.lock.hashed_key,
 			});
 
-			await workflows.triggerExpireLockReceipt(
+			await deps.workflows.triggerExpireLockReceipt(
 				{
 					orgId: ctx.org.id,
 					env: ctx.env,

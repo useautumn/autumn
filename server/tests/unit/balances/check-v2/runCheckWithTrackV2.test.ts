@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
 	ErrCode,
@@ -11,6 +11,7 @@ import {
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckDataV2 } from "@/internal/balances/check/checkTypes/CheckDataV2.js";
+import { runCheckWithTrackV2 } from "@/internal/balances/check/runCheckWithTrackV2.js";
 
 const mockState = {
 	runTrackV3Calls: [] as unknown[],
@@ -18,23 +19,18 @@ const mockState = {
 	runTrackV3Error: null as unknown,
 };
 
-mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
+const deps = {
 	runTrackV3: async (args: unknown) => {
 		mockState.runTrackV3Calls.push(args);
 		if (mockState.runTrackV3Error) throw mockState.runTrackV3Error;
-		return { balance: 10 };
+		return { balance: 10 } as never;
 	},
-}));
-
-mock.module("@/queue/workflows.js", () => ({
 	workflows: {
 		triggerExpireLockReceipt: async (...args: unknown[]) => {
 			mockState.triggerExpireLockReceiptCalls.push(args);
 		},
 	},
-}));
-
-import { runCheckWithTrackV2 } from "@/internal/balances/check/runCheckWithTrackV2.js";
+};
 
 const meteredFeature = {
 	id: "messages",
@@ -116,6 +112,7 @@ describe("runCheckWithTrackV2", () => {
 				} as never,
 				requiredBalance: 1,
 				checkData: buildCheckData(),
+				deps,
 			}),
 		).rejects.toMatchObject({
 			message:
@@ -143,6 +140,7 @@ describe("runCheckWithTrackV2", () => {
 						type: "boolean",
 					} as Feature,
 				}),
+				deps,
 			}),
 		).rejects.toMatchObject({
 			code: ErrCode.InvalidRequest,
@@ -174,6 +172,7 @@ describe("runCheckWithTrackV2", () => {
 						},
 					} as Feature,
 				}),
+				deps,
 			}),
 		).rejects.toMatchObject({
 			code: ErrCode.InvalidRequest,
@@ -205,6 +204,7 @@ describe("runCheckWithTrackV2", () => {
 				} as never,
 				requiredBalance: 1,
 				checkData: buildCheckData(),
+				deps,
 			}),
 		).rejects.toBe(mockState.runTrackV3Error);
 
