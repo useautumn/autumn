@@ -23,11 +23,14 @@ export const queueTrack = async ({
 		await addTaskToQueue({
 			jobName: JobName.Track,
 			queueUrl,
-			messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}`,
-			messageDeduplicationId: body.idempotency_key,
+			messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}:${body.entity_id ?? "none"}`,
+			messageDeduplicationId: ctx.id,
 			payload: {
 				orgId: ctx.org.id,
 				env: ctx.env,
+				customerId: body.customer_id,
+				entityId: body.entity_id,
+				requestId: ctx.id,
 				apiVersion: ctx.apiVersion.value,
 				body,
 			},

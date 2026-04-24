@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import type { Logger } from "pino";
 import { isTransientDbError } from "@/db/dbUtils.js";
+import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -10,6 +11,7 @@ import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
+import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
 import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
@@ -40,6 +42,27 @@ export interface SqsJob {
 	name: string;
 	data: any;
 }
+
+export const shouldRetrySqsJobError = ({
+	jobName,
+	error,
+}: {
+	jobName: string;
+	error: unknown;
+}) => {
+	switch (jobName) {
+		case JobName.SyncBalanceBatchV3:
+		case JobName.SyncBalanceBatchV4:
+		case JobName.RefreshEntityAggregate:
+			return isTransientDbError({ error });
+		case JobName.Track:
+			return (
+				isTransientDbError({ error }) || isTransientRedisError({ error })
+			);
+		default:
+			return false;
+	}
+};
 
 export const processMessage = async ({
 	message,
@@ -175,6 +198,20 @@ export const processMessage = async ({
 			return;
 		}
 
+		if (job.name === JobName.Track) {
+			if (!ctx) {
+				workerLogger.error("No context found for track job");
+				return;
+			}
+
+			await runQueuedTrack({
+				ctx,
+				body: job.data.body,
+				apiVersion: job.data.apiVersion,
+			});
+			return;
+		}
+
 		if (job.name === JobName.RefreshEntityAggregate) {
 			if (!ctx) {
 				workerLogger.error("No context found for refresh entity aggregate job");
@@ -291,14 +328,9 @@ export const processMessage = async ({
 		// Sync jobs: re-throw infrastructure errors so the message stays in SQS.
 		// Application errors (RecaseError, InternalError) are swallowed — they
 		// won't fix on retry. DB errors (connection, timeout) will.
-		if (
-			(job.name === JobName.SyncBalanceBatchV3 ||
-				job.name === JobName.SyncBalanceBatchV4 ||
-				job.name === JobName.RefreshEntityAggregate) &&
-			isTransientDbError({ error })
-		) {
+		if (shouldRetrySqsJobError({ jobName: job.name, error })) {
 			Sentry.captureException(error);
-			errorLogger.error(`[${job.name}] Retryable DB error, keeping in SQS`, {
+			errorLogger.error(`[${job.name}] Retryable error, keeping in SQS`, {
 				jobName: job.name,
 				error:
 					error instanceof Error
