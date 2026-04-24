@@ -33,6 +33,30 @@ const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 // Per-message processing timeout — must be under VisibilityTimeout (30s)
 const MESSAGE_TIMEOUT_MS = 25_000;
 
+type JobOverride = {
+	ackUpfront: true;
+	dispatch: "inline" | "background";
+};
+
+// Jobs whose handlers can exceed the 30s VisibilityTimeout. ACK upfront to
+// avoid redelivery loops; dispatch mode controls whether the poll loop awaits
+// them (inline → preserves backpressure) or fires in background (→ no
+// backpressure; only safe for genuinely rare, low-volume jobs).
+const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
+	// Rare (handful per day); fire-and-forget is safe.
+	[JobName.Migration]: { ackUpfront: true, dispatch: "background" },
+	// Can exceed VisibilityTimeout on large orgs; redelivery causes a
+	// self-amplifying Redis UNLINK storm. Inline so one worker's concurrency
+	// stays capped at the receive batch size.
+	[JobName.ClearCreditSystemCustomerCache]: {
+		ackUpfront: true,
+		dispatch: "inline",
+	},
+};
+
+const getJobOverride = (jobName: string): JobOverride | undefined =>
+	JOB_OVERRIDES[jobName as JobName];
+
 // Stale connection detection
 const EMPTY_POLL_THRESHOLD = 9; // ~3 min of empty polls (9 * 20s wait)
 const HEARTBEAT_INTERVAL_MS = ms.minutes(5);
@@ -147,7 +171,7 @@ const startPollingLoop = async ({
 			...(isFifo && { ReceiveRequestAttemptId: generateId("receive") }),
 		});
 
-	const deleteMigrationJobImmediately = async ({
+	const ackMessageUpfront = async ({
 		sqs,
 		message,
 		job,
@@ -157,7 +181,7 @@ const startPollingLoop = async ({
 		job: SqsJob;
 	}) => {
 		logger.info(
-			`Returning success immediately for migration job ${job.data.migrationJobId}`,
+			`ACKing ${job.name} upfront (messageId=${message.MessageId})`,
 		);
 		await sqs.send(
 			new DeleteMessageCommand({
@@ -179,25 +203,13 @@ const startPollingLoop = async ({
 		if (!isRunning || !message.Body) return null;
 
 		const job: SqsJob = JSON.parse(message.Body);
+		const override = getJobOverride(job.name);
 
-		// Migration jobs: delete IMMEDIATELY before processing (long-running, avoid timeout redelivery)
-		if (job.name === JobName.Migration) {
-			await deleteMigrationJobImmediately({ sqs, message, job });
+		if (override?.ackUpfront) {
+			await ackMessageUpfront({ sqs, message, job });
 		}
 
-		// ClearCreditSystemCustomerCache: ACK upfront (handler can exceed
-		// VisibilityTimeout when clearing many customers, and redelivery
-		// causes a self-amplifying Redis UNLINK storm), but still await
-		// inline so worker concurrency stays capped at the receive batch
-		// size (avoids firing a huge burst of cache clears at once).
-		if (job.name === JobName.ClearCreditSystemCustomerCache) {
-			await deleteMigrationJobImmediately({ sqs, message, job });
-		}
-
-		const isMigration = job.name === JobName.Migration;
-		const isAckedUpfront =
-			isMigration || job.name === JobName.ClearCreditSystemCustomerCache;
-		if (isAckedUpfront) {
+		if (override) {
 			await processMessage({ message, db });
 		} else {
 			await withTimeout({
@@ -210,8 +222,7 @@ const startPollingLoop = async ({
 		messagesProcessed++;
 		totalMessagesProcessed++;
 
-		// Return delete info (skip jobs already deleted upfront)
-		if (message.ReceiptHandle && !isAckedUpfront) {
+		if (message.ReceiptHandle && !override?.ackUpfront) {
 			return { id: message.MessageId!, receiptHandle: message.ReceiptHandle };
 		}
 		return null;
@@ -308,12 +319,13 @@ const startPollingLoop = async ({
 				for (const message of messages) {
 					if (!message.Body) continue;
 					const job: SqsJob = JSON.parse(message.Body);
-					if (job.name === JobName.Migration) {
+					const override = getJobOverride(job.name);
+					if (override?.dispatch === "background") {
 						activeMigrationJobs++;
 						handleSingleMessage({ sqs, message, db })
 							.catch((error) => {
 								console.error(
-									`${prefix} Migration job failed:`,
+									`${prefix} Background job ${job.name} failed:`,
 									error instanceof Error ? error.message : error,
 								);
 								Sentry.captureException(error);
