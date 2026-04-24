@@ -64,10 +64,7 @@ export const runTrackV3 = async ({
 		body,
 	});
 
-	const redisIdempotencyKey = getTrackIdempotencyKey({
-		idempotencyKey: body.idempotency_key,
-		requestId: ctx.id,
-	});
+	const redisIdempotencyKey = getTrackIdempotencyKey({ ctx });
 
 	const response: TrackResponseV3 = await runRedisTrackV3({
 		ctx,

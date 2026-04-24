@@ -133,10 +133,8 @@ export const executeRedisDeductionV2 = async ({
 
 		const idempotencyRedisKey = idempotencyKey
 			? getRedisTrackFeatureIdempotencyKey({
-					orgId: org.id,
-					env,
+					ctx,
 					customerId,
-					trackIdempotencyKey: idempotencyKey,
 					featureId: feature.id,
 				}).redisKey
 			: null;

@@ -1,14 +1,10 @@
 import { ms } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 export const TRACK_V3_IDEMPOTENCY_TTL_MS = ms.days(2);
 
-export const getTrackIdempotencyKey = ({
-	idempotencyKey,
-	requestId,
-}: {
-	idempotencyKey?: string;
-	requestId: string;
-}) => `track:${idempotencyKey || requestId}`;
+export const getTrackIdempotencyKey = ({ ctx }: { ctx: AutumnContext }) =>
+	`track:${ctx.id}`;
 
 const hashIdempotencyKey = (key: string) => {
 	const hasher = new Bun.CryptoHasher("sha256");
@@ -17,23 +13,19 @@ const hashIdempotencyKey = (key: string) => {
 };
 
 export const getRedisTrackFeatureIdempotencyKey = ({
-	orgId,
-	env,
+	ctx,
 	customerId,
-	trackIdempotencyKey,
 	featureId,
 }: {
-	orgId: string;
-	env: string;
+	ctx: AutumnContext;
 	customerId: string;
-	trackIdempotencyKey: string;
 	featureId: string;
 }) => {
 	const hashedKey = hashIdempotencyKey(
-		`${trackIdempotencyKey}:feature:${featureId}`,
+		`${getTrackIdempotencyKey({ ctx })}:feature:${featureId}`,
 	);
 	return {
 		hashedKey,
-		redisKey: `{${customerId}}:${orgId}:${env}:idempotency:${hashedKey}`,
+		redisKey: `{${customerId}}:${ctx.org.id}:${ctx.env}:idempotency:${hashedKey}`,
 	};
 };
