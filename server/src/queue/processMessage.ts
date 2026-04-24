@@ -29,6 +29,7 @@ import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutRewa
 import { generateId } from "@/utils/genUtils.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
+import { withWorkerSpan } from "@/utils/otel/withWorkerSpan.js";
 import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { JobName } from "./JobName.js";
@@ -78,10 +79,12 @@ export const processMessage = async ({
 
 	const job: SqsJob = JSON.parse(message.Body);
 
+	const workflowId = message.MessageId ?? generateId("job");
+
 	const workerLogger = addWorkflowToLogs({
 		logger: logger,
 		workflowContext: {
-			id: message.MessageId ?? generateId("job"),
+			id: workflowId,
 			name: job.name,
 			payload: job.data,
 		},
@@ -322,7 +325,16 @@ export const processMessage = async ({
 	};
 
 	try {
-		await executeJob();
+		await withWorkerSpan({
+			workflowName: job.name,
+			workflowId,
+			tenantAttrs: {
+				org_id: job.data?.orgId,
+				env: job.data?.env,
+				customer_id: job.data?.customerId,
+			},
+			fn: executeJob,
+		});
 	} catch (error) {
 		const errorLogger = workerCtx?.logger ?? workerLogger;
 		// Sync jobs: re-throw infrastructure errors so the message stays in SQS.
