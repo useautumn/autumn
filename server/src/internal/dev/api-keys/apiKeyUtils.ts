@@ -38,6 +38,10 @@ export const hashApiKey = (apiKey: string) => {
 	return crypto.createHash("sha256").update(apiKey).digest("hex");
 };
 
+/**
+ * Note: scope subset validation (requestedScopes ⊆ callerScopes) is the
+ * caller's responsibility. This function trusts its input.
+ */
 export const createKey = async ({
 	db,
 	env,
@@ -46,6 +50,7 @@ export const createKey = async ({
 	orgId,
 	prefix,
 	meta,
+	scopes,
 }: {
 	db: DrizzleCli;
 	env: AppEnv;
@@ -54,6 +59,7 @@ export const createKey = async ({
 	prefix: string;
 	meta: Record<string, unknown>;
 	userId?: string;
+	scopes?: string[];
 }) => {
 	const apiKey = generateApiKey(42, prefix);
 	const hashedKey = hashApiKey(apiKey);
@@ -68,6 +74,7 @@ export const createKey = async ({
 		env,
 		hashed_key: hashedKey,
 		meta,
+		scopes: scopes ?? null,
 	};
 
 	await ApiKeyService.insert({ db, apiKey: apiKeyData });
@@ -75,6 +82,10 @@ export const createKey = async ({
 	return apiKey;
 };
 
+/**
+ * Note: scope subset validation (requestedScopes ⊆ callerScopes) is the
+ * caller's responsibility. This function trusts its input.
+ */
 export const createHardcodedKey = async ({
 	db,
 	env,
@@ -82,6 +93,7 @@ export const createHardcodedKey = async ({
 	orgId,
 	hardcodedKey,
 	meta,
+	scopes,
 }: {
 	db: DrizzleCli;
 	env: AppEnv;
@@ -89,6 +101,7 @@ export const createHardcodedKey = async ({
 	orgId: string;
 	hardcodedKey: string;
 	meta: Record<string, unknown>;
+	scopes?: string[];
 }): Promise<{ key: string; alreadyExists: boolean }> => {
 	const hashedKey = hashApiKey(hardcodedKey);
 
@@ -113,6 +126,7 @@ export const createHardcodedKey = async ({
 		env,
 		hashed_key: hashedKey,
 		meta,
+		scopes: scopes ?? null,
 	};
 
 	await ApiKeyService.insert({ db, apiKey: apiKeyData });

@@ -48,6 +48,15 @@ export type RequestContext = {
 	apiVersion: ApiVersionClass;
 	timestamp: number;
 
+	/** Granted auth scopes for this request.
+	 *  Empty array `[]` is the legacy/unrestricted signal.
+	 *  Stored as raw strings (not ScopeString) because different auth paths
+	 *  (secret key, better-auth, public key) may write legacy scope strings
+	 *  that haven't been normalised yet; the scope-check middleware
+	 *  normalises at check time. Kept as raw strings to keep this file
+	 *  dependency-free. */
+	scopes: string[];
+
 	// Query params
 	expand: string[];
 	skipCache: boolean;
