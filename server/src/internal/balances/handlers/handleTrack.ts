@@ -19,13 +19,13 @@ export const handleTrack = createRoute({
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 		const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
+		const response = await runTrackWithRollout({
+			ctx,
+			body,
+			featureDeductions,
+		});
+		const status = ctx.extraLogs.trackQueuedForReplay ? 202 : 200;
 
-		return c.json(
-			await runTrackWithRollout({
-				ctx,
-				body,
-				featureDeductions,
-			}),
-		);
+		return c.json(response, status);
 	},
 });
