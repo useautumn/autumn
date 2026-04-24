@@ -19,6 +19,8 @@ const redisV2Config = getRedisV2ConnectionConfig({
 	currentRegion,
 });
 
+export const hasRedisV2Config = Boolean(redisV2Config);
+
 export const redisV2: Redis = redisV2Config
 	? createRedisConnection(redisV2Config)
 	: redis;
