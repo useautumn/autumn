@@ -91,7 +91,10 @@ if (cluster.isPrimary) {
 		}
 	});
 } else {
-	// Worker process
+	// Worker process — start OTel SDK so child spans (Stripe/Redis/Drizzle/
+	// withSpan/withWorkerSpan) export to Axiom.
+	await import("./instrumentation.js");
+
 	const startupStartedAt = Date.now();
 	const queueImplementation = "SQS";
 	startMemoryMonitor("worker", 60_000);
