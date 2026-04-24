@@ -5,10 +5,12 @@ import { buildSharedFullSubjectBalanceKey } from "./buildSharedFullSubjectBalanc
 // declared via KEYS[]. Layout the deductFromSubjectBalances script expects:
 //   KEYS[1]  = routing key
 //   KEYS[2]  = lock receipt key ("" when no lock)
-//   KEYS[3+] = per-feature balance hash keys
+//   KEYS[3]  = idempotency key ("" when request is not idempotent)
+//   KEYS[4+] = per-feature balance hash keys
 const ROUTING_KEY_INDEX = 1;
 const LOCK_RECEIPT_KEY_INDEX = 2;
-const BALANCE_KEYS_START_INDEX = 3;
+const IDEMPOTENCY_KEY_INDEX = 3;
+const BALANCE_KEYS_START_INDEX = 4;
 
 export const buildDeductFromSubjectBalancesKeys = ({
 	orgId,
@@ -16,6 +18,7 @@ export const buildDeductFromSubjectBalancesKeys = ({
 	customerId,
 	routingKey,
 	lockReceiptKey,
+	idempotencyKey,
 	customerEntitlementDeductions,
 	fallbackFeatureId,
 }: {
@@ -24,6 +27,7 @@ export const buildDeductFromSubjectBalancesKeys = ({
 	customerId: string;
 	routingKey: string;
 	lockReceiptKey: string | null | undefined;
+	idempotencyKey?: string | null;
 	customerEntitlementDeductions: { feature_id?: string }[];
 	fallbackFeatureId: string;
 }) => {
@@ -51,6 +55,7 @@ export const buildDeductFromSubjectBalancesKeys = ({
 	);
 	keys[ROUTING_KEY_INDEX - 1] = routingKey;
 	keys[LOCK_RECEIPT_KEY_INDEX - 1] = lockReceiptKey ?? "";
+	keys[IDEMPOTENCY_KEY_INDEX - 1] = idempotencyKey ?? "";
 	for (let i = 0; i < balanceFeatureIds.length; i++) {
 		keys[BALANCE_KEYS_START_INDEX - 1 + i] =
 			balanceKeysByFeatureId[balanceFeatureIds[i]];

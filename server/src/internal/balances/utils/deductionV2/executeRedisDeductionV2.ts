@@ -11,6 +11,10 @@ import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWe
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
+import {
+	getRedisIdempotencyKey,
+	IDEMPOTENCY_TTL_MS,
+} from "@/internal/misc/idempotency/checkIdempotencyKey.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
@@ -36,6 +40,7 @@ export const executeRedisDeductionV2 = async ({
 	fullSubject,
 	entityId,
 	deductions,
+	idempotencyKey,
 	deductionOptions = {},
 	redisInstance,
 }: {
@@ -43,6 +48,7 @@ export const executeRedisDeductionV2 = async ({
 	fullSubject: FullSubject;
 	entityId?: string;
 	deductions: FeatureDeduction[];
+	idempotencyKey?: string | null;
 	deductionOptions?: DeductionOptions;
 	redisInstance?: Redis;
 }): Promise<{
@@ -96,6 +102,13 @@ export const executeRedisDeductionV2 = async ({
 		customerId,
 		entityId: fullSubject.entityId,
 	});
+	const idempotencyRedisKey = idempotencyKey
+		? getRedisIdempotencyKey({
+				orgId: org.id,
+				env,
+				idempotencyKey,
+			}).redisKey
+		: null;
 
 	for (const deduction of deductions) {
 		const {
@@ -132,6 +145,7 @@ export const executeRedisDeductionV2 = async ({
 				customerId,
 				routingKey,
 				lockReceiptKey: preparedLock?.redis_receipt_key ?? lockReceiptKey,
+				idempotencyKey: idempotencyRedisKey,
 				customerEntitlementDeductions,
 				fallbackFeatureId: feature.id,
 			});
@@ -153,6 +167,8 @@ export const executeRedisDeductionV2 = async ({
 			alter_granted_balance: options.alterGrantedBalance,
 			overage_behaviour: options.overageBehaviour,
 			feature_id: feature.id,
+			idempotency_ttl_ms:
+				idempotencyRedisKey !== null ? IDEMPOTENCY_TTL_MS : null,
 			lock: preparedLock
 				? {
 						...preparedLock,
