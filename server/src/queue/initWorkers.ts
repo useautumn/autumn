@@ -12,6 +12,10 @@ import * as Sentry from "@sentry/bun";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { verifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
+import {
+	isJobQueueEnabled,
+	JOB_QUEUE_IDS,
+} from "@/internal/misc/jobQueues/jobQueueStore.js";
 import { generateId } from "@/utils/genUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
@@ -21,7 +25,8 @@ import { processMessage, type SqsJob } from "./processMessage.js";
 
 // ============ Shared State ============
 let isRunning = true;
-let abortController: AbortController;
+const abortControllers = new Set<AbortController>();
+export const getAbortControllerCountForTesting = () => abortControllers.size;
 
 // Process recycling — exit after processing this many messages to prevent memory leaks
 const MAX_MESSAGES_BEFORE_RECYCLE = 50_000;
@@ -71,18 +76,20 @@ const logPrefix = ({ queueUrl }: { queueUrl: string }) =>
 
 // ============ Polling Loop (per-queue, per-loop state) ============
 
-const startPollingLoop = async ({
+export const startPollingLoop = async ({
 	db,
 	queueUrl,
 	isFifo,
 	getSqsClientFn,
 	recreateSqsClientFn,
+	shouldPoll = () => true,
 }: {
 	db: DrizzleCli;
 	queueUrl: string;
 	isFifo: boolean;
 	getSqsClientFn: () => SQSClient;
 	recreateSqsClientFn: () => SQSClient;
+	shouldPoll?: () => boolean;
 }) => {
 	// Per-loop state
 	let messagesProcessed = 0;
@@ -94,6 +101,13 @@ const startPollingLoop = async ({
 	let consecutiveZeroMessageIntervals = 0;
 
 	const prefix = logPrefix({ queueUrl });
+	let abortController = new AbortController();
+	abortControllers.add(abortController);
+	const replaceAbortController = () => {
+		abortControllers.delete(abortController);
+		abortController = new AbortController();
+		abortControllers.add(abortController);
+	};
 
 	const alertZeroMessages = () => {
 		const minutes = consecutiveZeroMessageIntervals;
@@ -129,6 +143,13 @@ const startPollingLoop = async ({
 	};
 
 	const logStatsAndCheckZeroMessages = () => {
+		if (!shouldPoll()) {
+			consecutiveZeroMessageIntervals = 0;
+			messagesProcessed = 0;
+			lastStatsTime = Date.now();
+			return;
+		}
+
 		const elapsedSeconds = ((Date.now() - lastStatsTime) / 1000).toFixed(0);
 		const mem = process.memoryUsage();
 		console.log(
@@ -266,7 +287,7 @@ const startPollingLoop = async ({
 				`${prefix} ${consecutiveEmptyPolls} consecutive empty polls - recreating SQS client`,
 			);
 			consecutiveEmptyPolls = 0;
-			abortController = new AbortController();
+			replaceAbortController();
 			return recreateSqsClientFn();
 		}
 
@@ -291,7 +312,7 @@ const startPollingLoop = async ({
 		if (consecutiveEmptyPolls >= EMPTY_POLL_THRESHOLD) {
 			console.warn(`${prefix} Repeated errors - recreating SQS client`);
 			consecutiveEmptyPolls = 0;
-			abortController = new AbortController();
+			replaceAbortController();
 			await new Promise((resolve) => setTimeout(resolve, 5000));
 			return recreateSqsClientFn();
 		}
@@ -306,6 +327,12 @@ const startPollingLoop = async ({
 
 	while (isRunning) {
 		try {
+			if (!shouldPoll()) {
+				consecutiveEmptyPolls = 0;
+				await new Promise((resolve) => setTimeout(resolve, 5000));
+				continue;
+			}
+
 			const response = await sqs.send(createReceiveCommand(), {
 				abortSignal: abortController.signal,
 			});
@@ -371,6 +398,7 @@ const startPollingLoop = async ({
 		}
 	}
 
+	abortControllers.delete(abortController);
 	clearInterval(statsInterval);
 	console.log(`${prefix} Stopped`);
 };
@@ -393,7 +421,9 @@ export const initWorkers = async ({
 	const shutdown = async () => {
 		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
 		isRunning = false;
-		if (abortController) abortController.abort();
+		for (const controller of abortControllers) {
+			controller.abort();
+		}
 
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {
@@ -409,20 +439,37 @@ export const initWorkers = async ({
 	process.on("SIGTERM", shutdown);
 	process.on("SIGINT", shutdown);
 
-	abortController = new AbortController();
-
 	const startupDurationMs = Date.now() - startupStartedAt;
 	console.log(
 		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
 	);
+	const pollingLoops = [];
 
-	await startPollingLoop({
-		db,
-		queueUrl: QUEUE_URL,
-		isFifo: QUEUE_URL.endsWith(".fifo"),
-		getSqsClientFn: getSqsClient,
-		recreateSqsClientFn: recreateSqsClient,
-	});
+	for (const { queueId, queueUrl } of [
+		{
+			queueId: JOB_QUEUE_IDS.primary,
+			queueUrl: QUEUE_URL,
+		},
+		{
+			queueId: JOB_QUEUE_IDS.track,
+			queueUrl: process.env.TRACK_SQS_QUEUE_URL,
+		},
+	]) {
+		if (!queueUrl) continue;
+
+		pollingLoops.push(
+			startPollingLoop({
+				db,
+				queueUrl,
+				isFifo: queueUrl.endsWith(".fifo"),
+				getSqsClientFn: getSqsClient,
+				recreateSqsClientFn: recreateSqsClient,
+				shouldPoll: () => isJobQueueEnabled({ queue: queueId }),
+			}),
+		);
+	}
+
+	await Promise.all(pollingLoops);
 };
 
 export const initHatchetWorker = async () => {

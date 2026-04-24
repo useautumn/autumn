@@ -1,6 +1,9 @@
 import { RedisUnavailableError } from "./errors.js";
 
-const TRANSIENT_REDIS_ERROR_MESSAGES = new Set(["Command timed out"]);
+const TRANSIENT_REDIS_ERROR_MESSAGES = new Set([
+	"Command timed out",
+	"Connection is closed.",
+]);
 const TRANSIENT_REDIS_ERROR_NAMES = new Set(["MaxRetriesPerRequestError"]);
 
 export const isTransientRedisError = ({
