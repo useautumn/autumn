@@ -3,6 +3,7 @@ import {
 	CustomerNotFoundError,
 	ErrCode,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
@@ -11,6 +12,7 @@ import { generateId } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
 
 export const handleGetReferralCode = createRoute({
+	scopes: [Scopes.Rewards.Write],
 	body: CreateReferralCodeParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

@@ -1,9 +1,10 @@
-import { member, organizations, user } from "@autumn/shared";
+import { member, organizations, user, Scopes } from "@autumn/shared";
 import { and, desc, eq, gt, gte, ilike, inArray, lt, or } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
 
 export const handleListAdminOrgs = createRoute({
+	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db } = ctx;

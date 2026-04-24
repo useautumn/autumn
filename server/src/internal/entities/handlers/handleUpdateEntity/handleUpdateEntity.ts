@@ -2,6 +2,7 @@ import {
 	AffectedResource,
 	CustomerNotFoundError,
 	UpdateEntityParamsSchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { findCustomerForEntity } from "../../actions/findCustomer.js";
@@ -9,6 +10,7 @@ import { entityActions } from "../../actions/index.js";
 import { getApiEntityByRollout } from "../../actions/getApiEntityByRollout.js";
 
 export const handleUpdateEntity = createRoute({
+	scopes: [Scopes.Customers.Write],
 	body: UpdateEntityParamsSchema,
 	resource: AffectedResource.Entity,
 	handler: async (c) => {

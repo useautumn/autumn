@@ -1,8 +1,10 @@
 import { getSvixDashboardUrl } from "../../../external/svix/svixHelpers";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { ApiKeyService } from "../ApiKeyService";
 
 export const handleGetDevData = createRoute({
+	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, env, org } = ctx;

@@ -1,3 +1,4 @@
+import { Scopes } from "@autumn/shared";
 import type { UpdateSubscriptionV1Params } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
@@ -12,6 +13,7 @@ import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/bui
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 
 export const handleCancelV2 = createRoute({
+	scopes: [Scopes.Billing.Write],
 	lock:
 		process.env.NODE_ENV !== "development"
 			? {

@@ -1,8 +1,9 @@
-import { oauthClient } from "@autumn/shared";
+import { oauthClient, Scopes } from "@autumn/shared";
 import { desc } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 export const handleListOAuthClients = createRoute({
+	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db } = ctx;

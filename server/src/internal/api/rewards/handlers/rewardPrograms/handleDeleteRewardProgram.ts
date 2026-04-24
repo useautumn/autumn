@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
 
@@ -7,6 +8,7 @@ const DeleteRewardProgramParamsSchema = z.object({
 });
 
 export const handleDeleteRewardProgram = createRoute({
+	scopes: [Scopes.Rewards.Write],
 	params: DeleteRewardProgramParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

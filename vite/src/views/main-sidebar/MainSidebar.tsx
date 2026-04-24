@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
+import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
@@ -86,6 +87,8 @@ export const MainSidebar = ({
 	const env = useEnv();
 
 	const flags = useAutumnFlags();
+	const { has } = useScopes();
+	const canSeeDev = has("apiKeys:read");
 
 	const [storedExpanded, setExpanded] = useLocalStorage<boolean>(
 		"sidebar.expanded",
@@ -183,15 +186,17 @@ export const MainSidebar = ({
 							title="Analytics"
 							env={env}
 						/>
-						<CollapsibleNavGroup
-							value="dev"
-							icon={<TerminalWindowIcon size={16} weight="fill" />}
-							title="Developer"
-							env={env}
-							isOpen={devGroupOpen}
-							onToggle={() => setDevGroupOpen((prev) => !prev)}
-							subTabs={buildDevSubTabs({ flags })}
-						/>
+						{canSeeDev && (
+							<CollapsibleNavGroup
+								value="dev"
+								icon={<TerminalWindowIcon size={16} weight="fill" />}
+								title="Developer"
+								env={env}
+								isOpen={devGroupOpen}
+								onToggle={() => setDevGroupOpen((prev) => !prev)}
+								subTabs={buildDevSubTabs({ flags })}
+							/>
+						)}
 					</div>
 				</div>
 

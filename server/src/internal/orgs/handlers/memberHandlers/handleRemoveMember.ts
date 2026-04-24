@@ -1,9 +1,10 @@
-import { session as authSession, member, RecaseError } from "@autumn/shared";
+import { session as authSession, member, RecaseError, Scopes } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod/v4";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 
 export const handleRemoveMember = createRoute({
+	scopes: { ANY: [Scopes.Admin, Scopes.Owner] },
 	body: z.object({
 		memberId: z.string(),
 		userId: z.string(),

@@ -1,4 +1,4 @@
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getRuntimeFeatureFlag } from "@/internal/misc/featureFlags/featureFlagStore.js";
@@ -27,6 +27,7 @@ const assertRevenueMetricsEnabled = () => {
 };
 
 export const handleRevenueByProduct = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: z.object({
 		granularity: z.enum(["day", "month", "year"]).default("month"),
 	}),
@@ -40,6 +41,7 @@ export const handleRevenueByProduct = createRoute({
 });
 
 export const handleRevenueProductShare = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: z.object({}),
 	handler: async (c) => {
 		assertRevenueMetricsEnabled();
@@ -50,6 +52,7 @@ export const handleRevenueProductShare = createRoute({
 });
 
 export const handleArpc = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: z.object({}),
 	handler: async (c) => {
 		assertRevenueMetricsEnabled();
@@ -60,6 +63,7 @@ export const handleArpc = createRoute({
 });
 
 export const handleInvoiceStatus = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: z.object({}),
 	handler: async (c) => {
 		assertRevenueMetricsEnabled();
@@ -70,6 +74,7 @@ export const handleInvoiceStatus = createRoute({
 });
 
 export const handleCustomerLeaderboard = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: z.object({}),
 	handler: async (c) => {
 		assertRevenueMetricsEnabled();
@@ -80,6 +85,7 @@ export const handleCustomerLeaderboard = createRoute({
 });
 
 export const handleEstimatedMrr = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: z.object({}),
 	handler: async (c) => {
 		assertRevenueMetricsEnabled();

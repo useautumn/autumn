@@ -3,6 +3,7 @@ import {
 	type ConfirmCheckoutParams,
 	ConfirmCheckoutParamsSchema,
 	type PreviewCheckoutResponse,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { augmentCheckoutParams } from "../utils/augmentCheckoutParams";
@@ -27,6 +28,7 @@ const getAdjustableFeatureIds = ({ checkout }: { checkout: Checkout }) => {
  * Used for inline quantity editing in the checkout UI.
  */
 export const handlePreviewCheckout = createRoute({
+	scopes: [Scopes.Public],
 	body: ConfirmCheckoutParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

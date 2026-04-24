@@ -3,6 +3,7 @@ import {
 	GetBillingPortalQuerySchema,
 	InternalError,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import z from "zod/v4";
@@ -13,6 +14,7 @@ import { toSuccessUrl } from "../../../orgs/orgUtils/convertOrgUtils";
 import { CusService } from "../../CusService";
 
 export const handleGetBillingPortal = createRoute({
+	scopes: [Scopes.Billing.Read],
 	query: GetBillingPortalQuerySchema,
 	params: z.object({
 		customer_id: z.string(),

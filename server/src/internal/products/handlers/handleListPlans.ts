@@ -3,6 +3,7 @@ import {
 	type ApiPlanV1,
 	applyResponseVersionChanges,
 	ListPlansQuerySchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { CusService } from "../../customers/CusService";
@@ -10,6 +11,7 @@ import { ProductService } from "../ProductService";
 import { getPlanResponse } from "../productUtils/productResponseUtils/getPlanResponse";
 
 export const handleListPlans = createRoute({
+	scopes: [Scopes.Plans.Read],
 	query: ListPlansQuerySchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

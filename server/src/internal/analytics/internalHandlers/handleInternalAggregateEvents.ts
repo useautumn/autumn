@@ -4,6 +4,7 @@ import {
 	type FullCustomer,
 	type RangeEnum,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
@@ -29,6 +30,7 @@ const InternalAggregateEventsSchema = z.object({
  * Query events by customer ID
  */
 export const handleInternalAggregateEvents = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: InternalAggregateEventsSchema,
 	handler: async (c) => {
 		assertTinybirdAvailable();

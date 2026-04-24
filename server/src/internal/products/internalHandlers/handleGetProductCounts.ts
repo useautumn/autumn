@@ -1,4 +1,5 @@
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { Scopes } from "@autumn/shared";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService";
 import { ProductService } from "@/internal/products/ProductService";
 
@@ -7,6 +8,7 @@ import { ProductService } from "@/internal/products/ProductService";
  * Used by: vite/src/hooks/queries/useProductsQuery.tsx
  */
 export const handleGetProductCounts = createRoute({
+	scopes: [Scopes.Plans.Read],
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");
 

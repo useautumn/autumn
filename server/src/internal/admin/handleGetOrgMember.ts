@@ -1,4 +1,4 @@
-import { member, user } from "@autumn/shared";
+import { member, user, Scopes } from "@autumn/shared";
 import { and, eq, isNull, ne, or } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
@@ -11,6 +11,7 @@ import { createRoute } from "../../honoMiddlewares/routeHandler";
  * Returns the userId of the first non-admin member of the org.
  */
 export const handleGetOrgMember = createRoute({
+	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db } = ctx;

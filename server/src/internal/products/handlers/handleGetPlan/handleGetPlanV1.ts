@@ -5,6 +5,7 @@ import {
 	ErrCode,
 	ProductNotFoundError,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -19,6 +20,7 @@ const GetProductQuerySchema = z.object({
  * Route: GET /products/:product_id - Get a product by ID
  */
 export const handleGetPlanV1 = createRoute({
+	scopes: [Scopes.Plans.Read],
 	query: GetProductQuerySchema,
 	resource: AffectedResource.Product,
 	handler: async (c) => {

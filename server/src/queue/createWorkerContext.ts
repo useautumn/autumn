@@ -80,6 +80,7 @@ export const createWorkerContext = async ({
 		isPublic: false,
 		authType: AuthType.Worker,
 		apiVersion,
+		scopes: [],
 		expand: [],
 		skipCache: true,
 		extraLogs: {},

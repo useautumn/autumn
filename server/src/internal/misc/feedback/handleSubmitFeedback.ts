@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 const SubmitFeedbackSchema = z.object({
@@ -6,6 +7,7 @@ const SubmitFeedbackSchema = z.object({
 });
 
 export const handleSubmitFeedback = createRoute({
+	scopes: [Scopes.Public],
 	body: SubmitFeedbackSchema,
 	handler: async (c) => {
 		const { feedback } = c.req.valid("json");

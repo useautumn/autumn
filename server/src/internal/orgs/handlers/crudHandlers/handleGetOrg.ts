@@ -2,6 +2,7 @@ import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
 import { createOrgResponse } from "../../orgUtils.js";
 
 export const handleGetOrg = createRoute({
+	scopes: [],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org, env } = ctx;

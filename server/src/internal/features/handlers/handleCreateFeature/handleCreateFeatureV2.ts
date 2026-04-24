@@ -6,11 +6,13 @@ import {
 	dbToApiFeatureV1,
 	featureV1ToDbFeature,
 	InternalError,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { createFeature } from "@/internal/features/featureActions/createFeature.js";
 
 export const handleCreateFeatureV2 = createRoute({
+	scopes: [Scopes.Features.Write],
 	body: CreateFeatureV2ParamsSchema,
 	resource: AffectedResource.Feature,
 	handler: async (c) => {
