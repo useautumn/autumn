@@ -71,9 +71,9 @@ local lock_receipt_key_from_keys = KEYS[2]
 if lock_receipt_key_from_keys == '' then
   lock_receipt_key_from_keys = nil
 end
-local idempotency_key_from_keys = KEYS[3]
-if idempotency_key_from_keys == '' then
-  idempotency_key_from_keys = nil
+local idempotency_key = KEYS[3]
+if idempotency_key == '' then
+  idempotency_key = nil
 end
 
 -- Rebuild balance_keys_by_feature_id by dereferencing KEYS via the index map.
@@ -112,8 +112,8 @@ local lock = params.lock
 local unwind_value = params.unwind_value
 local lock_receipt_key = lock_receipt_key_from_keys
 
-if not is_nil(idempotency_key_from_keys) then
-  if redis.call('EXISTS', idempotency_key_from_keys) == 1 then
+if not is_nil(idempotency_key) then
+  if redis.call('EXISTS', idempotency_key) == 1 then
     return cjson.encode({
       error = 'DUPLICATE_IDEMPOTENCY_KEY',
       updates = {},
@@ -308,8 +308,8 @@ update_aggregated_balances({
   mutation_logs = mutation_logs,
 })
 
-if not is_nil(idempotency_key_from_keys) and not is_nil(idempotency_ttl_ms) then
-  redis.call('SET', idempotency_key_from_keys, '1', 'PX', idempotency_ttl_ms)
+if not is_nil(idempotency_key) and not is_nil(idempotency_ttl_ms) then
+  redis.call('SET', idempotency_key, '1', 'PX', idempotency_ttl_ms)
 end
 
 logger.log("=== LUA DEDUCTION END ===")
