@@ -24,7 +24,7 @@ export const queueTrack = async ({
 			jobName: JobName.Track,
 			queueUrl,
 			messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}:${body.entity_id ?? "none"}`,
-			messageDeduplicationId: body.idempotency_key || ctx.id,
+			messageDeduplicationId: ctx.id,
 			payload: {
 				orgId: ctx.org.id,
 				env: ctx.env,

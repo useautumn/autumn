@@ -1,23 +1,20 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	ApiVersion,
 	ApiVersionClass,
 	AppEnv,
-	type TrackResponseV3,
 } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getSqsClient } from "@/queue/initSqs.js";
 
 const mockState = {
-	queueCalls: [] as Record<string, unknown>[],
+	queueCommands: [] as Record<string, unknown>[],
+	queueError: null as Error | null,
+	originalSend: null as ReturnType<typeof getSqsClient>["send"] | null,
 	runTrackV2Calls: [] as Record<string, unknown>[],
 	runTrackV3Calls: [] as Record<string, unknown>[],
 	v3Error: null as unknown,
-	queuedResponse: {
-		customer_id: "cus_123",
-		value: 2,
-		balance: null,
-	} as TrackResponseV3 | null,
 };
 
 mock.module("@/internal/balances/track/runTrackV2.js", () => ({
@@ -32,13 +29,6 @@ mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
 		mockState.runTrackV3Calls.push(args);
 		if (mockState.v3Error) throw mockState.v3Error;
 		return { ok: true };
-	},
-}));
-
-mock.module("@/internal/balances/track/utils/queueTrack.js", () => ({
-	queueTrack: async (args: Record<string, unknown>) => {
-		mockState.queueCalls.push(args);
-		return mockState.queuedResponse;
 	},
 }));
 
@@ -74,15 +64,24 @@ const body = {
 
 describe("track queue fallback", () => {
 	beforeEach(() => {
-		mockState.queueCalls = [];
+		mockState.queueCommands = [];
+		mockState.queueError = null;
 		mockState.runTrackV2Calls = [];
 		mockState.runTrackV3Calls = [];
 		mockState.v3Error = null;
-		mockState.queuedResponse = {
-			customer_id: "cus_123",
-			value: 2,
-			balance: null,
-		};
+		process.env.TRACK_SQS_QUEUE_URL =
+			"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
+
+		const sqsClient = getSqsClient();
+		mockState.originalSend = sqsClient.send.bind(sqsClient);
+		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
+			if (mockState.queueError) {
+				throw mockState.queueError;
+			}
+
+			mockState.queueCommands.push(command.input);
+			return {};
+		}) as typeof sqsClient.send;
 	});
 
 	test("queues track when rollout path hits a retryable Redis failure", async () => {
@@ -99,16 +98,17 @@ describe("track queue fallback", () => {
 
 		expect(mockState.runTrackV3Calls).toHaveLength(1);
 		expect(mockState.runTrackV2Calls).toHaveLength(0);
-		expect(mockState.queueCalls).toHaveLength(1);
-		expect(mockState.queueCalls[0]).toMatchObject({
-			body: {
-				customer_id: "cus_123",
-				feature_id: "messages",
-			},
+		expect(mockState.queueCommands).toHaveLength(1);
+		expect(mockState.queueCommands[0]).toMatchObject({
+			QueueUrl:
+				"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo",
 		});
-
-		if (!mockState.queuedResponse) throw new Error("expected queued response");
-		expect(response).toEqual(mockState.queuedResponse);
+		expect(response).toEqual({
+			customer_id: "cus_123",
+			entity_id: undefined,
+			value: 2,
+			balance: null,
+		});
 	});
 
 	test("throws retryable Redis failure when queue fallback is unavailable", async () => {
@@ -117,7 +117,7 @@ describe("track queue fallback", () => {
 			reason: "timeout",
 		});
 		mockState.v3Error = error;
-		mockState.queuedResponse = null;
+		mockState.queueError = new Error("sqs unavailable");
 
 		await expect(
 			runTrackWithRollout({
@@ -127,6 +127,13 @@ describe("track queue fallback", () => {
 			}),
 		).rejects.toBe(error);
 
-		expect(mockState.queueCalls).toHaveLength(1);
+		expect(mockState.queueCommands).toHaveLength(0);
+	});
+
+	afterEach(() => {
+		const sqsClient = getSqsClient();
+		if (mockState.originalSend) {
+			sqsClient.send = mockState.originalSend;
+		}
 	});
 });

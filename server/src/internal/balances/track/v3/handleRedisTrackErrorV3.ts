@@ -7,6 +7,7 @@ import {
 	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import {
 	RedisDeductionError,
@@ -57,7 +58,11 @@ export const handleRedisTrackErrorV3 = async ({
 	}
 
 	if (error.isRedisUnavailable()) {
-		throw error;
+		throw new RedisUnavailableError({
+			source: "runTrackV3",
+			reason: "other",
+			cause: error,
+		});
 	}
 
 	if (error.shouldFallback()) {

@@ -1,16 +1,13 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
+import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getSqsClient } from "@/queue/initSqs.js";
 
 const mockState = {
-	queueCalls: [] as Record<string, unknown>[],
+	queueCommands: [] as Record<string, unknown>[],
+	originalSend: null as null | SQSClient["send"],
 };
-
-mock.module("@/queue/queueUtils.js", () => ({
-	addTaskToQueue: async (args: Record<string, unknown>) => {
-		mockState.queueCalls.push(args);
-	},
-}));
 
 mock.module("@/internal/balances/track/utils/getQueuedTrackResponse.js", () => ({
 	getQueuedTrackResponse: () => ({
@@ -26,9 +23,15 @@ describe("queueTrack", () => {
 	const originalTrackQueueUrl = process.env.TRACK_SQS_QUEUE_URL;
 
 	beforeEach(() => {
-		mockState.queueCalls = [];
+		mockState.queueCommands = [];
 		process.env.TRACK_SQS_QUEUE_URL =
 			"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
+		const sqsClient = getSqsClient();
+		mockState.originalSend = sqsClient.send.bind(sqsClient);
+		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
+			mockState.queueCommands.push(command.input);
+			return {};
+		}) as typeof sqsClient.send;
 	});
 
 	test("queues track with request identity and entity-scoped grouping", async () => {
@@ -52,13 +55,16 @@ describe("queueTrack", () => {
 			},
 		});
 
-		expect(mockState.queueCalls).toHaveLength(1);
-		expect(mockState.queueCalls[0]).toMatchObject({
-			queueUrl:
+		expect(mockState.queueCommands).toHaveLength(1);
+		expect(mockState.queueCommands[0]).toMatchObject({
+			QueueUrl:
 				"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo",
-			messageGroupId: "org_123:sandbox:cus_123:ent_123",
-			messageDeduplicationId: "req_123",
-			payload: {
+			MessageGroupId: "org_123:sandbox:cus_123:ent_123",
+			MessageDeduplicationId: "req_123",
+		});
+		expect(JSON.parse(mockState.queueCommands[0]?.MessageBody as string)).toMatchObject({
+			name: "track",
+			data: {
 				orgId: "org_123",
 				env: AppEnv.Sandbox,
 				customerId: "cus_123",
@@ -70,6 +76,10 @@ describe("queueTrack", () => {
 	});
 
 	afterEach(() => {
+		if (mockState.originalSend) {
+			const sqsClient = getSqsClient();
+			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
+		}
 		process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
 	});
 });

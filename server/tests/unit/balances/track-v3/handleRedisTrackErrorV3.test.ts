@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	RedisDeductionError,
@@ -36,7 +37,7 @@ describe("handleRedisTrackErrorV3", () => {
 		mockState.postgresCalls = [];
 	});
 
-	test("rethrows when Redis is unavailable", async () => {
+	test("normalizes Redis unavailable to RedisUnavailableError", async () => {
 		const error = new RedisDeductionError({
 			message: "Redis not ready for deduction",
 			code: RedisDeductionErrorCode.RedisUnavailable,
@@ -54,7 +55,11 @@ describe("handleRedisTrackErrorV3", () => {
 				fullSubject: {} as never,
 				featureDeductions: [],
 			}),
-		).rejects.toBe(error);
+		).rejects.toMatchObject({
+			name: "RedisUnavailableError",
+			source: "runTrackV3",
+			reason: "other",
+		} satisfies Partial<RedisUnavailableError>);
 
 		expect(mockState.postgresCalls).toHaveLength(0);
 	});
