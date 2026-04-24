@@ -24,10 +24,8 @@ export const handleTrack = createRoute({
 			body,
 			featureDeductions,
 		});
+		const status = ctx.extraLogs.trackQueuedForReplay ? 202 : 200;
 
-		return c.json(
-			response,
-			ctx.extraLogs.trackQueuedForReplay ? 202 : 200,
-		);
+		return c.json(response, status);
 	},
 });
