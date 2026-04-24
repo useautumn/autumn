@@ -56,10 +56,12 @@ export const processMessage = async ({
 
 	const job: SqsJob = JSON.parse(message.Body);
 
+	const workflowId = message.MessageId ?? generateId("job");
+
 	const workerLogger = addWorkflowToLogs({
 		logger: logger,
 		workflowContext: {
-			id: message.MessageId ?? generateId("job"),
+			id: workflowId,
 			name: job.name,
 			payload: job.data,
 		},
@@ -288,7 +290,7 @@ export const processMessage = async ({
 	try {
 		await withWorkerSpan({
 			workflowName: job.name,
-			workflowId: message.MessageId ?? generateId("job"),
+			workflowId,
 			tenantAttrs: {
 				org_id: job.data?.orgId,
 				env: job.data?.env,
