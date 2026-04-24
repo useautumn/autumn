@@ -21,7 +21,7 @@ import { checkoutToAttachContext } from "./utils/checkoutToAttachContext";
 import { getCheckoutOptions } from "./utils/getCheckoutOptions";
 
 export const handleLegacyApiCheckout = createRoute({
-	scopes: [Scopes.Billing.Read],
+	scopes: [Scopes.Billing.Write],
 	versionedBody: {
 		latest: CheckoutParamsV0Schema,
 		[ApiVersion.V1_Beta]: CheckoutParamsV0Schema,
