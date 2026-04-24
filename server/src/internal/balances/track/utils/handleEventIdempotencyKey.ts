@@ -9,6 +9,14 @@ export const getTrackIdempotencyKey = ({
 	requestId: string;
 }) => `track:${idempotencyKey ?? requestId}`;
 
+export const getTrackFeatureIdempotencyKey = ({
+	trackIdempotencyKey,
+	featureId,
+}: {
+	trackIdempotencyKey: string;
+	featureId: string;
+}) => `${trackIdempotencyKey}:feature:${featureId}`;
+
 export const handleEventIdempotencyKey = async ({
 	ctx,
 	idempotencyKey,

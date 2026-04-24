@@ -4,7 +4,10 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { Decimal } from "decimal.js";
 import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
-import { getTrackIdempotencyKey } from "@/internal/balances/track/utils/handleEventIdempotencyKey.js";
+import {
+	getTrackFeatureIdempotencyKey,
+	getTrackIdempotencyKey,
+} from "@/internal/balances/track/utils/handleEventIdempotencyKey.js";
 import { runTrackV3 } from "@/internal/balances/track/v3/runTrackV3.js";
 import { getRedisIdempotencyKey } from "@/internal/misc/idempotency/checkIdempotencyKey.js";
 import { buildCustomerMeteredScenario } from "../../db/full-subject/utils/fullSubjectScenarioBuilders.js";
@@ -65,9 +68,12 @@ test("track-v3 idempotency is atomic for single-feature requests", async () => {
 			const { redisKey } = getRedisIdempotencyKey({
 				orgId: ctx.org.id,
 				env: ctx.env,
-				idempotencyKey: getTrackIdempotencyKey({
-					idempotencyKey,
-					requestId: ctx.id,
+				idempotencyKey: getTrackFeatureIdempotencyKey({
+					trackIdempotencyKey: getTrackIdempotencyKey({
+						idempotencyKey,
+						requestId: ctx.id,
+					}),
+					featureId: TestFeature.Messages,
 				}),
 				slotKey: body.customer_id,
 			});

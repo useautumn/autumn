@@ -7,6 +7,7 @@ import type { Redis } from "ioredis";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
+import { getTrackFeatureIdempotencyKey } from "@/internal/balances/track/utils/handleEventIdempotencyKey.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
@@ -102,14 +103,6 @@ export const executeRedisDeductionV2 = async ({
 		customerId,
 		entityId: fullSubject.entityId,
 	});
-	const idempotencyRedisKey = idempotencyKey
-		? getRedisIdempotencyKey({
-				orgId: org.id,
-				env,
-				idempotencyKey,
-				slotKey: customerId,
-			}).redisKey
-		: null;
 
 	for (const deduction of deductions) {
 		const {
@@ -138,6 +131,18 @@ export const executeRedisDeductionV2 = async ({
 		if (unlimitedFeatureIds.length > 0) {
 			continue;
 		}
+
+		const idempotencyRedisKey = idempotencyKey
+			? getRedisIdempotencyKey({
+					orgId: org.id,
+					env,
+					idempotencyKey: getTrackFeatureIdempotencyKey({
+						trackIdempotencyKey: idempotencyKey,
+						featureId: feature.id,
+					}),
+					slotKey: customerId,
+				}).redisKey
+			: null;
 
 		const { keys, balanceKeyIndexByFeatureId } =
 			buildDeductFromSubjectBalancesKeys({
