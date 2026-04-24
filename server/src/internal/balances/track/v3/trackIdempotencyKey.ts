@@ -8,7 +8,7 @@ export const getTrackIdempotencyKey = ({
 }: {
 	idempotencyKey?: string;
 	requestId: string;
-}) => `track:${idempotencyKey ?? requestId}`;
+}) => `track:${idempotencyKey || requestId}`;
 
 const hashIdempotencyKey = (key: string) => {
 	const hasher = new Bun.CryptoHasher("sha256");
