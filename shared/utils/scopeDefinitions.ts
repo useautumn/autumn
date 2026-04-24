@@ -354,7 +354,7 @@ export type RouteScopeRequirement =
 // Roles
 // ---------------------------------------------------------------------------
 
-export type Role = "owner" | "admin" | "developer" | "sales" | "viewer";
+export type Role = "owner" | "admin" | "developer" | "sales" | "member";
 
 /**
  * Default scope grants per role.
@@ -390,7 +390,7 @@ export const ROLE_SCOPES: Record<Role, ScopeString[]> = {
 		Scopes.Features.Read,
 		Scopes.Analytics.Read,
 	],
-	viewer: [
+	member: [
 		Scopes.Organisation.Read,
 		Scopes.Customers.Read,
 		Scopes.Features.Read,
@@ -704,6 +704,30 @@ export function checkScopes(
 	}
 
 	return { allowed: false, missing };
+}
+
+/**
+ * Check whether every scope in `requested` is granted by `granted`.
+ *
+ * Applies `expandScopes` to both sides so legacy scopes, write→read
+ * expansion, and meta-scope bypasses are handled correctly.
+ *
+ * Returns true if requested is a subset of the expanded grant. Useful
+ * for privilege-escalation guards: "can this caller mint a key with
+ * these scopes?"
+ *
+ * Special cases:
+ *   - Empty `requested` → always true (unrestricted key, no new privs).
+ *   - `granted` contains `admin` → always true (caller has the bypass).
+ */
+export function isScopeSubset(
+	requested: readonly string[],
+	granted: readonly string[],
+): boolean {
+	if (requested.length === 0) return true;
+	if (granted.includes("admin") || granted.includes("superuser")) return true;
+	const expandedGranted = expandScopes(granted);
+	return [...expandScopes(requested)].every((s) => expandedGranted.has(s));
 }
 
 // ---------------------------------------------------------------------------
