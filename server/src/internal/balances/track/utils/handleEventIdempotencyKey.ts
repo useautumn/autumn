@@ -12,9 +12,11 @@ export const getTrackIdempotencyKey = ({
 export const handleEventIdempotencyKey = async ({
 	ctx,
 	idempotencyKey,
+	customerId,
 }: {
 	ctx: AutumnContext;
 	idempotencyKey?: string;
+	customerId: string;
 }) => {
 	await checkIdempotencyKey({
 		orgId: ctx.org.id,
@@ -23,6 +25,7 @@ export const handleEventIdempotencyKey = async ({
 			idempotencyKey,
 			requestId: ctx.id,
 		}),
+		slotKey: customerId,
 		logger: ctx.logger,
 	});
 

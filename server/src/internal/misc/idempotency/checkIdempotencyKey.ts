@@ -14,15 +14,19 @@ export const getRedisIdempotencyKey = ({
 	orgId,
 	env,
 	idempotencyKey,
+	slotKey,
 }: {
 	orgId: string;
 	env: string;
 	idempotencyKey: string;
+	slotKey?: string;
 }) => {
 	const hashedKey = hashIdempotencyKey(idempotencyKey);
 	return {
 		hashedKey,
-		redisKey: `${orgId}:${env}:idempotency:${hashedKey}`,
+		redisKey: slotKey
+			? `{${slotKey}}:${orgId}:${env}:idempotency:${hashedKey}`
+			: `${orgId}:${env}:idempotency:${hashedKey}`,
 	};
 };
 
@@ -35,11 +39,13 @@ export const checkIdempotencyKey = async ({
 	orgId,
 	env,
 	idempotencyKey,
+	slotKey,
 	logger,
 }: {
 	orgId: string;
 	env: string;
 	idempotencyKey: string;
+	slotKey?: string;
 	logger: Logger;
 }): Promise<void> => {
 	// Fail-open: if Redis is not ready, allow the request
@@ -51,6 +57,7 @@ export const checkIdempotencyKey = async ({
 		orgId,
 		env,
 		idempotencyKey,
+		slotKey,
 	});
 
 	try {
