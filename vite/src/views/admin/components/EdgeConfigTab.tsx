@@ -5,6 +5,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
 import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
+import { JobQueuesDialog } from "./JobQueuesDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
 import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
@@ -27,6 +28,7 @@ export function EdgeConfigTab() {
 	const [featureFlagsOpen, setFeatureFlagsOpen] = useState(false);
 	const [customerBlockOpen, setCustomerBlockOpen] = useState(false);
 	const [orgLimitsOpen, setOrgLimitsOpen] = useState(false);
+	const [jobQueuesOpen, setJobQueuesOpen] = useState(false);
 	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
 	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
 
@@ -158,6 +160,23 @@ export function EdgeConfigTab() {
 
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-t1">Job Queues</div>
+						<div className="text-xs text-t3">
+							Pause or resume worker consumption for shared and dedicated SQS
+							queues.
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setJobQueuesOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
 						<div className="text-sm font-medium text-t1">Stripe Sync</div>
 						<div className="text-xs text-t3">
 							Enable Stripe webhook event syncing to the sync DB per org.
@@ -214,6 +233,11 @@ export function EdgeConfigTab() {
 			/>
 
 			<OrgLimitsDialog open={orgLimitsOpen} onOpenChange={setOrgLimitsOpen} />
+
+			<JobQueuesDialog
+				open={jobQueuesOpen}
+				onOpenChange={setJobQueuesOpen}
+			/>
 
 			<StripeSyncDialog
 				open={stripeSyncOpen}
