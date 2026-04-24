@@ -61,9 +61,7 @@ mock.module("@/internal/balances/track/v3/runRedisTrackV3.js", () => ({
 	},
 }));
 
-let importNonce = 0;
-const importRunTrackV3 = async () =>
-	import(`@/internal/balances/track/v3/runTrackV3.js?test=${importNonce++}`);
+import { runTrackV3 } from "@/internal/balances/track/v3/runTrackV3.js";
 
 const ctx = {
 	apiVersion: new ApiVersionClass(ApiVersion.V2_1),
@@ -86,8 +84,6 @@ describe("runTrackV3 idempotency routing", () => {
 	});
 
 	test("uses the same request-level key for multi-feature requests", async () => {
-		const { runTrackV3 } = await importRunTrackV3();
-
 		await runTrackV3({
 			ctx,
 			body: {
@@ -108,8 +104,6 @@ describe("runTrackV3 idempotency routing", () => {
 	});
 
 	test("uses atomic Redis idempotency for single-feature requests", async () => {
-		const { runTrackV3 } = await importRunTrackV3();
-
 		await runTrackV3({
 			ctx,
 			body: {
@@ -127,8 +121,6 @@ describe("runTrackV3 idempotency routing", () => {
 	});
 
 	test("uses the request id when client idempotency key is missing", async () => {
-		const { runTrackV3 } = await importRunTrackV3();
-
 		await runTrackV3({
 			ctx,
 			body: {

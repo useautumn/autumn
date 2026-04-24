@@ -9,20 +9,6 @@ import { runTrackV3 } from "./v3/runTrackV3.js";
 
 const TRACK_V3_ENABLED = true;
 
-type RunTrackWithRolloutDeps = {
-	withRedisFailOpen: typeof withRedisFailOpen;
-	runTrackV2: typeof runTrackV2;
-	runTrackV3: typeof runTrackV3;
-	queueTrack: typeof queueTrack;
-};
-
-const defaultDeps: RunTrackWithRolloutDeps = {
-	withRedisFailOpen,
-	runTrackV2,
-	runTrackV3,
-	queueTrack,
-};
-
 export const shouldUseTrackV3 = ({ ctx }: { ctx: AutumnContext }): boolean =>
 	TRACK_V3_ENABLED && isFullSubjectRolloutEnabled({ ctx });
 
@@ -31,33 +17,31 @@ export const runTrackWithRollout = async ({
 	body,
 	featureDeductions,
 	apiVersion,
-	deps = defaultDeps,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
 	apiVersion?: ApiVersion;
-	deps?: RunTrackWithRolloutDeps;
 }): Promise<TrackResponseV3> => {
 	if (shouldUseTrackV3({ ctx })) {
-		return deps.withRedisFailOpen<TrackResponseV3>({
+		return withRedisFailOpen<TrackResponseV3>({
 			source: "runTrackWithRollout",
 			run: () =>
-				deps.runTrackV3({
+				runTrackV3({
 					ctx,
 					body,
 					featureDeductions,
 					apiVersion,
 				}),
 			fallback: async (error) => {
-				const queuedResponse = await deps.queueTrack({ ctx, body });
+				const queuedResponse = await queueTrack({ ctx, body });
 				if (queuedResponse) return queuedResponse;
 				throw error;
 			},
 		});
 	}
 
-	return deps.runTrackV2({
+	return runTrackV2({
 		ctx,
 		body,
 		featureDeductions,
