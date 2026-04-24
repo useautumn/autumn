@@ -1,5 +1,12 @@
-import type { AffectedResource, ApiVersion } from "@autumn/shared";
-import type { Context, Env } from "hono";
+import {
+	type AffectedResource,
+	type ApiVersion,
+	checkScopes,
+	ErrCode,
+	RecaseError,
+	type RouteScopeRequirement,
+} from "@autumn/shared";
+import type { Context, Env, Next } from "hono";
 import type { H } from "hono/types";
 import type { ZodType, z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -108,8 +115,59 @@ export function createRoute<
 		/** Error message to show when lock is already held */
 		errorMessage?: string;
 	};
+	/**
+	 * Required auth scopes for this route. See `RouteScopeRequirement`.
+	 * Accepts a plain array (ALL semantics) or `{ ANY | ALL | ANY, ALL }`.
+	 * Use `Scopes.Public` to declare a route needs no scopes (public
+	 * endpoints, authed-but-ungated routes, etc).
+	 */
+	scopes: RouteScopeRequirement;
 }): [H, ...H[]] {
 	const middlewares: H[] = [];
+
+	/**
+	 * Scope-check middleware — runs before validators/expand/body so we
+	 * fail-fast on unauthorised requests without wasting CPU parsing a
+	 * payload we'll reject.
+	 */
+	const scopeCheckMiddleware = async (c: Context<HonoEnv>, next: Next) => {
+		// Webhooks authenticate via signed payloads from external services
+		// (Stripe, Vercel, RevenueCat, etc.). They have no bearer token and
+		// no session, so ctx.scopes is never populated. Bypass the scope
+		// check unconditionally for any request under /webhooks/*.
+		if (c.req.path.startsWith("/webhooks/")) {
+			return next();
+		}
+
+		const ctx = c.get("ctx");
+		const granted = ctx.scopes;
+
+		// Legacy fail-open: no scopes on key/session ⇒ allow with warning.
+		// Covers:
+		//   - Legacy API keys created before the scopes column existed
+		//   - Public keys (by design bypass the scope system)
+		//   - Cached API key payloads from before the deploy
+		if (!granted || granted.length === 0) {
+			ctx.logger?.warn("Scope check skipped: no scopes on request auth", {
+				path: c.req.path,
+				method: c.req.method,
+				required: opts.scopes,
+				authType: ctx.authType,
+			});
+			return next();
+		}
+
+		const { allowed, missing } = checkScopes(opts.scopes, granted);
+		if (!allowed) {
+			throw new RecaseError({
+				message: `Insufficient scopes. Missing: ${missing.join(", ")}`,
+				code: ErrCode.InsufficientScopes,
+				statusCode: 403,
+			});
+		}
+		return next();
+	};
+	middlewares.push(scopeCheckMiddleware);
 
 	// Query validation runs before expand so ctx.expand can keep using validated query data.
 	if (opts.versionedQuery && opts.resource) {

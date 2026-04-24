@@ -120,6 +120,8 @@ export const publicKeyMiddleware = async (
 	ctx.env = env;
 	ctx.authType = AuthType.PublicKey;
 	ctx.isPublic = true;
+	// Public keys bypass the scope system. Empty array triggers fail-open in the scope-check middleware.
+	ctx.scopes = [];
 
 	await next();
 };

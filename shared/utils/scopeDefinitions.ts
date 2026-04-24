@@ -36,6 +36,7 @@ export const RESOURCES = [
 	"billing",
 	"analytics",
 	"apiKeys",
+	"platform",
 ] as const;
 
 export type ResourceType = (typeof RESOURCES)[number];
@@ -70,11 +71,33 @@ type WritableResource = Exclude<ResourceType, "analytics">;
  *
  * - `admin` — universal bypass for product-level scopes. A caller with
  *   this scope passes every scope check that does not explicitly require
- *   `superuser` or `owner` (see {@link checkScopes}). Granted to the org
- *   owner/admin roles so they can do anything non-destructive across the
- *   product.
+ *   `superuser`, `owner`, or `public` (see {@link checkScopes}). Granted
+ *   to the org owner/admin roles so they can do anything non-destructive
+ *   across the product.
+ *
+ * - `public` — explicit declaration that a route requires NO scopes.
+ *   When a route declares `scopes: [Scopes.Public]` the scope-check
+ *   middleware short-circuits regardless of what the caller has (or
+ *   doesn't have). Used for:
+ *     - truly unauthenticated endpoints (e.g. checkout links, hosted
+ *       invoice redirects) where authorisation comes from possession of
+ *       a URL-embedded token, not from a session/key;
+ *     - authenticated-but-universally-accessible endpoints (e.g. feedback
+ *       submission, org feature flags, saved views) where the upstream
+ *       auth middleware has already validated the session and no
+ *       per-action gating is desired.
+ *
+ *   Prefer `public` over the old empty-scopes fail-open: declaring it
+ *   explicitly makes intent visible in the route file and at the call
+ *   site in the picker. Future work can replace the fail-open with
+ *   fail-closed on empty scopes without breaking these routes.
  */
-export const META_SCOPES = ["superuser", "owner", "admin"] as const;
+export const META_SCOPES = [
+	"superuser",
+	"owner",
+	"admin",
+	"public",
+] as const;
 export type MetaScope = (typeof META_SCOPES)[number];
 
 /**
@@ -136,6 +159,15 @@ export const Scopes = {
 		Write: "apiKeys:write",
 	},
 	/**
+	 * Platform API resource. Gates `/v1/platform/*` routes that operate
+	 * across multiple tenant orgs (used by platform partners embedding
+	 * Autumn billing on behalf of their end-users).
+	 */
+	Platform: {
+		Read: "platform:read",
+		Write: "platform:write",
+	},
+	/**
 	 * Internal Autumn-staff scope. Gates admin-dashboard routes.
 	 * See {@link META_SCOPES}.
 	 */
@@ -148,10 +180,15 @@ export const Scopes = {
 	Owner: "owner",
 	/**
 	 * Product-level universal bypass. Short-circuits every scope check
-	 * that does not explicitly require `superuser` or `owner`.
+	 * that does not explicitly require `superuser`, `owner`, or `public`.
 	 * See {@link META_SCOPES}.
 	 */
 	Admin: "admin",
+	/**
+	 * Declares the route needs NO scopes. Short-circuits the scope-check
+	 * middleware unconditionally. See {@link META_SCOPES}.
+	 */
+	Public: "public",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -182,6 +219,8 @@ export const MODERN_SCOPES: readonly ScopeString[] = [
 	Scopes.Analytics.Read,
 	Scopes.ApiKeys.Read,
 	Scopes.ApiKeys.Write,
+	Scopes.Platform.Read,
+	Scopes.Platform.Write,
 ] as const;
 
 /**
@@ -340,6 +379,7 @@ export const ROLE_SCOPES: Record<Role, ScopeString[]> = {
 		Scopes.Billing.Write,
 		Scopes.Analytics.Read,
 		Scopes.ApiKeys.Write,
+		Scopes.Platform.Write,
 	],
 	sales: [
 		Scopes.Customers.Write,
@@ -360,6 +400,7 @@ export const ROLE_SCOPES: Record<Role, ScopeString[]> = {
 		Scopes.Billing.Read,
 		Scopes.Analytics.Read,
 		Scopes.ApiKeys.Read,
+		Scopes.Platform.Read,
 	],
 };
 
@@ -423,6 +464,12 @@ export const RESOURCE_METADATA: Record<
 		name: "API Key",
 		namePlural: "API Keys",
 		description: "API keys for programmatic access",
+	},
+	platform: {
+		name: "Platform",
+		namePlural: "Platform",
+		description:
+			"Multi-tenant Platform API for partners embedding Autumn on behalf of end-user orgs",
 	},
 };
 
@@ -589,17 +636,27 @@ function requirementMentions(
  * `granted` may contain legacy scopes; normalisation (and write→read
  * expansion) happens internally via {@link expandScopes}.
  *
- * Short-circuits to `allowed: true` if granted contains the `admin`
- * meta-scope AND the route does not require `superuser` or `owner`.
- * The `admin` meta-scope is a product-level catch-all (org owner /
- * org admin) and deliberately does NOT grant access to:
- *   - Autumn-staff-only routes, which must require `superuser`;
- *   - Owner-only destructive routes, which must require `owner`.
+ * Two short-circuits, evaluated in order:
+ *   1. If the route's requirement includes `public`, the check passes
+ *      for EVERY caller regardless of what they have. Used for truly
+ *      unauthenticated endpoints and authed-but-universally-accessible
+ *      ones. See {@link META_SCOPES}.
+ *   2. If granted contains the `admin` meta-scope AND the route does
+ *      not require `superuser` or `owner`, the check passes. The
+ *      `admin` meta-scope is a product-level catch-all (org owner /
+ *      org admin) and deliberately does NOT grant access to:
+ *        - Autumn-staff-only routes, which must require `superuser`;
+ *        - Owner-only destructive routes, which must require `owner`.
  */
 export function checkScopes(
 	required: RouteScopeRequirement,
 	granted: readonly string[],
 ): { allowed: boolean; missing: ScopeString[] } {
+	// Public short-circuit: route explicitly declared no scopes required.
+	if (requirementMentions(required, ["public"])) {
+		return { allowed: true, missing: [] };
+	}
+
 	// Product-level universal bypass. Skipped when the route requires
 	// superuser or owner — those are strictly narrower than admin.
 	if (
