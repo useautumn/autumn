@@ -1,39 +1,18 @@
+import type { TrackParams } from "@autumn/shared";
 import { checkIdempotencyKey } from "@/internal/misc/idempotency/checkIdempotencyKey.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 
-export const getTrackIdempotencyKey = ({
-	idempotencyKey,
-	requestId,
-}: {
-	idempotencyKey?: string;
-	requestId: string;
-}) => `track:${idempotencyKey ?? requestId}`;
-
-export const getTrackFeatureIdempotencyKey = ({
-	trackIdempotencyKey,
-	featureId,
-}: {
-	trackIdempotencyKey: string;
-	featureId: string;
-}) => `${trackIdempotencyKey}:feature:${featureId}`;
-
 export const handleEventIdempotencyKey = async ({
 	ctx,
-	idempotencyKey,
-	customerId,
+	body,
 }: {
 	ctx: AutumnContext;
-	idempotencyKey?: string;
-	customerId: string;
+	body: TrackParams;
 }) => {
 	await checkIdempotencyKey({
 		orgId: ctx.org.id,
 		env: ctx.env,
-		idempotencyKey: getTrackIdempotencyKey({
-			idempotencyKey,
-			requestId: ctx.id,
-		}),
-		slotKey: customerId,
+		idempotencyKey: `track:${body.idempotency_key}`,
 		logger: ctx.logger,
 	});
 

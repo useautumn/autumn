@@ -2,32 +2,12 @@ import { ErrCode, ms, RecaseError } from "@autumn/shared";
 import type { Logger } from "@/external/logtail/logtailUtils";
 import { redis } from "@/external/redis/initRedis.js";
 
-export const IDEMPOTENCY_TTL_MS = ms.days(2);
+const IDEMPOTENCY_TTL_MS = ms.hours(24);
 
 const hashIdempotencyKey = (key: string): string => {
 	const hasher = new Bun.CryptoHasher("sha256");
 	hasher.update(key);
 	return hasher.digest("base64url");
-};
-
-export const getRedisIdempotencyKey = ({
-	orgId,
-	env,
-	idempotencyKey,
-	slotKey,
-}: {
-	orgId: string;
-	env: string;
-	idempotencyKey: string;
-	slotKey?: string;
-}) => {
-	const hashedKey = hashIdempotencyKey(idempotencyKey);
-	return {
-		hashedKey,
-		redisKey: slotKey
-			? `{${slotKey}}:${orgId}:${env}:idempotency:${hashedKey}`
-			: `${orgId}:${env}:idempotency:${hashedKey}`,
-	};
 };
 
 /**
@@ -39,13 +19,11 @@ export const checkIdempotencyKey = async ({
 	orgId,
 	env,
 	idempotencyKey,
-	slotKey,
 	logger,
 }: {
 	orgId: string;
 	env: string;
 	idempotencyKey: string;
-	slotKey?: string;
 	logger: Logger;
 }): Promise<void> => {
 	// Fail-open: if Redis is not ready, allow the request
@@ -53,12 +31,8 @@ export const checkIdempotencyKey = async ({
 		return;
 	}
 
-	const { hashedKey, redisKey } = getRedisIdempotencyKey({
-		orgId,
-		env,
-		idempotencyKey,
-		slotKey,
-	});
+	const hashedKey = hashIdempotencyKey(idempotencyKey);
+	const redisKey = `${orgId}:${env}:idempotency:${hashedKey}`;
 
 	try {
 		// Use SET NX (set if not exists) for atomic check-and-set to prevent race conditions
