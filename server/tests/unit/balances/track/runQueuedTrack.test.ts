@@ -85,4 +85,21 @@ describe("runQueuedTrack", () => {
 			}),
 		).resolves.toBeUndefined();
 	});
+
+	test("rethrows non-duplicate replay errors", async () => {
+		const error = new Error("redis still unavailable");
+		mockState.runTrackV3Error = error;
+
+		await expect(
+			runQueuedTrack({
+				ctx,
+				body: {
+					customer_id: "cus_123",
+					feature_id: "messages",
+					value: 1,
+				},
+				apiVersion: ApiVersion.V2_1,
+			}),
+		).rejects.toBe(error);
+	});
 });
