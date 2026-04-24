@@ -92,12 +92,7 @@ type WritableResource = Exclude<ResourceType, "analytics">;
  *   site in the picker. Future work can replace the fail-open with
  *   fail-closed on empty scopes without breaking these routes.
  */
-export const META_SCOPES = [
-	"superuser",
-	"owner",
-	"admin",
-	"public",
-] as const;
+export const META_SCOPES = ["superuser", "owner", "admin", "public"] as const;
 export type MetaScope = (typeof META_SCOPES)[number];
 
 /**
@@ -371,6 +366,7 @@ export const ROLE_SCOPES: Record<Role, ScopeString[]> = {
 	owner: ["owner", "admin", ...MODERN_SCOPES],
 	admin: ["admin", ...MODERN_SCOPES],
 	developer: [
+		Scopes.Rewards.Write,
 		Scopes.Organisation.Read,
 		Scopes.Customers.Write,
 		Scopes.Features.Write,
@@ -422,8 +418,7 @@ export const RESOURCE_METADATA: Record<
 	organisation: {
 		name: "Organisation",
 		namePlural: "Organisation",
-		description:
-			"Your organization settings, members, and integrations",
+		description: "Your organization settings, members, and integrations",
 	},
 	customers: {
 		name: "Customer",
@@ -575,13 +570,32 @@ export function isMetaScope(scope: string): scope is MetaScope {
  * Steps:
  *   1. Legacy CRUDL scopes are rewritten via {@link LEGACY_SCOPE_ALIASES}.
  *   2. OpenID and unknown scopes are dropped.
- *   3. Meta-scopes (`admin`, `superuser`) are preserved as-is.
+ *   3. Meta-scopes expand hierarchically. The hierarchy is:
+ *        superuser > owner > admin > product-scopes
+ *      so:
+ *        - `superuser` in grant → expands to: superuser, owner, admin,
+ *          and every modern R/W scope
+ *        - `owner`     in grant → expands to: owner, admin, and every
+ *          modern R/W scope
+ *        - `admin`     in grant → expands to: admin, and every modern
+ *          R/W scope
+ *        - `public`    in grant → expands to: public (no hierarchy
+ *          involvement — it's a route-side declaration)
+ *
+ *      Equivalently, satisfaction semantics at the requirement end:
+ *        - A `superuser` requirement is satisfied ONLY by `superuser`.
+ *        - An `owner`     requirement is satisfied by `superuser` or `owner`.
+ *        - An `admin`     requirement is satisfied by `superuser`, `owner`, or `admin`.
+ *        - A product-scope requirement is satisfied by admin / owner /
+ *          superuser / the exact scope.
+ *
+ *      This is the single source of truth for the hierarchy — `checkScopes`,
+ *      `isScopeSubset`, and `makeScopeChecker` all rely on this expansion
+ *      rather than re-implementing the hierarchy.
  *   4. For every `:write`, the corresponding `:read` is added (write
  *      implies read).
  */
-export function expandScopes(
-	scopes: readonly string[],
-): Set<ScopeString> {
+export function expandScopes(scopes: readonly string[]): Set<ScopeString> {
 	const expanded = new Set<ScopeString>();
 
 	for (const raw of scopes) {
@@ -592,9 +606,17 @@ export function expandScopes(
 			scope = LEGACY_SCOPE_ALIASES[scope];
 		}
 
-		// Meta-scopes ride through untouched.
+		// Meta-scope hierarchy: superuser > owner > admin.
+		// `public` does not participate in the hierarchy — it's a
+		// route-side declaration meaning "no scopes required".
 		if (isMetaScope(scope)) {
 			expanded.add(scope);
+			if (scope === "superuser") {
+				expanded.add("owner");
+				expanded.add("admin");
+			} else if (scope === "owner") {
+				expanded.add("admin");
+			}
 			continue;
 		}
 
@@ -607,6 +629,14 @@ export function expandScopes(
 			const resource = scope.slice(0, -":write".length) as ResourceType;
 			const readScope = `${resource}:read` as ScopeString;
 			expanded.add(readScope);
+		}
+	}
+
+	// `admin` (by itself, or via expansion from owner/superuser) grants
+	// every product-scope. This is the product-level catch-all.
+	if (expanded.has("admin")) {
+		for (const scope of MODERN_SCOPES) {
+			expanded.add(scope);
 		}
 	}
 
@@ -634,19 +664,18 @@ function requirementMentions(
  * Check whether a set of granted scopes satisfies a route's requirement.
  *
  * `granted` may contain legacy scopes; normalisation (and write→read
- * expansion) happens internally via {@link expandScopes}.
+ * expansion and meta-scope hierarchy expansion) happens internally via
+ * {@link expandScopes}.
  *
- * Two short-circuits, evaluated in order:
- *   1. If the route's requirement includes `public`, the check passes
- *      for EVERY caller regardless of what they have. Used for truly
- *      unauthenticated endpoints and authed-but-universally-accessible
- *      ones. See {@link META_SCOPES}.
- *   2. If granted contains the `admin` meta-scope AND the route does
- *      not require `superuser` or `owner`, the check passes. The
- *      `admin` meta-scope is a product-level catch-all (org owner /
- *      org admin) and deliberately does NOT grant access to:
- *        - Autumn-staff-only routes, which must require `superuser`;
- *        - Owner-only destructive routes, which must require `owner`.
+ * One short-circuit:
+ *   - If the route's requirement includes `public`, the check passes
+ *     for EVERY caller regardless of what they have. Used for truly
+ *     unauthenticated endpoints and authed-but-universally-accessible
+ *     ones. See {@link META_SCOPES}.
+ *
+ * All other behaviour falls out of the expansion in `expandScopes`:
+ * superuser > owner > admin > product-scopes. Requirement-side
+ * satisfaction is literal `expanded.has(scope)` membership.
  */
 export function checkScopes(
 	required: RouteScopeRequirement,
@@ -654,15 +683,6 @@ export function checkScopes(
 ): { allowed: boolean; missing: ScopeString[] } {
 	// Public short-circuit: route explicitly declared no scopes required.
 	if (requirementMentions(required, ["public"])) {
-		return { allowed: true, missing: [] };
-	}
-
-	// Product-level universal bypass. Skipped when the route requires
-	// superuser or owner — those are strictly narrower than admin.
-	if (
-		granted.includes("admin") &&
-		!requirementMentions(required, ["superuser", "owner"])
-	) {
 		return { allowed: true, missing: [] };
 	}
 
@@ -710,22 +730,21 @@ export function checkScopes(
  * Check whether every scope in `requested` is granted by `granted`.
  *
  * Applies `expandScopes` to both sides so legacy scopes, write→read
- * expansion, and meta-scope bypasses are handled correctly.
+ * expansion, and the meta-scope hierarchy are handled correctly via the
+ * single source of truth in `expandScopes`.
  *
  * Returns true if requested is a subset of the expanded grant. Useful
  * for privilege-escalation guards: "can this caller mint a key with
  * these scopes?"
  *
- * Special cases:
+ * Edge case:
  *   - Empty `requested` → always true (unrestricted key, no new privs).
- *   - `granted` contains `admin` → always true (caller has the bypass).
  */
 export function isScopeSubset(
 	requested: readonly string[],
 	granted: readonly string[],
 ): boolean {
 	if (requested.length === 0) return true;
-	if (granted.includes("admin") || granted.includes("superuser")) return true;
 	const expandedGranted = expandScopes(granted);
 	return [...expandScopes(requested)].every((s) => expandedGranted.has(s));
 }
@@ -735,14 +754,23 @@ export function isScopeSubset(
  * boundary (request, session load, useScopes hook) and pass the result
  * around instead of re-running `expandScopes` on every check.
  *
- * The returned helpers honour meta-scope semantics:
- *   - `admin` short-circuits `has` / `hasAny` / `hasAll` for product-level
- *     scopes, but does NOT satisfy `superuser` or `owner`.
- *   - `superuser` short-circuits everything including product scopes and
- *     `superuser`-requiring checks.
- *   - `check(required)` delegates to {@link checkScopes} unchanged, so all
- *     the nuanced bypass/denial logic from there applies (public, admin,
- *     owner, superuser, shorthand array / ALL / ANY / ALL+ANY).
+ * Semantics are driven entirely by the hierarchy expansion in
+ * {@link expandScopes}:
+ *   - `has("customers:read")` on an admin grant → true (admin expands to
+ *     every modern product scope).
+ *   - `has("owner")` on an admin grant → false (admin does NOT grant owner).
+ *   - `has("owner")` on a superuser grant → true (superuser → owner → admin).
+ *   - `has("superuser")` on an owner grant → false (owner does NOT grant
+ *     superuser — superuser is strictly narrower).
+ *
+ * The `isAdmin` / `isOwner` / `isSuperuser` booleans reflect CAPABILITY,
+ * not literal scope membership. `isAdmin` is true whenever the caller can
+ * satisfy an admin-level requirement (i.e. admin, owner, or superuser
+ * was granted).
+ *
+ * `check(required)` delegates to {@link checkScopes} unchanged, so the
+ * public-bypass and requirement-shape handling (array / ALL / ANY /
+ * ALL+ANY) apply.
  *
  * @example
  *   const { has, hasAny } = makeScopeChecker(ctx.scopes);
@@ -750,28 +778,26 @@ export function isScopeSubset(
  */
 export function makeScopeChecker(granted: readonly string[]) {
 	const expanded = expandScopes(granted);
-	const isAdmin = granted.includes("admin") || expanded.has("admin");
-	const isSuperuser =
-		granted.includes("superuser") || expanded.has("superuser");
+	const isAdmin = expanded.has("admin");
+	const isOwner = expanded.has("owner");
+	const isSuperuser = expanded.has("superuser");
 
-	const has = (scope: ScopeString): boolean => {
-		if (isSuperuser) return true;
-		// `admin` is a product-level bypass but does NOT grant `owner` /
-		// `superuser` scopes.
-		if (isAdmin) {
-			if (scope === "owner" || scope === "superuser") return false;
-			return true;
-		}
-		return expanded.has(scope);
-	};
-	const hasAny = (scopes: readonly ScopeString[]): boolean =>
-		scopes.some(has);
-	const hasAll = (scopes: readonly ScopeString[]): boolean =>
-		scopes.every(has);
+	const has = (scope: ScopeString): boolean => expanded.has(scope);
+	const hasAny = (scopes: readonly ScopeString[]): boolean => scopes.some(has);
+	const hasAll = (scopes: readonly ScopeString[]): boolean => scopes.every(has);
 	const check = (required: RouteScopeRequirement) =>
 		checkScopes(required, granted);
 
-	return { expanded, isAdmin, isSuperuser, has, hasAny, hasAll, check };
+	return {
+		expanded,
+		isAdmin,
+		isOwner,
+		isSuperuser,
+		has,
+		hasAny,
+		hasAll,
+		check,
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -799,9 +825,7 @@ export function groupScopesByResource(
 
 	// Stable ordering: read before write.
 	for (const [resource, actions] of grouped.entries()) {
-		actions.sort(
-			(a, b) => ACTION_METADATA[a].order - ACTION_METADATA[b].order,
-		);
+		actions.sort((a, b) => ACTION_METADATA[a].order - ACTION_METADATA[b].order);
 		grouped.set(resource, actions);
 	}
 
