@@ -4,6 +4,7 @@ import {
 	type Organization,
 	type RevenueCatProcessorConfig,
 	UpsertRevenueCatProcessorConfigSchema,
+	Scopes,
 } from "@autumn/shared";
 import { createSvixApp } from "@server/external/svix/svixHelpers.js";
 import { createSvixCli } from "@server/external/svix/svixUtils.js";
@@ -72,6 +73,7 @@ export const getRevenueCatConfigDisplay = ({
 };
 
 export const handleGetRevenueCatConfig = createRoute({
+	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");
 
@@ -122,6 +124,7 @@ export const handleGetRevenueCatConfig = createRoute({
 });
 
 export const handleUpsertRevenueCatConfig = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	body: UpsertRevenueCatProcessorConfigSchema,
 	handler: async (c) => {
 		const { db, org } = c.get("ctx");
@@ -161,6 +164,7 @@ export const handleUpsertRevenueCatConfig = createRoute({
 });
 
 const handleGetVercelSink = createRoute({
+	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");
 		const vercelConfig = org.processor_configs?.vercel;

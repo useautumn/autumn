@@ -1,4 +1,4 @@
-import { AppEnv, type StripeConfig } from "@autumn/shared";
+import { AppEnv, type StripeConfig, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { ensureStripeProductsWithEnv } from "@/external/stripe/stripeEnsureUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -24,6 +24,7 @@ const addSuccessUrlToUpdates = ({
 };
 
 export const handleConnectStripe = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	body: z.object({
 		secret_key: z.string().optional(),
 		success_url: z.string().optional(),

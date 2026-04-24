@@ -19,6 +19,7 @@
       "devDependencies": {
         "@better-auth/cli": "^1.4.21",
         "@biomejs/biome": "^2.2.7",
+        "@socketsecurity/bun-security-scanner": "^1.1.2",
         "@types/node": "^24.9.1",
         "concurrently": "^9.2.1",
         "dotenv": "^16.6.1",
@@ -1946,6 +1947,8 @@
     "@smithy/uuid": ["@smithy/uuid@1.1.2", "", { "dependencies": { "tslib": "^2.6.2" } }, "sha512-O/IEdcCUKkubz60tFbGA7ceITTAJsty+lBjNoorP4Z6XRqaFb/OjQjZODophEcuq68nKm6/0r+6/lLQ+XVpk8g=="],
 
     "@socket.io/component-emitter": ["@socket.io/component-emitter@3.1.2", "", {}, "sha512-9BCxFwvbGg/RsZK9tjXd8s4UcwR0MWeFQ1XEKIQVVvAGJyINdrqKMcTRyLoK8Rse1GjzLV9cwjWV1olXRWEXVA=="],
+
+    "@socketsecurity/bun-security-scanner": ["@socketsecurity/bun-security-scanner@1.1.2", "", {}, "sha512-TdsAg6SMolubyZ6HfIjLWlANfHvhV6i7pdWof4OQ33zPEwXJm2ilA755levHMR618MKq22+06Ag8efiVKowxqA=="],
 
     "@squircle/core": ["@squircle/core@1.0.6", "", { "peerDependencies": { "@squircle/paint-polyfill": "^1.0.3" } }, "sha512-jvAIehtarEHBl6W80LNiZ9KWVKdJw6jGj/avwwbCoGVs9t+AUA5YVmUyAtEasFtoocHwxbbRsdnTeKxQ+061aQ=="],
 

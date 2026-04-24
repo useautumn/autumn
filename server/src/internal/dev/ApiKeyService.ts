@@ -53,6 +53,7 @@ export class ApiKeyService {
 			env,
 			userId: data.user_id,
 			user: data.user || null,
+			scopes: data.scopes,
 		};
 
 		return result;

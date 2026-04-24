@@ -3,12 +3,14 @@ import {
 	ApiVersion,
 	TrackParamsSchema,
 	TrackQuerySchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 
 export const handleTrack = createRoute({
+	scopes: [Scopes.Balances.Write],
 	query: TrackQuerySchema,
 	versionedBody: {
 		latest: TrackParamsSchema,

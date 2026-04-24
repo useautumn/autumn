@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -9,6 +9,7 @@ const DeleteCouponParamsSchema = z.object({
 });
 
 export const handleDeleteCoupon = createRoute({
+	scopes: [Scopes.Rewards.Write],
 	params: DeleteCouponParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

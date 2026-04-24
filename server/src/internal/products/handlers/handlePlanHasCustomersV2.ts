@@ -4,12 +4,14 @@ import {
 	ProductNotFoundError,
 	type ProductV2,
 	productsAreSame,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { ProductService } from "@/internal/products/ProductService";
 
 export const handlePlanHasCustomersV2 = createRoute({
+	scopes: [Scopes.Plans.Read],
 	handler: async (c) => {
 		const { product_id } = c.req.param();
 		const ctx = c.get("ctx");

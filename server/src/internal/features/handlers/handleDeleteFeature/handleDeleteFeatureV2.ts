@@ -2,6 +2,7 @@ import {
 	DeleteFeatureV1ParamsSchema,
 	FeatureNotFoundError,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
@@ -9,6 +10,7 @@ import { getCreditSystemsFromFeature } from "../../creditSystemUtils.js";
 import { FeatureService } from "../../FeatureService.js";
 
 export const handleDeleteFeatureV2 = createRoute({
+	scopes: [Scopes.Features.Write],
 	body: DeleteFeatureV1ParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

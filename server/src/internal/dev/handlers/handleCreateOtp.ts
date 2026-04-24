@@ -1,4 +1,5 @@
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { Scopes } from "@autumn/shared";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager";
 import { generateOtp, OTP_TTL } from "../cliAuth/cliAuthUtils";
 
@@ -7,6 +8,7 @@ import { generateOtp, OTP_TTL } from "../cliAuth/cliAuthUtils";
  * Creates an OTP for CLI authentication
  */
 export const handleCreateOtp = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const { org } = c.get("ctx");
 

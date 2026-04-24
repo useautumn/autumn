@@ -2,12 +2,14 @@ import {
 	AffectedResource,
 	ApiVersion,
 	ListCustomersQuerySchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { CusBatchService } from "../CusBatchService.js";
 
 export const handleListCustomers = createRoute({
+	scopes: [Scopes.Customers.Read],
 	versionedQuery: {
 		latest: ListCustomersQuerySchema,
 		[ApiVersion.V1_2]: ListCustomersQuerySchema,

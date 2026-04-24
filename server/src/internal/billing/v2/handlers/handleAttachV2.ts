@@ -4,6 +4,7 @@ import {
 	AttachParamsV0Schema,
 	AttachParamsV1Schema,
 	InternalError,
+	Scopes,
 } from "@autumn/shared";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { billingActions } from "@/internal/billing/v2/actions";
@@ -11,6 +12,7 @@ import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
 
 export const handleAttachV2 = createRoute({
+	scopes: [Scopes.Billing.Write],
 	versionedBody: {
 		latest: AttachParamsV1Schema,
 		[ApiVersion.V1_Beta]: AttachParamsV0Schema,

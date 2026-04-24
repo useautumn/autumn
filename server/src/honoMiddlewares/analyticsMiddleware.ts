@@ -98,6 +98,7 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			user_id: ctx.userId || undefined,
 			user_email: ctx.user?.email || undefined,
 			api_version: ctx.apiVersion?.semver,
+			scopes: ctx.scopes,
 			full_subject_bucket: fullSubjectBucket ?? undefined,
 			full_subject_rollout_enabled: customerId
 				? isFullSubjectRolloutEnabled({ ctx })

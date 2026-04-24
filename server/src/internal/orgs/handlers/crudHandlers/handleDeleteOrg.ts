@@ -1,4 +1,4 @@
-import { AppEnv, type Organization } from "@autumn/shared";
+import { AppEnv, type Organization, Scopes } from "@autumn/shared";
 import {
 	deauthorizeAccount,
 	deleteConnectedAccount,
@@ -97,6 +97,7 @@ const deleteStripeAccounts = async ({
 };
 
 export const handleDeleteOrg = createRoute({
+	scopes: [Scopes.Owner],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org, db, logger } = ctx;

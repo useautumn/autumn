@@ -1,4 +1,4 @@
-import { AppEnv, RecaseError } from "@autumn/shared";
+import { AppEnv, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { redis } from "@/external/redis/initRedis";
 import {
@@ -16,6 +16,11 @@ import { encryptData } from "@/utils/encryptUtils";
  * Connects Stripe keys from CLI authentication flow
  */
 export const handleCliStripe = createRoute({
+	// Mounted on the public dev router (no auth middleware — the CLI hits
+	// this during setup before it has any key). Authorisation comes from
+	// the OTP token in the Authorization header, validated inside the
+	// handler. Scope-check middleware cannot gate this route.
+	scopes: [Scopes.Public],
 	body: z.object({
 		stripeTestKey: z.string(),
 		stripeLiveKey: z.string(),

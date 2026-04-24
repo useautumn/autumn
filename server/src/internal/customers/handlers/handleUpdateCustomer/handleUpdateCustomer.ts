@@ -3,11 +3,13 @@ import {
 	ApiVersion,
 	GetCustomerQuerySchema,
 	UpdateCustomerParamsV0Schema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions";
 
 export const handleUpdateCustomer = createRoute({
+	scopes: [Scopes.Customers.Write],
 	body: UpdateCustomerParamsV0Schema,
 	versionedQuery: {
 		latest: GetCustomerQuerySchema,
