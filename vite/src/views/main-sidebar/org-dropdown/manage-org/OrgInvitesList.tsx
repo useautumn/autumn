@@ -1,7 +1,8 @@
-import type { Invite, Membership } from "@autumn/shared";
+import type { Invite, Membership, Role } from "@autumn/shared";
 import { isFuture } from "date-fns";
 import { Item, Row } from "@/components/general/TableGrid";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@/components/v2/badges/Badge";
+import { ROLE_META } from "@/components/v2/selects/RoleSelect";
 import { useSession } from "@/lib/auth-client";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import { useMemberships } from "../hooks/useMemberships";
@@ -45,12 +46,16 @@ export const OrgInvitesList = () => {
 				<Item className="flex-1"></Item>
 			</Row>
 			{pendingInvites.map((invite: Invite) => {
+				const roleLabel =
+					(invite.role && ROLE_META[invite.role as Role]?.label) ??
+					invite.role ??
+					"";
 				return (
 					<Row key={invite.id} className="flex px-6 text-sm text-t2">
 						<Item className="flex-6">{invite.email}</Item>
 						<Item className="flex-5">{invite.status}</Item>
 						<Item className="flex-3">
-							<Badge variant="outline">{invite.role}</Badge>
+							<Badge variant="muted">{roleLabel}</Badge>
 						</Item>
 						<Item className="flex-3">{formatDateStr(invite.expiresAt)}</Item>
 						<Item className="flex-1 flex justify-end">
