@@ -86,26 +86,14 @@ export const createRedisAvailability = ({
 		return redis.status === "ready" && pong === "PONG";
 	};
 
-	const tryReconnectRedis = async () => {
-		if (!hasConfig || redis.status === "ready") {
-			reconnectStartedAt = null;
-			return;
-		}
-
-		if (
-			redis.status === "connecting" ||
-			redis.status === "reconnecting"
-		) {
-			reconnectStartedAt ??= Date.now();
-			if (Date.now() - reconnectStartedAt < REDIS_STALE_RECONNECT_MS) return;
-		}
-
+	const reconnectRedis = async () => {
 		try {
 			redis.disconnect(false);
 			await withTimeout({
 				timeoutMs: REDIS_PROBE_TIMEOUT_MS,
 				fn: () => redis.connect(),
 			});
+			reconnectStartedAt = null;
 		} catch {
 			// Let the next probe decide whether we recovered.
 		}
@@ -114,14 +102,37 @@ export const createRedisAvailability = ({
 	const tickRedisAvailability = async () => {
 		if (!hasConfig) return;
 
+		let failedWhileReady = false;
 		try {
 			if (await pingRedisClient()) {
 				recordRedisAvailability(true);
 				return;
 			}
-		} catch {}
+			failedWhileReady = redis.status === "ready";
+		} catch {
+			failedWhileReady = redis.status === "ready";
+		}
 
-		await tryReconnectRedis();
+		const shouldReconnectReadyClient =
+			failedWhileReady &&
+			consecutiveFailures + 1 >= REDIS_FAILURES_TO_DEGRADE;
+
+		if (shouldReconnectReadyClient) {
+			await reconnectRedis();
+		} else if (redis.status !== "ready") {
+			if (
+				redis.status === "connecting" ||
+				redis.status === "reconnecting"
+			) {
+				reconnectStartedAt ??= Date.now();
+				if (Date.now() - reconnectStartedAt < REDIS_STALE_RECONNECT_MS) {
+					recordRedisAvailability(false);
+					return;
+				}
+			}
+
+			await reconnectRedis();
+		}
 		(await pingRedisClient().catch(() => false))
 			? recordRedisAvailability(true)
 			: recordRedisAvailability(false);
