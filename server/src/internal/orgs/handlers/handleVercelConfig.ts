@@ -5,6 +5,7 @@ import {
 	UpsertVercelProcessorConfigSchema,
 	type VercelMarketplaceMode,
 	type VercelProcessorConfig,
+	Scopes,
 } from "@autumn/shared";
 import { createSvixApp } from "@server/external/svix/svixHelpers.js";
 import { createSvixCli } from "@server/external/svix/svixUtils.js";
@@ -72,6 +73,7 @@ export const getVercelConfigDisplay = ({
 };
 
 export const handleUpsertVercelConfig = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	body: UpsertVercelProcessorConfigSchema,
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");
@@ -174,6 +176,7 @@ export const handleUpsertVercelConfig = createRoute({
 });
 
 export const handleGetVercelSink = createRoute({
+	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");
 		const vercelConfig = org.processor_configs?.vercel;

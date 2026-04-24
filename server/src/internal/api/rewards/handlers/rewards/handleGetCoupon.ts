@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { RewardService } from "@/internal/rewards/RewardService.js";
 
@@ -7,6 +8,7 @@ const GetCouponParamsSchema = z.object({
 });
 
 export const handleGetCoupon = createRoute({
+	scopes: [Scopes.Rewards.Read],
 	params: GetCouponParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

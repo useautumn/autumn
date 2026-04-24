@@ -1,8 +1,9 @@
-import { AffectedResource, DeletePlanParamsV2Schema } from "@autumn/shared";
+import { AffectedResource, DeletePlanParamsV2Schema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { deleteProduct } from "../../../product/actions/deleteProduct.js";
 
 export const handleDeletePlanV2 = createRoute({
+	scopes: [Scopes.Plans.Write],
 	body: DeletePlanParamsV2Schema,
 	resource: AffectedResource.Product,
 	handler: async (c) => {

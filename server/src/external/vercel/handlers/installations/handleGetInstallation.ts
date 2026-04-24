@@ -1,14 +1,10 @@
-import {
-	cusProductToProduct,
-	type FullCusProduct,
-	mapToProductV2,
-	productV2ToBasePrice,
-} from "@autumn/shared";
+import { cusProductToProduct, type FullCusProduct, mapToProductV2, productV2ToBasePrice, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { VercelBillingPlan } from "../../misc/vercelTypes.js";
 import { productToBillingPlan } from "../handleListBillingPlans.js";
 
 export const handleGetInstallation = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org, fullCustomer: customer } = ctx;

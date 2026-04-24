@@ -1,12 +1,14 @@
 import {
 	CustomerNotFoundError,
 	DeleteEntityParamsV0Schema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
 import { findCustomerForEntity } from "../../actions/findCustomer.js";
 import { entityActions } from "../../actions/index.js";
 
 export const handleDeleteEntityV2 = createRoute({
+	scopes: [Scopes.Customers.Write],
 	body: DeleteEntityParamsV0Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

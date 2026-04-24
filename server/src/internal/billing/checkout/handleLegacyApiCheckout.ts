@@ -3,6 +3,7 @@ import {
 	ApiVersion,
 	AttachFunction,
 	CheckoutParamsV0Schema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { handleCreateCheckout } from "../../customers/add-product/handleCreateCheckout";
@@ -20,6 +21,7 @@ import { checkoutToAttachContext } from "./utils/checkoutToAttachContext";
 import { getCheckoutOptions } from "./utils/getCheckoutOptions";
 
 export const handleLegacyApiCheckout = createRoute({
+	scopes: [Scopes.Billing.Write],
 	versionedBody: {
 		latest: CheckoutParamsV0Schema,
 		[ApiVersion.V1_Beta]: CheckoutParamsV0Schema,

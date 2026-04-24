@@ -1,4 +1,4 @@
-import { SetUsageParamsSchema } from "@autumn/shared";
+import { SetUsageParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
@@ -7,6 +7,7 @@ import { runUpdateUsage } from "../updateBalance/runUpdateUsage.js";
 import { updateUsageV2 } from "../updateBalance/v2/updateUsageV2.js";
 
 export const handleSetUsage = createRoute({
+	scopes: [Scopes.Balances.Write],
 	body: SetUsageParamsSchema,
 	handler: async (c) => {
 		const body = c.req.valid("json");

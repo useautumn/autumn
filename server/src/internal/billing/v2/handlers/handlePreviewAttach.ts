@@ -3,12 +3,14 @@ import {
 	ApiVersion,
 	AttachParamsV0Schema,
 	AttachParamsV1Schema,
+	Scopes,
 } from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingPlanToAttachPreview } from "../utils/billingPlan/billingPlanToAttachPreview";
 
 export const handlePreviewAttach = createRoute({
+	scopes: [Scopes.Billing.Read],
 	versionedBody: {
 		latest: AttachParamsV1Schema,
 		[ApiVersion.V1_Beta]: AttachParamsV0Schema,

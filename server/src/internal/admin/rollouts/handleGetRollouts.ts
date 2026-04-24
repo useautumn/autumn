@@ -1,4 +1,4 @@
-import { organizations } from "@autumn/shared";
+import { organizations, Scopes } from "@autumn/shared";
 import { inArray } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
@@ -7,6 +7,7 @@ import {
 } from "@/internal/misc/rollouts/rolloutConfigStore.js";
 
 export const handleGetRollouts = createRoute({
+	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const { db } = c.get("ctx");
 		const status = getRolloutConfigStatus();

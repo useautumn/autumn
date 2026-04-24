@@ -13,8 +13,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
-import { handleEventIdempotencyKey } from "../utils/handleEventIdempotencyKey.js";
 import { runRedisTrackV3 } from "./runRedisTrackV3.js";
+import { getTrackIdempotencyKey } from "./trackIdempotencyKey.js";
 
 const getTrackFullSubject = async ({
 	ctx,
@@ -64,12 +64,7 @@ export const runTrackV3 = async ({
 		body,
 	});
 
-	if (body.idempotency_key) {
-		await handleEventIdempotencyKey({
-			ctx,
-			body,
-		});
-	}
+	const redisIdempotencyKey = getTrackIdempotencyKey({ ctx });
 
 	const response: TrackResponseV3 = await runRedisTrackV3({
 		ctx,
@@ -77,6 +72,7 @@ export const runTrackV3 = async ({
 		featureDeductions,
 		overageBehavior: body.overage_behavior || "cap",
 		body,
+		idempotencyKey: redisIdempotencyKey,
 	});
 
 	return applyResponseVersionChanges<TrackResponseV3>({

@@ -1,4 +1,4 @@
-import { apiKeys, oauthConsent } from "@autumn/shared";
+import { apiKeys, oauthConsent, Scopes } from "@autumn/shared";
 import { eq, sql } from "drizzle-orm";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -13,6 +13,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
  * Returns: Array of { id, prefix, env, name }
  */
 export const handleGetConsentApiKeys = createRoute({
+	scopes: [Scopes.ApiKeys.Read],
 	params: z.object({
 		consent_id: z.string(),
 	}),

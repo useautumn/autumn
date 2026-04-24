@@ -3,6 +3,7 @@ import {
 	CustomerNotFoundError,
 	cusProductToProduct,
 	productToCusProduct,
+	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
@@ -16,6 +17,7 @@ import { ACTIVE_STATUSES } from "../cusProducts/CusProductService";
  * Used by: vite/src/views/customers/customer/product/hooks/useCusProductQuery.tsx
  */
 export const handleGetCustomerProduct = createRoute({
+	scopes: [Scopes.Customers.Read],
 	query: z.object({
 		version: z.string().optional(),
 		customer_product_id: z.string().optional(),

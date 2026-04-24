@@ -1,8 +1,10 @@
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "../OrgService.js";
 
 export const handleUpdateOrg = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	body: z.object({
 		onboarded: z.boolean().optional(),
 		deployed: z.boolean().optional(),

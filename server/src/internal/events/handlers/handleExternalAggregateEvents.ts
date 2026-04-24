@@ -6,6 +6,7 @@ import {
 	ErrCode,
 	EventsAggregateParamsSchema,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { eventActions } from "@/internal/analytics/actions/eventActions.js";
@@ -19,6 +20,7 @@ import {
 } from "../eventUtils.js";
 
 export const handleExternalAggregateEvents = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: EventsAggregateParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

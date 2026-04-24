@@ -1,3 +1,4 @@
+import { Scopes } from "@autumn/shared";
 import type { AppEnv } from "@autumn/shared";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -7,6 +8,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
  * Get a single resource by ID
  */
 export const handleGetResource = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const { orgId, env, integrationConfigurationId, resourceId } =
 			c.req.param();

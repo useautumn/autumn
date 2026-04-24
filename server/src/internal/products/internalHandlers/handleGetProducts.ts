@@ -1,4 +1,5 @@
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { Scopes } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService";
 import { getGroupToDefaults } from "@/internal/products/productUtils";
 import { mapToProductV2 } from "@/internal/products/productV2Utils";
@@ -10,6 +11,7 @@ import { mapToProductV2 } from "@/internal/products/productV2Utils";
  * - vite/src/views/onboarding4/hooks/useOnboardingProgress.tsx
  */
 export const handleGetProducts = createRoute({
+	scopes: [Scopes.Plans.Read],
 	handler: async (c) => {
 		const { db, org, env, features } = c.get("ctx");
 

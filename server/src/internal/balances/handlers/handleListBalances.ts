@@ -3,6 +3,7 @@ import {
 	customerProducts,
 	entitlements,
 	features,
+	Scopes,
 } from "@autumn/shared";
 import { CustomerNotFoundError } from "@shared/index";
 import { and, eq, isNull } from "drizzle-orm";
@@ -15,6 +16,7 @@ const ListBalancesSchema = z.object({
 });
 
 export const handleListBalances = createRoute({
+	scopes: [Scopes.Balances.Read],
 	query: ListBalancesSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

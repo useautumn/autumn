@@ -1,10 +1,11 @@
-import { findFeatureById, UpdateBalanceParamsV0Schema } from "@autumn/shared";
+import { findFeatureById, UpdateBalanceParamsV0Schema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { updateBalanceV1 } from "@/internal/balances/updateBalance/updateBalanceV1.js";
 import { updateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
 export const handleUpdateBalance = createRoute({
+	scopes: [Scopes.Balances.Write],
 	body: UpdateBalanceParamsV0Schema.extend({}),
 
 	handler: async (c) => {

@@ -81,5 +81,20 @@ export const betterAuthMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	ctx.authType = AuthType.Dashboard;
 	ctx.user = user;
 
+	/**
+	 * Pull scopes injected by the `customSession` better-auth plugin
+	 * (see `server/src/utils/auth.ts`). The plugin augments the session
+	 * response with top-level `role` and `scopes` fields derived from the
+	 * user's membership row in the active organisation.
+	 *
+	 * `as any` is used deliberately: better-auth's `getSession` return
+	 * type does not auto-infer `customSession` additions in all TS
+	 * setups, and the better-auth docs recommend this cast as the
+	 * workaround. The fallback `?? []` preserves the "no scopes = legacy
+	 * unrestricted" convention documented on `RequestContext.scopes`.
+	 */
+	// biome-ignore lint/suspicious/noExplicitAny: documented better-auth workaround
+	ctx.scopes = (session as any).scopes ?? [];
+
 	await next();
 };

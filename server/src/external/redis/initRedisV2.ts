@@ -9,6 +9,7 @@ import {
 } from "./initRedis.js";
 import {
 	getRedisV2ConnectionConfig,
+	REDIS_V2_COMMAND_TIMEOUT_MS,
 	supportsUpstashShebangForRedisV2,
 } from "./initUtils/redisV2Config.js";
 
@@ -17,6 +18,8 @@ const redisV2Config = getRedisV2ConnectionConfig({
 	primaryCacheUrl: process.env.CACHE_URL,
 	currentRegion,
 });
+
+export const hasRedisV2Config = Boolean(redisV2Config);
 
 export const redisV2: Redis = redisV2Config
 	? createRedisConnection(redisV2Config)
@@ -51,6 +54,7 @@ export const getAlternateRedisV2Instance = (
 		cacheUrl,
 		region: `${currentRegion}:v2:${name}`,
 		supportsUpstashShebang: supportsUpstashShebangForRedisV2(name),
+		commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 	});
 	instancePool.set(name, instance);
 	return instance;

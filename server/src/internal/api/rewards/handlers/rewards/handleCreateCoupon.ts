@@ -2,6 +2,7 @@ import {
 	CreateRewardSchema,
 	isFixedPrice,
 	RewardCategory,
+	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCouponUtils.js";
@@ -22,6 +23,7 @@ const CreateCouponQuerySchema = z.object({
 });
 
 export const handleCreateCoupon = createRoute({
+	scopes: [Scopes.Rewards.Write],
 	body: CreateRewardSchema,
 	query: CreateCouponQuerySchema,
 	handler: async (c) => {

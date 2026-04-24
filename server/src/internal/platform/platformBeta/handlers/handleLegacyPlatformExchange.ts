@@ -7,6 +7,7 @@ import {
 	RecaseError,
 	type StripeConfig,
 	user as userTable,
+	Scopes,
 } from "@autumn/shared";
 import { generateId } from "better-auth";
 import { and, eq } from "drizzle-orm";
@@ -30,6 +31,7 @@ const ExchangeSchema = z.object({
 });
 
 export const handleLegacyPlatformExchange = createRoute({
+	scopes: [Scopes.Platform.Write],
 	body: ExchangeSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

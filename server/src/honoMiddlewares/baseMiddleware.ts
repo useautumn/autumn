@@ -90,6 +90,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		entityId,
 		authType: AuthType.Unknown,
 		env: AppEnv.Sandbox, // maybe use app_env headers
+		scopes: [],
 
 		// Query params
 		expand: [],

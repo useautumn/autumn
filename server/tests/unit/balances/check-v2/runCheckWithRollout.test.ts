@@ -1,11 +1,16 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const mockState = {
+	shouldUseRedis: true,
 	legacyCalls: [] as Record<string, unknown>[],
 	v2Calls: [] as Record<string, unknown>[],
 	v2Error: null as unknown,
 	warnCalls: [] as unknown[][],
 };
+
+mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
+	shouldUseRedisV2: () => mockState.shouldUseRedis,
+}));
 
 mock.module("@/internal/balances/check/runCheckLegacyFlow.js", () => ({
 	runCheckLegacyFlow: async (args: Record<string, unknown>) => {
@@ -29,11 +34,19 @@ mock.module("@/internal/balances/check/runCheckV2.js", () => ({
 	},
 }));
 
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import { runCheckWithRollout } from "@/internal/balances/check/runCheckWithRollout.js";
 
-afterEach(() => {
+const resetMockState = () => {
+	mockState.shouldUseRedis = true;
+	mockState.legacyCalls = [];
+	mockState.v2Calls = [];
 	mockState.v2Error = null;
-});
+	mockState.warnCalls = [];
+};
+
+beforeEach(resetMockState);
+afterEach(resetMockState);
 
 const rolloutCtx = {
 	apiVersion: { value: "2025-02-01" },
@@ -53,10 +66,6 @@ const rolloutCtx = {
 
 describe("runCheckWithRollout", () => {
 	test("uses the legacy flow when the rollout is off", async () => {
-		mockState.legacyCalls = [];
-		mockState.v2Calls = [];
-		mockState.v2Error = null;
-
 		const result = await runCheckWithRollout({
 			ctx: {
 				rolloutSnapshot: undefined,
@@ -74,10 +83,6 @@ describe("runCheckWithRollout", () => {
 	});
 
 	test("uses the v2 flow when the full-subject rollout is enabled", async () => {
-		mockState.legacyCalls = [];
-		mockState.v2Calls = [];
-		mockState.v2Error = null;
-
 		const result = await runCheckWithRollout({
 			ctx: {
 				rolloutSnapshot: {
@@ -101,15 +106,44 @@ describe("runCheckWithRollout", () => {
 		});
 	});
 
+	test("returns fail-open fallback when Redis health is degraded", async () => {
+		mockState.shouldUseRedis = false;
+
+		const result = await runCheckWithRollout({
+			ctx: rolloutCtx,
+			body: { customer_id: "cus_123", feature_id: "messages" } as never,
+			requiredBalance: 1,
+		});
+
+		expect(mockState.v2Calls).toHaveLength(0);
+		expect(result).toMatchObject({
+			checkData: null,
+			response: {
+				allowed: true,
+				customer_id: "cus_123",
+				required_balance: 1,
+				balance: null,
+				flag: null,
+			},
+		});
+	});
+
 	test.each([
 		{
 			name: "DB statement timeout",
 			error: Object.assign(new Error("statement timeout"), { code: "57014" }),
 		},
 		{
-			name: "Redis retry exhaustion",
-			error: Object.assign(new Error("redis retries exhausted"), {
-				name: "MaxRetriesPerRequestError",
+			name: "DB connect timeout",
+			error: Object.assign(new Error("connect timeout"), {
+				code: "CONNECT_TIMEOUT",
+			}),
+		},
+		{
+			name: "Redis unavailable",
+			error: new RedisUnavailableError({
+				source: "unit-test",
+				reason: "timeout",
 			}),
 		},
 		{
@@ -117,10 +151,7 @@ describe("runCheckWithRollout", () => {
 			error: new Error("Command timed out"),
 		},
 	])("returns fail-open fallback on $name", async ({ error }) => {
-		mockState.legacyCalls = [];
-		mockState.v2Calls = [];
 		mockState.v2Error = error;
-		mockState.warnCalls = [];
 
 		const result = await runCheckWithRollout({
 			ctx: rolloutCtx,
@@ -134,6 +165,8 @@ describe("runCheckWithRollout", () => {
 				allowed: true,
 				customer_id: "cus_123",
 				required_balance: 1,
+				balance: null,
+				flag: null,
 			},
 		});
 		expect(mockState.warnCalls).toContainEqual([
@@ -144,5 +177,18 @@ describe("runCheckWithRollout", () => {
 				required_balance: 1,
 			}),
 		]);
+	});
+
+	test("throws non-transient errors", async () => {
+		const error = new Error("application bug");
+		mockState.v2Error = error;
+
+		await expect(
+			runCheckWithRollout({
+				ctx: rolloutCtx,
+				body: { customer_id: "cus_123", feature_id: "messages" } as never,
+				requiredBalance: 1,
+			}),
+		).rejects.toBe(error);
 	});
 });

@@ -3,6 +3,7 @@ import {
 	apiPlan,
 	CreatePlanParamsV2Schema,
 	type CreateProductV2Params,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { createProduct } from "../../../product/actions/createProduct.js";
@@ -10,6 +11,7 @@ import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 export const handleCreatePlanV2 = createRoute({
+	scopes: [Scopes.Plans.Write],
 	body: CreatePlanParamsV2Schema,
 	resource: AffectedResource.Product,
 	handler: async (c) => {

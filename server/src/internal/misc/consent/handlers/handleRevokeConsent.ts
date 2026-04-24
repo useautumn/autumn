@@ -5,6 +5,7 @@ import {
 	oauthConsent,
 	oauthRefreshToken,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -24,6 +25,7 @@ import { clearSecretKeyCache } from "../../../dev/api-keys/cacheApiKeyUtils.js";
  * Returns: { deleted_api_keys: ["am_sk_test_...", ...] }
  */
 export const handleRevokeConsent = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	params: z.object({
 		consent_id: z.string(),
 	}),

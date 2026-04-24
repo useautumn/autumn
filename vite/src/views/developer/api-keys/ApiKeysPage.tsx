@@ -6,7 +6,7 @@ import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { createAPIKeyTableColumns } from "./components/APIKeyTableColumns";
-import { CreateApiKeyDialog } from "./components/CreateApiKeyDialog";
+import { CreateApiKeySheet } from "./components/CreateApiKeySheet";
 
 export const ApiKeysPage = () => {
 	const { apiKeys } = useDevQuery();
@@ -56,7 +56,7 @@ export const ApiKeysPage = () => {
 
 	return (
 		<div className="h-fit max-h-full">
-			<CreateApiKeyDialog
+			<CreateApiKeySheet
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
 			/>

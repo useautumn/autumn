@@ -76,12 +76,14 @@ export const runRedisTrackV3 = async ({
 	featureDeductions,
 	overageBehavior,
 	body,
+	idempotencyKey,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
 	body: TrackParams;
+	idempotencyKey?: string;
 }): Promise<TrackResponseV3> => {
 	const { data: result, error } = await tryCatch(
 		executeRedisDeductionV2({
@@ -89,6 +91,7 @@ export const runRedisTrackV3 = async ({
 			fullSubject,
 			entityId: fullSubject.entity?.id ?? undefined,
 			deductions: featureDeductions,
+			idempotencyKey,
 			deductionOptions: {
 				overageBehaviour: overageBehavior,
 				triggerAutoTopUp: true,

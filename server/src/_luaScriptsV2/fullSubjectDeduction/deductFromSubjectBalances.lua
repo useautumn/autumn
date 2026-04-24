@@ -19,8 +19,9 @@
 
   KEYS[1] = shared balance routing key (used for cluster slot routing)
   KEYS[2] = lock receipt key, or "" when no lock is in play
-  KEYS[3..N] = per-feature shared balance hash keys; params.balance_key_index_by_feature_id
-              maps feature_id → the index (3..N) of the key for that feature
+  KEYS[3] = idempotency key, or "" when the request is not idempotent
+  KEYS[4..N] = per-feature shared balance hash keys; params.balance_key_index_by_feature_id
+              maps feature_id → the index (4..N) of the key for that feature
 
   All Redis keys the script touches MUST be declared in KEYS[] so Upstash (and
   Redis Cluster) can apply key-based locking / slot routing. Do not reconstruct
@@ -43,7 +44,8 @@
       skip_additional_balance: boolean,
       alter_granted_balance: boolean,
       overage_behaviour: "cap" | "reject" | "allow",
-      feature_id: string
+      feature_id: string,
+      idempotency_ttl_ms: number | null
     }
 
   Returns JSON:
@@ -68,6 +70,10 @@ local params = cjson.decode(ARGV[1])
 local lock_receipt_key_from_keys = KEYS[2]
 if lock_receipt_key_from_keys == '' then
   lock_receipt_key_from_keys = nil
+end
+local idempotency_key = KEYS[3]
+if idempotency_key == '' then
+  idempotency_key = nil
 end
 
 -- Rebuild balance_keys_by_feature_id by dereferencing KEYS via the index map.
@@ -101,9 +107,24 @@ local skip_additional_balance = params.skip_additional_balance or false
 local alter_granted_balance = params.alter_granted_balance or false
 local overage_behaviour = params.overage_behaviour or 'cap'
 local feature_id = params.feature_id
+local idempotency_ttl_ms = params.idempotency_ttl_ms
 local lock = params.lock
 local unwind_value = params.unwind_value
 local lock_receipt_key = lock_receipt_key_from_keys
+
+if not is_nil(idempotency_key) then
+  if redis.call('EXISTS', idempotency_key) == 1 then
+    return cjson.encode({
+      error = 'DUPLICATE_IDEMPOTENCY_KEY',
+      updates = {},
+      rollover_updates = {},
+      modified_customer_entitlement_ids = new_empty_array(),
+      mutation_logs = new_empty_array(),
+      remaining = 0,
+      logs = new_empty_array(),
+    })
+  end
+end
 
 -- Initialize context with in-memory state from Redis
 if #customer_entitlement_deductions == 0 then
@@ -286,6 +307,10 @@ update_aggregated_balances({
   context = context,
   mutation_logs = mutation_logs,
 })
+
+if not is_nil(idempotency_key) and not is_nil(idempotency_ttl_ms) then
+  redis.call('SET', idempotency_key, '1', 'PX', idempotency_ttl_ms)
+end
 
 logger.log("=== LUA DEDUCTION END ===")
 

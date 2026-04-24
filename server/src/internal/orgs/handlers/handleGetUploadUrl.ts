@@ -1,9 +1,10 @@
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, Scopes } from "@autumn/shared";
 import { getUploadUrl } from "@/external/supabase/storageUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 
 export const handleGetUploadUrl = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org } = ctx;

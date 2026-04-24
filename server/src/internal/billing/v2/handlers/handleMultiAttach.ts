@@ -2,6 +2,7 @@ import {
 	AffectedResource,
 	InternalError,
 	MultiAttachParamsV0Schema,
+	Scopes,
 } from "@autumn/shared";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
 import { billingActions } from "@/internal/billing/v2/actions";
@@ -9,6 +10,7 @@ import { createRoute } from "../../../../honoMiddlewares/routeHandler";
 import { billingResultToResponse } from "../utils/billingResult/billingResultToResponse";
 
 export const handleMultiAttach = createRoute({
+	scopes: [Scopes.Billing.Write],
 	body: MultiAttachParamsV0Schema,
 	resource: AffectedResource.MultiAttach,
 	lock:
