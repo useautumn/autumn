@@ -10,6 +10,3 @@ timeout = 0
 
 [test.env]
 NODE_ENV = "test"
-
-[install.security]
-scanner = "@socketsecurity/bun-security-scanner"
