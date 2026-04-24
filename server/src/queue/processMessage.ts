@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import type { Logger } from "pino";
 import { isTransientDbError } from "@/db/dbUtils.js";
+import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -41,6 +42,27 @@ export interface SqsJob {
 	name: string;
 	data: any;
 }
+
+export const shouldRetrySqsJobError = ({
+	jobName,
+	error,
+}: {
+	jobName: string;
+	error: unknown;
+}) => {
+	switch (jobName) {
+		case JobName.SyncBalanceBatchV3:
+		case JobName.SyncBalanceBatchV4:
+		case JobName.RefreshEntityAggregate:
+			return isTransientDbError({ error });
+		case JobName.Track:
+			return (
+				isTransientDbError({ error }) || isTransientRedisError({ error })
+			);
+		default:
+			return false;
+	}
+};
 
 export const processMessage = async ({
 	message,
@@ -306,14 +328,9 @@ export const processMessage = async ({
 		// Sync jobs: re-throw infrastructure errors so the message stays in SQS.
 		// Application errors (RecaseError, InternalError) are swallowed — they
 		// won't fix on retry. DB errors (connection, timeout) will.
-		if (
-			(job.name === JobName.SyncBalanceBatchV3 ||
-				job.name === JobName.SyncBalanceBatchV4 ||
-				job.name === JobName.RefreshEntityAggregate) &&
-			isTransientDbError({ error })
-		) {
+		if (shouldRetrySqsJobError({ jobName: job.name, error })) {
 			Sentry.captureException(error);
-			errorLogger.error(`[${job.name}] Retryable DB error, keeping in SQS`, {
+			errorLogger.error(`[${job.name}] Retryable error, keeping in SQS`, {
 				jobName: job.name,
 				error:
 					error instanceof Error
