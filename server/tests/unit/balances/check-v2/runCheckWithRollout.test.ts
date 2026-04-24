@@ -8,8 +8,8 @@ const mockState = {
 	warnCalls: [] as unknown[][],
 };
 
-mock.module("@/external/redis/initRedis.js", () => ({
-	shouldUseRedis: () => mockState.shouldUseRedis,
+mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
+	shouldUseRedisV2: () => mockState.shouldUseRedis,
 }));
 
 mock.module("@/internal/balances/check/runCheckLegacyFlow.js", () => ({
