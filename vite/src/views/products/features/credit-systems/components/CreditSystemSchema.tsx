@@ -9,6 +9,14 @@ import { ClassicCreditSchema } from "./ClassicCreditSchema";
 
 type CreditSchemaMode = "classic" | "ai";
 
+const DEFAULT_AI_MODEL_COMPANIES = ["anthropic", "google", "openai"] as const;
+
+const getReleaseDateMs = (releaseDate?: string) => {
+	if (!releaseDate) return -1;
+	const timestamp = Date.parse(releaseDate);
+	return Number.isNaN(timestamp) ? -1 : timestamp;
+};
+
 function getDefaultModelMarkups(
 	providers: Record<string, ModelsDevProvider>,
 ): Record<string, { markup: number; humanModelName: string }> {
@@ -18,16 +26,30 @@ function getDefaultModelMarkups(
 	if (!preferredProvider) return result;
 
 	const providerKey = preferredProvider.id;
-	for (const company of ["anthropic", "openai", "google"]) {
+	for (const company of DEFAULT_AI_MODEL_COMPANIES) {
 		const companyModels = Object.entries(preferredProvider.models)
-			.filter(([key]) => key.startsWith(company))
-			.slice(0, 3);
-		for (const [modelKey, model] of companyModels) {
-			result[`${providerKey}/${modelKey}`] = {
-				markup: 0,
-				humanModelName: model.name,
-			};
-		}
+			.filter(([key]) => key.startsWith(company));
+
+		const latestModel = companyModels.reduce<
+			[string, ModelsDevProvider["models"][string]] | null
+		>((currentLatest, candidate) => {
+			if (!currentLatest) return candidate;
+
+			const currentRelease = getReleaseDateMs(
+				currentLatest[1].release_date,
+			);
+			const candidateRelease = getReleaseDateMs(candidate[1].release_date);
+
+			return candidateRelease > currentRelease ? candidate : currentLatest;
+		}, null);
+
+		if (!latestModel) continue;
+
+		const [modelKey, model] = latestModel;
+		result[`${providerKey}/${modelKey}`] = {
+			markup: 0,
+			humanModelName: model.name,
+		};
 	}
 	return result;
 }

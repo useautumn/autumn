@@ -2,6 +2,7 @@
 export interface ModelsDevModel {
 	id: string;
 	name: string;
+	release_date?: string;
 	cost: {
 		input: number;
 		output: number;
