@@ -8,19 +8,19 @@ import { extractLocalEndpoint } from "@/queue/initSqs.js";
 import { schedulerClient } from "./initEventBridge.js";
 
 const isLocalQueue = (): boolean =>
-	!!extractLocalEndpoint({ queueUrl: process.env.SQS_QUEUE_URL });
+	!!extractLocalEndpoint({ queueUrl: process.env.SQS_QUEUE_URL_V2 });
 
 const SCHEDULE_GROUP = "default";
 const SCHEDULER_ROLE_ARN = process.env.AWS_EVENTBRIDGE_SCHEDULER_ROLE_ARN || "";
 
 /** Derives SQS ARN from URL: https://sqs.<region>.amazonaws.com/<account>/<name> -> arn:aws:sqs:<region>:<account>:<name> */
 const getSqsQueueArn = (): string => {
-	const url = process.env.SQS_QUEUE_URL || "";
+	const url = process.env.SQS_QUEUE_URL_V2 || "";
 	const match = url.match(
 		/^https:\/\/sqs\.([a-z0-9-]+)\.amazonaws\.com\/(\d+)\/(.+)$/,
 	);
 	if (!match)
-		throw new Error(`Cannot derive SQS ARN from SQS_QUEUE_URL: ${url}`);
+		throw new Error(`Cannot derive SQS ARN from SQS_QUEUE_URL_V2: ${url}`);
 	const [, region, accountId, queueName] = match;
 	return `arn:aws:sqs:${region}:${accountId}:${queueName}`;
 };
