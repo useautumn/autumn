@@ -1,6 +1,10 @@
 import { ms } from "@autumn/shared";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import {
+	getAwsTaskIdentity,
+	hasAwsTaskIdentity,
+} from "@/external/aws/ecs/awsTaskIdentity.js";
+import {
 	BLUE_GREEN_HEARTBEAT_KEY_PREFIX,
 	getAdminS3Config,
 } from "@/external/aws/s3/adminS3Config.js";
@@ -8,11 +12,7 @@ import { getS3Client } from "@/external/aws/s3/initS3.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { describeSlotGate } from "./blueGreenGate.js";
 import type { WorkerHeartbeat } from "./blueGreenSchemas.js";
-import {
-	getInstanceId,
-	getResolvedWorkerIdentity,
-	hasWorkerIdentity,
-} from "./blueGreenSlotEnv.js";
+import { getInstanceId } from "./blueGreenSlotEnv.js";
 import { getActiveSlotStoreStatus } from "./blueGreenSlotStore.js";
 
 const HEARTBEAT_INTERVAL_MS = ms.seconds(10);
@@ -54,9 +54,9 @@ const messagesLastMinute = (): number => {
 };
 
 const buildHeartbeat = (): WorkerHeartbeat | null => {
-	if (!hasWorkerIdentity()) return null;
+	if (!hasAwsTaskIdentity()) return null;
 
-	const identity = getResolvedWorkerIdentity();
+	const identity = getAwsTaskIdentity();
 	if (!identity) return null;
 
 	const gate = describeSlotGate();
@@ -112,7 +112,7 @@ export const startBlueGreenHeartbeat = ({
 	logger?: Logger;
 } = {}) => {
 	if (state.timer) return;
-	if (!hasWorkerIdentity()) return;
+	if (!hasAwsTaskIdentity()) return;
 
 	void writeHeartbeat({ logger });
 	state.timer = setInterval(() => {

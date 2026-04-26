@@ -1,12 +1,12 @@
+import {
+	hasAwsTaskIdentity,
+	resolveAwsTaskIdentity,
+} from "@/external/aws/ecs/awsTaskIdentity.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import {
 	startBlueGreenHeartbeat,
 	stopBlueGreenHeartbeat,
 } from "./blueGreenHeartbeat.js";
-import {
-	hasWorkerIdentity,
-	resolveWorkerIdentity,
-} from "./blueGreenSlotEnv.js";
 import {
 	startBlueGreenSlotStorePolling,
 	stopBlueGreenSlotStorePolling,
@@ -14,24 +14,23 @@ import {
 
 /**
  * Wire blue-green into the worker process:
- *   1. Resolve task identity from ECS metadata (cached for process lifetime).
+ *   1. Resolve AWS task identity (idempotent — `awsTaskIdentity` also fires
+ *      a fire-and-forget at module load, so identity is usually ready by the
+ *      time this runs).
  *   2. Start polling the S3 active-slot pointer.
  *   3. Start the per-instance heartbeat writer.
  *
  * Polling is started here (not via the global edge-config registry) because
  * `initBlueGreen` runs after `startAllEdgeConfigPolling` in the worker boot path.
- * No-op when identity can't be resolved (local dev outside ECS).
+ * No-op when identity can't be resolved (local dev / non-ECS).
  */
 export const initBlueGreen = async ({ logger }: { logger?: Logger } = {}) => {
-	const identity = await resolveWorkerIdentity();
+	const identity = await resolveAwsTaskIdentity();
 	await startBlueGreenSlotStorePolling({ logger });
 	startBlueGreenHeartbeat({ logger });
 
-	if (hasWorkerIdentity()) {
+	if (hasAwsTaskIdentity()) {
 		logger?.info(
-			`[BlueGreen] Worker identity resolved: taskDef=${identity.taskDefinitionArn ?? "unknown"} sha=${identity.imageSha ?? "unknown"}. Slot gate active.`,
-		);
-		console.log(
 			`[BlueGreen] Worker identity resolved: taskDef=${identity.taskDefinitionArn ?? "unknown"} sha=${identity.imageSha ?? "unknown"}. Slot gate active.`,
 		);
 	}

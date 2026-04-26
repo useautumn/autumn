@@ -1,5 +1,6 @@
 import { Writable } from "node:stream";
 import pino from "pino";
+import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
 
 // Custom log formatter for Bun compatibility
 const createDevLogStream = () => {
@@ -155,6 +156,21 @@ export const initLogger = () => {
 	const logger = pino(
 		{
 			level: isDev || isTest ? "debug" : "info",
+			// Tag every log line with this process's AWS task identity so Axiom
+			// can distinguish blue/green task sets. Returns {} until
+			// `resolveAwsTaskIdentity` finishes (~100ms after boot) and on
+			// non-AWS hosts (Railway, local) where identity stays null.
+			mixin: () => {
+				const identity = getAwsTaskIdentity();
+				if (!identity) return {};
+				if (!identity.taskDefinitionArn && !identity.imageSha) return {};
+				return {
+					aws: {
+						taskDefinitionArn: identity.taskDefinitionArn,
+						imageSha: identity.imageSha,
+					},
+				};
+			},
 			formatters: {
 				level: (label: any) => {
 					return {

@@ -1,29 +1,31 @@
 import {
-	getResolvedWorkerIdentity,
-	hasWorkerIdentity,
-} from "./blueGreenSlotEnv.js";
+	getAwsTaskIdentity,
+	hasAwsTaskIdentity,
+} from "@/external/aws/ecs/awsTaskIdentity.js";
 import { getActiveSlotConfig } from "./blueGreenSlotStore.js";
 
 /**
- * True iff this process should be consuming SQS messages right now.
- * Fail-open: any state in which we don't have a clear, healthy "you are idle"
- * signal lets workers consume. Specifically:
- *   - No worker identity resolved (local dev / non-ECS) → consume.
- *   - No active record in S3 (file missing OR store errored — `createEdgeConfigStore`
- *     resets to defaults on error, so this branch covers both) → consume.
- *   - Active record present and our identity matches → consume.
- *   - Active record present and our identity does NOT match → idle (the only
+ * True iff this process should run worker/cron work right now.
+ *
+ * Fail-open everywhere except active-record-mismatch:
+ *   - **Non-AWS host** (no ECS metadata, no `FC_GIT_COMMIT_SHA`) → true.
+ *     Lets us run the same code on Railway / local / any non-ECS host
+ *     without blue-green configuration.
+ *   - **No S3 active-slot record** (BG never enabled, or `createEdgeConfigStore`
+ *     reset to defaults on S3 error) → true.
+ *   - **S3 record present + identity matches** → true.
+ *   - **S3 record present + identity does NOT match** → false (the only
  *     case where we stop consuming).
  */
 export const isActiveSlot = (): boolean => {
-	if (!hasWorkerIdentity()) return true;
+	if (!hasAwsTaskIdentity()) return true;
 
 	const config = getActiveSlotConfig();
 	if (!config.activeTaskDefinitionArn && !config.activeImageSha) {
 		return true;
 	}
 
-	const identity = getResolvedWorkerIdentity();
+	const identity = getAwsTaskIdentity();
 	if (!identity) return true;
 
 	if (
@@ -47,14 +49,14 @@ export const isActiveSlot = (): boolean => {
 
 /** Same logic as isActiveSlot, but returns a structured reason for diagnostics. */
 export const describeSlotGate = () => {
-	if (!hasWorkerIdentity()) {
+	if (!hasAwsTaskIdentity()) {
 		return { allowPoll: true, reason: "blue-green-disabled" as const };
 	}
 	const config = getActiveSlotConfig();
 	if (!config.activeTaskDefinitionArn && !config.activeImageSha) {
 		return { allowPoll: true, reason: "no-active-record" as const };
 	}
-	const identity = getResolvedWorkerIdentity();
+	const identity = getAwsTaskIdentity();
 	if (!identity) {
 		return { allowPoll: true, reason: "identity-unresolved" as const };
 	}

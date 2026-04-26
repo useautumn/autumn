@@ -2,6 +2,10 @@ import "../sentry.ts";
 import { CronJob } from "cron";
 import { initDrizzle } from "../db/initDrizzle.js";
 import { logger } from "../external/logtail/logtailUtils.js";
+import {
+	describeSlotGate,
+	isActiveSlot,
+} from "../queue/blueGreen/blueGreenGate.js";
 import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runProductCron } from "./productCron/runProductCron.js";
@@ -26,6 +30,17 @@ const logCronHeartbeat = () => {
 const main = async () => {
 	if (process.env.DISABLE_CRON === "true") {
 		console.log(`Cron disabled!`);
+		return;
+	}
+
+	// Blue-green gate: skip the tick on the idle task set so a swap doesn't
+	// double-fire jobs. Fail-open on non-AWS hosts (no task identity).
+	if (!isActiveSlot()) {
+		const reason = describeSlotGate();
+		logger.info("Cron tick skipped (idle slot)", {
+			type: "cron_skipped_idle",
+			gate: reason,
+		});
 		return;
 	}
 
