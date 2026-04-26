@@ -51,8 +51,11 @@ export const recordMessagesReceived = ({
 }) => {
 	if (count <= 0) return;
 	state.queueUrls.add(queueUrl);
-	state.lastMessageReceivedAt = new Date().toISOString();
-	state.receiveSamples.push({ at: Date.now(), count });
+	const now = Date.now();
+	state.lastMessageReceivedAt = new Date(now).toISOString();
+	const cutoff = now - ROLLING_WINDOW_MS;
+	state.receiveSamples = state.receiveSamples.filter((s) => s.at >= cutoff);
+	state.receiveSamples.push({ at: now, count });
 };
 
 const messagesLastMinute = (): number => {

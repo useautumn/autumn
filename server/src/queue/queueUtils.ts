@@ -160,5 +160,5 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 		return;
 	}
 
-	throw new Error("No queue configured. Set SQS_QUEUE_URL");
+	throw new Error("No queue configured. Set SQS_QUEUE_URL_V2");
 };
