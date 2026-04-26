@@ -19,6 +19,13 @@ export type WorkerIdentity = z.infer<typeof WorkerIdentitySchema>;
 export const ActiveSlotConfigSchema = z.object({
 	activeTaskDefinitionArn: z.string().nullable(),
 	activeImageSha: z.string().nullable(),
+	/**
+	 * Operator-maintained record of which ECS service ARN Flightcontrol
+	 * currently considers Blue (Production). Dashboard-side metadata only —
+	 * the autumn server gate doesn't read this. Allowed to be unset for
+	 * back-compat with existing records.
+	 */
+	flightcontrolBlueArn: z.string().nullable().optional(),
 	updatedAt: z.string(),
 	updatedBy: z.string().optional(),
 	reason: z.string().optional(),
