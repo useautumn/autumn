@@ -1,4 +1,5 @@
 import { SpanKind, SpanStatusCode, trace } from "@opentelemetry/api";
+import { getAwsTaskIdentity } from "@/external/aws/ecs/awsTaskIdentity.js";
 import { type TenantAttrs, withTenantContext } from "./tenantContext.js";
 
 const tracer = trace.getTracer("autumn.worker");
@@ -28,6 +29,14 @@ export const withWorkerSpan = async <T>({
 				workflow_id: workflowId,
 				workflow_name: workflowName,
 			});
+
+			const aws = getAwsTaskIdentity();
+			if (aws?.taskDefinitionArn) {
+				span.setAttribute("aws.task_definition_arn", aws.taskDefinitionArn);
+			}
+			if (aws?.imageSha) {
+				span.setAttribute("aws.image_sha", aws.imageSha);
+			}
 
 			if (tenantAttrs) {
 				for (const [key, value] of Object.entries(tenantAttrs)) {

@@ -1,15 +1,5 @@
 import { z } from "zod/v4";
-
-/**
- * Identity of a worker task set, derived from ECS task metadata at boot.
- * task definition ARN is the primary identifier (AWS-issued, unique per deploy);
- * image SHA is a fallback for environments without ECS metadata (local dev).
- */
-export const WorkerIdentitySchema = z.object({
-	taskDefinitionArn: z.string().nullable(),
-	imageSha: z.string().nullable(),
-});
-export type WorkerIdentity = z.infer<typeof WorkerIdentitySchema>;
+import { AwsTaskIdentitySchema } from "@/external/aws/ecs/awsTaskIdentity.js";
 
 /**
  * Single source-of-truth pointer naming which task set should consume SQS.
@@ -36,7 +26,7 @@ export type ActiveSlotConfig = z.infer<typeof ActiveSlotConfigSchema>;
 export const WorkerHeartbeatSchema = z.object({
 	instanceId: z.string(),
 	pid: z.number(),
-	identity: WorkerIdentitySchema,
+	identity: AwsTaskIdentitySchema,
 	declaredActive: z.boolean(),
 	storeHealthy: z.boolean(),
 	lastReceivePollAt: z.string().nullable(),

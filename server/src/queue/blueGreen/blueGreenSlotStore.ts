@@ -1,3 +1,4 @@
+import { ms } from "@autumn/shared";
 import { BLUE_GREEN_ACTIVE_SLOT_KEY } from "@/external/aws/s3/adminS3Config.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
@@ -12,10 +13,15 @@ import {
  *
  * Note: not registered with the global edge-config registry — `initBlueGreen`
  * starts polling explicitly because it runs after `startAllEdgeConfigPolling`.
+ *
+ * Polls every 2s (vs the 10s default for other edge-config stores) so a
+ * Promote takes effect quickly. S3 GET cost is negligible at this rate;
+ * the win is shrinking the dual-consume window during a swap.
  */
 const store = createEdgeConfigStore<ActiveSlotConfig>({
 	s3Key: BLUE_GREEN_ACTIVE_SLOT_KEY,
 	schema: ActiveSlotConfigSchema,
+	pollIntervalMs: ms.seconds(2),
 	defaultValue: () => ({
 		activeTaskDefinitionArn: null,
 		activeImageSha: null,
