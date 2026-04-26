@@ -121,7 +121,7 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	delayMs?: number;
 	queueUrl?: string;
 }) => {
-	const resolvedQueueUrl = queueUrl || process.env.SQS_QUEUE_URL;
+	const resolvedQueueUrl = queueUrl || process.env.SQS_QUEUE_URL_V2;
 
 	if (resolvedQueueUrl) {
 		const sqsClient = getSqsClient();
