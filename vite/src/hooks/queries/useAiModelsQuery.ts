@@ -10,7 +10,7 @@ export const useModelsDevPricing = () => {
 		queryFn: async () => {
 			const { data } = await axiosInstance.get<
 				Record<string, ModelsDevProvider>
-			>("/features/ai/model_pricing");
+			>("/v1/features/ai/model_pricing");
 			return data;
 		},
 		staleTime: 1000 * 60 * 10,
