@@ -69,6 +69,11 @@ export const getApiCustomerBaseV2 = async ({
 			usage_alerts: customer.usage_alerts ?? undefined,
 			overage_allowed: customer.overage_allowed ?? undefined,
 		},
+		config: customer.config
+			? {
+					disable_pooled_balance: customer.config.disable_pooled_balance,
+				}
+			: undefined,
 		invoices:
 			fullSubject.invoices && ctx.expand.includes(CustomerExpand.Invoices)
 				? invoicesToResponse({

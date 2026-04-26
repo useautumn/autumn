@@ -12,7 +12,7 @@ import { getSqsClient } from "@/queue/initSqs.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 
 describe("addTaskToQueue queue override", () => {
-	const originalSqsQueueUrl = process.env.SQS_QUEUE_URL;
+	const originalSqsQueueUrl = process.env.SQS_QUEUE_URL_V2;
 	const originalQueueUrl = process.env.QUEUE_URL;
 
 	beforeEach(() => {
@@ -23,7 +23,7 @@ describe("addTaskToQueue queue override", () => {
 			mockState.commands.push(command.input);
 			return {};
 		}) as typeof sqsClient.send;
-		delete process.env.SQS_QUEUE_URL;
+		delete process.env.SQS_QUEUE_URL_V2;
 		delete process.env.QUEUE_URL;
 	});
 
@@ -32,7 +32,7 @@ describe("addTaskToQueue queue override", () => {
 			const sqsClient = getSqsClient();
 			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
 		}
-		process.env.SQS_QUEUE_URL = originalSqsQueueUrl;
+		process.env.SQS_QUEUE_URL_V2 = originalSqsQueueUrl;
 		process.env.QUEUE_URL = originalQueueUrl;
 	});
 
