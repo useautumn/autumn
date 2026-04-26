@@ -2,6 +2,7 @@ import {
 	hasAwsTaskIdentity,
 	resolveAwsTaskIdentity,
 } from "@/external/aws/ecs/awsTaskIdentity.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import {
 	startBlueGreenHeartbeat,
@@ -24,10 +25,16 @@ import {
  * `initBlueGreen` runs after `startAllEdgeConfigPolling` in the worker boot path.
  * No-op when identity can't be resolved (local dev / non-ECS).
  */
-export const initBlueGreen = async ({ logger }: { logger?: Logger } = {}) => {
+export const initBlueGreen = async ({
+	db,
+	logger,
+}: {
+	db: DrizzleCli;
+	logger?: Logger;
+}) => {
 	const identity = await resolveAwsTaskIdentity();
 	await startBlueGreenSlotStorePolling({ serviceName: "workers", logger });
-	startBlueGreenHeartbeat({ logger });
+	startBlueGreenHeartbeat({ db, logger, serviceName: "workers" });
 
 	if (hasAwsTaskIdentity()) {
 		logger?.info(

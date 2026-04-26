@@ -424,7 +424,7 @@ export const initWorkers = async ({
 	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
 	await warmupRegionalRedis();
 
-	await initBlueGreen({ logger });
+	await initBlueGreen({ db, logger });
 
 	const shutdown = async () => {
 		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
