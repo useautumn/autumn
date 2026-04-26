@@ -1,0 +1,42 @@
+import { z } from "zod/v4";
+
+/**
+ * Identity of a worker task set, derived from ECS task metadata at boot.
+ * task definition ARN is the primary identifier (AWS-issued, unique per deploy);
+ * image SHA is a fallback for environments without ECS metadata (local dev).
+ */
+export const WorkerIdentitySchema = z.object({
+	taskDefinitionArn: z.string().nullable(),
+	imageSha: z.string().nullable(),
+});
+export type WorkerIdentity = z.infer<typeof WorkerIdentitySchema>;
+
+/**
+ * Single source-of-truth pointer naming which task set should consume SQS.
+ * Either field is sufficient; both are populated when known so the gate has
+ * redundancy. Both null = blue-green disabled (back-compat).
+ */
+export const ActiveSlotConfigSchema = z.object({
+	activeTaskDefinitionArn: z.string().nullable(),
+	activeImageSha: z.string().nullable(),
+	updatedAt: z.string(),
+	updatedBy: z.string().optional(),
+	reason: z.string().optional(),
+});
+export type ActiveSlotConfig = z.infer<typeof ActiveSlotConfigSchema>;
+
+/** Per-process liveness record. Written every ~10s; dashboard reads + aggregates. */
+export const WorkerHeartbeatSchema = z.object({
+	instanceId: z.string(),
+	pid: z.number(),
+	identity: WorkerIdentitySchema,
+	declaredActive: z.boolean(),
+	storeHealthy: z.boolean(),
+	lastReceivePollAt: z.string().nullable(),
+	lastMessageReceivedAt: z.string().nullable(),
+	messagesLastMinute: z.number(),
+	queueUrls: z.array(z.string()),
+	startedAt: z.string(),
+	writtenAt: z.string(),
+});
+export type WorkerHeartbeat = z.infer<typeof WorkerHeartbeatSchema>;
