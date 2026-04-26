@@ -247,7 +247,7 @@ export const getPgHealthState = (): {
 	failureCount,
 	probeActive: probeInterval !== null,
 	firstProbeSuccessAt,
-	hasReplica: !!process.env.DATABASE_REPLICA_URL,
+	hasReplica: !!process.env.DATABASE_V2_REPLICA_URL,
 });
 
 /** Force DEGRADED state (for testing). Does NOT start the recovery probe. */
