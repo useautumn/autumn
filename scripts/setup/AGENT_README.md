@@ -65,7 +65,7 @@ Set these in the process environment before running `bun dev:agent` and they wil
 
 ## SQS isolation
 
-Each agent instance gets its own local ElasticMQ. `SQS_QUEUE_URL` is always hardcoded to `http://localhost:9324/000000000000/autumn.fifo` in `server/.env` — the shared `SQS_QUEUE_URL` from the Capy environment is intentionally ignored to prevent agents from consuming a shared queue.
+Each agent instance gets its own local ElasticMQ. `SQS_QUEUE_URL_V2` is always hardcoded to `http://localhost:9324/000000000000/autumn.fifo` in `server/.env` — the shared `SQS_QUEUE_URL_V2` from the Capy environment is intentionally ignored to prevent agents from consuming a shared queue.
 
 ## Known limitations
 

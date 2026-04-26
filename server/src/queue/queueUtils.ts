@@ -121,7 +121,7 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	delayMs?: number;
 	queueUrl?: string;
 }) => {
-	const resolvedQueueUrl = queueUrl || process.env.SQS_QUEUE_URL;
+	const resolvedQueueUrl = queueUrl || process.env.SQS_QUEUE_URL_V2;
 
 	if (resolvedQueueUrl) {
 		const sqsClient = getSqsClient();
@@ -172,5 +172,5 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 		return;
 	}
 
-	throw new Error("No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL");
+	throw new Error("No queue configured. Set either SQS_QUEUE_URL_V2 or QUEUE_URL");
 };
