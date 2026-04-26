@@ -26,17 +26,17 @@ import {
  */
 export const initBlueGreen = async ({ logger }: { logger?: Logger } = {}) => {
 	const identity = await resolveAwsTaskIdentity();
-	await startBlueGreenSlotStorePolling({ logger });
+	await startBlueGreenSlotStorePolling({ serviceName: "workers", logger });
 	startBlueGreenHeartbeat({ logger });
 
 	if (hasAwsTaskIdentity()) {
 		logger?.info(
-			`[BlueGreen] Worker identity resolved: taskDef=${identity.taskDefinitionArn ?? "unknown"} sha=${identity.imageSha ?? "unknown"}. Slot gate active.`,
+			`[BlueGreen] Worker identity resolved: serviceArn=${identity.serviceArn ?? "unknown"} sha=${identity.imageSha ?? "unknown"}. Slot gate active.`,
 		);
 	}
 };
 
 export const shutdownBlueGreen = () => {
 	stopBlueGreenHeartbeat();
-	stopBlueGreenSlotStorePolling();
+	stopBlueGreenSlotStorePolling({ serviceName: "workers" });
 };

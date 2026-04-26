@@ -35,8 +35,8 @@ const main = async () => {
 
 	// Blue-green gate: skip the tick on the idle task set so a swap doesn't
 	// double-fire jobs. Fail-open on non-AWS hosts (no task identity).
-	if (!isActiveSlot()) {
-		const reason = describeSlotGate();
+	if (!isActiveSlot({ serviceName: "cron" })) {
+		const reason = describeSlotGate({ serviceName: "cron" });
 		logger.info("Cron tick skipped (idle slot)", {
 			type: "cron_skipped_idle",
 			gate: reason,

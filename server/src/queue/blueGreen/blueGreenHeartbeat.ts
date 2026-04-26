@@ -59,14 +59,14 @@ const buildHeartbeat = (): WorkerHeartbeat | null => {
 	const identity = getAwsTaskIdentity();
 	if (!identity) return null;
 
-	const gate = describeSlotGate();
+	const gate = describeSlotGate({ serviceName: "workers" });
 
 	return {
 		instanceId: getInstanceId(),
 		pid: process.pid,
 		identity,
 		declaredActive: gate.allowPoll && gate.reason === "active",
-		storeHealthy: getActiveSlotStoreStatus().healthy,
+		storeHealthy: getActiveSlotStoreStatus({ serviceName: "workers" }).healthy,
 		lastReceivePollAt: state.lastReceivePollAt,
 		lastMessageReceivedAt: state.lastMessageReceivedAt,
 		messagesLastMinute: messagesLastMinute(),

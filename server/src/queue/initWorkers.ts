@@ -474,7 +474,8 @@ export const initWorkers = async ({
 				getSqsClientFn: getSqsClient,
 				recreateSqsClientFn: recreateSqsClient,
 				shouldPoll: () =>
-					isJobQueueEnabled({ queue: queueId }) && isActiveSlot(),
+					isJobQueueEnabled({ queue: queueId }) &&
+					isActiveSlot({ serviceName: "workers" }),
 			}),
 		);
 	}

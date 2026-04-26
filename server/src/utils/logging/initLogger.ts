@@ -163,10 +163,10 @@ export const initLogger = () => {
 			mixin: () => {
 				const identity = getAwsTaskIdentity();
 				if (!identity) return {};
-				if (!identity.taskDefinitionArn && !identity.imageSha) return {};
+				if (!identity.serviceArn && !identity.imageSha) return {};
 				return {
 					aws: {
-						taskDefinitionArn: identity.taskDefinitionArn,
+						serviceArn: identity.serviceArn,
 						imageSha: identity.imageSha,
 					},
 				};
