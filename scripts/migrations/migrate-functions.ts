@@ -8,7 +8,7 @@ export const migrateFunctions = async () => {
 	const { initializeDatabaseFunctions } = await import(
 		"@server/db/initializeDatabaseFunctions"
 	);
-	const databaseUrl = process.env.DATABASE_URL;
+	const databaseUrl = process.env.DATABASE_V2_URL;
 
 	if (databaseUrl?.includes("us-west-3")) {
 		const { confirm } = await inquirer.prompt([
