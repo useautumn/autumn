@@ -41,12 +41,9 @@ const probe = async ({
 };
 
 const getConfiguredQueueUrls = () =>
-	[
-		QUEUE_URL,
-		process.env.TRACK_SQS_QUEUE_URL,
-		process.env.SQS_QUEUE_URL,
-		process.env.SQS_QUEUE_URL_V2,
-	].filter((url): url is string => Boolean(url));
+	[QUEUE_URL, process.env.TRACK_SQS_QUEUE_URL].filter(
+		(url): url is string => Boolean(url),
+	);
 
 export const getBlueGreenQueueUrls = ({
 	knownQueueUrls = [],
