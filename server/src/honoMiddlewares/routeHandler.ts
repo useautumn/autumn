@@ -148,12 +148,12 @@ export function createRoute<
 		//   - Public keys (by design bypass the scope system)
 		//   - Cached API key payloads from before the deploy
 		if (!granted || granted.length === 0) {
-			ctx.logger?.warn("Scope check skipped: no scopes on request auth", {
-				path: c.req.path,
-				method: c.req.method,
-				required: opts.scopes,
-				authType: ctx.authType,
-			});
+			// ctx.logger?.warn("Scope check skipped: no scopes on request auth", {
+			// 	path: c.req.path,
+			// 	method: c.req.method,
+			// 	required: opts.scopes,
+			// 	authType: ctx.authType,
+			// });
 			return next();
 		}
 
