@@ -6,6 +6,11 @@ import {
 	describeSlotGate,
 	isActiveSlot,
 } from "../queue/blueGreen/blueGreenGate.js";
+import {
+	startBlueGreenHeartbeat,
+	stopBlueGreenHeartbeat,
+} from "../queue/blueGreen/blueGreenHeartbeat.js";
+import { stopBlueGreenSlotStorePolling } from "../queue/blueGreen/blueGreenSlotStore.js";
 import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
 import { runProductCron } from "./productCron/runProductCron.js";
@@ -13,6 +18,7 @@ import { runResetCron } from "./resetCron/runResetCron.js";
 import type { CronContext } from "./utils/CronContext.js";
 
 const { db, client } = initDrizzle();
+startBlueGreenHeartbeat({ db, logger, serviceName: "cron" });
 
 const logCronHeartbeat = () => {
 	logger.info(
@@ -70,12 +76,16 @@ main();
 
 process.on("SIGTERM", async () => {
 	console.log("Received SIGTERM signal, closing database connection...");
+	stopBlueGreenHeartbeat({ serviceName: "cron" });
+	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	await client.end();
 	process.exit(0);
 });
 
 process.on("SIGINT", async () => {
 	console.log("Received SIGINT signal, closing database connection...");
+	stopBlueGreenHeartbeat({ serviceName: "cron" });
+	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	await client.end();
 	process.exit(0);
 });

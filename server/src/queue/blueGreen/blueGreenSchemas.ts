@@ -37,3 +37,39 @@ export const WorkerHeartbeatSchema = z.object({
 	writtenAt: z.string(),
 });
 export type WorkerHeartbeat = z.infer<typeof WorkerHeartbeatSchema>;
+
+export const BlueGreenProbeResultSchema = z.object({
+	ok: z.boolean(),
+	latencyMs: z.number(),
+	error: z.string().optional(),
+});
+export type BlueGreenProbeResult = z.infer<typeof BlueGreenProbeResultSchema>;
+
+export const BlueGreenReadinessHeartbeatSchema = z.object({
+	serviceName: z.enum(["workers", "cron"]),
+	instanceId: z.string(),
+	pid: z.number(),
+	identity: AwsTaskIdentitySchema,
+	declaredActive: z.boolean(),
+	storeHealthy: z.boolean(),
+	ok: z.boolean(),
+	checks: z.object({
+		db: BlueGreenProbeResultSchema,
+		redis: BlueGreenProbeResultSchema,
+		redisV2: BlueGreenProbeResultSchema,
+		sqs: BlueGreenProbeResultSchema,
+	}),
+	worker: z
+		.object({
+			lastReceivePollAt: z.string().nullable(),
+			lastMessageReceivedAt: z.string().nullable(),
+			messagesLastMinute: z.number(),
+			queueUrls: z.array(z.string()),
+		})
+		.optional(),
+	startedAt: z.string(),
+	writtenAt: z.string(),
+});
+export type BlueGreenReadinessHeartbeat = z.infer<
+	typeof BlueGreenReadinessHeartbeatSchema
+>;
