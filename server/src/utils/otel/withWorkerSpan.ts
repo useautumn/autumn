@@ -31,8 +31,8 @@ export const withWorkerSpan = async <T>({
 			});
 
 			const aws = getAwsTaskIdentity();
-			if (aws?.taskDefinitionArn) {
-				span.setAttribute("aws.task_definition_arn", aws.taskDefinitionArn);
+			if (aws?.serviceArn) {
+				span.setAttribute("aws.service_arn", aws.serviceArn);
 			}
 			if (aws?.imageSha) {
 				span.setAttribute("aws.image_sha", aws.imageSha);

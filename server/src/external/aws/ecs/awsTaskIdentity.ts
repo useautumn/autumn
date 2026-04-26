@@ -2,16 +2,21 @@ import { z } from "zod/v4";
 
 /**
  * Identity of the ECS task this Node process is running in. Applies to
- * server, workers, and cron — used both by the blue-green gate and by
- * log/trace tagging so Axiom can distinguish between task sets.
+ * server, workers, and cron — used by the blue-green gate (matching on
+ * `serviceArn`) and by log/trace tagging.
  *
- * `taskDefinitionArn` comes from the ECS Container Metadata Endpoint v4.
- * `imageSha` falls back to `FC_GIT_COMMIT_SHA`. Either may be null on
- * non-ECS hosts (Railway, local dev) — callers must treat that as
- * "blue-green disabled" and fail open.
+ * - `serviceArn`: full ECS service ARN constructed at boot from the v4
+ *   metadata `Cluster` ARN + `ServiceName`. Stable across deploys, unique
+ *   per FC blue/green service. **Sole gate signal.**
+ * - `imageSha`: from `FC_GIT_COMMIT_SHA` / `IMAGE_TAG` env. Used only for
+ *   log/trace tagging (which deploy code is running) — NOT a gate signal,
+ *   to avoid the stale-SHA failure mode.
+ *
+ * Both may be null on non-ECS hosts (Railway, local). The gate fails open
+ * when `serviceArn` is null (`hasAwsTaskIdentity()` returns false).
  */
 export const AwsTaskIdentitySchema = z.object({
-	taskDefinitionArn: z.string().nullable(),
+	serviceArn: z.string().nullable(),
 	imageSha: z.string().nullable(),
 });
 export type AwsTaskIdentity = z.infer<typeof AwsTaskIdentitySchema>;
@@ -20,10 +25,30 @@ let cachedIdentity: AwsTaskIdentity | null = null;
 let identityResolved = false;
 
 /**
+ * Build the full ECS service ARN from the v4 `Cluster` ARN + a service
+ * name. Returns null if the cluster ARN doesn't match the expected format.
+ *
+ * - Cluster ARN: arn:aws:ecs:<region>:<accountId>:cluster/<clusterName>
+ * - Service ARN: arn:aws:ecs:<region>:<accountId>:service/<clusterName>/<serviceName>
+ */
+const constructServiceArn = ({
+	clusterArn,
+	serviceName,
+}: {
+	clusterArn: string;
+	serviceName: string;
+}): string | null => {
+	const match = clusterArn.match(
+		/^arn:aws:ecs:([^:]+):([^:]+):cluster\/(.+)$/,
+	);
+	if (!match) return null;
+	const [, region, accountId, clusterName] = match;
+	return `arn:aws:ecs:${region}:${accountId}:service/${clusterName}/${serviceName}`;
+};
+
+/**
  * Reads the ECS task metadata endpoint to resolve this task's identity.
- * Falls back to `FC_GIT_COMMIT_SHA` / `IMAGE_TAG` when metadata is
- * unavailable. Cached for process lifetime — neither value changes for
- * a running task.
+ * Cached for process lifetime — neither field changes for a running task.
  */
 export const resolveAwsTaskIdentity = async (): Promise<AwsTaskIdentity> => {
 	if (identityResolved && cachedIdentity) return cachedIdentity;
@@ -32,7 +57,7 @@ export const resolveAwsTaskIdentity = async (): Promise<AwsTaskIdentity> => {
 		process.env.FC_GIT_COMMIT_SHA || process.env.IMAGE_TAG || null;
 
 	const metadataUri = process.env.ECS_CONTAINER_METADATA_URI_V4;
-	let taskDefinitionArn: string | null = null;
+	let serviceArn: string | null = null;
 
 	if (metadataUri) {
 		try {
@@ -41,19 +66,40 @@ export const resolveAwsTaskIdentity = async (): Promise<AwsTaskIdentity> => {
 			});
 			if (response.ok) {
 				const body = (await response.json()) as {
-					TaskDefinitionArn?: string;
-					TaskARN?: string;
+					ServiceName?: string;
+					Cluster?: string;
 				};
-				if (typeof body.TaskDefinitionArn === "string") {
-					taskDefinitionArn = body.TaskDefinitionArn;
+				if (
+					typeof body.ServiceName === "string" &&
+					typeof body.Cluster === "string"
+				) {
+					serviceArn = constructServiceArn({
+						clusterArn: body.Cluster,
+						serviceName: body.ServiceName,
+					});
+					if (!serviceArn) {
+						console.warn(
+							`[awsTaskIdentity] Could not parse cluster ARN: ${body.Cluster}; gate will fail open`,
+						);
+					}
 				}
+			} else {
+				console.warn(
+					`[awsTaskIdentity] ECS metadata returned ${response.status}; gate will fail open`,
+				);
 			}
-		} catch {
-			// Metadata endpoint unavailable or timed out — fall through to SHA-only identity.
+		} catch (error) {
+			console.warn(
+				`[awsTaskIdentity] ECS metadata fetch failed: ${error instanceof Error ? error.message : error}; gate will fail open`,
+			);
 		}
+	} else if (process.env.NODE_ENV === "production") {
+		console.warn(
+			"[awsTaskIdentity] ECS_CONTAINER_METADATA_URI_V4 unset in production — gate will fail open",
+		);
 	}
 
-	cachedIdentity = { taskDefinitionArn, imageSha };
+	cachedIdentity = { serviceArn, imageSha };
 	identityResolved = true;
 	return cachedIdentity;
 };
@@ -62,16 +108,13 @@ export const resolveAwsTaskIdentity = async (): Promise<AwsTaskIdentity> => {
 export const getAwsTaskIdentity = (): AwsTaskIdentity | null => cachedIdentity;
 
 /**
- * True when this process is running in a context where the AWS task
- * identity is known. False on non-ECS hosts (Railway, local) where the
- * gate must fall open.
+ * True iff `serviceArn` is known. The gate uses this — when false, we're
+ * either on a non-ECS host (Railway, local) or ECS metadata didn't surface
+ * the data we need (rare). Either way → fail open.
  */
-export const hasAwsTaskIdentity = (): boolean => {
-	if (!cachedIdentity) return false;
-	return Boolean(cachedIdentity.taskDefinitionArn || cachedIdentity.imageSha);
-};
+export const hasAwsTaskIdentity = (): boolean =>
+	Boolean(cachedIdentity?.serviceArn);
 
 // Fire-and-forget at module load so server, workers, and cron all get
 // identity resolved without each entry point having to await explicitly.
-// Logs/spans emitted before resolution finishes (~100ms) lack `aws.*`.
 void resolveAwsTaskIdentity();
