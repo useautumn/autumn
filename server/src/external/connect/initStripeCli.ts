@@ -20,6 +20,7 @@ export const initMasterStripe = (params?: {
 	accountId?: string;
 	legacyVersion?: boolean;
 	env?: AppEnv;
+	skipInstrumentation?: boolean;
 }) => {
 	let secretKey: string;
 
@@ -48,15 +49,15 @@ export const initMasterStripe = (params?: {
 
 	return getOrCreateStripeClient({
 		cacheKey,
-		create: () =>
-			instrumentStripe({
-				client: new Stripe(secretKey, {
-					stripeAccount: params?.accountId,
-					apiVersion: params?.legacyVersion
-						? ("2025-02-24.acacia" as any)
-						: undefined,
-				}),
-			}),
+		create: () => {
+			const client = new Stripe(secretKey, {
+				stripeAccount: params?.accountId,
+				apiVersion: params?.legacyVersion
+					? ("2025-02-24.acacia" as any)
+					: undefined,
+			});
+			return params?.skipInstrumentation ? client : instrumentStripe({ client });
+		},
 	});
 };
 
@@ -65,11 +66,13 @@ export const initPlatformStripe = ({
 	env,
 	accountId,
 	legacyVersion,
+	skipInstrumentation = false,
 }: {
 	masterOrg: Organization | null;
 	env: AppEnv;
 	accountId?: string;
 	legacyVersion?: boolean;
+	skipInstrumentation?: boolean;
 }) => {
 	if (!masterOrg) {
 		throw new InternalError({
@@ -108,12 +111,11 @@ export const initPlatformStripe = ({
 				});
 			}
 
-			return instrumentStripe({
-				client: new Stripe(decrypted, {
-					stripeAccount: accountId || undefined,
-					apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
-				}),
+			const client = new Stripe(decrypted, {
+				stripeAccount: accountId || undefined,
+				apiVersion: legacyVersion ? ("2025-02-24.acacia" as any) : undefined,
 			});
+			return skipInstrumentation ? client : instrumentStripe({ client });
 		},
 	});
 };

@@ -19,6 +19,12 @@ import {
 import { generateId } from "@/utils/genUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
+import { isActiveSlot } from "./blueGreen/blueGreenGate.js";
+import {
+	recordMessagesReceived,
+	recordPollAttempt,
+} from "./blueGreen/blueGreenHeartbeat.js";
+import { initBlueGreen, shutdownBlueGreen } from "./blueGreen/initBlueGreen.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
@@ -201,9 +207,7 @@ export const startPollingLoop = async ({
 		message: Message;
 		job: SqsJob;
 	}) => {
-		logger.info(
-			`ACKing ${job.name} upfront (messageId=${message.MessageId})`,
-		);
+		logger.info(`ACKing ${job.name} upfront (messageId=${message.MessageId})`);
 		await sqs.send(
 			new DeleteMessageCommand({
 				QueueUrl: queueUrl,
@@ -333,6 +337,7 @@ export const startPollingLoop = async ({
 				continue;
 			}
 
+			recordPollAttempt({ queueUrl });
 			const response = await sqs.send(createReceiveCommand(), {
 				abortSignal: abortController.signal,
 			});
@@ -340,6 +345,7 @@ export const startPollingLoop = async ({
 			const messages = response.Messages ?? [];
 
 			if (messages.length > 0) {
+				recordMessagesReceived({ queueUrl, count: messages.length });
 				consecutiveEmptyPolls = 0;
 
 				const regularMessages: Message[] = [];
@@ -418,9 +424,12 @@ export const initWorkers = async ({
 	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
 	await warmupRegionalRedis();
 
+	await initBlueGreen({ logger });
+
 	const shutdown = async () => {
 		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
 		isRunning = false;
+		shutdownBlueGreen();
 		for (const controller of abortControllers) {
 			controller.abort();
 		}
@@ -464,7 +473,8 @@ export const initWorkers = async ({
 				isFifo: queueUrl.endsWith(".fifo"),
 				getSqsClientFn: getSqsClient,
 				recreateSqsClientFn: recreateSqsClient,
-				shouldPoll: () => isJobQueueEnabled({ queue: queueId }),
+				shouldPoll: () =>
+					isJobQueueEnabled({ queue: queueId }) && isActiveSlot(),
 			}),
 		);
 	}
