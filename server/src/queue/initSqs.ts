@@ -23,7 +23,7 @@ export const extractLocalEndpoint = ({
 };
 
 const getSqsClientConfig = () => {
-	const queueUrl = process.env.SQS_QUEUE_URL;
+	const queueUrl = process.env.SQS_QUEUE_URL_V2;
 	const endpoint = extractLocalEndpoint({ queueUrl });
 	return {
 		region:
@@ -51,4 +51,4 @@ export const recreateSqsClient = (): SQSClient => {
 /** Get the current SQS client (use this instead of direct sqs export for refreshable access) */
 export const getSqsClient = (): SQSClient => sqsClient;
 
-export const QUEUE_URL = process.env.SQS_QUEUE_URL || "";
+export const QUEUE_URL = process.env.SQS_QUEUE_URL_V2 || "";

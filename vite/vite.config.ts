@@ -29,9 +29,9 @@ export default defineConfig({
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
 
-			// Force all packages to use the same React version
-			react: path.resolve(__dirname, "./node_modules/react"),
-			"react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
+			// Bun may not materialize workspace-local links in fresh CI installs.
+			react: path.resolve(__dirname, "../node_modules/react"),
+			"react-dom": path.resolve(__dirname, "../node_modules/react-dom"),
 
 			// Workspace packages
 			"autumn-js/react": path.resolve(
