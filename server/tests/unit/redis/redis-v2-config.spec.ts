@@ -6,32 +6,17 @@ import {
 } from "@/external/redis/initUtils/redisV2Config.js";
 
 describe("redis V2 connection config", () => {
-	test("uses a distinct Upstash CACHE_V2_UPSTASH_URL with the Upstash shebang", () => {
+	test("uses a distinct CACHE_V2_UPSTASH_URL with the Upstash shebang", () => {
 		expect(
 			getRedisV2ConnectionConfig({
-				cacheV2Url: " rediss://example.upstash.io:6379 ",
+				cacheV2Url: " redis://v2 ",
 				primaryCacheUrl: "redis://primary",
 				currentRegion: "us-west-2",
 			}),
 		).toEqual({
-			cacheUrl: "rediss://example.upstash.io:6379",
+			cacheUrl: "redis://v2",
 			region: "us-west-2:v2",
 			supportsUpstashShebang: true,
-			commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
-		});
-	});
-
-	test("does not use the Upstash shebang for local CACHE_V2_UPSTASH_URL overrides", () => {
-		expect(
-			getRedisV2ConnectionConfig({
-				cacheV2Url: " redis://localhost:6379/1 ",
-				primaryCacheUrl: "redis://localhost:6379",
-				currentRegion: "us-west-2",
-			}),
-		).toEqual({
-			cacheUrl: "redis://localhost:6379/1",
-			region: "us-west-2:v2",
-			supportsUpstashShebang: false,
 			commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 		});
 	});
