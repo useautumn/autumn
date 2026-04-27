@@ -1,3 +1,4 @@
+import { Scopes } from "@autumn/shared";
 import type { FullCusProduct, ProductV2 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -16,6 +17,7 @@ const GetPricingTableQuerySchema = z.object({
  * Get pricing table with products for display in components
  */
 export const handleGetPricingTable = createRoute({
+	scopes: [Scopes.Public],
 	query: GetPricingTableQuerySchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

@@ -2,6 +2,7 @@ import { AppEnv } from "@autumn/shared";
 import { Hono } from "hono";
 import { handleRotateResourceSecret } from "@/external/vercel/handlers/resources/handleRotateResourceSecret.js";
 import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware.js";
+import { traceEnrichMiddleware } from "@/honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { sendCustomSvixEvent } from "../svix/svixHelpers.js";
 import { handleListBillingPlansPerInstall } from "./handlers/handleListBillingPlans.js";
@@ -40,6 +41,7 @@ vercelWebhookRouter.use(
 	"/:orgId/:env/*",
 	vercelSeederMiddleware,
 	analyticsMiddleware,
+	traceEnrichMiddleware,
 );
 
 // Product-level plans (no integrationConfigurationId in path)

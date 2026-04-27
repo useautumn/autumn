@@ -1,6 +1,7 @@
 import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import {
@@ -83,6 +84,12 @@ export const executeAutumnBillingPlan = async ({
 
 	// 3. Update customer product (DB only)
 	for (const { customerProduct, updates } of updateCustomerProducts) {
+		// Skip empty updates — drizzle throws "No values to set" on empty SET.
+		// This happens when the billing plan registers a customer product update
+		// entry (e.g. for intent=None discount-only flows) but there are no
+		// actual DB columns to change.
+		if (!updates || Object.keys(updates).length === 0) continue;
+
 		await CusProductService.update({
 			ctx,
 			cusProductId: customerProduct.id,
@@ -107,6 +114,16 @@ export const executeAutumnBillingPlan = async ({
 		customerId: autumnBillingPlan.customerId,
 		updates: autumnBillingPlan.updateCustomerEntitlements,
 	});
+
+	// 5a. Auto top-up rebalance: apply pre-computed paydown + remainder deltas as
+	// atomic SQL `balance + delta` increments.
+	if (autumnBillingPlan.autoTopupRebalance) {
+		await executeAutoTopupRebalance({
+			ctx,
+			customerId: autumnBillingPlan.customerId,
+			deltas: autumnBillingPlan.autoTopupRebalance.deltas,
+		});
+	}
 
 	// 6. Upsert subscription (if provided)
 	if (autumnBillingPlan.upsertSubscription) {

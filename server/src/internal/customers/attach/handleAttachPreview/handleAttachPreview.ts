@@ -1,9 +1,10 @@
-import { AffectedResource, AttachBodyV0Schema } from "@autumn/shared";
+import { AffectedResource, AttachBodyV0Schema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { attachParamsToPreview } from "../../../billing/attachPreview/attachParamsToPreview.js";
 import { getAttachParams } from "../attachUtils/attachParams/getAttachParams.js";
 
 export const handleAttachPreview = createRoute({
+	scopes: [Scopes.Billing.Read],
 	body: AttachBodyV0Schema,
 	resource: AffectedResource.Attach,
 	handler: async (c) => {

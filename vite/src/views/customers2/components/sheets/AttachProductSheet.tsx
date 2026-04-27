@@ -35,7 +35,7 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -205,12 +205,11 @@ function PlanDiffSkeleton() {
 }
 
 function SelectContent() {
-	const { formValues } = useAttachFormContext();
+	const { formValues, entityId, onScopeChange } = useAttachFormContext();
 	const { closeSheet, setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 	const hasProductSelected = !!formValues.productId;
 
-	const { entityId, setEntityId } = useEntity();
 	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | null;
 	const entities = fullCustomer?.entities || [];
@@ -247,7 +246,9 @@ function SelectContent() {
 							<SearchableSelect<EntityOption>
 								value={entityId ?? CUSTOMER_LEVEL_VALUE}
 								onValueChange={(value) =>
-									setEntityId(value === CUSTOMER_LEVEL_VALUE ? null : value)
+									onScopeChange?.(
+										value === CUSTOMER_LEVEL_VALUE ? undefined : value,
+									)
 								}
 								options={entityOptions}
 								getOptionValue={getEntityOptionValue}
@@ -460,12 +461,14 @@ export function AttachProductSheet() {
 	const { closeSheet } = useSheetStore();
 	const { customer } = useCusQuery();
 	const { setIsInlineEditorOpen } = useCustomerContext();
-	const { entityId } = useEntity();
+	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(
+		customer as FullCustomer | undefined,
+	);
 
 	return (
 		<AttachFormProvider
 			customerId={customer?.id ?? customer?.internal_id ?? ""}
-			entityId={entityId ?? undefined}
+			entityId={scopeEntityId}
 			initialProductId={itemId ?? undefined}
 			onPlanEditorOpen={() => setIsInlineEditorOpen(true)}
 			onPlanEditorClose={() => setIsInlineEditorOpen(false)}
@@ -474,6 +477,7 @@ export function AttachProductSheet() {
 				toast.success("Checkout URL copied to clipboard");
 			}}
 			onSuccess={closeSheet}
+			onScopeChange={setScopeEntityId}
 		>
 			<SheetContent />
 		</AttachFormProvider>

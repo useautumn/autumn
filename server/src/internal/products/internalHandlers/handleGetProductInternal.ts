@@ -1,4 +1,4 @@
-import { mapToProductV2, queryInteger } from "@autumn/shared";
+import { mapToProductV2, queryInteger, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "../ProductService.js";
@@ -8,6 +8,7 @@ const GetProductInternalQuerySchema = z.object({
 });
 
 export const handleGetProductInternal = createRoute({
+	scopes: [Scopes.Plans.Read],
 	query: GetProductInternalQuerySchema,
 	handler: async (c) => {
 		const { productId } = c.req.param();

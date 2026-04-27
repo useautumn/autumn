@@ -17,9 +17,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { triggerAutoTopUpsOnEnabled } from "@/internal/balances/autoTopUp/triggerAutoTopUpsOnEnabled";
 import { CusService } from "@/internal/customers/CusService";
-import { invalidateCachedFullSubject } from "../../cache/fullSubject/actions/invalidate/invalidateFullSubject";
-import { updateCachedCustomerData as updateCachedCustomerDataV2 } from "../../cache/fullSubject/actions/updateCachedCustomerData";
-import { updateCachedCustomerData } from "../../cusUtils/fullCustomerCacheUtils/updateCachedCustomerData";
 import { getApiCustomerByRollout } from "../getApiCustomerByRollout";
 
 export const updateCustomer = async ({
@@ -186,27 +183,27 @@ export const updateCustomer = async ({
 
 	const originalCustomerId =
 		originalCustomer.id || originalCustomer.internal_id;
-	const updatedCustomerId = newCustomerId ?? customerId;
+	// const updatedCustomerId = newCustomerId ?? customerId;
 
-	if (updatedCustomerId !== originalCustomerId) {
-		await invalidateCachedFullSubject({
-			ctx,
-			customerId: originalCustomerId,
-			source: "updateCustomer:id_changed",
-		});
-	}
+	// if (updatedCustomerId !== originalCustomerId) {
+	// 	await invalidateCachedFullSubject({
+	// 		ctx,
+	// 		customerId: originalCustomerId,
+	// 		source: "updateCustomer:id_changed",
+	// 	});
+	// }
 
 	await Promise.all([
-		updateCachedCustomerData({
-			ctx,
-			customerId: originalCustomerId,
-			updates: updateData,
-		}),
-		updateCachedCustomerDataV2({
-			ctx,
-			customerId: originalCustomerId,
-			updates: updateData,
-		}),
+		// updateCachedCustomerData({
+		// 	ctx,
+		// 	customerId: originalCustomerId,
+		// 	updates: updateData,
+		// }),
+		// updateCachedCustomerDataV2({
+		// 	ctx,
+		// 	customerId: originalCustomerId,
+		// 	updates: updateData,
+		// }),
 	]);
 
 	ctx.skipCache = true;

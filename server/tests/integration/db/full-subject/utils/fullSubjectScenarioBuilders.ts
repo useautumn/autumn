@@ -146,9 +146,9 @@ const buildProduct = ({
 	group: "db-fullsubject",
 	version: 1,
 	processor: null,
-	config: { ignore_past_due: false },
 	base_variant_id: null,
 	archived: false,
+	config: { ignore_past_due: false },
 });
 
 const buildEntitlement = ({

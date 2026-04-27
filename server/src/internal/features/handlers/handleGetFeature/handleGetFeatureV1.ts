@@ -2,11 +2,13 @@ import {
 	AffectedResource,
 	dbToApiFeatureV1,
 	findFeatureById,
+	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 export const handleGetFeatureV1 = createRoute({
+	scopes: [Scopes.Features.Read],
 	resource: AffectedResource.Feature,
 	params: z.object({
 		feature_id: z.string(),

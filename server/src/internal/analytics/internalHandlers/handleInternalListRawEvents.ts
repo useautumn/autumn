@@ -1,4 +1,4 @@
-import { ErrCode, type FullCustomer, RecaseError } from "@autumn/shared";
+import { ErrCode, type FullCustomer, RecaseError, Scopes } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -15,6 +15,7 @@ const InternalListRawEventsSchema = z.object({
  * Query raw events by customer ID
  */
 export const handleInternalListRawEvents = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: InternalListRawEventsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

@@ -1,3 +1,4 @@
+import { Scopes } from "@autumn/shared";
 import type { Checkout, GetCheckoutResponse } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { previewCheckoutAction } from "../utils/previewCheckoutAction/previewCheckoutAction";
@@ -21,6 +22,7 @@ const getAdjustableFeatureIds = ({ checkout }: { checkout: Checkout }) => {
  * The checkout is already fetched and validated by the middleware.
  */
 export const handleGetCheckout = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const checkout = c.get("checkout") as Checkout;

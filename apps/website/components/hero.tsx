@@ -28,11 +28,7 @@ const getLoggedInHintCookie = () => {
 
 export default function Hero() {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	// Start with the final text so SSR/first paint shows "// 100% open source"
-	// immediately. The typewriter effect only runs on fast desktop hydration
-	// (it intentionally clears and re-scrambles this value); everywhere else
-	// the initial text is left alone.
-	const [displayedText, setDisplayedText] = useState(BADGE_TEXT);
+	const [displayedText, setDisplayedText] = useState("");
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	// Gate the xl-only hero visual (background video + AutumnConfig syntax
 	// highlighter) behind an actual viewport check so mobile never downloads
@@ -135,9 +131,27 @@ export default function Hero() {
 				filter: "blur(6px) brightness(1)",
 				scale: 0.97,
 				transformOrigin: "center top",
-				duration: 0.4,
-				ease: "power2.out",
-			})
+			});
+
+			gsap.set(".hero-reveal", {
+				opacity: 0,
+				y: 25,
+				filter: "blur(12px)",
+				scale: 0.96,
+				transformOrigin: "center bottom",
+			});
+
+			gsap.set(".hero-cta", { opacity: 0, scale: 0.95 });
+
+			tl.to(".hero-root", { opacity: 1, duration: 0.3, ease: "none" })
+
+				.to(".hero-bg", {
+					opacity: 1,
+					filter: "blur(0px) brightness(1)",
+					scale: 1,
+					duration: 0.4,
+					ease: "power2.out",
+				})
 
 				.to(".hero-bg", {
 					filter: "blur(0px) brightness(1.6)",

@@ -5,14 +5,12 @@ import {
 	SubjectType,
 	type TrackParams,
 } from "@autumn/shared";
-import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 import { updateCustomerData } from "@/internal/customers/actions/updateCustomerData.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { getCachedFullSubject } from "./getCachedFullSubject.js";
-import { getOrInitFullSubjectViewEpoch } from "./invalidate/getOrInitFullSubjectViewEpoch.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
 export const getOrCreateCachedFullSubject = async ({
@@ -27,7 +25,7 @@ export const getOrCreateCachedFullSubject = async ({
 	source?: string;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
-	const useRedis = !skipCache && shouldUseRedis();
+	const useRedis = !skipCache;
 	const {
 		customer_id: customerId,
 		customer_data: customerData,
@@ -41,12 +39,16 @@ export const getOrCreateCachedFullSubject = async ({
 	let fetchedSubjectViewEpoch = 0;
 
 	if (customerId && useRedis) {
-		fullSubject = await getCachedFullSubject({
+		// Pipeline inside getCachedFullSubject already fetches the epoch,
+		// so we reuse it on miss instead of a second round trip.
+		const cachedResult = await getCachedFullSubject({
 			ctx,
 			customerId,
 			entityId,
 			source,
 		});
+		fullSubject = cachedResult.fullSubject;
+		fetchedSubjectViewEpoch = cachedResult.subjectViewEpoch;
 
 		if (fullSubject) {
 			logger.debug(`[getOrCreateCachedFullSubject] Cache hit: ${customerId}`);
@@ -55,16 +57,17 @@ export const getOrCreateCachedFullSubject = async ({
 	}
 
 	if (!fullSubject && customerId) {
-		fetchedSubjectViewEpoch = useRedis
-			? await getOrInitFullSubjectViewEpoch({
-					ctx,
-					customerId,
-				})
-			: 0;
+		// Probe customer with entity fallback: if the customer exists but the
+		// requested entity doesn't, return a customer-scoped subject so the
+		// downstream autoCreateEntity branch handles the missing entity
+		// (either creating it when entity_data.feature_id is set, or throwing
+		// the descriptive error). This prevents falling through to
+		// createWithDefaults on an already-existing customer.
 		normalizedResult = await getFullSubjectNormalized({
 			ctx,
 			customerId,
 			entityId,
+			allowMissingEntity: true,
 		});
 		if (normalizedResult) {
 			fullSubject = normalizedResult.fullSubject;

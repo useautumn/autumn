@@ -223,5 +223,6 @@ export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils";
 export * from "./utils/rewardUtils/rewardFilterUtils";
 export * from "./utils/rewardUtils/rewardMigrationUtils";
+export * from "./utils/authAccessControl";
 export * from "./utils/scopeDefinitions";
 export * from "./utils/fullSubjectUtils";

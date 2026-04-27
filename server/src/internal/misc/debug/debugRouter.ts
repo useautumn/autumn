@@ -85,7 +85,7 @@ debugRouter.post("/pool-test", async (c) => {
 		return c.json({ error: "Forbidden" }, 403);
 	}
 
-	if (process.env.DATABASE_URL?.includes("us-west")) {
+	if (process.env.DATABASE_V2_URL?.includes("us-east-2")) {
 		return c.json({ error: "Not available against production database" }, 403);
 	}
 

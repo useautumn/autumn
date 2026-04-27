@@ -4,7 +4,6 @@ import {
 	EntityNotFoundError,
 	type FullCustomer,
 } from "@autumn/shared";
-import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "../../CusService.js";
 import { getCachedFullCustomer } from "./getCachedFullCustomer.js";
@@ -26,7 +25,7 @@ export const getOrSetCachedFullCustomer = async ({
 	source?: string;
 }): Promise<FullCustomer> => {
 	const { skipCache, logger } = ctx;
-	const useRedis = !skipCache && shouldUseRedis();
+	const useRedis = !skipCache;
 
 	// 1. Try cache first (getCachedFullCustomer handles lazy reset internally)
 	if (useRedis) {

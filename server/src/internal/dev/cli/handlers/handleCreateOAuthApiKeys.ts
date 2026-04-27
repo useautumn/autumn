@@ -4,6 +4,7 @@ import {
 	oauthAccessToken,
 	oauthConsent,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { and, eq, gt } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -20,6 +21,7 @@ import { ApiKeyPrefix, createKey } from "../../api-keys/apiKeyUtils.js";
  * Returns: { sandbox_key, prod_key, org_id }
  */
 export const handleCreateOAuthApiKeys = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const db = c.get("ctx").db;
 

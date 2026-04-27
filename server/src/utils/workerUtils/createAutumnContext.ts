@@ -66,6 +66,7 @@ export const createWorkerAutumnContext = async ({
 		authType: AuthType.Unknown,
 		apiVersion,
 		timestamp: Date.now(),
+		scopes: [],
 		skipCache: false,
 		extraLogs: {},
 		rolloutSnapshot,

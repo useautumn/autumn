@@ -18,10 +18,11 @@ export const createWorkerContext = async ({
 		orgId?: string;
 		env?: AppEnv;
 		customerId?: string;
+		requestId?: string;
 	};
 	logger: Logger;
 }) => {
-	const { orgId, env, customerId } = payload;
+	const { orgId, env, customerId, requestId } = payload;
 	if (!orgId || !env) return;
 
 	// Fetch org with features once for all items
@@ -74,11 +75,12 @@ export const createWorkerContext = async ({
 		logger: workerLogger,
 		redisV2: resolveRedisV2(),
 
-		id: generateId("job"),
+		id: requestId || generateId("job"),
 		timestamp: Date.now(),
 		isPublic: false,
 		authType: AuthType.Worker,
 		apiVersion,
+		scopes: [],
 		expand: [],
 		skipCache: true,
 		extraLogs: {},

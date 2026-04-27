@@ -1,4 +1,4 @@
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, Scopes } from "@autumn/shared";
 import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -9,6 +9,7 @@ import {
 } from "../../misc/vercelWebhookTypes.js";
 
 export const handleDeleteInstallation = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { integrationConfigurationId, orgId } = c.req.param();

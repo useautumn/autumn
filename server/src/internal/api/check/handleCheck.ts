@@ -6,6 +6,7 @@ import {
 	CheckQuerySchema,
 	type CheckResponseV3,
 	type ParsedCheckParams,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { runCheckWithRollout } from "@/internal/balances/check/index.js";
@@ -15,6 +16,7 @@ import { handleProductCheck } from "./handlers/handleProductCheck.js";
 
 const DEFAULT_REQUIRED_BALANCE = 1;
 export const handleCheck = createRoute({
+	scopes: [Scopes.Balances.Read],
 	versionedQuery: {
 		latest: CheckQuerySchema,
 		[ApiVersion.V1_2]: CheckQuerySchema,
@@ -56,7 +58,7 @@ export const handleCheck = createRoute({
 			requiredBalance,
 		});
 		if (!result.checkData) {
-			return c.json(result.response);
+			return c.json(result.response, 202);
 		}
 
 		const { checkData, response } = result;

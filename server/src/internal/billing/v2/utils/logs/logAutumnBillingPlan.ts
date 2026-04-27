@@ -64,6 +64,15 @@ export const logAutumnBillingPlan = ({
 						item: `${item.description}: ${item.amountAfterDiscounts}`,
 						effectivePeriod: `${formatMs(item.context.effectivePeriod?.start)} - ${formatMs(item.context.effectivePeriod?.end)}`,
 					})) ?? "none",
+
+				autoTopupRebalance: plan.autoTopupRebalance
+					? plan.autoTopupRebalance.deltas
+							.map(
+								({ cusEntId, delta }) =>
+									`${cusEntId}: ${delta > 0 ? "+" : ""}${delta}`,
+							)
+							.join(", ") || "no-op"
+					: "none",
 			},
 		},
 	});

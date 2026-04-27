@@ -11,7 +11,14 @@ export const handleCreateScheduleErrors = ({
 }: {
 	billingContext: CreateScheduleBillingContext;
 }) => {
-	const { currentEpochMs, immediatePhase } = billingContext;
+	const { currentEpochMs, immediatePhase, stripeSubscriptionSchedule } =
+		billingContext;
+
+	// Updates reuse the existing schedule's current-phase start_date downstream
+	// (see executeStripeSubscriptionScheduleAction.buildAnchoredPhases), so the
+	// caller-supplied starts_at for phase 0 is effectively ignored. The
+	// immediate-start guard only makes sense on creation.
+	if (stripeSubscriptionSchedule) return;
 
 	if (
 		immediatePhase.starts_at < currentEpochMs - FIRST_PHASE_TOLERANCE_MS ||

@@ -1,3 +1,4 @@
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 /** Runs `operation`. If it throws or returns `undefined`, logs a warning,
@@ -21,6 +22,7 @@ export const tryOrInvalidate = async <T>({
 		if (result !== undefined) return result;
 		ctx.logger.warn(warnMessage);
 	} catch (error) {
+		if (error instanceof RedisUnavailableError) throw error;
 		ctx.logger.warn(`${warnMessage}, error: ${error}`);
 	}
 	await invalidate();

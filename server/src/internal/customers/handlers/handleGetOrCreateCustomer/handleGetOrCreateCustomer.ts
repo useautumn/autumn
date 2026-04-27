@@ -8,11 +8,13 @@ import {
 	CustomerDataSchema,
 	CustomerExpand,
 	V0_2_InvoicesAlwaysExpanded,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
 
 export const handlePostCustomer = createRoute({
+	scopes: [Scopes.Customers.Write],
 	versionedQuery: {
 		latest: CreateCustomerQuerySchema,
 		[ApiVersion.V1_2]: CreateCustomerQuerySchema,
