@@ -26,7 +26,7 @@ async function main() {
 		STRIPE_WEBHOOK_URL: process.env.STRIPE_WEBHOOK_URL,
 	};
 
-	const databaseUrl = process.env.DATABASE_URL;
+	const databaseUrl = process.env.DATABASE_V2_URL;
 	const stripeWebhookVars = [];
 	// stripeWebhookVars = await handleLocalRunSetup();
 
@@ -57,7 +57,7 @@ async function main() {
 
 	// Database section
 	if (databaseUrl) {
-		envSections.push("# Database", `DATABASE_URL=${databaseUrl}`, "");
+		envSections.push("# Database", `DATABASE_V2_URL=${databaseUrl}`, "");
 	}
 
 	// Stripe Webhooks section

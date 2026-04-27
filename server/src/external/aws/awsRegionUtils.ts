@@ -1,4 +1,4 @@
-export const DEFAULT_AWS_REGION = "us-west-2";
+export const DEFAULT_AWS_REGION = "us-east-2";
 
 /** Extracts the AWS region from a queue URL. */
 export const extractRegionFromQueueUrl = ({
