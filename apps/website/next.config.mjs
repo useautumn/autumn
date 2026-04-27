@@ -1,5 +1,7 @@
 import createMDX from "@next/mdx";
 
+const isProd = process.env.NODE_ENV === "production";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
@@ -14,10 +16,9 @@ const nextConfig = {
    // formats: ["image/avif", "image/webp"],
   },
   async headers() {
+    if (!isProd) return [];
+
     return [
-      // Next.js chunks include a content hash in their filename, so they are
-      // safe to cache indefinitely. Vercel sets this automatically on its CDN,
-      // but the explicit header also covers self-hosted deployments.
       {
         source: "/_next/static/(.*)",
         headers: [
@@ -27,8 +28,6 @@ const nextConfig = {
           },
         ],
       },
-      // Lottie JSON files are large (1.4–2.6 MB each) and change infrequently.
-      // A 1-year cache means repeat visitors skip the expensive re-download.
       {
         source: "/animation/(.*)",
         headers: [
@@ -38,8 +37,6 @@ const nextConfig = {
           },
         ],
       },
-      // Public images: 7-day TTL with a 1-day stale-while-revalidate window
-      // so content updates eventually propagate without blocking visitors.
       {
         source: "/images/(.*)",
         headers: [
