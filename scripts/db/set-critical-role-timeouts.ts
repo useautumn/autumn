@@ -39,7 +39,9 @@ const setEnvFromInfisicalExport = (value: unknown) => {
 		return;
 	}
 
-	for (const [key, secretValue] of Object.entries(value as Record<string, string>)) {
+	for (const [key, secretValue] of Object.entries(
+		value as Record<string, string>,
+	)) {
 		process.env[key] = secretValue;
 	}
 };
@@ -71,9 +73,11 @@ const main = async () => {
 
 	loadInfisicalEnv(env);
 
-	const criticalDatabaseUrl = process.env.DATABASE_V2_CRITICAL_URL;
+	const criticalDatabaseUrl = process.env.DATABASE_CRITICAL_URL;
 	if (!criticalDatabaseUrl) {
-		throw new Error(`DATABASE_V2_CRITICAL_URL is not set in Infisical env "${env}"`);
+		throw new Error(
+			`DATABASE_CRITICAL_URL is not set in Infisical env "${env}"`,
+		);
 	}
 
 	const client = new Pool({
@@ -106,7 +110,7 @@ const main = async () => {
 		});
 
 		try {
-			console.log("Verified in a new DATABASE_V2_CRITICAL_URL session:");
+			console.log("Verified in a new DATABASE_CRITICAL_URL session:");
 			for (const key of Object.keys(ROLE_SETTINGS)) {
 				const verifyResult = await verifyClient.query<Record<string, string>>(
 					`SHOW ${key}`,
