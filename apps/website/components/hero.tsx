@@ -322,7 +322,9 @@ export default function Hero() {
 							aria-hidden="true"
 							fill
 							priority
-							sizes="100vw"
+							fetchPriority="high"
+							sizes="(max-width: 768px) 90vw, 450px"
+							quality={70}
 							className="hero-bg absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100 pointer-events-none select-none"
 						/>
 
