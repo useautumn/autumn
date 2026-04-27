@@ -14,13 +14,13 @@ database_url="${database_base_url%/*}/${database_name}${database_query}"
 logged_database_url="$(printf '%s' "${database_url}" | sed -E 's#(postgres(ql)?://[^:/?]+):[^@/]*@#\1:***@#')"
 cache_url="${LOCAL_CACHE_URL:-redis://localhost:6379}"
 
-echo "dev-local: overriding Infisical DATABASE_V2_URL/CACHE_URL with local values and disabling CACHE_CERT"
-echo "dev-local: DATABASE_V2_URL=${logged_database_url}"
+echo "dev-local: overriding Infisical DATABASE_URL/CACHE_URL with local values and disabling CACHE_CERT"
+echo "dev-local: DATABASE_URL=${logged_database_url}"
 
 exec infisical run --env=prod -- env \
 	ENV_FILE=.env.prod \
 	NODE_ENV=development \
-	DATABASE_V2_URL="${database_url}" \
+	DATABASE_URL="${database_url}" \
 	CACHE_URL="${cache_url}" \
 	CACHE_URL_US_EAST="${cache_url}" \
 	CACHE_CERT="" \

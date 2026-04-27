@@ -33,9 +33,9 @@ export const redactDatabaseUrl = (databaseUrl?: string) => {
 };
 
 export const getRedactedDatabaseUrls = () => ({
-	primary: redactDatabaseUrl(process.env.DATABASE_V2_URL),
-	replica: redactDatabaseUrl(process.env.DATABASE_V2_REPLICA_URL),
+	primary: redactDatabaseUrl(process.env.DATABASE_URL),
+	replica: redactDatabaseUrl(process.env.DATABASE_REPLICA_URL),
 	critical: redactDatabaseUrl(
-		process.env.DATABASE_V2_CRITICAL_URL || process.env.DATABASE_V2_URL,
+		process.env.DATABASE_CRITICAL_URL || process.env.DATABASE_URL,
 	),
 });
