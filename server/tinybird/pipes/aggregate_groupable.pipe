@@ -1,5 +1,9 @@
 DESCRIPTION >
     Aggregate queries with grouping by a property key, customer_id, or entity_id.
+    When grouping by customer_id/entity_id with no property filters, reads from
+    events_hourly_no_properties_two_mv (the small, properties-free sibling MV)
+    so high-cardinality property values in events_hourly_mv don't blow up scan
+    cost. Falls back to events_hourly_mv otherwise.
     Uses PER-BIN TOP N groups + "AUTUMN_RESERVED" bucket ((N+1) max total per bin).
     N is controlled by the max_groups parameter (default 9).
     Each time bin shows its own top N groups, not global top N.
@@ -32,11 +36,20 @@ SQL >
         customer_id as group_value,
         {% elif String(group_column, 'property') == 'entity_id' %}
         entity_id as group_value,
+        {% elif String(group_column, 'property') == 'property' and (String(property_key, '') == 'apiKeyId' or String(property_key, '') == 'endpoint' or String(property_key, '') == 'source') and (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
+        {{ column(String(property_key, '')) }} as group_value,
         {% else %}
         {{ column('properties.' + String(property_key, '')) }}::String as group_value,
         {% end %}
         sum(total_value) as total_value
-    FROM events_hourly_mv
+    FROM
+        {% if (String(group_column, 'property') == 'customer_id' or String(group_column, 'property') == 'entity_id') and (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
+        events_hourly_no_properties_two_mv
+        {% elif String(group_column, 'property') == 'property' and (String(property_key, '') == 'apiKeyId' or String(property_key, '') == 'endpoint' or String(property_key, '') == 'source') and (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
+        events_hourly_promoted_mv
+        {% else %}
+        events_hourly_mv
+        {% end %}
     WHERE
         org_id = {{ String(org_id, '') }}
         AND env = {{ String(env, 'test') }}
