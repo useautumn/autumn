@@ -1,0 +1,58 @@
+DESCRIPTION >
+    Lists raw events for a single customer with offset-based pagination.
+    Reads from events_by_customer_mv where customer_id is part of the prefix sort key,
+    so customer-scoped queries can prune efficiently instead of scanning the whole org+timeframe slice.
+    customer_id is required - use list_events_paginated for non-customer-scoped queries.
+
+TOKEN "list_events_by_customer_read" READ
+
+NODE endpoint
+TYPE endpoint
+SQL >
+    %
+    SELECT
+        id,
+        org_id,
+        env,
+        customer_id,
+        event_name,
+        timestamp,
+        value,
+        properties,
+        idempotency_key,
+        entity_id
+    FROM events_by_customer_mv
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND customer_id = {{ String(customer_id, '') }}
+        {% if defined(start_date) and String(start_date, '') != '' %}
+        AND timestamp >= toDateTime64({{ String(start_date) }}, 6)
+        {% end %}
+        {% if defined(end_date) and String(end_date, '') != '' %}
+        AND timestamp <= toDateTime64({{ String(end_date) }}, 6)
+        {% end %}
+        {% if defined(event_names) %}
+        AND event_name IN {{ Array(event_names, 'String') }}
+        {% end %}
+        {% if defined(entity_id) and String(entity_id, '') != '' %}
+        AND entity_id = {{ String(entity_id) }}
+        {% end %}
+        {% if defined(filter_key_0) and String(filter_key_0, '') != '' %}
+        AND positionCaseInsensitive(assumeNotNull(properties), concat('"', {{ String(filter_key_0, '') }}, '":"', {{ String(filter_value_0, '') }}, '"')) > 0
+        {% end %}
+        {% if defined(filter_key_1) and String(filter_key_1, '') != '' %}
+        AND positionCaseInsensitive(assumeNotNull(properties), concat('"', {{ String(filter_key_1, '') }}, '":"', {{ String(filter_value_1, '') }}, '"')) > 0
+        {% end %}
+        {% if defined(filter_key_2) and String(filter_key_2, '') != '' %}
+        AND positionCaseInsensitive(assumeNotNull(properties), concat('"', {{ String(filter_key_2, '') }}, '":"', {{ String(filter_value_2, '') }}, '"')) > 0
+        {% end %}
+        {% if defined(filter_key_3) and String(filter_key_3, '') != '' %}
+        AND positionCaseInsensitive(assumeNotNull(properties), concat('"', {{ String(filter_key_3, '') }}, '":"', {{ String(filter_value_3, '') }}, '"')) > 0
+        {% end %}
+        {% if defined(filter_key_4) and String(filter_key_4, '') != '' %}
+        AND positionCaseInsensitive(assumeNotNull(properties), concat('"', {{ String(filter_key_4, '') }}, '":"', {{ String(filter_value_4, '') }}, '"')) > 0
+        {% end %}
+    ORDER BY timestamp DESC, id DESC
+    LIMIT {{ Int32(limit, 101) }}
+    OFFSET {{ Int32(offset, 0) }}

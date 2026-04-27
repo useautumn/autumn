@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import {
 	getTinybirdPipes,
+	type ListEventsByCustomerPipeRow,
 	type ListEventsPaginatedPipeRow,
 } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -50,7 +51,7 @@ const calculateStartDateFromInterval = (interval: string): Date => {
 
 /** Converts pipe row to the expected ClickHouse format */
 const convertPipeRowToClickHouseFormat = (
-	row: ListEventsPaginatedPipeRow,
+	row: ListEventsPaginatedPipeRow | ListEventsByCustomerPipeRow,
 ): RawEventFromClickHouse => ({
 	id: row.id,
 	customer_id: row.customer_id,
@@ -110,27 +111,33 @@ export const listRawEvents = async ({
 			? billingCycleResult.endDate
 			: formatJsDateToClickHouseDateTime(new Date());
 
-	const pipeParams = {
-		org_id: org.id,
-		env,
-		start_date: finalStartDate,
-		end_date: finalEndDate,
-		customer_id: params.aggregateAll ? undefined : params.customer_id,
-		entity_id: params.entity_id,
-		event_names: params.event_name ? [params.event_name] : undefined,
-		limit: params.limit ?? DEFAULT_LIMIT,
-		offset: 0,
-	};
+	const customerId = params.aggregateAll ? undefined : params.customer_id;
 
-	// ctx.logger.debug("Listing raw events via Tinybird pipe", {
-	// 	customerId: params.customer_id,
-	// 	aggregateAll: params.aggregateAll,
-	// 	startDate: finalStartDate,
-	// 	endDate: finalEndDate,
-	// 	limit: pipeParams.limit,
-	// });
-
-	const result = await pipes.listEventsPaginated(pipeParams);
+	// Route customer-scoped reads to the customer-sorted MV so the lookup
+	// can prune by customer_id instead of scanning the entire org+timeframe slice.
+	const result = customerId
+		? await pipes.listEventsByCustomer({
+				org_id: org.id,
+				env,
+				customer_id: customerId,
+				start_date: finalStartDate,
+				end_date: finalEndDate,
+				entity_id: params.entity_id,
+				event_names: params.event_name ? [params.event_name] : undefined,
+				limit: params.limit ?? DEFAULT_LIMIT,
+				offset: 0,
+			})
+		: await pipes.listEventsPaginated({
+				org_id: org.id,
+				env,
+				start_date: finalStartDate,
+				end_date: finalEndDate,
+				customer_id: undefined,
+				entity_id: params.entity_id,
+				event_names: params.event_name ? [params.event_name] : undefined,
+				limit: params.limit ?? DEFAULT_LIMIT,
+				offset: 0,
+			});
 
 	// ctx.logger.debug("Raw events result", {
 	// 	queryMs: Math.round(performance.now() - startTime),

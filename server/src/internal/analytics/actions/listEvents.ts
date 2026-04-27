@@ -56,18 +56,31 @@ export const listEvents = async ({
 	}
 
 	const startTime = performance.now();
-	const result = await pipes.listEventsPaginated({
-		org_id: org.id,
-		env,
-		start_date: startDate,
-		end_date: endDate,
-		customer_id: params.customer_id,
-		entity_id: params.entity_id,
-		event_names: params.feature_ids,
-		limit: fetchLimit,
-		offset: params.offset,
-		...filterParams,
-	});
+	const result = params.customer_id
+		? await pipes.listEventsByCustomer({
+				org_id: org.id,
+				env,
+				customer_id: params.customer_id,
+				start_date: startDate,
+				end_date: endDate,
+				entity_id: params.entity_id,
+				event_names: params.feature_ids,
+				limit: fetchLimit,
+				offset: params.offset,
+				...filterParams,
+			})
+		: await pipes.listEventsPaginated({
+				org_id: org.id,
+				env,
+				start_date: startDate,
+				end_date: endDate,
+				customer_id: undefined,
+				entity_id: params.entity_id,
+				event_names: params.feature_ids,
+				limit: fetchLimit,
+				offset: params.offset,
+				...filterParams,
+			});
 
 	const queryDuration = performance.now() - startTime;
 	const hasMore = result.data.length > params.limit;

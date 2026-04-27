@@ -1,0 +1,26 @@
+DESCRIPTION >
+    Materializes events into hourly aggregates with promoted property columns
+    (apiKeyId, endpoint, source) instead of the full properties JSON.
+    Lets squashing collapse rows that share the same promoted values, fixing
+    the high-cardinality bottleneck for orgs whose properties contain unique
+    per-event identifiers (e.g. firecrawl's jobId).
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        event_name,
+        coalesce(entity_id, '') as entity_id,
+        toStartOfHour(timestamp) as hour,
+        properties.apiKeyId::String as apiKeyId,
+        properties.endpoint::String as endpoint,
+        properties.source::String as source,
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
+    FROM events
+    GROUP BY org_id, env, customer_id, event_name, entity_id, hour, apiKeyId, endpoint, source
+
+TYPE materialized
+DATASOURCE events_hourly_promoted_mv

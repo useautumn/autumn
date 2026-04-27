@@ -33,6 +33,13 @@ export {
 	listEventNamesPipeResponseSchema,
 } from "./listEventNamesPipe.js";
 export {
+	createListEventsByCustomerPipe,
+	type ListEventsByCustomerPipeParams,
+	type ListEventsByCustomerPipeRow,
+	listEventsByCustomerPipeParamsSchema,
+	listEventsByCustomerPipeResponseSchema,
+} from "./listEventsByCustomerPipe.js";
+export {
 	createListEventsPaginatedPipe,
 	type ListEventsPaginatedPipeParams,
 	type ListEventsPaginatedPipeRow,
