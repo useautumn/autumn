@@ -34,6 +34,19 @@ class HealthyFakeRedis extends FakeRedis {
 	}
 }
 
+class ConnectingFakeRedis extends HealthyFakeRedis {
+	status = "connecting";
+	readyHandler?: () => void;
+	errorHandler?: (error: Error) => void;
+
+	once(event: string, handler: (...args: never[]) => void) {
+		if (event === "ready") this.readyHandler = handler as () => void;
+		if (event === "error")
+			this.errorHandler = handler as (error: Error) => void;
+		return this;
+	}
+}
+
 const wait = (ms: number) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -94,6 +107,25 @@ describe("createRedisAvailability", () => {
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
 		});
+
+		await availability.prime();
+
+		expect(availability.shouldUseRedis()).toBe(true);
+	});
+
+	test("waits for a connecting client before priming availability", async () => {
+		const redis = new ConnectingFakeRedis();
+		const availability = createRedisAvailability({
+			redis: redis as never,
+			hasConfig: true,
+			logPrefix: "RedisV2",
+			logType: "redis_v2_availability_state_set",
+		});
+
+		setTimeout(() => {
+			redis.status = "ready";
+			redis.readyHandler?.();
+		}, 0);
 
 		await availability.prime();
 

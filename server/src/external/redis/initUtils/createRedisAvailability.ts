@@ -1,6 +1,7 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
+import { waitForRedisReady } from "./redisWarmup.js";
 
 const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
@@ -148,6 +149,12 @@ export const createRedisAvailability = ({
 	return {
 		prime: async () => {
 			if (!hasConfig) return;
+			if (
+				redis.status === "connecting" ||
+				redis.status === "reconnecting"
+			) {
+				await waitForRedisReady(redis, logPrefix).catch(() => undefined);
+			}
 			const available = await probeRedisAvailability();
 			consecutiveSuccesses = available ? REDIS_SUCCESSES_TO_RECOVER : 0;
 			consecutiveFailures = available ? 0 : REDIS_FAILURES_TO_DEGRADE;
