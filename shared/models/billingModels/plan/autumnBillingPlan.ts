@@ -95,6 +95,7 @@ export const AutumnBillingPlanSchema = z.object({
 			deltas: z.array(
 				z.object({
 					cusEntId: z.string(),
+					featureId: z.string(),
 					delta: z.number(),
 				}),
 			),

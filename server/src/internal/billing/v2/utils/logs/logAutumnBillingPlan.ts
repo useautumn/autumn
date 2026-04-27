@@ -67,7 +67,10 @@ export const logAutumnBillingPlan = ({
 
 				autoTopupRebalance: plan.autoTopupRebalance
 					? plan.autoTopupRebalance.deltas
-							.map(({ cusEntId, delta }) => `${cusEntId}: ${delta > 0 ? "+" : ""}${delta}`)
+							.map(
+								({ cusEntId, delta }) =>
+									`${cusEntId}: ${delta > 0 ? "+" : ""}${delta}`,
+							)
 							.join(", ") || "no-op"
 					: "none",
 			},

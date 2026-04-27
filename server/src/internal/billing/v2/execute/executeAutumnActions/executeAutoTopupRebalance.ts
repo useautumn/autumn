@@ -1,10 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { AutoTopupRebalanceDelta } from "@/internal/balances/autoTopUp/compute/computeRebalancedAutoTopUp.js";
 import { customerEntitlementActions } from "@/internal/customers/cusProducts/cusEnts/actions/index.js";
-
-export type AutoTopupRebalanceDelta = {
-	cusEntId: string;
-	delta: number;
-};
 
 /**
  * Apply pre-computed auto top-up rebalance deltas. Each delta is an atomic SQL
@@ -23,13 +19,14 @@ export const executeAutoTopupRebalance = async ({
 	customerId: string;
 	deltas: AutoTopupRebalanceDelta[];
 }): Promise<void> => {
-	for (const { cusEntId, delta } of deltas) {
+	for (const { cusEntId, featureId, delta } of deltas) {
 		if (delta === 0) continue;
 
 		await customerEntitlementActions.adjustBalanceDbAndCache({
 			ctx,
 			customerId,
 			cusEntId,
+			featureId,
 			delta,
 		});
 	}

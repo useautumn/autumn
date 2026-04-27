@@ -99,7 +99,7 @@ export const computeAutoTopupPlan = ({
 		},
 	};
 
-	// E. Build stripe invoice action (manual — bypassing evaluateStripeBillingPlan)
+	// D. Build stripe invoice action (manual — bypassing evaluateStripeBillingPlan)
 	const addLineParams = lineItemsToInvoiceAddLinesParams({
 		lineItems: [lineItem],
 	});
