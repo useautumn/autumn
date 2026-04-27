@@ -53,8 +53,8 @@ export const initDrizzle = ({
 	poolConfig?: PoolConfig;
 } = {}) => {
 	const envDbUrl = replica
-		? process.env.DATABASE_V2_REPLICA_URL
-		: process.env.DATABASE_V2_URL;
+		? process.env.DATABASE_REPLICA_URL
+		: process.env.DATABASE_URL;
 
 	const dbUrl = databaseUrl || envDbUrl || "";
 
@@ -86,10 +86,10 @@ export const initDrizzle = ({
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	maxConnections: 5,
 	connectTimeout: 2,
-	databaseUrl: process.env.DATABASE_V2_CRITICAL_URL,
+	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
-		// Server-side timeout is configured on the DATABASE_V2_CRITICAL_URL role.
+		// Server-side timeout is configured on the DATABASE_CRITICAL_URL role.
 		query_timeout: 2_000,
 	},
 });
@@ -100,8 +100,8 @@ export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 });
 
 // -- Replica pool: used as fallback when primary is degraded --
-// Only created if DATABASE_V2_REPLICA_URL is configured.
-const replicaResult = process.env.DATABASE_V2_REPLICA_URL
+// Only created if DATABASE_REPLICA_URL is configured.
+const replicaResult = process.env.DATABASE_REPLICA_URL
 	? initDrizzle({ replica: true, maxConnections: 5, connectTimeout: null })
 	: null;
 export const dbReplica = replicaResult?.db ?? null;
