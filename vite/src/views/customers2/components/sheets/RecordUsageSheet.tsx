@@ -1,3 +1,4 @@
+import type { Entity, FullCustomer } from "@autumn/shared";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -12,18 +13,27 @@ import {
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "../../customer/CustomerContext";
+import { EntityScopeSelector } from "./EntityScopeSelector";
 
 export function RecordUsageSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
 	const { customer } = useCusQuery();
-	const { entityId } = useCustomerContext();
+	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(
+		customer as FullCustomer | undefined,
+	);
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
+
+	const fullCustomer = customer as FullCustomer | null;
+	const entities = fullCustomer?.entities || [];
+	const fullEntity = entities.find(
+		(e: Entity) => e.id === scopeEntityId || e.internal_id === scopeEntityId,
+	);
 
 	const featureId = sheetData?.featureId as string | undefined;
 	const featureName = sheetData?.featureName as string | undefined;
@@ -82,7 +92,7 @@ export function RecordUsageSheet() {
 			value: parsedValue,
 		};
 
-		if (entityId) params.entity_id = entityId;
+		if (scopeEntityId) params.entity_id = scopeEntityId;
 
 		const filteredProperties = properties.filter((p) => p.key.trim());
 		if (filteredProperties.length > 0) {
@@ -113,8 +123,20 @@ export function RecordUsageSheet() {
 			<div className="flex h-full flex-col overflow-y-auto">
 				<SheetHeader
 					title="Record Usage"
-					description={`Record usage for ${featureName ?? featureId}`}
+					description={
+						scopeEntityId
+							? `Tracking for entity ${fullEntity?.name || scopeEntityId}`
+							: `Record usage for ${featureName ?? featureId}`
+					}
 				/>
+
+				{entities.length > 0 && (
+					<EntityScopeSelector
+						entities={entities}
+						scopeEntityId={scopeEntityId}
+						onScopeChange={setScopeEntityId}
+					/>
+				)}
 
 				<SheetSection withSeparator>
 					<FormLabel>Value</FormLabel>
