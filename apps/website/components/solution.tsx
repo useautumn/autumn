@@ -30,7 +30,7 @@ const iconSrc = {
 
 export default function Solution() {
 	return (
-		<section className="relative w-full bg-[#000000] border-t border-[#292929] overflow-hidden pt-24">
+		<section className="relative w-full bg-[#000000] overflow-hidden pt-24">
 			<div
 				className="absolute inset-0 z-0 pointer-events-none"
 				style={{

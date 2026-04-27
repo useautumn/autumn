@@ -83,7 +83,7 @@ export default function FAQ() {
 												"text-base tracking-[-2%] transition-all duration-400 lg:text-[18px]",
 												isOpen
 													? "font-normal text-white"
-													: "font-light text-[#FFFFFF66] md:group-hover:text-white",
+													: "font-light text-[#FFFFFF80] md:group-hover:text-white",
 											)}
 										>
 											{faq.question}
@@ -95,7 +95,7 @@ export default function FAQ() {
 													"h-5 w-5 transition-colors duration-400",
 													isOpen
 														? "text-white"
-														: "text-[#FFFFFF66] md:group-hover:text-white",
+														: "text-[#FFFFFF80] md:group-hover:text-white",
 												)}
 											/>
 										</div>

@@ -72,6 +72,7 @@ export default function BlogListingPage() {
 										alt={post.title}
 										fill
 										className="object-cover"
+										sizes="(max-width: 640px) 0px, (max-width: 768px) 140px, 180px"
 									/>
 								</div>
 							)}
