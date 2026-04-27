@@ -85,6 +85,22 @@ export const AutumnBillingPlanSchema = z.object({
 		.array(UpdateCustomerEntitlementSchema)
 		.optional(),
 
+	/**
+	 * Pre-computed auto top-up rebalance deltas. The compute step sizes paydown + prepaid
+	 * remainder from the context's FullCustomer snapshot; the executor just loops these
+	 * and applies each via adjustBalanceDbAndCache (atomic SQL balance + delta).
+	 */
+	autoTopupRebalance: z
+		.object({
+			deltas: z.array(
+				z.object({
+					cusEntId: z.string(),
+					delta: z.number(),
+				}),
+			),
+		})
+		.optional(),
+
 	// Upsert operations (populated during webhook handling, e.g., checkout.session.completed)
 	upsertSubscription: SubscriptionSchema.optional(),
 	upsertInvoice: z.custom<InsertInvoice>().optional(),
