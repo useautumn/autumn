@@ -65,10 +65,11 @@ export function CheckBalanceSheet() {
 				<SheetHeader
 					title="Check Balance"
 					description={
+					description={
 						scopeEntityId
-							? `Tracking for entity ${fullEntity?.name || scopeEntityId}`
+							? `Checking balance for entity ${fullEntity?.name || scopeEntityId}`
 							: `POST /check for ${featureName ?? featureId}`
-					}
+						}
 				/>
 
 				{entities.length > 0 && (
