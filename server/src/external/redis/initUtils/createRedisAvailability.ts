@@ -1,6 +1,7 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { withTimeout } from "@/utils/withTimeout.js";
+import { waitForRedisReady } from "./redisWarmup.js";
 
 const REDIS_ERROR_LOG_INTERVAL_MS = 30_000;
 const REDIS_PROBE_INTERVAL_MS = 2_000;
@@ -99,14 +100,13 @@ export const createRedisAvailability = ({
 		}
 	};
 
-	const tickRedisAvailability = async () => {
-		if (!hasConfig) return;
+	const probeRedisAvailability = async (): Promise<boolean> => {
+		if (!hasConfig) return false;
 
 		let failedWhileReady = false;
 		try {
 			if (await pingRedisClient()) {
-				recordRedisAvailability(true);
-				return;
+				return true;
 			}
 			failedWhileReady = redis.status === "ready";
 		} catch {
@@ -126,31 +126,42 @@ export const createRedisAvailability = ({
 			) {
 				reconnectStartedAt ??= Date.now();
 				if (Date.now() - reconnectStartedAt < REDIS_STALE_RECONNECT_MS) {
-					recordRedisAvailability(false);
-					return;
+					return false;
 				}
 			}
 
 			await reconnectRedis();
 		}
-		(await pingRedisClient().catch(() => false))
-			? recordRedisAvailability(true)
-			: recordRedisAvailability(false);
+
+		return await pingRedisClient().catch(() => false);
 	};
 
 	const runTick = async () => {
 		if (redisTickInFlight) return;
 		redisTickInFlight = true;
 		try {
-			await tickRedisAvailability();
+			recordRedisAvailability(await probeRedisAvailability());
 		} finally {
 			redisTickInFlight = false;
 		}
 	};
 
 	return {
+		prime: async () => {
+			if (!hasConfig) return;
+			if (
+				redis.status === "connecting" ||
+				redis.status === "reconnecting"
+			) {
+				await waitForRedisReady(redis, logPrefix).catch(() => undefined);
+			}
+			const available = await probeRedisAvailability();
+			consecutiveSuccesses = available ? REDIS_SUCCESSES_TO_RECOVER : 0;
+			consecutiveFailures = available ? 0 : REDIS_FAILURES_TO_DEGRADE;
+			setRedisAvailabilityState(available ? "healthy" : "degraded");
+		},
 		startMonitor: () => {
-			if (redisMonitorInterval) return;
+			if (!hasConfig || redisMonitorInterval) return;
 
 			void runTick();
 
