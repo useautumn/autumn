@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import Image from "next/image";
 import type { ComponentPropsWithoutRef } from "react";
 import { forwardRef } from "react";
 import type { ImgProps, SvgIconProps } from "@/lib/types";
@@ -1330,10 +1331,13 @@ export const ProblemBgSvg = (props: ComponentPropsWithoutRef<"div">) => (
 		className="w-full h-auto hidden md:block cursor-pointer transition-all duration-300 hover:brightness-125 hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.15)]"
 		{...props}
 	>
-		{/* eslint-disable-next-line @next/next/no-img-element */}
-		<img
-			src="/images/problems/problembg.svg"
+		<Image
+			src="/images/problems/problembg.png"
 			alt="Problem Background"
+			width={621}
+			height={223}
+			sizes="(max-width: 1280px) 100vw, 720px"
+			loading="lazy"
 			className="w-full h-auto"
 		/>
 	</div>
