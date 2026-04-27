@@ -11,7 +11,7 @@ const AnimatedFooterImage = forwardRef<HTMLDivElement>(
 			>
 				<div className="relative w-full h-full">
 				<Image
-					src="/images/footer/footer.webp"
+					src="/images/footer/footer.avif"
 					alt="footer background"
 					fill
 					sizes="100vw"

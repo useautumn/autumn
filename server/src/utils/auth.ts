@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import { ac, ALL_SCOPES, invitation, roles, schemas } from "@autumn/shared";
+import type { AccessControl } from "better-auth/plugins/access";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import {
 	type BetterAuthOptions,
@@ -165,7 +166,7 @@ const options = {
 		}),
 
 		organization({
-			ac,
+			ac: ac as AccessControl,
 			roles,
 			creatorRole: "owner",
 			async sendInvitationEmail(data: {

@@ -69,7 +69,7 @@ export default function Features() {
 			</div>
 
 			<div className="border-t border-[#292929] w-full" />
-			<div className="grid grid-cols-1 gap-[-3px]  md:grid-cols-2 lg:grid-cols-3 xl:px-22.75 border-[#292929] [&>*:last-child]:border-b-0 [&>*:nth-last-child(2)]:border-b-0 md:[&>*:nth-last-child(-n+2)]:border-b-0 lg:[&>*:nth-last-child(-n+3)]:border-b-0 *:border-l md:[&>*:nth-child(2n)]:border-l-0 lg:[&>*:nth-child(3n+1)]:border-l lg:[&>*:nth-child(3n+2)]:border-l-0 lg:[&>*:nth-child(3n)]:border-l-0">
+			<div className="grid grid-cols-1 gap-[-3px]  md:grid-cols-2 lg:grid-cols-3 xl:px-22.75 border-[#292929] [&>*:last-child]:border-b-0 md:[&>*:nth-last-child(-n+2)]:border-b-0 lg:[&>*:nth-last-child(-n+3)]:border-b-0 *:border-l md:[&>*:nth-child(2n)]:border-l-0 lg:[&>*:nth-child(3n+1)]:border-l lg:[&>*:nth-child(3n+2)]:border-l-0 lg:[&>*:nth-child(3n)]:border-l-0">
 				{featuresData.map((feature, i) => (
 					<FeatureCard key={i} feature={feature} />
 				))}
