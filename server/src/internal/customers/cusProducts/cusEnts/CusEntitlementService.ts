@@ -177,7 +177,7 @@ export class CusEntService {
 				lt(customerEntitlements.next_reset_at, customDateUnix ?? Date.now()),
 				or(
 					isNull(customerEntitlements.expires_at),
-					gt(customerEntitlements.expires_at, Date.now()),
+					gt(customerEntitlements.expires_at, customDateUnix ?? Date.now()),
 				),
 			);
 
