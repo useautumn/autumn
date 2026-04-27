@@ -16,7 +16,7 @@ export const getCusEntsNeedingReset = ({
 }): FullCusEntWithFullCusProduct[] => {
 	const customerEntitlements = fullCustomerToCustomerEntitlements({
 		fullCustomer: fullCus,
-		inStatuses: [CusProductStatus.Active],
+		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
 
 	return getResettableCustomerEntitlements({ customerEntitlements, now });

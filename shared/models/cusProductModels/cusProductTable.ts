@@ -97,6 +97,10 @@ export const customerProducts = pgTable(
 			"gin",
 			table.subscription_ids,
 		),
+		index("idx_customer_products_scheduled_ids").using(
+			"gin",
+			table.scheduled_ids,
+		),
 	],
 );
 

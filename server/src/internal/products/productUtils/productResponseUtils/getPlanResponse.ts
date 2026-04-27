@@ -131,6 +131,8 @@ export const getPlanResponse = async ({
 		archived: product.archived,
 		base_variant_id: product.base_variant_id,
 
+		config: product.config ?? { ignore_past_due: false },
+
 		customer_eligibility: customerEligibility,
 	} satisfies ApiPlanV1);
 };
