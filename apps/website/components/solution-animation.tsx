@@ -15,52 +15,72 @@ export default function SolutionAnimation() {
 
 	useEffect(() => {
 		if (!containerRef.current) return;
-		let cancelled = false;
 
 		const isMobile = window.innerWidth < 768;
 		const url = isMobile
 			? "/animation/solution-mobile.json"
 			: "/animation/solution-desktop.json";
 
-		fetch(url)
-			.then((res) => res.json())
-			.then((animationData) => {
-				if (cancelled || !containerRef.current) return;
-
-				const anim = lottie.loadAnimation({
-					container: containerRef.current,
-					renderer: "svg",
-					loop: false,
-					autoplay: false,
-					animationData,
-				});
-
-				animRef.current = anim;
-
-				const totalFrames = anim.totalFrames;
-				const loopStart = Math.floor(totalFrames * 0.2);
-
-				anim.addEventListener("complete", () => {
-					anim.loop = true;
-					anim.playSegments([loopStart, totalFrames], true);
-				});
-
-				const st = ScrollTrigger.create({
-					trigger: containerRef.current,
-					start: "top 75%",
-					onEnter: () => anim.play(),
-				});
-
-				cleanupRef.current = () => {
-					st.kill();
-					anim.destroy();
-				};
-			});
-
+		let cancelled = false;
 		const cleanupRef = { current: () => {} };
+
+		const initAnimation = () => {
+			if (cancelled || !containerRef.current) return;
+
+			fetch(url)
+				.then((res) => res.json())
+				.then((animationData) => {
+					if (cancelled || !containerRef.current) return;
+
+					const anim = lottie.loadAnimation({
+						container: containerRef.current,
+						renderer: "svg",
+						loop: false,
+						autoplay: false,
+						animationData,
+					});
+
+					animRef.current = anim;
+
+					const totalFrames = anim.totalFrames;
+					const loopStart = Math.floor(totalFrames * 0.2);
+
+					anim.addEventListener("complete", () => {
+						anim.loop = true;
+						anim.playSegments([loopStart, totalFrames], true);
+					});
+
+					const st = ScrollTrigger.create({
+						trigger: containerRef.current,
+						start: "top 75%",
+						onEnter: () => anim.play(),
+					});
+
+					cleanupRef.current = () => {
+						st.kill();
+						anim.destroy();
+					};
+				});
+		};
+
+		// Defer the 1.4–2.1 MB Lottie JSON fetch until the element is close to
+		// the viewport. Without this the browser fetches it during initial load
+		// and blocks the main thread while parsing the large JSON blob.
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0].isIntersecting) {
+					observer.disconnect();
+					initAnimation();
+				}
+			},
+			{ rootMargin: "200px" },
+		);
+
+		observer.observe(containerRef.current);
 
 		return () => {
 			cancelled = true;
+			observer.disconnect();
 			cleanupRef.current();
 		};
 	}, []);

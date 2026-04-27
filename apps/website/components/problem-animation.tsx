@@ -70,6 +70,8 @@ export default function ProblemAnimation() {
 							src={src}
 							alt=""
 							className="block max-h-full max-w-[90%] object-contain"
+							loading="lazy"
+							decoding="async"
 							draggable={false}
 						/>
 					</div>
