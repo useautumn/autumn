@@ -36,8 +36,6 @@ SQL >
         customer_id as group_value,
         {% elif String(group_column, 'property') == 'entity_id' %}
         entity_id as group_value,
-        {% elif String(group_column, 'property') == 'property' and (String(property_key, '') == 'apiKeyId' or String(property_key, '') == 'endpoint' or String(property_key, '') == 'source') and (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
-        {{ column(String(property_key, '')) }} as group_value,
         {% else %}
         {{ column('properties.' + String(property_key, '')) }}::String as group_value,
         {% end %}
@@ -45,8 +43,6 @@ SQL >
     FROM
         {% if (String(group_column, 'property') == 'customer_id' or String(group_column, 'property') == 'entity_id') and (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
         events_hourly_no_properties_two_mv
-        {% elif String(group_column, 'property') == 'property' and (String(property_key, '') == 'apiKeyId' or String(property_key, '') == 'endpoint' or String(property_key, '') == 'source') and (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
-        events_hourly_promoted_mv
         {% else %}
         events_hourly_mv
         {% end %}
