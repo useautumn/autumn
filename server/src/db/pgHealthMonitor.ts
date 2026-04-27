@@ -49,11 +49,7 @@ export const getDbHealth = (): PgHealth => state;
  * Initialize the health monitor with a pg pool for probing.
  * Call once at startup. The probe client should be the critical pool's raw client.
  */
-export const initPgHealthMonitor = ({
-	client,
-}: {
-	client: Pool;
-}): void => {
+export const initPgHealthMonitor = ({ client }: { client: Pool }): void => {
 	probeClient = client;
 	logger.info("[PgHealthMonitor] Initialized", { type: "pg_health_init" });
 };
@@ -247,7 +243,7 @@ export const getPgHealthState = (): {
 	failureCount,
 	probeActive: probeInterval !== null,
 	firstProbeSuccessAt,
-	hasReplica: !!process.env.DATABASE_V2_REPLICA_URL,
+	hasReplica: !!process.env.DATABASE_REPLICA_URL,
 });
 
 /** Force DEGRADED state (for testing). Does NOT start the recovery probe. */
