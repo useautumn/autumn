@@ -49,6 +49,13 @@ const productDetailsSame = (prod1: Product, prod2: UpdateProduct) => {
 		return false;
 	}
 
+	if (
+		notNullish(prod2.config) &&
+		JSON.stringify(prod1.config ?? {}) !== JSON.stringify(prod2.config)
+	) {
+		return false;
+	}
+
 	return true;
 };
 
@@ -224,6 +231,10 @@ export const handleUpdateProductDetails = async ({
 
 	// 2. Update product
 
+	const mergedConfig = notNullish(newProduct.config)
+		? { ...curProduct.config, ...newProduct.config }
+		: undefined;
+
 	await ProductService.updateByInternalId({
 		db,
 		internalId: curProduct.internal_id,
@@ -237,6 +248,7 @@ export const handleUpdateProductDetails = async ({
 			is_add_on: newProduct.is_add_on,
 			is_default: newProduct.is_default,
 			archived: newProduct.archived,
+			config: mergedConfig,
 		},
 	});
 
@@ -259,4 +271,5 @@ export const handleUpdateProductDetails = async ({
 	curProduct.is_add_on = newProduct.is_add_on ?? curProduct.is_add_on;
 	curProduct.is_default = newProduct.is_default ?? curProduct.is_default;
 	curProduct.archived = newProduct.archived ?? curProduct.archived;
+	curProduct.config = mergedConfig ?? curProduct.config;
 };
