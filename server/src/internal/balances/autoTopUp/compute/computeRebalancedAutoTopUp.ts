@@ -12,6 +12,7 @@ import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLo
 
 export type AutoTopupRebalanceDelta = {
 	cusEntId: string;
+	featureId: string;
 	delta: number;
 };
 
@@ -108,12 +109,12 @@ export const computeRebalancedAutoTopUp = ({
 		for (const [cusEntId, update] of Object.entries(updates)) {
 			const delta = -update.deducted;
 			if (delta === 0) continue;
-			deltas.push({ cusEntId, delta });
+			deltas.push({ cusEntId, featureId, delta });
 		}
 	}
 
 	if (remainder > 0) {
-		deltas.push({ cusEntId: prepaidCusEnt.id, delta: remainder });
+		deltas.push({ cusEntId: prepaidCusEnt.id, featureId, delta: remainder });
 	}
 
 	return { deltas };

@@ -225,7 +225,9 @@ describe("computeRebalancedAutoTopUp", () => {
 			prepaidCustomerEntitlementId: prepaid.id,
 		});
 
-		expect(deltas).toEqual([{ cusEntId: prepaid.id, delta: 600 }]);
+		expect(deltas).toEqual([
+			{ cusEntId: prepaid.id, featureId: "messages", delta: 600 },
+		]);
 	});
 
 	test("2. single overage cusEnt: paydown delta then prepaid remainder delta", () => {
@@ -245,8 +247,8 @@ describe("computeRebalancedAutoTopUp", () => {
 		});
 
 		expect(deltas).toEqual([
-			{ cusEntId: base.id, delta: 500 },
-			{ cusEntId: prepaid.id, delta: 100 },
+			{ cusEntId: base.id, featureId: "messages", delta: 500 },
+			{ cusEntId: prepaid.id, featureId: "messages", delta: 100 },
 		]);
 	});
 
@@ -266,7 +268,9 @@ describe("computeRebalancedAutoTopUp", () => {
 			prepaidCustomerEntitlementId: prepaid.id,
 		});
 
-		expect(deltas).toEqual([{ cusEntId: base.id, delta: 600 }]);
+		expect(deltas).toEqual([
+			{ cusEntId: base.id, featureId: "messages", delta: 600 },
+		]);
 	});
 
 	test("4. prepaid cusEnt missing: empty deltas", () => {
@@ -337,7 +341,9 @@ describe("computeRebalancedAutoTopUp", () => {
 			prepaidCustomerEntitlementId: prepaid.id,
 		});
 
-		expect(deltas).toEqual([{ cusEntId: prepaid.id, delta: 300 }]);
+		expect(deltas).toEqual([
+			{ cusEntId: prepaid.id, featureId: "messages", delta: 300 },
+		]);
 	});
 
 	test("7. usage_allowed sorts before non-usage_allowed", () => {
@@ -368,8 +374,8 @@ describe("computeRebalancedAutoTopUp", () => {
 		});
 
 		expect(deltas).toEqual([
-			{ cusEntId: usageAllowedCe.id, delta: 100 },
-			{ cusEntId: nonUsageAllowed.id, delta: 50 },
+			{ cusEntId: usageAllowedCe.id, featureId: "messages", delta: 100 },
+			{ cusEntId: nonUsageAllowed.id, featureId: "messages", delta: 50 },
 		]);
 	});
 
@@ -397,7 +403,9 @@ describe("computeRebalancedAutoTopUp", () => {
 		});
 
 		// Only enough to zero one cusEnt. Older (createdAt=1) paid down first.
-		expect(deltas).toEqual([{ cusEntId: olderCe.id, delta: 100 }]);
+		expect(deltas).toEqual([
+			{ cusEntId: olderCe.id, featureId: "messages", delta: 100 },
+		]);
 	});
 
 	test("9. multi-cusEnt paydown with prepaid remainder", () => {
@@ -424,9 +432,9 @@ describe("computeRebalancedAutoTopUp", () => {
 		});
 
 		expect(deltas).toEqual([
-			{ cusEntId: cusEntA.id, delta: 300 },
-			{ cusEntId: cusEntB.id, delta: 200 },
-			{ cusEntId: prepaid.id, delta: 500 },
+			{ cusEntId: cusEntA.id, featureId: "messages", delta: 300 },
+			{ cusEntId: cusEntB.id, featureId: "messages", delta: 200 },
+			{ cusEntId: prepaid.id, featureId: "messages", delta: 500 },
 		]);
 	});
 
@@ -452,8 +460,8 @@ describe("computeRebalancedAutoTopUp", () => {
 		});
 
 		expect(deltas).toEqual([
-			{ cusEntId: base.id, delta: 100 },
-			{ cusEntId: prepaid.id, delta: 500 },
+			{ cusEntId: base.id, featureId: "messages", delta: 100 },
+			{ cusEntId: prepaid.id, featureId: "messages", delta: 500 },
 		]);
 	});
 });

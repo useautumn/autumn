@@ -20,13 +20,16 @@ const AUTO_TOPUP_WAIT_MS = 40000;
  * on non-prepaid, non-entity-scoped top-level cusEnts before routing the remainder to
  * the one-off prepaid cusEnt.
  *
- * Architecture note: paydown computation runs at EXECUTE time (post-Stripe-charge),
- * not compute time. The billing plan carries only a declarative intent
- * (`autoTopupRebalance: { featureId, quantity, prepaidCustomerEntitlementId }`);
- * `applyAutoTopupRebalance` reads LIVE cusEnt balances (cache → DB fallback) and
- * applies race-safe atomic delta writes via `adjustBalanceDbAndCache`. This avoids
- * both the stale-snapshot overwrite race (data loss) and the snapshot-deeper-than-
- * live overcredit race.
+ * Architecture note: paydown computation runs at compute time from the billing
+ * context's FullCustomer snapshot. The billing plan carries pre-computed deltas
+ * (`autoTopupRebalance: { deltas: [{ cusEntId, featureId, delta }] }`), and execute
+ * applies them with race-safe atomic delta writes via `adjustBalanceDbAndCache`.
+ *
+ * Cache v2 sequencing note: `customers.update(billing_controls)` invalidates the
+ * FullSubject cache. If the prior usage deduction has not been synced to Postgres
+ * yet, the next read rehydrates from a stale DB and the post-track ATU trigger
+ * misses the overage. So we configure billing_controls FIRST, then drive usage,
+ * so the deduction itself triggers ATU against the cached, deducted state.
  *
  * Entity-scoped cusEnts are intentionally excluded from paydown — there is no
  * race-safe per-entity atomic increment primitive today. Entity-scoped overage is
@@ -81,28 +84,18 @@ test.concurrent(
 			enabled: true,
 		});
 
+		// Configure ATU FIRST (before any deduction) so that the post-track trigger
+		// fires against the cached, deducted state — see cache v2 sequencing note.
+		await autumnV2_1.customers.update(customerId, {
+			billing_controls: makeAutoTopupConfig({ threshold: 0, quantity: 600 }),
+		});
+
 		// Drive base into -500 overage (usage = 1500 against allowance 1000).
+		// Post-track ATU trigger sees combined balance = -500 ≤ threshold 0 → fires.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 1500,
-		});
-
-		// Configure ATU: threshold=0 (combined balance currently -500 ≤ 0), quantity=600.
-		await autumnV2_1.customers.update(customerId, {
-			billing_controls: makeAutoTopupConfig({
-				threshold: 0,
-				quantity: 600,
-			}),
-		});
-
-		// Fire a zero-value track to push the auto-topup trigger path (trigger happens
-		// after any deduction). Value 0 keeps balance the same but still invokes the
-		// post-track trigger check.
-		await autumnV2_1.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: 0,
 		});
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
@@ -167,31 +160,21 @@ test.concurrent(
 			],
 		});
 
-		// Use 750 of base + 50 of prepaid = 800 total. Base=250, prepaid=50. Combined=300.
-		// ATU threshold=300, quantity=600 → no overage, full remainder to prepaid.
+		// Configure ATU first.
+		await autumnV2_1.customers.update(customerId, {
+			billing_controls: makeAutoTopupConfig({ threshold: 300, quantity: 600 }),
+		});
+
+		// Use 800 → base=200, prepaid=100 → combined=300. threshold=300 so trigger fires.
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 800,
 		});
 
-		await autumnV2_1.customers.update(customerId, {
-			billing_controls: makeAutoTopupConfig({
-				threshold: 300,
-				quantity: 600,
-			}),
-		});
-
-		// Track 0 to trigger post-track ATU check now that config is set.
-		await autumnV2_1.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: 0,
-		});
-
 		await timeout(AUTO_TOPUP_WAIT_MS);
 
-		// Base unchanged at 250, prepaid grows by 600 to 650. Combined = 900.
+		// Base unchanged at 200, prepaid grows by 600 to 700. Combined = 900.
 		const after = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer: after,
@@ -258,25 +241,16 @@ test.concurrent(
 			enabled: true,
 		});
 
+		// Configure ATU first.
+		await autumnV2_1.customers.update(customerId, {
+			billing_controls: makeAutoTopupConfig({ threshold: 0, quantity: 600 }),
+		});
+
 		// Drive base to -1000 overage (usage=2000 vs allowance=1000).
 		await autumnV2_1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Messages,
 			value: 2000,
-		});
-
-		// Top-up 600 cannot cover all 1000 overage — only pays down 600 of it.
-		await autumnV2_1.customers.update(customerId, {
-			billing_controls: makeAutoTopupConfig({
-				threshold: 0,
-				quantity: 600,
-			}),
-		});
-
-		await autumnV2_1.track({
-			customer_id: customerId,
-			feature_id: TestFeature.Messages,
-			value: 0,
 		});
 
 		await timeout(AUTO_TOPUP_WAIT_MS);
