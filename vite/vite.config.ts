@@ -29,10 +29,6 @@ export default defineConfig({
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
 
-			// Bun may not materialize workspace-local links in fresh CI installs.
-			react: path.resolve(__dirname, "../node_modules/react"),
-			"react-dom": path.resolve(__dirname, "../node_modules/react-dom"),
-
 			// Workspace packages
 			"autumn-js/react": path.resolve(
 				__dirname,
