@@ -28,7 +28,7 @@ export const createRedisAvailability = ({
 	logPrefix: string;
 	logType: string;
 }) => {
-	let redisAvailabilityState: RedisAvailabilityState = "healthy";
+	let redisAvailabilityState: RedisAvailabilityState = "degraded";
 	let redisMonitorInterval: ReturnType<typeof setInterval> | null = null;
 	let redisTickInFlight = false;
 	let lastAvailabilityLogAt = 0;
@@ -99,14 +99,13 @@ export const createRedisAvailability = ({
 		}
 	};
 
-	const tickRedisAvailability = async () => {
-		if (!hasConfig) return;
+	const probeRedisAvailability = async (): Promise<boolean> => {
+		if (!hasConfig) return false;
 
 		let failedWhileReady = false;
 		try {
 			if (await pingRedisClient()) {
-				recordRedisAvailability(true);
-				return;
+				return true;
 			}
 			failedWhileReady = redis.status === "ready";
 		} catch {
@@ -126,29 +125,34 @@ export const createRedisAvailability = ({
 			) {
 				reconnectStartedAt ??= Date.now();
 				if (Date.now() - reconnectStartedAt < REDIS_STALE_RECONNECT_MS) {
-					recordRedisAvailability(false);
-					return;
+					return false;
 				}
 			}
 
 			await reconnectRedis();
 		}
-		(await pingRedisClient().catch(() => false))
-			? recordRedisAvailability(true)
-			: recordRedisAvailability(false);
+
+		return await pingRedisClient().catch(() => false);
 	};
 
 	const runTick = async () => {
 		if (redisTickInFlight) return;
 		redisTickInFlight = true;
 		try {
-			await tickRedisAvailability();
+			recordRedisAvailability(await probeRedisAvailability());
 		} finally {
 			redisTickInFlight = false;
 		}
 	};
 
 	return {
+		prime: async () => {
+			if (!hasConfig) return;
+			const available = await probeRedisAvailability();
+			consecutiveSuccesses = available ? REDIS_SUCCESSES_TO_RECOVER : 0;
+			consecutiveFailures = available ? 0 : REDIS_FAILURES_TO_DEGRADE;
+			setRedisAvailabilityState(available ? "healthy" : "degraded");
+		},
 		startMonitor: () => {
 			if (redisMonitorInterval) return;
 
