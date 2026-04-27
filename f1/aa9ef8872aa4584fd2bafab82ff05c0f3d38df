@@ -1,0 +1,683 @@
+vite/src/views/main-sidebar/org-dropdown/manage-org/InvitePopover.tsx
+  14180c81b03c02ae 1,13,20-25,28,43,55,76-114,121-133,144-150
+server/src/internal/balances/handlers/handleListBalances.ts
+  14180c81b03c02ae 6,19
+vite/src/views/developer/api-keys/components/CreateApiKeySheet.tsx
+  14180c81b03c02ae 1,9-15,17,25,34-38,42,50,87-88,92,94-100,107-116,118-119,122,132,134-136,139-152,154,156-177,179-223,236,239,241,257,259-266,271,274,279-281
+server/src/internal/orgs/handlers/memberHandlers/handleGetOrgMembers.ts
+  14180c81b03c02ae 5
+server/src/internal/customers/handlers/handleUpdateBalancesV2.ts
+  14180c81b03c02ae 4,12
+server/src/internal/admin/handleListAdminOrgs.ts
+  14180c81b03c02ae 1,7
+shared/utils/cusUtils/fullCusUtils/fullCustomerToOverageAllowed.ts
+  14180c81b03c02ae 4-9,24-25,30-36
+server/experiments/benchmarkV2CacheFlows.ts
+  14180c81b03c02ae 1-515
+server/src/internal/billing/v2/actions/createSchedule/errors/handleCreateScheduleErrors.ts
+  14180c81b03c02ae 14-21
+server/src/routers/apiRouter.ts
+  14180c81b03c02ae 20,52
+server/src/internal/checkouts/handlers/handleConfirmCheckout.ts
+  14180c81b03c02ae 6,23
+server/src/internal/customers/internalHandlers/handleGetInvoiceLineItems.ts
+  14180c81b03c02ae 2,8
+vite/src/components/v2/scope-selector/ScopeSelector.tsx
+  14180c81b03c02ae 1-290
+server/src/external/vercel/handlers/installations/handleGetInstallation.ts
+  14180c81b03c02ae 1,7
+server/src/internal/features/handlers/handleGetFeature/handleGetFeatureV2.ts
+  14180c81b03c02ae 6,11
+server/src/internal/entities/handlers/handleGetEntity/handleGetEntityV2.ts
+  14180c81b03c02ae 5,12
+apps/website/components/solution-animation.tsx
+  14180c81b03c02ae 24-25,27-28,30-33,35-43,45-62,64,66-77,79,83
+server/src/internal/api/rewards/handlers/rewards/handleDeleteCoupon.ts
+  14180c81b03c02ae 1,12
+server/src/internal/products/handlers/handleMigrateProductV2.ts
+  14180c81b03c02ae 8,27
+server/tests/integration/db/full-subject-cache/full-subject-cache-roundtrip.test.ts
+  14180c81b03c02ae 127,187,344,350,410,454,495
+server/src/queue/createWorkerContext.ts
+  14180c81b03c02ae 21,25,78,83
+server/src/internal/admin/handleGetAdminRequestBlockConfig.ts
+  14180c81b03c02ae 2,9
+server/src/internal/entities/handlers/handleCreateEntity/handleCreateEntityV2.ts
+  14180c81b03c02ae 1,6
+server/src/internal/misc/pricingAgent/handlers/handleSyncPreviewPricing.ts
+  14180c81b03c02ae 9,39
+server/src/external/revenueCat/handlers/handleGetRevenuecatProducts.ts
+  14180c81b03c02ae 2,7
+server/src/honoMiddlewares/secretKeyMiddleware.ts
+  14180c81b03c02ae 78,93
+server/src/internal/billing/v2/handlers/handlePreviewUpdateSubscription.ts
+  14180c81b03c02ae 7,14
+apps/website/public/images/logos/Mastra.svg.svg
+  14180c81b03c02ae 1-3
+server/src/internal/products/internalProductRouter.ts
+  14180c81b03c02ae 7,39
+packages/sdk/README.md
+  14180c81b03c02ae 387,414,817,857
+server/src/internal/products/handlers/handleListPlans/handleListPlansV2.ts
+  14180c81b03c02ae 6,14
+server/src/external/redis/initUtils/redisV2Availability.ts
+  14180c81b03c02ae 1-53
+server/src/internal/customers/handlers/handleTransferProductV2.ts
+  14180c81b03c02ae 7,29
+server/tests/_groups/temp.ts
+  14180c81b03c02ae 13-27
+server/src/queue/blueGreen/blueGreenGate.ts
+  14180c81b03c02ae 1-72
+vite/src/components/forms/attach-v2/context/AttachFormProvider.tsx
+  14180c81b03c02ae 62-64,109,142,480-481,506-507
+server/src/external/connect/initStripeCli.ts
+  14180c81b03c02ae 23,52-60,69,75,114-116,118
+shared/api/billing/updateSubscription/updateSubscriptionV0Params.ts
+  14180c81b03c02ae 4,35
+server/src/external/stripe/stripeWebhookRouter.ts
+  14180c81b03c02ae 3,23,36
+server/src/external/redis/utils/index.ts
+  14180c81b03c02ae 2-7
+server/src/internal/products/handlers/handleGetPlan/handleGetPlanV1.ts
+  14180c81b03c02ae 8,23
+server/src/internal/admin/adminRouter.ts
+  14180c81b03c02ae 6,21,72-73
+server/src/internal/analytics/internalHandlers/handleInternalListRawEvents.ts
+  14180c81b03c02ae 1,18
+server/src/internal/balances/handlers/handleDeleteBalance.ts
+  14180c81b03c02ae 1,6
+server/src/internal/products/handlers/handleListPlans.ts
+  14180c81b03c02ae 6,14
+server/src/internal/products/internalHandlers/handleGetMigrations.ts
+  14180c81b03c02ae 2,10
+server/src/internal/admin/handleUpsertAdminFeatureFlagsConfig.ts
+  14180c81b03c02ae 2,7
+server/src/queue/blueGreen/blueGreenSchemas.ts
+  14180c81b03c02ae 1-75
+server/src/external/vercel/handlers/resources/handleDeleteResource.ts
+  14180c81b03c02ae 1,16
+server/src/db/pgHealthMonitor.ts
+  14180c81b03c02ae 250
+server/src/external/aws/ecs/awsTaskIdentity.ts
+  14180c81b03c02ae 1-124
+server/src/utils/workerUtils/createAutumnContext.ts
+  14180c81b03c02ae 69
+server/src/init.ts
+  14180c81b03c02ae 28,35-38,58,159
+server/src/internal/entities/handlers/handleCreateEntity/handleCreateEntity.ts
+  14180c81b03c02ae 7,14
+apps/website/public/images/logos/T3_svg.svg
+  14180c81b03c02ae 1-10
+server/src/cron/cronInit.ts
+  14180c81b03c02ae 5-13,21,42-52,79-80,87-88
+apps/docs/mintlify/api-reference/billing/billingUpdate.mdx
+  14180c81b03c02ae 264-277
+server/src/internal/orgs/handlers/stripeHandlers/handleDeleteStripe.ts
+  14180c81b03c02ae 5,89
+server/src/internal/balances/handlers/handleFinalizeLock.ts
+  14180c81b03c02ae 1,6
+server/tests/unit/balances/track-v3/runTrackV3Idempotency.test.ts
+  14180c81b03c02ae 1-140
+server/src/internal/api/rewards/handlers/rewardPrograms/handleCreateRewardProgram.ts
+  14180c81b03c02ae 6,15
+vite/src/components/forms/create-schedule/hooks/useCreateScheduleRequestBody.ts
+  14180c81b03c02ae 3,114-115,123-124,172-182,193-194,202-203,214-215,217-295
+apps/website/components/problem.tsx
+  14180c81b03c02ae 77
+shared/enums/ErrCode.ts
+  14180c81b03c02ae 19
+server/src/internal/orgs/handlers/handleUpdateOrg.ts
+  14180c81b03c02ae 2,7
+server/tests/unit/customers/full-customer-cache-redis-gating.test.ts
+  14180c81b03c02ae 79,81,120,127,138,145,160,165
+server/tests/integration/db/full-subject/utils/fullSubjectScenarioBuilders.ts
+  14180c81b03c02ae 151
+server/src/internal/customers/handlers/handleBillingPortal/handleGetBillingPortal.ts
+  14180c81b03c02ae 6,17
+server/src/internal/billing/handlers/handleSetupPayment.ts
+  14180c81b03c02ae 5,16
+server/src/external/vercel/handlers/installations/handleUpsertInstallation.ts
+  14180c81b03c02ae 1,18
+server/src/external/revenueCat/handlers/handleSaveRevenuecatMappings.ts
+  14180c81b03c02ae 2,12
+server/src/internal/billing/v2/handlers/handleAttachV2.ts
+  14180c81b03c02ae 7,15
+server/src/internal/misc/savedViews/handlers/handleGetViews.ts
+  14180c81b03c02ae 2,9
+server/src/internal/admin/handleGetAdminFeatureFlagsConfig.ts
+  14180c81b03c02ae 2,9
+server/src/internal/admin/handleGetAdminOrgLimitsConfig.ts
+  14180c81b03c02ae 2,9
+server/src/internal/orgs/handlers/handleVercelConfig.ts
+  14180c81b03c02ae 8,76,179
+server/src/internal/products/internalHandlers/handleGetProductCount.ts
+  14180c81b03c02ae 1,16
+server/src/internal/analytics/internalHandlers/handleListEventNames.ts
+  14180c81b03c02ae 2,15
+shared/models/devModels/apiKeyModels.ts
+  14180c81b03c02ae 13
+server/src/internal/misc/consent/handlers/handleGetOrgConsents.ts
+  14180c81b03c02ae 1,16
+apps/website/components/home-sections.tsx
+  14180c81b03c02ae 3,7-20,45-53
+server/src/queue/blueGreen/blueGreenHeartbeat.ts
+  14180c81b03c02ae 1-190
+server/tests/unit/full-subject-cache/tryOrInvalidate.test.ts
+  14180c81b03c02ae 1-69
+server/src/internal/customers/internalHandlers/handleGetCusReferrals.ts
+  14180c81b03c02ae 1,10
+server/src/internal/billing/v2/handlers/handleUpdateSubscription.ts
+  14180c81b03c02ae 7,15
+server/src/internal/misc/feedback/handleSubmitFeedback.ts
+  14180c81b03c02ae 2,10
+server/src/external/vercel/handlers/handleUpdateBillingPlan.ts
+  14180c81b03c02ae 1,12
+server/src/utils/otel/TenantAttrSpanProcessor.ts
+  14180c81b03c02ae 1-33
+vite/src/views/main-sidebar/org-dropdown/manage-org/MemberRowToolbar.tsx
+  14180c81b03c02ae 2,5,11,28,45,52,65,71,76,81-82,84-85,92-98,100,102,104,113
+server/src/internal/api/rewards/handlers/rewards/handleCreateCoupon.ts
+  14180c81b03c02ae 5,26
+server/src/internal/misc/debug/debugRouter.ts
+  14180c81b03c02ae 88
+server/src/internal/misc/savedViews/handlers/handleSaveView.ts
+  14180c81b03c02ae 1,16
+server/src/internal/customers/CusService.ts
+  14180c81b03c02ae 155-161
+server/src/internal/misc/configs/handlers/handleNukeOrganisationConfiguration.ts
+  14180c81b03c02ae 2,10
+server/src/db/dbUtils.ts
+  14180c81b03c02ae 116,118-119,121
+server/src/internal/balances/track/runQueuedTrack.ts
+  14180c81b03c02ae 1-40
+server/src/internal/products/handlers/handleDeletePlan/handleDeletePlanV2.ts
+  14180c81b03c02ae 1,6
+server/src/internal/balances/track/deductUtils/deductFromCusEntsTypescript.ts
+  14180c81b03c02ae 96-99,101
+server/tests/infra/pgFailover.test.ts
+  14180c81b03c02ae 320
+vite/src/components/forms/create-schedule/components/CreateScheduleAdvancedSection.tsx
+  14180c81b03c02ae 1-67
+vite/src/views/main-sidebar/org-dropdown/manage-org/OrgInvitesList.tsx
+  14180c81b03c02ae 1,4-5,49-52,58
+server/src/internal/customers/handlers/handleGetCustomerV2.ts
+  14180c81b03c02ae 10,16
+server/src/utils/authUtils/customSessionScopes.ts
+  14180c81b03c02ae 1-71
+server/src/internal/customers/internalHandlers/handleSearchCustomers.ts
+  14180c81b03c02ae 2,14
+server/src/internal/features/handlers/handleCreateFeature/handleCreateFeatureV2.ts
+  14180c81b03c02ae 9,15
+server/src/internal/platform/platformBeta/handlers/handleDeletePlatformOrg.ts
+  14180c81b03c02ae 8,29
+server/src/internal/platform/platformBeta/handlers/handleListPlatformUsers.ts
+  14180c81b03c02ae 8,19
+package.json
+  14180c81b03c02ae 92,100
+server/src/internal/features/handlers/handleDeleteFeature/handleDeleteFeatureV2.ts
+  14180c81b03c02ae 5,13
+server/tests/unit/balances/track-v3/handleRedisTrackDuplicateIdempotency.test.ts
+  14180c81b03c02ae 1-52
+server/src/external/vercel/handlers/resources/handleCreateResource.ts
+  14180c81b03c02ae 1,20
+server/src/internal/balances/autoTopUp/compute/computeAutoTopupPlan.ts
+  14180c81b03c02ae 20,22,76-87,92-93
+server/src/internal/products/handlers/handleGetProductDeleteInfo.ts
+  14180c81b03c02ae 1,7
+"apps/website/public/images/logos/Browser use.svg"
+  14180c81b03c02ae 1-10
+server/tests/unit/queue/processMessage.test.ts
+  14180c81b03c02ae 1-27
+server/src/internal/entities/handlers/handleDeleteEntity/handleDeleteEntityV2.ts
+  14180c81b03c02ae 4,11
+server/src/internal/billing/v2/handlers/handleMultiAttach.ts
+  14180c81b03c02ae 5,13
+apps/website/public/images/logos/Firecrawl.svg.svg
+  14180c81b03c02ae 1-19
+server/src/internal/admin/handleUpsertAdminRequestBlockConfig.ts
+  14180c81b03c02ae 2,7
+server/src/internal/products/handlers/handleCreateProduct/handleCreatePlanV2.ts
+  14180c81b03c02ae 6,14
+server/src/internal/products/handlers/handlePlanHasCustomersV2.ts
+  14180c81b03c02ae 7,14
+server/src/external/revenueCat/revenuecatWebhookRouter.ts
+  14180c81b03c02ae 12,35
+server/src/internal/dev/cli/handlers/handleCreateOAuthApiKeys.ts
+  14180c81b03c02ae 7,24
+server/src/internal/features/handlers/handleListFeatures/handleListFeaturesV1.ts
+  14180c81b03c02ae 1,5
+server/src/internal/api/check/checkUtils/getCheckData.ts
+  14180c81b03c02ae 11,93-96
+server/src/queue/blueGreen/blueGreenReadinessChecks.ts
+  14180c81b03c02ae 1-119
+server/src/utils/initUtils.ts
+  14180c81b03c02ae 5-6
+server/src/internal/admin/handleUpsertAdminOrgLimitsConfig.ts
+  14180c81b03c02ae 2,7
+server/src/internal/products/internalHandlers/handleGetProductInternal.ts
+  14180c81b03c02ae 1,11
+server/src/internal/misc/components/handlers/handleGetPricingTable.ts
+  14180c81b03c02ae 1,20
+apps/docs/mintlify/api-reference/billing/previewUpdate.mdx
+  14180c81b03c02ae 230-243
+scripts/axiom/setOtelVirtualFields.ts
+  14180c81b03c02ae 1-246
+server/src/internal/misc/consent/handlers/handleRevokeConsent.ts
+  14180c81b03c02ae 8,28
+server/src/internal/api/rewards/handlers/referrals/handleGetRedemption.ts
+  14180c81b03c02ae 2,6
+server/src/internal/customers/handlers/handleBillingPortal/handleOpenCustomerPortalV2.ts
+  14180c81b03c02ae 4,11
+server/src/internal/customers/attach/handleAttachPreview/handleAttachPreview.ts
+  14180c81b03c02ae 1,7
+server/src/external/redis/initUtils/createRedisAvailability.ts
+  14180c81b03c02ae 1-174
+server/src/internal/platform/platformBeta/handlers/handleCreatePlatformOrg.ts
+  14180c81b03c02ae 8,33
+server/src/internal/admin/handleUpsertAdminOrgRequestBlock.ts
+  14180c81b03c02ae 2,8
+server/src/internal/customers/handlers/handleUpdateCustomer/handleUpdateCustomer.ts
+  14180c81b03c02ae 6,12
+server/src/utils/logging/initLogger.ts
+  14180c81b03c02ae 3,159-173
+server/src/external/connect/createStripeCli.ts
+  14180c81b03c02ae 21,27,56-60,62,78,82-87
+server/src/external/vercel/handlers/installations/handleDeleteInstallation.ts
+  14180c81b03c02ae 1,12
+vite/src/views/developer/api-keys/ApiKeysPage.tsx
+  14180c81b03c02ae 9,59
+server/src/honoMiddlewares/baseMiddleware.ts
+  14180c81b03c02ae 62,93
+server/src/external/vercel/handlers/transfers/handleResourceTransfers.ts
+  14180c81b03c02ae 1,15,22,29
+server/src/internal/products/internalHandlers/handleGetProducts.ts
+  14180c81b03c02ae 2,14
+vite/src/views/customers2/components/table/customer-usage-analytics/CustomerUsageAnalyticsTable.tsx
+  14180c81b03c02ae 61,170
+server/src/internal/platform/platformBeta/handlers/handleGetPlatformOAuth.ts
+  14180c81b03c02ae 1,21
+server/src/internal/billing/v2/handlers/handleCreateSchedule.ts
+  14180c81b03c02ae 4,12
+server/tests/integration/balances/utils/overage-allowed-utils/customerOverageAllowedUtils.ts
+  14180c81b03c02ae 3,27,31
+server/src/internal/billing/v2/utils/logs/logAutumnBillingPlan.ts
+  14180c81b03c02ae 67-75
+server/src/internal/orgs/handlers/memberHandlers/handleGetInvites.ts
+  14180c81b03c02ae 6
+server/src/internal/products/internalHandlers/handleGetProductCounts.ts
+  14180c81b03c02ae 2,11
+server/src/internal/billing/v2/handlers/handlePreviewMultiAttach.ts
+  14180c81b03c02ae 1,7
+server/tests/unit/balances/track/runQueuedTrack.test.ts
+  14180c81b03c02ae 1-105
+shared/models/devModels/apiKeyTable.ts
+  14180c81b03c02ae 25
+server/tests/unit/balances/track/handle-track-queue-fallback.test.ts
+  14180c81b03c02ae 2-7,9,12-17,20-24,27-32,35-36,39-46,48-56,58-62,65,67-73,75-84,87-91,93-96,99-106,108-110,114-130,132-144,146,148-155
+server/src/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance.ts
+  14180c81b03c02ae 1-33
+server/src/internal/admin/handleUpsertAdminCustomerBlockConfig.ts
+  14180c81b03c02ae 2,7
+server/src/internal/customers/handlers/handleGetOrCreateCustomer/handleGetOrCreateCustomerV2.ts
+  14180c81b03c02ae 5,12
+server/tests/integration/balances/utils/spend-limit-utils/customerSpendLimitUtils.ts
+  14180c81b03c02ae 2,28,32
+server/src/internal/customers/handlers/handleGetOrCreateCustomer/handleGetOrCreateCustomer.ts
+  14180c81b03c02ae 11,17
+vite/src/components/v2/selects/RoleSelect.tsx
+  14180c81b03c02ae 1-129
+server/src/internal/billing/v2/handlers/handlePreviewCreateSchedule.ts
+  14180c81b03c02ae 1,6
+server/src/internal/admin/handleGetMasterStripeAccount.ts
+  14180c81b03c02ae 2,6
+server/src/internal/customers/getFullCusQuery.ts
+  14180c81b03c02ae 30-35,101,400-417
+server/src/internal/entities/handlers/handleListEntities.ts
+  14180c81b03c02ae 2,6
+server/src/internal/misc/trmnl/handlers/handleGetTrmnlDeviceId.ts
+  14180c81b03c02ae 2,9
+server/src/external/aws/eventbridge/initEventBridge.ts
+  14180c81b03c02ae 10
+server/src/internal/misc/jobQueues/jobQueueSchemas.ts
+  14180c81b03c02ae 1-14
+server/src/internal/orgs/handlers/crudHandlers/handleGetOrg.ts
+  14180c81b03c02ae 5
+server/src/internal/dev/ApiKeyService.ts
+  14180c81b03c02ae 56
+server/src/internal/checkouts/checkoutRouter.ts
+  14180c81b03c02ae 3,28-29
+server/src/internal/entities/handlers/handleDeleteEntity/handleDeleteEntity.ts
+  14180c81b03c02ae 6,22
+server/src/internal/orgs/handlers/memberHandlers/handleRemoveMember.ts
+  14180c81b03c02ae 1,7
+shared/utils/authAccessControl.ts
+  14180c81b03c02ae 1-70
+server/src/external/redis/utils/withRedisFailOpen.ts
+  14180c81b03c02ae 1-30
+server/src/internal/admin/handleGetAdminJobQueueConfig.ts
+  14180c81b03c02ae 1-24
+vite/src/views/customers2/hooks/useCustomerTimeseriesEvents.ts
+  14180c81b03c02ae 67-69
+server/src/internal/checkouts/handlers/handleGetCheckout.ts
+  14180c81b03c02ae 1,25
+server/src/internal/misc/trmnl/trmnlRouter.ts
+  14180c81b03c02ae 3,32
+server/src/internal/platform/platformBeta/handlers/handleLegacyPlatformExchange.ts
+  14180c81b03c02ae 10,34
+server/src/internal/misc/configs/handlers/handlePushOrganisationConfiguration.ts
+  14180c81b03c02ae 9,29
+server/src/external/redis/utils/isTransientRedisError.ts
+  14180c81b03c02ae 1-18
+vite/src/hooks/common/useOrg.tsx
+  14180c81b03c02ae 8-9,11-21,51-56,59,63,65-75
+server/src/internal/products/internalHandlers/handleGetStripeCoupons.ts
+  14180c81b03c02ae 2,10
+server/src/internal/products/handlers/handleDeletePlan/handleDeletePlanV1.ts
+  14180c81b03c02ae 1,15
+server/src/internal/features/handlers/handleUpdateFeature/handleUpdateFeatureV2.ts
+  14180c81b03c02ae 13,19
+server/src/internal/dev/handlers/handleDeleteSecretKey.ts
+  14180c81b03c02ae 2,7
+vite/src/hooks/useScopes.ts
+  14180c81b03c02ae 1-20
+server/src/external/redis/utils/errors.ts
+  14180c81b03c02ae 5-6
+server/src/internal/admin/handleGetAdminOrgRequestBlock.ts
+  14180c81b03c02ae 2,10
+server/src/internal/misc/pricingAgent/handlers/handleSetupPreviewOrg.ts
+  14180c81b03c02ae 6,35
+server/src/internal/orgs/handlers/handleGetUploadUrl.ts
+  14180c81b03c02ae 1,7
+server/src/external/aws/awsRegionUtils.ts
+  14180c81b03c02ae 1
+server/src/internal/orgs/handlers/stripeHandlers/handleGetOAuthUrl.ts
+  14180c81b03c02ae 1,7
+server/src/internal/products/handlers/handleUpdatePlan/handleUpdatePlanV2.ts
+  14180c81b03c02ae 6,14
+scripts/db/set-critical-role-timeouts.ts
+  14180c81b03c02ae 74,76,109
+server/src/internal/misc/trmnl/handlers/handleGenerateTrmnlScreen.ts
+  14180c81b03c02ae 1,13
+server/src/internal/entities/handlers/handleUpdateEntity/handleUpdateEntity.ts
+  14180c81b03c02ae 5,13
+server/src/internal/admin/handleGetInvoiceLineItems.ts
+  14180c81b03c02ae 2,11
+server/src/internal/balances/track/v3/trackIdempotencyKey.ts
+  14180c81b03c02ae 1-31
+server/src/internal/customers/handlers/handleListCustomers.ts
+  14180c81b03c02ae 5,12
+server/src/internal/features/handlers/handleDeleteFeature/handleDeleteFeatureV1.ts
+  14180c81b03c02ae 1,8
+server/tests/unit/balances/track-v3/trackIdempotencyKey.test.ts
+  14180c81b03c02ae 1-15
+server/tests/unit/full-subject-cache/buildDeductFromSubjectBalancesKeys.test.ts
+  14180c81b03c02ae 1-28
+packages/autumn-js/src/generated/updateSubscriptionSchemas.ts
+  14180c81b03c02ae 28-32,135-139,161-163,287-289
+server/src/internal/customers/cancel/handleCancelV2.ts
+  14180c81b03c02ae 1,16
+server/src/internal/products/handlers/handleCopyProduct/handleCopyProductV2.ts
+  14180c81b03c02ae 6,38
+server/src/internal/orgs/handlers/crudHandlers/handleDeleteOrg.ts
+  14180c81b03c02ae 1,100
+server/src/queue/blueGreen/blueGreenSlotStore.ts
+  14180c81b03c02ae 1-86
+server/src/internal/customers/handlers/handleDeleteCustomer.ts
+  14180c81b03c02ae 1,11,32
+server/src/workers.ts
+  14180c81b03c02ae 13,30,94-97
+vite/src/views/admin/components/EdgeConfigTab.tsx
+  14180c81b03c02ae 8,31,161-177,237-240
+server/tests/unit/queue/queue-utils.test.ts
+  14180c81b03c02ae 1,3,7,11,15,20-26,31-35,49-50
+server/src/internal/api/rewards/handlers/rewardPrograms/handleDeleteRewardProgram.ts
+  14180c81b03c02ae 2,11
+server/src/honoUtils/HonoEnv.ts
+  14180c81b03c02ae 51-59
+packages/autumn-js/src/generated/previewUpdateSubscriptionSchemas.ts
+  14180c81b03c02ae 28-32,215-219,244-246,372-374
+server/src/internal/customers/handlers/handleRefundInvoice/handleRefundInvoice.ts
+  14180c81b03c02ae 1,19
+server/src/internal/misc/consent/handlers/handleGetConsentApiKeys.ts
+  14180c81b03c02ae 1,16
+server/src/internal/api/rewards/handlers/referrals/handleGetReferralCode.ts
+  14180c81b03c02ae 6,15
+server/src/internal/billing/v2/handlers/handlePreviewAttach.ts
+  14180c81b03c02ae 6,13
+server/src/utils/otel/withWorkerSpan.ts
+  14180c81b03c02ae 1-65
+shared/api/billing/updateSubscription/updateSubscriptionV1Params.ts
+  14180c81b03c02ae 3,16-19,79,93
+server/src/internal/orgs/handlers/handleGetOrgFlags.ts
+  14180c81b03c02ae 2,7
+server/src/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext.ts
+  14180c81b03c02ae 31,101
+server/tests/utils/testInitUtils/createTestContext.ts
+  14180c81b03c02ae 85
+server/src/internal/admin/handleGetAdminStripeSyncConfig.ts
+  14180c81b03c02ae 2,9
+AGENTS.md
+  14180c81b03c02ae 52-62,71,80
+server/src/internal/api/rewards/handlers/rewardPrograms/handleUpdateRewardProgram.ts
+  14180c81b03c02ae 8,19
+server/src/internal/customers/handlers/handleListCustomersV2.ts
+  14180c81b03c02ae 7,14
+server/src/internal/dev/handlers/handleCreateOtp.ts
+  14180c81b03c02ae 2,11
+server/src/internal/entities/handlers/handleGetEntity/handleGetEntity.ts
+  14180c81b03c02ae 5,11
+server/src/internal/products/handlers/handleCopyEnvironment/handleCopyEnvironment.ts
+  14180c81b03c02ae 1,13
+server/tests/integration/crud/entities/get-entity.test.ts
+  14180c81b03c02ae 284-350
+server/src/internal/admin/handleListAdminUsers.ts
+  14180c81b03c02ae 1,6
+server/src/internal/platform/platformBeta/handlers/handleListPlatformOrgs.ts
+  14180c81b03c02ae 6,16
+server/src/honoMiddlewares/routeHandler.ts
+  14180c81b03c02ae 1-9,118-124,128-170
+server/src/internal/customers/handlers/handleUpdateCustomer/handleUpdateCustomerV2.ts
+  14180c81b03c02ae 1-5,10
+server/src/internal/customers/handlers/handleBillingPortal/handleCreateBillingPortal.ts
+  14180c81b03c02ae 5,13
+server/src/internal/admin/handleUpsertAdminStripeSyncConfig.ts
+  14180c81b03c02ae 2,7
+vite/src/views/customers2/components/table/customer-usage-analytics/CustomerUsageAnalyticsChart.tsx
+  14180c81b03c02ae 21,27,69,71-74,77-120,124-127,187-188
+server/src/internal/dev/api-keys/apiKeyUtils.ts
+  14180c81b03c02ae 41-44,53,62,77,85-88,96,104,129
+server/src/internal/products/handlers/handleGetPlan/handleGetPlanV2.ts
+  14180c81b03c02ae 1,7
+server/src/internal/customers/internalHandlers/handleGetCustomerProduct.ts
+  14180c81b03c02ae 6,20
+server/src/external/vercel/handlers/resources/handleRotateResourceSecret.ts
+  14180c81b03c02ae 1,12
+server/src/internal/analytics/internalHandlers/handleGetEventNames.ts
+  14180c81b03c02ae 1,10
+vite/src/views/main-sidebar/org-dropdown/manage-org/OrgMembersList.tsx
+  14180c81b03c02ae 1,5,11-12,16-17,21-27,31,33-34,40,57-58,60-66,80,82,85-86,100-113,119-124,128
+server/src/internal/orgs/handlers/handleResetDefaultAccount.ts
+  14180c81b03c02ae 1,9
+server/src/honoMiddlewares/publicKeyMiddleware.ts
+  14180c81b03c02ae 123-124
+server/src/internal/billing/checkout/handleLegacyApiCheckout.ts
+  14180c81b03c02ae 6,24
+server/src/internal/billing/v2/actions/createSchedule/setup/setupCreateScheduleBillingContext.ts
+  14180c81b03c02ae 10-12,16,122,140-141,146-189
+server/src/internal/analytics/internalHandlers/handleInternalAggregateEvents.ts
+  14180c81b03c02ae 7,9-10,20-26,42,99-162,210
+server/src/internal/features/internalHandlers/handleGetFeatureDeletionInfo.ts
+  14180c81b03c02ae 7,14
+server/src/internal/products/handlers/handleCreateProduct/handleCreatePlan.ts
+  14180c81b03c02ae 15,38
+server/src/internal/api/rewards/handlers/rewards/handleGetCoupon.ts
+  14180c81b03c02ae 2,11
+server/tests/unit/cache/cache-utils.test.ts
+  14180c81b03c02ae 35,66-67,69,71-72,83-109,125,132,140
+apps/scope-picker/ScopePicker.tsx
+  14180c81b03c02ae 1-1033
+server/src/internal/admin/handleUpsertAdminJobQueueConfig.ts
+  14180c81b03c02ae 1-16
+shared/utils/scopeDefinitions.ts
+  14180c81b03c02ae 4-16,19-21,23-40,42-49,52-222,232-238,241,269-274,277-321,325-326,328-332,335-408,420-421,426,438-457,461-467,472,479,485,487-490,494-497,499,506-538,544,548-790,792-799,803-806,808-809,814,817,821-823,826,836-837,839-840,846,850,852,856-857,861-862,864-865,874,878,885-888,909,919-922
+server/src/routers/internalRouter.ts
+  14180c81b03c02ae 11,30
+server/src/internal/misc/savedViews/handlers/handleDeleteView.ts
+  14180c81b03c02ae 2,9
+server/src/internal/customers/cache/fullSubject/actions/rehydrateWithLiveBalances.ts
+  14180c81b03c02ae 1-57
+server/src/internal/features/featureActions/runClearCreditSystemCacheTask.ts
+  14180c81b03c02ae 37-48
+server/src/internal/dev/handlers/handleCliStripe.ts
+  14180c81b03c02ae 1,19-23
+vite/src/hooks/useSheetScopeEntityId.ts
+  14180c81b03c02ae 1-34
+server/src/internal/misc/edgeConfig/edgeConfigStore.ts
+  14180c81b03c02ae 148-152,159,161-167
+server/src/internal/billing/v2/handlers/handleSyncProposals.ts
+  14180c81b03c02ae 1,6
+server/src/internal/misc/jobQueues/jobQueueStore.ts
+  14180c81b03c02ae 1-55
+server/.env.example
+  14180c81b03c02ae 21
+server/src/internal/dev/handlers/handleGetOtp.ts
+  14180c81b03c02ae 1,14
+server/src/internal/admin/handleGetAdminCustomerBlockConfig.ts
+  14180c81b03c02ae 2,9
+server/src/internal/dev/handlers/handleGetDevData.ts
+  14180c81b03c02ae 2,7
+server/src/internal/invoices/handlers/handleGetStripeInvoice.ts
+  14180c81b03c02ae 2,10
+server/src/queue/blueGreen/initBlueGreen.ts
+  14180c81b03c02ae 1-49
+server/src/utils/otel/tenantContext.ts
+  14180c81b03c02ae 1-37
+server/src/internal/admin/handleGetOrgMember.ts
+  14180c81b03c02ae 1,14
+server/src/internal/balances/utils/types/redisDeductionError.ts
+  14180c81b03c02ae 11
+shared/utils/fullSubjectUtils/mergeCustomerBillingControlsForCheck.ts
+  14180c81b03c02ae 1-62
+server/src/external/vercel/vercelWebhookRouter.ts
+  14180c81b03c02ae 5,44
+server/src/external/vercel/handlers/resources/handleUpdateResource.ts
+  14180c81b03c02ae 1,12
+server/src/internal/analytics/internalHandlers/handleRevenueAnalytics.ts
+  14180c81b03c02ae 1,30,44,55,66,77,88
+server/src/internal/balances/autoTopUp/compute/computeRebalancedAutoTopUp.ts
+  14180c81b03c02ae 1-121
+shared/utils/scopeDefinitions.test.ts
+  14180c81b03c02ae 1-1380
+server/src/honoMiddlewares/betterAuthMiddleware.ts
+  14180c81b03c02ae 84-98
+server/src/external/revenueCat/handlers/handleGetRevenuecatMappings.ts
+  14180c81b03c02ae 2,6
+server/src/internal/features/handlers/handleCreateFeature/handleCreateFeatureV1.ts
+  14180c81b03c02ae 8,15
+server/src/queue/blueGreen/blueGreenSlotEnv.ts
+  14180c81b03c02ae 1-11
+server/src/internal/customers/internalHandlers/handleGetCustomer.ts
+  14180c81b03c02ae 1,14
+server/src/internal/features/handlers/handleUpdateFeature/handleUpdateFeatureV1.ts
+  14180c81b03c02ae 13,20
+server/src/external/vercel/handlers/resources/handleGetResource.ts
+  14180c81b03c02ae 1,11
+vite/src/components/forms/create-schedule/hooks/useCreateScheduleForm.ts
+  14180c81b03c02ae 16-17
+server/src/cron.ts
+  14180c81b03c02ae 16-26
+server/src/internal/events/handlers/handleExternalListEvents.ts
+  14180c81b03c02ae 1,8
+vite/src/components/forms/create-schedule/createScheduleFormSchema.ts
+  14180c81b03c02ae 1,172-173
+vite/src/services/DevService.tsx
+  14180c81b03c02ae 4-7
+vite/src/views/developer/api-keys/components/APIKeyTableColumns.tsx
+  14180c81b03c02ae 9,118-124
+server/src/internal/products/internalHandlers/handleGetRewards.ts
+  14180c81b03c02ae 2,11
+server/src/internal/api/rewards/handlers/rewards/handleUpdateCoupon.ts
+  14180c81b03c02ae 8,28
+server/src/internal/customers/internalHandlers/handleGetFullCustomers.ts
+  14180c81b03c02ae 1,15
+server/tests/integration/balances/check/check-fallback.test.ts
+  14180c81b03c02ae 54,109
+shared/utils/cusUtils/fullCusUtils/fullCustomerToSpendLimit.ts
+  14180c81b03c02ae 7-12,27-28,33-39
+server/src/external/vercel/handlers/handleListBillingPlans.ts
+  14180c81b03c02ae 1,199
+server/src/internal/billing/attach/handleAttach.ts
+  14180c81b03c02ae 1,19
+server/src/internal/orgs/handlers/handleRevenueCatConfig.ts
+  14180c81b03c02ae 7,76,127,167
+server/src/internal/dev/handlers/handleCreateSecretKey.ts
+  14180c81b03c02ae 1-7,14,17,22-34,65-68
+server/src/internal/products/internalHandlers/handleGetFeatures.ts
+  14180c81b03c02ae 2,9
+server/src/internal/billing/v2/handlers/handleSetupPaymentV2.ts
+  14180c81b03c02ae 1,6
+server/src/internal/invoices/handlers/handleRedirectToInvoice.ts
+  14180c81b03c02ae 1,9-10,13
+server/src/internal/orgs/handlers/stripeHandlers/handleGetStripeAccount.ts
+  14180c81b03c02ae 2,7
+server/src/internal/customers/handlers/handleAddCouponToCusV2.ts
+  14180c81b03c02ae 5,14
+server/src/internal/admin/handleListOAuthClients.ts
+  14180c81b03c02ae 1,6
+server/src/internal/misc/trmnl/handlers/handlePostTrmnlDeviceId.ts
+  14180c81b03c02ae 1,15
+server/src/internal/features/handlers/handleGetFeature/handleGetFeatureV1.ts
+  14180c81b03c02ae 5,11
+server/src/internal/billing/v2/handlers/handleSync.ts
+  14180c81b03c02ae 1,6
+server/tests/integration/queue/fixtures/livePollingWorker.ts
+  14180c81b03c02ae 1-2,4-6,8-10,12-18,20,22,24-34
+server/src/internal/platform/platformBeta/handlers/handleUpdateOrganizationStripe.ts
+  14180c81b03c02ae 1,64
+server/tests/unit/balances/track/queueTrack.test.ts
+  14180c81b03c02ae 1-85
+vite/src/components/forms/attach-v2/components/AttachProductSelection.tsx
+  14180c81b03c02ae 10
+vite/src/views/admin/components/JobQueuesDialog.tsx
+  14180c81b03c02ae 1-235
+vite/src/views/main-sidebar/MainSidebar.tsx
+  14180c81b03c02ae 20,90-91,189-199
+server/tests/unit/redis/redis-v2-config.spec.ts
+  14180c81b03c02ae 4,20
+server/src/internal/orgs/handlers/stripeHandlers/handleConnectStripe.ts
+  14180c81b03c02ae 1,27
+server/src/internal/products/handlers/handleGetPlanDeleteInfo.ts
+  14180c81b03c02ae 1,7
+server/src/internal/products/handlers/handleUpdatePlan/handleUpdatePlanV1.ts
+  14180c81b03c02ae 22,42
+shared/models/billingModels/plan/autumnBillingPlan.ts
+  14180c81b03c02ae 88-104
+server/src/internal/events/handlers/handleExternalAggregateEvents.ts
+  14180c81b03c02ae 9,23
+vite/src/components/v2/scope-selector/ScopePreview.tsx
+  14180c81b03c02ae 1-54
+server/src/internal/checkouts/handlers/handlePreviewCheckout.ts
+  14180c81b03c02ae 6,31
+server/src/internal/api/rewards/handlers/referrals/handleRedeemReferral.ts
+  14180c81b03c02ae 10,23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "f1aa9ef8872aa4584fd2bafab82ff05c0f3d38df",
+  "prompts": {
+    "14180c81b03c02ae": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_23068b28fffeQYDiGWlXZjXRf1",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 9152,
+      "total_deletions": 2533,
+      "accepted_lines": 9152,
+      "overriden_lines": 0
+    }
+  }
+}
