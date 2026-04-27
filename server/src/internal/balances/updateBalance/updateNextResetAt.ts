@@ -43,6 +43,7 @@ export const updateNextResetAt = async ({
 	});
 
 	const targetCusEnt = sorted[0];
+	const targetFeatureId = featureId ?? targetCusEnt.entitlement.feature.id;
 
 	if (targetCusEnt.entitlement.interval === EntInterval.Lifetime) {
 		throw new RecaseError({
@@ -55,5 +56,6 @@ export const updateNextResetAt = async ({
 		customerId: fullCustomer.id ?? "",
 		cusEntId: targetCusEnt.id,
 		updates: { next_reset_at: nextResetAt },
+		featureId: targetFeatureId,
 	});
 };

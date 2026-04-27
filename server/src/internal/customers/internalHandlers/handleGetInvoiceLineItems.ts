@@ -1,9 +1,11 @@
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { InvoiceService } from "@/internal/invoices/InvoiceService";
 import { invoiceLineItemRepo } from "@/internal/invoices/lineItems/repos/index.js";
 
 export const handleGetInvoiceLineItems = createRoute({
+	scopes: [Scopes.Customers.Read],
 	body: z.object({
 		invoice_ids: z.array(z.string()),
 	}),

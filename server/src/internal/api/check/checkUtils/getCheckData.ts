@@ -8,6 +8,7 @@ import {
 	findFeatureById,
 	getFeatureToUseForCheck,
 	InternalError,
+	mergeCustomerBillingControlsForCheck,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
@@ -89,7 +90,10 @@ export const getCheckData = async ({
 			fullCus: fullCustomer,
 		});
 
-		apiSubject = apiEntityResult;
+		apiSubject = mergeCustomerBillingControlsForCheck({
+			entityApiSubject: apiEntityResult,
+			customerApiSubject: apiCustomer,
+		});
 	}
 
 	if (!apiSubject) {

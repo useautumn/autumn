@@ -129,3 +129,16 @@ TAKEHOME.md
 
 
 .openlogs
+
+
+# project context (personal working state)
+# .context/
+
+# ai-sync: generated files (source of truth is ai/)
+.cursor/
+.claude/
+.codex/
+.agents/
+.mcp.json
+.opencode/skills/
+AGENTS.md

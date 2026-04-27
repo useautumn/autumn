@@ -54,3 +54,6 @@ export const entitlements = pgTable(
 		index("idx_entitlements_internal_product_id").on(table.internal_product_id),
 	],
 );
+
+export type DbEntitlement = typeof entitlements.$inferSelect;
+export type InsertDbEntitlement = typeof entitlements.$inferInsert;

@@ -2,6 +2,7 @@ import {
 	AffectedResource,
 	CustomerNotFoundError,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
@@ -10,6 +11,7 @@ import { RewardService } from "../../rewards/RewardService.js";
 import { CusService } from "../CusService.js";
 
 export const handleAddCouponToCusV2 = createRoute({
+	scopes: [Scopes.Billing.Write],
 	resource: AffectedResource.Customer,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

@@ -2,6 +2,7 @@ import {
 	CustomerNotFoundError,
 	GetBillingPortalBodySchema,
 	GetBillingPortalQuerySchema,
+	Scopes,
 } from "@autumn/shared";
 import z from "zod/v4";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler";
@@ -9,6 +10,7 @@ import { CusService } from "../../CusService";
 import { createBillingPortalSession } from "./createBillingPortalSession";
 
 export const handleCreateBillingPortal = createRoute({
+	scopes: [Scopes.Billing.Read],
 	query: GetBillingPortalQuerySchema,
 	params: z.object({
 		customer_id: z.string(),

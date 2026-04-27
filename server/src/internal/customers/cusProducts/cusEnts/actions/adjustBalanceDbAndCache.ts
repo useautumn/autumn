@@ -1,5 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusEntService } from "../CusEntitlementService.js";
+import { adjustSubjectBalanceCache } from "./cache/adjustSubjectBalanceCache.js";
 import { incrementCachedCusEntBalance } from "./cache/incrementCachedCusEntBalance.js";
 
 /**
@@ -11,23 +12,43 @@ export const adjustBalanceDbAndCache = async ({
 	customerId,
 	cusEntId,
 	delta,
+	featureId,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	cusEntId: string;
 	delta: number;
-}) => {
-	if (delta === 0) return;
+	featureId: string;
+}): Promise<
+	Awaited<ReturnType<typeof CusEntService.increment>>[number] | undefined
+> => {
+	if (delta === 0) return undefined;
 
-	if (delta > 0) {
-		await CusEntService.increment({ ctx, id: cusEntId, amount: delta });
-	} else {
-		await CusEntService.decrement({
+	const updatedRows =
+		delta > 0
+			? await CusEntService.increment({
+					ctx,
+					id: cusEntId,
+					amount: delta,
+				})
+			: await CusEntService.decrement({
+					ctx,
+					id: cusEntId,
+					amount: Math.abs(delta),
+				});
+
+	const updatedCustomerEntitlement = updatedRows[0];
+
+	await Promise.all([
+		incrementCachedCusEntBalance({ ctx, customerId, cusEntId, delta }),
+		adjustSubjectBalanceCache({
 			ctx,
-			id: cusEntId,
-			amount: Math.abs(delta),
-		});
-	}
+			customerId,
+			featureId,
+			customerEntitlementId: cusEntId,
+			delta,
+		}),
+	]);
 
-	await incrementCachedCusEntBalance({ ctx, customerId, cusEntId, delta });
+	return updatedCustomerEntitlement;
 };

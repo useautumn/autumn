@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
+import { traceEnrichMiddleware } from "@/honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleGenerateTrmnlScreen } from "./handlers/handleGenerateTrmnlScreen.js";
 import { handleGetTrmnlDeviceId } from "./handlers/handleGetTrmnlDeviceId.js";
@@ -28,5 +29,6 @@ publicTrmnlRouter.post(
 	"/screen",
 	trmnlScreenLimiter,
 	trmnlAuthMiddleware,
+	traceEnrichMiddleware,
 	...handleGenerateTrmnlScreen,
 );

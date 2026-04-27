@@ -184,7 +184,7 @@ async function getCustomerCount(
 }
 
 /**
- * Read DATABASE_URL from server/.env file
+ * Read DATABASE_V2_URL from server/.env file
  */
 function readLocalDatabaseUrl(): string | null {
 	try {
@@ -194,8 +194,8 @@ function readLocalDatabaseUrl(): string | null {
 
 		for (const line of lines) {
 			const trimmed = line.trim();
-			if (trimmed.startsWith("DATABASE_URL=")) {
-				const url = trimmed.replace(/^DATABASE_URL=/, "").trim();
+			if (trimmed.startsWith("DATABASE_V2_URL=")) {
+				const url = trimmed.replace(/^DATABASE_V2_URL=/, "").trim();
 				// Remove quotes if present
 				return url.replace(/^["']|["']$/g, "");
 			}
@@ -237,7 +237,7 @@ async function pullDatabase({
 	if (!localUrl) {
 		console.error("❌ Could not find local database URL");
 		console.error("   Options:");
-		console.error("   1. Ensure server/.env exists and contains DATABASE_URL");
+		console.error("   1. Ensure server/.env exists and contains DATABASE_V2_URL");
 		console.error("   2. Pass local URL as second argument");
 		console.error("   3. Set LOCAL_DATABASE_URL environment variable");
 		process.exit(1);
@@ -359,7 +359,7 @@ if (!remoteUrl) {
 		"  local-database-url   (optional) Local database URL to pull into",
 	);
 	console.log(
-		"                        If not provided, reads from server/.env DATABASE_URL\n",
+		"                        If not provided, reads from server/.env DATABASE_V2_URL\n",
 	);
 	console.log("Environment variables:");
 	console.log("  REMOTE_DATABASE_URL  Remote database URL");
@@ -370,7 +370,7 @@ if (!remoteUrl) {
 	console.log('  REMOTE_DATABASE_URL="postgresql://..." bun db:pull\n');
 	console.log("⚠️  Important: URLs must be quoted to prevent shell expansion\n");
 	console.log(
-		"By default, the script reads DATABASE_URL from server/.env for the local database.\n",
+		"By default, the script reads DATABASE_V2_URL from server/.env for the local database.\n",
 	);
 	process.exit(1);
 }

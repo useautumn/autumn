@@ -3,6 +3,7 @@ import {
 	type Checkout,
 	type ConfirmCheckoutParams,
 	ConfirmCheckoutParamsSchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { buildBillingLockKey } from "@/internal/billing/v2/utils/billingLock/buildBillingLockKey";
@@ -19,6 +20,7 @@ import { augmentCheckoutParams } from "../utils/augmentCheckoutParams";
  * - Returns success with billing result
  */
 export const handleConfirmCheckout = createRoute({
+	scopes: [Scopes.Public],
 	resource: AffectedResource.Attach,
 	body: ConfirmCheckoutParamsSchema,
 	lock:

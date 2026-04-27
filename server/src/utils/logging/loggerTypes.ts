@@ -6,9 +6,13 @@ export type LogRequestContext = {
 	method: string;
 	url: string;
 	timestamp: number;
+	customer_id?: string;
+	entity_id?: string;
 
 	user_agent?: string;
 	ip_address?: string;
+
+	region?: string;
 
 	// New fields
 	query: Record<string, string>;
@@ -25,9 +29,13 @@ export type LogAppContext = {
 	auth_type: AuthType;
 
 	customer_id?: string;
+	entity_id?: string;
 	user_id?: string;
 	user_email?: string;
 	api_version: string;
+	scopes?: string[];
+	full_subject_bucket?: number;
+	full_subject_rollout_enabled?: boolean;
 };
 
 /** Stripe webhook event context */
@@ -43,3 +51,29 @@ export type LogWorkflowContext = {
 	payload: unknown;
 	name: string; // workflow / job name
 };
+
+/** Redis slow-command context - goes under context.redis.data (map field) */
+export type LogRedisData = {
+	operation: string;
+	duration_ms: number;
+	slow_ms: number;
+	base_slow_ms: number;
+	region_baseline_ms: number;
+	severe_ms: number;
+	breach_ratio: number;
+	region?: string;
+	key?: string;
+	org_id?: string;
+	customer_id?: string;
+	entity_id?: string;
+};
+
+export type AlertSeverity = "warning" | "error" | "critical";
+
+export type AlertCategory =
+	| "redis"
+	| "db"
+	| "worker"
+	| "cache"
+	| "billing"
+	| "system";

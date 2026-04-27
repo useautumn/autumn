@@ -3,15 +3,14 @@ import {
 	ApiVersion,
 	TrackParamsSchema,
 	TrackQuerySchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { runTrackV2 } from "@/internal/balances/track/runTrackV2.js";
-import {
-	getTrackEventNameDeductions,
-	getTrackFeatureDeductions,
-} from "@/internal/balances/track/utils/getFeatureDeductions.js";
+import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
+import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 
 export const handleTrack = createRoute({
+	scopes: [Scopes.Balances.Write],
 	query: TrackQuerySchema,
 	versionedBody: {
 		latest: TrackParamsSchema,
@@ -21,27 +20,14 @@ export const handleTrack = createRoute({
 	handler: async (c) => {
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
+		const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
+		const response = await runTrackWithRollout({
+			ctx,
+			body,
+			featureDeductions,
+		});
+		const status = ctx.extraLogs.trackQueuedForReplay ? 202 : 200;
 
-		// Build feature deductions
-		const featureDeductions = body.feature_id
-			? getTrackFeatureDeductions({
-					ctx,
-					featureId: body.feature_id,
-					lock: body.lock,
-					value: body.value,
-				})
-			: getTrackEventNameDeductions({
-					ctx,
-					eventName: body.event_name!,
-					value: body.value,
-				});
-
-		return c.json(
-			await runTrackV2({
-				ctx,
-				body,
-				featureDeductions,
-			}),
-		);
+		return c.json(response, status);
 	},
 });

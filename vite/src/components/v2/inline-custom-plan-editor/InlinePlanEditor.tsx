@@ -1,4 +1,4 @@
-import type { FrontendProduct } from "@autumn/shared";
+import { type FrontendProduct, sortPlanItems } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/v2/buttons/Button";
@@ -88,7 +88,12 @@ function InlinePlanEditorContent({
 								{hasPlanChanges && (
 									<ShortcutButton
 										metaShortcut="s"
-										onClick={() => onSave(product)}
+										onClick={() =>
+											onSave({
+												...product,
+												items: sortPlanItems({ items: product.items }),
+											})
+										}
 									>
 										Save Changes
 									</ShortcutButton>

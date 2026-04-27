@@ -117,6 +117,8 @@ export function useUpdateSubscriptionRequestBody({
 			cancelAction,
 			billingBehavior,
 			resetBillingCycle,
+			refundBehavior,
+			refundAmount,
 			noBillingChanges,
 		} = formValues;
 
@@ -130,12 +132,17 @@ export function useUpdateSubscriptionRequestBody({
 
 		// For cancel actions, only include cancellation-related fields
 		if (cancelAction) {
+			const isRefund = refundBehavior === "refund";
 			return {
 				...base,
 				cancel_action: cancelAction,
 				billing_behavior:
-					cancelAction === "cancel_immediately"
+					cancelAction === "cancel_immediately" && !isRefund
 						? billingBehavior || undefined
+						: undefined,
+				refund_last_payment:
+					cancelAction === "cancel_immediately" && isRefund
+						? refundAmount || "prorated"
 						: undefined,
 				no_billing_changes: noBillingChanges || undefined,
 			};

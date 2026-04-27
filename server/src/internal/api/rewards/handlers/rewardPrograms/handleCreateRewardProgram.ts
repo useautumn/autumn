@@ -3,6 +3,7 @@ import {
 	ErrCode,
 	RecaseError,
 	RewardTriggerEvent,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
@@ -11,6 +12,7 @@ import { constructRewardProgram } from "@/internal/rewards/rewardTriggerUtils.js
 import { nullish } from "@/utils/genUtils.js";
 
 export const handleCreateRewardProgram = createRoute({
+	scopes: [Scopes.Rewards.Write],
 	body: CreateRewardProgram,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

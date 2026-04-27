@@ -34,7 +34,10 @@ import { executeWithHealthTracking } from "@/db/pgHealthMonitor.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { withSpan } from "../analytics/tracer/spanUtils.js";
-import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
+import {
+	getOrgCusProductLimit,
+	getOrgEntitiesLimit,
+} from "../misc/edgeConfig/orgLimitsStore.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
 import {
 	ACTIVE_STATUSES,
@@ -56,6 +59,7 @@ export class CusService {
 		allowNotFound = false,
 		withEvents = false,
 		explain = false,
+		skipReset = false,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
@@ -67,6 +71,7 @@ export class CusService {
 		allowNotFound?: boolean;
 		withEvents?: boolean;
 		explain?: boolean;
+		skipReset?: boolean;
 	}): Promise<FullCustomer> {
 		const { db, org, env } = ctx;
 		const orgId = org.id;
@@ -90,6 +95,10 @@ export class CusService {
 					orgId,
 					orgSlug: org.slug,
 				});
+				const entitiesLimit = getOrgEntitiesLimit({
+					orgId,
+					orgSlug: org.slug,
+				});
 
 				const query = getFullCusQuery({
 					idOrInternalId,
@@ -103,6 +112,7 @@ export class CusService {
 					withEvents,
 					entityId,
 					cusProductLimit,
+					entitiesLimit,
 				});
 
 				if (explain) {
@@ -162,7 +172,7 @@ export class CusService {
 
 					fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
 				}
-				if (!usedReplica) {
+				if (!usedReplica && !skipReset) {
 					// Skip reset only when executeWithHealthTracking explicitly chose the
 					// replica. Lazy reset writes themselves go through dbGeneral.
 					await resetCustomerEntitlements({

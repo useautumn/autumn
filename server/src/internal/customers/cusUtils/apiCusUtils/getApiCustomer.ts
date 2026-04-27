@@ -10,7 +10,10 @@ import { getApiCustomerBase } from "./getApiCustomerBase.js";
 import { getApiCustomerExpand } from "./getApiCustomerExpand.js";
 
 /**
- * Transform FullCustomer to ApiCustomer with expand fields and version changes applied
+ * Transform FullCustomer to ApiCustomer with expand fields and version changes applied.
+ *
+ * Note: schedule is not included on the API customer. Consumers that need it
+ * should call the dedicated schedule endpoint.
  */
 export const getApiCustomer = async ({
 	ctx,

@@ -1,15 +1,21 @@
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { z } from "zod/v4";
+import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
 import { RedirectModeSchema } from "../common/redirectMode";
+import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 
 export const ExtUpdateSubscriptionV1ParamsSchema =
 	BillingParamsBaseV1Schema.extend({
 		plan_id: z.string().optional().meta({
 			description:
 				"The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.",
+		}),
+		discounts: z.array(AttachDiscountSchema).optional().meta({
+			description:
+				"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
 		}),
 		cancel_action: CancelActionSchema.optional().meta({
 			description:
@@ -27,6 +33,10 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 			// internal: true,
 			description:
 				"If true, the subscription is updated internally without applying billing changes in Stripe.",
+		}),
+
+		refund_last_payment: RefundLastPaymentSchema.optional().meta({
+			internal: true,
 		}),
 
 		recalculate_balances: z
@@ -62,9 +72,11 @@ const UPDATE_FIELDS = [
 	"billing_cycle_anchor",
 	"processor_subscription_id",
 	"no_billing_changes",
+	"refund_last_payment",
 	"recalculate_balances",
 	"status",
 	"redirect_mode",
+	"discounts",
 ] as const satisfies (keyof z.input<
 	typeof ExtUpdateSubscriptionV1ParamsSchema
 >)[];
@@ -75,10 +87,26 @@ export const UpdateSubscriptionV1ParamsSchema =
 			internal: true,
 		}),
 		redirect_mode: RedirectModeSchema.optional(),
-	}).refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
-		message:
-			"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances or billing_cycle_anchor)",
-	});
+	})
+		.refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
+			message:
+				"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances, billing_cycle_anchor, or discounts)",
+		})
+		.refine((data) => !(data.refund_last_payment && data.proration_behavior), {
+			message:
+				"Cannot pass both proration_behavior and refund_last_payment. Use proration_behavior for invoice credits/proration, or refund_last_payment for direct refunds.",
+		})
+		.refine(
+			(data) =>
+				!(
+					data.refund_last_payment &&
+					data.cancel_action !== "cancel_immediately"
+				),
+			{
+				message:
+					"refund_last_payment requires cancel_action to be 'cancel_immediately'.",
+			},
+		);
 
 export type UpdateSubscriptionV1Params = z.infer<
 	typeof UpdateSubscriptionV1ParamsSchema

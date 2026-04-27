@@ -30,6 +30,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addWeeks } from "date-fns";
+import { constructPriceItem } from "@/internal/products/product-items/productItemUtils";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts";
 import { advanceTestClock } from "@/utils/scriptUtils/testClockUtils";
 
@@ -288,14 +289,17 @@ test.concurrent(`${chalk.yellowBright("legacy-downgrade 4: pro-quarter -> premiu
 	const customerId = "legacy-downgrade-4";
 
 	const wordsItem = items.consumableWords();
+	const quarterlyPrice = constructPriceItem({
+		price: 500,
+		interval: BillingInterval.Quarter,
+	});
 
-	// Quarterly pro product - use constructProduct directly with interval parameter
 	const proQuarter = constructProduct({
 		id: "pro-quarter",
-		items: [wordsItem],
-		type: "pro",
-		interval: BillingInterval.Quarter,
+		items: [wordsItem, quarterlyPrice],
+		type: "free",
 		isDefault: false,
+		interval: BillingInterval.Quarter,
 	});
 
 	const premium = products.premium({ id: "premium", items: [wordsItem] });

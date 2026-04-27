@@ -1,21 +1,11 @@
-import {
-	ErrCode,
-	findFeatureById,
-	notNullish,
-	nullish,
-	RecaseError,
-	UpdateBalanceParamsV0Schema,
-} from "@autumn/shared";
-import { StatusCodes } from "http-status-codes";
+import { findFeatureById, UpdateBalanceParamsV0Schema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { runUpdateBalanceV2 } from "@/internal/balances/updateBalance/runUpdateBalanceV2";
-import { runUpdateUsage } from "@/internal/balances/updateBalance/runUpdateUsage";
-import { updateGrantedBalance } from "@/internal/balances/updateBalance/updateGrantedBalance";
-import { updateNextResetAt } from "@/internal/balances/updateBalance/updateNextResetAt";
-import { buildCustomerEntitlementFilters } from "@/internal/balances/utils/buildCustomerEntitlementFilters";
-import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer";
+import { updateBalanceV1 } from "@/internal/balances/updateBalance/updateBalanceV1.js";
+import { updateBalanceV2 } from "@/internal/balances/updateBalance/v2/updateBalanceV2.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
 export const handleUpdateBalance = createRoute({
+	scopes: [Scopes.Balances.Write],
 	body: UpdateBalanceParamsV0Schema.extend({}),
 
 	handler: async (c) => {
@@ -32,63 +22,10 @@ export const handleUpdateBalance = createRoute({
 
 		const targetBalance = params.remaining ?? params.current_balance;
 
-		if (notNullish(params.included_grant) && nullish(targetBalance)) {
-			throw new RecaseError({
-				message:
-					"'remaining' is required when updating granted balance",
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
-
-		let fullCustomer = await getOrSetCachedFullCustomer({
-			ctx,
-			customerId: params.customer_id,
-			entityId: params.entity_id,
-			source: "handleUpdateBalance",
-		});
-
-		if (notNullish(params.add_to_balance) || notNullish(targetBalance)) {
-			const result = await runUpdateBalanceV2({ ctx, params, fullCustomer });
-			fullCustomer = result?.fullCus ?? fullCustomer;
-		}
-
-		if (notNullish(params.usage)) {
-			const result = await runUpdateUsage({ ctx, params, fullCustomer });
-			fullCustomer = result?.fullCus ?? fullCustomer;
-		}
-
-		if (notNullish(params.included_grant)) {
-
-			ctx.logger.info(
-				`updating granted balance for feature ${params.feature_id} to ${params.included_grant}`,
-			);
-
-			const customerEntitlementFilters = buildCustomerEntitlementFilters({
-				params,
-			});
-
-			await updateGrantedBalance({
-				ctx,
-				fullCustomer,
-				featureId: params.feature_id,
-				targetGrantedBalance: params.included_grant,
-				customerEntitlementFilters,
-			});
-		}
-
-		if (notNullish(params.next_reset_at)) {
-			const customerEntitlementFilters = buildCustomerEntitlementFilters({
-				params,
-			});
-
-			await updateNextResetAt({
-				ctx,
-				fullCustomer,
-				featureId: params.feature_id,
-				nextResetAt: params.next_reset_at,
-				customerEntitlementFilters,
-			});
+		if (isFullSubjectRolloutEnabled({ ctx })) {
+			await updateBalanceV2({ ctx, params, targetBalance });
+		} else {
+			await updateBalanceV1({ ctx, params, targetBalance });
 		}
 
 		return c.json({ success: true });

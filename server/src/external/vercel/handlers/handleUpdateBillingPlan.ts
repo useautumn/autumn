@@ -1,4 +1,4 @@
-import { RecaseError } from "@autumn/shared";
+import { RecaseError, Scopes } from "@autumn/shared";
 import { ErrCode } from "@shared/enums/ErrCode.js";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
@@ -9,6 +9,7 @@ import type { VercelError, VercelNotification } from "../misc/vercelTypes.js";
 import { productToBillingPlan } from "./handleListBillingPlans.js";
 
 export const handleUpdateVercelBillingPlan = createRoute({
+	scopes: [Scopes.Public],
 	body: z.object({
 		billingPlanId: z.string().min(1),
 	}),

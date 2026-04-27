@@ -85,17 +85,29 @@ export const DateInputUnix = ({
 	unixDate,
 	setUnixDate,
 	disabled,
+	disablePastDates,
+	minUnixDate,
 	withTime,
 	use24Hour,
+	className,
 }: {
 	unixDate: number | null;
 	setUnixDate: (unixDate: number | null) => void;
 	disabled?: boolean;
+	disablePastDates?: boolean;
+	minUnixDate?: number;
 	withTime?: boolean;
 	/** Show 24-hour clock (00–23) instead of 12-hour with AM/PM. */
 	use24Hour?: boolean;
+	className?: string;
 }) => {
 	const [popoverOpen, setPopoverOpen] = useState(false);
+	const minDate = minUnixDate ? new Date(minUnixDate) : null;
+	const minDay = minDate ? new Date(minDate) : null;
+
+	if (minDay) {
+		minDay.setHours(0, 0, 0, 0);
+	}
 
 	const displayFormat = !withTime
 		? "EEEE, MMMM do yyyy"
@@ -104,8 +116,14 @@ export const DateInputUnix = ({
 			: "EEEE, MMMM do yyyy 'at' h:mm a";
 
 	const dateObj = unixDate ? new Date(unixDate) : undefined;
+	const clampUnixDate = (nextUnixDate: number) => {
+		if (minUnixDate != null && nextUnixDate < minUnixDate) {
+			return minUnixDate;
+		}
 
-	/** Carry over the current time when the user picks a new day. */
+		return nextUnixDate;
+	};
+
 	const handleDaySelect = (newDay: Date | undefined) => {
 		if (!newDay) {
 			setUnixDate(null);
@@ -113,15 +131,14 @@ export const DateInputUnix = ({
 		}
 
 		if (!withTime) {
-			setUnixDate(newDay.getTime());
+			setUnixDate(clampUnixDate(newDay.getTime()));
 			setPopoverOpen(false);
 			return;
 		}
 
 		if (!dateObj) {
-			// First selection – default to noon.
 			newDay.setHours(12, 0, 0, 0);
-			setUnixDate(newDay.getTime());
+			setUnixDate(clampUnixDate(newDay.getTime()));
 			return;
 		}
 
@@ -132,12 +149,12 @@ export const DateInputUnix = ({
 			newDay.getMonth(),
 			newDay.getDate(),
 		);
-		setUnixDate(newDateFull.getTime());
+		setUnixDate(clampUnixDate(newDateFull.getTime()));
 	};
 
 	const handleTimeChange = (newDate: Date | undefined) => {
 		if (!newDate) return;
-		setUnixDate(newDate.getTime());
+		setUnixDate(clampUnixDate(newDate.getTime()));
 	};
 
 	return (
@@ -151,6 +168,7 @@ export const DateInputUnix = ({
 						"w-full rounded-lg flex items-center justify-start gap-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50",
 						"h-input input-base input-shadow-default input-state-open truncate",
 						!unixDate && "text-muted-foreground",
+						className,
 					)}
 				>
 					<CalendarIcon className="size-3.5 shrink-0 text-t3 ml-1" />
@@ -166,7 +184,10 @@ export const DateInputUnix = ({
 					mode="single"
 					selected={dateObj}
 					onSelect={handleDaySelect}
-					initialFocus
+					disabled={disablePastDates && minDay ? { before: minDay } : undefined}
+					captionLayout="dropdown-buttons"
+					fromYear={new Date().getFullYear()}
+					toYear={new Date().getFullYear() + 10}
 				/>
 				{withTime && (
 					<TimePicker

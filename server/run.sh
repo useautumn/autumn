@@ -6,12 +6,12 @@ if [[ "$filename" == *"shell"* ]]; then
     "$filename" "${@:2}"
 elif [[ "$filename" == *".test.ts" ]]; then
     # Test files: use bun test (preload configured in bunfig.toml)
-    NODE_ENV=development infisical run --env=dev -- bun test --timeout 0 "$filename"
+    NODE_ENV=development infisical run --env=dev --recursive -- bun test --timeout 0 "$filename"
 elif [[ "$filename" == *".sh"* ]]; then
     "$filename"
 else
     # Regular scripts (preload configured in bunfig.toml allows .env to override Infisical)
-    infisical run --env=dev -- bun  "$filename"
+    infisical run --env=dev --recursive -- bun  "$filename"
 fi
 
 # OLD: Using scripts/test.ts for test file matching (deprecated)

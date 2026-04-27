@@ -4,6 +4,7 @@ import { handleGetProductDeleteInfo } from "./handlers/handleGetProductDeleteInf
 
 const expressProductRouter: Router = Router({ mergeParams: true });
 
+import { Scopes } from "@autumn/shared";
 import { Hono } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -35,6 +36,7 @@ internalProductRouter.get("/:productId/info", ...handleGetProductDeleteInfo);
 internalProductRouter.get(
 	"/has_entity_feature_id",
 	...createRoute({
+		scopes: [Scopes.Features.Read],
 		handler: async (c) => {
 			const ctx = c.get("ctx");
 			const { db, org, env } = ctx;

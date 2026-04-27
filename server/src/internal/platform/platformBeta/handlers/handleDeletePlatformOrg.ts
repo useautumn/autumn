@@ -5,6 +5,7 @@ import {
 	member,
 	organizations,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -25,6 +26,7 @@ const deleteOrgSchema = z.object({
  * Deletes a platform organization by slug (for test cleanup)
  */
 export const handleDeletePlatformOrg = createRoute({
+	scopes: [Scopes.Platform.Write],
 	body: deleteOrgSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

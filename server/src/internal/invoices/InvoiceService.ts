@@ -216,6 +216,11 @@ export class InvoiceService {
 			currency: stripeInvoice.currency,
 		});
 
+		const atmnAmountPaid = stripeToAtmnAmount({
+			amount: stripeInvoice.amount_paid,
+			currency: stripeInvoice.currency,
+		});
+
 		const invoice: Invoice = {
 			id: generateId("inv"),
 			internal_customer_id: internalCustomerId,
@@ -229,6 +234,7 @@ export class InvoiceService {
 
 			// Stripe stuff
 			total: atmnTotal,
+			amount_paid: atmnAmountPaid,
 			refunded_amount: 0,
 			currency: stripeInvoice.currency,
 			discounts: getInvoiceDiscounts({
@@ -323,6 +329,7 @@ export class InvoiceService {
 					hosted_invoice_url: invoice.hosted_invoice_url,
 					discounts: invoice.discounts,
 					total: invoice.total,
+					amount_paid: invoice.amount_paid,
 					product_ids: invoice.product_ids?.length
 						? sql`CASE
 							WHEN ${invoices.product_ids} IS NULL OR cardinality(${invoices.product_ids}) = 0

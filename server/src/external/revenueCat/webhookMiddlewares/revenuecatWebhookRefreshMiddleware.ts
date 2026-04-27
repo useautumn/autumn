@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import { deleteCachedApiCustomer } from "@/internal/customers/cusUtils/apiCusCacheUtils/deleteCachedApiCustomer.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type { RevenueCatWebhookHonoEnv } from "./revenuecatWebhookContext.js";
 
 /**
@@ -29,7 +29,7 @@ export const revenuecatWebhookRefreshMiddleware = async (
 			`Attempting delete cached api customer! RevenueCat ${revenuecatEventType}`,
 		);
 
-		await deleteCachedApiCustomer({
+		await deleteCachedFullCustomer({
 			customerId,
 			ctx,
 			source: `revenuecatWebhookRefreshMiddleware: ${revenuecatEventType}`,

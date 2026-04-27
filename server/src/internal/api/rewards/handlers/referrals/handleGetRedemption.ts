@@ -1,7 +1,9 @@
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
 export const handleGetRedemption = createRoute({
+	scopes: [Scopes.Rewards.Read],
 	params: z.object({ redemption_id: z.string() }),
 	handler: async (c) => {
 		const { db } = c.get("ctx");

@@ -3,6 +3,7 @@ import {
 	EntityNotFoundError,
 	findCustomerEntitlementByFeature,
 	findFeatureById,
+	Scopes,
 } from "@autumn/shared";
 import { adjustAllowance } from "@/internal/balances/utils/paidAllocatedFeature/adjustAllowance.js";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
@@ -18,6 +19,7 @@ import { RepService } from "../../../customers/cusProducts/cusEnts/RepService.js
 import { cancelSubsForEntity } from "../../actions/deleteEntity/cancelEntitySubscriptions.js";
 
 export const handleDeleteEntity = createRoute({
+	scopes: [Scopes.Customers.Write],
 	handler: async (c) => {
 		const { customer_id, entity_id } = c.req.param();
 		const ctx = c.get("ctx");
@@ -107,13 +109,7 @@ export const handleDeleteEntity = createRoute({
 				}
 
 				await CusEntService.update({
-					ctx: {
-						db,
-						logger,
-						org,
-						env,
-						customerId: customer_id,
-					},
+					ctx: { ...ctx, customerId: customer_id },
 					id: linkedCusEnt.id,
 					updates: {
 						entities: newEntities,
@@ -123,13 +119,7 @@ export const handleDeleteEntity = createRoute({
 
 			if (!replaceable) {
 				await CusEntService.increment({
-					ctx: {
-						db,
-						logger,
-						org,
-						env,
-						customerId: customer_id,
-					},
+					ctx: { ...ctx, customerId: customer_id },
 					id: mainCusEnt.id,
 					amount: 1,
 				});

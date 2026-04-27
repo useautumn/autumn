@@ -2,33 +2,28 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Billing cycle anchor tests (attach + update subscription)",
+	description: "Failed tests to triage and fix",
 	tier: "domain",
 	paths: [
-		// Attach — reset ("now")
-		"integration/billing/attach/params/billing-cycle-anchor/billing-cycle-anchor-reset.test.ts",
-		"integration/billing/attach/params/billing-cycle-anchor/billing-cycle-anchor-reset-entities.test.ts",
-		"integration/billing/attach/params/billing-cycle-anchor/anchor-reset-refund/anchor-reset-no-carry-over.test.ts",
-		"integration/billing/attach/params/billing-cycle-anchor/anchor-reset-refund/anchor-reset-with-carry-over.test.ts",
-
-		// Attach — scheduled (all tests skipped — scheduled anchor not yet supported)
-		// "integration/billing/attach/params/billing-cycle-anchor/billing-cycle-anchor-schedule.test.ts",
-		// "integration/billing/attach/params/billing-cycle-anchor/billing-cycle-anchor-schedule-entities.test.ts",
-
-		// Attach — new plan (tests 1 & 2 skipped, test 3 "now" is active)
-		"integration/billing/attach/params/billing-cycle-anchor/billing-cycle-anchor-new-plan.test.ts",
-		"integration/billing/attach/params/billing-cycle-anchor/billing-cycle-anchor-new-plan-entities.test.ts",
-
-		// Attach — line items & errors
-		"integration/billing/attach/invoice-line-items/billing-cycle-anchor-reset-line-items.test.ts",
-		"integration/billing/attach/errors/attach-billing-cycle-anchor-errors.test.ts",
-
-		// Update subscription — reset ("now")
-		"integration/billing/update-subscription/params/billing-cycle-anchor/update-sub-anchor-reset-no-partial-refund.test.ts",
-		"integration/billing/update-subscription/params/billing-cycle-anchor/update-sub-anchor-reset-errors.test.ts",
-		"integration/billing/update-subscription/params/billing-cycle-anchor/update-sub-anchor-reset-with-changes.test.ts",
-
-		// Update subscription — anchor drift
-		"integration/billing/update-subscription/custom-plan/update-free-to-free-anchor-drift.test.ts",
+		"balances/check/loose/loose-2.test.ts",
+		"balances/check/loose/entities/entity-loose-2.test.ts",
+		// "balances/track/loose/loose-unlimited.test.ts",
+		// "balances/track/concurrency/concurrent-track6.test.ts",
+		// "integration/balances/lock/check-with-lock-concurrent-stress.test.ts",
+		"balances/check/overage-allowed/check-customer-overage-allowed.test.ts",
+		"balances/check/overage-allowed/check-overage-allowed-allocated.test.ts",
+		"balances/check/overage-allowed/check-overage-allowed-consumable.test.ts",
+		"balances/check/overage-allowed/check-overage-allowed-entity.test.ts",
+		"balances/check/spend-limit/check-customer-spend-limit.test.ts",
+		"balances/check/spend-limit/check-entity-product-spend-limit.test.ts",
+		"balances/check/spend-limit/check-per-entity-spend-limit.test.ts",
+		"balances/track/overage-allowed/track-customer-overage-allowed.test.ts",
+		"balances/track/overage-allowed/track-overage-allowed-allocated.test.ts",
+		"balances/track/overage-allowed/track-overage-allowed-consumable.test.ts",
+		"balances/track/overage-allowed/track-overage-allowed-entity.test.ts",
+		"balances/track/spend-limit/track-customer-spend-limit.test.ts",
+		"balances/track/spend-limit/track-entity-product-spend-limit.test.ts",
+		"balances/track/spend-limit/track-per-entity-spend-limit.test.ts",
+		"balances/track/spend-limit/track-postgres-entity-spend-limit.test.ts",
 	],
 };

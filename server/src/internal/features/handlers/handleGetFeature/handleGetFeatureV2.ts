@@ -3,10 +3,12 @@ import {
 	dbToApiFeatureV1,
 	findFeatureById,
 	GetFeatureParamsSchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 export const handleGetFeatureV2 = createRoute({
+	scopes: [Scopes.Features.Read],
 	resource: AffectedResource.Feature,
 	body: GetFeatureParamsSchema,
 	handler: async (c) => {

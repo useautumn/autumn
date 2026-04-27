@@ -1,0 +1,111 @@
+---
+title: "Embedded UI components are easier with shadcn"
+description: "We decided to use a shadcn/ui registry to set up our pricing components, instead of a Reactjs library. We used this approach for pricing pages, upgrade and downgrade flows and paywalls."
+date: "2025-05-28"
+author: "John, Autumn Co-Founder"
+slug: "shadcn"
+image: "/images/blog/shadcn.png"
+featured: true
+---
+
+We're building Autumn, which is a billing platform that helps devs integrate [stripe](/blog/what-if-stripe-builds-this) and manage their pricing model. One feature of this is a UI library to drop-in things like a pricing table, upgrade/downgrade flows, paywalls--similar to Clerk with auth.
+
+We are heavy users of shadcn/ui and love having full design customisability. When Supabase launched it’s UI library through shadcn, we wanted to do the same.
+
+Here's our exploration into it and some of the challenges we faced.
+
+### **V1 as a React library**
+
+We first attempted this as a standard npm React library:
+
+```
+import PricingPage from "autumn-js"
+```
+
+It's biggest issue was customisability**.** There are two ways to make npm components customisable: through props, or a no-code interface in our app.
+
+1.  With props there were too many class variables. For example with the pricing page, each pricing card is composed of many headers, descriptions, buttons and more. And each card itself can have variants (recommended, discounts, annual etc).
+    
+2.  A low code interface is a bad experience for devs, who want full customisability and have 10x experience designing with tailwind/css. Even more so with the era of cursor. This is subjective but I’ve never had a good experience with one.
+    
+
+_Sidenote:_ If you ever try to make your npm component customisable via tailwind, all the best. That was one of the most frustrating days of our lives.
+
+Also, If you ever forgot what jsx styles look like, here’s a snippet of what we had to write…
+
+![](https://framerusercontent.com/images/AfIf7siCuQZQhQWWGgBmQQjoyjw.png)
+
+We made one measly post on linkedin about it, decided it was unusable and shelved it.
+
+### **V2 as shadcn/ui components**
+
+A few weeks later we started looking into it again with shadcn.
+
+```
+npx shadcn@latest add https://ui.useautumn.com/classic/pricing-table.json
+```
+
+This immediately felt like a more customizable and fluid DX, but had its own challenges:
+
+1.  Because shadcn components install as a user file, we cannot fully control it via our SDK. For example, if we wanted to trigger a modal/popup to confirm a plan upgrade, the user needs to explicitly pass it into a function. This does take away slightly from that “magical DX”.  
+      
+    
+    ```jsx
+    //upgrading to Pro tier
+    <Button
+      onClick={async () =>
+        await attach({
+          productId: "pro",
+          dialog: ProductChangeDialog,
+        })
+      }
+    />;
+    ```
+    
+2.  Since users own and control the component files, deciding what data abstraction level to return to the frontend is hard. For example, our upgrade dialog shows different text and styling depending on the scenarios:  
+      
+    \- One time purchase vs subscription  
+    \- Upgrades vs downgrades vs cancellations vs renewals  
+    \- Does the upgrade require an input from users (eg, quantity of credits to purchase)
+    
+
+![](https://framerusercontent.com/images/ncBPxNIGQkh4vZHzdi87FAweR0.png)
+
+With a React library, everything would be "completely processed", with no customizability. Initially this is the same approach we took with the shadcn registry, but users quickly told us they wanted to customize the text too. We switched to the "in-between" approach.
+
+Our API will return a scenario (eg, upgrade, downgrade, add-on, free-trial etc), and our shadcn components install with a library of cases that users can edit to control the messaging.
+
+```jsx
+  switch (scenario) {
+    case "scheduled":
+      return {
+        title: <p>Scheduled product already exists</p>,
+        message: <p>You will downgrade on {scheduled_date}</p>,
+      };
+
+    case "active":
+      return {
+        title: <p>Product already active</p>,
+        message: <p>You are already subscribed to this product.</p>,
+      };
+
+    case "new":
+      if (recurring) {
+        return {
+          title: <p>Subscribe to {product_name}</p>,
+          message: (
+            <p>
+              By clicking confirm, you will be subscribed to {product_name} and
+              your card will be charged immediately.
+            </p>
+          ),
+        };
+      }
+//..... etc
+```
+
+![](https://framerusercontent.com/images/qQ6pvBXw6yquIFtUptD2lRggE.png)
+
+Ultimately, after having used it ourselves and watching our users, we’re pretty happy with this approach. Shadcn is as popular as it is for a reason, and we believe in the paradigm of owning your own components and everything inside them.
+
+We're maintaining these components for free separate to our main product here: [https://pricecn.com](https://pricecn.com/)

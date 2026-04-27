@@ -10,11 +10,13 @@ import {
 	nullish,
 	RecaseError,
 	UpdateFeatureV2ParamsSchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature.js";
 
 export const handleUpdateFeatureV2 = createRoute({
+	scopes: [Scopes.Features.Write],
 	body: UpdateFeatureV2ParamsSchema,
 	resource: AffectedResource.Feature,
 	handler: async (c) => {

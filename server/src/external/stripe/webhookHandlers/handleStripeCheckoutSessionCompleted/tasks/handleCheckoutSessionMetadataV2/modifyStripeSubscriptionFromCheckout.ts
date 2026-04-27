@@ -32,6 +32,7 @@ export const modifyStripeSubscriptionFromCheckout = async ({
 
 	await stripeCli.subscriptions.update(updateAction.stripeSubscriptionId, {
 		...updateAction.params,
+		discounts: undefined,
 		payment_behavior: "error_if_incomplete",
 		expand: ["latest_invoice"],
 	});

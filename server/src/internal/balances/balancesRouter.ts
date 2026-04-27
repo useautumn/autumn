@@ -5,9 +5,9 @@ import { handleCreateBalance } from "./handlers/handleCreateBalance.js";
 import { handleDeleteBalance } from "./handlers/handleDeleteBalance.js";
 import { handleFinalizeLock } from "./handlers/handleFinalizeLock.js";
 import { handleListBalances } from "./handlers/handleListBalances.js";
+import { handleSetUsage } from "./handlers/handleSetUsage.js";
 import { handleTrack } from "./handlers/handleTrack.js";
 import { handleUpdateBalance } from "./handlers/handleUpdateBalance.js";
-import { handleSetUsage } from "./setUsage/handleSetUsage.js";
 
 // Create a Hono app for products
 export const balancesRouter = new Hono<HonoEnv>();
@@ -26,6 +26,7 @@ balancesRouter.post("/check", ...handleCheck);
 
 // Legacy
 balancesRouter.post("/usage", ...handleSetUsage);
+
 export const balancesRpcRouter = new Hono<HonoEnv>();
 balancesRpcRouter.post("/balances.create", ...handleCreateBalance);
 balancesRpcRouter.post("/balances.update", ...handleUpdateBalance);

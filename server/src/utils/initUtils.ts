@@ -2,8 +2,8 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import "dotenv/config";
 
 export const checkEnvVars = () => {
-	if (!process.env.DATABASE_URL) {
-		console.error(`DATABASE_URL is not set`);
+	if (!process.env.DATABASE_V2_URL) {
+		console.error(`DATABASE_V2_URL is not set`);
 		process.exit(1);
 	}
 
@@ -19,10 +19,9 @@ export const checkEnvVars = () => {
 		!process.env.CACHE_URL_US_EAST &&
 		!process.env.CACHE_BACKUP_URL?.trim()
 	) {
-		console.error(
-			`No Redis URL set (CACHE_URL, CACHE_URL_US_EAST, or CACHE_BACKUP_URL)`,
+		logger.warn(
+			"No Redis URL set (CACHE_URL, CACHE_URL_US_EAST, or CACHE_BACKUP_URL), running without Redis",
 		);
-		process.exit(1);
 	}
 
 	if (!process.env.BETTER_AUTH_SECRET || !process.env.BETTER_AUTH_URL) {

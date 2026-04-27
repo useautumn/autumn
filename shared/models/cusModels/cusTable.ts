@@ -20,6 +20,10 @@ import type {
 	DbUsageAlert,
 } from "./billingControls/customerBillingControls.js";
 
+export type CustomerConfig = {
+	disable_pooled_balance?: boolean;
+};
+
 export type CustomerProcessor = {
 	type: "stripe";
 	id: string;
@@ -46,6 +50,7 @@ export const customers = pgTable(
 		spend_limits: jsonb().$type<DbSpendLimit[]>(),
 		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
 		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
+		config: jsonb().$type<CustomerConfig>().default({}),
 	},
 	(table) => [
 		unique("cus_id_constraint").on(table.org_id, table.id, table.env),
@@ -94,3 +99,9 @@ export const customers = pgTable(
 ).enableRLS();
 
 collatePgColumn(customers.internal_id, "C");
+
+// CREATE INDEX idx_customers_org_env_internal_id
+// ON customers (org_id, env, internal_id DESC);
+
+export type DbCustomer = typeof customers.$inferSelect;
+export type InsertDbCustomer = typeof customers.$inferInsert;

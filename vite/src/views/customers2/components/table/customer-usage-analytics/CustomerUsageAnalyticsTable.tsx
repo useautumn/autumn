@@ -58,7 +58,7 @@ export function CustomerUsageAnalyticsTable() {
 	// have fully settled (including background revalidations) to avoid firing with
 	// stale cached event names from a previously viewed customer.
 	// Pass the external customer ID since events are keyed by that.
-	const { timeseriesEvents, isLoading: timeseriesLoading } =
+	const { timeseriesEvents, totals, isLoading: timeseriesLoading } =
 		useCustomerTimeseriesEvents({
 			interval,
 			eventNames: customerEventNames,
@@ -167,6 +167,7 @@ export function CustomerUsageAnalyticsTable() {
 							<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
 								<CustomerUsageAnalyticsChart
 									timeseriesEvents={timeseriesEvents}
+									totals={totals}
 									daysToShow={selectedDays ?? 7}
 								/>
 							</div>

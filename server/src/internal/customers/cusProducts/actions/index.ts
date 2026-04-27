@@ -1,12 +1,15 @@
 import { getExpiredCustomerProductsCacheAndMerge } from "@/internal/customers/cusProducts/actions/expiredCache/getExpiredCustomerProductsCache";
 import { activateFreeSuccessorProduct } from "./activateFreeSuccessorProduct";
 import { activateScheduledCustomerProduct } from "./activateScheduled";
+import { cancelCustomerProduct } from "./cancelCustomerProduct";
 import { deleteScheduledCustomerProduct } from "./deleteScheduledCustomerProduct";
 import { expireCustomerProductAndActivateDefault } from "./expireAndActivateDefault";
 import {
 	getExpiredCustomerProductsCache,
 	setExpiredCustomerProductsCache,
 } from "./expiredCache";
+import { markCustomerProductPastDue } from "./markCustomerProductPastDue";
+import { uncancelCustomerProduct } from "./uncancelCustomerProduct";
 import { updateCustomerProductDbAndCache } from "./updateDbAndCache";
 
 export const customerProductActions = {
@@ -18,6 +21,15 @@ export const customerProductActions = {
 
 	/** Activates a scheduled customer product with new subscription/schedule IDs */
 	activateScheduled: activateScheduledCustomerProduct,
+
+	/** Cancels a customer product and sends a Cancel webhook */
+	cancel: cancelCustomerProduct,
+
+	/** Uncancels a customer product and sends a Renew webhook */
+	uncancel: uncancelCustomerProduct,
+
+	/** Marks a customer product as past due and sends a PastDue webhook */
+	markPastDue: markCustomerProductPastDue,
 
 	/** Deletes any scheduled main customer product in the same group */
 	deleteScheduled: deleteScheduledCustomerProduct,

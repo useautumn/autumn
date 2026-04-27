@@ -1,5 +1,6 @@
 import { type AppEnv, CusProductStatus } from "@autumn/shared";
 import type { RepoContext } from "@/db/repoContext.js";
+import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { getOneOffCustomerProductsToCleanup } from "@/internal/customers/cusProducts/actions/cleanupOneOff/getOneOffToCleanup.js";
 import { batchUpdateCustomerProducts } from "@/internal/customers/cusProducts/repos/batchUpdateCustomerProducts.js";
 import type { CronContext } from "../utils/CronContext.js";
@@ -63,6 +64,7 @@ export const runOneOffCleanup = async ({ ctx }: { ctx: CronContext }) => {
 				},
 				env: group.env,
 				logger: logger,
+				redisV2: resolveRedisV2(),
 			};
 			await batchUpdateCustomerProducts({
 				ctx: repoContext,

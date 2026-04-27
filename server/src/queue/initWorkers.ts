@@ -12,15 +12,27 @@ import * as Sentry from "@sentry/bun";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { verifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
+import {
+	isJobQueueEnabled,
+	JOB_QUEUE_IDS,
+} from "@/internal/misc/jobQueues/jobQueueStore.js";
 import { generateId } from "@/utils/genUtils.js";
+import { withTimeout } from "@/utils/withTimeout.js";
 import { hatchet } from "../external/hatchet/initHatchet.js";
+import { isActiveSlot } from "./blueGreen/blueGreenGate.js";
+import {
+	recordMessagesReceived,
+	recordPollAttempt,
+} from "./blueGreen/blueGreenHeartbeat.js";
+import { initBlueGreen, shutdownBlueGreen } from "./blueGreen/initBlueGreen.js";
 import { getSqsClient, QUEUE_URL, recreateSqsClient } from "./initSqs.js";
 import { JobName } from "./JobName.js";
 import { processMessage, type SqsJob } from "./processMessage.js";
 
 // ============ Shared State ============
 let isRunning = true;
-let abortController: AbortController;
+const abortControllers = new Set<AbortController>();
+export const getAbortControllerCountForTesting = () => abortControllers.size;
 
 // Process recycling — exit after processing this many messages to prevent memory leaks
 const MAX_MESSAGES_BEFORE_RECYCLE = 50_000;
@@ -32,6 +44,30 @@ const shouldIdleSelfKill = process.env.NODE_ENV !== "development";
 // Per-message processing timeout — must be under VisibilityTimeout (30s)
 const MESSAGE_TIMEOUT_MS = 25_000;
 
+type JobOverride = {
+	ackUpfront: true;
+	dispatch: "inline" | "background";
+};
+
+// Jobs whose handlers can exceed the 30s VisibilityTimeout. ACK upfront to
+// avoid redelivery loops; dispatch mode controls whether the poll loop awaits
+// them (inline → preserves backpressure) or fires in background (→ no
+// backpressure; only safe for genuinely rare, low-volume jobs).
+const JOB_OVERRIDES: Partial<Record<JobName, JobOverride>> = {
+	// Rare (handful per day); fire-and-forget is safe.
+	[JobName.Migration]: { ackUpfront: true, dispatch: "background" },
+	// Can exceed VisibilityTimeout on large orgs; redelivery causes a
+	// self-amplifying Redis UNLINK storm. Inline so one worker's concurrency
+	// stays capped at the receive batch size.
+	[JobName.ClearCreditSystemCustomerCache]: {
+		ackUpfront: true,
+		dispatch: "inline",
+	},
+};
+
+const getJobOverride = (jobName: string): JobOverride | undefined =>
+	JOB_OVERRIDES[jobName as JobName];
+
 // Stale connection detection
 const EMPTY_POLL_THRESHOLD = 9; // ~3 min of empty polls (9 * 20s wait)
 const HEARTBEAT_INTERVAL_MS = ms.minutes(5);
@@ -41,44 +77,25 @@ const ZERO_MESSAGE_ALERT_THRESHOLD = 20; // ~20 min of 0 messages
 
 // ============ Helper Functions ============
 
-const withTimeout = <T>(promise: Promise<T>, timeoutMs: number): Promise<T> =>
-	new Promise((resolve, reject) => {
-		const timeout = setTimeout(() => {
-			reject(new Error(`Processing timed out after ${timeoutMs}ms`));
-		}, timeoutMs);
-
-		if (timeout.unref) {
-			timeout.unref();
-		}
-
-		promise
-			.then((result) => {
-				clearTimeout(timeout);
-				resolve(result);
-			})
-			.catch((error) => {
-				clearTimeout(timeout);
-				reject(error);
-			});
-	});
-
 const logPrefix = ({ queueUrl }: { queueUrl: string }) =>
 	`[SQS Worker ${process.pid}][${queueUrl.split("/").pop()}]`;
 
 // ============ Polling Loop (per-queue, per-loop state) ============
 
-const startPollingLoop = async ({
+export const startPollingLoop = async ({
 	db,
 	queueUrl,
 	isFifo,
 	getSqsClientFn,
 	recreateSqsClientFn,
+	shouldPoll = () => true,
 }: {
 	db: DrizzleCli;
 	queueUrl: string;
 	isFifo: boolean;
 	getSqsClientFn: () => SQSClient;
 	recreateSqsClientFn: () => SQSClient;
+	shouldPoll?: () => boolean;
 }) => {
 	// Per-loop state
 	let messagesProcessed = 0;
@@ -90,6 +107,13 @@ const startPollingLoop = async ({
 	let consecutiveZeroMessageIntervals = 0;
 
 	const prefix = logPrefix({ queueUrl });
+	let abortController = new AbortController();
+	abortControllers.add(abortController);
+	const replaceAbortController = () => {
+		abortControllers.delete(abortController);
+		abortController = new AbortController();
+		abortControllers.add(abortController);
+	};
 
 	const alertZeroMessages = () => {
 		const minutes = consecutiveZeroMessageIntervals;
@@ -125,6 +149,13 @@ const startPollingLoop = async ({
 	};
 
 	const logStatsAndCheckZeroMessages = () => {
+		if (!shouldPoll()) {
+			consecutiveZeroMessageIntervals = 0;
+			messagesProcessed = 0;
+			lastStatsTime = Date.now();
+			return;
+		}
+
 		const elapsedSeconds = ((Date.now() - lastStatsTime) / 1000).toFixed(0);
 		const mem = process.memoryUsage();
 		console.log(
@@ -167,7 +198,7 @@ const startPollingLoop = async ({
 			...(isFifo && { ReceiveRequestAttemptId: generateId("receive") }),
 		});
 
-	const deleteMigrationJobImmediately = async ({
+	const ackMessageUpfront = async ({
 		sqs,
 		message,
 		job,
@@ -176,9 +207,7 @@ const startPollingLoop = async ({
 		message: Message;
 		job: SqsJob;
 	}) => {
-		logger.info(
-			`Returning success immediately for migration job ${job.data.migrationJobId}`,
-		);
+		logger.info(`ACKing ${job.name} upfront (messageId=${message.MessageId})`);
 		await sqs.send(
 			new DeleteMessageCommand({
 				QueueUrl: queueUrl,
@@ -199,24 +228,26 @@ const startPollingLoop = async ({
 		if (!isRunning || !message.Body) return null;
 
 		const job: SqsJob = JSON.parse(message.Body);
+		const override = getJobOverride(job.name);
 
-		// Migration jobs: delete IMMEDIATELY before processing (long-running, avoid timeout redelivery)
-		if (job.name === JobName.Migration) {
-			await deleteMigrationJobImmediately({ sqs, message, job });
+		if (override?.ackUpfront) {
+			await ackMessageUpfront({ sqs, message, job });
 		}
 
-		const isMigration = job.name === JobName.Migration;
-		if (isMigration) {
+		if (override) {
 			await processMessage({ message, db });
 		} else {
-			await withTimeout(processMessage({ message, db }), MESSAGE_TIMEOUT_MS);
+			await withTimeout({
+				timeoutMs: MESSAGE_TIMEOUT_MS,
+				timeoutMessage: `Processing timed out after ${MESSAGE_TIMEOUT_MS}ms`,
+				fn: () => processMessage({ message, db }),
+			});
 		}
 
 		messagesProcessed++;
 		totalMessagesProcessed++;
 
-		// Return delete info (skip migration jobs - already deleted)
-		if (message.ReceiptHandle && job.name !== JobName.Migration) {
+		if (message.ReceiptHandle && !override?.ackUpfront) {
 			return { id: message.MessageId!, receiptHandle: message.ReceiptHandle };
 		}
 		return null;
@@ -260,7 +291,7 @@ const startPollingLoop = async ({
 				`${prefix} ${consecutiveEmptyPolls} consecutive empty polls - recreating SQS client`,
 			);
 			consecutiveEmptyPolls = 0;
-			abortController = new AbortController();
+			replaceAbortController();
 			return recreateSqsClientFn();
 		}
 
@@ -285,7 +316,7 @@ const startPollingLoop = async ({
 		if (consecutiveEmptyPolls >= EMPTY_POLL_THRESHOLD) {
 			console.warn(`${prefix} Repeated errors - recreating SQS client`);
 			consecutiveEmptyPolls = 0;
-			abortController = new AbortController();
+			replaceAbortController();
 			await new Promise((resolve) => setTimeout(resolve, 5000));
 			return recreateSqsClientFn();
 		}
@@ -294,14 +325,19 @@ const startPollingLoop = async ({
 		return null;
 	};
 
-	console.log(`${prefix} Started polling ${queueUrl}`);
-
 	const statsInterval = setInterval(logStatsAndCheckZeroMessages, 60000);
 
 	let sqs = getSqsClientFn();
 
 	while (isRunning) {
 		try {
+			if (!shouldPoll()) {
+				consecutiveEmptyPolls = 0;
+				await new Promise((resolve) => setTimeout(resolve, 5000));
+				continue;
+			}
+
+			recordPollAttempt({ queueUrl });
 			const response = await sqs.send(createReceiveCommand(), {
 				abortSignal: abortController.signal,
 			});
@@ -309,18 +345,20 @@ const startPollingLoop = async ({
 			const messages = response.Messages ?? [];
 
 			if (messages.length > 0) {
+				recordMessagesReceived({ queueUrl, count: messages.length });
 				consecutiveEmptyPolls = 0;
 
 				const regularMessages: Message[] = [];
 				for (const message of messages) {
 					if (!message.Body) continue;
 					const job: SqsJob = JSON.parse(message.Body);
-					if (job.name === JobName.Migration) {
+					const override = getJobOverride(job.name);
+					if (override?.dispatch === "background") {
 						activeMigrationJobs++;
 						handleSingleMessage({ sqs, message, db })
 							.catch((error) => {
 								console.error(
-									`${prefix} Migration job failed:`,
+									`${prefix} Background job ${job.name} failed:`,
 									error instanceof Error ? error.message : error,
 								);
 								Sentry.captureException(error);
@@ -366,6 +404,7 @@ const startPollingLoop = async ({
 		}
 	}
 
+	abortControllers.delete(abortController);
 	clearInterval(statsInterval);
 	console.log(`${prefix} Stopped`);
 };
@@ -374,15 +413,26 @@ const startPollingLoop = async ({
  * Initialize SQS pollers for this process.
  * cluster.fork() in workers.ts handles multi-process parallelism.
  */
-export const initWorkers = async () => {
+export const initWorkers = async ({
+	startupStartedAt,
+	queueImplementation,
+}: {
+	startupStartedAt: number;
+	queueImplementation: string;
+}) => {
 	const { db } = initDrizzle({ maxConnections: 10 });
 	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
 	await warmupRegionalRedis();
 
+	await initBlueGreen({ db, logger });
+
 	const shutdown = async () => {
 		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
 		isRunning = false;
-		if (abortController) abortController.abort();
+		shutdownBlueGreen();
+		for (const controller of abortControllers) {
+			controller.abort();
+		}
 
 		const isProd = process.env.NODE_ENV === "production";
 		if (isProd) {
@@ -398,15 +448,39 @@ export const initWorkers = async () => {
 	process.on("SIGTERM", shutdown);
 	process.on("SIGINT", shutdown);
 
-	abortController = new AbortController();
+	const startupDurationMs = Date.now() - startupStartedAt;
+	console.log(
+		`[Worker ${process.pid}] ${queueImplementation} worker ready in ${startupDurationMs}ms`,
+	);
+	const pollingLoops = [];
 
-	await startPollingLoop({
-		db,
-		queueUrl: QUEUE_URL,
-		isFifo: QUEUE_URL.endsWith(".fifo"),
-		getSqsClientFn: getSqsClient,
-		recreateSqsClientFn: recreateSqsClient,
-	});
+	for (const { queueId, queueUrl } of [
+		{
+			queueId: JOB_QUEUE_IDS.primary,
+			queueUrl: QUEUE_URL,
+		},
+		{
+			queueId: JOB_QUEUE_IDS.track,
+			queueUrl: process.env.TRACK_SQS_QUEUE_URL,
+		},
+	]) {
+		if (!queueUrl) continue;
+
+		pollingLoops.push(
+			startPollingLoop({
+				db,
+				queueUrl,
+				isFifo: queueUrl.endsWith(".fifo"),
+				getSqsClientFn: getSqsClient,
+				recreateSqsClientFn: recreateSqsClient,
+				shouldPoll: () =>
+					isJobQueueEnabled({ queue: queueId }) &&
+					isActiveSlot({ serviceName: "workers" }),
+			}),
+		);
+	}
+
+	await Promise.all(pollingLoops);
 };
 
 export const initHatchetWorker = async () => {

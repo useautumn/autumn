@@ -27,6 +27,10 @@ function toMB(bytes: number): number {
 }
 
 function logMemoryUsage(label: string) {
+	if (process.env.NODE_ENV === "development") {
+		return;
+	}
+
 	const mem = process.memoryUsage();
 
 	const lagMeanMs = Math.round((lagHistogram.mean / 1e6) * 10) / 10;
@@ -73,10 +77,6 @@ export function startMemoryMonitor(
 	if (intervalHandle.unref) {
 		intervalHandle.unref();
 	}
-
-	console.log(
-		`[mem:${label}] Memory monitor started (every ${intervalMs / 1000}s)`,
-	);
 }
 
 export function stopMemoryMonitor() {

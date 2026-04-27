@@ -2,7 +2,6 @@ import type { Reward } from "@autumn/shared";
 import { RewardType } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
-import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
@@ -25,6 +24,7 @@ import { getBackendErr } from "@/utils/genUtils";
 import { getOriginalCouponId } from "@/utils/product/couponUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCusReferralQuery } from "@/views/customers/customer/hooks/useCusReferralQuery";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 export const AddCouponDialog = ({
 	open,
@@ -85,10 +85,10 @@ export const AddCouponDialog = ({
 					<DialogTitle>Add Reward</DialogTitle>
 				</DialogHeader>
 				{getExistingCoupon() && (
-					<WarningBox>
+					<InfoBox variant="warning">
 						Reward {getExistingCoupon()?.name} already applied. Adding a new one
 						will replace the existing one.
-					</WarningBox>
+					</InfoBox>
 				)}
 				<div>
 					<Select

@@ -384,6 +384,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+@param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
@@ -410,6 +411,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+@param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
@@ -441,6 +443,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
+@param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 * [list](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
@@ -811,6 +814,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+@param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
@@ -850,6 +854,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+@param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
@@ -910,6 +915,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
+@param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 - [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 - [`customersUpdate`](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.

@@ -26,7 +26,9 @@ export const createEdgeConfigStore = <T>({
 	s3Key,
 	schema,
 	defaultValue,
-	pollIntervalMs = ms.seconds(10),
+	pollIntervalMs = process.env.NODE_ENV === "development"
+		? ms.seconds(1)
+		: ms.seconds(10),
 	s3Client: injectedS3Client,
 }: {
 	s3Key: string;
@@ -143,15 +145,26 @@ export const createEdgeConfigStore = <T>({
 				lastSuccessAt: nowIso(),
 			};
 		} catch (error) {
+			const errMsg =
+				error instanceof Error ? error.message : "Failed to load config";
+			const previouslyHealthy = runtimeStatus.healthy;
+			const sameError = runtimeStatus.error === errMsg;
+
 			runtimeConfig = defaultValue();
 			runtimeStatus = {
 				configured: true,
 				healthy: false,
 				lastFetchAt: runtimeStatus.lastFetchAt,
 				lastSuccessAt: runtimeStatus.lastSuccessAt,
-				error: error instanceof Error ? error.message : "Failed to load config",
+				error: errMsg,
 			};
-			logger?.warn(`Failed to refresh edge config "${s3Key}": ${error}`);
+
+			// Log on first failure or whenever the error changes. Suppresses the
+			// poll-loop spam that otherwise fires every pollIntervalMs when S3
+			// credentials are missing/invalid in dev.
+			if (previouslyHealthy || !sameError) {
+				logger?.warn(`Failed to refresh edge config "${s3Key}": ${error}`);
+			}
 		}
 	};
 

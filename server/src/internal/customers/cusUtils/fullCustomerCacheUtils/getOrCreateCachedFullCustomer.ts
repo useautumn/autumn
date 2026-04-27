@@ -39,10 +39,11 @@ export const getOrCreateCachedFullCustomer = async ({
 
 	let fullCustomer: FullCustomer | undefined;
 	const fetchTimeMs = Date.now();
+	const useRedis = !!customerId && !skipCache;
 
 	// 1. Try cache first (getCachedFullCustomer handles lazy reset internally)
 	let setCache = true;
-	if (customerId && !skipCache) {
+	if (useRedis) {
 		fullCustomer = await getCachedFullCustomer({
 			ctx,
 			customerId,
@@ -52,10 +53,6 @@ export const getOrCreateCachedFullCustomer = async ({
 		if (fullCustomer) {
 			logger.debug(`[getOrCreateCachedFullCustomer] Cache hit: ${customerId}`);
 			setCache = false;
-		}
-
-		if (skipCreate && !fullCustomer) {
-			throw new CustomerNotFoundError({ customerId });
 		}
 	}
 
@@ -69,6 +66,10 @@ export const getOrCreateCachedFullCustomer = async ({
 			expand: [CustomerExpand.Invoices],
 			allowNotFound: true,
 		});
+	}
+
+	if (skipCreate && !fullCustomer) {
+		throw new CustomerNotFoundError({ customerId: customerId || "" });
 	}
 
 	// 3. Create if not found
@@ -113,8 +114,13 @@ export const getOrCreateCachedFullCustomer = async ({
 		}
 	}
 
+	// fullCustomer = await hydrateFullCustomerSchedule({
+	// 	ctx,
+	// 	fullCustomer,
+	// });
+
 	// 6. Set cache (await to ensure it's ready before Redis deduction)
-	if (!skipCache && setCache) {
+	if (useRedis && setCache) {
 		// Note (to fix): causes race condition when cache isn't set and concurrent track requests each set the cache.
 		await setCachedFullCustomer({
 			ctx,

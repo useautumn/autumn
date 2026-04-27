@@ -1,16 +1,4 @@
-import {
-	AppEnv,
-	type FullProduct,
-	formatAmount,
-	getProductItemDisplay,
-	isFixedPrice,
-	isPrepaidPrice,
-	isPriceItem,
-	mapToProductV2,
-	type Organization,
-	productV2ToBasePrice,
-	type UsagePriceConfig,
-} from "@autumn/shared";
+import { AppEnv, type FullProduct, formatAmount, getProductItemDisplay, isFixedPrice, isPrepaidPrice, isPriceItem, mapToProductV2, type Organization, productV2ToBasePrice, type UsagePriceConfig, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { parseVercelPrepaidQuantities } from "@/external/vercel/misc/vercelInvoicing.js";
@@ -208,6 +196,7 @@ const listVercelPlansForOrg = async ({
 };
 
 export const handleListBillingPlansPerInstall = createRoute({
+	scopes: [Scopes.Public],
 	query: z.object({
 		metadata: z.string().optional(),
 	}),

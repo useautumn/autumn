@@ -10,4 +10,5 @@ export type ApiKey = {
 	env: AppEnv;
 	hashed_key: string;
 	meta: any;
+	scopes: string[] | null;
 };

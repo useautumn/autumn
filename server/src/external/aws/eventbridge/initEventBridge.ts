@@ -7,7 +7,7 @@ import {
 const getSchedulerClientConfig = () => ({
 	region:
 		extractRegionFromQueueUrl({
-			queueUrl: process.env.SQS_QUEUE_URL,
+			queueUrl: process.env.SQS_QUEUE_URL_V2,
 		}) || DEFAULT_AWS_REGION,
 	credentials: {
 		accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
