@@ -7,9 +7,25 @@ import tsconfigPaths from "vite-tsconfig-paths";
 export default defineConfig({
 	plugins: [react(), tsconfigPaths(), tailwindcss()],
 	resolve: {
-		alias: {
-			"@": path.resolve(__dirname, "./src"),
-		},
+		dedupe: ["react", "react-dom"],
+		alias: [
+			{ find: "@", replacement: path.resolve(__dirname, "./src") },
+			{
+				find: /^react$/,
+				replacement: path.resolve(__dirname, "./node_modules/react"),
+			},
+			{
+				find: /^react-dom$/,
+				replacement: path.resolve(__dirname, "./node_modules/react-dom"),
+			},
+			{
+				find: /^react\/jsx-runtime$/,
+				replacement: path.resolve(
+					__dirname,
+					"./node_modules/react/jsx-runtime.js",
+				),
+			},
+		],
 	},
 	optimizeDeps: {
 		exclude: ["@autumn/shared", "zod/v4"],
