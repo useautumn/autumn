@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MDXRemote } from "next-mdx-remote/rsc";
+import { MDXRemote } from "next-mdx-remote-client/rsc";
 import { mdxComponents } from "@/components/blogComponents";
 import { getAllPosts, getPostBySlug } from "@/lib/blogUtils";
 import type { BlogParams } from "@/lib/types";

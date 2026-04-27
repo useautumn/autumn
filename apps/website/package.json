@@ -10,6 +10,7 @@
 	},
 	"dependencies": {
 		"@gsap/react": "^2.1.2",
+		"@types/react": "^19.2.14",
 		"@vercel/analytics": "^2.0.1",
 		"framer-motion": "^12.38.0",
 		"gray-matter": "^4.0.3",
@@ -19,12 +20,11 @@
 		"matter-js": "^0.20.0",
 		"motion": "^12.38.0",
 		"next": "16.2.4",
-		"next-mdx-remote": "^6.0.0",
+		"next-mdx-remote-client": "^2.1",
 		"ngrok": "^5.0.0-beta.2",
 		"react": "19.2.4",
 		"react-dom": "19.2.4",
-		"react-syntax-highlighter": "^16.1.1",
-		"@types/react": "^19.2.14"
+		"react-syntax-highlighter": "^16.1.1"
 	},
 	"devDependencies": {
 		"@tailwindcss/postcss": "^4.2.2",
