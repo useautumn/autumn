@@ -28,7 +28,7 @@ export const createRedisAvailability = ({
 	logPrefix: string;
 	logType: string;
 }) => {
-	let redisAvailabilityState: RedisAvailabilityState = "degraded";
+	let redisAvailabilityState: RedisAvailabilityState = "healthy";
 	let redisMonitorInterval: ReturnType<typeof setInterval> | null = null;
 	let redisTickInFlight = false;
 	let lastAvailabilityLogAt = 0;
