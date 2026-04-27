@@ -28,4 +28,33 @@ jobs:
       - name: Validate schema
         env:
           DATABASE_URL: ${{ secrets.DATABASE_READ_ONLY_URL }}
-        run: bun scripts/migrations/validate-schema.ts
+          DB_MAX_CONNECTIONS: 1
+          NODE_OPTIONS: --dns-result-order=ipv4first
+        run: |
+          for i in 1 2 3; do
+            bun -e '
+              import { lookup } from "node:dns/promises";
+              import net from "node:net";
+
+              try {
+                const url = new URL(process.env.DATABASE_URL ?? "");
+                await lookup(url.hostname);
+                await new Promise((resolve, reject) => {
+                  const socket = net.connect(Number(url.port || 5432), url.hostname);
+                  socket.setTimeout(10_000);
+                  socket.once("connect", () => {
+                    socket.end();
+                    resolve();
+                  });
+                  socket.once("timeout", () => reject(new Error("database TCP connection timed out")));
+                  socket.once("error", reject);
+                });
+              } catch (error) {
+                console.error(`Database preflight failed (${error?.code ?? error?.name ?? "unknown"})`);
+                process.exit(1);
+              }
+            ' && bun scripts/migrations/validate-schema.ts && exit 0
+            sleep $((i * 10))
+          done
+
+          exit 1
