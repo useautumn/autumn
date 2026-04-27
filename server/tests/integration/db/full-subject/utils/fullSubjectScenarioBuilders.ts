@@ -148,6 +148,7 @@ const buildProduct = ({
 	processor: null,
 	base_variant_id: null,
 	archived: false,
+	config: { ignore_past_due: false },
 });
 
 const buildEntitlement = ({
