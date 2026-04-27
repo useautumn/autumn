@@ -48,6 +48,32 @@ const waitUntil = async (check: () => boolean, timeoutMs: number) => {
 };
 
 describe("createRedisAvailability", () => {
+	test("does not start monitoring when Redis is not configured", () => {
+		const originalSetInterval = globalThis.setInterval;
+		let intervalCalls = 0;
+		globalThis.setInterval = (((handler: TimerHandler) => {
+			intervalCalls++;
+			return 0 as unknown as ReturnType<typeof setInterval>;
+		}) as unknown) as typeof setInterval;
+
+		try {
+			const redis = new FakeRedis();
+			const availability = createRedisAvailability({
+				redis: redis as never,
+				hasConfig: false,
+				logPrefix: "RedisV2",
+				logType: "redis_v2_availability_state_set",
+			});
+
+			availability.startMonitor();
+
+			expect(intervalCalls).toBe(0);
+			expect(availability.shouldUseRedis()).toBe(false);
+		} finally {
+			globalThis.setInterval = originalSetInterval;
+		}
+	});
+
 	test("starts degraded before the first probe runs", () => {
 		const redis = new FakeRedis();
 		const availability = createRedisAvailability({

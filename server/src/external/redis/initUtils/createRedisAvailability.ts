@@ -154,7 +154,7 @@ export const createRedisAvailability = ({
 			setRedisAvailabilityState(available ? "healthy" : "degraded");
 		},
 		startMonitor: () => {
-			if (redisMonitorInterval) return;
+			if (!hasConfig || redisMonitorInterval) return;
 
 			void runTick();
 
