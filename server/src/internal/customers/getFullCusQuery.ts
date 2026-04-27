@@ -27,6 +27,12 @@ const buildOptimizedCusProductsCTE = ({
 		sql`, `,
 	)}]) THEN 0 ELSE 1 END`;
 
+	const hasCustomerPrices = sql`EXISTS (
+    SELECT 1
+    FROM customer_prices cpr_exists
+    WHERE cpr_exists.customer_product_id = cp.id
+  )`;
+
 	return sql`
     customer_products_with_prices AS (
       SELECT 
@@ -92,7 +98,7 @@ const buildOptimizedCusProductsCTE = ({
       ) ft_data ON true
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
       ${withStatusFilter()}
-      ORDER BY ${relevantStatusFirst}, prod.is_add_on ASC, cp.created_at DESC
+      ORDER BY ${relevantStatusFirst}, ${hasCustomerPrices} DESC, prod.is_add_on ASC, cp.created_at DESC
       LIMIT ${cusProductLimit}
     )
   `;
@@ -391,7 +397,24 @@ export const getFullCusQuery = ({
 	selectFieldsChunks.push(sql`
     cr.*,
     COALESCE(
-      (SELECT json_agg(cpwp) FROM customer_products_with_prices cpwp),
+      (
+        SELECT json_agg(cpwp ORDER BY
+          CASE WHEN cpwp.status = ANY(ARRAY[${sql.join(
+						RELEVANT_STATUSES.map((status) => sql`${status}`),
+						sql`, `,
+					)}]) THEN 0 ELSE 1 END,
+          (
+            EXISTS (
+              SELECT 1
+              FROM customer_prices cpr_exists
+              WHERE cpr_exists.customer_product_id = cpwp.id
+            )
+          ) DESC,
+          (cpwp.product->>'is_add_on')::boolean ASC,
+          cpwp.created_at DESC
+        )
+        FROM customer_products_with_prices cpwp
+      ),
       '[]'::json
     ) AS customer_products
   `);
