@@ -2,7 +2,6 @@ import type { Entity, FullCustomer } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import type { AxiosError } from "axios";
 import { format } from "date-fns";
-import { CheckIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -26,7 +25,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/v2/buttons/Button";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -42,6 +40,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { CreateEntity } from "@/views/customers2/customer/components/CreateEntity";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
+import { EntityScopeSelector } from "./EntityScopeSelector";
 
 function ReviewPreviewSkeleton() {
 	return (
@@ -219,16 +218,6 @@ function SelectContent() {
 
 	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 
-	const CUSTOMER_LEVEL_VALUE = "";
-	type EntityOption = Entity | null;
-	const entityOptions: EntityOption[] = [null, ...entities];
-
-	const getEntityOptionValue = (option: EntityOption) =>
-		option === null ? CUSTOMER_LEVEL_VALUE : option.id || option.internal_id;
-
-	const getEntityOptionLabel = (option: EntityOption) =>
-		option === null ? "Customer-level" : option.name || option.id || "PENDING";
-
 	return (
 		<>
 			<SheetHeader
@@ -241,77 +230,27 @@ function SelectContent() {
 					<AttachProductSelection />
 
 					{entities.length > 0 && (
-						<div>
-							<div className="text-form-label block mb-1">Select scope</div>
-							<SearchableSelect<EntityOption>
-								value={entityId ?? CUSTOMER_LEVEL_VALUE}
-								onValueChange={(value) =>
-									onScopeChange?.(
-										value === CUSTOMER_LEVEL_VALUE ? undefined : value,
-									)
-								}
-								options={entityOptions}
-								getOptionValue={getEntityOptionValue}
-								getOptionLabel={getEntityOptionLabel}
-								placeholder="Select entity"
-								searchable
-								searchPlaceholder="Search entities..."
-								emptyText="No entities found"
-								triggerClassName="w-full"
-								renderValue={(option) =>
-									option === null || option === undefined ? (
-										<span className="text-t2">Customer-level</span>
-									) : (
-										<span className="text-t2 truncate">
-											{option.name || option.id || "PENDING"}
-										</span>
-									)
-								}
-								renderOption={(option, isSelected) => {
-									if (option === null) {
-										return (
-											<>
-												<span className="text-sm">Customer-level</span>
-												{isSelected && (
-													<CheckIcon className="size-4 shrink-0" />
-												)}
-											</>
-										);
-									}
-									const entityLabel = option.id || "PENDING";
-									return (
-										<>
-											<div className="flex gap-2 items-center min-w-0 flex-1">
-												{option.name && (
-													<span className="text-sm shrink-0">
-														{option.name}
-													</span>
-												)}
-												<span className="truncate text-t3 font-mono text-xs min-w-0">
-													{entityLabel}
-												</span>
-											</div>
-											{isSelected && <CheckIcon className="size-4 shrink-0" />}
-										</>
-									);
-								}}
-								footer={
-									<div className="border-t py-1.5 px-2">
-										<Button
-											variant="muted"
-											className="w-full"
-											onClick={() => setCreateEntityOpen(true)}
-										>
-											<PlusIcon
-												className="size-[14px] text-t2"
-												weight="regular"
-											/>
-											Create new entity
-										</Button>
-									</div>
-								}
-							/>
-						</div>
+						<EntityScopeSelector
+							entities={entities}
+							scopeEntityId={entityId ?? undefined}
+							onScopeChange={(value) => onScopeChange?.(value)}
+							wrapInSection={false}
+							footer={
+								<div className="border-t py-1.5 px-2">
+									<Button
+										variant="muted"
+										className="w-full"
+										onClick={() => setCreateEntityOpen(true)}
+									>
+										<PlusIcon
+											className="size-[14px] text-t2"
+											weight="regular"
+										/>
+										Create new entity
+									</Button>
+								</div>
+							}
+						/>
 					)}
 
 					{entityId ? (
