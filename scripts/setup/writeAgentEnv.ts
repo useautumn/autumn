@@ -50,7 +50,7 @@ ENCRYPTION_IV=${genUrlSafeBase64({ bytes: 16 })}
 ENCRYPTION_PASSWORD=${genUrlSafeBase64({ bytes: 64 })}
 
 # Local services
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/autumn
+DATABASE_V2_URL=postgresql://postgres:postgres@localhost:5432/autumn
 CACHE_URL=redis://localhost:6379
 CACHE_URL_US_EAST=redis://localhost:6379
 REDIS_URL=redis://localhost:6379

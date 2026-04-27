@@ -21,11 +21,11 @@ export const clearMasterOrg = async () => {
 			process.exit(1);
 		}
 
-		const databaseUrl = process.env.DATABASE_URL ?? "";
+		const databaseUrl = process.env.DATABASE_V2_URL ?? "";
 		if (databaseUrl.toLowerCase().includes("fancy-duckling")) {
 			console.error(
 				chalk.red(
-					"\n❌ Refusing to run clearMasterOrg against prod-like DATABASE_URL (contains 'fancy-duckling').\n",
+					"\n❌ Refusing to run clearMasterOrg against prod-like DATABASE_V2_URL (contains 'fancy-duckling').\n",
 				),
 			);
 			process.exit(1);
