@@ -1,28 +1,25 @@
 DESCRIPTION >
     Aggregate queries with grouping by a property key, customer_id, or entity_id.
-    When grouping by customer_id/entity_id with no property filters, reads from
-    events_hourly_no_properties_two_mv (the small, properties-free sibling MV)
-    so high-cardinality property values in events_hourly_mv don't blow up scan
-    cost. Falls back to events_hourly_mv otherwise.
+    Routes to the smallest viable MV for the query shape:
+      - events_hourly_no_properties_two_mv: customer_id/entity_id grouping with no filters
+      - events_hourly_promoted_mv:           promoted property key (apiKeyId, endpoint, source) with no filters
+      - events_hourly_mv:                    fallback for arbitrary properties or filtered queries
     Uses PER-BIN TOP N groups + "AUTUMN_RESERVED" bucket ((N+1) max total per bin).
     N is controlled by the max_groups parameter (default 9).
-    Each time bin shows its own top N groups, not global top N.
     Returns unpivoted data: (period, event_name, group_value, total_value, _truncated)
-    _truncated is true only if at least one bin has more than max_groups unique values.
-    Frontend maps "AUTUMN_RESERVED" to "Other values" for display.
-    Parameters:
-      - group_column: 'customer_id' to group by customer, 'entity_id' to group by entity, 'property' (default) to group by property_key
-      - max_groups: maximum number of distinct groups to show per bin (default 9, remainder bucketed into AUTUMN_RESERVED)
 
 TOKEN "aggregate_groupable_read" READ
 
 NODE base
 DESCRIPTION >
     Aggregate raw data by period, event_name, and group_value.
-    Excludes rows with empty/null group values to prevent irrelevant events
-    from polluting the top-N and "Other" buckets.
 SQL >
     %
+    {% set no_filters = (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
+    {% set is_promoted_key = String(property_key, '') in ['apiKeyId', 'endpoint', 'source'] %}
+    {% set use_no_props = (String(group_column, 'property') in ['customer_id', 'entity_id']) and no_filters %}
+    {% set use_promoted = (String(group_column, 'property') == 'property') and is_promoted_key and no_filters %}
+
     SELECT
         {% if String(bin_size, 'day') == 'hour' %}
         formatDateTime(hour, '%F %T') as period,
@@ -36,13 +33,17 @@ SQL >
         customer_id as group_value,
         {% elif String(group_column, 'property') == 'entity_id' %}
         entity_id as group_value,
+        {% elif use_promoted %}
+        {{ column(String(property_key, '')) }} as group_value,
         {% else %}
         {{ column('properties.' + String(property_key, '')) }}::String as group_value,
         {% end %}
         sum(total_value) as total_value
     FROM
-        {% if (String(group_column, 'property') == 'customer_id' or String(group_column, 'property') == 'entity_id') and (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
+        {% if use_no_props %}
         events_hourly_no_properties_two_mv
+        {% elif use_promoted %}
+        events_hourly_promoted_mv
         {% else %}
         events_hourly_mv
         {% end %}
@@ -73,8 +74,12 @@ SQL >
         {% if defined(filter_key_4) and String(filter_key_4, '') != '' %}
         AND {{ column('properties.' + String(filter_key_4, '')) }}::String = {{ String(filter_value_4, '') }}
         {% end %}
+
+        {# Filter out null/empty grouping values #}
         {% if String(group_column, 'property') == 'entity_id' %}
         AND entity_id IS NOT NULL AND entity_id != ''
+        {% elif use_promoted %}
+        AND {{ column(String(property_key, '')) }} != ''
         {% elif String(group_column, 'property') == 'property' %}
         AND {{ column('properties.' + String(property_key, '')) }}::String IS NOT NULL
         AND {{ column('properties.' + String(property_key, '')) }}::String != ''
@@ -82,8 +87,6 @@ SQL >
     GROUP BY period, event_name, group_value
 
 NODE ranked
-DESCRIPTION >
-    Rank groups within each bin by total_value descending.
 SQL >
     SELECT
         *,
