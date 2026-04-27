@@ -1,5 +1,8 @@
+import createMDX from "@next/mdx";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  pageExtensions: ["ts", "tsx", "md", "mdx"],
   allowedDevOrigins: ["*.ngrok-free.dev"],
   experimental: {
     optimizePackageImports: ["framer-motion", "motion", "gsap", "@gsap/react"],
@@ -76,4 +79,6 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+const withMDX = createMDX();
+
+export default withMDX(nextConfig);

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MDXRemote } from "next-mdx-remote-client/rsc";
 import { mdxComponents } from "@/components/blogComponents";
 import { getAllPosts, getPostBySlug } from "@/lib/blogUtils";
 import type { BlogParams } from "@/lib/types";
@@ -45,10 +44,22 @@ function formatDate(dateString: string | null) {
 	});
 }
 
+async function loadMdxContent({ slug }: { slug: string }) {
+	try {
+		const mod = await import(`@/content/blog/${slug}.mdx`);
+		return mod.default as React.ComponentType<{ components?: Record<string, React.ComponentType> }>;
+	} catch {
+		return null;
+	}
+}
+
 export default async function BlogPostPage({ params }: { params: BlogParams }) {
 	const { slug } = await params;
 	const post = getPostBySlug({ slug });
 	if (!post) notFound();
+
+	const Content = await loadMdxContent({ slug });
+	if (!Content) notFound();
 
 	return (
 		<div className="py-16 md:py-24 bg-[#0F0F0F]">
@@ -109,7 +120,7 @@ export default async function BlogPostPage({ params }: { params: BlogParams }) {
 				<hr className="border-[#292929] mb-12" />
 
 				<article className="prose prose-invert prose-lg max-w-none">
-					<MDXRemote source={post.source} components={mdxComponents} />
+					<Content components={mdxComponents} />
 				</article>
 			</div>
 		</div>
