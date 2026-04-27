@@ -10,7 +10,7 @@ export const migrateFunctions = async () => {
 	);
 	const databaseUrl = process.env.DATABASE_URL;
 
-	if (databaseUrl?.includes("us-west-3")) {
+	if (databaseUrl?.includes("us-east-2")) {
 		const { confirm } = await inquirer.prompt([
 			{
 				type: "confirm",
