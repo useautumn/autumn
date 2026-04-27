@@ -1,4 +1,4 @@
-import { AppEnv, type FullProduct, RecaseError } from "@autumn/shared";
+import { AppEnv, type FullProduct, RecaseError, Scopes } from "@autumn/shared";
 import { ErrCode } from "@shared/enums/ErrCode.js";
 import { DrizzleError } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
@@ -17,6 +17,7 @@ import {
 import { productToBillingPlan } from "../handleListBillingPlans.js";
 
 export const handleCreateResource = createRoute({
+	scopes: [Scopes.Public],
 	body: z.object({
 		productId: z.string().min(1),
 		name: z.string().min(1),

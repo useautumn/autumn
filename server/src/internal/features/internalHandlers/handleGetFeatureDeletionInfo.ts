@@ -4,12 +4,14 @@ import {
 	entitlements,
 	products,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { and, eq, sql } from "drizzle-orm";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { FeatureService } from "../FeatureService.js";
 
 export const handleGetFeatureDeletionInfo = createRoute({
+	scopes: [Scopes.Features.Read],
 	resource: AffectedResource.Feature,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

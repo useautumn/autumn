@@ -1,4 +1,4 @@
-import { RecaseError } from "@autumn/shared";
+import { RecaseError, Scopes } from "@autumn/shared";
 import { nanoid } from "nanoid";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -13,6 +13,7 @@ const SaveViewSchema = z.object({
  * Save a new view for the organization
  */
 export const handleSaveView = createRoute({
+	scopes: [Scopes.Public],
 	body: SaveViewSchema,
 	handler: async (c) => {
 		const { org, env } = c.get("ctx");

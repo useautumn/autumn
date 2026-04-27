@@ -7,11 +7,13 @@ import {
 	GetCustomerQuerySchema,
 	RecaseError,
 	V0_2_InvoicesAlwaysExpanded,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getApiCustomerByRollout } from "../actions/getApiCustomerByRollout.js";
 
 export const handleGetCustomerV2 = createRoute({
+	scopes: [Scopes.Customers.Read],
 	versionedQuery: {
 		latest: GetCustomerQuerySchema,
 		[ApiVersion.V2_0]: GetCustomerQuerySchema,

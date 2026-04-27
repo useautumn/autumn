@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError, stripeToAtmnAmount } from "@autumn/shared";
+import { ErrCode, RecaseError, stripeToAtmnAmount, Scopes } from "@autumn/shared";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -16,6 +16,7 @@ const RefundInvoiceBodySchema = z.object({
 });
 
 export const handleRefundInvoice = createRoute({
+	scopes: [Scopes.Billing.Write],
 	params: z.object({
 		customer_id: z.string(),
 		stripe_invoice_id: z.string(),

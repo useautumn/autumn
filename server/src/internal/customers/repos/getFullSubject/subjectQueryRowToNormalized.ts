@@ -15,6 +15,7 @@ import {
 	FeatureType,
 	type FullCustomerPrice,
 	type FullSubject,
+	InternalError,
 	type NormalizedFullSubject,
 	normalizedToFullSubject,
 	type Replaceable,
@@ -31,12 +32,24 @@ import {
  */
 export const subjectQueryRowToNormalized = ({
 	row,
+	entityIdRequested = false,
+	allowMissingEntity = false,
 }: {
 	row: SubjectQueryRow;
+	entityIdRequested?: boolean;
+	allowMissingEntity?: boolean;
 }): NormalizedFullSubject => {
 	const customer = row.customer as unknown as Customer;
 	const entity = row.entity as Entity | undefined;
 	const isEntitySubject = !!entity;
+
+	if (entityIdRequested && !entity && !allowMissingEntity) {
+		throw new InternalError({
+			message:
+				"subjectQueryRowToNormalized received a row with no entity when an entityId was requested and allowMissingEntity is false",
+			code: "subject_row_missing_entity",
+		});
+	}
 
 	const entitlementsByEntitlementId = new Map(
 		row.entitlements.map((e) => [e.id, e] as const),
@@ -259,9 +272,17 @@ export const subjectQueryRowToNormalized = ({
 /** Convert raw DB query row to FullSubject via NormalizedFullSubject. */
 export const resultToFullSubject = ({
 	row,
+	entityIdRequested = false,
+	allowMissingEntity = false,
 }: {
 	row: SubjectQueryRow;
+	entityIdRequested?: boolean;
+	allowMissingEntity?: boolean;
 }): FullSubject => {
-	const normalized = subjectQueryRowToNormalized({ row });
+	const normalized = subjectQueryRowToNormalized({
+		row,
+		entityIdRequested,
+		allowMissingEntity,
+	});
 	return normalizedToFullSubject({ normalized });
 };

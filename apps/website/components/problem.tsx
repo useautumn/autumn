@@ -74,7 +74,7 @@ export default function Problem() {
 							<div
 								key={i}
 								className={`py-6 pr-9 border-[#292929] border-r
-      ${i === 2 ? "col-span-2 xl:col-span-1 border-t xl:border-t-0 border-r-0 xl:border-r" : ""}
+      ${i === 2 ? "col-span-2 xl:col-span-1 border-t xl:border-t-0 border-r-0" : ""}
       ${i === 1 ? "border-r-0 xl:border-r" : ""}
       pl-4 xl:pl-6`}
 							>

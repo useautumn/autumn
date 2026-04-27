@@ -1,4 +1,4 @@
-import { CustomerNotFoundError } from "@autumn/shared";
+import { CustomerNotFoundError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -7,6 +7,7 @@ import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionServ
 import { CusReadService } from "../CusReadService.js";
 import { CusService } from "../CusService.js";
 export const handleGetCusReferrals = createRoute({
+	scopes: [Scopes.Customers.Read],
 	params: z.object({ customer_id: z.string() }),
 	handler: async (c) => {
 		const { env, db, org } = c.get("ctx");

@@ -18,11 +18,13 @@ import { cn } from "@/lib/utils";
 
 export function CustomerUsageAnalyticsChart({
 	timeseriesEvents,
+	totals,
 	events = [],
 	daysToShow = 7,
 	isLoading = false,
 }: {
 	timeseriesEvents?: TimeseriesData;
+	totals?: Record<string, { count: number; sum: number }>;
 	events?: Event[];
 	daysToShow?: number;
 	isLoading?: boolean;
@@ -64,18 +66,65 @@ export function CustomerUsageAnalyticsChart({
 	const yAxisTicks = maxValue === 0 ? [0, 50, 100, 150, 200] : undefined;
 
 	return (
-		<ChartContainer
-			config={chartConfig}
+		<div
 			className={cn(
-				"h-full pt-3 pr-2 w-full relative border rounded-lg transition-colors duration-200",
-				eventNames.length === 0 ? "bg-transparent border-dashed" : "bg-interactive-secondary",
+				"h-full w-full flex flex-col border rounded-lg transition-colors duration-200 overflow-hidden",
+				eventNames.length === 0
+					? "bg-transparent border-dashed"
+					: "bg-interactive-secondary",
 			)}
 		>
+			{eventNames.length > 0 && (
+				<div
+					className={cn(
+						"flex items-stretch h-7 gap-4 px-2 overflow-hidden border-b shrink-0 bg-card",
+						isLoading && "animate-pulse",
+					)}
+				>
+					{eventNames.map((name) => {
+						const entry = totals?.[name] ?? { count: 0, sum: 0 };
+						const primary =
+							entry.sum !== entry.count ? entry.sum : entry.count;
+						const color = (chartConfig[name] as { color?: string })?.color;
+						const showName = eventNames.length <= 3;
+						return (
+							<div
+								key={name}
+								className="flex items-center gap-1.5 min-w-0"
+								title={`${name}: ${entry.count.toLocaleString()} events${
+									entry.sum !== entry.count
+										? ` · Σ ${entry.sum.toLocaleString()}`
+										: ""
+								}`}
+							>
+								<span
+									className="w-2 h-2 rounded-sm shrink-0"
+									style={{ background: color }}
+								/>
+								{showName && (
+									<span className="text-t4 text-tiny truncate min-w-0">
+										{name}
+									</span>
+								)}
+								<span className="text-t2 text-tiny tabular-nums shrink-0">
+									{primary.toLocaleString()}
+								</span>
+							</div>
+						);
+					})}
+				</div>
+			)}
+			<ChartContainer
+				config={chartConfig}
+				className="flex-1 min-h-0 w-full"
+			>
 			<BarChart
 				// accessibilityLayer
 				data={chartData}
-				className={cn("[&_.recharts-cartesian-grid-bg]:fill-white dark:[&_.recharts-cartesian-grid-bg]:fill-gray-900 [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px] absolute top-1",
-					isLoading && "animate-pulse")}
+				className={cn(
+					"[&_.recharts-cartesian-grid-bg]:fill-white dark:[&_.recharts-cartesian-grid-bg]:fill-gray-900 [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px] pt-3 pr-2",
+					isLoading && "animate-pulse",
+				)}
 				barCategoryGap={4}
 			>
 				{eventNames.length > 0 && !isLoading && (
@@ -135,6 +184,7 @@ export function CustomerUsageAnalyticsChart({
 					/>
 				))}
 			</BarChart>
-		</ChartContainer>
+			</ChartContainer>
+		</div>
 	);
 }

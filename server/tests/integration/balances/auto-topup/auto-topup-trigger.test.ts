@@ -38,17 +38,20 @@ test.concurrent(`${chalk.yellowBright("auto-topup trigger 1: when balance is 0 a
 		],
 	});
 
-	await autumnV2_1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 90,
-	});
-
+	// Configure ATU first. customers.update invalidates the FullSubject cache;
+	// doing it before the deduction avoids rehydrating from a pre-deduction DB
+	// state under cache v2.
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 20,
 			quantity: 100,
 		}),
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 90,
 	});
 
 	await autumnV2_1.check({
@@ -163,19 +166,21 @@ test.concurrent(`${chalk.yellowBright("auto-topup trigger 3: track depletes, the
 		],
 	});
 
-	// Track 85 → balance = 15 (below future threshold, but no config yet)
-	await autumnV2_1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 85,
-	});
-
-	// Now set auto top-up config
+	// Configure ATU first. customers.update invalidates the FullSubject cache;
+	// doing it before the deduction avoids rehydrating from a pre-deduction DB
+	// state under cache v2.
 	await autumnV2_1.customers.update(customerId, {
 		billing_controls: makeAutoTopupConfig({
 			threshold: 20,
 			quantity: 100,
 		}),
+	});
+
+	// Track 85 → balance = 15 (below threshold, deduction triggers ATU directly)
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 85,
 	});
 
 	// check with send_event=true deducts 2 more → balance = 13

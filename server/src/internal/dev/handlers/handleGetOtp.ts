@@ -1,4 +1,4 @@
-import { AppEnv, RecaseError } from "@autumn/shared";
+import { AppEnv, RecaseError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { isStripeConnected } from "@/internal/orgs/orgUtils";
@@ -11,6 +11,7 @@ import { generateRandomKey, OTP_TTL } from "../cliAuth/cliAuthUtils";
  * Validates OTP and returns API keys for CLI
  */
 export const handleGetOtp = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const { db, user } = c.get("ctx");
 		const { otp } = c.req.param();

@@ -11,6 +11,7 @@ import {
 	expectBoundaryAndParity,
 	normalizeCheckResponse,
 } from "../../utils/spend-limit-utils/checkSpendLimitUtils.js";
+import { setCustomerSpendLimit } from "../../utils/spend-limit-utils/customerSpendLimitUtils.js";
 import {
 	getActionUnitsForCreditAmount,
 	setEntitySpendLimit,
@@ -480,4 +481,50 @@ test.concurrent(`${chalk.yellowBright("check-entity-product-spend-limit6: disabl
 	expect(normalizeCheckResponse(uncached)).toEqual(
 		normalizeCheckResponse(cached),
 	);
+});
+
+test.concurrent(`${chalk.yellowBright("check-entity-product-spend-limit7: entity-scoped check inherits customer spend_limit when entity has none")}`, async () => {
+	const customerProduct = products.base({
+		id: "inherit-customer-spend-limit-check",
+		items: [
+			items.consumableMessages({
+				includedUsage: 100,
+				maxPurchase: 300,
+				price: 0.5,
+			}),
+		],
+	});
+
+	const { autumnV2_1, customerId, entities } = await initScenario({
+		customerId: "check-entity-product-spend-limit-7",
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: false }),
+			s.products({ list: [customerProduct] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [s.billing.attach({ productId: customerProduct.id })],
+	});
+
+	await setCustomerSpendLimit({
+		autumn: autumnV2_1,
+		customerId,
+		featureId: TestFeature.Messages,
+		overageLimit: 25,
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		value: 120,
+	});
+
+	await expectBoundaryAndParity({
+		autumn: autumnV2_1,
+		customerId,
+		entityId: entities[0].id,
+		featureId: TestFeature.Messages,
+		allowedRequiredBalance: 5,
+		blockedRequiredBalance: 6,
+	});
 });

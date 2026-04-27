@@ -7,12 +7,12 @@ import {
 	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import {
 	RedisDeductionError,
 	RedisDeductionErrorCode,
 } from "../../utils/types/redisDeductionError.js";
-import { queueTrack } from "../utils/queueTrack.js";
 import { runPostgresTrackV3 } from "./runPostgresTrackV3.js";
 
 /** Handles errors from V2 Redis deduction. Falls back to Postgres V3 path. */
@@ -47,10 +47,22 @@ export const handleRedisTrackErrorV3 = async ({
 		});
 	}
 
+	if (error.code === RedisDeductionErrorCode.DuplicateIdempotencyKey) {
+		throw new RecaseError({
+			message: body.idempotency_key
+				? `Another request with idempotency key ${body.idempotency_key} has already been received`
+				: "This track request has already been received",
+			code: ErrCode.DuplicateIdempotencyKey,
+			statusCode: 409,
+		});
+	}
+
 	if (error.isRedisUnavailable()) {
-		const queuedResponse = await queueTrack({ ctx, body });
-		if (queuedResponse) return queuedResponse;
-		throw error;
+		throw new RedisUnavailableError({
+			source: "runTrackV3",
+			reason: "other",
+			cause: error,
+		});
 	}
 
 	if (error.shouldFallback()) {

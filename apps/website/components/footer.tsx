@@ -52,10 +52,10 @@ export default function Footer() {
 			className="mt-[50px] relative bg-[#000000] border-t border-[#292929] overflow-hidden text-[#FFFFFF99] grid"
 		>
 			<div className="col-start-1 row-start-1 flex flex-col z-10 w-full relative">
-				<div className="relative w-full flex flex-col justify-between min-h-[400px]">
+				<div className="relative w-full flex flex-col justify-between min-h-[300px] md:min-h-[400px]">
 					<div className="absolute bottom-0 left-0 right-0 h-[300px] sm:h-[550px] lg:h-[400px] pointer-events-none opacity-70 bg-[url('/images/footer/footerbg.svg')] bg-cover sm:bg-contain bg-bottom bg-no-repeat z-0" />
 
-					<div className="flex flex-col lg:flex-row justify-between pt-[32px] md:pt-24 pb-32 md:pb-16 pl-4.5 xl:pl-[90px] pr-4 sm:pr-8 lg:pr-12 gap-10 md:gap-16 lg:gap-8 relative z-10">
+					<div className="flex flex-col lg:flex-row justify-between pt-[32px] md:pt-24 pb-16 md:pb-16 pl-4.5 xl:pl-[90px] pr-4 sm:pr-8 lg:pr-12 gap-10 md:gap-16 lg:gap-8 relative z-10">
 						<div className="flex flex-col max-w-sm">
 							<Link href="/" className="mb-3 md:mb-6 inline-block">
 								<Image

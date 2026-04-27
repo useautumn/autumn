@@ -1,3 +1,4 @@
+import { Scopes } from "@autumn/shared";
 import type { Customer } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
@@ -11,6 +12,7 @@ import { CusSearchService } from "../CusSearchService";
  * - vite/src/views/customers/hooks/useFullCusSearchQuery.tsx
  */
 export const handleGetFullCustomers = createRoute({
+	scopes: [Scopes.Customers.Read],
 	body: z.object({
 		search: z.string().optional(),
 		page_size: z.number().optional().default(50),

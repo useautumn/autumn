@@ -1,17 +1,23 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect } from "react";
-import FAQ from "./faq";
-import Features from "./features";
-import Footer from "./footer";
 import Hero from "./hero";
-import Pricing from "./pricing";
-import PricingModels from "./pricing-models";
-import Problem from "./problem";
-import ProductionScale from "./production-scale";
 import SectionDivider from "./section-divider";
-import Solution from "./solution";
-import Testimonials from "./testimonials";
+
+// All below-fold sections are code-split into separate lazy chunks so the
+// initial JS bundle only contains the hero. Framer-motion, GSAP ScrollTrigger,
+// and lottie-web are pulled into these chunks rather than the main bundle.
+const LogoWall = dynamic(() => import("./logo-wall"));
+const Problem = dynamic(() => import("./problem"));
+const Solution = dynamic(() => import("./solution"));
+const PricingModels = dynamic(() => import("./pricing-models"));
+const Features = dynamic(() => import("./features"));
+const Testimonials = dynamic(() => import("./testimonials"));
+const ProductionScale = dynamic(() => import("./production-scale"));
+const Pricing = dynamic(() => import("./pricing"));
+const FAQ = dynamic(() => import("./faq"));
+const Footer = dynamic(() => import("./footer"));
 
 function scrollToHash() {
 	const hash = window.location.hash;
@@ -36,6 +42,15 @@ export default function HomeSections() {
 	return (
 		<>
 			<Hero />
+						{/*
+			<div className="flex flex-col gap-2.5 bg-[#000000]">
+				<div className="border-t border-[#292929] w-full" />
+				<div className="border-t border-[#292929] w-full" />
+				<div className="border-t border-[#292929] w-full" />
+				<div className="border-t border-[#292929] w-full" />
+				<div className="border-t border-[#292929] w-full" />
+			</div>
+ <LogoWall /> */}
 			<SectionDivider title="THE PROBLEM" />
 			<Problem />
 			<SectionDivider title="THE SOLUTION" />

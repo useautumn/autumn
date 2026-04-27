@@ -19,6 +19,14 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 		method: "DELETE",
 		url: "/customers/:customer_id",
 	}),
+	route({
+		method: "POST",
+		url: "/customers/:customer_id",
+	}),
+	route({
+		method: "PATCH",
+		url: "/customers/:customer_id",
+	}),
 
 	route({
 		method: "POST",
@@ -124,6 +132,11 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 	route({
 		method: "POST",
 		url: "/customers.delete",
+	}),
+
+	route({
+		method: "POST",
+		url: "/customers.update",
 	}),
 ];
 

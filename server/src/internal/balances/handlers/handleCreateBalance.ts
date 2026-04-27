@@ -1,4 +1,4 @@
-import { CreateBalanceParamsV0Schema, fullSubjectToFullCustomer } from "@autumn/shared";
+import { CreateBalanceParamsV0Schema, fullSubjectToFullCustomer, Scopes } from "@autumn/shared";
 import { FeatureNotFoundError } from "@shared/index";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { prepareNewBalanceForInsertion } from "@/internal/balances/createBalance/prepareNewBalanceForInsertion";
@@ -10,6 +10,7 @@ import { EntitlementService } from "@/internal/products/entitlements/Entitlement
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
 export const handleCreateBalance = createRoute({
+	scopes: [Scopes.Balances.Write],
 	body: CreateBalanceParamsV0Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

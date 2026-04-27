@@ -4,6 +4,7 @@ import {
 	CusProductAlreadyExistsError,
 	CusProductNotFoundError,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -25,6 +26,7 @@ const TransferProductSchema = z.object({
 // - Transfer from entity to org
 // - Transfer from org to entity
 export const handleTransferProductV2 = createRoute({
+	scopes: [Scopes.Billing.Write],
 	body: TransferProductSchema,
 	resource: AffectedResource.Customer,
 	handler: async (c) => {

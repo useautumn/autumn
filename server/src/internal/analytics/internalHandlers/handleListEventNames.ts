@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { Scopes } from "@autumn/shared";
 import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { eventActions } from "../actions/eventActions.js";
@@ -11,6 +12,7 @@ const ListEventNamesSchema = z.object({
  * List all distinct event names for the org sorted by popularity
  */
 export const handleListEventNames = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	query: ListEventNamesSchema,
 	handler: async (c) => {
 		assertTinybirdAvailable();

@@ -3,6 +3,7 @@ import {
 	type Organization,
 	RecaseError,
 	user as userTable,
+	Scopes,
 } from "@autumn/shared";
 import { generateId } from "better-auth";
 import { eq } from "drizzle-orm";
@@ -31,6 +32,7 @@ export function buildPreviewOrgSlug({
  * - Returns a sandbox API key for making checkout calls
  */
 export const handleSetupPreviewOrg = createRoute({
+	scopes: { ALL: [Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write] },
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org: masterOrg, logger, userId } = ctx;

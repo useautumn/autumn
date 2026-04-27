@@ -1,4 +1,4 @@
-import { type Feature, FeatureType } from "@autumn/shared";
+import { type Feature, FeatureType, Scopes } from "@autumn/shared";
 import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { eventActions } from "../actions/eventActions.js";
@@ -7,6 +7,7 @@ import { eventActions } from "../actions/eventActions.js";
  * Get top event names for the organization
  */
 export const handleGetEventNames = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	handler: async (c) => {
 		assertTinybirdAvailable();
 		const ctx = c.get("ctx");

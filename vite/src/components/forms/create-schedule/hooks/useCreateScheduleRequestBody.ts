@@ -1,5 +1,6 @@
 import type {
 	ApiPlanItemV1,
+	BillingBehavior,
 	CreateScheduleParamsV0,
 	Feature,
 	ProductItem,
@@ -110,6 +111,8 @@ export function buildCreateScheduleRequestBody({
 	products,
 	features,
 	nowMs,
+	billingBehavior,
+	resetBillingCycle,
 }: {
 	customerId: string | undefined;
 	entityId: string | undefined;
@@ -117,6 +120,8 @@ export function buildCreateScheduleRequestBody({
 	products: ProductV2[];
 	features: Feature[];
 	nowMs?: number;
+	billingBehavior?: BillingBehavior | null;
+	resetBillingCycle?: boolean;
 }): CreateScheduleParamsV0 | null {
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
@@ -164,6 +169,17 @@ export function buildCreateScheduleRequestBody({
 		phases: validPhases,
 	};
 	if (entityId) body.entity_id = entityId;
+
+	// `billing_behavior` / `billing_cycle_anchor` aren't supported when the
+	// immediate phase is a multi-attach. The review UI disables the toggles in
+	// that case; mirror the same guard here so stale values don't leak into the
+	// request if the user flips from single-plan to multi-plan after toggling.
+	const immediatePlanCount = validPhases[0]?.plans.length ?? 0;
+	const supportsBillingFlags = immediatePlanCount === 1;
+	if (supportsBillingFlags) {
+		if (billingBehavior) body.billing_behavior = billingBehavior;
+		if (resetBillingCycle) body.billing_cycle_anchor = "now";
+	}
 	return body as CreateScheduleParamsV0;
 }
 
@@ -174,6 +190,8 @@ export function useCreateScheduleRequestBody({
 	products,
 	features,
 	nowMs,
+	billingBehavior,
+	resetBillingCycle,
 }: {
 	customerId: string | undefined;
 	entityId: string | undefined;
@@ -181,6 +199,8 @@ export function useCreateScheduleRequestBody({
 	products: ProductV2[];
 	features: Feature[];
 	nowMs?: number;
+	billingBehavior?: BillingBehavior | null;
+	resetBillingCycle?: boolean;
 }) {
 	return useMemo(
 		() =>
@@ -191,8 +211,88 @@ export function useCreateScheduleRequestBody({
 				products,
 				features,
 				nowMs,
+				billingBehavior,
+				resetBillingCycle,
 			}),
-		[customerId, entityId, phases, products, features, nowMs],
+		[
+			customerId,
+			entityId,
+			phases,
+			products,
+			features,
+			nowMs,
+			billingBehavior,
+			resetBillingCycle,
+		],
+	);
+}
+
+export function useBuildCreateScheduleRequestBody({
+	customerId,
+	entityId,
+	products,
+	features,
+	nowMs,
+	getPhases,
+	getBillingBehavior,
+	getResetBillingCycle,
+}: {
+	customerId: string | undefined;
+	entityId: string | undefined;
+	products: ProductV2[];
+	features: Feature[];
+	nowMs?: number;
+	getPhases: () => SchedulePhase[];
+	getBillingBehavior?: () => BillingBehavior | null;
+	getResetBillingCycle?: () => boolean;
+}) {
+	return useMemo(
+		() =>
+			({
+				useInvoice,
+				enableProductImmediately,
+				finalizeInvoice,
+			}: {
+				useInvoice?: boolean;
+				enableProductImmediately?: boolean;
+				finalizeInvoice?: boolean;
+			} = {}): CreateScheduleParamsV0 | null => {
+				const requestBody = buildCreateScheduleRequestBody({
+					customerId,
+					entityId,
+					phases: getPhases(),
+					products,
+					features,
+					nowMs,
+					billingBehavior: getBillingBehavior?.() ?? null,
+					resetBillingCycle: getResetBillingCycle?.() ?? false,
+				});
+
+				if (!requestBody) return null;
+
+				if (useInvoice) {
+					return {
+						...requestBody,
+						invoice_mode: {
+							enabled: true,
+							enable_plan_immediately: enableProductImmediately ?? true,
+							finalize: finalizeInvoice ?? true,
+						},
+					};
+				}
+
+				return requestBody;
+			},
+		[
+			customerId,
+			entityId,
+			products,
+			features,
+			nowMs,
+			getPhases,
+			getBillingBehavior,
+			getResetBillingCycle,
+		],
 	);
 }
 

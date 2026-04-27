@@ -6,7 +6,7 @@ import type {
 } from "@autumn/shared";
 import { CusProductStatus, mapToProductItems } from "@autumn/shared";
 import { motion } from "motion/react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo } from "react";
 import { toast } from "sonner";
 import {
 	AttachFormProvider,
@@ -43,6 +43,7 @@ import {
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -142,6 +143,8 @@ export function buildInitialValues({
 						: { ...EMPTY_SCHEDULE_PLAN };
 				}),
 			})),
+			billingBehavior: null,
+			resetBillingCycle: false,
 		};
 	}
 
@@ -164,6 +167,8 @@ export function buildInitialValues({
 					activePlans.length > 0 ? activePlans : [{ ...EMPTY_SCHEDULE_PLAN }],
 			},
 		],
+		billingBehavior: null,
+		resetBillingCycle: false,
 	};
 }
 
@@ -360,15 +365,10 @@ export function getScheduleForScope({
 export function CreateScheduleSheet() {
 	const { closeSheet } = useSheetStore();
 	const { customer, testClockFrozenTimeMs } = useCusQuery({ schedule: true });
-	const initialEntityId =
-		new URLSearchParams(window.location.search).get("entity_id") ?? undefined;
-	const [scopeEntityId, setScopeEntityId] = useState<string | undefined>(
-		initialEntityId,
-	);
+	const fullCustomer = customer as FullCustomer | undefined;
+	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(fullCustomer);
 
 	const { products } = useProductsQuery();
-
-	const fullCustomer = customer as FullCustomer | undefined;
 	const schedule = getScheduleForScope({
 		customer: fullCustomer,
 		entityId: scopeEntityId,
@@ -385,24 +385,11 @@ export function CreateScheduleSheet() {
 		[fullCustomer, schedule, products, scopeEntityId],
 	);
 
-	// Only update the schedule ID portion of the key when the user explicitly
-	// changes scope. Without this, the customer query invalidation after an
-	// invoice mutation causes schedule?.id to change (undefined → real ID),
-	// which remounts the form provider and resets SendInvoiceStage's local
-	// completedInvoiceUrl state, bouncing the user back to the draft/finalize view.
-	const previousScopeRef = useRef(scopeEntityId);
-	const scheduleIdForKeyRef = useRef(schedule?.id ?? "new");
-
-	if (previousScopeRef.current !== scopeEntityId) {
-		previousScopeRef.current = scopeEntityId;
-		scheduleIdForKeyRef.current = schedule?.id ?? "new";
-	}
-
-	const formKey = `${scopeEntityId ?? "customer"}-${scheduleIdForKeyRef.current}`;
-
+	// Intentionally no `key` on CreateScheduleFormProvider: scope changes should
+	// preserve the user's in-progress draft (mirrors AttachFormProvider). The
+	// provider reads the live `entityId` prop for preview/request building.
 	return (
 		<CreateScheduleFormProvider
-			key={formKey}
 			customerId={customer?.id ?? customer?.internal_id ?? ""}
 			entityId={scopeEntityId}
 			initialValues={initialValues}

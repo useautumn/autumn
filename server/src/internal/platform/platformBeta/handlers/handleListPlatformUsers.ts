@@ -5,6 +5,7 @@ import {
 	member,
 	organizations,
 	user as userTable,
+	Scopes,
 } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { cte } from "@/db/cteUtils/buildCte.js";
@@ -15,6 +16,7 @@ import { toPlatformOrg } from "./platformOrgUtils.js";
  * Route: GET /platform/users - List users created by master org
  */
 export const listPlatformUsers = createRoute({
+	scopes: [Scopes.Platform.Read],
 	query: ListPlatformUsersQuerySchema,
 	handler: async (c) => {
 		const query = c.req.valid("query") as ListPlatformUsersQuery;

@@ -6,6 +6,7 @@ import {
 	CreateProductItemParamsSchema,
 	CreateProductSchema,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -35,6 +36,7 @@ const SyncPreviewPricingSchema = z.object({
  * - Pushes new config from the request body
  */
 export const handleSyncPreviewPricing = createRoute({
+	scopes: { ALL: [Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write] },
 	body: SyncPreviewPricingSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

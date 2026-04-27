@@ -49,7 +49,17 @@ There is a legacy-compatibility exception in the adjust-balance flow:
 
 Projects maintain state in `.context/<project>/` folders across sessions. Tasks are optional parallel workstreams within a project.
 
-### Reading context (session start)
+### Default: NOT interacting with a project
+**Unless the user explicitly mentions a project or task by name, assume the current conversation is NOT associated with any project.** Session-start hooks may surface a list of active projects as reference material — that alone is NOT a signal that the current work belongs to any of them.
+
+Do not:
+- Read `.context/**` files proactively
+- Write, update, or append to any project's STATUS.md / DECISIONS.md / sessions
+- Assume a script, audit, or change is part of a project just because it touches files related to one (e.g. a user-of-framework script is not part of the framework's project)
+
+Only engage with `.context/<project>/` when the user explicitly references the project, opens a task in it, or asks for project-tracking actions.
+
+### Reading context (when a project IS referenced)
 When the user mentions a project or task name and `.context/<name>/` exists:
 1. Read project STATUS.md first (20-30 line "resume card")
 2. If the project has `tasks/`, list active tasks
@@ -58,7 +68,7 @@ When the user mentions a project or task name and `.context/<name>/` exists:
 5. Do NOT read everything upfront. Use progressive disclosure.
 
 ### Updating context (at breakpoints, NOT continuously)
-Update at these moments ONLY:
+Only update when the current work IS part of a project (see default-off rule above). When it is, update at these moments ONLY:
 - Phase or milestone completed
 - Architectural decision made (append to DECISIONS.md)
 - User says they're done or switching tasks
@@ -66,6 +76,8 @@ Update at these moments ONLY:
 - Task created, completed, or handed off
 
 Do NOT update context during normal coding work. Work first, compact at breakpoints.
+
+A STATUS.md entry should record changes to the project itself — not one-off work that merely uses the project (e.g. writing a consumer script of a framework is not a framework-project update).
 
 ### Compaction quality
 STATUS.md must be:

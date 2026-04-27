@@ -13,4 +13,15 @@ const { startAllEdgeConfigPolling } = await import(
 );
 await startAllEdgeConfigPolling({ logger });
 
+// Resolve AWS task identity + start polling the cron blue-green slot store
+// so `isActiveSlot({ serviceName: "cron" })` in cronInit reads fresh data.
+const { resolveAwsTaskIdentity } = await import(
+	"./external/aws/ecs/awsTaskIdentity.js"
+);
+await resolveAwsTaskIdentity();
+const { startBlueGreenSlotStorePolling } = await import(
+	"./queue/blueGreen/blueGreenSlotStore.js"
+);
+await startBlueGreenSlotStorePolling({ serviceName: "cron", logger });
+
 await import("./cron/cronInit.js");

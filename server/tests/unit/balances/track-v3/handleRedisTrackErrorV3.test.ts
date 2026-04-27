@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	RedisDeductionError,
@@ -7,20 +8,8 @@ import {
 } from "@/internal/balances/utils/types/redisDeductionError.js";
 
 const mockState = {
-	queueCalls: [] as Record<string, unknown>[],
 	postgresCalls: [] as Record<string, unknown>[],
 };
-
-mock.module("@/internal/balances/track/utils/queueTrack.js", () => ({
-	queueTrack: async (args: Record<string, unknown>) => {
-		mockState.queueCalls.push(args);
-		return {
-			customer_id: "cus_123",
-			feature_id: "messages",
-			balance: null,
-		};
-	},
-}));
 
 mock.module(
 	"@/internal/balances/track/v3/runPostgresTrackV3.js",
@@ -45,31 +34,33 @@ const ctx = {
 
 describe("handleRedisTrackErrorV3", () => {
 	beforeEach(() => {
-		mockState.queueCalls = [];
 		mockState.postgresCalls = [];
 	});
 
-	test("queues track instead of falling back to Postgres when Redis is unavailable", async () => {
-		const response = await handleRedisTrackErrorV3({
-			ctx,
-			error: new RedisDeductionError({
-				message: "Redis not ready for deduction",
-				code: RedisDeductionErrorCode.RedisUnavailable,
-			}),
-			body: {
-				customer_id: "cus_123",
-				feature_id: "messages",
-				value: 1,
-			},
-			fullSubject: {} as never,
-			featureDeductions: [],
+	test("normalizes Redis unavailable to RedisUnavailableError", async () => {
+		const error = new RedisDeductionError({
+			message: "Redis not ready for deduction",
+			code: RedisDeductionErrorCode.RedisUnavailable,
 		});
 
-		expect(mockState.queueCalls).toHaveLength(1);
+		await expect(
+			handleRedisTrackErrorV3({
+				ctx,
+				error,
+				body: {
+					customer_id: "cus_123",
+					feature_id: "messages",
+					value: 1,
+				},
+				fullSubject: {} as never,
+				featureDeductions: [],
+			}),
+		).rejects.toMatchObject({
+			name: "RedisUnavailableError",
+			source: "runTrackV3",
+			reason: "other",
+		} satisfies Partial<RedisUnavailableError>);
+
 		expect(mockState.postgresCalls).toHaveLength(0);
-		expect(response).toMatchObject({
-			customer_id: "cus_123",
-			balance: null,
-		});
 	});
 });

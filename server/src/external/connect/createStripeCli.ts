@@ -18,11 +18,13 @@ export const createStripeCli = ({
 	env,
 	legacyVersion,
 	throughSecretKey = false,
+	skipInstrumentation = false,
 }: {
 	org: Organization;
 	env: AppEnv;
 	legacyVersion?: boolean;
 	throughSecretKey?: boolean;
+	skipInstrumentation?: boolean;
 }) => {
 	// Try secret key first.
 	if (isStripeConnected({ org, env, throughSecretKey: true })) {
@@ -51,14 +53,13 @@ export const createStripeCli = ({
 			cacheKey,
 			create: () => {
 				const decrypted = decryptData(encrypted);
-				return instrumentStripe({
-					client: new Stripe(decrypted, {
-						apiVersion: legacyVersion
-							? // biome-ignore lint/suspicious/noExplicitAny: Need to cast to any to avoid type error
-								("2025-02-24.acacia" as any)
-							: undefined,
-					}),
+				const client = new Stripe(decrypted, {
+					apiVersion: legacyVersion
+						? // biome-ignore lint/suspicious/noExplicitAny: Need to cast to any to avoid type error
+							("2025-02-24.acacia" as any)
+						: undefined,
 				});
+				return skipInstrumentation ? client : instrumentStripe({ client });
 			},
 		});
 	}
@@ -67,7 +68,6 @@ export const createStripeCli = ({
 	const accountId = orgToAccountId({ org, env });
 
 	if (accountId && !throughSecretKey) {
-		// Check if this org has a master_org_id (platform flow)
 		const useMaster = shouldUseMaster({ org, env });
 		if (useMaster) {
 			return initPlatformStripe({
@@ -75,11 +75,16 @@ export const createStripeCli = ({
 				env,
 				accountId,
 				legacyVersion,
+				skipInstrumentation,
 			});
 		}
 
-		// Standard flow - use Autumn's master Stripe keys
-		return initMasterStripe({ accountId, legacyVersion, env });
+		return initMasterStripe({
+			accountId,
+			legacyVersion,
+			env,
+			skipInstrumentation,
+		});
 	}
 
 	throw new RecaseError({

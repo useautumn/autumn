@@ -1,4 +1,4 @@
-import { ErrCode, oauthConsent, RecaseError } from "@autumn/shared";
+import { ErrCode, oauthConsent, RecaseError, Scopes } from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
@@ -13,6 +13,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
  * Returns: Array of consents for the current org
  */
 export const handleGetOrgConsents = createRoute({
+	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org } = ctx;

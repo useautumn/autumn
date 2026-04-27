@@ -82,6 +82,7 @@ export const createTestContext = async () => {
 		authType: AuthType.Unknown,
 		apiVersion: new ApiVersionClass(LATEST_VERSION),
 		timestamp: Date.now(),
+		scopes: [],
 		skipCache: false,
 		expand: [],
 		extraLogs: {},

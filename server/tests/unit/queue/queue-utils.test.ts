@@ -1,34 +1,38 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { ApiVersion, AppEnv } from "@autumn/shared";
+import type { SQSClient } from "@aws-sdk/client-sqs";
 
 const mockState = {
 	commands: [] as Record<string, unknown>[],
+	originalSend: null as null | SQSClient["send"],
 };
 
-mock.module("@/queue/initSqs.js", () => ({
-	QUEUE_URL: "https://sqs.eu-west-1.amazonaws.com/123456789012/primary.fifo",
-	getSqsClient: () => ({
-		send: async (command: { input: Record<string, unknown> }) => {
-			mockState.commands.push(command.input);
-		},
-	}),
-}));
-
 import { JobName } from "@/queue/JobName.js";
+import { getSqsClient } from "@/queue/initSqs.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 
 describe("addTaskToQueue queue override", () => {
-	const originalSqsQueueUrl = process.env.SQS_QUEUE_URL;
+	const originalSqsQueueUrl = process.env.SQS_QUEUE_URL_V2;
 	const originalQueueUrl = process.env.QUEUE_URL;
 
 	beforeEach(() => {
 		mockState.commands = [];
-		delete process.env.SQS_QUEUE_URL;
+		const sqsClient = getSqsClient();
+		mockState.originalSend = sqsClient.send.bind(sqsClient);
+		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
+			mockState.commands.push(command.input);
+			return {};
+		}) as typeof sqsClient.send;
+		delete process.env.SQS_QUEUE_URL_V2;
 		delete process.env.QUEUE_URL;
 	});
 
 	afterEach(() => {
-		process.env.SQS_QUEUE_URL = originalSqsQueueUrl;
+		if (mockState.originalSend) {
+			const sqsClient = getSqsClient();
+			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
+		}
+		process.env.SQS_QUEUE_URL_V2 = originalSqsQueueUrl;
 		process.env.QUEUE_URL = originalQueueUrl;
 	});
 
@@ -42,6 +46,8 @@ describe("addTaskToQueue queue override", () => {
 			payload: {
 				orgId: "org_123",
 				env: AppEnv.Sandbox,
+				customerId: "cus_123",
+				requestId: "req_123",
 				apiVersion: ApiVersion.V2_1,
 				body: {
 					customer_id: "cus_123",
