@@ -9,6 +9,7 @@ import type {
 	WebhookUnCancellation,
 } from "@puzzmo/revenue-cat-webhook-types";
 import { type Context, Hono } from "hono";
+import { traceEnrichMiddleware } from "@/honoMiddlewares/traceMiddleware.js";
 import { getRevenuecatWebhookSecret } from "./misc/getRevenuecatWebhookSecret";
 import {
 	revenuecatLogMiddleware,
@@ -31,6 +32,7 @@ revenuecatWebhookRouter.post(
 	revenuecatSeederMiddleware,
 	revenuecatLogMiddleware,
 	revenuecatWebhookRefreshMiddleware,
+	traceEnrichMiddleware,
 	async (c: Context<RevenueCatWebhookHonoEnv>) => {
 		const ctx = c.get("ctx");
 		const { logger, org, env } = ctx;

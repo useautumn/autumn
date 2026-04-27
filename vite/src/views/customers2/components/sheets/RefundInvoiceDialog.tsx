@@ -39,6 +39,9 @@ export function RefundInvoiceDialog({
 	const buildQueryKey = useQueryKeyFactory();
 
 	const customerId = customer?.id || customer?.internal_id;
+	const alreadyRefunded = invoice.refunded_amount ?? 0;
+	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
+	const remainingRefundable = refundableAmount - alreadyRefunded;
 
 	const refundMutation = useMutation({
 		mutationFn: async () => {
@@ -77,16 +80,16 @@ export function RefundInvoiceDialog({
 				toast.error("Please enter a valid refund amount");
 				return;
 			}
-			if (parsed > invoice.total) {
-				toast.error("Refund amount cannot exceed invoice total");
+			if (parsed > refundableAmount) {
+				toast.error("Refund amount cannot exceed the amount paid");
 				return;
 			}
 		}
 		refundMutation.mutate();
 	};
 
-	const formattedTotal = formatAmount({
-		amount: invoice.total,
+	const formattedRefundable = formatAmount({
+		amount: refundableAmount,
 		currency: invoice.currency,
 		minFractionDigits: 2,
 		amountFormatOptions: {
@@ -100,7 +103,7 @@ export function RefundInvoiceDialog({
 				<DialogHeader>
 					<DialogTitle>Refund Invoice</DialogTitle>
 					<DialogDescription>
-						Invoice total: {formattedTotal} {invoice.currency.toUpperCase()}
+						Amount paid: {formattedRefundable} {invoice.currency.toUpperCase()}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -129,7 +132,7 @@ export function RefundInvoiceDialog({
 								type="number"
 								min="0.01"
 								step="0.01"
-								max={invoice.total}
+								max={refundableAmount}
 								placeholder="0.00"
 								value={amount}
 								onChange={(e) => setAmount(e.target.value)}

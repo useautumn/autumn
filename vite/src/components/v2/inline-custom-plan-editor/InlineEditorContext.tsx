@@ -1,4 +1,5 @@
 import type { FrontendProduct, ProductItem } from "@autumn/shared";
+import { sortPlanItems } from "@autumn/shared";
 import { type ReactNode, useCallback, useMemo, useState } from "react";
 import { useItemDraftController } from "@/hooks/inline-editor/useItemDraftController";
 import { ProductProvider } from "./PlanEditorContext";
@@ -22,8 +23,16 @@ interface InlineEditorProviderProps {
  */
 export function InlineEditorProvider({
 	children,
-	initialProduct,
+	initialProduct: initialProductProp,
 }: InlineEditorProviderProps) {
+	const initialProduct = useMemo<FrontendProduct>(
+		() => ({
+			...initialProductProp,
+			items: sortPlanItems({ items: initialProductProp.items }),
+		}),
+		[initialProductProp],
+	);
+
 	const [sheetType, setSheetType] = useState<SheetType>(null);
 	const [itemId, setItemId] = useState<string | null>(null);
 	const [initialItem, setInitialItemState] = useState<ProductItem | null>(null);

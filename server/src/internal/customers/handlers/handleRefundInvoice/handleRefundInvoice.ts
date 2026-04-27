@@ -1,16 +1,11 @@
-import {
-	ErrCode,
-	invoices,
-	RecaseError,
-	stripeToAtmnAmount,
-} from "@autumn/shared";
-import { eq, sql } from "drizzle-orm";
+import { ErrCode, RecaseError, stripeToAtmnAmount, Scopes } from "@autumn/shared";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
 	calculateRefundAmountInCents,
+	createRefundAndUpdateInvoice,
 	resolveChargeFromInvoice,
 	validateChargeRefundable,
 } from "./invoiceRefundUtils.js";
@@ -21,6 +16,7 @@ const RefundInvoiceBodySchema = z.object({
 });
 
 export const handleRefundInvoice = createRoute({
+	scopes: [Scopes.Billing.Write],
 	params: z.object({
 		customer_id: z.string(),
 		stripe_invoice_id: z.string(),
@@ -70,29 +66,22 @@ export const handleRefundInvoice = createRoute({
 			currency: charge.currency,
 		});
 
-		// 4. Issue the refund
-		const stripeRefund = await stripeCli.refunds.create({
-			charge: charge.id,
-			amount: refundAmountInCents,
+		// 4. Issue the refund and update the DB
+		const stripeRefund = await createRefundAndUpdateInvoice({
+			stripeCli,
+			db: ctx.db,
+			chargeId: charge.id,
+			stripeInvoiceId: stripe_invoice_id,
+			amountInCents: refundAmountInCents,
 		});
-
-		// 5. Atomically increment refunded_amount on the Autumn invoice
-		const refundedAmount = stripeToAtmnAmount({
-			amount: stripeRefund.amount,
-			currency: stripeRefund.currency,
-		});
-
-		await ctx.db
-			.update(invoices)
-			.set({
-				refunded_amount: sql`${invoices.refunded_amount} + ${refundedAmount}`,
-			})
-			.where(eq(invoices.stripe_id, stripe_invoice_id));
 
 		return c.json({
 			refund_id: stripeRefund.id,
 			charge_id: charge.id,
-			amount: refundedAmount,
+			amount: stripeToAtmnAmount({
+				amount: stripeRefund.amount,
+				currency: stripeRefund.currency,
+			}),
 			currency: stripeRefund.currency,
 			status: stripeRefund.status,
 		});

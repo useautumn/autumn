@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -6,9 +6,11 @@ import { InvoiceService } from "../InvoiceService.js";
 
 /**
  * Redirect to Stripe hosted invoice URL
- * Public route - no authentication required
+ * Public route - no authentication required. Authorisation comes from
+ * possession of the opaque invoice ID in the URL.
  */
 export const handleRedirectToInvoice = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const { db } = c.get("ctx");
 		const { invoiceId } = c.req.param();

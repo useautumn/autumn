@@ -3,17 +3,15 @@ import {
 	isProductCurrentlyAttached,
 } from "@autumn/shared";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
 export function AttachProductSelection() {
-	const { form, hasCustomizations } = useAttachFormContext();
+	const { form, hasCustomizations, entityId } = useAttachFormContext();
 
 	const { products } = useProductsQuery();
 	const availableProducts = products.filter((p) => !p.archived);
 	const { customer } = useCusQuery();
-	const { entityId } = useEntity();
 
 	const productId = form.state.values.productId;
 
@@ -24,7 +22,7 @@ export function AttachProductSelection() {
 					<field.SelectField
 						label=""
 						searchable
-						defaultOpen
+						defaultOpen={!productId}
 						options={availableProducts.map((p) => {
 							const entityIdVal = entityId ?? undefined;
 							const alreadyEnabled = isProductAlreadyEnabled({

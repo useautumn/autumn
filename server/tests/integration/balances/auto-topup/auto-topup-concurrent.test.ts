@@ -217,6 +217,8 @@ test.concurrent(`${chalk.yellowBright("auto-topup concurrent: sequential drain �
 		}),
 	});
 
+	await timeout(2000);
+
 	// Round 1: Track 85 → balance = 15 → top-up fires → balance = 115
 	await autumnV2_1.track({
 		customer_id: customerId,

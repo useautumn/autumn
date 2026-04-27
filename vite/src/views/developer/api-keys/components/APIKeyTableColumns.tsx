@@ -6,6 +6,7 @@ import {
 	TerminalIcon,
 	UserIcon,
 } from "lucide-react";
+import { ScopePreview } from "@/components/v2/scope-selector";
 import {
 	Tooltip,
 	TooltipContent,
@@ -112,6 +113,15 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 			}
 
 			return <div className="text-t4">—</div>;
+		},
+	},
+	{
+		header: "Scopes",
+		accessorKey: "scopes",
+		size: 200,
+		enableSorting: false,
+		cell: ({ row }: { row: Row<ApiKey> }) => {
+			return <ScopePreview scopes={row.original.scopes ?? null} />;
 		},
 	},
 	{

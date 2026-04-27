@@ -1,17 +1,21 @@
 import {
+	type AppEnv,
 	customerEntitlements,
 	customerProducts,
 	customers,
+	orgToFeaturesByOrgEnv,
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { and, asc, count, eq, gt, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { batchDeleteCachedCustomers } from "@/internal/customers/cusUtils/apiCusCacheUtils/batchDeleteCachedCustomers.js";
+import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
+import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
 
 export interface ClearCreditSystemCachePayload {
 	orgId: string;
-	env: string;
+	env: AppEnv;
 	internalFeatureId: string;
 }
 
@@ -29,6 +33,31 @@ export const runClearCreditSystemCacheTask = async ({
 	logger: Logger;
 }) => {
 	const { orgId, env, internalFeatureId } = payload;
+
+	// TEMP 2026-04-24: skip credit-system cache clears for 1h to let the
+	// poison-message loop (SQS msg 2e30616f-7622-454a-91a2-e67d1fd0698a,
+	// redelivering every ~34s and hammering Redis with ~40k UNLINKs/sec)
+	// drain. Remove this guard after 2026-04-24 15:50 UTC.
+	const SKIP_UNTIL_MS = Date.UTC(2026, 3, 24, 15, 50, 0);
+	if (Date.now() < SKIP_UNTIL_MS) {
+		logger.warn(
+			`Skipping credit-system cache clear (org=${orgId} feature=${internalFeatureId}) — temporary guard active until 2026-04-24 15:50 UTC`,
+		);
+		return;
+	}
+
+	const orgWithFeatures = await OrgService.getWithFeatures({ db, orgId, env });
+	if (!orgWithFeatures) {
+		logger.error(
+			`Organization ${orgId} not found while clearing customer cache`,
+		);
+		return;
+	}
+	const featuresByOrgEnv = orgToFeaturesByOrgEnv({
+		org: orgWithFeatures.org,
+		env,
+		features: orgWithFeatures.features,
+	});
 
 	logger.info(
 		`Clearing cache for customers with credit system feature: ${internalFeatureId}`,
@@ -133,8 +162,10 @@ export const runClearCreditSystemCacheTask = async ({
 			}));
 
 		if (customersToDelete.length > 0) {
-			const deleted = await batchDeleteCachedCustomers({
+			const deleted = await batchInvalidateCachedFullSubjects({
 				customers: customersToDelete,
+				featuresByOrgEnv,
+				redisV2: resolveRedisV2(),
 			});
 			totalDeleted += deleted;
 		}

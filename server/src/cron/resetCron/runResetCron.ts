@@ -1,13 +1,15 @@
 import {
+	type AppEnv,
 	type CustomerEntitlement,
+	type Feature,
 	notNullish,
-	type OrgConfig,
-	OrgConfigSchema,
+	type Organization,
 	type ResetCusEnt,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import * as Sentry from "@sentry/bun";
 import { format } from "date-fns";
+import { buildFullSubjectOrgEnvKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectOrgEnvKey.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import type { CronContext } from "../utils/CronContext";
@@ -21,33 +23,43 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 	const timeoutMs = 60_000; // 1 minute
 	const startTime = Date.now();
 
-	const orgConfigCache = new Map<string, OrgConfig>();
+	const orgWithFeaturesCache = new Map<
+		string,
+		{ org: Organization; features: Feature[] }
+	>();
 
-	const getOrgConfig = async ({
+	const getOrgWithFeatures = async ({
 		orgId,
+		env,
 	}: {
 		orgId: string;
-	}): Promise<OrgConfig | undefined> => {
-		const cached = orgConfigCache.get(orgId);
+		env: AppEnv;
+	}): Promise<{ org: Organization; features: Feature[] } | undefined> => {
+		const cacheKey = buildFullSubjectOrgEnvKey({ orgId, env });
+		const cached = orgWithFeaturesCache.get(cacheKey);
 		if (cached) return cached;
 
 		try {
-			const org = await OrgService.get({ db, orgId });
-			const config = OrgConfigSchema.parse(org.config || {});
-			orgConfigCache.set(orgId, config);
-			return config;
+			const orgWithFeatures = await OrgService.getWithFeatures({
+				db,
+				orgId,
+				env,
+			});
+			if (!orgWithFeatures) return undefined;
+			orgWithFeaturesCache.set(cacheKey, orgWithFeatures);
+			return orgWithFeatures;
 		} catch (error) {
 			console.error(
-				`Reset cron: failed to fetch org config for orgId=${orgId}, skipping cusEnts for this org`,
+				`Reset cron: failed to fetch org with features for orgId=${orgId}, env=${env}, skipping cusEnts for this org`,
 				error,
 			);
 
 			logger.error(
-				`Reset cron: failed to fetch org config for orgId=${orgId}, skipping cusEnts for this org ${error}`,
+				`Reset cron: failed to fetch org with features for orgId=${orgId}, env=${env}, skipping cusEnts for this org ${error}`,
 			);
 
 			Sentry.captureException(error, {
-				extra: { orgId, context: "runResetCron.getOrgConfig" },
+				extra: { orgId, env, context: "runResetCron.getOrgWithFeatures" },
 			});
 			return undefined;
 		}
@@ -80,24 +92,39 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 			for (let i = 0; i < cusEnts.length; i += batchSize) {
 				const batch = cusEnts.slice(i, i + batchSize);
 
-				// Pre-fetch org configs for all unique org_ids in this batch
-				const uniqueOrgIds = new Set(batch.map((ce) => ce.customer.org_id));
+				const uniqueOrgEnvs = new Map<string, { orgId: string; env: AppEnv }>();
+				for (const customerEntitlement of batch) {
+					const env = customerEntitlement.customer.env as AppEnv;
+					const orgId = customerEntitlement.customer.org_id;
+					uniqueOrgEnvs.set(buildFullSubjectOrgEnvKey({ orgId, env }), {
+						orgId,
+						env,
+					});
+				}
 				await Promise.all(
-					[...uniqueOrgIds].map((orgId) => getOrgConfig({ orgId })),
+					[...uniqueOrgEnvs.values()].map(({ orgId, env }) =>
+						getOrgWithFeatures({ orgId, env }),
+					),
 				);
 
 				const batchResets = [];
 				const updatedCusEnts: ResetCusEnt[] = [];
 				for (const cusEnt of batch) {
-					const orgConfig = orgConfigCache.get(cusEnt.customer.org_id);
-					if (!orgConfig) continue;
+					const orgWithFeatures = orgWithFeaturesCache.get(
+						buildFullSubjectOrgEnvKey({
+							orgId: cusEnt.customer.org_id,
+							env: cusEnt.customer.env as AppEnv,
+						}),
+					);
+					if (!orgWithFeatures) continue;
 
 					batchResets.push(
 						resetCustomerEntitlement({
 							ctx,
 							cusEnt: cusEnt,
 							updatedCusEnts,
-							persistFreeOverage: orgConfig.persist_free_overage ?? false,
+							persistFreeOverage:
+								orgWithFeatures.org.config.persist_free_overage ?? false,
 						}),
 					);
 				}
@@ -111,7 +138,9 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 				});
 				console.log(`Upserted ${toUpsert.length} short entitlements`);
 
-				await clearCusEntsFromCache({ cusEnts: updatedCusEnts });
+				await clearCusEntsFromCache({
+					cusEnts: updatedCusEnts,
+				});
 			}
 		}
 

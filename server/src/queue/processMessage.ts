@@ -2,7 +2,8 @@ import type { Message } from "@aws-sdk/client-sqs";
 import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import type { Logger } from "pino";
-import { isRetryableDbError } from "@/db/dbUtils.js";
+import { isTransientDbError } from "@/db/dbUtils.js";
+import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -10,7 +11,10 @@ import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
 import { runInsertEventBatch } from "@/internal/balances/events/runInsertEventBatch.js";
 import { expireLock } from "@/internal/balances/finalizeLock/expireLock.js";
+import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
+import { refreshEntityAggregateCache } from "@/internal/balances/utils/refreshEntityAggregate/index.js";
 import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
+import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
 import { grantCheckoutReward } from "@/internal/billing/v2/workflows/grantCheckoutReward/grantCheckoutReward.js";
 import { sendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/sendProductsUpdated.js";
 import { storeDeferredInvoiceLineItems } from "@/internal/billing/v2/workflows/storeDeferredInvoiceLineItems/storeDeferredInvoiceLineItems.js";
@@ -25,6 +29,7 @@ import { runTriggerCheckoutReward } from "@/internal/rewards/triggerCheckoutRewa
 import { generateId } from "@/utils/genUtils.js";
 import { addWorkflowToLogs } from "@/utils/logging/addContextToLogs.js";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
+import { withWorkerSpan } from "@/utils/otel/withWorkerSpan.js";
 import { setSentryTags } from "../external/sentry/sentryUtils.js";
 import { createWorkerContext } from "./createWorkerContext.js";
 import { JobName } from "./JobName.js";
@@ -38,6 +43,27 @@ export interface SqsJob {
 	name: string;
 	data: any;
 }
+
+export const shouldRetrySqsJobError = ({
+	jobName,
+	error,
+}: {
+	jobName: string;
+	error: unknown;
+}) => {
+	switch (jobName) {
+		case JobName.SyncBalanceBatchV3:
+		case JobName.SyncBalanceBatchV4:
+		case JobName.RefreshEntityAggregate:
+			return isTransientDbError({ error });
+		case JobName.Track:
+			return (
+				isTransientDbError({ error }) || isTransientRedisError({ error })
+			);
+		default:
+			return false;
+	}
+};
 
 export const processMessage = async ({
 	message,
@@ -53,10 +79,12 @@ export const processMessage = async ({
 
 	const job: SqsJob = JSON.parse(message.Body);
 
+	const workflowId = message.MessageId ?? generateId("job");
+
 	const workerLogger = addWorkflowToLogs({
 		logger: logger,
 		workflowContext: {
-			id: message.MessageId ?? generateId("job"),
+			id: workflowId,
 			name: job.name,
 			payload: job.data,
 		},
@@ -159,9 +187,44 @@ export const processMessage = async ({
 				return;
 			}
 
-			await syncItemV3({
+			await syncItemV3({ ctx, payload: job.data });
+			return;
+		}
+
+		if (job.name === JobName.SyncBalanceBatchV4) {
+			if (!ctx) {
+				workerLogger.error("No context found for sync balance batch v4 job");
+				return;
+			}
+
+			await syncItemV4({ ctx, payload: job.data });
+			return;
+		}
+
+		if (job.name === JobName.Track) {
+			if (!ctx) {
+				workerLogger.error("No context found for track job");
+				return;
+			}
+
+			await runQueuedTrack({
 				ctx,
-				payload: job.data,
+				body: job.data.body,
+				apiVersion: job.data.apiVersion,
+			});
+			return;
+		}
+
+		if (job.name === JobName.RefreshEntityAggregate) {
+			if (!ctx) {
+				workerLogger.error("No context found for refresh entity aggregate job");
+				return;
+			}
+
+			await refreshEntityAggregateCache({
+				ctx,
+				customerId: job.data.customerId,
+				internalFeatureIds: job.data.internalFeatureIds,
 			});
 			return;
 		}
@@ -262,18 +325,24 @@ export const processMessage = async ({
 	};
 
 	try {
-		await executeJob();
+		await withWorkerSpan({
+			workflowName: job.name,
+			workflowId,
+			tenantAttrs: {
+				org_id: job.data?.orgId,
+				env: job.data?.env,
+				customer_id: job.data?.customerId,
+			},
+			fn: executeJob,
+		});
 	} catch (error) {
 		const errorLogger = workerCtx?.logger ?? workerLogger;
 		// Sync jobs: re-throw infrastructure errors so the message stays in SQS.
 		// Application errors (RecaseError, InternalError) are swallowed — they
 		// won't fix on retry. DB errors (connection, timeout) will.
-		if (
-			job.name === JobName.SyncBalanceBatchV3 &&
-			isRetryableDbError({ error })
-		) {
+		if (shouldRetrySqsJobError({ jobName: job.name, error })) {
 			Sentry.captureException(error);
-			errorLogger.error(`[${job.name}] Retryable DB error, keeping in SQS`, {
+			errorLogger.error(`[${job.name}] Retryable error, keeping in SQS`, {
 				jobName: job.name,
 				error:
 					error instanceof Error

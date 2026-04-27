@@ -1,9 +1,11 @@
+import { Scopes } from "@autumn/shared";
 import type { ApiEventsListResponse } from "@autumn/shared";
 import { ApiEventsListParamsSchema } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { eventActions } from "@/internal/analytics/actions/eventActions.js";
 
 export const handleExternalListEvents = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: ApiEventsListParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

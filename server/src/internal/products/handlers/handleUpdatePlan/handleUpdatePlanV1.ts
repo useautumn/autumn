@@ -19,6 +19,7 @@ import {
 	UpdateProductSchema,
 	type UpdateProductV2Params,
 	UpdateProductV2ParamsSchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
@@ -38,6 +39,7 @@ import { handleVersionProductV2 } from "../handleVersionProduct.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
 
 export const handleUpdatePlanV1 = createRoute({
+	scopes: [Scopes.Plans.Write],
 	versionedBody: {
 		latest: UpdatePlanParamsV1Schema,
 		[ApiVersion.V1_Beta]: UpdateProductV2ParamsSchema,

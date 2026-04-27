@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { WarningBox } from "@/components/general/modal-components/WarningBox";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
@@ -12,6 +11,7 @@ import {
 } from "@/components/v2/dialogs/Dialog";
 import { Input } from "@/components/v2/inputs/Input";
 import { useProductStore } from "@/hooks/stores/useProductStore";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 
 export const ConfirmMigrationDialog = ({
 	open,
@@ -67,11 +67,11 @@ export const ConfirmMigrationDialog = ({
 							This will migrate all customers on {product.name} (version{" "}
 							{version}) to the latest version.
 						</p>
-						<WarningBox>
+						<InfoBox variant="warning">
 							Features and balances will be immediately migrated. Pricing
 							changes will take effect from the next billing cycle. Custom plans
 							and cancelled plans will not be migrated.
-						</WarningBox>
+						</InfoBox>
 						<p>
 							Type <code className="font-mono font-semibold">{product.id}</code>{" "}
 							to continue.

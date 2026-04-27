@@ -1440,6 +1440,12 @@ class Billing(BaseSDK):
         proration_behavior: Optional[models.BillingUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.BillingUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
+        discounts: Optional[
+            Union[
+                List[models.BillingUpdateAttachDiscount],
+                List[models.BillingUpdateAttachDiscountTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
         recalculate_balances: Optional[
@@ -1467,6 +1473,7 @@ class Billing(BaseSDK):
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+        :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
@@ -1502,6 +1509,9 @@ class Billing(BaseSDK):
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.BillingUpdateAttachDiscount]]
+            ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
             recalculate_balances=utils.get_pydantic_model(
@@ -1593,6 +1603,12 @@ class Billing(BaseSDK):
         proration_behavior: Optional[models.BillingUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.BillingUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
+        discounts: Optional[
+            Union[
+                List[models.BillingUpdateAttachDiscount],
+                List[models.BillingUpdateAttachDiscountTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.BillingUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
         recalculate_balances: Optional[
@@ -1620,6 +1636,7 @@ class Billing(BaseSDK):
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+        :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
@@ -1655,6 +1672,9 @@ class Billing(BaseSDK):
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.BillingUpdateAttachDiscount]]
+            ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
             recalculate_balances=utils.get_pydantic_model(
@@ -1746,6 +1766,12 @@ class Billing(BaseSDK):
         proration_behavior: Optional[models.PreviewUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.PreviewUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
+        discounts: Optional[
+            Union[
+                List[models.PreviewUpdateAttachDiscount],
+                List[models.PreviewUpdateAttachDiscountTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
         recalculate_balances: Optional[
@@ -1773,6 +1799,7 @@ class Billing(BaseSDK):
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+        :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
@@ -1809,6 +1836,9 @@ class Billing(BaseSDK):
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.PreviewUpdateAttachDiscount]]
+            ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
             recalculate_balances=utils.get_pydantic_model(
@@ -1900,6 +1930,12 @@ class Billing(BaseSDK):
         proration_behavior: Optional[models.PreviewUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.PreviewUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
+        discounts: Optional[
+            Union[
+                List[models.PreviewUpdateAttachDiscount],
+                List[models.PreviewUpdateAttachDiscountTypedDict],
+            ]
+        ] = None,
         cancel_action: Optional[models.PreviewUpdateCancelAction] = None,
         no_billing_changes: Optional[bool] = None,
         recalculate_balances: Optional[
@@ -1927,6 +1963,7 @@ class Billing(BaseSDK):
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
+        :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
@@ -1963,6 +2000,9 @@ class Billing(BaseSDK):
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.PreviewUpdateAttachDiscount]]
+            ),
             cancel_action=cancel_action,
             no_billing_changes=no_billing_changes,
             recalculate_balances=utils.get_pydantic_model(

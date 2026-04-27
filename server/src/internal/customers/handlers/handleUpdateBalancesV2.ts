@@ -1,6 +1,7 @@
 import {
 	FeatureNotFoundError,
 	UpdateBalancesParamsSchema,
+	Scopes,
 } from "@autumn/shared";
 import { executePostgresDeduction } from "@/internal/balances/utils/deduction/executePostgresDeduction";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
@@ -8,6 +9,7 @@ import type { FeatureDeduction } from "../../balances/utils/types/featureDeducti
 import { CusService } from "../CusService";
 
 export const handleUpdateBalancesV2 = createRoute({
+	scopes: [Scopes.Balances.Write],
 	body: UpdateBalancesParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

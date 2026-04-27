@@ -6,16 +6,35 @@ import {
 
 // ============ FIFO Queue (primary) ============
 
-const getSqsClientConfig = () => ({
-	region:
-		extractRegionFromQueueUrl({
-			queueUrl: process.env.SQS_QUEUE_URL,
-		}) || DEFAULT_AWS_REGION,
-	credentials: {
-		accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
-		secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
-	},
-});
+/** Returns a base endpoint URL if the queue URL points to a non-AWS host (e.g. ElasticMQ). */
+export const extractLocalEndpoint = ({
+	queueUrl,
+}: {
+	queueUrl: string | undefined;
+}): string | undefined => {
+	if (!queueUrl) return undefined;
+	try {
+		const url = new URL(queueUrl);
+		if (url.hostname.endsWith("amazonaws.com")) return undefined;
+		return `${url.protocol}//${url.host}`;
+	} catch {
+		return undefined;
+	}
+};
+
+const getSqsClientConfig = () => {
+	const queueUrl = process.env.SQS_QUEUE_URL_V2;
+	const endpoint = extractLocalEndpoint({ queueUrl });
+	return {
+		region:
+			extractRegionFromQueueUrl({ queueUrl }) || DEFAULT_AWS_REGION,
+		...(endpoint ? { endpoint } : {}),
+		credentials: {
+			accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
+			secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY || "",
+		},
+	};
+};
 
 let sqsClient = new SQSClient(getSqsClientConfig());
 
@@ -32,4 +51,4 @@ export const recreateSqsClient = (): SQSClient => {
 /** Get the current SQS client (use this instead of direct sqs export for refreshable access) */
 export const getSqsClient = (): SQSClient => sqsClient;
 
-export const QUEUE_URL = process.env.SQS_QUEUE_URL || "";
+export const QUEUE_URL = process.env.SQS_QUEUE_URL_V2 || "";

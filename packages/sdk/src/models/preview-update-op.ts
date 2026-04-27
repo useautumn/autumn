@@ -405,6 +405,20 @@ export type PreviewUpdateRedirectMode = ClosedEnum<
 >;
 
 /**
+ * A discount to apply. Can be either a reward ID or a promotion code.
+ */
+export type PreviewUpdateAttachDiscount = {
+  /**
+   * The ID of the reward to apply as a discount.
+   */
+  rewardId?: string | undefined;
+  /**
+   * The promotion code to apply as a discount.
+   */
+  promotionCode?: string | undefined;
+};
+
+/**
  * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
  */
 export const PreviewUpdateCancelAction = {
@@ -470,6 +484,10 @@ export type PreviewUpdateParams = {
    * A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
    */
   subscriptionId?: string | undefined;
+  /**
+   * List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+   */
+  discounts?: Array<PreviewUpdateAttachDiscount> | undefined;
   /**
    * Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
    */
@@ -1248,6 +1266,39 @@ export const PreviewUpdateRedirectMode$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewUpdateRedirectMode);
 
 /** @internal */
+export type PreviewUpdateAttachDiscount$Outbound = {
+  reward_id?: string | undefined;
+  promotion_code?: string | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateAttachDiscount$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAttachDiscount$Outbound,
+  PreviewUpdateAttachDiscount
+> = z.pipe(
+  z.object({
+    rewardId: z.optional(z.string()),
+    promotionCode: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      rewardId: "reward_id",
+      promotionCode: "promotion_code",
+    });
+  }),
+);
+
+export function previewUpdateAttachDiscountToJSON(
+  previewUpdateAttachDiscount: PreviewUpdateAttachDiscount,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAttachDiscount$outboundSchema.parse(
+      previewUpdateAttachDiscount,
+    ),
+  );
+}
+
+/** @internal */
 export const PreviewUpdateCancelAction$outboundSchema: z.ZodMiniEnum<
   typeof PreviewUpdateCancelAction
 > = z.enum(PreviewUpdateCancelAction);
@@ -1289,6 +1340,7 @@ export type PreviewUpdateParams$Outbound = {
   proration_behavior?: string | undefined;
   redirect_mode: string;
   subscription_id?: string | undefined;
+  discounts?: Array<PreviewUpdateAttachDiscount$Outbound> | undefined;
   cancel_action?: string | undefined;
   billing_cycle_anchor?: "now" | undefined;
   no_billing_changes?: boolean | undefined;
@@ -1320,6 +1372,9 @@ export const PreviewUpdateParams$outboundSchema: z.ZodMiniType<
       "if_required",
     ),
     subscriptionId: z.optional(z.string()),
+    discounts: z.optional(
+      z.array(z.lazy(() => PreviewUpdateAttachDiscount$outboundSchema)),
+    ),
     cancelAction: z.optional(PreviewUpdateCancelAction$outboundSchema),
     billingCycleAnchor: z.optional(z.literal("now")),
     noBillingChanges: z.optional(z.boolean()),

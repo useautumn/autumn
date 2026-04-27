@@ -89,4 +89,6 @@ export interface BillingContext {
 	checkoutMode?: CheckoutMode;
 
 	anchorResetRefund?: AnchorResetRefund;
+
+	refundLastPayment?: "prorated" | "full";
 }

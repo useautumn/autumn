@@ -1,4 +1,4 @@
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { invalidateProductsCache } from "../../productCacheUtils.js";
@@ -10,6 +10,7 @@ import { handleCopyProducts } from "./handleCopyProducts.js";
  * Copies all products and features from sandbox to production
  */
 export const handleCopyEnvironment = createRoute({
+	scopes: [Scopes.Plans.Write],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org } = ctx;

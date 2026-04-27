@@ -1,11 +1,16 @@
 import "dotenv/config";
 
-import { ALL_SCOPES, invitation, schemas } from "@autumn/shared";
+import { ac, ALL_SCOPES, invitation, roles, schemas } from "@autumn/shared";
 import { oauthProvider } from "@better-auth/oauth-provider";
-import { betterAuth, type User } from "better-auth";
+import {
+	type BetterAuthOptions,
+	betterAuth,
+	type User,
+} from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
 	admin,
+	customSession,
 	emailOTP,
 	jwt,
 	type Organization,
@@ -19,10 +24,13 @@ import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
 import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
 import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
 import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
+import { afterSessionCreated } from "./authUtils/afterSessionCreated.js";
+import { afterSessionDeleted } from "./authUtils/afterSessionDeleted.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { ADMIN_USER_IDs } from "./constants.js";
+import { getScopesForUserInOrg } from "./authUtils/customSessionScopes.js";
 
-export const auth = betterAuth({
+const options = {
 	baseURL: process.env.BETTER_AUTH_URL,
 	telemetry: {
 		enabled: false,
@@ -33,6 +41,22 @@ export const auth = betterAuth({
 		schema: schemas,
 	}),
 
+	user: {
+		deleteUser: {
+			enabled: true,
+			sendDeleteAccountVerification: async ({
+				user,
+				url,
+				token,
+			}: {
+				user: User;
+				url: string;
+				token: string;
+			}) => {
+				console.log("Delete account verification", { user, url, token });
+			},
+		},
+	},
 	databaseHooks: {
 		user: {
 			create: {
@@ -48,15 +72,10 @@ export const auth = betterAuth({
 		session: {
 			create: {
 				before: beforeSessionCreated,
+				after: afterSessionCreated,
 			},
-		},
-	},
-	user: {
-		deleteUser: {
-			enabled: true,
-
-			sendDeleteAccountVerification: async ({ user, url, token }) => {
-				console.log("Delete account verification", { url, token });
+			delete: {
+				after: afterSessionDeleted,
 			},
 		},
 	},
@@ -121,9 +140,9 @@ export const auth = betterAuth({
 		oauthProvider({
 			loginPage: `${process.env.CLIENT_URL}/sign-in`,
 			consentPage: `${process.env.CLIENT_URL}/consent`,
-			// Resource-based scopes with CRUD actions
-			// Format: resource:action (e.g., customers:read, plans:create)
-			scopes: ALL_SCOPES,
+			// Resource-based scopes with R/W actions (plus legacy CRUDL +
+			// meta scopes — see shared/utils/scopeDefinitions.ts).
+			scopes: [...ALL_SCOPES],
 			clientReference: ({ session }) => {
 				return (
 					(session?.activeOrganizationId as string | undefined) ?? undefined
@@ -146,6 +165,9 @@ export const auth = betterAuth({
 		}),
 
 		organization({
+			ac,
+			roles,
+			creatorRole: "owner",
 			async sendInvitationEmail(data: {
 				id: string;
 				email: string;
@@ -178,10 +200,8 @@ export const auth = betterAuth({
 					},
 				},
 			},
-
-			organizationCreation: {
-				disabled: false,
-				afterCreate: async ({
+			organizationHooks: {
+				afterCreateOrganization: async ({
 					organization,
 					user,
 				}: {
@@ -192,5 +212,54 @@ export const auth = betterAuth({
 				},
 			},
 		}),
+	],
+} satisfies BetterAuthOptions;
+
+export const auth = betterAuth({
+	...options,
+	plugins: [
+		...options.plugins,
+		/**
+		 * Attach `role` and `scopes` to every session response.
+		 *
+		 * Must be last in the plugin list so it can observe the session
+		 * produced by the other plugins (notably `organization`, which
+		 * populates `session.activeOrganizationId`).
+		 *
+		 * better-auth docs note that custom session fields are NOT cached
+		 * (neither in secondary storage nor the cookie cache), so every
+		 * `getSession` call pays a DB round-trip. Accepted.
+		 */
+		customSession(async ({ user, session }) => {
+			let role: string | null = null;
+			let scopes: string[] = [];
+			const orgId = session.activeOrganizationId;
+			if (orgId && user?.id) {
+				const resolved = await getScopesForUserInOrg({
+					db,
+					userId: user.id,
+					organizationId: orgId,
+				});
+				role = resolved.role;
+				scopes = [...resolved.scopes];
+			}
+
+			/**
+			 * Inject `superuser` for Autumn staff. Triggered when the
+			 * better-auth GLOBAL user role is "admin" (NOT the org role),
+			 * or when the session is an impersonation. Mirrors the
+			 * client-side check in `useAdmin` and `adminAuthMiddleware`.
+			 */
+			const globalUserRole = (user as { role?: string } | null | undefined)
+				?.role;
+			const impersonatedBy = (
+				session as { impersonatedBy?: string | null } | null | undefined
+			)?.impersonatedBy;
+			if (globalUserRole === "admin" || impersonatedBy) {
+				if (!scopes.includes("superuser")) scopes.push("superuser");
+			}
+
+			return { user, session, role, scopes };
+		}, options),
 	],
 });

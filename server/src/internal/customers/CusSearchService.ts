@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	CusProductStatus,
+	RELEVANT_STATUSES,
 	customerProducts,
 	customers,
 	products,
@@ -42,6 +43,7 @@ const customerProductFields = {
 	canceled_at: customerProducts.canceled_at,
 	status: customerProducts.status,
 	trial_ends_at: customerProducts.trial_ends_at,
+	created_at: customerProducts.created_at,
 };
 
 const productFields = {
@@ -398,10 +400,9 @@ export class CusSearchService {
 		const cusProductLimit = getOrgCusProductLimit({ orgId, orgSlug });
 		const processedData = Array.from(customerMap.values());
 		for (const customer of processedData) {
-			customer.customer_products = customer.customer_products.slice(
-				0,
-				cusProductLimit,
-			);
+			customer.customer_products = sortRelevantFirst(
+				customer.customer_products,
+			).slice(0, cusProductLimit);
 		}
 
 		const totalCount = totalCountResult[0]?.totalCount || 0;
@@ -735,15 +736,41 @@ export class CusSearchService {
 		const cusProductLimit = getOrgCusProductLimit({ orgId, orgSlug });
 		const finalResults = Array.from(customerMap.values());
 		for (const customer of finalResults) {
-			customer.customer_products = customer.customer_products.slice(
-				0,
-				cusProductLimit,
-			);
+			customer.customer_products = sortRelevantFirst(
+				customer.customer_products,
+			).slice(0, cusProductLimit);
 		}
 
 		return { data: finalResults, count: totalCount };
 	}
 }
+
+const sortRelevantFirst = (
+	customerProducts: Array<{
+		status?: string;
+		created_at?: string | number;
+		product?: { is_add_on?: boolean; name?: string | null };
+	}>,
+) => {
+	return customerProducts.sort((a, b) => {
+		const isRelevant = (status?: string) =>
+			RELEVANT_STATUSES.includes(status as CusProductStatus) ||
+			status === CusProductStatus.Trialing;
+		const aRelevant = isRelevant(a.status) ? 0 : 1;
+		const bRelevant = isRelevant(b.status) ? 0 : 1;
+		if (aRelevant !== bRelevant) return aRelevant - bRelevant;
+
+		const aAddOn = a.product?.is_add_on ? 1 : 0;
+		const bAddOn = b.product?.is_add_on ? 1 : 0;
+		if (aAddOn !== bAddOn) return aAddOn - bAddOn;
+
+		const aName = (a.product?.name ?? "").toLowerCase();
+		const bName = (b.product?.name ?? "").toLowerCase();
+		if (aName !== bName) return aName.localeCompare(bName);
+
+		return Number(b.created_at ?? 0) - Number(a.created_at ?? 0);
+	});
+};
 // // Legacy support for product_id field (if still used)
 // let productIds: string[] = [];
 // if (filters.product_id) {

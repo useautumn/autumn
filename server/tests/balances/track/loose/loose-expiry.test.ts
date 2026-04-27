@@ -128,6 +128,8 @@ describe(`${chalk.yellowBright("loose-expiry-mixed: mixed expiring and non-expir
 		expect(res.balance?.current_balance).toBe(150);
 	});
 
+	// return;
+
 	test("should deduct across mixed loose ents", async () => {
 		// Track 120 (needs both ents)
 		await autumnV1.track({

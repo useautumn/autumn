@@ -1,8 +1,11 @@
 import {
 	CusProductStatus,
 	type Entity,
+	type FrontendProduct,
 	isCustomerProductTrialing,
 	type ProductItem,
+	sortPlanItems,
+	splitBooleanItems,
 	UsageModel,
 } from "@autumn/shared";
 import {
@@ -20,7 +23,8 @@ import {
 	XCircle,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useEffect } from "react";
+import { useMemo } from "react";
+import { CollapsedBooleanItems } from "@/components/forms/shared/plan-items/CollapsedBooleanItems";
 import { Button } from "@/components/v2/buttons/Button";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -28,10 +32,7 @@ import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
-import {
-	usePrepaidItems,
-	useProductStore,
-} from "@/hooks/stores/useProductStore";
+import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 
@@ -42,7 +43,60 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
-import { UpdatePlanButton } from "./UpdatePlanButton";
+
+function SubscriptionDetailItems({
+	items,
+	product,
+	prepaidDisplayQuantities,
+}: {
+	items: ProductItem[];
+	product: FrontendProduct;
+	prepaidDisplayQuantities: Record<string, number>;
+}) {
+	const sortedItems = useMemo(() => sortPlanItems({ items }), [items]);
+	const { visibleItems, collapsedBooleanItems } = useMemo(
+		() => splitBooleanItems({ items: sortedItems }),
+		[sortedItems],
+	);
+
+	const renderRow = (item: ProductItem, index: number) => {
+		if (!item.feature_id) return null;
+		const prepaidQuantity =
+			item.usage_model === UsageModel.Prepaid
+				? (prepaidDisplayQuantities[item.feature_id] ?? null)
+				: null;
+
+		return (
+			<PlanFeatureRow
+				key={item.feature_id || item.price_id || index}
+				item={item}
+				index={index}
+				readOnly={true}
+				prepaidQuantity={prepaidQuantity}
+			/>
+		);
+	};
+
+	return (
+		<SheetSection>
+			<div className="flex gap-2 justify-between items-center h-6 mb-3">
+				<BasePriceDisplay product={product} readOnly={true} />
+			</div>
+
+			<div className="space-y-2">
+				{visibleItems.map((item, index) => renderRow(item, index))}
+				{collapsedBooleanItems.length > 0 && (
+					<CollapsedBooleanItems
+						items={collapsedBooleanItems}
+						renderItem={(item, index) =>
+							renderRow(item, visibleItems.length + index)
+						}
+					/>
+				)}
+			</div>
+		</SheetSection>
+	);
+}
 
 export function SubscriptionDetailSheet() {
 	const { customer } = useCusQuery();
@@ -50,15 +104,6 @@ export function SubscriptionDetailSheet() {
 	const env = useEnv();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const resetProductStore = useProductStore((s) => s.reset);
-	const sheetType = useSheetStore((s) => s.type);
-	// Get edited product from store
-
-	const storeProduct = useProductStore((s) => s.product);
-
-	// Check if there are changes in the product store
-	const showUpdateProduct = storeProduct?.id;
-
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
 
@@ -67,15 +112,6 @@ export function SubscriptionDetailSheet() {
 
 	const isExpired = cusProduct?.status === CusProductStatus.Expired;
 	const isCanceled = cusProduct?.canceled;
-
-	useEffect(() => {
-		if (
-			sheetType !== "subscription-detail" &&
-			sheetType !== "subscription-update"
-		) {
-			resetProductStore();
-		}
-	}, [sheetType, resetProductStore]);
 
 	// Check for prepaid items in the product (must be called before any returns)
 	const { prepaidItems } = usePrepaidItems({ product: productV2 ?? undefined });
@@ -109,7 +145,7 @@ export function SubscriptionDetailSheet() {
 	};
 
 	const handleUpdateSubscription = () => {
-		setSheet({ type: "subscription-update-v2", itemId });
+		setSheet({ type: "subscription-update", itemId });
 	};
 
 	const handleViewStripe = () => {
@@ -144,33 +180,11 @@ export function SubscriptionDetailSheet() {
 			/>
 
 			{productV2?.items && productV2.items.length > 0 && (
-				<SheetSection>
-					{productV2 && (
-						<div className="flex gap-2 justify-between items-center h-6 mb-3">
-							<BasePriceDisplay product={productV2} readOnly={true} />
-						</div>
-					)}
-
-					<div className="space-y-2">
-						{productV2.items.map((item: ProductItem, index: number) => {
-							if (!item.feature_id) return null;
-							const prepaidQuantity =
-								item.usage_model === UsageModel.Prepaid
-									? (prepaidDisplayQuantities[item.feature_id] ?? null)
-									: null;
-
-							return (
-								<PlanFeatureRow
-									key={item.feature_id || item.price_id || index}
-									item={item}
-									index={index}
-									readOnly={true}
-									prepaidQuantity={prepaidQuantity}
-								/>
-							);
-						})}
-					</div>
-				</SheetSection>
+				<SubscriptionDetailItems
+					items={productV2.items}
+					product={productV2}
+					prepaidDisplayQuantities={prepaidDisplayQuantities}
+				/>
 			)}
 
 			<SheetSection withSeparator={true}>
@@ -306,12 +320,6 @@ export function SubscriptionDetailSheet() {
 					)}
 				</div>
 			</SheetSection>
-
-			{showUpdateProduct && (
-				<div className="flex justify-end p-2">
-					<UpdatePlanButton cusProduct={cusProduct} />
-				</div>
-			)}
 
 			{!isExpired && !isScheduled && (
 				<div className="sticky bottom-0 p-4 flex gap-2 bg-card">

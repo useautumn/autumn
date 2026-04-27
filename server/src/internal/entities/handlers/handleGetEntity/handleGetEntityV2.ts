@@ -2,12 +2,14 @@ import {
 	AffectedResource,
 	GetEntityParamsV0Schema,
 	InternalError,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { findCustomerForEntity } from "../../actions/findCustomer.js";
-import { getApiEntity } from "../../entityUtils/apiEntityUtils/getApiEntity.js";
+import { getApiEntityByRollout } from "../../actions/getApiEntityByRollout.js";
 
 export const handleGetEntityV2 = createRoute({
+	scopes: [Scopes.Customers.Read],
 	body: GetEntityParamsV0Schema,
 	resource: AffectedResource.Entity,
 	handler: async (c) => {
@@ -31,10 +33,11 @@ export const handleGetEntityV2 = createRoute({
 			customerId = customer.id;
 		}
 
-		const apiEntity = await getApiEntity({
+		const apiEntity = await getApiEntityByRollout({
 			ctx,
 			customerId: customerId,
 			entityId: entityId,
+			source: "handleGetEntityV2",
 		});
 
 		return c.json(apiEntity);

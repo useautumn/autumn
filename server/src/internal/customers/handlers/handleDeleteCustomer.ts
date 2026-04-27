@@ -1,4 +1,4 @@
-import { AffectedResource, DeleteCustomerParamsSchema } from "@autumn/shared";
+import { AffectedResource, DeleteCustomerParamsSchema, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
@@ -8,6 +8,7 @@ const DeleteCustomerQuerySchema = z.object({
 });
 
 export const handleDeleteCustomer = createRoute({
+	scopes: [Scopes.Customers.Write],
 	query: DeleteCustomerQuerySchema,
 	resource: AffectedResource.Customer,
 	handler: async (c) => {
@@ -28,6 +29,7 @@ export const handleDeleteCustomer = createRoute({
 });
 
 export const handleDeleteCustomerV2 = createRoute({
+	scopes: [Scopes.Customers.Write],
 	body: DeleteCustomerParamsSchema,
 	resource: AffectedResource.Customer,
 	handler: async (c) => {

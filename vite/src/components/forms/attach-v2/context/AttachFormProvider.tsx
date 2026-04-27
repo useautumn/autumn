@@ -15,6 +15,7 @@ import {
 	isFreeProductV2,
 	isOneOffProductV2,
 	productV2ToFrontendProduct,
+	UsageModel,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import {
@@ -27,6 +28,7 @@ import {
 	useRef,
 	useState,
 } from "react";
+import type { SchedulePlan } from "@/components/forms/create-schedule/createScheduleFormSchema";
 import { applyDefinedFormPatchFields } from "@/components/forms/shared/utils/formPatchUtils";
 import {
 	getProductWithSupportedPlanFormValues,
@@ -57,6 +59,9 @@ interface AttachFormContextValue {
 	formValues: AttachForm;
 	features: Feature[];
 
+	entityId: string | undefined;
+	onScopeChange?: (entityId: string | undefined) => void;
+
 	product: ProductV2 | undefined;
 	prepaidItems: PrepaidItemWithFeature[];
 	originalItems: ProductItem[] | undefined;
@@ -80,7 +85,13 @@ interface AttachFormContextValue {
 
 	isPending: boolean;
 	handleConfirm: () => void;
-	handleInvoiceAttach: (params: { enableProductImmediately: boolean }) => void;
+	handleInvoiceAttach: (params: {
+		enableProductImmediately: boolean;
+		finalizeInvoice: boolean;
+	}) => Promise<{
+		stripeId: string | undefined;
+		hostedInvoiceUrl: string | null | undefined;
+	}>;
 }
 
 const AttachFormReactContext = createContext<AttachFormContextValue | null>(
@@ -93,9 +104,11 @@ interface AttachFormProviderProps {
 	initialProductId?: string;
 	onPlanEditorOpen?: () => void;
 	onPlanEditorClose?: () => void;
-	onInvoiceCreated?: (invoiceId: string) => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
+	onScopeChange?: (entityId: string | undefined) => void;
+	initialSchedulePlan?: SchedulePlan | null;
+	disablePreview?: boolean;
 	children: ReactNode;
 }
 
@@ -124,14 +137,25 @@ export function AttachFormProvider({
 	initialProductId,
 	onPlanEditorOpen,
 	onPlanEditorClose,
-	onInvoiceCreated,
 	onCheckoutRedirect,
 	onSuccess,
+	onScopeChange,
+	initialSchedulePlan,
+	disablePreview,
 	children,
 }: AttachFormProviderProps) {
 	const [showPlanEditor, setShowPlanEditor] = useState(false);
+	const [initialPrepaidOptions, setInitialPrepaidOptions] = useState<
+		Record<string, number>
+	>({});
 
-	const form = useAttachForm({ initialProductId });
+	const form = useAttachForm({
+		initialProductId,
+		initialItems: initialSchedulePlan?.items,
+		initialIsCustom: initialSchedulePlan?.isCustom,
+		initialVersion: initialSchedulePlan?.version,
+		initialPrepaidOptions: initialSchedulePlan?.prepaidOptions,
+	});
 
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
@@ -278,7 +302,19 @@ export function AttachFormProvider({
 
 		// Initialize prepaid options for the selected product
 		if (product) {
-			form.setFieldValue("prepaidOptions", {});
+			const newInitialPrepaidOptions: Record<string, number> = {};
+			for (const item of product.items) {
+				if (item.usage_model === UsageModel.Prepaid && item.feature_id) {
+					newInitialPrepaidOptions[item.feature_id] = 0;
+				}
+			}
+			const currentPrepaidOptions = form.store.state.values.prepaidOptions;
+			const resolvedPrepaidOptions =
+				isProductChange || Object.keys(currentPrepaidOptions).length === 0
+					? newInitialPrepaidOptions
+					: { ...newInitialPrepaidOptions, ...currentPrepaidOptions };
+			form.setFieldValue("prepaidOptions", resolvedPrepaidOptions);
+			setInitialPrepaidOptions(resolvedPrepaidOptions);
 
 			if (product.free_trial) {
 				form.setFieldValue("trialEnabled", true);
@@ -353,7 +389,10 @@ export function AttachFormProvider({
 		isFreeToPaidTransition,
 	});
 
-	const previewQuery = useAttachPreview({ requestBody });
+	const previewQuery = useAttachPreview({
+		requestBody,
+		enabled: disablePreview ? false : undefined,
+	});
 
 	const previewPrepaidOptions = useMemo(() => {
 		const incoming = previewQuery.data?.incoming;
@@ -368,8 +407,6 @@ export function AttachFormProvider({
 		return options;
 	}, [previewQuery.data?.incoming]);
 
-	const initialPrepaidOptions: Record<string, number> = {};
-
 	const previewDiff = usePreviewDiff({
 		previewQuery,
 		productId: productId ?? "",
@@ -381,7 +418,6 @@ export function AttachFormProvider({
 	const { handleConfirm, handleInvoiceAttach, isPending } = useAttachMutation({
 		customerId,
 		buildRequestBody,
-		onInvoiceCreated,
 		onCheckoutRedirect,
 		onSuccess,
 	});
@@ -441,6 +477,8 @@ export function AttachFormProvider({
 			form,
 			formValues,
 			features,
+			entityId,
+			onScopeChange,
 			product: effectiveProduct,
 			prepaidItems,
 			originalItems,
@@ -465,6 +503,8 @@ export function AttachFormProvider({
 			form,
 			formValues,
 			features,
+			entityId,
+			onScopeChange,
 			effectiveProduct,
 			prepaidItems,
 			originalItems,

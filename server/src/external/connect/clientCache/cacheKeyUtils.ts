@@ -1,7 +1,9 @@
+import { createHash } from "node:crypto";
 import type { AppEnv } from "@autumn/shared";
 
 const getSecretFingerprint = ({ secret }: { secret: string }) => {
-	return Bun.hash(secret).toString();
+	if (typeof globalThis.Bun !== "undefined") return Bun.hash(secret).toString();
+	return createHash("sha256").update(secret).digest("hex").slice(0, 16);
 };
 
 /** Builds cache key for Stripe clients created via org secret key. */

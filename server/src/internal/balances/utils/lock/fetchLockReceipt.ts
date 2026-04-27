@@ -1,6 +1,7 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { fetchAndClaimLockReceiptV2 } from "@/internal/balances/utils/lockV2/fetchAndClaimLockReceiptV2.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildLockReceiptKey } from "./buildLockReceiptKey.js";
@@ -14,6 +15,8 @@ export type LockReceipt = {
 	region?: string | null;
 	items: MutationLogItem[];
 };
+
+export type LockReceiptSource = "redis_v1" | "redis_v2";
 
 const normalizeLockReceiptItems = ({
 	items,
@@ -43,6 +46,7 @@ export const fetchLockReceipt = async ({
 	ctx: AutumnContext;
 	lockId: string;
 }) => {
+	const { redisV2 } = ctx;
 	const hashedKey = Bun.hash(lockId).toString();
 	const lockReceiptKey = buildLockReceiptKey({
 		orgId: ctx.org.id,
@@ -50,35 +54,46 @@ export const fetchLockReceipt = async ({
 		lockKey: hashedKey,
 	});
 
-	const rawReceipt = await tryRedisRead(
-		() => redis.call("JSON.GET", lockReceiptKey, "$") as Promise<string | null>,
-	);
+	// V2 half doubles as a fetch+claim (pipelined GET + SET NX on a marker key)
+	// so the dispatcher can route to runFinalizeLockV2 without a follow-up claim RT.
+	// V1 half stays a plain JSON.GET — V1 finalize still claims via Lua afterwards.
+	const [rawReceiptV1, v2Result] = await Promise.all([
+		tryRedisRead(
+			() =>
+				redis.call("JSON.GET", lockReceiptKey, "$") as Promise<string | null>,
+			redis,
+		),
+		fetchAndClaimLockReceiptV2({
+			ctx,
+			lockId,
+			redisInstance: redisV2,
+		}),
+	]);
 
-	if (!rawReceipt) {
+	if (v2Result.found) {
+		return {
+			receipt: v2Result.receipt,
+			lockReceiptKey: v2Result.lockReceiptKey,
+			source: "redis_v2" as const,
+			claimed: v2Result.claimed,
+		};
+	}
+
+	if (!rawReceiptV1) {
 		throw new RecaseError({
 			message: `Lock not found for ID: ${lockId}`,
 			code: ErrCode.InvalidRequest,
 		});
 	}
 
-	const receipt = (JSON.parse(rawReceipt) as LockReceipt[])[0];
-	if (!receipt?.customer_id) {
-		throw new RecaseError({
-			message: `Lock receipt is missing customer_id for ID: ${lockId}`,
-			code: ErrCode.InvalidRequest,
-		});
-	}
+	const receipt = (JSON.parse(rawReceiptV1) as LockReceipt[])[0];
 
-	if (!receipt.feature_id) {
+	const missingField = (["customer_id", "feature_id", "items"] as const).find(
+		(field) => !receipt?.[field],
+	);
+	if (missingField) {
 		throw new RecaseError({
-			message: `Lock receipt is missing feature_id for ID: ${lockId}`,
-			code: ErrCode.InvalidRequest,
-		});
-	}
-
-	if (!receipt.items) {
-		throw new RecaseError({
-			message: `Lock receipt is missing items for ID: ${lockId}`,
+			message: `Lock receipt is missing ${missingField} for ID: ${lockId}`,
 			code: ErrCode.InvalidRequest,
 		});
 	}
@@ -91,5 +106,6 @@ export const fetchLockReceipt = async ({
 	return {
 		receipt,
 		lockReceiptKey,
+		source: "redis_v1" as const,
 	};
 };

@@ -55,9 +55,9 @@ export const billingPlanToPreviewResponse = async ({
 		subtotal,
 		total,
 		currency,
-		// credit,
 		next_cycle: nextCycle,
 		incoming,
 		outgoing,
+		refund: autumnBillingPlan.refundPlan,
 	} satisfies BillingPreviewResponse;
 };

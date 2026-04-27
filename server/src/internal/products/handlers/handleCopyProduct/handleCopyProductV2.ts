@@ -3,6 +3,7 @@ import {
 	CreateFeatureSchema,
 	ErrCode,
 	ProductAlreadyExistsError,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
@@ -34,6 +35,7 @@ const initNewFeature = ({
  * Route: POST /v1/products/:productId/copy - Copy a product
  */
 export const handleCopyProductV2 = createRoute({
+	scopes: [Scopes.Plans.Write],
 	body: CopyProductParamsSchema,
 	handler: async (c) => {
 		const body = c.req.valid("json");

@@ -5,6 +5,7 @@ import {
 	type Product,
 	RecaseError,
 	RewardCategory,
+	Scopes,
 } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -24,6 +25,7 @@ const UpdateCouponQuerySchema = z.object({
 });
 
 export const handleUpdateCoupon = createRoute({
+	scopes: [Scopes.Rewards.Write],
 	params: UpdateCouponParamsSchema,
 	query: UpdateCouponQuerySchema,
 	handler: async (c) => {

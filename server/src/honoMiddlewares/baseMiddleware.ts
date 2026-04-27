@@ -3,14 +3,18 @@ import {
 	AppEnv,
 	AuthType,
 	LATEST_VERSION,
+	type Organization,
 	tryCatch,
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { db, dbGeneral } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { generateId } from "@/utils/genUtils.js";
 import { addRequestToLogs } from "@/utils/logging/addContextToLogs";
+import { resolveCustomerId } from "./utils/resolveCustomerId.js";
+import { resolveEntityId } from "./utils/resolveEntityId.js";
 
 /**
  * Base middleware that sets up the request context
@@ -31,7 +35,18 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			? await tryCatch(c.req.json())
 			: { data: undefined };
 
-	// const { data: body } = await tryCatch(c.req.json());
+	const customerId = resolveCustomerId({
+		method: c.req.method,
+		path: c.req.path,
+		body,
+		query: c.req.query(),
+	});
+	const entityId = resolveEntityId({
+		method: c.req.method,
+		path: c.req.path,
+		body,
+		query: c.req.query(),
+	});
 
 	const childLogger = addRequestToLogs({
 		logger,
@@ -40,8 +55,11 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			method: c.req.method,
 			url: c.req.url,
 			timestamp,
+			customer_id: customerId,
+			entity_id: entityId,
 			user_agent: c.req.header("user-agent"),
 			ip_address: c.req.header("x-forwarded-for"),
+			region: process.env.AWS_REGION,
 			query: c.req.query(),
 			body,
 
@@ -55,6 +73,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		db,
 		dbGeneral,
 		logger: childLogger,
+		redisV2: resolveRedisV2(),
 
 		// Request info
 		id,
@@ -64,11 +83,14 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		apiVersion: new ApiVersionClass(LATEST_VERSION),
 
 		// Auth (will be populated by auth middleware)
-		org: undefined as any,
+		org: undefined as unknown as Organization,
 		features: [],
 		userId: undefined,
+		customerId,
+		entityId,
 		authType: AuthType.Unknown,
 		env: AppEnv.Sandbox, // maybe use app_env headers
+		scopes: [],
 
 		// Query params
 		expand: [],

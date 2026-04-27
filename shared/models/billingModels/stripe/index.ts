@@ -4,5 +4,6 @@ export * from "./stripeDiscountWithCoupon";
 export * from "./stripeInvoiceAction";
 export * from "./stripeInvoiceItemsAction";
 export * from "./stripeItemSpec";
+export * from "./stripeRefundAction";
 export * from "./stripeSubscriptionAction";
 export * from "./stripeSubscriptionScheduleAction";

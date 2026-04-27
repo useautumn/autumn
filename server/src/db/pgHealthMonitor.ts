@@ -1,5 +1,5 @@
 import type { SQL } from "drizzle-orm";
-import type postgres from "postgres";
+import type { Pool } from "pg";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { isConnectionDropError } from "./dbUtils.js";
 import { type DrizzleCli, dbCritical, dbReplica } from "./initDrizzle.js";
@@ -30,29 +30,32 @@ const RECOVERY_STABILITY_MS = 10_000;
 let state: PgHealth = PgHealth.Healthy;
 let probeInterval: ReturnType<typeof setInterval> | null = null;
 let firstProbeSuccessAt: number | null = null;
-let probeClient: postgres.Sql | null = null;
+let probeClient: Pool | null = null;
 
 // Lightweight failure tracking — tumbling window with a counter instead of
 // an array of timestamps. Two numbers, zero allocations per call.
 let failureCount = 0;
 let windowStartedAt = Date.now();
 
+const resetFailureWindow = (now = Date.now()) => {
+	failureCount = 0;
+	windowStartedAt = now;
+};
+
 /** Get the current DB health state. */
 export const getDbHealth = (): PgHealth => state;
 
 /**
- * Initialize the health monitor with a postgres.js client for probing.
+ * Initialize the health monitor with a pg pool for probing.
  * Call once at startup. The probe client should be the critical pool's raw client.
  */
 export const initPgHealthMonitor = ({
 	client,
 }: {
-	client: postgres.Sql;
+	client: Pool;
 }): void => {
-	console.time("db:health-monitor-init");
 	probeClient = client;
 	logger.info("[PgHealthMonitor] Initialized", { type: "pg_health_init" });
-	console.timeEnd("db:health-monitor-init");
 };
 
 /**
@@ -95,8 +98,7 @@ const switchToDegraded = (): void => {
 		thresholdCount: FAILURE_THRESHOLD,
 	});
 
-	failureCount = 0;
-	windowStartedAt = Date.now();
+	resetFailureWindow();
 
 	startProbe();
 };
@@ -105,8 +107,7 @@ const switchToHealthy = (): void => {
 	if (state === PgHealth.Healthy) return;
 
 	state = PgHealth.Healthy;
-	failureCount = 0;
-	windowStartedAt = Date.now();
+	resetFailureWindow();
 	firstProbeSuccessAt = null;
 
 	logger.info("[PgHealthMonitor] RECOVERED to HEALTHY", {
@@ -127,7 +128,7 @@ const startProbe = (): void => {
 		let timeoutId: ReturnType<typeof setTimeout> | undefined;
 		try {
 			await Promise.race([
-				probeClient`SELECT 1`,
+				probeClient.query("SELECT 1"),
 				new Promise<never>((_, reject) => {
 					timeoutId = setTimeout(
 						() => reject(new Error("probe timeout")),
@@ -246,14 +247,13 @@ export const getPgHealthState = (): {
 	failureCount,
 	probeActive: probeInterval !== null,
 	firstProbeSuccessAt,
-	hasReplica: !!process.env.DATABASE_REPLICA_URL,
+	hasReplica: !!process.env.DATABASE_V2_REPLICA_URL,
 });
 
 /** Force DEGRADED state (for testing). Does NOT start the recovery probe. */
 export const forceDegraded = (): void => {
 	state = PgHealth.Degraded;
-	failureCount = 0;
-	windowStartedAt = Date.now();
+	resetFailureWindow();
 	logger.info("[PgHealthMonitor] FORCE DEGRADED (test)", {
 		type: "pg_health_force",
 	});
@@ -262,8 +262,7 @@ export const forceDegraded = (): void => {
 /** Force HEALTHY state and stop any active probe (for testing). */
 export const forceHealthy = (): void => {
 	state = PgHealth.Healthy;
-	failureCount = 0;
-	windowStartedAt = Date.now();
+	resetFailureWindow();
 	firstProbeSuccessAt = null;
 	stopProbe();
 	logger.info("[PgHealthMonitor] FORCE HEALTHY (test)", {

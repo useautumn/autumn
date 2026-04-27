@@ -25,9 +25,10 @@ export const getOrSetCachedFullCustomer = async ({
 	source?: string;
 }): Promise<FullCustomer> => {
 	const { skipCache, logger } = ctx;
+	const useRedis = !skipCache;
 
 	// 1. Try cache first (getCachedFullCustomer handles lazy reset internally)
-	if (!skipCache) {
+	if (useRedis) {
 		const cached = await getCachedFullCustomer({
 			ctx,
 			customerId,
@@ -79,8 +80,13 @@ export const getOrSetCachedFullCustomer = async ({
 		}
 	}
 
+	// const hydratedFullCustomer = await hydrateFullCustomerSchedule({
+	// 	ctx,
+	// 	fullCustomer,
+	// });
+
 	// 3. Set cache (fire and forget)
-	if (!skipCache) {
+	if (useRedis) {
 		await setCachedFullCustomer({
 			ctx,
 			fullCustomer,

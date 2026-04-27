@@ -121,9 +121,8 @@ export const hasCustomerProductEnded = (
 	const nowMs = params?.nowMs ?? Date.now();
 
 	const hasEnded =
-		isCustomerProductCanceling(cp) &&
-		notNullish(cp.ended_at) &&
-		nowMs >= cp.ended_at;
+		// isCustomerProductCanceling(cp) &&
+		notNullish(cp.ended_at) && nowMs >= cp.ended_at;
 	return hasEnded;
 };
 
@@ -280,4 +279,27 @@ export const customerProductHasPrepaidPrice = (
 	if (!customerProduct) return false;
 	const prices = cusProductToPrices({ cusProduct: customerProduct });
 	return prices.some((price) => isPrepaidPrice(price));
+};
+
+// ============================================================================
+// AGGREGATE CHECKS
+// ============================================================================
+
+/** Returns true if any customer product is active (or trialing), has a subscription, and is paid recurring. */
+export const hasActivePaidSubscription = ({
+	customerProducts,
+}: {
+	customerProducts: FullCusProduct[];
+}): boolean => {
+	return customerProducts.some((customerProduct) => {
+		const hasActiveOrTrialingStatus =
+			ACTIVE_STATUSES.includes(customerProduct.status) ||
+			customerProduct.status === CusProductStatus.Trialing;
+
+		if (!hasActiveOrTrialingStatus) return false;
+		if (!customerProduct.subscription_ids?.length) return false;
+
+		const prices = cusProductToPrices({ cusProduct: customerProduct });
+		return !isOneOffProduct({ prices }) && !isFreeProduct({ prices });
+	});
 };

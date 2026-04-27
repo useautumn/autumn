@@ -1,7 +1,7 @@
 import type { InsertCustomerProduct } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { updateCachedCustomerProductV2 } from "../../cache/fullSubject/actions/updateCachedCustomerProduct.js";
 import { CusProductService } from "../CusProductService.js";
-import { updateCachedCustomerProduct } from "./cache/updateCachedCustomerProduct.js";
 
 /**
  * Updates a customer product in both Postgres and the Redis FullCustomer cache.
@@ -29,16 +29,12 @@ export const updateCustomerProductDbAndCache = async ({
 		updates,
 	});
 
-	const result = await updateCachedCustomerProduct({
-		ctx,
-		customerId,
-		cusProductId,
-		updates,
-	});
-
-	if (result?.error === "cache_miss") {
-		ctx.logger.info(
-			`[updateCustomerProductDbAndCache] cache_miss for cusProduct ${cusProductId}, rebuilding cache from DB`,
-		);
-	}
+	await Promise.all([
+		updateCachedCustomerProductV2({
+			ctx,
+			customerId,
+			customerProductId: cusProductId,
+			updates,
+		}),
+	]);
 };

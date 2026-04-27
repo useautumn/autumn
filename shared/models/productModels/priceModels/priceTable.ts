@@ -57,3 +57,6 @@ export const prices = pgTable(
 );
 
 collatePgColumn(prices.id, "C");
+
+export type DbPrice = typeof prices.$inferSelect;
+export type InsertDbPrice = typeof prices.$inferInsert;

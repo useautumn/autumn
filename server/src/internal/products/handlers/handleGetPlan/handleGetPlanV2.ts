@@ -1,9 +1,10 @@
-import { AffectedResource, GetPlanParamsV0Schema } from "@autumn/shared";
+import { AffectedResource, GetPlanParamsV0Schema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "../../ProductService.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 
 export const handleGetPlanV2 = createRoute({
+	scopes: [Scopes.Plans.Read],
 	body: GetPlanParamsV0Schema,
 	resource: AffectedResource.Product,
 	handler: async (c) => {

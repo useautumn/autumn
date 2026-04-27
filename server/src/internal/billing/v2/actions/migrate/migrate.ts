@@ -24,11 +24,15 @@ export async function migrate({
 	fullCustomer,
 	currentCustomerProduct,
 	newProduct,
+	options = {},
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	currentCustomerProduct: FullCusProduct;
 	newProduct: FullProduct;
+	options?: {
+		noBillingChanges?: boolean;
+	};
 }) {
 	// 1. Build update subscription params
 	const entity = fullCustomer.entities.find(
@@ -54,6 +58,7 @@ export async function migrate({
 
 		transition_rules: transitionRules,
 		redirect_mode: "if_required",
+		no_billing_changes: options.noBillingChanges,
 	};
 
 	ctx.logger.info(

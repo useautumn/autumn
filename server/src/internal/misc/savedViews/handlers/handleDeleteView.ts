@@ -1,10 +1,12 @@
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { Scopes } from "@autumn/shared";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
 
 /**
  * Delete a saved view for the organization
  */
 export const handleDeleteView = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const { org, env } = c.get("ctx");
 		const { viewId } = c.req.param();

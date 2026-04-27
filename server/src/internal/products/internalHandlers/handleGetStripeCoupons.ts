@@ -1,4 +1,5 @@
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 
 /**
@@ -6,6 +7,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
  * Fetches valid coupons directly from Stripe for the current org.
  */
 export const handleGetStripeCoupons = createRoute({
+	scopes: [Scopes.Plans.Read],
 	handler: async (c) => {
 		const { org, env } = c.get("ctx");
 

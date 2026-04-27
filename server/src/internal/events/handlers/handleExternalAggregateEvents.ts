@@ -6,6 +6,7 @@ import {
 	ErrCode,
 	EventsAggregateParamsSchema,
 	RecaseError,
+	Scopes,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { eventActions } from "@/internal/analytics/actions/eventActions.js";
@@ -19,6 +20,7 @@ import {
 } from "../eventUtils.js";
 
 export const handleExternalAggregateEvents = createRoute({
+	scopes: [Scopes.Analytics.Read],
 	body: EventsAggregateParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
@@ -34,17 +36,6 @@ export const handleExternalAggregateEvents = createRoute({
 			filter_by,
 			max_groups,
 		} = c.req.valid("json");
-
-		console.log("handleAggregateEvents", {
-			customer_id,
-			entity_id,
-			feature_id,
-			group_by,
-			range,
-			bin_size,
-			custom_range,
-			filter_by,
-		});
 
 		let customer: Awaited<ReturnType<typeof CusService.getFull>> | undefined;
 		let aggregateAll = false;
