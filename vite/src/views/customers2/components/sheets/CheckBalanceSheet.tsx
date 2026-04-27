@@ -1,3 +1,4 @@
+import type { Entity, FullCustomer } from "@autumn/shared";
 import { LATEST_VERSION } from "@autumn/shared";
 import { Spinner } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
@@ -14,30 +15,39 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "../../customer/CustomerContext";
+import { EntityScopeSelector } from "./EntityScopeSelector";
 
 export function CheckBalanceSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const { customer } = useCusQuery();
-	const { entityId } = useCustomerContext();
+	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(
+		customer as FullCustomer | undefined,
+	);
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();
+
+	const fullCustomer = customer as FullCustomer | null;
+	const entities = fullCustomer?.entities || [];
+	const fullEntity = entities.find(
+		(e: Entity) => e.id === scopeEntityId || e.internal_id === scopeEntityId,
+	);
 
 	const featureId = sheetData?.featureId as string | undefined;
 	const featureName = sheetData?.featureName as string | undefined;
 	const customerId = customer?.id || customer?.internal_id;
 
 	const { data, isLoading, error } = useQuery({
-		queryKey: buildKey(["check-balance", customerId, featureId, entityId]),
+		queryKey: buildKey(["check-balance", customerId, featureId, scopeEntityId]),
 		queryFn: async () => {
 			const params: Record<string, unknown> = {
 				customer_id: customerId,
 				feature_id: featureId,
 			};
-			if (entityId) params.entity_id = entityId;
+			if (scopeEntityId) params.entity_id = scopeEntityId;
 
 			const { data } = await axiosInstance.post("/v1/check", params);
 			return data;
@@ -54,8 +64,20 @@ export function CheckBalanceSheet() {
 			<div className="flex h-full flex-col overflow-hidden">
 				<SheetHeader
 					title="Check Balance"
-					description={`POST /check for ${featureName ?? featureId}`}
+					description={
+						scopeEntityId
+							? `Tracking for entity ${fullEntity?.name || scopeEntityId}`
+							: `POST /check for ${featureName ?? featureId}`
+					}
 				/>
+
+				{entities.length > 0 && (
+					<EntityScopeSelector
+						entities={entities}
+						scopeEntityId={scopeEntityId}
+						onScopeChange={setScopeEntityId}
+					/>
+				)}
 
 				<div className="flex-1 overflow-hidden flex flex-col px-4 pb-4">
 					{isLoading && (
