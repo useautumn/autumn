@@ -41,6 +41,18 @@ const waitUntil = async (check: () => boolean, timeoutMs: number) => {
 };
 
 describe("createRedisAvailability", () => {
+	test("starts healthy before the first probe runs", () => {
+		const redis = new FakeRedis();
+		const availability = createRedisAvailability({
+			redis: redis as never,
+			hasConfig: true,
+			logPrefix: "RedisV2",
+			logType: "redis_v2_availability_state_set",
+		});
+
+		expect(availability.shouldUseRedis()).toBe(true);
+	});
+
 	test(
 		"reconnects after repeated probe failures while the client still reports ready",
 		async () => {
