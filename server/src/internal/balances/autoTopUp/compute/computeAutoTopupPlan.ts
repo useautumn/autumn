@@ -17,9 +17,8 @@ import {
 	buildUpdatedOptions,
 	updateCusEntOptionsInline,
 } from "../helpers/autoTopUpUtils.js";
-import { computeRebalancedAutoTopUp } from "./computeRebalancedAutoTopUp.js";
 
-/** Compute the auto top-up billing plan + stripe invoice action. Throws if line item amount is <= 0. */
+/** Compute the auto top-up billing plan + stripe invoice action. Returns null if line item amount is <= 0. */
 export const computeAutoTopupPlan = ({
 	ctx,
 	autoTopupContext,
@@ -73,24 +72,17 @@ export const computeAutoTopupPlan = ({
 		});
 	}
 
-	// C. Compute paydown + prepaid remainder deltas from the context's FullCustomer.
-	// Deltas apply atomically at execute time via `balance + delta` SQL increments.
-	const { deltas } = computeRebalancedAutoTopUp({
-		fullCustomer: autoTopupContext.fullCustomer,
-		featureId: feature.id,
-		quantity,
-		prepaidCustomerEntitlementId: customerEntitlement.id,
-	});
-
-	// D. Build autumn billing plan. `options.quantity` bumps by the FULL topUpPacks
-	// because the customer is charged for the full purchase regardless of where the
-	// balance landed.
+	// C. Build autumn billing plan
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId: autoTopupContext.fullCustomer?.id ?? "",
 		insertCustomerProducts: [],
 		lineItems: [lineItem],
-		updateCustomerEntitlements: [],
-		autoTopupRebalance: { deltas },
+		updateCustomerEntitlements: [
+			{
+				customerEntitlement,
+				balanceChange: quantity,
+			},
+		],
 		updateCustomerProduct: {
 			customerProduct: cusProduct,
 			updates: {
@@ -99,7 +91,7 @@ export const computeAutoTopupPlan = ({
 		},
 	};
 
-	// E. Build stripe invoice action (manual — bypassing evaluateStripeBillingPlan)
+	// D. Build stripe invoice action (manual — bypassing evaluateStripeBillingPlan)
 	const addLineParams = lineItemsToInvoiceAddLinesParams({
 		lineItems: [lineItem],
 	});
