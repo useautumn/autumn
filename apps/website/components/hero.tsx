@@ -28,11 +28,7 @@ const getLoggedInHintCookie = () => {
 
 export default function Hero() {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	// Start with the final text so SSR/first paint shows "// 100% open source"
-	// immediately. The typewriter effect only runs on fast desktop hydration
-	// (it intentionally clears and re-scrambles this value); everywhere else
-	// the initial text is left alone.
-	const [displayedText, setDisplayedText] = useState(BADGE_TEXT);
+	const [displayedText, setDisplayedText] = useState("");
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	// Gate the xl-only hero visual (background video + AutumnConfig syntax
 	// highlighter) behind an actual viewport check so mobile never downloads
@@ -55,18 +51,6 @@ export default function Hero() {
 
 	// Badge typewriter
 	useEffect(() => {
-		// Only run the typewriter scramble on fast desktop hydration. Initial
-		// state is already `BADGE_TEXT`, so bailing here leaves the SSR-rendered
-		// text in place. On mobile, tablets, or slow-hydration desktop this
-		// avoids a jarring "full text -> empty -> scrambled in" flash that
-		// fires many seconds after the page has already been visible.
-		if (
-			window.matchMedia("(max-width: 1023px)").matches ||
-			performance.now() > 300
-		) {
-			return;
-		}
-
 		const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*0123456789";
 		let intervalId: ReturnType<typeof setInterval> | null = null;
 		let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -106,38 +90,38 @@ export default function Hero() {
 
 	useGSAP(
 		() => {
-			// IMPORTANT: do NOT gate `.hero-root` behind opacity:0 here or in JSX.
-			// GSAP ships in a code-split chunk, so if the class were `opacity-0`
-			// by default the hero would stay invisible for the full duration of
-			// the JS chunk download + parse + hydrate on mobile (~several seconds
-			// on Slow 4G). We use `gsap.from()` tweens so the content is visible
-			// by default and only animates if GSAP has loaded by first frame.
+			gsap.set(".hero-root", { opacity: 0 });
 
-			// Skip the entrance animation on non-desktop viewports, or on any
-			// device where hydration landed well after first paint. Running
-			// `.from()` tweens late would visibly hide already-painted content
-			// and animate it back in — a much worse UX than no animation.
-			// Threshold is tight (300ms) so the flash never happens on slow
-			// devices; only near-instant hydration earns the animation.
-			if (
-				window.matchMedia("(max-width: 1023px)").matches ||
-				performance.now() > 300
-			) {
-				return;
-			}
+			gsap.set(".hero-bg", {
+				opacity: 0,
+				filter: "blur(6px) brightness(1)",
+				scale: 0.97,
+				transformOrigin: "center top",
+			});
+
+			gsap.set(".hero-reveal", {
+				opacity: 0,
+				y: 25,
+				filter: "blur(12px)",
+				scale: 0.96,
+				transformOrigin: "center bottom",
+			});
+
+			gsap.set(".hero-cta", { opacity: 0, scale: 0.95 });
 
 			const tl = gsap.timeline({
 				defaults: { overwrite: "auto" },
 			});
 
-			tl.from(".hero-bg", {
-				opacity: 0,
-				filter: "blur(6px) brightness(1)",
-				scale: 0.97,
-				transformOrigin: "center top",
-				duration: 0.4,
-				ease: "power2.out",
-			})
+			tl.to(".hero-root", { opacity: 1, duration: 0.3, ease: "none" })
+
+				.to(".hero-bg", {
+					opacity: 1,
+					filter: "blur(0px) brightness(1)",
+					scale: 1,
+					duration: 0.4,
+					ease: "power2.out",
+				})
 
 				.to(".hero-bg", {
 					filter: "blur(0px) brightness(1.6)",
@@ -151,14 +135,13 @@ export default function Hero() {
 					ease: "power2.out",
 				})
 
-				.from(
+				.to(
 					".hero-reveal",
 					{
-						opacity: 0,
-						y: 25,
-						filter: "blur(12px)",
-						scale: 0.96,
-						transformOrigin: "center bottom",
+						opacity: 1,
+						y: 0,
+						filter: "blur(0px)",
+						scale: 1,
 						duration: 1.1,
 						stagger: 0.1,
 						ease: "power3.out",
@@ -166,11 +149,11 @@ export default function Hero() {
 					"-=0.2",
 				)
 
-				.from(
+				.to(
 					".hero-cta",
 					{
-						opacity: 0,
-						scale: 0.95,
+						opacity: 1,
+						scale: 1,
 						duration: 0.3,
 						stagger: 0.06,
 						ease: "back.out(1.5)",
@@ -183,7 +166,7 @@ export default function Hero() {
 
 	return (
 		<div ref={containerRef}>
-			<div className="relative hero-root flex flex-col items-stretch pb-0 md:pb-12 mb-0 bg-[#0F0F0F]">
+			<div className="relative hero-root opacity-0 flex flex-col items-stretch pb-0 md:pb-12 mb-0 bg-[#0F0F0F]">
 				<div className="flex justify-between">
 					<div className="flex flex-col gap-6 px-4 xl:px-22.75 py-8 bg-[#0F0F0F] mt-26">
 						<h4 className="hero-reveal relative uppercase font-mono tracking-[-2%] text-[12px] md:text-sm leading-sm text-white md:text-[#FFFFFF99] bg-[#2c2c2d] w-fit p-2 min-h-[30px] md:min-h-[36px] flex items-center">

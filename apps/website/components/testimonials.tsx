@@ -41,7 +41,6 @@ const testimonialsData = [
 ];
 
 const Testimonials = () => {
-	const videoRef = useRef<HTMLVideoElement | null>(null);
 	const scrollRef = useRef<HTMLDivElement | null>(null);
 	const progressRef = useRef<HTMLDivElement | null>(null);
 	const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -65,12 +64,6 @@ const Testimonials = () => {
 				const progress = maxScroll > 0 ? (scrollLeft / maxScroll) * 100 : 0;
 				progressRef.current.style.transform = `translateX(${progress}%)`;
 			}
-		}
-	}, []);
-
-	useEffect(() => {
-		if (videoRef.current) {
-			videoRef.current.playbackRate = 0.4;
 		}
 	}, []);
 
@@ -143,7 +136,6 @@ const Testimonials = () => {
 									<div className="absolute inset-x-0 bottom-0 h-[120%] pointer-events-none z-0 overflow-hidden">
 										<div className="absolute inset-0 opacity-0 translate-y-6 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out pointer-events-none z-0 hidden md:block">
 											<video
-												ref={videoRef}
 												src="/images/testimonials/testimonial section.webm"
 												autoPlay
 												loop
