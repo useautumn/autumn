@@ -18,7 +18,7 @@ export type PayInvoiceResult = {
 
 type PayStripeInvoiceParams = {
 	stripeCli: Stripe;
-	invoiceId: string;
+	invoice: Stripe.Invoice;
 	paymentMethod?: Stripe.PaymentMethod | null;
 };
 
@@ -28,13 +28,10 @@ type PayStripeInvoiceParams = {
 
 export const payStripeInvoice = async ({
 	stripeCli,
-	invoiceId,
+	invoice,
 	paymentMethod,
 }: PayStripeInvoiceParams): Promise<PayInvoiceResult> => {
-	// 1. Retrieve invoice to check status
-	const invoice = await stripeCli.invoices.retrieve(invoiceId);
-
-	// 2. Already paid - return success
+	// 1. Already paid - return success
 	if (invoice.status === "paid") {
 		return {
 			paid: true,
@@ -42,7 +39,7 @@ export const payStripeInvoice = async ({
 		};
 	}
 
-	// 3. No payment method - return failure
+	// 2. No payment method - return failure
 	if (!paymentMethod) {
 		return handleInvoicePaymentFailure({
 			invoice,
@@ -50,9 +47,9 @@ export const payStripeInvoice = async ({
 		});
 	}
 
-	// 4. Attempt payment
+	// 3. Attempt payment
 	const { data: paidInvoice, error } = await tryCatch(
-		stripeCli.invoices.pay(invoiceId, {
+		stripeCli.invoices.pay(invoice.id, {
 			payment_method: paymentMethod.id,
 		}),
 	);
