@@ -27,7 +27,7 @@ if (cluster.isPrimary) {
 	// await initHatchetWorker();
 
 	console.log(`Starting ${NUM_PROCESSES} worker processes`);
-	console.log(`SQS URL: ${process.env.SQS_QUEUE_URL}`);
+	console.log(`SQS URL: ${process.env.SQS_QUEUE_URL_V2}`);
 
 	// Fork workers
 	for (let i = 0; i < NUM_PROCESSES; i++) {

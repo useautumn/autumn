@@ -141,7 +141,7 @@ jobs:
             echo "Detected merged fix/ branch: $BRANCH_NAME"
             echo "Triggering auto-deploy..."
             
-            curl -X POST "$DEPLOY_URL/api/deploy/github" \
+            curl --fail-with-body -X POST "$DEPLOY_URL/api/deploy/github" \
               -H "Content-Type: application/json" \
               -H "x-deploy-secret: $DEPLOY_SECRET" \
               -d "{\"commitSha\": \"$COMMIT_SHA\", \"deploymentType\": \"server\"}"
@@ -159,7 +159,7 @@ jobs:
           COMMIT_SHA: ${{ github.sha }}
         run: |
           echo "Deploying to staging..."
-          curl -X POST "$DEPLOY_URL/api/deploy/github/staging" \
+          curl --fail-with-body -X POST "$DEPLOY_URL/api/deploy/github/staging" \
             -H "Content-Type: application/json" \
             -H "x-deploy-secret: $DEPLOY_SECRET" \
             -d "{\"commitSha\": \"$COMMIT_SHA\"}"
