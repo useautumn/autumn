@@ -93,8 +93,12 @@ const buildMutationLogs = ({
 /**
  * Runs a single deduction pass over customer entitlements, tracking updates and mutation logs.
  * Extracted to avoid duplicating the per-cusEnt loop logic across passes.
+ *
+ * Also exported for reuse by callers that need the "paydown primitive" — e.g. the auto
+ * top-up rebalancer uses a single pass with `maxBalance: 0` and a negative `amountToDeduct`
+ * to heal overage'd cusEnts up to (but not past) zero.
  */
-const runDeductionPass = ({
+export const runDeductionPass = ({
 	cusEnts,
 	amountToDeduct,
 	targetEntityId,
