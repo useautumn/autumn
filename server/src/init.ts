@@ -30,9 +30,11 @@ import { closeStripeSyncEngine } from "@autumn/stripe-sync";
 import {
 	startRedisMonitor,
 	stopRedisMonitor,
+	primeRedisMonitor,
 	warmupRegionalRedis,
 } from "./external/redis/initRedis.js";
 import {
+	primeRedisV2Monitor,
 	startRedisV2Monitor,
 	stopRedisV2Monitor,
 } from "./external/redis/initUtils/redisV2Availability.js";
@@ -54,12 +56,11 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 
 	initPgHealthMonitor({ client: clientCritical });
 
+	await startAllEdgeConfigPolling({ logger });
+	await warmupRegionalRedis();
+	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 	startRedisMonitor();
 	startRedisV2Monitor();
-	void warmupRegionalRedis().catch((error) => {
-		logger.warn("[Redis] Warmup failed", { error });
-	});
-	await startAllEdgeConfigPolling({ logger });
 
 	const PORT = process.env.SERVER_PORT
 		? Number.parseInt(process.env.SERVER_PORT)

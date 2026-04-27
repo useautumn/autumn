@@ -17,6 +17,7 @@ export {
 } from "./initUtils/redisConfig.js";
 export {
 	getRedisAvailability,
+	primeRedisMonitor,
 	shouldUseRedis,
 	startRedisMonitor,
 	stopRedisMonitor,

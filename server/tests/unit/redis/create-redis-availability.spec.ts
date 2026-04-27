@@ -27,6 +27,13 @@ class FakeRedis {
 	}
 }
 
+class HealthyFakeRedis extends FakeRedis {
+	override async ping() {
+		this.pingCalls++;
+		return "PONG";
+	}
+}
+
 const wait = (ms: number) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -41,7 +48,7 @@ const waitUntil = async (check: () => boolean, timeoutMs: number) => {
 };
 
 describe("createRedisAvailability", () => {
-	test("starts healthy before the first probe runs", () => {
+	test("starts degraded before the first probe runs", () => {
 		const redis = new FakeRedis();
 		const availability = createRedisAvailability({
 			redis: redis as never,
@@ -49,6 +56,20 @@ describe("createRedisAvailability", () => {
 			logPrefix: "RedisV2",
 			logType: "redis_v2_availability_state_set",
 		});
+
+		expect(availability.shouldUseRedis()).toBe(false);
+	});
+
+	test("primes healthy after a successful initial probe", async () => {
+		const redis = new HealthyFakeRedis();
+		const availability = createRedisAvailability({
+			redis: redis as never,
+			hasConfig: true,
+			logPrefix: "RedisV2",
+			logType: "redis_v2_availability_state_set",
+		});
+
+		await availability.prime();
 
 		expect(availability.shouldUseRedis()).toBe(true);
 	});
