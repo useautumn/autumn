@@ -54,12 +54,15 @@ export const setupBillingCycleAnchor = ({
 		? secondsToMs(stripeSubscription?.trial_end)
 		: undefined;
 
-	const newIsTrialing =
-		(trialContext?.trialEndsAt && trialContext.trialEndsAt > currentEpochMs) ??
-		stripeTrialEndsAtMs;
+	// Prefer the new product's trial context when it has a future end,
+	// otherwise inherit the trialing Stripe subscription's trial_end.
+	const trialEndsAtMs =
+		trialContext?.trialEndsAt && trialContext.trialEndsAt > currentEpochMs
+			? trialContext.trialEndsAt
+			: stripeTrialEndsAtMs;
 
 	// Billing cycle anchor = trial ends at if exists
-	if (newIsTrialing) return trialContext?.trialEndsAt ?? "now";
+	if (trialEndsAtMs) return trialEndsAtMs;
 
 	return secondsToMs(stripeSubscription?.billing_cycle_anchor) ?? "now";
 };
