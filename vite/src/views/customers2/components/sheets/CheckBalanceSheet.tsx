@@ -66,7 +66,7 @@ export function CheckBalanceSheet() {
 					title="Check Balance"
 					description={
 						scopeEntityId
-							? `Tracking for entity ${fullEntity?.name || scopeEntityId}`
+						? `Checking balance for entity ${fullEntity?.name || scopeEntityId}`
 							: `POST /check for ${featureName ?? featureId}`
 					}
 				/>
