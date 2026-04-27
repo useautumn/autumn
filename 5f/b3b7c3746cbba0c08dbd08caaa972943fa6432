@@ -1,0 +1,23 @@
+server/tests/integration/crud/plans/get-plan-advanced.test.ts
+  0a8013228ca1b666 237-417
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "5fb3b7c3746cbba0c08dbd08caaa972943fa6432",
+  "prompts": {
+    "0a8013228ca1b666": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_23092dff1ffe7Mn7tK6xza926t",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 181,
+      "total_deletions": 0,
+      "accepted_lines": 181,
+      "overriden_lines": 0
+    }
+  }
+}
