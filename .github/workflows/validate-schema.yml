@@ -1,6 +1,9 @@
 name: Validate Production Schema
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
