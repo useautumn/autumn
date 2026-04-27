@@ -14,6 +14,7 @@ const redisAvailability = createRedisAvailability({
 
 export const startRedisMonitor = redisAvailability.startMonitor;
 export const stopRedisMonitor = redisAvailability.stopMonitor;
+export const primeRedisMonitor = redisAvailability.prime;
 export const shouldUseRedis = redisAvailability.shouldUseRedis;
 export const getRedisAvailability = redisAvailability.getRedisAvailability;
 
