@@ -11,6 +11,12 @@
 		"enumMembers",
 		"duplicates"
 	],
+	"ignoreWorkspaces": [
+		"packages/atmn",
+		"packages/autumn-js",
+		"packages/openapi",
+		"packages/sdk"
+	],
 	"workspaces": {
 		".": {
 			"entry": ["apps/scope-picker/**/*"]
@@ -63,24 +69,8 @@
 			"project": ["src/**/*.{ts,tsx}"],
 			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
 		},
-		"packages/atmn": {
-			"entry": ["src/cli.tsx", "src/compose/index.ts"],
-			"project": ["src/**/*.{ts,tsx}", "*.ts"]
-		},
-		"packages/autumn-js": {
-			"entry": ["src/{sdk,react,backend,better-auth}/index.ts", "src/backend/adapters/*.ts"],
-			"project": ["src/**/*.ts", "*.ts"]
-		},
 		"packages/ksuid": {
 			"project": ["src/**/*.ts"]
-		},
-		"packages/openapi": {
-			"entry": ["scripts/**/*.ts", "v2.1/contracts/index.ts"],
-			"project": ["**/*.ts"]
-		},
-		"packages/sdk": {
-			"entry": ["src/*.ts", "examples/**/*.ts"],
-			"project": ["src/**/*.ts", "examples/**/*.ts"]
 		},
 		"packages/stripe-sync": {
 			"entry": ["scripts/**/*.ts"],
