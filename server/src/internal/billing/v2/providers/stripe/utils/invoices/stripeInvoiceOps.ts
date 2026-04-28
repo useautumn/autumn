@@ -104,11 +104,7 @@ export const createStripeInvoiceItems = async ({
 }: CreateStripeInvoiceItemsParams): Promise<Stripe.InvoiceItem[]> => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-	const invoiceItemsCreated: Stripe.InvoiceItem[] = [];
-	for (const item of invoiceItems) {
-		const invoiceItem = await stripeCli.invoiceItems.create(item);
-		invoiceItemsCreated.push(invoiceItem);
-	}
-
-	return invoiceItemsCreated;
+	return Promise.all(
+		invoiceItems.map((item) => stripeCli.invoiceItems.create(item)),
+	);
 };

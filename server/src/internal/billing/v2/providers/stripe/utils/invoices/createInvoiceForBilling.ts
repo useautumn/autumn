@@ -119,7 +119,7 @@ export const createInvoiceForBilling = async ({
 
 	return payStripeInvoice({
 		stripeCli,
-		invoiceId: finalizedInvoice.id,
+		invoice: finalizedInvoice,
 		paymentMethod: billingContext.paymentMethod,
 	});
 };

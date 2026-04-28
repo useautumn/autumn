@@ -18,7 +18,9 @@ const serverPort = process.env.AGENT_SERVER_PORT ?? "8080";
 const vitePort = process.env.AGENT_VITE_PORT ?? "3000";
 
 if (existsSync(serverEnvPath)) {
-	console.log("[writeAgentEnv] server/.env already exists — skipping generation");
+	console.log(
+		"[writeAgentEnv] server/.env already exists — skipping generation",
+	);
 } else {
 	const passThrough = [
 		"STRIPE_SANDBOX_CLIENT_ID",
@@ -50,7 +52,7 @@ ENCRYPTION_IV=${genUrlSafeBase64({ bytes: 16 })}
 ENCRYPTION_PASSWORD=${genUrlSafeBase64({ bytes: 64 })}
 
 # Local services
-DATABASE_V2_URL=postgresql://postgres:postgres@localhost:5432/autumn
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/autumn
 CACHE_URL=redis://localhost:6379
 CACHE_URL_US_EAST=redis://localhost:6379
 REDIS_URL=redis://localhost:6379

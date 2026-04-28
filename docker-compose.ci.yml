@@ -8,7 +8,7 @@ services:
     volumes:
       - valkey-data:/bitnami/valkey/data
     healthcheck:
-      test: ['CMD', 'redis-cli', '-h', 'localhost', '-p', '6379', 'ping']
+      test: [ "CMD", "redis-cli", "-h", "localhost", "-p", "6379", "ping" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -65,7 +65,7 @@ services:
     environment:
       - NODE_ENV=development
       - REDIS_URL=redis://valkey:6379
-      - DATABASE_V2_URL=${DATABASE_V2_URL}
+      - DATABASE_URL=${DATABASE_URL}
       - ENCRYPTION_IV=${ENCRYPTION_IV}
       - ENCRYPTION_PASSWORD=${ENCRYPTION_PASSWORD}
       - TESTS_ORG=${TESTS_ORG}
@@ -98,7 +98,6 @@ services:
       - shared
     restart: unless-stopped
 
-
   # Run localtunnel
   localtunnel:
     build:
@@ -112,7 +111,6 @@ services:
     depends_on:
       - server
     restart: unless-stopped
-
 
 volumes:
   # Shared package dist output

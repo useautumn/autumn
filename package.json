@@ -71,7 +71,7 @@
 	"scripts": {
 		"dev": "bun scripts/dev.ts",
 		"vite:build": "bun -F @autumn/vite build:bun",
-		"t": "infisical run --env=dev --recursive -- bun scripts/testScripts/testDispatcher.ts",
+		"t": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/testScripts/testDispatcher.ts",
 		"cm": "cd server && bun cm",
 		"d": "lsof -ti:8080 -ti:3000 | xargs kill -9 2>/dev/null || true; ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dev.ts",
 		"d:prod": "lsof -ti:8080 -ti:3000 | xargs kill -9 2>/dev/null || true; ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dev.ts --production",
