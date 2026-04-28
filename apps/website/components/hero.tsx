@@ -1,13 +1,12 @@
 "use client";
 
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
 import { motion } from "motion/react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CTALines, IconCTADocs, IconCTAStart } from "@/app/constant";
+import { getGsap } from "@/lib/lazyGsap";
 
 // `AutumnConfig` pulls in `react-syntax-highlighter` + `highlight.js` (~100KB
 // gzipped + meaningful parse cost on mobile). It only renders on `xl+`
@@ -88,85 +87,44 @@ export default function Hero() {
 		};
 	}, []);
 
-	useGSAP(
-		() => {
-			gsap.set(".hero-root", { opacity: 0 });
+	useEffect(() => {
+		const container = containerRef.current;
+		if (!container) return;
 
-			gsap.set(".hero-bg", {
-				opacity: 0,
-				filter: "blur(6px) brightness(1)",
-				scale: 0.97,
-				transformOrigin: "center top",
-			});
+		let ctx: { revert: () => void } | null = null;
+		let cancelled = false;
 
-			gsap.set(".hero-reveal", {
-				opacity: 0,
-				y: 25,
-				filter: "blur(12px)",
-				scale: 0.96,
-				transformOrigin: "center bottom",
-			});
+		getGsap().then((gsap) => {
+			if (cancelled) return;
+			ctx = gsap.context(() => {
+				gsap.set(".hero-reveal", {
+					opacity: 0,
+					y: 25,
+					scale: 0.96,
+					transformOrigin: "center bottom",
+				});
+				gsap.set(".hero-cta", { opacity: 0, scale: 0.95 });
 
-			gsap.set(".hero-cta", { opacity: 0, scale: 0.95 });
+				const tl = gsap.timeline({ defaults: { overwrite: "auto" } });
 
-			const tl = gsap.timeline({
-				defaults: { overwrite: "auto" },
-			});
+				// hero-bg is intentionally NOT hidden — it is the LCP element and
+				// must be visible from first paint. The brightness flash still runs.
+				tl.to(".hero-bg", { filter: "brightness(1.6)", duration: 0.125, ease: "power2.in" })
+					.to(".hero-bg", { filter: "brightness(1)", duration: 0.125, ease: "power2.out" })
+					.to(".hero-reveal", { opacity: 1, y: 0, scale: 1, duration: 1.1, stagger: 0.1, ease: "power3.out" }, "-=0.2")
+					.to(".hero-cta", { opacity: 1, scale: 1, duration: 0.3, stagger: 0.06, ease: "back.out(1.5)" }, "-=0.1");
+			}, container);
+		});
 
-			tl.to(".hero-root", { opacity: 1, duration: 0.3, ease: "none" })
-
-				.to(".hero-bg", {
-					opacity: 1,
-					filter: "blur(0px) brightness(1)",
-					scale: 1,
-					duration: 0.4,
-					ease: "power2.out",
-				})
-
-				.to(".hero-bg", {
-					filter: "blur(0px) brightness(1.6)",
-					duration: 0.125,
-					ease: "power2.in",
-				})
-
-				.to(".hero-bg", {
-					filter: "blur(0px) brightness(1)",
-					duration: 0.125,
-					ease: "power2.out",
-				})
-
-				.to(
-					".hero-reveal",
-					{
-						opacity: 1,
-						y: 0,
-						filter: "blur(0px)",
-						scale: 1,
-						duration: 1.1,
-						stagger: 0.1,
-						ease: "power3.out",
-					},
-					"-=0.2",
-				)
-
-				.to(
-					".hero-cta",
-					{
-						opacity: 1,
-						scale: 1,
-						duration: 0.3,
-						stagger: 0.06,
-						ease: "back.out(1.5)",
-					},
-					"-=0.1",
-				);
-		},
-		{ scope: containerRef },
-	);
+		return () => {
+			cancelled = true;
+			ctx?.revert();
+		};
+	}, []);
 
 	return (
 		<div ref={containerRef}>
-			<div className="relative hero-root opacity-0 flex flex-col items-stretch pb-0 md:pb-12 mb-0 bg-[#0F0F0F]">
+			<div className="relative hero-root flex flex-col items-stretch pb-0 md:pb-12 mb-0 bg-[#0F0F0F]">
 				<div className="flex justify-between">
 					<div className="flex flex-col gap-6 px-4 xl:px-22.75 py-8 bg-[#0F0F0F] mt-26">
 						<h4 className="hero-reveal relative uppercase font-mono tracking-[-2%] text-[12px] md:text-sm leading-sm text-white md:text-[#FFFFFF99] bg-[#2c2c2d] w-fit p-2 min-h-[30px] md:min-h-[36px] flex items-center">
@@ -305,6 +263,7 @@ export default function Hero() {
 							aria-hidden="true"
 							fill
 							priority
+							fetchPriority="high"
 							sizes="100vw"
 							className="hero-bg absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100 pointer-events-none select-none"
 						/>
