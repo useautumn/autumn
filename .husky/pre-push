@@ -18,9 +18,9 @@ changed_files="$(
 )"
 
 if printf '%s\n' "$changed_files" | grep -q '^server/'; then
-	(cd server && bun test tests/unit)
+	bunx turbo run test:unit --filter=@autumn/server
 fi
 
 if printf '%s\n' "$changed_files" | grep -q '^vite/'; then
-	(cd vite && bun test tests/)
+	bunx turbo run test:unit --filter=@autumn/vite
 fi

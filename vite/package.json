@@ -6,8 +6,10 @@
 	"scripts": {
 		"dev": "vite --host",
 		"build": "tsc && vite build",
+		"ts": "tsc --noEmit",
 		"start": "serve -s dist",
 		"lint": "eslint .",
+		"test:unit": "bun test tests/",
 		"preview": "vite preview",
 		"dev:bun": "bunx --bun vite --port 3000 --host",
 		"build:bun": "tsc && bunx --bun vite build",

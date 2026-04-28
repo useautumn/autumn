@@ -5,9 +5,9 @@ changed_files="$(git diff --cached --name-only)"
 bun knip
 
 if printf '%s\n' "$changed_files" | grep -q '^server/'; then
-	(cd server && bun ts)
+	bunx turbo run ts --filter=@autumn/server
 fi
 
 if printf '%s\n' "$changed_files" | grep -q '^vite/'; then
-	(cd vite && bunx tsc --noEmit)
+	bunx turbo run ts --filter=@autumn/vite
 fi
