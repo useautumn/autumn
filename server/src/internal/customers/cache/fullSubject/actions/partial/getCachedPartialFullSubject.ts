@@ -13,6 +13,7 @@ import { filterNormalizedFullSubjectByFeatureIds } from "../../filterFullSubject
 import {
 	type CachedFullSubject,
 	cachedFullSubjectToNormalized,
+	FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 } from "../../fullSubjectCacheModel.js";
 import { sanitizeCachedFullSubject } from "../../sanitize/index.js";
 import { tryOrInvalidate } from "../../tryOrInvalidate.js";
@@ -128,6 +129,28 @@ export const getCachedPartialFullSubject = async ({
 		warnMessage: `[getCachedPartialFullSubject] Stale subject view epoch for ${subjectLabel}, cached=${cached.subjectViewEpoch}, current=${currentSubjectViewEpoch}, source: ${source}`,
 	});
 	if (epochOk === undefined) {
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+		};
+	}
+
+	const schemaOk = await tryOrInvalidate({
+		ctx,
+		operation: () =>
+			cached._schemaVersion === FULL_SUBJECT_CACHE_SCHEMA_VERSION
+				? true
+				: undefined,
+		invalidate: () =>
+			invalidateCachedFullSubjectExact({
+				ctx,
+				customerId,
+				entityId,
+				source: "partial-stale-subject-schema-version",
+			}),
+		warnMessage: `[getCachedPartialFullSubject] Stale subject schema version for ${subjectLabel}, cached=${cached._schemaVersion ?? "missing"}, current=${FULL_SUBJECT_CACHE_SCHEMA_VERSION}, source=${source}`,
+	});
+	if (schemaOk === undefined) {
 		return {
 			fullSubject: undefined,
 			subjectViewEpoch: currentSubjectViewEpoch,
