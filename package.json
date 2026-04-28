@@ -111,7 +111,7 @@
 		"site": "cd apps/website && bun dev && cd ../..",
 		"docs": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build",
-		"ts": "bun -F @autumn/server ts && bun -F autumn-js ts && bun -F @autumn/openapi ts && bun -F atmn ts && bun -F checkout ts",
+		"ts": "turbo run ts --filter=@autumn/server --filter=autumn-js --filter=@autumn/openapi --filter=atmn --filter=checkout",
 		"atmn:build": "bun -F atmn build",
 		"openapi:ts": "bun -F @autumn/openapi ts",
 		"js:ts": "bun -F autumn-js ts",
