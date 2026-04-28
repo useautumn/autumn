@@ -2,10 +2,38 @@ name: Vite Unit Tests
 
 on:
   pull_request:
+    paths:
+      - "vite/**"
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
+  changes:
+    name: Check changed files
+    runs-on: ubuntu-latest
+    outputs:
+      vite: ${{ steps.filter.outputs.vite }}
+    steps:
+      - name: Check changed files
+        id: filter
+        uses: dorny/paths-filter@6852f92c20ea7fd3b0c25de3b5112db3a98da050
+        with:
+          filters: |
+            vite:
+              - "vite/**"
+              - "shared/**"
+              - "packages/atmn/**"
+              - "packages/autumn-js/**"
+              - "package.json"
+              - "bun.lock"
+              - ".github/workflows/vite-unit-tests.yml"
+
   unit-tests:
     name: Unit Tests
+    needs: changes
+    if: needs.changes.outputs.vite == 'true'
     runs-on: ubuntu-latest
 
     steps:
