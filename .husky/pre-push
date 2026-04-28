@@ -1,1 +1,11 @@
-cd server && bun ts
+set -e
+
+changed_files="$(git diff --name-only @{u}...HEAD 2>/dev/null || git diff --name-only origin/dev...HEAD)"
+
+if printf '%s\n' "$changed_files" | grep -q '^server/'; then
+	(cd server && bun test tests/unit)
+fi
+
+if printf '%s\n' "$changed_files" | grep -q '^vite/'; then
+	(cd vite && bun test tests/)
+fi
