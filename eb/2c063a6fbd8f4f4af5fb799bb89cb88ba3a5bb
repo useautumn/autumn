@@ -1,0 +1,27 @@
+shared/utils/cusProductUtils/filterCustomerProducts/filterCustomerProductsByProcessorType.ts
+  ebaef5a7b131dc4b 7-11,24-29
+server/tests/unit/billing/stripe/subscriptions/build-subscription-items-update-multi-product.spec.ts
+  ebaef5a7b131dc4b 1250-1252
+server/tests/unit/billing/filter-customer-products-by-processor-type.spec.ts
+  ebaef5a7b131dc4b 1-138
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "eb2c063a6fbd8f4f4af5fb799bb89cb88ba3a5bb",
+  "prompts": {
+    "ebaef5a7b131dc4b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_22b5551e3ffeRhDheLWriEYeoC",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 152,
+      "total_deletions": 9,
+      "accepted_lines": 1077,
+      "overriden_lines": 0
+    }
+  }
+}
