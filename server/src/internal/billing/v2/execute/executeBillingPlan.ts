@@ -46,10 +46,7 @@ export const executeBillingPlan = async ({
 			});
 		}
 
-		if (
-			checkoutLockParamsHash &&
-			stripeBillingResult.stripeCheckoutSession
-		) {
+		if (checkoutLockParamsHash && stripeBillingResult.stripeCheckoutSession) {
 			await checkoutSessionLock.set({
 				ctx,
 				customerId:
@@ -59,8 +56,7 @@ export const executeBillingPlan = async ({
 					paramsHash: checkoutLockParamsHash,
 					checkoutSessionUrl:
 						stripeBillingResult.stripeCheckoutSession.url ?? "",
-					checkoutSessionId:
-						stripeBillingResult.stripeCheckoutSession.id ?? "",
+					checkoutSessionId: stripeBillingResult.stripeCheckoutSession.id ?? "",
 				},
 			});
 		}

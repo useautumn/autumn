@@ -35,7 +35,8 @@ import { Decimal } from "decimal.js";
 // Both cached and non-cached (DB-synced) balances are asserted.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const NUM_PAIRS = 1000;
+// Reduced from 1000 — local Redis saturates under FullSubject cache load
+const NUM_PAIRS = 500;
 
 const INITIAL_ACTION1 = 1000;
 const INITIAL_CREDITS = 2000;

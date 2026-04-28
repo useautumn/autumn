@@ -177,10 +177,10 @@ const generateSupabaseDatabaseUrl = async () => {
 	const projectId = found.id;
 	const region = found.region;
 
-	// Step 8: Construct DATABASE_V2_URL
+	// Step 8: Construct DATABASE_URL
 	const databaseUrl = `postgresql://postgres.${projectId}:${dbPassword}@aws-1-${region}.pooler.supabase.com:5432/postgres`;
 	console.log(chalk.greenBright(`\nGenerated DB password: ${dbPassword}\n`));
-	console.log(chalk.greenBright(`\nYour DATABASE_V2_URL is:\n${databaseUrl}\n`));
+	console.log(chalk.greenBright(`\nYour DATABASE_URL is:\n${databaseUrl}\n`));
 	console.log(chalk.yellow("--------------------------------"));
 
 	// Step 9: Prompt to run docker compose up
@@ -208,8 +208,8 @@ const handleDatabaseSetup = async () => {
 			message: chalk.cyan("How do you want to set up your database?"),
 			choices: [
 				{ name: "Set up Supabase (Cloud) for Autumn", value: "supabase" },
-				{ name: "Paste in your own DATABASE_V2_URL", value: "paste" },
-				{ name: "Paste in your own DATABASE_V2_URL later", value: "later" },
+				{ name: "Paste in your own DATABASE_URL", value: "paste" },
+				{ name: "Paste in your own DATABASE_URL later", value: "later" },
 			],
 			default: "supabase",
 		},
@@ -224,7 +224,7 @@ const handleDatabaseSetup = async () => {
 			{
 				type: "input",
 				name: "databaseUrl",
-				message: "Paste in your DATABASE_V2_URL:",
+				message: "Paste in your DATABASE_URL:",
 				validate: (input) => input && input.length > 5,
 			},
 		]);
@@ -285,7 +285,7 @@ async function main() {
 
 	// Database section
 	if (databaseUrl) {
-		envSections.push("# Database", `DATABASE_V2_URL=${databaseUrl}`, "");
+		envSections.push("# Database", `DATABASE_URL=${databaseUrl}`, "");
 	}
 
 	// Stripe Webhooks section

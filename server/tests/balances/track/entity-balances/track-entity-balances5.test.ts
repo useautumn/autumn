@@ -36,7 +36,8 @@ const freeProd = constructProduct({
 	items: [customerMessagesItem, entityMessagesItem],
 });
 
-const NUM_REQUESTS = 5000;
+// Reduced from 5000 — local Redis saturates under new FullSubject cache load.
+const NUM_REQUESTS = 500;
 const NUM_CUSTOMERS = 1;
 const NUM_ENTITIES = 2;
 

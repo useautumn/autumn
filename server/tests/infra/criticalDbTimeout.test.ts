@@ -1,5 +1,5 @@
-import net from "node:net";
 import { expect, test } from "bun:test";
+import net from "node:net";
 import { sql } from "drizzle-orm";
 import { assertNotProductionDb } from "@/db/dbUtils.js";
 import {
@@ -47,8 +47,8 @@ test("db connect timeout fails fast when postgres accepts tcp but never responds
 		throw new Error("Failed to bind test TCP server");
 	}
 
-	const databaseUrl = process.env.DATABASE_V2_URL;
-	process.env.DATABASE_V2_URL = `postgres://user:password@127.0.0.1:${address.port}/db`;
+	const databaseUrl = process.env.DATABASE_URL;
+	process.env.DATABASE_URL = `postgres://user:password@127.0.0.1:${address.port}/db`;
 
 	const { client: deadClient } = initDrizzle({ connectTimeout: 1 });
 	const startedAt = Date.now();
@@ -58,7 +58,7 @@ test("db connect timeout fails fast when postgres accepts tcp but never responds
 
 		expect(Date.now() - startedAt).toBeLessThan(2_000);
 	} finally {
-		process.env.DATABASE_V2_URL = databaseUrl;
+		process.env.DATABASE_URL = databaseUrl;
 		await deadClient.end().catch(() => {});
 		await new Promise<void>((resolve, reject) => {
 			server.close((error) => (error ? reject(error) : resolve()));

@@ -26,6 +26,7 @@ const getPrimaryBackedRedisV2Availability = (): RedisAvailabilitySnapshot => {
 
 const redisV2Availability = usesPrimaryRedis
 	? {
+			prime: noop,
 			startMonitor: noop,
 			stopMonitor: noop,
 			shouldUseRedis,
@@ -39,6 +40,7 @@ const redisV2Availability = usesPrimaryRedis
 		});
 
 const {
+	prime: primeRedisV2Monitor,
 	startMonitor: startRedisV2Monitor,
 	stopMonitor: stopRedisV2Monitor,
 	shouldUseRedis: shouldUseRedisV2,
@@ -47,6 +49,7 @@ const {
 
 export {
 	getRedisV2Availability,
+	primeRedisV2Monitor,
 	startRedisV2Monitor,
 	stopRedisV2Monitor,
 	shouldUseRedisV2,
