@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { stripeWebhookEarlyAckMiddleware } from "@/external/stripe/webhookMiddlewares/stripeWebhookEarlyAckMiddleware";
 
-const wait = (ms = 0) => new Promise((resolve) => setTimeout(resolve, ms));
+const waitForImmediate = () => new Promise((resolve) => setImmediate(resolve));
 
 const createApp = () => {
 	const app = new Hono();
@@ -72,7 +72,7 @@ describe("stripeWebhookEarlyAckMiddleware", () => {
 		expect(processed).toBe(false);
 
 		resolveProcessing();
-		await wait(5);
+		await waitForImmediate();
 		expect(processed).toBe(true);
 	});
 
@@ -91,7 +91,7 @@ describe("stripeWebhookEarlyAckMiddleware", () => {
 		expect(await response.json()).toEqual({ received: true });
 		expect(started).toBe(false);
 
-		await wait(5);
+		await waitForImmediate();
 		expect(started).toBe(true);
 	});
 });
