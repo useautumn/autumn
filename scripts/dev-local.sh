@@ -17,7 +17,7 @@ cache_url="${LOCAL_CACHE_URL:-redis://localhost:6379}"
 echo "dev-local: overriding Infisical DATABASE_URL/CACHE_URL with local values and disabling CACHE_CERT"
 echo "dev-local: DATABASE_URL=${logged_database_url}"
 
-exec infisical run --env=prod -- env \
+exec infisical run --recursive --env=prod -- env \
 	ENV_FILE=.env.prod \
 	NODE_ENV=development \
 	DATABASE_URL="${database_url}" \

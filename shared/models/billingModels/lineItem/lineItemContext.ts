@@ -3,6 +3,7 @@ import { FullCustomerEntitlementSchema } from "../../cusProductModels/cusEntMode
 import { FullCustomerPriceSchema } from "../../cusProductModels/cusPriceModels/cusPriceModels";
 import { FullCusProductSchema } from "../../cusProductModels/cusProductModels";
 import { FeatureSchema } from "../../featureModels/featureModels";
+import { EntitySchema } from "../../cusModels/entityModels/entityModels";
 import { PriceSchema } from "../../productModels/priceModels/priceModels";
 import { ProductSchema } from "../../productModels/productModels";
 
@@ -25,6 +26,7 @@ export const LineItemContextSchema = z.object({
 	discountable: z.boolean().optional(), // If true, let Stripe auto-apply discounts to this line item
 
 	// Entity references (optional - not all line items have these)
+	entity: EntitySchema.optional(),
 	customerProduct: FullCusProductSchema.optional(),
 	customerPrice: FullCustomerPriceSchema.optional(),
 	customerEntitlement: FullCustomerEntitlementSchema.optional(),

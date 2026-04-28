@@ -42,6 +42,9 @@ export const computeCustomPlan = async ({
 		newCustomerProducts: [newFullCustomerProduct],
 		deletedCustomerProduct: customerProduct,
 		billingContext: updateSubscriptionContext,
+
+		includeArrearLineItems:
+			updateSubscriptionContext.chargeExistingOverages === true,
 	});
 
 	// If customer product is canceling, compute the scheduled product to delete

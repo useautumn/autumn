@@ -63,6 +63,9 @@ export const stripeLegacySeederMiddleware = async (
 		);
 	} catch (err: unknown) {
 		const message = err instanceof Error ? err.message : String(err);
+		logger.warn(
+			`Stripe legacy webhook signature verification failed: ${message}`,
+		);
 		return c.json({ error: `Webhook Error: ${message}` }, 400);
 	}
 
