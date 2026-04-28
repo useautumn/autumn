@@ -50,7 +50,7 @@ There is a legacy-compatibility exception in the adjust-balance flow:
 Projects maintain state in `.context/<project>/` folders across sessions. Tasks are optional parallel workstreams within a project.
 
 ### Default: NOT interacting with a project
-**Unless the user explicitly mentions a project or task by name, assume the current conversation is NOT associated with any project.** Session-start hooks may surface a list of active projects as reference material — that alone is NOT a signal that the current work belongs to any of them.
+**Unless the user explicitly mentions a project or task by name, assume the current conversation is NOT associated with any project.** Session-start hooks may surface a list of active projects as reference material -- that alone is NOT a signal that the current work belongs to any of them.
 
 Do not:
 - Read `.context/**` files proactively
@@ -77,7 +77,7 @@ Only update when the current work IS part of a project (see default-off rule abo
 
 Do NOT update context during normal coding work. Work first, compact at breakpoints.
 
-A STATUS.md entry should record changes to the project itself — not one-off work that merely uses the project (e.g. writing a consumer script of a framework is not a framework-project update).
+A STATUS.md entry should record changes to the project itself -- not one-off work that merely uses the project (e.g. writing a consumer script of a framework is not a framework-project update).
 
 ### Compaction quality
 STATUS.md must be:
