@@ -13,8 +13,20 @@ export const sanitizeCachedFullSubject = ({
 	cachedFullSubject,
 }: {
 	cachedFullSubject: CachedFullSubject;
-}): CachedFullSubject =>
-	normalizeFromSchema<CachedFullSubject>({
+}): CachedFullSubject => {
+	const normalized = normalizeFromSchema<CachedFullSubject>({
 		schema: CachedFullSubjectSchema,
 		data: cachedFullSubject,
 	});
+
+	// Safeguard for new product fields: Upstash Lua cjson collapses `{}` to `[]`,
+	// and pre-existing cache entries may not have these fields at all.
+	for (const product of normalized.products ?? []) {
+		const productAsRecord = product as { config?: unknown };
+		if (!productAsRecord.config || Array.isArray(productAsRecord.config)) {
+			productAsRecord.config = {};
+		}
+	}
+
+	return normalized;
+};
