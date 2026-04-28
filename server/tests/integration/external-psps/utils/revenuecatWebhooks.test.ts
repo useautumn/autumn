@@ -4,11 +4,12 @@ import {
 	AppEnv,
 	CusProductStatus,
 	customers,
+	revenuecatMappings,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
+import { and, arrayOverlaps, eq } from "drizzle-orm";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
@@ -176,13 +177,50 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 			webhookSecret: RC_WEBHOOK_SECRET,
 		});
 
-		// 2-4. Create products, mappings, and customer concurrently
+		// IMPORTANT: clean up stale RC mappings before re-upserting.
+		//
+		// `addPrefixToProducts` was changed in Jan from prefix-style
+		// (`${prefix}_${id}`) to suffix-style (`${id}_${prefix}`). Old runs left
+		// rows in `revenuecat_mappings` keyed by the prefix-style autumn_product_id
+		// (e.g. `rc1_rc1-pro-monthly`). The mapping table PK includes
+		// `autumn_product_id`, so a fresh upsert under the new ID does NOT
+		// overwrite the stale row. The resolver's `arrayContains` lookup can then
+		// return the stale row, causing `ProductNotFoundError`.
+		//
+		// Clear by `revenuecat_product_ids` overlap so the cleanup is independent
+		// of whatever stale autumn_product_id format was used previously.
+		await ctx.db
+			.delete(revenuecatMappings)
+			.where(
+				and(
+					eq(revenuecatMappings.org_id, ctx.org.id),
+					eq(revenuecatMappings.env, AppEnv.Sandbox),
+					arrayOverlaps(revenuecatMappings.revenuecat_product_ids, [
+						RC_PRO_MONTHLY_ID,
+						RC_PRO_YEARLY_ID,
+						RC_ADD_ON_ID,
+					]),
+				),
+			);
+
+		// Create products + customer concurrently. Products must finish before
+		// we read their (post-prefix) IDs for the mappings below.
 		await Promise.all([
 			initProductsV0({
 				ctx,
 				products: [proMonthly, proYearly, addOnPack],
 				prefix: testCase,
 			}),
+			initCustomerV3({
+				ctx,
+				customerId,
+				withTestClock: false,
+			}),
+		]);
+
+		// Now that initProductsV0 has mutated the product IDs (suffix-style),
+		// upsert mappings with the final, correct autumn_product_id values.
+		await Promise.all([
 			RCMappingService.upsert({
 				db: ctx.db,
 				data: {
@@ -209,11 +247,6 @@ describe(chalk.yellowBright("rc1: RevenueCat webhook integration"), () => {
 					autumn_product_id: proYearly.id,
 					revenuecat_product_ids: [RC_PRO_YEARLY_ID],
 				},
-			}),
-			initCustomerV3({
-				ctx,
-				customerId,
-				withTestClock: false,
 			}),
 		]);
 
