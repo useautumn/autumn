@@ -26,7 +26,7 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import type Stripe from "stripe";
 import { initDrizzle } from "@/db/initDrizzle";
-import { handleSubCreated } from "@/external/stripe/webhookHandlers/handleSubCreated/handleSubCreated";
+import { handleStripeSubscriptionCreated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
 import { OrgService } from "@/internal/orgs/OrgService";
@@ -215,7 +215,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: sync extern
 	expect(stripeSubscription.id).toBeDefined();
 	expect(stripeSubscription.status).toBe("active");
 
-	await handleSubCreated({
+	await handleStripeSubscriptionCreated({
 		ctx: await makeSubCreatedWebhookContext({
 			ctx,
 			customerId,
@@ -248,7 +248,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: sync extern
 test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips unknown Autumn customer")}`, async () => {
 	const { ctx, retrieveCalls } = makeGuardrailContext({});
 
-	await handleSubCreated({ ctx });
+	await handleStripeSubscriptionCreated({ ctx });
 
 	expect(retrieveCalls).toEqual([]);
 });
@@ -260,7 +260,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips alrea
 		fullCustomer: makeFullCustomer({ subscriptionIds: [subscriptionId] }),
 	});
 
-	await handleSubCreated({ ctx });
+	await handleStripeSubscriptionCreated({ ctx });
 
 	expect(retrieveCalls).toEqual([]);
 });
@@ -273,7 +273,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: production 
 	});
 
 	await withNodeEnv("production", async () => {
-		await handleSubCreated({ ctx });
+		await handleStripeSubscriptionCreated({ ctx });
 	});
 
 	expect(retrieveCalls).toEqual([]);
@@ -325,7 +325,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Strip
 		],
 	});
 
-	await handleSubCreated({
+	await handleStripeSubscriptionCreated({
 		ctx: await makeSubCreatedWebhookContext({
 			ctx,
 			customerId,
@@ -366,7 +366,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Strip
 		productIds: [pro.id, premium.id],
 	});
 
-	await handleSubCreated({
+	await handleStripeSubscriptionCreated({
 		ctx: await makeSubCreatedWebhookContext({
 			ctx,
 			customerId,

@@ -1,8 +1,8 @@
 import type { Price, Product } from "@autumn/shared";
 import type Stripe from "stripe";
-import { stripePriceIdMatchesAutumnPrice } from "../matchUtils/stripePriceIdMatchesAutumnPrice";
-import { stripeProductIdMatchesAutumnPrice } from "../matchUtils/stripeProductIdMatchesAutumnPrice";
-import { normalizeStripePrice } from "../normalizeStripeObject";
+import { stripePriceIdMatchesAutumnPrice } from "../matchUtils/stripePriceIdMatchesAutumnPrice.js";
+import { stripeProductIdMatchesAutumnPrice } from "../matchUtils/stripeProductIdMatchesAutumnPrice.js";
+import { normalizeStripePrice } from "../normalizeStripeObject.js";
 
 export const findStripePriceForAutumnPrice = ({
 	autumnPrice,

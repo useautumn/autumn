@@ -5,7 +5,7 @@ import {
 	type Product,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import type { NormalizedStripeSyncCandidate } from "../normalizeStripeObject";
+import type { NormalizedStripeSyncCandidate } from "../normalizeStripeObject.js";
 
 const getStripeProductIdForAutumnPrice = ({
 	price,

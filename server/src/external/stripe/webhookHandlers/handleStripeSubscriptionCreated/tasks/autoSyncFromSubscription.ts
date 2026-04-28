@@ -2,17 +2,17 @@ import type { SyncMappingV0 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
 import { sync } from "@/internal/billing/v2/actions/sync/sync.js";
 import { findAutumnProductsForSubscription } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/findAutumnProductsForSubscription.js";
-import type { SubCreatedContext } from "../setupSubCreatedContext.js";
+import type { StripeSubscriptionCreatedContext } from "../setupStripeSubscriptionCreatedContext.js";
 
 export const autoSyncFromSubscription = async ({
 	ctx,
-	subCreatedContext,
+	subscriptionCreatedContext,
 }: {
 	ctx: StripeWebhookContext;
-	subCreatedContext: SubCreatedContext;
+	subscriptionCreatedContext: StripeSubscriptionCreatedContext;
 }) => {
 	const { logger } = ctx;
-	const { subscription, fullCustomer, candidateProducts } = subCreatedContext;
+	const { subscription, fullCustomer, candidateProducts } = subscriptionCreatedContext;
 
 	const matchedProducts = findAutumnProductsForSubscription({
 		stripeSubscription: subscription,
@@ -42,6 +42,7 @@ export const autoSyncFromSubscription = async ({
 		{
 			stripe_subscription_id: subscription.id,
 			plan_id: matchedProduct.id,
+			expire_previous: true,
 		},
 	];
 

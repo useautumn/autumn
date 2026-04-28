@@ -1,8 +1,8 @@
 import type { Price, Product } from "@autumn/shared";
 import type Stripe from "stripe";
-import { normalizeStripePhaseItem } from "../normalizeStripeObject";
-import { stripePriceIdMatchesAutumnPrice } from "./stripePriceIdMatchesAutumnPrice";
-import { stripeProductIdMatchesAutumnPrice } from "./stripeProductIdMatchesAutumnPrice";
+import { normalizeStripePhaseItem } from "../normalizeStripeObject.js";
+import { stripePriceIdMatchesAutumnPrice } from "./stripePriceIdMatchesAutumnPrice.js";
+import { stripeProductIdMatchesAutumnPrice } from "./stripeProductIdMatchesAutumnPrice.js";
 
 export const phaseItemMatchesAutumnPrice = ({
 	phaseItem,

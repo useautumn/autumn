@@ -4,17 +4,17 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { getFullStripeSub } from "../../stripeSubUtils.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 
-export type SubCreatedContext = {
+export type StripeSubscriptionCreatedContext = {
 	subscription: Stripe.Subscription;
 	fullCustomer: FullCustomer;
 	candidateProducts: FullProduct[];
 };
 
-export const setupSubCreatedContext = async ({
+export const setupStripeSubscriptionCreatedContext = async ({
 	ctx,
 }: {
 	ctx: StripeWebhookContext;
-}): Promise<SubCreatedContext | undefined> => {
+}): Promise<StripeSubscriptionCreatedContext | undefined> => {
 	const { db, org, env, fullCustomer, stripeCli, stripeEvent } = ctx;
 	const stripeObject = stripeEvent.data.object as Stripe.Subscription;
 
@@ -22,8 +22,8 @@ export const setupSubCreatedContext = async ({
 	if (!fullCustomer) return undefined;
 
 	// Skip if Autumn already linked this sub (e.g. created via attach flow).
-	const alreadyLinked = fullCustomer.customer_products?.some((cp) =>
-		cp.subscription_ids?.includes(stripeObject.id),
+	const alreadyLinked = fullCustomer.customer_products?.some((customerProduct) =>
+		customerProduct.subscription_ids?.includes(stripeObject.id),
 	);
 	if (alreadyLinked) return undefined;
 
@@ -33,7 +33,7 @@ export const setupSubCreatedContext = async ({
 	]);
 
 	// Skip subs Autumn created itself — guards against the race where the
-	// attach flow has not yet written `subscription_ids` on the cusProduct
+	// attach flow has not yet written `subscription_ids` on the customerProduct
 	// when sub.created arrives.
 	if (subscription.metadata?.autumn_managed === "true") return undefined;
 

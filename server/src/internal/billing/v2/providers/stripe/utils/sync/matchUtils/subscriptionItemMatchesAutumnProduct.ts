@@ -1,7 +1,7 @@
 import type { Product } from "@autumn/shared";
 import type Stripe from "stripe";
-import { normalizeStripeSubscriptionItem } from "../normalizeStripeObject";
-import { stripeProductIdMatchesAutumnProduct } from "./stripeProductIdMatchesAutumnProduct";
+import { normalizeStripeSubscriptionItem } from "../normalizeStripeObject.js";
+import { stripeProductIdMatchesAutumnProduct } from "./stripeProductIdMatchesAutumnProduct.js";
 
 export const subscriptionItemMatchesAutumnProduct = ({
 	stripeSubscriptionItem,

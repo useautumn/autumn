@@ -1,6 +1,6 @@
 import type { Price } from "@autumn/shared";
-import type { NormalizedStripeSyncCandidate } from "../normalizeStripeObject";
-import { getStripePriceIdsForAutumnPrice } from "./getStripePriceIdsForAutumnPrice";
+import type { NormalizedStripeSyncCandidate } from "../normalizeStripeObject.js";
+import { getStripePriceIdsForAutumnPrice } from "./getStripePriceIdsForAutumnPrice.js";
 
 export const stripePriceIdMatchesAutumnPrice = ({
 	candidate,

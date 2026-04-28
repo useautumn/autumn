@@ -1,5 +1,5 @@
 import type { Product } from "@autumn/shared";
-import type { NormalizedStripeSyncCandidate } from "../normalizeStripeObject";
+import type { NormalizedStripeSyncCandidate } from "../normalizeStripeObject.js";
 
 export const stripeProductIdMatchesAutumnProduct = ({
 	candidate,

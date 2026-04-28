@@ -66,9 +66,9 @@ const removeCusProductFromScheduleItems = async ({
 		// 1. If arrear price
 		if (isConsumablePrice(price)) {
 			if (
-				allCusProducts.some((cp) => {
-					if (cp.id === cusProduct.id) return false;
-					if (cp.canceled) return false;
+				allCusProducts.some((customerProduct) => {
+					if (customerProduct.id === cusProduct.id) return false;
+					if (customerProduct.canceled) return false;
 
 					if (
 						phaseStart &&
@@ -77,14 +77,15 @@ const removeCusProductFromScheduleItems = async ({
 						return false;
 
 					if (
-						cusProductToPrices({ cusProduct: cp }).some((autumnPrice) =>
-							Boolean(
-								findPhaseItemForAutumnPrice({
-									price: autumnPrice,
-									product: cp.product,
-									phaseItems: [existingScheduleItem],
-								}),
-							),
+						cusProductToPrices({ cusProduct: customerProduct }).some(
+							(autumnPrice) =>
+								Boolean(
+									findPhaseItemForAutumnPrice({
+										price: autumnPrice,
+										product: customerProduct.product,
+										phaseItems: [existingScheduleItem],
+									}),
+								),
 						)
 					) {
 						return true;

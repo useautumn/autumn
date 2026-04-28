@@ -36,17 +36,24 @@ export const normalizeStripePhaseItem = ({
 }: {
 	phaseItem: Stripe.SubscriptionSchedule.Phase.Item;
 }): NormalizedStripeSyncCandidate => {
-	const stripePrice = phaseItem.price as Stripe.Price | undefined;
+	// Stripe types `phaseItem.price` as `string | Stripe.Price`. Handle both:
+	// when expanded it's a Price object; when unexpanded it's a raw price ID.
+	const phaseItemPrice = phaseItem.price as string | Stripe.Price | undefined;
+	const expandedPrice =
+		typeof phaseItemPrice === "object" ? phaseItemPrice : undefined;
+	const stripePriceId =
+		typeof phaseItemPrice === "string"
+			? phaseItemPrice
+			: (expandedPrice?.id ?? null);
 
-return {
-	stripePriceId: stripePrice?.id ?? null,
-	stripeProductId:
-		typeof stripePrice?.product === "string"
-			? stripePrice.product
-			: ((stripePrice?.product as Stripe.Product | undefined)?.id ?? null),
-	metadata: {},
+	return {
+		stripePriceId,
+		stripeProductId: normalizeStripeProductId({
+			product: expandedPrice?.product,
+		}),
+		metadata: {},
 		quantity: phaseItem.quantity ?? null,
-};
+	};
 };
 
 export const normalizeStripeCheckoutLineItem = ({
