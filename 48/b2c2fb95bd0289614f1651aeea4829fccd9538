@@ -1,0 +1,23 @@
+server/tests/integration/external-psps/utils/revenuecatWebhooks.test.ts
+  a782bc0d3846c2d0 7,12,180-207,214-223
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "48b2c2fb95bd0289614f1651aeea4829fccd9538",
+  "prompts": {
+    "a782bc0d3846c2d0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_22c551400ffeoPCNO4NzmF3kbs",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 516,
+      "total_deletions": 169,
+      "accepted_lines": 822,
+      "overriden_lines": 0
+    }
+  }
+}
