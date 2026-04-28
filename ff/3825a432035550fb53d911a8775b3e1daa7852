@@ -1,0 +1,23 @@
+server/tests/integration/external-psps/revenuecat-cross-processor-oneoff.test.ts
+  ebaef5a7b131dc4b 346-506
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "ff3825a432035550fb53d911a8775b3e1daa7852",
+  "prompts": {
+    "ebaef5a7b131dc4b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_22b5551e3ffeRhDheLWriEYeoC",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 1086,
+      "total_deletions": 0,
+      "accepted_lines": 1086,
+      "overriden_lines": 0
+    }
+  }
+}
