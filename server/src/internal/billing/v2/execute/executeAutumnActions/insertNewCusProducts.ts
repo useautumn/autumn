@@ -51,7 +51,14 @@ export const insertNewCusProducts = async ({
 			RolloverService.insert({
 				ctx,
 				rows: cusEnt.rollovers,
-				fullCusEnt: { ...cusEnt, customer_product: cusProduct ?? null },
+				// New cusEnt — no pre-existing DB rollovers. Pass [] so the max-cap
+				// check in clearExcessRollovers doesn't double-count the rows we're
+				// inserting (cusEnt.rollovers already holds the same objects as `rows`).
+				fullCusEnt: {
+					...cusEnt,
+					customer_product: cusProduct ?? null,
+					rollovers: [],
+				},
 			}),
 		];
 	});
