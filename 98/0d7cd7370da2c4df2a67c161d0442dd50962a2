@@ -1,0 +1,29 @@
+server/src/external/revenueCat/misc/resolveRevenuecatResources.ts
+  a782bc0d3846c2d0 13,73-80,82
+server/src/internal/customers/attach/attachUtils/handleAttachErrors.ts
+  a782bc0d3846c2d0 19,163,166-170,172-182
+server/tests/integration/external-psps/revenuecat-cross-processor-oneoff.test.ts
+  a782bc0d3846c2d0 1-345
+server/src/internal/customers/attach/attachUtils/handleAttachErrors/handleMultiAttachErrors.ts
+  a782bc0d3846c2d0 11,24-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "980d7cd7370da2c4df2a67c161d0442dd50962a2",
+  "prompts": {
+    "a782bc0d3846c2d0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_22c551400ffeoPCNO4NzmF3kbs",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 860,
+      "total_deletions": 15,
+      "accepted_lines": 846,
+      "overriden_lines": 0
+    }
+  }
+}
