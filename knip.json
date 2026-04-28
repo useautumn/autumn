@@ -1,29 +1,32 @@
 {
-	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"exclude": [
+		"dependencies",
+		"unlisted",
+		"unresolved",
+		"binaries",
+		"catalog",
+		"exports",
+		"types",
+		"enumMembers",
+		"duplicates"
+	],
 	"workspaces": {
 		".": {
-			"ignore": [".opencode/**"]
+			"entry": ["apps/scope-picker/**/*"]
 		},
 		"server": {
-			"entry": ["tests/**/*.ts"],
+			"entry": ["src/**/*.ts", "tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
-			"ignore": [
-				"src/_luaScriptsV2/**",
-				"src/utils/importUtils/**",
-				"src/utils/scriptUtils/**",
-				"src/utils/workerUtils/**",
-				"src/db/**"
-			],
 			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"]
 		},
 		"shared": {
-			"entry": ["index.ts"],
-			"project": ["**/*.ts"],
-			"includeEntryExports": false,
-			"ignore": ["api/balances/track/changes/V0.2_TrackChange.ts"]
+			"entry": ["**/*.ts", "!utils/**"],
+			"project": ["**/*.ts", "!utils/**"],
+			"includeEntryExports": false
 		},
 		"vite": {
-			"entry": ["src/main.tsx"],
+			"entry": ["src/**/*.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}"],
 			"ignore": ["src/components/ai-elements/**"],
 			"ignoreDependencies": [
@@ -37,11 +40,46 @@
 			"entry": ["**/*.{ts,js}"],
 			"project": ["**/*.{ts,js}"]
 		},
+		"apps/docs": {
+			"entry": ["**/*"],
+			"project": ["**/*.{ts,js,jsx,css,mdx}"]
+		},
+		"apps/sdk-test": {
+			"entry": ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "*.ts"],
+			"project": ["**/*.{ts,tsx}"]
+		},
+		"apps/website": {
+			"entry": ["app/**/*.{ts,tsx,mdx}", "components/**/*.{ts,tsx}", "content/**/*.mdx", "*.mjs"],
+			"project": ["**/*.{ts,tsx,mdx,mjs}"]
+		},
 		"apps/checkout": {
-			"entry": ["src/main.tsx"],
+			"entry": ["src/**/*.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}"],
-			"ignore": ["src/components/ui/**", "src/hooks/**"],
 			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
+		},
+		"packages/atmn": {
+			"entry": ["src/**/*.{ts,tsx}"],
+			"project": ["src/**/*.{ts,tsx}", "*.ts"]
+		},
+		"packages/autumn-js": {
+			"entry": ["src/**/*.ts", "*.ts"],
+			"project": ["src/**/*.ts", "*.ts"]
+		},
+		"packages/ksuid": {
+			"entry": ["src/**/*.ts"],
+			"project": ["src/**/*.ts"]
+		},
+		"packages/openapi": {
+			"entry": ["**/*.ts"],
+			"project": ["**/*.ts"]
+		},
+		"packages/sdk": {
+			"entry": ["src/**/*.ts", "examples/**/*.ts"],
+			"project": ["src/**/*.ts", "examples/**/*.ts"]
+		},
+		"packages/stripe-sync": {
+			"entry": ["src/**/*.ts", "scripts/**/*.ts"],
+			"project": ["src/**/*.ts", "scripts/**/*.ts"]
 		}
 	},
 	"ignoreBinaries": ["infisical", "lsof", "serve"]
