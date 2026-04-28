@@ -95,3 +95,86 @@ test.concurrent(`${chalk.yellowBright("temp: pro annual prepaid credits with rol
 
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
+
+test.concurrent(`${chalk.yellowBright("temp: pro prepaid messages rollover persists after price update")}`, async () => {
+	const customerId = "temp-pro-prepaid-msgs-price-update";
+	const rolloverConfig = {
+		max_percentage: 50,
+		length: 1,
+		duration: RolloverExpiryDurationType.Month,
+	};
+
+	const messagesItem = constructPrepaidItem({
+		featureId: TestFeature.Messages,
+		includedUsage: 100,
+		billingUnits: 1,
+		price: 0.1,
+		rolloverConfig,
+	});
+
+	const updatedMessagesItem = constructPrepaidItem({
+		featureId: TestFeature.Messages,
+		includedUsage: 100,
+		billingUnits: 1,
+		price: 0.2,
+		rolloverConfig,
+	});
+
+	const pro = products.pro({
+		id: "pro-prepaid-msgs-price-update",
+		items: [messagesItem],
+	});
+
+	const quantity = 1500;
+
+	const { autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: pro.id,
+				options: [{ feature_id: TestFeature.Messages, quantity }],
+			}),
+			s.advanceToNextInvoice(),
+		],
+	});
+
+	// After invoice: rollover = 50% of 1500 = 750
+	// New balance = 1500 + 750 = 2250
+	const expectedRollover = quantity / 2;
+	const expectedRemaining = quantity + expectedRollover;
+
+	const customerAfterInvoice =
+		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+
+	expectBalanceCorrect({
+		customer: customerAfterInvoice,
+		featureId: TestFeature.Messages,
+		remaining: expectedRemaining,
+		usage: 0,
+		rollovers: [{ balance: expectedRollover }],
+	});
+
+	// Update subscription to change prepaid messages price
+	await autumnV2_2.subscriptions.update({
+		customer_id: customerId,
+		product_id: pro.id,
+		items: [updatedMessagesItem],
+	});
+
+	const customerAfterUpdate =
+		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+
+	expectBalanceCorrect({
+		customer: customerAfterUpdate,
+		featureId: TestFeature.Messages,
+		remaining: expectedRemaining,
+		usage: 0,
+		rollovers: [{ balance: expectedRollover }],
+	});
+
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
+});
