@@ -1,0 +1,4 @@
+set -e
+
+bun knip
+(cd server && bun ts)
