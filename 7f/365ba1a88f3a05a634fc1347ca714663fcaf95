@@ -1,0 +1,29 @@
+server/src/internal/customers/attach/attachUtils/handleAttachErrors/handleMultiAttachErrors.ts
+  a33b59d7c9acde93 11
+server/src/internal/customers/attach/attachUtils/handleAttachErrors/handleCheckoutErrors.ts
+  a33b59d7c9acde93 3-4
+server/src/internal/customers/attach/attachUtils/handleAttachErrors/handleExternalPSPErrors.ts
+  a33b59d7c9acde93 1-41
+server/src/internal/customers/attach/attachUtils/handleAttachErrors.ts
+  a33b59d7c9acde93 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "7f365ba1a88f3a05a634fc1347ca714663fcaf95",
+  "prompts": {
+    "a33b59d7c9acde93": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_22be985beffeOmS9HEIabCUzLC",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 45,
+      "total_deletions": 42,
+      "accepted_lines": 45,
+      "overriden_lines": 0
+    }
+  }
+}
