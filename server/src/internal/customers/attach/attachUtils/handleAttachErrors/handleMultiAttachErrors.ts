@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import RecaseError from "@/utils/errorUtils.js";
+import { handleExternalPSPErrors } from "../handleAttachErrors.js";
 
 export const handleMultiAttachErrors = async ({
 	attachParams,
@@ -19,6 +20,10 @@ export const handleMultiAttachErrors = async ({
 	branch: AttachBranch;
 }) => {
 	const { products, prices, productsList } = attachParams;
+
+	// MultiAttach must stay fully blocked for cross-processor customers — even
+	// for one-off products, because the batch may include recurring main products.
+	handleExternalPSPErrors({ attachParams, strict: true });
 
 	const usagePrice = prices.find((p: Price) => isUsagePrice({ price: p }));
 
