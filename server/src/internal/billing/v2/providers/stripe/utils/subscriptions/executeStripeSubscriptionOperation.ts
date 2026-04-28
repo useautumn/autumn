@@ -51,6 +51,11 @@ export const executeStripeSubscriptionOperation = async ({
 		userMetadata: billingContext.userMetadata,
 	});
 
+	const createMeta = mergeStripeMetadata({
+		userMetadata: billingContext.userMetadata,
+		autumnMetadata: { autumn_managed: "true" },
+	});
+
 	switch (subscriptionAction.type) {
 		case "update": {
 			let stripeSubscription = billingContext.stripeSubscription;
@@ -105,7 +110,7 @@ export const executeStripeSubscriptionOperation = async ({
 				...subscriptionAction.params,
 				...invoiceModeParams,
 				...fallbackPaymentMethodParams,
-				...(userMeta && { metadata: userMeta }),
+				...(createMeta && { metadata: createMeta }),
 
 				billing_mode: { type: "flexible" },
 

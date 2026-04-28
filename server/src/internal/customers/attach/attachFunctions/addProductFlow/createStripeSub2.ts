@@ -88,7 +88,7 @@ export const createStripeSub2 = async ({
 			expand: ["latest_invoice"],
 
 			// Pass metadata from attachParams (e.g., Vercel installation/billing plan IDs)
-			metadata: metadata || undefined,
+			metadata: { ...(metadata || {}), autumn_managed: "true" },
 
 			// For custom payment methods, save the payment method on the subscription
 			// so it's available in webhook handlers and for future renewals
