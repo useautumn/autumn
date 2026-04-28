@@ -1,15 +1,16 @@
-name: Knip
+name: Validate Production Schema
 
 on:
   pull_request:
     branches:
-      - main
-      - staging
+      - dev
+  push:
+    branches:
       - dev
 
 jobs:
-  knip:
-    name: Check for unused code
+  validate-schema:
+    name: Validate Schema
     runs-on: ubuntu-latest
 
     steps:
@@ -24,5 +25,8 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Run Knip
-        run: bun knip
+      - name: Validate schema
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_READ_ONLY_URL }}
+          DB_MAX_CONNECTIONS: 1
+        run: bun scripts/migrations/validate-schema.ts
