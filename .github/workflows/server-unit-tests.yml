@@ -2,6 +2,8 @@ name: Server Unit Tests
 
 on:
   pull_request:
+    paths:
+      - "server/**"
 
 jobs:
   unit-tests:
