@@ -59,14 +59,25 @@ const sidebarItems = [
 ] as const;
 
 const images: Record<(typeof sidebarItems)[number]["model"], string> = {
-	0: "/images/pricing-models/Subscriptions.webp",
-	1: "/images/pricing-models/Subscriptions (1).webp",
-	2: "/images/pricing-models/Trial Configuration.webp",
-	3: "/images/pricing-models/Hybrid Plan Builder.webp",
-	4: "/images/pricing-models/Usage Metering.webp",
-	5: "/images/pricing-models/Hybrid Plan Builder (1).webp",
-	6: "/images/pricing-models/Subscriptions (2).webp",
-	7: "/images/pricing-models/Subscriptions (3).webp",
+	0: "/images/pricing-models/Subscriptions.avif",
+	1: "/images/pricing-models/Subscriptions (1).avif",
+	2: "/images/pricing-models/Trial Configuration.avif",
+	3: "/images/pricing-models/Hybrid Plan Builder.avif",
+	4: "/images/pricing-models/Usage Metering.avif",
+	5: "/images/pricing-models/Hybrid Plan Builder (1).avif",
+	6: "/images/pricing-models/Subscriptions (2).avif",
+	7: "/images/pricing-models/Subscriptions (3).avif",
+};
+
+const mobileImages: Record<(typeof sidebarItems)[number]["model"], string> = {
+	0: "/images/pricing-models/Subscriptions-mobile.avif",
+	1: "/images/pricing-models/Subscriptions (1)-mobile.avif",
+	2: "/images/pricing-models/Trial Configuration-mobile.avif",
+	3: "/images/pricing-models/Hybrid Plan Builder-mobile.avif",
+	4: "/images/pricing-models/Usage Metering-mobile.avif",
+	5: "/images/pricing-models/Hybrid Plan Builder (1)-mobile.avif",
+	6: "/images/pricing-models/Subscriptions (2)-mobile.avif",
+	7: "/images/pricing-models/Subscriptions (3)-mobile.avif",
 };
 
 export default function PricingModels() {
@@ -159,7 +170,7 @@ export default function PricingModels() {
 											src={src}
 											alt="Pricing Model"
 											fill
-											sizes="(max-width: 768px) 100vw, 50vw"
+											sizes="(max-width: 1024px) 100vw, (max-width: 1440px) 40vw, 600px"
 											className="object-contain"
 											priority={key === "0"}
 										/>
@@ -194,9 +205,12 @@ export default function PricingModels() {
 											>
 												<div className="relative w-full aspect-3/2.5 sm:aspect-square">
 													<div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center px-3 pt-2">
-														<img
-															src={images[item.model]}
+														<Image
+															src={mobileImages[item.model]}
 															alt="Pricing Model"
+															width={1212}
+															height={1048}
+															sizes="(max-width: 640px) 90vw, (max-width: 768px) 85vw, 400px"
 															className="w-full h-auto max-h-full object-contain object-bottom"
 														/>
 													</div>

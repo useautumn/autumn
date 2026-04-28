@@ -1,4 +1,5 @@
 import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels.js";
+import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
@@ -94,6 +95,10 @@ export const CreateProductV2ParamsSchema = z
 		free_trial: CreateFreeTrialSchema.nullish().default(null).meta({
 			description: descriptions.free_trial,
 		}),
+
+		config: ProductConfigParamsSchema.optional().meta({
+			description: "Miscellaneous product-level configuration flags.",
+		}),
 	})
 	.meta({
 		examples: [CREATE_PRODUCT_EXAMPLE],
@@ -136,6 +141,10 @@ export const UpdateProductV2ParamsSchema = z.object({
 	items: z.array(CreateProductItemParamsSchema).optional(),
 	free_trial: CreateFreeTrialSchema.nullish().meta({
 		description: descriptions.free_trial,
+	}),
+
+	config: ProductConfigParamsSchema.optional().meta({
+		description: "Miscellaneous product-level configuration flags.",
 	}),
 });
 

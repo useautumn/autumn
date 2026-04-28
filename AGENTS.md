@@ -77,7 +77,11 @@ Only update when the current work IS part of a project (see default-off rule abo
 
 Do NOT update context during normal coding work. Work first, compact at breakpoints.
 
+<<<<<<< HEAD
+A STATUS.md entry should record changes to the project itself -- not one-off work that merely uses the project (e.g. writing a consumer script of a framework is not a framework-project update).
+=======
 A STATUS.md entry should record changes to the project itself — not one-off work that merely uses the project (e.g. writing a consumer script of a framework is not a framework-project update).
+>>>>>>> a62195ba706f12fbd35f7ecf48b4701011115101
 
 ### Compaction quality
 STATUS.md must be:

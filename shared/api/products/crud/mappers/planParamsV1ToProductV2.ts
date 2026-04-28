@@ -39,6 +39,11 @@ export function planParamsV1ToProductV2({
 			? params.archived
 			: undefined;
 
+	const config =
+		"config" in params && params.config !== undefined
+			? params.config
+			: undefined;
+
 	return {
 		id: params.id, // fallback just for placeholders...
 		name: params.name,
@@ -57,5 +62,6 @@ export function planParamsV1ToProductV2({
 				}
 			: params.free_trial,
 		...(archived !== undefined && { archived }),
+		...(config !== undefined && { config }),
 	};
 }

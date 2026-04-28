@@ -317,7 +317,7 @@ test(`${chalk.yellowBright("pg failover: critical endpoints failover to replica 
 			}
 		} else {
 			console.log(
-				"\n--- Step 5: SKIPPED (no DATABASE_V2_REPLICA_URL configured) ---",
+				"\n--- Step 5: SKIPPED (no DATABASE_REPLICA_URL configured) ---",
 			);
 		}
 

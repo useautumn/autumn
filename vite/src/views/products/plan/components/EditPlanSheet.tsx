@@ -43,7 +43,7 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 			{!showAdvanced && (
 				<SheetAccordion type="single" withSeparator={false}>
 					<SheetAccordionItem value="advanced" title="Advanced">
-						<div className="space-y-2">
+						<div className="space-y-4">
 							<AreaCheckbox
 								title="Group"
 								description="If your app has multiple groups of subscription tiers, you can choose which group this plan belongs to."
@@ -62,6 +62,17 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 									/>
 								)}
 							</AreaCheckbox>
+							<AreaCheckbox
+								title="Ignore past due"
+								description="Customers on this plan won't be treated as past due — balances keep resetting normally"
+								checked={product.config?.ignore_past_due}
+								onCheckedChange={(checked) =>
+									setProduct({
+										...product,
+										config: { ...product.config, ignore_past_due: checked },
+									})
+								}
+							/>
 						</div>
 					</SheetAccordionItem>
 				</SheetAccordion>

@@ -12,18 +12,26 @@
  */
 
 import { test } from "bun:test";
-import { type ApiCustomerV3, RolloverExpiryDurationType } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	type ApiCustomerV5,
+	type AttachParamsV1Input,
+	RolloverExpiryDurationType,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import {
 	expectCustomerRolloverCorrect,
 	expectNoRollovers,
 } from "@tests/integration/billing/utils/rollover/expectCustomerRolloverCorrect";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { constructPrepaidItem } from "@/utils/scriptUtils/constructItem";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Upgrade with rollover carryover (same cap)
@@ -430,4 +438,95 @@ test.concurrent(`${chalk.yellowBright("immediate-switch-rollover 4: upgrade to p
 		customer: customerAfterUpgrade,
 		featureId: TestFeature.Messages,
 	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST: Pro annual prepaid credits with rollover (max_percentage) carries to pro monthly
+//
+// Regression for double-counting bug in clearExcessRollovers when inserting a
+// new cusProduct: in-memory cusEnt.rollovers (carried-over) was the same array
+// instance as `newRows`, so the cap check saw 2× the balance and zeroed out
+// the rollover during the immediate switch.
+// ═══════════════════════════════════════════════════════════════════════════════
+test.concurrent(`${chalk.yellowBright("immediate-switch-rollover: prepaid credits + max_percentage rollover carries from annual to monthly")}`, async () => {
+	const customerId = "imm-switch-rollover-prepaid-annual-to-monthly";
+	const rolloverConfig = {
+		max_percentage: 50,
+		length: 1,
+		duration: RolloverExpiryDurationType.Month,
+	};
+
+	const annualCreditsItem = constructPrepaidItem({
+		featureId: TestFeature.Credits,
+		includedUsage: 100,
+		billingUnits: 1,
+		price: 0.25,
+		rolloverConfig,
+	});
+
+	const monthlyCreditsItem = constructPrepaidItem({
+		featureId: TestFeature.Credits,
+		includedUsage: 100,
+		billingUnits: 1,
+		price: 0.25,
+		rolloverConfig,
+	});
+
+	const proAnnual = products.proAnnual({
+		id: "pro-annual-rollover-prepaid",
+		items: [annualCreditsItem],
+	});
+
+	const proMonthly = products.pro({
+		id: "pro-monthly-rollover-prepaid",
+		items: [monthlyCreditsItem],
+	});
+
+	const { autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [proAnnual, proMonthly] }),
+		],
+		actions: [
+			s.billing.attach({
+				productId: proAnnual.id,
+				options: [{ feature_id: TestFeature.Credits, quantity: 1500 }],
+			}),
+			s.advanceToNextInvoice(),
+		],
+	});
+
+	const customerAfterInvoice =
+		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+
+	// After cycle reset: balance refreshed to 1500, rollover = 50% of 1500 = 750
+	expectBalanceCorrect({
+		customer: customerAfterInvoice,
+		featureId: TestFeature.Credits,
+		remaining: 1500 + 750,
+		usage: 0,
+		rollovers: [{ balance: 750 }],
+	});
+
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: proMonthly.id,
+		redirect_mode: "if_required",
+	});
+
+	const customerAfterSwitch =
+		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+
+	// Rollover must persist on the new pro-monthly cusProduct (cap = 50% of new
+	// quantity 1500 = 750, so the existing 750 rollover survives intact).
+	expectBalanceCorrect({
+		customer: customerAfterSwitch,
+		featureId: TestFeature.Credits,
+		remaining: 1500 + 750,
+		usage: 0,
+		rollovers: [{ balance: 750 }],
+	});
+
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

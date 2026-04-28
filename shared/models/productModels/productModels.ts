@@ -4,6 +4,7 @@ import { AppEnv } from "../genModels/genEnums";
 import { EntitlementSchema } from "./entModels/entModels";
 import { FreeTrialSchema } from "./freeTrialModels/freeTrialModels";
 import { PriceSchema } from "./priceModels/priceModels";
+import { ProductConfigSchema } from "./productConfig/productConfig";
 
 export const ProductSchema = z.object({
 	id: z.string(),
@@ -27,6 +28,7 @@ export const ProductSchema = z.object({
 		.nullish(),
 	base_variant_id: z.string().nullable(),
 	archived: z.boolean().default(false),
+	config: ProductConfigSchema.default(() => ({ ignore_past_due: false })),
 });
 
 export const CreateProductSchema = z.object({
@@ -48,6 +50,7 @@ export const UpdateProductSchema = z.object({
 	is_default: z.boolean().optional(),
 	group: z.string().nullish(),
 	archived: z.boolean().optional(),
+	config: ProductConfigSchema.partial().optional(),
 });
 
 export const FullProductSchema = ProductSchema.extend({

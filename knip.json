@@ -1,30 +1,46 @@
 {
-	"$schema": "https://unpkg.com/knip@5/schema.json",
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"exclude": [
+		"dependencies",
+		"unlisted",
+		"unresolved",
+		"binaries",
+		"catalog",
+		"exports",
+		"types",
+		"enumMembers",
+		"duplicates"
+	],
+	"ignoreWorkspaces": [
+		"packages/atmn",
+		"packages/autumn-js",
+		"packages/openapi",
+		"packages/sdk"
+	],
 	"workspaces": {
 		".": {
-			"ignore": [".opencode/**"]
+			"entry": ["apps/scope-picker/**/*"]
 		},
 		"server": {
-			"entry": ["tests/**/*.ts"],
-			"project": ["src/**/*.ts", "tests/**/*.ts"],
-			"ignore": [
-				"src/_luaScriptsV2/**",
-				"src/utils/importUtils/**",
-				"src/utils/scriptUtils/**",
-				"src/utils/workerUtils/**",
-				"src/db/**"
+			"entry": [
+				"src/internal/customers/cusUtils/createNewCustomer.ts",
+				"src/utils/importUtils/addProductFromSubs.ts",
+				"src/utils/scriptUtils/readOnlyStripe.ts",
+				"src/utils/scriptUtils/scriptUtils.ts",
+				"src/utils/scriptUtils/getAll/getAllAutumnCustomers.ts",
+				"src/utils/scriptUtils/getAll/getAllOrgs.ts",
+				"tests/**/*.ts"
 			],
+			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"]
 		},
 		"shared": {
-			"entry": ["index.ts"],
-			"project": ["**/*.ts"],
-			"includeEntryExports": false,
-			"ignore": ["api/balances/track/changes/V0.2_TrackChange.ts"]
+			"project": ["**/*.ts", "!utils/**"],
+			"includeEntryExports": false
 		},
 		"vite": {
-			"entry": ["src/main.tsx"],
-			"project": ["src/**/*.{ts,tsx}"],
+			"entry": ["tests/**/*.{ts,tsx}"],
+			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 			"ignore": ["src/components/ai-elements/**"],
 			"ignoreDependencies": [
 				"tailwindcss",
@@ -37,11 +53,28 @@
 			"entry": ["**/*.{ts,js}"],
 			"project": ["**/*.{ts,js}"]
 		},
+		"apps/docs": {
+			"entry": ["**/*"],
+			"project": ["**/*.{ts,js,jsx,css,mdx}"]
+		},
+		"apps/sdk-test": {
+			"entry": ["app/**/*.{ts,tsx}", "lib/**/*.{ts,tsx}", "*.ts"],
+			"project": ["**/*.{ts,tsx}"]
+		},
+		"apps/website": {
+			"entry": ["app/**/*.{ts,tsx,mdx}", "components/**/*.{ts,tsx}", "content/**/*.mdx", "*.mjs"],
+			"project": ["**/*.{ts,tsx,mdx,mjs}"]
+		},
 		"apps/checkout": {
-			"entry": ["src/main.tsx"],
 			"project": ["src/**/*.{ts,tsx}"],
-			"ignore": ["src/components/ui/**", "src/hooks/**"],
 			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
+		},
+		"packages/ksuid": {
+			"project": ["src/**/*.ts"]
+		},
+		"packages/stripe-sync": {
+			"entry": ["scripts/**/*.ts"],
+			"project": ["src/**/*.ts", "scripts/**/*.ts"]
 		}
 	},
 	"ignoreBinaries": ["infisical", "lsof", "serve"]
