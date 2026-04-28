@@ -233,18 +233,18 @@ const validateProductItem = ({
 		const rollover = item.config.rollover as RolloverConfig;
 
 		// Ensure rollover is only allowed for items with intervals and included usage
-		if (
-			item.interval === null ||
-			nullish(item.included_usage) ||
-			item.included_usage === 0
-		) {
-			throw new RecaseError({
-				message:
-					"Rollover is only allowed for items with intervals and included usage",
-				code: ErrCode.InvalidInputs,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
+		// if (
+		// 	item.interval === null ||
+		// 	nullish(item.included_usage) ||
+		// 	item.included_usage === 0
+		// ) {
+		// 	throw new RecaseError({
+		// 		message:
+		// 			"Rollover is only allowed for items with intervals and included usage",
+		// 		code: ErrCode.InvalidInputs,
+		// 		statusCode: StatusCodes.BAD_REQUEST,
+		// 	});
+		// }
 
 		// Validate rollover max amount
 		if (rollover.max !== null && typeof rollover.max === "number") {
