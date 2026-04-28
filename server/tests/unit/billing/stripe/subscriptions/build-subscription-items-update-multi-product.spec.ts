@@ -1247,7 +1247,9 @@ describe(
 					options: stripeAddOn.allOptions,
 					status: CusProductStatus.Active,
 					subscriptionIds: [],
-					// processor defaults to Stripe via cusProductToProcessorType
+					// IMPORTANT: processor is intentionally unset here — legacy Stripe-managed
+					// cus products have no `processor` field. The filter must treat unset as
+					// Stripe (so this product's items get included). RevenueCat is always tagged.
 				});
 
 				const ctx = contexts.create({ features: [] });
