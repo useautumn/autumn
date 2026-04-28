@@ -83,29 +83,42 @@ export const handleCreateCheckout = async ({
 		);
 	}
 
+	const checkoutParams = attachParams.checkoutSessionParams as
+		| Partial<Stripe.Checkout.SessionCreateParams>
+		| undefined;
+	const checkoutSubscriptionData = checkoutParams?.subscription_data as
+		| Stripe.Checkout.SessionCreateParams.SubscriptionData
+		| undefined;
+	const trialEnd =
+		freeTrial && !attachParams.disableFreeTrial
+			? freeTrialToStripeTimestamp({ freeTrial })
+			: undefined;
+	const trialSettings =
+		freeTrial && !attachParams.disableFreeTrial && freeTrial.card_required
+			? {
+					end_behavior: {
+						missing_payment_method: "cancel" as const,
+					},
+				}
+			: undefined;
+
 	const subscriptionData:
 		| Stripe.Checkout.SessionCreateParams.SubscriptionData
 		| undefined = isRecurring
 		? {
-				trial_end:
-					freeTrial && !attachParams.disableFreeTrial
-						? freeTrialToStripeTimestamp({ freeTrial })
-						: undefined,
-				trial_settings:
-					freeTrial && !attachParams.disableFreeTrial && freeTrial.card_required
-						? {
-								end_behavior: {
-									missing_payment_method: "cancel",
-								},
-							}
-						: undefined,
-				billing_cycle_anchor: billingCycleAnchorUnixSeconds,
+				...(checkoutSubscriptionData ?? {}),
+				...(trialEnd ? { trial_end: trialEnd } : {}),
+				...(trialSettings ? { trial_settings: trialSettings } : {}),
+				...(billingCycleAnchorUnixSeconds
+					? { billing_cycle_anchor: billingCycleAnchorUnixSeconds }
+					: {}),
+				metadata: {
+					...(checkoutSubscriptionData?.metadata ?? {}),
+					autumn_managed: "true",
+				},
 			}
 		: undefined;
 
-	const checkoutParams = attachParams.checkoutSessionParams as
-		| Partial<Stripe.Checkout.SessionCreateParams>
-		| undefined;
 	const allowPromotionCodes =
 		notNullish(checkoutParams?.discounts) || notNullish(rewards)
 			? undefined
@@ -128,7 +141,6 @@ export const handleCreateCheckout = async ({
 	let sessionParams: Stripe.Checkout.SessionCreateParams = {
 		customer: customer.processor.id,
 		line_items: items,
-		subscription_data: subscriptionData,
 		mode: isRecurring ? "subscription" : "payment",
 		currency: orgToCurrency({ org }),
 		success_url: successUrl || toSuccessUrl({ org, env: customer.env }),
@@ -139,6 +151,7 @@ export const handleCreateCheckout = async ({
 
 		...rewardData,
 		...(attachParams.checkoutSessionParams || {}),
+		...(isRecurring ? { subscription_data: subscriptionData } : {}),
 		metadata: {
 			...(attachParams.metadata ? attachParams.metadata : {}),
 			...(checkoutParams?.metadata || {}),
