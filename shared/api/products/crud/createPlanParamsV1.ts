@@ -1,5 +1,6 @@
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
+import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
 import { CreatePlanItemParamsV1Schema } from "../items/crud/createPlanItemParamsV1.js";
@@ -41,6 +42,9 @@ export const CreatePlanParamsV1Schema = z.object({
 	free_trial: FreeTrialParamsV1Schema.optional().meta({
 		description:
 			"Free trial configuration. Customers can try this plan before being charged.",
+	}),
+	config: ProductConfigParamsSchema.optional().meta({
+		description: "Miscellaneous plan-level configuration flags.",
 	}),
 });
 

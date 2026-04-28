@@ -1,15 +1,32 @@
-import { applyProration } from "@autumn/shared";
+import {
+	applyProration,
+	type BillingInterval,
+	getCycleEnd,
+	getCycleStart,
+	secondsToMs,
+} from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 
 /**
  * Get Stripe subscription for a customer.
+ *
+ * When `interval` is supplied, the returned billingPeriod is cycle-aligned
+ * to the subscription's `billing_cycle_anchor` for that interval (mirrors
+ * `getLineItemBillingPeriod` in production). This is the correct period to
+ * use when computing proration for a cross-interval add-on (e.g., a monthly
+ * item attached to an annual subscription, where Stripe's per-item
+ * `current_period_start/end` inherit the parent sub's annual period).
  */
 export const getStripeSubscription = async ({
 	customerId,
+	interval,
+	intervalCount = 1,
 }: {
 	customerId: string;
+	interval?: BillingInterval;
+	intervalCount?: number;
 }) => {
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
@@ -34,11 +51,20 @@ export const getStripeSubscription = async ({
 		throw new Error("No subscriptions found");
 	}
 
-	// Find an active subscription (not canceled)
+	// Prefer a sub matching the requested interval, falling back to the first active.
+	const activeSubs = subscriptions.data.filter(
+		(sub) => sub.status === "active" || sub.status === "trialing",
+	);
+	const candidateSubs = activeSubs.length > 0 ? activeSubs : subscriptions.data;
+
 	const subscription =
-		subscriptions.data.find(
-			(sub) => sub.status === "active" || sub.status === "trialing",
-		) ?? subscriptions.data[0];
+		(interval &&
+			candidateSubs.find((sub) =>
+				sub.items.data.some(
+					(item) => item.price?.recurring?.interval === interval,
+				),
+			)) ||
+		candidateSubs[0];
 
 	// Get billing period from the first subscription item
 	// Stripe stores current_period_start/end on each item, not the subscription itself
@@ -62,14 +88,45 @@ export const getStripeSubscription = async ({
 		);
 	}
 
+	// When `interval` is supplied, align the billing period to that interval
+	// using the sub's billing_cycle_anchor — Stripe inherits the parent sub's
+	// period on every item regardless of price interval, so the raw
+	// current_period_* values are wrong for cross-interval add-ons.
+	let billingPeriod: { start: number; end: number };
+	if (interval) {
+		const anchorMs = secondsToMs(subscription.billing_cycle_anchor);
+		const subCreatedMs = subscription.created
+			? secondsToMs(subscription.created)
+			: undefined;
+		const nowMs = Date.now();
+
+		billingPeriod = {
+			start: getCycleStart({
+				anchor: anchorMs,
+				interval,
+				intervalCount,
+				now: nowMs,
+				floor: subCreatedMs,
+			}),
+			end: getCycleEnd({
+				anchor: anchorMs,
+				interval,
+				intervalCount,
+				now: nowMs,
+			}),
+		};
+	} else {
+		billingPeriod = {
+			start: periodStart * 1000,
+			end: periodEnd * 1000,
+		};
+	}
+
 	return {
 		stripeCli,
 		stripeCustomerId,
 		subscription,
-		billingPeriod: {
-			start: periodStart * 1000,
-			end: periodEnd * 1000,
-		},
+		billingPeriod,
 	};
 };
 

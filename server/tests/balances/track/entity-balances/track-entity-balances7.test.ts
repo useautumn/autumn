@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { ErrCode } from "@autumn/shared";
+import { warmEntityCaches } from "@tests/integration/balances/utils/warmEntityCaches.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -130,7 +131,7 @@ test.concurrent(`${chalk.yellowBright("track-entity-balances7-cap: entity caps a
 	const entityId = "ent-1";
 	const freeProd = makeFreeProd();
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, entities } = await initScenario({
 		customerId,
 		setup: [
 			s.deleteCustomer({ customerId }),
@@ -143,6 +144,8 @@ test.concurrent(`${chalk.yellowBright("track-entity-balances7-cap: entity caps a
 		],
 		actions: [s.attach({ productId: freeProd.id })],
 	});
+
+	await warmEntityCaches({ autumn: autumnV1, customerId, entities });
 
 	// Pre-track sanity
 	const preEntity = await autumnV1.entities.get(customerId, entityId);
@@ -188,7 +191,7 @@ test.concurrent(`${chalk.yellowBright("track-entity-balances7-overage: entity go
 	const entityId = "ent-1";
 	const freeProd = makeFreeProd();
 
-	const { autumnV1, autumnV2_1 } = await initScenario({
+	const { autumnV1, autumnV2_1, entities } = await initScenario({
 		customerId,
 		setup: [
 			s.deleteCustomer({ customerId }),
@@ -205,11 +208,13 @@ test.concurrent(`${chalk.yellowBright("track-entity-balances7-overage: entity go
 	// Enable overage_allowed on the customer so the entity balance can
 	// go negative under cap.
 	await setCustomerOverageAllowed({
-		autumn: autumnV2_1 as any,
+		autumn: autumnV2_1,
 		customerId,
 		featureId: TestFeature.Messages,
 		enabled: true,
 	});
+
+	await warmEntityCaches({ autumn: autumnV1, customerId, entities });
 
 	// Pre-track sanity
 	const preEntity = await autumnV1.entities.get(customerId, entityId);

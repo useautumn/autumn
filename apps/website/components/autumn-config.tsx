@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Light as RawSyntaxHighlighter } from "react-syntax-highlighter";
 import js from "react-syntax-highlighter/dist/esm/languages/hljs/javascript";
 
@@ -12,7 +12,7 @@ const SyntaxHighlighter = RawSyntaxHighlighter as unknown as ((props: {
 	lineNumberStyle?: Record<string, string | number>;
 	showLineNumbers?: boolean;
 	style?: Record<string, Record<string, string | number>>;
-}) => JSX.Element) & {
+}) => React.JSX.Element) & {
 	registerLanguage: (name: string, language: unknown) => void;
 };
 

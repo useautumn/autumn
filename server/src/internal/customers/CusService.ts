@@ -152,13 +152,13 @@ export class CusService {
 
 				const fullCus = data as FullCustomer;
 
-				if (orgId === "org_2x5sJDcxhpVDjyUSqs4khaaNnxq") {
-					fullCus.customer_products = (
-						fullCus.customer_products as FullCusProduct[]
-					)
-						.sort((a, b) => b.customer_prices.length - a.customer_prices.length)
-						.slice(0, 5);
-				}
+				// if (orgId === "org_2x5sJDcxhpVDjyUSqs4khaaNnxq") {
+				// 	fullCus.customer_products = (
+				// 		fullCus.customer_products as FullCusProduct[]
+				// 	)
+				// 		.sort((a, b) => b.customer_prices.length - a.customer_prices.length)
+				// 		.slice(0, 5);
+				// }
 
 				if (
 					orgId === "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF" &&

@@ -2,7 +2,9 @@ import { initDrizzle } from "@server/db/initDrizzle";
 import { validateDbSchema } from "@server/db/validateDbSchema";
 import { validateSqlFunctions } from "@server/db/validateSqlFunctions";
 
-const { db } = initDrizzle({ maxConnections: 5 });
+const { db } = initDrizzle({
+	maxConnections: Number(process.env.DB_MAX_CONNECTIONS ?? 5),
+});
 
 // Check if --validate-content flag is passed
 const validateContent = process.argv.includes("--validate-content");

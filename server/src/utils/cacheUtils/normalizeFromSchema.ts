@@ -109,13 +109,21 @@ export const normalizeFromSchema = <T>({
 	}
 
 	if (type === "object") {
-		if (!data || typeof data !== "object" || Array.isArray(data)) {
+		// Upstash Lua cjson collapses empty `{}` to `[]`; treat as empty object
+		// so nested defaults still get applied on round-trip.
+		const objectData =
+			Array.isArray(data) && data.length === 0 ? {} : data;
+		if (
+			!objectData ||
+			typeof objectData !== "object" ||
+			Array.isArray(objectData)
+		) {
 			return data as T;
 		}
 
 		const shape = (unwrapped as any)._def.shape;
 		const normalized: Record<string, unknown> = {
-			...(data as Record<string, unknown>),
+			...(objectData as Record<string, unknown>),
 		};
 
 		for (const key in shape) {

@@ -25,4 +25,4 @@ jobs:
         run: bun install
 
       - name: Run Knip
-        run: bun knip --no-exit-code
+        run: bun knip

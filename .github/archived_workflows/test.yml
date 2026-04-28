@@ -6,7 +6,7 @@
 #     branches:
 #       - main
 # env:
-#   DATABASE_V2_URL: ${{ secrets.SUPABASE_URL }}
+#   DATABASE_URL: ${{ secrets.SUPABASE_URL }}
 #   UNIT_TEST_AUTUMN_SECRET_KEY: ${{ secrets.AUTUMN_KEY }}
 #   REDIS_URL: redis://localhost:6379
 #   ENCRYPTION_IV: ${{ secrets.ENCRYPTION_IV }}
@@ -92,7 +92,7 @@
 #       - name: Create .env file
 #         run: |
 #           echo "Creating .env file..."
-#           echo "DATABASE_V2_URL=${{ env.DATABASE_V2_URL }}" >> .env
+#           echo "DATABASE_URL=${{ env.DATABASE_URL }}" >> .env
 #           echo "UNIT_TEST_AUTUMN_SECRET_KEY=${{ env.UNIT_TEST_AUTUMN_SECRET_KEY }}" >> .env
 #           echo "REDIS_URL=${{ env.REDIS_URL }}" >> .env
 #           echo "ENCRYPTION_IV=${{ env.ENCRYPTION_IV }}" >> .env
