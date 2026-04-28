@@ -196,6 +196,16 @@ export const getCachedFullCustomer = async ({
 		fullCustomer.send_email_receipts = false;
 	}
 
+	// Safeguard for new product fields: Upstash Lua cjson collapses `{}` to `[]`,
+	// and pre-existing cache entries may not have these fields at all.
+	for (const cusProduct of fullCustomer.customer_products ?? []) {
+		if (!cusProduct.product) continue;
+		const product = cusProduct.product as { config?: unknown };
+		if (!product.config || Array.isArray(product.config)) {
+			product.config = {};
+		}
+	}
+
 	fullCustomer.invoices = deduplicateFullCustomerInvoices(fullCustomer);
 
 	fullCustomer.customer_products = filterExpiredCustomerProducts(fullCustomer);
