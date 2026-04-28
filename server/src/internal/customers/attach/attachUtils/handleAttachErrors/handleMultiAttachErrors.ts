@@ -8,7 +8,7 @@ import {
 } from "@autumn/shared";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import RecaseError from "@/utils/errorUtils.js";
-import { handleExternalPSPErrors } from "../handleAttachErrors.js";
+import { handleExternalPSPErrors } from "./handleExternalPSPErrors.js";
 
 export const handleMultiAttachErrors = async ({
 	attachParams,
