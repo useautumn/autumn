@@ -46,20 +46,16 @@ export const evaluateStripeBillingPlan = async ({
 	});
 
 	// Build stripe subscription schedule action
-	const skipSubscriptionScheduleUpdates =
-		billingContext.skipSubscriptionScheduleUpdates === true;
 	const {
 		scheduleAction: stripeSubscriptionScheduleAction,
 		subscriptionCancelAt,
-	} = skipSubscriptionScheduleUpdates
-		? {}
-		: buildStripeSubscriptionScheduleAction({
-				ctx,
-				billingContext,
-				autumnBillingPlan,
-				finalCustomerProducts: finalFullCustomer.customer_products,
-				trialEndsAt: billingContext.trialContext?.trialEndsAt ?? undefined,
-			});
+	} = buildStripeSubscriptionScheduleAction({
+		ctx,
+		billingContext,
+		autumnBillingPlan,
+		finalCustomerProducts: finalFullCustomer.customer_products,
+		trialEndsAt: billingContext.trialContext?.trialEndsAt ?? undefined,
+	});
 
 	const stripeSubscriptionAction = buildStripeSubscriptionAction({
 		ctx,

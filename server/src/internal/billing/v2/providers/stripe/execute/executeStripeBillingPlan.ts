@@ -103,11 +103,12 @@ export const executeStripeBillingPlan = async ({
 			subscriptionResult.stripeSubscription ?? stripeSubscription;
 	}
 
-	if (
+	const shouldExecuteScheduleAction =
 		stripeSubscriptionScheduleAction &&
 		!isReleaseAction &&
-		!skipSubscriptionScheduleUpdates
-	) {
+		!skipSubscriptionScheduleUpdates;
+
+	if (shouldExecuteScheduleAction) {
 		const stripeSubscriptionSchedule =
 			await executeStripeSubscriptionScheduleAction({
 				ctx,
