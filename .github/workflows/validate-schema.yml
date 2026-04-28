@@ -33,8 +33,7 @@ jobs:
         run: |
           bun -e '
             const raw = process.env.DATABASE_URL ?? "";
-            const lines = raw.split(/\r?\n/);
-            const envLine = lines.find((line) =>
+            const envLine = raw.split(/\r?\n/).find((line) =>
               /^[\s]*(?:export[\s]+)?(?:DATABASE_URL|DATABASE_READ_ONLY_URL)[\s]*=/.test(line),
             );
 
@@ -56,47 +55,14 @@ jobs:
               ),
             );
 
-            const sanitizedStart = (value) => {
-              const start = value.trim().slice(0, 96);
-              const match = start.match(/^(postgres(?:ql)?:\/\/)(.*)$/);
-              if (!match) return start.slice(0, 24);
-
-              const [, scheme, rest] = match;
-              const authority = rest.split("/", 1)[0];
-              const hostish = authority.includes("@")
-                ? authority.slice(authority.lastIndexOf("@") + 1)
-                : authority.includes(":")
-                  ? "<redacted-authority>"
-                  : authority;
-              return `${scheme}${authority.includes("@") ? "<credentials>@" : ""}${hostish.slice(0, 24)}`;
-            };
-
-            const schemeMatch = candidate.match(/^postgres(?:ql)?:\/\//);
-            const authority = candidate
-              .replace(/^postgres(?:ql)?:\/\//, "")
-              .split("/", 1)[0];
-
-            console.error(`DATABASE_READ_ONLY_URL raw length: ${raw.length}`);
-            console.error(`DATABASE_READ_ONLY_URL contains multiple lines: ${lines.length > 1 ? "yes" : "no"}`);
-            console.error(`DATABASE_READ_ONLY_URL normalized length: ${candidate.length}`);
-            console.error(`DATABASE_READ_ONLY_URL sanitized start: ${sanitizedStart(candidate)}`);
-            console.error(`DATABASE_READ_ONLY_URL starts with postgres scheme: ${schemeMatch ? "yes" : "no"}`);
-
             try {
               const url = new URL(candidate);
-              const validProtocol = ["postgres:", "postgresql:"].includes(url.protocol);
-
-              console.error(`DATABASE_READ_ONLY_URL format: ${validProtocol ? "valid postgres URL" : `invalid protocol ${url.protocol}`}`);
-              console.error(`DATABASE_READ_ONLY_URL host: ${url.hostname || "missing"}`);
-              console.error(`DATABASE_READ_ONLY_URL port: ${url.port || "5432"}`);
-
-              if (!validProtocol || !url.hostname) process.exit(1);
+              if (!["postgres:", "postgresql:"].includes(url.protocol) || !url.hostname) {
+                throw new Error("DATABASE_READ_ONLY_URL must be a postgres URL");
+              }
               process.stdout.write(candidate);
             } catch (error) {
-              console.error(`DATABASE_READ_ONLY_URL format: invalid URL (${error?.code ?? error?.name ?? "unknown"})`);
-              console.error(`DATABASE_READ_ONLY_URL authority contains @: ${authority.includes("@") ? "yes" : "no"}`);
-              console.error(`DATABASE_READ_ONLY_URL authority contains #: ${authority.includes("#") ? "yes - encode as %23" : "no"}`);
-              console.error(`DATABASE_READ_ONLY_URL authority contains whitespace: ${/\s/.test(authority) ? "yes - remove it or percent-encode it" : "no"}`);
+              console.error(`Invalid DATABASE_READ_ONLY_URL: ${error?.message ?? error}`);
               process.exit(1);
             }
           ' > "$RUNNER_TEMP/database-url"
