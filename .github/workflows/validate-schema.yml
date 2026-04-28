@@ -3,10 +3,10 @@ name: Validate Production Schema
 on:
   pull_request:
     branches:
-      - main
+      - dev
   push:
     branches:
-      - main
+      - dev
 
 jobs:
   validate-schema:
