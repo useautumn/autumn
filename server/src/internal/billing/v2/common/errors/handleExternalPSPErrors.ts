@@ -1,4 +1,5 @@
 import {
+	cusProductToPrices,
 	cusProductToProcessorType,
 	type FullCusProduct,
 	type FullProduct,
@@ -13,15 +14,19 @@ import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
  *
  * For `update`: validates the specific cusProduct being modified.
  *
- * For `attach`: scans the customer's existing products. Throws if any are
- * managed by a non-Stripe processor — UNLESS the product being attached is a
- * true one-off (no recurring prices). True one-off attaches are safe across
- * processors because they create a parallel cus_product without replacing
- * the customer's existing subscription, and they never spin up a new Stripe
- * subscription that could conflict with an RC-managed plan.
+ * For `attach`: scans the customer's existing products. Throws if any
+ * RECURRING product is managed by a non-Stripe processor — UNLESS the product
+ * being attached is itself a true one-off (no recurring prices). One-off
+ * cross-processor purchases (in either direction) are safe: they create a
+ * parallel cus_product, never spin up or reuse a recurring Stripe subscription,
+ * and so cannot conflict with the existing external subscription.
  *
- * Recurring add-ons are NOT exempt — they create a Stripe subscription that
- * would coexist with the RC-managed main product, leading to incorrect billing.
+ * Concretely:
+ *   - external recurring + attaching anything → throw (would create / mutate
+ *     a Stripe sub that coexists or collides with the external sub).
+ *   - external recurring + attaching one-off  → bypass (parallel one-off only).
+ *   - external one-off only + attaching anything → bypass (no external sub
+ *     exists to conflict with).
  */
 export const handleExternalPSPErrors = ({
 	customerProduct,
@@ -60,13 +65,25 @@ export const handleExternalPSPErrors = ({
 		return;
 	}
 
-	const externalCusProduct = customerProducts.find(
-		(cp) => cusProductToProcessorType(cp) !== ProcessorType.Stripe,
-	);
+	// Only block on EXTERNAL RECURRING products. External one-off-only products
+	// (e.g. a previously-purchased RC one-off pack) don't have a recurring
+	// subscription and so can't conflict with the new Stripe attach.
+	const conflictingExternalCusProduct = customerProducts.find((cp) => {
+		const isExternal =
+			cusProductToProcessorType(cp) !== ProcessorType.Stripe;
+		if (!isExternal) return false;
 
-	if (externalCusProduct) {
+		// Skip external products that are pure one-offs — they have no
+		// recurring sub to conflict with. Prices live on customer_prices
+		// (FullCusProduct.product is the bare Product without prices).
+		const cpPrices = cusProductToPrices({ cusProduct: cp });
+		const cpIsOneOffOnly = pricesOnlyOneOff(cpPrices);
+		return !cpIsOneOffOnly;
+	});
+
+	if (conflictingExternalCusProduct) {
 		throw new RecaseError({
-			message: `Cannot attach because the customer's current product '${externalCusProduct.product.name}' is managed by RevenueCat.`,
+			message: `Cannot attach because the customer's current product '${conflictingExternalCusProduct.product.name}' is managed by RevenueCat.`,
 		});
 	}
 };
