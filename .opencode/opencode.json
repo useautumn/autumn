@@ -29,6 +29,11 @@
 		"planetscale": {
 			"type": "remote",
 			"url": "https://mcp.pscale.dev/mcp/planetscale"
+		},
+		"incident-io": {
+			"type": "remote",
+			"url": "https://mcp.incident.io/mcp",
+			"oauth": {}
 		}
 	},
 	"plugin": [

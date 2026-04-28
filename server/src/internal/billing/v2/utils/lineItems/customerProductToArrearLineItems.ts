@@ -1,5 +1,6 @@
 import type { BillingContext, UpdateCustomerEntitlement } from "@autumn/shared";
 import {
+	customerProductToEntity,
 	cusPriceToCusEntWithCusProduct,
 	cusProductToPrices,
 	EntInterval,
@@ -47,6 +48,10 @@ export const customerProductToArrearLineItems = ({
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 } => {
 	const lineItems: LineItem[] = [];
+	const entity = customerProductToEntity({
+		customerProduct,
+		entities: billingContext.fullCustomer.entities,
+	});
 
 	let filteredPrices = cusProductToPrices({ cusProduct: customerProduct });
 
@@ -98,6 +103,7 @@ export const customerProductToArrearLineItems = ({
 			currency:
 				billingContext.stripeCustomer?.currency ??
 				orgToCurrency({ org: ctx.org }),
+			entity,
 			customerProduct,
 			customerPrice: cusPrice,
 		};

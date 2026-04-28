@@ -61,7 +61,10 @@ mock.module("@/internal/balances/track/v3/runRedisTrackV3.js", () => ({
 	},
 }));
 
-import { runTrackV3 } from "@/internal/balances/track/v3/runTrackV3.js";
+const { runTrackV3 } = await import(
+	// @ts-expect-error - Bun test cache-busting import query isolates module mocks.
+	"@/internal/balances/track/v3/runTrackV3.js?runTrackV3Idempotency"
+);
 
 const ctx = {
 	apiVersion: new ApiVersionClass(ApiVersion.V2_1),

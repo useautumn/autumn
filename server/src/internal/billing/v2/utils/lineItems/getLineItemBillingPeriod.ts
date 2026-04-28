@@ -28,8 +28,12 @@ export const getLineItemBillingPeriod = ({
 }): BillingPeriod | undefined => {
 	if (isOneOffPrice(price)) return undefined;
 
-	const { billingCycleAnchorMs, currentEpochMs, stripeSubscription } =
-		billingContext;
+	const {
+		billingCycleAnchorMs,
+		currentEpochMs,
+		stripeSubscription,
+		trialContext,
+	} = billingContext;
 
 	const { interval, interval_count: intervalCount } = price.config;
 
@@ -38,10 +42,14 @@ export const getLineItemBillingPeriod = ({
 		? secondsToMs(stripeSubscription.created)
 		: undefined;
 
-	// Floor for end: billing cycle anchor (can't end billing period before anchor, e.g., trial end)
-	// Only apply when anchor is a specific timestamp, not "now"
+	// Floor for end: trial end (can't end billing period before trial ends).
+	// Only used for long trials (>1 interval) where the natural cycle end would land
+	// before the trial end. For non-trial attaches against an existing subscription
+	// whose anchor is far in the future, do NOT floor at the anchor — natural cycle
+	// boundaries (e.g., monthly add-on on an annual sub) are correct.
+	const trialEndsAt = trialContext?.trialEndsAt;
 	const endFloor =
-		billingCycleAnchorMs === "now" ? undefined : billingCycleAnchorMs;
+		trialEndsAt && trialEndsAt > currentEpochMs ? trialEndsAt : undefined;
 
 	const start = getCycleStart({
 		anchor: billingCycleAnchorMs,

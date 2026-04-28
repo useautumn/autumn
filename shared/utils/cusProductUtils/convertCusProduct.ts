@@ -9,6 +9,7 @@ import type {
 	CusProduct,
 	FullCusProduct,
 } from "../../models/cusProductModels/cusProductModels.js";
+import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
 import { ProcessorType } from "../../models/genModels/genEnums.js";
 import type { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { FullProduct } from "../../models/productModels/productModels.js";
@@ -168,6 +169,20 @@ export const customerProductsToProducts = ({
 	customerProducts: FullCusProduct[];
 }): FullProduct[] => {
 	return customerProducts.map((cp) => cusProductToProduct({ cusProduct: cp }));
+};
+
+export const customerProductToEntity = ({
+	customerProduct,
+	entities,
+}: {
+	customerProduct: FullCusProduct;
+	entities: Entity[];
+}): Entity | undefined => {
+	if (!customerProduct.internal_entity_id) return undefined;
+
+	return entities.find(
+		(entity) => entity.internal_id === customerProduct.internal_entity_id,
+	);
 };
 
 export const cusProductToCusEnts = ({
