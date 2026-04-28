@@ -82,13 +82,34 @@ const buildMixedIntervalProduct = (id: string): FullProduct =>
 		],
 	});
 
-const buildRcCusProduct = (id = "cus_prod_rc"): FullCusProduct =>
-	customerProducts.create({
+const buildRcCusProduct = (id = "cus_prod_rc"): FullCusProduct => {
+	const product = buildRecurringProduct("rc_main", false);
+	return customerProducts.create({
 		id,
 		productId: "rc_main",
+		product,
+		customerPrices: product.prices.map((price) =>
+			priceFixtures.createCustomer({ price, customerProductId: id }),
+		),
 		processorType: ProcessorType.RevenueCat,
 		subscriptionIds: [],
 	});
+};
+
+/** RC-managed cus product whose underlying product has only one-off prices. */
+const buildRcOneOffCusProduct = (id = "cus_prod_rc_oneoff"): FullCusProduct => {
+	const product = buildOneOffProduct("rc_oneoff", true);
+	return customerProducts.create({
+		id,
+		productId: "rc_oneoff",
+		product,
+		customerPrices: product.prices.map((price) =>
+			priceFixtures.createCustomer({ price, customerProductId: id }),
+		),
+		processorType: ProcessorType.RevenueCat,
+		subscriptionIds: [],
+	});
+};
 
 const buildStripeCusProduct = (id = "cus_prod_stripe"): FullCusProduct =>
 	customerProducts.create({
@@ -258,6 +279,65 @@ describe(
 					}),
 				"managed by RevenueCat",
 			);
+		});
+
+		// ─── External one-off-only products are NOT a conflict ──────────────────
+		test("BYPASS: customer has only an RC ONE-OFF product, attaching a Stripe recurring", () => {
+			// RC one-off (e.g. an in-app topup) doesn't have a recurring sub —
+			// nothing to conflict with the new Stripe attach.
+			const rcOneOff = buildRcOneOffCusProduct();
+			const recurringMain = buildRecurringProduct("pro_25_monthly", false);
+
+			expect(() =>
+				handleExternalPSPErrors({
+					customerProducts: [rcOneOff],
+					attachProduct: recurringMain,
+					action: "attach",
+				}),
+			).not.toThrow();
+		});
+
+		test("BYPASS: customer has only an RC ONE-OFF product, attaching a Stripe recurring add-on", () => {
+			const rcOneOff = buildRcOneOffCusProduct();
+			const recurringAddOn = buildRecurringProduct("recurring_addon", true);
+
+			expect(() =>
+				handleExternalPSPErrors({
+					customerProducts: [rcOneOff],
+					attachProduct: recurringAddOn,
+					action: "attach",
+				}),
+			).not.toThrow();
+		});
+
+		test("THROWS: customer has BOTH RC recurring and RC one-off, attaching a Stripe recurring", () => {
+			// The one-off is benign but the recurring product still conflicts.
+			const rcRecurring = buildRcCusProduct("cus_prod_rc_recurring");
+			const rcOneOff = buildRcOneOffCusProduct("cus_prod_rc_oneoff");
+			const recurringMain = buildRecurringProduct("pro_50_monthly", false);
+
+			expectThrows(
+				() =>
+					handleExternalPSPErrors({
+						customerProducts: [rcOneOff, rcRecurring],
+						attachProduct: recurringMain,
+						action: "attach",
+					}),
+				"managed by RevenueCat",
+			);
+		});
+
+		test("BYPASS: customer has only an RC ONE-OFF, no attachProduct provided", () => {
+			// Defensive: even without attachProduct, an RC one-off shouldn't
+			// trigger the guard since there's no recurring conflict.
+			const rcOneOff = buildRcOneOffCusProduct();
+
+			expect(() =>
+				handleExternalPSPErrors({
+					customerProducts: [rcOneOff],
+					action: "attach",
+				}),
+			).not.toThrow();
 		});
 	},
 );
