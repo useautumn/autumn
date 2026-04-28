@@ -26,7 +26,7 @@ const pro = constructProduct({
 	items: [lifetimeMessagesItem],
 });
 
-const NUM_REQUESTS = 500; // Reduced from 10000 to avoid DB parameter limits
+const NUM_REQUESTS = 250; // Reduced from 10000 — local Redis saturates under FullSubject cache load
 const NUM_CUSTOMERS = 3;
 
 // Calculate total included usage dynamically

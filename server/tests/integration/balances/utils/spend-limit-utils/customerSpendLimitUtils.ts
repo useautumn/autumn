@@ -29,5 +29,5 @@ export const setCustomerSpendLimit = async ({
 	await autumn.customers.update(customerId, {
 		billing_controls: billingControls,
 	});
-	await timeout(2000);
+	await timeout(3000);
 };

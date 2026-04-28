@@ -1,9 +1,10 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { normalizedToFullSubject } from "@autumn/shared";
+import { AppEnv, normalizedToFullSubject } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { getOrInitFullSubjectViewEpoch } from "@/internal/customers/cache/fullSubject/actions/invalidate/getOrInitFullSubjectViewEpoch.js";
 import type { CachedFullSubject } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
+import { sanitizeCachedFullSubject } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedFullSubject.js";
 import {
 	buildFullSubjectKey,
 	buildFullSubjectViewEpochKey,
@@ -555,5 +556,82 @@ describe(`${chalk.yellowBright("fullSubject cache roundtrip")}`, () => {
 				await cleanupKeys({ customerId: scenario.ids.customerId });
 			},
 		});
+	});
+
+	// ─────────────────────────────────────────────────────────────────────────
+	// Commit ce100dbf — cache sanitization regression
+	//
+	// Upstash's Lua cjson collapses empty `{}` to `[]` on round-trip. Without
+	// the sanitizer, a cached `product.config` written as `{}` comes back as
+	// `[]` and downstream consumers throw "Expected object, received array".
+	// ─────────────────────────────────────────────────────────────────────────
+	test(`${chalk.yellowBright("redis round-trip — cached product.config:[] is sanitized to {} on read")}`, async () => {
+		const planId = "plan_sanitize_redis_roundtrip";
+		const cacheKey = `tests:cache-sanitize-roundtrip:${planId}:${Date.now()}`;
+		const malformedCacheEntry: unknown = {
+			subjectType: "customer",
+			customerId: "cus_sanitize_redis",
+			internalCustomerId: "cus_int_sanitize_redis",
+			_cachedAt: Date.now(),
+			subjectViewEpoch: 0,
+			meteredFeatures: [],
+			customerEntitlementIdsByFeatureId: {},
+			customer: {
+				internal_id: "cus_int_sanitize_redis",
+				org_id: ctx.org.id,
+				env: AppEnv.Live,
+				created_at: 1,
+			},
+			customer_products: [],
+			products: [
+				{
+					id: planId,
+					internal_id: `ip_${planId}`,
+					name: planId,
+					group: `grp_${planId}`,
+					created_at: 1,
+					env: ctx.env,
+					org_id: ctx.org.id,
+					is_add_on: false,
+					is_default: false,
+					version: 1,
+					archived: false,
+					config: [], // <-- this is what Upstash hands back for `{}`
+				},
+			],
+			entitlements: [],
+			prices: [],
+			free_trials: [],
+			subscriptions: [],
+			invoices: [],
+			flags: {},
+		};
+
+		try {
+			await ctx.redisV2.set(cacheKey, JSON.stringify(malformedCacheEntry));
+			const raw = await ctx.redisV2.get(cacheKey);
+			expect(raw).toBeDefined();
+			const parsed = JSON.parse(raw as string) as CachedFullSubject;
+
+			// Pre-condition: the on-wire payload really does contain the bug
+			// shape we're guarding against.
+			expect(
+				Array.isArray(
+					(parsed.products[0] as unknown as { config: unknown }).config,
+				),
+			).toBe(true);
+
+			const sanitized = sanitizeCachedFullSubject({
+				cachedFullSubject: parsed,
+			});
+			const product = sanitized.products[0] as unknown as {
+				config: { ignore_past_due: boolean };
+			};
+
+			expect(Array.isArray(product.config)).toBe(false);
+			expect(product.config.ignore_past_due).toBe(false);
+		} finally {
+			await ctx.redisV2.del(cacheKey);
+		}
 	});
 });
