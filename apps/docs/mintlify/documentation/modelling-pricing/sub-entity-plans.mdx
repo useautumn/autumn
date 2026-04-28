@@ -198,7 +198,7 @@ curl -X POST "https://api.useautumn.com/v1/check" \
 
 ## Upgrading an entity's plan
 
-To upgrade or downgrade an entity, attach the new plan with the same `entity_id`. The same [upgrade/downgrade](/documentation/customers/billing/subscription-lifecycle) logic applies:
+To upgrade or downgrade an entity, attach the new plan with the same `entity_id`. The same [upgrade/downgrade](/documentation/customers/subscription-lifecycle) logic applies:
 
 <CodeGroup>
 
@@ -233,7 +233,7 @@ curl -X POST "https://api.useautumn.com/v1/billing.attach" \
 
 ## Cancelling an entity's plan
 
-Use `billing.update` with `cancelAction` to cancel an entity's plan. The same [cancel/uncancel](/documentation/customers/billing/subscription-lifecycle#cancellations) behavior applies.
+Use `billing.update` with `cancelAction` to cancel an entity's plan. The same [cancel/uncancel](/documentation/customers/subscription-lifecycle#cancellations) behavior applies.
 
 <CodeGroup>
 
