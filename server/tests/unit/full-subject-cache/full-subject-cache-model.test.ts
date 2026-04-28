@@ -1,11 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import {
 	AppEnv,
+	BillingInterval,
+	isCustomerProductOneOff,
 	type NormalizedFullSubject,
+	normalizedToFullSubject,
+	PriceType,
 	SubjectType,
 } from "@autumn/shared";
 import {
 	cachedFullSubjectToNormalized,
+	FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 	normalizedToCachedFullSubject,
 } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
 
@@ -105,6 +110,65 @@ const buildNormalized = (): NormalizedFullSubject =>
 		entity_aggregations: undefined,
 	}) as unknown as NormalizedFullSubject;
 
+const buildMixedIntervalNormalized = (): NormalizedFullSubject => {
+	const normalized = buildNormalized();
+	const [customerEntitlement] = normalized.customer_entitlements;
+	if (!customerEntitlement) throw new Error("expected test entitlement");
+	const fixedPrice = {
+		id: "price_fixed",
+		config: {
+			type: PriceType.Fixed,
+			amount: 19,
+			interval: BillingInterval.Month,
+		},
+	};
+	const usagePrice = {
+		id: "price_usage",
+		config: {
+			type: PriceType.Usage,
+			interval: BillingInterval.OneOff,
+			usage_tiers: [{ to: "inf", amount: 9 }],
+		},
+	};
+	const fixedCustomerPrice = {
+		id: "cus_price_fixed",
+		price_id: "price_fixed",
+		customer_product_id: "cp_1",
+	};
+	const usageCustomerPrice = {
+		id: "cus_price_usage",
+		price_id: "price_usage",
+		customer_product_id: "cp_1",
+	};
+
+	return {
+		...normalized,
+		customer_products: [
+			{
+				id: "cp_1",
+				internal_product_id: "prod_int_1",
+				free_trial_id: null,
+			},
+		],
+		customer_entitlements: [
+			{
+				...customerEntitlement,
+				customerPrice: { ...usageCustomerPrice, price: usagePrice },
+			},
+		],
+		customer_prices: [fixedCustomerPrice, usageCustomerPrice],
+		flags: {},
+		products: [
+			{
+				internal_id: "prod_int_1",
+				id: "prod_1",
+				is_add_on: false,
+			},
+		],
+		prices: [fixedPrice, usagePrice],
+	} as unknown as NormalizedFullSubject;
+};
+
 describe("fullSubject cache model", () => {
 	test("stores non-balance data in the top-level subject", () => {
 		const normalized = buildNormalized();
@@ -118,6 +182,7 @@ describe("fullSubject cache model", () => {
 		expect(cached.customerEntitlementIdsByFeatureId).toEqual({
 			feat_1: ["cus_ent_1"],
 		});
+		expect(cached._schemaVersion).toBe(FULL_SUBJECT_CACHE_SCHEMA_VERSION);
 		expect(cached._cachedAt).toBeTypeOf("number");
 	});
 
@@ -170,5 +235,27 @@ describe("fullSubject cache model", () => {
 			normalized.customer_entitlements,
 		);
 		expect(reconstructed.customer_prices).toEqual([]);
+	});
+
+	test("preserves fixed prices without entitlements across cache roundtrip", () => {
+		const normalized = buildMixedIntervalNormalized();
+		const cached = normalizedToCachedFullSubject({
+			normalized,
+			subjectViewEpoch: 0,
+		});
+		const reconstructed = cachedFullSubjectToNormalized({
+			cached,
+			customerEntitlements: normalized.customer_entitlements,
+		});
+		const fullSubject = normalizedToFullSubject({ normalized: reconstructed });
+		const [customerProduct] = fullSubject.customer_products;
+
+		expect(customerProduct).toBeDefined();
+		expect(
+			customerProduct!.customer_prices.map((customerPrice) =>
+				customerPrice.price_id,
+			),
+		).toEqual(["price_fixed", "price_usage"]);
+		expect(isCustomerProductOneOff(customerProduct)).toBe(false);
 	});
 });
