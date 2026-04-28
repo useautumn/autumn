@@ -3,9 +3,33 @@ name: Server Type Check
 on:
   pull_request:
 
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
+  changes:
+    name: Check changed files
+    runs-on: ubuntu-latest
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+    steps:
+      - name: Check changed files
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            server:
+              - "server/**"
+              - "shared/**"
+              - "package.json"
+              - "bun.lock"
+              - ".github/workflows/server-typecheck.yml"
+
   typecheck:
     name: Type Check
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
     runs-on: ubuntu-latest
 
     steps:
