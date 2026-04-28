@@ -74,10 +74,14 @@ export class FailOpenHook implements SDKInitHook, AfterErrorHook {
 			fetcher: async (input, init) => {
 				try {
 					return init == null ? await fetch(input) : await fetch(input, init);
-				} catch {
+				} catch (error) {
+					console.log(error);
+					console.log(
+						`Network failed to reach Autumn: ${error}. Returning 555 Network Error.`,
+					);
 					return new Response(null, {
-						status: 503,
-						statusText: "Autumn Unreachable",
+						status: 555,
+						statusText: "Network Error",
 					});
 				}
 			},
