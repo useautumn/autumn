@@ -1,6 +1,7 @@
 import {
 	CusProductSchema,
 	CustomerSchema,
+	CustomerPriceSchema,
 	EntitlementWithFeatureSchema,
 	EntityAggregationsSchema,
 	EntitySchema,
@@ -16,13 +17,16 @@ import { z } from "zod/v4";
 
 export type CachedFullSubject = Omit<
 	NormalizedFullSubject,
-	"customer_entitlements" | "customer_prices"
+	"customer_entitlements"
 > & {
+	_schemaVersion: number;
 	_cachedAt: number;
 	meteredFeatures: string[];
 	customerEntitlementIdsByFeatureId: Record<string, string[]>;
 	subjectViewEpoch: number;
 };
+
+export const FULL_SUBJECT_CACHE_SCHEMA_VERSION = 2;
 
 /**
  * Schema mirror of `CachedFullSubject` used by the cache-hole-filling walker
@@ -45,6 +49,7 @@ export const CachedFullSubjectSchema = z.object({
 	entity: EntitySchema.optional(),
 
 	customer_products: z.array(CusProductSchema),
+	customer_prices: z.array(CustomerPriceSchema),
 	flags: z.record(z.string(), SubjectFlagSchema),
 
 	products: z.array(ProductSchema),
@@ -57,6 +62,7 @@ export const CachedFullSubjectSchema = z.object({
 
 	entity_aggregations: EntityAggregationsSchema.optional(),
 
+	_schemaVersion: z.number().optional(),
 	_cachedAt: z.number(),
 	meteredFeatures: z.array(z.string()),
 	customerEntitlementIdsByFeatureId: z.record(z.string(), z.array(z.string())),
@@ -102,6 +108,7 @@ export const normalizedToCachedFullSubject = ({
 		customer: normalized.customer,
 		entity: normalized.entity,
 		customer_products: normalized.customer_products,
+		customer_prices: normalized.customer_prices,
 		flags: normalized.flags,
 		products: normalized.products,
 		entitlements: normalized.entitlements,
@@ -110,6 +117,7 @@ export const normalizedToCachedFullSubject = ({
 		subscriptions: normalized.subscriptions,
 		invoices: normalized.invoices,
 		entity_aggregations: normalized.entity_aggregations,
+		_schemaVersion: FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 		_cachedAt: Date.now(),
 		meteredFeatures,
 		customerEntitlementIdsByFeatureId,
@@ -134,7 +142,7 @@ export const cachedFullSubjectToNormalized = ({
 		entity: cached.entity,
 		customer_products: cached.customer_products,
 		customer_entitlements: customerEntitlements,
-		customer_prices: [],
+		customer_prices: cached.customer_prices,
 		flags: cached.flags,
 		products: cached.products,
 		entitlements: cached.entitlements,

@@ -11,6 +11,7 @@ import { buildFullSubjectViewEpochKey } from "../builders/buildFullSubjectViewEp
 import {
 	type CachedFullSubject,
 	cachedFullSubjectToNormalized,
+	FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 } from "../fullSubjectCacheModel.js";
 import { sanitizeCachedFullSubject } from "../sanitize/index.js";
 import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
@@ -107,6 +108,22 @@ export const getCachedFullSubject = async ({
 			customerId,
 			entityId,
 			source: "stale-subject-view-epoch",
+		});
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+		};
+	}
+
+	if (cached._schemaVersion !== FULL_SUBJECT_CACHE_SCHEMA_VERSION) {
+		logger.warn(
+			`[getCachedFullSubject] Stale subject schema version for ${customerId}${entityId ? `:${entityId}` : ""}, cached=${cached._schemaVersion ?? "missing"}, current=${FULL_SUBJECT_CACHE_SCHEMA_VERSION}, source: ${source}`,
+		);
+		await invalidateCachedFullSubjectExact({
+			ctx,
+			customerId,
+			entityId,
+			source: "stale-subject-schema-version",
 		});
 		return {
 			fullSubject: undefined,
