@@ -11,6 +11,7 @@
 		"enumMembers",
 		"duplicates"
 	],
+	"ignore": ["ai/**"],
 	"ignoreWorkspaces": [
 		"packages/atmn",
 		"packages/autumn-js",
