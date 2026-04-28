@@ -31,13 +31,50 @@ jobs:
           DB_MAX_CONNECTIONS: 1
           NODE_OPTIONS: --dns-result-order=ipv4first
         run: |
+          DATABASE_URL="$(printf '%s' "$DATABASE_URL" | awk -F= '/^(DATABASE_URL|DATABASE_READ_ONLY_URL)=/ { sub(/^[^=]*=/, ""); print; exit } NR == 1 { print; exit }')"
+          DATABASE_URL="${DATABASE_URL%\"}"
+          DATABASE_URL="${DATABASE_URL#\"}"
+          DATABASE_URL="${DATABASE_URL%\'}"
+          DATABASE_URL="${DATABASE_URL#\'}"
+          export DATABASE_URL
+
+          bun -e '
+            const databaseUrl = process.env.DATABASE_URL?.trim();
+            if (!databaseUrl) {
+              console.error("DATABASE_READ_ONLY_URL format: empty");
+              process.exit(1);
+            }
+
+            try {
+              const url = new URL(databaseUrl);
+              console.log(`DATABASE_READ_ONLY_URL format: ${["postgres:", "postgresql:"].includes(url.protocol) ? "valid postgres URL" : `invalid protocol ${url.protocol}`}`);
+              console.log(`DATABASE_READ_ONLY_URL host: ${url.hostname || "missing"}`);
+              console.log(`DATABASE_READ_ONLY_URL port: ${url.port || "5432"}`);
+              if (!["postgres:", "postgresql:"].includes(url.protocol) || !url.hostname) {
+                process.exit(1);
+              }
+            } catch {
+              console.error("DATABASE_READ_ONLY_URL format: invalid URL");
+              process.exit(1);
+            }
+          '
+
           for i in 1 2 3; do
             bun -e '
               import { lookup } from "node:dns/promises";
               import net from "node:net";
 
               try {
-                const url = new URL(process.env.DATABASE_URL ?? "");
+                const databaseUrl = process.env.DATABASE_URL?.trim();
+                if (!databaseUrl) {
+                  throw new Error("DATABASE_READ_ONLY_URL secret is empty");
+                }
+
+                const url = new URL(databaseUrl);
+                if (!["postgres:", "postgresql:"].includes(url.protocol)) {
+                  throw new Error("DATABASE_READ_ONLY_URL must be a postgres URL");
+                }
+
                 await lookup(url.hostname);
                 await new Promise((resolve, reject) => {
                   const socket = net.connect(Number(url.port || 5432), url.hostname);
@@ -50,7 +87,7 @@ jobs:
                   socket.once("error", reject);
                 });
               } catch (error) {
-                console.error(`Database preflight failed (${error?.code ?? error?.name ?? "unknown"})`);
+                console.error(`Database preflight failed: ${error?.message ?? error}`);
                 process.exit(1);
               }
             ' && bun scripts/migrations/validate-schema.ts && exit 0
