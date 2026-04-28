@@ -36,6 +36,7 @@ export interface BillingContextOverride {
 	transitionConfig?: TransitionConfig;
 	billingVersion?: BillingVersion;
 	endOfCycleMsOverride?: number;
+	skipSubscriptionScheduleUpdates?: boolean;
 }
 
 export interface UpdateSubscriptionBillingContextOverride

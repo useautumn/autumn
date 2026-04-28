@@ -259,6 +259,8 @@ export const setupAttachBillingContext = async ({
 		externalId: params.subscription_id,
 
 		skipBillingChanges,
+		skipSubscriptionScheduleUpdates:
+			contextOverride.skipSubscriptionScheduleUpdates,
 
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,
