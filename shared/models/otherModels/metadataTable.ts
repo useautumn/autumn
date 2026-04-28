@@ -20,6 +20,7 @@ export const metadata = pgTable("metadata", {
 	type: text("type").$type<MetadataType>(),
 	stripe_invoice_id: text("stripe_invoice_id"),
 	stripe_checkout_session_id: text("stripe_checkout_session_id"),
+	validate_schema_probe: text("validate_schema_probe"),
 });
 
 export type Metadata = InferSelectModel<typeof metadata>;
