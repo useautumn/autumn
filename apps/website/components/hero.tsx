@@ -94,12 +94,12 @@ export default function Hero() {
 		let ctx: { revert: () => void } | null = null;
 		let cancelled = false;
 
+		// Mobile: CSS animations in globals.css handle the hero reveal.
+		// Guard here so mobile never initiates the ~60KB GSAP dynamic import.
+		if (window.innerWidth < 1024) return;
+
 		getGsap().then((gsap) => {
 			if (cancelled) return;
-			// Mobile: CSS animations in globals.css handle the hero reveal.
-			// Skipping GSAP avoids a ~60KB async fetch on mobile and prevents
-			// the inline opacity:0 set from fighting the CSS animation fill.
-			if (window.innerWidth < 1024) return;
 			ctx = gsap.context(() => {
 				gsap.set(".hero-reveal", {
 					opacity: 0,
