@@ -47,6 +47,34 @@ describe("stripeWebhookEarlyAckMiddleware", () => {
 		expect(processed).toBe(true);
 	});
 
+	test("does not run downstream twice when waitUntil throws", async () => {
+		const errors: unknown[] = [];
+		let runs = 0;
+		const response = await stripeWebhookEarlyAckMiddleware(
+			{
+				get: () => ({
+					logger: { error: (_message: string, meta: unknown) => errors.push(meta) },
+				}),
+				json: (body: unknown, status: number) =>
+					new Response(JSON.stringify(body), { status }),
+				executionCtx: {
+					waitUntil: () => {
+						throw new Error("waitUntil failed");
+					},
+				},
+			} as never,
+			async () => {
+				runs++;
+			},
+		);
+
+		expect(response.status).toBe(200);
+		await Promise.resolve();
+		await waitForImmediate();
+		expect(runs).toBe(1);
+		expect(errors).toHaveLength(1);
+	});
+
 	test("returns 200 before downstream webhook processing completes", async () => {
 		const app = createApp();
 		let resolveProcessing!: () => void;
