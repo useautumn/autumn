@@ -13,6 +13,7 @@ type CreateInvoiceParams = {
 	currency?: string;
 	discounts?: Stripe.InvoiceCreateParams["discounts"];
 	collectionMethod?: "charge_automatically" | "send_invoice";
+	paymentSettings?: Stripe.InvoiceCreateParams["payment_settings"];
 	daysUntilDue?: number;
 	description?: string;
 	metadata?: Stripe.InvoiceCreateParams["metadata"];
@@ -24,6 +25,7 @@ export const createStripeInvoice = async ({
 	stripeSubId,
 	currency,
 	collectionMethod = "charge_automatically",
+	paymentSettings,
 	daysUntilDue,
 	description,
 	metadata,
@@ -39,6 +41,7 @@ export const createStripeInvoice = async ({
 		collection_method: collectionMethod,
 		days_until_due:
 			collectionMethod === "send_invoice" ? (daysUntilDue ?? 30) : undefined,
+		...(paymentSettings ? { payment_settings: paymentSettings } : {}),
 		...(discounts ? { discounts } : {}),
 	});
 
