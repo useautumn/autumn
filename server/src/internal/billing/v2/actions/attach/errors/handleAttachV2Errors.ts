@@ -34,7 +34,8 @@ export const handleAttachV2Errors = async ({
 
 	// 1. External PSP errors (RevenueCat)
 	handleExternalPSPErrors({
-		customerProduct: billingContext.currentCustomerProduct,
+		customerProducts: billingContext.fullCustomer.customer_products,
+		attachProduct: billingContext.attachProduct,
 		action: "attach",
 	});
 
