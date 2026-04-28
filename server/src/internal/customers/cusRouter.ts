@@ -11,6 +11,7 @@ import {
 	handleDeleteCustomerV2,
 } from "./handlers/handleDeleteCustomer.js";
 import { handleGetCustomerV2 } from "./handlers/handleGetCustomerV2.js";
+import { handleGetCustomerV3 } from "./handlers/handleGetCustomerV3.js";
 import { handlePostCustomer } from "./handlers/handleGetOrCreateCustomer/handleGetOrCreateCustomer.js";
 import { handleListCustomers } from "./handlers/handleListCustomers.js";
 import { handleListCustomersV2 } from "./handlers/handleListCustomersV2.js";
@@ -57,3 +58,4 @@ customerRpcRouter.post(
 customerRpcRouter.post("/customers.update", ...handleUpdateCustomerV2);
 customerRpcRouter.post("/customers.list", ...handleListCustomersV2);
 customerRpcRouter.post("/customers.delete", ...handleDeleteCustomerV2);
+customerRpcRouter.post("/customers.get", ...handleGetCustomerV3);
