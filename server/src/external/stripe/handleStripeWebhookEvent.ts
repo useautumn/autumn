@@ -13,7 +13,7 @@ import { handleStripeCheckoutSessionCompleted } from "./webhookHandlers/handleSt
 import { handleStripeInvoiceCreated } from "./webhookHandlers/handleStripeInvoiceCreated/handleStripeInvoiceCreated.js";
 import { handleStripeInvoiceFinalized } from "./webhookHandlers/handleStripeInvoiceFinalized/handleStripeInvoiceFinalized.js";
 import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
-import { handleSubCreated } from "./webhookHandlers/handleSubCreated/handleSubCreated.js";
+import { handleStripeSubscriptionCreated } from "./webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
 import type {
 	StripeWebhookContext,
@@ -34,7 +34,7 @@ export const handleStripeWebhookEvent = async (
 	try {
 		switch (event.type) {
 			case "customer.subscription.created":
-				await handleSubCreated({ ctx });
+				await handleStripeSubscriptionCreated({ ctx });
 				break;
 
 			case "customer.subscription.updated":

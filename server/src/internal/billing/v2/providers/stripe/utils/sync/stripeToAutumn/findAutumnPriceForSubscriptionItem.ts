@@ -1,6 +1,6 @@
 import type { Price, Product } from "@autumn/shared";
 import type Stripe from "stripe";
-import { subscriptionItemMatchesAutumnPrice } from "../matchUtils/subscriptionItemMatchesAutumnPrice";
+import { subscriptionItemMatchesAutumnPrice } from "../matchUtils/subscriptionItemMatchesAutumnPrice.js";
 
 export const findAutumnPriceForSubscriptionItem = ({
 	stripeSubscriptionItem,
