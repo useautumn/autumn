@@ -29,6 +29,7 @@
 				"src/utils/scriptUtils/scriptUtils.ts",
 				"src/utils/scriptUtils/getAll/getAllAutumnCustomers.ts",
 				"src/utils/scriptUtils/getAll/getAllOrgs.ts",
+				"src/internal/billing/v2/providers/stripe/utils/sync/**/*.ts",
 				"tests/**/*.ts"
 			],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
