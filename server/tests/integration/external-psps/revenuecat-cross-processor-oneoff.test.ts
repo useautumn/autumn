@@ -343,3 +343,164 @@ test.concurrent(
 		).rejects.toThrow(/Stripe|RevenueCat|external|managed/i);
 	},
 );
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 4: V2 attach — RC sub + Stripe one-off top-up via /v1/billing.attach
+//
+// Mirror of Test 2 but exercises the V2 attach pipeline (autumnV1.billing.attach
+// → handleAttachV2 → handleAttachV2Errors → handleExternalPSPErrors v2).
+// Confirms the V2 gate bypasses cross-processor for true one-offs.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("revenuecat cross-processor 4: rc sub + stripe one-off top-up via s.billing.attach (v2)")}`,
+	async () => {
+		const customerId = "rc-xproc-4";
+
+		const RC_PRO_MONTHLY_ID = "com.app.rc_xproc_4_pro_monthly";
+
+		const rcProMonthly = products.pro({
+			id: "rc-xproc-4-pro-monthly",
+			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
+		const webTopUp = products.oneOff({
+			id: "rc-xproc-4-web-top-up",
+			items: [items.lifetimeMessages({ includedUsage: 100 })],
+			isAddOn: true,
+		});
+
+		await setupRevenueCatOrg();
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [rcProMonthly, webTopUp] }),
+			],
+			actions: [],
+		});
+
+		await RCMappingService.upsert({
+			db: ctx.db,
+			data: {
+				org_id: ctx.org.id,
+				env: AppEnv.Sandbox,
+				autumn_product_id: rcProMonthly.id,
+				revenuecat_product_ids: [RC_PRO_MONTHLY_ID],
+			},
+		});
+
+		const rcClient = new RevenueCatWebhookClient({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			webhookSecret: RC_WEBHOOK_SECRET,
+		});
+
+		// Step 1: RC initial purchase puts customer on the RC-managed subscription
+		const rcResult = await rcClient.initialPurchase({
+			productId: RC_PRO_MONTHLY_ID,
+			appUserId: customerId,
+			originalTransactionId: "rc_xproc_4_tx_001",
+		});
+		expectWebhookSuccess(rcResult);
+
+		// Confirm pre-state: 1 product active (RC sub)
+		let customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(customer.products[0].id).toBe(rcProMonthly.id);
+
+		// PRIMARY ACTION: V2 attach the Stripe one-off top-up — must succeed because
+		// pricesOnlyOneOff(attachProduct.prices) === true bypasses the RC guard.
+		await autumnV1.billing.attach({
+			customer_id: customerId,
+			product_id: webTopUp.id,
+		});
+
+		customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(2);
+		const productIds = customer.products
+			.map((p: { id: string }) => p.id)
+			.sort();
+		expect(productIds).toEqual([rcProMonthly.id, webTopUp.id].sort());
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 5: V2 attach negative guard — recurring add-on via /v1/billing.attach must
+// STILL be blocked when customer has an RC-managed main product.
+//
+// This is the bug we just fixed: previously the V2 gate (`setupAttachTransitionContext`
+// + handleExternalPSPErrors v2) bypassed the cross-processor check for ALL
+// add-ons + one-offs because `currentCustomerProduct` resolved to undefined for
+// non-main-recurring attaches. Now we scan all customer_products and only bypass
+// for `pricesOnlyOneOff(attachProduct.prices)`. Recurring add-ons must throw.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("revenuecat cross-processor 5: rc sub + stripe recurring add-on via s.billing.attach must throw (v2)")}`,
+	async () => {
+		const customerId = "rc-xproc-5";
+
+		const RC_PRO_ID = "com.app.rc_xproc_5_pro";
+
+		const rcPro = products.pro({
+			id: "rc-xproc-5-rc-pro",
+			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
+		// Recurring add-on (NOT a one-off): cross-processor V2 attach must still throw.
+		const stripeRecurringAddOn = products.recurringAddOn({
+			id: "rc-xproc-5-recurring-addon",
+			items: [items.monthlyMessages({ includedUsage: 50 })],
+		});
+
+		await setupRevenueCatOrg();
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [rcPro, stripeRecurringAddOn] }),
+			],
+			actions: [],
+		});
+
+		await RCMappingService.upsert({
+			db: ctx.db,
+			data: {
+				org_id: ctx.org.id,
+				env: AppEnv.Sandbox,
+				autumn_product_id: rcPro.id,
+				revenuecat_product_ids: [RC_PRO_ID],
+			},
+		});
+
+		const rcClient = new RevenueCatWebhookClient({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			webhookSecret: RC_WEBHOOK_SECRET,
+		});
+
+		// Step 1: RC initial purchase puts customer on the RC-managed subscription
+		const rcResult = await rcClient.initialPurchase({
+			productId: RC_PRO_ID,
+			appUserId: customerId,
+			originalTransactionId: "rc_xproc_5_tx_001",
+		});
+		expectWebhookSuccess(rcResult);
+
+		// PRIMARY ACTION: V2 attach a recurring add-on → must throw.
+		// Without the fix, this would silently succeed and create a brand-new Stripe
+		// subscription that bundles in the RC product's Stripe price (Runable bug).
+		await expect(
+			autumnV1.billing.attach({
+				customer_id: customerId,
+				product_id: stripeRecurringAddOn.id,
+			}),
+		).rejects.toThrow(/Stripe|RevenueCat|external|managed/i);
+
+		// Sanity: the recurring add-on must NOT have been attached.
+		const customer = await autumnV1.customers.get(customerId);
+		expect(customer.products).toHaveLength(1);
+		expect(customer.products[0].id).toBe(rcPro.id);
+	},
+);
