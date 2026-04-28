@@ -1,7 +1,7 @@
 import { BillingMethod } from "@api/products/components/billingMethod";
 import {
 	TierBehavior,
-	UsageTierSchema,
+	ApiUsageTierOutputSchema,
 } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import { z } from "zod/v4";
 import { ApiFeatureV1Schema } from "../../features/apiFeatureV1";
@@ -39,7 +39,7 @@ export const ApiBalanceBreakdownPriceSchema = z.object({
 	amount: z.number().optional().meta({
 		description: "The per-unit price amount.",
 	}),
-	tiers: z.array(UsageTierSchema).optional().meta({
+	tiers: z.array(ApiUsageTierOutputSchema).optional().meta({
 		description: "Tiered pricing configuration if applicable.",
 	}),
 	tier_behavior: z.enum(TierBehavior).optional().meta({
