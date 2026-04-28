@@ -1,5 +1,5 @@
 bun knip
-cd server && bun ts
+(cd server && bun ts)
 
 changed_files="$(git diff --cached --name-only)"
 

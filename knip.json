@@ -16,18 +16,25 @@
 			"entry": ["apps/scope-picker/**/*"]
 		},
 		"server": {
-			"entry": ["src/**/*.ts", "tests/**/*.ts"],
+			"entry": [
+				"src/internal/customers/cusUtils/createNewCustomer.ts",
+				"src/utils/importUtils/addProductFromSubs.ts",
+				"src/utils/scriptUtils/readOnlyStripe.ts",
+				"src/utils/scriptUtils/scriptUtils.ts",
+				"src/utils/scriptUtils/getAll/getAllAutumnCustomers.ts",
+				"src/utils/scriptUtils/getAll/getAllOrgs.ts",
+				"tests/**/*.ts"
+			],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"]
 		},
 		"shared": {
-			"entry": ["**/*.ts", "!utils/**"],
 			"project": ["**/*.ts", "!utils/**"],
 			"includeEntryExports": false
 		},
 		"vite": {
-			"entry": ["src/**/*.{ts,tsx}"],
-			"project": ["src/**/*.{ts,tsx}"],
+			"entry": ["tests/**/*.{ts,tsx}"],
+			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 			"ignore": ["src/components/ai-elements/**"],
 			"ignoreDependencies": [
 				"tailwindcss",
@@ -53,32 +60,30 @@
 			"project": ["**/*.{ts,tsx,mdx,mjs}"]
 		},
 		"apps/checkout": {
-			"entry": ["src/**/*.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}"],
 			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
 		},
 		"packages/atmn": {
-			"entry": ["src/**/*.{ts,tsx}"],
+			"entry": ["src/cli.tsx", "src/compose/index.ts"],
 			"project": ["src/**/*.{ts,tsx}", "*.ts"]
 		},
 		"packages/autumn-js": {
-			"entry": ["src/**/*.ts", "*.ts"],
+			"entry": ["src/{sdk,react,backend,better-auth}/index.ts", "src/backend/adapters/*.ts"],
 			"project": ["src/**/*.ts", "*.ts"]
 		},
 		"packages/ksuid": {
-			"entry": ["src/**/*.ts"],
 			"project": ["src/**/*.ts"]
 		},
 		"packages/openapi": {
-			"entry": ["**/*.ts"],
+			"entry": ["scripts/**/*.ts", "v2.1/contracts/index.ts"],
 			"project": ["**/*.ts"]
 		},
 		"packages/sdk": {
-			"entry": ["src/**/*.ts", "examples/**/*.ts"],
+			"entry": ["src/*.ts", "examples/**/*.ts"],
 			"project": ["src/**/*.ts", "examples/**/*.ts"]
 		},
 		"packages/stripe-sync": {
-			"entry": ["src/**/*.ts", "scripts/**/*.ts"],
+			"entry": ["scripts/**/*.ts"],
 			"project": ["src/**/*.ts", "scripts/**/*.ts"]
 		}
 	},
