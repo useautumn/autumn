@@ -3,18 +3,19 @@ import type Stripe from "stripe";
 import { subscriptionItemMatchesAutumnProduct } from "../matchUtils/subscriptionItemMatchesAutumnProduct";
 import { findAutumnPriceForSubscriptionItem } from "./findAutumnPriceForSubscriptionItem";
 
-export const findAutumnProductForSubscription = ({
+export const findAutumnProductsForSubscription = ({
 	stripeSubscription,
 	products,
 }: {
 	stripeSubscription: Stripe.Subscription;
 	products: FullProduct[];
-}) => {
-	const matchedProducts = new Set<string>();
-	let matchedAutumnProduct: FullProduct | undefined;
+}): FullProduct[] => {
+	const matchedById = new Map<string, FullProduct>();
 
 	for (const stripeSubscriptionItem of stripeSubscription.items.data) {
 		for (const product of products) {
+			if (matchedById.has(product.id)) continue;
+
 			const matchedPrice = findAutumnPriceForSubscriptionItem({
 				stripeSubscriptionItem,
 				prices: product.prices.map((price) => ({
@@ -31,12 +32,9 @@ export const findAutumnProductForSubscription = ({
 
 			if (!matchedPrice && !productMatchedDirectly) continue;
 
-			matchedProducts.add(product.id);
-			matchedAutumnProduct = product;
+			matchedById.set(product.id, product);
 		}
 	}
 
-	if (matchedProducts.size !== 1) return undefined;
-
-	return matchedAutumnProduct;
+	return Array.from(matchedById.values());
 };

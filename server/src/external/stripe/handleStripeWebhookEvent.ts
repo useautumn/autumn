@@ -13,7 +13,7 @@ import { handleStripeCheckoutSessionCompleted } from "./webhookHandlers/handleSt
 import { handleStripeInvoiceCreated } from "./webhookHandlers/handleStripeInvoiceCreated/handleStripeInvoiceCreated.js";
 import { handleStripeInvoiceFinalized } from "./webhookHandlers/handleStripeInvoiceFinalized/handleStripeInvoiceFinalized.js";
 import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
-import { handleSubCreated } from "./webhookHandlers/handleSubCreated.js";
+import { handleSubCreated } from "./webhookHandlers/handleSubCreated/handleSubCreated.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
 import type {
 	StripeWebhookContext,
