@@ -30,7 +30,9 @@ export const autoSyncFromSubscription = async ({
 		logger.warn(
 			`sub.created auto-sync: stripe sub ${subscription.id} matched ${matchedProducts.length} Autumn products (${matchedProducts
 				.map((product) => product.id)
-				.join(", ")}); skipping due to ambiguity. Check for overlapping stripe price IDs across products.`,
+				.join(
+					", ",
+				)}); skipping due to ambiguity. Check for overlapping stripe price IDs across products.`,
 		);
 		return;
 	}

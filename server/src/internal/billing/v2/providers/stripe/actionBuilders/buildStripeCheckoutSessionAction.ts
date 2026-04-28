@@ -65,6 +65,7 @@ export const buildStripeCheckoutSessionAction = ({
 							end_behavior: { missing_payment_method: "cancel" },
 						},
 					}),
+					metadata: { autumn_managed: "true" },
 				}
 			: undefined;
 

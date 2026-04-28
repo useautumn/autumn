@@ -32,5 +32,10 @@ export const setupSubCreatedContext = async ({
 		ProductService.listFull({ db, orgId: org.id, env }),
 	]);
 
+	// Skip subs Autumn created itself — guards against the race where the
+	// attach flow has not yet written `subscription_ids` on the cusProduct
+	// when sub.created arrives.
+	if (subscription.metadata?.autumn_managed === "true") return undefined;
+
 	return { subscription, fullCustomer, candidateProducts };
 };
