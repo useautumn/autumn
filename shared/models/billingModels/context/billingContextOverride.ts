@@ -46,6 +46,4 @@ export interface UpdateSubscriptionBillingContextOverride
 		customPrices?: Price[];
 		customEnts?: Entitlement[];
 	};
-
-	inheritBillingVersion?: boolean;
 }
