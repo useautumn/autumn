@@ -1,0 +1,67 @@
+others/python-sdk/src/autumn_sdk/models/__init__.py
+  352be3e93475e47f 529-532,1389,1818-1821,3183-3186
+packages/sdk/src/funcs/balances-finalize.ts
+  352be3e93475e47f 155
+packages/sdk/.speakeasy/out.openapi.yaml
+  352be3e93475e47f 10672-10673
+packages/sdk/src/models/finalize-lock-op.ts
+  352be3e93475e47f 11,49-55,59,63-66,108-109,115-150
+others/python-sdk/src/autumn_sdk/balances.py
+  352be3e93475e47f 781-783,882-884
+packages/openapi/v2.1/contracts/balancesContract.ts
+  352be3e93475e47f 178-184
+others/python-sdk/src/autumn_sdk/models/finalizelockop.py
+  352be3e93475e47f 8-9,31,79,88-100,106,110-120
+packages/openapi/openapi.yml
+  352be3e93475e47f 11628-11631
+packages/autumn-js/src/better-auth/utils/createAutumnEndpoint.ts
+  b866e71bb81f0337 13-14,29,43
+packages/openapi/openapi-stripped.yml
+  352be3e93475e47f 10938-10941
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "4fc9d22bce205c253af71857d2c336103b87b31b",
+  "prompts": {
+    "2ab6205660cefd3b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "05b4fcad-2f90-4b07-8263-8a003866678c",
+        "model": "gpt-5.5"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 1,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    },
+    "352be3e93475e47f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2263129d9ffe0V74duE0L4a4ks",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 146,
+      "total_deletions": 111,
+      "accepted_lines": 143,
+      "overriden_lines": 1
+    },
+    "b866e71bb81f0337": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "44dfbd33-b410-4a95-8656-b894aff4e4ba",
+        "model": "gpt-5.5"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 9,
+      "total_deletions": 7,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    }
+  }
+}
