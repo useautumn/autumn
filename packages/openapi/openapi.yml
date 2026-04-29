@@ -11625,6 +11625,18 @@ paths:
                     type: boolean
                 required:
                   - success
+        "202":
+          description: Accepted. Autumn is experiencing degraded service from a downstream
+            provider, so the finalize request was allowed fail-open.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
       x-speakeasy-name-override: finalize
       parameters:
         - *a1

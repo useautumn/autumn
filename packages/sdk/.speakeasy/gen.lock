@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 7b300647-cd76-49e9-bf77-7d1bf5446d66
 management:
-  docChecksum: 7b041db250cc83cf3e1c834d9f7371f7
+  docChecksum: f77f5b270eb05aabdf92746cfc1c8a1c
   docVersion: 2.2.0
   speakeasyVersion: 1.718.0
   generationVersion: 2.824.1
   releaseVersion: 0.10.17
   configChecksum: c6b2bd1231da8dc3af5be7430f3cfbac
 persistentEdits:
-  generation_id: e8060a07-3993-40fa-8a98-a82f0bf74bb1
-  pristine_commit_hash: a7083484a7071b5087318add6bdeda67285dd0c6
-  pristine_tree_hash: 01836ee29b7ddcf1f471e6e21f35f9d65f5c0ba0
+  generation_id: 9196abe4-3f28-4ec5-9b77-953542676af8
+  pristine_commit_hash: bcfb9f63775d52b1d9b0554611cfdc099a64aa08
+  pristine_tree_hash: df8d840d49d8e9ddec459f9fd029b92beaa6be7f
 features:
   typescript:
     additionalDependencies: 0.1.0
@@ -1094,10 +1094,18 @@ trackedFiles:
     id: 9e46b2266879
     last_write_checksum: sha1:71ca1201534ec6648233b162a2182853e22c5bf3
     pristine_git_object: f9b057e603470bb3b10559db649d12276ca9441f
+  docs/models/finalize-lock-response-body1.md:
+    id: a26657e9fc9b
+    last_write_checksum: sha1:3ec646f95ff32c26aabe5344be76ba1fd20141a2
+    pristine_git_object: 1ecb12ad7b1f4295d92707205dfd15a638f04c43
+  docs/models/finalize-lock-response-body2.md:
+    id: b6c64f1548c8
+    last_write_checksum: sha1:8cd028fcf2ae8e01308deb5f4f6aa521fb6e5c12
+    pristine_git_object: d8e92965780a197fb88d8d7ffab88683fe6c038c
   docs/models/finalize-lock-response.md:
     id: 1d3e59ed6f9f
-    last_write_checksum: sha1:2cb76104cdcfc8523df0b1bee455803d92d1a03d
-    pristine_git_object: 73e853665d84c32272456719c739e803c14f8494
+    last_write_checksum: sha1:228fb911552a0230572611e839dd1d88a67e2f0a
+    pristine_git_object: 1245c94d0e602d8ef227c2b8b806fcb182b038c6
   docs/models/flag-display1.md:
     id: 795088cca79e
     last_write_checksum: sha1:434ec2ae0dac8c5387d8a9d605603fe88000d25f
@@ -3228,8 +3236,8 @@ trackedFiles:
     pristine_git_object: 35150249724d4013c7a9bab5043914c68e294790
   src/funcs/balances-finalize.ts:
     id: 0cadf4150802
-    last_write_checksum: sha1:77127694ddec8674a3ba9a52cd67def01e4e28eb
-    pristine_git_object: 3f90ce62bddced2b9a1bde942534a394be7edb33
+    last_write_checksum: sha1:96d985206081d494a4f031b5a225bebc1e8b75d9
+    pristine_git_object: dc348d3d1eaca950c5feda453c43c3d66bb3a0d5
   src/funcs/balances-update.ts:
     id: a4d3bafe74f2
     last_write_checksum: sha1:c179574469056b82c8ab32eb9f8bf64c3c647114
@@ -3520,8 +3528,8 @@ trackedFiles:
     pristine_git_object: fe9f3ba6325264cd07c3735c675e401a5d91a78e
   src/models/finalize-lock-op.ts:
     id: 8b7c7048d1dd
-    last_write_checksum: sha1:8f356c8c314ec0f7eda45c765c63393f61b19247
-    pristine_git_object: e32f582176649899148ca6afba2175c75dc7abdf
+    last_write_checksum: sha1:1b4b9e92bcd8ef4c059768b239c8c74c47403abd
+    pristine_git_object: 1bd8afff1e3e103eaa4c4779bc2b6c4142eb9e02
   src/models/get-entity-op.ts:
     id: 7932a3cea5c1
     last_write_checksum: sha1:c53be8c587568ad3abffb5f5ce9276d83b373bfe
@@ -4519,6 +4527,8 @@ examples:
         application/json: {"lock_id": "lock_abc123", "action": "confirm"}
       responses:
         "200":
+          application/json: {"success": true}
+        "202":
           application/json: {"success": true}
   updateEntity:
     speakeasy-default-update-entity:
