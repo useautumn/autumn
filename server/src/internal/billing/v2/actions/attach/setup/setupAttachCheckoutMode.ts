@@ -20,6 +20,7 @@ export const setupAttachCheckoutMode = ({
 	stripeSubscription,
 	trialContext,
 	invoiceMode,
+	hasFutureStartDate,
 }: {
 	paymentMethod?: Stripe.PaymentMethod;
 	currentCustomerProduct?: FullCusProduct;
@@ -28,6 +29,7 @@ export const setupAttachCheckoutMode = ({
 	stripeSubscription?: Stripe.Subscription;
 	trialContext?: TrialContext;
 	invoiceMode?: InvoiceMode;
+	hasFutureStartDate?: boolean;
 }): CheckoutMode => {
 	const hasPaymentMethod = !!paymentMethod;
 	const hasExistingSubscription = !!stripeSubscription;
@@ -42,6 +44,10 @@ export const setupAttachCheckoutMode = ({
 	}
 
 	if (invoiceMode) {
+		return null;
+	}
+
+	if (hasFutureStartDate) {
 		return null;
 	}
 
