@@ -1,14 +1,11 @@
 import { hasCustomerProductStarted } from "@autumn/shared";
+import { fromUnixTime } from "date-fns";
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-const getScheduleId = ({
-	subscription,
-}: {
-	subscription: Stripe.Subscription;
-}) =>
+const getScheduleId = (subscription: Stripe.Subscription) =>
 	typeof subscription.schedule === "string"
 		? subscription.schedule
 		: subscription.schedule?.id;
@@ -20,7 +17,7 @@ export const linkScheduledCustomerProductsToSubscription = async ({
 	ctx: StripeWebhookContext;
 	subscription: Stripe.Subscription;
 }) => {
-	const scheduleId = getScheduleId({ subscription });
+	const scheduleId = getScheduleId(subscription);
 	if (!scheduleId) return;
 
 	const { db, org, env, logger } = ctx;
@@ -37,22 +34,31 @@ export const linkScheduledCustomerProductsToSubscription = async ({
 		if (subscriptionIds.includes(subscription.id)) continue;
 
 		const nextSubscriptionIds = [...subscriptionIds, subscription.id];
-		const shouldActivate =
-			ctx.fullCustomer &&
-			hasCustomerProductStarted(cusProduct, {
-				nowMs: (subscription.start_date ?? subscription.created) * 1000,
-			});
+		const subscriptionStartMs = fromUnixTime(
+			subscription.start_date ?? subscription.created,
+		).getTime();
+		const hasStarted = hasCustomerProductStarted(cusProduct, {
+			nowMs: subscriptionStartMs,
+		});
 
-		if (shouldActivate) {
+		if (hasStarted && ctx.fullCustomer) {
 			await customerProductActions.activateScheduled({
 				ctx,
 				customerProduct: cusProduct,
-				fullCustomer: ctx.fullCustomer!,
+				fullCustomer: ctx.fullCustomer,
 				subscriptionIds: nextSubscriptionIds,
-				scheduledIds: cusProduct.scheduled_ids ?? [scheduleId],
+				scheduledIds: cusProduct.scheduled_ids?.length
+					? cusProduct.scheduled_ids
+					: [scheduleId],
 			});
 			updatedCount++;
 			continue;
+		}
+
+		if (hasStarted) {
+			logger.warn(
+				`[sub.created] could not activate scheduled customer product ${cusProduct.id}: fullCustomer missing`,
+			);
 		}
 
 		await CusProductService.update({

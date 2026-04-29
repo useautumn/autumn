@@ -29,6 +29,24 @@ export const handleStartDateErrors = ({
 		});
 	}
 
+	if (params.plan_schedule === "end_of_cycle") {
+		throw new RecaseError({
+			message:
+				"start_date cannot be used together with plan_schedule: end_of_cycle.",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
+	if (billingContext.currentCustomerProduct) {
+		throw new RecaseError({
+			message:
+				"start_date is only supported when attaching a new subscription, not when switching an existing one.",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	const isFutureStart =
 		params.start_date > billingContext.currentEpochMs + START_DATE_TOLERANCE_MS;
 	if (!isFutureStart) return;
@@ -44,18 +62,17 @@ export const handleStartDateErrors = ({
 		});
 	}
 
-	if (billingContext.trialContext?.trialEndsAt) {
+	if (!billingContext.paymentMethod) {
 		throw new RecaseError({
-			message: "Future start_date cannot be used together with a free trial.",
+			message: "Future start_date requires a saved payment method.",
 			code: ErrCode.InvalidRequest,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
 
-	if (billingContext.currentCustomerProduct) {
+	if (billingContext.trialContext?.trialEndsAt) {
 		throw new RecaseError({
-			message:
-				"Future start_date is only supported when attaching a new subscription, not when switching an existing one.",
+			message: "Future start_date cannot be used together with a free trial.",
 			code: ErrCode.InvalidRequest,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});

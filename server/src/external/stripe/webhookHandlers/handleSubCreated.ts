@@ -1,7 +1,7 @@
 import type Stripe from "stripe";
 import { getFullStripeSub } from "../stripeSubUtils.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
-import { linkScheduledCustomerProductsToSubscription } from "./handleSubCreated/tasks/linkScheduledCustomerProductsToSubscription";
+import { linkScheduledCustomerProductsToSubscription } from "./handleSubCreated/tasks/linkScheduledCustomerProductsToSubscription.js";
 
 export const handleSubCreated = async ({
 	ctx,
