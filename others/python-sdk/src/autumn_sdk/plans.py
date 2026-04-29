@@ -30,6 +30,11 @@ class Plans(BaseSDK):
         free_trial: Optional[
             Union[models.FreeTrialRequest, models.FreeTrialRequestTypedDict]
         ] = None,
+        config: Optional[
+            Union[
+                models.CreatePlanConfigRequest, models.CreatePlanConfigRequestTypedDict
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -50,6 +55,7 @@ class Plans(BaseSDK):
         :param price: Base recurring price for the plan. Omit for free or usage-only plans.
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: Free trial configuration. Customers can try this plan before being charged.
+        :param config: Miscellaneous plan-level configuration flags.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -80,6 +86,9 @@ class Plans(BaseSDK):
             ),
             free_trial=utils.get_pydantic_model(
                 free_trial, Optional[models.FreeTrialRequest]
+            ),
+            config=utils.get_pydantic_model(
+                config, Optional[models.CreatePlanConfigRequest]
             ),
         )
 
@@ -163,6 +172,11 @@ class Plans(BaseSDK):
         free_trial: Optional[
             Union[models.FreeTrialRequest, models.FreeTrialRequestTypedDict]
         ] = None,
+        config: Optional[
+            Union[
+                models.CreatePlanConfigRequest, models.CreatePlanConfigRequestTypedDict
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -183,6 +197,7 @@ class Plans(BaseSDK):
         :param price: Base recurring price for the plan. Omit for free or usage-only plans.
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: Free trial configuration. Customers can try this plan before being charged.
+        :param config: Miscellaneous plan-level configuration flags.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -213,6 +228,9 @@ class Plans(BaseSDK):
             ),
             free_trial=utils.get_pydantic_model(
                 free_trial, Optional[models.FreeTrialRequest]
+            ),
+            config=utils.get_pydantic_model(
+                config, Optional[models.CreatePlanConfigRequest]
             ),
         )
 
@@ -685,6 +703,11 @@ class Plans(BaseSDK):
                 models.UpdatePlanFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
+        config: Optional[
+            Union[
+                models.UpdatePlanConfigRequest, models.UpdatePlanConfigRequestTypedDict
+            ]
+        ] = None,
         version: Optional[float] = None,
         archived: Optional[bool] = False,
         new_plan_id: Optional[str] = None,
@@ -708,6 +731,7 @@ class Plans(BaseSDK):
         :param price: The price of the plan. Set to null to remove the base price.
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: The free trial of the plan. Set to null to remove the free trial.
+        :param config: Miscellaneous plan-level configuration flags.
         :param version:
         :param archived:
         :param new_plan_id: The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.
@@ -741,6 +765,9 @@ class Plans(BaseSDK):
             ),
             free_trial=utils.get_pydantic_model(
                 free_trial, OptionalNullable[models.UpdatePlanFreeTrialParams]
+            ),
+            config=utils.get_pydantic_model(
+                config, Optional[models.UpdatePlanConfigRequest]
             ),
             version=version,
             archived=archived,
@@ -830,6 +857,11 @@ class Plans(BaseSDK):
                 models.UpdatePlanFreeTrialParamsTypedDict,
             ]
         ] = UNSET,
+        config: Optional[
+            Union[
+                models.UpdatePlanConfigRequest, models.UpdatePlanConfigRequestTypedDict
+            ]
+        ] = None,
         version: Optional[float] = None,
         archived: Optional[bool] = False,
         new_plan_id: Optional[str] = None,
@@ -853,6 +885,7 @@ class Plans(BaseSDK):
         :param price: The price of the plan. Set to null to remove the base price.
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: The free trial of the plan. Set to null to remove the free trial.
+        :param config: Miscellaneous plan-level configuration flags.
         :param version:
         :param archived:
         :param new_plan_id: The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.
@@ -886,6 +919,9 @@ class Plans(BaseSDK):
             ),
             free_trial=utils.get_pydantic_model(
                 free_trial, OptionalNullable[models.UpdatePlanFreeTrialParams]
+            ),
+            config=utils.get_pydantic_model(
+                config, Optional[models.UpdatePlanConfigRequest]
             ),
             version=version,
             archived=archived,

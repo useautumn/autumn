@@ -115,10 +115,11 @@ export const setupAttachBillingContext = async ({
 			isTransitionFromFree &&
 			hasPaidRecurringSubscription);
 
+	const skipBillingFetching =
+		orgDisableStripeWrites({ ctx }) || params.no_billing_changes === true;
+
 	const skipBillingChanges =
-		orgDisableStripeWrites({ ctx }) ||
-		params.no_billing_changes === true ||
-		params.processor_subscription_id !== undefined;
+		skipBillingFetching || params.processor_subscription_id !== undefined;
 
 	const {
 		stripeSubscription,
@@ -135,7 +136,7 @@ export const setupAttachBillingContext = async ({
 		contextOverride,
 		params,
 		newBillingSubscription: shouldForceNewSubscription,
-		skipBillingChanges,
+		skipBillingFetching,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({

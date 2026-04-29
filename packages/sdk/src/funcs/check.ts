@@ -57,7 +57,7 @@ import { Result } from "../types/fp.js";
  * @param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
  * @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
  *
- * @returns Whether access is allowed, plus the current balance for that feature.
+ * @returns Whether access is allowed, plus the current balance for that feature. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 and allow access fail-open.
  */
 export function check(
   client: AutumnCore,
@@ -183,6 +183,7 @@ async function $do(
     | SDKValidationError
   >(
     M.json(200, models.CheckResponse$inboundSchema),
+    M.json(202, models.CheckResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

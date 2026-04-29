@@ -13,6 +13,7 @@ export * from "./featureOptionUtils/findFeatureOptions";
 export * from "./featureOptionUtils/index";
 export * from "./filterCusProductUtils";
 export * from "./filterCustomerProducts/filterCustomerProductsByActiveStatuses.js";
+export * from "./filterCustomerProducts/filterCustomerProductsByFeatureId.js";
 export * from "./filterCustomerProducts/filterCustomerProductsByProcessorType.js";
 export * from "./filterCustomerProducts/filterCustomerProductsByStripeSubscriptionId.js";
 export * from "./findCustomerProduct/findActiveCustomerProduct.js";

@@ -316,6 +316,16 @@ export type FreeTrialRequest = {
   cardRequired?: boolean | undefined;
 };
 
+/**
+ * Miscellaneous plan-level configuration flags.
+ */
+export type CreatePlanConfigRequest = {
+  /**
+   * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+   */
+  ignorePastDue?: boolean | undefined;
+};
+
 export type CreatePlanParams = {
   /**
    * The ID of the plan to create.
@@ -353,6 +363,10 @@ export type CreatePlanParams = {
    * Free trial configuration. Customers can try this plan before being charged.
    */
   freeTrial?: FreeTrialRequest | undefined;
+  /**
+   * Miscellaneous plan-level configuration flags.
+   */
+  config?: CreatePlanConfigRequest | undefined;
 };
 
 /**
@@ -708,6 +722,16 @@ export const CreatePlanEnv = {
 export type CreatePlanEnv = OpenEnum<typeof CreatePlanEnv>;
 
 /**
+ * Miscellaneous plan-level configuration flags.
+ */
+export type CreatePlanConfigResponse = {
+  /**
+   * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+   */
+  ignorePastDue: boolean;
+};
+
+/**
  * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
  */
 export const CreatePlanStatus = {
@@ -817,6 +841,10 @@ export type CreatePlanResponse = {
    * If this is a variant, the ID of the base plan it was created from.
    */
   baseVariantId: string | null;
+  /**
+   * Miscellaneous plan-level configuration flags.
+   */
+  config: CreatePlanConfigResponse;
   customerEligibility?: CreatePlanCustomerEligibility | undefined;
 };
 
@@ -1161,6 +1189,34 @@ export function freeTrialRequestToJSON(
 }
 
 /** @internal */
+export type CreatePlanConfigRequest$Outbound = {
+  ignore_past_due: boolean;
+};
+
+/** @internal */
+export const CreatePlanConfigRequest$outboundSchema: z.ZodMiniType<
+  CreatePlanConfigRequest$Outbound,
+  CreatePlanConfigRequest
+> = z.pipe(
+  z.object({
+    ignorePastDue: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      ignorePastDue: "ignore_past_due",
+    });
+  }),
+);
+
+export function createPlanConfigRequestToJSON(
+  createPlanConfigRequest: CreatePlanConfigRequest,
+): string {
+  return JSON.stringify(
+    CreatePlanConfigRequest$outboundSchema.parse(createPlanConfigRequest),
+  );
+}
+
+/** @internal */
 export type CreatePlanParams$Outbound = {
   plan_id: string;
   group: string;
@@ -1171,6 +1227,7 @@ export type CreatePlanParams$Outbound = {
   price?: CreatePlanPriceRequest$Outbound | undefined;
   items?: Array<CreatePlanPlanItem$Outbound> | undefined;
   free_trial?: FreeTrialRequest$Outbound | undefined;
+  config?: CreatePlanConfigRequest$Outbound | undefined;
 };
 
 /** @internal */
@@ -1188,6 +1245,7 @@ export const CreatePlanParams$outboundSchema: z.ZodMiniType<
     price: z.optional(z.lazy(() => CreatePlanPriceRequest$outboundSchema)),
     items: z.optional(z.array(z.lazy(() => CreatePlanPlanItem$outboundSchema))),
     freeTrial: z.optional(z.lazy(() => FreeTrialRequest$outboundSchema)),
+    config: z.optional(z.lazy(() => CreatePlanConfigRequest$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1581,6 +1639,31 @@ export const CreatePlanEnv$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreatePlanEnv);
 
 /** @internal */
+export const CreatePlanConfigResponse$inboundSchema: z.ZodMiniType<
+  CreatePlanConfigResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    ignore_past_due: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "ignore_past_due": "ignorePastDue",
+    });
+  }),
+);
+
+export function createPlanConfigResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<CreatePlanConfigResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CreatePlanConfigResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CreatePlanConfigResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const CreatePlanStatus$inboundSchema: z.ZodMiniType<
   CreatePlanStatus,
   unknown
@@ -1644,6 +1727,7 @@ export const CreatePlanResponse$inboundSchema: z.ZodMiniType<
     env: CreatePlanEnv$inboundSchema,
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
+    config: z.lazy(() => CreatePlanConfigResponse$inboundSchema),
     customer_eligibility: types.optional(
       z.lazy(() => CreatePlanCustomerEligibility$inboundSchema),
     ),

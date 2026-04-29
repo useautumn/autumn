@@ -7,7 +7,7 @@ import { DynamicParamField } from "/components/dynamic-param-field.jsx";
 import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
 import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
 
-Updates an existing plan. By default, creates a new version of the plan. See [Adding features to plans](/documentation/concepts/plan-items) for item configuration.
+Updates an existing plan. By default, creates a new version of the plan. See [Adding features to plans](/documentation/pricing/plan-features) for item configuration.
 
 <Note>
   Updates create a new plan version by default. Existing customers remain on their current version until their subscription renews or they explicitly upgrade.
@@ -234,6 +234,16 @@ await autumn.plans.update({
 
     <DynamicParamField body="card_required" type="boolean">
       If true, payment method required to start trial. Customer is charged after trial ends.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="config" type="object">
+  Miscellaneous plan-level configuration flags.
+  <Expandable title="properties">
+    <DynamicParamField body="ignore_past_due" type="boolean">
+      If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
     </DynamicParamField>
 
   </Expandable>
@@ -498,6 +508,16 @@ await autumn.plans.update({
   If this is a variant, the ID of the base plan it was created from.
 </DynamicResponseField>
 
+<DynamicResponseField name="config" type="object">
+  Miscellaneous plan-level configuration flags.
+  <Expandable title="properties">
+    <DynamicResponseField name="ignore_past_due" type="boolean">
+      If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
 <DynamicResponseField name="customer_eligibility" type="object">
   <Expandable title="properties">
     <DynamicResponseField name="trial_available" type="boolean">
@@ -582,7 +602,10 @@ await autumn.plans.update({
   "createdAt": 1771513979217,
   "env": "sandbox",
   "archived": false,
-  "baseVariantId": null
+  "baseVariantId": null,
+  "config": {
+    "ignore_past_due": false
+  }
 }
 ```
 </ResponseExample>

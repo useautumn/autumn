@@ -21,4 +21,4 @@ fi
 #     # Remove .ts extension if present
 #     path_after_tests="${path_after_tests%.ts}"
 #     # Use scripts/test.ts which auto-detects framework
-#     NODE_ENV=development infisical run --env=dev -- bun ../scripts/test.ts "$path_after_tests"
+#     NODE_ENV=development infisical run --recursive --env=dev -- bun ../scripts/test.ts "$path_after_tests"
