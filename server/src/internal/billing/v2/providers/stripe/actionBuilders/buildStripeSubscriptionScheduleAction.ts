@@ -8,6 +8,7 @@ import {
 	cp,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
+	msToSeconds,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { buildStripePhasesUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
@@ -70,11 +71,14 @@ const filterEmptyPhases = (
 const getScheduleScenario = ({
 	scheduledPhases,
 	endsWithEmptyPhase,
+	shouldCreateFutureSchedule,
 }: {
 	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
 	endsWithEmptyPhase: boolean;
+	shouldCreateFutureSchedule: boolean;
 }): ScheduleScenario => {
 	if (scheduledPhases.length === 0) return "no_phases";
+	if (shouldCreateFutureSchedule) return "multi_phase";
 
 	if (scheduledPhases.length === 1) {
 		if (endsWithEmptyPhase) return "simple_cancel";
@@ -158,6 +162,24 @@ const buildActionForScenario = ({
 	}
 };
 
+const shouldCreateFutureSchedule = ({
+	billingContext,
+	scheduledPhases,
+	stripeSubscription,
+}: {
+	billingContext: BillingContext;
+	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
+	stripeSubscription?: Stripe.Subscription;
+}) => {
+	if (stripeSubscription) return false;
+
+	const startDate = scheduledPhases[0]?.start_date;
+	return (
+		typeof startDate === "number" &&
+		startDate > msToSeconds(billingContext.currentEpochMs)
+	);
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // MAIN FUNCTION
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -232,6 +254,11 @@ export const buildStripeSubscriptionScheduleAction = ({
 	});
 
 	const scheduledPhases = filterEmptyPhases(phases);
+	const isFutureSchedule = shouldCreateFutureSchedule({
+		billingContext,
+		scheduledPhases,
+		stripeSubscription,
+	});
 
 	// 3. Derive cancel info from trailing empty phase
 	const lastPhase = phases[phases.length - 1];
@@ -242,7 +269,11 @@ export const buildStripeSubscriptionScheduleAction = ({
 			: undefined;
 
 	// 4. Determine scenario and build action
-	const scenario = getScheduleScenario({ scheduledPhases, endsWithEmptyPhase });
+	const scenario = getScheduleScenario({
+		scheduledPhases,
+		endsWithEmptyPhase,
+		shouldCreateFutureSchedule: isFutureSchedule,
+	});
 
 	return buildActionForScenario({
 		scenario,
