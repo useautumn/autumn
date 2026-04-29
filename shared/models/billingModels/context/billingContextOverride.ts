@@ -47,8 +47,6 @@ export interface UpdateSubscriptionBillingContextOverride
 		customEnts?: Entitlement[];
 	};
 
-	inheritBillingVersion?: boolean;
-
 	/**
 	 * When true, `buildAutumnLineItems` is called with
 	 * `includeArrearLineItems: true` — existing consumable overage on the
