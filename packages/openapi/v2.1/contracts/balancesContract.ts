@@ -25,6 +25,14 @@ export const balancesCheckContract = oc
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "check",
+			responses: {
+				...spec.responses,
+				202: {
+					...spec.responses?.["200"],
+					description:
+						"Accepted. Autumn is experiencing degraded service from a downstream provider, so access was allowed fail-open.",
+				},
+			},
 		}),
 	})
 	.input(
@@ -67,7 +75,15 @@ export const balancesTrackContract = oc
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "track",
-		}),
+			responses: {
+				...spec.responses,
+					202: {
+						...spec.responses?.["200"],
+						description:
+							"Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored.",
+					},
+				},
+			}),
 	})
 	.input(
 		TrackParamsSchema.meta({
