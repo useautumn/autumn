@@ -5,6 +5,7 @@ export const temp: TestGroup = {
 	description: "Failed tests to triage and fix",
 	tier: "domain",
 	paths: [
+		"_temp/prepaid-volume-v1-price-zero-quantity.test.ts",
 		"balances/check/loose/loose-2.test.ts",
 		"balances/check/loose/entities/entity-loose-2.test.ts",
 		// "balances/track/loose/loose-unlimited.test.ts",
