@@ -1,7 +1,9 @@
 import type { BillingContext, StripeItemSpec } from "@autumn/shared";
 import {
 	filterCustomerProductsByActiveStatuses,
+	filterCustomerProductsByProcessorType,
 	filterCustomerProductsByStripeSubscriptionId,
+	ProcessorType,
 } from "@autumn/shared";
 import type { FullCusProduct } from "@shared/models/cusProductModels/cusProductModels";
 import type Stripe from "stripe";
@@ -94,19 +96,30 @@ export const buildStripeSubscriptionItemsUpdate = ({
 		stripeSubscriptionId: billingContext.stripeSubscription?.id,
 	});
 
-	// 2. Filter customer products by active statuses
-	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
+	// 2. Drop customer products managed by a non-Stripe processor (e.g. RevenueCat).
+	//
+	// `filterCustomerProductsByStripeSubscriptionId` with `undefined` returns every
+	// customer product whose `subscription_ids` is empty — and RC-managed cus products
+	// have empty `subscription_ids`. Without this step, an RC product's Stripe price
+	// would leak into a brand-new Stripe subscription created for an add-on attach.
+	const stripeManagedCustomerProducts = filterCustomerProductsByProcessorType({
 		customerProducts: relatedCustomerProducts,
+		processorType: ProcessorType.Stripe,
 	});
 
-	// 3. Get recurring subscription item array (doesn't include one-off items)
+	// 3. Filter customer products by active statuses
+	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
+		customerProducts: stripeManagedCustomerProducts,
+	});
+
+	// 4. Get recurring subscription item array (doesn't include one-off items)
 	const recurringStripeItemSpecs = customerProductsToRecurringStripeItemSpecs({
 		ctx,
 		billingContext,
 		customerProducts: activeCustomerProducts,
 	});
 
-	// 4. Diff against current subscription items
+	// 5. Diff against current subscription items
 	return stripeItemSpecsToSubItemsUpdate({
 		billingContext,
 		stripeItemSpecs: recurringStripeItemSpecs,
