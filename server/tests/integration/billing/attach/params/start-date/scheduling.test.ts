@@ -19,7 +19,7 @@ import chalk from "chalk";
 import type Stripe from "stripe";
 import { expectResetAnchoredTo, getCustomerProduct } from "./utils";
 
-test(`${chalk.yellowBright("start_date: future attach creates scheduled subscription")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: future attach creates scheduled subscription")}`, async () => {
 	const customerId = "attach-start-date-future";
 	const pro = products.pro({
 		id: "pro",
@@ -69,7 +69,7 @@ test(`${chalk.yellowBright("start_date: future attach creates scheduled subscrip
 	await expectCustomerInvoiceCorrect({ customerId, count: 0 });
 });
 
-test(`${chalk.yellowBright("start_date: now attaches immediately")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: now attaches immediately")}`, async () => {
 	const customerId = "attach-start-date-now";
 	const pro = products.pro({
 		id: "pro",
@@ -105,7 +105,7 @@ test(`${chalk.yellowBright("start_date: now attaches immediately")}`, async () =
 	});
 });
 
-test(`${chalk.yellowBright("start_date: test clock start links and activates subscription")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: test clock start links and activates subscription")}`, async () => {
 	const customerId = "attach-start-date-clock";
 	const pro = products.pro({
 		id: "pro",

@@ -6,7 +6,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-test(`${chalk.yellowBright("start_date: past dates are rejected")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: past dates are rejected")}`, async () => {
 	const customerId = "attach-start-date-past";
 	const pro = products.pro({
 		id: "pro",
@@ -34,7 +34,7 @@ test(`${chalk.yellowBright("start_date: past dates are rejected")}`, async () =>
 	});
 });
 
-test(`${chalk.yellowBright("start_date: future date rejects free plans")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: future date rejects free plans")}`, async () => {
 	const customerId = "attach-start-date-free";
 	const free = products.base({
 		id: "free",
@@ -59,7 +59,7 @@ test(`${chalk.yellowBright("start_date: future date rejects free plans")}`, asyn
 	});
 });
 
-test(`${chalk.yellowBright("start_date: future date rejects one-off plans")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: future date rejects one-off plans")}`, async () => {
 	const customerId = "attach-start-date-one-off";
 	const oneOff = products.oneOff({
 		id: "one-off",
@@ -87,7 +87,62 @@ test(`${chalk.yellowBright("start_date: future date rejects one-off plans")}`, a
 	});
 });
 
-test(`${chalk.yellowBright("start_date: future date rejects switches")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: future date rejects customers without payment method")}`, async () => {
+	const customerId = "attach-start-date-no-payment-method";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV2_2, advancedTo } = await initScenario({
+		customerId,
+		setup: [s.customer({}), s.products({ list: [pro] })],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage: "Future start_date requires a saved payment method",
+		func: () =>
+			autumnV2_2.billing.attach<AttachParamsV1Input>({
+				customer_id: customerId,
+				plan_id: pro.id,
+				start_date: advancedTo + ms.days(1),
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("start_date: future date rejects end of cycle plan schedule")}`, async () => {
+	const customerId = "attach-start-date-end-of-cycle";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV2_2, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage:
+			"start_date cannot be used together with plan_schedule: end_of_cycle",
+		func: () =>
+			autumnV2_2.billing.attach<AttachParamsV1Input>({
+				customer_id: customerId,
+				plan_id: pro.id,
+				start_date: advancedTo + ms.days(1),
+				plan_schedule: "end_of_cycle",
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("start_date: future date rejects switches")}`, async () => {
 	const customerId = "attach-start-date-switch";
 	const pro = products.pro({
 		id: "pro",
@@ -110,7 +165,7 @@ test(`${chalk.yellowBright("start_date: future date rejects switches")}`, async 
 	await expectAutumnError({
 		errCode: ErrCode.InvalidRequest,
 		errMessage:
-			"Future start_date is only supported when attaching a new subscription",
+			"start_date is only supported when attaching a new subscription",
 		func: () =>
 			autumnV2_2.billing.attach<AttachParamsV1Input>({
 				customer_id: customerId,
@@ -120,7 +175,7 @@ test(`${chalk.yellowBright("start_date: future date rejects switches")}`, async 
 	});
 });
 
-test(`${chalk.yellowBright("start_date: future date rejects free trials")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: future date rejects free trials")}`, async () => {
 	const customerId = "attach-start-date-trial";
 	const proTrial = products.proWithTrial({
 		id: "pro-trial",
