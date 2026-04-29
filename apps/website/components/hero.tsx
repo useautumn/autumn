@@ -128,7 +128,7 @@ export default function Hero() {
 
 	return (
 		<div ref={containerRef}>
-			<div className="relative hero-root flex flex-col items-stretch pb-0 md:pb-12 mb-0 bg-[#0F0F0F]">
+			<div className="relative hero-root flex flex-col items-stretch pb-0 mb-0 bg-[#0F0F0F]">
 				<div className="flex justify-between">
 					<div className="flex flex-col gap-6 px-4 xl:px-22.75 py-8 bg-[#0F0F0F] mt-26">
 						<h4 className="hero-reveal lg:opacity-0 relative uppercase font-mono tracking-[-2%] text-[12px] md:text-sm leading-sm text-white md:text-[#FFFFFF99] bg-[#2c2c2d] w-fit p-2 min-h-[30px] md:min-h-[36px] flex items-center">
