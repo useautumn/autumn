@@ -225,7 +225,7 @@ class BaseSDK:
             data=serialized_request_body.data,
             files=serialized_request_body.files,
             headers=headers,
-            timeout=timeout,
+            timeout=timeout if timeout is not None else httpx.USE_CLIENT_DEFAULT,
         )
 
     def do_request(
@@ -245,6 +245,8 @@ class BaseSDK:
             http_res = None
             try:
                 req = hooks.before_request(BeforeRequestContext(hook_ctx), request)
+                if "timeout" in request.extensions and "timeout" not in req.extensions:
+                    req.extensions["timeout"] = request.extensions["timeout"]
                 logger.debug(
                     "Request:\nMethod: %s\nURL: %s\nHeaders: %s\nBody: %s",
                     req.method,
@@ -322,6 +324,8 @@ class BaseSDK:
                     hooks.before_request, BeforeRequestContext(hook_ctx), request
                 )
 
+                if "timeout" in request.extensions and "timeout" not in req.extensions:
+                    req.extensions["timeout"] = request.extensions["timeout"]
                 logger.debug(
                     "Request:\nMethod: %s\nURL: %s\nHeaders: %s\nBody: %s",
                     req.method,

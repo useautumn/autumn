@@ -10,6 +10,8 @@ export type HandleBetterAuthRouteFn = (args: {
 	routeName: RouteName;
 }) => Promise<{ status: number; body: unknown }>;
 
+export type AutumnEndpoint = ReturnType<typeof createAuthEndpoint>;
+
 /** Get route config by name from routeConfigs */
 const getRouteConfig = (routeName: RouteName) => {
 	const route = routeConfigs.find((r) => r.route === routeName);
@@ -24,7 +26,7 @@ const getRouteConfig = (routeName: RouteName) => {
 export const createAutumnEndpoint = <T extends RouteName>(
 	routeName: T,
 	handleRoute: HandleBetterAuthRouteFn,
-) => {
+): AutumnEndpoint => {
 	const config = getRouteConfig(routeName);
 	return createAuthEndpoint(
 		`/autumn/${routeName}` as `/autumn/${T}`,
@@ -38,5 +40,5 @@ export const createAutumnEndpoint = <T extends RouteName>(
 				status: result.status,
 			});
 		},
-	);
+	) as AutumnEndpoint;
 };
