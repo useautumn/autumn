@@ -26,6 +26,31 @@ const getScheduledBillingCycleAnchorResetAt = ({
 	return null;
 };
 
+const getStartsAt = ({
+	startDate,
+	isScheduled,
+	endOfCycleMs,
+}: {
+	startDate?: number;
+	isScheduled: boolean;
+	endOfCycleMs?: number;
+}) => {
+	if (startDate) return startDate;
+	if (isScheduled) return endOfCycleMs;
+	return undefined;
+};
+
+const getResetCycleAnchor = ({
+	startDate,
+	resetCycleAnchorMs,
+}: {
+	startDate?: number;
+	resetCycleAnchorMs: number | "now";
+}) => {
+	if (resetCycleAnchorMs !== "now") return resetCycleAnchorMs;
+	return startDate ?? resetCycleAnchorMs;
+};
+
 /**
  * Creates the new FullCusProduct to insert when attaching a product.
  *
@@ -74,6 +99,15 @@ export const computeAttachNewCustomerProduct = ({
 	);
 
 	const isScheduled = planTiming === "end_of_cycle";
+	const startsAt = getStartsAt({
+		startDate: params.start_date,
+		isScheduled,
+		endOfCycleMs,
+	});
+	const resetCycleAnchor = getResetCycleAnchor({
+		startDate: params.start_date,
+		resetCycleAnchorMs,
+	});
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
 		!isScheduled && currentCustomerProduct
@@ -106,7 +140,7 @@ export const computeAttachNewCustomerProduct = ({
 			featureQuantities,
 			// existingUsages: isScheduled ? undefined : existingUsages,
 			// existingRollovers,
-			resetCycleAnchor: resetCycleAnchorMs,
+			resetCycleAnchor,
 			now: currentEpochMs,
 			freeTrial: trialContext?.freeTrial ?? null,
 			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
@@ -122,7 +156,7 @@ export const computeAttachNewCustomerProduct = ({
 			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 			status: isScheduled ? CusProductStatus.Scheduled : undefined,
-			startsAt: isScheduled ? endOfCycleMs : undefined,
+			startsAt,
 			externalId,
 			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor,
