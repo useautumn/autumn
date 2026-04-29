@@ -1,10 +1,5 @@
 import { expect, test } from "bun:test";
-import {
-	type ApiCustomerV3,
-	AppEnv,
-	type FullCustomer,
-	organizations,
-} from "@autumn/shared";
+import { type ApiCustomerV3, AppEnv, type FullCustomer } from "@autumn/shared";
 import {
 	createStripeSubscriptionFromProduct,
 	createStripeSubscriptionFromProducts,
@@ -17,66 +12,15 @@ import {
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import {
-	createTestContext,
-	type TestContext,
-} from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
-import type Stripe from "stripe";
-import { initDrizzle } from "@/db/initDrizzle";
 import { handleStripeSubscriptionCreated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
-import { OrgService } from "@/internal/orgs/OrgService";
-import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache";
-import { encryptData } from "@/utils/encryptUtils";
-
-const ensureTestOrgUsesStripeSandboxKey = async (): Promise<TestContext> => {
-	const sandboxSecretKey = process.env.STRIPE_SANDBOX_SECRET_KEY;
-	if (!sandboxSecretKey?.startsWith("sk_test_")) {
-		throw new Error(
-			"STRIPE_SANDBOX_SECRET_KEY must be set to a Stripe test-mode secret key",
-		);
-	}
-
-	const { db } = initDrizzle();
-	const orgSlug = process.env.TESTS_ORG;
-	if (!orgSlug) {
-		throw new Error("TESTS_ORG must be set before running integration tests");
-	}
-
-	const org = await OrgService.getBySlug({ db, slug: orgSlug });
-	if (!org) {
-		throw new Error(`Org with slug "${orgSlug}" not found`);
-	}
-
-	await db
-		.update(organizations)
-		.set({
-			stripe_connected: true,
-			stripe_config: {
-				...(org.stripe_config || {}),
-				test_api_key: encryptData(sandboxSecretKey),
-			},
-			test_stripe_connect: {},
-		})
-		.where(eq(organizations.id, org.id));
-
-	await clearOrgCache({
-		db,
-		orgId: org.id,
-	});
-
-	return createTestContext();
-};
-
-let stripeSandboxContext: Promise<TestContext> | undefined;
-const getStripeSandboxContext = () => {
-	stripeSandboxContext ??= ensureTestOrgUsesStripeSandboxKey();
-	return stripeSandboxContext;
-};
+import {
+	getStripeSandboxContext,
+	makeSubCreatedWebhookContext,
+} from "./subscriptionCreatedTestUtils.js";
 
 const makeFullCustomer = ({
 	subscriptionIds = [],
@@ -138,37 +82,6 @@ const makeGuardrailContext = ({
 				},
 			},
 		} as unknown as StripeWebhookContext,
-	};
-};
-
-const makeSubCreatedWebhookContext = async ({
-	ctx,
-	customerId,
-	stripeSubscription,
-}: {
-	ctx: TestContext;
-	customerId: string;
-	stripeSubscription: Stripe.Subscription;
-}): Promise<StripeWebhookContext> => {
-	const fullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-		withSubs: true,
-		withEntities: true,
-	});
-
-	return {
-		...ctx,
-		fullCustomer,
-		stripeEvent: {
-			type: "customer.subscription.created",
-			data: {
-				object: {
-					id: stripeSubscription.id,
-					customer: fullCustomer.processor?.id,
-				},
-			},
-		} as Stripe.Event,
 	};
 };
 
