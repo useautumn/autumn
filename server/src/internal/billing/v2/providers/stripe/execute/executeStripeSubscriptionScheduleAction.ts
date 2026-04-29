@@ -174,10 +174,13 @@ export const executeStripeSubscriptionScheduleAction = async ({
 				});
 			}
 
+			// No subscription - create standalone schedule
+			const startDate = params.phases?.[0]?.start_date;
 			return await stripeCli.subscriptionSchedules.create({
 				customer: billingContext.stripeCustomer?.id ?? "none",
 				phases: params.phases?.map(toCreatePhase) ?? [],
 				end_behavior: params.end_behavior,
+				start_date: startDate,
 			});
 		}
 
