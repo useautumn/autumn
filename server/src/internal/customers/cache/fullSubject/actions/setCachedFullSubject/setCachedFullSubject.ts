@@ -3,7 +3,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
-import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "../../config/fullSubjectCacheConfig.js";
+import {
+	FULL_SUBJECT_CACHE_TTL_SECONDS,
+	FULL_SUBJECT_EPOCH_TTL_SECONDS,
+} from "../../config/fullSubjectCacheConfig.js";
 import { normalizedToCachedFullSubject } from "../../fullSubjectCacheModel.js";
 import type { SetCachedFullSubjectResult } from "./fullSubjectWriteTypes.js";
 import { buildSharedBalanceWrites } from "./setSharedFullSubjectBalances.js";
@@ -56,6 +59,7 @@ export const setCachedFullSubject = async ({
 	const argv: string[] = [
 		String(fetchedSubjectViewEpoch),
 		String(FULL_SUBJECT_CACHE_TTL_SECONDS),
+		String(FULL_SUBJECT_EPOCH_TTL_SECONDS),
 		JSON.stringify(cached),
 		String(balanceWrites.length),
 	];
