@@ -1,19 +1,22 @@
 import type Stripe from "stripe";
 import { getFullStripeSub } from "../stripeSubUtils.js";
 import type { StripeWebhookContext } from "../webhookMiddlewares/stripeWebhookContext.js";
+import { linkScheduledCustomerProductsToSubscription } from "./handleSubCreated/tasks/linkScheduledCustomerProductsToSubscription";
 
 export const handleSubCreated = async ({
 	ctx,
 }: {
 	ctx: StripeWebhookContext;
 }) => {
-	const { db, org, env, logger, stripeCli, stripeEvent } = ctx;
+	const { stripeCli, stripeEvent } = ctx;
 	const stripeObject = stripeEvent.data.object as Stripe.Subscription;
 
 	const subscription = await getFullStripeSub({
 		stripeCli,
 		stripeId: stripeObject.id,
 	});
+
+	await linkScheduledCustomerProductsToSubscription({ ctx, subscription });
 
 	// // 1. can ignore
 	// if (subscription.schedule) {

@@ -3,6 +3,7 @@ import type {
 	AttachParamsV1,
 	AutumnBillingPlan,
 } from "@autumn/shared";
+import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
@@ -56,9 +57,12 @@ export const computeAttachPlan = ({
 	});
 
 	const includeArrearLineItems = !params.carry_over_usages?.enabled;
+	const shouldBuildLineItems =
+		planTiming === "immediate" &&
+		newCustomerProduct.status !== CusProductStatus.Scheduled;
 
 	const { allLineItems: lineItems, updateCustomerEntitlements } =
-		planTiming === "immediate"
+		shouldBuildLineItems
 			? buildAutumnLineItems({
 					ctx,
 					newCustomerProducts: [newCustomerProduct],
