@@ -6,7 +6,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { getCustomerProduct, triggerSubscriptionCreated } from "./utils";
 
-test(`${chalk.yellowBright("start_date: subscription.created links scheduled product")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: subscription.created links scheduled product")}`, async () => {
 	const customerId = "attach-start-date-webhook";
 	const pro = products.pro({
 		id: "pro",
@@ -43,7 +43,7 @@ test(`${chalk.yellowBright("start_date: subscription.created links scheduled pro
 	expect(updatedProduct.subscription_ids).toEqual([stripeSubId]);
 });
 
-test(`${chalk.yellowBright("start_date: subscription.created link is idempotent")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: subscription.created link is idempotent")}`, async () => {
 	const customerId = "attach-start-date-webhook-idempotent";
 	const pro = products.pro({
 		id: "pro",
@@ -83,7 +83,7 @@ test(`${chalk.yellowBright("start_date: subscription.created link is idempotent"
 	expect(updatedProduct.subscription_ids).toEqual([stripeSubId]);
 });
 
-test(`${chalk.yellowBright("start_date: subscription.created ignores missing schedule")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: subscription.created ignores missing schedule")}`, async () => {
 	const customerId = "attach-start-date-webhook-no-schedule";
 	const pro = products.pro({
 		id: "pro",
@@ -115,7 +115,7 @@ test(`${chalk.yellowBright("start_date: subscription.created ignores missing sch
 	expect(cusProduct.subscription_ids ?? []).toEqual([]);
 });
 
-test(`${chalk.yellowBright("start_date: subscription.created ignores unknown schedule")}`, async () => {
+test.concurrent(`${chalk.yellowBright("start_date: subscription.created ignores unknown schedule")}`, async () => {
 	const customerId = "attach-start-date-webhook-unknown-schedule";
 	const pro = products.pro({
 		id: "pro",
