@@ -2,6 +2,7 @@ import type { SyncMappingV0 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
 import { sync } from "@/internal/billing/v2/actions/sync/sync.js";
 import { findAutumnProductsForSubscription } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/findAutumnProductsForSubscription.js";
+import { subscriptionToPrepaidFeatureOptions } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/subscriptionToFeatureOptions.js";
 import type { StripeSubscriptionCreatedContext } from "../setupStripeSubscriptionCreatedContext.js";
 
 export const autoSyncFromSubscription = async ({
@@ -12,7 +13,8 @@ export const autoSyncFromSubscription = async ({
 	subscriptionCreatedContext: StripeSubscriptionCreatedContext;
 }) => {
 	const { logger } = ctx;
-	const { subscription, fullCustomer, candidateProducts } = subscriptionCreatedContext;
+	const { subscription, fullCustomer, candidateProducts } =
+		subscriptionCreatedContext;
 
 	const matchedProducts = findAutumnProductsForSubscription({
 		stripeSubscription: subscription,
@@ -38,10 +40,17 @@ export const autoSyncFromSubscription = async ({
 	}
 
 	const [matchedProduct] = matchedProducts;
+	const prepaidFeatureOptions = subscriptionToPrepaidFeatureOptions({
+		ctx,
+		stripeSubscription: subscription,
+		matchedProduct,
+	});
+
 	const mappings: SyncMappingV0[] = [
 		{
 			stripe_subscription_id: subscription.id,
 			plan_id: matchedProduct.id,
+			prepaid_feature_options: prepaidFeatureOptions,
 			expire_previous: true,
 		},
 	];
