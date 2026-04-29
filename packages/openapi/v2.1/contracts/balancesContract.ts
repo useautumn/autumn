@@ -16,16 +16,38 @@ import {
 	balancesTrackJsDoc,
 } from "../jsDocs/balancesJsDocs";
 
+type SpecWithResponses = {
+	responses?: Record<string, object | undefined>;
+};
+
+const withAcceptedResponse = <TSpec extends SpecWithResponses>(
+	spec: TSpec,
+	nameOverride: string,
+	description: string,
+) => ({
+	...spec,
+	"x-speakeasy-name-override": nameOverride,
+	responses: {
+		...spec.responses,
+		202: {
+			...spec.responses?.["200"],
+			description,
+		},
+	},
+});
+
 export const balancesCheckContract = oc
 	.route({
 		method: "POST",
 		path: "/v1/balances.check",
 		operationId: "check",
 		description: balancesCheckJsDoc,
-		spec: (spec) => ({
-			...spec,
-			"x-speakeasy-name-override": "check",
-		}),
+		spec: (spec) =>
+			withAcceptedResponse(
+				spec,
+				"check",
+				"Accepted. Autumn is experiencing degraded service from a downstream provider, so access was allowed fail-open.",
+			),
 	})
 	.input(
 		ExtCheckParamsSchema.meta({
@@ -64,10 +86,12 @@ export const balancesTrackContract = oc
 		path: "/v1/balances.track",
 		operationId: "track",
 		description: balancesTrackJsDoc,
-		spec: (spec) => ({
-			...spec,
-			"x-speakeasy-name-override": "track",
-		}),
+		spec: (spec) =>
+			withAcceptedResponse(
+				spec,
+				"track",
+				"Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored.",
+			),
 	})
 	.input(
 		TrackParamsSchema.meta({
@@ -156,10 +180,12 @@ export const balancesFinalizeContract = oc
 		tags: ["balances"],
 		description:
 			"Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.",
-		spec: (spec) => ({
-			...spec,
-			"x-speakeasy-name-override": "finalize",
-		}),
+		spec: (spec) =>
+			withAcceptedResponse(
+				spec,
+				"finalize",
+				"Accepted. Autumn is experiencing degraded service from a downstream provider, so the finalize request was allowed fail-open.",
+			),
 	})
 	.input(
 		FinalizeLockParamsV0Schema.meta({

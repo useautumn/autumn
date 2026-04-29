@@ -7,6 +7,7 @@ import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { Balance, Balance$inboundSchema } from "./balance.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
@@ -58,9 +59,9 @@ export type TrackParams = {
 };
 
 /**
- * OK
+ * Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored.
  */
-export type TrackResponse = {
+export type TrackResponseBody2 = {
   /**
    * The ID of the customer whose usage was tracked.
    */
@@ -86,6 +87,38 @@ export type TrackResponse = {
    */
   balances?: { [k: string]: Balance } | undefined;
 };
+
+/**
+ * OK
+ */
+export type TrackResponseBody1 = {
+  /**
+   * The ID of the customer whose usage was tracked.
+   */
+  customerId: string;
+  /**
+   * The ID of the entity, if entity-scoped tracking was performed.
+   */
+  entityId?: string | undefined;
+  /**
+   * The event name that was tracked, if event_name was used instead of feature_id.
+   */
+  eventName?: string | undefined;
+  /**
+   * The amount of usage that was recorded.
+   */
+  value: number;
+  /**
+   * The updated balance for the tracked feature. Null if tracking by event_name that affects multiple features.
+   */
+  balance: Balance | null;
+  /**
+   * Map of feature_id to updated balance when tracking by event_name affects multiple features.
+   */
+  balances?: { [k: string]: Balance } | undefined;
+};
+
+export type TrackResponse = TrackResponseBody1 | TrackResponseBody2;
 
 /** @internal */
 export type TrackLock$Outbound = {
@@ -156,8 +189,8 @@ export function trackParamsToJSON(trackParams: TrackParams): string {
 }
 
 /** @internal */
-export const TrackResponse$inboundSchema: z.ZodMiniType<
-  TrackResponse,
+export const TrackResponseBody2$inboundSchema: z.ZodMiniType<
+  TrackResponseBody2,
   unknown
 > = z.pipe(
   z.object({
@@ -176,6 +209,57 @@ export const TrackResponse$inboundSchema: z.ZodMiniType<
     });
   }),
 );
+
+export function trackResponseBody2FromJSON(
+  jsonString: string,
+): SafeParseResult<TrackResponseBody2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => TrackResponseBody2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackResponseBody2' from JSON`,
+  );
+}
+
+/** @internal */
+export const TrackResponseBody1$inboundSchema: z.ZodMiniType<
+  TrackResponseBody1,
+  unknown
+> = z.pipe(
+  z.object({
+    customer_id: types.string(),
+    entity_id: types.optional(types.string()),
+    event_name: types.optional(types.string()),
+    value: types.number(),
+    balance: types.nullable(Balance$inboundSchema),
+    balances: types.optional(z.record(z.string(), Balance$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "customer_id": "customerId",
+      "entity_id": "entityId",
+      "event_name": "eventName",
+    });
+  }),
+);
+
+export function trackResponseBody1FromJSON(
+  jsonString: string,
+): SafeParseResult<TrackResponseBody1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => TrackResponseBody1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackResponseBody1' from JSON`,
+  );
+}
+
+/** @internal */
+export const TrackResponse$inboundSchema: z.ZodMiniType<
+  TrackResponse,
+  unknown
+> = smartUnion([
+  z.lazy(() => TrackResponseBody1$inboundSchema),
+  z.lazy(() => TrackResponseBody2$inboundSchema),
+]);
 
 export function trackResponseFromJSON(
   jsonString: string,
