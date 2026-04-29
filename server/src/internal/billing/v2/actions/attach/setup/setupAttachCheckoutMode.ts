@@ -47,10 +47,6 @@ export const setupAttachCheckoutMode = ({
 		return null;
 	}
 
-	if (hasFutureStartDate) {
-		return null;
-	}
-
 	const getStripeCheckoutOrDirectBilling = () => {
 		// A. if no payment method
 		if (hasPaymentMethod) return null;
@@ -69,6 +65,9 @@ export const setupAttachCheckoutMode = ({
 	};
 
 	const checkoutMode = getStripeCheckoutOrDirectBilling();
+	if (hasFutureStartDate && checkoutMode === null) {
+		return null;
+	}
 
 	if (checkoutMode === null && redirectMode === "always") {
 		// 1. If it's one off product, return stripe_checkout
