@@ -2,7 +2,7 @@
  * Load test setup — creates products and 500 customers with Stripe payment methods.
  *
  * Run: cd server && bun loadtest:setup
- *   or: ENV_FILE=.env infisical run --env=dev -- bun perf/load-test/setup.ts
+ *   or: ENV_FILE=.env infisical run --recursive --env=dev -- bun perf/load-test/setup.ts
  */
 
 import { loadLocalEnv } from "../../src/utils/envUtils.js";

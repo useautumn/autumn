@@ -289,6 +289,16 @@ const plan = await autumn.plans.get({
   If this is a variant, the ID of the base plan it was created from.
 </DynamicResponseField>
 
+<DynamicResponseField name="config" type="object">
+  Miscellaneous plan-level configuration flags.
+  <Expandable title="properties">
+    <DynamicResponseField name="ignore_past_due" type="boolean">
+      If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
 <DynamicResponseField name="customer_eligibility" type="object">
   <Expandable title="properties">
     <DynamicResponseField name="trial_available" type="boolean">
@@ -373,7 +383,10 @@ const plan = await autumn.plans.get({
   "createdAt": 1771513979217,
   "env": "sandbox",
   "archived": false,
-  "baseVariantId": null
+  "baseVariantId": null,
+  "config": {
+    "ignore_past_due": false
+  }
 }
 ```
 </ResponseExample>

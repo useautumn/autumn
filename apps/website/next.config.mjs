@@ -7,13 +7,13 @@ const nextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
   allowedDevOrigins: ["*.ngrok-free.dev"],
   experimental: {
-    optimizePackageImports: ["framer-motion", "motion", "gsap", "@gsap/react"],
+    optimizePackageImports: ["motion", "gsap", "@gsap/react"],
     optimizeCss: true,
   },
   images: {
     // Serve AVIF to supporting browsers (better compression than WebP),
     // falling back to WebP. Next.js negotiates via Accept header automatically.
-   // formats: ["image/avif", "image/webp"],
+    formats: ["image/avif", "image/webp"],
   },
   async headers() {
     if (!isProd) return [];

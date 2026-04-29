@@ -27,7 +27,7 @@ export const balancesCheckJsDoc = createJSDocDescription({
 	],
 	methodName: "check",
 	returns:
-		"Whether access is allowed, plus the current balance for that feature.",
+		"Whether access is allowed, plus the current balance for that feature. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 and allow access fail-open.",
 });
 
 export const balancesTrackJsDoc = createJSDocDescription({
@@ -56,5 +56,5 @@ export const balancesTrackJsDoc = createJSDocDescription({
 	],
 	methodName: "track",
 	returns:
-		"The usage value recorded, with either a single updated balance or a map of updated balances.",
+		"The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.",
 });

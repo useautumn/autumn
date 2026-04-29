@@ -71,6 +71,7 @@ import { Result } from "../types/fp.js";
  * @param price - The price of the plan. Set to null to remove the base price. (optional)
  * @param items - Feature configurations for this plan. Each item defines included units, pricing, and reset behavior. (optional)
  * @param freeTrial - The free trial of the plan. Set to null to remove the free trial. (optional)
+ * @param config - Miscellaneous plan-level configuration flags. (optional)
  * @param newPlanId - The new ID to use for the plan. Can only be updated if the plan has not been used by any customers. (optional)
  *
  * @returns The updated plan object.

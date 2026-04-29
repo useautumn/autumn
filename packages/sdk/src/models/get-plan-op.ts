@@ -369,6 +369,16 @@ export const GetPlanEnv = {
 export type GetPlanEnv = OpenEnum<typeof GetPlanEnv>;
 
 /**
+ * Miscellaneous plan-level configuration flags.
+ */
+export type GetPlanConfig = {
+  /**
+   * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+   */
+  ignorePastDue: boolean;
+};
+
+/**
  * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
  */
 export const GetPlanStatus = {
@@ -478,6 +488,10 @@ export type GetPlanResponse = {
    * If this is a variant, the ID of the base plan it was created from.
    */
   baseVariantId: string | null;
+  /**
+   * Miscellaneous plan-level configuration flags.
+   */
+  config: GetPlanConfig;
   customerEligibility?: GetPlanCustomerEligibility | undefined;
 };
 
@@ -867,6 +881,31 @@ export const GetPlanEnv$inboundSchema: z.ZodMiniType<GetPlanEnv, unknown> =
   openEnums.inboundSchema(GetPlanEnv);
 
 /** @internal */
+export const GetPlanConfig$inboundSchema: z.ZodMiniType<
+  GetPlanConfig,
+  unknown
+> = z.pipe(
+  z.object({
+    ignore_past_due: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "ignore_past_due": "ignorePastDue",
+    });
+  }),
+);
+
+export function getPlanConfigFromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanConfig, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetPlanConfig$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanConfig' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetPlanStatus$inboundSchema: z.ZodMiniType<
   GetPlanStatus,
   unknown
@@ -928,6 +967,7 @@ export const GetPlanResponse$inboundSchema: z.ZodMiniType<
     env: GetPlanEnv$inboundSchema,
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
+    config: z.lazy(() => GetPlanConfig$inboundSchema),
     customer_eligibility: types.optional(
       z.lazy(() => GetPlanCustomerEligibility$inboundSchema),
     ),
