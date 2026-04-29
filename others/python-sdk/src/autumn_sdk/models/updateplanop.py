@@ -476,6 +476,36 @@ class UpdatePlanFreeTrialParams(BaseModel):
         return m
 
 
+class UpdatePlanConfigRequestTypedDict(TypedDict):
+    r"""Miscellaneous plan-level configuration flags."""
+
+    ignore_past_due: NotRequired[bool]
+    r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
+
+
+class UpdatePlanConfigRequest(BaseModel):
+    r"""Miscellaneous plan-level configuration flags."""
+
+    ignore_past_due: Optional[bool] = False
+    r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["ignore_past_due"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdatePlanParamsTypedDict(TypedDict):
     plan_id: str
     r"""The ID of the plan to update."""
@@ -494,6 +524,8 @@ class UpdatePlanParamsTypedDict(TypedDict):
     r"""Feature configurations for this plan. Each item defines included units, pricing, and reset behavior."""
     free_trial: NotRequired[Nullable[UpdatePlanFreeTrialParamsTypedDict]]
     r"""The free trial of the plan. Set to null to remove the free trial."""
+    config: NotRequired[UpdatePlanConfigRequestTypedDict]
+    r"""Miscellaneous plan-level configuration flags."""
     version: NotRequired[float]
     archived: NotRequired[bool]
     new_plan_id: NotRequired[str]
@@ -527,6 +559,9 @@ class UpdatePlanParams(BaseModel):
     free_trial: OptionalNullable[UpdatePlanFreeTrialParams] = UNSET
     r"""The free trial of the plan. Set to null to remove the free trial."""
 
+    config: Optional[UpdatePlanConfigRequest] = None
+    r"""Miscellaneous plan-level configuration flags."""
+
     version: Optional[float] = None
 
     archived: Optional[bool] = False
@@ -546,6 +581,7 @@ class UpdatePlanParams(BaseModel):
                 "price",
                 "items",
                 "free_trial",
+                "config",
                 "version",
                 "archived",
                 "new_plan_id",
@@ -1134,6 +1170,36 @@ UpdatePlanEnv = Union[
 r"""Environment this plan belongs to ('sandbox' or 'live')."""
 
 
+class UpdatePlanConfigResponseTypedDict(TypedDict):
+    r"""Miscellaneous plan-level configuration flags."""
+
+    ignore_past_due: NotRequired[bool]
+    r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
+
+
+class UpdatePlanConfigResponse(BaseModel):
+    r"""Miscellaneous plan-level configuration flags."""
+
+    ignore_past_due: Optional[bool] = False
+    r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["ignore_past_due"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 UpdatePlanStatus = Union[
     Literal[
         "active",
@@ -1232,6 +1298,8 @@ class UpdatePlanResponseTypedDict(TypedDict):
     r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
     base_variant_id: Nullable[str]
     r"""If this is a variant, the ID of the base plan it was created from."""
+    config: UpdatePlanConfigResponseTypedDict
+    r"""Miscellaneous plan-level configuration flags."""
     free_trial: NotRequired[UpdatePlanFreeTrialTypedDict]
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
     customer_eligibility: NotRequired[UpdatePlanCustomerEligibilityTypedDict]
@@ -1278,6 +1346,9 @@ class UpdatePlanResponse(BaseModel):
 
     base_variant_id: Nullable[str]
     r"""If this is a variant, the ID of the base plan it was created from."""
+
+    config: UpdatePlanConfigResponse
+    r"""Miscellaneous plan-level configuration flags."""
 
     free_trial: Optional[UpdatePlanFreeTrial] = None
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""

@@ -181,7 +181,7 @@ const response = await client.check({
 @param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
 @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
 
-@returns Whether access is allowed, plus the current balance for that feature.
+@returns Whether access is allowed, plus the current balance for that feature. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 and allow access fail-open.
 * [track](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.
@@ -205,7 +205,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
 
-@returns The usage value recorded, with either a single updated balance or a map of updated balances.
+@returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
 
 ### [Balances](docs/sdks/balances/README.md)
 
@@ -893,7 +893,7 @@ const response = await client.check({
 @param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
 @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
 
-@returns Whether access is allowed, plus the current balance for that feature.
+@returns Whether access is allowed, plus the current balance for that feature. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 and allow access fail-open.
 - [`customersDelete`](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 - [`customersGetOrCreate`](docs/sdks/customers/README.md#getorcreate) - Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
 
@@ -1113,7 +1113,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
 
-@returns The usage value recorded, with either a single updated balance or a map of updated balances.
+@returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
 
 </details>
 <!-- End Standalone functions [standalone-funcs] -->
