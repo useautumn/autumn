@@ -350,6 +350,16 @@ export const PlanEnv = {
 export type PlanEnv = OpenEnum<typeof PlanEnv>;
 
 /**
+ * Miscellaneous plan-level configuration flags.
+ */
+export type PlanConfig = {
+  /**
+   * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+   */
+  ignorePastDue: boolean;
+};
+
+/**
  * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
  */
 export const PlanStatus = {
@@ -456,6 +466,10 @@ export type Plan = {
    * If this is a variant, the ID of the base plan it was created from.
    */
   baseVariantId: string | null;
+  /**
+   * Miscellaneous plan-level configuration flags.
+   */
+  config: PlanConfig;
   customerEligibility?: CustomerEligibility | undefined;
 };
 
@@ -812,6 +826,29 @@ export const PlanEnv$inboundSchema: z.ZodMiniType<PlanEnv, unknown> = openEnums
   .inboundSchema(PlanEnv);
 
 /** @internal */
+export const PlanConfig$inboundSchema: z.ZodMiniType<PlanConfig, unknown> = z
+  .pipe(
+    z.object({
+      ignore_past_due: z._default(types.boolean(), false),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "ignore_past_due": "ignorePastDue",
+      });
+    }),
+  );
+
+export function planConfigFromJSON(
+  jsonString: string,
+): SafeParseResult<PlanConfig, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PlanConfig$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PlanConfig' from JSON`,
+  );
+}
+
+/** @internal */
 export const PlanStatus$inboundSchema: z.ZodMiniType<PlanStatus, unknown> =
   openEnums.inboundSchema(PlanStatus);
 
@@ -866,6 +903,7 @@ export const Plan$inboundSchema: z.ZodMiniType<Plan, unknown> = z.pipe(
     env: PlanEnv$inboundSchema,
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
+    config: z.lazy(() => PlanConfig$inboundSchema),
     customer_eligibility: types.optional(z.lazy(() =>
       CustomerEligibility$inboundSchema
     )),
