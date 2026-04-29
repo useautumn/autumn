@@ -56,7 +56,7 @@ Push changes with `atmn push`.
 
 ## Attaching a subscription
 
-Use [billing.attach](/documentation/customers/attaching-plans) to attach a subscription to a customer. With `redirectMode: "always"`, a checkout URL is always returned for the customer to complete payment or confirm the plan change.
+Use [billing.attach](/documentation/customers/payment-flow) to attach a subscription to a customer. With `redirectMode: "always"`, a checkout URL is always returned for the customer to complete payment or confirm the plan change.
 
 <CodeGroup>
 
@@ -212,7 +212,7 @@ This is useful when you want to offer an annual discount while still metering us
 
 ## Managing subscriptions
 
-Once a customer has an active subscription, you can manage upgrades, downgrades, and cancellations. See [Managing Subscriptions](/documentation/customers/s) for details on:
+Once a customer has an active subscription, you can manage upgrades, downgrades, and cancellations. See [Managing Subscriptions](/documentation/customers/subscription-lifecycle) for details on:
 
 - **Upgrades** — prorated charges for switching to a higher-priced plan
 - **Downgrades** — scheduled at end of billing period

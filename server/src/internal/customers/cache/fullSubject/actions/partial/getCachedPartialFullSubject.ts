@@ -9,7 +9,6 @@ import { applyLiveAggregatedBalances } from "../../balances/applyLiveAggregatedB
 import { getCachedFeatureBalancesBatch } from "../../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
-import { FULL_SUBJECT_EPOCH_TTL_SECONDS } from "../../config/fullSubjectCacheConfig.js";
 import { filterNormalizedFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
 import {
 	type CachedFullSubject,
@@ -61,18 +60,12 @@ export const getCachedPartialFullSubject = async ({
 	});
 	const subjectLabel = buildSubjectLabel({ customerId, entityId });
 
-	// Pipeline subject GET + epoch GETEX + SET NX — both keys share the
-	// `{customerId}` hash tag so they're on the same slot. One RTT instead
-	// of two reads plus an EXPIRE, and the SET NX init means we never need
-	// a fallback RTT when the epoch key is missing.
+	// Subject + epoch keys share the `{customerId}` hash tag and live on the
+	// same Redis slot, so a single pipeline fetches both in one round trip.
+	// Read-only GETs — epoch TTL is refreshed on writes (setCachedFullSubject
+	// Lua) and on invalidations, not on reads, to avoid write amplification.
 	const pipelineResults = await runRedisOp({
-		operation: () =>
-			redisV2
-				.pipeline()
-				.get(subjectKey)
-				.getex(epochKey, "EX", FULL_SUBJECT_EPOCH_TTL_SECONDS)
-				.set(epochKey, "0", "EX", FULL_SUBJECT_EPOCH_TTL_SECONDS, "NX")
-				.exec(),
+		operation: () => redisV2.pipeline().get(subjectKey).get(epochKey).exec(),
 		source: "getCachedPartialFullSubject:pipeline",
 		redisInstance: redisV2,
 	});
@@ -85,8 +78,8 @@ export const getCachedPartialFullSubject = async ({
 	const cachedRaw = (subjectEntry?.[1] ?? null) as string | null;
 	const epochRaw = (epochEntry?.[1] ?? null) as string | null;
 
-	// Epoch from the pipeline. If the key was missing, the SET NX above just
-	// initialized it to "0" — treat it as 0 here.
+	// Missing epoch key is treated as 0; the next invalidation will INCR it
+	// from missing to 1, which mismatches any cached subject written at 0.
 	const parsedEpoch =
 		epochRaw !== null ? Number.parseInt(epochRaw, 10) : Number.NaN;
 	const currentSubjectViewEpoch = Number.isNaN(parsedEpoch) ? 0 : parsedEpoch;

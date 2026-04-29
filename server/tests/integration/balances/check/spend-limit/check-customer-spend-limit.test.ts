@@ -11,6 +11,7 @@ import {
 	normalizeCheckResponse,
 } from "../../utils/spend-limit-utils/checkSpendLimitUtils.js";
 import { setCustomerSpendLimit } from "../../utils/spend-limit-utils/customerSpendLimitUtils.js";
+import { warmEntityCaches } from "../../utils/warmEntityCaches.js";
 
 const expectAllowedCheckParity = async ({
 	autumn,
@@ -269,6 +270,8 @@ test.skip(`${chalk.yellowBright("check-customer-spend-limit4: customer spend lim
 		overageLimit: 25,
 	});
 
+	await warmEntityCaches({ autumn: autumnV2_1, customerId, entities });
+
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -337,6 +340,8 @@ test.concurrent(`${chalk.yellowBright("check-customer-spend-limit5: customer spe
 		overageLimit: 25,
 	});
 
+	await warmEntityCaches({ autumn: autumnV2_1, customerId, entities });
+
 	await autumnV2_1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
@@ -350,6 +355,7 @@ test.concurrent(`${chalk.yellowBright("check-customer-spend-limit5: customer spe
 		feature_id: TestFeature.Messages,
 		value: 810,
 	});
+	// return;
 
 	await expectBoundaryAndParity({
 		autumn: autumnV2_1,
@@ -515,6 +521,8 @@ test.concurrent(`${chalk.yellowBright("check-customer-spend-limit8: disabled cus
 		featureId: TestFeature.Messages,
 		overageLimit: 25,
 	});
+
+	await warmEntityCaches({ autumn: autumnV2_1, customerId, entities });
 
 	await autumnV2_1.track({
 		customer_id: customerId,
