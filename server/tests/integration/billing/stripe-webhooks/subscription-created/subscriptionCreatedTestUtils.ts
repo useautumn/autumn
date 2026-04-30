@@ -17,6 +17,13 @@ const ensureTestOrgUsesStripeSandboxKey = async (): Promise<TestContext> => {
 		);
 	}
 
+	const sandboxWebhookSecret = process.env.STRIPE_SANDBOX_WEBHOOK_SECRET;
+	if (!sandboxWebhookSecret?.startsWith("whsec_")) {
+		throw new Error(
+			"STRIPE_SANDBOX_WEBHOOK_SECRET must be set; the webhook handler reads this off the org's stripe_config to verify signatures",
+		);
+	}
+
 	const { db } = initDrizzle();
 	const organizationSlug = process.env.TESTS_ORG;
 	if (!organizationSlug) {
@@ -38,6 +45,7 @@ const ensureTestOrgUsesStripeSandboxKey = async (): Promise<TestContext> => {
 			stripe_config: {
 				...(organization.stripe_config || {}),
 				test_api_key: encryptData(sandboxSecretKey),
+				test_webhook_secret: encryptData(sandboxWebhookSecret),
 			},
 			test_stripe_connect: {},
 		})
