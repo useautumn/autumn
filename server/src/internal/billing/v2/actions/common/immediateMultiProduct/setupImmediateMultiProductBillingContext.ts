@@ -231,6 +231,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 					.map((featureQuantity) => featureQuantity.feature_id) ?? [],
 		),
 		invoiceMode,
+		enablePlanImmediately: params.enable_plan_immediately ?? false,
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,

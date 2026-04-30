@@ -122,7 +122,11 @@ export const createSchedule = async ({
 			: undefined,
 	});
 
-	if (billingResult.stripe.deferred) {
+	// When deferred (legacy stripe_checkout) OR enable_plan_immediately is set,
+	// the schedule rows are persisted in the webhook handler — at this point
+	// either no Stripe subscription exists yet, or we're explicitly delaying
+	// schedule materialization to the same point as the deferred flow.
+	if (billingResult.stripe.deferred || billingContext.enablePlanImmediately) {
 		return buildPendingCreateScheduleResponse({
 			billingContext,
 			billingResult,

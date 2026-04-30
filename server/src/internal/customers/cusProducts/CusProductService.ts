@@ -295,6 +295,44 @@ export class CusProductService {
 		});
 	}
 
+	static async getByStripeCheckoutSessionId({
+		db,
+		stripeCheckoutSessionId,
+		orgId,
+		env,
+		inStatuses,
+	}: {
+		db: DrizzleCli;
+		stripeCheckoutSessionId: string;
+		orgId: string;
+		env: AppEnv;
+		inStatuses?: string[];
+	}) {
+		const data = await db.query.customerProducts.findMany({
+			where: (_table, { and, eq: dEq, inArray }) =>
+				and(
+					dEq(
+						customerProducts.stripe_checkout_session_id,
+						stripeCheckoutSessionId,
+					),
+					inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
+				),
+			with: {
+				product: true,
+				customer: true,
+				...getFullCusProdRelations(),
+			},
+		});
+
+		const cusProducts = data as FullCusProduct[];
+
+		return filterByOrgAndEnv({
+			cusProducts,
+			orgId,
+			env,
+		});
+	}
+
 	static async getByStripeScheduledId({
 		db,
 		stripeScheduledId,

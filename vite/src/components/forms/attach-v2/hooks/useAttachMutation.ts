@@ -80,8 +80,12 @@ export function useAttachMutation({
 		},
 	});
 
-	const handleConfirm = () => {
-		mutation.mutate({ useInvoice: false });
+	const handleConfirm = ({
+		enableProductImmediately,
+	}: {
+		enableProductImmediately?: boolean;
+	} = {}) => {
+		mutation.mutate({ useInvoice: false, enableProductImmediately });
 	};
 
 	const handleInvoiceAttach = async ({
