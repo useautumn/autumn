@@ -36,8 +36,8 @@ export const buildStripeSubscriptionUpdateAction = ({
 
 	const trialEndsAt = trialContext?.trialEndsAt;
 
-	// When a schedule manages the subscription, don't set trial_end or cancel_at_period_end
-	// The schedule controls these via phase-level settings
+	// When a schedule manages the sub, leave trial_end/cancel alone — the
+	// schedule sets those via phase-level settings.
 	const scheduleManagesSubscription = !!stripeSubscriptionScheduleAction;
 
 	const appliesToBilling = trialContext?.appliesToBilling;
@@ -52,7 +52,7 @@ export const buildStripeSubscriptionUpdateAction = ({
 		shouldUnsetTrialEnd = !scheduleManagesSubscription && trialEndsAt === null;
 	}
 
-	// Determine cancel_at: null = clear, number = set, undefined = don't touch
+	// cancel_at: null = clear, number = set, undefined = unchanged.
 	const currentCancelAt = stripeSubscription.cancel_at;
 	const shouldClearCancelAt =
 		subscriptionCancelAt === null && currentCancelAt !== null;
@@ -94,26 +94,18 @@ export const buildStripeSubscriptionUpdateAction = ({
 			},
 		}),
 
-		// Tax policy lives in the org config — when on, every sub.update we
-		// dispatch propagates `automatic_tax: { enabled: true }` so existing
-		// subs catch up to the org's tax setting on their next mutation.
-		// Owning this here (not at execute time) keeps the action object
-		// self-describing in logs / EXTRA LOGS / debug snapshots.
-		//
-		// Skip when invoice mode — Stripe rejects auto_tax on invoices that
-		// can't collect customer address. If the resulting sub.update emits
-		// an invoice with `collection_method: send_invoice`, the hosted
-		// invoice page has no address form and Stripe Tax errors out.
+		// Propagate auto_tax onto every sub.update so existing subs catch up
+		// when the org flag flips. Baked in here (not execute) for log
+		// self-description. Skipped in invoice mode: send_invoice invoices
+		// can't collect address, so Stripe Tax rejects.
 		...(ctx.org.config.automatic_tax && !billingContext.invoiceMode
 			? { automatic_tax: { enabled: true } }
 			: {}),
 	};
 
-	// Note: `automatic_tax` is intentionally excluded from this check.
-	// It's only attached to update params that ALREADY have a real reason
-	// to fire (items/trial/cancel/discounts changed). We don't fire a
-	// sub.update purely to propagate the auto_tax flag — that would create
-	// noise on every flag flip.
+	// `automatic_tax` is excluded from this check: we only ride along on
+	// updates that have a real reason to fire, never trigger one just to
+	// propagate the flag.
 	const hasNoUpdates = [
 		params.items,
 		params.trial_end,

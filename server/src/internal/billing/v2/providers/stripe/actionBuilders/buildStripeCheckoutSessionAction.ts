@@ -73,11 +73,8 @@ export const buildStripeCheckoutSessionAction = ({
 		? stripeDiscountsToCheckoutParams({ stripeDiscounts })
 		: undefined;
 
-	// 7. Build params (only variable params - static params added in execute).
-	// Tax policy is part of the action shape (org config decides), so it
-	// lives here in the build step rather than being injected at execute
-	// time. Same rationale as `buildStripeSubscriptionUpdateAction`: the
-	// action object should be self-describing in logs / EXTRA LOGS.
+	// 7. Build params. Tax policy is baked in here (not at execute time) so
+	// the action object is self-describing in logs/EXTRA_LOGS.
 	const autumnAutoTax: Partial<Stripe.Checkout.SessionCreateParams> = org
 		.config.automatic_tax
 		? {

@@ -47,11 +47,6 @@ export const createStripeSub2 = async ({
 		paymentMethodData = {
 			default_payment_method: paymentMethod.id,
 		};
-		// if (paymentMethod.type === "alipay") {
-
-		// } else {
-
-		// }
 	}
 
 	const { subItems, invoiceItems, usageFeatures } = itemSet;
@@ -60,16 +55,12 @@ export const createStripeSub2 = async ({
 		? rewards.map((reward) => ({ coupon: reward.id }))
 		: undefined;
 
-	// Check if using custom payment method (Vercel, etc.)
+	// Custom PMs (Vercel, etc.) use external payment confirmation.
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
 	try {
-		// Skip auto_tax in invoice mode — `invoiceOnly` here means
-		// `collection_method: send_invoice` on the resulting sub, whose
-		// hosted invoice page has no buyer-facing address-collection UI.
-		// For charge_automatically sub creates we trust Stripe's waterfall
-		// (customer.address → recent checkout / IP / predicted location)
-		// to resolve a jurisdiction.
+		// Skip auto_tax in invoice mode: send_invoice has no
+		// address-collection UI so Stripe Tax rejects.
 		const wantsAutoTax =
 			!!org.config.automatic_tax && !attachParams.invoiceOnly;
 
@@ -80,8 +71,8 @@ export const createStripeSub2 = async ({
 			...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 
 			billing_mode: { type: "flexible" },
-			// For custom payment methods (e.g., Vercel), start subscription as incomplete.
-			// The subscription will become active after external payment is confirmed via Payment Records API.
+			// Custom PMs activate the sub after external payment confirmation
+			// via the Payment Records API.
 			payment_behavior: isCustomPaymentMethod
 				? "default_incomplete"
 				: "allow_incomplete",
@@ -98,12 +89,11 @@ export const createStripeSub2 = async ({
 			discounts,
 			expand: ["latest_invoice"],
 
-			// Pass metadata from attachParams (e.g., Vercel installation/billing plan IDs)
+			// e.g. Vercel installation/billing plan IDs.
 			metadata: metadata || undefined,
 
-			// For custom payment methods, save the payment method on
-			// the subscription so it's available in webhook handlers
-			// and for future renewals.
+			// Save the custom PM on the sub so webhook handlers and renewals
+			// can find it.
 			...(isCustomPaymentMethod && {
 				payment_settings: {
 					save_default_payment_method: "on_subscription",
