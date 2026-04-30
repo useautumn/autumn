@@ -1,0 +1,62 @@
+server/src/internal/invoices/invoiceUtils/createAndFinalizeInvoice.ts
+  f6b7de1bbba43d80 27-28
+server/src/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction.ts
+  f6b7de1bbba43d80 39-40,55,97-100,106-108
+server/src/internal/customers/internalHandlers/handleGetInvoiceLineItems.ts
+  f6b7de1bbba43d80 41
+server/src/internal/platform/platformBeta/handlers/handleDeletePlatformOrg.ts
+  f6b7de1bbba43d80 11,21
+server/src/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation.ts
+  f6b7de1bbba43d80 33,39,52-53,94-95
+server/src/internal/billing/v2/providers/stripe/actionBuilders/buildStripeCheckoutSessionAction.ts
+  f6b7de1bbba43d80 76-77
+server/src/internal/customers/attach/attachFunctions/addProductFlow/handleOneOffFunction.ts
+  f6b7de1bbba43d80 136-137
+server/src/utils/scriptUtils/testUtils/initCustomerV3.ts
+  f6b7de1bbba43d80 8,38,60,68,88
+server/src/external/stripe/stripeSubUtils/updateStripeSub/createProrationinvoice.ts
+  f6b7de1bbba43d80 19,38,90-92
+server/src/internal/customers/attach/attachFunctions/addProductFlow/createStripeSub2.ts
+  f6b7de1bbba43d80 58,62-63,74-75,92,95-96
+server/src/internal/orgs/deleteOrg/deletePlatformSubOrg.ts
+  f6b7de1bbba43d80 20-21,23
+server/src/internal/customers/add-product/handleCreateCheckout.ts
+  f6b7de1bbba43d80 142-146
+server/src/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling.ts
+  f6b7de1bbba43d80 84-86
+server/src/internal/billing/v2/providers/stripe/execute/executeStripeCheckoutSessionAction.ts
+  f6b7de1bbba43d80 43-45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "09c64ecc801355f3102abac5f49b7deba9e014dc",
+  "prompts": {
+    "c4778a4e887e1cf5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2213ea901ffeJSdplBxFgDIo8s",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 2,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "f6b7de1bbba43d80": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2210d6456ffe0v6rv9aWxrdAy7",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 324,
+      "total_deletions": 974,
+      "accepted_lines": 324,
+      "overriden_lines": 0
+    }
+  }
+}
