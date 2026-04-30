@@ -1,5 +1,8 @@
 import { z } from "zod/v4";
-import { BillingPreviewResponseSchema } from "./billingPreviewResponse.js";
+import {
+	BillingPreviewResponseSchema,
+	PreviewTaxSchema,
+} from "./billingPreviewResponse.js";
 
 export const AttachPreviewResponseSchema = BillingPreviewResponseSchema.extend({
 	object: z.literal("attach_preview").meta({ internal: true }),
@@ -15,6 +18,11 @@ export const AttachPreviewResponseSchema = BillingPreviewResponseSchema.extend({
 			description:
 				"The type of checkout that will be used if the customer is redirected to a checkout page.",
 		}),
+
+	tax: PreviewTaxSchema.optional().meta({
+		description:
+			"Tax preview for the immediate charge, computed via Stripe Tax. Present only when the org has `automatic_tax` enabled, the customer exists in Stripe, there's a positive amount to charge immediately, and the flow is NOT a Stripe Checkout redirect (Stripe Checkout collects the address and computes tax during the buyer-facing form).",
+	}),
 	// redirect_type: z.enum(["stripe_checkout", "autumn_checkout", "none"]),
 });
 
