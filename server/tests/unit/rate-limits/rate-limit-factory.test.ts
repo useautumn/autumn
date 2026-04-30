@@ -10,12 +10,22 @@ mock.module("@/external/redis/initRedis", () => ({
 	shouldUseRedis: () => mockState.shouldUseRedis,
 }));
 
-mock.module("@/external/logtail/logtailUtils.js", () => ({
-	logger: {
-		warn: (message: string) => {
-			mockState.warnings.push(message);
-		},
+// Stub logger must match the full `Logger` shape from logtailUtils.ts because
+// `mock.module` is process-wide in Bun: any other unit test loaded later in the
+// same `bun test` run gets this stub instead of the real logger. Missing
+// methods (e.g. `debug`) would crash unrelated code paths.
+const mockLogger = {
+	debug: () => undefined,
+	info: () => undefined,
+	warn: (message: string) => {
+		mockState.warnings.push(message);
 	},
+	error: () => undefined,
+	child: () => mockLogger,
+};
+
+mock.module("@/external/logtail/logtailUtils.js", () => ({
+	logger: mockLogger,
 }));
 
 import { rateLimitFactory } from "@/internal/misc/rateLimiter/rateLimitFactory.js";

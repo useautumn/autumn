@@ -5,21 +5,31 @@ const mockState = {
 };
 const defaultRedis = { status: "ready" };
 
-mock.module("@/external/logtail/logtailUtils.js", () => ({
-	logger: {
-		info: () => undefined,
-		warn: (data: Record<string, unknown> | string, message?: string) => {
-			if (typeof data === "string") {
-				mockState.warnings.push({ message: data });
-				return;
-			}
+// Stub logger must match the full `Logger` shape from logtailUtils.ts because
+// `mock.module` is process-wide in Bun: any other unit test loaded later in the
+// same `bun test` run gets this stub instead of the real logger. Missing
+// methods (e.g. `debug`) would crash unrelated code paths like
+// getOrSetCachedFullSubject.
+const mockLogger = {
+	debug: () => undefined,
+	info: () => undefined,
+	warn: (data: Record<string, unknown> | string, message?: string) => {
+		if (typeof data === "string") {
+			mockState.warnings.push({ message: data });
+			return;
+		}
 
-			mockState.warnings.push({
-				message: message || "",
-				data,
-			});
-		},
+		mockState.warnings.push({
+			message: message || "",
+			data,
+		});
 	},
+	error: () => undefined,
+	child: () => mockLogger,
+};
+
+mock.module("@/external/logtail/logtailUtils.js", () => ({
+	logger: mockLogger,
 }));
 
 mock.module("@/external/redis/initUtils/redisConfig.js", () => ({
