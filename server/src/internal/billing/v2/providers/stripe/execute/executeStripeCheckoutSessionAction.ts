@@ -48,7 +48,9 @@ export const executeStripeCheckoutSessionAction = async ({
 		typeOverride: metadataType,
 	});
 
-	// 2. Build full checkout params (merge variable + static params)
+	// 2. Build full checkout params. Tax-related fields (automatic_tax,
+	// billing_address_collection, customer_update, tax_id_collection) are
+	// already baked into action.params by buildStripeCheckoutSessionAction.
 	const fullParams = buildCheckoutSessionParams({
 		params: checkoutSessionAction.params,
 		checkoutSessionParams: checkoutSessionAction.checkoutSessionParams,
