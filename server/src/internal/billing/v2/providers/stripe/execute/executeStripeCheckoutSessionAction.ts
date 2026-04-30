@@ -40,7 +40,12 @@ export const executeStripeCheckoutSessionAction = async ({
 		expiresAt: addDays(Date.now(), 10).getTime(),
 	});
 
-	// 2. Build full checkout params (merge variable + static params)
+	// 2. Build full checkout params (merge variable + static params).
+	// `automatic_tax`, `billing_address_collection`, `customer_update`, and
+	// `tax_id_collection` are part of `checkoutSessionAction.params` —
+	// `buildStripeCheckoutSessionAction` decides them from org config and
+	// bakes them into the action shape so the object is self-describing
+	// in logs.
 	const fullParams = buildCheckoutSessionParams({
 		params: checkoutSessionAction.params,
 		checkoutSessionParams: checkoutSessionAction.checkoutSessionParams,

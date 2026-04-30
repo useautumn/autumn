@@ -1,7 +1,9 @@
+import type { CustomerData } from "@autumn/shared";
 import {
 	ApiVersion,
 	type CreateReward,
 	type CreateRewardProgram,
+	type OrgConfig,
 	type PlanTiming,
 	type ProductItem,
 	type ProductV2,
@@ -9,8 +11,8 @@ import {
 	type RewardRedemption,
 } from "@autumn/shared";
 import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
-import type { CustomerData } from "@autumn/shared";
 import { addHours, addMonths } from "date-fns";
+import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -20,6 +22,10 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 import { hoursToFinalizeInvoice } from "../constants.js";
 import { createReferralProgram, createReward } from "../productUtils.js";
 import { advanceTestClock as advanceTestClockFn } from "../stripeUtils.js";
+import {
+	createSubOrgTestContext,
+	type TaxRegistrationCountry,
+} from "./createSubOrgTestContext.js";
 import defaultCtx, { type TestContext } from "./createTestContext.js";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -187,6 +193,14 @@ type CleanupConfig = {
 	emailsToDelete: string[];
 };
 
+type PlatformCreateConfig = {
+	slug?: string;
+	name?: string;
+	userEmail?: string;
+	configOverrides?: Partial<OrgConfig>;
+	taxRegistrations?: TaxRegistrationCountry[];
+};
+
 type ScenarioConfig = {
 	testClock: boolean;
 	attachPm?: "success" | "fail" | "authenticate" | "alipay";
@@ -197,6 +211,7 @@ type ScenarioConfig = {
 	sendEmailReceipts?: boolean;
 	nameOverride?: string | null;
 	emailOverride?: string | null;
+	stripeCustomerOverrides?: Partial<Stripe.CustomerCreateParams>;
 	products: ProductV2[];
 	productPrefix?: string;
 	entityConfig?: EntityConfig;
@@ -206,6 +221,7 @@ type ScenarioConfig = {
 	otherCustomers: OtherCustomerConfig[];
 	referralProgram?: ReferralProgramConfig;
 	rewards: RewardConfig[];
+	platformConfig?: PlatformCreateConfig;
 };
 
 type ConfigFn = (config: ScenarioConfig) => ScenarioConfig;
@@ -258,6 +274,7 @@ const customer = ({
 	send_email_receipts,
 	name,
 	email,
+	stripeCustomerOverrides,
 }: {
 	testClock?: boolean;
 	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
@@ -268,6 +285,7 @@ const customer = ({
 	send_email_receipts?: boolean;
 	name?: string | null;
 	email?: string | null;
+	stripeCustomerOverrides?: Partial<Stripe.CustomerCreateParams>;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -280,6 +298,8 @@ const customer = ({
 		sendEmailReceipts: send_email_receipts ?? config.sendEmailReceipts,
 		nameOverride: name,
 		emailOverride: email,
+		stripeCustomerOverrides:
+			stripeCustomerOverrides ?? config.stripeCustomerOverrides,
 	});
 };
 
@@ -883,6 +903,35 @@ const createAndRedeemReferralCode = ({
 };
 
 /**
+ * Provision a fresh platform sub-org for this scenario via the
+ * `POST /platform/organizations` endpoint, optionally with config overrides
+ * (e.g. `automatic_tax: true`) and Stripe Tax registrations on its connect
+ * account. The returned ctx is overridden to point at the sub-org so all
+ * subsequent scenario operations (customer/product setup, attach, assertions)
+ * route there instead of the master test org. Useful for isolating tests
+ * that mutate org-level config.
+ *
+ * Sub-org lifecycle: NOT cleaned up automatically at test end. Sub-orgs
+ * persist in the master org's `created_by` set across runs until `bun cm`
+ * (which runs `clearMasterOrg`) explicitly deletes them. Each call here uses
+ * a randomized slug by default so accumulating sub-orgs don't collide.
+ *
+ * @param slug - Optional sub-org slug; defaults to a randomized "tax-XXXXXX".
+ * @param name - Optional org display name; defaults to the slug.
+ * @param userEmail - Optional owner email; defaults to "platform-tests@autumn.test".
+ * @param configOverrides - Partial OrgConfig merged into the sub-org's config jsonb after creation.
+ * @param taxRegistrations - List of countries to register Stripe Tax on the sub-org's connect account.
+ *
+ * @example s.platform.create({ configOverrides: { automatic_tax: true }, taxRegistrations: ["AU"] })
+ */
+const platformCreate = (cfg: PlatformCreateConfig = {}): ConfigFn => {
+	return (config) => ({
+		...config,
+		platformConfig: cfg,
+	});
+};
+
+/**
  * Scenario configuration functions.
  * Import and use with initScenario to configure test setup.
  * @example
@@ -925,6 +974,9 @@ export const s = {
 		createCode: createReferralCode,
 		redeem: redeemReferralCode,
 		createAndRedeem: createAndRedeemReferralCode,
+	},
+	platform: {
+		create: platformCreate,
 	},
 } as const;
 
@@ -1064,10 +1116,51 @@ export async function initScenario({
 	actions: ConfigFn[];
 	ctx?: TestContext;
 }) {
-	// Use provided context or fall back to default
-	const ctx = ctxOverride ?? defaultCtx;
+	// Use provided context or fall back to default. May be reassigned below
+	// if `s.platform.create(...)` was used (sub-org provisioning).
+	let ctx = ctxOverride ?? defaultCtx;
 	// Build config from setup and actions
 	const config = [...setup, ...actions].reduce((c, fn) => fn(c), defaultConfig);
+
+	// Provision a platform sub-org and re-bind ctx if requested. This must run
+	// BEFORE customer/product setup so all scenario operations route to the
+	// sub-org's Stripe Connect account and DB scope. The master org's secret
+	// key (from the current ctx) is used to authenticate the platform call.
+	if (config.platformConfig) {
+		const masterAutumn = new AutumnInt({ secretKey: ctx.orgSecretKey });
+
+		const slug =
+			config.platformConfig.slug ??
+			`tax-${Math.random().toString(36).slice(2, 8)}`;
+		const userEmail =
+			config.platformConfig.userEmail ?? "platform-tests@autumn.test";
+		const name = config.platformConfig.name ?? slug;
+
+		const response = (await masterAutumn.post("/platform/organizations", {
+			user_email: userEmail,
+			name,
+			slug,
+			env: "test",
+		})) as {
+			test_secret_key: string;
+			live_secret_key?: string;
+			org_slug: string;
+		};
+
+		ctx = await createSubOrgTestContext({
+			subOrgSlug: response.org_slug,
+			testSecretKey: response.test_secret_key,
+			configOverrides: config.platformConfig.configOverrides,
+			taxRegistrations: config.platformConfig.taxRegistrations,
+		});
+
+		console.log(
+			"[TEST] Creating sub-org:",
+			slug,
+			" | Impersonate via: ",
+			`http://localhost:3000/impersonate-redirect?org_id=${ctx.org.id}`,
+		);
+	}
 
 	// Generate entities from config
 	const generatedEntities = config.entityConfig
@@ -1190,6 +1283,7 @@ export async function initScenario({
 			sendEmailReceipts: config.sendEmailReceipts,
 			nameOverride: config.nameOverride,
 			emailOverride: config.emailOverride,
+			stripeCustomerOverrides: config.stripeCustomerOverrides,
 		});
 		testClockId = result.testClockId;
 		customer = result.customer;

@@ -24,9 +24,16 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
+import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { getStripeInvoiceLink } from "@/utils/linkUtils";
+import { notNullish } from "@/utils/genUtils";
+import {
+	getStripeConnectViewAsLink,
+	getStripeInvoiceLink,
+} from "@/utils/linkUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
@@ -45,6 +52,12 @@ type ProductGroup = {
 	lineItemGroups: LineItemGroup[];
 };
 
+type InvoiceDetailSheetProps = {
+	invoice?: Invoice;
+	lineItems?: InvoiceLineItem[];
+	taxedAmount?: number;
+};
+
 /** Resolve a feature_id slug to its display name */
 const resolveFeatureName = ({
 	featureId,
@@ -58,15 +71,25 @@ const resolveFeatureName = ({
 	return feature?.name ?? featureId;
 };
 
-export function InvoiceDetailSheet() {
+export function InvoiceDetailSheet({
+	invoice: invoiceProp,
+	lineItems: lineItemsProp,
+	taxedAmount: taxedAmountProp,
+}: InvoiceDetailSheetProps = {}) {
 	const sheetData = useSheetStore((s) => s.data);
-	const invoice = sheetData?.invoice as Invoice | undefined;
-	const lineItems = (sheetData?.lineItems as InvoiceLineItem[]) ?? [];
+	const invoice = invoiceProp ?? (sheetData?.invoice as Invoice | undefined);
+	const lineItems =
+		lineItemsProp ?? ((sheetData?.lineItems as InvoiceLineItem[]) || []);
+	const taxedAmount =
+		taxedAmountProp ?? (sheetData?.taxedAmount as number | undefined);
 
 	const { stripeAccount } = useOrgStripeQuery();
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();
 	const env = useEnv();
+	const { isAdmin } = useAdmin();
+	const { masterStripeAccount } = useMasterStripeAccount();
+	const { data: sessionData } = useSession();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 	const { customer } = useCusQuery();
 
@@ -143,6 +166,18 @@ export function InvoiceDetailSheet() {
 		isStripeCustomer &&
 		invoice.status === InvoiceStatus.Paid &&
 		!isFullyRefunded;
+	const stripeConnectViewAsInvoiceLink =
+		isAdmin &&
+		notNullish(sessionData?.session?.impersonatedBy) &&
+		masterStripeAccount?.id &&
+		stripeAccount?.id
+			? getStripeConnectViewAsLink({
+					masterAccountId: masterStripeAccount.id,
+					connectedAccountId: stripeAccount.id,
+					env,
+					path: `invoices/${invoice.stripe_id}`,
+				})
+			: null;
 
 	const formatAmount = (amount: number, currency: string) => {
 		const absAmount = Math.abs(amount);
@@ -172,6 +207,11 @@ export function InvoiceDetailSheet() {
 	};
 
 	const handleViewInvoice = () => {
+		if (stripeConnectViewAsInvoiceLink) {
+			window.open(stripeConnectViewAsInvoiceLink, "_blank");
+			return;
+		}
+
 		if (invoice.hosted_invoice_url) {
 			window.open(invoice.hosted_invoice_url, "_blank");
 		} else {
@@ -231,6 +271,14 @@ export function InvoiceDetailSheet() {
 			{/* Invoice Total */}
 			<SheetSection withSeparator={true}>
 				<div className="space-y-2">
+					{taxedAmount != null && taxedAmount > 0 && (
+						<div className="flex items-center justify-between">
+							<span className="text-sm text-t2">Tax</span>
+							<span className="text-sm tabular-nums text-t2">
+								{formatSignedAmount(taxedAmount, invoice.currency)}
+							</span>
+						</div>
+					)}
 					<div className="flex items-center justify-between">
 						<span className="text-sm font-medium text-foreground">Total</span>
 						<span className="text-sm font-semibold text-foreground tabular-nums">

@@ -1,5 +1,6 @@
 import { ApiVersion, type CustomerData } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
+import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { attachPaymentMethod } from "../initCustomer.js";
@@ -18,6 +19,7 @@ export const initCustomerV3 = async ({
 	sendEmailReceipts,
 	nameOverride,
 	emailOverride,
+	stripeCustomerOverrides,
 }: {
 	ctx: TestContext;
 	customerId: string;
@@ -31,6 +33,7 @@ export const initCustomerV3 = async ({
 	sendEmailReceipts?: boolean;
 	nameOverride?: string | null;
 	emailOverride?: string | null;
+	stripeCustomerOverrides?: Partial<Stripe.CustomerCreateParams>;
 }) => {
 	// Use override if provided (including null), otherwise default to customerId-based values
 	const name =
@@ -59,6 +62,7 @@ export const initCustomerV3 = async ({
 		email,
 		name,
 		test_clock: testClockId,
+		...(stripeCustomerOverrides ?? {}),
 	});
 
 	// 2. Create customer

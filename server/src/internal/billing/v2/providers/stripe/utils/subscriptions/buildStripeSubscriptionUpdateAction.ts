@@ -11,7 +11,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
 
 export const buildStripeSubscriptionUpdateAction = ({
-	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
 	ctx,
 	billingContext,
 	// biome-ignore lint/correctness/noUnusedFunctionParameters: might be used in the future
@@ -94,8 +93,27 @@ export const buildStripeSubscriptionUpdateAction = ({
 				},
 			},
 		}),
+
+		// Tax policy lives in the org config — when on, every sub.update we
+		// dispatch propagates `automatic_tax: { enabled: true }` so existing
+		// subs catch up to the org's tax setting on their next mutation.
+		// Owning this here (not at execute time) keeps the action object
+		// self-describing in logs / EXTRA LOGS / debug snapshots.
+		//
+		// Skip when invoice mode — Stripe rejects auto_tax on invoices that
+		// can't collect customer address. If the resulting sub.update emits
+		// an invoice with `collection_method: send_invoice`, the hosted
+		// invoice page has no address form and Stripe Tax errors out.
+		...(ctx.org.config.automatic_tax && !billingContext.invoiceMode
+			? { automatic_tax: { enabled: true } }
+			: {}),
 	};
 
+	// Note: `automatic_tax` is intentionally excluded from this check.
+	// It's only attached to update params that ALREADY have a real reason
+	// to fire (items/trial/cancel/discounts changed). We don't fire a
+	// sub.update purely to propagate the auto_tax flag — that would create
+	// noise on every flag flip.
 	const hasNoUpdates = [
 		params.items,
 		params.trial_end,

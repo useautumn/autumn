@@ -132,14 +132,29 @@ export const handleOneOffFunction = async ({
 
 	// Create invoice
 	logger.info("1. Creating invoice");
+
+	// Skip auto_tax in invoice mode — `invoiceOnly` sets
+	// `collection_method: send_invoice`, whose hosted invoice page has no
+	// buyer-facing address-collection UI for Stripe Tax to source from.
+	// For charge_automatically one-off invoices we trust Stripe's
+	// waterfall (customer.address → recent checkout / IP / predicted
+	// location) to resolve a jurisdiction.
+	const wantsAutoTax =
+		!!org.config.automatic_tax && !attachParams.invoiceOnly;
+
 	let stripeInvoice = await stripeCli.invoices.create({
 		customer: customer.processor.id!,
 		auto_advance: false,
 		currency: orgToCurrency({ org }),
-		discounts: rewards ? rewards.map((r) => ({ coupon: r.id })) : undefined,
-		collection_method: attachParams.invoiceOnly ? "send_invoice" : undefined,
+		discounts: rewards
+			? rewards.map((r) => ({ coupon: r.id }))
+			: undefined,
+		collection_method: attachParams.invoiceOnly
+			? "send_invoice"
+			: undefined,
 		days_until_due: attachParams.invoiceOnly ? 30 : undefined,
 		...(shouldMemo ? { description: invoiceMemo } : {}),
+		...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 	});
 
 	logger.info("2. Creating invoice items");

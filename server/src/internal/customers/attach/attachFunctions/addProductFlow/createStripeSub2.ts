@@ -64,21 +64,32 @@ export const createStripeSub2 = async ({
 	const isCustomPaymentMethod = paymentMethod?.type === "custom";
 
 	try {
+		// Skip auto_tax in invoice mode — `invoiceOnly` here means
+		// `collection_method: send_invoice` on the resulting sub, whose
+		// hosted invoice page has no buyer-facing address-collection UI.
+		// For charge_automatically sub creates we trust Stripe's waterfall
+		// (customer.address → recent checkout / IP / predicted location)
+		// to resolve a jurisdiction.
+		const wantsAutoTax =
+			!!org.config.automatic_tax && !attachParams.invoiceOnly;
+
 		const subscription = await stripeCli.subscriptions.create({
 			...paymentMethodData,
 			customer: customer.processor.id,
 			items: sanitizeSubItems(subItems),
+			...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 
 			billing_mode: { type: "flexible" },
-			// For custom payment methods (e.g., Vercel), start subscription as incomplete
-			// The subscription will become active after external payment is confirmed via Payment Records API
+			// For custom payment methods (e.g., Vercel), start subscription as incomplete.
+			// The subscription will become active after external payment is confirmed via Payment Records API.
 			payment_behavior: isCustomPaymentMethod
 				? "default_incomplete"
 				: "allow_incomplete",
-			// payment_behavior: "default_incomplete",
 
 			add_invoice_items: invoiceItems,
-			collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
+			collection_method: invoiceOnly
+				? "send_invoice"
+				: "charge_automatically",
 			days_until_due: invoiceOnly ? 30 : undefined,
 			billing_cycle_anchor: billingCycleAnchorUnix
 				? Math.floor(billingCycleAnchorUnix / 1000)
@@ -90,26 +101,24 @@ export const createStripeSub2 = async ({
 			// Pass metadata from attachParams (e.g., Vercel installation/billing plan IDs)
 			metadata: metadata || undefined,
 
-			// For custom payment methods, save the payment method on the subscription
-			// so it's available in webhook handlers and for future renewals
+			// For custom payment methods, save the payment method on
+			// the subscription so it's available in webhook handlers
+			// and for future renewals.
 			...(isCustomPaymentMethod && {
 				payment_settings: {
 					save_default_payment_method: "on_subscription",
 				},
 			}),
 
-			...{
-				trial_settings:
-					freeTrial && !freeTrial.card_required
-						? {
-								end_behavior: {
-									missing_payment_method: "cancel",
-								},
-							}
-						: undefined,
-
-				trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
-			},
+			trial_settings:
+				freeTrial && !freeTrial.card_required
+					? {
+							end_behavior: {
+								missing_payment_method: "cancel",
+							},
+						}
+					: undefined,
+			trial_end: freeTrialToStripeTimestamp({ freeTrial, now }),
 		});
 
 		const latestInvoice = subscription.latest_invoice as Stripe.Invoice;
