@@ -5,13 +5,28 @@
  * Uses Axiom logger so metrics are queryable via type: "memory_log".
  */
 
-import { monitorEventLoopDelay } from "node:perf_hooks";
+import { monitorEventLoopDelay, PerformanceObserver } from "node:perf_hooks";
 import { logger } from "../external/logtail/logtailUtils.js";
 
 // Event loop lag histogram — samples at 100ms resolution at the C++ level.
 // No JS callbacks involved, negligible overhead.
 const lagHistogram = monitorEventLoopDelay({ resolution: 100 });
 lagHistogram.enable();
+
+// GC pause tracking. observes V8 GC events and accumulates count, max and total
+// pause duration. Reset alongside the lag histogram on each emit so windows align.
+let gcCount = 0;
+let gcMaxMs = 0;
+let gcTotalMs = 0;
+
+const gcObserver = new PerformanceObserver((list) => {
+	for (const entry of list.getEntries()) {
+		gcCount += 1;
+		gcTotalMs += entry.duration;
+		if (entry.duration > gcMaxMs) gcMaxMs = entry.duration;
+	}
+});
+gcObserver.observe({ entryTypes: ["gc"] });
 
 /** Get the current mean event loop lag in milliseconds. */
 export function getEventLoopLagMs(): number {
@@ -38,8 +53,15 @@ function logMemoryUsage(label: string) {
 	const lagMaxMs = Math.round((lagHistogram.max / 1e6) * 10) / 10;
 	lagHistogram.reset();
 
+	const localGcCount = gcCount;
+	const localGcMaxMs = Math.round(gcMaxMs * 10) / 10;
+	const localGcTotalMs = Math.round(gcTotalMs * 10) / 10;
+	gcCount = 0;
+	gcMaxMs = 0;
+	gcTotalMs = 0;
+
 	logger.info(
-		`memory_log, rss: ${toMB(mem.rss)}MB, heapUsed: ${toMB(mem.heapUsed)}MB, eventLoopLagP99: ${lagP99Ms}ms, eventLoopLagMax: ${lagMaxMs}ms`,
+		`memory_log, rss: ${toMB(mem.rss)}MB, heapUsed: ${toMB(mem.heapUsed)}MB, eventLoopLagP99: ${lagP99Ms}ms, eventLoopLagMax: ${lagMaxMs}ms, gcMax: ${localGcMaxMs}ms`,
 		{
 			type: "memory_log",
 			data: {
@@ -54,6 +76,9 @@ function logMemoryUsage(label: string) {
 				eventLoopLagMeanMs: lagMeanMs,
 				eventLoopLagP99Ms: lagP99Ms,
 				eventLoopLagMaxMs: lagMaxMs,
+				gcCount: localGcCount,
+				gcMaxMs: localGcMaxMs,
+				gcTotalMs: localGcTotalMs,
 			},
 		},
 	);
