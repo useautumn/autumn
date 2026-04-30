@@ -16,29 +16,26 @@ const undoSubUpdate = async ({
 	curSub: Stripe.Subscription;
 	updatedSub: Stripe.Subscription;
 }) => {
-	// For each price in the old subscription, find the corresponding item in the updated subscription
-	// and update it back to the old quantity, or delete it if it doesn't exist in the old sub
+	// Revert each updated item to the old quantity, or delete if missing from old sub.
 	const itemsToUpdate = updatedSub.items.data.map((updatedItem) => {
 		const oldItem = curSub.items.data.find(
 			(item) => item.price.id === updatedItem.price.id,
 		);
 
 		if (oldItem) {
-			// Item exists in both old and new - revert to old quantity
 			return {
 				id: updatedItem.id,
 				price: oldItem.price.id,
 				quantity: oldItem.quantity,
 			};
 		}
-		// Item only exists in updated sub - delete it
 		return {
 			id: updatedItem.id,
 			deleted: true,
 		};
 	});
 
-	// For prices that existed in old sub but were removed in the update, we need to add them back
+	// Re-add prices that were removed in the update.
 	const itemsToAdd = curSub.items.data
 		.filter(
 			(oldItem) =>
@@ -90,18 +87,9 @@ export const createProrationInvoice = async ({
 		};
 	}
 
-	// EXCEPTION TO THE INVOICE-MODE SKIP RULE: this is the proration invoice
-	// we charge IMMEDIATELY off the customer's PM (default
-	// `charge_automatically`). It is never emitted as
-	// `collection_method: send_invoice` — even when `invoiceOnly` is true on
-	// the parent attach, that flag controls whether we return the invoice
-	// for the buyer to pay manually, not the collection method on this
-	// invoice itself. So auto_tax is safe here.
-	//
-	// A proration invoice implies the customer already has a sub, which
-	// means they went through Checkout (or attach) at least once and Stripe
-	// has a location for them via its waterfall (customer.address →
-	// recent checkout / IP / predicted location). We trust that to resolve.
+	// Proration invoice always uses charge_automatically (parent's
+	// `invoiceOnly` only affects whether we return the invoice for manual
+	// payment, not this invoice's collection_method), so auto_tax is safe.
 	const wantsAutoTax = !!ctx.org.config.automatic_tax;
 	const invoice = await stripeCli.invoices.create({
 		customer: customer.processor.id,

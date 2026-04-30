@@ -38,7 +38,7 @@ export const handleGetInvoiceLineItems = createRoute({
 			});
 			const stripeInvoices = [];
 			for (const invoice of autumnInvoices) {
-				// Sleep for 20ms before each retrieve
+				// Throttle to avoid Stripe rate limits.
 				await new Promise((res) => setTimeout(res, 20));
 				stripeInvoices.push({
 					autumnInvoiceId: invoice.id,
@@ -46,7 +46,6 @@ export const handleGetInvoiceLineItems = createRoute({
 				});
 			}
 
-			// Check if any invoice has automatic_tax.enabled
 			const anyAutomaticTax = stripeInvoices.some(
 				({ stripeInvoice }) => stripeInvoice.automatic_tax?.enabled,
 			);

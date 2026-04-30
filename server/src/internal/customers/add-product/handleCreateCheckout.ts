@@ -139,15 +139,11 @@ export const handleCreateCheckout = async ({
 
 		...rewardData,
 		...(attachParams.checkoutSessionParams || {}),
-		// Autumn-injected automatic_tax wins over user-supplied
-		// checkoutSessionParams: when the org has automatic_tax enabled,
-		// every checkout session should collect tax, force a full billing
-		// address form (not just country), and write the captured address
-		// back to the customer record so future renewal invoices have a
-		// tax-resolvable address. `billing_address_collection: "required"`
-		// is the key bit that forces the full form — without it, Stripe
-		// defaults to "auto" and only collects country, which leaves
-		// `automatic_tax.status` stuck at `requires_location_inputs`.
+		// Autumn auto_tax wins over user-supplied checkoutSessionParams.
+		// `billing_address_collection: "required"` is required: with "auto"
+		// Stripe only collects country, leaving auto_tax stuck at
+		// `requires_location_inputs`. `customer_update.address` writes the
+		// captured address back to the customer for future renewals.
 		...(org.config.automatic_tax
 			? {
 					automatic_tax: { enabled: true },

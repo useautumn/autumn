@@ -30,15 +30,13 @@ export const executeStripeSubscriptionOperation = async ({
 		stripeSubscriptionAction: subscriptionAction,
 	});
 
-	// default incomplete used so that payment failure / 3ds errors are clearly handled
+	// default_incomplete surfaces payment/3DS errors clearly.
 	const createPaymentBehavior =
 		nullish(paymentMethod) || paymentMethod?.type === "custom"
 			? "default_incomplete"
 			: "allow_incomplete";
 
-	// If customer's invoice_settings.default_payment_method is null but we
-	// resolved a payment method from the customer's attached PMs, pass it
-	// explicitly so Stripe knows which PM to charge.
+	// Pass resolved PM explicitly when customer has no default PM set.
 	const customerHasDefaultPm =
 		billingContext.stripeCustomer?.invoice_settings?.default_payment_method;
 
@@ -51,11 +49,8 @@ export const executeStripeSubscriptionOperation = async ({
 		userMetadata: billingContext.userMetadata,
 	});
 
-	// Skip auto_tax in invoice mode — Stripe rejects when the resulting
-	// invoice is `send_invoice` (no buyer-facing address-collection UI).
-	// For charge_automatically paths we trust Stripe's waterfall
-	// (customer.address → recent checkout / IP / predicted location) to
-	// resolve a jurisdiction.
+	// Skip auto_tax in invoice mode: send_invoice has no address-collection
+	// UI so Stripe Tax rejects.
 	const wantsAutoTax =
 		!!ctx.org.config.automatic_tax && !billingContext.invoiceMode;
 
@@ -96,9 +91,8 @@ export const executeStripeSubscriptionOperation = async ({
 				);
 			}
 
-			// `automatic_tax` is in `subscriptionAction.params` from
-			// `buildStripeSubscriptionUpdateAction`. Strip it from the spread
-			// so we can re-add it conditionally based on `wantsAutoTax` here.
+			// Strip `automatic_tax` from the action params so we can re-apply
+			// it here conditioned on `wantsAutoTax` (invoice-mode skip).
 			const { automatic_tax: _builtAutoTax, ...paramsWithoutAutoTax } =
 				subscriptionAction.params;
 

@@ -8,10 +8,7 @@ const deleteOrgSchema = z.object({
 	slug: z.string().min(1, "Organization slug is required"),
 });
 
-/**
- * DELETE /organizations
- * Deletes a platform organization by slug (for test cleanup)
- */
+/** DELETE /organizations — deletes a platform sub-org by slug (test cleanup). */
 export const handleDeletePlatformOrg = createRoute({
 	scopes: [Scopes.Platform.Write],
 	body: deleteOrgSchema,
@@ -21,8 +18,7 @@ export const handleDeletePlatformOrg = createRoute({
 
 		const { slug } = c.req.valid("json");
 
-		// Platform API creates orgs with format: {slug}|{masterOrgId}
-		// So we need to find the org with this pattern
+		// Platform API uses `{slug}|{masterOrgId}` format.
 		const fullSlug = `${slug}|${masterOrg.id}`;
 
 		const org = await OrgService.getBySlug({ db, slug: fullSlug });

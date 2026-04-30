@@ -24,10 +24,8 @@ export const createAndFinalizeInvoice = async ({
 	automaticTax?: boolean;
 	logger?: any;
 }) => {
-	// Skip auto_tax in send_invoice mode — Stripe rejects on invoices that
-	// can't collect customer address (the hosted invoice page has no
-	// address-collection UI). The helper enforces this regardless of what
-	// the caller passes so future callers can't accidentally bypass it.
+	// Skip auto_tax in send_invoice mode: no address-collection UI.
+	// Enforced here regardless of caller input.
 	const wantsAutoTax = automaticTax && chargeAutomatically;
 
 	const invoice = await stripeCli.invoices.create({

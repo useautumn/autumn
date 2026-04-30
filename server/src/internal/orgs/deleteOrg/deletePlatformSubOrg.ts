@@ -17,14 +17,10 @@ import {
 } from "@/internal/orgs/orgUtils/deleteOrgUtils.js";
 
 /**
- * Deletes a platform-created sub-org: svix webhooks, stripe webhooks,
- * stripe accounts, sandbox customers, members, then the `organizations` row.
+ * Deletes a platform-created sub-org and all its dependencies.
+ * Used by `DELETE /platform/organizations` and `clearMasterOrg.ts`.
  *
- * Used by the `DELETE /platform/organizations` route handler and by the
- * test cleanup script (`clearMasterOrg.ts`).
- *
- * When `skipLiveCustomerCheck` is true, bypasses the `OrgHasCustomers` guard
- * (test cleanup needs this since it's a clean-everything operation).
+ * `skipLiveCustomerCheck` bypasses the `OrgHasCustomers` guard (test cleanup).
  */
 export const deletePlatformSubOrg = async ({
 	db,
@@ -37,7 +33,6 @@ export const deletePlatformSubOrg = async ({
 	logger: Logger;
 	skipLiveCustomerCheck?: boolean;
 }): Promise<void> => {
-	// Check if any live customers exist
 	if (!skipLiveCustomerCheck) {
 		const hasCustomers = await db.query.customers.findFirst({
 			where: and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Live)),
@@ -52,19 +47,15 @@ export const deletePlatformSubOrg = async ({
 		}
 	}
 
-	// Delete svix webhooks
 	logger.info("1. Deleting svix webhooks");
 	await deleteSvixWebhooks({ org, logger });
 
-	// Delete stripe webhooks
 	logger.info("2. Deleting stripe webhooks");
 	await deleteStripeWebhooks({ org, logger });
 
-	// Delete stripe accounts
 	logger.info("3. Deleting stripe accounts");
 	await deleteStripeAccounts({ org, logger });
 
-	// Delete all sandbox customers
 	logger.info("4. Deleting sandbox customers");
 	await db
 		.delete(customers)
@@ -72,11 +63,9 @@ export const deletePlatformSubOrg = async ({
 			and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox)),
 		);
 
-	// Delete memberships
 	logger.info("5. Deleting org memberships");
 	await db.delete(member).where(eq(member.organizationId, org.id));
 
-	// Delete the organization itself
 	logger.info("6. Deleting organization");
 	await db.delete(organizations).where(eq(organizations.id, org.id));
 };
