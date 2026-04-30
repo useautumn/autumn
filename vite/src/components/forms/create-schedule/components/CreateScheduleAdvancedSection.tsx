@@ -12,8 +12,10 @@ import {
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 
 export function CreateScheduleAdvancedSection() {
-	const { form, formValues } = useCreateScheduleFormContext();
-	const { billingBehavior, resetBillingCycle, phases } = formValues;
+	const { form, formValues, preview } = useCreateScheduleFormContext();
+	const { billingBehavior, resetBillingCycle, enablePlanImmediately, phases } =
+		formValues;
+	const isCheckoutRedirect = preview?.redirect_to_checkout === true;
 
 	const isProrate = billingBehavior !== "none";
 	const hasMultipleImmediatePlans = (phases[0]?.plans.length ?? 0) > 1;
@@ -62,6 +64,20 @@ export function CreateScheduleAdvancedSection() {
 						form.setFieldValue("resetBillingCycle", !!checked),
 				})}
 			/>
+			{isCheckoutRedirect && (
+				<ConfigRow
+					title="Enable Plan Immediately"
+					description="Activate the plan as soon as the checkout URL is generated, before the customer pays."
+					action={
+						<Switch
+							checked={enablePlanImmediately}
+							onCheckedChange={(checked) =>
+								form.setFieldValue("enablePlanImmediately", !!checked)
+							}
+						/>
+					}
+				/>
+			)}
 		</AdvancedSection>
 	);
 }

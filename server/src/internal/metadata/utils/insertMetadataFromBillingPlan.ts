@@ -1,14 +1,14 @@
-import { InternalError, MetadataType } from "@autumn/shared";
-import { addDays } from "date-fns";
-import type Stripe from "stripe";
-import { createStripeCli } from "@/external/connect/createStripeCli";
-import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type {
 	BillingContext,
 	BillingPlan,
 	DeferredAutumnBillingPlanData,
 	StripeBillingStage,
 } from "@autumn/shared";
+import { InternalError, MetadataType } from "@autumn/shared";
+import { addDays } from "date-fns";
+import type Stripe from "stripe";
+import { createStripeCli } from "@/external/connect/createStripeCli";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { generateId } from "@/utils/genUtils";
 import { MetadataService } from "../MetadataService";
 
@@ -23,6 +23,7 @@ export const insertMetadataFromBillingPlan = async ({
 	stripeCheckoutSession,
 	expiresAt,
 	resumeAfter,
+	typeOverride,
 }: {
 	ctx: AutumnContext;
 	billingPlan: BillingPlan;
@@ -31,14 +32,18 @@ export const insertMetadataFromBillingPlan = async ({
 	stripeCheckoutSession?: Stripe.Checkout.Session;
 	resumeAfter?: StripeBillingStage;
 	expiresAt: number;
+	/** Override the auto-detected metadata type. Used by the enable_plan_immediately checkout flow. */
+	typeOverride?: MetadataType;
 }) => {
 	const id = generateId("meta");
 
-	let type: MetadataType | undefined;
-	if (stripeCheckoutSession) {
-		type = MetadataType.CheckoutSessionV2;
-	} else if (stripeInvoice) {
-		type = MetadataType.DeferredInvoice;
+	let type: MetadataType | undefined = typeOverride;
+	if (!type) {
+		if (stripeCheckoutSession) {
+			type = MetadataType.CheckoutSessionV2;
+		} else if (stripeInvoice) {
+			type = MetadataType.DeferredInvoice;
+		}
 	}
 
 	const data = {
@@ -89,17 +94,19 @@ export const updateMetadataWithCheckoutSession = async ({
 	ctx,
 	metadataId,
 	stripeCheckoutSessionId,
+	type = MetadataType.CheckoutSessionV2,
 }: {
 	ctx: AutumnContext;
 	metadataId: string;
 	stripeCheckoutSessionId: string;
+	type?: MetadataType;
 }) => {
 	return MetadataService.update({
 		db: ctx.db,
 		id: metadataId,
 		updates: {
 			stripe_checkout_session_id: stripeCheckoutSessionId,
-			type: MetadataType.CheckoutSessionV2,
+			type,
 		},
 	});
 };

@@ -109,6 +109,8 @@ export const initCustomerProduct = ({
 		billing_version: billingVersion,
 
 		external_id: externalId ?? null,
+
+		stripe_checkout_session_id: null,
 	};
 };
 
