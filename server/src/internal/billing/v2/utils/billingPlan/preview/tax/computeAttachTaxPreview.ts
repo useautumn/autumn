@@ -20,7 +20,9 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
  *
  * Skip-conditions (return undefined):
  *  - org has `automatic_tax: false`
- *  - flow is `stripe_checkout` (Checkout collects the address itself)
+ *  - flow is `stripe_checkout` or `autumn_checkout` (the buyer-facing form
+ *    may collect/update the address, so a pre-checkout tax preview risks
+ *    diverging from what Stripe charges at checkout)
  *  - no Stripe customer exists (we only support previewing against an
  *    existing Stripe customer; Stripe's location waterfall needs it)
  *  - nothing positive to charge immediately (no taxable subtotal)
@@ -39,20 +41,21 @@ export const computeAttachTaxPreview = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 }): Promise<PreviewTax | undefined> => {
 	if (!ctx.org.config.automatic_tax) return undefined;
-	if (billingContext.checkoutMode === "stripe_checkout") return undefined;
+	if (
+		billingContext.checkoutMode === "stripe_checkout" ||
+		billingContext.checkoutMode === "autumn_checkout"
+	) {
+		return undefined;
+	}
 	if (!billingContext.stripeCustomer?.id) return undefined;
 
 	const allLineItems = autumnBillingPlan.lineItems ?? [];
 	if (allLineItems.length === 0) return undefined;
 
-	// Stripe Tax requires `line_items.amount` to be a positive integer, so
-	// only send lines that are immediately charged AND positive. Credit
-	// (negative) lines aren't taxable on the Stripe side anyway, so
-	// dropping them mirrors how the actual proration invoice would be
-	// taxed.
-	const taxableLines = allLineItems.filter(
-		(line) => line.chargeImmediately && line.amount > 0,
-	);
+	const taxableLines = allLineItems.filter((line) => {
+		const net = line.amountAfterDiscounts ?? line.amount;
+		return line.chargeImmediately && net > 0;
+	});
 	if (taxableLines.length === 0) return undefined;
 
 	const currency = orgToCurrency({ org: ctx.org });
@@ -63,7 +66,10 @@ export const computeAttachTaxPreview = async ({
 			currency,
 			customer: billingContext.stripeCustomer.id,
 			line_items: taxableLines.map((line, idx) => ({
-				amount: atmnToStripeAmount({ amount: line.amount, currency }),
+				amount: atmnToStripeAmount({
+					amount: line.amountAfterDiscounts ?? line.amount,
+					currency,
+				}),
 				reference: line.id || `li_${idx}`,
 				quantity: 1,
 			})),
