@@ -51,6 +51,14 @@ export const executeStripeSubscriptionOperation = async ({
 		userMetadata: billingContext.userMetadata,
 	});
 
+	// Skip auto_tax in invoice mode — Stripe rejects when the resulting
+	// invoice is `send_invoice` (no buyer-facing address-collection UI).
+	// For charge_automatically paths we trust Stripe's waterfall
+	// (customer.address → recent checkout / IP / predicted location) to
+	// resolve a jurisdiction.
+	const wantsAutoTax =
+		!!ctx.org.config.automatic_tax && !billingContext.invoiceMode;
+
 	switch (subscriptionAction.type) {
 		case "update": {
 			let stripeSubscription = billingContext.stripeSubscription;
@@ -71,15 +79,15 @@ export const executeStripeSubscriptionOperation = async ({
 				stripeSubscription?.default_payment_method;
 			const shouldResetBillingCycleAnchorNow =
 				billingContext.requestedBillingCycleAnchor === "now";
-			// const shouldSkipResetForProrationNone =
-			// 	billingContext.requestedProrationBehavior === "none" &&
-			// 	!billingContext.anchorResetRefund?.noPartialRefund;
 
 			if (shouldResetBillingCycleAnchorNow) {
 				stripeSubscription = await stripeClient.subscriptions.update(
 					subscriptionAction.stripeSubscriptionId,
 					{
-						...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
+						...(subscriptionHasDefaultPm
+							? {}
+							: fallbackPaymentMethodParams),
+						...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 						billing_cycle_anchor: "now",
 						proration_behavior: "none",
 						payment_behavior: "error_if_incomplete",
@@ -88,13 +96,22 @@ export const executeStripeSubscriptionOperation = async ({
 				);
 			}
 
+			// `automatic_tax` is in `subscriptionAction.params` from
+			// `buildStripeSubscriptionUpdateAction`. Strip it from the spread
+			// so we can re-add it conditionally based on `wantsAutoTax` here.
+			const { automatic_tax: _builtAutoTax, ...paramsWithoutAutoTax } =
+				subscriptionAction.params;
+
 			return await stripeClient.subscriptions.update(
 				subscriptionAction.stripeSubscriptionId,
 				{
-					...subscriptionAction.params,
-					...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
+					...paramsWithoutAutoTax,
+					...(subscriptionHasDefaultPm
+						? {}
+						: fallbackPaymentMethodParams),
 					...(updateWillCreateInvoice ? invoiceModeParams : {}),
 					...(userMeta && { metadata: userMeta }),
+					...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 					payment_behavior: "error_if_incomplete",
 					expand: ["latest_invoice"],
 				},
@@ -106,6 +123,7 @@ export const executeStripeSubscriptionOperation = async ({
 				...invoiceModeParams,
 				...fallbackPaymentMethodParams,
 				...(userMeta && { metadata: userMeta }),
+				...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 
 				billing_mode: { type: "flexible" },
 

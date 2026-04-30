@@ -4,11 +4,16 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, type Organization, organizations } from "@autumn/shared";
 
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
+import { initDrizzle } from "@/db/initDrizzle.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis } from "@/external/redis/initRedis.js";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
+import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import { clearOrg } from "./utils/setup/clearOrg.js";
 import { setupOrg } from "./utils/setup/setupOrg.js";
 
@@ -29,6 +34,72 @@ export const clearMasterOrg = async () => {
 				),
 			);
 			process.exit(1);
+		}
+
+		// Clean up any platform sub-orgs created by this master org first.
+		// IMPORTANT: this is the ONLY path that auto-deletes platform sub-orgs.
+		// Tests created via `s.platform.create(...)` do NOT clean up after
+		// themselves — sub-orgs accumulate across test runs and are only
+		// cleared here, when an operator explicitly invokes `bun cm`. Each
+		// `s.platform.create(...)` defaults to a randomized slug so the buildup
+		// doesn't cause slug collisions between runs.
+		{
+			const { db, client } = initDrizzle();
+			try {
+				const masterOrg = await OrgService.getBySlug({
+					db,
+					slug: process.env.TESTS_ORG,
+				});
+
+				if (!masterOrg) {
+					console.log(
+						chalk.yellow(
+							`\n⚠️  Master org '${process.env.TESTS_ORG}' not found; skipping sub-org cleanup.\n`,
+						),
+					);
+				} else {
+					const subOrgs = (await db.query.organizations.findMany({
+						where: eq(organizations.created_by, masterOrg.id),
+					})) as Organization[];
+
+					console.log(
+						chalk.blue(
+							`\n🧹 Found ${subOrgs.length} platform sub-org(s) to delete...\n`,
+						),
+					);
+
+					const BATCH_SIZE = 10;
+					for (let i = 0; i < subOrgs.length; i += BATCH_SIZE) {
+						const batch = subOrgs.slice(i, i + BATCH_SIZE);
+						await Promise.all(
+							batch.map(async (subOrg) => {
+								try {
+									await deletePlatformSubOrg({
+										db,
+										org: subOrg,
+										logger,
+										skipLiveCustomerCheck: true,
+									});
+									console.log(
+										chalk.green(
+											`   ✅ Deleted sub-org ${subOrg.slug} (${subOrg.id})`,
+										),
+									);
+								} catch (err) {
+									console.error(
+										chalk.red(
+											`   ❌ Failed to delete sub-org ${subOrg.slug} (${subOrg.id}):`,
+										),
+										err,
+									);
+								}
+							}),
+						);
+					}
+				}
+			} finally {
+				await client.end();
+			}
 		}
 
 		const org = await clearOrg({

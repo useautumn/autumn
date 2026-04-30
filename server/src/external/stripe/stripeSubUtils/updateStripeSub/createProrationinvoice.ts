@@ -90,10 +90,24 @@ export const createProrationInvoice = async ({
 		};
 	}
 
+	// EXCEPTION TO THE INVOICE-MODE SKIP RULE: this is the proration invoice
+	// we charge IMMEDIATELY off the customer's PM (default
+	// `charge_automatically`). It is never emitted as
+	// `collection_method: send_invoice` — even when `invoiceOnly` is true on
+	// the parent attach, that flag controls whether we return the invoice
+	// for the buyer to pay manually, not the collection method on this
+	// invoice itself. So auto_tax is safe here.
+	//
+	// A proration invoice implies the customer already has a sub, which
+	// means they went through Checkout (or attach) at least once and Stripe
+	// has a location for them via its waterfall (customer.address →
+	// recent checkout / IP / predicted location). We trust that to resolve.
+	const wantsAutoTax = !!ctx.org.config.automatic_tax;
 	const invoice = await stripeCli.invoices.create({
 		customer: customer.processor.id,
 		auto_advance: false,
 		pending_invoice_items_behavior: "include",
+		...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 	});
 
 	if (invoiceOnly)

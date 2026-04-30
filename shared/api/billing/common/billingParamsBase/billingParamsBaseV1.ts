@@ -36,6 +36,21 @@ export const BillingParamsBaseV1Schema = z.object({
 		description:
 			"Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.",
 	}),
+
+	// Legacy V0 invoice-mode aliases. Accepted on V1+ schemas for callers
+	// (and tests) that still pass the flat fields. `setupInvoiceModeContext`
+	// promotes these into `invoice_mode` when the structured field is absent.
+	invoice: z.boolean().optional().meta({
+		description:
+			"Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.",
+	}),
+	enable_product_immediately: z.boolean().optional().meta({
+		description:
+			"Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.",
+	}),
+	finalize_invoice: z.boolean().optional().meta({
+		description: "Deprecated: legacy alias for `invoice_mode.finalize`.",
+	}),
 	proration_behavior: BillingBehaviorSchema.optional().meta({
 		description:
 			"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",

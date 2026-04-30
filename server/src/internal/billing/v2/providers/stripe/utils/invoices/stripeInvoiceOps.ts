@@ -16,6 +16,7 @@ type CreateInvoiceParams = {
 	daysUntilDue?: number;
 	description?: string;
 	metadata?: Stripe.InvoiceCreateParams["metadata"];
+	automaticTax?: boolean;
 };
 
 export const createStripeInvoice = async ({
@@ -28,6 +29,7 @@ export const createStripeInvoice = async ({
 	description,
 	metadata,
 	discounts,
+	automaticTax,
 }: CreateInvoiceParams): Promise<Stripe.Invoice> => {
 	const invoice = await stripeCli.invoices.create({
 		customer: stripeCusId,
@@ -40,6 +42,7 @@ export const createStripeInvoice = async ({
 		days_until_due:
 			collectionMethod === "send_invoice" ? (daysUntilDue ?? 30) : undefined,
 		...(discounts ? { discounts } : {}),
+		...(automaticTax ? { automatic_tax: { enabled: true } } : {}),
 	});
 
 	return invoice;

@@ -139,6 +139,23 @@ export const handleCreateCheckout = async ({
 
 		...rewardData,
 		...(attachParams.checkoutSessionParams || {}),
+		// Autumn-injected automatic_tax wins over user-supplied
+		// checkoutSessionParams: when the org has automatic_tax enabled,
+		// every checkout session should collect tax, force a full billing
+		// address form (not just country), and write the captured address
+		// back to the customer record so future renewal invoices have a
+		// tax-resolvable address. `billing_address_collection: "required"`
+		// is the key bit that forces the full form — without it, Stripe
+		// defaults to "auto" and only collects country, which leaves
+		// `automatic_tax.status` stuck at `requires_location_inputs`.
+		...(org.config.automatic_tax
+			? {
+					automatic_tax: { enabled: true },
+					billing_address_collection: "required" as const,
+					customer_update: { address: "auto", name: "auto" },
+					tax_id_collection: { enabled: true },
+				}
+			: {}),
 		metadata: {
 			...(attachParams.metadata ? attachParams.metadata : {}),
 			...(checkoutParams?.metadata || {}),
@@ -159,6 +176,14 @@ export const handleCreateCheckout = async ({
 			success_url: successUrl || toSuccessUrl({ org, env: customer.env }),
 			currency: org.default_currency || "usd",
 			...checkoutParams,
+			...(org.config.automatic_tax
+				? {
+						automatic_tax: { enabled: true },
+						billing_address_collection: "required" as const,
+						customer_update: { address: "auto", name: "auto" },
+						tax_id_collection: { enabled: true },
+					}
+				: {}),
 			metadata: {
 				...(checkoutParams?.metadata || {}),
 				autumn_metadata_id: metadata.id,

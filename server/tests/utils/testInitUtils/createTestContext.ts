@@ -89,16 +89,65 @@ export const createTestContext = async () => {
 	} satisfies TestContext;
 };
 
-// Only create test context if we're actually running tests
-const isTestEnvironment =
-	process.env.NODE_ENV === "test" ||
-	process.argv.some((arg) => arg.includes("test")) ||
-	process.argv[1]?.includes("/tests/");
+/**
+ * Lazy-read default export. The actual TestContext is created once by the
+ * bun preload (`server/tests/setup-integration-tests.ts`) and stashed on
+ * `globalThis.__autumnTestContext`. We expose a Proxy here so the lookup
+ * happens on property ACCESS, not at module evaluation.
+ *
+ * Why this matters:
+ *
+ *  - The preload imports this module to call `createTestContext()`. That
+ *    triggers this module's evaluation BEFORE the preload's body runs, so
+ *    if we captured the stash at evaluation time it would be `undefined`
+ *    forever — the preload would set `globalThis` after the const had
+ *    already frozen to null.
+ *
+ *  - Previously this module did a top-level `await createTestContext()`
+ *    here, which made the module async and put its default export in TDZ
+ *    until the await resolved. With many test files concurrently loading
+ *    in one process, importers could race ahead of the not-yet-finalized
+ *    default export and throw `ReferenceError: Cannot access 'defaultCtx'
+ *    before initialization`. The Proxy eliminates that window — the module
+ *    evaluates synchronously and the lookup is deferred to first property
+ *    access on the default export, by which time the preload has finished.
+ *
+ *  - For unit tests (which skip integration preload), property access
+ *    throws a clear "preload did not run" message instead of the cryptic
+ *    `Cannot read property X of null` of the previous implementation.
+ *    Unit tests don't access the default export anyway.
+ */
+const lazyDefaultCtx = new Proxy({} as TestContext, {
+	get(_target, prop, _receiver) {
+		const ctx = (globalThis as { __autumnTestContext?: TestContext | null })
+			.__autumnTestContext;
+		if (ctx == null) {
+			throw new Error(
+				`Default TestContext is not initialized. The integration test ` +
+					`preload (server/tests/setup-integration-tests.ts) did not ` +
+					`populate globalThis.__autumnTestContext before "${String(prop)}" ` +
+					`was accessed. This usually means a unit test is reaching for ` +
+					`the default ctx, or the preload was bypassed.`,
+			);
+		}
+		return Reflect.get(ctx, prop);
+	},
+	has(_target, prop) {
+		const ctx = (globalThis as { __autumnTestContext?: TestContext | null })
+			.__autumnTestContext;
+		return ctx != null && prop in ctx;
+	},
+	ownKeys(_target) {
+		const ctx = (globalThis as { __autumnTestContext?: TestContext | null })
+			.__autumnTestContext;
+		return ctx == null ? [] : Reflect.ownKeys(ctx);
+	},
+	getOwnPropertyDescriptor(_target, prop) {
+		const ctx = (globalThis as { __autumnTestContext?: TestContext | null })
+			.__autumnTestContext;
+		if (ctx == null) return undefined;
+		return Reflect.getOwnPropertyDescriptor(ctx, prop);
+	},
+});
 
-let testContext: TestContext | null = null;
-
-if (isTestEnvironment) {
-	testContext = await createTestContext();
-}
-
-export default testContext as TestContext;
+export default lazyDefaultCtx;

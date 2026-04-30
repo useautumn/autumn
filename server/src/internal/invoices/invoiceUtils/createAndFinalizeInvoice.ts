@@ -10,6 +10,7 @@ export const createAndFinalizeInvoice = async ({
 	errorOnPaymentFail = true,
 	voidIfFailed = true,
 	chargeAutomatically = true,
+	automaticTax = false,
 	logger,
 }: {
 	stripeCli: Stripe;
@@ -20,8 +21,15 @@ export const createAndFinalizeInvoice = async ({
 	errorOnPaymentFail?: boolean;
 	voidIfFailed?: boolean;
 	chargeAutomatically?: boolean;
+	automaticTax?: boolean;
 	logger?: any;
 }) => {
+	// Skip auto_tax in send_invoice mode — Stripe rejects on invoices that
+	// can't collect customer address (the hosted invoice page has no
+	// address-collection UI). The helper enforces this regardless of what
+	// the caller passes so future callers can't accidentally bypass it.
+	const wantsAutoTax = automaticTax && chargeAutomatically;
+
 	const invoice = await stripeCli.invoices.create({
 		customer: stripeCusId,
 		auto_advance: false,
@@ -30,6 +38,7 @@ export const createAndFinalizeInvoice = async ({
 			? "charge_automatically"
 			: "send_invoice",
 		days_until_due: chargeAutomatically ? undefined : 30,
+		...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 	});
 
 	if (invoiceItems) {
