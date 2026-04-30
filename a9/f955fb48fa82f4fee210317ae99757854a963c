@@ -1,0 +1,27 @@
+server/tests/unit/full-subject-cache/invalidateCachedFullSubject.test.ts
+  f6b7de1bbba43d80 154
+server/tests/unit/cache/cache-utils.test.ts
+  f6b7de1bbba43d80 8-20,22-25,27-32
+server/tests/unit/rate-limits/rate-limit-factory.test.ts
+  f6b7de1bbba43d80 13-21,23-28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "a9f955fb48fa82f4fee210317ae99757854a963c",
+  "prompts": {
+    "f6b7de1bbba43d80": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2210d6456ffe0v6rv9aWxrdAy7",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 39,
+      "total_deletions": 19,
+      "accepted_lines": 39,
+      "overriden_lines": 0
+    }
+  }
+}
