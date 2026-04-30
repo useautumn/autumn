@@ -17,6 +17,7 @@ import chalk from "chalk";
 import { handleStripeSubscriptionCreated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
+import { ProductService } from "@/internal/products/ProductService";
 import { timeout } from "@/utils/genUtils";
 import { getStripeSandboxContext } from "./subscriptionCreatedTestUtils.js";
 
@@ -253,6 +254,65 @@ test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync: 
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotPresent({ customer, productId: pro.id });
+});
+
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync: links via stripe_price_id when stripe_product_id mismatches")}`, async () => {
+	const ctx = await getStripeSandboxContext();
+	const customerId = `sub-created-auto-sync-price-id-match-${testRunId}`;
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const pro = products.pro({
+		id: "pro",
+		items: [messagesItem],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		ctx,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	// Force product-id mismatch so the only viable match path is price-id.
+	const fullProduct = await ProductService.getFull({
+		db: ctx.db,
+		idOrInternalId: pro.id,
+		orgId: ctx.org.id,
+		env: ctx.env,
+	});
+	await ProductService.updateByInternalId({
+		db: ctx.db,
+		internalId: fullProduct.internal_id,
+		update: {
+			processor: { type: "stripe", id: `prod_fake_${testRunId}` },
+		},
+	});
+
+	// Sub items still carry the real stripe_price_id (and Stripe-bound product),
+	// so price-id matches the Autumn price even though product-id won't match.
+	const stripeSubscription = await createStripeSubscriptionFromProduct({
+		ctx,
+		customerId,
+		productId: pro.id,
+	});
+
+	await timeout(WEBHOOK_TIMEOUT_MS);
+
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectProductActive({ customer, productId: pro.id });
+
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		withSubs: true,
+	});
+	const customerProduct = fullCustomer.customer_products.find(
+		(product) => product.product_id === pro.id,
+	);
+	expect(customerProduct?.subscription_ids).toContain(stripeSubscription.id);
 });
 
 test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Stripe sandbox sub matching multiple products")}`, async () => {
