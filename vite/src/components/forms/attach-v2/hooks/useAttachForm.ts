@@ -28,6 +28,7 @@ export function useAttachForm({
 			trialEnabled: false,
 			trialCardRequired: true,
 			planSchedule: null,
+			startDate: null,
 			prorationBehavior: null,
 			redirectMode: "if_required",
 			newBillingSubscription: false,

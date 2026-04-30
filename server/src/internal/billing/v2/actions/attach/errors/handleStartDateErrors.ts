@@ -1,6 +1,9 @@
 import {
+	ACTIVE_STATUSES,
 	type AttachBillingContext,
 	type AttachParamsV1,
+	CusProductStatus,
+	cusProductToPrices,
 	ErrCode,
 	isFreeProduct,
 	isOneOffProduct,
@@ -10,6 +13,23 @@ import {
 import { StatusCodes } from "http-status-codes";
 
 const START_DATE_TOLERANCE_MS = ms.minutes(1);
+
+const hasActivePaidRecurringSubscription = ({
+	billingContext,
+}: {
+	billingContext: AttachBillingContext;
+}) =>
+	billingContext.fullCustomer.customer_products.some((customerProduct) => {
+		const hasActiveOrTrialingStatus =
+			ACTIVE_STATUSES.includes(customerProduct.status) ||
+			customerProduct.status === CusProductStatus.Trialing;
+
+		if (!hasActiveOrTrialingStatus) return false;
+		if (!customerProduct.subscription_ids?.length) return false;
+
+		const prices = cusProductToPrices({ cusProduct: customerProduct });
+		return !isFreeProduct({ prices }) && !isOneOffProduct({ prices });
+	});
 
 export const handleStartDateErrors = ({
 	billingContext,
@@ -50,6 +70,15 @@ export const handleStartDateErrors = ({
 	const isFutureStart =
 		params.start_date > billingContext.currentEpochMs + START_DATE_TOLERANCE_MS;
 	if (!isFutureStart) return;
+
+	if (hasActivePaidRecurringSubscription({ billingContext })) {
+		throw new RecaseError({
+			message:
+				"Future start_date is only supported when the customer has no active paid subscription.",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
 
 	const prices = billingContext.attachProduct.prices;
 	const isPaidRecurring =
