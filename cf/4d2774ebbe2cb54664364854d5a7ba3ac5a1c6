@@ -1,0 +1,23 @@
+vite/src/views/customers2/components/sheets/AttachProductSheet.tsx
+  c4778a4e887e1cf5 1-5,9,11,114-130,137-140,147-163,168,170-178,206-252
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "cf4d2774ebbe2cb54664364854d5a7ba3ac5a1c6",
+  "prompts": {
+    "c4778a4e887e1cf5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2213ea901ffeJSdplBxFgDIo8s",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 134,
+      "total_deletions": 54,
+      "accepted_lines": 106,
+      "overriden_lines": 0
+    }
+  }
+}
