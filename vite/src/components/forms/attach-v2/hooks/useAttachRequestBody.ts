@@ -30,6 +30,7 @@ export interface BuildAttachRequestBodyParams {
 	trialEnabled: boolean;
 	trialCardRequired: boolean;
 	planSchedule: PlanTiming | null;
+	startDate: number | null;
 	prorationBehavior: BillingBehavior | null;
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
@@ -58,6 +59,7 @@ export function buildAttachRequestBody({
 	trialEnabled,
 	trialCardRequired,
 	planSchedule,
+	startDate,
 	prorationBehavior,
 	redirectMode,
 	newBillingSubscription,
@@ -121,6 +123,13 @@ export function buildAttachRequestBody({
 
 	if (planSchedule) {
 		body.plan_schedule = planSchedule;
+	}
+
+	// Skip when other form state makes start_date invalid — server would reject anyway,
+	// and form values can carry stale dates after the picker is hidden.
+	const startDateAllowed = !trialEnabled && planSchedule !== "end_of_cycle";
+	if (startDate && startDateAllowed) {
+		body.start_date = startDate;
 	}
 
 	const normalizedProrationBehavior = normalizeAttachProrationBehavior({
@@ -194,6 +203,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		trialEnabled,
 		trialCardRequired,
 		planSchedule,
+		startDate,
 		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
@@ -223,6 +233,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				trialEnabled,
 				trialCardRequired,
 				planSchedule,
+				startDate,
 				prorationBehavior,
 				redirectMode,
 				newBillingSubscription,
@@ -249,6 +260,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			trialEnabled,
 			trialCardRequired,
 			planSchedule,
+			startDate,
 			prorationBehavior,
 			redirectMode,
 			newBillingSubscription,
