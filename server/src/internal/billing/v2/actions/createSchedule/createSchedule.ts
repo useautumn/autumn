@@ -122,11 +122,22 @@ export const createSchedule = async ({
 			: undefined,
 	});
 
-	// When deferred (legacy stripe_checkout) OR enable_plan_immediately is set,
-	// the schedule rows are persisted in the webhook handler — at this point
-	// either no Stripe subscription exists yet, or we're explicitly delaying
-	// schedule materialization to the same point as the deferred flow.
-	if (billingResult.stripe.deferred || billingContext.enablePlanImmediately) {
+	// Schedule rows are persisted in the webhook for two cases:
+	//   - Deferred (legacy stripe_checkout): no Stripe subscription yet, so the
+	//     deferred billing plan execution + schedule persistence both happen on
+	//     checkout.session.completed.
+	//   - enable_plan_immediately + stripe_checkout: cusProducts are inserted at
+	//     request time, but the Stripe subscription_schedule still requires the
+	//     subscription that checkout creates, so we defer schedule materialization
+	//     to keep Autumn / Stripe in sync.
+	// For non-checkout flows (autumn_checkout, direct charge) the schedule action
+	// already executed and persistCreateSchedule must run here.
+	const deferScheduleToWebhook =
+		billingResult.stripe.deferred ||
+		(billingContext.enablePlanImmediately &&
+			billingContext.checkoutMode === "stripe_checkout");
+
+	if (deferScheduleToWebhook) {
 		return buildPendingCreateScheduleResponse({
 			billingContext,
 			billingResult,
