@@ -58,7 +58,7 @@ type InvoiceDetailSheetProps = {
 	taxedAmount?: number;
 };
 
-/** Resolve a feature_id slug to its display name */
+/** Resolve feature_id to its display name. */
 const resolveFeatureName = ({
 	featureId,
 	features,
@@ -94,7 +94,7 @@ export function InvoiceDetailSheet({
 	const { customer } = useCusQuery();
 
 	const productGroups = useMemo(() => {
-		// Step 1: bucket line items by product_id
+		// Bucket line items by product_id, then group within each bucket.
 		const byProduct = new Map<string, InvoiceLineItem[]>();
 		for (const item of lineItems) {
 			const key = item.product_id ?? "__unknown__";
@@ -106,7 +106,6 @@ export function InvoiceDetailSheet({
 			}
 		}
 
-		// Step 2: within each product bucket, group into LineItemGroups
 		const result: ProductGroup[] = [];
 		for (const [productKey, items] of byProduct) {
 			const groups = new Map<string, LineItemGroup>();
@@ -420,11 +419,10 @@ function LineItemGroupRow({
 		},
 	];
 
-	// For multi-item groups (tiered), show grouped display
+	// Tiered groups: header + per-tier rows.
 	if (!isSingleItem) {
 		return (
 			<div className="flex flex-col py-1">
-				{/* Group header with label and total */}
 				<div className="flex items-start justify-between gap-2">
 					<div className="flex flex-col min-w-0 flex-1 gap-0.5">
 						<div className="flex items-center gap-1.5">
@@ -463,7 +461,6 @@ function LineItemGroupRow({
 		);
 	}
 
-	// Single item display
 	const isRefund = firstItem.direction === "refund";
 	const paidAmount = firstItem.amount_after_discounts ?? firstItem.amount;
 
@@ -495,7 +492,6 @@ function LineItemGroupRow({
 						{period && <span className="text-xs text-t4">{period}</span>}
 					</div>
 					<div className="flex flex-col items-end shrink-0">
-						{/* Show original amount with strikethrough if discounted */}
 						{hasDiscounts && paidAmount !== firstItem.amount && (
 							<span className="text-xs tabular-nums text-t4 line-through">
 								{isRefund ? "-" : ""}
@@ -514,7 +510,6 @@ function LineItemGroupRow({
 					</div>
 				</div>
 
-				{/* Discount details */}
 				{hasDiscounts && (
 					<div className="mt-1 flex flex-wrap gap-1.5">
 						{firstItem.discounts.map((discount) => (
@@ -579,7 +574,6 @@ function DiscountBadge({
 	currency: string;
 	formatAmount: (amount: number, currency: string) => string;
 }) {
-	// Show percent_off if defined, otherwise show formatted amount_off
 	const label = discount.percent_off
 		? `${discount.percent_off}% off`
 		: `${formatAmount(discount.amount_off, currency)} off`;

@@ -1,15 +1,10 @@
 import type { Page } from "playwright-core";
 
 /**
- * Optional billing address override for the checkout form. When omitted, the
- * helper defaults to a US address with postal code 10001 (the historical
- * behavior). Supply this when the test needs Stripe Checkout to collect a
- * specific country/region — typically required when the merchant has
- * `automatic_tax: { enabled: true }` and `customer_update: { address: "auto" }`,
- * which makes Stripe present a FULL address form (line1, city, state,
- * postal_code, country) rather than just postal code.
- *
- * Field names mirror Stripe.AddressParam.
+ * Billing address override (defaults to US / 10001). Supply when the
+ * session uses auto_tax + `customer_update: { address: "auto" }`, which
+ * makes Stripe present a full address form. Field names mirror
+ * Stripe.AddressParam.
  */
 export type StripeCheckoutBillingAddress = {
 	country?: string;
@@ -20,17 +15,12 @@ export type StripeCheckoutBillingAddress = {
 };
 
 /**
- * Self-contained Playwright function for completing a Stripe Checkout session page.
- * NO external imports — this function must be serializable via fn.toString()
- * for Kernel Playwright Execution. (type imports are fine — Bun strips them)
+ * Self-contained Playwright function for completing a Stripe Checkout page.
+ * NO runtime imports — must be serializable via `fn.toString()` for Kernel
+ * Playwright Execution (type imports are fine; Bun strips them).
  *
- * Handles checkout.stripe.com pages which have:
- * 1. Direct DOM selectors (#cardNumber, #cardExpiry, #cardCvc, #billingName)
- * 2. Optional adjustable quantity (.AdjustableQuantitySelector)
- * 3. Optional promo code (#promotionCode)
- * 4. Optional full billing address form (line1, city, state) when the
- *    session was created with `customer_update: { address: "auto" }`.
- * 5. Submit button (.SubmitButton-TextContainer)
+ * Handles card fields, optional quantity selector, promo code, optional
+ * full billing address (when `customer_update.address: "auto"`), and submit.
  */
 export const stripeCheckout = async ({
 	page,
@@ -48,12 +38,10 @@ export const stripeCheckout = async ({
 	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 	console.log("[stripeCheckout] Page loaded");
 
-	// Wait for the checkout page to render
 	await page.waitForTimeout(3000);
 
-	// Select the Card payment method. The radio input is hidden behind an
-	// AccordionButton overlay with expandedClickArea. Use JS click on the
-	// data-testid button, with a fallback to the radio input directly.
+	// Select Card. The radio is hidden by an AccordionButton overlay; click
+	// the data-testid button via JS, fall back to the radio.
 	try {
 		const cardBtn = page.locator('[data-testid="card-accordion-item-button"]');
 		if ((await cardBtn.count()) > 0) {
@@ -71,12 +59,11 @@ export const stripeCheckout = async ({
 			await page.waitForTimeout(500);
 		}
 	} catch {
-		// Card might already be selected or not present
+		// Card may already be selected or absent.
 	}
 
-	// Stripe's card inputs are custom components that require individual key events.
-	// .fill() sets the value programmatically and skips keydown/keypress/keyup,
-	// so Stripe never registers the input. Use .pressSequentially() instead.
+	// Card fields require real key events — `.fill()` skips keydown/up so
+	// Stripe never registers the input. Use `.pressSequentially()`.
 	const cardNumber = page.locator("#cardNumber");
 	await cardNumber.waitFor({ timeout: 120000 });
 	await cardNumber.pressSequentially("4242424242424242");
@@ -104,11 +91,10 @@ export const stripeCheckout = async ({
 			console.log("[stripeCheckout] Email filled");
 		}
 	} catch {
-		// Email field not present
+		// Email field absent.
 	}
 
-	// Resolve billing address fields. Defaults preserve historical behavior
-	// (US / 10001) when no explicit billingAddress is supplied.
+	// Address fields. Defaults: US / 10001.
 	const country = billingAddress?.country ?? "US";
 	const postalCode = billingAddress?.postal_code ?? "10001";
 	const line1 = billingAddress?.line1;
@@ -123,13 +109,11 @@ export const stripeCheckout = async ({
 			await page.waitForTimeout(500);
 		}
 	} catch {
-		// Country selector not present
+		// Country selector absent.
 	}
 
-	// When `customer_update: { address: "auto" }` was set on the session,
-	// Stripe Checkout shows a full billing address form (line1, city, state)
-	// rather than just postal code. These fields are optional — they only
-	// appear when address collection is enabled, so we feature-detect each.
+	// Full address form (line1/city/state) appears only when the session
+	// uses `customer_update: { address: "auto" }`. Feature-detect each.
 	if (line1) {
 		try {
 			const line1Field = page.locator("#billingAddressLine1");
@@ -137,9 +121,7 @@ export const stripeCheckout = async ({
 				await line1Field.pressSequentially(line1);
 				console.log(`[stripeCheckout] Address line 1 filled: ${line1}`);
 			}
-		} catch {
-			// Line 1 not present
-		}
+		} catch {}
 	}
 
 	if (city) {
@@ -149,17 +131,14 @@ export const stripeCheckout = async ({
 				await cityField.pressSequentially(city);
 				console.log(`[stripeCheckout] City filled: ${city}`);
 			}
-		} catch {
-			// City not present
-		}
+		} catch {}
 	}
 
 	if (state) {
 		try {
 			const stateField = page.locator("#billingAdministrativeArea");
 			if ((await stateField.count()) > 0) {
-				// State is a select on US / CA / AU; try selectOption first,
-				// fall back to typing.
+				// State is a select on US/CA/AU; fall back to typing.
 				try {
 					await stateField.selectOption(state);
 				} catch {
@@ -167,9 +146,7 @@ export const stripeCheckout = async ({
 				}
 				console.log(`[stripeCheckout] State filled: ${state}`);
 			}
-		} catch {
-			// State not present
-		}
+		} catch {}
 	}
 
 	try {
@@ -178,11 +155,8 @@ export const stripeCheckout = async ({
 			await postalField.pressSequentially(postalCode);
 			console.log(`[stripeCheckout] Postal code filled: ${postalCode}`);
 		}
-	} catch {
-		// Postal code field not present
-	}
+	} catch {}
 
-	// Handle adjustable quantity if requested
 	if (overrideQuantity !== undefined && overrideQuantity !== null) {
 		const quantityBtn = page.locator(".AdjustableQuantitySelector").first();
 		if ((await quantityBtn.count()) === 0) {
@@ -208,7 +182,6 @@ export const stripeCheckout = async ({
 		await page.waitForTimeout(1000);
 	}
 
-	// Handle promo code if provided
 	if (promoCode) {
 		const promoInput = page.locator("#promotionCode");
 		await promoInput.waitFor({ timeout: 60000 });
@@ -219,8 +192,8 @@ export const stripeCheckout = async ({
 		await page.waitForTimeout(5000);
 	}
 
-	// Click submit button — use force:true because Stripe overlays (Link, phone number)
-	// can obscure the button and cause Playwright's actionability checks to time out.
+	// Submit via JS click — Stripe overlays (Link, phone) can obscure the
+	// button and break Playwright's actionability check.
 	const submitBtn = page.locator(".SubmitButton-TextContainer").first();
 	if ((await submitBtn.count()) === 0) {
 		throw new Error(".SubmitButton-TextContainer not found");
@@ -228,7 +201,7 @@ export const stripeCheckout = async ({
 	await submitBtn.evaluate((el) => (el as HTMLElement).click());
 	console.log("[stripeCheckout] Submit clicked");
 
-	// Wait for checkout to process + webhook delivery
+	// Wait for checkout processing + webhook delivery.
 	await page.waitForTimeout(20000);
 	console.log("[stripeCheckout] Checkout complete");
 };

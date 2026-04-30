@@ -36,13 +36,9 @@ export const clearMasterOrg = async () => {
 			process.exit(1);
 		}
 
-		// Clean up any platform sub-orgs created by this master org first.
-		// IMPORTANT: this is the ONLY path that auto-deletes platform sub-orgs.
-		// Tests created via `s.platform.create(...)` do NOT clean up after
-		// themselves — sub-orgs accumulate across test runs and are only
-		// cleared here, when an operator explicitly invokes `bun cm`. Each
-		// `s.platform.create(...)` defaults to a randomized slug so the buildup
-		// doesn't cause slug collisions between runs.
+		// This is the only path that deletes platform sub-orgs. Tests using
+		// `s.platform.create(...)` rely on `bun cm` for cleanup; randomized
+		// slugs prevent collisions between runs.
 		{
 			const { db, client } = initDrizzle();
 			try {
@@ -118,7 +114,7 @@ export const clearMasterOrg = async () => {
 		const isRegionalRedisUrl = (url: string | undefined) =>
 			(url ?? "").toLowerCase().includes("redis-17710.mc1716-0.us");
 
-		// Flush primary cache if not pointed at regional Redis
+		// Flush primary cache unless pointed at regional Redis.
 		const redisUrl = process.env.REDIS_URL ?? process.env.BUN_REDIS_URL ?? "";
 		if (!isRegionalRedisUrl(redisUrl)) await redis.flushall();
 		else
@@ -128,7 +124,7 @@ export const clearMasterOrg = async () => {
 				),
 			);
 
-		// Flush v2 cache (CACHE_V2_URL) if it's a distinct, non-regional connection
+		// Flush v2 cache when distinct and non-regional.
 		const cacheV2Url = process.env.CACHE_V2_UPSTASH_URL?.trim();
 		if (redisV2 !== redis && cacheV2Url) {
 			if (!isRegionalRedisUrl(cacheV2Url)) {
