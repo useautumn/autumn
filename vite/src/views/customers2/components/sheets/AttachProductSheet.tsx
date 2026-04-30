@@ -1,7 +1,6 @@
 import type { Entity, FullCustomer } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import type { AxiosError } from "axios";
-import { format } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -15,6 +14,7 @@ import {
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
+import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import {
@@ -112,31 +112,10 @@ function ReviewPreviewBlock() {
 		? getBackendErr(queryError as AxiosError, "Failed to load preview")
 		: undefined;
 
-	const totals: {
-		label: string;
-		amount: number;
-		variant: "primary" | "secondary";
-		badge?: string;
-	}[] = [];
-
-	if (previewData) {
-		totals.push({
-			label: "Total Due Now",
-			amount: Math.max(previewData.total, 0),
-			variant: "primary",
-		});
-
-		if (previewData.next_cycle) {
-			totals.push({
-				label: "Next Cycle",
-				amount: previewData.next_cycle.total,
-				variant: "secondary",
-				badge: previewData.next_cycle.starts_at
-					? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
-					: undefined,
-			});
-		}
-	}
+	const totals = buildAttachPreviewTotals({
+		previewData,
+		startDate: formValues.startDate,
+	});
 
 	return (
 		<AnimatePresence mode="popLayout">

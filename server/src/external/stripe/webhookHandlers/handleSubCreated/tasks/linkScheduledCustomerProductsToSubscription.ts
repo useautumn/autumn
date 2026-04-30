@@ -59,6 +59,7 @@ export const linkScheduledCustomerProductsToSubscription = async ({
 			logger.warn(
 				`[sub.created] could not activate scheduled customer product ${cusProduct.id}: fullCustomer missing`,
 			);
+			continue;
 		}
 
 		await CusProductService.update({
