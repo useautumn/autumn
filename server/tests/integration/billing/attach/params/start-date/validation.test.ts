@@ -142,6 +142,73 @@ test.concurrent(`${chalk.yellowBright("start_date: future date rejects end of cy
 	});
 });
 
+test.concurrent(`${chalk.yellowBright("start_date: future date rejects active subscription add-ons")}`, async () => {
+	const customerId = "attach-start-date-active-sub-addon";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const addon = products.recurringAddOn({
+		id: "addon",
+		items: [items.monthlyUsers({ includedUsage: 5 })],
+	});
+
+	const { autumnV2_2, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, addon] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage:
+			"Future start_date is only supported when the customer has no active paid subscription",
+		func: () =>
+			autumnV2_2.billing.attach<AttachParamsV1Input>({
+				customer_id: customerId,
+				plan_id: addon.id,
+				start_date: advancedTo + ms.days(1),
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("start_date: future date rejects new billing subscription with active subscription")}`, async () => {
+	const customerId = "attach-start-date-active-sub-new-billing";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+	const addon = products.recurringAddOn({
+		id: "addon",
+		items: [items.monthlyUsers({ includedUsage: 5 })],
+	});
+
+	const { autumnV2_2, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, addon] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage:
+			"Future start_date is only supported when the customer has no active paid subscription",
+		func: () =>
+			autumnV2_2.billing.attach<AttachParamsV1Input>({
+				customer_id: customerId,
+				plan_id: addon.id,
+				start_date: advancedTo + ms.days(1),
+				new_billing_subscription: true,
+			}),
+	});
+});
+
 test.concurrent(`${chalk.yellowBright("start_date: future date rejects switches")}`, async () => {
 	const customerId = "attach-start-date-switch";
 	const pro = products.pro({

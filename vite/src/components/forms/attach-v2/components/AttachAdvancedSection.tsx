@@ -1,4 +1,9 @@
-import type { Feature, FullCustomer } from "@autumn/shared";
+import {
+	type Feature,
+	type FullCustomer,
+	isFreeProductV2,
+	isOneOffProductV2,
+} from "@autumn/shared";
 import { CaretDownIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
@@ -7,6 +12,7 @@ import {
 	AdvancedToggleRow,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
+import { DateInputUnix } from "@/components/general/DateInputUnix";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -104,7 +110,7 @@ function FeatureSelectDropdown({
 }
 
 export function AttachAdvancedSection() {
-	const { form, formValues, features } = useAttachFormContext();
+	const { form, formValues, features, product } = useAttachFormContext();
 	const {
 		discounts,
 		newBillingSubscription,
@@ -116,6 +122,8 @@ export function AttachAdvancedSection() {
 		carryOverUsages,
 		carryOverUsageFeatureIds,
 		customLineItems,
+		trialEnabled,
+		startDate,
 	} = formValues;
 	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | null;
@@ -138,6 +146,7 @@ export function AttachAdvancedSection() {
 	const {
 		hasActiveSubscription,
 		hasOutgoing,
+		effectivePlanSchedule,
 		showProrationRow,
 		showProrationBehavior,
 		effectiveProrationBehavior,
@@ -149,6 +158,17 @@ export function AttachAdvancedSection() {
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
 	} = usePlanScheduleField();
+
+	const isPaidRecurringProduct =
+		!!product &&
+		!isFreeProductV2({ items: product.items }) &&
+		!isOneOffProductV2({ items: product.items });
+
+	const showStartDate =
+		isPaidRecurringProduct &&
+		!hasActiveSubscription &&
+		!trialEnabled &&
+		effectivePlanSchedule !== "end_of_cycle";
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
@@ -191,6 +211,30 @@ export function AttachAdvancedSection() {
 
 	const moreOptions = (
 		<>
+			{showStartDate && (
+				<ConfigRow
+					title="Start Date"
+					description="Schedule the plan to start on a future date"
+					expanded={startDate !== null}
+					action={
+						<Switch
+							checked={startDate !== null}
+							onCheckedChange={(checked) =>
+								form.setFieldValue("startDate", checked ? Date.now() : null)
+							}
+						/>
+					}
+				>
+					<DateInputUnix
+						unixDate={startDate}
+						setUnixDate={(value) => form.setFieldValue("startDate", value)}
+						disablePastDates
+						minUnixDate={Date.now()}
+						withTime
+					/>
+				</ConfigRow>
+			)}
+
 			{hasCustomerEntitlements && (
 				<ConfigRow
 					title="Carry Over Balances"
