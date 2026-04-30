@@ -25,6 +25,31 @@ export const PreviewLineItemDiscountSchema = z.object({
 	reward_name: z.string().optional(),
 });
 
+export const PreviewTaxSchema = z.object({
+	total: z.number().meta({
+		description:
+			"Total tax amount in the response's major currency unit. Sum of inclusive + exclusive taxes computed by Stripe Tax across all positive line items. Negative (credit) lines are excluded from tax computation per Stripe's behavior.",
+	}),
+	amount_inclusive: z.number().meta({
+		description:
+			"Tax portion in major units that is INCLUDED in line item subtotals (when line items use `tax_behavior: inclusive`). Currently always 0 — autumn line items use exclusive tax behavior — but exposed for forward compatibility.",
+	}),
+	amount_exclusive: z.number().meta({
+		description:
+			"Tax portion in major units that will be ADDED ON TOP of line item subtotals.",
+	}),
+	currency: z.string().meta({
+		description:
+			"Three-letter ISO currency code (lowercase). Matches the response's top-level `currency`.",
+	}),
+	status: z.enum(["complete", "incomplete"]).meta({
+		description:
+			"Autumn-side status. 'complete' means Stripe Tax computed the calculation successfully (zero is a valid complete result, e.g. tax-free jurisdictions). 'incomplete' means we caught a Stripe error (typically because the customer's location couldn't be resolved); totals will be zero.",
+	}),
+});
+
+export type PreviewTax = z.infer<typeof PreviewTaxSchema>;
+
 export const ExtPreviewLineItemSchema = z.object({
 	display_name: z.string().meta({
 		description:

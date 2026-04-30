@@ -42,5 +42,6 @@ export const billingPlanToAttachPreview = async ({
 		object: "attach_preview" as const,
 		redirect_to_checkout: willRedirectToCheckout,
 		checkout_type: checkoutType,
+		tax: billingPlan.preview?.tax,
 	} satisfies AttachPreviewResponse;
 };
