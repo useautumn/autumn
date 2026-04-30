@@ -12,6 +12,7 @@ export enum CustomerExpand {
 	PurchasesPlan = "purchases.plan",
 	BalancesFeature = "balances.feature",
 	FlagsFeature = "flags.feature",
+	AutoTopupsPurchaseLimit = "billing_controls.auto_topups.purchase_limit",
 }
 
 export const CustomerExpandEnum = z.enum(CustomerExpand).meta({
