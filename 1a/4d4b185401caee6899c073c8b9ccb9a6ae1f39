@@ -1,0 +1,43 @@
+server/src/internal/customers/cusUtils/apiCusUtils/getApiCustomerExpandV2.ts
+  660a62708f54f821 4,13,19-29,40,79-117,125-127
+server/src/internal/balances/autoTopUp/repos/index.ts
+  660a62708f54f821 2,8
+shared/api/customers/baseApiCustomer.ts
+  660a62708f54f821 1,37
+server/src/internal/customers/cusUtils/apiCusUtils/getApiCustomer.ts
+  660a62708f54f821 51-52,55-63
+shared/api/customers/components/customerExpand/customerExpand.ts
+  660a62708f54f821 15
+shared/models/cusModels/billingControls/customerBillingControls.ts
+  660a62708f54f821 50-97,114-138,186,188,192-193
+server/src/internal/customers/cusUtils/getApiCustomerV2/getApiCustomerV2.ts
+  660a62708f54f821 44-45,48-56
+server/src/internal/customers/cusUtils/apiCusUtils/getApiCustomerExpand.ts
+  660a62708f54f821 10,15,25,60-93,102-104
+server/src/internal/balances/autoTopUp/repos/findAutoTopupLimitsByCustomer.ts
+  660a62708f54f821 1-26
+server/tests/integration/crud/customers/customer-billing-controls.test.ts
+  660a62708f54f821 2-8,11-13,18-19,486-650
+server/src/internal/customers/cusUtils/cusResponseUtils/getCusAutoTopupPurchaseLimits.ts
+  660a62708f54f821 1-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "1a4d4b185401caee6899c073c8b9ccb9a6ae1f39",
+  "prompts": {
+    "660a62708f54f821": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2209ef46fffesK4dqIeBoh9G15",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 486,
+      "total_deletions": 69,
+      "accepted_lines": 480,
+      "overriden_lines": 0
+    }
+  }
+}
