@@ -1,0 +1,26 @@
+set -e
+
+zero_sha="0000000000000000000000000000000000000000"
+changed_files="$(
+	while read local_ref local_sha remote_ref remote_sha; do
+		if [ "$local_sha" = "$zero_sha" ]; then
+			continue
+		fi
+
+		if [ "$remote_sha" = "$zero_sha" ]; then
+			base="$(git merge-base "$local_sha" origin/dev)"
+		else
+			base="$remote_sha"
+		fi
+
+		git diff --name-only "$base" "$local_sha"
+	done | sort -u
+)"
+
+if printf '%s\n' "$changed_files" | grep -q '^server/'; then
+	bunx turbo run test:unit --filter=@autumn/server
+fi
+
+if printf '%s\n' "$changed_files" | grep -q '^vite/'; then
+	bunx turbo run test:unit --filter=@autumn/vite
+fi

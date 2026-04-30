@@ -8,7 +8,7 @@ export TEST_FILE_CONCURRENCY=${TEST_FILE_CONCURRENCY:-3}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SERVER_DIR="$PROJECT_ROOT/server"
-BUN_CMD="infisical run --env=dev -- bun"
+BUN_CMD="infisical run --recursive --env=dev -- bun"
 
 # Test runner function
 BUN_PARALLEL() {

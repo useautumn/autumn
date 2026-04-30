@@ -1,6 +1,7 @@
 {
 	"name": "autumn",
 	"private": true,
+	"packageManager": "bun@1.3.10",
 	"workspaces": {
 		"packages": [
 			"server",
@@ -83,6 +84,7 @@
 		"setup": "node scripts/setup/setup.js",
 		"setup:s3-admin": "bun scripts/setup/setupS3Admin.ts",
 		"setup:test": "infisical run --env=dev --recursive -- bun scripts/setup/setup-test.ts",
+		"stripe:link-test": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/setup/link-test-stripe-account.ts",
 		"agent:bootstrap": "bash scripts/setup/agent-bootstrap.sh",
 		"dev:agent": "bash scripts/setup/devAgent.sh",
 		"migrate-functions": "infisical run --env=dev --recursive -- bun scripts/migrations/migrate-functions.ts",
@@ -110,7 +112,7 @@
 		"site": "cd apps/website && bun dev && cd ../..",
 		"docs": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build",
-		"ts": "bun -F @autumn/server ts && bun -F autumn-js ts && bun -F @autumn/openapi ts && bun -F atmn ts && bun -F checkout ts",
+		"ts": "turbo run ts --filter=@autumn/server --filter=autumn-js --filter=@autumn/openapi --filter=atmn --filter=checkout",
 		"atmn:build": "bun -F atmn build",
 		"openapi:ts": "bun -F @autumn/openapi ts",
 		"js:ts": "bun -F autumn-js ts",
@@ -143,6 +145,7 @@
 		"husky": "^9.1.7",
 		"inquirer": "^12.10.0",
 		"knip": "^6.7.0",
-		"ts-to-zod": "^5.1.0"
+		"ts-to-zod": "^5.1.0",
+		"turbo": "^2.9.6"
 	}
 }

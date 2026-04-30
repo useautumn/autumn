@@ -9,11 +9,9 @@ export const handleFinalizeLock = createRoute({
 		const ctx = c.get("ctx");
 		const params = c.req.valid("json");
 
-		return c.json(
-			await runFinalizeLock({
-				ctx,
-				params,
-			}),
-		);
+		const response = await runFinalizeLock({ ctx, params });
+		const status = ctx.extraLogs.finalizeLockFailedOpen ? 202 : 200;
+
+		return c.json(response, status);
 	},
 });

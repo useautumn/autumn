@@ -1197,6 +1197,16 @@ components:
             - type: string
             - type: "null"
           description: If this is a variant, the ID of the base plan it was created from.
+        config:
+          type: object
+          properties:
+            ignore_past_due:
+              type: boolean
+              default: false
+              description: If true, entitlements attached to this plan will still reset on
+                schedule even when the customer's product is in a past_due
+                state.
+          description: Miscellaneous plan-level configuration flags.
         customer_eligibility:
           type: object
           properties:
@@ -1245,6 +1255,7 @@ components:
         - env
         - archived
         - base_variant_id
+        - config
     Balance:
       type: object
       properties:
@@ -3488,6 +3499,16 @@ paths:
                     - duration_length
                   description: Free trial configuration. Customers can try this plan before being
                     charged.
+                config:
+                  type: object
+                  properties:
+                    ignore_past_due:
+                      type: boolean
+                      default: false
+                      description: If true, entitlements attached to this plan will still reset on
+                        schedule even when the customer's product is in a
+                        past_due state.
+                  description: Miscellaneous plan-level configuration flags.
               required:
                 - plan_id
                 - name
@@ -3866,6 +3887,16 @@ paths:
                       - type: string
                       - type: "null"
                     description: If this is a variant, the ID of the base plan it was created from.
+                  config:
+                    type: object
+                    properties:
+                      ignore_past_due:
+                        type: boolean
+                        default: false
+                        description: If true, entitlements attached to this plan will still reset on
+                          schedule even when the customer's product is in a
+                          past_due state.
+                    description: Miscellaneous plan-level configuration flags.
                   customer_eligibility:
                     type: object
                     properties:
@@ -3914,6 +3945,7 @@ paths:
                   - env
                   - archived
                   - base_variant_id
+                  - config
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
@@ -3962,6 +3994,8 @@ paths:
                     env: sandbox
                     archived: false
                     baseVariantId: null
+                    config:
+                      ignore_past_due: false
               example: *a9
       x-speakeasy-name-override: create
       parameters:
@@ -4387,6 +4421,16 @@ paths:
                       - type: string
                       - type: "null"
                     description: If this is a variant, the ID of the base plan it was created from.
+                  config:
+                    type: object
+                    properties:
+                      ignore_past_due:
+                        type: boolean
+                        default: false
+                        description: If true, entitlements attached to this plan will still reset on
+                          schedule even when the customer's product is in a
+                          past_due state.
+                    description: Miscellaneous plan-level configuration flags.
                   customer_eligibility:
                     type: object
                     properties:
@@ -4435,6 +4479,7 @@ paths:
                   - env
                   - archived
                   - base_variant_id
+                  - config
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
@@ -4483,6 +4528,8 @@ paths:
                     env: sandbox
                     archived: false
                     baseVariantId: null
+                    config:
+                      ignore_past_due: false
               example: *a11
       x-speakeasy-name-override: get
       parameters:
@@ -4890,6 +4937,16 @@ paths:
                             - type: string
                             - type: "null"
                           description: If this is a variant, the ID of the base plan it was created from.
+                        config:
+                          type: object
+                          properties:
+                            ignore_past_due:
+                              type: boolean
+                              default: false
+                              description: If true, entitlements attached to this plan will still reset on
+                                schedule even when the customer's product is in
+                                a past_due state.
+                          description: Miscellaneous plan-level configuration flags.
                         customer_eligibility:
                           type: object
                           properties:
@@ -4938,6 +4995,7 @@ paths:
                         - env
                         - archived
                         - base_variant_id
+                        - config
                       description: A plan defines a set of features, pricing, and entitlements that
                         can be attached to customers.
                 required:
@@ -4989,6 +5047,8 @@ paths:
                         env: sandbox
                         archived: false
                         baseVariantId: null
+                        config:
+                          ignore_past_due: false
               example: *a13
       x-speakeasy-name-override: list
       parameters:
@@ -5271,6 +5331,16 @@ paths:
                       description: Free trial configuration for a plan.
                     - type: "null"
                   description: The free trial of the plan. Set to null to remove the free trial.
+                config:
+                  type: object
+                  properties:
+                    ignore_past_due:
+                      type: boolean
+                      default: false
+                      description: If true, entitlements attached to this plan will still reset on
+                        schedule even when the customer's product is in a
+                        past_due state.
+                  description: Miscellaneous plan-level configuration flags.
                 version:
                   type: number
                 archived:
@@ -5632,6 +5702,16 @@ paths:
                       - type: string
                       - type: "null"
                     description: If this is a variant, the ID of the base plan it was created from.
+                  config:
+                    type: object
+                    properties:
+                      ignore_past_due:
+                        type: boolean
+                        default: false
+                        description: If true, entitlements attached to this plan will still reset on
+                          schedule even when the customer's product is in a
+                          past_due state.
+                    description: Miscellaneous plan-level configuration flags.
                   customer_eligibility:
                     type: object
                     properties:
@@ -5680,6 +5760,7 @@ paths:
                   - env
                   - archived
                   - base_variant_id
+                  - config
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
@@ -5728,6 +5809,8 @@ paths:
                     env: sandbox
                     archived: false
                     baseVariantId: null
+                    config:
+                      ignore_past_due: false
               example: *a15
       x-speakeasy-name-override: update
       parameters:
@@ -11666,6 +11749,18 @@ paths:
                     type: boolean
                 required:
                   - success
+        "202":
+          description: Accepted. Autumn is experiencing degraded service from a downstream
+            provider, so the finalize request was allowed fail-open.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                required:
+                  - success
       x-speakeasy-name-override: finalize
       parameters:
         - name: x-api-version
@@ -12305,6 +12400,534 @@ paths:
                           price: null
                           expires_at: null
               example: *a47
+        "202":
+          description: Accepted. Autumn is experiencing degraded service from a downstream
+            provider, so access was allowed fail-open.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  allowed:
+                    type: boolean
+                    description: Whether the customer is allowed to use the feature. True if they
+                      have sufficient balance or the feature is
+                      unlimited/boolean.
+                  customer_id:
+                    type: string
+                    description: The ID of the customer that was checked.
+                  entity_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The ID of the entity, if an entity-scoped check was performed.
+                  required_balance:
+                    type: number
+                    description: The required balance that was checked against.
+                  balance:
+                    anyOf:
+                      - $ref: "#/components/schemas/Balance"
+                      - type: "null"
+                    description: The customer's balance for this feature. Null if the customer has
+                      no balance for this feature.
+                  flag:
+                    anyOf:
+                      - type: object
+                        properties:
+                          id:
+                            type: string
+                            description: The unique identifier for this flag.
+                          plan_id:
+                            anyOf:
+                              - type: string
+                              - type: "null"
+                            description: The plan ID this flag originates from, or null for standalone
+                              flags.
+                          expires_at:
+                            anyOf:
+                              - type: number
+                              - type: "null"
+                            description: Timestamp when this flag expires, or null for no expiration.
+                          feature_id:
+                            type: string
+                            description: The feature ID this flag is for.
+                          feature:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                description: The unique identifier for this feature, used in /check and /track
+                                  calls.
+                              name:
+                                type: string
+                                description: Human-readable name displayed in the dashboard and billing UI.
+                              type:
+                                enum:
+                                  - boolean
+                                  - metered
+                                  - credit_system
+                                type: string
+                                description: "Feature type: 'boolean' for on/off access, 'metered' for
+                                  usage-tracked features, 'credit_system' for
+                                  unified credit pools."
+                              consumable:
+                                type: boolean
+                                description: "For metered features: true if usage resets periodically (API
+                                  calls, credits), false if allocated
+                                  persistently (seats, storage)."
+                              event_names:
+                                type: array
+                                items:
+                                  type: string
+                                description: Event names that trigger this feature's balance. Allows multiple
+                                  features to respond to a single event.
+                              credit_schema:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    metered_feature_id:
+                                      type: string
+                                      description: ID of the metered feature that draws from this credit system.
+                                    credit_cost:
+                                      type: number
+                                      description: Credits consumed per unit of the metered feature.
+                                  required:
+                                    - metered_feature_id
+                                    - credit_cost
+                                description: "For credit_system features: maps metered features to their credit
+                                  costs."
+                              display:
+                                type: object
+                                properties:
+                                  singular:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    description: Singular form for UI display (e.g., 'API call', 'seat').
+                                  plural:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    description: Plural form for UI display (e.g., 'API calls', 'seats').
+                                description: Display names for the feature in billing UI and customer-facing
+                                  components.
+                              archived:
+                                type: boolean
+                                description: Whether the feature is archived and hidden from the dashboard.
+                            required:
+                              - id
+                              - name
+                              - type
+                              - consumable
+                              - archived
+                            description: The full feature object if expanded.
+                        required:
+                          - id
+                          - plan_id
+                          - expires_at
+                          - feature_id
+                        examples:
+                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                            plan_id: pro_plan
+                            expires_at: null
+                            feature_id: dashboard
+                      - type: "null"
+                    description: The flag associated with this check, if any.
+                  preview:
+                    type: object
+                    properties:
+                      scenario:
+                        enum:
+                          - usage_limit
+                          - feature_flag
+                        type: string
+                        description: The reason access was denied. 'usage_limit' means the customer
+                          exceeded their balance, 'feature_flag' means the
+                          feature is not included in their plan.
+                      title:
+                        type: string
+                        description: A title suitable for displaying in a paywall or upgrade modal.
+                      message:
+                        type: string
+                        description: A message explaining why access was denied.
+                      feature_id:
+                        type: string
+                        description: The ID of the feature that was checked.
+                      feature_name:
+                        type: string
+                        description: The display name of the feature.
+                      products:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The ID of the product you set when creating the product
+                            name:
+                              type: string
+                              description: The name of the product
+                            group:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: Product group which this product belongs to
+                            env:
+                              enum:
+                                - sandbox
+                                - live
+                              type: string
+                              description: The environment of the product
+                            is_add_on:
+                              type: boolean
+                              description: Whether the product is an add-on and can be purchased alongside
+                                other products
+                            is_default:
+                              type: boolean
+                              description: Whether the product is the default product
+                            archived:
+                              type: boolean
+                              description: Whether this product has been archived and is no longer available
+                            version:
+                              type: number
+                              description: The current version of the product
+                            created_at:
+                              type: number
+                              description: The timestamp of when the product was created in milliseconds since
+                                epoch
+                            items:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  type:
+                                    anyOf:
+                                      - enum:
+                                          - feature
+                                          - priced_feature
+                                          - price
+                                        type: string
+                                      - type: "null"
+                                    description: The type of the product item
+                                  feature_id:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    description: The feature ID of the product item. If the item is a fixed price,
+                                      should be `null`
+                                  feature_type:
+                                    anyOf:
+                                      - enum:
+                                          - single_use
+                                          - continuous_use
+                                          - boolean
+                                          - static
+                                        type: string
+                                      - type: "null"
+                                    description: Single use features are used once and then depleted, like API calls
+                                      or credits. Continuous use features are
+                                      those being used on an ongoing-basis, like
+                                      storage or seats.
+                                  included_usage:
+                                    anyOf:
+                                      - anyOf:
+                                          - type: number
+                                          - const: inf
+                                      - type: "null"
+                                    description: The amount of usage included for this feature.
+                                  interval:
+                                    anyOf:
+                                      - enum:
+                                          - minute
+                                          - hour
+                                          - day
+                                          - week
+                                          - month
+                                          - quarter
+                                          - semi_annual
+                                          - year
+                                        type: string
+                                      - type: "null"
+                                    description: The reset or billing interval of the product item. If null, feature
+                                      will have no reset date, and if there's a
+                                      price, it will be billed one-off.
+                                  interval_count:
+                                    anyOf:
+                                      - type: number
+                                      - type: "null"
+                                    description: The interval count of the product item.
+                                  price:
+                                    anyOf:
+                                      - type: number
+                                      - type: "null"
+                                    description: The price of the product item. Should be `null` if tiered pricing
+                                      is set.
+                                  tiers:
+                                    anyOf:
+                                      - type: array
+                                        items:
+                                          anyOf:
+                                            - {}
+                                            - type: "null"
+                                      - type: "null"
+                                    description: Tiered pricing for the product item. Not applicable for fixed price
+                                      items.
+                                  tier_behavior:
+                                    anyOf:
+                                      - enum:
+                                          - graduated
+                                          - volume
+                                        type: string
+                                      - type: "null"
+                                    description: "How tiers are applied: graduated (split across bands) or volume
+                                      (flat rate for the matched tier). Defaults
+                                      to graduated."
+                                  usage_model:
+                                    anyOf:
+                                      - enum:
+                                          - prepaid
+                                          - pay_per_use
+                                        type: string
+                                      - type: "null"
+                                    description: Whether the feature should be prepaid upfront or billed for how
+                                      much they use end of billing period.
+                                  billing_units:
+                                    anyOf:
+                                      - type: number
+                                      - type: "null"
+                                    description: The amount per billing unit (eg. $9 / 250 units)
+                                  reset_usage_when_enabled:
+                                    anyOf:
+                                      - type: boolean
+                                      - type: "null"
+                                    description: Whether the usage should be reset when the product is enabled.
+                                  entity_feature_id:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    description: The entity feature ID of the product item if applicable.
+                                  display:
+                                    anyOf:
+                                      - type: object
+                                        properties:
+                                          primary_text:
+                                            type: string
+                                          secondary_text:
+                                            anyOf:
+                                              - type: string
+                                              - type: "null"
+                                        required:
+                                          - primary_text
+                                      - type: "null"
+                                    description: The display of the product item.
+                                  quantity:
+                                    anyOf:
+                                      - type: number
+                                      - type: "null"
+                                    description: Used in customer context. Quantity of the feature the customer has
+                                      prepaid for.
+                                  next_cycle_quantity:
+                                    anyOf:
+                                      - type: number
+                                      - type: "null"
+                                    description: Used in customer context. Quantity of the feature the customer will
+                                      prepay for in the next cycle.
+                                  config:
+                                    anyOf:
+                                      - type: object
+                                        properties:
+                                          rollover:
+                                            anyOf:
+                                              - type: object
+                                                properties:
+                                                  max:
+                                                    anyOf:
+                                                      - type: number
+                                                      - type: "null"
+                                                  max_percentage:
+                                                    anyOf:
+                                                      - type: number
+                                                      - type: "null"
+                                                  duration:
+                                                    enum:
+                                                      - month
+                                                      - forever
+                                                    type: string
+                                                    default: month
+                                                  length:
+                                                    type: number
+                                                required:
+                                                  - length
+                                              - type: "null"
+                                          on_increase:
+                                            anyOf:
+                                              - enum:
+                                                  - bill_immediately
+                                                  - prorate_immediately
+                                                  - prorate_next_cycle
+                                                  - bill_next_cycle
+                                                type: string
+                                              - type: "null"
+                                          on_decrease:
+                                            anyOf:
+                                              - enum:
+                                                  - prorate
+                                                  - prorate_immediately
+                                                  - prorate_next_cycle
+                                                  - none
+                                                  - no_prorations
+                                                type: string
+                                              - type: "null"
+                                      - type: "null"
+                                    description: Configuration for rollover and proration behavior of the feature.
+                                description: Product item defining features and pricing within a product
+                              description: Array of product items that define the product's features and
+                                pricing
+                            free_trial:
+                              anyOf:
+                                - type: object
+                                  properties:
+                                    duration:
+                                      enum:
+                                        - day
+                                        - month
+                                        - year
+                                      type: string
+                                      description: The duration type of the free trial
+                                    length:
+                                      type: number
+                                      description: The length of the duration type specified
+                                    unique_fingerprint:
+                                      type: boolean
+                                      description: Whether the free trial is limited to one per customer fingerprint
+                                    card_required:
+                                      type: boolean
+                                      description: Whether the free trial requires a card. If false, the customer can
+                                        attach the product without going through
+                                        a checkout flow or having a card on
+                                        file.
+                                    trial_available:
+                                      anyOf:
+                                        - type: boolean
+                                          default: true
+                                        - type: "null"
+                                      description: Used in customer context. Whether the free trial is available for
+                                        the customer if they were to attach the
+                                        product.
+                                  required:
+                                    - duration
+                                    - length
+                                    - unique_fingerprint
+                                    - card_required
+                                - type: "null"
+                              description: Free trial configuration for this product, if available
+                            base_variant_id:
+                              anyOf:
+                                - type: string
+                                - type: "null"
+                              description: ID of the base variant this product is derived from
+                            scenario:
+                              enum:
+                                - scheduled
+                                - active
+                                - new
+                                - renew
+                                - upgrade
+                                - update_prepaid_quantity
+                                - downgrade
+                                - cancel
+                                - expired
+                                - past_due
+                              type: string
+                              description: Scenario for when this product is used in attach flows
+                            properties:
+                              type: object
+                              properties:
+                                is_free:
+                                  type: boolean
+                                  description: True if the product has no base price or usage prices
+                                is_one_off:
+                                  type: boolean
+                                  description: True if the product only contains a one-time price
+                                interval_group:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: The billing interval group for recurring products (e.g., 'monthly',
+                                    'yearly')
+                                has_trial:
+                                  anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                                  description: True if the product includes a free trial
+                                updateable:
+                                  anyOf:
+                                    - type: boolean
+                                    - type: "null"
+                                  description: True if the product can be updated after creation (only applicable
+                                    if there are prepaid recurring prices)
+                              required:
+                                - is_free
+                                - is_one_off
+                          required:
+                            - id
+                            - name
+                            - group
+                            - env
+                            - is_add_on
+                            - is_default
+                            - archived
+                            - version
+                            - created_at
+                            - items
+                            - free_trial
+                            - base_variant_id
+                        description: Products that would grant access to this feature. Use to display
+                          upgrade options.
+                    required:
+                      - scenario
+                      - title
+                      - message
+                      - feature_id
+                      - feature_name
+                      - products
+                    description: Upgrade/upsell information when access is denied. Only present if
+                      with_preview was true and allowed is false.
+                required:
+                  - allowed
+                  - customer_id
+                  - balance
+                  - flag
+                examples:
+                  - &a48
+                    allowed: true
+                    customer_id: cus_123
+                    entity_id: null
+                    required_balance: 1
+                    balance:
+                      feature_id: messages
+                      granted: 100
+                      remaining: 72
+                      usage: 28
+                      unlimited: false
+                      overage_allowed: false
+                      max_purchase: null
+                      next_reset_at: 1773851121437
+                      breakdown:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          included_grant: 100
+                          prepaid_grant: 0
+                          remaining: 72
+                          usage: 28
+                          unlimited: false
+                          reset:
+                            interval: month
+                            resets_at: 1773851121437
+                          price: null
+                          expires_at: null
+              example: *a48
       x-speakeasy-name-override: check
       parameters:
         - name: x-api-version
@@ -12401,11 +13024,11 @@ paths:
                 - customer_id
               title: TrackParams
               examples:
-                - &a48
+                - &a49
                   customer_id: cus_123
                   feature_id: messages
                   value: 1
-            example: *a48
+            example: *a49
       responses:
         "200":
           description: OK
@@ -12446,7 +13069,7 @@ paths:
                   - value
                   - balance
                 examples:
-                  - &a49
+                  - &a50
                     customer_id: cus_123
                     value: 1
                     balance:
@@ -12471,7 +13094,74 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a49
+              example: *a50
+        "202":
+          description: Accepted. Autumn is experiencing degraded service from a downstream
+            provider, so the event was accepted for replay and will be tracked
+            as soon as the service is restored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer whose usage was tracked.
+                  entity_id:
+                    type: string
+                    description: The ID of the entity, if entity-scoped tracking was performed.
+                  event_name:
+                    type: string
+                    description: The event name that was tracked, if event_name was used instead of
+                      feature_id.
+                  value:
+                    type: number
+                    description: The amount of usage that was recorded.
+                  balance:
+                    anyOf:
+                      - $ref: "#/components/schemas/Balance"
+                      - type: "null"
+                    description: The updated balance for the tracked feature. Null if tracking by
+                      event_name that affects multiple features.
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      $ref: "#/components/schemas/Balance"
+                    description: Map of feature_id to updated balance when tracking by event_name
+                      affects multiple features.
+                required:
+                  - customer_id
+                  - value
+                  - balance
+                examples:
+                  - &a51
+                    customer_id: cus_123
+                    value: 1
+                    balance:
+                      feature_id: messages
+                      granted: 100
+                      remaining: 72
+                      usage: 28
+                      unlimited: false
+                      overage_allowed: false
+                      max_purchase: null
+                      next_reset_at: 1773851121437
+                      breakdown:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          included_grant: 100
+                          prepaid_grant: 0
+                          remaining: 72
+                          usage: 28
+                          unlimited: false
+                          reset:
+                            interval: month
+                            resets_at: 1773851121437
+                          price: null
+                          expires_at: null
+              example: *a51
       x-speakeasy-name-override: track
       parameters:
         - name: x-api-version
@@ -12560,14 +13250,14 @@ paths:
                   description: Filter events by time range
               title: EventsListParams
               examples:
-                - &a50
+                - &a52
                   customer_id: cus_123
                   limit: 50
                 - feature_id: api_calls
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
-            example: *a50
+            example: *a52
       responses:
         "200":
           description: OK
@@ -12629,7 +13319,7 @@ paths:
                   - limit
                   - total
                 examples:
-                  - &a51
+                  - &a53
                     list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
                         timestamp: 1765958215459
@@ -12647,7 +13337,7 @@ paths:
                     has_more: false
                     offset: 0
                     limit: 100
-              example: *a51
+              example: *a53
       x-speakeasy-name-override: list
       parameters:
         - name: x-api-version
@@ -12769,7 +13459,7 @@ paths:
                 - feature_id
               title: EventsAggregateParams
               examples:
-                - &a52
+                - &a54
                   customer_id: cus_123
                   feature_id: api_calls
                   range: 30d
@@ -12780,7 +13470,7 @@ paths:
                     - messages
                   range: 7d
                   group_by: properties.model
-            example: *a52
+            example: *a54
       responses:
         "200":
           description: OK
@@ -12842,7 +13532,7 @@ paths:
                   - list
                   - total
                 examples:
-                  - &a53
+                  - &a55
                     list:
                       - period: 1762905600000
                         values:
@@ -12889,7 +13579,7 @@ paths:
                       sessions:
                         count: 2
                         sum: 15
-              example: *a53
+              example: *a55
       x-speakeasy-name-override: aggregate
       parameters:
         - name: x-api-version
@@ -13041,500 +13731,11 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a54
+                - &a56
                   customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a54
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The unique identifier of the entity
-                  name:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The name of the entity
-                  customer_id:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The customer ID this entity belongs to
-                  feature_id:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: The feature ID this entity belongs to
-                  created_at:
-                    type: number
-                    description: Unix timestamp when the entity was created
-                  env:
-                    enum:
-                      - sandbox
-                      - live
-                    type: string
-                    description: The environment (sandbox/live)
-                  subscriptions:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          description: The unique identifier of this subscription. If a subscription_id
-                            was provided at attach time, it is used; otherwise,
-                            falls back to the internal ID.
-                        plan:
-                          $ref: "#/components/schemas/Plan"
-                          description: The full plan object if expanded.
-                        plan_id:
-                          type: string
-                          description: The unique identifier of the subscribed plan.
-                        auto_enable:
-                          type: boolean
-                          description: Whether the plan was automatically enabled for the customer.
-                        add_on:
-                          type: boolean
-                          description: Whether this is an add-on plan rather than a base subscription.
-                        status:
-                          enum:
-                            - active
-                            - scheduled
-                          type: string
-                          description: Current status of the subscription.
-                        past_due:
-                          type: boolean
-                          description: Whether the subscription has overdue payments.
-                        canceled_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the subscription was canceled, or null if not
-                            canceled.
-                        expires_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the subscription will expire, or null if no expiry
-                            set.
-                        trial_ends_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the trial period ends, or null if not on trial.
-                        started_at:
-                          type: number
-                          description: Timestamp when the subscription started.
-                        current_period_start:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Start timestamp of the current billing period.
-                        current_period_end:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: End timestamp of the current billing period.
-                        quantity:
-                          type: number
-                          description: Number of units of this subscription (for per-seat plans).
-                      required:
-                        - id
-                        - plan_id
-                        - auto_enable
-                        - add_on
-                        - status
-                        - past_due
-                        - canceled_at
-                        - expires_at
-                        - trial_ends_at
-                        - started_at
-                        - current_period_start
-                        - current_period_end
-                        - quantity
-                  purchases:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        plan:
-                          $ref: "#/components/schemas/Plan"
-                          description: The full plan object if expanded.
-                        plan_id:
-                          type: string
-                          description: The unique identifier of the purchased plan.
-                        expires_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when the purchase expires, or null for lifetime access.
-                        started_at:
-                          type: number
-                          description: Timestamp when the purchase was made.
-                        quantity:
-                          type: number
-                          description: Number of units purchased.
-                      required:
-                        - plan_id
-                        - expires_at
-                        - started_at
-                        - quantity
-                  balances:
-                    type: object
-                    propertyNames:
-                      type: string
-                    additionalProperties:
-                      $ref: "#/components/schemas/Balance"
-                  flags:
-                    type: object
-                    propertyNames:
-                      type: string
-                    additionalProperties:
-                      type: object
-                      properties:
-                        id:
-                          type: string
-                          description: The unique identifier for this flag.
-                        plan_id:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: The plan ID this flag originates from, or null for standalone
-                            flags.
-                        expires_at:
-                          anyOf:
-                            - type: number
-                            - type: "null"
-                          description: Timestamp when this flag expires, or null for no expiration.
-                        feature_id:
-                          type: string
-                          description: The feature ID this flag is for.
-                        feature:
-                          type: object
-                          properties:
-                            id:
-                              type: string
-                              description: The unique identifier for this feature, used in /check and /track
-                                calls.
-                            name:
-                              type: string
-                              description: Human-readable name displayed in the dashboard and billing UI.
-                            type:
-                              enum:
-                                - boolean
-                                - metered
-                                - credit_system
-                              type: string
-                              description: "Feature type: 'boolean' for on/off access, 'metered' for
-                                usage-tracked features, 'credit_system' for
-                                unified credit pools."
-                            consumable:
-                              type: boolean
-                              description: "For metered features: true if usage resets periodically (API
-                                calls, credits), false if allocated persistently
-                                (seats, storage)."
-                            event_names:
-                              type: array
-                              items:
-                                type: string
-                              description: Event names that trigger this feature's balance. Allows multiple
-                                features to respond to a single event.
-                            credit_schema:
-                              type: array
-                              items:
-                                type: object
-                                properties:
-                                  metered_feature_id:
-                                    type: string
-                                    description: ID of the metered feature that draws from this credit system.
-                                  credit_cost:
-                                    type: number
-                                    description: Credits consumed per unit of the metered feature.
-                                required:
-                                  - metered_feature_id
-                                  - credit_cost
-                              description: "For credit_system features: maps metered features to their credit
-                                costs."
-                            display:
-                              type: object
-                              properties:
-                                singular:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                  description: Singular form for UI display (e.g., 'API call', 'seat').
-                                plural:
-                                  anyOf:
-                                    - type: string
-                                    - type: "null"
-                                  description: Plural form for UI display (e.g., 'API calls', 'seats').
-                              description: Display names for the feature in billing UI and customer-facing
-                                components.
-                            archived:
-                              type: boolean
-                              description: Whether the feature is archived and hidden from the dashboard.
-                          required:
-                            - id
-                            - name
-                            - type
-                            - consumable
-                            - archived
-                          description: The full feature object if expanded.
-                      required:
-                        - id
-                        - plan_id
-                        - expires_at
-                        - feature_id
-                      examples:
-                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                          plan_id: pro_plan
-                          expires_at: null
-                          feature_id: dashboard
-                  billing_controls:
-                    type: object
-                    properties:
-                      spend_limits:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: Optional feature ID this spend limit applies to.
-                            enabled:
-                              type: boolean
-                              default: false
-                              description: Whether this spend limit is enabled.
-                            overage_limit:
-                              type: number
-                              minimum: 0
-                              description: Maximum allowed overage spend for the target feature.
-                        description: List of overage spend limits per feature.
-                      usage_alerts:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: The feature ID this alert applies to.
-                            enabled:
-                              type: boolean
-                              default: true
-                              description: Whether this usage alert is enabled.
-                            threshold:
-                              type: number
-                              minimum: 0
-                              description: The threshold value that triggers the alert. For usage or
-                                remaining, this is an absolute count. For
-                                usage_percentage or remaining_percentage, this
-                                is a percentage (0-100).
-                            threshold_type:
-                              enum:
-                                - usage
-                                - usage_percentage
-                                - remaining
-                                - remaining_percentage
-                              type: string
-                              description: Whether the threshold is an absolute count or a percentage of the
-                                usage allowance or remaining balance.
-                            name:
-                              type: string
-                              description: Optional user-defined label to distinguish multiple alerts on the
-                                same feature.
-                          required:
-                            - threshold
-                            - threshold_type
-                        description: List of usage alert configurations per feature.
-                      overage_allowed:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            feature_id:
-                              type: string
-                              description: The feature ID this overage allowed control applies to.
-                            enabled:
-                              type: boolean
-                              default: false
-                              description: Whether overage is allowed for this feature.
-                          required:
-                            - feature_id
-                        description: List of overage allowed controls per feature. When enabled, usage
-                          can exceed balance.
-                    description: Billing controls for the entity.
-                  invoices:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        plan_ids:
-                          type: array
-                          items:
-                            type: string
-                          description: Array of plan IDs included in this invoice
-                        stripe_id:
-                          type: string
-                          description: The Stripe invoice ID
-                        status:
-                          type: string
-                          description: The status of the invoice
-                        total:
-                          type: number
-                          description: The total amount of the invoice
-                        currency:
-                          type: string
-                          description: The currency code for the invoice
-                        created_at:
-                          type: number
-                          description: Timestamp when the invoice was created
-                        hosted_invoice_url:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: URL to the Stripe-hosted invoice page
-                      required:
-                        - plan_ids
-                        - stripe_id
-                        - status
-                        - total
-                        - currency
-                        - created_at
-                    description: Invoices for this entity (only included when expand=invoices)
-                required:
-                  - id
-                  - name
-                  - created_at
-                  - env
-                  - subscriptions
-                  - purchases
-                  - balances
-                  - flags
-                examples:
-                  - &a55
-                    id: seat_42
-                    name: Seat 42
-                    customer_id: cus_123
-                    feature_id: seats
-                    created_at: 1771409161016
-                    env: sandbox
-                    subscriptions:
-                      - plan_id: pro_plan
-                        auto_enable: true
-                        add_on: false
-                        status: active
-                        past_due: false
-                        canceled_at: null
-                        expires_at: null
-                        trial_ends_at: null
-                        started_at: 1771431921437
-                        current_period_start: 1771431921437
-                        current_period_end: 1771999921437
-                        quantity: 1
-                    purchases: []
-                    balances:
-                      messages:
-                        feature_id: messages
-                        granted: 100
-                        remaining: 72
-                        usage: 28
-                        unlimited: false
-                        overage_allowed: false
-                        max_purchase: null
-                        next_reset_at: 1773851121437
-                        breakdown:
-                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                            plan_id: pro_plan
-                            included_grant: 100
-                            prepaid_grant: 0
-                            remaining: 72
-                            usage: 28
-                            unlimited: false
-                            reset:
-                              interval: month
-                              resets_at: 1773851121437
-                            price: null
-                            expires_at: null
-                    invoices: []
-              example: *a55
-      x-speakeasy-name-override: create
-      parameters:
-        - name: x-api-version
-          in: header
-          required: true
-          schema:
-            type: string
-            default: 2.2.0
-          x-speakeasy-globals-hidden: true
-      x-codeSamples:
-        - lang: typescript
-          label: Typescript (SDK)
-          source: |-
-            import { Autumn } from 'autumn-js'
-
-            const autumn = new Autumn()
-
-            const result = await autumn.entities.create({
-              name: "Seat 42",
-              featureId: "seats",
-              customerId: "cus_123",
-              entityId: "seat_42",
-            });
-        - lang: python
-          label: Python (SDK)
-          source: |-
-            from autumn_sdk import Autumn
-
-            autumn = Autumn(secret_key="am_sk_test...")
-
-            res = autumn.entities.create(
-                feature_id="seats",
-                customer_id="cus_123",
-                entity_id="seat_42",
-                name="Seat 42",
-            )
-  /v1/entities.get:
-    post:
-      operationId: getEntity
-      description: >-
-        Fetches an entity by its ID.
-
-
-        Use this to read one entity's current state. Pass customerId when you
-        want to scope the lookup to a specific customer.
-      tags:
-        - entities
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                customer_id:
-                  type: string
-                  description: The ID of the customer to create the entity for.
-                entity_id:
-                  type: string
-                  description: The ID of the entity.
-              required:
-                - entity_id
-              title: GetEntityParams
-              examples:
-                - &a56
-                  entity_id: seat_42
-                - customer_id: cus_123
-                  entity_id: seat_42
             example: *a56
       responses:
         "200":
@@ -13956,7 +14157,7 @@ paths:
                             expires_at: null
                     invoices: []
               example: *a57
-      x-speakeasy-name-override: get
+      x-speakeasy-name-override: create
       parameters:
         - name: x-api-version
           in: header
@@ -13973,7 +14174,10 @@ paths:
 
             const autumn = new Autumn()
 
-            const result = await autumn.entities.get({
+            const result = await autumn.entities.create({
+              name: "Seat 42",
+              featureId: "seats",
+              customerId: "cus_123",
               entityId: "seat_42",
             });
         - lang: python
@@ -13983,16 +14187,21 @@ paths:
 
             autumn = Autumn(secret_key="am_sk_test...")
 
-            res = autumn.entities.get(entity_id="seat_42")
-  /v1/entities.update:
+            res = autumn.entities.create(
+                feature_id="seats",
+                customer_id="cus_123",
+                entity_id="seat_42",
+                name="Seat 42",
+            )
+  /v1/entities.get:
     post:
-      operationId: updateEntity
+      operationId: getEntity
       description: >-
-        Updates an existing entity and returns the refreshed entity object.
+        Fetches an entity by its ID.
 
 
-        Use this to change entity billing controls or other mutable entity
-        fields after the entity has already been created.
+        Use this to read one entity's current state. Pass customerId when you
+        want to scope the lookup to a specific customer.
       tags:
         - entities
       requestBody:
@@ -14004,95 +14213,18 @@ paths:
               properties:
                 customer_id:
                   type: string
-                  description: The ID of the customer that owns the entity.
+                  description: The ID of the customer to create the entity for.
                 entity_id:
                   type: string
                   description: The ID of the entity.
-                billing_controls:
-                  type: object
-                  properties:
-                    spend_limits:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          feature_id:
-                            type: string
-                            description: Optional feature ID this spend limit applies to.
-                          enabled:
-                            type: boolean
-                            default: false
-                            description: Whether this spend limit is enabled.
-                          overage_limit:
-                            type: number
-                            minimum: 0
-                            description: Maximum allowed overage spend for the target feature.
-                      description: List of overage spend limits per feature.
-                    usage_alerts:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          feature_id:
-                            type: string
-                            description: The feature ID this alert applies to.
-                          enabled:
-                            type: boolean
-                            default: true
-                            description: Whether this usage alert is enabled.
-                          threshold:
-                            type: number
-                            minimum: 0
-                            description: The threshold value that triggers the alert. For usage or
-                              remaining, this is an absolute count. For
-                              usage_percentage or remaining_percentage, this is
-                              a percentage (0-100).
-                          threshold_type:
-                            enum:
-                              - usage
-                              - usage_percentage
-                              - remaining
-                              - remaining_percentage
-                            type: string
-                            description: Whether the threshold is an absolute count or a percentage of the
-                              usage allowance or remaining balance.
-                          name:
-                            type: string
-                            description: Optional user-defined label to distinguish multiple alerts on the
-                              same feature.
-                        required:
-                          - threshold
-                          - threshold_type
-                      description: List of usage alert configurations per feature.
-                    overage_allowed:
-                      type: array
-                      items:
-                        type: object
-                        properties:
-                          feature_id:
-                            type: string
-                            description: The feature ID this overage allowed control applies to.
-                          enabled:
-                            type: boolean
-                            default: false
-                            description: Whether overage is allowed for this feature.
-                        required:
-                          - feature_id
-                      description: List of overage allowed controls per feature. When enabled, usage
-                        can exceed balance.
-                  description: Billing controls to replace on the entity.
               required:
                 - entity_id
-              title: UpdateEntityParams
+              title: GetEntityParams
               examples:
                 - &a58
-                  customer_id: cus_123
                   entity_id: seat_42
-                  billing_controls:
-                    spend_limits:
-                      - feature_id: messages
-                        enabled: true
-                        overage_limit: 25
+                - customer_id: cus_123
+                  entity_id: seat_42
             example: *a58
       responses:
         "200":
@@ -14514,6 +14646,564 @@ paths:
                             expires_at: null
                     invoices: []
               example: *a59
+      x-speakeasy-name-override: get
+      parameters:
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.entities.get({
+              entityId: "seat_42",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.entities.get(entity_id="seat_42")
+  /v1/entities.update:
+    post:
+      operationId: updateEntity
+      description: >-
+        Updates an existing entity and returns the refreshed entity object.
+
+
+        Use this to change entity billing controls or other mutable entity
+        fields after the entity has already been created.
+      tags:
+        - entities
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The ID of the customer that owns the entity.
+                entity_id:
+                  type: string
+                  description: The ID of the entity.
+                billing_controls:
+                  type: object
+                  properties:
+                    spend_limits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: Optional feature ID this spend limit applies to.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether this spend limit is enabled.
+                          overage_limit:
+                            type: number
+                            minimum: 0
+                            description: Maximum allowed overage spend for the target feature.
+                      description: List of overage spend limits per feature.
+                    usage_alerts:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature ID this alert applies to.
+                          enabled:
+                            type: boolean
+                            default: true
+                            description: Whether this usage alert is enabled.
+                          threshold:
+                            type: number
+                            minimum: 0
+                            description: The threshold value that triggers the alert. For usage or
+                              remaining, this is an absolute count. For
+                              usage_percentage or remaining_percentage, this is
+                              a percentage (0-100).
+                          threshold_type:
+                            enum:
+                              - usage
+                              - usage_percentage
+                              - remaining
+                              - remaining_percentage
+                            type: string
+                            description: Whether the threshold is an absolute count or a percentage of the
+                              usage allowance or remaining balance.
+                          name:
+                            type: string
+                            description: Optional user-defined label to distinguish multiple alerts on the
+                              same feature.
+                        required:
+                          - threshold
+                          - threshold_type
+                      description: List of usage alert configurations per feature.
+                    overage_allowed:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature ID this overage allowed control applies to.
+                          enabled:
+                            type: boolean
+                            default: false
+                            description: Whether overage is allowed for this feature.
+                        required:
+                          - feature_id
+                      description: List of overage allowed controls per feature. When enabled, usage
+                        can exceed balance.
+                  description: Billing controls to replace on the entity.
+              required:
+                - entity_id
+              title: UpdateEntityParams
+              examples:
+                - &a60
+                  customer_id: cus_123
+                  entity_id: seat_42
+                  billing_controls:
+                    spend_limits:
+                      - feature_id: messages
+                        enabled: true
+                        overage_limit: 25
+            example: *a60
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The unique identifier of the entity
+                  name:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The name of the entity
+                  customer_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The customer ID this entity belongs to
+                  feature_id:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: The feature ID this entity belongs to
+                  created_at:
+                    type: number
+                    description: Unix timestamp when the entity was created
+                  env:
+                    enum:
+                      - sandbox
+                      - live
+                    type: string
+                    description: The environment (sandbox/live)
+                  subscriptions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier of this subscription. If a subscription_id
+                            was provided at attach time, it is used; otherwise,
+                            falls back to the internal ID.
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The full plan object if expanded.
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the subscribed plan.
+                        auto_enable:
+                          type: boolean
+                          description: Whether the plan was automatically enabled for the customer.
+                        add_on:
+                          type: boolean
+                          description: Whether this is an add-on plan rather than a base subscription.
+                        status:
+                          enum:
+                            - active
+                            - scheduled
+                          type: string
+                          description: Current status of the subscription.
+                        past_due:
+                          type: boolean
+                          description: Whether the subscription has overdue payments.
+                        canceled_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription was canceled, or null if not
+                            canceled.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the subscription will expire, or null if no expiry
+                            set.
+                        trial_ends_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the trial period ends, or null if not on trial.
+                        started_at:
+                          type: number
+                          description: Timestamp when the subscription started.
+                        current_period_start:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Start timestamp of the current billing period.
+                        current_period_end:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: End timestamp of the current billing period.
+                        quantity:
+                          type: number
+                          description: Number of units of this subscription (for per-seat plans).
+                      required:
+                        - id
+                        - plan_id
+                        - auto_enable
+                        - add_on
+                        - status
+                        - past_due
+                        - canceled_at
+                        - expires_at
+                        - trial_ends_at
+                        - started_at
+                        - current_period_start
+                        - current_period_end
+                        - quantity
+                  purchases:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan:
+                          $ref: "#/components/schemas/Plan"
+                          description: The full plan object if expanded.
+                        plan_id:
+                          type: string
+                          description: The unique identifier of the purchased plan.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when the purchase expires, or null for lifetime access.
+                        started_at:
+                          type: number
+                          description: Timestamp when the purchase was made.
+                        quantity:
+                          type: number
+                          description: Number of units purchased.
+                      required:
+                        - plan_id
+                        - expires_at
+                        - started_at
+                        - quantity
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      $ref: "#/components/schemas/Balance"
+                  flags:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: The unique identifier for this flag.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: The plan ID this flag originates from, or null for standalone
+                            flags.
+                        expires_at:
+                          anyOf:
+                            - type: number
+                            - type: "null"
+                          description: Timestamp when this flag expires, or null for no expiration.
+                        feature_id:
+                          type: string
+                          description: The feature ID this flag is for.
+                        feature:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                              description: The unique identifier for this feature, used in /check and /track
+                                calls.
+                            name:
+                              type: string
+                              description: Human-readable name displayed in the dashboard and billing UI.
+                            type:
+                              enum:
+                                - boolean
+                                - metered
+                                - credit_system
+                              type: string
+                              description: "Feature type: 'boolean' for on/off access, 'metered' for
+                                usage-tracked features, 'credit_system' for
+                                unified credit pools."
+                            consumable:
+                              type: boolean
+                              description: "For metered features: true if usage resets periodically (API
+                                calls, credits), false if allocated persistently
+                                (seats, storage)."
+                            event_names:
+                              type: array
+                              items:
+                                type: string
+                              description: Event names that trigger this feature's balance. Allows multiple
+                                features to respond to a single event.
+                            credit_schema:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  metered_feature_id:
+                                    type: string
+                                    description: ID of the metered feature that draws from this credit system.
+                                  credit_cost:
+                                    type: number
+                                    description: Credits consumed per unit of the metered feature.
+                                required:
+                                  - metered_feature_id
+                                  - credit_cost
+                              description: "For credit_system features: maps metered features to their credit
+                                costs."
+                            display:
+                              type: object
+                              properties:
+                                singular:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Singular form for UI display (e.g., 'API call', 'seat').
+                                plural:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Plural form for UI display (e.g., 'API calls', 'seats').
+                              description: Display names for the feature in billing UI and customer-facing
+                                components.
+                            archived:
+                              type: boolean
+                              description: Whether the feature is archived and hidden from the dashboard.
+                          required:
+                            - id
+                            - name
+                            - type
+                            - consumable
+                            - archived
+                          description: The full feature object if expanded.
+                      required:
+                        - id
+                        - plan_id
+                        - expires_at
+                        - feature_id
+                      examples:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          expires_at: null
+                          feature_id: dashboard
+                  billing_controls:
+                    type: object
+                    properties:
+                      spend_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: Optional feature ID this spend limit applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether this spend limit is enabled.
+                            overage_limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum allowed overage spend for the target feature.
+                        description: List of overage spend limits per feature.
+                      usage_alerts:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this alert applies to.
+                            enabled:
+                              type: boolean
+                              default: true
+                              description: Whether this usage alert is enabled.
+                            threshold:
+                              type: number
+                              minimum: 0
+                              description: The threshold value that triggers the alert. For usage or
+                                remaining, this is an absolute count. For
+                                usage_percentage or remaining_percentage, this
+                                is a percentage (0-100).
+                            threshold_type:
+                              enum:
+                                - usage
+                                - usage_percentage
+                                - remaining
+                                - remaining_percentage
+                              type: string
+                              description: Whether the threshold is an absolute count or a percentage of the
+                                usage allowance or remaining balance.
+                            name:
+                              type: string
+                              description: Optional user-defined label to distinguish multiple alerts on the
+                                same feature.
+                          required:
+                            - threshold
+                            - threshold_type
+                        description: List of usage alert configurations per feature.
+                      overage_allowed:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature ID this overage allowed control applies to.
+                            enabled:
+                              type: boolean
+                              default: false
+                              description: Whether overage is allowed for this feature.
+                          required:
+                            - feature_id
+                        description: List of overage allowed controls per feature. When enabled, usage
+                          can exceed balance.
+                    description: Billing controls for the entity.
+                  invoices:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_ids:
+                          type: array
+                          items:
+                            type: string
+                          description: Array of plan IDs included in this invoice
+                        stripe_id:
+                          type: string
+                          description: The Stripe invoice ID
+                        status:
+                          type: string
+                          description: The status of the invoice
+                        total:
+                          type: number
+                          description: The total amount of the invoice
+                        currency:
+                          type: string
+                          description: The currency code for the invoice
+                        created_at:
+                          type: number
+                          description: Timestamp when the invoice was created
+                        hosted_invoice_url:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: URL to the Stripe-hosted invoice page
+                      required:
+                        - plan_ids
+                        - stripe_id
+                        - status
+                        - total
+                        - currency
+                        - created_at
+                    description: Invoices for this entity (only included when expand=invoices)
+                required:
+                  - id
+                  - name
+                  - created_at
+                  - env
+                  - subscriptions
+                  - purchases
+                  - balances
+                  - flags
+                examples:
+                  - &a61
+                    id: seat_42
+                    name: Seat 42
+                    customer_id: cus_123
+                    feature_id: seats
+                    created_at: 1771409161016
+                    env: sandbox
+                    subscriptions:
+                      - plan_id: pro_plan
+                        auto_enable: true
+                        add_on: false
+                        status: active
+                        past_due: false
+                        canceled_at: null
+                        expires_at: null
+                        trial_ends_at: null
+                        started_at: 1771431921437
+                        current_period_start: 1771431921437
+                        current_period_end: 1771999921437
+                        quantity: 1
+                    purchases: []
+                    balances:
+                      messages:
+                        feature_id: messages
+                        granted: 100
+                        remaining: 72
+                        usage: 28
+                        unlimited: false
+                        overage_allowed: false
+                        max_purchase: null
+                        next_reset_at: 1773851121437
+                        breakdown:
+                          - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                            plan_id: pro_plan
+                            included_grant: 100
+                            prepaid_grant: 0
+                            remaining: 72
+                            usage: 28
+                            unlimited: false
+                            reset:
+                              interval: month
+                              resets_at: 1773851121437
+                            price: null
+                            expires_at: null
+                    invoices: []
+              example: *a61
       x-speakeasy-name-override: update
       parameters:
         - name: x-api-version
@@ -14592,10 +15282,10 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a60
+                - &a62
                   customer_id: cus_123
                   entity_id: seat_42
-            example: *a60
+            example: *a62
       responses:
         "200":
           description: OK
@@ -14609,9 +15299,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a61
+                  - &a63
                     success: true
-              example: *a61
+              example: *a63
       x-speakeasy-name-override: delete
       parameters:
         - name: x-api-version
@@ -14668,10 +15358,10 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a62
+                - &a64
                   customer_id: cus_123
                   program_id: prog_123
-            example: *a62
+            example: *a64
       responses:
         "200":
           description: OK
@@ -14694,11 +15384,11 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a63
+                  - &a65
                     code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a63
+              example: *a65
       x-speakeasy-name-override: createCode
       parameters:
         - name: x-api-version
@@ -14755,10 +15445,10 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a64
+                - &a66
                   code: REF123
                   customer_id: cus_456
-            example: *a64
+            example: *a66
       responses:
         "200":
           description: OK
@@ -14781,11 +15471,11 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a65
+                  - &a67
                     id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a65
+              example: *a67
       x-speakeasy-name-override: redeemCode
       parameters:
         - name: x-api-version

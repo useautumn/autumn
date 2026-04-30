@@ -139,7 +139,10 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
-	const isCustom = hasCustomItems(params.customize);
+	const isCustom =
+		contextOverride.forceIsCustom !== undefined
+			? contextOverride.forceIsCustom
+			: hasCustomItems(params.customize);
 
 	const defaultProduct = await setupDefaultProductContext({
 		ctx,
@@ -199,9 +202,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		trialContext,
 		isCustom,
 
-		billingVersion: contextOverride.billingVersion
-			? contextOverride.billingVersion
-			: (customerProduct.billing_version ?? BillingVersion.V2),
+		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
 
 		skipBillingChanges,
 
@@ -212,5 +213,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 			prorationBehavior: params.proration_behavior,
 			outgoingCustomerProduct: customerProduct,
 		}),
+
+		chargeExistingOverages: contextOverride.chargeExistingOverages,
+		skipExistingUsageCarry: contextOverride.skipExistingUsageCarry,
 	};
 };

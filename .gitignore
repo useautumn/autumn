@@ -16,6 +16,7 @@ supabase.sh
 **/dist/
 **/.next/
 **/.vercel/
+**/.turbo/
 **/.DS_Store
 **/.env*
 tests/
