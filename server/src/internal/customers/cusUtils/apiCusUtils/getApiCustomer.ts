@@ -48,9 +48,19 @@ export const getApiCustomer = async ({
 		fullCus: fullCustomer,
 	});
 
+	const { billing_controls_override, ...standardExpand } = apiCustomerExpand;
+
 	const apiCustomer: ApiCustomerV5 = {
 		...cleanedBaseCustomer,
-		...apiCustomerExpand,
+		...standardExpand,
+		...(billing_controls_override
+			? {
+					billing_controls: {
+						...cleanedBaseCustomer.billing_controls,
+						auto_topups: billing_controls_override.auto_topups,
+					},
+				}
+			: {}),
 	};
 
 	// Apply version transformations based on API version
