@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 import {
 	AdvancedSection,
 	ConfigRow,
@@ -16,6 +16,15 @@ export function CreateScheduleAdvancedSection() {
 	const { billingBehavior, resetBillingCycle, enablePlanImmediately, phases } =
 		formValues;
 	const isCheckoutRedirect = preview?.redirect_to_checkout === true;
+
+	// Keep form state in sync with what the user can see: when the toggle hides
+	// (no checkout flow), reset the value so a stale `true` doesn't leak into
+	// the request body.
+	useEffect(() => {
+		if (!isCheckoutRedirect && enablePlanImmediately) {
+			form.setFieldValue("enablePlanImmediately", false);
+		}
+	}, [isCheckoutRedirect, enablePlanImmediately, form]);
 
 	const isProrate = billingBehavior !== "none";
 	const hasMultipleImmediatePlans = (phases[0]?.plans.length ?? 0) > 1;
