@@ -1,0 +1,81 @@
+server/tests/utils/browserPool/completeStripeCheckoutFormV2.ts
+  f6b7de1bbba43d80 13-16,30
+server/tests/integration/platform/platform-suborg-smoke.test.ts
+  f6b7de1bbba43d80 2-6,27,32,35,42,46
+server/tests/utils/testInitUtils/initScenario.ts
+  c4778a4e887e1cf5 1177,1369
+  f6b7de1bbba43d80 233,247-248,292,294,314,333,341-342,355,372-374,412-414,433-436,471-472,491,505-507,536-538,567-568,588-589,613,644-648,703,734,741,749,764,780-782,784-785,787-791,802,856-858,864-865,874,900,937,941,1011-1012,1030,1055,1084-1085,1097,1105,1147,1170,1495,1505
+server/tests/integration/billing/tax/automatic-tax-checkout-session.test.ts
+  f6b7de1bbba43d80 2-5,7-8,53,101
+shared/models/orgModels/orgConfig.ts
+  f6b7de1bbba43d80 40-41
+server/tests/utils/testInitUtils/createTestContext.ts
+  f6b7de1bbba43d80 41,58,91-95,97
+server/tests/integration/billing/tax/automatic-tax-no-address-existing-customer.test.ts
+  f6b7de1bbba43d80 2,4-8,10-12,22-26,28-42,44-87,89-92,94,96-120,129-130,150-151,169,178-179,187,190-191,197-198,211,225-248,250,252-255,257-264,266-273,275-279,283-288,290-292
+server/tests/unit/rate-limits/rate-limit-factory.test.ts
+  f6b7de1bbba43d80 13-14
+server/tests/integration/billing/tax/automatic-tax-proration.test.ts
+  f6b7de1bbba43d80 2-4,6-8
+server/tests/clearMasterOrg.ts
+  f6b7de1bbba43d80 39-41,117,127
+server/tests/integration/billing/tax/automatic-tax-no-address-error.test.ts
+  f6b7de1bbba43d80 2-5
+server/tests/integration/billing/tax/automatic-tax-subscription.test.ts
+  f6b7de1bbba43d80 2-3
+server/tests/integration/billing/tax/automatic-tax-subscription-update.test.ts
+  f6b7de1bbba43d80 2-4,11-12,33-36,38-52,54-59,61,63-66,68-73,75-78,80-94,96-101,103,105
+server/tests/unit/cache/cache-utils.test.ts
+  f6b7de1bbba43d80 8-9
+server/tests/integration/billing/tax/automatic-tax-default-off.test.ts
+  f6b7de1bbba43d80 2-4,36
+server/tests/utils/browserPool/playwright/stripeCheckout.ts
+  f6b7de1bbba43d80 4-7,18-20,22-23,43-44,62,65-66,94,97,112,115-116,124,134,141,149,158,195-196,204
+shared/api/billing/common/billingParamsBase/billingParamsBaseV1.ts
+  f6b7de1bbba43d80 40-41
+server/tests/setup-integration-tests.ts
+  f6b7de1bbba43d80 30-34,36-39
+server/tests/integration/billing/tax/automatic-tax-spray-jurisdictions.test.ts
+  f6b7de1bbba43d80 2-5,7,9-11,118-120,132,161-162
+server/tests/unit/billing/automatic-tax-config-schema.test.ts
+  f6b7de1bbba43d80 2-5
+server/tests/utils/testInitUtils/createSubOrgTestContext.ts
+  f6b7de1bbba43d80 40,49-50,64,74,77-78,84,125-126,176-177,193,200
+server/tests/integration/billing/tax/automatic-tax-invoice-one-off.test.ts
+  f6b7de1bbba43d80 2-5,25
+vite/src/views/customers2/components/sheets/InvoiceDetailSheet.tsx
+  f6b7de1bbba43d80 61,97,422
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "2a5286d221e70113c40404355d2ce1b91f02ea42",
+  "prompts": {
+    "c4778a4e887e1cf5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2213ea901ffeJSdplBxFgDIo8s",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 4,
+      "overriden_lines": 0
+    },
+    "f6b7de1bbba43d80": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2210d6456ffe0v6rv9aWxrdAy7",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 7,
+      "total_deletions": 16,
+      "accepted_lines": 267,
+      "overriden_lines": 3
+    }
+  }
+}
