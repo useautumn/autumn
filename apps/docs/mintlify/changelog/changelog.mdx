@@ -4,6 +4,70 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="April 30th 2026">
+  ## API key scopes
+
+  You can now scope API keys to specific resources and actions. Create restricted keys for backend services, dashboards, or third-party integrations — instead of handing out full-access secrets.
+
+  - **Granular permissions**: Limit a key to read-only access, specific endpoints, or particular resources
+  - **Per-org enforcement**: Scopes are validated on every request and surface a `403` when a key lacks permission
+  - **Manage from the dashboard**: Pick scopes when creating a key in [Developer Settings](https://app.useautumn.com/production/dev?tab=api_keys)
+
+  ## Auto top-up rebalancing
+
+  Auto top-ups now rebalance at execution time based on the customer's current usage. If a customer's balance changes between when a top-up is scheduled and when it runs, Autumn recalculates the top-up amount so the customer is charged for what they actually need — not a stale estimate.
+
+  See the [auto top-ups guide](/documentation/modelling-pricing/auto-top-ups) for details.
+
+  ## Async webhook acknowledgement
+
+  Long-running endpoints (`finalizeLock` and others) now return `202 Accepted` and process the work asynchronously. This lets clients ack immediately and avoids client timeouts on slow Stripe round-trips.
+
+  Stripe webhooks are also acknowledged earlier in the request lifecycle, reducing retries from Stripe when downstream processing is slow.
+
+  ## Discounts on `update_subscription`
+
+  You can now pass `discounts` when calling `billing.update_subscription`. Apply Stripe coupons or percentage discounts when changing a customer's plan or quantities — same shape as `billing.attach`.
+
+  See the [updating subscriptions guide](/documentation/customers/updating-subscriptions) for usage.
+
+  ## Idempotent `track`
+
+  The `/track` endpoint now stores an idempotency key alongside each event. Sending the same `idempotency_key` twice is safely deduplicated, even across retries that hit different Redis nodes. Multi-feature track calls are also covered.
+
+  See the [track endpoint](/api-reference/core/track) for details.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - API key scopes for granular permissions - [#1349](https://github.com/useautumn/autumn/pull/1349)
+      - Execution-time rebalancing for auto top-ups - [#1318](https://github.com/useautumn/autumn/pull/1318), [#1371](https://github.com/useautumn/autumn/pull/1371)
+      - `202 Accepted` async response for `finalizeLock` and SDK methods - [#1409](https://github.com/useautumn/autumn/pull/1409)
+      - Early acknowledgement on Stripe webhooks to reduce retries - [#1397](https://github.com/useautumn/autumn/pull/1397)
+      - `discounts` parameter on `billing.update_subscription` - [#1337](https://github.com/useautumn/autumn/pull/1337)
+      - Idempotency key support on `/track` (including multi-feature) - [#1341](https://github.com/useautumn/autumn/pull/1341)
+      - Cross-processor one-off product purchases for RevenueCat customers - [#1400](https://github.com/useautumn/autumn/pull/1400)
+      - Smart default scope and persistent draft state for attach and create-schedule sheets - [#1351](https://github.com/useautumn/autumn/pull/1351)
+      - Persist last-active org in localStorage to prevent unexpected org resets - [#1368](https://github.com/useautumn/autumn/pull/1368)
+      - Feature totals strip on customer usage charts - [#1351](https://github.com/useautumn/autumn/pull/1351)
+      - Event-loop lag and runtime metrics for improved observability - [#1412](https://github.com/useautumn/autumn/pull/1412)
+    </Accordion>
+
+    <Accordion title="Bug Fixes">
+      - Fixed billing controls (overage allowed, spend limits) not inheriting correctly on entity-scoped checks - [#1353](https://github.com/useautumn/autumn/pull/1353)
+      - Fixed legacy `update_subscription` quantity changes - [#1410](https://github.com/useautumn/autumn/pull/1410)
+      - Fixed network errors being swallowed by the SDK fail-open hook - [#1404](https://github.com/useautumn/autumn/pull/1404)
+      - Fixed balance editing for entity-scoped entitlements when no entity was selected - [#1407](https://github.com/useautumn/autumn/pull/1407)
+      - Fixed past-due customer entitlements not resetting from the cache - [#1396](https://github.com/useautumn/autumn/pull/1396), [#1297](https://github.com/useautumn/autumn/pull/1297)
+      - Fixed customer cache occasionally missing prices on attach - [#1387](https://github.com/useautumn/autumn/pull/1387), [#1388](https://github.com/useautumn/autumn/pull/1388)
+      - Fixed customer config defaults not applying to V2 attach flows - [#1355](https://github.com/useautumn/autumn/pull/1355), [#1356](https://github.com/useautumn/autumn/pull/1356)
+      - Fixed `cusproduct` sorting in customer detail views - [#1363](https://github.com/useautumn/autumn/pull/1363)
+      - Fixed checkout reference error on certain plan transitions - [#1383](https://github.com/useautumn/autumn/pull/1383), [#1384](https://github.com/useautumn/autumn/pull/1384)
+      - Improved Redis fail-open behavior on first connection timeout - [#1347](https://github.com/useautumn/autumn/pull/1347), [#1361](https://github.com/useautumn/autumn/pull/1361)
+      - Improved OTel tracing with tenant context for clearer debugging - [#1346](https://github.com/useautumn/autumn/pull/1346)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
