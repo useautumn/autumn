@@ -1,0 +1,25 @@
+server/src/internal/billing/v2/utils/billingPlan/preview/tax/computeAttachTaxPreview.ts
+  c4778a4e887e1cf5 23-25,44-49,55-58,69-72
+server/src/internal/billing/v2/actions/attach/attach.ts
+  c4778a4e887e1cf5 82-87,90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "9aef642cbb73062c74cf327a469a3be8da99388a",
+  "prompts": {
+    "c4778a4e887e1cf5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2213ea901ffeJSdplBxFgDIo8s",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 35,
+      "total_deletions": 21,
+      "accepted_lines": 24,
+      "overriden_lines": 0
+    }
+  }
+}
