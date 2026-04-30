@@ -17,10 +17,11 @@ import chalk from "chalk";
 import { handleStripeSubscriptionCreated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
-import {
-	getStripeSandboxContext,
-	makeSubCreatedWebhookContext,
-} from "./subscriptionCreatedTestUtils.js";
+import { timeout } from "@/utils/genUtils";
+import { getStripeSandboxContext } from "./subscriptionCreatedTestUtils.js";
+
+const testRunId = Date.now().toString(36);
+const WEBHOOK_TIMEOUT_MS = 8000;
 
 const makeFullCustomer = ({
 	subscriptionIds = [],
@@ -41,11 +42,13 @@ const makeGuardrailContext = ({
 	orgId = "org_123",
 	orgSlug = "org-slug",
 	subscriptionId = "sub_stripe_external",
+	metadata,
 }: {
 	fullCustomer?: FullCustomer;
 	orgId?: string;
 	orgSlug?: string;
 	subscriptionId?: string;
+	metadata?: Record<string, string>;
 }): {
 	ctx: StripeWebhookContext;
 	retrieveCalls: string[];
@@ -78,6 +81,7 @@ const makeGuardrailContext = ({
 					object: {
 						id: subscriptionId,
 						customer: "cus_stripe_external",
+						...(metadata && { metadata }),
 					},
 				},
 			},
@@ -100,9 +104,9 @@ const withNodeEnv = async <T>(nodeEnv: string, callback: () => Promise<T>) => {
 	}
 };
 
-test(`${chalk.yellowBright("customer.subscription.created auto-sync: sync external Stripe sandbox sub")}`, async () => {
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync: sync external Stripe sandbox sub")}`, async () => {
 	const ctx = await getStripeSandboxContext();
-	const customerId = "sub-created-auto-sync";
+	const customerId = `sub-created-auto-sync-${testRunId}`;
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({
@@ -128,13 +132,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: sync extern
 	expect(stripeSubscription.id).toBeDefined();
 	expect(stripeSubscription.status).toBe("active");
 
-	await handleStripeSubscriptionCreated({
-		ctx: await makeSubCreatedWebhookContext({
-			ctx,
-			customerId,
-			stripeSubscription,
-		}),
-	});
+	await timeout(WEBHOOK_TIMEOUT_MS);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: pro.id });
@@ -158,7 +156,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: sync extern
 	expect(ctx.env).toBe(AppEnv.Sandbox);
 });
 
-test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips unknown Autumn customer")}`, async () => {
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync: skips unknown Autumn customer")}`, async () => {
 	const { ctx, retrieveCalls } = makeGuardrailContext({});
 
 	await handleStripeSubscriptionCreated({ ctx });
@@ -166,7 +164,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips unkno
 	expect(retrieveCalls).toEqual([]);
 });
 
-test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips already-linked subscription")}`, async () => {
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync: skips already-linked subscription")}`, async () => {
 	const subscriptionId = "sub_already_linked";
 	const { ctx, retrieveCalls } = makeGuardrailContext({
 		subscriptionId,
@@ -178,6 +176,19 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips alrea
 	expect(retrieveCalls).toEqual([]);
 });
 
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync: skips subs created by Autumn (autumn_managed metadata)")}`, async () => {
+	const { ctx, retrieveCalls } = makeGuardrailContext({
+		fullCustomer: makeFullCustomer(),
+		metadata: { autumn_managed: "true" },
+	});
+
+	await handleStripeSubscriptionCreated({ ctx });
+
+	expect(retrieveCalls).toEqual([]);
+});
+
+// Serial: mutates process.env.NODE_ENV; concurrent peers calling
+// handleStripeSubscriptionCreated would observe the wrong value mid-flight.
 test(`${chalk.yellowBright("customer.subscription.created auto-sync: production gate skips disabled org")}`, async () => {
 	const { ctx, retrieveCalls } = makeGuardrailContext({
 		orgId: "org_sub_created_auto_sync_disabled",
@@ -192,9 +203,9 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: production 
 	expect(retrieveCalls).toEqual([]);
 });
 
-test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Stripe sandbox sub with no product match")}`, async () => {
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Stripe sandbox sub with no product match")}`, async () => {
 	const ctx = await getStripeSandboxContext();
-	const customerId = "sub-created-auto-sync-no-match";
+	const customerId = `sub-created-auto-sync-no-match-${testRunId}`;
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({
@@ -222,9 +233,9 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Strip
 	}
 
 	const stripeProduct = await ctx.stripeCli.products.create({
-		name: "Sub Created Auto Sync No Match",
+		name: `Sub Created Auto Sync No Match ${testRunId}`,
 	});
-	const stripeSubscription = await ctx.stripeCli.subscriptions.create({
+	await ctx.stripeCli.subscriptions.create({
 		customer: stripeCustomerId,
 		items: [
 			{
@@ -238,21 +249,15 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Strip
 		],
 	});
 
-	await handleStripeSubscriptionCreated({
-		ctx: await makeSubCreatedWebhookContext({
-			ctx,
-			customerId,
-			stripeSubscription,
-		}),
-	});
+	await timeout(WEBHOOK_TIMEOUT_MS);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotPresent({ customer, productId: pro.id });
 });
 
-test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Stripe sandbox sub matching multiple products")}`, async () => {
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Stripe sandbox sub matching multiple products")}`, async () => {
 	const ctx = await getStripeSandboxContext();
-	const customerId = "sub-created-auto-sync-multi-match";
+	const customerId = `sub-created-auto-sync-multi-match-${testRunId}`;
 
 	const pro = products.pro({
 		id: "pro",
@@ -273,19 +278,13 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Strip
 		actions: [],
 	});
 
-	const stripeSubscription = await createStripeSubscriptionFromProducts({
+	await createStripeSubscriptionFromProducts({
 		ctx,
 		customerId,
 		productIds: [pro.id, premium.id],
 	});
 
-	await handleStripeSubscriptionCreated({
-		ctx: await makeSubCreatedWebhookContext({
-			ctx,
-			customerId,
-			stripeSubscription,
-		}),
-	});
+	await timeout(WEBHOOK_TIMEOUT_MS);
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductNotPresent({ customer, productId: pro.id });

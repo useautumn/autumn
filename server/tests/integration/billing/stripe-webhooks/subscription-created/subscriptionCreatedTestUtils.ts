@@ -4,10 +4,7 @@ import {
 	type TestContext,
 } from "@tests/utils/testInitUtils/createTestContext";
 import { eq } from "drizzle-orm";
-import type Stripe from "stripe";
 import { initDrizzle } from "@/db/initDrizzle";
-import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { CusService } from "@/internal/customers/CusService";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache";
 import { encryptData } from "@/utils/encryptUtils";
@@ -59,35 +56,4 @@ let stripeSandboxContext: Promise<TestContext> | undefined;
 export const getStripeSandboxContext = () => {
 	stripeSandboxContext ??= ensureTestOrgUsesStripeSandboxKey();
 	return stripeSandboxContext;
-};
-
-export const makeSubCreatedWebhookContext = async ({
-	ctx,
-	customerId,
-	stripeSubscription,
-}: {
-	ctx: TestContext;
-	customerId: string;
-	stripeSubscription: Stripe.Subscription;
-}): Promise<StripeWebhookContext> => {
-	const fullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-		withSubs: true,
-		withEntities: true,
-	});
-
-	return {
-		...ctx,
-		fullCustomer,
-		stripeEvent: {
-			type: "customer.subscription.created",
-			data: {
-				object: {
-					id: stripeSubscription.id,
-					customer: fullCustomer.processor?.id,
-				},
-			},
-		} as Stripe.Event,
-	};
 };

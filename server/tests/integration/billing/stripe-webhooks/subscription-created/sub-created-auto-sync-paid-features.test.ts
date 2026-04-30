@@ -9,15 +9,13 @@ import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import type Stripe from "stripe";
-import { handleStripeSubscriptionCreated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
-import {
-	getStripeSandboxContext,
-	makeSubCreatedWebhookContext,
-} from "./subscriptionCreatedTestUtils.js";
+import { timeout } from "@/utils/genUtils";
+import { getStripeSandboxContext } from "./subscriptionCreatedTestUtils.js";
 
 const testRunId = Date.now().toString(36);
+const WEBHOOK_TIMEOUT_MS = 8000;
 
 const getFullProduct = async ({
 	ctx,
@@ -107,25 +105,9 @@ const createStripeSubscription = async ({
 	});
 };
 
-const runSubscriptionCreatedAutoSync = async ({
-	ctx,
-	customerId,
-	stripeSubscription,
-}: {
-	ctx: TestContext;
-	customerId: string;
-	stripeSubscription: Stripe.Subscription;
-}) => {
-	await handleStripeSubscriptionCreated({
-		ctx: await makeSubCreatedWebhookContext({
-			ctx,
-			customerId,
-			stripeSubscription,
-		}),
-	});
-};
+const waitForWebhookToProcess = () => timeout(WEBHOOK_TIMEOUT_MS);
 
-test(`${chalk.yellowBright("customer.subscription.created auto-sync paid features: imports prepaid Stripe quantity")}`, async () => {
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync paid features: imports prepaid Stripe quantity")}`, async () => {
 	const ctx = await getStripeSandboxContext();
 	const customerId = `sub-created-auto-sync-prepaid-quantity-${testRunId}`;
 
@@ -158,17 +140,13 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 		price: messagesPrice,
 	});
 
-	const stripeSubscription = await createStripeSubscription({
+	await createStripeSubscription({
 		ctx,
 		customerId,
 		subscriptionItems: [{ price: messagesStripePriceId, quantity: 5 }],
 	});
 
-	await runSubscriptionCreatedAutoSync({
-		ctx,
-		customerId,
-		stripeSubscription,
-	});
+	await waitForWebhookToProcess();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: pro.id });
@@ -180,7 +158,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 	});
 });
 
-test(`${chalk.yellowBright("customer.subscription.created auto-sync paid features: missing prepaid item initializes to zero quantity")}`, async () => {
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync paid features: missing prepaid item initializes to zero quantity")}`, async () => {
 	const ctx = await getStripeSandboxContext();
 	const customerId = `sub-created-auto-sync-missing-prepaid-${testRunId}`;
 
@@ -217,17 +195,13 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 		price: messagesPrice,
 	});
 
-	const stripeSubscription = await createStripeSubscription({
+	await createStripeSubscription({
 		ctx,
 		customerId,
 		subscriptionItems: [{ price: messagesStripePriceId, quantity: 3 }],
 	});
 
-	await runSubscriptionCreatedAutoSync({
-		ctx,
-		customerId,
-		stripeSubscription,
-	});
+	await waitForWebhookToProcess();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: pro.id });
@@ -245,7 +219,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 	});
 });
 
-test(`${chalk.yellowBright("customer.subscription.created auto-sync paid features: keeps consumable feature while seeding prepaid")}`, async () => {
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync paid features: keeps consumable feature while seeding prepaid")}`, async () => {
 	const ctx = await getStripeSandboxContext();
 	const customerId = `sub-created-auto-sync-mixed-consumable-${testRunId}`;
 
@@ -284,7 +258,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 		}),
 	});
 
-	const stripeSubscription = await createStripeSubscription({
+	await createStripeSubscription({
 		ctx,
 		customerId,
 		subscriptionItems: [
@@ -293,11 +267,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 		],
 	});
 
-	await runSubscriptionCreatedAutoSync({
-		ctx,
-		customerId,
-		stripeSubscription,
-	});
+	await waitForWebhookToProcess();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: pro.id });
@@ -316,7 +286,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 	});
 });
 
-test(`${chalk.yellowBright("customer.subscription.created auto-sync paid features: skips allocated prices cleanly")}`, async () => {
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync paid features: skips allocated prices cleanly")}`, async () => {
 	const ctx = await getStripeSandboxContext();
 	const customerId = `sub-created-auto-sync-allocated-skip-${testRunId}`;
 
@@ -349,17 +319,13 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 		}),
 	});
 
-	const stripeSubscription = await createStripeSubscription({
+	await createStripeSubscription({
 		ctx,
 		customerId,
 		subscriptionItems: [{ price: messagesStripePriceId, quantity: 1 }],
 	});
 
-	await runSubscriptionCreatedAutoSync({
-		ctx,
-		customerId,
-		stripeSubscription,
-	});
+	await waitForWebhookToProcess();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: pro.id });
@@ -371,7 +337,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 	});
 });
 
-test(`${chalk.yellowBright("customer.subscription.created auto-sync paid features: ignores extra unmapped Stripe items")}`, async () => {
+test.concurrent(`${chalk.yellowBright("customer.subscription.created auto-sync paid features: ignores extra unmapped Stripe items")}`, async () => {
 	const ctx = await getStripeSandboxContext();
 	const customerId = `sub-created-auto-sync-extra-stripe-item-${testRunId}`;
 
@@ -406,7 +372,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 		name: "Sub Created Auto Sync Extra Item",
 	});
 
-	const stripeSubscription = await createStripeSubscription({
+	await createStripeSubscription({
 		ctx,
 		customerId,
 		subscriptionItems: [
@@ -422,11 +388,7 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync paid feature
 		],
 	});
 
-	await runSubscriptionCreatedAutoSync({
-		ctx,
-		customerId,
-		stripeSubscription,
-	});
+	await waitForWebhookToProcess();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	await expectProductActive({ customer, productId: pro.id });
