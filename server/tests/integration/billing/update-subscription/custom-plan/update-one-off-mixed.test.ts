@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { type ApiCustomerV3, FreeTrialDuration } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -7,7 +7,6 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import { FreeTrialDuration } from "autumn-js";
 import chalk from "chalk";
 
 // ═══════════════════════════════════════════════════════════════════════════════

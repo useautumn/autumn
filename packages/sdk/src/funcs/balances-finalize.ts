@@ -152,6 +152,7 @@ async function $do(
     | SDKValidationError
   >(
     M.json(200, models.FinalizeLockResponse$inboundSchema),
+    M.json(202, models.FinalizeLockResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

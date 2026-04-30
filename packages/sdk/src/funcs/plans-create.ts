@@ -103,6 +103,7 @@ import { Result } from "../types/fp.js";
  * @param price - Base recurring price for the plan. Omit for free or usage-only plans. (optional)
  * @param items - Feature configurations for this plan. Each item defines included units, pricing, and reset behavior. (optional)
  * @param freeTrial - Free trial configuration. Customers can try this plan before being charged. (optional)
+ * @param config - Miscellaneous plan-level configuration flags. (optional)
  *
  * @returns The created plan object.
  */

@@ -78,6 +78,17 @@ export function BalanceEditSheet() {
 			cp.price.entitlement_id === selectedCusEnt.entitlement.id,
 	);
 
+	const derivedEntity = customer?.entities?.find((e: Entity) => {
+		if (selectedCusEnt.internal_entity_id)
+			return e.internal_id === selectedCusEnt.internal_entity_id;
+		return (
+			e.internal_id === cusProduct?.internal_entity_id ||
+			e.id === cusProduct?.entity_id
+		);
+	});
+	const effectiveEntityId =
+		entityId ?? derivedEntity?.id ?? derivedEntity?.internal_id ?? null;
+
 	return (
 		<div className="flex flex-col h-full">
 			<SheetHeader
@@ -92,15 +103,15 @@ export function BalanceEditSheet() {
 
 			{isUnlimited ? (
 				<UnlimitedBalanceInfo
-					customer={customer}
+					entity={derivedEntity}
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
 				/>
 			) : (
 				<BalanceEditForm
 					selectedCusEnt={selectedCusEnt}
-					entityId={entityId}
-					customer={customer}
+					entity={derivedEntity}
+					entityId={effectiveEntityId}
 					cusProduct={cusProduct}
 					cusPrice={cusPrice}
 					featureId={featureId}
@@ -113,11 +124,11 @@ export function BalanceEditSheet() {
 /* ─── Unlimited Info (no form needed) ─── */
 
 function UnlimitedBalanceInfo({
-	customer,
+	entity,
 	selectedCusEnt,
 	cusProduct,
 }: {
-	customer: any;
+	entity: Entity | undefined;
 	selectedCusEnt: FullCustomerEntitlement;
 	cusProduct: FullCusProduct | undefined;
 }) {
@@ -125,7 +136,7 @@ function UnlimitedBalanceInfo({
 		<div className="flex-1 overflow-y-auto">
 			<SheetSection withSeparator={false}>
 				<EntitlementInfoRows
-					customer={customer}
+					entity={entity}
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
 					isUnlimited
@@ -140,19 +151,20 @@ function UnlimitedBalanceInfo({
 
 function BalanceEditForm({
 	selectedCusEnt,
+	entity,
 	entityId,
-	customer,
 	cusProduct,
 	cusPrice,
 	featureId,
 }: {
 	selectedCusEnt: FullCustomerEntitlement;
+	entity: Entity | undefined;
 	entityId: string | null;
-	customer: any;
 	cusProduct: FullCusProduct | undefined;
 	cusPrice: FullCustomerPrice | undefined;
 	featureId: string;
 }) {
+	const { customer } = useCusQuery();
 	const form = useBalanceEditForm({
 		selectedCusEnt,
 		entityId,
@@ -162,7 +174,7 @@ function BalanceEditForm({
 		<div className="flex-1 overflow-y-auto">
 			<SheetSection withSeparator>
 				<EntitlementInfoRows
-					customer={customer}
+					entity={entity}
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
 					isUnlimited={false}
@@ -249,26 +261,16 @@ function RolloversSection({
 /* ─── Entitlement Info Rows ─── */
 
 function EntitlementInfoRows({
-	customer,
+	entity,
 	selectedCusEnt,
 	cusProduct,
 	isUnlimited,
 }: {
-	customer: any;
+	entity: Entity | undefined;
 	selectedCusEnt: FullCustomerEntitlement;
 	cusProduct: FullCusProduct | undefined;
 	isUnlimited: boolean;
 }) {
-	const entity = customer?.entities?.find((e: Entity) => {
-		if (selectedCusEnt.internal_entity_id) {
-			return e.internal_id === selectedCusEnt.internal_entity_id;
-		}
-		return (
-			e.internal_id === cusProduct?.internal_entity_id ||
-			e.id === cusProduct?.entity_id
-		);
-	});
-
 	return (
 		<div className="flex flex-col gap-2 rounded-lg">
 			{selectedCusEnt.external_id && (

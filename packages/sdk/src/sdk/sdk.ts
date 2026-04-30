@@ -89,7 +89,7 @@ export class Autumn extends ClientSDK {
    * @param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
    * @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
    *
-   * @returns Whether access is allowed, plus the current balance for that feature.
+   * @returns Whether access is allowed, plus the current balance for that feature. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 and allow access fail-open.
    */
   async check(
     request: models.CheckParams,
@@ -126,7 +126,7 @@ export class Autumn extends ClientSDK {
    * @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
    * @param properties - Additional properties to attach to this usage event. (optional)
    *
-   * @returns The usage value recorded, with either a single updated balance or a map of updated balances.
+   * @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
    */
   async track(
     request: models.TrackParams,

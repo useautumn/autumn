@@ -64,7 +64,7 @@ export const lazyResetSubjectEntitlements = async ({
 
 	const allCustomerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
-		inStatuses: [CusProductStatus.Active],
+		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
 
 	const customerEntitlementsNeedingReset = getResettableCustomerEntitlements({

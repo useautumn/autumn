@@ -36,9 +36,6 @@ export const applyExistingRollovers = ({
 				id: generateId("roll"),
 				cus_ent_id: targetCusEnt.id,
 			});
-			console.log(
-				`Added rollover with balance ${existingRollover.balance} to new cus ent: ${targetCusEnt.id}-${targetCusEnt.entitlement.feature.name}`,
-			);
 		} else continue;
 	}
 };

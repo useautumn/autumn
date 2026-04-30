@@ -6,6 +6,7 @@ import type { BillingContext } from "@autumn/shared";
 import {
 	addCusProductToCusEnt,
 	cusPriceToCusEnt,
+	customerProductToEntity,
 	type FullCusProduct,
 	fixedPriceToLineItem,
 	isConsumablePrice,
@@ -54,6 +55,10 @@ export const customerProductToLineItems = ({
 	});
 
 	const lineItems: LineItem[] = [];
+	const entity = customerProductToEntity({
+		customerProduct,
+		entities: billingContext.fullCustomer.entities,
+	});
 
 	let filteredCustomerPrices = customerProduct.customer_prices;
 	if (priceFilters?.excludeOneOffPrices) {
@@ -101,6 +106,7 @@ export const customerProductToLineItems = ({
 			billingTiming: "in_advance",
 			now: effectiveNow,
 			currency: orgToCurrency({ org: ctx.org }),
+			entity,
 			customerProduct,
 			customerPrice: cusPrice,
 		};
