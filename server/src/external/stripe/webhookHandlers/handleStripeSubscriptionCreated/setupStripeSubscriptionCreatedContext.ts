@@ -22,20 +22,19 @@ export const setupStripeSubscriptionCreatedContext = async ({
 	if (!fullCustomer) return undefined;
 
 	// Skip if Autumn already linked this sub (e.g. created via attach flow).
-	const alreadyLinked = fullCustomer.customer_products?.some((customerProduct) =>
-		customerProduct.subscription_ids?.includes(stripeObject.id),
+	const alreadyLinked = fullCustomer.customer_products?.some(
+		(customerProduct) =>
+			customerProduct.subscription_ids?.includes(stripeObject.id),
 	);
 	if (alreadyLinked) return undefined;
+
+	// Race guard: webhook can arrive before attach writes `subscription_ids`.
+	if (stripeObject.metadata?.autumn_managed === "true") return undefined;
 
 	const [subscription, candidateProducts] = await Promise.all([
 		getFullStripeSub({ stripeCli, stripeId: stripeObject.id }),
 		ProductService.listFull({ db, orgId: org.id, env }),
 	]);
-
-	// Skip subs Autumn created itself — guards against the race where the
-	// attach flow has not yet written `subscription_ids` on the customerProduct
-	// when sub.created arrives.
-	if (subscription.metadata?.autumn_managed === "true") return undefined;
 
 	return { subscription, fullCustomer, candidateProducts };
 };
