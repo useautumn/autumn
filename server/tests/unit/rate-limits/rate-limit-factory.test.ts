@@ -10,12 +10,20 @@ mock.module("@/external/redis/initRedis", () => ({
 	shouldUseRedis: () => mockState.shouldUseRedis,
 }));
 
-mock.module("@/external/logtail/logtailUtils.js", () => ({
-	logger: {
-		warn: (message: string) => {
-			mockState.warnings.push(message);
-		},
+// Stub the full `Logger` shape — Bun's `mock.module` is process-wide, so
+// later unit tests inherit this stub. Missing methods crash unrelated code.
+const mockLogger = {
+	debug: () => undefined,
+	info: () => undefined,
+	warn: (message: string) => {
+		mockState.warnings.push(message);
 	},
+	error: () => undefined,
+	child: () => mockLogger,
+};
+
+mock.module("@/external/logtail/logtailUtils.js", () => ({
+	logger: mockLogger,
 }));
 
 import { rateLimitFactory } from "@/internal/misc/rateLimiter/rateLimitFactory.js";
