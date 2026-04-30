@@ -1,6 +1,6 @@
 import { expect } from "bun:test";
 import { type FullCusProduct, ms } from "@autumn/shared";
-import { addMonths } from "date-fns";
+import { addMonths, getUnixTime } from "date-fns";
 import type Stripe from "stripe";
 import { handleSubCreated } from "@/external/stripe/webhookHandlers/handleSubCreated";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
@@ -65,14 +65,19 @@ export const triggerSubscriptionCreated = async ({
 	ctx,
 	stripeSubId,
 	scheduleId,
+	subscriptionCreatedAtMs,
+	fullCustomer,
 }: {
 	ctx: TestContext;
 	stripeSubId: string;
 	scheduleId?: string | null;
+	subscriptionCreatedAtMs?: number;
+	fullCustomer?: StripeWebhookContext["fullCustomer"];
 }) => {
 	const subscription = {
 		id: stripeSubId,
 		object: "subscription",
+		created: getUnixTime(subscriptionCreatedAtMs ?? Date.now()),
 		schedule: scheduleId ?? null,
 	} as Stripe.Subscription;
 	const retrieveSubscription: Stripe.SubscriptionsResource["retrieve"] = async () =>
@@ -90,7 +95,7 @@ export const triggerSubscriptionCreated = async ({
 		id: `evt_${stripeSubId}`,
 		object: "event",
 		api_version: null,
-		created: Math.floor(Date.now() / 1000),
+		created: getUnixTime(Date.now()),
 		data: {
 			object: subscription,
 		},
@@ -103,6 +108,7 @@ export const triggerSubscriptionCreated = async ({
 	await handleSubCreated({
 		ctx: {
 			...ctx,
+			fullCustomer,
 			stripeCli,
 			stripeEvent,
 		} satisfies StripeWebhookContext,
