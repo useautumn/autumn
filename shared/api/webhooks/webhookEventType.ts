@@ -4,6 +4,7 @@ export enum WebhookEventType {
 
 	BalancesUsageAlertTriggered = "balances.usage_alert_triggered",
 	BalancesLimitReached = "balances.limit_reached",
+	BalancesAutoTopupSucceeded = "balances.auto_topup_succeeded",
 
 	VercelResourcesDeleted = "vercel.resources.deleted",
 	VercelResourcesProvisioned = "vercel.resources.provisioned",
