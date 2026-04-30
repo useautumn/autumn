@@ -37,7 +37,7 @@ export const createSubOrgTestContext = async ({
 }): Promise<TestContext> => {
 	const { db } = initDrizzle();
 
-	// 1. Resolve sub-org from DB.
+	// 1. Resolve sub-org.
 	let subOrg = await OrgService.getBySlug({ db, slug: subOrgSlug });
 	if (!subOrg) {
 		throw new Error(
@@ -46,9 +46,8 @@ export const createSubOrgTestContext = async ({
 		);
 	}
 
-	// 2. Apply config overrides (if any).
-	// OrgService.update replaces the whole `config` jsonb (it does
-	// `db.update(organizations).set(updates)`), so we merge in JS first.
+	// 2. Apply config overrides. OrgService.update replaces the whole
+	// `config` jsonb, so we merge in JS first.
 	if (configOverrides && Object.keys(configOverrides).length > 0) {
 		const existingConfig = (subOrg.config ?? {}) as OrgConfig;
 		const mergedConfig: OrgConfig = {
@@ -62,7 +61,7 @@ export const createSubOrgTestContext = async ({
 			updates: { config: mergedConfig },
 		});
 
-		// Re-fetch so the returned context has the merged config.
+		// Re-fetch with merged config.
 		const refetched = await OrgService.getBySlug({ db, slug: subOrgSlug });
 		if (!refetched) {
 			throw new Error(
@@ -72,20 +71,17 @@ export const createSubOrgTestContext = async ({
 		subOrg = refetched;
 	}
 
-	// 3. Build Stripe client scoped to sub-org's connect account.
+	// 3. Stripe client scoped to the sub-org's connect account.
 	const subStripeCli = createStripeCli({ org: subOrg, env: AppEnv.Sandbox });
 
-	// 4. Register Stripe Tax jurisdictions (if any).
-	//    Stripe requires a head office address on the merchant's Tax Settings
-	//    BEFORE any tax.registrations.create call. Test sub-orgs are fresh
-	//    Connect accounts with no settings, so we set a default US head office
-	//    once before iterating registrations.
+	// 4. Stripe Tax jurisdictions. Stripe requires a head office address
+	// on Tax Settings before any tax.registrations.create.
 	if (taxRegistrations && taxRegistrations.length > 0) {
 		try {
 			await subStripeCli.tax.settings.update({
 				defaults: {
 					tax_behavior: "exclusive",
-					tax_code: "txcd_10000000", // General services
+					tax_code: "txcd_10000000",
 				},
 				head_office: {
 					address: {
@@ -126,9 +122,8 @@ export const createSubOrgTestContext = async ({
 						active_from: "now",
 					});
 				} else if (country === "US") {
-					// California state sales tax. Note SaaS / digital services are
-					// often NOT taxable in CA, so a CA customer may still see $0
-					// tax on a recurring subscription invoice — by design.
+					// CA state sales tax. SaaS often isn't taxable in CA, so $0
+					// tax on the resulting invoice is expected.
 					await subStripeCli.tax.registrations.create({
 						country: "US",
 						country_options: {
@@ -137,14 +132,12 @@ export const createSubOrgTestContext = async ({
 						active_from: "now",
 					});
 				} else if (country === "CA") {
-					// Federal GST/HST simplified registration (covers all CA provinces).
 					await subStripeCli.tax.registrations.create({
 						country: "CA",
 						country_options: { ca: { type: "simplified" } },
 						active_from: "now",
 					});
 				} else if (country === "DE") {
-					// EU standard VAT for Germany.
 					await subStripeCli.tax.registrations.create({
 						country: "DE",
 						country_options: {
@@ -156,7 +149,6 @@ export const createSubOrgTestContext = async ({
 						active_from: "now",
 					});
 				} else if (country === "FR") {
-					// EU standard VAT for France.
 					await subStripeCli.tax.registrations.create({
 						country: "FR",
 						country_options: {
@@ -168,14 +160,12 @@ export const createSubOrgTestContext = async ({
 						active_from: "now",
 					});
 				} else if (country === "SA") {
-					// Saudi Arabia simplified VAT.
 					await subStripeCli.tax.registrations.create({
 						country: "SA",
 						country_options: { sa: { type: "simplified" } },
 						active_from: "now",
 					});
 				} else if (country === "RU") {
-					// Russia simplified VAT.
 					await subStripeCli.tax.registrations.create({
 						country: "RU",
 						country_options: { ru: { type: "simplified" } },
@@ -183,8 +173,8 @@ export const createSubOrgTestContext = async ({
 					});
 				}
 			} catch (err) {
-				// Idempotency: if a registration already exists, Stripe throws.
-				// Log and continue so a retried test setup doesn't fail.
+				// Tolerate already-registered (Stripe throws); retried setups
+				// shouldn't fail.
 				const stripeErr = err as {
 					message?: string;
 					code?: string;
@@ -200,14 +190,14 @@ export const createSubOrgTestContext = async ({
 		}
 	}
 
-	// 5. Build features list for the sub-org.
+	// 5. Sub-org features.
 	const features = await FeatureService.list({
 		db,
 		orgId: subOrg.id,
 		env: AppEnv.Sandbox,
 	});
 
-	// 6. Return a TestContext matching createTestContext.ts's return shape exactly.
+	// 6. TestContext with sub-org rebinding (matches createTestContext shape).
 	return {
 		org: subOrg,
 		env: AppEnv.Sandbox,

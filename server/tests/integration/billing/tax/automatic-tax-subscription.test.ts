@@ -1,22 +1,6 @@
 /**
- * TDD test for `automatic_tax` on recurring subscriptions (Cycles 3 + 4).
- *
- * Exercises BOTH attach paths concurrently:
- *  - v1 legacy `/v1/attach` via `s.attach(...)` → createStripeSub2
- *  - v2 `/v1/billing.attach` via `s.billing.attach(...)` → executeStripeSubscriptionOperation
- *
- * Red-failure mode (current behavior, pre-fix):
- *  - Both paths' `subscriptions.create` calls omit `automatic_tax: { enabled: true }`.
- *  - Result: subscription.automatic_tax.enabled is false, latest invoice
- *    total stays at the pre-tax base amount.
- *
- * Green-success criteria (after fix):
- *  - Both paths pass `automatic_tax: { enabled: true }` when org config is on.
- *  - Subscription.automatic_tax.enabled === true on both.
- *  - Latest invoice total = base price + 10% AU GST.
- *
- * Pro product is auto-priced at $20/mo by `constructProduct`. Expected total
- * with AU GST: $22.00 = 2200 cents.
+ * `automatic_tax` on recurring subs, both v1 (createStripeSub2) and v2
+ * (executeStripeSubscriptionOperation). Pro is $20/mo + 10% AU GST = $22 (2200 cents).
  */
 
 import { expect, test } from "bun:test";

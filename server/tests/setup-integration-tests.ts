@@ -27,35 +27,16 @@ const loadInfisicalSecrets = async () => {
 };
 
 /**
- * Bun test preload script — runs ONCE per `bun test` invocation, BEFORE any
- * test file evaluates.
+ * Bun test preload — runs once per `bun test` before any test file evaluates.
+ * Loads env vars and eagerly creates the master-org `TestContext`, stashing
+ * it on `globalThis.__autumnTestContext`. `createTestContext.ts`'s default
+ * export is a Proxy that reads the stash lazily, sidestepping import-order
+ * races and top-level-await TDZ.
  *
- * Loads environment variables AND eagerly initializes the master-org
- * `TestContext` once, stashing it on `globalThis.__autumnTestContext`.
- * `createTestContext.ts`'s default export is a Proxy that reads this stash
- * lazily on property access — by deferring the lookup until first read,
- * we eliminate both the top-level-await TDZ and the import-order race
- * (the preload imports `createTestContext` to call its function, which
- * would normally evaluate the module BEFORE the preload populated the
- * stash; the Proxy makes that order irrelevant).
- *
- * Why we always run integration setup (no unit-vs-integration branch):
- *
- *  - When `bun test` is invoked with multiple paths, `process.argv` only
- *    contains the FIRST one — bun strips the rest before invoking the
- *    preload. Conditioning on argv is unreliable: a unit test listed
- *    first would skip the setup that the subsequent integration tests
- *    need, and they would fail with `defaultCtx is not initialized`.
- *
- *  - The createTestContext call is wrapped in try/catch so pure-unit
- *    environments (e.g. CI lanes that don't set TESTS_ORG) still complete
- *    the preload cleanly. Unit tests don't read the default ctx anyway,
- *    so a missing stash is fine for them.
- *
- *  - Cost for unit-only runs: ~1-2s (DB fetch + Stripe client init). The
- *    `bun t` test dispatcher (`scripts/testScripts/testDispatcher.ts`)
- *    already separates unit and integration runs in practice, so this
- *    overhead only hits direct-bun-test mixed runs.
+ * `createTestContext` is wrapped in try/catch so pure-unit lanes (no
+ * TESTS_ORG) still preload cleanly — unit tests don't read the default ctx.
+ * argv-based unit/integration branching isn't reliable (bun only passes the
+ * first path).
  */
 
 declare global {

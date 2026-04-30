@@ -230,10 +230,7 @@ type ConfigFn = (config: ScenarioConfig) => ScenarioConfig;
 // HELPER FUNCTIONS
 // ═══════════════════════════════════════════════════════════════════
 
-/**
- * Generate entity definitions from count and featureId.
- * Creates entities with ids "ent-1", "ent-2", etc.
- */
+/** Builds entities with ids "ent-1", "ent-2", etc. */
 const generateEntities = (config: EntityConfig): GeneratedEntity[] => {
 	return Array.from({ length: config.count }, (_, i) => ({
 		id: `ent-${i + 1}`,
@@ -247,22 +244,10 @@ const generateEntities = (config: EntityConfig): GeneratedEntity[] => {
 // ═══════════════════════════════════════════════════════════════════
 
 /**
- * Configure customer options: test clock, payment method, customer data, and default product.
- * @param testClock - Enable Stripe test clock for time manipulation (default: true)
- * @param paymentMethod - Attach payment method: "success", "fail", or "authenticate"
- * @param data - Customer metadata (fingerprint, name, email, etc.)
- * @param withDefault - Attach the default product on creation (default: false)
- * @param defaultGroup - The product group to use for default product selection
- * @param skipWebhooks - Skip sending webhooks for this customer creation (default: undefined, uses server default)
- * @param send_email_receipts - Whether to send email receipts to the customer
- * @param name - Override customer name (pass null for no name, undefined to use default)
- * @param email - Override customer email (pass null for no email, undefined to use default)
+ * Configure customer options: test clock, payment method, data, default product.
+ * Pass `name: null` / `email: null` for a nameless / emailless customer.
  * @example s.customer({ paymentMethod: "success" })
- * @example s.customer({ paymentMethod: "success", data: { name: "Test" } })
  * @example s.customer({ withDefault: true, defaultGroup: "enterprise" })
- * @example s.customer({ withDefault: true, skipWebhooks: false }) // Enable webhooks for testing
- * @example s.customer({ paymentMethod: "success", send_email_receipts: true })
- * @example s.customer({ name: null, email: null }) // Customer with no name or email
  */
 const customer = ({
 	testClock = true,
@@ -304,14 +289,9 @@ const customer = ({
 };
 
 /**
- * Define products to create for this test scenario.
- * Products are prefixed with customerId for test isolation.
- * @param list - Array of ProductV2 objects
- * @param prefix - Optional custom prefix for product IDs (defaults to customerId or "shared")
- * @param customerIdsToDelete - Array of customer IDs to delete before creating products
+ * Products for this scenario. Auto-prefixed with customerId for isolation.
  * @example s.products({ list: [pro, free] })
- * @example s.products({ list: [freeDefault], prefix: "my-prefix" }) // custom prefix when no customerId
- * @example s.products({ list: [pro, free], customerIdsToDelete: [customerId] })
+ * @example s.products({ list: [freeDefault], prefix: "my-prefix" })
  */
 const products = ({
 	list,
@@ -331,13 +311,8 @@ const products = ({
 };
 
 /**
- * Define entities to create for this test scenario.
- * Entities are auto-generated with ids "ent-1", "ent-2", etc.
- * @param count - Number of entities to create
- * @param featureId - Feature ID for all entities (e.g., TestFeature.Users)
- * @param defaultGroup - Optional default_group passed via customer_data.internal_options
+ * Auto-generates entities with ids "ent-1", "ent-2", etc.
  * @example s.entities({ count: 2, featureId: TestFeature.Users })
- * @example s.entities({ count: 1, featureId: TestFeature.Users, defaultGroup: "my-customer" })
  */
 const entities = ({
 	count,
@@ -355,10 +330,7 @@ const entities = ({
 };
 
 /**
- * Define additional customers for this test scenario.
- * Useful for referral tests where you need a referrer and redeemer.
- * Other customers share the same test clock as the primary customer.
- * @param customers - Array of customer configurations
+ * Additional customers (e.g. referrer/redeemer). Share the primary's test clock.
  * @example s.otherCustomers([{ id: "redeemer", paymentMethod: "success" }])
  */
 const otherCustomers = (customers: OtherCustomerConfig[]): ConfigFn => {
@@ -366,11 +338,8 @@ const otherCustomers = (customers: OtherCustomerConfig[]): ConfigFn => {
 };
 
 /**
- * Define a referral program for this test scenario.
- * IDs are auto-suffixed with the product prefix for test isolation.
- * @param reward - The reward configuration
- * @param program - The referral program configuration
- * @example s.referralProgram({ reward: rewards.monthOff(), program: referralPrograms.onCheckoutReferrer({ ... }) })
+ * Referral program. IDs auto-suffixed with productPrefix for isolation.
+ * @example s.referralProgram({ reward: rewards.monthOff(), program: referralPrograms.onCheckoutReferrer({...}) })
  */
 const referralProgramSetup = ({
 	reward,
@@ -383,10 +352,7 @@ const referralProgramSetup = ({
 };
 
 /**
- * Define a reward/coupon for this test scenario.
- * Reward ID is auto-suffixed with the product prefix for test isolation.
- * @param reward - The reward configuration (from constructCoupon)
- * @param productId - The product ID to apply this reward to
+ * Reward/coupon. Reward ID auto-suffixed with productPrefix.
  * @example s.reward({ reward: constructCoupon({ id: "50-off", discountValue: 50, ... }), productId: "pro" })
  */
 const rewardSetup = ({
@@ -403,22 +369,10 @@ const rewardSetup = ({
 };
 
 /**
- * Attach a product to the customer or a specific entity.
- * Product ID is auto-prefixed with customerId.
- * Actions are executed in the order they appear in the actions array.
- * @param productId - The product ID (without prefix)
- * @param customerId - Optional: use this customer instead of primary (from otherCustomers)
- * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
- * @param options - Optional feature options (e.g., prepaid quantity)
- * @param newBillingSubscription - Create a separate Stripe subscription for this product
- * @param timeout - Optional timeout in milliseconds for the attach request
- * @example s.attach({ productId: "pro" }) // customer-level
- * @example s.attach({ productId: "pro", customerId: "redeemer" }) // attach to other customer
- * @example s.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity (ent-1)
- * @example s.attach({ productId: "free", entityIndex: 1 }) // attach to second entity (ent-2)
+ * Attach a product to the customer or an entity. Product ID auto-prefixed.
+ * @example s.attach({ productId: "pro" })
+ * @example s.attach({ productId: "pro", entityIndex: 0 })
  * @example s.attach({ productId: "pro", options: [{ feature_id: "messages", quantity: 100 }] })
- * @example s.attach({ productId: "addon", newBillingSubscription: true }) // separate subscription
- * @example s.attach({ productId: "pro", timeout: 5000 }) // with timeout
  */
 const attach = ({
 	productId,
@@ -455,12 +409,9 @@ const attach = ({
 };
 
 /**
- * Cancel a product subscription for the customer or a specific entity.
- * Actions are executed in the order they appear in the actions array.
- * @param productId - The product ID (without prefix)
- * @param entityIndex - Optional entity index (0-based) to cancel for (omit for customer-level)
- * @example s.cancel({ productId: "pro" }) // customer-level
- * @example s.cancel({ productId: "pro", entityIndex: 0 }) // cancel for first entity
+ * Cancel a product subscription for the customer or an entity.
+ * @example s.cancel({ productId: "pro" })
+ * @example s.cancel({ productId: "pro", entityIndex: 0 })
  */
 const cancel = ({
 	productId,
@@ -479,25 +430,10 @@ const cancel = ({
 };
 
 /**
- * Advance the Stripe test clock.
- * Actions are executed in the order they appear in the actions array.
- * Multiple advanceTestClock calls are executed sequentially, each starting from where the previous one ended.
- * @param days - Number of days to advance
- * @param weeks - Number of weeks to advance
- * @param hours - Number of hours to advance
- * @param months - Number of months to advance
- * @param toNextInvoice - Advance to next billing cycle + invoice finalization time
- * @param waitForSeconds - Wait for Stripe webhooks to process after advancing
- * @example s.advanceTestClock({ days: 15 }) // advance 15 days
- * @example s.advanceTestClock({ months: 1 }) // advance 1 month
- * @example s.advanceTestClock({ toNextInvoice: true }) // advance to next invoice
- * @example s.advanceTestClock({ days: 8, waitForSeconds: 30 }) // advance 8 days, wait 30s for webhooks
- * @example
- * // Interleaved actions:
- * s.attach({ productId: "pro" }),
- * s.advanceTestClock({ days: 7 }),
- * s.cancel({ productId: "pro" }),
- * s.advanceTestClock({ days: 3 }),
+ * Advance the Stripe test clock. Successive calls chain from the previous endpoint.
+ * @example s.advanceTestClock({ days: 15 })
+ * @example s.advanceTestClock({ toNextInvoice: true })
+ * @example s.advanceTestClock({ days: 8, waitForSeconds: 30 })
  */
 const advanceTestClock = ({
 	days,
@@ -532,11 +468,8 @@ const advanceTestClock = ({
 };
 
 /**
- * Attach or replace a payment method for the customer.
- * Useful for testing payment failures or 3DS authentication flows mid-scenario.
- * @param type - Payment method type: "success", "fail", or "authenticate"
- * @example s.attachPaymentMethod({ type: "authenticate" }) // attach 3DS-required card
- * @example s.attachPaymentMethod({ type: "fail" }) // attach card that will fail
+ * Attach/replace the customer's payment method. Useful for mid-scenario PM swaps.
+ * @example s.attachPaymentMethod({ type: "authenticate" })
  */
 const attachPaymentMethod = ({
 	type,
@@ -555,11 +488,7 @@ const attachPaymentMethod = ({
 	});
 };
 
-/**
- * Remove all payment methods from the customer.
- * Useful for testing "no payment method" scenarios.
- * @example s.removePaymentMethod()
- */
+/** Remove all of the customer's payment methods. */
 const removePaymentMethod = (): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -573,14 +502,9 @@ const removePaymentMethod = (): ConfigFn => {
 };
 
 /**
- * Track usage for a feature on the customer or a specific entity.
- * @param featureId - The feature ID to track usage for
- * @param value - The usage value to track
- * @param entityIndex - Optional entity index (0-based) to track for (omit for customer-level)
- * @param timeout - Optional timeout in milliseconds to wait after tracking (for sync)
- * @example s.track({ featureId: TestFeature.Messages, value: 300 }) // customer-level
- * @example s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 }) // entity-level
- * @example s.track({ featureId: TestFeature.Messages, value: 300, timeout: 2000 }) // with timeout
+ * Track feature usage for the customer or an entity.
+ * @example s.track({ featureId: TestFeature.Messages, value: 300 })
+ * @example s.track({ featureId: TestFeature.Messages, value: 250, entityIndex: 0 })
  */
 const track = ({
 	featureId,
@@ -609,14 +533,9 @@ const track = ({
 };
 
 /**
- * Update a subscription (e.g., cancel end of cycle, add items).
- * @param productId - The product ID (without prefix)
- * @param entityIndex - Optional entity index (0-based) for entity-level subscription
- * @param cancelAction - Cancel action: "cancel_end_of_cycle", "cancel_immediately", or "uncancel"
- * @param items - Optional items to add/update on the subscription
- * @example s.updateSubscription({ productId: "pro", cancelAction: "cancel_end_of_cycle" }) // customer-level
- * @example s.updateSubscription({ productId: "pro", entityIndex: 0, cancelAction: "cancel_end_of_cycle" }) // entity-level
- * @example s.updateSubscription({ productId: "pro", items: [consumableItem] }) // add items
+ * Update a subscription (cancel end-of-cycle, add items, etc.).
+ * @example s.updateSubscription({ productId: "pro", cancelAction: "cancel_end_of_cycle" })
+ * @example s.updateSubscription({ productId: "pro", items: [consumableItem] })
  */
 const updateSubscription = ({
 	productId,
@@ -645,10 +564,8 @@ const updateSubscription = ({
 };
 
 /**
- * Advance the test clock to the next invoice cycle.
- * @param withPause - If true, advances in two steps (to month boundary, then to finalize)
- * @example s.advanceToNextInvoice()
- * @example s.advanceToNextInvoice({ withPause: true })
+ * Advance the test clock to the next invoice cycle. `withPause` advances in
+ * two steps (month boundary, then finalize).
  */
 const advanceToNextInvoice = ({
 	withPause,
@@ -668,12 +585,8 @@ const advanceToNextInvoice = ({
 };
 
 /**
- * Reset a feature's usage cycle to simulate end-of-cycle rollover creation.
- * Use this for FREE products (no Stripe subscription) to create rollovers.
- * For PAID products, use s.advanceToNextInvoice() instead.
- *
- * @param featureId - The feature ID to reset
- * @param timeout - Optional timeout in milliseconds to wait after reset (default: 2000)
+ * Reset a feature's usage cycle. Use for FREE products (no Stripe sub);
+ * use s.advanceToNextInvoice() for PAID products.
  * @example s.resetFeature({ featureId: TestFeature.Messages })
  */
 const resetFeature = ({
@@ -697,10 +610,7 @@ const resetFeature = ({
 };
 
 /**
- * Delete a customer before the test runs.
- * Uses API to clear cache. Silently ignores if customer doesn't exist.
- * @param customerId - Delete by customer ID
- * @param email - Delete all customers with this email
+ * Delete a customer before the test runs (silent if missing). Clears cache via API.
  * @example s.deleteCustomer({ customerId: "test-customer" })
  * @example s.deleteCustomer({ email: "test@example.com" })
  */
@@ -731,26 +641,11 @@ const deleteCustomer = (
 };
 
 /**
- * Attach a product using the NEW billing/attach V2 endpoint.
- * Product ID is auto-prefixed with customerId.
- *
- * NOTE: Add-on is defined at product level using `products.recurringAddOn()` or
- * `products.base({ isAddOn: true })`, NOT in the attach params.
- *
- * @param productId - The product ID (without prefix)
- * @param customerId - Optional: use this customer instead of primary (from otherCustomers)
- * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
- * @param options - Optional feature options (e.g., prepaid quantity)
- * @param newBillingSubscription - Create a separate Stripe subscription for this product
- * @param planSchedule - Override plan timing: "immediate" or "end_of_cycle"
- * @param timeout - Optional timeout in milliseconds for the attach request
- * @param items - Custom product items (creates is_custom customer product)
- * @param subscriptionId - Optional custom subscription ID for this attachment
- * @example s.billing.attach({ productId: "pro" }) // customer-level
- * @example s.billing.attach({ productId: "pro", customerId: "redeemer" }) // attach to other customer
- * @example s.billing.attach({ productId: "pro", entityIndex: 0 }) // attach to first entity
- * @example s.billing.attach({ productId: "pro", planSchedule: "end_of_cycle" }) // scheduled upgrade
- * @example s.billing.attach({ productId: "pro", items: [items.monthlyMessages({ includedUsage: 750 })] }) // custom plan
+ * Attach a product via /v1/billing.attach (V2). Product ID auto-prefixed.
+ * Add-on lives on the product (`products.recurringAddOn()`), not here.
+ * @example s.billing.attach({ productId: "pro" })
+ * @example s.billing.attach({ productId: "pro", planSchedule: "end_of_cycle" })
+ * @example s.billing.attach({ productId: "pro", items: [items.monthlyMessages({ includedUsage: 750 })] })
  */
 const billingAttach = ({
 	productId,
@@ -805,13 +700,8 @@ const billingAttach = ({
 };
 
 /**
- * Multi-attach multiple plans to a customer or entity via /billing.multi_attach.
- * @param plans - Array of plans to attach, each with productId and optional featureQuantities/version
- * @param entityIndex - Optional entity index (0-based) to attach to (omit for customer-level)
- * @param freeTrial - Optional free trial config applied to all plans
- * @param timeout - Optional timeout in milliseconds
+ * Multi-attach via /billing.multi_attach.
  * @example s.billing.multiAttach({ plans: [{ productId: "pro" }, { productId: "addon" }] })
- * @example s.billing.multiAttach({ plans: [{ productId: "pro" }], entityIndex: 0 })
  */
 const billingMultiAttach = ({
 	plans,
@@ -841,20 +731,14 @@ const billingMultiAttach = ({
 	});
 };
 
-/**
- * Alias for billing multi-attach to keep the short, top-level scenario-builder API consistent.
- */
+/** Top-level alias for billing multi-attach. */
 const multiAttach = billingMultiAttach;
 
 // ═══════════════════════════════════════════════════════════════════
 // REFERRAL ACTIONS
 // ═══════════════════════════════════════════════════════════════════
 
-/**
- * Create a referral code for the primary customer.
- * Requires s.referralProgram() to be configured.
- * @example s.referral.createCode()
- */
+/** Create a referral code (requires s.referralProgram()). */
 const createReferralCode = (): ConfigFn => {
 	return (config) => ({
 		...config,
@@ -862,12 +746,7 @@ const createReferralCode = (): ConfigFn => {
 	});
 };
 
-/**
- * Redeem the created referral code for a customer.
- * Requires s.referral.createCode() to be called first.
- * @param customerId - The customer ID to redeem for (from otherCustomers)
- * @example s.referral.redeem({ customerId: "redeemer" })
- */
+/** Redeem the referral code for `customerId` (requires s.referral.createCode() first). */
 const redeemReferralCode = ({
 	customerId,
 }: {
@@ -882,12 +761,7 @@ const redeemReferralCode = ({
 	});
 };
 
-/**
- * Create and redeem a referral code in one action.
- * Creates code for primary customer, redeems for specified customer.
- * @param customerId - The customer ID to redeem for (from otherCustomers)
- * @example s.referral.createAndRedeem({ customerId: "redeemer" })
- */
+/** Create code on primary, redeem for `customerId` in one step. */
 const createAndRedeemReferralCode = ({
 	customerId,
 }: {
@@ -903,24 +777,18 @@ const createAndRedeemReferralCode = ({
 };
 
 /**
- * Provision a fresh platform sub-org for this scenario via the
- * `POST /platform/organizations` endpoint, optionally with config overrides
- * (e.g. `automatic_tax: true`) and Stripe Tax registrations on its connect
- * account. The returned ctx is overridden to point at the sub-org so all
- * subsequent scenario operations (customer/product setup, attach, assertions)
- * route there instead of the master test org. Useful for isolating tests
- * that mutate org-level config.
+ * Provision a fresh platform sub-org via `POST /platform/organizations` and
+ * rebind ctx to it for the rest of the scenario. Use to isolate tests that
+ * mutate org-level config.
  *
- * Sub-org lifecycle: NOT cleaned up automatically at test end. Sub-orgs
- * persist in the master org's `created_by` set across runs until `bun cm`
- * (which runs `clearMasterOrg`) explicitly deletes them. Each call here uses
- * a randomized slug by default so accumulating sub-orgs don't collide.
+ * Sub-orgs are NOT auto-cleaned; `bun cm` runs `clearMasterOrg` to delete
+ * them. Slugs are randomized by default to avoid collisions.
  *
- * @param slug - Optional sub-org slug; defaults to a randomized "tax-XXXXXX".
- * @param name - Optional org display name; defaults to the slug.
- * @param userEmail - Optional owner email; defaults to "platform-tests@autumn.test".
- * @param configOverrides - Partial OrgConfig merged into the sub-org's config jsonb after creation.
- * @param taxRegistrations - List of countries to register Stripe Tax on the sub-org's connect account.
+ * @param slug - Sub-org slug; defaults to randomized "tax-XXXXXX".
+ * @param name - Display name; defaults to slug.
+ * @param userEmail - Owner email; defaults to "platform-tests@autumn.test".
+ * @param configOverrides - Merged into the sub-org's config jsonb.
+ * @param taxRegistrations - Countries to register Stripe Tax for.
  *
  * @example s.platform.create({ configOverrides: { automatic_tax: true }, taxRegistrations: ["AU"] })
  */
@@ -931,23 +799,7 @@ const platformCreate = (cfg: PlatformCreateConfig = {}): ConfigFn => {
 	});
 };
 
-/**
- * Scenario configuration functions.
- * Import and use with initScenario to configure test setup.
- * @example
- * ```typescript
- * import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
- *
- * const { autumnV1, ctx } = await initScenario({
- *   customerId: "my-test",
- *   options: [
- *     s.customer({ paymentMethod: "success" }),
- *     s.products({ list: [pro, free] }),
- *     s.attach({ productId: "pro" }),
- *   ],
- * });
- * ```
- */
+/** Scenario configuration functions for use with `initScenario`. */
 export const s = {
 	customer,
 	otherCustomers,
@@ -1001,58 +853,25 @@ const defaultConfig: ScenarioConfig = {
 };
 
 /**
- * Initialize a complete test scenario with customer, products, entities, and attachments.
- * Uses functional composition for flexible configuration.
- * Actions are executed in the exact order they appear in the actions array.
- *
- * @param customerId - Unique identifier used as customer ID and product prefix. If not provided, customer creation is skipped.
- * @param setup - Configuration functions (customer, products, entities)
- * @param actions - Action functions (attach, cancel, advanceTestClock) - executed in order
- * @returns autumnV1, autumnV2, ctx, testClockId, customer, entities, advancedTo
+ * Build a test scenario from setup/actions config functions. Customer
+ * creation is skipped when `customerId` is omitted (useful for null-id tests).
+ * Actions execute in array order.
  *
  * @example
  * ```typescript
- * // Simple test
  * const { autumnV1, ctx } = await initScenario({
  *   customerId: "simple-test",
- *   setup: [
- *     s.customer({ paymentMethod: "success" }),
- *     s.products({ list: [free] }),
- *   ],
- *   actions: [
- *     s.attach({ productId: "base" }),
- *   ],
- * });
- *
- * // Products only (no customer) - useful for null ID tests
- * const { autumnV1 } = await initScenario({
- *   setup: [s.products({ list: [freeDefault] })],
- *   actions: [],
- * });
- *
- * // Interleaved actions - executed in order
- * const { autumnV1, ctx, advancedTo } = await initScenario({
- *   customerId: "interleaved-test",
- *   setup: [
- *     s.customer({ testClock: true, paymentMethod: "success" }),
- *     s.products({ list: [pro] }),
- *   ],
- *   actions: [
- *     s.attach({ productId: "pro" }),
- *     s.advanceTestClock({ days: 7 }),  // Advance 7 days
- *     s.cancel({ productId: "pro" }),
- *     s.advanceTestClock({ days: 3 }),  // Advance another 3 days (10 total)
- *   ],
+ *   setup: [s.customer({ paymentMethod: "success" }), s.products({ list: [free] })],
+ *   actions: [s.attach({ productId: "base" })],
  * });
  * ```
  */
-// Other customer result type
 type OtherCustomerResult = {
 	id: string;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
 };
 
-// Overload: when customerId is provided, return type has customerId: string
+// customerId provided -> customerId: string in return.
 export async function initScenario(params: {
 	customerId: string;
 	setup: ConfigFn[];
@@ -1078,7 +897,7 @@ export async function initScenario(params: {
 	redemption: RewardRedemption | null;
 }>;
 
-// Overload: when customerId is not provided, return type has customerId: undefined
+// customerId omitted -> customerId: undefined in return.
 export async function initScenario(params: {
 	customerId?: undefined;
 	setup: ConfigFn[];
@@ -1104,7 +923,6 @@ export async function initScenario(params: {
 	redemption: RewardRedemption | null;
 }>;
 
-// Implementation
 export async function initScenario({
 	customerId,
 	setup,
@@ -1116,16 +934,11 @@ export async function initScenario({
 	actions: ConfigFn[];
 	ctx?: TestContext;
 }) {
-	// Use provided context or fall back to default. May be reassigned below
-	// if `s.platform.create(...)` was used (sub-org provisioning).
+	// Use override or default ctx; may be rebound below if s.platform.create.
 	let ctx = ctxOverride ?? defaultCtx;
-	// Build config from setup and actions
 	const config = [...setup, ...actions].reduce((c, fn) => fn(c), defaultConfig);
 
-	// Provision a platform sub-org and re-bind ctx if requested. This must run
-	// BEFORE customer/product setup so all scenario operations route to the
-	// sub-org's Stripe Connect account and DB scope. The master org's secret
-	// key (from the current ctx) is used to authenticate the platform call.
+	// Sub-org provisioning runs first so subsequent setup hits the sub-org.
 	if (config.platformConfig) {
 		const masterAutumn = new AutumnInt({ secretKey: ctx.orgSecretKey });
 
@@ -1195,11 +1008,10 @@ export async function initScenario({
 		}
 	}
 
-	// 1. Initialize products & delete previous customers (prefix = customerId for isolation)
-	// Priority: explicit productPrefix > customerId > "shared"
+	// 1. Products + previous-customer cleanup. Prefix priority:
+	// productPrefix > customerId > "shared".
 	const productPrefix = config.productPrefix ?? customerId ?? "shared";
 
-	// Collect all customer IDs to delete (primary + other customers)
 	const otherCustomerIds = config.otherCustomers.map((c) => c.id);
 	const allCustomerIds = config.customerIds ?? [
 		...(customerId ? [customerId] : []),
@@ -1215,19 +1027,15 @@ export async function initScenario({
 		});
 	}
 
-	// 1.5. Initialize referral program (if configured)
-	// Suffix IDs with productPrefix for isolation and mutate in place
+	// 1.5. Referral program. Suffix IDs with productPrefix for isolation.
 	if (config.referralProgram) {
 		const { reward, program } = config.referralProgram;
 
-		// Suffix reward ID
 		reward.id = `${reward.id}_${productPrefix}`;
 
-		// Suffix program ID and update internal_reward_id reference
 		program.id = `${program.id}_${productPrefix}`;
 		program.internal_reward_id = reward.id;
 
-		// Suffix product_ids to match prefixed products
 		if (program.product_ids && program.product_ids.length > 0) {
 			program.product_ids = program.product_ids.map(
 				(pid) => `${pid}_${productPrefix}`,
@@ -1244,14 +1052,11 @@ export async function initScenario({
 		});
 	}
 
-	// 1.6. Initialize standalone rewards (if configured)
+	// 1.6. Standalone rewards. Suffix IDs with productPrefix.
 	for (const rewardConfig of config.rewards) {
 		const { reward, productId } = rewardConfig;
 
-		// Suffix reward ID with productPrefix for isolation
 		reward.id = `${reward.id}_${productPrefix}`;
-
-		// Suffix productId to match prefixed products
 		const prefixedProductId = `${productId}_${productPrefix}`;
 
 		await createReward({
@@ -1276,8 +1081,8 @@ export async function initScenario({
 			customerData: config.customerData,
 			attachPm: config.attachPm,
 			withTestClock: config.testClock,
-			withDefault: config.withDefault ?? false, // RIP
-			// Default group matches the product prefix (customerId) used in initProductsV0
+			withDefault: config.withDefault ?? false,
+			// Default group matches the product prefix used in initProductsV0.
 			defaultGroup: config.defaultGroup ?? customerId,
 			skipWebhooks: config.skipWebhooks,
 			sendEmailReceipts: config.sendEmailReceipts,
@@ -1289,7 +1094,7 @@ export async function initScenario({
 		customer = result.customer;
 	}
 
-	// 2.5. Initialize other customers (share test clock with primary customer)
+	// 2.5. Other customers — share the primary's test clock.
 	const otherCustomersMap = new Map<string, OtherCustomerResult>();
 	for (const otherCusConfig of config.otherCustomers) {
 		const otherResult = await initCustomerV3({
@@ -1297,7 +1102,7 @@ export async function initScenario({
 			customerId: otherCusConfig.id,
 			customerData: otherCusConfig.data,
 			attachPm: otherCusConfig.paymentMethod,
-			withTestClock: false, // Don't create a new test clock
+			withTestClock: false,
 			...(testClockId ? { existingTestClockId: testClockId } : {}),
 			withDefault: false,
 			defaultGroup: productPrefix,
@@ -1339,7 +1144,7 @@ export async function initScenario({
 		secretKey: ctx.orgSecretKey,
 	});
 
-	// 4. Create entities if any (requires customerId)
+	// 4. Entities (requires customerId).
 	if (generatedEntities.length > 0) {
 		if (!customerId) {
 			throw new Error(
@@ -1362,14 +1167,14 @@ export async function initScenario({
 		await autumnV1.entities.create(customerId, entityDefs);
 	}
 
-	// 5. Execute actions in order (attach, cancel, advanceClock, referrals)
+	// 5. Run actions in order.
 	let advancedTo: number = Date.now();
 	let referralCode: ReferralCode | null = null;
 	let redemption: RewardRedemption | null = null;
 
 	for (const action of config.actions) {
 		if (action.type === "attach") {
-			// Resolve target customer: action.customerId override or primary customerId
+			// Override or fall back to primary customerId.
 			const targetCustomerId = action.customerId ?? customerId;
 			if (!targetCustomerId) {
 				throw new Error(
@@ -1378,7 +1183,6 @@ export async function initScenario({
 			}
 			const prefixedProductId = `${action.productId}_${productPrefix}`;
 
-			// Resolve entityIndex to entityId
 			let entityId: string | undefined;
 			if (action.entityIndex !== undefined) {
 				if (action.entityIndex >= generatedEntities.length) {
@@ -1407,7 +1211,6 @@ export async function initScenario({
 			}
 			const prefixedProductId = `${action.productId}_${productPrefix}`;
 
-			// Resolve entityIndex to entityId
 			let entityId: string | undefined;
 			if (action.entityIndex !== undefined) {
 				if (action.entityIndex >= generatedEntities.length) {
@@ -1486,7 +1289,6 @@ export async function initScenario({
 				);
 			}
 
-			// Resolve entityIndex to entityId
 			let entityId: string | undefined;
 			if (action.entityIndex !== undefined) {
 				if (action.entityIndex >= generatedEntities.length) {
@@ -1514,7 +1316,6 @@ export async function initScenario({
 			}
 			const prefixedProductId = `${action.productId}_${productPrefix}`;
 
-			// Resolve entityIndex to entityId
 			let entityId: string | undefined;
 			if (action.entityIndex !== undefined) {
 				if (action.entityIndex >= generatedEntities.length) {
@@ -1565,7 +1366,7 @@ export async function initScenario({
 				});
 			}
 		} else if (action.type === "billingAttach") {
-			// Resolve target customer: action.customerId override or primary customerId
+			// Override or fall back to primary customerId.
 			const targetCustomerId = action.customerId ?? customerId;
 			if (!targetCustomerId) {
 				throw new Error(
@@ -1574,7 +1375,6 @@ export async function initScenario({
 			}
 			const prefixedProductId = `${action.productId}_${productPrefix}`;
 
-			// Resolve entityIndex to entityId
 			let entityId: string | undefined;
 			if (action.entityIndex !== undefined) {
 				if (action.entityIndex >= generatedEntities.length) {
@@ -1608,7 +1408,6 @@ export async function initScenario({
 				);
 			}
 
-			// Resolve entityIndex to entityId
 			let entityId: string | undefined;
 			if (action.entityIndex !== undefined) {
 				if (action.entityIndex >= generatedEntities.length) {
@@ -1693,9 +1492,7 @@ export async function initScenario({
 				);
 			}
 
-			// Product group is always the productPrefix (customerId)
-			// All products in a test share the same group unless explicitly overridden
-			// The productId param is not used for group - it was a naming confusion
+			// Product group is always productPrefix; productId param is unused.
 			const productGroup = productPrefix;
 
 			await resetAndGetCusEnt({
@@ -1705,7 +1502,7 @@ export async function initScenario({
 				featureId: action.featureId,
 			});
 
-			// Wait for cache to clear (default 2000ms)
+			// Wait for cache to clear.
 			const waitTime = action.timeout ?? 2000;
 			await new Promise((resolve) => setTimeout(resolve, waitTime));
 		}

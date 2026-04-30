@@ -29,7 +29,6 @@ export function CustomerInvoicesTable() {
 		[customer?.invoices, products],
 	);
 
-	// Fetch line items for all invoices
 	const invoiceIds = useMemo(
 		() => customer?.invoices?.map((inv: Invoice) => inv.id) ?? [],
 		[customer?.invoices],

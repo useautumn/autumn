@@ -1,30 +1,8 @@
 /**
- * TDD test for the negative guard when `automatic_tax: true` but the
- * customer has no tax-resolvable address (Cycle 7).
- *
- * Why: Stripe Tax can't compute tax without knowing the customer's
- * jurisdiction. If `automatic_tax: { enabled: true }` is passed alongside
- * a customer with no address, Stripe responds with
- * `customer_tax_location_invalid`. Without a clean error path, this surfaces
- * as an opaque 500 to the integrator.
- *
- * Exercises BOTH attach paths concurrently:
- *  - v1 legacy `/v1/attach`
- *  - v2 `/v1/billing.attach`
- *
- * Red-failure mode (current behavior, pre-fix):
- *  - Stripe throws `customer_tax_location_invalid`, but the error bubbles
- *    up wrapped in a generic 500 with no actionable code or message.
- *
- * Green-success criteria (after fix):
- *  - The API surfaces a clearly-attributable error: either Stripe's exact
- *    `customer_tax_location_invalid` code, OR a typed `RecaseError` with a
- *    tax-related message.
- *
- * As of writing: both paths already surface a tax/address-attributable
- * error message via the existing AutumnError plumbing, so this is
- * effectively a regression guard (GREEN at start) — locks in the contract
- * that no-address attach with auto_tax produces an actionable error.
+ * Regression guard: when `automatic_tax: true` but the customer has no
+ * address, attach must surface an actionable tax/address error (Stripe's
+ * `customer_tax_location_invalid` or a typed RecaseError) instead of a
+ * generic 500. Covers both v1 `/v1/attach` and v2 `/v1/billing.attach`.
  */
 
 import { expect, test } from "bun:test";
@@ -57,7 +35,6 @@ test.concurrent(`${chalk.yellowBright("automatic-tax-no-address-error (v1 legacy
 				configOverrides: { automatic_tax: true },
 				taxRegistrations: ["AU"],
 			}),
-			// No stripeCustomerOverrides => no address.
 			s.customer({
 				testClock: false,
 				paymentMethod: "success",
@@ -75,7 +52,6 @@ test.concurrent(`${chalk.yellowBright("automatic-tax-no-address-error (v1 legacy
 		});
 	} catch (err) {
 		caughtError = err;
-		console.log("caughtError", caughtError);
 	}
 
 	expect(caughtError).toBeDefined();

@@ -38,8 +38,7 @@ export interface TestContext extends AutumnContext {
 export const createTestContext = async () => {
 	const { db } = initDrizzle();
 
-	// Support dynamic org slug from environment (for parallel test groups)
-	// Falls back to TESTS_ORG for legacy tests
+	// TESTS_ORG is set by the test runner (per parallel group).
 	const orgSlug = process.env.TESTS_ORG;
 	if (!orgSlug) {
 		throw new Error(
@@ -56,8 +55,7 @@ export const createTestContext = async () => {
 	const stripeCli = createStripeCli({ org, env });
 	const features = await FeatureService.list({ db, orgId: org.id, env });
 
-	// Get org secret key for API calls
-	// Priority: 1. Environment variable (set by test runner), 2. Org's secret_keys field
+	// Org secret key, set by test runner.
 	const orgSecretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY || "";
 	if (!orgSecretKey) {
 		throw new Error(
@@ -90,32 +88,13 @@ export const createTestContext = async () => {
 };
 
 /**
- * Lazy-read default export. The actual TestContext is created once by the
- * bun preload (`server/tests/setup-integration-tests.ts`) and stashed on
- * `globalThis.__autumnTestContext`. We expose a Proxy here so the lookup
- * happens on property ACCESS, not at module evaluation.
+ * Lazy default export. The real TestContext is built once by the preload
+ * (`setup-integration-tests.ts`) and stashed on `globalThis`. The Proxy
+ * defers the lookup until first property access, sidestepping the
+ * import-order race (preload imports this module before populating the
+ * stash) and the top-level-await TDZ from a prior implementation.
  *
- * Why this matters:
- *
- *  - The preload imports this module to call `createTestContext()`. That
- *    triggers this module's evaluation BEFORE the preload's body runs, so
- *    if we captured the stash at evaluation time it would be `undefined`
- *    forever — the preload would set `globalThis` after the const had
- *    already frozen to null.
- *
- *  - Previously this module did a top-level `await createTestContext()`
- *    here, which made the module async and put its default export in TDZ
- *    until the await resolved. With many test files concurrently loading
- *    in one process, importers could race ahead of the not-yet-finalized
- *    default export and throw `ReferenceError: Cannot access 'defaultCtx'
- *    before initialization`. The Proxy eliminates that window — the module
- *    evaluates synchronously and the lookup is deferred to first property
- *    access on the default export, by which time the preload has finished.
- *
- *  - For unit tests (which skip integration preload), property access
- *    throws a clear "preload did not run" message instead of the cryptic
- *    `Cannot read property X of null` of the previous implementation.
- *    Unit tests don't access the default export anyway.
+ * Unit tests that hit this throw a clear "preload did not run" error.
  */
 const lazyDefaultCtx = new Proxy({} as TestContext, {
 	get(_target, prop, _receiver) {

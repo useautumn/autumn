@@ -37,9 +37,8 @@ export const OrgConfigSchema = z.object({
 
 	forward_customer_metadata: z.boolean().default(false),
 
-	// Stripe Tax / VAT — when true, Stripe writes (invoices, subscriptions,
-	// checkout sessions) pass `automatic_tax: { enabled: true }` so Stripe
-	// computes tax server-side. Customer must have a tax-resolvable address.
+	// When true, Stripe writes pass `automatic_tax: { enabled: true }`.
+	// Customer must have a tax-resolvable address.
 	automatic_tax: z.boolean().default(false),
 });
 

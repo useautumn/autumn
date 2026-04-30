@@ -5,11 +5,8 @@ const mockState = {
 };
 const defaultRedis = { status: "ready" };
 
-// Stub logger must match the full `Logger` shape from logtailUtils.ts because
-// `mock.module` is process-wide in Bun: any other unit test loaded later in the
-// same `bun test` run gets this stub instead of the real logger. Missing
-// methods (e.g. `debug`) would crash unrelated code paths like
-// getOrSetCachedFullSubject.
+// Stub the full `Logger` shape — Bun's `mock.module` is process-wide, so
+// later unit tests inherit this stub. Missing methods crash unrelated code.
 const mockLogger = {
 	debug: () => undefined,
 	info: () => undefined,

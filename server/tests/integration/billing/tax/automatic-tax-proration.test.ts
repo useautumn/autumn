@@ -1,28 +1,11 @@
 /**
- * TDD test for `automatic_tax` on proration invoices for mid-cycle plan
- * changes (Cycle 5.5). Mirrors the Mintlify customer scenario:
- *  - Customer mid-cycle, upgrades or downgrades.
- *  - Stripe prorates with TWO line items: a negative credit refunding
- *    unused old-plan time, a positive charge for new-plan remaining time.
- *  - BOTH lines must be taxed for the math to be correct.
+ * `automatic_tax` on proration invoices (mid-cycle plan changes).
+ * Stripe prorates with negative credit + positive charge lines; both must
+ * be taxed for totals to balance.
  *
- * Exercises BOTH attach paths concurrently:
- *  - v1 legacy /v1/attach upgrade Pro -> Premium (downgrade omitted: the
- *    legacy attach path auto-schedules downgrades to end-of-cycle by default,
- *    so there is no immediate proration invoice to assert tax on; the v2
- *    path with `plan_schedule: "immediate"` is the right surface for that)
- *  - v2 /v1/billing.attach upgrade Pro -> Premium
- *  - v2 /v1/billing.attach downgrade Premium -> Pro (immediate)
- *
- * Red-failure mode (current behavior, pre-fix):
- *  - Proration invoice has automatic_tax.enabled === false.
- *  - Lines have no taxes; total === subtotal.
- *
- * Green-success criteria (after fix):
- *  - Proration invoice has automatic_tax.enabled === true.
- *  - Every line item has at least one tax entry.
- *  - Credit line tax is itself negative (refunded GST).
- *  - Total = subtotal × 1.10 within ±1 cent rounding.
+ * Covers v1 upgrade, v2 upgrade, and v2 immediate downgrade. (v1 downgrade
+ * omitted: legacy attach auto-schedules to end-of-cycle, so no immediate
+ * proration invoice to assert.)
  */
 
 import { expect, test } from "bun:test";

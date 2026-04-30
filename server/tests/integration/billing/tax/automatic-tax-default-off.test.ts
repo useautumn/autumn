@@ -1,26 +1,7 @@
 /**
- * Regression guard for the default-off behavior (Cycle 8).
- *
- * NOT a TDD red→green cycle — this test is GREEN at the start. It exists
- * to lock in the contract that:
- *  - Orgs without `automatic_tax: true` in their config get the legacy
- *    behavior: `automatic_tax: { enabled: false }` on Stripe writes.
- *  - The flag is OPT-IN, not opt-out, so adding the field to OrgConfig
- *    does not retroactively start taxing every existing org's customers.
- *
- * Exercises BOTH attach paths concurrently:
- *  - v1 legacy `/v1/attach`
- *  - v2 `/v1/billing.attach`
- *
- * Runs against the master test org (no `s.platform.create`), which has
- * `automatic_tax` falsy in its config (the schema default kicks in only
- * on .parse(); the raw DB jsonb may have `undefined`). Asserts that
- * resulting Stripe subscription has `automatic_tax.enabled === false`
- * after attach via either path.
- *
- * If a future change accidentally hardcodes `automatic_tax: { enabled: true }`
- * unconditionally (i.e. without checking org.config.automatic_tax), this
- * test will fail and surface the regression at PR time.
+ * Regression guard: orgs without `automatic_tax` in config must NOT have
+ * Stripe Tax enabled on attach (auto_tax is opt-in). Runs against the master
+ * test org via both v1 `/v1/attach` and v2 `/v1/billing.attach`.
  */
 
 import { expect, test } from "bun:test";
@@ -52,7 +33,7 @@ test.concurrent(
 		const customerId = "tax-default-off-v1";
 		const proProd = products.pro({ id: "pro", items: [] });
 
-		// Master org (no s.platform.create). Config has automatic_tax falsy.
+		// Master org (no s.platform.create) with automatic_tax falsy.
 		const { ctx, customer } = await initScenario({
 			customerId,
 			setup: [

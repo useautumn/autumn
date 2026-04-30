@@ -1,44 +1,14 @@
 /**
- * Spray test exercising `automatic_tax: true` across a representative spread
- * of tax jurisdictions, all sharing ONE platform sub-org. The sub-org
- * registers Stripe Tax in every covered country at once, then provisions a
- * customer per jurisdiction (each with an address in that country) and
- * attaches the same recurring product.
+ * Spray test: `automatic_tax: true` across 8 jurisdictions on ONE sub-org.
+ * Verifies that the factory's `taxRegistrations: [...]` array correctly
+ * handles multi-country registration and that every per-jurisdiction
+ * customer's resulting sub has auto_tax enabled.
  *
- * Why one sub-org instead of N: real platform tenants register multiple
- * jurisdictions on a single Stripe Connect account. This test verifies the
- * factory's `taxRegistrations: [...]` array correctly handles multi-country
- * setup AND that Stripe Tax routes the right rate to each customer based
- * on customer address + merchant nexus.
+ * Coverage: GB, CA, US/CA, AU, FR, DE, SA, RU.
  *
- * Jurisdictions covered:
- *  - United Kingdom (GB) — 20% VAT
- *  - Canada (CA) — federal GST/HST simplified, ~5%
- *  - California / United States (US) — ~7-9% state sales tax (note: SaaS
- *    is generally NOT taxable in CA, so tax may legitimately compute as $0)
- *  - Australia (AU) — 10% GST
- *  - France (FR) — 20% VAT (EU standard)
- *  - Germany (DE) — 19% VAT (EU standard)
- *  - Saudi Arabia (SA) — 15% VAT (simplified)
- *  - Russia (RU) — 20% VAT (simplified)
- *
- * What this test asserts:
- *  - Every jurisdiction's Stripe Tax registration succeeds in the factory
- *    (no SDK shape mismatch, no rejected `country_options`).
- *  - The resulting Stripe subscription for each per-jurisdiction customer
- *    has `automatic_tax.enabled === true`.
- *  - The factory's head-office-address bootstrap supports all 8 in one go.
- *
- * What this test does NOT assert:
- *  - Specific tax rates per country. Stripe Tax rate depends on customer
- *    address + product tax_code + merchant nexus; rate can legitimately be
- *    $0 in some jurisdictions for SaaS (CA most notably), so a strict
- *    `tax > 0` would be false-positive prone.
- *  - That Stripe Tax has accurate registrations for every test-mode
- *    jurisdiction. If a registration genuinely fails (Stripe doesn't
- *    support it in test mode, sanctions, etc.), the factory swallows the
- *    error with a warning — eyeball the run logs for any "Failed to
- *    register Stripe Tax" warnings.
+ * Does NOT assert specific tax rates — SaaS is sometimes $0 (e.g. CA), so
+ * `tax > 0` would be false-positive prone. Watch run logs for any
+ * "Failed to register Stripe Tax" warnings (factory swallows them).
  */
 
 import { expect, test } from "bun:test";
@@ -145,10 +115,9 @@ test(
 	async () => {
 		const proProd = products.pro({ id: "pro", items: [] });
 
-		// ONE sub-org. Registers Stripe Tax for all 8 countries up front.
-		// No primary `s.customer(...)` — we'll provision per-jurisdiction
-		// customers manually inside the test body to keep them in lock-step
-		// against the same Connect account.
+		// ONE sub-org with all 8 tax registrations. No primary customer —
+		// we provision per-jurisdiction customers in the test body so they
+		// share the same Connect account.
 		const { ctx, autumnV1 } = await initScenario({
 			setup: [
 				s.platform.create({
@@ -160,16 +129,11 @@ test(
 			actions: [],
 		});
 
-		// Provision a customer per jurisdiction in parallel, then attach the
-		// pro product, then fetch the resulting Stripe subscription. Returns
-		// a tuple of (jurisdiction, sub) per concurrent unit.
+		// Per-jurisdiction customer + attach + fetch sub, in parallel.
 		const results = await Promise.all(
 			jurisdictions.map(async (j) => {
 				const customerId = `tax-spray-${j.country.toLowerCase()}`;
 
-				// initCustomerV3 creates the Stripe customer with the address
-				// override, attaches a successful payment method, and registers
-				// the Autumn customer linked to that Stripe customer.
 				const { customer } = await initCustomerV3({
 					ctx,
 					customerId,
@@ -179,7 +143,6 @@ test(
 					stripeCustomerOverrides: { address: j.address },
 				});
 
-				// Attach the pro product via the legacy /v1/attach path.
 				await autumnV1.attach({
 					customer_id: customerId,
 					product_id: "pro_spray",
@@ -195,9 +158,8 @@ test(
 			}),
 		);
 
-		// Assert every jurisdiction's resulting subscription has
-		// automatic_tax.enabled === true. Log the actual computed tax for
-		// visibility (rates differ by country and SaaS is sometimes $0).
+		// Every jurisdiction's sub has auto_tax enabled. Log computed tax
+		// for visibility (SaaS is sometimes $0).
 		for (const { jurisdiction, sub } of results) {
 			expect(sub).toBeDefined();
 			expect(sub.automatic_tax.enabled).toBe(true);

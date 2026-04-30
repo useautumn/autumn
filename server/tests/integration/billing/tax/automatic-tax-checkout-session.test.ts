@@ -1,33 +1,11 @@
 /**
- * TDD test for `automatic_tax` + `customer_update.address: "auto"` on
- * Stripe Checkout sessions (Cycle 6). Customers without a payment method
- * are routed to a Stripe-hosted checkout session — that session needs to
- * (a) collect tax, (b) write the entered address back to the Stripe
- * customer record so future charges have a tax-resolvable address.
+ * `automatic_tax` + `customer_update.address: "auto"` on Stripe Checkout.
+ * Asserts both v1 (`/v1/attach` → handleCreateCheckout) and v2
+ * (`/v1/billing.attach` → executeStripeCheckoutSessionAction) inject
+ * auto_tax + address-collection when `org.config.automatic_tax` is on.
  *
- * Exercises BOTH attach paths concurrently:
- *  - v1 legacy `/v1/attach` → handleCreateCheckout
- *  - v2 `/v1/billing.attach` → executeStripeCheckoutSessionAction
- *
- * Red-failure mode (current behavior, pre-fix):
- *  - Both checkout paths call `stripeCli.checkout.sessions.create({...})`
- *    WITHOUT `automatic_tax` or `customer_update`.
- *  - Result: session.automatic_tax.enabled is false. Mintlify (and any
- *    auto-tax org) would have to manually pass these via
- *    `checkout_session_params` on every attach call.
- *
- * Green-success criteria (after fix):
- *  - Both checkout paths inject `automatic_tax: { enabled: true }` and
- *    `customer_update: { address: "auto" }` when `org.config.automatic_tax`
- *    is true. Mintlify gets this for free without any client-side work.
- *
- * No invoice-total assertion here: the customer hasn't completed checkout,
- * so there's no invoice yet. Total-validation is covered by Cycles 2–5.
- *
- * Note: customer_update is a create-only param and is NOT echoed back in
- * the Session response object. The customer_update fix is applied in
- * production code; the integration test asserts only the observable
- * `session.automatic_tax.enabled`.
+ * `customer_update` is create-only and not echoed in the Session response;
+ * the test asserts only the observable `session.automatic_tax.enabled`.
  */
 
 import { expect, test } from "bun:test";
@@ -72,7 +50,7 @@ test.concurrent(
 					configOverrides: { automatic_tax: true },
 					taxRegistrations: ["AU"],
 				}),
-				// NO paymentMethod — forces checkout-URL branch on attach.
+				// No PM forces the checkout-URL branch.
 				s.customer({
 					testClock: false,
 					stripeCustomerOverrides: { address: auAddress },
@@ -120,7 +98,7 @@ test.concurrent(
 			plan_id: `pro_${customerId}`,
 		})) as { payment_url?: string };
 
-		// V2 returns the URL via `payment_url` (not `checkout_url`).
+		// V2 uses `payment_url`, not `checkout_url`.
 		expect(result.payment_url).toBeDefined();
 		expect(typeof result.payment_url).toBe("string");
 		await assertCheckoutSessionTaxed({
