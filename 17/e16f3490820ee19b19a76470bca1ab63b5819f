@@ -1,0 +1,41 @@
+server/src/internal/billing/v2/utils/billingPlan/preview/tax/computeAttachTaxPreview.ts
+  c4778a4e887e1cf5 48-92
+server/src/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan.ts
+  c4778a4e887e1cf5 1-36
+shared/models/billingModels/plan/index.ts
+  c4778a4e887e1cf5 4
+shared/models/billingModels/plan/billingPlan.ts
+  c4778a4e887e1cf5 18-21,27,40
+shared/api/billing/common/billingPreviewResponse.ts
+  c4778a4e887e1cf5 28-52
+server/src/internal/billing/v2/actions/attach/attach.ts
+  c4778a4e887e1cf5 17,68-76,80
+server/src/internal/billing/v2/utils/billingPlan/billingPlanToAttachPreview.ts
+  c4778a4e887e1cf5 45
+shared/api/billing/common/attachPreviewResponse.ts
+  c4778a4e887e1cf5 2-5,21-25
+shared/models/billingModels/plan/previewBillingPlan.ts
+  c4778a4e887e1cf5 1-16
+server/tests/integration/billing/tax/automatic-tax-preview-attach-immediate.test.ts
+  c4778a4e887e1cf5 1-46,50-80,83,86,94-96,98-113,115-118,126-128,130-147,151-154,156-161
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "17e16f3490820ee19b19a76470bca1ab63b5819f",
+  "prompts": {
+    "c4778a4e887e1cf5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2213ea901ffeJSdplBxFgDIo8s",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 304,
+      "total_deletions": 12,
+      "accepted_lines": 247,
+      "overriden_lines": 16
+    }
+  }
+}
