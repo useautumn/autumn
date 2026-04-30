@@ -88,6 +88,11 @@ export interface BillingContext {
 
 	checkoutMode?: CheckoutMode;
 
+	// When true, the cusProduct is activated immediately even if a Stripe checkout
+	// session is required. Mirrors invoice-mode enable_plan_immediately for the
+	// stripe_checkout flow.
+	enablePlanImmediately?: boolean;
+
 	anchorResetRefund?: AnchorResetRefund;
 
 	refundLastPayment?: "prorated" | "full";

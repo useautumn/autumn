@@ -84,7 +84,7 @@ interface AttachFormContextValue {
 	handleGrantFreeToggle: (params: { enabled: boolean }) => void;
 
 	isPending: boolean;
-	handleConfirm: () => void;
+	handleConfirm: (params?: { enableProductImmediately?: boolean }) => void;
 	handleInvoiceAttach: (params: {
 		enableProductImmediately: boolean;
 		finalizeInvoice: boolean;
@@ -178,6 +178,7 @@ export function AttachFormProvider({
 		discounts,
 		grantFree,
 		noBillingChanges,
+		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -381,6 +382,7 @@ export function AttachFormProvider({
 		resetBillingCycle,
 		discounts,
 		noBillingChanges,
+		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
