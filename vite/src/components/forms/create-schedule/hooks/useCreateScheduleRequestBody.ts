@@ -10,7 +10,10 @@ import { productItemsToPlanItemsV1 } from "@autumn/shared";
 import { useMemo } from "react";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 
-type CreatePlanItemParams = Omit<ApiPlanItemV1, "reset" | "price" | "rollover"> & {
+type CreatePlanItemParams = Omit<
+	ApiPlanItemV1,
+	"reset" | "price" | "rollover"
+> & {
 	reset?: ApiPlanItemV1["reset"];
 	price?: ApiPlanItemV1["price"];
 	rollover?: ApiPlanItemV1["rollover"];
@@ -236,6 +239,7 @@ export function useBuildCreateScheduleRequestBody({
 	getPhases,
 	getBillingBehavior,
 	getResetBillingCycle,
+	getEnablePlanImmediately,
 }: {
 	customerId: string | undefined;
 	entityId: string | undefined;
@@ -245,6 +249,7 @@ export function useBuildCreateScheduleRequestBody({
 	getPhases: () => SchedulePhase[];
 	getBillingBehavior?: () => BillingBehavior | null;
 	getResetBillingCycle?: () => boolean;
+	getEnablePlanImmediately?: () => boolean;
 }) {
 	return useMemo(
 		() =>
@@ -281,6 +286,17 @@ export function useBuildCreateScheduleRequestBody({
 					};
 				}
 
+				// `enable_plan_immediately` also applies to the stripe_checkout flow:
+				// when the form toggle is on, cusProducts (immediate Active + scheduled
+				// Scheduled) are inserted at request time and the schedule rows
+				// materialize on checkout.session.completed.
+				if (getEnablePlanImmediately?.()) {
+					return {
+						...requestBody,
+						enable_plan_immediately: true,
+					};
+				}
+
 				return requestBody;
 			},
 		[
@@ -292,6 +308,7 @@ export function useBuildCreateScheduleRequestBody({
 			getPhases,
 			getBillingBehavior,
 			getResetBillingCycle,
+			getEnablePlanImmediately,
 		],
 	);
 }

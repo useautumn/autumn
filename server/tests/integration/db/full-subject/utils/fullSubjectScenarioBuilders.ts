@@ -272,6 +272,7 @@ const buildCustomerProduct = ({
 	api_version: null,
 	api_semver: ApiVersion.V2_2,
 	external_id: null,
+	stripe_checkout_session_id: null,
 });
 
 const buildCustomerPrice = ({

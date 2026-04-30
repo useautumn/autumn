@@ -63,7 +63,12 @@
 			"project": ["**/*.{ts,tsx}"]
 		},
 		"apps/website": {
-			"entry": ["app/**/*.{ts,tsx,mdx}", "components/**/*.{ts,tsx}", "content/**/*.mdx", "*.mjs"],
+			"entry": [
+				"app/**/*.{ts,tsx,mdx}",
+				"components/**/*.{ts,tsx}",
+				"content/**/*.mdx",
+				"*.mjs"
+			],
 			"project": ["**/*.{ts,tsx,mdx,mjs}"]
 		},
 		"apps/checkout": {
