@@ -20,12 +20,17 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
  *
  * Skip-conditions (return undefined):
  *  - org has `automatic_tax: false`
- *  - flow is `stripe_checkout` or `autumn_checkout` (the buyer-facing form
- *    may collect/update the address, so a pre-checkout tax preview risks
- *    diverging from what Stripe charges at checkout)
+ *  - flow is `stripe_checkout` (Stripe Checkout collects the address itself
+ *    and computes tax during the buyer-facing form, so any pre-checkout
+ *    preview here would diverge from what Stripe ultimately charges)
  *  - no Stripe customer exists (we only support previewing against an
  *    existing Stripe customer; Stripe's location waterfall needs it)
  *  - nothing positive to charge immediately (no taxable subtotal)
+ *
+ * Note: `autumn_checkout` is intentionally NOT skipped. It's a
+ * confirmation-only flow — no address or payment method collection — so
+ * the customer's existing Stripe address (and the resulting tax) is
+ * exactly what gets charged on confirmation.
  *
  * On Stripe error → returns `{ status: "incomplete", ...zeros }` so the
  * merchant sees an explicit "tax not computed" signal in the preview rather
@@ -41,12 +46,7 @@ export const computeAttachTaxPreview = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 }): Promise<PreviewTax | undefined> => {
 	if (!ctx.org.config.automatic_tax) return undefined;
-	if (
-		billingContext.checkoutMode === "stripe_checkout" ||
-		billingContext.checkoutMode === "autumn_checkout"
-	) {
-		return undefined;
-	}
+	if (billingContext.checkoutMode === "stripe_checkout") return undefined;
 	if (!billingContext.stripeCustomer?.id) return undefined;
 
 	const allLineItems = autumnBillingPlan.lineItems ?? [];
