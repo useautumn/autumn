@@ -4,6 +4,59 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 1st 2026">
+  ## Stripe automatic tax
+
+  Autumn now collects sales tax, VAT, and GST automatically through **Stripe Tax** — for new subscriptions, plan upgrades, prorations, one-off invoices, and the customer portal. Once you enable Stripe Tax in your dashboard, Autumn forwards the right addresses and tax codes to Stripe so the correct tax is calculated on every charge.
+
+  - **Tax previews on attach**: `billing.attach` and `billing.preview_attach` now return tax line items so you can show customers their full breakdown — subtotal, tax, total — before they confirm. Works with [Autumn Checkout](/documentation/customers/payment-flow) too
+  - **No code changes**: Existing attach and update flows pick up tax automatically when Stripe Tax is on
+
+  ## Cross-processor one-off purchases
+
+  If you use both **Stripe** and **RevenueCat**, customers can now purchase one-off products on either processor regardless of which one their subscription lives on. Recurring add-ons remain restricted to a single processor for billing safety.
+
+  ## Auto top-up rebalancing
+
+  Auto top-ups now recompute automatically when a customer's plan, allowance, or balance changes. If a plan upgrade increases included usage, the next top-up amount adjusts accordingly — no more over-charging customers who just got a bigger bucket. See the [auto top-ups guide](/documentation/modelling-pricing/auto-top-ups).
+
+  ## New customer expand option: `billing_controls.auto_topups.purchase_limit`
+
+  You can now expand `billing_controls.auto_topups.purchase_limit` on customer responses to see how much remaining budget a customer has for auto top-ups in the current cycle. Useful for surfacing top-up status in your dashboard.
+
+  ## `config.ignore_past_due` on plans
+
+  Plans now accept a `config.ignore_past_due` flag. When set, entitlements attached to that plan continue to reset on schedule even when the customer's product is in a `past_due` state — so customers who are temporarily delinquent don't lose access to fresh allowances. See the [createPlan reference](/api-reference/plans/createPlan).
+
+  ## Checkout: plan enabled immediately
+
+  When a customer completes [Autumn Checkout](/documentation/customers/payment-flow), their plan is now enabled the moment the session completes — instead of waiting for the Stripe webhook. Faster onboarding, less webhook-timing flakiness.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Stripe automatic tax across attach, update, prorations, and one-off invoices - [#1417](https://github.com/useautumn/autumn/pull/1417)
+      - Tax previews on attach and preview-attach responses - [#1424](https://github.com/useautumn/autumn/pull/1424)
+      - Cross-processor one-off product purchases (Stripe + RevenueCat) - [#1400](https://github.com/useautumn/autumn/pull/1400)
+      - Auto top-up rebalancing when plans, allowances, or balances change - [#1371](https://github.com/useautumn/autumn/pull/1371)
+      - `billing_controls.auto_topups.purchase_limit` expand option on customers - [#1423](https://github.com/useautumn/autumn/pull/1423)
+      - `config.ignore_past_due` on plans to keep resets running for past-due customers - [#1297](https://github.com/useautumn/autumn/pull/1297)
+      - Plans enabled immediately on Autumn Checkout session completion - [#1415](https://github.com/useautumn/autumn/pull/1415)
+      - Async billing operations now return `202 Accepted` in SDKs and OpenAPI - [#1409](https://github.com/useautumn/autumn/pull/1409)
+    </Accordion>
+
+    <Accordion title="Bug Fixes">
+      - Fixed past-due customer entitlements not resetting under cache v2 - [#1396](https://github.com/useautumn/autumn/pull/1396)
+      - Fixed balance edit failing for entity-scoped entitlements when no entity was selected - [#1407](https://github.com/useautumn/autumn/pull/1407)
+      - Fixed network errors being silently swallowed by the fail-open hook in `autumn-js` - [#1404](https://github.com/useautumn/autumn/pull/1404)
+      - Fixed missing prices in customer cache - [#1387](https://github.com/useautumn/autumn/pull/1387), [#1388](https://github.com/useautumn/autumn/pull/1388)
+      - Fixed cache sanitization for customer data - [#1385](https://github.com/useautumn/autumn/pull/1385)
+      - Fixed reference error during checkout - [#1383](https://github.com/useautumn/autumn/pull/1383), [#1384](https://github.com/useautumn/autumn/pull/1384)
+      - Fixed legacy `billing.update` quantity handling for prepaid volume features - [#1410](https://github.com/useautumn/autumn/pull/1410)
+      - Fixed entity description and overrides on `billing.update_subscription` - [#1402](https://github.com/useautumn/autumn/pull/1402)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
