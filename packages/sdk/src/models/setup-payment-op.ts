@@ -444,18 +444,6 @@ export type SetupPaymentParams = {
    */
   customize?: SetupPaymentCustomize | undefined;
   /**
-   * Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-   */
-  invoice?: boolean | undefined;
-  /**
-   * Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-   */
-  enableProductImmediately?: boolean | undefined;
-  /**
-   * Deprecated: legacy alias for `invoice_mode.finalize`.
-   */
-  finalizeInvoice?: boolean | undefined;
-  /**
    * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
   prorationBehavior?: SetupPaymentProrationBehavior | undefined;
@@ -1071,9 +1059,6 @@ export type SetupPaymentParams$Outbound = {
   feature_quantities?: Array<SetupPaymentFeatureQuantity$Outbound> | undefined;
   version?: number | undefined;
   customize?: SetupPaymentCustomize$Outbound | undefined;
-  invoice?: boolean | undefined;
-  enable_product_immediately?: boolean | undefined;
-  finalize_invoice?: boolean | undefined;
   proration_behavior?: string | undefined;
   subscription_id?: string | undefined;
   discounts?: Array<SetupPaymentAttachDiscount$Outbound> | undefined;
@@ -1103,9 +1088,6 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     ),
     version: z.optional(z.number()),
     customize: z.optional(z.lazy(() => SetupPaymentCustomize$outboundSchema)),
-    invoice: z.optional(z.boolean()),
-    enableProductImmediately: z.optional(z.boolean()),
-    finalizeInvoice: z.optional(z.boolean()),
     prorationBehavior: z.optional(SetupPaymentProrationBehavior$outboundSchema),
     subscriptionId: z.optional(z.string()),
     discounts: z.optional(
@@ -1134,8 +1116,6 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       planId: "plan_id",
       featureQuantities: "feature_quantities",
-      enableProductImmediately: "enable_product_immediately",
-      finalizeInvoice: "finalize_invoice",
       prorationBehavior: "proration_behavior",
       subscriptionId: "subscription_id",
       successUrl: "success_url",

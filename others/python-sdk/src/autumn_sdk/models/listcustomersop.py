@@ -257,14 +257,14 @@ ListCustomersPurchaseLimitUnionTypedDict = TypeAliasType(
     "ListCustomersPurchaseLimitUnionTypedDict",
     Union[ListCustomersPurchaseLimit1TypedDict, ListCustomersPurchaseLimit2TypedDict],
 )
-r"""Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit."""
+r"""Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at."""
 
 
 ListCustomersPurchaseLimitUnion = TypeAliasType(
     "ListCustomersPurchaseLimitUnion",
     Union[ListCustomersPurchaseLimit1, ListCustomersPurchaseLimit2],
 )
-r"""Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit."""
+r"""Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at."""
 
 
 class ListCustomersAutoTopupTypedDict(TypedDict):
@@ -277,7 +277,7 @@ class ListCustomersAutoTopupTypedDict(TypedDict):
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
     purchase_limit: NotRequired[ListCustomersPurchaseLimitUnionTypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
@@ -296,7 +296,7 @@ class ListCustomersAutoTopup(BaseModel):
     r"""Whether auto top-up is enabled."""
 
     purchase_limit: Optional[ListCustomersPurchaseLimitUnion] = None
-    r"""Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit."""
+    r"""Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at."""
 
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""

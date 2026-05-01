@@ -472,18 +472,6 @@ export type UpdateSubscriptionParams = {
    */
   invoiceMode?: BillingUpdateInvoiceMode | undefined;
   /**
-   * Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-   */
-  invoice?: boolean | undefined;
-  /**
-   * Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-   */
-  enableProductImmediately?: boolean | undefined;
-  /**
-   * Deprecated: legacy alias for `invoice_mode.finalize`.
-   */
-  finalizeInvoice?: boolean | undefined;
-  /**
    * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
   prorationBehavior?: BillingUpdateProrationBehavior | undefined;
@@ -1123,9 +1111,6 @@ export type UpdateSubscriptionParams$Outbound = {
   version?: number | undefined;
   customize?: BillingUpdateCustomize$Outbound | undefined;
   invoice_mode?: BillingUpdateInvoiceMode$Outbound | undefined;
-  invoice?: boolean | undefined;
-  enable_product_immediately?: boolean | undefined;
-  finalize_invoice?: boolean | undefined;
   proration_behavior?: string | undefined;
   redirect_mode: string;
   subscription_id?: string | undefined;
@@ -1153,9 +1138,6 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
     invoiceMode: z.optional(
       z.lazy(() => BillingUpdateInvoiceMode$outboundSchema),
     ),
-    invoice: z.optional(z.boolean()),
-    enableProductImmediately: z.optional(z.boolean()),
-    finalizeInvoice: z.optional(z.boolean()),
     prorationBehavior: z.optional(
       BillingUpdateProrationBehavior$outboundSchema,
     ),
@@ -1181,8 +1163,6 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       planId: "plan_id",
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
-      enableProductImmediately: "enable_product_immediately",
-      finalizeInvoice: "finalize_invoice",
       prorationBehavior: "proration_behavior",
       redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
