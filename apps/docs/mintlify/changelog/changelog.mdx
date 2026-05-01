@@ -4,6 +4,54 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 1st 2026">
+  ## Stripe automatic tax
+
+  Autumn now integrates directly with **Stripe Tax**. Once enabled on your organisation, tax is automatically calculated and applied across checkout sessions, subscriptions, one-off invoices, prorations, and subscription updates — using the customer's address to determine the right jurisdiction.
+
+  - **Tax in previews**: `billing.preview_attach`, `billing.preview_multi_attach`, and `billing.preview_update` now include a `tax` object with totals, inclusive/exclusive splits, and a calculation status
+  - **End-to-end coverage**: Works for new subscriptions, plan changes, prorations, and one-off invoices
+  - **No-address handling**: Returns a clear error when a Stripe customer is missing an address so you can prompt for one before charging
+
+  See the [attach preview reference](/api-reference/billing/previewAttach) for the full response shape.
+
+  ## Auto top-up purchase limits in customer responses
+
+  Customer and entity responses can now expand `billing_controls.auto_topups.purchase_limit` to show how many top-ups have occurred in the current window and when the counter next resets — making it easy to surface limits in your UI without separate calls.
+
+  See [billing controls](/documentation/customers/billing-controls) and [updateCustomer](/api-reference/customers/updateCustomer) for details.
+
+  ## Cross-processor one-off purchases
+
+  Customers managed in RevenueCat can now buy one-off products through Stripe (and vice versa) without conflict. Recurring add-ons across processors remain blocked to keep subscription state clean.
+
+  ## 202 Accepted on async billing operations
+
+  Long-running billing endpoints (including `balances.finalize_lock`) now return `202 Accepted` when work is queued asynchronously, alongside the existing `200` response. SDKs have been updated to surface the new status so you can handle async paths explicitly.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Stripe automatic tax across checkout, subscriptions, invoices, and prorations - [#1417](https://github.com/useautumn/autumn/pull/1417)
+      - Tax preview included in attach/multi-attach/update preview responses - [#1424](https://github.com/useautumn/autumn/pull/1424)
+      - `billing_controls.auto_topups.purchase_limit` expandable on customer and entity responses - [#1423](https://github.com/useautumn/autumn/pull/1423)
+      - Cross-processor one-off product purchases between Stripe and RevenueCat - [#1386](https://github.com/useautumn/autumn/pull/1386)
+      - Plans now activate immediately on Stripe checkout session completion - [#1415](https://github.com/useautumn/autumn/pull/1415)
+      - `202 Accepted` responses added for async billing operations across SDKs - [#1409](https://github.com/useautumn/autumn/pull/1409)
+    </Accordion>
+
+    <Accordion title="Bug fixes">
+      - Tax preview now correctly reflects non-net calculations - [#1434](https://github.com/useautumn/autumn/pull/1434)
+      - Fixed legacy `billing.update` quantity updates failing in some scenarios - [#1410](https://github.com/useautumn/autumn/pull/1410)
+      - Fixed RevenueCat add-on attaches incorrectly leaking into Stripe subscriptions - [#1400](https://github.com/useautumn/autumn/pull/1400)
+      - Fixed entity-scoped balance edits when no entity was selected in the dashboard - [#1406](https://github.com/useautumn/autumn/pull/1406), [#1407](https://github.com/useautumn/autumn/pull/1407)
+      - Fixed network errors being silently swallowed by cache fail-open path - [#1404](https://github.com/useautumn/autumn/pull/1404)
+      - Fixed missing entity context on subscription update descriptions and overrides - [#1397](https://github.com/useautumn/autumn/pull/1397)
+      - Fixed past-due customer entitlement resets in cache - [#1396](https://github.com/useautumn/autumn/pull/1396)
+      - Fixed save-changes bar not appearing for past-due customers in the dashboard - [#1297](https://github.com/useautumn/autumn/pull/1297)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
