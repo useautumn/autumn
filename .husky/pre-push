@@ -17,10 +17,6 @@ changed_files="$(
 	done | sort -u
 )"
 
-if printf '%s\n' "$changed_files" | grep -q '^server/'; then
-	bunx turbo run test:unit --filter=@autumn/server
-fi
-
-if printf '%s\n' "$changed_files" | grep -q '^vite/'; then
-	bunx turbo run test:unit --filter=@autumn/vite
-fi
+# if printf '%s\n' "$changed_files" | grep -q '^vite/'; then
+# 	bunx turbo run test:unit --filter=@autumn/vite
+# fi

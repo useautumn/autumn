@@ -146,7 +146,7 @@ export const syncItemV4 = async ({
 			customerId,
 			featureId,
 			customerEntitlementIds,
-			readMaster: true,
+			// readMaster: true,
 		});
 
 		if (outcome.kind !== "ok") {
