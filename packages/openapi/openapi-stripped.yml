@@ -337,9 +337,9 @@ components:
                           - limit
                           - count
                           - next_reset_at
-                    description: Optional rate limit to cap how often auto top-ups occur. Includes
-                      runtime state when expanded via
-                      billing_controls.auto_topups.purchase_limit.
+                    description: Optional rate limit to cap how often auto top-ups occur. Expand
+                      billing_controls.auto_topups.purchase_limit for a count of
+                      top ups and the next_reset_at.
                   invoice_mode:
                     type: boolean
                     description: When true, auto top-up creates a send_invoice invoice instead of
@@ -2032,9 +2032,10 @@ paths:
                                           - limit
                                           - count
                                           - next_reset_at
-                                    description: Optional rate limit to cap how often auto top-ups occur. Includes
-                                      runtime state when expanded via
-                                      billing_controls.auto_topups.purchase_limit.
+                                    description: Optional rate limit to cap how often auto top-ups occur. Expand
+                                      billing_controls.auto_topups.purchase_limit
+                                      for a count of top ups and the
+                                      next_reset_at.
                                   invoice_mode:
                                     type: boolean
                                     description: When true, auto top-up creates a send_invoice invoice instead of
@@ -2849,9 +2850,9 @@ paths:
                                     - limit
                                     - count
                                     - next_reset_at
-                              description: Optional rate limit to cap how often auto top-ups occur. Includes
-                                runtime state when expanded via
-                                billing_controls.auto_topups.purchase_limit.
+                              description: Optional rate limit to cap how often auto top-ups occur. Expand
+                                billing_controls.auto_topups.purchase_limit for
+                                a count of top ups and the next_reset_at.
                             invoice_mode:
                               type: boolean
                               description: When true, auto top-up creates a send_invoice invoice instead of
@@ -6742,17 +6743,6 @@ paths:
                   description: Invoice mode creates a draft or open invoice and sends it to the
                     customer, instead of charging their card immediately. This
                     uses Stripe's send_invoice collection method.
-                invoice:
-                  type: boolean
-                  description: "Deprecated: legacy alias for `invoice_mode.enabled`. Prefer
-                    `invoice_mode: { enabled: true }`."
-                enable_product_immediately:
-                  type: boolean
-                  description: "Deprecated: legacy alias for
-                    `invoice_mode.enable_plan_immediately`."
-                finalize_invoice:
-                  type: boolean
-                  description: "Deprecated: legacy alias for `invoice_mode.finalize`."
                 proration_behavior:
                   enum:
                     - prorate_immediately
@@ -7804,17 +7794,6 @@ paths:
                   description: Invoice mode creates a draft or open invoice and sends it to the
                     customer, instead of charging their card immediately. This
                     uses Stripe's send_invoice collection method.
-                invoice:
-                  type: boolean
-                  description: "Deprecated: legacy alias for `invoice_mode.enabled`. Prefer
-                    `invoice_mode: { enabled: true }`."
-                enable_product_immediately:
-                  type: boolean
-                  description: "Deprecated: legacy alias for
-                    `invoice_mode.enable_plan_immediately`."
-                finalize_invoice:
-                  type: boolean
-                  description: "Deprecated: legacy alias for `invoice_mode.finalize`."
                 proration_behavior:
                   enum:
                     - prorate_immediately
@@ -9484,17 +9463,6 @@ paths:
                   description: Invoice mode creates a draft or open invoice and sends it to the
                     customer, instead of charging their card immediately. This
                     uses Stripe's send_invoice collection method.
-                invoice:
-                  type: boolean
-                  description: "Deprecated: legacy alias for `invoice_mode.enabled`. Prefer
-                    `invoice_mode: { enabled: true }`."
-                enable_product_immediately:
-                  type: boolean
-                  description: "Deprecated: legacy alias for
-                    `invoice_mode.enable_plan_immediately`."
-                finalize_invoice:
-                  type: boolean
-                  description: "Deprecated: legacy alias for `invoice_mode.finalize`."
                 proration_behavior:
                   enum:
                     - prorate_immediately
@@ -9951,17 +9919,6 @@ paths:
                   description: Invoice mode creates a draft or open invoice and sends it to the
                     customer, instead of charging their card immediately. This
                     uses Stripe's send_invoice collection method.
-                invoice:
-                  type: boolean
-                  description: "Deprecated: legacy alias for `invoice_mode.enabled`. Prefer
-                    `invoice_mode: { enabled: true }`."
-                enable_product_immediately:
-                  type: boolean
-                  description: "Deprecated: legacy alias for
-                    `invoice_mode.enable_plan_immediately`."
-                finalize_invoice:
-                  type: boolean
-                  description: "Deprecated: legacy alias for `invoice_mode.finalize`."
                 proration_behavior:
                   enum:
                     - prorate_immediately
@@ -10719,17 +10676,6 @@ paths:
                         custom trial, or null to remove the trial entirely.
                   description: Customize the plan to attach. Can override the price, items, free
                     trial, or a combination.
-                invoice:
-                  type: boolean
-                  description: "Deprecated: legacy alias for `invoice_mode.enabled`. Prefer
-                    `invoice_mode: { enabled: true }`."
-                enable_product_immediately:
-                  type: boolean
-                  description: "Deprecated: legacy alias for
-                    `invoice_mode.enable_plan_immediately`."
-                finalize_invoice:
-                  type: boolean
-                  description: "Deprecated: legacy alias for `invoice_mode.finalize`."
                 proration_behavior:
                   enum:
                     - prorate_immediately

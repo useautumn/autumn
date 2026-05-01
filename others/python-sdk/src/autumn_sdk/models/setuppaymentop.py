@@ -705,12 +705,6 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""The version of the plan to attach."""
     customize: NotRequired[SetupPaymentCustomizeTypedDict]
     r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
-    invoice: NotRequired[bool]
-    r"""Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."""
-    enable_product_immediately: NotRequired[bool]
-    r"""Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."""
-    finalize_invoice: NotRequired[bool]
-    r"""Deprecated: legacy alias for `invoice_mode.finalize`."""
     proration_behavior: NotRequired[SetupPaymentProrationBehavior]
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
     subscription_id: NotRequired[str]
@@ -757,15 +751,6 @@ class SetupPaymentParams(BaseModel):
 
     customize: Optional[SetupPaymentCustomize] = None
     r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
-
-    invoice: Optional[bool] = None
-    r"""Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."""
-
-    enable_product_immediately: Optional[bool] = None
-    r"""Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."""
-
-    finalize_invoice: Optional[bool] = None
-    r"""Deprecated: legacy alias for `invoice_mode.finalize`."""
 
     proration_behavior: Optional[SetupPaymentProrationBehavior] = None
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
@@ -818,9 +803,6 @@ class SetupPaymentParams(BaseModel):
                 "feature_quantities",
                 "version",
                 "customize",
-                "invoice",
-                "enable_product_immediately",
-                "finalize_invoice",
                 "proration_behavior",
                 "subscription_id",
                 "discounts",

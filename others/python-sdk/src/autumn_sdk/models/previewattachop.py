@@ -764,12 +764,6 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
     invoice_mode: NotRequired[PreviewAttachInvoiceModeTypedDict]
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
-    invoice: NotRequired[bool]
-    r"""Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."""
-    enable_product_immediately: NotRequired[bool]
-    r"""Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."""
-    finalize_invoice: NotRequired[bool]
-    r"""Deprecated: legacy alias for `invoice_mode.finalize`."""
     proration_behavior: NotRequired[PreviewAttachProrationBehavior]
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
     redirect_mode: NotRequired[PreviewAttachRedirectMode]
@@ -825,15 +819,6 @@ class PreviewAttachParams(BaseModel):
 
     invoice_mode: Optional[PreviewAttachInvoiceMode] = None
     r"""Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method."""
-
-    invoice: Optional[bool] = None
-    r"""Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."""
-
-    enable_product_immediately: Optional[bool] = None
-    r"""Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."""
-
-    finalize_invoice: Optional[bool] = None
-    r"""Deprecated: legacy alias for `invoice_mode.finalize`."""
 
     proration_behavior: Optional[PreviewAttachProrationBehavior] = None
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
@@ -895,9 +880,6 @@ class PreviewAttachParams(BaseModel):
                 "version",
                 "customize",
                 "invoice_mode",
-                "invoice",
-                "enable_product_immediately",
-                "finalize_invoice",
                 "proration_behavior",
                 "redirect_mode",
                 "subscription_id",

@@ -28,9 +28,6 @@ class Billing(BaseSDK):
         invoice_mode: Optional[
             Union[models.AttachInvoiceMode, models.AttachInvoiceModeTypedDict]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.AttachProrationBehavior] = None,
         redirect_mode: Optional[models.AttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -78,9 +75,6 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
-        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -125,9 +119,6 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.AttachInvoiceMode]
             ),
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -231,9 +222,6 @@ class Billing(BaseSDK):
         invoice_mode: Optional[
             Union[models.AttachInvoiceMode, models.AttachInvoiceModeTypedDict]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.AttachProrationBehavior] = None,
         redirect_mode: Optional[models.AttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -281,9 +269,6 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
-        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -328,9 +313,6 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.AttachInvoiceMode]
             ),
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -749,9 +731,6 @@ class Billing(BaseSDK):
                 models.PreviewAttachInvoiceModeTypedDict,
             ]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.PreviewAttachProrationBehavior] = None,
         redirect_mode: Optional[models.PreviewAttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -803,9 +782,6 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
-        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -851,9 +827,6 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewAttachInvoiceMode]
             ),
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -960,9 +933,6 @@ class Billing(BaseSDK):
                 models.PreviewAttachInvoiceModeTypedDict,
             ]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.PreviewAttachProrationBehavior] = None,
         redirect_mode: Optional[models.PreviewAttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -1014,9 +984,6 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
-        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -1062,9 +1029,6 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewAttachInvoiceMode]
             ),
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -1497,9 +1461,6 @@ class Billing(BaseSDK):
                 models.BillingUpdateInvoiceModeTypedDict,
             ]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.BillingUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.BillingUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -1533,9 +1494,6 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
-        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -1572,9 +1530,6 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.BillingUpdateInvoiceMode]
             ),
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -1669,9 +1624,6 @@ class Billing(BaseSDK):
                 models.BillingUpdateInvoiceModeTypedDict,
             ]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.BillingUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.BillingUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -1705,9 +1657,6 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
-        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -1744,9 +1693,6 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.BillingUpdateInvoiceMode]
             ),
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -1841,9 +1787,6 @@ class Billing(BaseSDK):
                 models.PreviewUpdateInvoiceModeTypedDict,
             ]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.PreviewUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.PreviewUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -1877,9 +1820,6 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
-        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -1917,9 +1857,6 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewUpdateInvoiceMode]
             ),
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -2014,9 +1951,6 @@ class Billing(BaseSDK):
                 models.PreviewUpdateInvoiceModeTypedDict,
             ]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.PreviewUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.PreviewUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -2050,9 +1984,6 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
-        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -2090,9 +2021,6 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewUpdateInvoiceMode]
             ),
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -2373,9 +2301,6 @@ class Billing(BaseSDK):
         customize: Optional[
             Union[models.SetupPaymentCustomize, models.SetupPaymentCustomizeTypedDict]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.SetupPaymentProrationBehavior] = None,
         subscription_id: Optional[str] = None,
         discounts: Optional[
@@ -2421,9 +2346,6 @@ class Billing(BaseSDK):
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
-        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
@@ -2462,9 +2384,6 @@ class Billing(BaseSDK):
             customize=utils.get_pydantic_model(
                 customize, Optional[models.SetupPaymentCustomize]
             ),
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
@@ -2562,9 +2481,6 @@ class Billing(BaseSDK):
         customize: Optional[
             Union[models.SetupPaymentCustomize, models.SetupPaymentCustomizeTypedDict]
         ] = None,
-        invoice: Optional[bool] = None,
-        enable_product_immediately: Optional[bool] = None,
-        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.SetupPaymentProrationBehavior] = None,
         subscription_id: Optional[str] = None,
         discounts: Optional[
@@ -2610,9 +2526,6 @@ class Billing(BaseSDK):
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
-        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
-        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
-        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
@@ -2651,9 +2564,6 @@ class Billing(BaseSDK):
             customize=utils.get_pydantic_model(
                 customize, Optional[models.SetupPaymentCustomize]
             ),
-            invoice=invoice,
-            enable_product_immediately=enable_product_immediately,
-            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(

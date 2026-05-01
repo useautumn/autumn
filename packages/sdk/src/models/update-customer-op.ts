@@ -296,7 +296,7 @@ export type UpdateCustomerPurchaseLimitResponse1 = {
 };
 
 /**
- * Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit.
+ * Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at.
  */
 export type UpdateCustomerPurchaseLimitUnion =
   | UpdateCustomerPurchaseLimitResponse2
@@ -320,7 +320,7 @@ export type UpdateCustomerAutoTopupResponse = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit.
+   * Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at.
    */
   purchaseLimit?:
     | UpdateCustomerPurchaseLimitResponse2

@@ -260,9 +260,6 @@ export const previewAttachParamsOutboundSchema = z.object({
 	invoice_mode: z
 		.union([previewAttachInvoiceModeOutboundSchema, z.undefined()])
 		.optional(),
-	invoice: z.union([z.boolean(), z.undefined()]).optional(),
-	enable_product_immediately: z.union([z.boolean(), z.undefined()]).optional(),
-	finalize_invoice: z.union([z.boolean(), z.undefined()]).optional(),
 	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
 	redirect_mode: z.string(),
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
@@ -403,9 +400,6 @@ export const previewAttachParamsSchema = z.object({
 	invoiceMode: z
 		.union([previewAttachInvoiceModeSchema, z.undefined()])
 		.optional(),
-	invoice: z.union([z.boolean(), z.undefined()]).optional(),
-	enableProductImmediately: z.union([z.boolean(), z.undefined()]).optional(),
-	finalizeInvoice: z.union([z.boolean(), z.undefined()]).optional(),
 	prorationBehavior: z
 		.union([previewAttachProrationBehaviorSchema, z.undefined()])
 		.optional(),

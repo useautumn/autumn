@@ -169,9 +169,6 @@ export const attachParamsOutboundSchema = z.object({
 	invoice_mode: z
 		.union([attachInvoiceModeOutboundSchema, z.undefined()])
 		.optional(),
-	invoice: z.union([z.boolean(), z.undefined()]).optional(),
-	enable_product_immediately: z.union([z.boolean(), z.undefined()]).optional(),
-	finalize_invoice: z.union([z.boolean(), z.undefined()]).optional(),
 	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
 	redirect_mode: z.string(),
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
@@ -299,9 +296,6 @@ export const attachParamsSchema = z.object({
 	version: z.union([z.number(), z.undefined()]).optional(),
 	customize: z.union([attachCustomizeSchema, z.undefined()]).optional(),
 	invoiceMode: z.union([attachInvoiceModeSchema, z.undefined()]).optional(),
-	invoice: z.union([z.boolean(), z.undefined()]).optional(),
-	enableProductImmediately: z.union([z.boolean(), z.undefined()]).optional(),
-	finalizeInvoice: z.union([z.boolean(), z.undefined()]).optional(),
 	prorationBehavior: z
 		.union([attachProrationBehaviorSchema, z.undefined()])
 		.optional(),
