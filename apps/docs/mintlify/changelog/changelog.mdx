@@ -4,6 +4,60 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 1st 2026">
+  ## Automatic Stripe Tax
+
+  Autumn now supports **Stripe Automatic Tax** end-to-end. Once you enable it on your org, Autumn passes `automatic_tax: { enabled: true }` to Stripe on checkout sessions, subscriptions, subscription updates, prorations, and one-off invoices — so the right tax is calculated based on your customer's address.
+
+  - **Tax in previews**: Attach previews now include a `tax` object showing inclusive, exclusive, and total tax amounts so customers see the final number before they confirm. See the [preview attach reference](/api-reference/billing/previewAttach).
+  - **Graceful incomplete state**: If a customer's address can't be resolved by Stripe Tax, the preview returns `tax.status: "incomplete"` with zero amounts instead of erroring out.
+  - **Dashboard surface**: Tax totals are surfaced on the AttachProduct sheet and customer invoices so your team can see what was charged.
+
+  ## `billing.auto_topup_succeeded` webhook
+
+  A new webhook fires every time an auto top-up grants credits to a customer — whether the charge ran on a saved card or fell back to an invoice. The payload includes the customer, feature, granted quantity, threshold that fired, post-top-up balance, and the underlying Stripe invoice.
+
+  Use it to send receipts, sync internal ledgers, or notify customers after a recharge. See the [webhook reference](/api-reference/webhooks/billingAutoTopupSucceeded) and the [auto top-ups guide](/documentation/modelling-pricing/auto-top-ups).
+
+  ## `enable_plan_immediately` on attach
+
+  Attach now accepts an `enable_plan_immediately` flag. When set, a customer's plan is activated as soon as you call `billing.attach` — even if payment is deferred (invoice mode) or pending (Stripe Checkout). The customer product is materialized up front so feature access starts the moment the attach call succeeds.
+
+  - Works with both Stripe Checkout and invoice mode.
+  - Mutually exclusive with `adjustable_quantity` line items — the API returns a clear validation error if both are set.
+
+  See the [attach reference](/api-reference/billing/attach).
+
+  ## Auto top-up purchase limits on the customer object
+
+  Auto top-up purchase tracking is now exposed on the customer API. Pass `expand=billing_controls.auto_topups.purchase_limit` on any customer fetch to see how many top-ups have run in the current window and when the counter next resets — useful for surfacing spend caps in your UI without a separate query.
+
+  ## Cross-processor one-off purchases
+
+  Customers on a RevenueCat subscription can now buy Stripe-billed one-off products (and vice versa) without conflicts. The attach pipeline filters customer products by processor when building Stripe subscription updates, so mixing mobile and web purchases on the same customer just works.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Automatic Stripe Tax across checkout, subscriptions, prorations, and invoices - [#1417](https://github.com/useautumn/autumn/pull/1417)
+      - `tax` object in attach and update previews - [#1424](https://github.com/useautumn/autumn/pull/1424)
+      - `billing.auto_topup_succeeded` webhook - [#1429](https://github.com/useautumn/autumn/pull/1429)
+      - `enable_plan_immediately` flag on attach, multi-attach, update, and previews - [#1415](https://github.com/useautumn/autumn/pull/1415)
+      - `billing_controls.auto_topups.purchase_limit` customer expand option - [#1423](https://github.com/useautumn/autumn/pull/1423)
+      - Cross-processor one-off product purchases for RevenueCat customers - [#1400](https://github.com/useautumn/autumn/pull/1400)
+      - `ignore_past_due` plan config exposed in plan and preview responses - [#1409](https://github.com/useautumn/autumn/pull/1409)
+      - `202 Accepted` responses documented across SDKs and the OpenAPI spec - [#1409](https://github.com/useautumn/autumn/pull/1409)
+      - Checkout session stage and auto top-up details surfaced in the dashboard - [#1436](https://github.com/useautumn/autumn/pull/1436)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Fixed tax preview calculation for non-net (tax-exclusive) line items - [#1434](https://github.com/useautumn/autumn/pull/1434)
+      - Fixed legacy quantity updates on subscriptions - [#1410](https://github.com/useautumn/autumn/pull/1410)
+      - Fixed balance edit failing for entity-scoped entitlements when no entity is selected - [#1407](https://github.com/useautumn/autumn/pull/1407)
+      - Fixed entitlement resets not running when a customer product was past due - [#1396](https://github.com/useautumn/autumn/pull/1396)
+      - SDK fail-open hook no longer swallows network errors silently - [#1404](https://github.com/useautumn/autumn/pull/1404)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
