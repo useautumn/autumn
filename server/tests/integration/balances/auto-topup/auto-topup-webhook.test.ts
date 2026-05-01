@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import {
 	type ApiCustomerV5,
-	type BalancesAutoTopupSucceeded,
+	type BillingAutoTopupSucceeded,
 	WebhookEventType,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
@@ -21,10 +21,10 @@ import { Decimal } from "decimal.js";
 import { makeAutoTopupConfig } from "./utils/makeAutoTopupConfig.js";
 
 type AutoTopupSucceededPayload = {
-	type: WebhookEventType.BalancesAutoTopupSucceeded;
+	type: WebhookEventType.BillingAutoTopupSucceeded;
 	id: string;
 	occurred_at: number;
-	data: BalancesAutoTopupSucceeded;
+	data: BillingAutoTopupSucceeded;
 };
 
 let webhook: WebhookTestSetup;
@@ -35,7 +35,7 @@ beforeAll(async () => {
 	const appId = getTestSvixAppId({ svixConfig: ctx.org.svix_config });
 	webhook = await setupWebhookTest({
 		appId,
-		filterTypes: [WebhookEventType.BalancesAutoTopupSucceeded],
+		filterTypes: [WebhookEventType.BillingAutoTopupSucceeded],
 	});
 	playToken = webhook.playToken;
 });
@@ -85,7 +85,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: successful auto top-u
 	const result = await waitForWebhook<AutoTopupSucceededPayload>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === WebhookEventType.BalancesAutoTopupSucceeded &&
+			payload.type === WebhookEventType.BillingAutoTopupSucceeded &&
 			payload.data?.customer_id === customerId,
 		timeoutMs: 30_000,
 	});
@@ -156,7 +156,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: invoice mode fires wi
 	const result = await waitForWebhook<AutoTopupSucceededPayload>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === WebhookEventType.BalancesAutoTopupSucceeded &&
+			payload.type === WebhookEventType.BillingAutoTopupSucceeded &&
 			payload.data?.customer_id === customerId,
 		timeoutMs: 30_000,
 	});
@@ -210,7 +210,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: no webhook when balan
 	const result = await waitForWebhook<AutoTopupSucceededPayload>({
 		token: playToken,
 		predicate: (payload) =>
-			payload.type === WebhookEventType.BalancesAutoTopupSucceeded &&
+			payload.type === WebhookEventType.BillingAutoTopupSucceeded &&
 			payload.data?.customer_id === customerId,
 		timeoutMs: 10_000,
 	});

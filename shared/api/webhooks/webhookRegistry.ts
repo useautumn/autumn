@@ -1,7 +1,7 @@
 import type { z } from "zod/v4";
-import { BalancesAutoTopupSucceededSchema } from "./balances/balancesAutoTopupSucceeded.js";
 import { BalancesLimitReachedSchema } from "./balances/balancesLimitReached.js";
 import { BalancesUsageAlertTriggeredSchema } from "./balances/balancesUsageAlertTriggered.js";
+import { BillingAutoTopupSucceededSchema } from "./billing/billingAutoTopupSucceeded.js";
 import { VercelResourceDeletedSchema } from "./vercel/vercelResourceDeleted.js";
 import { VercelResourceProvisionedSchema } from "./vercel/vercelResourceProvisioned.js";
 import { VercelResourceRotateSecretsSchema } from "./vercel/vercelResourceRotateSecrets.js";
@@ -40,12 +40,14 @@ export const webhookRegistry: WebhookDefinition[] = [
 		description:
 			"Fired when a customer reaches the limit for a feature (included allowance, max purchase, or spend limit).",
 	},
+
+	// ── Billing ───────────────────────────────────────────────────────────
 	{
-		eventType: WebhookEventType.BalancesAutoTopupSucceeded,
-		operationId: "balancesAutoTopupSucceeded",
+		eventType: WebhookEventType.BillingAutoTopupSucceeded,
+		operationId: "billingAutoTopupSucceeded",
 		title: "Auto Top-Up Succeeded",
-		schema: BalancesAutoTopupSucceededSchema,
-		group: "Balances",
+		schema: BillingAutoTopupSucceededSchema,
+		group: "Billing",
 		description:
 			"Fired when an automatic top-up grants additional prepaid balance.",
 	},
