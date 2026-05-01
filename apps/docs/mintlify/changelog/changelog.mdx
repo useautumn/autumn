@@ -4,6 +4,48 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 1st 2026">
+  ## Cross-processor one-off purchases for RevenueCat customers
+
+  Customers managed by RevenueCat can now buy one-off products through Autumn directly. Recurring add-ons remain restricted to the customer's primary processor, but one-time purchases are unblocked across processors. See the [RevenueCat integration guide](/documentation/external-providers/revenuecat) for details.
+
+  ## Feature totals on customer usage charts
+
+  The customer usage chart in the dashboard now shows per-feature totals in a strip above the bar chart, so you can see aggregate consumption alongside the time series at a glance.
+
+  ## Entity scope selector on Track and Check sheets
+
+  The dashboard's **Record Usage** and **Check Balance** sheets now include an entity scope dropdown, matching the existing Attach sheet. Choose the customer or a specific entity in one click without editing the request body.
+
+  ## Auto top-up rebalancing at execution time
+
+  Auto top-ups now recompute against the customer's actual remaining balance the moment they execute, instead of relying on the value captured when the top-up was scheduled. Customers no longer get over- or under-topped up when usage shifts between trigger and execution. See the [auto top-ups guide](/documentation/modelling-pricing/auto-top-ups).
+
+  ## `202 Accepted` for fail-open balance operations
+
+  `balances.check`, `balances.track`, and `balances.finalize` now return **`202 Accepted`** instead of `200 OK` when Autumn is experiencing degraded service from a downstream provider and the request was allowed through fail-open. This makes it easy to distinguish a fully-processed response from a fail-open passthrough. See the [fail-open guide](/documentation/fail-open).
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Cross-processor one-off product purchases for RevenueCat customers - [#1400](https://github.com/useautumn/autumn/pull/1400)
+      - Feature totals strip on the customer usage chart in the dashboard
+      - Entity scope selector added to **Record Usage** and **Check Balance** sheets - [#1380](https://github.com/useautumn/autumn/pull/1380), [#1381](https://github.com/useautumn/autumn/pull/1381)
+      - Auto top-ups rebalance against the live balance at execution time - [#1371](https://github.com/useautumn/autumn/pull/1371)
+      - `202 Accepted` returned by `check`, `track`, and `finalize` when fail-open is engaged - [#1409](https://github.com/useautumn/autumn/pull/1409)
+      - Stripe webhooks are now acknowledged immediately and processed asynchronously, reducing webhook timeouts - [#1397](https://github.com/useautumn/autumn/pull/1397)
+      - `track` now persists the `idempotency_key` end-to-end for stronger duplicate protection
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Editing balances no longer fails for entity-scoped entitlements when no entity is selected at the page level - [#1406](https://github.com/useautumn/autumn/pull/1406), [#1407](https://github.com/useautumn/autumn/pull/1407)
+      - Past-due customers now have their entitlements reset correctly on lazy reset - [#1396](https://github.com/useautumn/autumn/pull/1396)
+      - Network errors are no longer swallowed by the SDK's fail-open hook; they're propagated with a debug log - [#1404](https://github.com/useautumn/autumn/pull/1404)
+      - Legacy quantity updates on prepaid volume V1 prices with zero quantity no longer error out - [#1410](https://github.com/useautumn/autumn/pull/1410)
+      - `update_subscription` now respects entity-on-description and additional override settings
+      - Rollovers are correctly applied when inserting new customer products
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
