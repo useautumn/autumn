@@ -1,0 +1,38 @@
+server/src/internal/billing/v2/utils/billingPlan/preview/tax/computeAttachTaxPreview.ts
+  623859c3d96b6e7e 28-42,69-79,84-96,101-110
+server/tests/integration/billing/tax/automatic-tax-preview-attach-prorated-credit.test.ts
+  623859c3d96b6e7e 1-51,55-116,118-122,128-130,132-150,152-163,168-176,179-187,191-239
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "5cd340efe180e5eff5a95cc579ce9b387f37589a",
+  "prompts": {
+    "623859c3d96b6e7e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_21c42ea5fffeW0PNNQrsY05Ngx",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 300,
+      "total_deletions": 14,
+      "accepted_lines": 253,
+      "overriden_lines": 11
+    },
+    "6cd800ed208d36e5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_21c08cb94ffeViBvOmV4m5tRGx",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 22121,
+      "total_deletions": 180,
+      "accepted_lines": 22121,
+      "overriden_lines": 0
+    }
+  }
+}
