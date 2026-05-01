@@ -28,6 +28,58 @@ export interface SendInvoiceSubmitParams {
 	finalizeInvoice: boolean;
 }
 
+export function PlanActivationSection({
+	enableImmediately,
+	setEnableImmediately,
+	disabled,
+}: {
+	enableImmediately: boolean;
+	setEnableImmediately: (value: boolean) => void;
+	disabled?: boolean;
+}) {
+	return (
+		<SheetSection
+			title="Plan Activation"
+			withSeparator
+			className={disabled ? "opacity-50 pointer-events-none" : ""}
+		>
+			<div className="space-y-4">
+				<div className="flex w-full items-center gap-4">
+					<PanelButton
+						isSelected={enableImmediately}
+						onClick={() => setEnableImmediately(true)}
+						icon={<LightningIcon size={18} weight="duotone" />}
+					/>
+					<div className="flex-1">
+						<div className="text-body-highlight mb-1">
+							Enable plan immediately
+						</div>
+						<div className="text-body-secondary leading-tight">
+							Plan activates now, payment is collected separately.
+						</div>
+					</div>
+				</div>
+
+				<div className="flex w-full items-center gap-4">
+					<PanelButton
+						isSelected={!enableImmediately}
+						onClick={() => setEnableImmediately(false)}
+						icon={<HourglassIcon size={18} weight="duotone" />}
+					/>
+					<div className="flex-1">
+						<div className="text-body-highlight mb-1">
+							Enable plan after payment
+						</div>
+						<div className="text-body-secondary leading-tight">
+							Plan activates only after the customer completes payment.
+						</div>
+					</div>
+				</div>
+			</div>
+		</SheetSection>
+	);
+}
+
 export function SendInvoiceStage({
 	productName,
 	isPending,
@@ -65,9 +117,9 @@ export function SendInvoiceStage({
 	const [completedInvoiceUrl, setCompletedInvoiceUrl] = useState<string | null>(
 		null,
 	);
-	const [activeAction, setActiveAction] = useState<
-		"draft" | "finalize" | null
-	>(null);
+	const [activeAction, setActiveAction] = useState<"draft" | "finalize" | null>(
+		null,
+	);
 
 	const customerId = customer?.id ?? customer?.internal_id;
 
@@ -160,9 +212,9 @@ export function SendInvoiceStage({
 						View Stripe invoice
 					</Button>
 					<CopyButton
-							text={completedInvoiceUrl}
-							innerClassName="text-xs text-t3 font-mono w-96"
-						/>
+						text={completedInvoiceUrl}
+						innerClassName="text-xs text-t3 font-mono w-96"
+					/>
 				</SheetFooter>
 			</>
 		);
@@ -217,45 +269,11 @@ export function SendInvoiceStage({
 				</SheetSection>
 			)}
 
-			<SheetSection
-				title="Plan Activation"
-				withSeparator
-				className={needsEmail ? "opacity-50 pointer-events-none" : ""}
-			>
-				<div className="space-y-4">
-					<div className="flex w-full items-center gap-4">
-						<PanelButton
-							isSelected={enableImmediately}
-							onClick={() => setEnableImmediately(true)}
-							icon={<LightningIcon size={18} weight="duotone" />}
-						/>
-						<div className="flex-1">
-							<div className="text-body-highlight mb-1">
-								Enable plan immediately
-							</div>
-							<div className="text-body-secondary leading-tight">
-								Plan activates now, invoice is sent for payment.
-							</div>
-						</div>
-					</div>
-
-					<div className="flex w-full items-center gap-4">
-						<PanelButton
-							isSelected={!enableImmediately}
-							onClick={() => setEnableImmediately(false)}
-							icon={<HourglassIcon size={18} weight="duotone" />}
-						/>
-						<div className="flex-1">
-							<div className="text-body-highlight mb-1">
-								Enable plan after payment
-							</div>
-							<div className="text-body-secondary leading-tight">
-								Plan activates only after the customer pays the invoice.
-							</div>
-						</div>
-					</div>
-				</div>
-			</SheetSection>
+			<PlanActivationSection
+				enableImmediately={enableImmediately}
+				setEnableImmediately={setEnableImmediately}
+				disabled={needsEmail}
+			/>
 
 			<LineItemsPreview
 				title="Pricing Preview"
