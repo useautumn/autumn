@@ -1,8 +1,4 @@
-import {
-	type Entity,
-	formatAmount,
-	type FullCustomer,
-} from "@autumn/shared";
+import { type Entity, type FullCustomer, formatAmount } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import type { AxiosError } from "axios";
 import { format } from "date-fns";
@@ -98,7 +94,7 @@ function ReviewPreviewSkeleton() {
 }
 
 function ReviewPreviewBlock() {
-	const { previewQuery, formValues } = useAttachFormContext();
+	const { previewQuery, formValues, customerId } = useAttachFormContext();
 	const hasProductSelected = !!formValues.productId;
 	const {
 		data: previewData,
@@ -120,13 +116,13 @@ function ReviewPreviewBlock() {
 		if (previewData.tax.status !== "incomplete") return;
 		// Dedupe per request: keyed by the customer + plan in scope so flips
 		// on the same form don't spam.
-		const key = `${formValues.customerId ?? ""}|${formValues.productId ?? ""}`;
+		const key = `${customerId ?? ""}|${formValues.productId ?? ""}`;
 		if (incompleteToastShownFor.current === key) return;
 		incompleteToastShownFor.current = key;
 		toast.warning(
 			"While preparing a tax preview for this purchase, we were unable to determine the customer's location. Tax will not be shown in this preview, but Stripe will compute it on the actual charge.",
 		);
-	}, [previewData?.tax, formValues.customerId, formValues.productId]);
+	}, [previewData?.tax, customerId, formValues.productId]);
 
 	if (!hasProductSelected) return null;
 

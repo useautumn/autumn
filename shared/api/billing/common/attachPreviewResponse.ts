@@ -21,7 +21,7 @@ export const AttachPreviewResponseSchema = BillingPreviewResponseSchema.extend({
 
 	tax: PreviewTaxSchema.optional().meta({
 		description:
-			"Tax preview for the immediate charge, computed via Stripe Tax. Present only when the org has `automatic_tax` enabled, the customer exists in Stripe, there's a positive amount to charge immediately, and the flow is NOT a Stripe Checkout redirect (Stripe Checkout collects the address and computes tax during the buyer-facing form).",
+			"Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.",
 	}),
 	// redirect_type: z.enum(["stripe_checkout", "autumn_checkout", "none"]),
 });

@@ -282,6 +282,18 @@ This is useful for attaching custom metadata to the Stripe subscription created 
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="invoice" type="boolean">
+  Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: \{ enabled: true \}`.
+</DynamicParamField>
+
+<DynamicParamField body="enable_product_immediately" type="boolean">
+  Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+</DynamicParamField>
+
+<DynamicParamField body="finalize_invoice" type="boolean">
+  Deprecated: legacy alias for `invoice_mode.finalize`.
+</DynamicParamField>
+
 <DynamicParamField body="proration_behavior" type="'prorate_immediately' | 'none'">
   How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
 </DynamicParamField>
@@ -380,6 +392,10 @@ This is useful for attaching custom metadata to the Stripe subscription created 
 
 <DynamicParamField body="no_billing_changes" type="boolean">
   If true, skips any billing changes for the attach operation.
+</DynamicParamField>
+
+<DynamicParamField body="enable_plan_immediately" type="boolean">
+  If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
 </DynamicParamField>
 
 

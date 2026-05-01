@@ -15,7 +15,7 @@ from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
 from typing import Any, Dict, List, Literal, Optional, Union
-from typing_extensions import Annotated, NotRequired, TypedDict
+from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
 class ListCustomersGlobalsTypedDict(TypedDict):
@@ -150,7 +150,62 @@ ListCustomersEnv = Union[
 r"""The environment this customer was created in."""
 
 
-ListCustomersInterval = Union[
+ListCustomersInterval2 = Union[
+    Literal[
+        "hour",
+        "day",
+        "week",
+        "month",
+    ],
+    UnrecognizedStr,
+]
+
+
+class ListCustomersPurchaseLimit2TypedDict(TypedDict):
+    interval: Nullable[ListCustomersInterval2]
+    r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
+    interval_count: Nullable[float]
+    r"""Number of intervals in the purchase limit window. Null when no purchase limit is configured."""
+    limit: Nullable[float]
+    r"""Maximum number of auto top-ups allowed within the interval. Null when no purchase limit is configured."""
+    count: float
+    r"""Number of auto top-ups already consumed in the current window."""
+    next_reset_at: float
+    r"""Unix ms timestamp when the current purchase window ends and the count resets."""
+
+
+class ListCustomersPurchaseLimit2(BaseModel):
+    interval: Nullable[ListCustomersInterval2]
+    r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
+
+    interval_count: Nullable[float]
+    r"""Number of intervals in the purchase limit window. Null when no purchase limit is configured."""
+
+    limit: Nullable[float]
+    r"""Maximum number of auto top-ups allowed within the interval. Null when no purchase limit is configured."""
+
+    count: float
+    r"""Number of auto top-ups already consumed in the current window."""
+
+    next_reset_at: float
+    r"""Unix ms timestamp when the current purchase window ends and the count resets."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
+
+
+ListCustomersInterval1 = Union[
     Literal[
         "hour",
         "day",
@@ -162,10 +217,8 @@ ListCustomersInterval = Union[
 r"""The time interval for the purchase limit window."""
 
 
-class ListCustomersPurchaseLimitTypedDict(TypedDict):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
-
-    interval: ListCustomersInterval
+class ListCustomersPurchaseLimit1TypedDict(TypedDict):
+    interval: ListCustomersInterval1
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -173,10 +226,8 @@ class ListCustomersPurchaseLimitTypedDict(TypedDict):
     r"""Number of intervals in the purchase limit window."""
 
 
-class ListCustomersPurchaseLimit(BaseModel):
-    r"""Optional rate limit to cap how often auto top-ups occur."""
-
-    interval: ListCustomersInterval
+class ListCustomersPurchaseLimit1(BaseModel):
+    interval: ListCustomersInterval1
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -202,6 +253,20 @@ class ListCustomersPurchaseLimit(BaseModel):
         return m
 
 
+ListCustomersPurchaseLimitUnionTypedDict = TypeAliasType(
+    "ListCustomersPurchaseLimitUnionTypedDict",
+    Union[ListCustomersPurchaseLimit1TypedDict, ListCustomersPurchaseLimit2TypedDict],
+)
+r"""Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit."""
+
+
+ListCustomersPurchaseLimitUnion = TypeAliasType(
+    "ListCustomersPurchaseLimitUnion",
+    Union[ListCustomersPurchaseLimit1, ListCustomersPurchaseLimit2],
+)
+r"""Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit."""
+
+
 class ListCustomersAutoTopupTypedDict(TypedDict):
     feature_id: str
     r"""The ID of the feature (credit balance) to auto top-up."""
@@ -211,8 +276,8 @@ class ListCustomersAutoTopupTypedDict(TypedDict):
     r"""Amount of credits to add per auto top-up."""
     enabled: NotRequired[bool]
     r"""Whether auto top-up is enabled."""
-    purchase_limit: NotRequired[ListCustomersPurchaseLimitTypedDict]
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    purchase_limit: NotRequired[ListCustomersPurchaseLimitUnionTypedDict]
+    r"""Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit."""
     invoice_mode: NotRequired[bool]
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""
 
@@ -230,8 +295,8 @@ class ListCustomersAutoTopup(BaseModel):
     enabled: Optional[bool] = False
     r"""Whether auto top-up is enabled."""
 
-    purchase_limit: Optional[ListCustomersPurchaseLimit] = None
-    r"""Optional rate limit to cap how often auto top-ups occur."""
+    purchase_limit: Optional[ListCustomersPurchaseLimitUnion] = None
+    r"""Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit."""
 
     invoice_mode: Optional[bool] = None
     r"""When true, auto top-up creates a send_invoice invoice instead of auto-charging."""

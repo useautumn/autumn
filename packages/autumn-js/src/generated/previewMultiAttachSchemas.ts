@@ -451,6 +451,7 @@ export const previewMultiAttachParamsSchema = z.object({
 		.union([previewMultiAttachRedirectModeSchema, z.undefined()])
 		.optional(),
 	newBillingSubscription: z.union([z.boolean(), z.undefined()]).optional(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	customerData: z.union([customerDataSchema, z.undefined()]).optional(),
 	entityData: z
 		.union([previewMultiAttachEntityDataSchema, z.undefined()])
@@ -477,6 +478,16 @@ export const previewMultiAttachOutgoingSchema = z.object({
 
 export const previewMultiAttachCheckoutTypeSchema = openEnumSchema;
 
+export const previewMultiAttachStatusSchema = openEnumSchema;
+
+export const previewMultiAttachTaxSchema = z.object({
+	total: z.number(),
+	amountInclusive: z.number(),
+	amountExclusive: z.number(),
+	currency: z.string(),
+	status: previewMultiAttachStatusSchema,
+});
+
 export const previewMultiAttachResponseSchema = z.object({
 	customerId: z.string(),
 	lineItems: z.array(previewMultiAttachLineItemSchema),
@@ -491,6 +502,7 @@ export const previewMultiAttachResponseSchema = z.object({
 	outgoing: z.array(previewMultiAttachOutgoingSchema),
 	redirectToCheckout: z.boolean(),
 	checkoutType: previewMultiAttachCheckoutTypeSchema.nullable(),
+	tax: z.union([previewMultiAttachTaxSchema, z.undefined()]).optional(),
 });
 
 export const previewMultiAttachParamsOutboundSchema = z.object({
@@ -516,6 +528,7 @@ export const previewMultiAttachParamsOutboundSchema = z.object({
 		.optional(),
 	redirect_mode: z.string(),
 	new_billing_subscription: z.union([z.boolean(), z.undefined()]).optional(),
+	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 	customer_data: z
 		.union([customerDataOutboundSchema, z.undefined()])
 		.optional(),

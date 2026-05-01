@@ -501,6 +501,18 @@ export type PreviewAttachParams = {
    */
   invoiceMode?: PreviewAttachInvoiceMode | undefined;
   /**
+   * Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+   */
+  invoice?: boolean | undefined;
+  /**
+   * Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+   */
+  enableProductImmediately?: boolean | undefined;
+  /**
+   * Deprecated: legacy alias for `invoice_mode.finalize`.
+   */
+  finalizeInvoice?: boolean | undefined;
+  /**
    * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
   prorationBehavior?: PreviewAttachProrationBehavior | undefined;
@@ -560,6 +572,10 @@ export type PreviewAttachParams = {
    * If true, skips any billing changes for the attach operation.
    */
   noBillingChanges?: boolean | undefined;
+  /**
+   * If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+   */
+  enablePlanImmediately?: boolean | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -820,6 +836,44 @@ export type PreviewAttachCheckoutType = OpenEnum<
 >;
 
 /**
+ * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ */
+export const PreviewAttachStatus = {
+  Complete: "complete",
+  Incomplete: "incomplete",
+} as const;
+/**
+ * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ */
+export type PreviewAttachStatus = OpenEnum<typeof PreviewAttachStatus>;
+
+/**
+ * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
+ */
+export type PreviewAttachTax = {
+  /**
+   * Total tax amount in major currency units.
+   */
+  total: number;
+  /**
+   * Tax included in line item subtotals.
+   */
+  amountInclusive: number;
+  /**
+   * Tax added on top of subtotals.
+   */
+  amountExclusive: number;
+  /**
+   * Three-letter currency code.
+   */
+  currency: string;
+  /**
+   * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+   */
+  status: PreviewAttachStatus;
+};
+
+/**
  * OK
  */
 export type PreviewAttachResponse = {
@@ -864,6 +918,10 @@ export type PreviewAttachResponse = {
    * The type of checkout that will be used if the customer is redirected to a checkout page.
    */
   checkoutType: PreviewAttachCheckoutType | null;
+  /**
+   * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
+   */
+  tax?: PreviewAttachTax | undefined;
 };
 
 /** @internal */
@@ -1461,6 +1519,9 @@ export type PreviewAttachParams$Outbound = {
   version?: number | undefined;
   customize?: PreviewAttachCustomize$Outbound | undefined;
   invoice_mode?: PreviewAttachInvoiceMode$Outbound | undefined;
+  invoice?: boolean | undefined;
+  enable_product_immediately?: boolean | undefined;
+  finalize_invoice?: boolean | undefined;
   proration_behavior?: string | undefined;
   redirect_mode: string;
   subscription_id?: string | undefined;
@@ -1476,6 +1537,7 @@ export type PreviewAttachParams$Outbound = {
   carry_over_usages?: PreviewAttachCarryOverUsages$Outbound | undefined;
   metadata?: { [k: string]: string } | undefined;
   no_billing_changes?: boolean | undefined;
+  enable_plan_immediately?: boolean | undefined;
 };
 
 /** @internal */
@@ -1495,6 +1557,9 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     invoiceMode: z.optional(
       z.lazy(() => PreviewAttachInvoiceMode$outboundSchema),
     ),
+    invoice: z.optional(z.boolean()),
+    enableProductImmediately: z.optional(z.boolean()),
+    finalizeInvoice: z.optional(z.boolean()),
     prorationBehavior: z.optional(
       PreviewAttachProrationBehavior$outboundSchema,
     ),
@@ -1523,6 +1588,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     ),
     metadata: z.optional(z.record(z.string(), z.string())),
     noBillingChanges: z.optional(z.boolean()),
+    enablePlanImmediately: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1531,6 +1597,8 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       planId: "plan_id",
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
+      enableProductImmediately: "enable_product_immediately",
+      finalizeInvoice: "finalize_invoice",
       prorationBehavior: "proration_behavior",
       redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
@@ -1544,6 +1612,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       carryOverBalances: "carry_over_balances",
       carryOverUsages: "carry_over_usages",
       noBillingChanges: "no_billing_changes",
+      enablePlanImmediately: "enable_plan_immediately",
     });
   }),
 );
@@ -1954,6 +2023,42 @@ export const PreviewAttachCheckoutType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PreviewAttachCheckoutType);
 
 /** @internal */
+export const PreviewAttachStatus$inboundSchema: z.ZodMiniType<
+  PreviewAttachStatus,
+  unknown
+> = openEnums.inboundSchema(PreviewAttachStatus);
+
+/** @internal */
+export const PreviewAttachTax$inboundSchema: z.ZodMiniType<
+  PreviewAttachTax,
+  unknown
+> = z.pipe(
+  z.object({
+    total: types.number(),
+    amount_inclusive: types.number(),
+    amount_exclusive: types.number(),
+    currency: types.string(),
+    status: PreviewAttachStatus$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_inclusive": "amountInclusive",
+      "amount_exclusive": "amountExclusive",
+    });
+  }),
+);
+
+export function previewAttachTaxFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachTax, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewAttachTax$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachTax' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
   PreviewAttachResponse,
   unknown
@@ -1972,6 +2077,7 @@ export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
     outgoing: z.array(z.lazy(() => PreviewAttachOutgoing$inboundSchema)),
     redirect_to_checkout: types.boolean(),
     checkout_type: types.nullable(PreviewAttachCheckoutType$inboundSchema),
+    tax: types.optional(z.lazy(() => PreviewAttachTax$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
