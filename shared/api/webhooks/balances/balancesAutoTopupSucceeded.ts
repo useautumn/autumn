@@ -21,7 +21,6 @@ export const BalancesAutoTopupSucceededInvoiceSchema = z.object({
 export const BALANCES_AUTO_TOPUP_SUCCEEDED_EXAMPLE = {
 	customer_id: "cus_123",
 	feature_id: "messages",
-	customer_product_id: "cp_123",
 	quantity_granted: 100,
 	threshold: 20,
 	balance_after: 115,
@@ -42,10 +41,6 @@ export const BalancesAutoTopupSucceededSchema = z
 		}),
 		feature_id: z.string().meta({
 			description: "The feature ID that was automatically topped up.",
-		}),
-		customer_product_id: z.string().meta({
-			description:
-				"The Autumn customer product ID whose prepaid quantity was updated.",
 		}),
 		quantity_granted: z.number().meta({
 			description: "The normalized amount of balance granted by the top-up.",

@@ -29,6 +29,7 @@ type AutoTopupSucceededPayload = {
 
 let webhook: WebhookTestSetup;
 let playToken: string;
+const RUN_ID = Date.now();
 
 beforeAll(async () => {
 	const appId = getTestSvixAppId({ svixConfig: ctx.org.svix_config });
@@ -50,12 +51,12 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: successful auto top-u
 		price: 10,
 	});
 	const oneOffProduct = products.oneOffAddOn({
-		id: "topup-webhook-success",
+		id: `topup-webhook-success-${RUN_ID}`,
 		items: [oneOffItem],
 	});
 
 	const { customerId, autumnV2_1 } = await initScenario({
-		customerId: "auto-topup-webhook-success",
+		customerId: `auto-topup-webhook-success-${RUN_ID}`,
 		setup: [
 			s.customer({ paymentMethod: "success", skipWebhooks: true }),
 			s.products({ list: [oneOffProduct] }),
@@ -96,8 +97,6 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: successful auto top-u
 	const data = payload.data;
 	expect(data.customer_id).toBe(customerId);
 	expect(data.feature_id).toBe(TestFeature.Messages);
-	expect(typeof data.customer_product_id).toBe("string");
-	expect(data.customer_product_id.length).toBeGreaterThan(0);
 	expect(data.quantity_granted).toBe(100);
 	expect(data.threshold).toBe(20);
 	expect(data.balance_after).toBe(new Decimal(100).sub(85).add(100).toNumber());
@@ -113,7 +112,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: successful auto top-u
 		featureId: TestFeature.Messages,
 		remaining: new Decimal(100).sub(85).add(100).toNumber(),
 	});
-});
+}, 60_000);
 
 test.concurrent(`${chalk.yellowBright("auto-topup webhook: invoice mode fires with open invoice")}`, async () => {
 	const oneOffItem = items.oneOffMessages({
@@ -122,12 +121,12 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: invoice mode fires wi
 		price: 10,
 	});
 	const oneOffProduct = products.oneOffAddOn({
-		id: "topup-webhook-invoice-mode",
+		id: `topup-webhook-invoice-mode-${RUN_ID}`,
 		items: [oneOffItem],
 	});
 
 	const { customerId, autumnV2_1 } = await initScenario({
-		customerId: "auto-topup-webhook-invoice-mode",
+		customerId: `auto-topup-webhook-invoice-mode-${RUN_ID}`,
 		setup: [
 			s.customer({ paymentMethod: "success", skipWebhooks: true }),
 			s.products({ list: [oneOffProduct] }),
@@ -168,7 +167,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: invoice mode fires wi
 	expect(data.invoice.status).not.toBe("void");
 	expect(data.invoice.status).not.toBe("paid");
 	expect(data.balance_after).toBe(new Decimal(100).sub(85).add(100).toNumber());
-});
+}, 60_000);
 
 test.concurrent(`${chalk.yellowBright("auto-topup webhook: no webhook when balance remains above threshold")}`, async () => {
 	const oneOffItem = items.oneOffMessages({
@@ -177,12 +176,12 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: no webhook when balan
 		price: 10,
 	});
 	const oneOffProduct = products.oneOffAddOn({
-		id: "topup-webhook-no-fire",
+		id: `topup-webhook-no-fire-${RUN_ID}`,
 		items: [oneOffItem],
 	});
 
 	const { customerId, autumnV2_1 } = await initScenario({
-		customerId: "auto-topup-webhook-no-fire",
+		customerId: `auto-topup-webhook-no-fire-${RUN_ID}`,
 		setup: [
 			s.customer({ paymentMethod: "success", skipWebhooks: true }),
 			s.products({ list: [oneOffProduct] }),
@@ -213,8 +212,8 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: no webhook when balan
 		predicate: (payload) =>
 			payload.type === WebhookEventType.BalancesAutoTopupSucceeded &&
 			payload.data?.customer_id === customerId,
-		timeoutMs: 5_000,
+		timeoutMs: 10_000,
 	});
 
 	expect(result).toBeNull();
-});
+}, 60_000);
