@@ -273,6 +273,12 @@
 								]
 							},
 							{
+								"group": "Billing",
+								"pages": [
+									"api-reference/webhooks/billingAutoTopupSucceeded"
+								]
+							},
+							{
 								"group": "Vercel",
 								"pages": [
 									"api-reference/webhooks/vercelResourcesDeleted",

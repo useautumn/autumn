@@ -28,7 +28,7 @@ targets:
         sourceRevisionDigest: sha256:1855536f6873d7de43c645fd173ba8caf2e79a8db90bb6e0603ec65df84df392
         sourceBlobDigest: sha256:15472373f815975e687aa0ce5e7723b4e24b691424a5b60f0e20d213a46c3b80
         codeSamplesNamespace: autumn-api-python-code-samples
-        codeSamplesRevisionDigest: sha256:9736bf24a308c64875677f5a9b8ce997762a1f130f7e588d5368d95fbe414394
+        codeSamplesRevisionDigest: sha256:6f5801246781ff1282d0aefad42f71fe727a74b04668a74334728e145fdd6640
 workflow:
     workflowVersion: 1.0.0
     speakeasyVersion: pinned
