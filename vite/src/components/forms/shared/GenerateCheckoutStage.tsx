@@ -53,11 +53,13 @@ export function GenerateCheckoutStage({
 			const { paymentUrl } = await onSubmit({
 				enablePlanImmediately: enableImmediately,
 			});
-			if (paymentUrl) {
-				setCompletedCheckoutUrl(paymentUrl);
-				navigator.clipboard.writeText(paymentUrl);
-				toast.success("Checkout URL copied to clipboard");
-			}
+		if (paymentUrl) {
+			setCompletedCheckoutUrl(paymentUrl);
+			navigator.clipboard.writeText(paymentUrl);
+			toast.success("Checkout URL copied to clipboard");
+		} else {
+			toast.error("No checkout URL was returned. Please try again.");
+		}
 		} finally {
 			setIsSubmitting(false);
 		}
