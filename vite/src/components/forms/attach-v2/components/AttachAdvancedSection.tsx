@@ -110,6 +110,7 @@ export function AttachAdvancedSection() {
 		newBillingSubscription,
 		resetBillingCycle,
 		noBillingChanges,
+		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -364,6 +365,19 @@ export function AttachAdvancedSection() {
 						checked={noBillingChanges}
 						onCheckedChange={(checked) =>
 							form.setFieldValue("noBillingChanges", !!checked)
+						}
+					/>
+				}
+			/>
+
+			<ConfigRow
+				title="Enable Plan Immediately"
+				description="Grant access as soon as the checkout session is created, before payment is completed"
+				action={
+					<Switch
+						checked={enablePlanImmediately}
+						onCheckedChange={(checked) =>
+							form.setFieldValue("enablePlanImmediately", !!checked)
 						}
 					/>
 				}

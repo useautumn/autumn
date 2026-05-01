@@ -14,6 +14,7 @@ import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBilling
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
+import { computeAttachPreviewBillingPlan } from "@/internal/billing/v2/utils/billingPlan/preview/computeAttachPreviewBillingPlan";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
 import { hashJson } from "@/utils/hash/hashJson";
 import {
@@ -78,9 +79,15 @@ export async function attach({
 	});
 
 	if (preview) {
+		const previewBillingPlan = await computeAttachPreviewBillingPlan({
+			ctx,
+			billingContext,
+			autumnBillingPlan,
+		});
+
 		return {
 			billingContext,
-			billingPlan,
+			billingPlan: { ...billingPlan, preview: previewBillingPlan },
 		};
 	}
 

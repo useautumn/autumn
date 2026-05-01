@@ -70,6 +70,7 @@ import { Result } from "../types/fp.js";
  * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
  * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
  * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
+ * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
  *
  * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
  */

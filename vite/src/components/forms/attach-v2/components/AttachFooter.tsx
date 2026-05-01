@@ -153,7 +153,7 @@ export function AttachFooter() {
 						<Button
 							variant="primary"
 							className="w-full"
-							onClick={handleConfirm}
+							onClick={() => handleConfirm()}
 							isLoading={isPending}
 						>
 							{confirmLabel}

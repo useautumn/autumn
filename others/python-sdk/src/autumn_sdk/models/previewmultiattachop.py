@@ -916,6 +916,8 @@ class PreviewMultiAttachParamsTypedDict(TypedDict):
     r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
     new_billing_subscription: NotRequired[bool]
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
+    enable_plan_immediately: NotRequired[bool]
+    r"""If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout."""
     customer_data: NotRequired[CustomerDataTypedDict]
     r"""Customer details to set when creating a customer"""
     entity_data: NotRequired[PreviewMultiAttachEntityDataTypedDict]
@@ -952,6 +954,9 @@ class PreviewMultiAttachParams(BaseModel):
     new_billing_subscription: Optional[bool] = None
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
 
+    enable_plan_immediately: Optional[bool] = None
+    r"""If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout."""
+
     customer_data: Optional[CustomerData] = None
     r"""Customer details to set when creating a customer"""
 
@@ -969,6 +974,7 @@ class PreviewMultiAttachParams(BaseModel):
                 "checkout_session_params",
                 "redirect_mode",
                 "new_billing_subscription",
+                "enable_plan_immediately",
                 "customer_data",
                 "entity_data",
             ]
@@ -1508,6 +1514,50 @@ PreviewMultiAttachCheckoutType = Union[
 ]
 
 
+PreviewMultiAttachStatus = Union[
+    Literal[
+        "complete",
+        "incomplete",
+    ],
+    UnrecognizedStr,
+]
+r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+
+
+class PreviewMultiAttachTaxTypedDict(TypedDict):
+    r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
+
+    total: float
+    r"""Total tax amount in major currency units."""
+    amount_inclusive: float
+    r"""Tax included in line item subtotals."""
+    amount_exclusive: float
+    r"""Tax added on top of subtotals."""
+    currency: str
+    r"""Three-letter currency code."""
+    status: PreviewMultiAttachStatus
+    r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+
+
+class PreviewMultiAttachTax(BaseModel):
+    r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
+
+    total: float
+    r"""Total tax amount in major currency units."""
+
+    amount_inclusive: float
+    r"""Tax included in line item subtotals."""
+
+    amount_exclusive: float
+    r"""Tax added on top of subtotals."""
+
+    currency: str
+    r"""Three-letter currency code."""
+
+    status: PreviewMultiAttachStatus
+    r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+
+
 class PreviewMultiAttachResponseTypedDict(TypedDict):
     r"""OK"""
 
@@ -1532,6 +1582,8 @@ class PreviewMultiAttachResponseTypedDict(TypedDict):
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
     expand: NotRequired[List[str]]
     r"""Expand the response with additional data."""
+    tax: NotRequired[PreviewMultiAttachTaxTypedDict]
+    r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
 
 
 class PreviewMultiAttachResponse(BaseModel):
@@ -1569,9 +1621,12 @@ class PreviewMultiAttachResponse(BaseModel):
     expand: Optional[List[str]] = None
     r"""Expand the response with additional data."""
 
+    tax: Optional[PreviewMultiAttachTax] = None
+    r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["next_cycle", "expand"])
+        optional_fields = set(["next_cycle", "expand", "tax"])
         nullable_fields = set(["checkout_type"])
         serialized = handler(self)
         m = {}
