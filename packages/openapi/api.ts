@@ -1,4 +1,7 @@
-import { generateMintlifyDocs } from "./utils/mintlifyTransform.js";
+import {
+	generateMintlifyDocs,
+	syncSvixTransforms,
+} from "./utils/mintlifyTransform.js";
 import { resolvePaths } from "./utils/paths.js";
 import {
 	generateSdksInParallel,
@@ -41,6 +44,12 @@ async function main() {
 	// Generate Mintlify docs (transform OpenAPI + generate MDX)
 	await generateMintlifyDocs({
 		openApiPath: paths.docsOpenApiPath,
+		docsDir: paths.docsDir,
+	});
+
+	// Sync Slack/Discord Svix transform sources into docs snippets
+	syncSvixTransforms({
+		svixTransformsDir: paths.svixTransformsDir,
 		docsDir: paths.docsDir,
 	});
 
