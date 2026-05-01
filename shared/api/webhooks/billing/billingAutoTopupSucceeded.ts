@@ -1,6 +1,6 @@
 import { z } from "zod/v4";
 
-export const BalancesAutoTopupSucceededInvoiceSchema = z.object({
+export const BillingAutoTopupSucceededInvoiceSchema = z.object({
 	stripe_id: z.string().meta({
 		description: "The Stripe invoice ID.",
 	}),
@@ -18,7 +18,7 @@ export const BalancesAutoTopupSucceededInvoiceSchema = z.object({
 	}),
 });
 
-export const BALANCES_AUTO_TOPUP_SUCCEEDED_EXAMPLE = {
+export const BILLING_AUTO_TOPUP_SUCCEEDED_EXAMPLE = {
 	customer_id: "cus_123",
 	feature_id: "messages",
 	quantity_granted: 100,
@@ -34,7 +34,7 @@ export const BALANCES_AUTO_TOPUP_SUCCEEDED_EXAMPLE = {
 	},
 };
 
-export const BalancesAutoTopupSucceededSchema = z
+export const BillingAutoTopupSucceededSchema = z
 	.object({
 		customer_id: z.string().meta({
 			description: "The ID of the customer whose balance was topped up.",
@@ -57,17 +57,17 @@ export const BalancesAutoTopupSucceededSchema = z
 			description:
 				"Whether the auto top-up created a send_invoice invoice instead of auto-charging.",
 		}),
-		invoice: BalancesAutoTopupSucceededInvoiceSchema.meta({
+		invoice: BillingAutoTopupSucceededInvoiceSchema.meta({
 			description: "The invoice created for the auto top-up.",
 		}),
 	})
 	.meta({
-		examples: [BALANCES_AUTO_TOPUP_SUCCEEDED_EXAMPLE],
+		examples: [BILLING_AUTO_TOPUP_SUCCEEDED_EXAMPLE],
 	});
 
-export type BalancesAutoTopupSucceeded = z.infer<
-	typeof BalancesAutoTopupSucceededSchema
+export type BillingAutoTopupSucceeded = z.infer<
+	typeof BillingAutoTopupSucceededSchema
 >;
-export type BalancesAutoTopupSucceededInvoice = z.infer<
-	typeof BalancesAutoTopupSucceededInvoiceSchema
+export type BillingAutoTopupSucceededInvoice = z.infer<
+	typeof BillingAutoTopupSucceededInvoiceSchema
 >;

@@ -1,6 +1,6 @@
 import {
 	ACTIVE_STATUSES,
-	type BalancesAutoTopupSucceededInvoice,
+	type BillingAutoTopupSucceededInvoice,
 	type BillingResult,
 	fullCustomerToCustomerEntitlements,
 	getApiBalance,
@@ -16,7 +16,7 @@ const getInvoicePayload = ({
 	billingResult,
 }: {
 	billingResult: BillingResult;
-}): BalancesAutoTopupSucceededInvoice | null => {
+}): BillingAutoTopupSucceededInvoice | null => {
 	const stripeInvoice = billingResult.stripe.stripeInvoice;
 	if (!stripeInvoice) return null;
 
@@ -91,7 +91,7 @@ const sendAutoTopupSucceededWebhookUnsafe = async ({
 
 	await sendSvixEvent({
 		ctx,
-		eventType: WebhookEventType.BalancesAutoTopupSucceeded,
+		eventType: WebhookEventType.BillingAutoTopupSucceeded,
 		payloadFields: {
 			id: generateId("evt_auto_topup"),
 			occurred_at: Date.now(),
