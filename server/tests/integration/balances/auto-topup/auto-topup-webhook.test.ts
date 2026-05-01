@@ -164,8 +164,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup webhook: invoice mode fires wi
 	expect(result).not.toBeNull();
 	const data = result!.payload.data;
 	expect(data.invoice_mode).toBe(true);
-	expect(data.invoice.status).not.toBe("void");
-	expect(data.invoice.status).not.toBe("paid");
+	expect(data.invoice.status).toBe("open");
 	expect(data.balance_after).toBe(new Decimal(100).sub(85).add(100).toNumber());
 }, 60_000);
 

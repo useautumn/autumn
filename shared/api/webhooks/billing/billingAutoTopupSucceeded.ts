@@ -2,16 +2,18 @@ import { z } from "zod/v4";
 
 export const BillingAutoTopupSucceededInvoiceSchema = z.object({
 	stripe_id: z.string().meta({
-		description: "The Stripe invoice ID.",
+		description: "The Stripe invoice ID. Use this as a stable dedupe key.",
 	}),
 	status: z.string().nullish().meta({
-		description: "The status of the invoice.",
+		description:
+			'The status of the invoice. "paid" for auto-charged top-ups; "open" for invoice-mode top-ups where credits were granted but the invoice has not yet been paid.',
 	}),
 	total: z.number().meta({
-		description: "The total amount of the invoice.",
+		description:
+			"The total amount of the invoice in the smallest currency unit (e.g. cents for USD), matching Stripe's invoice.total.",
 	}),
 	currency: z.string().meta({
-		description: "The currency code for the invoice.",
+		description: "The ISO currency code for the invoice.",
 	}),
 	hosted_invoice_url: z.string().nullish().meta({
 		description: "URL to the hosted invoice page, if available.",
