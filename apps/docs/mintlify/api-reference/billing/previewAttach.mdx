@@ -315,6 +315,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   If true, skips any billing changes for the attach operation.
 </DynamicParamField>
 
+<DynamicParamField body="enable_plan_immediately" type="boolean">
+  If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+</DynamicParamField>
+
 
 ### Response
 
@@ -1167,6 +1171,32 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 <DynamicResponseField name="checkout_type" type="'stripe_checkout' | 'autumn_checkout'">
   The type of checkout that will be used if the customer is redirected to a checkout page.
+</DynamicResponseField>
+
+<DynamicResponseField name="tax" type="object">
+  Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
+  <Expandable title="properties">
+    <DynamicResponseField name="total" type="number">
+      Total tax amount in major currency units.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="amount_inclusive" type="number">
+      Tax included in line item subtotals.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="amount_exclusive" type="number">
+      Tax added on top of subtotals.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string">
+      Three-letter currency code.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="'complete' | 'incomplete'">
+      Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+    </DynamicResponseField>
+
+  </Expandable>
 </DynamicResponseField>
 
 

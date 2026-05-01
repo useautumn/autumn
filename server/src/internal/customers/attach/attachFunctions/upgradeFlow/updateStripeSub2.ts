@@ -66,7 +66,6 @@ export const updateStripeSub2 = async ({
 				: undefined;
 
 	// 1. Update subscription
-
 	const updatedSub = await stripeCli.subscriptions.update(curSub.id, {
 		items: sanitizeSubItems(itemSet.subItems),
 		proration_behavior:

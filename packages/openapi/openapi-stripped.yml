@@ -200,6 +200,7 @@ components:
         - purchases.plan
         - balances.feature
         - flags.feature
+        - billing_controls.auto_topups.purchase_limit
       type: string
       title: CustomerExpand
     Customer:
@@ -273,29 +274,72 @@ components:
                     minimum: 1
                     description: Amount of credits to add per auto top-up.
                   purchase_limit:
-                    type: object
-                    properties:
-                      interval:
-                        enum:
-                          - hour
-                          - day
-                          - week
-                          - month
-                        type: string
-                        description: The time interval for the purchase limit window.
-                      interval_count:
-                        type: number
-                        minimum: 1
-                        default: 1
-                        description: Number of intervals in the purchase limit window.
-                      limit:
-                        type: number
-                        minimum: 1
-                        description: Maximum number of auto top-ups allowed within the interval.
-                    required:
-                      - interval
-                      - limit
-                    description: Optional rate limit to cap how often auto top-ups occur.
+                    anyOf:
+                      - type: object
+                        properties:
+                          interval:
+                            enum:
+                              - hour
+                              - day
+                              - week
+                              - month
+                            type: string
+                            description: The time interval for the purchase limit window.
+                          interval_count:
+                            type: number
+                            minimum: 1
+                            default: 1
+                            description: Number of intervals in the purchase limit window.
+                          limit:
+                            type: number
+                            minimum: 1
+                            description: Maximum number of auto top-ups allowed within the interval.
+                        required:
+                          - interval
+                          - limit
+                      - type: object
+                        properties:
+                          interval:
+                            anyOf:
+                              - enum:
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                type: string
+                              - type: "null"
+                            description: The time interval for the purchase limit window. Null when no
+                              purchase limit is configured.
+                          interval_count:
+                            anyOf:
+                              - type: number
+                                minimum: 1
+                              - type: "null"
+                            description: Number of intervals in the purchase limit window. Null when no
+                              purchase limit is configured.
+                          limit:
+                            anyOf:
+                              - type: number
+                                minimum: 1
+                              - type: "null"
+                            description: Maximum number of auto top-ups allowed within the interval. Null
+                              when no purchase limit is configured.
+                          count:
+                            type: number
+                            description: Number of auto top-ups already consumed in the current window.
+                          next_reset_at:
+                            type: number
+                            description: Unix ms timestamp when the current purchase window ends and the
+                              count resets.
+                        required:
+                          - interval
+                          - interval_count
+                          - limit
+                          - count
+                          - next_reset_at
+                    description: Optional rate limit to cap how often auto top-ups occur. Expand
+                      billing_controls.auto_topups.purchase_limit for a count of
+                      top ups and the next_reset_at.
                   invoice_mode:
                     type: boolean
                     description: When true, auto top-up creates a send_invoice invoice instead of
@@ -1924,29 +1968,74 @@ paths:
                                     minimum: 1
                                     description: Amount of credits to add per auto top-up.
                                   purchase_limit:
-                                    type: object
-                                    properties:
-                                      interval:
-                                        enum:
-                                          - hour
-                                          - day
-                                          - week
-                                          - month
-                                        type: string
-                                        description: The time interval for the purchase limit window.
-                                      interval_count:
-                                        type: number
-                                        minimum: 1
-                                        default: 1
-                                        description: Number of intervals in the purchase limit window.
-                                      limit:
-                                        type: number
-                                        minimum: 1
-                                        description: Maximum number of auto top-ups allowed within the interval.
-                                    required:
-                                      - interval
-                                      - limit
-                                    description: Optional rate limit to cap how often auto top-ups occur.
+                                    anyOf:
+                                      - type: object
+                                        properties:
+                                          interval:
+                                            enum:
+                                              - hour
+                                              - day
+                                              - week
+                                              - month
+                                            type: string
+                                            description: The time interval for the purchase limit window.
+                                          interval_count:
+                                            type: number
+                                            minimum: 1
+                                            default: 1
+                                            description: Number of intervals in the purchase limit window.
+                                          limit:
+                                            type: number
+                                            minimum: 1
+                                            description: Maximum number of auto top-ups allowed within the interval.
+                                        required:
+                                          - interval
+                                          - limit
+                                      - type: object
+                                        properties:
+                                          interval:
+                                            anyOf:
+                                              - enum:
+                                                  - hour
+                                                  - day
+                                                  - week
+                                                  - month
+                                                type: string
+                                              - type: "null"
+                                            description: The time interval for the purchase limit window. Null when no
+                                              purchase limit is configured.
+                                          interval_count:
+                                            anyOf:
+                                              - type: number
+                                                minimum: 1
+                                              - type: "null"
+                                            description: Number of intervals in the purchase limit window. Null when no
+                                              purchase limit is configured.
+                                          limit:
+                                            anyOf:
+                                              - type: number
+                                                minimum: 1
+                                              - type: "null"
+                                            description: Maximum number of auto top-ups allowed within the interval. Null
+                                              when no purchase limit is
+                                              configured.
+                                          count:
+                                            type: number
+                                            description: Number of auto top-ups already consumed in the current window.
+                                          next_reset_at:
+                                            type: number
+                                            description: Unix ms timestamp when the current purchase window ends and the
+                                              count resets.
+                                        required:
+                                          - interval
+                                          - interval_count
+                                          - limit
+                                          - count
+                                          - next_reset_at
+                                    description: Optional rate limit to cap how often auto top-ups occur. Expand
+                                      billing_controls.auto_topups.purchase_limit
+                                      for a count of top ups and the
+                                      next_reset_at.
                                   invoice_mode:
                                     type: boolean
                                     description: When true, auto top-up creates a send_invoice invoice instead of
@@ -2698,29 +2787,72 @@ paths:
                               minimum: 1
                               description: Amount of credits to add per auto top-up.
                             purchase_limit:
-                              type: object
-                              properties:
-                                interval:
-                                  enum:
-                                    - hour
-                                    - day
-                                    - week
-                                    - month
-                                  type: string
-                                  description: The time interval for the purchase limit window.
-                                interval_count:
-                                  type: number
-                                  minimum: 1
-                                  default: 1
-                                  description: Number of intervals in the purchase limit window.
-                                limit:
-                                  type: number
-                                  minimum: 1
-                                  description: Maximum number of auto top-ups allowed within the interval.
-                              required:
-                                - interval
-                                - limit
-                              description: Optional rate limit to cap how often auto top-ups occur.
+                              anyOf:
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                      type: string
+                                      description: The time interval for the purchase limit window.
+                                    interval_count:
+                                      type: number
+                                      minimum: 1
+                                      default: 1
+                                      description: Number of intervals in the purchase limit window.
+                                    limit:
+                                      type: number
+                                      minimum: 1
+                                      description: Maximum number of auto top-ups allowed within the interval.
+                                  required:
+                                    - interval
+                                    - limit
+                                - type: object
+                                  properties:
+                                    interval:
+                                      anyOf:
+                                        - enum:
+                                            - hour
+                                            - day
+                                            - week
+                                            - month
+                                          type: string
+                                        - type: "null"
+                                      description: The time interval for the purchase limit window. Null when no
+                                        purchase limit is configured.
+                                    interval_count:
+                                      anyOf:
+                                        - type: number
+                                          minimum: 1
+                                        - type: "null"
+                                      description: Number of intervals in the purchase limit window. Null when no
+                                        purchase limit is configured.
+                                    limit:
+                                      anyOf:
+                                        - type: number
+                                          minimum: 1
+                                        - type: "null"
+                                      description: Maximum number of auto top-ups allowed within the interval. Null
+                                        when no purchase limit is configured.
+                                    count:
+                                      type: number
+                                      description: Number of auto top-ups already consumed in the current window.
+                                    next_reset_at:
+                                      type: number
+                                      description: Unix ms timestamp when the current purchase window ends and the
+                                        count resets.
+                                  required:
+                                    - interval
+                                    - interval_count
+                                    - limit
+                                    - count
+                                    - next_reset_at
+                              description: Optional rate limit to cap how often auto top-ups occur. Expand
+                                billing_controls.auto_topups.purchase_limit for
+                                a count of top ups and the next_reset_at.
                             invoice_mode:
                               type: boolean
                               description: When true, auto top-up creates a send_invoice invoice instead of
@@ -6740,6 +6872,12 @@ paths:
                 no_billing_changes:
                   type: boolean
                   description: If true, skips any billing changes for the attach operation.
+                enable_plan_immediately:
+                  type: boolean
+                  description: If true, the customer's plan is activated immediately even when
+                    payment is deferred (invoice mode) or pending (Stripe
+                    checkout). For Stripe checkout, the customer_product is
+                    inserted before the customer completes the hosted form.
               required:
                 - customer_id
                 - plan_id
@@ -7173,6 +7311,10 @@ paths:
                   description: Only applicable when the customer has an existing Stripe
                     subscription. If true, creates a new separate subscription
                     instead of merging into the existing one.
+                enable_plan_immediately:
+                  type: boolean
+                  description: If true, the cusProducts are activated immediately even when
+                    payment is pending via Stripe checkout.
                 customer_data:
                   $ref: "#/components/schemas/CustomerData"
                 entity_data:
@@ -7781,6 +7923,12 @@ paths:
                 no_billing_changes:
                   type: boolean
                   description: If true, skips any billing changes for the attach operation.
+                enable_plan_immediately:
+                  type: boolean
+                  description: If true, the customer's plan is activated immediately even when
+                    payment is deferred (invoice mode) or pending (Stripe
+                    checkout). For Stripe checkout, the customer_product is
+                    inserted before the customer completes the hosted form.
               required:
                 - customer_id
                 - plan_id
@@ -8125,6 +8273,37 @@ paths:
                       - type: "null"
                     description: The type of checkout that will be used if the customer is
                       redirected to a checkout page.
+                  tax:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        description: Total tax amount in major currency units.
+                      amount_inclusive:
+                        type: number
+                        description: Tax included in line item subtotals.
+                      amount_exclusive:
+                        type: number
+                        description: Tax added on top of subtotals.
+                      currency:
+                        type: string
+                        description: Three-letter currency code.
+                      status:
+                        enum:
+                          - complete
+                          - incomplete
+                        type: string
+                        description: Calculation status ('complete' when Stripe Tax succeeds or
+                          'incomplete' when Stripe Tax returned 0 or errored).
+                    required:
+                      - total
+                      - amount_inclusive
+                      - amount_exclusive
+                      - currency
+                      - status
+                    description: Tax preview for the immediate charge. Contact us to enable the tax
+                      flag on your organisation. Shows only with flag enabled, a
+                      Stripe customer exists and has a location.
                 required:
                   - customer_id
                   - line_items
@@ -8494,6 +8673,10 @@ paths:
                   description: Only applicable when the customer has an existing Stripe
                     subscription. If true, creates a new separate subscription
                     instead of merging into the existing one.
+                enable_plan_immediately:
+                  type: boolean
+                  description: If true, the cusProducts are activated immediately even when
+                    payment is pending via Stripe checkout.
                 customer_data:
                   $ref: "#/components/schemas/CustomerData"
                 entity_data:
@@ -8929,6 +9112,37 @@ paths:
                       - type: "null"
                     description: The type of checkout that will be used if the customer is
                       redirected to a checkout page.
+                  tax:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        description: Total tax amount in major currency units.
+                      amount_inclusive:
+                        type: number
+                        description: Tax included in line item subtotals.
+                      amount_exclusive:
+                        type: number
+                        description: Tax added on top of subtotals.
+                      currency:
+                        type: string
+                        description: Three-letter currency code.
+                      status:
+                        enum:
+                          - complete
+                          - incomplete
+                        type: string
+                        description: Calculation status ('complete' when Stripe Tax succeeds or
+                          'incomplete' when Stripe Tax returned 0 or errored).
+                    required:
+                      - total
+                      - amount_inclusive
+                      - amount_exclusive
+                      - currency
+                      - status
+                    description: Tax preview for the immediate charge. Contact us to enable the tax
+                      flag on your organisation. Shows only with flag enabled, a
+                      Stripe customer exists and has a location.
                 required:
                   - customer_id
                   - line_items
@@ -10567,6 +10781,12 @@ paths:
                 no_billing_changes:
                   type: boolean
                   description: If true, skips any billing changes for the attach operation.
+                enable_plan_immediately:
+                  type: boolean
+                  description: If true, the customer's plan is activated immediately even when
+                    payment is deferred (invoice mode) or pending (Stripe
+                    checkout). For Stripe checkout, the customer_product is
+                    inserted before the customer completes the hosted form.
               required:
                 - customer_id
               title: SetupPaymentParams

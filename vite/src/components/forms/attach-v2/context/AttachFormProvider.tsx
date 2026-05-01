@@ -55,6 +55,7 @@ import {
 } from "../hooks/usePreviewDiff";
 
 interface AttachFormContextValue {
+	customerId: string | undefined;
 	form: UseAttachForm;
 	formValues: AttachForm;
 	features: Feature[];
@@ -84,7 +85,7 @@ interface AttachFormContextValue {
 	handleGrantFreeToggle: (params: { enabled: boolean }) => void;
 
 	isPending: boolean;
-	handleConfirm: () => void;
+	handleConfirm: (params?: { enableProductImmediately?: boolean }) => void;
 	handleInvoiceAttach: (params: {
 		enableProductImmediately: boolean;
 		finalizeInvoice: boolean;
@@ -178,6 +179,7 @@ export function AttachFormProvider({
 		discounts,
 		grantFree,
 		noBillingChanges,
+		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -314,7 +316,9 @@ export function AttachFormProvider({
 					? newInitialPrepaidOptions
 					: { ...newInitialPrepaidOptions, ...currentPrepaidOptions };
 			form.setFieldValue("prepaidOptions", resolvedPrepaidOptions);
-			setInitialPrepaidOptions(resolvedPrepaidOptions);
+			setInitialPrepaidOptions(
+				resolvedPrepaidOptions as Record<string, number>,
+			);
 
 			if (product.free_trial) {
 				form.setFieldValue("trialEnabled", true);
@@ -381,6 +385,7 @@ export function AttachFormProvider({
 		resetBillingCycle,
 		discounts,
 		noBillingChanges,
+		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -475,6 +480,7 @@ export function AttachFormProvider({
 	const value = useMemo<AttachFormContextValue>(
 		() => ({
 			form,
+			customerId,
 			formValues,
 			features,
 			entityId,
@@ -500,6 +506,7 @@ export function AttachFormProvider({
 			handleInvoiceAttach,
 		}),
 		[
+			customerId,
 			form,
 			formValues,
 			features,

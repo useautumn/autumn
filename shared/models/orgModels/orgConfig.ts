@@ -36,6 +36,10 @@ export const OrgConfigSchema = z.object({
 	dryrun_autotopups: z.boolean().default(false),
 
 	forward_customer_metadata: z.boolean().default(false),
+
+	// When true, Stripe writes pass `automatic_tax: { enabled: true }`.
+	// Customer must have a tax-resolvable address.
+	automatic_tax: z.boolean().default(false),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;

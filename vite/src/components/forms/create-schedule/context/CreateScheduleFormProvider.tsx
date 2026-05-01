@@ -150,6 +150,11 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
+	const getEnablePlanImmediately = useCallback(
+		() => form.store.state.values.enablePlanImmediately ?? false,
+		[form.store],
+	);
+
 	const buildRequestBody = useBuildCreateScheduleRequestBody({
 		customerId,
 		entityId,
@@ -159,6 +164,7 @@ export function CreateScheduleFormProvider({
 		getPhases,
 		getBillingBehavior,
 		getResetBillingCycle,
+		getEnablePlanImmediately,
 	});
 
 	const previewRequestBody = useCreateScheduleRequestBody({
