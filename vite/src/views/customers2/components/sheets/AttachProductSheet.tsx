@@ -16,6 +16,7 @@ import {
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
+import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import {
@@ -438,6 +439,23 @@ function SendInvoiceContent() {
 	);
 }
 
+function CheckoutSessionContent() {
+	const { product, previewQuery, isPending, handleCheckoutAttach } =
+		useAttachFormContext();
+	const { setSheet } = useSheetStore();
+	const itemId = useSheetStore((s) => s.itemId);
+
+	return (
+		<GenerateCheckoutStageWithPreview
+			productName={product?.name}
+			previewQuery={previewQuery}
+			isPending={isPending}
+			onSubmit={handleCheckoutAttach}
+			onBack={() => setSheet({ type: "attach-review", itemId })}
+		/>
+	);
+}
+
 function SheetContent() {
 	const sheetType = useSheetStore((s) => s.type);
 	const {
@@ -447,16 +465,19 @@ function SheetContent() {
 		handlePlanEditorCancel,
 	} = useAttachFormContext();
 
+	const StageContent =
+		sheetType === "attach-send-invoice"
+			? SendInvoiceContent
+			: sheetType === "attach-checkout-session"
+				? CheckoutSessionContent
+				: sheetType === "attach-review"
+					? ReviewContent
+					: SelectContent;
+
 	return (
 		<LayoutGroup>
 			<div className="flex flex-col h-full overflow-y-auto">
-				{sheetType === "attach-send-invoice" ? (
-					<SendInvoiceContent />
-				) : sheetType === "attach-review" ? (
-					<ReviewContent />
-				) : (
-					<SelectContent />
-				)}
+				<StageContent />
 
 				{productWithFormItems && (
 					<InlinePlanEditor
