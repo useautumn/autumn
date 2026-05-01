@@ -62,52 +62,6 @@ const getBalanceAfter = async ({
 	return balance.remaining;
 };
 
-const sendAutoTopupSucceededWebhookUnsafe = async ({
-	ctx,
-	autoTopupContext,
-	billingResult,
-}: {
-	ctx: AutumnContext;
-	autoTopupContext: AutoTopupContext;
-	billingResult: BillingResult;
-}) => {
-	const invoice = getInvoicePayload({
-		billingResult,
-	});
-	if (!invoice) {
-		ctx.logger.warn(
-			"[sendAutoTopupSucceededWebhook] Missing invoice, skipping webhook",
-		);
-		return;
-	}
-
-	const customerId =
-		autoTopupContext.fullCustomer.id ??
-		autoTopupContext.fullCustomer.internal_id;
-	const balanceAfter = await getBalanceAfter({
-		ctx,
-		autoTopupContext,
-	});
-
-	await sendSvixEvent({
-		ctx,
-		eventType: WebhookEventType.BillingAutoTopupSucceeded,
-		payloadFields: {
-			id: generateId("evt_auto_topup"),
-			occurred_at: Date.now(),
-		},
-		data: {
-			customer_id: customerId,
-			feature_id: autoTopupContext.autoTopupConfig.feature_id,
-			quantity_granted: autoTopupContext.autoTopupConfig.quantity,
-			threshold: autoTopupContext.autoTopupConfig.threshold,
-			balance_after: balanceAfter,
-			invoice_mode: Boolean(autoTopupContext.invoiceMode),
-			invoice,
-		},
-	});
-};
-
 export const sendAutoTopupSucceededWebhook = async ({
 	ctx,
 	autoTopupContext,
@@ -118,10 +72,35 @@ export const sendAutoTopupSucceededWebhook = async ({
 	billingResult: BillingResult;
 }) => {
 	try {
-		await sendAutoTopupSucceededWebhookUnsafe({
+		const invoice = getInvoicePayload({ billingResult });
+		if (!invoice) {
+			ctx.logger.warn(
+				"[sendAutoTopupSucceededWebhook] Missing invoice, skipping webhook",
+			);
+			return;
+		}
+
+		const customerId =
+			autoTopupContext.fullCustomer.id ??
+			autoTopupContext.fullCustomer.internal_id;
+		const balanceAfter = await getBalanceAfter({ ctx, autoTopupContext });
+
+		await sendSvixEvent({
 			ctx,
-			autoTopupContext,
-			billingResult,
+			eventType: WebhookEventType.BillingAutoTopupSucceeded,
+			payloadFields: {
+				id: generateId("evt_auto_topup"),
+				occurred_at: Date.now(),
+			},
+			data: {
+				customer_id: customerId,
+				feature_id: autoTopupContext.autoTopupConfig.feature_id,
+				quantity_granted: autoTopupContext.autoTopupConfig.quantity,
+				threshold: autoTopupContext.autoTopupConfig.threshold,
+				balance_after: balanceAfter,
+				invoice_mode: Boolean(autoTopupContext.invoiceMode),
+				invoice,
+			},
 		});
 	} catch (error) {
 		ctx.logger.error(
