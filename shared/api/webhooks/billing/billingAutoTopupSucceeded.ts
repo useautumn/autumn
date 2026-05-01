@@ -1,0 +1,75 @@
+import { z } from "zod/v4";
+
+export const BillingAutoTopupSucceededInvoiceSchema = z.object({
+	stripe_id: z.string().meta({
+		description: "The Stripe invoice ID. Use this as a stable dedupe key.",
+	}),
+	status: z.string().nullish().meta({
+		description:
+			'The status of the invoice. "paid" for auto-charged top-ups; "open" for invoice-mode top-ups where credits were granted but the invoice has not yet been paid.',
+	}),
+	total: z.number().meta({
+		description:
+			"The total amount of the invoice in the smallest currency unit (e.g. cents for USD), matching Stripe's invoice.total.",
+	}),
+	currency: z.string().meta({
+		description: "The ISO currency code for the invoice.",
+	}),
+	hosted_invoice_url: z.string().nullish().meta({
+		description: "URL to the hosted invoice page, if available.",
+	}),
+});
+
+export const BILLING_AUTO_TOPUP_SUCCEEDED_EXAMPLE = {
+	customer_id: "cus_123",
+	feature_id: "messages",
+	quantity_granted: 100,
+	threshold: 20,
+	balance_after: 115,
+	invoice_mode: false,
+	invoice: {
+		stripe_id: "in_1A2B3C4D5E6F7G8H",
+		status: "paid",
+		total: 1000,
+		currency: "usd",
+		hosted_invoice_url: "https://invoice.stripe.com/i/acct_123/test_456",
+	},
+};
+
+export const BillingAutoTopupSucceededSchema = z
+	.object({
+		customer_id: z.string().meta({
+			description: "The ID of the customer whose balance was topped up.",
+		}),
+		feature_id: z.string().meta({
+			description: "The feature ID that was automatically topped up.",
+		}),
+		quantity_granted: z.number().meta({
+			description: "The normalized amount of balance granted by the top-up.",
+		}),
+		threshold: z.number().meta({
+			description:
+				"The configured balance threshold that triggered the top-up.",
+		}),
+		balance_after: z.number().meta({
+			description:
+				"The customer's remaining balance for the feature after the top-up.",
+		}),
+		invoice_mode: z.boolean().meta({
+			description:
+				"Whether the auto top-up created a send_invoice invoice instead of auto-charging.",
+		}),
+		invoice: BillingAutoTopupSucceededInvoiceSchema.meta({
+			description: "The invoice created for the auto top-up.",
+		}),
+	})
+	.meta({
+		examples: [BILLING_AUTO_TOPUP_SUCCEEDED_EXAMPLE],
+	});
+
+export type BillingAutoTopupSucceeded = z.infer<
+	typeof BillingAutoTopupSucceededSchema
+>;
+export type BillingAutoTopupSucceededInvoice = z.infer<
+	typeof BillingAutoTopupSucceededInvoiceSchema
+>;
