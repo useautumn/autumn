@@ -1,0 +1,42 @@
+others/svix-transforms/slack.ts
+  d258362aee9e6fbd 1-292
+apps/website/public/images/navbar/autumnicon.svg
+  d258362aee9e6fbd 1-4
+others/svix-transforms/discord.ts
+  d258362aee9e6fbd 1-242
+server/tests/integration/billing/tax/automatic-tax-unregistered-jurisdiction.test.ts
+  c4778a4e887e1cf5 1-140
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "57802e9c23f5be22cd7f838c63aae782ada10b18",
+  "prompts": {
+    "c4778a4e887e1cf5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2213ea901ffeJSdplBxFgDIo8s",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 144,
+      "total_deletions": 4,
+      "accepted_lines": 140,
+      "overriden_lines": 0
+    },
+    "d258362aee9e6fbd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_21d3e6d79ffekpENqgWkAywcL5",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 694,
+      "total_deletions": 156,
+      "accepted_lines": 538,
+      "overriden_lines": 0
+    }
+  }
+}
