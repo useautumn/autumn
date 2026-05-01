@@ -14,6 +14,7 @@ import { clearAutoTopupPendingKey } from "./helpers/enqueueAutoTopupWithBurstSup
 import { recordAutoTopupAttempt } from "./helpers/limits/index.js";
 import { logAutoTopupContext } from "./logs/logAutoTopupContext.js";
 import { setupAutoTopupContext } from "./setup/setupAutoTopupContext.js";
+import { sendAutoTopupSucceededWebhook } from "./webhooks/sendAutoTopupSucceededWebhook.js";
 
 /** Workflow handler for auto top-ups. */
 export const autoTopup = async ({
@@ -102,14 +103,20 @@ export const autoTopup = async ({
 		// Manually update cached options here since we're not refreshing cache.
 		const customerProductUpdate = autumnBillingPlan.updateCustomerProduct;
 		if (customerProductUpdate?.updates.options) {
-			const cusProductId = customerProductUpdate.customerProduct.id;
+			const customerProductId = customerProductUpdate.customerProduct.id;
 			await updateCachedCustomerProductV2({
 				ctx,
 				customerId,
-				customerProductId: cusProductId,
+				customerProductId,
 				updates: customerProductUpdate.updates,
 			});
 		}
+
+		await sendAutoTopupSucceededWebhook({
+			ctx,
+			autoTopupContext,
+			billingResult,
+		});
 
 		const durationMs = Math.round(performance.now() - start);
 		logger.info(

@@ -1,5 +1,6 @@
 import {
 	type AutoTopup,
+	type AutoTopupResponse,
 	cusEntToCusPrice,
 	type Feature,
 	FeatureType,
@@ -12,6 +13,7 @@ import {
 	PurchaseLimitInterval,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
@@ -65,8 +67,14 @@ export function BillingAutoTopupSheet() {
 	const axiosInstance = useAxiosInstance();
 
 	const isEdit = sheetType === "billing-auto-topup-edit";
-	const existingItem = sheetData?.item as AutoTopup | undefined;
+	const existingItem = sheetData?.item as AutoTopupResponse | undefined;
 	const existingIndex = sheetData?.index as number | undefined;
+
+	const expandedPurchaseLimit = useMemo(() => {
+		const limit = existingItem?.purchase_limit;
+		if (!limit || !("count" in limit)) return null;
+		return limit;
+	}, [existingItem]);
 
 	const [isSaving, setIsSaving] = useState(false);
 	const [featureId, setFeatureId] = useState(existingItem?.feature_id ?? "");
@@ -332,6 +340,26 @@ export function BillingAutoTopupSheet() {
 						/>
 						<FormLabel className="mb-0">Purchase limit</FormLabel>
 					</div>
+
+					{hasPurchaseLimit && expandedPurchaseLimit && (
+						<InfoBox variant="note"
+						classNames={{
+							infoBox: "my-3"
+						}}
+						>
+							{expandedPurchaseLimit.count} of{" "}
+							{expandedPurchaseLimit.limit ?? "∞"} top-ups used this window
+							{expandedPurchaseLimit.next_reset_at && (
+								<>
+									{" · Resets "}
+									{format(
+										new Date(expandedPurchaseLimit.next_reset_at),
+										"MMM d, yyyy",
+									)}
+								</>
+							)}
+						</InfoBox>
+					)}
 
 					{hasPurchaseLimit && (
 						<div className="flex flex-col gap-3">

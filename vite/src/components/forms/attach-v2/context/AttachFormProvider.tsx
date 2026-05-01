@@ -93,6 +93,11 @@ interface AttachFormContextValue {
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
 	}>;
+	handleCheckoutAttach: (params: {
+		enablePlanImmediately: boolean;
+	}) => Promise<{
+		paymentUrl: string | null | undefined;
+	}>;
 }
 
 const AttachFormReactContext = createContext<AttachFormContextValue | null>(
@@ -420,7 +425,12 @@ export function AttachFormProvider({
 		incomingItems: originalItems,
 	});
 
-	const { handleConfirm, handleInvoiceAttach, isPending } = useAttachMutation({
+	const {
+		handleConfirm,
+		handleInvoiceAttach,
+		handleCheckoutAttach,
+		isPending,
+	} = useAttachMutation({
 		customerId,
 		buildRequestBody,
 		onCheckoutRedirect,
@@ -504,6 +514,7 @@ export function AttachFormProvider({
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,
+			handleCheckoutAttach,
 		}),
 		[
 			customerId,
@@ -530,6 +541,7 @@ export function AttachFormProvider({
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,
+			handleCheckoutAttach,
 		],
 	);
 
