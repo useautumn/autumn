@@ -130,6 +130,7 @@
 						"group": "Additional Resources",
 						"pages": [
 							"documentation/webhooks",
+							"documentation/slack-discord-notifications",
 							"documentation/fail-open",
 							"documentation/rate-limits",
 							"documentation/external-providers/convex",

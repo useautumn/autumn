@@ -25,7 +25,21 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
  *    preview here would diverge from what Stripe ultimately charges)
  *  - no Stripe customer exists (we only support previewing against an
  *    existing Stripe customer; Stripe's location waterfall needs it)
- *  - nothing positive to charge immediately (no taxable subtotal)
+ *  - no `chargeImmediately` line items at all
+ *
+ * When the net taxable subtotal is `<= 0` (proration credits exceed new
+ * charges), we short-circuit with `{ status: "complete", ...zeros }` —
+ * Stripe Tax rejects non-positive line amounts and produces no tax on
+ * net-credit invoices anyway, so this matches actual billing.
+ *
+ * Net-subtotal collapsing: we sum positive and negative `chargeImmediately`
+ * line items into a single Stripe Tax line. Stripe Tax requires positive
+ * line amounts (so we can't pass a -$10 unused-credit line directly), and
+ * Stripe charges tax on the net invoice subtotal — not on positive lines
+ * alone. Collapsing to one combined line yields the same total tax that
+ * Stripe will actually invoice. If we ever need per-line `tax_code`
+ * overrides we'll have to switch to proportional credit redistribution
+ * across positive lines.
  *
  * Note: `autumn_checkout` is intentionally NOT skipped. It's a
  * confirmation-only flow — no address or payment method collection — so
@@ -52,27 +66,48 @@ export const computeAttachTaxPreview = async ({
 	const allLineItems = autumnBillingPlan.lineItems ?? [];
 	if (allLineItems.length === 0) return undefined;
 
-	const taxableLines = allLineItems.filter((line) => {
-		const net = line.amountAfterDiscounts ?? line.amount;
-		return line.chargeImmediately && net > 0;
-	});
-	if (taxableLines.length === 0) return undefined;
+	const immediateLines = allLineItems.filter((line) => line.chargeImmediately);
+	if (immediateLines.length === 0) return undefined;
+
+	// Stripe charges tax on the net invoice subtotal — positives plus
+	// negative proration credits — not on positive lines alone. Sum across
+	// ALL chargeImmediately lines so the preview matches what Stripe
+	// actually invoices.
+	const netSubtotal = immediateLines.reduce(
+		(sum, line) => sum + (line.amountAfterDiscounts ?? line.amount),
+		0,
+	);
 
 	const currency = orgToCurrency({ org: ctx.org });
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+
+	// No tax owed when net subtotal is zero or negative (credit exceeds
+	// charge). Stripe Tax rejects non-positive line amounts anyway, and
+	// a credit invoice produces no tax in actual billing.
+	if (netSubtotal <= 0) {
+		return {
+			total: 0,
+			amount_inclusive: 0,
+			amount_exclusive: 0,
+			currency,
+			status: "complete",
+		};
+	}
 
 	try {
 		const calc = await stripeCli.tax.calculations.create({
 			currency,
 			customer: billingContext.stripeCustomer.id,
-			line_items: taxableLines.map((line, idx) => ({
-				amount: atmnToStripeAmount({
-					amount: line.amountAfterDiscounts ?? line.amount,
-					currency,
-				}),
-				reference: line.id || `li_${idx}`,
-				quantity: 1,
-			})),
+			line_items: [
+				{
+					amount: atmnToStripeAmount({
+						amount: netSubtotal,
+						currency,
+					}),
+					reference: "preview_net_subtotal",
+					quantity: 1,
+				},
+			],
 		});
 
 		return {
