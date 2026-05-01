@@ -71,13 +71,9 @@ const sendAutoTopupSucceededWebhookUnsafe = async ({
 	autoTopupContext: AutoTopupContext;
 	billingResult: BillingResult;
 }) => {
-	const customerProduct = autoTopupContext.customerEntitlement.customer_product;
-	if (!customerProduct) {
-		ctx.logger.warn(
-			"[sendAutoTopupSucceededWebhook] Missing customer product, skipping webhook",
-		);
-		return;
-	}
+	ctx.logger.info(
+		`[sendAutoTopupSucceededWebhook] entry for customer ${autoTopupContext.fullCustomer.id ?? autoTopupContext.fullCustomer.internal_id}, feature ${autoTopupContext.autoTopupConfig.feature_id}`,
+	);
 
 	const invoice = getInvoicePayload({
 		billingResult,
@@ -107,7 +103,6 @@ const sendAutoTopupSucceededWebhookUnsafe = async ({
 		data: {
 			customer_id: customerId,
 			feature_id: autoTopupContext.autoTopupConfig.feature_id,
-			customer_product_id: customerProduct.id,
 			quantity_granted: autoTopupContext.autoTopupConfig.quantity,
 			threshold: autoTopupContext.autoTopupConfig.threshold,
 			balance_after: balanceAfter,

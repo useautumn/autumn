@@ -91,6 +91,10 @@ export const autoTopup = async ({
 		const isInvoiceMode = Boolean(autoTopupContext.invoiceMode);
 		const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
 
+		logger.info(
+			`[autoTopup] post-execute gate: isInvoiceMode=${isInvoiceMode}, invoiceStatus=${invoiceStatus}, customer=${customerId}`,
+		);
+
 		if (!isInvoiceMode && invoiceStatus !== "paid") {
 			await voidStripeInvoiceIfOpen({
 				ctx,
