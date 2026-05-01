@@ -1,0 +1,23 @@
+packages/autumn-js/package.json
+  6cd800ed208d36e5 4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "919a1a226a90be314be31a3d564a1e0e060b99d0",
+  "prompts": {
+    "6cd800ed208d36e5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_21c08cb94ffeViBvOmV4m5tRGx",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 147,
+      "total_deletions": 16,
+      "accepted_lines": 21841,
+      "overriden_lines": 2
+    }
+  }
+}
