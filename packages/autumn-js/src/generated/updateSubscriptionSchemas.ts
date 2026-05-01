@@ -155,6 +155,9 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 	invoice_mode: z
 		.union([billingUpdateInvoiceModeOutboundSchema, z.undefined()])
 		.optional(),
+	invoice: z.union([z.boolean(), z.undefined()]).optional(),
+	enable_product_immediately: z.union([z.boolean(), z.undefined()]).optional(),
+	finalize_invoice: z.union([z.boolean(), z.undefined()]).optional(),
 	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
 	redirect_mode: z.string(),
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
@@ -277,6 +280,9 @@ export const updateSubscriptionParamsSchema = z.object({
 	invoiceMode: z
 		.union([billingUpdateInvoiceModeSchema, z.undefined()])
 		.optional(),
+	invoice: z.union([z.boolean(), z.undefined()]).optional(),
+	enableProductImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	finalizeInvoice: z.union([z.boolean(), z.undefined()]).optional(),
 	prorationBehavior: z
 		.union([billingUpdateProrationBehaviorSchema, z.undefined()])
 		.optional(),

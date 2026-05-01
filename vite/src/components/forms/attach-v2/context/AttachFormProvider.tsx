@@ -55,6 +55,7 @@ import {
 } from "../hooks/usePreviewDiff";
 
 interface AttachFormContextValue {
+	customerId: string | undefined;
 	form: UseAttachForm;
 	formValues: AttachForm;
 	features: Feature[];
@@ -315,7 +316,9 @@ export function AttachFormProvider({
 					? newInitialPrepaidOptions
 					: { ...newInitialPrepaidOptions, ...currentPrepaidOptions };
 			form.setFieldValue("prepaidOptions", resolvedPrepaidOptions);
-			setInitialPrepaidOptions(resolvedPrepaidOptions);
+			setInitialPrepaidOptions(
+				resolvedPrepaidOptions as Record<string, number>,
+			);
 
 			if (product.free_trial) {
 				form.setFieldValue("trialEnabled", true);
@@ -477,6 +480,7 @@ export function AttachFormProvider({
 	const value = useMemo<AttachFormContextValue>(
 		() => ({
 			form,
+			customerId,
 			formValues,
 			features,
 			entityId,
@@ -502,6 +506,7 @@ export function AttachFormProvider({
 			handleInvoiceAttach,
 		}),
 		[
+			customerId,
 			form,
 			formValues,
 			features,

@@ -160,6 +160,9 @@ export const setupPaymentParamsOutboundSchema = z.object({
 	customize: z
 		.union([setupPaymentCustomizeOutboundSchema, z.undefined()])
 		.optional(),
+	invoice: z.union([z.boolean(), z.undefined()]).optional(),
+	enable_product_immediately: z.union([z.boolean(), z.undefined()]).optional(),
+	finalize_invoice: z.union([z.boolean(), z.undefined()]).optional(),
 	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
 	subscription_id: z.union([z.string(), z.undefined()]).optional(),
 	discounts: z
@@ -184,6 +187,7 @@ export const setupPaymentParamsOutboundSchema = z.object({
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
+	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -285,6 +289,9 @@ export const setupPaymentParamsSchema = z.object({
 		.optional(),
 	version: z.union([z.number(), z.undefined()]).optional(),
 	customize: z.union([setupPaymentCustomizeSchema, z.undefined()]).optional(),
+	invoice: z.union([z.boolean(), z.undefined()]).optional(),
+	enableProductImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	finalizeInvoice: z.union([z.boolean(), z.undefined()]).optional(),
 	prorationBehavior: z
 		.union([setupPaymentProrationBehaviorSchema, z.undefined()])
 		.optional(),
@@ -311,4 +318,5 @@ export const setupPaymentParamsSchema = z.object({
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 });

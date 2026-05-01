@@ -249,29 +249,66 @@ components:
                     minimum: 1
                     description: Amount of credits to add per auto top-up.
                   purchase_limit:
-                    type: object
-                    properties:
-                      interval:
-                        enum:
-                          - hour
-                          - day
-                          - week
-                          - month
-                        type: string
-                        description: The time interval for the purchase limit window.
-                      interval_count:
-                        type: number
-                        minimum: 1
-                        default: 1
-                        description: Number of intervals in the purchase limit window.
-                      limit:
-                        type: number
-                        minimum: 1
-                        description: Maximum number of auto top-ups allowed within the interval.
-                    required:
-                      - interval
-                      - limit
-                    description: Optional rate limit to cap how often auto top-ups occur.
+                    anyOf:
+                      - type: object
+                        properties:
+                          interval:
+                            enum:
+                              - hour
+                              - day
+                              - week
+                              - month
+                            type: string
+                            description: The time interval for the purchase limit window.
+                          interval_count:
+                            type: number
+                            minimum: 1
+                            default: 1
+                            description: Number of intervals in the purchase limit window.
+                          limit:
+                            type: number
+                            minimum: 1
+                            description: Maximum number of auto top-ups allowed within the interval.
+                        required:
+                          - interval
+                          - limit
+                      - type: object
+                        properties:
+                          interval:
+                            anyOf:
+                              - enum:
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                type: string
+                              - type: "null"
+                            description: The time interval for the purchase limit window. Null when no purchase limit is configured.
+                          interval_count:
+                            anyOf:
+                              - type: number
+                                minimum: 1
+                              - type: "null"
+                            description: Number of intervals in the purchase limit window. Null when no purchase limit is configured.
+                          limit:
+                            anyOf:
+                              - type: number
+                                minimum: 1
+                              - type: "null"
+                            description: Maximum number of auto top-ups allowed within the interval. Null when no purchase limit is configured.
+                          count:
+                            type: number
+                            description: Number of auto top-ups already consumed in the current window.
+                          next_reset_at:
+                            type: number
+                            description: Unix ms timestamp when the current purchase window ends and the count resets.
+                        required:
+                          - interval
+                          - interval_count
+                          - limit
+                          - count
+                          - next_reset_at
+                    description: Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit.
                   invoice_mode:
                     type: boolean
                     description: When true, auto top-up creates a send_invoice invoice instead of auto-charging.
@@ -1842,29 +1879,66 @@ paths:
                                     minimum: 1
                                     description: Amount of credits to add per auto top-up.
                                   purchase_limit:
-                                    type: object
-                                    properties:
-                                      interval:
-                                        enum:
-                                          - hour
-                                          - day
-                                          - week
-                                          - month
-                                        type: string
-                                        description: The time interval for the purchase limit window.
-                                      interval_count:
-                                        type: number
-                                        minimum: 1
-                                        default: 1
-                                        description: Number of intervals in the purchase limit window.
-                                      limit:
-                                        type: number
-                                        minimum: 1
-                                        description: Maximum number of auto top-ups allowed within the interval.
-                                    required:
-                                      - interval
-                                      - limit
-                                    description: Optional rate limit to cap how often auto top-ups occur.
+                                    anyOf:
+                                      - type: object
+                                        properties:
+                                          interval:
+                                            enum:
+                                              - hour
+                                              - day
+                                              - week
+                                              - month
+                                            type: string
+                                            description: The time interval for the purchase limit window.
+                                          interval_count:
+                                            type: number
+                                            minimum: 1
+                                            default: 1
+                                            description: Number of intervals in the purchase limit window.
+                                          limit:
+                                            type: number
+                                            minimum: 1
+                                            description: Maximum number of auto top-ups allowed within the interval.
+                                        required:
+                                          - interval
+                                          - limit
+                                      - type: object
+                                        properties:
+                                          interval:
+                                            anyOf:
+                                              - enum:
+                                                  - hour
+                                                  - day
+                                                  - week
+                                                  - month
+                                                type: string
+                                              - type: "null"
+                                            description: The time interval for the purchase limit window. Null when no purchase limit is configured.
+                                          interval_count:
+                                            anyOf:
+                                              - type: number
+                                                minimum: 1
+                                              - type: "null"
+                                            description: Number of intervals in the purchase limit window. Null when no purchase limit is configured.
+                                          limit:
+                                            anyOf:
+                                              - type: number
+                                                minimum: 1
+                                              - type: "null"
+                                            description: Maximum number of auto top-ups allowed within the interval. Null when no purchase limit is configured.
+                                          count:
+                                            type: number
+                                            description: Number of auto top-ups already consumed in the current window.
+                                          next_reset_at:
+                                            type: number
+                                            description: Unix ms timestamp when the current purchase window ends and the count resets.
+                                        required:
+                                          - interval
+                                          - interval_count
+                                          - limit
+                                          - count
+                                          - next_reset_at
+                                    description: Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit.
                                   invoice_mode:
                                     type: boolean
                                     description: When true, auto top-up creates a send_invoice invoice instead of auto-charging.
@@ -2576,29 +2650,66 @@ paths:
                               minimum: 1
                               description: Amount of credits to add per auto top-up.
                             purchase_limit:
-                              type: object
-                              properties:
-                                interval:
-                                  enum:
-                                    - hour
-                                    - day
-                                    - week
-                                    - month
-                                  type: string
-                                  description: The time interval for the purchase limit window.
-                                interval_count:
-                                  type: number
-                                  minimum: 1
-                                  default: 1
-                                  description: Number of intervals in the purchase limit window.
-                                limit:
-                                  type: number
-                                  minimum: 1
-                                  description: Maximum number of auto top-ups allowed within the interval.
-                              required:
-                                - interval
-                                - limit
-                              description: Optional rate limit to cap how often auto top-ups occur.
+                              anyOf:
+                                - type: object
+                                  properties:
+                                    interval:
+                                      enum:
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                      type: string
+                                      description: The time interval for the purchase limit window.
+                                    interval_count:
+                                      type: number
+                                      minimum: 1
+                                      default: 1
+                                      description: Number of intervals in the purchase limit window.
+                                    limit:
+                                      type: number
+                                      minimum: 1
+                                      description: Maximum number of auto top-ups allowed within the interval.
+                                  required:
+                                    - interval
+                                    - limit
+                                - type: object
+                                  properties:
+                                    interval:
+                                      anyOf:
+                                        - enum:
+                                            - hour
+                                            - day
+                                            - week
+                                            - month
+                                          type: string
+                                        - type: "null"
+                                      description: The time interval for the purchase limit window. Null when no purchase limit is configured.
+                                    interval_count:
+                                      anyOf:
+                                        - type: number
+                                          minimum: 1
+                                        - type: "null"
+                                      description: Number of intervals in the purchase limit window. Null when no purchase limit is configured.
+                                    limit:
+                                      anyOf:
+                                        - type: number
+                                          minimum: 1
+                                        - type: "null"
+                                      description: Maximum number of auto top-ups allowed within the interval. Null when no purchase limit is configured.
+                                    count:
+                                      type: number
+                                      description: Number of auto top-ups already consumed in the current window.
+                                    next_reset_at:
+                                      type: number
+                                      description: Unix ms timestamp when the current purchase window ends and the count resets.
+                                  required:
+                                    - interval
+                                    - interval_count
+                                    - limit
+                                    - count
+                                    - next_reset_at
+                              description: Optional rate limit to cap how often auto top-ups occur. Includes runtime state when expanded via billing_controls.auto_topups.purchase_limit.
                             invoice_mode:
                               type: boolean
                               description: When true, auto top-up creates a send_invoice invoice instead of auto-charging.
@@ -6226,6 +6337,12 @@ paths:
 
         @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 
+        @param invoice - Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`. (optional)
+
+        @param enableProductImmediately - Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`. (optional)
+
+        @param finalizeInvoice - Deprecated: legacy alias for `invoice_mode.finalize`. (optional)
+
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 
         @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -6255,6 +6372,8 @@ paths:
         @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 
         @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
+
+        @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 
 
         @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
@@ -6516,6 +6635,15 @@ paths:
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+                invoice:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."
+                enable_product_immediately:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."
+                finalize_invoice:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.finalize`."
                 proration_behavior:
                   enum:
                     - prorate_immediately
@@ -6624,6 +6752,9 @@ paths:
                 no_billing_changes:
                   type: boolean
                   description: If true, skips any billing changes for the attach operation.
+                enable_plan_immediately:
+                  type: boolean
+                  description: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
               required:
                 - customer_id
                 - plan_id
@@ -6741,6 +6872,7 @@ paths:
         @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
         @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
         @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+        @param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
 
         @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
       tags:
@@ -7047,6 +7179,9 @@ paths:
                 new_billing_subscription:
                   type: boolean
                   description: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+                enable_plan_immediately:
+                  type: boolean
+                  description: If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
                 customer_data:
                   $ref: "#/components/schemas/CustomerData"
                 entity_data:
@@ -7254,6 +7389,12 @@ paths:
 
         @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
 
+        @param invoice - Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`. (optional)
+
+        @param enableProductImmediately - Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`. (optional)
+
+        @param finalizeInvoice - Deprecated: legacy alias for `invoice_mode.finalize`. (optional)
+
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 
         @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
@@ -7283,6 +7424,8 @@ paths:
         @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 
         @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
+
+        @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 
 
         @returns A preview response with line items, totals, and effective dates for the proposed changes.
@@ -7544,6 +7687,15 @@ paths:
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+                invoice:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."
+                enable_product_immediately:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."
+                finalize_invoice:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.finalize`."
                 proration_behavior:
                   enum:
                     - prorate_immediately
@@ -7652,6 +7804,9 @@ paths:
                 no_billing_changes:
                   type: boolean
                   description: If true, skips any billing changes for the attach operation.
+                enable_plan_immediately:
+                  type: boolean
+                  description: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
               required:
                 - customer_id
                 - plan_id
@@ -7977,6 +8132,34 @@ paths:
                         type: string
                       - type: "null"
                     description: The type of checkout that will be used if the customer is redirected to a checkout page.
+                  tax:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        description: Total tax amount in major currency units.
+                      amount_inclusive:
+                        type: number
+                        description: Tax included in line item subtotals.
+                      amount_exclusive:
+                        type: number
+                        description: Tax added on top of subtotals.
+                      currency:
+                        type: string
+                        description: Three-letter currency code.
+                      status:
+                        enum:
+                          - complete
+                          - incomplete
+                        type: string
+                        description: Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+                    required:
+                      - total
+                      - amount_inclusive
+                      - amount_exclusive
+                      - currency
+                      - status
+                    description: Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
                 required:
                   - customer_id
                   - line_items
@@ -8025,6 +8208,7 @@ paths:
         @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
         @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
         @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+        @param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
 
         @returns A preview response with line items, totals, and effective dates for the proposed multi-plan attachment.
       tags:
@@ -8331,6 +8515,9 @@ paths:
                 new_billing_subscription:
                   type: boolean
                   description: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+                enable_plan_immediately:
+                  type: boolean
+                  description: If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
                 customer_data:
                   $ref: "#/components/schemas/CustomerData"
                 entity_data:
@@ -8741,6 +8928,34 @@ paths:
                         type: string
                       - type: "null"
                     description: The type of checkout that will be used if the customer is redirected to a checkout page.
+                  tax:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        description: Total tax amount in major currency units.
+                      amount_inclusive:
+                        type: number
+                        description: Tax included in line item subtotals.
+                      amount_exclusive:
+                        type: number
+                        description: Tax added on top of subtotals.
+                      currency:
+                        type: string
+                        description: Three-letter currency code.
+                      status:
+                        enum:
+                          - complete
+                          - incomplete
+                        type: string
+                        description: Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+                    required:
+                      - total
+                      - amount_inclusive
+                      - amount_exclusive
+                      - currency
+                      - status
+                    description: Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
                 required:
                   - customer_id
                   - line_items
@@ -8821,6 +9036,12 @@ paths:
         @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
 
         @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
+
+        @param invoice - Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`. (optional)
+
+        @param enableProductImmediately - Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`. (optional)
+
+        @param finalizeInvoice - Deprecated: legacy alias for `invoice_mode.finalize`. (optional)
 
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 
@@ -9098,6 +9319,15 @@ paths:
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+                invoice:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."
+                enable_product_immediately:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."
+                finalize_invoice:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.finalize`."
                 proration_behavior:
                   enum:
                     - prorate_immediately
@@ -9274,6 +9504,12 @@ paths:
         @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
 
         @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
+
+        @param invoice - Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`. (optional)
+
+        @param enableProductImmediately - Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`. (optional)
+
+        @param finalizeInvoice - Deprecated: legacy alias for `invoice_mode.finalize`. (optional)
 
         @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 
@@ -9551,6 +9787,15 @@ paths:
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+                invoice:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."
+                enable_product_immediately:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."
+                finalize_invoice:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.finalize`."
                 proration_behavior:
                   enum:
                     - prorate_immediately
@@ -10249,6 +10494,15 @@ paths:
                         - type: "null"
                       description: Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
                   description: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+                invoice:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."
+                enable_product_immediately:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."
+                finalize_invoice:
+                  type: boolean
+                  description: "Deprecated: legacy alias for `invoice_mode.finalize`."
                 proration_behavior:
                   enum:
                     - prorate_immediately
@@ -10340,6 +10594,9 @@ paths:
                 no_billing_changes:
                   type: boolean
                   description: If true, skips any billing changes for the attach operation.
+                enable_plan_immediately:
+                  type: boolean
+                  description: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
               required:
                 - customer_id
               title: SetupPaymentParams

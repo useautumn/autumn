@@ -482,6 +482,18 @@ export type AttachParams = {
    */
   invoiceMode?: AttachInvoiceMode | undefined;
   /**
+   * Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+   */
+  invoice?: boolean | undefined;
+  /**
+   * Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+   */
+  enableProductImmediately?: boolean | undefined;
+  /**
+   * Deprecated: legacy alias for `invoice_mode.finalize`.
+   */
+  finalizeInvoice?: boolean | undefined;
+  /**
    * How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
    */
   prorationBehavior?: AttachProrationBehavior | undefined;
@@ -541,6 +553,10 @@ export type AttachParams = {
    * If true, skips any billing changes for the attach operation.
    */
   noBillingChanges?: boolean | undefined;
+  /**
+   * If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+   */
+  enablePlanImmediately?: boolean | undefined;
 };
 
 /**
@@ -1171,6 +1187,9 @@ export type AttachParams$Outbound = {
   version?: number | undefined;
   customize?: AttachCustomize$Outbound | undefined;
   invoice_mode?: AttachInvoiceMode$Outbound | undefined;
+  invoice?: boolean | undefined;
+  enable_product_immediately?: boolean | undefined;
+  finalize_invoice?: boolean | undefined;
   proration_behavior?: string | undefined;
   redirect_mode: string;
   subscription_id?: string | undefined;
@@ -1186,6 +1205,7 @@ export type AttachParams$Outbound = {
   carry_over_usages?: AttachCarryOverUsages$Outbound | undefined;
   metadata?: { [k: string]: string } | undefined;
   no_billing_changes?: boolean | undefined;
+  enable_plan_immediately?: boolean | undefined;
 };
 
 /** @internal */
@@ -1203,6 +1223,9 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     version: z.optional(z.number()),
     customize: z.optional(z.lazy(() => AttachCustomize$outboundSchema)),
     invoiceMode: z.optional(z.lazy(() => AttachInvoiceMode$outboundSchema)),
+    invoice: z.optional(z.boolean()),
+    enableProductImmediately: z.optional(z.boolean()),
+    finalizeInvoice: z.optional(z.boolean()),
     prorationBehavior: z.optional(AttachProrationBehavior$outboundSchema),
     redirectMode: z._default(AttachRedirectMode$outboundSchema, "if_required"),
     subscriptionId: z.optional(z.string()),
@@ -1226,6 +1249,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     ),
     metadata: z.optional(z.record(z.string(), z.string())),
     noBillingChanges: z.optional(z.boolean()),
+    enablePlanImmediately: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1234,6 +1258,8 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       planId: "plan_id",
       featureQuantities: "feature_quantities",
       invoiceMode: "invoice_mode",
+      enableProductImmediately: "enable_product_immediately",
+      finalizeInvoice: "finalize_invoice",
       prorationBehavior: "proration_behavior",
       redirectMode: "redirect_mode",
       subscriptionId: "subscription_id",
@@ -1247,6 +1273,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       carryOverBalances: "carry_over_balances",
       carryOverUsages: "carry_over_usages",
       noBillingChanges: "no_billing_changes",
+      enablePlanImmediately: "enable_plan_immediately",
     });
   }),
 );

@@ -705,6 +705,12 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""The version of the plan to attach."""
     customize: NotRequired[SetupPaymentCustomizeTypedDict]
     r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
+    invoice: NotRequired[bool]
+    r"""Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."""
+    enable_product_immediately: NotRequired[bool]
+    r"""Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."""
+    finalize_invoice: NotRequired[bool]
+    r"""Deprecated: legacy alias for `invoice_mode.finalize`."""
     proration_behavior: NotRequired[SetupPaymentProrationBehavior]
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
     subscription_id: NotRequired[str]
@@ -729,6 +735,8 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
     no_billing_changes: NotRequired[bool]
     r"""If true, skips any billing changes for the attach operation."""
+    enable_plan_immediately: NotRequired[bool]
+    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
 
 
 class SetupPaymentParams(BaseModel):
@@ -749,6 +757,15 @@ class SetupPaymentParams(BaseModel):
 
     customize: Optional[SetupPaymentCustomize] = None
     r"""Customize the plan to attach. Can override the price, items, free trial, or a combination."""
+
+    invoice: Optional[bool] = None
+    r"""Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`."""
+
+    enable_product_immediately: Optional[bool] = None
+    r"""Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`."""
+
+    finalize_invoice: Optional[bool] = None
+    r"""Deprecated: legacy alias for `invoice_mode.finalize`."""
 
     proration_behavior: Optional[SetupPaymentProrationBehavior] = None
     r"""How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges."""
@@ -789,6 +806,9 @@ class SetupPaymentParams(BaseModel):
     no_billing_changes: Optional[bool] = None
     r"""If true, skips any billing changes for the attach operation."""
 
+    enable_plan_immediately: Optional[bool] = None
+    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -798,6 +818,9 @@ class SetupPaymentParams(BaseModel):
                 "feature_quantities",
                 "version",
                 "customize",
+                "invoice",
+                "enable_product_immediately",
+                "finalize_invoice",
                 "proration_behavior",
                 "subscription_id",
                 "discounts",
@@ -810,6 +833,7 @@ class SetupPaymentParams(BaseModel):
                 "carry_over_usages",
                 "metadata",
                 "no_billing_changes",
+                "enable_plan_immediately",
             ]
         )
         serialized = handler(self)

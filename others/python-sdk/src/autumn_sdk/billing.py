@@ -28,6 +28,9 @@ class Billing(BaseSDK):
         invoice_mode: Optional[
             Union[models.AttachInvoiceMode, models.AttachInvoiceModeTypedDict]
         ] = None,
+        invoice: Optional[bool] = None,
+        enable_product_immediately: Optional[bool] = None,
+        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.AttachProrationBehavior] = None,
         redirect_mode: Optional[models.AttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -58,6 +61,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -74,6 +78,9 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -88,6 +95,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -117,6 +125,9 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.AttachInvoiceMode]
             ),
+            invoice=invoice,
+            enable_product_immediately=enable_product_immediately,
+            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -139,6 +150,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request(
@@ -219,6 +231,9 @@ class Billing(BaseSDK):
         invoice_mode: Optional[
             Union[models.AttachInvoiceMode, models.AttachInvoiceModeTypedDict]
         ] = None,
+        invoice: Optional[bool] = None,
+        enable_product_immediately: Optional[bool] = None,
+        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.AttachProrationBehavior] = None,
         redirect_mode: Optional[models.AttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -249,6 +264,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -265,6 +281,9 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -279,6 +298,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -308,6 +328,9 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.AttachInvoiceMode]
             ),
+            invoice=invoice,
+            enable_product_immediately=enable_product_immediately,
+            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -330,6 +353,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request_async(
@@ -418,6 +442,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.MultiAttachRedirectMode] = "if_required",
         new_billing_subscription: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         customer_data: Optional[
             Union[models.CustomerData, models.CustomerDataTypedDict]
         ] = None,
@@ -443,6 +468,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param enable_plan_immediately: If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
         :param customer_data: Customer details to set when creating a customer
         :param entity_data:
         :param retries: Override the default retry configuration for this method
@@ -477,6 +503,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             new_billing_subscription=new_billing_subscription,
+            enable_plan_immediately=enable_plan_immediately,
             customer_data=utils.get_pydantic_model(
                 customer_data, Optional[models.CustomerData]
             ),
@@ -571,6 +598,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.MultiAttachRedirectMode] = "if_required",
         new_billing_subscription: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         customer_data: Optional[
             Union[models.CustomerData, models.CustomerDataTypedDict]
         ] = None,
@@ -596,6 +624,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param enable_plan_immediately: If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
         :param customer_data: Customer details to set when creating a customer
         :param entity_data:
         :param retries: Override the default retry configuration for this method
@@ -630,6 +659,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             new_billing_subscription=new_billing_subscription,
+            enable_plan_immediately=enable_plan_immediately,
             customer_data=utils.get_pydantic_model(
                 customer_data, Optional[models.CustomerData]
             ),
@@ -719,6 +749,9 @@ class Billing(BaseSDK):
                 models.PreviewAttachInvoiceModeTypedDict,
             ]
         ] = None,
+        invoice: Optional[bool] = None,
+        enable_product_immediately: Optional[bool] = None,
+        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.PreviewAttachProrationBehavior] = None,
         redirect_mode: Optional[models.PreviewAttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -753,6 +786,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -769,6 +803,9 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -783,6 +820,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -813,6 +851,9 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewAttachInvoiceMode]
             ),
+            invoice=invoice,
+            enable_product_immediately=enable_product_immediately,
+            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -835,6 +876,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request(
@@ -918,6 +960,9 @@ class Billing(BaseSDK):
                 models.PreviewAttachInvoiceModeTypedDict,
             ]
         ] = None,
+        invoice: Optional[bool] = None,
+        enable_product_immediately: Optional[bool] = None,
+        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.PreviewAttachProrationBehavior] = None,
         redirect_mode: Optional[models.PreviewAttachRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -952,6 +997,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -968,6 +1014,9 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -982,6 +1031,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1012,6 +1062,9 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewAttachInvoiceMode]
             ),
+            invoice=invoice,
+            enable_product_immediately=enable_product_immediately,
+            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -1034,6 +1087,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request_async(
@@ -1126,6 +1180,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.PreviewMultiAttachRedirectMode] = "if_required",
         new_billing_subscription: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         customer_data: Optional[
             Union[models.CustomerData, models.CustomerDataTypedDict]
         ] = None,
@@ -1154,6 +1209,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param enable_plan_immediately: If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
         :param customer_data: Customer details to set when creating a customer
         :param entity_data:
         :param retries: Override the default retry configuration for this method
@@ -1188,6 +1244,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             new_billing_subscription=new_billing_subscription,
+            enable_plan_immediately=enable_plan_immediately,
             customer_data=utils.get_pydantic_model(
                 customer_data, Optional[models.CustomerData]
             ),
@@ -1286,6 +1343,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.PreviewMultiAttachRedirectMode] = "if_required",
         new_billing_subscription: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         customer_data: Optional[
             Union[models.CustomerData, models.CustomerDataTypedDict]
         ] = None,
@@ -1314,6 +1372,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param enable_plan_immediately: If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
         :param customer_data: Customer details to set when creating a customer
         :param entity_data:
         :param retries: Override the default retry configuration for this method
@@ -1348,6 +1407,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             new_billing_subscription=new_billing_subscription,
+            enable_plan_immediately=enable_plan_immediately,
             customer_data=utils.get_pydantic_model(
                 customer_data, Optional[models.CustomerData]
             ),
@@ -1437,6 +1497,9 @@ class Billing(BaseSDK):
                 models.BillingUpdateInvoiceModeTypedDict,
             ]
         ] = None,
+        invoice: Optional[bool] = None,
+        enable_product_immediately: Optional[bool] = None,
+        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.BillingUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.BillingUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -1470,6 +1533,9 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -1506,6 +1572,9 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.BillingUpdateInvoiceMode]
             ),
+            invoice=invoice,
+            enable_product_immediately=enable_product_immediately,
+            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -1600,6 +1669,9 @@ class Billing(BaseSDK):
                 models.BillingUpdateInvoiceModeTypedDict,
             ]
         ] = None,
+        invoice: Optional[bool] = None,
+        enable_product_immediately: Optional[bool] = None,
+        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.BillingUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.BillingUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -1633,6 +1705,9 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -1669,6 +1744,9 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.BillingUpdateInvoiceMode]
             ),
+            invoice=invoice,
+            enable_product_immediately=enable_product_immediately,
+            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -1763,6 +1841,9 @@ class Billing(BaseSDK):
                 models.PreviewUpdateInvoiceModeTypedDict,
             ]
         ] = None,
+        invoice: Optional[bool] = None,
+        enable_product_immediately: Optional[bool] = None,
+        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.PreviewUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.PreviewUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -1796,6 +1877,9 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -1833,6 +1917,9 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewUpdateInvoiceMode]
             ),
+            invoice=invoice,
+            enable_product_immediately=enable_product_immediately,
+            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -1927,6 +2014,9 @@ class Billing(BaseSDK):
                 models.PreviewUpdateInvoiceModeTypedDict,
             ]
         ] = None,
+        invoice: Optional[bool] = None,
+        enable_product_immediately: Optional[bool] = None,
+        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.PreviewUpdateProrationBehavior] = None,
         redirect_mode: Optional[models.PreviewUpdateRedirectMode] = "if_required",
         subscription_id: Optional[str] = None,
@@ -1960,6 +2050,9 @@ class Billing(BaseSDK):
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
         :param invoice_mode: Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.
+        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
@@ -1997,6 +2090,9 @@ class Billing(BaseSDK):
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.PreviewUpdateInvoiceMode]
             ),
+            invoice=invoice,
+            enable_product_immediately=enable_product_immediately,
+            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             redirect_mode=redirect_mode,
             subscription_id=subscription_id,
@@ -2277,6 +2373,9 @@ class Billing(BaseSDK):
         customize: Optional[
             Union[models.SetupPaymentCustomize, models.SetupPaymentCustomizeTypedDict]
         ] = None,
+        invoice: Optional[bool] = None,
+        enable_product_immediately: Optional[bool] = None,
+        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.SetupPaymentProrationBehavior] = None,
         subscription_id: Optional[str] = None,
         discounts: Optional[
@@ -2308,6 +2407,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2321,6 +2421,9 @@ class Billing(BaseSDK):
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
@@ -2332,6 +2435,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2358,6 +2462,9 @@ class Billing(BaseSDK):
             customize=utils.get_pydantic_model(
                 customize, Optional[models.SetupPaymentCustomize]
             ),
+            invoice=invoice,
+            enable_product_immediately=enable_product_immediately,
+            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
@@ -2377,6 +2484,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request(
@@ -2454,6 +2562,9 @@ class Billing(BaseSDK):
         customize: Optional[
             Union[models.SetupPaymentCustomize, models.SetupPaymentCustomizeTypedDict]
         ] = None,
+        invoice: Optional[bool] = None,
+        enable_product_immediately: Optional[bool] = None,
+        finalize_invoice: Optional[bool] = None,
         proration_behavior: Optional[models.SetupPaymentProrationBehavior] = None,
         subscription_id: Optional[str] = None,
         discounts: Optional[
@@ -2485,6 +2596,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2498,6 +2610,9 @@ class Billing(BaseSDK):
         :param feature_quantities: If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan.
         :param version: The version of the plan to attach.
         :param customize: Customize the plan to attach. Can override the price, items, free trial, or a combination.
+        :param invoice: Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`.
+        :param enable_product_immediately: Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`.
+        :param finalize_invoice: Deprecated: legacy alias for `invoice_mode.finalize`.
         :param proration_behavior: How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
@@ -2509,6 +2624,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2535,6 +2651,9 @@ class Billing(BaseSDK):
             customize=utils.get_pydantic_model(
                 customize, Optional[models.SetupPaymentCustomize]
             ),
+            invoice=invoice,
+            enable_product_immediately=enable_product_immediately,
+            finalize_invoice=finalize_invoice,
             proration_behavior=proration_behavior,
             subscription_id=subscription_id,
             discounts=utils.get_pydantic_model(
@@ -2554,6 +2673,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request_async(

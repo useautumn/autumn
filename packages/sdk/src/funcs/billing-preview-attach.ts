@@ -43,6 +43,9 @@ import { Result } from "../types/fp.js";
  * @param version - The version of the plan to attach. (optional)
  * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
  * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
+ * @param invoice - Deprecated: legacy alias for `invoice_mode.enabled`. Prefer `invoice_mode: { enabled: true }`. (optional)
+ * @param enableProductImmediately - Deprecated: legacy alias for `invoice_mode.enable_plan_immediately`. (optional)
+ * @param finalizeInvoice - Deprecated: legacy alias for `invoice_mode.finalize`. (optional)
  * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
  * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
  * @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
@@ -58,6 +61,7 @@ import { Result } from "../types/fp.js";
  * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
  * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
  * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
+ * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
  *
  * @returns A preview response with line items, totals, and effective dates for the proposed changes.
  */
