@@ -1,0 +1,45 @@
+packages/openapi/utils/mintlifyTransform/index.ts
+  d258362aee9e6fbd 1,73-120
+apps/docs/api-reference-generator/plans/createPlan.mdx
+  d258362aee9e6fbd 10
+apps/docs/api-reference-generator/plans/updatePlan.mdx
+  d258362aee9e6fbd 10
+apps/docs/mintlify/docs.json
+  d258362aee9e6fbd 133
+apps/docs/api-reference-generator/billing/billingUpdate.mdx
+  d258362aee9e6fbd 11
+apps/docs/mintlify/documentation/slack-discord-notifications.mdx
+  d258362aee9e6fbd 1-84
+packages/openapi/api.ts
+  d258362aee9e6fbd 1-4,50-55
+apps/docs/mintlify/api-reference/plans/createPlan.mdx
+  d258362aee9e6fbd 10
+apps/docs/mintlify/api-reference/billing/billingUpdate.mdx
+  d258362aee9e6fbd 11
+apps/docs/mintlify/api-reference/plans/updatePlan.mdx
+  d258362aee9e6fbd 10
+packages/openapi/utils/mintlifyTransform.ts
+  d258362aee9e6fbd 6
+packages/openapi/utils/paths.ts
+  d258362aee9e6fbd 26-27,48-51,68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "9072821f52e67ba4bd2de80741093d09c68fc9cf",
+  "prompts": {
+    "d258362aee9e6fbd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_21d3e6d79ffekpENqgWkAywcL5",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 168,
+      "total_deletions": 18,
+      "accepted_lines": 158,
+      "overriden_lines": 0
+    }
+  }
+}
