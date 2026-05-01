@@ -71,10 +71,6 @@ const sendAutoTopupSucceededWebhookUnsafe = async ({
 	autoTopupContext: AutoTopupContext;
 	billingResult: BillingResult;
 }) => {
-	ctx.logger.info(
-		`[sendAutoTopupSucceededWebhook] entry for customer ${autoTopupContext.fullCustomer.id ?? autoTopupContext.fullCustomer.internal_id}, feature ${autoTopupContext.autoTopupConfig.feature_id}`,
-	);
-
 	const invoice = getInvoicePayload({
 		billingResult,
 	});
