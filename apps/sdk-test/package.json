@@ -16,7 +16,7 @@
     "autumn-js": "workspace:*",
     "better-auth": "catalog:",
     "kysely": "^0.28.11",
-    "next": "16.1.6",
+    "next": "16.2.3",
     "pg": "^8.18.0",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
