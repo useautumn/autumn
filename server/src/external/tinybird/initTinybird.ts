@@ -4,6 +4,7 @@ import { createAggregatePipe } from "./pipes/aggregatePipe.js";
 import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
 import { createEstimatedMrrPipe } from "./pipes/estimatedMrrPipe.js";
 import { createListEventNamesPipe } from "./pipes/listEventNamesPipe.js";
+import { createListEventsByCustomerPipe } from "./pipes/listEventsByCustomerPipe.js";
 import { createListEventsPaginatedPipe } from "./pipes/listEventsPaginatedPipe.js";
 import { z } from "./tinybirdZod.js";
 
@@ -51,6 +52,7 @@ export const tinybirdPipes = tinybirdClient
 			estimatedMrr: createEstimatedMrrPipe(tinybirdClient),
 			listEventNames: createListEventNamesPipe(tinybirdClient),
 			listEventsPaginated: createListEventsPaginatedPipe(tinybirdClient),
+			listEventsByCustomer: createListEventsByCustomerPipe(tinybirdClient),
 		}
 	: null;
 
@@ -98,6 +100,8 @@ export type {
 	EstimatedMrrPipeRow,
 	ListEventNamesPipeParams,
 	ListEventNamesPipeRow,
+	ListEventsByCustomerPipeParams,
+	ListEventsByCustomerPipeRow,
 	ListEventsPaginatedPipeParams,
 	ListEventsPaginatedPipeRow,
 } from "./pipes/index.js";
