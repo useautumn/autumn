@@ -182,6 +182,8 @@ export const buildStripeSubscriptionScheduleAction = ({
 	finalCustomerProducts: FullCusProduct[];
 	trialEndsAt?: number;
 }): StripeSubscriptionScheduleResult => {
+	if (billingContext.skipSubscriptionScheduleUpdates === true) return {};
+
 	const { stripeSubscriptionSchedule, stripeSubscription } = billingContext;
 	const { insertCustomerProducts } = autumnBillingPlan;
 
