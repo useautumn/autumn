@@ -4,6 +4,44 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 1st 2026">
+  ## Auto top-up rebalancing
+
+  Auto top-ups now **rebalance after every deduction** instead of firing once and stopping. When a customer's balance crosses the configured threshold, Autumn recomputes how much to top up — so prepaid balances stay above the threshold even under bursty usage.
+
+  No API changes are required. See the [auto top-ups guide](/documentation/modelling-pricing/auto-top-ups) for setup details.
+
+  ## Ignore past-due on entitlement resets
+
+  Plans now support an `ignore_past_due` flag. When enabled, entitlements attached to the plan keep resetting on schedule even when the customer's subscription is `past_due` — useful for free or trial allowances that you don't want to gate behind a failed payment.
+
+  Configure it via the **Edit Plan** sheet (under Advanced) or the [`ignore_past_due` parameter](/api-reference/plans/createPlan) on plan create/update.
+
+  ## Entity scope picker in dashboard sheets
+
+  The **Track**, **Check Balance**, and **Attach** sheets in the dashboard now include a unified entity scope dropdown, so you can target a specific entity directly from any of them — no more switching pages first.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Auto top-ups rebalance after deductions to stay above threshold - [#1371](https://github.com/useautumn/autumn/pull/1371)
+      - `ignore_past_due` plan flag keeps entitlements resetting during past-due subscriptions - [#1297](https://github.com/useautumn/autumn/pull/1297)
+      - Unified Entity scope selector in Track, Check Balance, and Attach sheets - [#1380](https://github.com/useautumn/autumn/pull/1380), [#1381](https://github.com/useautumn/autumn/pull/1381)
+      - SDKs now recognize HTTP `202 Accepted` from `attach`, `billing.update`, and `finalizeLock` for async-accepted operations - [#1409](https://github.com/useautumn/autumn/pull/1409)
+      - Stripe webhook handlers now ack immediately to reduce timeouts and retries under load - [#1397](https://github.com/useautumn/autumn/pull/1397)
+      - Last-active org persists in `localStorage` so transient session refreshes don't reset the dashboard to a different org - [#1368](https://github.com/useautumn/autumn/pull/1368)
+    </Accordion>
+
+    <Accordion title="Bug fixes">
+      - Fixed cross-processor add-on attach overcharging when non-Stripe (e.g. RevenueCat) customer products leaked into newly-built Stripe subscriptions - [#1400](https://github.com/useautumn/autumn/pull/1400), [#1386](https://github.com/useautumn/autumn/pull/1386)
+      - Fixed past-due customers not resetting entitlements on the V2 cache reset path - [#1396](https://github.com/useautumn/autumn/pull/1396)
+      - Fixed legacy `update` flow mishandling zero-quantity edge cases on prepaid volume prices - [#1410](https://github.com/useautumn/autumn/pull/1410)
+      - Fixed balance-edit failing for entity-scoped entitlements when no entity was selected at the top of the customer view - [#1406](https://github.com/useautumn/autumn/pull/1406), [#1407](https://github.com/useautumn/autumn/pull/1407)
+      - Fixed a runtime error in [Autumn Checkout](/documentation/customers/payment-flow) caused by duplicate React copies in the build - [#1383](https://github.com/useautumn/autumn/pull/1383), [#1384](https://github.com/useautumn/autumn/pull/1384)
+      - SDK fail-open hook now surfaces network errors with a `555` status (was being swallowed as `503`), making connectivity issues easier to diagnose - [#1404](https://github.com/useautumn/autumn/pull/1404)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
