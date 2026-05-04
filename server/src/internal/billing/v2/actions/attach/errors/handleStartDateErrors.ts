@@ -7,12 +7,13 @@ import {
 	ErrCode,
 	isFreeProduct,
 	isOneOffProduct,
-	ms,
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-
-const START_DATE_TOLERANCE_MS = ms.minutes(1);
+import {
+	isFutureStartDate,
+	isPastStartDate,
+} from "@/internal/billing/v2/utils/startDateUtils";
 
 const hasActivePaidRecurringSubscription = ({
 	billingContext,
@@ -40,7 +41,7 @@ export const handleStartDateErrors = ({
 }) => {
 	if (params.start_date === undefined) return;
 
-	if (params.start_date < billingContext.currentEpochMs - START_DATE_TOLERANCE_MS) {
+	if (isPastStartDate(params.start_date, billingContext.currentEpochMs)) {
 		throw new RecaseError({
 			message:
 				"start_date cannot be set to a past timestamp. Use now or a future Unix timestamp in milliseconds.",
@@ -67,9 +68,11 @@ export const handleStartDateErrors = ({
 		});
 	}
 
-	const isFutureStart =
-		params.start_date > billingContext.currentEpochMs + START_DATE_TOLERANCE_MS;
-	if (!isFutureStart) return;
+	if (
+		!isFutureStartDate(params.start_date, billingContext.currentEpochMs)
+	) {
+		return;
+	}
 
 	if (params.invoice_mode?.enabled) {
 		throw new RecaseError({

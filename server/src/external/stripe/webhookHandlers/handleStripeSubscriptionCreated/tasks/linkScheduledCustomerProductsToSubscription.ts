@@ -28,15 +28,16 @@ export const linkScheduledCustomerProductsToSubscription = async ({
 		env,
 	});
 
-	let updatedCount = 0;
+	const subscriptionStartMs = fromUnixTime(
+		subscription.start_date ?? subscription.created,
+	).getTime();
+	let linkedCount = 0;
+
 	for (const cusProduct of cusProducts) {
 		const subscriptionIds = cusProduct.subscription_ids ?? [];
 		if (subscriptionIds.includes(subscription.id)) continue;
 
 		const nextSubscriptionIds = [...subscriptionIds, subscription.id];
-		const subscriptionStartMs = fromUnixTime(
-			subscription.start_date ?? subscription.created,
-		).getTime();
 		const hasStarted = hasCustomerProductStarted(cusProduct, {
 			nowMs: subscriptionStartMs,
 		});
@@ -51,7 +52,7 @@ export const linkScheduledCustomerProductsToSubscription = async ({
 					? cusProduct.scheduled_ids
 					: [scheduleId],
 			});
-			updatedCount++;
+			linkedCount++;
 			continue;
 		}
 
@@ -69,12 +70,12 @@ export const linkScheduledCustomerProductsToSubscription = async ({
 				subscription_ids: nextSubscriptionIds,
 			},
 		});
-		updatedCount++;
+		linkedCount++;
 	}
 
-	if (updatedCount > 0) {
+	if (linkedCount > 0) {
 		logger.info(
-			`[sub.created] linked ${updatedCount} scheduled customer product(s) to subscription ${subscription.id}`,
+			`[sub.created] linked ${linkedCount} scheduled customer product(s) to subscription ${subscription.id}`,
 		);
 	}
 };

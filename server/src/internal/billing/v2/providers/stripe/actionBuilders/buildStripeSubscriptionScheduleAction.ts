@@ -8,10 +8,10 @@ import {
 	cp,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
-	msToSeconds,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { buildStripePhasesUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
+import { stripePhaseStartsInFuture } from "@server/internal/billing/v2/utils/startDateUtils";
 import type Stripe from "stripe";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -173,10 +173,9 @@ const shouldCreateFutureSchedule = ({
 }) => {
 	if (stripeSubscription) return false;
 
-	const startDate = scheduledPhases[0]?.start_date;
-	return (
-		typeof startDate === "number" &&
-		startDate > msToSeconds(billingContext.currentEpochMs)
+	return stripePhaseStartsInFuture(
+		scheduledPhases[0]?.start_date,
+		billingContext.currentEpochMs,
 	);
 };
 
