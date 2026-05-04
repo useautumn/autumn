@@ -1,5 +1,10 @@
-import type { BillingContext, StripeItemSpec } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+	StripeItemSpec,
+} from "@autumn/shared";
 import {
+	cp,
 	filterCustomerProductsByActiveStatuses,
 	filterCustomerProductsByProcessorType,
 	filterCustomerProductsByStripeSubscriptionId,
@@ -84,10 +89,12 @@ const stripeItemSpecsToSubItemsUpdate = ({
 export const buildStripeSubscriptionItemsUpdate = ({
 	ctx,
 	billingContext,
+	autumnBillingPlan,
 	finalCustomerProducts,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
+	autumnBillingPlan: AutumnBillingPlan;
 	finalCustomerProducts: FullCusProduct[];
 }): Stripe.SubscriptionUpdateParams.Item[] => {
 	// 1. Filter customer products by stripe subscription id
@@ -107,9 +114,23 @@ export const buildStripeSubscriptionItemsUpdate = ({
 		processorType: ProcessorType.Stripe,
 	});
 
+	// 2a. Exclude orphan paid-recurring cusProducts (no sub link, not freshly inserted) — their recurring prices would otherwise leak into a new sub on the next attach.
+	const insertedIds = new Set(
+		autumnBillingPlan.insertCustomerProducts.map((cp) => cp.id),
+	);
+	const nonOrphanCustomerProducts = stripeManagedCustomerProducts.filter(
+		(customerProduct) => {
+			if (insertedIds.has(customerProduct.id)) return true;
+			const isPaidRecurringOrphan =
+				cp(customerProduct).paid().recurring().valid &&
+				!cp(customerProduct).hasSubscription().valid;
+			return !isPaidRecurringOrphan;
+		},
+	);
+
 	// 3. Filter customer products by active statuses
 	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
-		customerProducts: stripeManagedCustomerProducts,
+		customerProducts: nonOrphanCustomerProducts,
 	});
 
 	// 4. Get recurring subscription item array (doesn't include one-off items)
