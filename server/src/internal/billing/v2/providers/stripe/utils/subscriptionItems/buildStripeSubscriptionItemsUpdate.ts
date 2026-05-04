@@ -1,5 +1,6 @@
 import type { BillingContext, StripeItemSpec } from "@autumn/shared";
 import {
+	cp,
 	filterCustomerProductsByActiveStatuses,
 	filterCustomerProductsByProcessorType,
 	filterCustomerProductsByStripeSubscriptionId,
@@ -107,9 +108,23 @@ export const buildStripeSubscriptionItemsUpdate = ({
 		processorType: ProcessorType.Stripe,
 	});
 
+	// 2a. Exclude orphans: paid-recurring customer products that have no
+	// linked Stripe subscription. These represent broken state (e.g. a prior
+	// update unlinked the sub). Their recurring prices must not contribute to
+	// any Stripe sub action — otherwise a fresh attach on the same customer
+	// would bundle their items into a new sub and double-charge the customer.
+	const nonOrphanCustomerProducts = stripeManagedCustomerProducts.filter(
+		(customerProduct) => {
+			const isPaidRecurringOrphan =
+				cp(customerProduct).paid().recurring().valid &&
+				!cp(customerProduct).hasSubscription().valid;
+			return !isPaidRecurringOrphan;
+		},
+	);
+
 	// 3. Filter customer products by active statuses
 	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
-		customerProducts: stripeManagedCustomerProducts,
+		customerProducts: nonOrphanCustomerProducts,
 	});
 
 	// 4. Get recurring subscription item array (doesn't include one-off items)

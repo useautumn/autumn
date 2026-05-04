@@ -13,6 +13,7 @@ import { computeCustomPlan } from "@/internal/billing/v2/actions/updateSubscript
 import { finalizeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/finalizeUpdateSubscriptionPlan";
 import { computeUpdateQuantityPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/updateQuantity/computeUpdateQuantityPlan";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { computeFieldUpdates } from "./computeFieldUpdates";
 
 /**
@@ -84,6 +85,18 @@ export const computeUpdateSubscriptionPlan = async ({
 		billingContext,
 		params,
 	});
+
+	// When skipBillingChanges is true, Stripe is never called, so the post-Stripe
+	// sub-id linkage in executeStripeSubscriptionAction never runs.
+	const existingSubscriptionId =
+		billingContext.customerProduct.subscription_ids?.[0];
+
+	if (billingContext.skipBillingChanges && existingSubscriptionId) {
+		addStripeSubscriptionIdToBillingPlan({
+			autumnBillingPlan: plan,
+			stripeSubscriptionId: existingSubscriptionId,
+		});
+	}
 
 	return plan;
 };
