@@ -1,4 +1,8 @@
-import type { BillingContext, StripeItemSpec } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+	StripeItemSpec,
+} from "@autumn/shared";
 import {
 	cp,
 	filterCustomerProductsByActiveStatuses,
@@ -85,10 +89,12 @@ const stripeItemSpecsToSubItemsUpdate = ({
 export const buildStripeSubscriptionItemsUpdate = ({
 	ctx,
 	billingContext,
+	autumnBillingPlan,
 	finalCustomerProducts,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
+	autumnBillingPlan: AutumnBillingPlan;
 	finalCustomerProducts: FullCusProduct[];
 }): Stripe.SubscriptionUpdateParams.Item[] => {
 	// 1. Filter customer products by stripe subscription id
@@ -108,13 +114,13 @@ export const buildStripeSubscriptionItemsUpdate = ({
 		processorType: ProcessorType.Stripe,
 	});
 
-	// 2a. Exclude orphans: paid-recurring customer products that have no
-	// linked Stripe subscription. These represent broken state (e.g. a prior
-	// update unlinked the sub). Their recurring prices must not contribute to
-	// any Stripe sub action — otherwise a fresh attach on the same customer
-	// would bundle their items into a new sub and double-charge the customer.
+	// 2a. Exclude orphan paid-recurring cusProducts (no sub link, not freshly inserted) — their recurring prices would otherwise leak into a new sub on the next attach.
+	const insertedIds = new Set(
+		autumnBillingPlan.insertCustomerProducts.map((cp) => cp.id),
+	);
 	const nonOrphanCustomerProducts = stripeManagedCustomerProducts.filter(
 		(customerProduct) => {
+			if (insertedIds.has(customerProduct.id)) return true;
 			const isPaidRecurringOrphan =
 				cp(customerProduct).paid().recurring().valid &&
 				!cp(customerProduct).hasSubscription().valid;
