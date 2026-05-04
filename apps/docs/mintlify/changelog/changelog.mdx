@@ -4,6 +4,62 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 4th 2026">
+  ## Automatic tax on Stripe charges
+
+  If your Stripe account has Stripe Tax enabled, Autumn now applies automatic tax to checkout sessions, subscriptions, prorations, and one-off invoices — no extra configuration required. Customer location is resolved automatically from your existing Stripe customer.
+
+  Attach previews also surface tax line items so customers see the full breakdown — including tax — before they confirm. See the [attach API reference](/api-reference/billing/attach) for the updated preview shape.
+
+  ## `billing.auto_topup_succeeded` webhook
+
+  A new webhook fires whenever an auto top-up grants credits to a customer. The payload includes the granted quantity, the new balance, and the underlying invoice — handy for receipts, internal ledgers, and balance reconciliation.
+
+  See the [auto top-ups guide](/documentation/modelling-pricing/auto-top-ups) and the [webhook reference](/api-reference/webhooks/billingAutoTopupSucceeded).
+
+  ## Activate plans immediately on checkout
+
+  When generating a checkout URL from the dashboard, you can now choose whether to activate the plan immediately or wait for payment to complete. The `enable_product_immediately` flag is also exposed on `billing.attach` for programmatic use.
+
+  ## Auto top-up purchase limits in the dashboard
+
+  The customer dashboard now surfaces auto top-up purchase counts and the next reset time, so you can see at a glance how close a customer is to their daily/weekly recharge cap.
+
+  ## Cross-processor one-off purchases
+
+  Customers with an active Stripe subscription can now buy one-off products through RevenueCat (and vice versa). One-off purchases run alongside recurring subscriptions instead of being blocked at the processor boundary.
+
+  ## Entity scope selectors on dashboard sheets
+
+  The track usage, check balance, and attach product sheets now share a unified entity scope selector — making it easier to scope dashboard actions to a specific [sub-entity](/documentation/modelling-pricing/sub-entity-balances).
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Automatic Stripe tax on attaches, prorations, checkout sessions, and one-off invoices - [#1417](https://github.com/useautumn/autumn/pull/1417)
+      - Tax line items in attach previews for taxable orgs - [#1424](https://github.com/useautumn/autumn/pull/1424)
+      - `billing.auto_topup_succeeded` webhook with granted quantity, new balance, and invoice - [#1429](https://github.com/useautumn/autumn/pull/1429)
+      - "Enable plan immediately" option when generating a checkout URL from the dashboard - [#1436](https://github.com/useautumn/autumn/pull/1436)
+      - `enable_product_immediately` support on Stripe checkout sessions - [#1415](https://github.com/useautumn/autumn/pull/1415)
+      - Auto top-up purchase count and next reset surfaced on the customer dashboard - [#1423](https://github.com/useautumn/autumn/pull/1423), [#1436](https://github.com/useautumn/autumn/pull/1436)
+      - Cross-processor one-off product purchases (Stripe ↔ RevenueCat) - [#1400](https://github.com/useautumn/autumn/pull/1400)
+      - Shared entity scope selector across track, check, and attach sheets - [#1380](https://github.com/useautumn/autumn/pull/1380), [#1381](https://github.com/useautumn/autumn/pull/1381)
+      - `202 Accepted` responses for in-flight finalize lock requests in the SDK - [#1409](https://github.com/useautumn/autumn/pull/1409)
+      - Faster Stripe webhook acknowledgment for improved delivery reliability - [#1397](https://github.com/useautumn/autumn/pull/1397)
+    </Accordion>
+
+    <Accordion title="Bug Fixes">
+      - Fixed schedule sync and webhook telemetry edge cases - [#1443](https://github.com/useautumn/autumn/pull/1443)
+      - Fixed orphaned `cus_product` rows when attaching add-ons with detached base subscriptions - [#1440](https://github.com/useautumn/autumn/pull/1440)
+      - Fixed tax preview calculation when proration credits exceed new charges - [#1434](https://github.com/useautumn/autumn/pull/1434)
+      - Fixed legacy `update_subscription` failing on prepaid volume prices with zero quantity - [#1410](https://github.com/useautumn/autumn/pull/1410)
+      - Fixed balance edits failing for entity-scoped entitlements when no entity was selected - [#1406](https://github.com/useautumn/autumn/pull/1406), [#1407](https://github.com/useautumn/autumn/pull/1407)
+      - Fixed network errors being swallowed in the fail-open SDK hook - [#1404](https://github.com/useautumn/autumn/pull/1404)
+      - Fixed past-due customer entitlements not resetting on cache reads - [#1396](https://github.com/useautumn/autumn/pull/1396)
+      - Fixed multi-attach being included in sync flows where it shouldn't run - [#1426](https://github.com/useautumn/autumn/pull/1426)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
