@@ -1,8 +1,9 @@
-import type { Entity, FullCustomer } from "@autumn/shared";
+import { type Entity, type FullCustomer, formatAmount } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import type { AxiosError } from "axios";
+import { Decimal } from "decimal.js";
 import { AnimatePresence, motion } from "motion/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	AttachAdvancedSection,
@@ -14,7 +15,11 @@ import {
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
-import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import {
+	buildAttachPreviewTotals,
+	isFutureStartDate,
+} from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import {
@@ -93,7 +98,7 @@ function ReviewPreviewSkeleton() {
 }
 
 function ReviewPreviewBlock() {
-	const { previewQuery, formValues } = useAttachFormContext();
+	const { previewQuery, formValues, customerId } = useAttachFormContext();
 	const hasProductSelected = !!formValues.productId;
 	const {
 		data: previewData,
@@ -106,6 +111,23 @@ function ReviewPreviewBlock() {
 	if (showSkeleton) hasShownSkeleton.current = true;
 	const animateIn = hasShownSkeleton.current && !showSkeleton;
 
+	// Surface "tax couldn't be computed" once per resolved preview as a
+	// non-blocking warning. We don't render the Tax row in that case — see
+	// the totals section below.
+	const incompleteToastShownFor = useRef<string | null>(null);
+	useEffect(() => {
+		if (!previewData?.tax) return;
+		if (previewData.tax.status !== "incomplete") return;
+		// Dedupe per request: keyed by the customer + plan in scope so flips
+		// on the same form don't spam.
+		const key = `${customerId ?? ""}|${formValues.productId ?? ""}`;
+		if (incompleteToastShownFor.current === key) return;
+		incompleteToastShownFor.current = key;
+		toast.warning(
+			"While preparing a tax preview for this purchase, we were unable to determine the customer's location. Tax will not be shown in this preview, but Stripe will compute it on the actual charge.",
+		);
+	}, [previewData?.tax, customerId, formValues.productId]);
+
 	if (!hasProductSelected) return null;
 
 	const error = queryError
@@ -116,6 +138,21 @@ function ReviewPreviewBlock() {
 		previewData,
 		startDate: formValues.startDate,
 	});
+
+	// Tax-aware totals. Only show the Tax row when status is "complete" AND
+	// total > 0 — incomplete is surfaced via toast above; zero tax means
+	// nothing taxable in this jurisdiction (no value in showing $0).
+	const hasFutureStartDate = isFutureStartDate(formValues.startDate);
+	const showTaxRow =
+		!hasFutureStartDate &&
+		previewData?.tax?.status === "complete" && previewData.tax.total > 0;
+	const taxAmount = showTaxRow ? (previewData?.tax?.total ?? 0) : 0;
+	const totalDueNow = previewData
+		? Math.max(previewData.total, 0) + taxAmount
+		: 0;
+	const previewTotals = showTaxRow
+		? totals.filter((total) => total.label !== "Total Due Now")
+		: totals;
 
 	return (
 		<AnimatePresence mode="popLayout">
@@ -142,13 +179,53 @@ function ReviewPreviewBlock() {
 							<PreviewErrorDisplay error={error} />
 						</SheetSection>
 					) : (
-						<LineItemsPreview
-							title="Pricing Preview"
-							lineItems={previewData?.line_items}
-							currency={previewData?.currency}
-							totals={totals}
-							filterZeroAmounts
-						/>
+						<>
+							<LineItemsPreview
+								title="Pricing Preview"
+								lineItems={previewData?.line_items}
+								currency={previewData?.currency}
+								totals={previewTotals}
+								filterZeroAmounts
+							/>
+							{showTaxRow && previewData && (
+								<SheetSection withSeparator={false}>
+									<div className="space-y-2">
+										<div className="flex items-center justify-between">
+											<span className="text-sm text-t2">Tax</span>
+											<span className="text-sm tabular-nums text-t2">
+												{formatAmount({
+													amount: new Decimal(taxAmount)
+														.toDecimalPlaces(2)
+														.toNumber(),
+													currency: previewData.currency,
+													minFractionDigits: 2,
+													amountFormatOptions: {
+														currencyDisplay: "narrowSymbol",
+													},
+												})}
+											</span>
+										</div>
+										<div className="flex items-center justify-between">
+											<span className="text-sm font-medium text-foreground">
+												Total Due Now
+											</span>
+											<span className="text-sm font-semibold text-foreground tabular-nums">
+												{formatAmount({
+													amount: new Decimal(totalDueNow)
+														.toDecimalPlaces(2)
+														.toNumber(),
+													currency: previewData.currency,
+													minFractionDigits: 2,
+													amountFormatOptions: {
+														currencyDisplay: "narrowSymbol",
+													},
+												})}
+											</span>
+										</div>
+									</div>
+								</SheetSection>
+							)}
+						</>
 					)}
 					<AttachFooterV3 />
 				</motion.div>
@@ -341,6 +418,23 @@ function SendInvoiceContent() {
 	);
 }
 
+function CheckoutSessionContent() {
+	const { product, previewQuery, isPending, handleCheckoutAttach } =
+		useAttachFormContext();
+	const { setSheet } = useSheetStore();
+	const itemId = useSheetStore((s) => s.itemId);
+
+	return (
+		<GenerateCheckoutStageWithPreview
+			productName={product?.name}
+			previewQuery={previewQuery}
+			isPending={isPending}
+			onSubmit={handleCheckoutAttach}
+			onBack={() => setSheet({ type: "attach-review", itemId })}
+		/>
+	);
+}
+
 function SheetContent() {
 	const sheetType = useSheetStore((s) => s.type);
 	const {
@@ -350,16 +444,19 @@ function SheetContent() {
 		handlePlanEditorCancel,
 	} = useAttachFormContext();
 
+	const StageContent =
+		sheetType === "attach-send-invoice"
+			? SendInvoiceContent
+			: sheetType === "attach-checkout-session"
+				? CheckoutSessionContent
+				: sheetType === "attach-review"
+					? ReviewContent
+					: SelectContent;
+
 	return (
 		<LayoutGroup>
 			<div className="flex flex-col h-full overflow-y-auto">
-				{sheetType === "attach-send-invoice" ? (
-					<SendInvoiceContent />
-				) : sheetType === "attach-review" ? (
-					<ReviewContent />
-				) : (
-					<SelectContent />
-				)}
+				<StageContent />
 
 				{productWithFormItems && (
 					<InlinePlanEditor

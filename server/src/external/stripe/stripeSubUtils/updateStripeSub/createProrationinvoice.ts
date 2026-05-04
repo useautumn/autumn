@@ -16,29 +16,26 @@ const undoSubUpdate = async ({
 	curSub: Stripe.Subscription;
 	updatedSub: Stripe.Subscription;
 }) => {
-	// For each price in the old subscription, find the corresponding item in the updated subscription
-	// and update it back to the old quantity, or delete it if it doesn't exist in the old sub
+	// Revert each updated item to the old quantity, or delete if missing from old sub.
 	const itemsToUpdate = updatedSub.items.data.map((updatedItem) => {
 		const oldItem = curSub.items.data.find(
 			(item) => item.price.id === updatedItem.price.id,
 		);
 
 		if (oldItem) {
-			// Item exists in both old and new - revert to old quantity
 			return {
 				id: updatedItem.id,
 				price: oldItem.price.id,
 				quantity: oldItem.quantity,
 			};
 		}
-		// Item only exists in updated sub - delete it
 		return {
 			id: updatedItem.id,
 			deleted: true,
 		};
 	});
 
-	// For prices that existed in old sub but were removed in the update, we need to add them back
+	// Re-add prices that were removed in the update.
 	const itemsToAdd = curSub.items.data
 		.filter(
 			(oldItem) =>
@@ -90,10 +87,15 @@ export const createProrationInvoice = async ({
 		};
 	}
 
+	// Proration invoice always uses charge_automatically (parent's
+	// `invoiceOnly` only affects whether we return the invoice for manual
+	// payment, not this invoice's collection_method), so auto_tax is safe.
+	const wantsAutoTax = !!ctx.org.config.automatic_tax;
 	const invoice = await stripeCli.invoices.create({
 		customer: customer.processor.id,
 		auto_advance: false,
 		pending_invoice_items_behavior: "include",
+		...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 	});
 
 	if (invoiceOnly)

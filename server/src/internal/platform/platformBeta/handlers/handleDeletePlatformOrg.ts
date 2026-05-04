@@ -1,30 +1,14 @@
-import {
-	AppEnv,
-	customers,
-	ErrCode,
-	member,
-	organizations,
-	RecaseError,
-	Scopes,
-} from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
+import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import {
-	deleteStripeAccounts,
-	deleteStripeWebhooks,
-	deleteSvixWebhooks,
-} from "@/internal/orgs/orgUtils/deleteOrgUtils.js";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
 
 const deleteOrgSchema = z.object({
 	slug: z.string().min(1, "Organization slug is required"),
 });
 
-/**
- * DELETE /organizations
- * Deletes a platform organization by slug (for test cleanup)
- */
+/** DELETE /organizations — deletes a platform sub-org by slug (test cleanup). */
 export const handleDeletePlatformOrg = createRoute({
 	scopes: [Scopes.Platform.Write],
 	body: deleteOrgSchema,
@@ -34,8 +18,7 @@ export const handleDeletePlatformOrg = createRoute({
 
 		const { slug } = c.req.valid("json");
 
-		// Platform API creates orgs with format: {slug}|{masterOrgId}
-		// So we need to find the org with this pattern
+		// Platform API uses `{slug}|{masterOrgId}` format.
 		const fullSlug = `${slug}|${masterOrg.id}`;
 
 		const org = await OrgService.getBySlug({ db, slug: fullSlug });
@@ -45,46 +28,7 @@ export const handleDeletePlatformOrg = createRoute({
 			});
 		}
 
-		// Check if any live customers exist
-		const hasCustomers = await db.query.customers.findFirst({
-			where: and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Live)),
-		});
-
-		if (hasCustomers) {
-			throw new RecaseError({
-				message: "Cannot delete org with production mode customers",
-				code: ErrCode.OrgHasCustomers,
-				statusCode: 400,
-			});
-		}
-
-		// Delete svix webhooks
-		logger.info("1. Deleting svix webhooks");
-		await deleteSvixWebhooks({ org, logger });
-
-		// Delete stripe webhooks
-		logger.info("2. Deleting stripe webhooks");
-		await deleteStripeWebhooks({ org, logger });
-
-		// Delete stripe accounts
-		logger.info("3. Deleting stripe accounts");
-		await deleteStripeAccounts({ org, logger });
-
-		// Delete all sandbox customers
-		logger.info("4. Deleting sandbox customers");
-		await db
-			.delete(customers)
-			.where(
-				and(eq(customers.org_id, org.id), eq(customers.env, AppEnv.Sandbox)),
-			);
-
-		// Delete memberships
-		logger.info("5. Deleting org memberships");
-		await db.delete(member).where(eq(member.organizationId, org.id));
-
-		// Delete the organization itself
-		logger.info("6. Deleting organization");
-		await db.delete(organizations).where(eq(organizations.id, org.id));
+		await deletePlatformSubOrg({ db, org, logger });
 
 		return c.json({
 			success: true,

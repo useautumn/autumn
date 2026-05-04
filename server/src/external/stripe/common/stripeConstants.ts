@@ -5,6 +5,7 @@ type StripeEventType = Stripe.WebhookEndpointCreateParams.EnabledEvent;
 /** Events Autumn actively handles in its webhook handler. */
 export const MAIN_STRIPE_EVENT_TYPES: StripeEventType[] = [
 	"checkout.session.completed",
+	"checkout.session.expired",
 	"customer.subscription.created",
 	"customer.subscription.updated",
 	"customer.subscription.deleted",

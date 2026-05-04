@@ -25,14 +25,8 @@ import { SchedulePreview } from "./SchedulePreview";
 const CUSTOMER_LEVEL_VALUE = "__customer__";
 
 export function CreateScheduleSheetContent() {
-	const {
-		form,
-		formValues,
-		entityId,
-		handleAddPhase,
-		error,
-		onScopeChange,
-	} = useCreateScheduleFormContext();
+	const { form, formValues, entityId, handleAddPhase, error, onScopeChange } =
+		useCreateScheduleFormContext();
 	const { closeSheet, setSheet } = useSheetStore();
 	const hasSchedule = useHasSchedule();
 	const { customer } = useCusQuery();
@@ -129,10 +123,13 @@ export function CreateScheduleSheetContent() {
 function getConfirmLabel({
 	preview,
 }: {
-	preview: {
-		redirect_to_checkout?: boolean;
-		total: number;
-	} | null | undefined;
+	preview:
+		| {
+				redirect_to_checkout?: boolean;
+				total: number;
+		  }
+		| null
+		| undefined;
 }): string {
 	if (!preview) return "Create Schedule";
 	if (preview.redirect_to_checkout) return "Copy Checkout URL";
@@ -214,7 +211,7 @@ export function CreateScheduleReviewContent() {
 					<Button
 						variant="primary"
 						className="w-full"
-						onClick={handleSubmit}
+						onClick={() => handleSubmit()}
 						isLoading={isPending}
 						disabled={isDisabled}
 					>

@@ -25,6 +25,27 @@ export const PreviewLineItemDiscountSchema = z.object({
 	reward_name: z.string().optional(),
 });
 
+export const PreviewTaxSchema = z.object({
+	total: z.number().meta({
+		description: "Total tax amount in major currency units.",
+	}),
+	amount_inclusive: z.number().meta({
+		description: "Tax included in line item subtotals.",
+	}),
+	amount_exclusive: z.number().meta({
+		description: "Tax added on top of subtotals.",
+	}),
+	currency: z.string().meta({
+		description: "Three-letter currency code.",
+	}),
+	status: z.enum(["complete", "incomplete"]).meta({
+		description:
+			"Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).",
+	}),
+});
+
+export type PreviewTax = z.infer<typeof PreviewTaxSchema>;
+
 export const ExtPreviewLineItemSchema = z.object({
 	display_name: z.string().meta({
 		description:

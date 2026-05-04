@@ -287,6 +287,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
+	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -432,6 +433,7 @@ export const previewAttachParamsSchema = z.object({
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const previewAttachIncomingSchema = z.object({
@@ -454,6 +456,16 @@ export const previewAttachOutgoingSchema = z.object({
 
 export const previewAttachCheckoutTypeSchema = openEnumSchema;
 
+export const previewAttachStatusSchema = openEnumSchema;
+
+export const previewAttachTaxSchema = z.object({
+	total: z.number(),
+	amountInclusive: z.number(),
+	amountExclusive: z.number(),
+	currency: z.string(),
+	status: previewAttachStatusSchema,
+});
+
 export const previewAttachResponseSchema = z.object({
 	customerId: z.string(),
 	lineItems: z.array(previewAttachLineItemSchema),
@@ -466,4 +478,5 @@ export const previewAttachResponseSchema = z.object({
 	outgoing: z.array(previewAttachOutgoingSchema),
 	redirectToCheckout: z.boolean(),
 	checkoutType: previewAttachCheckoutTypeSchema.nullable(),
+	tax: z.union([previewAttachTaxSchema, z.undefined()]).optional(),
 });

@@ -729,6 +729,8 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
     no_billing_changes: NotRequired[bool]
     r"""If true, skips any billing changes for the attach operation."""
+    enable_plan_immediately: NotRequired[bool]
+    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
 
 
 class SetupPaymentParams(BaseModel):
@@ -789,6 +791,9 @@ class SetupPaymentParams(BaseModel):
     no_billing_changes: Optional[bool] = None
     r"""If true, skips any billing changes for the attach operation."""
 
+    enable_plan_immediately: Optional[bool] = None
+    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -810,6 +815,7 @@ class SetupPaymentParams(BaseModel):
                 "carry_over_usages",
                 "metadata",
                 "no_billing_changes",
+                "enable_plan_immediately",
             ]
         )
         serialized = handler(self)

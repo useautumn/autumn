@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { handleCheckoutSessionEnabledImmediately } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionEnabledImmediately/handleCheckoutSessionEnabledImmediately.js";
 import { handleCheckoutSessionMetadataV2 } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/handleCheckoutSessionMetadataV2.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
 import { setupCheckoutSessionCompletedContext } from "./setupCheckoutSessionCompletedContext.js";
@@ -19,8 +20,15 @@ export const handleStripeCheckoutSessionCompleted = async ({
 		event,
 	});
 
-	// V2 flow
+	// V2 flow (deferred — cusProducts inserted here by webhook)
 	await handleCheckoutSessionMetadataV2({
+		ctx,
+		checkoutContext,
+	});
+
+	// V2 + enable_plan_immediately (cusProducts already inserted at attach time;
+	// patch subscription_ids + reconcile Stripe sub here)
+	await handleCheckoutSessionEnabledImmediately({
 		ctx,
 		checkoutContext,
 	});

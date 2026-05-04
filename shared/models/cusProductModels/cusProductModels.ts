@@ -70,6 +70,8 @@ export const CusProductSchema = z.object({
 	billing_version: z.enum(BillingVersion).default(BillingVersion.V1),
 
 	external_id: z.string().nullable(),
+
+	stripe_checkout_session_id: z.string().nullish(),
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({

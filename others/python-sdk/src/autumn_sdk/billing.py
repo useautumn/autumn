@@ -58,6 +58,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -88,6 +89,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -139,6 +141,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request(
@@ -249,6 +252,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -279,6 +283,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -330,6 +335,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request_async(
@@ -418,6 +424,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.MultiAttachRedirectMode] = "if_required",
         new_billing_subscription: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         customer_data: Optional[
             Union[models.CustomerData, models.CustomerDataTypedDict]
         ] = None,
@@ -443,6 +450,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param enable_plan_immediately: If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
         :param customer_data: Customer details to set when creating a customer
         :param entity_data:
         :param retries: Override the default retry configuration for this method
@@ -477,6 +485,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             new_billing_subscription=new_billing_subscription,
+            enable_plan_immediately=enable_plan_immediately,
             customer_data=utils.get_pydantic_model(
                 customer_data, Optional[models.CustomerData]
             ),
@@ -571,6 +580,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.MultiAttachRedirectMode] = "if_required",
         new_billing_subscription: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         customer_data: Optional[
             Union[models.CustomerData, models.CustomerDataTypedDict]
         ] = None,
@@ -596,6 +606,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param enable_plan_immediately: If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
         :param customer_data: Customer details to set when creating a customer
         :param entity_data:
         :param retries: Override the default retry configuration for this method
@@ -630,6 +641,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             new_billing_subscription=new_billing_subscription,
+            enable_plan_immediately=enable_plan_immediately,
             customer_data=utils.get_pydantic_model(
                 customer_data, Optional[models.CustomerData]
             ),
@@ -753,6 +765,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -783,6 +796,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -835,6 +849,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request(
@@ -952,6 +967,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -982,6 +998,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1034,6 +1051,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request_async(
@@ -1126,6 +1144,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.PreviewMultiAttachRedirectMode] = "if_required",
         new_billing_subscription: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         customer_data: Optional[
             Union[models.CustomerData, models.CustomerDataTypedDict]
         ] = None,
@@ -1154,6 +1173,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param enable_plan_immediately: If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
         :param customer_data: Customer details to set when creating a customer
         :param entity_data:
         :param retries: Override the default retry configuration for this method
@@ -1188,6 +1208,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             new_billing_subscription=new_billing_subscription,
+            enable_plan_immediately=enable_plan_immediately,
             customer_data=utils.get_pydantic_model(
                 customer_data, Optional[models.CustomerData]
             ),
@@ -1286,6 +1307,7 @@ class Billing(BaseSDK):
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.PreviewMultiAttachRedirectMode] = "if_required",
         new_billing_subscription: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         customer_data: Optional[
             Union[models.CustomerData, models.CustomerDataTypedDict]
         ] = None,
@@ -1314,6 +1336,7 @@ class Billing(BaseSDK):
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
+        :param enable_plan_immediately: If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
         :param customer_data: Customer details to set when creating a customer
         :param entity_data:
         :param retries: Override the default retry configuration for this method
@@ -1348,6 +1371,7 @@ class Billing(BaseSDK):
             checkout_session_params=checkout_session_params,
             redirect_mode=redirect_mode,
             new_billing_subscription=new_billing_subscription,
+            enable_plan_immediately=enable_plan_immediately,
             customer_data=utils.get_pydantic_model(
                 customer_data, Optional[models.CustomerData]
             ),
@@ -2308,6 +2332,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2332,6 +2357,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2377,6 +2403,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request(
@@ -2485,6 +2512,7 @@ class Billing(BaseSDK):
         ] = None,
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
+        enable_plan_immediately: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2509,6 +2537,7 @@ class Billing(BaseSDK):
         :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
+        :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2554,6 +2583,7 @@ class Billing(BaseSDK):
             ),
             metadata=metadata,
             no_billing_changes=no_billing_changes,
+            enable_plan_immediately=enable_plan_immediately,
         )
 
         req = self._build_request_async(
