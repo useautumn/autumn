@@ -1,5 +1,6 @@
 export const SYNCABLE_EVENT_PREFIXES = [
 	"customer.subscription.",
+	"subscription_schedule.",
 	"payment_intent.",
 	"invoice.",
 	"customer.",
