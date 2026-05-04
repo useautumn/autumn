@@ -18,8 +18,8 @@ const getReleaseDateMs = (releaseDate?: string) => {
 
 function getDefaultModelMarkups(
 	providers: Record<string, ModelsDevProvider>,
-): Record<string, { markup: number; humanModelName: string }> {
-	const result: Record<string, { markup: number; humanModelName: string }> = {};
+): Record<string, { markup: number }> {
+	const result: Record<string, { markup: number }> = {};
 	const preferredProvider =
 		providers["openrouter"] ?? Object.values(providers)[0];
 	if (!preferredProvider) return result;
@@ -43,10 +43,9 @@ function getDefaultModelMarkups(
 
 		if (!latestModel) continue;
 
-		const [modelKey, model] = latestModel;
+		const [modelKey] = latestModel;
 		result[`${providerKey}/${modelKey}`] = {
 			markup: 0,
-			humanModelName: model.name,
 		};
 	}
 	return result;

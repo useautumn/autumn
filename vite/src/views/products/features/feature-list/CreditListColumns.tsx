@@ -1,11 +1,22 @@
+import type { Feature, ModelsDevProvider } from "@autumn/shared";
+import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
-import type { Feature } from "@autumn/shared";
-import type { ColumnDef, Row } from "@tanstack/react-table";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 
-export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
+function resolveModelName(
+	fullId: string,
+	providers: Record<string, ModelsDevProvider>,
+): string {
+	const [providerKey, ...modelParts] = fullId.split("/");
+	const modelKey = modelParts.join("/");
+	return providers[providerKey]?.models[modelKey]?.name ?? fullId;
+}
+
+export const createCreditListColumns = (
+	providers: Record<string, ModelsDevProvider>,
+): ColumnDef<Feature, unknown>[] => [
 	{
 		size: 150,
 		header: "Name",
@@ -49,7 +60,7 @@ export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
 			const featureIds =
 				modelMarkupEntries && modelMarkupEntries.length > 0
 					? modelMarkupEntries
-							.map(([key, value]) => value.humanModelName ?? key)
+							.map(([fullId]) => resolveModelName(fullId, providers))
 							.join(", ")
 					: creditSystem.config?.schema
 							?.map(

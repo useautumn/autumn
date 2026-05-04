@@ -8,7 +8,6 @@ import { AiModelSelectDropdown } from "./AiModelSelectDropdown";
 interface AiCreditSchemaRowProps {
 	modelKey: string;
 	markup: number;
-	humanModelName?: string;
 	provider: ModelsDevProvider;
 	isLoading: boolean;
 	isCustom?: boolean;
@@ -32,7 +31,6 @@ function formatCost(value: number | null | undefined): string {
 export function AiCreditSchemaRow({
 	modelKey,
 	markup,
-	humanModelName,
 	provider,
 	isLoading,
 	isCustom,
@@ -86,7 +84,6 @@ export function AiCreditSchemaRow({
 							}
 							provider={provider}
 							isLoading={isLoading}
-							humanModelName={humanModelName}
 						/>
 					)}
 				</div>

@@ -7,7 +7,6 @@ interface AiModelSelectDropdownProps {
 	onValueChange: (modelKey: string) => void;
 	provider: ModelsDevProvider;
 	isLoading: boolean;
-	humanModelName?: string;
 }
 
 export function AiModelSelectDropdown({
@@ -15,7 +14,6 @@ export function AiModelSelectDropdown({
 	onValueChange,
 	provider,
 	isLoading,
-	humanModelName,
 }: AiModelSelectDropdownProps) {
 	const models: ModelsDevModel[] = useMemo(
 		() => Object.values(provider.models),
@@ -34,8 +32,10 @@ export function AiModelSelectDropdown({
 				renderValue={(option) =>
 					option ? (
 						<span>{option.name}</span>
-					) : humanModelName ? (
-						<span>{humanModelName}</span>
+					) : provider.models[value]?.name ? (
+						<span>{provider.models[value].name}</span>
+					) : value ? (
+						<span>{value}</span>
 					) : (
 						<span className="text-t3">
 							{isLoading ? "Loading models..." : "Select model"}

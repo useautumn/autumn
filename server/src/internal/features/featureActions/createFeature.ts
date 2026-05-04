@@ -38,7 +38,6 @@ interface CreateFeatureParams {
 				markup: number;
 				input_cost?: number;
 				output_cost?: number;
-				humanModelName?: string;
 			}
 		> | null;
 	};

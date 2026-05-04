@@ -119,7 +119,6 @@ export function AiCreditSchema({
 											key={fullId}
 											modelKey={modelKey}
 											markup={modelMarkups[fullId]?.markup ?? 0}
-											humanModelName={modelMarkups[fullId]?.humanModelName}
 											provider={
 												provider ?? {
 													id: providerKey,

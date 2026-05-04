@@ -1,4 +1,4 @@
-import type { Feature } from "../../../compose/models/featureModels.js";
+import type { Feature, ModelMarkupEntry } from "../../../compose/models/featureModels.js";
 import { createTransformer } from "./Transformer.js";
 
 function mapCreditSchema(
@@ -9,6 +9,20 @@ function mapCreditSchema(
 			meteredFeatureId: cs.metered_feature_id,
 			creditCost: cs.credit_cost,
 		}),
+	);
+}
+
+function mapModelMarkups(api: any): Record<string, ModelMarkupEntry> | undefined {
+	if (!api.model_markups) return undefined;
+	return Object.fromEntries(
+		Object.entries(api.model_markups).map(([modelId, entry]: [string, any]) => [
+			modelId,
+			{
+				markup: entry.markup,
+				inputCost: entry.input_cost,
+				outputCost: entry.output_cost,
+			},
+		])
 	);
 }
 
@@ -32,14 +46,15 @@ export const featureTransformer = createTransformer<any, Feature>({
 			},
 		},
 
-		// Credit system features: always consumable
+		// Credit system features: check is_ai_credit_system flag to determine type
 		credit_system: {
 			copy: ["id", "name", "archived"],
 			compute: {
 				...BASE_COMPUTE,
-				type: () => "credit_system" as const,
-				consumable: () => true,
-				creditSchema: mapCreditSchema,
+				type: (api) => api.is_ai_credit_system ? "ai_credit_system" as const : "credit_system" as const,
+				consumable: (api) => api.is_ai_credit_system ? undefined : true,
+				creditSchema: (api) => api.is_ai_credit_system ? undefined : mapCreditSchema(api),
+				modelMarkups: (api) => api.is_ai_credit_system ? mapModelMarkups(api) : undefined,
 			},
 		},
 

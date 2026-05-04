@@ -5,7 +5,6 @@ import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
 
 type ModelMarkupEntry = {
 	markup: number;
-	humanModelName?: string;
 	input_cost?: number;
 	output_cost?: number;
 };
@@ -96,8 +95,7 @@ export function useAiCreditSchema({
 					output_cost: oldEntry?.output_cost ?? 0,
 				};
 			} else {
-				const newModel = providers[providerKey]?.models[newModelKey];
-				updatedMarkups[newFullId] = { markup, humanModelName: newModel?.name };
+				updatedMarkups[newFullId] = { markup };
 			}
 			updateMarkups(updatedMarkups);
 		},
@@ -196,10 +194,9 @@ export function useAiCreditSchema({
 			const firstModelKey = Object.keys(provider.models)[0];
 			if (!firstModelKey) return;
 			const fullId = `${providerKey}/${firstModelKey}`;
-			const model = provider.models[firstModelKey];
 			updateMarkups({
 				...modelMarkups,
-				[fullId]: { markup: defaultMarkup, humanModelName: model?.name },
+				[fullId]: { markup: defaultMarkup },
 			});
 		},
 		[defaultMarkup, modelMarkups, providerGroups, providers, updateMarkups],
@@ -234,10 +231,9 @@ export function useAiCreditSchema({
 			);
 			if (!nextModelKey) return;
 			const fullId = `${providerKey}/${nextModelKey}`;
-			const model = provider.models[nextModelKey];
 			updateMarkups({
 				...modelMarkups,
-				[fullId]: { markup: defaultMarkup, humanModelName: model?.name },
+				[fullId]: { markup: defaultMarkup },
 			});
 		},
 		[defaultMarkup, modelMarkups, providerGroups, providers, updateMarkups],

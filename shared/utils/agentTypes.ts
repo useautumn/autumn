@@ -47,7 +47,6 @@ export interface AgentFeature {
 			markup: number;
 			input_cost?: number;
 			output_cost?: number;
-			humanModelName?: string;
 		}
 	> | null;
 	is_ai_credit_system?: boolean;

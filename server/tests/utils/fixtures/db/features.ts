@@ -19,7 +19,7 @@ const create = ({
 	config?: Record<string, unknown>;
 	modelMarkups?: Record<
 		string,
-		{ markup: number; input_cost?: number; output_cost?: number, humanModelName: string }
+		{ markup: number; input_cost?: number; output_cost?: number }
 	> | null;
 	isAiCreditSystem?: boolean;
 }) => ({
