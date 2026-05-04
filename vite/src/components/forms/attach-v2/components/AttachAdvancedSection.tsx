@@ -5,6 +5,7 @@ import {
 	isOneOffProductV2,
 } from "@autumn/shared";
 import { CaretDownIcon, PlusIcon, XIcon } from "@phosphor-icons/react";
+import { addDays } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
 import {
@@ -220,7 +221,10 @@ export function AttachAdvancedSection() {
 						<Switch
 							checked={startDate !== null}
 							onCheckedChange={(checked) =>
-								form.setFieldValue("startDate", checked ? Date.now() : null)
+								form.setFieldValue(
+									"startDate",
+									checked ? addDays(Date.now(), 1).getTime() : null,
+								)
 							}
 						/>
 					}

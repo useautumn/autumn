@@ -21,6 +21,7 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	billing_cycle_anchor: BillingCycleAnchorSchema.optional(),
 
     plan_schedule: PlanTimingSchema.optional(),
+    start_date: z.number().optional(),
 
     // Discounts to apply (Stripe coupon IDs or human-readable promo code strings)
     discounts: z.array(AttachDiscountSchema).optional(),
