@@ -71,6 +71,14 @@ export const handleStartDateErrors = ({
 		params.start_date > billingContext.currentEpochMs + START_DATE_TOLERANCE_MS;
 	if (!isFutureStart) return;
 
+	if (params.invoice_mode?.enabled) {
+		throw new RecaseError({
+			message: "Future start_date cannot be used together with invoice mode.",
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
+		});
+	}
+
 	if (hasActivePaidRecurringSubscription({ billingContext })) {
 		throw new RecaseError({
 			message:
