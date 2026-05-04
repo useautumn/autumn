@@ -67,9 +67,9 @@ export function CustomerActions() {
 	const { data: sessionData } = useSession();
 
 	const stripeCustomerId = customer?.processor?.id;
+
 	const stripeConnectViewAsCustomerLink =
-		isAdmin &&
-		notNullish(sessionData?.session?.impersonatedBy) &&
+		(isAdmin || notNullish(sessionData?.session?.impersonatedBy)) &&
 		masterStripeAccount?.id &&
 		stripeAccount?.id &&
 		stripeCustomerId
