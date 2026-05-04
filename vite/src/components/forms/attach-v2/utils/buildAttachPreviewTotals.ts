@@ -1,8 +1,7 @@
 import type { AttachPreviewResponse } from "@autumn/shared";
-import { ms } from "@autumn/shared";
-import { format } from "date-fns";
+import { addMinutes, format, isAfter } from "date-fns";
 
-const FUTURE_START_TOLERANCE_MS = ms.minutes(1);
+const FUTURE_START_TOLERANCE_MINUTES = 1;
 
 export interface AttachPreviewTotal {
 	label: string;
@@ -12,6 +11,13 @@ export interface AttachPreviewTotal {
 }
 
 const formatDate = (unixMs: number) => format(new Date(unixMs), "MMM d, yyyy");
+
+export const isFutureStartDate = (
+	startDate: number | null,
+	now = Date.now(),
+): startDate is number =>
+	startDate !== null &&
+	isAfter(startDate, addMinutes(now, FUTURE_START_TOLERANCE_MINUTES));
 
 /**
  * Builds the totals rows for the Attach pricing preview.
@@ -29,10 +35,7 @@ export function buildAttachPreviewTotals({
 }): AttachPreviewTotal[] {
 	if (!previewData) return [];
 
-	const isFutureStart =
-		startDate !== null && startDate > now + FUTURE_START_TOLERANCE_MS;
-
-	if (isFutureStart) {
+	if (isFutureStartDate(startDate, now)) {
 		return [
 			{
 				label: `Total Due ${formatDate(startDate)}`,

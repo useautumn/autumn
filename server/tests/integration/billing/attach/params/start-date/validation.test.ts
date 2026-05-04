@@ -1,10 +1,16 @@
 import { test } from "bun:test";
-import { type AttachParamsV1Input, ErrCode, ms } from "@autumn/shared";
+import {
+	type AttachParamsV0Input,
+	type AttachParamsV1Input,
+	ErrCode,
+	FreeTrialDuration,
+} from "@autumn/shared";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { addDays, subDays } from "date-fns";
 
 test.concurrent(`${chalk.yellowBright("start_date: past dates are rejected")}`, async () => {
 	const customerId = "attach-start-date-past";
@@ -29,7 +35,7 @@ test.concurrent(`${chalk.yellowBright("start_date: past dates are rejected")}`, 
 			autumnV2_2.billing.attach<AttachParamsV1Input>({
 				customer_id: customerId,
 				plan_id: pro.id,
-				start_date: advancedTo - ms.days(1),
+				start_date: subDays(advancedTo, 1).getTime(),
 			}),
 	});
 });
@@ -54,7 +60,7 @@ test.concurrent(`${chalk.yellowBright("start_date: future date rejects free plan
 			autumnV2_2.billing.attach<AttachParamsV1Input>({
 				customer_id: customerId,
 				plan_id: free.id,
-				start_date: advancedTo + ms.days(1),
+				start_date: addDays(advancedTo, 1).getTime(),
 			}),
 	});
 });
@@ -82,7 +88,7 @@ test.concurrent(`${chalk.yellowBright("start_date: future date rejects one-off p
 			autumnV2_2.billing.attach<AttachParamsV1Input>({
 				customer_id: customerId,
 				plan_id: oneOff.id,
-				start_date: advancedTo + ms.days(1),
+				start_date: addDays(advancedTo, 1).getTime(),
 			}),
 	});
 });
@@ -107,7 +113,7 @@ test.concurrent(`${chalk.yellowBright("start_date: future date rejects customers
 			autumnV2_2.billing.attach<AttachParamsV1Input>({
 				customer_id: customerId,
 				plan_id: pro.id,
-				start_date: advancedTo + ms.days(1),
+				start_date: addDays(advancedTo, 1).getTime(),
 			}),
 	});
 });
@@ -136,8 +142,100 @@ test.concurrent(`${chalk.yellowBright("start_date: future date rejects end of cy
 			autumnV2_2.billing.attach<AttachParamsV1Input>({
 				customer_id: customerId,
 				plan_id: pro.id,
-				start_date: advancedTo + ms.days(1),
+				start_date: addDays(advancedTo, 1).getTime(),
 				plan_schedule: "end_of_cycle",
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("start_date: beta future date rejects end of cycle plan schedule")}`, async () => {
+	const customerId = "attach-start-date-beta-end-of-cycle";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV1Beta, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage:
+			"start_date cannot be used together with plan_schedule: end_of_cycle",
+		func: () =>
+			autumnV1Beta.billing.attach<AttachParamsV0Input>({
+				customer_id: customerId,
+				product_id: pro.id,
+				start_date: addDays(advancedTo, 1).getTime(),
+				plan_schedule: "end_of_cycle",
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("start_date: future date rejects invoice mode")}`, async () => {
+	const customerId = "attach-start-date-invoice-mode";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV2_2, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage: "Future start_date cannot be used together with invoice mode",
+		func: () =>
+			autumnV2_2.billing.attach<AttachParamsV1Input>({
+				customer_id: customerId,
+				plan_id: pro.id,
+				start_date: addDays(advancedTo, 1).getTime(),
+				invoice_mode: {
+					enabled: true,
+					enable_plan_immediately: true,
+					finalize: false,
+				},
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("start_date: beta future date rejects invoice mode")}`, async () => {
+	const customerId = "attach-start-date-beta-invoice-mode";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV1Beta, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage: "Future start_date cannot be used together with invoice mode",
+		func: () =>
+			autumnV1Beta.billing.attach<AttachParamsV0Input>({
+				customer_id: customerId,
+				product_id: pro.id,
+				start_date: addDays(advancedTo, 1).getTime(),
+				invoice: true,
 			}),
 	});
 });
@@ -170,7 +268,7 @@ test.concurrent(`${chalk.yellowBright("start_date: future date rejects active su
 			autumnV2_2.billing.attach<AttachParamsV1Input>({
 				customer_id: customerId,
 				plan_id: addon.id,
-				start_date: advancedTo + ms.days(1),
+				start_date: addDays(advancedTo, 1).getTime(),
 			}),
 	});
 });
@@ -203,7 +301,7 @@ test.concurrent(`${chalk.yellowBright("start_date: future date rejects new billi
 			autumnV2_2.billing.attach<AttachParamsV1Input>({
 				customer_id: customerId,
 				plan_id: addon.id,
-				start_date: advancedTo + ms.days(1),
+				start_date: addDays(advancedTo, 1).getTime(),
 				new_billing_subscription: true,
 			}),
 	});
@@ -237,7 +335,7 @@ test.concurrent(`${chalk.yellowBright("start_date: future date rejects switches"
 			autumnV2_2.billing.attach<AttachParamsV1Input>({
 				customer_id: customerId,
 				plan_id: premium.id,
-				start_date: advancedTo + ms.days(1),
+				start_date: addDays(advancedTo, 1).getTime(),
 			}),
 	});
 });
@@ -266,7 +364,40 @@ test.concurrent(`${chalk.yellowBright("start_date: future date rejects free tria
 			autumnV2_2.billing.attach<AttachParamsV1Input>({
 				customer_id: customerId,
 				plan_id: proTrial.id,
-				start_date: advancedTo + ms.days(1),
+				start_date: addDays(advancedTo, 1).getTime(),
+			}),
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("start_date: beta future date rejects custom free trial")}`, async () => {
+	const customerId = "attach-start-date-beta-trial";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV1Beta, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	await expectAutumnError({
+		errCode: ErrCode.InvalidRequest,
+		errMessage: "Future start_date cannot be used together with a free trial",
+		func: () =>
+			autumnV1Beta.billing.attach<AttachParamsV0Input>({
+				customer_id: customerId,
+				product_id: pro.id,
+				start_date: addDays(advancedTo, 1).getTime(),
+				free_trial: {
+					length: 7,
+					duration: FreeTrialDuration.Day,
+					card_required: true,
+				},
 			}),
 	});
 });

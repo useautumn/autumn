@@ -5,10 +5,10 @@ import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-const getScheduleId = (subscription: Stripe.Subscription) =>
-	typeof subscription.schedule === "string"
-		? subscription.schedule
-		: subscription.schedule?.id;
+const getScheduleId = (subscription: Stripe.Subscription) => {
+	const { schedule } = subscription;
+	return typeof schedule === "string" ? schedule : schedule?.id;
+};
 
 export const linkScheduledCustomerProductsToSubscription = async ({
 	ctx,
