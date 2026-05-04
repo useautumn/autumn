@@ -9,7 +9,6 @@ import {
 	hasCustomItems,
 	isFreeProduct,
 	isOneOffProduct,
-	ms,
 	notNullish,
 	orgDisableStripeWrites,
 	orgToReturnUrl,
@@ -23,6 +22,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
+import { isFutureStartDate } from "@/internal/billing/v2/utils/startDateUtils";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
@@ -198,9 +198,7 @@ export const setupAttachBillingContext = async ({
 			currentEpochMs,
 		});
 
-	const hasFutureStartDate =
-		params.start_date !== undefined &&
-		params.start_date > currentEpochMs + ms.minutes(1);
+	const hasFutureStartDate = isFutureStartDate(params.start_date, currentEpochMs);
 
 	const checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
