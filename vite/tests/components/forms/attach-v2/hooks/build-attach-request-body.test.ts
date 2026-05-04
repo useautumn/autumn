@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { type ProductV2, UsageModel } from "@autumn/shared";
+import { addDays } from "date-fns";
 import { buildAttachRequestBody } from "@/components/forms/attach-v2/hooks/useAttachRequestBody";
 
 function makeProduct({ items }: { items: ProductV2["items"] }): ProductV2 {
@@ -29,6 +30,7 @@ const baseParams: Omit<
 	trialEnabled: false,
 	trialCardRequired: false,
 	planSchedule: null,
+	startDate: null,
 	prorationBehavior: null,
 	redirectMode: "if_required",
 	newBillingSubscription: false,
@@ -167,5 +169,56 @@ describe("buildAttachRequestBody — billing_units handling", () => {
 		});
 
 		expect(result).toBeNull();
+	});
+});
+
+describe("buildAttachRequestBody — start_date handling", () => {
+	const product = makeProduct({
+		items: [
+			{
+				price: 20,
+				interval: "month",
+			},
+		],
+	});
+
+	test("sends start_date instead of silently falling back to plan_schedule", () => {
+		const startDate = addDays(Date.now(), 1).getTime();
+
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			planSchedule: "end_of_cycle",
+			startDate,
+		});
+
+		expect(result?.start_date).toBe(startDate);
+		expect(result?.plan_schedule).toBeUndefined();
+	});
+
+	test("keeps plan_schedule when no start_date is selected", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			planSchedule: "end_of_cycle",
+		});
+
+		expect(result?.plan_schedule).toBe("end_of_cycle");
+		expect(result?.start_date).toBeUndefined();
+	});
+
+	test("does not send start_date with a trial", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			startDate: addDays(Date.now(), 1).getTime(),
+			trialEnabled: true,
+			trialLength: 7,
+		});
+
+		expect(result?.start_date).toBeUndefined();
 	});
 });

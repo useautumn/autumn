@@ -119,15 +119,10 @@ export function buildAttachRequestBody({
 		body.free_trial = null;
 	}
 
-	if (planSchedule) {
-		body.plan_schedule = planSchedule;
-	}
-
-	// Skip when other form state makes start_date invalid — server would reject anyway,
-	// and form values can carry stale dates after the picker is hidden.
-	const startDateAllowed = !trialEnabled && planSchedule !== "end_of_cycle";
-	if (startDate && startDateAllowed) {
+	if (startDate && !trialEnabled) {
 		body.start_date = startDate;
+	} else if (planSchedule) {
+		body.plan_schedule = planSchedule;
 	}
 
 	const normalizedProrationBehavior = normalizeAttachProrationBehavior({

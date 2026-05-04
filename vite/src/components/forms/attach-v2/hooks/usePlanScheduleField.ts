@@ -21,7 +21,7 @@ import {
 export function usePlanScheduleField() {
 	const { form, formValues, previewQuery, isFreeToPaidTransition } =
 		useAttachFormContext();
-	const { planSchedule, prorationBehavior, newBillingSubscription } =
+	const { planSchedule, prorationBehavior, newBillingSubscription, startDate } =
 		formValues;
 	const previewData = previewQuery.data;
 	const { customer } = useCusQuery();
@@ -156,6 +156,9 @@ export function usePlanScheduleField() {
 		form.setFieldValue("planSchedule", value);
 		if (value !== "immediate") {
 			form.setFieldValue("prorationBehavior", null);
+		}
+		if (value === "end_of_cycle" && startDate !== null) {
+			form.setFieldValue("startDate", null);
 		}
 	};
 
