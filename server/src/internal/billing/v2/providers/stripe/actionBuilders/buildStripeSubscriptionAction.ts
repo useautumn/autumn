@@ -5,11 +5,11 @@ import type {
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
 } from "@autumn/shared";
-import { msToSeconds } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
+import { stripePhaseStartsInFuture } from "@server/internal/billing/v2/utils/startDateUtils";
 import { billingPlanToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/billingPlanToOneOffStripeItemSpecs";
 
 const scheduleStartsInFuture = ({
@@ -21,10 +21,9 @@ const scheduleStartsInFuture = ({
 }) => {
 	if (stripeSubscriptionScheduleAction?.type !== "create") return false;
 
-	const startDate = stripeSubscriptionScheduleAction.params.phases?.[0]?.start_date;
-	return (
-		typeof startDate === "number" &&
-		startDate > msToSeconds(billingContext.currentEpochMs)
+	return stripePhaseStartsInFuture(
+		stripeSubscriptionScheduleAction.params.phases?.[0]?.start_date,
+		billingContext.currentEpochMs,
 	);
 };
 

@@ -26,31 +26,6 @@ const getScheduledBillingCycleAnchorResetAt = ({
 	return null;
 };
 
-const getStartsAt = ({
-	startDate,
-	isScheduled,
-	endOfCycleMs,
-}: {
-	startDate?: number;
-	isScheduled: boolean;
-	endOfCycleMs?: number;
-}) => {
-	if (startDate) return startDate;
-	if (isScheduled) return endOfCycleMs;
-	return undefined;
-};
-
-const getResetCycleAnchor = ({
-	startDate,
-	resetCycleAnchorMs,
-}: {
-	startDate?: number;
-	resetCycleAnchorMs: number | "now";
-}) => {
-	if (resetCycleAnchorMs !== "now") return resetCycleAnchorMs;
-	return startDate ?? resetCycleAnchorMs;
-};
-
 /**
  * Creates the new FullCusProduct to insert when attaching a product.
  *
@@ -99,15 +74,11 @@ export const computeAttachNewCustomerProduct = ({
 	);
 
 	const isScheduled = planTiming === "end_of_cycle";
-	const startsAt = getStartsAt({
-		startDate: params.start_date,
-		isScheduled,
-		endOfCycleMs,
-	});
-	const resetCycleAnchor = getResetCycleAnchor({
-		startDate: params.start_date,
-		resetCycleAnchorMs,
-	});
+	const startsAt = params.start_date ?? (isScheduled ? endOfCycleMs : undefined);
+	const resetCycleAnchor =
+		resetCycleAnchorMs === "now" && params.start_date !== undefined
+			? params.start_date
+			: resetCycleAnchorMs;
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
 		!isScheduled && currentCustomerProduct
