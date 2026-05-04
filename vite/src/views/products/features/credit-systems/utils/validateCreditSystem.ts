@@ -10,7 +10,10 @@ export const validateCreditSystem = (
 	const isAiCreditSystem = creditSystem.is_ai_credit_system ?? false;
 
 	if (isAiCreditSystem) {
-		if (!creditSystem.model_markups || Object.keys(creditSystem.model_markups).length === 0)
+		if (
+			!creditSystem.model_markups ||
+			Object.keys(creditSystem.model_markups).length === 0
+		)
 			return "Add at least one model markup";
 
 		for (const [modelId, entry] of Object.entries(creditSystem.model_markups)) {

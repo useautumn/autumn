@@ -1,8 +1,8 @@
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Input } from "@/components/v2/inputs/Input";
 import type { ModelsDevProvider } from "@autumn/shared";
 import { X } from "lucide-react";
 import { useState } from "react";
+import { IconButton } from "@/components/v2/buttons/IconButton";
+import { Input } from "@/components/v2/inputs/Input";
 import { AiModelSelectDropdown } from "./AiModelSelectDropdown";
 
 interface AiCreditSchemaRowProps {

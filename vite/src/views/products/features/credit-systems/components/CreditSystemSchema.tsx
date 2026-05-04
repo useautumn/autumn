@@ -1,9 +1,8 @@
+import type { CreateFeature, ModelsDevProvider } from "@autumn/shared";
+import { useMemo } from "react";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import type { ModelsDevProvider } from "@autumn/shared";
 import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
-import type { CreateFeature } from "@autumn/shared";
-import { useMemo } from "react";
 import { AiCreditSchema } from "./AiCreditSchema";
 import { ClassicCreditSchema } from "./ClassicCreditSchema";
 
@@ -27,17 +26,16 @@ function getDefaultModelMarkups(
 
 	const providerKey = preferredProvider.id;
 	for (const company of DEFAULT_AI_MODEL_COMPANIES) {
-		const companyModels = Object.entries(preferredProvider.models)
-			.filter(([key]) => key.startsWith(company));
+		const companyModels = Object.entries(preferredProvider.models).filter(
+			([key]) => key.startsWith(company),
+		);
 
 		const latestModel = companyModels.reduce<
 			[string, ModelsDevProvider["models"][string]] | null
 		>((currentLatest, candidate) => {
 			if (!currentLatest) return candidate;
 
-			const currentRelease = getReleaseDateMs(
-				currentLatest[1].release_date,
-			);
+			const currentRelease = getReleaseDateMs(currentLatest[1].release_date);
 			const candidateRelease = getReleaseDateMs(candidate[1].release_date);
 
 			return candidateRelease > currentRelease ? candidate : currentLatest;
@@ -129,6 +127,7 @@ export function CreditSystemSchema({
 					/>
 				) : (
 					<AiCreditSchema
+						key={creditSystem.id}
 						creditSystem={creditSystem}
 						setCreditSystem={setCreditSystem}
 					/>

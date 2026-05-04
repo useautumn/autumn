@@ -1,12 +1,10 @@
 import type { CreateFeature } from "@autumn/shared";
 import { PlusIcon, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
-import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
+import { useAiCreditSchema } from "../hooks/useAiCreditSchema";
 import { AiCreditSchemaRow } from "./AiCreditSchemaRow";
 
 interface AiCreditSchemaProps {
@@ -16,240 +14,27 @@ interface AiCreditSchemaProps {
 	) => void;
 }
 
-/** Group model_markups keys by their provider prefix */
-function groupByProvider(
-	modelMarkups: Record<
-		string,
-		{
-			markup: number;
-			humanModelName?: string;
-			input_cost?: number;
-			output_cost?: number;
-		}
-	>,
-) {
-	const groups: Record<string, string[]> = {};
-	for (const fullId of Object.keys(modelMarkups)) {
-		const [providerKey] = fullId.split("/");
-		if (!groups[providerKey]) groups[providerKey] = [];
-		groups[providerKey].push(fullId);
-	}
-	return groups;
-}
-
 export function AiCreditSchema({
 	creditSystem,
 	setCreditSystem,
 }: AiCreditSchemaProps) {
 	const {
 		providers,
-		isLoading: modelsLoading,
-		error: modelsError,
-	} = useModelsDevPricing();
-	const modelMarkups = creditSystem.model_markups ?? {};
-
-	const [defaultMarkup, setDefaultMarkup] = useState<number>(0);
-	const manuallyEditedModels = useRef<Set<string>>(new Set());
-
-	useEffect(() => {
-		setDefaultMarkup(0);
-		manuallyEditedModels.current = new Set();
-	}, [creditSystem.id]);
-
-	useEffect(() => {
-		if (modelsError) {
-			toast.error("Models.dev pricing is unavailable. Try again later.");
-		}
-	}, [modelsError]);
-
-	const providerGroups = useMemo(
-		() => groupByProvider(modelMarkups),
-		[modelMarkups],
-	);
-	const activeProviderKeys = Object.keys(providerGroups);
-
-	const availableProviders = useMemo(() => {
-		const filtered = Object.values(providers).filter(
-			(provider) => !activeProviderKeys.includes(provider.id),
-		);
-		if (!activeProviderKeys.includes("custom")) {
-			filtered.push({ id: "custom", name: "Custom", models: {} });
-		}
-		return filtered;
-	}, [providers, activeProviderKeys]);
-
-	const updateMarkups = (
-		updatedMarkups: Record<
-			string,
-			{
-				markup: number;
-				humanModelName?: string;
-				input_cost?: number;
-				output_cost?: number;
-			}
-		>,
-	) => {
-		setCreditSystem((prev) => ({
-			...prev,
-			model_markups: updatedMarkups,
-		}));
-	};
-
-	const handleModelChange = (
-		providerKey: string,
-		oldModelKey: string,
-		newModelKey: string,
-	) => {
-		const oldFullId = `${providerKey}/${oldModelKey}`;
-		const newFullId = `${providerKey}/${newModelKey}`;
-		if (oldFullId !== newFullId && newFullId in modelMarkups) return;
-		const updatedMarkups = { ...modelMarkups };
-		const oldEntry = updatedMarkups[oldFullId];
-		const markup = oldEntry?.markup ?? 0;
-
-		if (manuallyEditedModels.current.has(oldFullId)) {
-			manuallyEditedModels.current.delete(oldFullId);
-			manuallyEditedModels.current.add(newFullId);
-		}
-
-		delete updatedMarkups[oldFullId];
-		if (providerKey === "custom") {
-			updatedMarkups[newFullId] = {
-				markup,
-				input_cost: oldEntry?.input_cost ?? 0,
-				output_cost: oldEntry?.output_cost ?? 0,
-			};
-		} else {
-			const newModel = providers[providerKey]?.models[newModelKey];
-			updatedMarkups[newFullId] = { markup, humanModelName: newModel?.name };
-		}
-		updateMarkups(updatedMarkups);
-	};
-
-	const handleMarkupChange = (
-		providerKey: string,
-		modelKey: string,
-		markup: number,
-	) => {
-		const fullId = `${providerKey}/${modelKey}`;
-		manuallyEditedModels.current.add(fullId);
-		updateMarkups({
-			...modelMarkups,
-			[fullId]: { ...modelMarkups[fullId], markup },
-		});
-	};
-
-	const handleDefaultMarkupChange = useCallback(
-		(value: number) => {
-			setDefaultMarkup(value);
-			const updatedMarkups = { ...modelMarkups };
-			for (const modelId of Object.keys(updatedMarkups)) {
-				if (!manuallyEditedModels.current.has(modelId)) {
-					updatedMarkups[modelId] = {
-						...updatedMarkups[modelId],
-						markup: value,
-					};
-				}
-			}
-			updateMarkups(updatedMarkups);
-		},
-		[modelMarkups],
-	);
-
-	const handleCostChange = (
-		providerKey: string,
-		modelKey: string,
-		field: "input_cost" | "output_cost",
-		value: number,
-	) => {
-		const fullId = `${providerKey}/${modelKey}`;
-		updateMarkups({
-			...modelMarkups,
-			[fullId]: { ...modelMarkups[fullId], [field]: value },
-		});
-	};
-
-	const handleRemoveModel = (providerKey: string, modelKey: string) => {
-		const fullId = `${providerKey}/${modelKey}`;
-		manuallyEditedModels.current.delete(fullId);
-		const updatedMarkups = { ...modelMarkups };
-		delete updatedMarkups[fullId];
-		updateMarkups(updatedMarkups);
-	};
-
-	const handleRemoveProvider = (providerKey: string) => {
-		const updatedMarkups = { ...modelMarkups };
-		for (const fullId of providerGroups[providerKey] ?? []) {
-			manuallyEditedModels.current.delete(fullId);
-			delete updatedMarkups[fullId];
-		}
-		updateMarkups(updatedMarkups);
-	};
-
-	const addProvider = (providerKey: string) => {
-		if (providerKey === "custom") {
-			const existingKeys = (providerGroups.custom ?? []).map((fullId) => {
-				const [, ...parts] = fullId.split("/");
-				return parts.join("/");
-			});
-			let counter = 1;
-			while (existingKeys.includes(`model-${counter}`)) counter++;
-			updateMarkups({
-				...modelMarkups,
-				[`custom/model-${counter}`]: {
-					markup: defaultMarkup,
-					input_cost: 0,
-					output_cost: 0,
-				},
-			});
-			return;
-		}
-		const provider = providers[providerKey];
-		if (!provider) return;
-		const firstModelKey = Object.keys(provider.models)[0];
-		if (!firstModelKey) return;
-		const fullId = `${providerKey}/${firstModelKey}`;
-		const model = provider.models[firstModelKey];
-		updateMarkups({
-			...modelMarkups,
-			[fullId]: { markup: defaultMarkup, humanModelName: model?.name },
-		});
-	};
-
-	const addModelToProvider = (providerKey: string) => {
-		if (providerKey === "custom") {
-			const existingKeys = (providerGroups.custom ?? []).map((fullId) => {
-				const [, ...parts] = fullId.split("/");
-				return parts.join("/");
-			});
-			let counter = 1;
-			while (existingKeys.includes(`model-${counter}`)) counter++;
-			const fullId = `custom/model-${counter}`;
-			updateMarkups({
-				...modelMarkups,
-				[fullId]: { markup: defaultMarkup, input_cost: 0, output_cost: 0 },
-			});
-			return;
-		}
-		const provider = providers[providerKey];
-		if (!provider) return;
-		const usedModelKeys = new Set(
-			(providerGroups[providerKey] ?? []).map((fullId) => {
-				const [, ...parts] = fullId.split("/");
-				return parts.join("/");
-			}),
-		);
-		const nextModelKey = Object.keys(provider.models).find(
-			(key) => !usedModelKeys.has(key),
-		);
-		if (!nextModelKey) return;
-		const fullId = `${providerKey}/${nextModelKey}`;
-		const model = provider.models[nextModelKey];
-		updateMarkups({
-			...modelMarkups,
-			[fullId]: { markup: defaultMarkup, humanModelName: model?.name },
-		});
-	};
+		modelsLoading,
+		modelMarkups,
+		defaultMarkup,
+		providerGroups,
+		activeProviderKeys,
+		availableProviders,
+		handleModelChange,
+		handleMarkupChange,
+		handleDefaultMarkupChange,
+		handleCostChange,
+		handleRemoveModel,
+		handleRemoveProvider,
+		addProvider,
+		addModelToProvider,
+	} = useAiCreditSchema({ creditSystem, setCreditSystem });
 
 	return (
 		<div className="flex flex-col gap-0">
@@ -309,7 +94,6 @@ export function AiCreditSchema({
 									</p>
 								)}
 
-								{/* Column Headers */}
 								<div className="grid grid-cols-[minmax(0,2.7fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto] items-center gap-1 px-0.5 pb-0.5">
 									<div className="min-w-0 text-xs font-semibold text-t-tertiary whitespace-nowrap">
 										Model
@@ -367,7 +151,6 @@ export function AiCreditSchema({
 									className="w-fit mt-0.5"
 									icon={<PlusIcon className="h-3.5 w-3.5" />}
 									disabled={
-										// If all models for this provider are already added, disable the button
 										providerKey === "custom"
 											? false
 											: Object.keys(provider?.models ?? {}).length ===
