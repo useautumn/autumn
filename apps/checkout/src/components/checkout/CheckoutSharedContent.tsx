@@ -17,9 +17,12 @@ export function CheckoutSharedContent() {
 		actionRequiredResponse,
 		confirmResult,
 		hasActionRequiredState,
+		hasPrepaidFeatures,
 		status,
 		isSandbox,
 	} = useCheckoutContext();
+
+	const showPlanSection = status.isLoading || hasPrepaidFeatures;
 
 	if (confirmResult) {
 		return (
@@ -63,8 +66,12 @@ export function CheckoutSharedContent() {
 
 				<div className="flex flex-col gap-6 w-full">
 					<Separator />
-					<PlanSection />
-					<Separator />
+					{showPlanSection && (
+						<>
+							<PlanSection />
+							<Separator />
+						</>
+					)}
 					<OrderSummarySection />
 				</div>
 
