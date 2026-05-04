@@ -1,6 +1,7 @@
 import {
 	type BillingResponse,
 	CheckoutAction,
+	type ConfirmCheckoutParams,
 	type ConfirmCheckoutResponse,
 	type GetCheckoutResponse,
 	CheckoutStatus,
@@ -76,6 +77,9 @@ export function useCheckoutState({
 	const [actionRequiredResponse, setActionRequiredResponse] =
 		useState<BillingResponse | null>(null);
 	const [quantities, setQuantities] = useState<Record<string, number>>({});
+	const [appliedPromotionCode, setAppliedPromotionCode] = useState<string | null>(
+		null,
+	);
 
 	// === API hooks ===
 	const { data: checkoutData, isLoading, error } = useCheckout({ checkoutId });
@@ -107,10 +111,31 @@ export function useCheckoutState({
 		};
 	}, [confirmResult]);
 
+	const buildCheckoutBody = useCallback(
+		({
+			nextQuantities = quantities,
+			promotionCode = appliedPromotionCode,
+		}: {
+			nextQuantities?: Record<string, number>;
+			promotionCode?: string | null;
+		} = {}): ConfirmCheckoutParams => {
+			const featureQuantities = checkoutData?.preview?.incoming
+				? buildFeatureQuantities(checkoutData.preview.incoming, nextQuantities)
+				: [];
+			const code = promotionCode?.trim();
+
+			return {
+				feature_quantities: featureQuantities,
+				...(code ? { discounts: [{ promotion_code: code }] } : {}),
+			};
+		},
+		[appliedPromotionCode, checkoutData, quantities],
+	);
+
 	// === Debounced preview ===
 	const debouncedPreview = useDebouncedCallback(
-		(feature_quantities: { feature_id: string; quantity: number }[]) => {
-			previewMutation.mutate({ feature_quantities });
+		(body: ConfirmCheckoutParams) => {
+			previewMutation.mutate(body);
 		},
 		600,
 	);
@@ -119,7 +144,6 @@ export function useCheckoutState({
 	const derivedState = useMemo(() => {
 		const { action, env, preview, org, entity, status: checkoutStatus } =
 			checkoutData ?? {};
-		const adjustableFeatureIds = checkoutData?.adjustable_feature_ids ?? [];
 		const incoming = preview?.incoming;
 		const outgoing = preview?.outgoing;
 		const isUpdateQuantityIntent =
@@ -139,6 +163,11 @@ export function useCheckoutState({
 		const incomingPlan = incomingChange?.plan;
 		const freeTrial = incomingPlan?.free_trial;
 		const hasActiveTrial = !!freeTrial;
+		const hasPrepaidFeatures = !!incoming?.some((change) =>
+			change.plan?.items.some(
+				(item) => item.price?.billing_method === "prepaid",
+			),
+		);
 
 		const headerDescription = buildHeaderDescription({
 			preview,
@@ -167,7 +196,7 @@ export function useCheckoutState({
 			hasActiveTrial,
 			isSandbox: env === "sandbox",
 			headerDescription,
-			adjustableFeatureIds,
+			hasPrepaidFeatures,
 			isUnchangedQuantityUpdate,
 		};
 	}, [checkoutData, routeMode]);
@@ -179,22 +208,34 @@ export function useCheckoutState({
 
 			if (checkoutData?.preview?.incoming) {
 				const newQuantities = { ...quantities, [featureId]: quantity };
-				const featureQuantities = buildFeatureQuantities(
-					checkoutData.preview.incoming,
-					newQuantities,
+				debouncedPreview(
+					buildCheckoutBody({
+						nextQuantities: newQuantities,
+					}),
 				);
-				debouncedPreview(featureQuantities);
 			}
 		},
-		[checkoutData, quantities, debouncedPreview],
+		[checkoutData, quantities, debouncedPreview, buildCheckoutBody],
 	);
 
-	const handleConfirm = useCallback(() => {
-		const featureQuantities = checkoutData?.preview?.incoming
-			? buildFeatureQuantities(checkoutData.preview.incoming, quantities)
-			: [];
+	const handleApplyDiscount = useCallback((promotionCode: string) => {
+		const code = promotionCode.trim();
+		if (!code) return Promise.resolve();
 
-		confirmMutation.mutate({ feature_quantities: featureQuantities }, {
+		return previewMutation
+			.mutateAsync(buildCheckoutBody({ promotionCode: code }))
+			.then(() => {
+				setAppliedPromotionCode(code);
+			});
+	}, [buildCheckoutBody, previewMutation]);
+
+	const handleClearDiscount = useCallback(() => {
+		setAppliedPromotionCode(null);
+		previewMutation.mutate(buildCheckoutBody({ promotionCode: null }));
+	}, [buildCheckoutBody, previewMutation]);
+
+	const handleConfirm = useCallback(() => {
+		confirmMutation.mutate(buildCheckoutBody(), {
 			onSuccess: (result) => {
 				if (!result.success) {
 					setActionRequiredResponse(result);
@@ -204,7 +245,7 @@ export function useCheckoutState({
 				setConfirmResult(result);
 			},
 		});
-	}, [checkoutData, confirmMutation, quantities]);
+	}, [buildCheckoutBody, confirmMutation]);
 
 	const hasActionRequiredState = !!(
 		actionRequiredResponse?.payment_url && actionRequiredResponse.required_action
@@ -232,11 +273,14 @@ export function useCheckoutState({
 		checkoutId,
 		...derivedState,
 		quantities,
+		appliedPromotionCode,
 		actionRequiredResponse,
 		hasActionRequiredState,
 		confirmResult,
 		status,
 		handleQuantityChange,
+		handleApplyDiscount,
+		handleClearDiscount,
 		handleConfirm,
 	};
 }

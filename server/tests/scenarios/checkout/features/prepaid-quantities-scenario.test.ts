@@ -20,7 +20,7 @@ test(`${chalk.yellowBright("attach: prepaid quantities - with prepaid options")}
 		id: "pro",
 		items: [
 			items.dashboard(),
-			items.prepaidMessages({ includedUsage: 50, billingUnits: 100 }), // $10 per 100 messages
+			items.prepaidMessages({ includedUsage: 100, billingUnits: 100 }), // $10 per 100 messages
 			items.prepaidUsers({ includedUsage: 2, billingUnits: 1 }), // $10 per user seat
 		],
 	});
@@ -57,16 +57,9 @@ test(`${chalk.yellowBright("attach: prepaid quantities - with prepaid options")}
 		options: prepaidOptions,
 		redirect_mode: "always",
 	});
-	console.log("prepaid attach result:", attachResult);
 
-	// Get customer state after attach
-	const customerAfter = await autumnV1.customers.get(customerId);
-	console.log("customer after prepaid attach:", {
-		products: customerAfter.products?.map(
-			(p: { id: string; name: string | null }) => ({
-				id: p.id,
-				name: p.name,
-			}),
-		),
+	console.log("prepaid quantities scenario:", {
+		customerId,
+		checkoutUrl: attachResult.payment_url,
 	});
 });

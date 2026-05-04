@@ -72,18 +72,16 @@ export function ConfirmSection() {
 
 						{/* Amount next cycle / Amount due on trial end */}
 						{preview?.next_cycle && (
-							<div className="flex flex-col gap-0.5">
-								<div className="flex items-center justify-between text-sm text-muted-foreground">
-									<span>
-										{preview.next_cycle.starts_at
-											? `Amount due on ${format(preview.next_cycle.starts_at, "do MMMM yyyy")}`
-											: "Total due next cycle"}
-									</span>
-									<span className="tabular-nums">
-										{formatAmount(preview.next_cycle.total, currency)}
-										{hasNextCycleUsage ? " + usage" : ""}
-									</span>
-								</div>
+							<div className="flex items-center justify-between text-sm text-muted-foreground">
+								<span>
+									{preview.next_cycle.starts_at
+										? `Amount due on ${format(preview.next_cycle.starts_at, "do MMMM yyyy")}`
+										: "Total due next cycle"}
+								</span>
+								<span className="tabular-nums">
+									{formatAmount(preview.next_cycle.total, currency)}
+									{hasNextCycleUsage ? " + usage" : ""}
+								</span>
 							</div>
 						)}
 					</div>
