@@ -3,23 +3,43 @@ import { beforeEach, describe, expect, mock, test } from "bun:test";
 const mockState = {
 	warnings: [] as Array<{ message: string; data?: Record<string, unknown> }>,
 };
+const defaultRedis = { status: "ready" };
+
+// Stub the full `Logger` shape — Bun's `mock.module` is process-wide, so
+// later unit tests inherit this stub. Missing methods crash unrelated code.
+const mockLogger = {
+	debug: () => undefined,
+	info: () => undefined,
+	warn: (data: Record<string, unknown> | string, message?: string) => {
+		if (typeof data === "string") {
+			mockState.warnings.push({ message: data });
+			return;
+		}
+
+		mockState.warnings.push({
+			message: message || "",
+			data,
+		});
+	},
+	error: () => undefined,
+	child: () => mockLogger,
+};
 
 mock.module("@/external/logtail/logtailUtils.js", () => ({
-	logger: {
-		warn: (data: Record<string, unknown> | string, message?: string) => {
-			if (typeof data === "string") {
-				mockState.warnings.push({ message: data });
-				return;
-			}
-
-			mockState.warnings.push({
-				message: message || "",
-				data,
-			});
-		},
-	},
+	logger: mockLogger,
 }));
 
+mock.module("@/external/redis/initUtils/redisConfig.js", () => ({
+	hasRedisConfig: true,
+}));
+mock.module("@/external/redis/initUtils/redisClientRegistry.js", () => ({
+	redis: defaultRedis,
+}));
+mock.module("@/external/redis/initRedis.js", () => ({
+	redis: defaultRedis,
+}));
+
+import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import {
 	tryRedisNx,
 	tryRedisRead,
@@ -50,12 +70,13 @@ describe("cache utils", () => {
 		});
 	});
 
-	test("tryRedisWrite returns null and warns when Redis is not ready", async () => {
-		const result = await tryRedisWrite(async () => "OK", {
+	test("tryRedisWrite throws RedisUnavailableError when Redis is not ready", async () => {
+		const error = await tryRedisWrite(async () => "OK", {
 			status: "connecting",
-		} as never);
+		} as never).catch((caught) => caught);
 
-		expect(result).toBeNull();
+		expect(error).toBeInstanceOf(RedisUnavailableError);
+		expect(error.reason).toBe("not_ready");
 		expect(mockState.warnings).toHaveLength(1);
 		expect(mockState.warnings[0]).toEqual({
 			message: "[redis] operation unavailable",
@@ -64,6 +85,33 @@ describe("cache utils", () => {
 				error: undefined,
 			},
 		});
+	});
+
+	test("tryRedisRead throws RedisUnavailableError when Redis command times out", async () => {
+		const error = await tryRedisRead(
+			async () => {
+				throw new Error("Command timed out");
+			},
+			{ status: "ready" } as never,
+		).catch((caught) => caught);
+
+		expect(error).toBeInstanceOf(RedisUnavailableError);
+		expect(error.reason).toBe("timeout");
+	});
+
+	test("tryRedisNx throws RedisUnavailableError on connection failures", async () => {
+		const error = await tryRedisNx({
+			operation: async () => {
+				throw new Error("Connection is closed.");
+			},
+			redisInstance: { status: "ready" } as never,
+			onRedisUnavailable: () => "fallback",
+			onSuccess: () => "success",
+			onKeyAlreadyExists: () => "exists",
+		}).catch((caught) => caught);
+
+		expect(error).toBeInstanceOf(RedisUnavailableError);
+		expect(error.reason).toBe("connection");
 	});
 
 	test("tryRedisNx falls back and warns when Redis operation throws", async () => {
@@ -78,13 +126,24 @@ describe("cache utils", () => {
 		});
 
 		expect(result).toBe("fallback");
-		expect(mockState.warnings).toHaveLength(1);
-		expect(mockState.warnings[0]).toEqual({
-			message: "[redis] operation unavailable",
-			data: {
-				source: "tryRedisNx:error",
-				error: "boom",
+	});
+
+	test("custom Redis failures do not mark default Redis unavailable", async () => {
+		const result = await tryRedisRead(
+			async () => {
+				throw new Error("custom redis failed");
 			},
+			{ status: "ready" } as never,
+		);
+
+		expect(result).toBeNull();
+	});
+
+	test("Redis command errors do not mark Redis unavailable", async () => {
+		await tryRedisWrite(async () => {
+			throw new Error("ERR user_script:2: unexpected symbol near '#'");
 		});
+
+		expect(mockState.warnings).toHaveLength(1);
 	});
 });

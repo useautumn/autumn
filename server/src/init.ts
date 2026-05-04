@@ -10,6 +10,7 @@ import {
 	initPgHealthMonitor,
 	shutdownPgHealthMonitor,
 } from "./db/pgHealthMonitor.js";
+import { getRedactedDatabaseUrls } from "./db/redactDatabaseUrl.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import {
 	startAllEdgeConfigPolling,
@@ -24,12 +25,19 @@ import "./internal/misc/customerBlocks/customerBlockStore.js";
 import "./internal/misc/edgeConfig/orgLimitsStore.js";
 import "./internal/misc/stripeSync/stripeSyncStore.js";
 import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
+import "./internal/misc/jobQueues/jobQueueStore.js";
 import { closeStripeSyncEngine } from "@autumn/stripe-sync";
 import {
 	startRedisMonitor,
 	stopRedisMonitor,
 	warmupRegionalRedis,
 } from "./external/redis/initRedis.js";
+import { primeRedisMonitor } from "./external/redis/initUtils/redisAvailability.js";
+import {
+	primeRedisV2Monitor,
+	startRedisV2Monitor,
+	stopRedisV2Monitor,
+} from "./external/redis/initUtils/redisV2Availability.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -37,16 +45,24 @@ import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
 checkEnvVars();
 
+let shuttingDown = false;
+
 const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
+	logger.info(getRedactedDatabaseUrls(), "DB URLs");
+
+	console.log("DB URLs:", getRedactedDatabaseUrls());
+
 	const app = createHonoApp();
 
 	initPgHealthMonitor({ client: clientCritical });
 
-	startRedisMonitor();
 	void warmupRegionalRedis().catch((error) => {
 		logger.warn("[Redis] Warmup failed", { error });
 	});
 	await startAllEdgeConfigPolling({ logger });
+	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
+	startRedisMonitor();
+	startRedisV2Monitor();
 
 	const PORT = process.env.SERVER_PORT
 		? Number.parseInt(process.env.SERVER_PORT)
@@ -71,6 +87,7 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 };
 
 if (process.env.NODE_ENV === "development") {
+	registerFatalErrorHandlers();
 	await init({ startupStartedAt: Date.now() });
 	registerShutdownHandlers();
 } else {
@@ -86,16 +103,44 @@ if (process.env.NODE_ENV === "development") {
 			cluster.fork();
 		}
 
-		cluster.on("exit", (worker, _code, _signal) => {
-			logger.error(`WORKER DIED: ${worker.process.pid}`);
+		cluster.on("exit", (worker, code, signal) => {
+			logger.error("WORKER DIED", {
+				pid: worker.process.pid,
+				code,
+				signal,
+				exitedAfterDisconnect: worker.exitedAfterDisconnect,
+			});
+			if (shuttingDown) return;
 			cluster.fork();
 		});
 
 		registerShutdownHandlers();
 	} else {
+		registerFatalErrorHandlers();
 		await init({ startupStartedAt: Date.now() });
 		registerShutdownHandlers();
 	}
+}
+
+function registerFatalErrorHandlers() {
+	const exitAfterLog = () => setTimeout(() => process.exit(1), 100);
+	const logFatal = (event: string, error: unknown) => {
+		logger.error(event, {
+			error:
+				error instanceof Error
+					? { name: error.name, message: error.message, stack: error.stack }
+					: error,
+		});
+	};
+
+	process.on("uncaughtException", (error) => {
+		logFatal("WORKER FATAL uncaughtException", error);
+		exitAfterLog();
+	});
+	process.on("unhandledRejection", (reason) => {
+		logFatal("WORKER FATAL unhandledRejection", reason);
+		exitAfterLog();
+	});
 }
 
 function registerShutdownHandlers() {
@@ -105,6 +150,7 @@ function registerShutdownHandlers() {
 }
 
 async function gracefulShutdown() {
+	shuttingDown = true;
 	console.log("Shutting down worker, flushing telemetry and closing DB...");
 	try {
 		// Flush any buffered OTel spans before shutting down
@@ -113,6 +159,7 @@ async function gracefulShutdown() {
 		}
 		shutdownPgHealthMonitor();
 		stopRedisMonitor();
+		stopRedisV2Monitor();
 		stopAllEdgeConfigPolling();
 		await Promise.all([
 			client.end(),

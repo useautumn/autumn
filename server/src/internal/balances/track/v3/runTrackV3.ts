@@ -15,6 +15,7 @@ import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubjec
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handleEventIdempotencyKey } from "../utils/handleEventIdempotencyKey.js";
 import { runRedisTrackV3 } from "./runRedisTrackV3.js";
+import { getTrackIdempotencyKey } from "./trackIdempotencyKey.js";
 
 const getTrackFullSubject = async ({
 	ctx,
@@ -71,12 +72,15 @@ export const runTrackV3 = async ({
 		});
 	}
 
+	const redisIdempotencyKey = getTrackIdempotencyKey({ ctx });
+
 	const response: TrackResponseV3 = await runRedisTrackV3({
 		ctx,
 		fullSubject,
 		featureDeductions,
 		overageBehavior: body.overage_behavior || "cap",
 		body,
+		idempotencyKey: redisIdempotencyKey,
 	});
 
 	return applyResponseVersionChanges<TrackResponseV3>({

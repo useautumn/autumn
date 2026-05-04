@@ -130,9 +130,10 @@
 						"group": "Additional Resources",
 						"pages": [
 							"documentation/webhooks",
-							"documentation/external-providers/ai-sdk",
+							"documentation/slack-discord-notifications",
 							"documentation/fail-open",
 							"documentation/rate-limits",
+							"documentation/external-providers/ai-sdk",
 							"documentation/external-providers/convex",
 							"documentation/external-providers/revenuecat",
 							"documentation/external-providers/vercel-marketplace"
@@ -271,6 +272,12 @@
 								"pages": [
 									"api-reference/webhooks/balancesUsageAlertTriggered",
 									"api-reference/webhooks/balancesLimitReached"
+								]
+							},
+							{
+								"group": "Billing",
+								"pages": [
+									"api-reference/webhooks/billingAutoTopupSucceeded"
 								]
 							},
 							{

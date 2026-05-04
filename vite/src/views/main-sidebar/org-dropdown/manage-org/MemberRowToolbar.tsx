@@ -1,16 +1,14 @@
 import type { Invite, Membership } from "@autumn/shared";
-import { TrashIcon } from "lucide-react";
+import { EllipsisVertical, TrashIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
-import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useOrg } from "@/hooks/common/useOrg";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useMemberships } from "../hooks/useMemberships";
@@ -24,11 +22,10 @@ export const MemberRowToolbar = ({
 }) => {
 	const [deleteLoading, setDeleteLoading] = useState(false);
 	const [open, setOpen] = useState(false);
-	const { org } = useOrg();
 	const { refetch } = useMemberships();
 	const axiosInstance = useAxiosInstance();
 
-	const handleDeleteMember = async (e: any) => {
+	const handleDeleteMember = async (e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -45,15 +42,14 @@ export const MemberRowToolbar = ({
 				return;
 			}
 
-			const response = await axiosInstance.post("/organization/remove-member", {
+			await axiosInstance.post("/organization/remove-member", {
 				memberId: membership.member.id,
 				userId: membership.user.id,
 			});
 
-			// Refresh the members list
 			await refetch();
 			toast.success("Member removed successfully");
-			setOpen(false); // Close the dropdown
+			setOpen(false);
 		} catch (error: any) {
 			console.error("Member removal error:", error);
 			if (error.response?.data?.code === "MEMBER_NOT_FOUND") {
@@ -66,36 +62,46 @@ export const MemberRowToolbar = ({
 		}
 	};
 
-	const handleDeleteInvite = async (e: any) => {
+	const handleDeleteInvite = async (e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
 
 		setDeleteLoading(true);
 		try {
-			const { data, error } = await authClient.organization.cancelInvitation({
+			const { error } = await authClient.organization.cancelInvitation({
 				invitationId: invite!.id,
 			});
 			if (error) {
 				toast.error(error.message);
+				return;
 			}
 
 			await refetch();
 			toast.success("Invite cancelled");
-		} catch (error) {
+			setOpen(false);
+		} catch {
 			toast.error("Failed to remove invite");
+		} finally {
+			setDeleteLoading(false);
 		}
-		setDeleteLoading(false);
 	};
 
 	return (
 		<DropdownMenu open={open} onOpenChange={setOpen}>
 			<DropdownMenuTrigger asChild>
-				<ToolbarButton />
+				<IconButton
+					variant="skeleton"
+					size="icon"
+					iconOrientation="center"
+					icon={<EllipsisVertical />}
+					className="!h-5 !w-5 rounded-lg hover:bg-stone-50"
+				/>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent>
+			<DropdownMenuContent align="end">
 				<DropdownMenuItem
+					variant="destructive"
 					shimmer={deleteLoading}
-					className="flex justify-between text-t2"
+					className="flex justify-between"
 					onClick={(e) => {
 						if (membership) {
 							handleDeleteMember(e);
@@ -104,7 +110,7 @@ export const MemberRowToolbar = ({
 						}
 					}}
 				>
-					<div className="flex justify-between items-center w-full">
+					<div className="flex justify-between items-center w-full gap-4">
 						<span>Remove</span>
 						<TrashIcon size={12} />
 					</div>

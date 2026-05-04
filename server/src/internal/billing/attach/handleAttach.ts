@@ -1,4 +1,4 @@
-import { type AttachResponseV1, AttachResponseV1Schema } from "@autumn/shared";
+import { type AttachResponseV1, AttachResponseV1Schema, Scopes } from "@autumn/shared";
 import { AttachBodyV0Schema } from "../../../../../shared/api/billing/attach/prevVersions/attachBodyV0";
 import {
 	AffectedResource,
@@ -16,6 +16,7 @@ import { insertCustomItems } from "../../customers/attach/attachUtils/insertCust
 import { attachToInvoiceResponse } from "../../invoices/invoiceUtils";
 
 export const handleAttach = createRoute({
+	scopes: [Scopes.Billing.Write],
 	body: AttachBodyV0Schema,
 	resource: AffectedResource.Attach,
 

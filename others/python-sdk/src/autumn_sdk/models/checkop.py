@@ -37,7 +37,7 @@ class CheckGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -80,7 +80,7 @@ class CheckLock(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -150,7 +150,7 @@ class CheckParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -159,7 +159,7 @@ class CheckParams(BaseModel):
         return m
 
 
-FlagType = Union[
+FlagType2 = Union[
     Literal[
         "boolean",
         "metered",
@@ -170,14 +170,14 @@ FlagType = Union[
 r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
 
 
-class CheckCreditSchemaTypedDict(TypedDict):
+class CheckCreditSchema2TypedDict(TypedDict):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
     credit_cost: float
     r"""Credits consumed per unit of the metered feature."""
 
 
-class CheckCreditSchema(BaseModel):
+class CheckCreditSchema2(BaseModel):
     metered_feature_id: str
     r"""ID of the metered feature that draws from this credit system."""
 
@@ -185,7 +185,7 @@ class CheckCreditSchema(BaseModel):
     r"""Credits consumed per unit of the metered feature."""
 
 
-class FlagDisplayTypedDict(TypedDict):
+class FlagDisplay2TypedDict(TypedDict):
     r"""Display names for the feature in billing UI and customer-facing components."""
 
     singular: NotRequired[Nullable[str]]
@@ -194,7 +194,7 @@ class FlagDisplayTypedDict(TypedDict):
     r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
 
 
-class FlagDisplay(BaseModel):
+class FlagDisplay2(BaseModel):
     r"""Display names for the feature in billing UI and customer-facing components."""
 
     singular: OptionalNullable[str] = UNSET
@@ -212,7 +212,7 @@ class FlagDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -229,14 +229,14 @@ class FlagDisplay(BaseModel):
         return m
 
 
-class CheckFeatureTypedDict(TypedDict):
+class CheckFeature2TypedDict(TypedDict):
     r"""The full feature object if expanded."""
 
     id: str
     r"""The unique identifier for this feature, used in /check and /track calls."""
     name: str
     r"""Human-readable name displayed in the dashboard and billing UI."""
-    type: FlagType
+    type: FlagType2
     r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
@@ -244,13 +244,13 @@ class CheckFeatureTypedDict(TypedDict):
     r"""Whether the feature is archived and hidden from the dashboard."""
     event_names: NotRequired[List[str]]
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
-    credit_schema: NotRequired[List[CheckCreditSchemaTypedDict]]
+    credit_schema: NotRequired[List[CheckCreditSchema2TypedDict]]
     r"""For credit_system features: maps metered features to their credit costs."""
-    display: NotRequired[FlagDisplayTypedDict]
+    display: NotRequired[FlagDisplay2TypedDict]
     r"""Display names for the feature in billing UI and customer-facing components."""
 
 
-class CheckFeature(BaseModel):
+class CheckFeature2(BaseModel):
     r"""The full feature object if expanded."""
 
     id: str
@@ -259,7 +259,7 @@ class CheckFeature(BaseModel):
     name: str
     r"""Human-readable name displayed in the dashboard and billing UI."""
 
-    type: FlagType
+    type: FlagType2
     r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
 
     consumable: bool
@@ -271,10 +271,10 @@ class CheckFeature(BaseModel):
     event_names: Optional[List[str]] = None
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
 
-    credit_schema: Optional[List[CheckCreditSchema]] = None
+    credit_schema: Optional[List[CheckCreditSchema2]] = None
     r"""For credit_system features: maps metered features to their credit costs."""
 
-    display: Optional[FlagDisplay] = None
+    display: Optional[FlagDisplay2] = None
     r"""Display names for the feature in billing UI and customer-facing components."""
 
     @model_serializer(mode="wrap")
@@ -285,7 +285,7 @@ class CheckFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -294,7 +294,7 @@ class CheckFeature(BaseModel):
         return m
 
 
-class FlagTypedDict(TypedDict):
+class Flag2TypedDict(TypedDict):
     id: str
     r"""The unique identifier for this flag."""
     plan_id: Nullable[str]
@@ -303,11 +303,11 @@ class FlagTypedDict(TypedDict):
     r"""Timestamp when this flag expires, or null for no expiration."""
     feature_id: str
     r"""The feature ID this flag is for."""
-    feature: NotRequired[CheckFeatureTypedDict]
+    feature: NotRequired[CheckFeature2TypedDict]
     r"""The full feature object if expanded."""
 
 
-class Flag(BaseModel):
+class Flag2(BaseModel):
     id: str
     r"""The unique identifier for this flag."""
 
@@ -320,7 +320,7 @@ class Flag(BaseModel):
     feature_id: str
     r"""The feature ID this flag is for."""
 
-    feature: Optional[CheckFeature] = None
+    feature: Optional[CheckFeature2] = None
     r"""The full feature object if expanded."""
 
     @model_serializer(mode="wrap")
@@ -332,7 +332,7 @@ class Flag(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -349,7 +349,7 @@ class Flag(BaseModel):
         return m
 
 
-Scenario = Union[
+Scenario2 = Union[
     Literal[
         "usage_limit",
         "feature_flag",
@@ -359,7 +359,7 @@ Scenario = Union[
 r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
 
 
-CheckEnv = Union[
+CheckEnv2 = Union[
     Literal[
         "sandbox",
         "live",
@@ -369,7 +369,7 @@ CheckEnv = Union[
 r"""The environment of the product"""
 
 
-ProductType = Union[
+ProductType2 = Union[
     Literal[
         "feature",
         "priced_feature",
@@ -379,7 +379,7 @@ ProductType = Union[
 ]
 
 
-FeatureType = Union[
+FeatureType2 = Union[
     Literal[
         "single_use",
         "continuous_use",
@@ -390,13 +390,13 @@ FeatureType = Union[
 ]
 
 
-IncludedUsageTypedDict = TypeAliasType("IncludedUsageTypedDict", Union[float, str])
+IncludedUsage2TypedDict = TypeAliasType("IncludedUsage2TypedDict", Union[float, str])
 
 
-IncludedUsage = TypeAliasType("IncludedUsage", Union[float, str])
+IncludedUsage2 = TypeAliasType("IncludedUsage2", Union[float, str])
 
 
-CheckInterval = Union[
+CheckInterval2 = Union[
     Literal[
         "minute",
         "hour",
@@ -411,7 +411,7 @@ CheckInterval = Union[
 ]
 
 
-CheckTierBehavior = Union[
+CheckTierBehavior2 = Union[
     Literal[
         "graduated",
         "volume",
@@ -420,7 +420,7 @@ CheckTierBehavior = Union[
 ]
 
 
-UsageModel = Union[
+UsageModel2 = Union[
     Literal[
         "prepaid",
         "pay_per_use",
@@ -429,12 +429,12 @@ UsageModel = Union[
 ]
 
 
-class ProductDisplayTypedDict(TypedDict):
+class ProductDisplay2TypedDict(TypedDict):
     primary_text: str
     secondary_text: NotRequired[Nullable[str]]
 
 
-class ProductDisplay(BaseModel):
+class ProductDisplay2(BaseModel):
     primary_text: str
 
     secondary_text: OptionalNullable[str] = UNSET
@@ -448,7 +448,7 @@ class ProductDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -465,7 +465,7 @@ class ProductDisplay(BaseModel):
         return m
 
 
-RolloverDuration = Union[
+ConfigDuration2 = Union[
     Literal[
         "month",
         "forever",
@@ -474,21 +474,21 @@ RolloverDuration = Union[
 ]
 
 
-class CheckRolloverTypedDict(TypedDict):
+class CheckRollover2TypedDict(TypedDict):
     length: float
     max: NotRequired[Nullable[float]]
     max_percentage: NotRequired[Nullable[float]]
-    duration: NotRequired[RolloverDuration]
+    duration: NotRequired[ConfigDuration2]
 
 
-class CheckRollover(BaseModel):
+class CheckRollover2(BaseModel):
     length: float
 
     max: OptionalNullable[float] = UNSET
 
     max_percentage: OptionalNullable[float] = UNSET
 
-    duration: Optional[RolloverDuration] = "month"
+    duration: Optional[ConfigDuration2] = "month"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -499,7 +499,7 @@ class CheckRollover(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -516,7 +516,7 @@ class CheckRollover(BaseModel):
         return m
 
 
-CheckOnIncrease = Union[
+CheckOnIncrease2 = Union[
     Literal[
         "bill_immediately",
         "prorate_immediately",
@@ -527,7 +527,7 @@ CheckOnIncrease = Union[
 ]
 
 
-CheckOnDecrease = Union[
+CheckOnDecrease2 = Union[
     Literal[
         "prorate",
         "prorate_immediately",
@@ -539,18 +539,18 @@ CheckOnDecrease = Union[
 ]
 
 
-class ConfigTypedDict(TypedDict):
-    rollover: NotRequired[Nullable[CheckRolloverTypedDict]]
-    on_increase: NotRequired[Nullable[CheckOnIncrease]]
-    on_decrease: NotRequired[Nullable[CheckOnDecrease]]
+class CheckConfig2TypedDict(TypedDict):
+    rollover: NotRequired[Nullable[CheckRollover2TypedDict]]
+    on_increase: NotRequired[Nullable[CheckOnIncrease2]]
+    on_decrease: NotRequired[Nullable[CheckOnDecrease2]]
 
 
-class Config(BaseModel):
-    rollover: OptionalNullable[CheckRollover] = UNSET
+class CheckConfig2(BaseModel):
+    rollover: OptionalNullable[CheckRollover2] = UNSET
 
-    on_increase: OptionalNullable[CheckOnIncrease] = UNSET
+    on_increase: OptionalNullable[CheckOnIncrease2] = UNSET
 
-    on_decrease: OptionalNullable[CheckOnDecrease] = UNSET
+    on_decrease: OptionalNullable[CheckOnDecrease2] = UNSET
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -561,7 +561,7 @@ class Config(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -578,18 +578,18 @@ class Config(BaseModel):
         return m
 
 
-class CheckItemTypedDict(TypedDict):
+class CheckItem2TypedDict(TypedDict):
     r"""Product item defining features and pricing within a product"""
 
-    type: NotRequired[Nullable[ProductType]]
+    type: NotRequired[Nullable[ProductType2]]
     r"""The type of the product item"""
     feature_id: NotRequired[Nullable[str]]
     r"""The feature ID of the product item. If the item is a fixed price, should be `null`"""
-    feature_type: NotRequired[Nullable[FeatureType]]
+    feature_type: NotRequired[Nullable[FeatureType2]]
     r"""Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."""
-    included_usage: NotRequired[Nullable[IncludedUsageTypedDict]]
+    included_usage: NotRequired[Nullable[IncludedUsage2TypedDict]]
     r"""The amount of usage included for this feature."""
-    interval: NotRequired[Nullable[CheckInterval]]
+    interval: NotRequired[Nullable[CheckInterval2]]
     r"""The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off."""
     interval_count: NotRequired[Nullable[float]]
     r"""The interval count of the product item."""
@@ -597,9 +597,9 @@ class CheckItemTypedDict(TypedDict):
     r"""The price of the product item. Should be `null` if tiered pricing is set."""
     tiers: NotRequired[Nullable[List[Nullable[Any]]]]
     r"""Tiered pricing for the product item. Not applicable for fixed price items."""
-    tier_behavior: NotRequired[Nullable[CheckTierBehavior]]
+    tier_behavior: NotRequired[Nullable[CheckTierBehavior2]]
     r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated."""
-    usage_model: NotRequired[Nullable[UsageModel]]
+    usage_model: NotRequired[Nullable[UsageModel2]]
     r"""Whether the feature should be prepaid upfront or billed for how much they use end of billing period."""
     billing_units: NotRequired[Nullable[float]]
     r"""The amount per billing unit (eg. $9 / 250 units)"""
@@ -607,32 +607,32 @@ class CheckItemTypedDict(TypedDict):
     r"""Whether the usage should be reset when the product is enabled."""
     entity_feature_id: NotRequired[Nullable[str]]
     r"""The entity feature ID of the product item if applicable."""
-    display: NotRequired[Nullable[ProductDisplayTypedDict]]
+    display: NotRequired[Nullable[ProductDisplay2TypedDict]]
     r"""The display of the product item."""
     quantity: NotRequired[Nullable[float]]
     r"""Used in customer context. Quantity of the feature the customer has prepaid for."""
     next_cycle_quantity: NotRequired[Nullable[float]]
     r"""Used in customer context. Quantity of the feature the customer will prepay for in the next cycle."""
-    config: NotRequired[Nullable[ConfigTypedDict]]
+    config: NotRequired[Nullable[CheckConfig2TypedDict]]
     r"""Configuration for rollover and proration behavior of the feature."""
 
 
-class CheckItem(BaseModel):
+class CheckItem2(BaseModel):
     r"""Product item defining features and pricing within a product"""
 
-    type: OptionalNullable[ProductType] = UNSET
+    type: OptionalNullable[ProductType2] = UNSET
     r"""The type of the product item"""
 
     feature_id: OptionalNullable[str] = UNSET
     r"""The feature ID of the product item. If the item is a fixed price, should be `null`"""
 
-    feature_type: OptionalNullable[FeatureType] = UNSET
+    feature_type: OptionalNullable[FeatureType2] = UNSET
     r"""Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."""
 
-    included_usage: OptionalNullable[IncludedUsage] = UNSET
+    included_usage: OptionalNullable[IncludedUsage2] = UNSET
     r"""The amount of usage included for this feature."""
 
-    interval: OptionalNullable[CheckInterval] = UNSET
+    interval: OptionalNullable[CheckInterval2] = UNSET
     r"""The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off."""
 
     interval_count: OptionalNullable[float] = UNSET
@@ -644,10 +644,10 @@ class CheckItem(BaseModel):
     tiers: OptionalNullable[List[Nullable[Any]]] = UNSET
     r"""Tiered pricing for the product item. Not applicable for fixed price items."""
 
-    tier_behavior: OptionalNullable[CheckTierBehavior] = UNSET
+    tier_behavior: OptionalNullable[CheckTierBehavior2] = UNSET
     r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated."""
 
-    usage_model: OptionalNullable[UsageModel] = UNSET
+    usage_model: OptionalNullable[UsageModel2] = UNSET
     r"""Whether the feature should be prepaid upfront or billed for how much they use end of billing period."""
 
     billing_units: OptionalNullable[float] = UNSET
@@ -659,7 +659,7 @@ class CheckItem(BaseModel):
     entity_feature_id: OptionalNullable[str] = UNSET
     r"""The entity feature ID of the product item if applicable."""
 
-    display: OptionalNullable[ProductDisplay] = UNSET
+    display: OptionalNullable[ProductDisplay2] = UNSET
     r"""The display of the product item."""
 
     quantity: OptionalNullable[float] = UNSET
@@ -668,7 +668,7 @@ class CheckItem(BaseModel):
     next_cycle_quantity: OptionalNullable[float] = UNSET
     r"""Used in customer context. Quantity of the feature the customer will prepay for in the next cycle."""
 
-    config: OptionalNullable[Config] = UNSET
+    config: OptionalNullable[CheckConfig2] = UNSET
     r"""Configuration for rollover and proration behavior of the feature."""
 
     @model_serializer(mode="wrap")
@@ -720,7 +720,7 @@ class CheckItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -737,7 +737,7 @@ class CheckItem(BaseModel):
         return m
 
 
-FreeTrialDuration = Union[
+FreeTrialDuration2 = Union[
     Literal[
         "day",
         "month",
@@ -748,8 +748,8 @@ FreeTrialDuration = Union[
 r"""The duration type of the free trial"""
 
 
-class CheckFreeTrialTypedDict(TypedDict):
-    duration: FreeTrialDuration
+class CheckFreeTrial2TypedDict(TypedDict):
+    duration: FreeTrialDuration2
     r"""The duration type of the free trial"""
     length: float
     r"""The length of the duration type specified"""
@@ -761,8 +761,8 @@ class CheckFreeTrialTypedDict(TypedDict):
     r"""Used in customer context. Whether the free trial is available for the customer if they were to attach the product."""
 
 
-class CheckFreeTrial(BaseModel):
-    duration: FreeTrialDuration
+class CheckFreeTrial2(BaseModel):
+    duration: FreeTrialDuration2
     r"""The duration type of the free trial"""
 
     length: float
@@ -786,7 +786,7 @@ class CheckFreeTrial(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -803,7 +803,7 @@ class CheckFreeTrial(BaseModel):
         return m
 
 
-ProductScenario = Union[
+ProductScenario2 = Union[
     Literal[
         "scheduled",
         "active",
@@ -821,7 +821,7 @@ ProductScenario = Union[
 r"""Scenario for when this product is used in attach flows"""
 
 
-class PropertiesTypedDict(TypedDict):
+class Properties2TypedDict(TypedDict):
     is_free: bool
     r"""True if the product has no base price or usage prices"""
     is_one_off: bool
@@ -834,7 +834,7 @@ class PropertiesTypedDict(TypedDict):
     r"""True if the product can be updated after creation (only applicable if there are prepaid recurring prices)"""
 
 
-class Properties(BaseModel):
+class Properties2(BaseModel):
     is_free: bool
     r"""True if the product has no base price or usage prices"""
 
@@ -859,7 +859,7 @@ class Properties(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -876,14 +876,14 @@ class Properties(BaseModel):
         return m
 
 
-class ProductTypedDict(TypedDict):
+class Product2TypedDict(TypedDict):
     id: str
     r"""The ID of the product you set when creating the product"""
     name: str
     r"""The name of the product"""
     group: Nullable[str]
     r"""Product group which this product belongs to"""
-    env: CheckEnv
+    env: CheckEnv2
     r"""The environment of the product"""
     is_add_on: bool
     r"""Whether the product is an add-on and can be purchased alongside other products"""
@@ -895,18 +895,18 @@ class ProductTypedDict(TypedDict):
     r"""The current version of the product"""
     created_at: float
     r"""The timestamp of when the product was created in milliseconds since epoch"""
-    items: List[CheckItemTypedDict]
+    items: List[CheckItem2TypedDict]
     r"""Array of product items that define the product's features and pricing"""
-    free_trial: Nullable[CheckFreeTrialTypedDict]
+    free_trial: Nullable[CheckFreeTrial2TypedDict]
     r"""Free trial configuration for this product, if available"""
     base_variant_id: Nullable[str]
     r"""ID of the base variant this product is derived from"""
-    scenario: NotRequired[ProductScenario]
+    scenario: NotRequired[ProductScenario2]
     r"""Scenario for when this product is used in attach flows"""
-    properties: NotRequired[PropertiesTypedDict]
+    properties: NotRequired[Properties2TypedDict]
 
 
-class Product(BaseModel):
+class Product2(BaseModel):
     id: str
     r"""The ID of the product you set when creating the product"""
 
@@ -916,7 +916,7 @@ class Product(BaseModel):
     group: Nullable[str]
     r"""Product group which this product belongs to"""
 
-    env: CheckEnv
+    env: CheckEnv2
     r"""The environment of the product"""
 
     is_add_on: bool
@@ -934,19 +934,19 @@ class Product(BaseModel):
     created_at: float
     r"""The timestamp of when the product was created in milliseconds since epoch"""
 
-    items: List[CheckItem]
+    items: List[CheckItem2]
     r"""Array of product items that define the product's features and pricing"""
 
-    free_trial: Nullable[CheckFreeTrial]
+    free_trial: Nullable[CheckFreeTrial2]
     r"""Free trial configuration for this product, if available"""
 
     base_variant_id: Nullable[str]
     r"""ID of the base variant this product is derived from"""
 
-    scenario: Optional[ProductScenario] = None
+    scenario: Optional[ProductScenario2] = None
     r"""Scenario for when this product is used in attach flows"""
 
-    properties: Optional[Properties] = None
+    properties: Optional[Properties2] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -957,7 +957,7 @@ class Product(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -974,10 +974,10 @@ class Product(BaseModel):
         return m
 
 
-class PreviewTypedDict(TypedDict):
+class Preview2TypedDict(TypedDict):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: Scenario
+    scenario: Scenario2
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
     title: str
     r"""A title suitable for displaying in a paywall or upgrade modal."""
@@ -987,14 +987,14 @@ class PreviewTypedDict(TypedDict):
     r"""The ID of the feature that was checked."""
     feature_name: str
     r"""The display name of the feature."""
-    products: List[ProductTypedDict]
+    products: List[Product2TypedDict]
     r"""Products that would grant access to this feature. Use to display upgrade options."""
 
 
-class Preview(BaseModel):
+class Preview2(BaseModel):
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
-    scenario: Scenario
+    scenario: Scenario2
     r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
 
     title: str
@@ -1009,12 +1009,12 @@ class Preview(BaseModel):
     feature_name: str
     r"""The display name of the feature."""
 
-    products: List[Product]
+    products: List[Product2]
     r"""Products that would grant access to this feature. Use to display upgrade options."""
 
 
-class CheckResponseTypedDict(TypedDict):
-    r"""OK"""
+class CheckResponseBody2TypedDict(TypedDict):
+    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so access was allowed fail-open."""
 
     allowed: bool
     r"""Whether the customer is allowed to use the feature. True if they have sufficient balance or the feature is unlimited/boolean."""
@@ -1022,18 +1022,18 @@ class CheckResponseTypedDict(TypedDict):
     r"""The ID of the customer that was checked."""
     balance: Nullable[BalanceTypedDict]
     r"""The customer's balance for this feature. Null if the customer has no balance for this feature."""
-    flag: Nullable[FlagTypedDict]
+    flag: Nullable[Flag2TypedDict]
     r"""The flag associated with this check, if any."""
     entity_id: NotRequired[Nullable[str]]
     r"""The ID of the entity, if an entity-scoped check was performed."""
     required_balance: NotRequired[float]
     r"""The required balance that was checked against."""
-    preview: NotRequired[PreviewTypedDict]
+    preview: NotRequired[Preview2TypedDict]
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
 
-class CheckResponse(BaseModel):
-    r"""OK"""
+class CheckResponseBody2(BaseModel):
+    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so access was allowed fail-open."""
 
     allowed: bool
     r"""Whether the customer is allowed to use the feature. True if they have sufficient balance or the feature is unlimited/boolean."""
@@ -1044,7 +1044,7 @@ class CheckResponse(BaseModel):
     balance: Nullable[Balance]
     r"""The customer's balance for this feature. Null if the customer has no balance for this feature."""
 
-    flag: Nullable[Flag]
+    flag: Nullable[Flag2]
     r"""The flag associated with this check, if any."""
 
     entity_id: OptionalNullable[str] = UNSET
@@ -1053,7 +1053,7 @@ class CheckResponse(BaseModel):
     required_balance: Optional[float] = None
     r"""The required balance that was checked against."""
 
-    preview: Optional[Preview] = None
+    preview: Optional[Preview2] = None
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
     @model_serializer(mode="wrap")
@@ -1065,7 +1065,7 @@ class CheckResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1080,6 +1080,940 @@ class CheckResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+FlagType1 = Union[
+    Literal[
+        "boolean",
+        "metered",
+        "credit_system",
+    ],
+    UnrecognizedStr,
+]
+r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+
+
+class CheckCreditSchema1TypedDict(TypedDict):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+    credit_cost: float
+    r"""Credits consumed per unit of the metered feature."""
+
+
+class CheckCreditSchema1(BaseModel):
+    metered_feature_id: str
+    r"""ID of the metered feature that draws from this credit system."""
+
+    credit_cost: float
+    r"""Credits consumed per unit of the metered feature."""
+
+
+class FlagDisplay1TypedDict(TypedDict):
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    singular: NotRequired[Nullable[str]]
+    r"""Singular form for UI display (e.g., 'API call', 'seat')."""
+    plural: NotRequired[Nullable[str]]
+    r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
+
+
+class FlagDisplay1(BaseModel):
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    singular: OptionalNullable[str] = UNSET
+    r"""Singular form for UI display (e.g., 'API call', 'seat')."""
+
+    plural: OptionalNullable[str] = UNSET
+    r"""Plural form for UI display (e.g., 'API calls', 'seats')."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["singular", "plural"])
+        nullable_fields = set(["singular", "plural"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class CheckFeature1TypedDict(TypedDict):
+    r"""The full feature object if expanded."""
+
+    id: str
+    r"""The unique identifier for this feature, used in /check and /track calls."""
+    name: str
+    r"""Human-readable name displayed in the dashboard and billing UI."""
+    type: FlagType1
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    consumable: bool
+    r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
+    archived: bool
+    r"""Whether the feature is archived and hidden from the dashboard."""
+    event_names: NotRequired[List[str]]
+    r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
+    credit_schema: NotRequired[List[CheckCreditSchema1TypedDict]]
+    r"""For credit_system features: maps metered features to their credit costs."""
+    display: NotRequired[FlagDisplay1TypedDict]
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+
+class CheckFeature1(BaseModel):
+    r"""The full feature object if expanded."""
+
+    id: str
+    r"""The unique identifier for this feature, used in /check and /track calls."""
+
+    name: str
+    r"""Human-readable name displayed in the dashboard and billing UI."""
+
+    type: FlagType1
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+
+    consumable: bool
+    r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
+
+    archived: bool
+    r"""Whether the feature is archived and hidden from the dashboard."""
+
+    event_names: Optional[List[str]] = None
+    r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
+
+    credit_schema: Optional[List[CheckCreditSchema1]] = None
+    r"""For credit_system features: maps metered features to their credit costs."""
+
+    display: Optional[FlagDisplay1] = None
+    r"""Display names for the feature in billing UI and customer-facing components."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["event_names", "credit_schema", "display"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class Flag1TypedDict(TypedDict):
+    id: str
+    r"""The unique identifier for this flag."""
+    plan_id: Nullable[str]
+    r"""The plan ID this flag originates from, or null for standalone flags."""
+    expires_at: Nullable[float]
+    r"""Timestamp when this flag expires, or null for no expiration."""
+    feature_id: str
+    r"""The feature ID this flag is for."""
+    feature: NotRequired[CheckFeature1TypedDict]
+    r"""The full feature object if expanded."""
+
+
+class Flag1(BaseModel):
+    id: str
+    r"""The unique identifier for this flag."""
+
+    plan_id: Nullable[str]
+    r"""The plan ID this flag originates from, or null for standalone flags."""
+
+    expires_at: Nullable[float]
+    r"""Timestamp when this flag expires, or null for no expiration."""
+
+    feature_id: str
+    r"""The feature ID this flag is for."""
+
+    feature: Optional[CheckFeature1] = None
+    r"""The full feature object if expanded."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature"])
+        nullable_fields = set(["plan_id", "expires_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+Scenario1 = Union[
+    Literal[
+        "usage_limit",
+        "feature_flag",
+    ],
+    UnrecognizedStr,
+]
+r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
+
+
+CheckEnv1 = Union[
+    Literal[
+        "sandbox",
+        "live",
+    ],
+    UnrecognizedStr,
+]
+r"""The environment of the product"""
+
+
+ProductType1 = Union[
+    Literal[
+        "feature",
+        "priced_feature",
+        "price",
+    ],
+    UnrecognizedStr,
+]
+
+
+FeatureType1 = Union[
+    Literal[
+        "single_use",
+        "continuous_use",
+        "boolean",
+        "static",
+    ],
+    UnrecognizedStr,
+]
+
+
+IncludedUsage1TypedDict = TypeAliasType("IncludedUsage1TypedDict", Union[float, str])
+
+
+IncludedUsage1 = TypeAliasType("IncludedUsage1", Union[float, str])
+
+
+CheckInterval1 = Union[
+    Literal[
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+
+
+CheckTierBehavior1 = Union[
+    Literal[
+        "graduated",
+        "volume",
+    ],
+    UnrecognizedStr,
+]
+
+
+UsageModel1 = Union[
+    Literal[
+        "prepaid",
+        "pay_per_use",
+    ],
+    UnrecognizedStr,
+]
+
+
+class ProductDisplay1TypedDict(TypedDict):
+    primary_text: str
+    secondary_text: NotRequired[Nullable[str]]
+
+
+class ProductDisplay1(BaseModel):
+    primary_text: str
+
+    secondary_text: OptionalNullable[str] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["secondary_text"])
+        nullable_fields = set(["secondary_text"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+ConfigDuration1 = Union[
+    Literal[
+        "month",
+        "forever",
+    ],
+    UnrecognizedStr,
+]
+
+
+class CheckRollover1TypedDict(TypedDict):
+    length: float
+    max: NotRequired[Nullable[float]]
+    max_percentage: NotRequired[Nullable[float]]
+    duration: NotRequired[ConfigDuration1]
+
+
+class CheckRollover1(BaseModel):
+    length: float
+
+    max: OptionalNullable[float] = UNSET
+
+    max_percentage: OptionalNullable[float] = UNSET
+
+    duration: Optional[ConfigDuration1] = "month"
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["max", "max_percentage", "duration"])
+        nullable_fields = set(["max", "max_percentage"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+CheckOnIncrease1 = Union[
+    Literal[
+        "bill_immediately",
+        "prorate_immediately",
+        "prorate_next_cycle",
+        "bill_next_cycle",
+    ],
+    UnrecognizedStr,
+]
+
+
+CheckOnDecrease1 = Union[
+    Literal[
+        "prorate",
+        "prorate_immediately",
+        "prorate_next_cycle",
+        "none",
+        "no_prorations",
+    ],
+    UnrecognizedStr,
+]
+
+
+class CheckConfig1TypedDict(TypedDict):
+    rollover: NotRequired[Nullable[CheckRollover1TypedDict]]
+    on_increase: NotRequired[Nullable[CheckOnIncrease1]]
+    on_decrease: NotRequired[Nullable[CheckOnDecrease1]]
+
+
+class CheckConfig1(BaseModel):
+    rollover: OptionalNullable[CheckRollover1] = UNSET
+
+    on_increase: OptionalNullable[CheckOnIncrease1] = UNSET
+
+    on_decrease: OptionalNullable[CheckOnDecrease1] = UNSET
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["rollover", "on_increase", "on_decrease"])
+        nullable_fields = set(["rollover", "on_increase", "on_decrease"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class CheckItem1TypedDict(TypedDict):
+    r"""Product item defining features and pricing within a product"""
+
+    type: NotRequired[Nullable[ProductType1]]
+    r"""The type of the product item"""
+    feature_id: NotRequired[Nullable[str]]
+    r"""The feature ID of the product item. If the item is a fixed price, should be `null`"""
+    feature_type: NotRequired[Nullable[FeatureType1]]
+    r"""Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."""
+    included_usage: NotRequired[Nullable[IncludedUsage1TypedDict]]
+    r"""The amount of usage included for this feature."""
+    interval: NotRequired[Nullable[CheckInterval1]]
+    r"""The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off."""
+    interval_count: NotRequired[Nullable[float]]
+    r"""The interval count of the product item."""
+    price: NotRequired[Nullable[float]]
+    r"""The price of the product item. Should be `null` if tiered pricing is set."""
+    tiers: NotRequired[Nullable[List[Nullable[Any]]]]
+    r"""Tiered pricing for the product item. Not applicable for fixed price items."""
+    tier_behavior: NotRequired[Nullable[CheckTierBehavior1]]
+    r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated."""
+    usage_model: NotRequired[Nullable[UsageModel1]]
+    r"""Whether the feature should be prepaid upfront or billed for how much they use end of billing period."""
+    billing_units: NotRequired[Nullable[float]]
+    r"""The amount per billing unit (eg. $9 / 250 units)"""
+    reset_usage_when_enabled: NotRequired[Nullable[bool]]
+    r"""Whether the usage should be reset when the product is enabled."""
+    entity_feature_id: NotRequired[Nullable[str]]
+    r"""The entity feature ID of the product item if applicable."""
+    display: NotRequired[Nullable[ProductDisplay1TypedDict]]
+    r"""The display of the product item."""
+    quantity: NotRequired[Nullable[float]]
+    r"""Used in customer context. Quantity of the feature the customer has prepaid for."""
+    next_cycle_quantity: NotRequired[Nullable[float]]
+    r"""Used in customer context. Quantity of the feature the customer will prepay for in the next cycle."""
+    config: NotRequired[Nullable[CheckConfig1TypedDict]]
+    r"""Configuration for rollover and proration behavior of the feature."""
+
+
+class CheckItem1(BaseModel):
+    r"""Product item defining features and pricing within a product"""
+
+    type: OptionalNullable[ProductType1] = UNSET
+    r"""The type of the product item"""
+
+    feature_id: OptionalNullable[str] = UNSET
+    r"""The feature ID of the product item. If the item is a fixed price, should be `null`"""
+
+    feature_type: OptionalNullable[FeatureType1] = UNSET
+    r"""Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats."""
+
+    included_usage: OptionalNullable[IncludedUsage1] = UNSET
+    r"""The amount of usage included for this feature."""
+
+    interval: OptionalNullable[CheckInterval1] = UNSET
+    r"""The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off."""
+
+    interval_count: OptionalNullable[float] = UNSET
+    r"""The interval count of the product item."""
+
+    price: OptionalNullable[float] = UNSET
+    r"""The price of the product item. Should be `null` if tiered pricing is set."""
+
+    tiers: OptionalNullable[List[Nullable[Any]]] = UNSET
+    r"""Tiered pricing for the product item. Not applicable for fixed price items."""
+
+    tier_behavior: OptionalNullable[CheckTierBehavior1] = UNSET
+    r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated."""
+
+    usage_model: OptionalNullable[UsageModel1] = UNSET
+    r"""Whether the feature should be prepaid upfront or billed for how much they use end of billing period."""
+
+    billing_units: OptionalNullable[float] = UNSET
+    r"""The amount per billing unit (eg. $9 / 250 units)"""
+
+    reset_usage_when_enabled: OptionalNullable[bool] = UNSET
+    r"""Whether the usage should be reset when the product is enabled."""
+
+    entity_feature_id: OptionalNullable[str] = UNSET
+    r"""The entity feature ID of the product item if applicable."""
+
+    display: OptionalNullable[ProductDisplay1] = UNSET
+    r"""The display of the product item."""
+
+    quantity: OptionalNullable[float] = UNSET
+    r"""Used in customer context. Quantity of the feature the customer has prepaid for."""
+
+    next_cycle_quantity: OptionalNullable[float] = UNSET
+    r"""Used in customer context. Quantity of the feature the customer will prepay for in the next cycle."""
+
+    config: OptionalNullable[CheckConfig1] = UNSET
+    r"""Configuration for rollover and proration behavior of the feature."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "type",
+                "feature_id",
+                "feature_type",
+                "included_usage",
+                "interval",
+                "interval_count",
+                "price",
+                "tiers",
+                "tier_behavior",
+                "usage_model",
+                "billing_units",
+                "reset_usage_when_enabled",
+                "entity_feature_id",
+                "display",
+                "quantity",
+                "next_cycle_quantity",
+                "config",
+            ]
+        )
+        nullable_fields = set(
+            [
+                "type",
+                "feature_id",
+                "feature_type",
+                "included_usage",
+                "interval",
+                "interval_count",
+                "price",
+                "tiers",
+                "tier_behavior",
+                "usage_model",
+                "billing_units",
+                "reset_usage_when_enabled",
+                "entity_feature_id",
+                "display",
+                "quantity",
+                "next_cycle_quantity",
+                "config",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+FreeTrialDuration1 = Union[
+    Literal[
+        "day",
+        "month",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""The duration type of the free trial"""
+
+
+class CheckFreeTrial1TypedDict(TypedDict):
+    duration: FreeTrialDuration1
+    r"""The duration type of the free trial"""
+    length: float
+    r"""The length of the duration type specified"""
+    unique_fingerprint: bool
+    r"""Whether the free trial is limited to one per customer fingerprint"""
+    card_required: bool
+    r"""Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file."""
+    trial_available: NotRequired[Nullable[bool]]
+    r"""Used in customer context. Whether the free trial is available for the customer if they were to attach the product."""
+
+
+class CheckFreeTrial1(BaseModel):
+    duration: FreeTrialDuration1
+    r"""The duration type of the free trial"""
+
+    length: float
+    r"""The length of the duration type specified"""
+
+    unique_fingerprint: bool
+    r"""Whether the free trial is limited to one per customer fingerprint"""
+
+    card_required: bool
+    r"""Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file."""
+
+    trial_available: OptionalNullable[bool] = True
+    r"""Used in customer context. Whether the free trial is available for the customer if they were to attach the product."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["trial_available"])
+        nullable_fields = set(["trial_available"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+ProductScenario1 = Union[
+    Literal[
+        "scheduled",
+        "active",
+        "new",
+        "renew",
+        "upgrade",
+        "update_prepaid_quantity",
+        "downgrade",
+        "cancel",
+        "expired",
+        "past_due",
+    ],
+    UnrecognizedStr,
+]
+r"""Scenario for when this product is used in attach flows"""
+
+
+class Properties1TypedDict(TypedDict):
+    is_free: bool
+    r"""True if the product has no base price or usage prices"""
+    is_one_off: bool
+    r"""True if the product only contains a one-time price"""
+    interval_group: NotRequired[Nullable[str]]
+    r"""The billing interval group for recurring products (e.g., 'monthly', 'yearly')"""
+    has_trial: NotRequired[Nullable[bool]]
+    r"""True if the product includes a free trial"""
+    updateable: NotRequired[Nullable[bool]]
+    r"""True if the product can be updated after creation (only applicable if there are prepaid recurring prices)"""
+
+
+class Properties1(BaseModel):
+    is_free: bool
+    r"""True if the product has no base price or usage prices"""
+
+    is_one_off: bool
+    r"""True if the product only contains a one-time price"""
+
+    interval_group: OptionalNullable[str] = UNSET
+    r"""The billing interval group for recurring products (e.g., 'monthly', 'yearly')"""
+
+    has_trial: OptionalNullable[bool] = UNSET
+    r"""True if the product includes a free trial"""
+
+    updateable: OptionalNullable[bool] = UNSET
+    r"""True if the product can be updated after creation (only applicable if there are prepaid recurring prices)"""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_group", "has_trial", "updateable"])
+        nullable_fields = set(["interval_group", "has_trial", "updateable"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class Product1TypedDict(TypedDict):
+    id: str
+    r"""The ID of the product you set when creating the product"""
+    name: str
+    r"""The name of the product"""
+    group: Nullable[str]
+    r"""Product group which this product belongs to"""
+    env: CheckEnv1
+    r"""The environment of the product"""
+    is_add_on: bool
+    r"""Whether the product is an add-on and can be purchased alongside other products"""
+    is_default: bool
+    r"""Whether the product is the default product"""
+    archived: bool
+    r"""Whether this product has been archived and is no longer available"""
+    version: float
+    r"""The current version of the product"""
+    created_at: float
+    r"""The timestamp of when the product was created in milliseconds since epoch"""
+    items: List[CheckItem1TypedDict]
+    r"""Array of product items that define the product's features and pricing"""
+    free_trial: Nullable[CheckFreeTrial1TypedDict]
+    r"""Free trial configuration for this product, if available"""
+    base_variant_id: Nullable[str]
+    r"""ID of the base variant this product is derived from"""
+    scenario: NotRequired[ProductScenario1]
+    r"""Scenario for when this product is used in attach flows"""
+    properties: NotRequired[Properties1TypedDict]
+
+
+class Product1(BaseModel):
+    id: str
+    r"""The ID of the product you set when creating the product"""
+
+    name: str
+    r"""The name of the product"""
+
+    group: Nullable[str]
+    r"""Product group which this product belongs to"""
+
+    env: CheckEnv1
+    r"""The environment of the product"""
+
+    is_add_on: bool
+    r"""Whether the product is an add-on and can be purchased alongside other products"""
+
+    is_default: bool
+    r"""Whether the product is the default product"""
+
+    archived: bool
+    r"""Whether this product has been archived and is no longer available"""
+
+    version: float
+    r"""The current version of the product"""
+
+    created_at: float
+    r"""The timestamp of when the product was created in milliseconds since epoch"""
+
+    items: List[CheckItem1]
+    r"""Array of product items that define the product's features and pricing"""
+
+    free_trial: Nullable[CheckFreeTrial1]
+    r"""Free trial configuration for this product, if available"""
+
+    base_variant_id: Nullable[str]
+    r"""ID of the base variant this product is derived from"""
+
+    scenario: Optional[ProductScenario1] = None
+    r"""Scenario for when this product is used in attach flows"""
+
+    properties: Optional[Properties1] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["scenario", "properties"])
+        nullable_fields = set(["group", "free_trial", "base_variant_id"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class Preview1TypedDict(TypedDict):
+    r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
+
+    scenario: Scenario1
+    r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
+    title: str
+    r"""A title suitable for displaying in a paywall or upgrade modal."""
+    message: str
+    r"""A message explaining why access was denied."""
+    feature_id: str
+    r"""The ID of the feature that was checked."""
+    feature_name: str
+    r"""The display name of the feature."""
+    products: List[Product1TypedDict]
+    r"""Products that would grant access to this feature. Use to display upgrade options."""
+
+
+class Preview1(BaseModel):
+    r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
+
+    scenario: Scenario1
+    r"""The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan."""
+
+    title: str
+    r"""A title suitable for displaying in a paywall or upgrade modal."""
+
+    message: str
+    r"""A message explaining why access was denied."""
+
+    feature_id: str
+    r"""The ID of the feature that was checked."""
+
+    feature_name: str
+    r"""The display name of the feature."""
+
+    products: List[Product1]
+    r"""Products that would grant access to this feature. Use to display upgrade options."""
+
+
+class CheckResponseBody1TypedDict(TypedDict):
+    r"""OK"""
+
+    allowed: bool
+    r"""Whether the customer is allowed to use the feature. True if they have sufficient balance or the feature is unlimited/boolean."""
+    customer_id: str
+    r"""The ID of the customer that was checked."""
+    balance: Nullable[BalanceTypedDict]
+    r"""The customer's balance for this feature. Null if the customer has no balance for this feature."""
+    flag: Nullable[Flag1TypedDict]
+    r"""The flag associated with this check, if any."""
+    entity_id: NotRequired[Nullable[str]]
+    r"""The ID of the entity, if an entity-scoped check was performed."""
+    required_balance: NotRequired[float]
+    r"""The required balance that was checked against."""
+    preview: NotRequired[Preview1TypedDict]
+    r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
+
+
+class CheckResponseBody1(BaseModel):
+    r"""OK"""
+
+    allowed: bool
+    r"""Whether the customer is allowed to use the feature. True if they have sufficient balance or the feature is unlimited/boolean."""
+
+    customer_id: str
+    r"""The ID of the customer that was checked."""
+
+    balance: Nullable[Balance]
+    r"""The customer's balance for this feature. Null if the customer has no balance for this feature."""
+
+    flag: Nullable[Flag1]
+    r"""The flag associated with this check, if any."""
+
+    entity_id: OptionalNullable[str] = UNSET
+    r"""The ID of the entity, if an entity-scoped check was performed."""
+
+    required_balance: Optional[float] = None
+    r"""The required balance that was checked against."""
+
+    preview: Optional[Preview1] = None
+    r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["entity_id", "required_balance", "preview"])
+        nullable_fields = set(["entity_id", "balance", "flag"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+CheckResponseTypedDict = TypeAliasType(
+    "CheckResponseTypedDict",
+    Union[CheckResponseBody1TypedDict, CheckResponseBody2TypedDict],
+)
+
+
+CheckResponse = TypeAliasType(
+    "CheckResponse", Union[CheckResponseBody1, CheckResponseBody2]
+)
 
 
 try:

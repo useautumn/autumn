@@ -1,46 +1,70 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect } from "react";
 import Hero from "./hero";
+import LazySection from "./lazy-section";
 import SectionDivider from "./section-divider";
 
-const ProductionScale = dynamic(() => import("@/components/production-scale"), {
-	ssr: false,
-});
-const Problem = dynamic(() => import("@/components/problem"), { ssr: false });
-const Solution = dynamic(() => import("@/components/solution"), { ssr: false });
-const Features = dynamic(() => import("@/components/features"), { ssr: false });
-const PricingModels = dynamic(() => import("@/components/pricing-models"), {
-	ssr: false,
-});
-const Testimonials = dynamic(() => import("@/components/testimonials"), {
-	ssr: false,
-});
-const Pricing = dynamic(() => import("@/components/pricing"), { ssr: false });
-const FAQ = dynamic(() => import("@/components/faq"), { ssr: false });
-const Footer = dynamic(() => import("@/components/footer"), { ssr: false });
+// All below-fold sections are code-split into separate lazy chunks so the
+// initial JS bundle only contains the hero. Framer-motion, GSAP ScrollTrigger,
+// and lottie-web are pulled into these chunks rather than the main bundle.
+// LazySection gates each component behind an IntersectionObserver so chunks
+// and their heavy assets (Lottie JSON, ScrollTrigger) only download as the
+// user scrolls toward them rather than all at once on page load.
+const LogoWall = dynamic(() => import("./logo-wall"));
+const Problem = dynamic(() => import("./problem"));
+const Solution = dynamic(() => import("./solution"));
+const PricingModels = dynamic(() => import("./pricing-models"));
+const Features = dynamic(() => import("./features"));
+const Testimonials = dynamic(() => import("./testimonials"));
+const ProductionScale = dynamic(() => import("./production-scale"));
+const Pricing = dynamic(() => import("./pricing"));
+const FAQ = dynamic(() => import("./faq"));
+const Footer = dynamic(() => import("./footer"));
+
+function scrollToHash() {
+	const hash = window.location.hash;
+	if (!hash) return;
+	const el = document.querySelector(hash);
+	if (!el) return;
+	const top = el.getBoundingClientRect().top + window.scrollY - 64;
+	window.scrollTo({ top, behavior: "smooth" });
+}
 
 export default function HomeSections() {
+	useEffect(() => {
+		if (!window.location.hash) return;
+		const timers = [
+			setTimeout(scrollToHash, 100),
+			setTimeout(scrollToHash, 500),
+			setTimeout(scrollToHash, 1200),
+		];
+		return () => timers.forEach(clearTimeout);
+	}, []);
+
 	return (
 		<>
 			<Hero />
+
+ <LogoWall />
 			<SectionDivider title="THE PROBLEM" />
-			<Problem />
+			<LazySection><Problem /></LazySection>
 			<SectionDivider title="THE SOLUTION" />
-			<Solution />
+			<LazySection><Solution /></LazySection>
 			<SectionDivider title="PRICING MODELS" />
-			<PricingModels />
+			<LazySection><PricingModels /></LazySection>
 			<SectionDivider title="FEATURES" />
-			<Features />
+			<LazySection><Features /></LazySection>
 			<SectionDivider title="TESTIMONIALS" />
-			<Testimonials />
+			<LazySection><Testimonials /></LazySection>
 			<SectionDivider title="PRODUCTION SCALE" />
-			<ProductionScale />
+			<LazySection><ProductionScale /></LazySection>
 			<SectionDivider title="PRICING" />
-			<Pricing />
+			<LazySection><Pricing /></LazySection>
 			<SectionDivider title="FAQ" />
-			<FAQ />
-			<Footer />
+			<LazySection><FAQ /></LazySection>
+			<LazySection><Footer /></LazySection>
 		</>
 	);
 }

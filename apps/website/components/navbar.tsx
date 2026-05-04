@@ -1,7 +1,5 @@
 "use client";
 
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
 import { motion } from "motion/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -29,12 +27,13 @@ import type {
 	PixelIconComponent,
 } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { getGsap } from "@/lib/lazyGsap";
 import { DashboardIconPixel } from "./dashboard-icon-pixel";
 
 const NAV_LINKS = [
 	{ label: "Docs", href: "https://docs.useautumn.com/welcome", Icon: IconDocs },
 	{ label: "Blog", href: "/blog", Icon: IconBlog },
-	{ label: "Pricing", href: "#pricing", Icon: IconPricing },
+	{ label: "Pricing", href: "/#pricing", Icon: IconPricing },
 	{
 		label: "Discord",
 		href: "https://discord.com/invite/STqxY92zuS",
@@ -42,10 +41,18 @@ const NAV_LINKS = [
 	},
 ];
 
+type GSAPTimeline = {
+	play: () => GSAPTimeline;
+	reverse: () => GSAPTimeline;
+	kill: () => void;
+	// biome-ignore lint/suspicious/noExplicitAny: structural shim for GSAP's overloaded .to() signature
+	to: (...args: any[]) => GSAPTimeline;
+};
+
 const NavIconPixel = forwardRef<PixelHoverHandle, { Icon: PixelIconComponent }>(
 	function NavIconPixel({ Icon }, ref) {
 		const iconRef = useRef<SVGSVGElement | null>(null);
-		const tlRef = useRef<gsap.core.Timeline | null>(null);
+		const tlRef = useRef<GSAPTimeline | null>(null);
 
 		useImperativeHandle(ref, () => ({
 			restart: () => tlRef.current?.play(),
@@ -53,46 +60,39 @@ const NavIconPixel = forwardRef<PixelHoverHandle, { Icon: PixelIconComponent }>(
 		}));
 
 		useEffect(() => {
-			const pixelEls =
-				iconRef.current?.querySelectorAll<SVGPathElement>(".icon-pixel-path");
-			if (!pixelEls?.length) return;
+			const el = iconRef.current;
+			if (!el) return;
+			let cancelled = false;
 
-			const pixels = Array.from(pixelEls).sort((a, b) => {
-				const aBox = a.getBBox();
-				const bBox = b.getBBox();
-				return (
-					aBox.x +
-					aBox.width / 2 -
-					(aBox.y + aBox.height / 2) -
-					(bBox.x + bBox.width / 2 - (bBox.y + bBox.height / 2))
-				);
-			});
+			getGsap().then((gsap) => {
+				if (cancelled) return;
+				const pixelEls = el.querySelectorAll<SVGPathElement>(".icon-pixel-path");
+				if (!pixelEls.length) return;
 
-			gsap.set(pixels, {
-				opacity: 0.15,
-				scale: 0.8,
-				transformOrigin: "left bottom",
-				fill: "currentColor",
-			});
-
-			tlRef.current = gsap.timeline({ paused: true });
-
-			tlRef.current
-				.to(pixels, {
-					opacity: 1,
-					scale: 1.15,
-					fill: "#FFFFFF",
-					duration: 0.01,
-					stagger: 0.025,
-					ease: "power2.out",
-				})
-				.to(pixels, {
-					scale: 1,
-					duration: 0.01,
-					ease: "back.out(3)",
+				const pixels = Array.from(pixelEls).sort((a, b) => {
+					const aBox = a.getBBox();
+					const bBox = b.getBBox();
+					return (
+						aBox.x + aBox.width / 2 - (aBox.y + aBox.height / 2) -
+						(bBox.x + bBox.width / 2 - (bBox.y + bBox.height / 2))
+					);
 				});
 
+				gsap.set(pixels, {
+					opacity: 0.15,
+					scale: 0.8,
+					transformOrigin: "left bottom",
+					fill: "currentColor",
+				});
+
+				tlRef.current = gsap.timeline({ paused: true });
+				tlRef.current!
+					.to(pixels, { opacity: 1, scale: 1.15, fill: "#FFFFFF", duration: 0.01, stagger: 0.025, ease: "power2.out" })
+					.to(pixels, { scale: 1, duration: 0.01, ease: "back.out(3)" });
+			});
+
 			return () => {
+				cancelled = true;
 				tlRef.current?.kill();
 			};
 		}, []);
@@ -110,13 +110,20 @@ NavIconPixel.displayName = "NavIconPixel";
 
 function NavLinkItem({ item }: { item: (typeof NAV_LINKS)[number] }) {
 	const iconRef = useRef<PixelHoverHandle | null>(null);
-	const isAnchor = item.href.startsWith("#");
+	const isAnchor =
+		item.href.startsWith("#") || item.href.startsWith("/#");
 
 	const handleClick = (e: MouseEvent<HTMLAnchorElement>) => {
 		if (!isAnchor) return;
-		e.preventDefault();
-		const target = document.querySelector(item.href);
-		if (target) target.scrollIntoView({ behavior: "smooth" });
+		const hash = item.href.startsWith("/#")
+			? item.href.slice(1)
+			: item.href;
+		const el = document.querySelector(hash);
+		if (el) {
+			e.preventDefault();
+			const top = el.getBoundingClientRect().top + window.scrollY - 64;
+			window.scrollTo({ top, behavior: "smooth" });
+		}
 	};
 
 	return (
@@ -182,125 +189,21 @@ export default function Navbar({
 		};
 	}, [menuOpen]);
 
-	useGSAP(
-		() => {
-			if (!animateIntro) return;
-			gsap.set(".nav-root", { opacity: 0 });
-			gsap.set(".nav-logo", {
-				opacity: 0,
-				filter: "blur(6px) brightness(1)",
-				scale: 0.92,
-				transformOrigin: "left center",
-			});
-			gsap.set(".nav-link", { opacity: 0, y: -8 });
-			gsap.set(".nav-dashboard", { opacity: 0, scale: 0.95 });
+	const navMobileRef = useRef<HTMLDivElement | null>(null);
 
-			const tl = gsap.timeline({ defaults: { overwrite: "auto" } });
-
-			tl.to(".nav-root", { opacity: 1, duration: 0.3, ease: "none" })
-				.to(".nav-logo", {
-					opacity: 1,
-					filter: "blur(0px) brightness(1)",
-					scale: 1,
-					duration: 0.7,
-					ease: "power2.out",
-				})
-				.to(".nav-logo", {
-					filter: "blur(0px) brightness(1.6)",
-					duration: 0.225,
-					ease: "power2.in",
-				})
-				.to(".nav-logo", {
-					filter: "blur(0px) brightness(1)",
-					duration: 0.125,
-					ease: "power2.out",
-				})
-				.to(
-					".nav-link",
-					{
-						opacity: 1,
-						y: 0,
-						duration: 0.25,
-						stagger: 0.06,
-						ease: "power2.out",
-					},
-					"-=0.05",
-				)
-				.to(
-					".nav-dashboard",
-					{
-						opacity: 1,
-						scale: 1,
-						duration: 0.3,
-						ease: "back.out(1.5)",
-					},
-					"-=0.1",
-				);
-		},
-		{ scope: containerRef, dependencies: [animateIntro] },
-	);
-
-	const mobileTl = useRef<gsap.core.Timeline | null>(null);
-
-	useGSAP(
-		() => {
-			gsap.set(".nav-mobile", {
-				opacity: 0,
-				clipPath: "inset(0% 0 100% 0)",
-				pointerEvents: "none",
-			});
-
-			gsap.set(
-				".nav-mobile a, .nav-mobile img, .nav-mobile button, .nav-mobile .border-b",
-				{
-					opacity: 0,
-					filter: "blur(8px)",
-					scale: 0.95,
-				},
-			);
-
-			mobileTl.current = gsap.timeline({
-				paused: true,
-				defaults: { overwrite: "auto" },
-			});
-
-			mobileTl.current
-				.to(".nav-mobile", {
-					opacity: 1,
-					y: 0,
-					pointerEvents: "auto",
-					clipPath: "inset(0% 0 0% 0)",
-					duration: 0.65,
-					ease: "power3.inOut",
-				})
-				.to(
-					".nav-mobile a, .nav-mobile img, .nav-mobile button, .nav-mobile .border-b",
-					{
-						opacity: 1,
-						filter: "blur(0px)",
-						scale: 1,
-						duration: 0.4,
-						stagger: 0.02,
-						ease: "power2.out",
-					},
-					"-=0.35",
-				);
-		},
-		{ scope: containerRef },
-	);
-
-	useGSAP(
-		() => {
-			if (mobileTl.current) {
-				if (menuOpen) {
-					mobileTl.current.timeScale(1).play();
-				} else {
-					mobileTl.current.timeScale(1.8).reverse();
-				}
-			}
-		},
-		{ scope: containerRef, dependencies: [menuOpen] },
-	);
+	useEffect(() => {
+		const el = navMobileRef.current;
+		if (!el) return;
+		if (menuOpen) {
+			el.style.opacity = "1";
+			el.style.pointerEvents = "auto";
+			el.style.clipPath = "inset(0% 0 0% 0)";
+		} else {
+			el.style.opacity = "0";
+			el.style.pointerEvents = "none";
+			el.style.clipPath = "inset(0% 0 100% 0)";
+		}
+	}, [menuOpen]);
 
 	return (
 		<div
@@ -335,7 +238,7 @@ export default function Navbar({
 							width={114}
 							height={28}
 							alt="Autumn"
-							loading="lazy"
+							priority
 							className="nav-logo ml-2 block w-[90px] sm:w-[110px] lg:w-[114px] h-auto"
 						/>
 					</Link>
@@ -385,8 +288,9 @@ export default function Navbar({
 				</nav>
 			</div>
 			<div
+				ref={navMobileRef}
 				className={cn(
-					"fixed nav-mobile inset-x-0 z-40 flex h-[calc(100dvh-58px)] flex-col overflow-x-hidden overflow-y-auto bg-[#000000] px-4 pb-8 font-mono uppercase transition-all duration-300 md:px-(--page-pad) lg:top-5",
+					"fixed inset-x-0 z-40 flex h-[calc(100dvh-58px)] flex-col overflow-x-hidden overflow-y-auto bg-[#000000] px-4 pb-8 font-mono uppercase md:px-(--page-pad) lg:top-5",
 					scrolled && !recoilHidden
 						? "top-[58px] sm:top-[60px]"
 						: "top-[66px] sm:top-[62px]",
@@ -395,29 +299,39 @@ export default function Navbar({
 					opacity: 0,
 					pointerEvents: "none",
 					clipPath: "inset(0% 0 100% 0)",
+					transition: "opacity 0.2s ease, clip-path 0.2s cubic-bezier(0.87, 0, 0.13, 1)",
 				}}
 			>
 				{/* Nav items */}
 				<div className="flex flex-col">
 					{NAV_LINKS.map((item) => {
-						const isAnchor = item.href.startsWith("#");
-						const isExternal = item.href.startsWith("http");
-						return (
-							<Link
-								key={item.label}
-								href={item.href}
-								target={isExternal ? "_blank" : undefined}
-								onClick={
-									isAnchor
-										? (e) => {
+					const isAnchor =
+						item.href.startsWith("#") || item.href.startsWith("/#");
+					const isExternal = item.href.startsWith("http");
+					return (
+						<Link
+							key={item.label}
+							href={item.href}
+							target={isExternal ? "_blank" : undefined}
+							onClick={
+								isAnchor
+									? (e) => {
+											const hash = item.href.startsWith("/#")
+												? item.href.slice(1)
+												: item.href;
+											const el = document.querySelector(hash);
+											setMenuOpen(false);
+											if (el) {
 												e.preventDefault();
-												setMenuOpen(false);
-												const target = document.querySelector(item.href);
-												if (target)
-													target.scrollIntoView({ behavior: "smooth" });
+												const top =
+													el.getBoundingClientRect().top +
+													window.scrollY -
+													64;
+												window.scrollTo({ top, behavior: "smooth" });
 											}
-										: undefined
-								}
+										}
+									: undefined
+							}
 								className="flex items-center gap-4 px-4 py-3.5 border-b border-[#292929] active:bg-[#141414ea] text-[#ffffff99] hover:text-white active:text-white transition-colors text-sm tracking-[-1%]"
 							>
 								<item.Icon className="h-3.5 w-3.5 shrink-0" />

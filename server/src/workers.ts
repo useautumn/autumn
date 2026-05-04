@@ -10,6 +10,7 @@ import {
 import "./internal/misc/requestBlocks/requestBlockStore.js";
 import "./internal/misc/rollouts/rolloutConfigStore.js";
 import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
+import "./internal/misc/jobQueues/jobQueueStore.js";
 
 // Number of worker processes (defaults to CPU cores)
 const NUM_PROCESSES = process.env.NODE_ENV === "development" ? 3 : 4;
@@ -26,6 +27,7 @@ if (cluster.isPrimary) {
 	// await initHatchetWorker();
 
 	console.log(`Starting ${NUM_PROCESSES} worker processes`);
+	console.log(`SQS URL: ${process.env.SQS_QUEUE_URL_V2}`);
 
 	// Fork workers
 	for (let i = 0; i < NUM_PROCESSES; i++) {
@@ -89,7 +91,10 @@ if (cluster.isPrimary) {
 		}
 	});
 } else {
-	// Worker process
+	// Worker process — start OTel SDK so child spans (Stripe/Redis/Drizzle/
+	// withSpan/withWorkerSpan) export to Axiom.
+	await import("./instrumentation.js");
+
 	const startupStartedAt = Date.now();
 	const queueImplementation = "SQS";
 	startMemoryMonitor("worker", 60_000);

@@ -11,7 +11,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
-import { saveLockReceipt } from "@/internal/balances/utils/lock/saveLockReceipt.js";
+import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -225,7 +225,7 @@ export const executePostgresDeductionV2 = async ({
 				}
 
 				if (preparedLock?.enabled) {
-					await saveLockReceipt({
+					await saveLockReceiptV2({
 						lock: preparedLock,
 						customerId: fullSubject.customerId || customerId,
 						featureId: feature.id,

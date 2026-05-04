@@ -8,6 +8,7 @@ import { safeParse } from "../lib/schemas.js";
 import { ClosedEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type FinalizeLockGlobals = {
@@ -46,11 +47,22 @@ export type FinalizeBalanceParams = {
 };
 
 /**
- * OK
+ * Accepted. Autumn is experiencing degraded service from a downstream provider, so the finalize request was allowed fail-open.
  */
-export type FinalizeLockResponse = {
+export type FinalizeLockResponseBody2 = {
   success: boolean;
 };
+
+/**
+ * OK
+ */
+export type FinalizeLockResponseBody1 = {
+  success: boolean;
+};
+
+export type FinalizeLockResponse =
+  | FinalizeLockResponseBody1
+  | FinalizeLockResponseBody2;
 
 /** @internal */
 export const Action$outboundSchema: z.ZodMiniEnum<typeof Action> = z.enum(
@@ -93,12 +105,49 @@ export function finalizeBalanceParamsToJSON(
 }
 
 /** @internal */
-export const FinalizeLockResponse$inboundSchema: z.ZodMiniType<
-  FinalizeLockResponse,
+export const FinalizeLockResponseBody2$inboundSchema: z.ZodMiniType<
+  FinalizeLockResponseBody2,
   unknown
 > = z.object({
   success: types.boolean(),
 });
+
+export function finalizeLockResponseBody2FromJSON(
+  jsonString: string,
+): SafeParseResult<FinalizeLockResponseBody2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => FinalizeLockResponseBody2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'FinalizeLockResponseBody2' from JSON`,
+  );
+}
+
+/** @internal */
+export const FinalizeLockResponseBody1$inboundSchema: z.ZodMiniType<
+  FinalizeLockResponseBody1,
+  unknown
+> = z.object({
+  success: types.boolean(),
+});
+
+export function finalizeLockResponseBody1FromJSON(
+  jsonString: string,
+): SafeParseResult<FinalizeLockResponseBody1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => FinalizeLockResponseBody1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'FinalizeLockResponseBody1' from JSON`,
+  );
+}
+
+/** @internal */
+export const FinalizeLockResponse$inboundSchema: z.ZodMiniType<
+  FinalizeLockResponse,
+  unknown
+> = smartUnion([
+  z.lazy(() => FinalizeLockResponseBody1$inboundSchema),
+  z.lazy(() => FinalizeLockResponseBody2$inboundSchema),
+]);
 
 export function finalizeLockResponseFromJSON(
   jsonString: string,

@@ -78,11 +78,13 @@ export const useHasChanges = () => {
 			features,
 		});
 
-		return (
+		const hasChanges =
 			!comparison.itemsSame ||
 			!comparison.detailsSame ||
-			!comparison.freeTrialsSame
-		);
+			!comparison.freeTrialsSame ||
+			!comparison.configSame;
+
+		return hasChanges;
 	}, [product, baseProduct, features]);
 };
 

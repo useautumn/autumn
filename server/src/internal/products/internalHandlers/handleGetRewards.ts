@@ -1,4 +1,5 @@
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { Scopes } from "@autumn/shared";
 import { RewardProgramService } from "@/internal/rewards/RewardProgramService";
 import { RewardService } from "@/internal/rewards/RewardService";
 
@@ -7,6 +8,7 @@ import { RewardService } from "@/internal/rewards/RewardService";
  * Used by: vite/src/hooks/queries/useRewardsQuery.tsx
  */
 export const handleGetRewards = createRoute({
+	scopes: [Scopes.Plans.Read],
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");
 

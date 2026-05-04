@@ -1,3 +1,4 @@
+import { Scopes } from "@autumn/shared";
 import { AppEnv } from "@shared/index";
 import { sendCustomSvixEvent } from "@/external/svix/svixHelpers";
 import {
@@ -8,6 +9,7 @@ import { VercelResourceService } from "@/external/vercel/services/VercelResource
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
 export const handleRotateResourceSecret = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const { env, integrationConfigurationId, resourceId } = c.req.param();
 		const { org, db } = c.get("ctx");

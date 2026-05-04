@@ -53,8 +53,8 @@ class Autumn(BaseSDK):
         x_api_version: Optional[str] = None,
         fail_open: Optional[bool] = None,
         server_idx: Optional[int] = None,
-        server_url: Optional[str] = None,
         url_params: Optional[Dict[str, str]] = None,
+        server_url: Optional[str] = None,
         client: Optional[HttpClient] = None,
         async_client: Optional[AsyncHttpClient] = None,
         retry_config: OptionalNullable[RetryConfig] = UNSET,
@@ -307,7 +307,9 @@ class Autumn(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.CheckResponse, http_res)
+            return unmarshal_json_response(models.CheckResponseBody1, http_res)
+        if utils.match_response(http_res, "202", "application/json"):
+            return unmarshal_json_response(models.CheckResponseBody2, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
             raise errors.AutumnDefaultError(
@@ -420,7 +422,9 @@ class Autumn(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.CheckResponse, http_res)
+            return unmarshal_json_response(models.CheckResponseBody1, http_res)
+        if utils.match_response(http_res, "202", "application/json"):
+            return unmarshal_json_response(models.CheckResponseBody2, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(
@@ -530,7 +534,9 @@ class Autumn(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.TrackResponse, http_res)
+            return unmarshal_json_response(models.TrackResponseBody1, http_res)
+        if utils.match_response(http_res, "202", "application/json"):
+            return unmarshal_json_response(models.TrackResponseBody2, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
             raise errors.AutumnDefaultError(
@@ -640,7 +646,9 @@ class Autumn(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.TrackResponse, http_res)
+            return unmarshal_json_response(models.TrackResponseBody1, http_res)
+        if utils.match_response(http_res, "202", "application/json"):
+            return unmarshal_json_response(models.TrackResponseBody2, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

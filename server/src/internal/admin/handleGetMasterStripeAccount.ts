@@ -1,7 +1,9 @@
 import { initMasterStripe } from "@/external/connect/initStripeCli";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 export const handleGetMasterStripeAccount = createRoute({
+	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { env, logger } = ctx;

@@ -126,11 +126,13 @@ export const getCachedFullCustomer = async ({
 	customerId,
 	entityId,
 	redisInstance,
+	skipRolloutCheck = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	redisInstance?: Redis;
+	skipRolloutCheck?: boolean;
 }): Promise<FullCustomer | undefined> => {
 	const { org, env } = ctx;
 	const cacheKey = buildFullCustomerCacheKey({
@@ -151,6 +153,7 @@ export const getCachedFullCustomer = async ({
 	delete parsed._cachedAt;
 
 	if (
+		!skipRolloutCheck &&
 		ctx.rolloutSnapshot &&
 		isSnapshotCacheStale({
 			snapshot: ctx.rolloutSnapshot,
@@ -191,6 +194,16 @@ export const getCachedFullCustomer = async ({
 
 	if (!fullCustomer.send_email_receipts) {
 		fullCustomer.send_email_receipts = false;
+	}
+
+	// Safeguard for new product fields: Upstash Lua cjson collapses `{}` to `[]`,
+	// and pre-existing cache entries may not have these fields at all.
+	for (const cusProduct of fullCustomer.customer_products ?? []) {
+		if (!cusProduct.product) continue;
+		const product = cusProduct.product as { config?: unknown };
+		if (!product.config || Array.isArray(product.config)) {
+			product.config = {};
+		}
 	}
 
 	fullCustomer.invoices = deduplicateFullCustomerInvoices(fullCustomer);

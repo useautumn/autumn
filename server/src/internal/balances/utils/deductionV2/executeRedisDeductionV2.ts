@@ -7,10 +7,14 @@ import type { Redis } from "ioredis";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
+import {
+	getRedisTrackFeatureIdempotencyKey,
+	TRACK_V3_IDEMPOTENCY_TTL_MS,
+} from "@/internal/balances/track/v3/trackIdempotencyKey.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
+import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
-import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
@@ -36,6 +40,7 @@ export const executeRedisDeductionV2 = async ({
 	fullSubject,
 	entityId,
 	deductions,
+	idempotencyKey,
 	deductionOptions = {},
 	redisInstance,
 }: {
@@ -43,6 +48,7 @@ export const executeRedisDeductionV2 = async ({
 	fullSubject: FullSubject;
 	entityId?: string;
 	deductions: FeatureDeduction[];
+	idempotencyKey?: string | null;
 	deductionOptions?: DeductionOptions;
 	redisInstance?: Redis;
 }): Promise<{
@@ -125,28 +131,32 @@ export const executeRedisDeductionV2 = async ({
 			continue;
 		}
 
-		const balanceKeysByFeatureId: Record<string, string> = {};
-		for (const deductionEntry of customerEntitlementDeductions) {
-			const targetFeatureId =
-				(deductionEntry as { feature_id?: string }).feature_id ?? feature.id;
-			if (!balanceKeysByFeatureId[targetFeatureId]) {
-				balanceKeysByFeatureId[targetFeatureId] = buildSharedFullSubjectBalanceKey(
-					{
-						orgId: org.id,
-						env,
-						customerId,
-						featureId: targetFeatureId,
-					},
-				);
-			}
-		}
+		const idempotencyRedisKey = idempotencyKey
+			? getRedisTrackFeatureIdempotencyKey({
+					ctx,
+					customerId,
+					featureId: feature.id,
+				}).redisKey
+			: null;
+
+		const { keys, balanceKeyIndexByFeatureId } =
+			buildDeductFromSubjectBalancesKeys({
+				orgId: org.id,
+				env,
+				customerId,
+				routingKey,
+				lockReceiptKey: preparedLock?.redis_receipt_key ?? lockReceiptKey,
+				idempotencyKey: idempotencyRedisKey,
+				customerEntitlementDeductions,
+				fallbackFeatureId: feature.id,
+			});
 
 		const luaParams = {
 			org_id: org.id,
 			env,
 			customer_id: customerId,
 			customer_entitlement_deductions: customerEntitlementDeductions,
-			balance_keys_by_feature_id: balanceKeysByFeatureId,
+			balance_key_index_by_feature_id: balanceKeyIndexByFeatureId,
 			spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 			usage_based_cus_ent_ids_by_feature_id:
 				usageBasedCusEntIdsByFeatureId ?? null,
@@ -158,6 +168,8 @@ export const executeRedisDeductionV2 = async ({
 			alter_granted_balance: options.alterGrantedBalance,
 			overage_behaviour: options.overageBehaviour,
 			feature_id: feature.id,
+			idempotency_ttl_ms:
+				idempotencyRedisKey !== null ? TRACK_V3_IDEMPOTENCY_TTL_MS : null,
 			lock: preparedLock
 				? {
 						...preparedLock,
@@ -165,7 +177,7 @@ export const executeRedisDeductionV2 = async ({
 					}
 				: null,
 			unwind_value: unwindValue ?? null,
-			lock_receipt_key: lockReceiptKey ?? null,
+			debug: process.env.NODE_ENV !== "production",
 		};
 
 		const targetRedis = redisInstance ?? ctx.redisV2;
@@ -173,7 +185,8 @@ export const executeRedisDeductionV2 = async ({
 		const result = await tryRedisWrite(
 			() =>
 				targetRedis.deductFromSubjectBalances(
-					routingKey,
+					keys.length,
+					...keys,
 					JSON.stringify(luaParams),
 				),
 			redisInstance,
@@ -182,7 +195,7 @@ export const executeRedisDeductionV2 = async ({
 		if (!result) {
 			throw new RedisDeductionError({
 				message: "Redis not ready for deduction",
-				code: RedisDeductionErrorCode.SubjectBalanceNotFound,
+				code: RedisDeductionErrorCode.RedisUnavailable,
 			});
 		}
 
@@ -267,6 +280,9 @@ export const executeRedisDeductionV2 = async ({
 				});
 			}
 		} catch (error) {
+			// if (error.message?.includes("declined")) {
+			// 	return;
+			// }
 			if (error instanceof Error && !error?.message?.includes("declined")) {
 				ctx.logger.error(
 					`[executeRedisDeductionV2] Attempting rollback due to error: ${error}`,

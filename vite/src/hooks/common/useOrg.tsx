@@ -5,11 +5,21 @@ import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 
-let lastSwitchedOrgId: string | null = null;
+const LAST_ORG_KEY = "autumn_last_active_org_id";
+
 export const setLastSwitchedOrgId = (id: string) => {
-	lastSwitchedOrgId = id;
+	try {
+		localStorage.setItem(LAST_ORG_KEY, id);
+	} catch {}
 };
-export const getLastSwitchedOrgId = () => lastSwitchedOrgId;
+
+export const getLastSwitchedOrgId = (): string | null => {
+	try {
+		return localStorage.getItem(LAST_ORG_KEY);
+	} catch {
+		return null;
+	}
+};
 
 export const useOrg = (params?: { env?: AppEnv }) => {
 	const currentEnv = useEnv();
@@ -39,17 +49,30 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 	});
 
 	useEffect(() => {
+		if (org?.id) {
+			setLastSwitchedOrgId(org.id);
+		}
+	}, [org?.id]);
+
+	useEffect(() => {
 		const handleNoActiveOrg = async () => {
-			if (orgList && orgList.length > 0) {
-				await authClient.organization.setActive({
-					organizationId: orgList[0].id,
-				});
-				window.location.reload();
-			} else {
+			if (!orgList || orgList.length === 0) {
 				console.log("No org to set active, signing out");
 				await authClient.signOut();
 				window.location.href = "/sign-in";
+				return;
 			}
+
+			const lastOrgId = getLastSwitchedOrgId();
+			const preferredOrg = lastOrgId
+				? orgList.find((o) => o.id === lastOrgId)
+				: null;
+			const targetOrgId = preferredOrg?.id ?? orgList[0].id;
+
+			await authClient.organization.setActive({
+				organizationId: targetOrgId,
+			});
+			window.location.reload();
 		};
 
 		if (!org && !isLoading) {

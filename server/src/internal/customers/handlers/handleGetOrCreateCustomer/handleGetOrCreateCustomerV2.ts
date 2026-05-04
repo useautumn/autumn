@@ -2,12 +2,14 @@ import {
 	AffectedResource,
 	CreateCustomerParamsV1Schema,
 	CustomerDataSchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getOrCreateApiCustomerByRollout } from "@/internal/customers/actions/getOrCreateApiCustomerByRollout.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
 export const handleGetOrCreateCustomerV2 = createRoute({
+	scopes: { ANY: [Scopes.Customers.Write, Scopes.Customers.Read] },
 	resource: AffectedResource.Customer,
 	body: CreateCustomerParamsV1Schema,
 	handler: async (c) => {

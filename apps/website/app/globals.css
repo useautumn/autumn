@@ -332,3 +332,10 @@ body {
   color: #b08aff;
   text-decoration-color: #b08aff;
 }
+
+/* ==========================================================================
+   HERO REVEAL  —  desktop only (lg+), driven by GSAP
+   On mobile, GSAP is skipped and hero elements are immediately visible.
+   The lg:opacity-0 utility class on .hero-reveal / .hero-cta elements
+   ensures they start hidden on desktop where GSAP animates them in.
+   ========================================================================== */

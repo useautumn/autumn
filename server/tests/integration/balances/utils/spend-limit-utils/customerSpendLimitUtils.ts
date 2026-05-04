@@ -1,4 +1,5 @@
 import type { CustomerBillingControls } from "@autumn/shared";
+import { timeout } from "@/utils/genUtils.js";
 import type { AutumnV2_1Client } from "./entitySpendLimitUtils.js";
 
 export const setCustomerSpendLimit = async ({
@@ -24,7 +25,9 @@ export const setCustomerSpendLimit = async ({
 		],
 	};
 
+	await timeout(2000);
 	await autumn.customers.update(customerId, {
 		billing_controls: billingControls,
 	});
+	await timeout(3000);
 };

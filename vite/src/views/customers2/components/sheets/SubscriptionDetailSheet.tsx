@@ -1,8 +1,11 @@
 import {
 	CusProductStatus,
 	type Entity,
+	type FrontendProduct,
 	isCustomerProductTrialing,
 	type ProductItem,
+	sortPlanItems,
+	splitBooleanItems,
 	UsageModel,
 } from "@autumn/shared";
 import {
@@ -20,6 +23,8 @@ import {
 	XCircle,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
+import { useMemo } from "react";
+import { CollapsedBooleanItems } from "@/components/forms/shared/plan-items/CollapsedBooleanItems";
 import { Button } from "@/components/v2/buttons/Button";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -38,6 +43,60 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
+
+function SubscriptionDetailItems({
+	items,
+	product,
+	prepaidDisplayQuantities,
+}: {
+	items: ProductItem[];
+	product: FrontendProduct;
+	prepaidDisplayQuantities: Record<string, number>;
+}) {
+	const sortedItems = useMemo(() => sortPlanItems({ items }), [items]);
+	const { visibleItems, collapsedBooleanItems } = useMemo(
+		() => splitBooleanItems({ items: sortedItems }),
+		[sortedItems],
+	);
+
+	const renderRow = (item: ProductItem, index: number) => {
+		if (!item.feature_id) return null;
+		const prepaidQuantity =
+			item.usage_model === UsageModel.Prepaid
+				? (prepaidDisplayQuantities[item.feature_id] ?? null)
+				: null;
+
+		return (
+			<PlanFeatureRow
+				key={item.feature_id || item.price_id || index}
+				item={item}
+				index={index}
+				readOnly={true}
+				prepaidQuantity={prepaidQuantity}
+			/>
+		);
+	};
+
+	return (
+		<SheetSection>
+			<div className="flex gap-2 justify-between items-center h-6 mb-3">
+				<BasePriceDisplay product={product} readOnly={true} />
+			</div>
+
+			<div className="space-y-2">
+				{visibleItems.map((item, index) => renderRow(item, index))}
+				{collapsedBooleanItems.length > 0 && (
+					<CollapsedBooleanItems
+						items={collapsedBooleanItems}
+						renderItem={(item, index) =>
+							renderRow(item, visibleItems.length + index)
+						}
+					/>
+				)}
+			</div>
+		</SheetSection>
+	);
+}
 
 export function SubscriptionDetailSheet() {
 	const { customer } = useCusQuery();
@@ -121,33 +180,11 @@ export function SubscriptionDetailSheet() {
 			/>
 
 			{productV2?.items && productV2.items.length > 0 && (
-				<SheetSection>
-					{productV2 && (
-						<div className="flex gap-2 justify-between items-center h-6 mb-3">
-							<BasePriceDisplay product={productV2} readOnly={true} />
-						</div>
-					)}
-
-					<div className="space-y-2">
-						{productV2.items.map((item: ProductItem, index: number) => {
-							if (!item.feature_id) return null;
-							const prepaidQuantity =
-								item.usage_model === UsageModel.Prepaid
-									? (prepaidDisplayQuantities[item.feature_id] ?? null)
-									: null;
-
-							return (
-								<PlanFeatureRow
-									key={item.feature_id || item.price_id || index}
-									item={item}
-									index={index}
-									readOnly={true}
-									prepaidQuantity={prepaidQuantity}
-								/>
-							);
-						})}
-					</div>
-				</SheetSection>
+				<SubscriptionDetailItems
+					items={productV2.items}
+					product={productV2}
+					prepaidDisplayQuantities={prepaidDisplayQuantities}
+				/>
 			)}
 
 			<SheetSection withSeparator={true}>

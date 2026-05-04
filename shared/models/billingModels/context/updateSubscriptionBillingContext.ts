@@ -21,6 +21,20 @@ export interface UpdateSubscriptionBillingContext extends BillingContext {
 	recalculateBalances?: boolean;
 
 	intent: UpdateSubscriptionIntent;
+
+	/**
+	 * Mirror of `UpdateSubscriptionBillingContextOverride.chargeExistingOverages`.
+	 * Read by `computeCustomPlan` to decide whether to call
+	 * `buildAutumnLineItems` with `includeArrearLineItems: true`.
+	 */
+	chargeExistingOverages?: boolean;
+
+	/**
+	 * Mirror of `UpdateSubscriptionBillingContextOverride.skipExistingUsageCarry`.
+	 * Read by `computeCustomPlanNewCustomerProduct` to decide whether to carry
+	 * consumable usages forward when initializing the new customer_product.
+	 */
+	skipExistingUsageCarry?: boolean;
 }
 
 export interface UpdateSubscriptionBillingContextOverrides {

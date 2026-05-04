@@ -1,8 +1,10 @@
 import { AppEnv } from "@shared/index";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { initRevenuecatCli } from "../misc/initRevenuecatCli";
 
 export const handleGetRevenueCatProducts = createRoute({
+	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const { org, env } = c.get("ctx");
 		const revenueCatConfig = org.processor_configs?.revenuecat;

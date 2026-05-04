@@ -1,6 +1,7 @@
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { nullish } from "@utils/utils";
 import { z } from "zod/v4";
+import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
@@ -31,6 +32,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 
 		processor_subscription_id: z.string().nullable().optional(),
 		no_billing_changes: z.boolean().optional(),
+		discounts: z.array(AttachDiscountSchema).optional(),
 		recalculate_balances: z
 			.object({
 				enabled: z.boolean(),

@@ -1,7 +1,9 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
+import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
+import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
@@ -16,11 +18,13 @@ import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
+import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
+import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
 import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
 import { handleGetRollouts } from "./rollouts/handleGetRollouts";
 import { handleUpdateRollout } from "./rollouts/handleUpdateRollout";
@@ -30,6 +34,7 @@ export const honoAdminRouter = new Hono<HonoEnv>();
 
 honoAdminRouter.get("/users", ...handleListAdminUsers);
 honoAdminRouter.get("/orgs", ...handleListAdminOrgs);
+honoAdminRouter.get("/edge-config-sources", ...handleGetAdminEdgeConfigSources);
 honoAdminRouter.get(
 	"/orgs/:org_id/request-block",
 	...handleGetAdminOrgRequestBlock,
@@ -64,6 +69,8 @@ honoAdminRouter.put(
 );
 honoAdminRouter.get("/org-limits-config", ...handleGetAdminOrgLimitsConfig);
 honoAdminRouter.put("/org-limits-config", ...handleUpsertAdminOrgLimitsConfig);
+honoAdminRouter.get("/job-queue-config", ...handleGetAdminJobQueueConfig);
+honoAdminRouter.put("/job-queue-config", ...handleUpsertAdminJobQueueConfig);
 honoAdminRouter.get("/stripe-sync-config", ...handleGetAdminStripeSyncConfig);
 honoAdminRouter.put(
 	"/stripe-sync-config",
@@ -88,6 +95,7 @@ honoAdminRouter.put(
 	"/rollouts/:rollout_id/orgs/:org_id",
 	...handleUpdateRolloutOrg,
 );
+honoAdminRouter.delete("/rollouts/:rollout_id", ...handleDeleteRollout);
 honoAdminRouter.delete(
 	"/rollouts/:rollout_id/orgs/:org_id",
 	...handleDeleteRolloutOrg,

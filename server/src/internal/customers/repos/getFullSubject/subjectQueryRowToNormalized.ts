@@ -1,5 +1,7 @@
 import type { FeatureOptions } from "@autumn/shared";
 import {
+	type AggregatedFeatureBalance,
+	type AggregatedSubjectFlag,
 	type Customer,
 	type DbCustomerEntitlement,
 	type DbCustomerPrice,
@@ -13,6 +15,7 @@ import {
 	FeatureType,
 	type FullCustomerPrice,
 	type FullSubject,
+	InternalError,
 	type NormalizedFullSubject,
 	normalizedToFullSubject,
 	type Replaceable,
@@ -29,12 +32,24 @@ import {
  */
 export const subjectQueryRowToNormalized = ({
 	row,
+	entityIdRequested = false,
+	allowMissingEntity = false,
 }: {
 	row: SubjectQueryRow;
+	entityIdRequested?: boolean;
+	allowMissingEntity?: boolean;
 }): NormalizedFullSubject => {
 	const customer = row.customer as unknown as Customer;
 	const entity = row.entity as Entity | undefined;
 	const isEntitySubject = !!entity;
+
+	if (entityIdRequested && !entity && !allowMissingEntity) {
+		throw new InternalError({
+			message:
+				"subjectQueryRowToNormalized received a row with no entity when an entityId was requested and allowMissingEntity is false",
+			code: "subject_row_missing_entity",
+		});
+	}
 
 	const entitlementsByEntitlementId = new Map(
 		row.entitlements.map((e) => [e.id, e] as const),
@@ -188,13 +203,43 @@ export const subjectQueryRowToNormalized = ({
 		partitionCustomerEntitlement(customerEntitlement);
 	}
 
+	// Split the SQL aggregate output by feature type:
+	//   - non-boolean rows → aggregated_customer_entitlements (metered totals)
+	//   - boolean rows     → aggregated_subject_flags (identity-only)
+	// This is the single choke point for keeping booleans out of the cache
+	// writer's per-feature `_aggregated` hashes.
 	let entityAggregations: EntityAggregations | undefined;
 	if (row.entity_aggregations) {
+		const featuresByInternalId = new Map(
+			row.entitlements.map(
+				(entitlement) =>
+					[entitlement.feature.internal_id, entitlement.feature] as const,
+			),
+		);
+
+		const aggregatedMetered: AggregatedFeatureBalance[] = [];
+		const aggregatedSubjectFlags: Record<string, AggregatedSubjectFlag> = {};
+
+		for (const aggregated of row.entity_aggregations
+			.aggregated_customer_entitlements) {
+			const feature = featuresByInternalId.get(aggregated.internal_feature_id);
+			if (feature?.type === FeatureType.Boolean) {
+				aggregatedSubjectFlags[aggregated.feature_id] = {
+					feature_id: aggregated.feature_id,
+					internal_feature_id: aggregated.internal_feature_id,
+					internal_customer_id: aggregated.internal_customer_id,
+					api_id: aggregated.api_id,
+				};
+			} else {
+				aggregatedMetered.push(aggregated);
+			}
+		}
+
 		entityAggregations = {
 			aggregated_customer_products:
 				row.entity_aggregations.aggregated_customer_products,
-			aggregated_customer_entitlements:
-				row.entity_aggregations.aggregated_customer_entitlements,
+			aggregated_customer_entitlements: aggregatedMetered,
+			aggregated_subject_flags: aggregatedSubjectFlags,
 		};
 	}
 
@@ -227,9 +272,17 @@ export const subjectQueryRowToNormalized = ({
 /** Convert raw DB query row to FullSubject via NormalizedFullSubject. */
 export const resultToFullSubject = ({
 	row,
+	entityIdRequested = false,
+	allowMissingEntity = false,
 }: {
 	row: SubjectQueryRow;
+	entityIdRequested?: boolean;
+	allowMissingEntity?: boolean;
 }): FullSubject => {
-	const normalized = subjectQueryRowToNormalized({ row });
+	const normalized = subjectQueryRowToNormalized({
+		row,
+		entityIdRequested,
+		allowMissingEntity,
+	});
 	return normalizedToFullSubject({ normalized });
 };

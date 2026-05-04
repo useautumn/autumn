@@ -1,30 +1,38 @@
 "use client";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { featuresData } from "@/app/constant";
 import type { PixelAnimationHandle } from "@/lib/types";
 import { FeatureIconAnimation } from "./feature-icon-animation";
 
 function FeatureCard({ feature }: { feature: (typeof featuresData)[number] }) {
-	const isDesktop =
-		typeof window !== "undefined" &&
-		window.matchMedia("(hover: hover)").matches;
+	// Only mount the hover-effect video on pointer:hover devices. The video is
+	// already CSS-hidden on mobile via `hidden md:block`, but CSS `display:none`
+	// does NOT stop `<video autoPlay>` from fetching, so without this every
+	// mobile visitor downloads one copy per feature card (≈ 9 × the file).
+	const [isHoverDevice, setIsHoverDevice] = useState(false);
+	useEffect(() => {
+		setIsHoverDevice(window.matchMedia("(hover: hover)").matches);
+	}, []);
+
 	const iconRef = useRef<PixelAnimationHandle | null>(null);
 	return (
 		<div
-			onMouseEnter={() => isDesktop && iconRef.current?.play()}
-			onMouseLeave={() => isDesktop && iconRef.current?.reverse()}
+			onMouseEnter={() => isHoverDevice && iconRef.current?.play()}
+			onMouseLeave={() => isHoverDevice && iconRef.current?.reverse()}
 			className="group relative flex px-4 md:px-4 flex-col justify-between p-6 bg-[#0F0F0F] min-h-[200px] md:min-h-[280px] border-r border-b border-[#292929] overflow-hidden cursor-pointer"
 		>
-			<div className="absolute inset-0 opacity-0 translate-y-6 md:group-hover:opacity-100 md:group-hover:translate-y-0 pointer-events-none z-0 hidden md:block">
-				<video
-					src="/images/features/pixel effect.webm"
-					autoPlay
-					loop
-					muted
-					playsInline
-					className="w-full h-full object-cover"
-				/>
-			</div>
+			{isHoverDevice && (
+				<div className="absolute inset-0 opacity-0 translate-y-6 md:group-hover:opacity-100 md:group-hover:translate-y-0 pointer-events-none z-0 hidden md:block">
+					<video
+						src="/images/features/pixel effect.webm"
+						autoPlay
+						loop
+						muted
+						playsInline
+						className="w-full h-full object-cover"
+					/>
+				</div>
+			)}
 			{/* Hover Gradient Overlay */}
 			<div className="absolute inset-x-0 bottom-0 h-[70%] bg-[linear-gradient(to_bottom,rgba(10,10,10,0)_0%,rgba(135,82,250,0.15)_40%,rgba(135,82,250,0.45)_70%,rgba(135,82,250,0.85)_90%)] opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
@@ -61,7 +69,7 @@ export default function Features() {
 			</div>
 
 			<div className="border-t border-[#292929] w-full" />
-			<div className="grid grid-cols-1 gap-[-3px]  md:grid-cols-2 lg:grid-cols-3 xl:px-22.75 border-[#292929] [&>*:last-child]:border-b-0 [&>*:nth-last-child(2)]:border-b-0 md:[&>*:nth-last-child(-n+2)]:border-b-0 lg:[&>*:nth-last-child(-n+3)]:border-b-0 *:border-l md:[&>*:nth-child(2n)]:border-l-0 lg:[&>*:nth-child(3n+1)]:border-l lg:[&>*:nth-child(3n+2)]:border-l-0 lg:[&>*:nth-child(3n)]:border-l-0">
+			<div className="grid grid-cols-1 gap-[-3px]  md:grid-cols-2 lg:grid-cols-3 xl:px-22.75 border-[#292929] [&>*:last-child]:border-b-0 md:[&>*:nth-last-child(-n+2)]:border-b-0 lg:[&>*:nth-last-child(-n+3)]:border-b-0 *:border-l md:[&>*:nth-child(2n)]:border-l-0 lg:[&>*:nth-child(3n+1)]:border-l lg:[&>*:nth-child(3n+2)]:border-l-0 lg:[&>*:nth-child(3n)]:border-l-0">
 				{featuresData.map((feature, i) => (
 					<FeatureCard key={i} feature={feature} />
 				))}

@@ -1,4 +1,4 @@
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, Scopes } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
@@ -13,6 +13,7 @@ import {
  * Delete (mark as uninstalled) a resource
  */
 export const handleDeleteResource = createRoute({
+	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const { orgId, env, integrationConfigurationId, resourceId } =
 			c.req.param();

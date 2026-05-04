@@ -1,8 +1,9 @@
-import { SyncProposalsParamsV0Schema } from "@autumn/shared";
+import { SyncProposalsParamsV0Schema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { billingActions } from "@/internal/billing/v2/actions";
 
 export const handleSyncProposals = createRoute({
+	scopes: [Scopes.Billing.Read],
 	body: SyncProposalsParamsV0Schema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");

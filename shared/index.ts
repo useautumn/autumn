@@ -156,6 +156,7 @@ export * from "./models/productModels/priceModels/priceModels";
 export * from "./models/productModels/priceModels/priceTable";
 export * from "./models/productModels/priceModels/priceTable";
 // 5. Product Models
+export * from "./models/productModels/productConfig/productConfig";
 export * from "./models/productModels/productEnums";
 export * from "./models/productModels/productModels";
 export * from "./models/productModels/productRelations";
@@ -224,5 +225,6 @@ export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils";
 export * from "./utils/rewardUtils/rewardFilterUtils";
 export * from "./utils/rewardUtils/rewardMigrationUtils";
+export * from "./utils/authAccessControl";
 export * from "./utils/scopeDefinitions";
 export * from "./utils/fullSubjectUtils";

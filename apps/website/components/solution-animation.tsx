@@ -4,10 +4,10 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import lottie, { type AnimationItem } from "lottie-web";
 import { useEffect, useRef } from "react";
-import desktopAnimationData from "@/public/animation/solution-desktop.json";
-import mobileAnimationData from "@/public/animation/solution-mobile.json";
 
-gsap.registerPlugin(ScrollTrigger);
+if (typeof window !== "undefined") {
+	gsap.registerPlugin(ScrollTrigger);
+}
 
 export default function SolutionAnimation() {
 	const containerRef = useRef<HTMLDivElement | null>(null);
@@ -17,36 +17,78 @@ export default function SolutionAnimation() {
 		if (!containerRef.current) return;
 
 		const isMobile = window.innerWidth < 768;
-		const animationData = isMobile ? mobileAnimationData : desktopAnimationData;
+		const url = isMobile
+			? "/animation/solution-mobile.json"
+			: "/animation/solution-desktop.json";
 
-		const anim = lottie.loadAnimation({
-			container: containerRef.current,
-			renderer: "svg",
-			loop: false,
-			autoplay: false,
-			animationData,
-		});
+		let cancelled = false;
+		const cleanupRef = { current: () => {} };
 
-		animRef.current = anim;
+		const initAnimation = () => {
+			if (cancelled || !containerRef.current) return;
 
-		const totalFrames = anim.totalFrames;
+			fetch(url)
+				.then((res) => res.json())
+				.then((animationData) => {
+					if (cancelled || !containerRef.current) return;
 
-		const loopStart = Math.floor(totalFrames * 0.2);
+					const anim = lottie.loadAnimation({
+						container: containerRef.current,
+						renderer: "svg",
+						loop: false,
+						autoplay: false,
+						animationData,
+					});
 
-		anim.addEventListener("complete", () => {
-			anim.loop = true;
-			anim.playSegments([loopStart, totalFrames], true);
-		});
+					animRef.current = anim;
 
-		const st = ScrollTrigger.create({
-			trigger: containerRef.current,
-			start: "top 75%", // Plays when the top of the animation reaches 75% viewport height
-			onEnter: () => anim.play(),
-		});
+					const totalFrames = anim.totalFrames;
+					const loopStart = Math.floor(totalFrames * 0.2);
+
+					anim.addEventListener("complete", () => {
+						anim.loop = true;
+						anim.playSegments([loopStart, totalFrames], true);
+					});
+
+					const st = ScrollTrigger.create({
+						trigger: containerRef.current,
+						start: "top 75%",
+						onEnter: () => anim.play(),
+					});
+
+					cleanupRef.current = () => {
+						st.kill();
+						anim.destroy();
+					};
+				});
+		};
+
+		// Defer the 1.4–2.1 MB Lottie JSON fetch until the element is close to
+		// the viewport. Without this the browser fetches it during initial load
+		// and blocks the main thread while parsing the large JSON blob.
+		if (!("IntersectionObserver" in window)) {
+			initAnimation();
+			return;
+		}
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				// intersectionRatio > 0 guards against a Safari bug where
+				// isIntersecting fires as false on the initial sync callback.
+				if (entries[0].isIntersecting || entries[0].intersectionRatio > 0) {
+					observer.disconnect();
+					initAnimation();
+				}
+			},
+			{ rootMargin: "200px" },
+		);
+
+		observer.observe(containerRef.current);
 
 		return () => {
-			st.kill();
-			anim.destroy();
+			cancelled = true;
+			observer.disconnect();
+			cleanupRef.current();
 		};
 	}, []);
 

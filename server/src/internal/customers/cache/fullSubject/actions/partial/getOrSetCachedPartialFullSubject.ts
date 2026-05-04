@@ -6,7 +6,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
 import { filterFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
-import { getOrInitFullSubjectViewEpoch } from "../invalidate/getOrInitFullSubjectViewEpoch.js";
+import { rehydrateWithLiveBalances } from "../rehydrateWithLiveBalances.js";
 import { setCachedFullSubject } from "../setCachedFullSubject/setCachedFullSubject.js";
 import { getCachedPartialFullSubject } from "./getCachedPartialFullSubject.js";
 
@@ -24,15 +24,22 @@ export const getOrSetCachedPartialFullSubject = async ({
 	source?: string;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
+	const useRedis = !skipCache;
 
-	if (!skipCache) {
-		const cached = await getCachedPartialFullSubject({
-			ctx,
-			customerId,
-			entityId,
-			featureIds,
-			source,
-		});
+	let fetchedSubjectViewEpoch = 0;
+
+	if (useRedis) {
+		// Pipeline inside getCachedPartialFullSubject already fetches the
+		// epoch, so we reuse it on miss.
+		const { fullSubject: cached, subjectViewEpoch } =
+			await getCachedPartialFullSubject({
+				ctx,
+				customerId,
+				entityId,
+				featureIds,
+				source,
+			});
+		fetchedSubjectViewEpoch = subjectViewEpoch;
 
 		if (cached) {
 			logger.debug(
@@ -45,10 +52,6 @@ export const getOrSetCachedPartialFullSubject = async ({
 	logger.debug(
 		`[getOrSetCachedPartialFullSubject] Cache miss for ${customerId}${entityId ? `:${entityId}` : ""}, fetching from DB, source: ${source}`,
 	);
-	const fetchedSubjectViewEpoch = await getOrInitFullSubjectViewEpoch({
-		ctx,
-		customerId,
-	});
 
 	const result = await getFullSubjectNormalized({
 		ctx,
@@ -63,26 +66,26 @@ export const getOrSetCachedPartialFullSubject = async ({
 
 	const { normalized, fullSubject } = result;
 
-	if (!skipCache) {
+	if (useRedis) {
 		await setCachedFullSubject({
 			ctx,
 			normalized,
 			fetchedSubjectViewEpoch,
 		});
 
-		// Re-read from cache instead of returning the DB-fetched fullSubject.
-		// Balance hash fields use HSETNX, so in-flight Lua deduction patches
-		// survive the setCachedFullSubject write. The DB data may be stale
-		// (e.g. entity view rebuilt before sync completes), but the balance
-		// hash reflects the true Redis state.
-		const freshCached = await getCachedPartialFullSubject({
+		// We just wrote the subject blob ourselves — skip re-reading it. Only
+		// the balance hashes need a fresh read to preserve any HSETNX-skipped
+		// in-flight Lua deduction patches. One RTT instead of two.
+		const withLiveBalances = await rehydrateWithLiveBalances({
 			ctx,
-			customerId,
-			entityId,
-			featureIds,
-			source: `${source}:post-set`,
+			normalized,
 		});
-		if (freshCached) return freshCached;
+		if (withLiveBalances) {
+			return filterFullSubjectByFeatureIds({
+				fullSubject: withLiveBalances,
+				featureIds,
+			});
+		}
 	}
 
 	return filterFullSubjectByFeatureIds({

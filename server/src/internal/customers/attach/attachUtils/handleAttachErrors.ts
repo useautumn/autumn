@@ -3,9 +3,7 @@ import {
 	AttachBranch,
 	type AttachConfig,
 	BillingType,
-	cusProductToProcessorType,
 	ErrCode,
-	ProcessorType,
 	RecaseError,
 	TierBehavior,
 	type UsagePriceConfig,
@@ -20,6 +18,7 @@ import {
 import { notNullish, nullOrUndefined } from "@/utils/genUtils.js";
 import type { AttachParams } from "../../cusProducts/AttachParams.js";
 import type { AttachFlags } from "../models/AttachFlags.js";
+import { handleExternalPSPErrors } from "./handleAttachErrors/handleExternalPSPErrors.js";
 import { handleMultiAttachErrors } from "./handleAttachErrors/handleMultiAttachErrors.js";
 
 const handleNonCheckoutErrors = ({
@@ -150,23 +149,6 @@ export const handleCustomPaymentMethodErrors = ({
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
 		});
 	} else if (attachParams.customer.processors?.vercel?.installation_id) {
-		throw new RecaseError({
-			message:
-				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
-		});
-	}
-};
-
-export const handleExternalPSPErrors = ({
-	attachParams,
-}: {
-	attachParams: AttachParams;
-}) => {
-	if (
-		attachParams.customer.customer_products.some(
-			(cp) => cusProductToProcessorType(cp) !== ProcessorType.Stripe,
-		)
-	) {
 		throw new RecaseError({
 			message:
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",

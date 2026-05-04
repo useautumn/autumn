@@ -19,10 +19,11 @@ export const getOrCreateCachedPartialFullSubject = async ({
 	source?: string;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
+	const useRedis = !skipCache;
 	const { customer_id: customerId, entity_id: entityId } = params;
 
-	if (customerId && !skipCache) {
-		const cached = await getCachedPartialFullSubject({
+	if (customerId && useRedis) {
+		const { fullSubject: cached } = await getCachedPartialFullSubject({
 			ctx,
 			customerId,
 			entityId,

@@ -39,10 +39,12 @@ local function init_context(params)
     missing_customer_entitlement_ids =
       read_result.missing_customer_entitlement_ids or {},
     logs = logs,
-    logger = {
+    logger = params.debug and {
       log = function(fmt, ...)
         table.insert(logs, string.format(fmt, ...))
       end,
+    } or {
+      log = function() end,
     },
   }
 

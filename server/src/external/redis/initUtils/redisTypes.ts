@@ -85,8 +85,8 @@ declare module "ioredis" {
 			paramsJson: string,
 		): Promise<string>;
 		deductFromSubjectBalances(
-			routingKey: string,
-			paramsJson: string,
+			numberOfKeys: number,
+			...keysAndArgs: string[]
 		): Promise<string>;
 		updateSubjectBalances(
 			balanceKey: string,

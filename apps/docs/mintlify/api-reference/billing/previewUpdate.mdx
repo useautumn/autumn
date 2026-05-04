@@ -227,6 +227,20 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
 </DynamicParamField>
 
+<DynamicParamField body="discounts" type="object[]">
+  List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+  <Expandable title="properties">
+    <DynamicParamField body="reward_id" type="string">
+      The ID of the reward to apply as a discount.
+    </DynamicParamField>
+
+    <DynamicParamField body="promotion_code" type="string">
+      The promotion code to apply as a discount.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="cancel_action" type="'cancel_immediately' | 'cancel_end_of_cycle' | 'uncancel'">
   Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
 </DynamicParamField>
@@ -704,6 +718,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           If this is a variant, the ID of the base plan it was created from.
         </DynamicResponseField>
 
+        <DynamicResponseField name="config" type="object">
+          Miscellaneous plan-level configuration flags.
+          <Expandable title="properties">
+            <DynamicResponseField name="ignore_past_due" type="boolean">
+              If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
         <DynamicResponseField name="customer_eligibility" type="object">
           <Expandable title="properties">
             <DynamicResponseField name="trial_available" type="boolean">
@@ -1017,6 +1041,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
         <DynamicResponseField name="base_variant_id" type="string | null">
           If this is a variant, the ID of the base plan it was created from.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="config" type="object">
+          Miscellaneous plan-level configuration flags.
+          <Expandable title="properties">
+            <DynamicResponseField name="ignore_past_due" type="boolean">
+              If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+            </DynamicResponseField>
+
+          </Expandable>
         </DynamicResponseField>
 
         <DynamicResponseField name="customer_eligibility" type="object">

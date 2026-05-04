@@ -157,6 +157,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="config" type="object">
+  Miscellaneous configurations for the customer.
+  <Expandable title="properties">
+    <DynamicParamField body="disable_pooled_balance" type="boolean">
+      Whether to disable the shared customer-level pool for entities.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 <DynamicParamField body="expand" type="string[]">
   Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
 </DynamicParamField>
@@ -223,7 +233,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
         </DynamicResponseField>
 
         <DynamicResponseField name="purchase_limit" type="object">
-          Optional rate limit to cap how often auto top-ups occur.
+          Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at.
           <Expandable title="properties">
             <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
               The time interval for the purchase limit window.
@@ -566,6 +576,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           If this is a variant, the ID of the base plan it was created from.
         </DynamicResponseField>
 
+        <DynamicResponseField name="config" type="object">
+          Miscellaneous plan-level configuration flags.
+          <Expandable title="properties">
+            <DynamicResponseField name="ignore_past_due" type="boolean">
+              If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
         <DynamicResponseField name="customer_eligibility" type="object">
           <Expandable title="properties">
             <DynamicResponseField name="trial_available" type="boolean">
@@ -899,6 +919,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           If this is a variant, the ID of the base plan it was created from.
         </DynamicResponseField>
 
+        <DynamicResponseField name="config" type="object">
+          Miscellaneous plan-level configuration flags.
+          <Expandable title="properties">
+            <DynamicResponseField name="ignore_past_due" type="boolean">
+              If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
         <DynamicResponseField name="customer_eligibility" type="object">
           <Expandable title="properties">
             <DynamicResponseField name="trial_available" type="boolean">
@@ -1222,6 +1252,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicResponseField>
 
+<DynamicResponseField name="config" type="object">
+  Configuration for the customer.
+  <Expandable title="properties">
+    <DynamicResponseField name="disable_pooled_balance" type="boolean">
+      Whether to disable the shared customer-level pool for entities.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
 <DynamicResponseField name="invoices" type="object[]">
   Invoices for this customer.
   <Expandable title="properties">
@@ -1450,6 +1490,9 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       "expires_at": null,
       "feature_id": "advanced_workflows"
     }
+  },
+  "config": {
+    "disable_pooled_balance": false
   }
 }
 ```

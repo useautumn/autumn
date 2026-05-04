@@ -41,20 +41,26 @@ export const insertNewCusProducts = async ({
 	});
 
 	// 1. Upsert rollovers (use upsert to handle carried-over rollovers from plan switches)
-
-	for (const cusEnt of cusEnts) {
+	const rolloverInsertPromises = cusEnts.flatMap((cusEnt) => {
 		const cusProduct = newCusProducts.find(
 			(cusProduct) => cusProduct.id === cusEnt.customer_product_id,
 		);
-
-		if (!customerProductHasActiveStatus(cusProduct)) continue;
-
-		if (cusEnt.rollovers.length > 0) {
-			await RolloverService.insert({
+		if (!customerProductHasActiveStatus(cusProduct)) return [];
+		if (cusEnt.rollovers.length === 0) return [];
+		return [
+			RolloverService.insert({
 				ctx,
 				rows: cusEnt.rollovers,
-				fullCusEnt: { ...cusEnt, customer_product: cusProduct ?? null },
-			});
-		}
-	}
+				// New cusEnt — no pre-existing DB rollovers. Pass [] so the max-cap
+				// check in clearExcessRollovers doesn't double-count the rows we're
+				// inserting (cusEnt.rollovers already holds the same objects as `rows`).
+				fullCusEnt: {
+					...cusEnt,
+					customer_product: cusProduct ?? null,
+					rollovers: [],
+				},
+			}),
+		];
+	});
+	await Promise.all(rolloverInsertPromises);
 };

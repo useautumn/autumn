@@ -12,6 +12,8 @@ export type LogRequestContext = {
 	user_agent?: string;
 	ip_address?: string;
 
+	region?: string;
+
 	// New fields
 	query: Record<string, string>;
 	body: unknown;
@@ -31,6 +33,7 @@ export type LogAppContext = {
 	user_id?: string;
 	user_email?: string;
 	api_version: string;
+	scopes?: string[];
 	full_subject_bucket?: number;
 	full_subject_rollout_enabled?: boolean;
 };

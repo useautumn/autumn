@@ -22,7 +22,6 @@ describe("fullSubject aggregate balance", () => {
 			rollover_usage: 0,
 			unlimited: false,
 			usage_allowed: false,
-			entity_count: 2,
 			entities: {
 				ent1: {
 					id: "ent1",

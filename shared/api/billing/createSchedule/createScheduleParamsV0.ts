@@ -4,6 +4,8 @@ import { RedirectModeSchema } from "@api/billing/common/redirectMode";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { z } from "zod/v4";
+import { BillingBehaviorSchema } from "../common/billingBehavior";
+import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 
 const CreateScheduleCustomizePlanSchema = z
 	.object({
@@ -80,6 +82,18 @@ export const CreateScheduleParamsV0Schema = z
 		redirect_mode: RedirectModeSchema.default("if_required").meta({
 			description:
 				"Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.",
+		}),
+		billing_behavior: BillingBehaviorSchema.optional().meta({
+			description:
+				"Whether to prorate the immediate phase. 'none' skips proration charges and credits.",
+		}),
+		billing_cycle_anchor: BillingCycleAnchorSchema.optional().meta({
+			description:
+				"Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.",
+		}),
+		enable_plan_immediately: z.boolean().optional().meta({
+			description:
+				"If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.",
 		}),
 		phases: z
 			.tuple([CreateSchedulePhaseSchema])

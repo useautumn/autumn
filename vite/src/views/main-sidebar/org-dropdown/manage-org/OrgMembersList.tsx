@@ -1,39 +1,43 @@
-import type { Membership } from "@autumn/shared";
+import type { Membership, Role } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Item, Row } from "@/components/general/TableGrid";
-import { Badge } from "@/components/ui/badge";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
+import { RoleSelect } from "@/components/v2/selects/RoleSelect";
 import { authClient, useSession } from "@/lib/auth-client";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import { useMemberships } from "../hooks/useMemberships";
 import { MemberRowToolbar } from "./MemberRowToolbar";
 
-const ROLE_OPTIONS = ["member", "admin", "owner"] as const;
+const NON_OWNER_ROLES: Role[] = ["admin", "developer", "sales", "member"];
+const ALL_ROLES: Role[] = ["owner", ...NON_OWNER_ROLES];
 
 const MemberRoleSelect = ({
 	membership,
+	allowOwnerPromotion,
+	disabled,
 	onRoleChanged,
 }: {
 	membership: Membership;
+	/**
+	 * Whether to expose `owner` in the role list. Only true when the
+	 * current user is themselves an owner (owners can promote others to
+	 * co-owners; admins cannot).
+	 */
+	allowOwnerPromotion: boolean;
+	disabled?: boolean;
 	onRoleChanged: () => void;
 }) => {
 	const [loading, setLoading] = useState(false);
+	const currentRole = membership.member.role as Role;
 
-	const handleRoleChange = async (newRole: string) => {
-		if (newRole === membership.member.role) return;
+	const handleRoleChange = async (newRole: Role) => {
+		if (newRole === currentRole) return;
 
 		setLoading(true);
 		try {
 			const { error } = await authClient.organization.updateMemberRole({
 				memberId: membership.member.id,
-				role: newRole as "member" | "admin" | "owner",
+				role: newRole,
 			});
 
 			if (error) {
@@ -50,23 +54,16 @@ const MemberRoleSelect = ({
 		}
 	};
 
+	const allowed = allowOwnerPromotion ? ALL_ROLES : NON_OWNER_ROLES;
+
 	return (
-		<Select
-			value={membership.member.role}
-			onValueChange={handleRoleChange}
-			disabled={loading}
-		>
-			<SelectTrigger className="h-7 w-[100px] text-xs">
-				<SelectValue />
-			</SelectTrigger>
-			<SelectContent>
-				{ROLE_OPTIONS.map((role) => (
-					<SelectItem key={role} value={role}>
-						{role.charAt(0).toUpperCase() + role.slice(1)}
-					</SelectItem>
-				))}
-			</SelectContent>
-		</Select>
+		<RoleSelect
+			value={currentRole}
+			onChange={handleRoleChange}
+			allowed={allowed}
+			disabled={disabled || loading}
+			className="h-7 w-[140px] text-xs"
+		/>
 	);
 };
 
@@ -80,13 +77,13 @@ export const OrgMembersList = () => {
 
 	if (isMembersLoading) return null;
 
+	const currentUserId = data?.session?.userId;
 	const currentMembership = memberships.find(
-		(membership: Membership) => membership.user.id === data?.session?.userId,
+		(membership: Membership) => membership.user.id === currentUserId,
 	);
 
-	const isAdmin =
-		currentMembership?.member.role === "admin" ||
-		currentMembership?.member.role === "owner";
+	const currentRole = currentMembership?.member.role as Role | undefined;
+	const isAdmin = currentRole === "admin" || currentRole === "owner";
 
 	return (
 		<div className="h-full overflow-y-auto">
@@ -100,23 +97,35 @@ export const OrgMembersList = () => {
 			{memberships.map((membership: Membership) => {
 				const user = membership.user;
 				const member = membership.member;
+				const memberRole = member.role as Role;
+				const isSelf = user.id === currentUserId;
+				const isOwnerUser = currentRole === "owner";
+				// Owners can never be demoted (only ownership transfer flows
+				// change an existing owner's role). Non-admins can't edit
+				// anyone. Admins can edit non-owner members. Users can always
+				// demote themselves (unless they are an owner).
+				const canEdit =
+					memberRole !== "owner" && (isAdmin || isSelf);
+				// Owner promotion is only available to other owners, and only
+				// when editing a non-owner row.
+				const canPromoteToOwner =
+					isOwnerUser && memberRole !== "owner" && canEdit;
+
 				return (
 					<Row key={membership.user.id} className="flex px-6 text-sm text-t2">
 						<Item className="flex-[6]">{user.email}</Item>
 						<Item className="flex-[5] text-t3">{user.name || "No name"}</Item>
 						<Item className="flex-[3]">
-							{isAdmin ? (
-								<MemberRoleSelect
-									membership={membership}
-									onRoleChanged={refetch}
-								/>
-							) : (
-								<Badge variant="outline">{member.role}</Badge>
-							)}
+							<MemberRoleSelect
+								membership={membership}
+								allowOwnerPromotion={canPromoteToOwner}
+								disabled={!canEdit}
+								onRoleChanged={refetch}
+							/>
 						</Item>
 						<Item className="flex-[3]">{formatDateStr(member.createdAt)}</Item>
 						<Item className="flex-[1] flex justify-end">
-							{isAdmin && member.role !== "owner" && (
+							{isAdmin && memberRole !== "owner" && !isSelf && (
 								<MemberRowToolbar membership={membership} />
 							)}
 						</Item>

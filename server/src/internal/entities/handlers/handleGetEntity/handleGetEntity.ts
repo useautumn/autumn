@@ -2,11 +2,13 @@ import {
 	AffectedResource,
 	ApiVersion,
 	GetEntityQuerySchema,
+	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getApiEntityByRollout } from "../../actions/getApiEntityByRollout.js";
 
 export const handleGetEntity = createRoute({
+	scopes: [Scopes.Customers.Read],
 	versionedQuery: {
 		latest: GetEntityQuerySchema,
 		[ApiVersion.V1_2]: GetEntityQuerySchema,

@@ -35,7 +35,7 @@ class ListPlansGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -71,7 +71,7 @@ class ListPlansParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -120,7 +120,7 @@ class ListPlansPriceDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -161,7 +161,7 @@ class ListPlansPrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -260,7 +260,7 @@ class ListPlansFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -316,7 +316,7 @@ class ListPlansReset(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -409,7 +409,7 @@ class ListPlansItemPrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -452,7 +452,7 @@ class ListPlansItemDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -508,7 +508,7 @@ class ListPlansRollover(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -578,7 +578,7 @@ class ListPlansItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -638,6 +638,36 @@ ListPlansEnv = Union[
     UnrecognizedStr,
 ]
 r"""Environment this plan belongs to ('sandbox' or 'live')."""
+
+
+class ListPlansConfigTypedDict(TypedDict):
+    r"""Miscellaneous plan-level configuration flags."""
+
+    ignore_past_due: NotRequired[bool]
+    r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
+
+
+class ListPlansConfig(BaseModel):
+    r"""Miscellaneous plan-level configuration flags."""
+
+    ignore_past_due: Optional[bool] = False
+    r"""If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["ignore_past_due"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 ListPlansStatus = Union[
@@ -700,7 +730,7 @@ class ListPlansCustomerEligibility(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -738,6 +768,8 @@ class ListPlansListTypedDict(TypedDict):
     r"""Whether the plan is archived. Archived plans cannot be attached to new customers."""
     base_variant_id: Nullable[str]
     r"""If this is a variant, the ID of the base plan it was created from."""
+    config: ListPlansConfigTypedDict
+    r"""Miscellaneous plan-level configuration flags."""
     free_trial: NotRequired[ListPlansFreeTrialTypedDict]
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
     customer_eligibility: NotRequired[ListPlansCustomerEligibilityTypedDict]
@@ -785,6 +817,9 @@ class ListPlansList(BaseModel):
     base_variant_id: Nullable[str]
     r"""If this is a variant, the ID of the base plan it was created from."""
 
+    config: ListPlansConfig
+    r"""Miscellaneous plan-level configuration flags."""
+
     free_trial: Optional[ListPlansFreeTrial] = None
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
@@ -799,7 +834,7 @@ class ListPlansList(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

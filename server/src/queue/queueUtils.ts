@@ -56,12 +56,22 @@ export interface Payloads {
 		entityId?: string;
 		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 	};
+	[JobName.RefreshEntityAggregate]: {
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		region?: string;
+		internalFeatureIds: string[];
+	};
 	[JobName.InsertEventBatch]: {
 		events: EventInsert[];
 	};
 	[JobName.Track]: {
 		orgId: string;
 		env: AppEnv;
+		customerId: string;
+		entityId?: string;
+		requestId: string;
 		apiVersion: ApiVersion;
 		body: TrackParams;
 	};
@@ -111,7 +121,7 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	delayMs?: number;
 	queueUrl?: string;
 }) => {
-	const resolvedQueueUrl = queueUrl || process.env.SQS_QUEUE_URL;
+	const resolvedQueueUrl = queueUrl || process.env.SQS_QUEUE_URL_V2;
 
 	if (resolvedQueueUrl) {
 		const sqsClient = getSqsClient();
@@ -150,17 +160,5 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 		return;
 	}
 
-	if (process.env.QUEUE_URL) {
-		const { queue } = await import("./bullmq/initBullMq.js");
-
-		// BullMQ dedup: if a stable dedup ID is provided, use it as the jobId.
-		// BullMQ ignores jobs whose jobId already exists in the queue (not yet completed).
-		await queue.add(jobName as string, payload, {
-			delay: delayMs,
-			...(messageDeduplicationId && { jobId: messageDeduplicationId }),
-		});
-		return;
-	}
-
-	throw new Error("No queue configured. Set either SQS_QUEUE_URL or QUEUE_URL");
+	throw new Error("No queue configured. Set SQS_QUEUE_URL_V2");
 };

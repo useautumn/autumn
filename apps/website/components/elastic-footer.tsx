@@ -1,6 +1,6 @@
 "use client";
-import { motion, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { useEffect, useState } from "react";
+import { motion, useMotionValue, useSpring, useTransform } from "motion/react";
+import { useEffect, useRef, useState } from "react";
 import type { LayoutProps } from "@/lib/types";
 import AnimatedFooterImage from "./animated-footer-image";
 
@@ -9,9 +9,14 @@ export default function ElasticRecoil({ children }: LayoutProps) {
 
 	const [showFooter, setShowFooter] = useState(false);
 	const [isMobile, setIsMobile] = useState(false);
+	const isMobileRef = useRef(false);
 
 	useEffect(() => {
-		const check = () => setIsMobile(window.innerWidth < 768);
+		const check = () => {
+			const mobile = window.innerWidth < 768;
+			setIsMobile(mobile);
+			isMobileRef.current = mobile;
+		};
 		check();
 		window.addEventListener("resize", check);
 		return () => window.removeEventListener("resize", check);
@@ -46,6 +51,7 @@ export default function ElasticRecoil({ children }: LayoutProps) {
 		};
 
 		const handleWheel = (e: WheelEvent) => {
+			if (isMobileRef.current) return;
 			const isAtBottom =
 				window.innerHeight + window.pageYOffset >=
 				document.documentElement.scrollHeight - 5;
@@ -77,6 +83,7 @@ export default function ElasticRecoil({ children }: LayoutProps) {
 		let lastTouchY = 0;
 		let atBottomOnStart = false;
 		const handleTouchStart = (e: TouchEvent) => {
+			if (isMobileRef.current) return;
 			isTouching = true;
 			lastTouchY = e.touches[0].clientY;
 			atBottomOnStart =
@@ -87,6 +94,7 @@ export default function ElasticRecoil({ children }: LayoutProps) {
 		};
 
 		const handleTouchMove = (e: TouchEvent) => {
+			if (isMobileRef.current) return;
 			const currentY = e.touches[0].clientY;
 			const delta = lastTouchY - currentY;
 			lastTouchY = currentY;
@@ -135,7 +143,7 @@ export default function ElasticRecoil({ children }: LayoutProps) {
 
 	return (
 		<div className="relative w-full overflow-hidden">
-			{showFooter && <AnimatedFooterImage />}
+			{showFooter && !isMobile && <AnimatedFooterImage />}
 			<motion.div style={{ y }} className="relative z-10 bg-black">
 				{children}
 			</motion.div>

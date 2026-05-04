@@ -1,7 +1,7 @@
 import type { AppEnv, Organization } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSentryTags } from "@/external/sentry/sentryUtils.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { createSvixCli, getSvixAppId, safeSvix } from "./svixUtils.js";
 
 export const createSvixApp = safeSvix({
@@ -42,10 +42,12 @@ export const sendSvixEvent = async ({
 	ctx,
 	eventType,
 	data,
+	payloadFields,
 }: {
 	ctx: AutumnContext;
 	eventType: string;
 	data: unknown;
+	payloadFields?: { id?: string; occurred_at?: number };
 }) => {
 	if (!process.env.SVIX_API_KEY) return;
 
@@ -62,6 +64,7 @@ export const sendSvixEvent = async ({
 			eventType,
 			payload: {
 				type: eventType,
+				...payloadFields,
 				data,
 			},
 		});

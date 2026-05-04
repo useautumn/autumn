@@ -1,8 +1,13 @@
-import { AffectedResource, UpdateCustomerParamsV1Schema } from "@autumn/shared";
+import {
+	AffectedResource,
+	Scopes,
+	UpdateCustomerParamsV1Schema,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 
 export const handleUpdateCustomerV2 = createRoute({
+	scopes: [Scopes.Customers.Write],
 	body: UpdateCustomerParamsV1Schema,
 	resource: AffectedResource.Customer,
 	handler: async (c) => {

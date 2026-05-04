@@ -18,7 +18,9 @@ const serverPort = process.env.AGENT_SERVER_PORT ?? "8080";
 const vitePort = process.env.AGENT_VITE_PORT ?? "3000";
 
 if (existsSync(serverEnvPath)) {
-	console.log("[writeAgentEnv] server/.env already exists — skipping generation");
+	console.log(
+		"[writeAgentEnv] server/.env already exists — skipping generation",
+	);
 } else {
 	const passThrough = [
 		"STRIPE_SANDBOX_CLIENT_ID",
@@ -56,7 +58,7 @@ CACHE_URL_US_EAST=redis://localhost:6379
 REDIS_URL=redis://localhost:6379
 
 # ElasticMQ (local SQS, per-agent isolated queue)
-SQS_QUEUE_URL=http://localhost:9324/000000000000/autumn.fifo
+SQS_QUEUE_URL_V2=http://localhost:9324/000000000000/autumn.fifo
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=x
 AWS_SECRET_ACCESS_KEY=x

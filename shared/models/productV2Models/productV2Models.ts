@@ -1,6 +1,7 @@
 import { ApiFreeTrialSchema } from "@api/models.js";
 import { z } from "zod/v4";
 import { AppEnv } from "../genModels/genEnums.js";
+import { ProductConfigSchema } from "../productModels/productConfig/productConfig.js";
 import { ProductItemSchema } from "./productItemModels/productItemModels.js";
 
 export const ProductV2Schema = z.object({
@@ -21,6 +22,7 @@ export const ProductV2Schema = z.object({
 	created_at: z.number(),
 	stripe_id: z.string().nullish(),
 	archived: z.boolean().default(false).nullish(),
+	config: ProductConfigSchema.partial().optional(),
 });
 
 // 1. Create a new type called FrontendProduct

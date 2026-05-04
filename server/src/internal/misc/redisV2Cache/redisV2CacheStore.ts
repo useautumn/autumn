@@ -11,7 +11,7 @@ import {
 const store = createEdgeConfigStore<RedisV2CacheConfig>({
 	s3Key: ADMIN_REDIS_V2_CACHE_CONFIG_KEY,
 	schema: RedisV2CacheConfigSchema,
-	defaultValue: () => ({ activeInstance: "primary" }),
+	defaultValue: () => ({ activeInstance: "upstash" }),
 	pollIntervalMs: ms.seconds(10),
 });
 

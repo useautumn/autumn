@@ -36,16 +36,15 @@ export default function Problem() {
 					<div className="flex flex-col mb-2 gap-3 pl-[28px] xl:pl-[90px] pr-6 xl:pr-8 pt-14 sm:pt-16 xl:pt-16 items-center xl:items-start">
 						<h2 className="font-normal tracking-[-4%] leading-[32px] xl:leading-[40px] mb-2 xl:mb-4 text-center xl:text-left">
 							<span className="block text-[#686868] text-[30px] md:text-[36px] xl:text-[40px]">
-								Hard to ship,
+								Say goodbye to the 
 							</span>
 							<span className="block text-white text-[30px] md:text-[36px] xl:text-[40px]">
-								harder to scale.
+								old way of billing.
 							</span>
 						</h2>
 						<p className="text-[#888888] font-light text-[16px] md:text-[18px] xl:text-[16px] tracking-[-2%] leading-[20px] mb-8 xl:mb-10 max-w-sm md:max-w-lg xl:max-w-sm text-center xl:text-left">
 							Maintaining payment logic, customer balances and feature access
-							across pricing and product changes is months of work and
-							unreliable.
+							across pricing and product changes is months of work.
 							<span className="text-white">
 								{" "}
 								Autumn replaces all the billing code you're building yourself.
@@ -54,36 +53,39 @@ export default function Problem() {
 					</div>
 
 					<div className="mt-auto">
-						<div className="grid grid-cols-2 xl:grid-cols-[max-content_max-content_max-content_auto] border-t border-b border-[#1E1E1E]">
-							{[
-								{ value: "3–6 months", label: "work per year" },
-								{ value: "7+ webhook", label: "events to handle" },
-								{ value: "Edge cases", label: "100s to debug" },
-							].map((stat, i) => (
-								<div
-									key={i}
-									className={`py-6 pr-9 border-[#292929] border-r
-      ${i === 2 ? "col-span-2 xl:col-span-1 border-t xl:border-t-0 border-r-0 xl:border-r" : ""}
+						<div className="grid grid-cols-2 xl:grid-cols-3 border-t border-b border-[#1E1E1E] xl:pl-[66px]">
+						{[
+							{
+								title: "Speed.",
+								description:
+									"Launch faster and maintain less code. Your coding agents will thank you.",
+							},
+							{
+								title: "Flexibility.",
+								description:
+									"Grow revenue by pricing how you want. No code changes needed.",
+							},
+							{
+								title: "Reliability.",
+								description:
+									"Declines, 3DS and edge cases handled. Contracts always accurate.",
+							},
+						].map((stat, i) => (
+							<div
+								key={i}
+								className={`py-6 pr-9 border-[#292929] border-r
+      ${i === 2 ? "col-span-2 xl:col-span-1 border-t xl:border-t-0 border-r-0" : ""}
       ${i === 1 ? "border-r-0 xl:border-r" : ""}
-      ${i === 0 || i === 2 ? "pl-4" : "pl-4"}
-      xl:pl-6 ${i === 0 ? "xl:pl-[90px]" : ""}`}
-								>
-									<p className="text-white tracking-[-5%] font-normal text-[18px] xl:text-[24px] leading-none">
-										{stat.value}
-									</p>
-									<p className="text-[#767676] font-light tracking-[-5%] text-[16px] xl:text-[18px] mt-1.5 leading-[20px] whitespace-nowrap">
-										{stat.label}
-									</p>
-								</div>
-							))}
-							<div className="hidden xl:flex flex-1 items-stretch">
-								{[...Array(4)].map((_, i) => (
-									<div
-										key={i}
-										className={`flex-1 ${i < 3 ? "border-r border-[#292929]" : ""}`}
-									/>
-								))}
+      pl-4 xl:pl-6`}
+							>
+								<p className="text-white tracking-[-5%] font-normal text-[16px] xl:text-[18px] leading-none">
+								{stat.title}
+							</p>
+							<p className="text-[#767676] font-light tracking-[-5%] text-[14px] xl:text-[15px] mt-1.5 leading-[18px]">
+									{stat.description}
+								</p>
 							</div>
+						))}
 						</div>
 
 						<ProblemBgSvg />

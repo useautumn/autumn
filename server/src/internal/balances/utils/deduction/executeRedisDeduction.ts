@@ -161,7 +161,7 @@ export const executeRedisDeduction = async ({
 		if (!result) {
 			throw new RedisDeductionError({
 				message: "Redis not ready for deduction",
-				code: RedisDeductionErrorCode.CustomerNotFound,
+				code: RedisDeductionErrorCode.RedisUnavailable,
 			});
 		}
 

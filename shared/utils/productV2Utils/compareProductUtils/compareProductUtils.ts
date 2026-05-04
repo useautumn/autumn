@@ -94,6 +94,26 @@ export const compareDetails = ({
 	return detailsSame;
 };
 
+export const compareConfig = ({
+	newConfig,
+	curConfig,
+}: {
+	newConfig?: ProductV2["config"];
+	curConfig?: ProductV2["config"];
+}) => {
+	const checks = {
+		ignore_past_due: {
+			condition: newConfig?.ignore_past_due === curConfig?.ignore_past_due,
+			message: `Ignore past due different: ${newConfig?.ignore_past_due} !== ${curConfig?.ignore_past_due}`,
+		},
+	};
+
+	const detailsSame = Object.values(checks).every((d) => d.condition);
+
+
+	return detailsSame;
+};
+
 export const prodOptionsAreSame = ({
 	curProduct,
 	newProduct,
@@ -150,6 +170,7 @@ export const productsAreSame = ({
 	let itemsSame = true;
 	let pricesChanged = false;
 	let detailsSame = true;
+	let configSame = true;
 	const newItems: ProductItem[] = [];
 	const removedItems: ProductItem[] = [];
 
@@ -158,17 +179,18 @@ export const productsAreSame = ({
 		curProductV2,
 	});
 
+	configSame = compareConfig({
+		newConfig: newProductV2?.config,
+		curConfig: curProductV2?.config,
+	});
+
 	if (items1.length !== items2.length) {
 		itemsSame = false;
 	}
 
 	if (items1.length !== items2.length) itemsSame = false;
 
-	// console.log(`items1: `, items1);
-	// console.log(`items2: `, items2);
-
 	for (const item of items1) {
-		// console.log(`base item: `, formatItem({ item, features }));
 		const similarItem = findSimilarItem({
 			item,
 			items: items2,
@@ -184,7 +206,6 @@ export const productsAreSame = ({
 
 			continue;
 		}
-		// console.log(`similar item: `, formatItem({ item: similarItem, features }));
 
 		const { same, pricesChanged: pricesChanged_ } = itemsAreSame({
 			item1: item,
@@ -250,5 +271,6 @@ export const productsAreSame = ({
 		removedItems,
 		detailsSame,
 		optionsSame,
+		configSame,
 	};
 };

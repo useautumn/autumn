@@ -5,8 +5,8 @@ from autumn_sdk.types import BaseModel, UNSET_SENTINEL
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import Any, Dict, Literal, Optional
-from typing_extensions import Annotated, NotRequired, TypedDict
+from typing import Any, Dict, Literal, Optional, Union
+from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
 class FinalizeLockGlobalsTypedDict(TypedDict):
@@ -28,7 +28,7 @@ class FinalizeLockGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -76,7 +76,7 @@ class FinalizeBalanceParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k)
+            val = serialized.get(k, serialized.get(n))
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -85,13 +85,36 @@ class FinalizeBalanceParams(BaseModel):
         return m
 
 
-class FinalizeLockResponseTypedDict(TypedDict):
+class FinalizeLockResponseBody2TypedDict(TypedDict):
+    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so the finalize request was allowed fail-open."""
+
+    success: bool
+
+
+class FinalizeLockResponseBody2(BaseModel):
+    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so the finalize request was allowed fail-open."""
+
+    success: bool
+
+
+class FinalizeLockResponseBody1TypedDict(TypedDict):
     r"""OK"""
 
     success: bool
 
 
-class FinalizeLockResponse(BaseModel):
+class FinalizeLockResponseBody1(BaseModel):
     r"""OK"""
 
     success: bool
+
+
+FinalizeLockResponseTypedDict = TypeAliasType(
+    "FinalizeLockResponseTypedDict",
+    Union[FinalizeLockResponseBody1TypedDict, FinalizeLockResponseBody2TypedDict],
+)
+
+
+FinalizeLockResponse = TypeAliasType(
+    "FinalizeLockResponse", Union[FinalizeLockResponseBody1, FinalizeLockResponseBody2]
+)

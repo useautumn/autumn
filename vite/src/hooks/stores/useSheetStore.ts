@@ -12,6 +12,7 @@ export type SheetType =
 	| "attach-product"
 	| "attach-review"
 	| "attach-send-invoice"
+	| "attach-checkout-session"
 	| "subscription-detail"
 	| "subscription-update"
 	| "subscription-update-send-invoice"
@@ -108,7 +109,8 @@ export const useIsAttachingProduct = () =>
 		(s) =>
 			s.type === "attach-product" ||
 			s.type === "attach-review" ||
-			s.type === "attach-send-invoice",
+			s.type === "attach-send-invoice" ||
+			s.type === "attach-checkout-session",
 	);
 
 /**

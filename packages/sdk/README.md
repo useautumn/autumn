@@ -181,7 +181,7 @@ const response = await client.check({
 @param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
 @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
 
-@returns Whether access is allowed, plus the current balance for that feature.
+@returns Whether access is allowed, plus the current balance for that feature. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 and allow access fail-open.
 * [track](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.
@@ -205,7 +205,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
 
-@returns The usage value recorded, with either a single updated balance or a map of updated balances.
+@returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
 
 ### [Balances](docs/sdks/balances/README.md)
 
@@ -260,6 +260,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
+@param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 * [multiAttach](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
@@ -294,6 +295,7 @@ const response = await client.billing.multiAttach({ customerId: "cus_123", plans
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+@param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 * [previewAttach](docs/sdks/billing/README.md#previewattach) - Previews the billing changes that would occur when attaching a plan, without actually making any changes.
@@ -328,6 +330,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
+@param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 * [previewMultiAttach](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -350,6 +353,7 @@ const response = await client.billing.previewMultiAttach({ customerId: "cus_123"
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+@param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed multi-plan attachment.
 * [update](docs/sdks/billing/README.md#update) - Updates an existing subscription. Use to modify feature quantities, cancel, or change plan configuration.
@@ -384,6 +388,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+@param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
@@ -410,6 +415,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+@param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
@@ -441,6 +447,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
+@param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 * [list](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
@@ -698,6 +705,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
+@param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 - [`billingMultiAttach`](docs/sdks/billing/README.md#multiattach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
@@ -732,6 +740,7 @@ const response = await client.billing.multiAttach({ customerId: "cus_123", plans
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+@param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 - [`billingOpenCustomerPortal`](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
@@ -767,6 +776,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
+@param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 - [`billingPreviewMultiAttach`](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -789,6 +799,7 @@ const response = await client.billing.previewMultiAttach({ customerId: "cus_123"
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+@param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed multi-plan attachment.
 - [`billingPreviewUpdate`](docs/sdks/billing/README.md#previewupdate) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
@@ -811,6 +822,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+@param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
@@ -850,6 +862,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
 @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
 @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
+@param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
@@ -888,7 +901,7 @@ const response = await client.check({
 @param lock - Reserve units of a feature upfront by passing a lock_id, then call balances.finalize to confirm or release the hold. (optional)
 @param withPreview - If true, includes upgrade/upsell information in the response when access is denied. Useful for displaying paywalls. (optional)
 
-@returns Whether access is allowed, plus the current balance for that feature.
+@returns Whether access is allowed, plus the current balance for that feature. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 and allow access fail-open.
 - [`customersDelete`](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 - [`customersGetOrCreate`](docs/sdks/customers/README.md#getorcreate) - Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
 
@@ -910,6 +923,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param autoEnablePlanId - The ID of the free plan to auto-enable for the customer (optional)
 @param sendEmailReceipts - Whether to send email receipts to this customer (optional)
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
+@param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
 - [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 - [`customersUpdate`](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
@@ -1107,7 +1121,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
 
-@returns The usage value recorded, with either a single updated balance or a map of updated balances.
+@returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
 
 </details>
 <!-- End Standalone functions [standalone-funcs] -->

@@ -7,9 +7,9 @@ import {
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
-import { refreshEntityAggregateCache } from "./refreshEntityAggregateCache.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
+import { globalRefreshEntityAggregateBatchingManager } from "../refreshEntityAggregate/RefreshEntityAggregateBatchingManager";
 
 const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
@@ -132,14 +132,8 @@ export const syncItemV4 = async ({
 	ctx: AutumnContext;
 	payload: SyncItemV4;
 }): Promise<void> => {
-	const {
-		customerId,
-		entityId,
-		orgId,
-		env,
-		rolloverIds,
-		modifiedCusEntIdsByFeatureId,
-	} = payload;
+	const { customerId, entityId, rolloverIds, modifiedCusEntIdsByFeatureId } =
+		payload;
 	const { db, logger } = ctx;
 
 	// Read targeted balance hashes
@@ -147,22 +141,22 @@ export const syncItemV4 = async ({
 	for (const [featureId, customerEntitlementIds] of Object.entries(
 		modifiedCusEntIdsByFeatureId,
 	)) {
-		const result = await getCachedFeatureBalance({
+		const outcome = await getCachedFeatureBalance({
 			ctx,
 			customerId,
 			featureId,
 			customerEntitlementIds,
-			readMaster: true,
+			// readMaster: true,
 		});
 
-		if (!result) {
+		if (outcome.kind !== "ok") {
 			logger.info(
-				`[SYNC V4] (${customerId}) Cache miss for feature=${featureId}, skipping`,
+				`[SYNC V4] (${customerId}) Cache ${outcome.kind} for feature=${featureId}, skipping`,
 			);
 			return;
 		}
 
-		allSubjectBalances.push(...result.balances);
+		allSubjectBalances.push(...outcome.value.balances);
 	}
 
 	// Build sync entries
@@ -244,12 +238,16 @@ export const syncItemV4 = async ({
 		(subjectBalance) => subjectBalance.isEntityLevel,
 	);
 	if (hasEntityLevel) {
-		await refreshEntityAggregateCache({
-			ctx,
+		const featureIds = Object.keys(modifiedCusEntIdsByFeatureId);
+		const internalFeatureIds = ctx.features
+			.filter((feature) => featureIds.includes(feature.id))
+			.map((feature) => feature.internal_id);
+
+		globalRefreshEntityAggregateBatchingManager.schedule({
+			orgId: ctx.org.id,
+			env: ctx.env,
 			customerId,
-			orgId,
-			env,
-			featureIds: Object.keys(modifiedCusEntIdsByFeatureId),
+			internalFeatureIds,
 		});
 	}
 };

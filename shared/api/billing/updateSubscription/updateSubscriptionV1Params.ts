@@ -1,5 +1,6 @@
 import { CusProductStatus } from "@models/cusProductModels/cusProductEnums";
 import { z } from "zod/v4";
+import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
@@ -11,6 +12,10 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 		plan_id: z.string().optional().meta({
 			description:
 				"The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product.",
+		}),
+		discounts: z.array(AttachDiscountSchema).optional().meta({
+			description:
+				"List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
 		}),
 		cancel_action: CancelActionSchema.optional().meta({
 			description:
@@ -71,6 +76,7 @@ const UPDATE_FIELDS = [
 	"recalculate_balances",
 	"status",
 	"redirect_mode",
+	"discounts",
 ] as const satisfies (keyof z.input<
 	typeof ExtUpdateSubscriptionV1ParamsSchema
 >)[];
@@ -84,7 +90,7 @@ export const UpdateSubscriptionV1ParamsSchema =
 	})
 		.refine((data) => UPDATE_FIELDS.some((key) => data[key] !== undefined), {
 			message:
-				"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances or billing_cycle_anchor)",
+				"At least one update parameter must be provided (feature_quantities, version, customize, cancel_action, recalculate_balances, billing_cycle_anchor, or discounts)",
 		})
 		.refine((data) => !(data.refund_last_payment && data.proration_behavior), {
 			message:

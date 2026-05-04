@@ -2,6 +2,7 @@ import {
 	AppEnv,
 	type Organization,
 	type StripeConnectConfig,
+	Scopes,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { orgToAccountId } from "@/external/connect/connectUtils.js";
@@ -85,6 +86,7 @@ const clearStripeConfig = async ({
 };
 
 export const handleDeleteStripe = createRoute({
+	scopes: [Scopes.Organisation.Write],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, logger, env } = ctx;

@@ -1,4 +1,5 @@
 import { AppEnv } from "@shared/index";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 import { FeatureService } from "@/internal/features/FeatureService";
@@ -6,6 +7,7 @@ import { ProductService } from "@/internal/products/ProductService";
 import { invalidateProductsCache } from "@/internal/products/productCacheUtils";
 
 export const handleNukeOrganisationConfiguration = createRoute({
+	scopes: { ALL: [Scopes.Organisation.Write, Scopes.Plans.Write, Scopes.Features.Write, Scopes.Customers.Write] },
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;

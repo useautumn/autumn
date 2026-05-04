@@ -16,6 +16,7 @@ supabase.sh
 **/dist/
 **/.next/
 **/.vercel/
+**/.turbo/
 **/.DS_Store
 **/.env*
 tests/
@@ -132,7 +133,7 @@ TAKEHOME.md
 
 
 # project context (personal working state)
-.context/
+# .context/
 
 # ai-sync: generated files (source of truth is ai/)
 .cursor/

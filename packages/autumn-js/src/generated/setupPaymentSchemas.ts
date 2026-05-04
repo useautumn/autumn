@@ -184,6 +184,7 @@ export const setupPaymentParamsOutboundSchema = z.object({
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
+	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -311,4 +312,5 @@ export const setupPaymentParamsSchema = z.object({
 		.union([z.record(z.string(), z.string()), z.undefined()])
 		.optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 });

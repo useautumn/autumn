@@ -78,6 +78,7 @@ export const getFullSubjectQuery = ({
 		offset: 0,
 	},
 	inStatuses = RELEVANT_STATUSES,
+	allowMissingEntity = false,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -88,6 +89,10 @@ export const getFullSubjectQuery = ({
 		offset?: number;
 	};
 	inStatuses?: CusProductStatus[];
+	// When true and both customerId + entityId are provided, return the
+	// customer-scoped row even if the entity does not exist. No-op when
+	// customerId is absent (entity-only lookup has no customer anchor).
+	allowMissingEntity?: boolean;
 }) => {
 	const page = pagination.page ?? 50;
 	const offset = pagination.offset ?? 0;
@@ -135,15 +140,19 @@ export const getFullSubjectQuery = ({
 		statusFilter,
 	});
 
-	const subjectCustomerFilter = entityId
-		? sql`
+	const allowEntityFallback =
+		allowMissingEntity && !!customerId && !entityOnlyLookup;
+
+	const subjectCustomerFilter =
+		entityId && !allowEntityFallback
+			? sql`
 			WHERE scr.internal_id = (
 				SELECT internal_customer_id
 				FROM entity_record
 				LIMIT 1
 			)
 		`
-		: sql``;
+			: sql``;
 
 	const extraCustomerEntitlementEntityFilter = entityId
 		? sql`
@@ -232,7 +241,19 @@ export const getFullSubjectQuery = ({
 				ON ce.internal_customer_id = scr.internal_id
 			WHERE ce.customer_product_id IS NULL
 				AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+				AND (
+					ce.balance != 0
+					OR ce.unlimited IS TRUE
+					OR EXISTS (
+						SELECT 1
+						FROM entitlements e
+						JOIN features f ON f.internal_id = e.internal_feature_id
+						WHERE e.id = ce.entitlement_id
+							AND f.type = 'boolean'
+					)
+				)
 				${extraCustomerEntitlementEntityFilter}
+			LIMIT 20
 		),
 
 		all_cus_ent_ids AS (

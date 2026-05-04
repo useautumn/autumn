@@ -20,12 +20,14 @@ export const getEntityAggregateForSync = async ({
 	orgId,
 	env,
 	customerId,
+	internalFeatureIds,
 	inStatuses = RELEVANT_STATUSES,
 }: {
 	db: DrizzleCli;
 	orgId: string;
 	env: AppEnv;
 	customerId: string;
+	internalFeatureIds?: string[];
 	inStatuses?: CusProductStatus[];
 }): Promise<AggregatedFeatureBalance[]> => {
 	const statusFilter =
@@ -38,6 +40,7 @@ export const getEntityAggregateForSync = async ({
 
 	const entityFragments = getEntityAggregateFragments({
 		statusFilter,
+		internalFeatureIds,
 	});
 
 	const query = sql`

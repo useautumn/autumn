@@ -41,11 +41,17 @@ const testimonialsData = [
 ];
 
 const Testimonials = () => {
-	const videoRef = useRef<HTMLVideoElement | null>(null);
 	const scrollRef = useRef<HTMLDivElement | null>(null);
 	const progressRef = useRef<HTMLDivElement | null>(null);
 	const [canScrollLeft, setCanScrollLeft] = useState(false);
 	const [canScrollRight, setCanScrollRight] = useState(true);
+	// Only mount the hover-effect video on pointer:hover devices. Without this
+	// every mobile visitor downloads one copy of the clip per testimonial (6×
+	// the file) even though the hover effect they're gated on never triggers.
+	const [isHoverDevice, setIsHoverDevice] = useState(false);
+	useEffect(() => {
+		setIsHoverDevice(window.matchMedia("(hover: hover)").matches);
+	}, []);
 
 	const handleScroll = useCallback(() => {
 		if (scrollRef.current) {
@@ -58,12 +64,6 @@ const Testimonials = () => {
 				const progress = maxScroll > 0 ? (scrollLeft / maxScroll) * 100 : 0;
 				progressRef.current.style.transform = `translateX(${progress}%)`;
 			}
-		}
-	}, []);
-
-	useEffect(() => {
-		if (videoRef.current) {
-			videoRef.current.playbackRate = 0.4;
 		}
 	}, []);
 
@@ -132,19 +132,20 @@ const Testimonials = () => {
 								key={testimonial.id}
 								className="group cursor-pointer shrink-0 w-[300px] sm:w-[300px] md:w-[360px] snap-start min-h-[360px] flex flex-col justify-between p-4 sm:p-10 border-l border-r border-b border-[#1A1A1A] transition-all duration-300 relative overflow-hidden"
 							>
-								<div className="absolute inset-x-0 bottom-0 h-[120%] pointer-events-none z-0 overflow-hidden">
-									<div className="absolute inset-0 opacity-0 translate-y-6 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out pointer-events-none z-0 hidden md:block">
-										<video
-											ref={videoRef}
-											src="/images/testimonials/testimonial section.webm"
-											autoPlay
-											loop
-											muted
-											playsInline
-											className="w-full h-full object-cover"
-										/>
+								{isHoverDevice && (
+									<div className="absolute inset-x-0 bottom-0 h-[120%] pointer-events-none z-0 overflow-hidden">
+										<div className="absolute inset-0 opacity-0 translate-y-6 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 ease-out pointer-events-none z-0 hidden md:block">
+											<video
+												src="/images/testimonials/testimonial section.webm"
+												autoPlay
+												loop
+												muted
+												playsInline
+												className="w-full h-full object-cover"
+											/>
+										</div>
 									</div>
-								</div>
+								)}
 								<div className="absolute inset-x-0 bottom-0 h-[70%] bg-[linear-gradient(to_bottom,rgba(10,10,10,0)_0%,rgba(135,82,250,0.15)_40%,rgba(135,82,250,0.45)_70%,rgba(135,82,250,0.85)_90%)] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-0" />
 								<div className="relative z-10 flex flex-col h-full justify-start">
 									<IconQuotes className="w-8 h-8 text-[#4C4C4C] opacity-60 group-hover:text-[#9564FF] group-hover:opacity-100 transition-colors duration-500 mb-6" />

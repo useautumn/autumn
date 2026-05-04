@@ -20,6 +20,17 @@ const getErrorCode = ({ error }: { error: unknown }): string | null => {
 	return typeof code === "string" ? code : null;
 };
 
+const getErrorMessage = ({ error }: { error: unknown }): string | null =>
+	error instanceof Error ? error.message : null;
+
+const TRANSIENT_DB_ERROR_MESSAGES = new Set([
+	"timeout exceeded when trying to connect",
+	"Query read timeout",
+	"Connection terminated due to connection timeout",
+	"canceling statement due to lock timeout",
+	"canceling statement due to statement timeout",
+]);
+
 /**
  * PostgreSQL SQLSTATE code prefixes that indicate infrastructure issues.
  * - Class 08: Connection Exception (connection lost, refused, broken pipe)
@@ -58,8 +69,10 @@ const RETRYABLE_PG_CODES = new Set([
  * resolve on retry (connection lost, timeout, resource exhaustion, etc.).
  * Returns false for application errors (constraint violations, syntax errors, etc.).
  */
-export const isRetryableDbError = ({ error }: { error: unknown }): boolean => {
+export const isTransientDbError = ({ error }: { error: unknown }): boolean => {
 	const code = getErrorCode({ error });
+	const message = getErrorMessage({ error });
+	if (message && TRANSIENT_DB_ERROR_MESSAGES.has(message)) return true;
 	if (!code) return false;
 
 	if (RETRYABLE_PG_CODES.has(code)) return true;
@@ -103,9 +116,9 @@ export const isConnectionDropError = ({
 /** Throws if DATABASE_URL looks like a production database. Single source of truth for this check. */
 export const assertNotProductionDb = () => {
 	const url = process.env.DATABASE_URL || "";
-	if (url.includes("us-west-3")) {
+	if (url.includes("us-east-2")) {
 		throw new Error(
-			"Refusing to run against production database (DATABASE_URL contains us-west)",
+			"Refusing to run against production database (DATABASE_URL contains us-east-2)",
 		);
 	}
 };

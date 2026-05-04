@@ -1,0 +1,56 @@
+---
+title: "Auto Top-Up Succeeded"
+openapi: "api/openapi.yml webhook billing.auto_topup_succeeded"
+---
+
+### Payload Fields
+
+<ParamField body="customer_id" type="string" required>
+  The ID of the customer whose balance was topped up.
+</ParamField>
+
+<ParamField body="feature_id" type="string" required>
+  The feature ID that was automatically topped up.
+</ParamField>
+
+<ParamField body="quantity_granted" type="number" required>
+  The normalized amount of balance granted by the top-up.
+</ParamField>
+
+<ParamField body="threshold" type="number" required>
+  The configured balance threshold that triggered the top-up.
+</ParamField>
+
+<ParamField body="balance_after" type="number" required>
+  The customer's remaining balance for the feature after the top-up.
+</ParamField>
+
+<ParamField body="invoice_mode" type="boolean" required>
+  Whether the auto top-up created a `send_invoice` invoice instead of auto-charging the saved payment method.
+</ParamField>
+
+<ParamField body="invoice" type="object" required>
+  The invoice created for the auto top-up.
+  <Expandable title="properties">
+    <ParamField body="stripe_id" type="string" required>
+      The Stripe invoice ID. Use this as a stable dedupe key.
+    </ParamField>
+
+    <ParamField body="status" type="string">
+      The status of the invoice. `"paid"` for auto-charged top-ups; `"open"` for `invoice_mode` top-ups where credits were granted but the invoice has not yet been paid.
+    </ParamField>
+
+    <ParamField body="total" type="number" required>
+      The total amount of the invoice in the smallest currency unit (e.g. cents for USD), matching Stripe's `invoice.total`.
+    </ParamField>
+
+    <ParamField body="currency" type="string" required>
+      The ISO currency code for the invoice.
+    </ParamField>
+
+    <ParamField body="hosted_invoice_url" type="string">
+      URL to the hosted invoice page, if available.
+    </ParamField>
+
+  </Expandable>
+</ParamField>

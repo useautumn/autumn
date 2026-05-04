@@ -5,13 +5,11 @@ import {
 	type FullCustomer,
 	type TrackParams,
 } from "@autumn/shared";
-import { shouldUseRedis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 import { autoCreateEntity } from "@/internal/entities/handlers/handleCreateEntity/autoCreateEntity.js";
 import { CusService } from "../../CusService.js";
 import { updateCustomerDetails } from "../cusUtils.js";
-import { hydrateFullCustomerSchedule } from "../getFullCustomerSchedule.js";
 import { getCachedFullCustomer } from "./getCachedFullCustomer.js";
 import { setCachedFullCustomer } from "./setCachedFullCustomer.js";
 
@@ -41,7 +39,7 @@ export const getOrCreateCachedFullCustomer = async ({
 
 	let fullCustomer: FullCustomer | undefined;
 	const fetchTimeMs = Date.now();
-	const useRedis = !!customerId && !skipCache && shouldUseRedis();
+	const useRedis = !!customerId && !skipCache;
 
 	// 1. Try cache first (getCachedFullCustomer handles lazy reset internally)
 	let setCache = true;
@@ -116,10 +114,10 @@ export const getOrCreateCachedFullCustomer = async ({
 		}
 	}
 
-	fullCustomer = await hydrateFullCustomerSchedule({
-		ctx,
-		fullCustomer,
-	});
+	// fullCustomer = await hydrateFullCustomerSchedule({
+	// 	ctx,
+	// 	fullCustomer,
+	// });
 
 	// 6. Set cache (await to ensure it's ready before Redis deduction)
 	if (useRedis && setCache) {

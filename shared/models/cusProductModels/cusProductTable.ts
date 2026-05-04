@@ -59,6 +59,11 @@ export const customerProducts = pgTable(
 		api_semver: text("api_semver"),
 
 		external_id: text("external_id"),
+
+		// When the cusProduct was created via a Stripe checkout flow with
+		// enable_plan_immediately, this links the row to the pending checkout session
+		// so the webhook can patch in subscription_ids on completion (or expire on abandonment).
+		stripe_checkout_session_id: text("stripe_checkout_session_id"),
 	},
 	(table) => [
 		foreignKey({
@@ -96,6 +101,13 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_subscription_ids").using(
 			"gin",
 			table.subscription_ids,
+		),
+		index("idx_customer_products_scheduled_ids").using(
+			"gin",
+			table.scheduled_ids,
+		),
+		index("idx_customer_products_stripe_checkout_session_id").on(
+			table.stripe_checkout_session_id,
 		),
 	],
 );

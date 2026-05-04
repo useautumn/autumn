@@ -10,12 +10,14 @@ import {
 	RecaseError,
 	UpdateFeatureV0ParamsSchema,
 	UpdateFeatureV1ParamsSchema,
+	Scopes,
 } from "@autumn/shared";
 
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature";
 
 export const handleUpdateFeatureV1 = createRoute({
+	scopes: [Scopes.Features.Write],
 	versionedBody: {
 		latest: UpdateFeatureV1ParamsSchema,
 		[ApiVersion.V1_Beta]: UpdateFeatureV0ParamsSchema,

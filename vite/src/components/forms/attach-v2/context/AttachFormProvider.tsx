@@ -55,9 +55,13 @@ import {
 } from "../hooks/usePreviewDiff";
 
 interface AttachFormContextValue {
+	customerId: string | undefined;
 	form: UseAttachForm;
 	formValues: AttachForm;
 	features: Feature[];
+
+	entityId: string | undefined;
+	onScopeChange?: (entityId: string | undefined) => void;
 
 	product: ProductV2 | undefined;
 	prepaidItems: PrepaidItemWithFeature[];
@@ -81,13 +85,18 @@ interface AttachFormContextValue {
 	handleGrantFreeToggle: (params: { enabled: boolean }) => void;
 
 	isPending: boolean;
-	handleConfirm: () => void;
+	handleConfirm: (params?: { enableProductImmediately?: boolean }) => void;
 	handleInvoiceAttach: (params: {
 		enableProductImmediately: boolean;
 		finalizeInvoice: boolean;
 	}) => Promise<{
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
+	}>;
+	handleCheckoutAttach: (params: {
+		enablePlanImmediately: boolean;
+	}) => Promise<{
+		paymentUrl: string | null | undefined;
 	}>;
 }
 
@@ -103,6 +112,7 @@ interface AttachFormProviderProps {
 	onPlanEditorClose?: () => void;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
+	onScopeChange?: (entityId: string | undefined) => void;
 	initialSchedulePlan?: SchedulePlan | null;
 	disablePreview?: boolean;
 	children: ReactNode;
@@ -135,6 +145,7 @@ export function AttachFormProvider({
 	onPlanEditorClose,
 	onCheckoutRedirect,
 	onSuccess,
+	onScopeChange,
 	initialSchedulePlan,
 	disablePreview,
 	children,
@@ -173,6 +184,7 @@ export function AttachFormProvider({
 		discounts,
 		grantFree,
 		noBillingChanges,
+		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -309,7 +321,9 @@ export function AttachFormProvider({
 					? newInitialPrepaidOptions
 					: { ...newInitialPrepaidOptions, ...currentPrepaidOptions };
 			form.setFieldValue("prepaidOptions", resolvedPrepaidOptions);
-			setInitialPrepaidOptions(resolvedPrepaidOptions);
+			setInitialPrepaidOptions(
+				resolvedPrepaidOptions as Record<string, number>,
+			);
 
 			if (product.free_trial) {
 				form.setFieldValue("trialEnabled", true);
@@ -376,6 +390,7 @@ export function AttachFormProvider({
 		resetBillingCycle,
 		discounts,
 		noBillingChanges,
+		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -410,7 +425,12 @@ export function AttachFormProvider({
 		incomingItems: originalItems,
 	});
 
-	const { handleConfirm, handleInvoiceAttach, isPending } = useAttachMutation({
+	const {
+		handleConfirm,
+		handleInvoiceAttach,
+		handleCheckoutAttach,
+		isPending,
+	} = useAttachMutation({
 		customerId,
 		buildRequestBody,
 		onCheckoutRedirect,
@@ -470,8 +490,11 @@ export function AttachFormProvider({
 	const value = useMemo<AttachFormContextValue>(
 		() => ({
 			form,
+			customerId,
 			formValues,
 			features,
+			entityId,
+			onScopeChange,
 			product: effectiveProduct,
 			prepaidItems,
 			originalItems,
@@ -491,11 +514,15 @@ export function AttachFormProvider({
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,
+			handleCheckoutAttach,
 		}),
 		[
+			customerId,
 			form,
 			formValues,
 			features,
+			entityId,
+			onScopeChange,
 			effectiveProduct,
 			prepaidItems,
 			originalItems,
@@ -514,6 +541,7 @@ export function AttachFormProvider({
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,
+			handleCheckoutAttach,
 		],
 	);
 

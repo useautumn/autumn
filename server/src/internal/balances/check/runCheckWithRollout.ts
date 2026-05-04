@@ -1,20 +1,14 @@
-import type { CheckResponseV3, ParsedCheckParams } from "@autumn/shared";
+import type { ParsedCheckParams } from "@autumn/shared";
+import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckData } from "@/internal/api/check/checkTypes/CheckData.js";
+import { getCheckFailOpenFallback } from "@/internal/api/check/checkUtils/getCheckFailOpenFallback.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 import { runCheckLegacyFlow } from "./runCheckLegacyFlow.js";
 import { runCheckV2 } from "./runCheckV2.js";
+import type { RunCheckResult } from "./types.js";
 
-export type RunCheckWithRolloutResult =
-	| {
-			checkData: CheckData | CheckDataV2;
-			response: CheckResponseV3;
-	  }
-	| {
-			checkData: null;
-			response: Record<string, unknown>;
-	  };
 export const runCheckWithRollout = async ({
 	ctx,
 	body,
@@ -23,18 +17,22 @@ export const runCheckWithRollout = async ({
 	ctx: AutumnContext;
 	body: ParsedCheckParams;
 	requiredBalance: number;
-}): Promise<RunCheckWithRolloutResult> => {
-	if (isFullSubjectRolloutEnabled({ ctx })) {
-		return runCheckV2({
-			ctx,
-			body,
-			requiredBalance,
-		});
+}): Promise<RunCheckResult<CheckData | CheckDataV2>> => {
+	if (!isFullSubjectRolloutEnabled({ ctx })) {
+		return runCheckLegacyFlow({ ctx, body, requiredBalance });
 	}
 
-	return runCheckLegacyFlow({
-		ctx,
-		body,
-		requiredBalance,
+	return withRedisFailOpen<RunCheckResult<CheckData | CheckDataV2>>({
+		source: "runCheckWithRollout",
+		run: () => runCheckV2({ ctx, body, requiredBalance }),
+		fallback: (error) => ({
+			checkData: null,
+			response: getCheckFailOpenFallback({
+				ctx,
+				body,
+				requiredBalance,
+				error,
+			}) as Record<string, unknown>,
+		}),
 	});
 };

@@ -1,4 +1,4 @@
-import { type AppEnv, RecaseError } from "@autumn/shared";
+import { type AppEnv, RecaseError, Scopes } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
@@ -9,6 +9,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
  * Update a resource
  */
 export const handleUpdateResource = createRoute({
+	scopes: [Scopes.Public],
 	body: z.object({
 		name: z.string().min(1).optional(),
 		status: z

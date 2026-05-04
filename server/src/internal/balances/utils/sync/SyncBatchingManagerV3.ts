@@ -293,6 +293,7 @@ export class SyncBatchingManagerV3 {
 					entityId: context.entityId,
 					modifiedCusEntIdsByFeatureId: context.modifiedCusEntIdsByFeatureId,
 				},
+				// messageGroupId: `sync-v4:${context.orgId}:${context.env}:${context.customerId}`,
 				messageDeduplicationId,
 			});
 

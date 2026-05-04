@@ -11,6 +11,7 @@ import {
 	RedisDeductionError,
 	RedisDeductionErrorCode,
 } from "../../utils/types/redisDeductionError.js";
+import { queueTrack } from "./queueTrack.js";
 import { runPostgresTrack } from "./runPostgresTrack.js";
 /**
  * Handles errors from Redis deduction.
@@ -49,6 +50,12 @@ export const handleRedisTrackError = async ({
 			code: ErrCode.LockAlreadyExists,
 			statusCode: 409,
 		});
+	}
+
+	if (error.isRedisUnavailable()) {
+		const queuedResponse = await queueTrack({ ctx, body });
+		if (queuedResponse) return queuedResponse;
+		throw error;
 	}
 
 	// Fallback to Postgres for recoverable errors

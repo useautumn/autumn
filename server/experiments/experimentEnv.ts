@@ -17,8 +17,6 @@ export const prodTestOrgId = requireEnv({ key: "PROD_TEST_ORG_ID" });
 export const prodTestCustomerId = requireEnv({
 	key: "PROD_TEST_CUSTOMER_ID",
 });
-export const prodTestEntityId = requireEnv({
-	key: "PROD_TEST_ENTITY_ID",
-});
+export const prodTestEntityId = process.env.PROD_TEST_ENTITY_ID || undefined;
 
 export const { initDrizzle } = await import("../src/db/initDrizzle");

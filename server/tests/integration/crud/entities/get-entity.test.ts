@@ -281,6 +281,73 @@ test.concurrent(`${chalk.yellowBright("get-entity: created boolean balance is re
 	expect(entity.balances[TestFeature.Dashboard]).toBeUndefined();
 });
 
+test.concurrent(`${chalk.yellowBright("get-entity: throws when entity does not exist on existing customer")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const baseProduct = products.base({
+		id: "missing-entity-base",
+		items: [messagesItem],
+	});
+	const customerId = "get-entity-missing-entity";
+
+	const { autumnV1, autumnV2_1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [baseProduct] }),
+		],
+		actions: [s.billing.attach({ productId: baseProduct.id })],
+	});
+
+	const missingEntityId = "entity-that-does-not-exist";
+
+	// get-entity: legacy (FullCustomer cache) + V2.1 (FullSubject cache) both throw
+	await expect(
+		autumnV1.entities.get<ApiEntityV0>(customerId, missingEntityId),
+	).rejects.toThrow();
+
+	await expect(
+		autumnV2_1.entities.get<ApiEntityV2>(customerId, missingEntityId),
+	).rejects.toThrow();
+
+	// check: legacy path previously mis-routed to createWithDefaults on missing
+	// entity; should now surface the entity-not-found error directly without
+	// running CusService.getFull or logging "Customer already exists".
+	await expect(
+		autumnV1.check({
+			customer_id: customerId,
+			entity_id: missingEntityId,
+			feature_id: TestFeature.Messages,
+		}),
+	).rejects.toThrow();
+
+	await expect(
+		autumnV2_1.check({
+			customer_id: customerId,
+			entity_id: missingEntityId,
+			feature_id: TestFeature.Messages,
+		}),
+	).rejects.toThrow();
+
+	// track: same legacy/V2.1 split as check.
+	await expect(
+		autumnV1.track({
+			customer_id: customerId,
+			entity_id: missingEntityId,
+			feature_id: TestFeature.Messages,
+			value: 1,
+		}),
+	).rejects.toThrow();
+
+	await expect(
+		autumnV2_1.track({
+			customer_id: customerId,
+			entity_id: missingEntityId,
+			feature_id: TestFeature.Messages,
+			value: 1,
+		}),
+	).rejects.toThrow();
+});
+
 test.concurrent(`${chalk.yellowBright("get-entity: entity cache updates after customer attach across repeated reads")}`, async () => {
 	const dashboardItem = items.dashboard();
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });

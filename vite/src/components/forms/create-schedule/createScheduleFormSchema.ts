@@ -1,4 +1,4 @@
-import type { ProductItem } from "@autumn/shared";
+import { BillingBehaviorSchema, type ProductItem } from "@autumn/shared";
 import { z } from "zod/v4";
 
 export const SchedulePlanSchema = z.object({
@@ -169,6 +169,9 @@ export function getPhaseTimingError({
 export const CreateScheduleFormSchema = z
 	.object({
 		phases: z.array(SchedulePhaseSchema).min(1),
+		billingBehavior: BillingBehaviorSchema.nullable(),
+		resetBillingCycle: z.boolean(),
+		enablePlanImmediately: z.boolean(),
 	})
 	.refine(
 		(data) =>

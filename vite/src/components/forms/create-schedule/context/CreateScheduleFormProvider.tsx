@@ -140,6 +140,21 @@ export function CreateScheduleFormProvider({
 		[form.store],
 	);
 
+	const getBillingBehavior = useCallback(
+		() => form.store.state.values.billingBehavior ?? null,
+		[form.store],
+	);
+
+	const getResetBillingCycle = useCallback(
+		() => form.store.state.values.resetBillingCycle ?? false,
+		[form.store],
+	);
+
+	const getEnablePlanImmediately = useCallback(
+		() => form.store.state.values.enablePlanImmediately ?? false,
+		[form.store],
+	);
+
 	const buildRequestBody = useBuildCreateScheduleRequestBody({
 		customerId,
 		entityId,
@@ -147,6 +162,9 @@ export function CreateScheduleFormProvider({
 		features,
 		nowMs,
 		getPhases,
+		getBillingBehavior,
+		getResetBillingCycle,
+		getEnablePlanImmediately,
 	});
 
 	const previewRequestBody = useCreateScheduleRequestBody({
@@ -156,6 +174,8 @@ export function CreateScheduleFormProvider({
 		products,
 		features,
 		nowMs,
+		billingBehavior: formValues.billingBehavior,
+		resetBillingCycle: formValues.resetBillingCycle,
 	});
 
 	const phaseTimingError = useMemo(

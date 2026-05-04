@@ -46,6 +46,7 @@ import { Result } from "../types/fp.js";
  * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
  * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
  * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+ * @param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
  *
  * @returns A preview response with line items, totals, and effective dates for the proposed multi-plan attachment.
  */

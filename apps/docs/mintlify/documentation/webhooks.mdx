@@ -97,6 +97,64 @@ For entity-scoped usage, the payload will also include an `entity_id`:
 }
 ```
 
+### billing.auto_topup_succeeded
+
+Fired when an [auto top-up](/documentation/modelling-pricing/auto-top-ups) successfully grants additional prepaid balance. Useful for sending receipts, updating internal ledgers, or reconciling balance after a recharge.
+
+For auto-charged top-ups, the event fires only after the Stripe invoice is `paid`. For `invoice_mode` top-ups, the event fires once credits are granted and the invoice is finalized — `invoice.status` will typically be `"open"` until the customer pays.
+
+Use `invoice.stripe_id` as a stable dedupe key. The top-level `id` field (e.g. `evt_auto_topup_...`) is a unique identifier for the event itself.
+
+**Example payload (auto-charge):**
+
+```json expandable
+{
+  "type": "billing.auto_topup_succeeded",
+  "id": "evt_auto_topup_2abc123",
+  "occurred_at": 1761840000000,
+  "data": {
+    "customer_id": "user_123",
+    "feature_id": "credits",
+    "quantity_granted": 1000,
+    "threshold": 500,
+    "balance_after": 1450,
+    "invoice_mode": false,
+    "invoice": {
+      "stripe_id": "in_1A2B3C4D5E6F",
+      "status": "paid",
+      "total": 1000,
+      "currency": "usd",
+      "hosted_invoice_url": "https://invoice.stripe.com/i/..."
+    }
+  }
+}
+```
+
+**Example payload (invoice mode):**
+
+```json expandable
+{
+  "type": "billing.auto_topup_succeeded",
+  "id": "evt_auto_topup_3xyz456",
+  "occurred_at": 1761840000000,
+  "data": {
+    "customer_id": "user_123",
+    "feature_id": "credits",
+    "quantity_granted": 1000,
+    "threshold": 500,
+    "balance_after": 1450,
+    "invoice_mode": true,
+    "invoice": {
+      "stripe_id": "in_2G3H4I5J6K7L",
+      "status": "open",
+      "total": 1000,
+      "currency": "usd",
+      "hosted_invoice_url": "https://invoice.stripe.com/i/..."
+    }
+  }
+}
+```
+
 ### balances.usage_alert_triggered
 
 Fired when a customer crosses a configured usage alert threshold. Usage alerts let you monitor when customers approach or exceed specific usage levels for a feature.
