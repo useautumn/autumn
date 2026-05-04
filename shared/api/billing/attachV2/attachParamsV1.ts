@@ -85,6 +85,11 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	no_billing_changes: z.boolean().optional().meta({
 		description: "If true, skips any billing changes for the attach operation.",
 	}),
+
+	enable_plan_immediately: z.boolean().optional().meta({
+		description:
+			"If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.",
+	}),
 });
 
 export type AttachParamsV1 = z.infer<typeof AttachParamsV1Schema>;

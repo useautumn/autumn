@@ -794,6 +794,8 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped."""
     no_billing_changes: NotRequired[bool]
     r"""If true, skips any billing changes for the attach operation."""
+    enable_plan_immediately: NotRequired[bool]
+    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
 
 
 class PreviewAttachParams(BaseModel):
@@ -866,6 +868,9 @@ class PreviewAttachParams(BaseModel):
     no_billing_changes: Optional[bool] = None
     r"""If true, skips any billing changes for the attach operation."""
 
+    enable_plan_immediately: Optional[bool] = None
+    r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -890,6 +895,7 @@ class PreviewAttachParams(BaseModel):
                 "carry_over_usages",
                 "metadata",
                 "no_billing_changes",
+                "enable_plan_immediately",
             ]
         )
         serialized = handler(self)
@@ -1418,6 +1424,50 @@ PreviewAttachCheckoutType = Union[
 ]
 
 
+PreviewAttachStatus = Union[
+    Literal[
+        "complete",
+        "incomplete",
+    ],
+    UnrecognizedStr,
+]
+r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+
+
+class PreviewAttachTaxTypedDict(TypedDict):
+    r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
+
+    total: float
+    r"""Total tax amount in major currency units."""
+    amount_inclusive: float
+    r"""Tax included in line item subtotals."""
+    amount_exclusive: float
+    r"""Tax added on top of subtotals."""
+    currency: str
+    r"""Three-letter currency code."""
+    status: PreviewAttachStatus
+    r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+
+
+class PreviewAttachTax(BaseModel):
+    r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
+
+    total: float
+    r"""Total tax amount in major currency units."""
+
+    amount_inclusive: float
+    r"""Tax included in line item subtotals."""
+
+    amount_exclusive: float
+    r"""Tax added on top of subtotals."""
+
+    currency: str
+    r"""Three-letter currency code."""
+
+    status: PreviewAttachStatus
+    r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
+
+
 class PreviewAttachResponseTypedDict(TypedDict):
     r"""OK"""
 
@@ -1442,6 +1492,8 @@ class PreviewAttachResponseTypedDict(TypedDict):
     r"""Preview of the next billing cycle, if applicable. This shows what the customer will be charged in subsequent cycles."""
     expand: NotRequired[List[str]]
     r"""Expand the response with additional data."""
+    tax: NotRequired[PreviewAttachTaxTypedDict]
+    r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
 
 
 class PreviewAttachResponse(BaseModel):
@@ -1479,9 +1531,12 @@ class PreviewAttachResponse(BaseModel):
     expand: Optional[List[str]] = None
     r"""Expand the response with additional data."""
 
+    tax: Optional[PreviewAttachTax] = None
+    r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["next_cycle", "expand"])
+        optional_fields = set(["next_cycle", "expand", "tax"])
         nullable_fields = set(["checkout_type"])
         serialized = handler(self)
         m = {}

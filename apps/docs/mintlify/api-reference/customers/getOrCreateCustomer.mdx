@@ -233,7 +233,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
         </DynamicResponseField>
 
         <DynamicResponseField name="purchase_limit" type="object">
-          Optional rate limit to cap how often auto top-ups occur.
+          Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at.
           <Expandable title="properties">
             <DynamicResponseField name="interval" type="'hour' | 'day' | 'week' | 'month'">
               The time interval for the purchase limit window.

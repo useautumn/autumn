@@ -36,6 +36,7 @@ export const BillingParamsBaseV1Schema = z.object({
 		description:
 			"Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method.",
 	}),
+
 	proration_behavior: BillingBehaviorSchema.optional().meta({
 		description:
 			"How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges.",

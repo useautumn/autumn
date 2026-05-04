@@ -1,0 +1,84 @@
+---
+title: "Slack and Discord Notifications"
+description: "Send Autumn webhook events to Slack or Discord channels with rich, formatted messages using Svix transformations."
+---
+
+import SlackTransform from "/snippets/svix-transforms/slack.mdx";
+import DiscordTransform from "/snippets/svix-transforms/discord.mdx";
+
+Forward Autumn webhook events to a Slack or Discord channel with ready-made
+[Svix transformations](https://docs.svix.com/transformations) that turn each
+event into a clean, formatted message.
+
+## Supported events
+
+| Event | Slack | Discord |
+| --- | :---: | :---: |
+| `customer.products.updated` | ✓ | ✓ |
+| `balances.limit_reached` | ✓ | ✓ |
+| `balances.usage_alert_triggered` | ✓ | ✓ |
+
+Other event types — including Vercel Marketplace events — are skipped by the
+transforms so they are never delivered to your Slack or Discord channel.
+
+## Setup
+
+<Steps>
+  <Step title="Get an incoming webhook URL">
+    Follow the official guide for the platform you want to use:
+
+    - [Slack — Sending messages using incoming webhooks](https://docs.slack.dev/messaging/sending-messages-using-incoming-webhooks/)
+    - [Discord — Intro to webhooks](https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks)
+
+    Both flows give you a webhook URL that looks like
+    `https://hooks.slack.com/services/...` or
+    `https://discord.com/api/webhooks/...`. Keep it handy for the next step.
+  </Step>
+
+  <Step title="Add the webhook endpoint in Autumn">
+    In your Autumn dashboard, go to **Developer → Webhooks** and click
+    **Add Endpoint**. Paste in the URL from the previous step and select the
+    events you want to subscribe to.
+
+    <Frame>
+      <img src="/images/svix-notifications/01-add-endpoint.png" alt="Adding a webhook endpoint in the Autumn dashboard" />
+    </Frame>
+  </Step>
+
+  <Step title="Enable transformations">
+    Open the endpoint you just created, switch to the **Advanced** tab, and
+    click **Edit transformation**.
+
+    <Frame>
+      <img src="/images/svix-notifications/02-advanced-tab.png" alt="The Advanced tab on a webhook endpoint, showing the Edit transformation button" />
+    </Frame>
+
+    Paste in the transform code below for the platform you're targeting,
+    then click **Save and Enable**.
+
+    <Frame>
+      <img src="/images/svix-notifications/03-transformation-editor.png" alt="The transformation editor with the Enabled toggle, code area, and Save and Enable button highlighted" />
+    </Frame>
+  </Step>
+
+  <Step title="Enable throttling">
+    Back on the **Advanced** tab, click **Edit** next to **Endpoint Throttling**
+    and set a sensible RPS (requests-per-second) limit. This prevents your
+    Slack or Discord channel from being flooded during high-volume events such
+    as bulk customer migrations or backfills.
+
+    <Frame>
+      <img src="/images/svix-notifications/04-throttling.png" alt="Endpoint throttling editor with an RPS input field" />
+    </Frame>
+  </Step>
+</Steps>
+
+## Transform code
+
+Copy the transform for your platform into the **Code** editor on the
+transformation page, then click **Save and Enable**.
+
+<CodeGroup>
+  <SlackTransform />
+  <DiscordTransform />
+</CodeGroup>

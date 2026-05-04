@@ -39,7 +39,7 @@ export function getConfirmLabel({
 	);
 	if (isScheduled) return "Schedule Change";
 
-	if (previewData.redirect_to_checkout) return "Copy Checkout URL";
+	if (previewData.redirect_to_checkout) return "Generate Checkout URL";
 
 	if (previewData.total <= 0) return "Attach Plan";
 
@@ -109,7 +109,13 @@ export function AttachFooterV3() {
 				<Button
 					variant="primary"
 					className="w-full"
-					onClick={handleConfirm}
+					onClick={() => {
+						if (previewData?.redirect_to_checkout) {
+							setSheet({ type: "attach-checkout-session", itemId });
+						} else {
+							handleConfirm();
+						}
+					}}
 					isLoading={isPending}
 				>
 					{confirmLabel}

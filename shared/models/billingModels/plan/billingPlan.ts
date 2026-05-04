@@ -15,11 +15,16 @@ import {
 	type DeferredAutumnBillingPlanData,
 	type DeferredSetupPaymentData,
 } from "./autumnBillingPlan";
+import {
+	type PreviewBillingPlan,
+	PreviewBillingPlanSchema,
+} from "./previewBillingPlan";
 
 export type {
 	AutumnBillingPlan,
 	DeferredAutumnBillingPlanData,
 	DeferredSetupPaymentData,
+	PreviewBillingPlan,
 	StripeBillingPlan,
 	StripeCheckoutSessionAction,
 	StripeInvoiceAction,
@@ -32,6 +37,7 @@ export type {
 export const BillingPlanSchema = z.object({
 	autumn: AutumnBillingPlanSchema,
 	stripe: StripeBillingPlanSchema,
+	preview: PreviewBillingPlanSchema.optional(),
 });
 
 export type BillingPlan = z.infer<typeof BillingPlanSchema>;

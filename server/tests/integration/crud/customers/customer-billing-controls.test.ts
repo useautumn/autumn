@@ -1,10 +1,21 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV5, CustomerBillingControls } from "@autumn/shared";
+import {
+	type ApiCustomerV5,
+	type CustomerBillingControls,
+	CustomerExpand,
+	PurchaseLimitInterval,
+} from "@autumn/shared";
+import { makeAutoTopupConfig } from "@tests/integration/balances/auto-topup/utils/makeAutoTopupConfig";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
+import { items } from "@tests/utils/fixtures/items.js";
+import { products } from "@tests/utils/fixtures/products.js";
+import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
+
+const AUTO_TOPUP_WAIT_MS = 20000;
 
 const spendLimitControls: CustomerBillingControls = {
 	spend_limits: [
@@ -471,4 +482,169 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: clearing overa
 	expect(uncached.billing_controls?.spend_limits).toEqual(
 		spendLimitControls.spend_limits,
 	);
+});
+
+test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.purchase_limit expand surfaces runtime tracking")}`, async () => {
+	/**
+	 * Exercises the new `expand=billing_controls.auto_topups.purchase_limit`
+	 * path through three branches:
+	 *
+	 *   Phase A — purchase_limit configured, no DB row yet
+	 *             → expand is a passthrough (no count / next_reset_at)
+	 *   Phase B — purchase_limit configured, top-up has fired
+	 *             → expand surfaces count + next_reset_at; non-expanded fetch
+	 *               must NOT include them; uncached path matches cached
+	 *   Phase C — purchase_limit removed from config, prior row persists
+	 *             → expand returns null for interval/interval_count/limit but
+	 *               continues to surface count + next_reset_at from the row
+	 *
+	 * Phase C asserts `count: 1` (carried over from Phase B's top-up).
+	 * Removing `purchase_limit` from config does not delete the row, but
+	 * `recordAutoTopupAttempt` only increments `purchase_count` when
+	 * `purchaseLimit` is configured — so subsequent top-ups don't advance the
+	 * counter. The runtime field reflects this honestly: an attempt without a
+	 * configured limit is, definitionally, not "consumed against a quota."
+	 */
+	const customerId = "customer-billing-controls-12";
+	const oneOffProd = products.oneOffAddOn({
+		id: "topup-expand",
+		items: [
+			items.oneOffMessages({
+				includedUsage: 0,
+				billingUnits: 100,
+				price: 10,
+			}),
+		],
+	});
+
+	const { autumnV2_1, autumnV2_2 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [oneOffProd] }),
+		],
+		actions: [
+			s.attach({
+				productId: oneOffProd.id,
+				options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
+			}),
+		],
+	});
+
+	// ── Phase A: purchase_limit configured, no DB row yet → expand is a
+	// passthrough of the static config shape.
+	await autumnV2_2.customers.update(customerId, {
+		billing_controls: makeAutoTopupConfig({
+			threshold: 50,
+			quantity: 100,
+			purchaseLimit: { interval: PurchaseLimitInterval.Month, limit: 5 },
+		}),
+	});
+
+	const phaseA = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
+		expand: [CustomerExpand.AutoTopupsPurchaseLimit],
+	});
+	const phaseAPurchaseLimit =
+		phaseA.billing_controls?.auto_topups?.[0]?.purchase_limit;
+	expect(phaseAPurchaseLimit).toEqual({
+		interval: PurchaseLimitInterval.Month,
+		interval_count: 1,
+		limit: 5,
+	});
+	expect(phaseAPurchaseLimit).not.toHaveProperty("count");
+	expect(phaseAPurchaseLimit).not.toHaveProperty("next_reset_at");
+
+	// ── Phase B: track usage to fire one auto top-up, then assert expand
+	// returns the runtime count + window end.
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 260,
+	});
+	await timeout(AUTO_TOPUP_WAIT_MS);
+
+	const phaseBExpanded = await autumnV2_1.customers.get<ApiCustomerV5>(
+		customerId,
+		{ expand: [CustomerExpand.AutoTopupsPurchaseLimit] },
+	);
+	const phaseBPurchaseLimit = phaseBExpanded.billing_controls?.auto_topups?.[0]
+		?.purchase_limit as
+		| {
+				interval: PurchaseLimitInterval | null;
+				interval_count: number | null;
+				limit: number | null;
+				count: number;
+				next_reset_at: number;
+		  }
+		| undefined;
+	expect(phaseBPurchaseLimit).toMatchObject({
+		interval: PurchaseLimitInterval.Month,
+		interval_count: 1,
+		limit: 5,
+		count: 1,
+	});
+	expect(typeof phaseBPurchaseLimit?.next_reset_at).toBe("number");
+	expect(phaseBPurchaseLimit?.next_reset_at).toBeGreaterThan(Date.now());
+
+	// Without the expand the runtime fields must not leak in, even though the
+	// DB row now exists.
+	const phaseBPlain = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	const phaseBPlainPurchaseLimit =
+		phaseBPlain.billing_controls?.auto_topups?.[0]?.purchase_limit;
+	expect(phaseBPlainPurchaseLimit).toEqual({
+		interval: PurchaseLimitInterval.Month,
+		interval_count: 1,
+		limit: 5,
+	});
+	expect(phaseBPlainPurchaseLimit).not.toHaveProperty("count");
+	expect(phaseBPlainPurchaseLimit).not.toHaveProperty("next_reset_at");
+
+	// skip_cache parity — uncached read should match the cached expanded read.
+	const phaseBUncached = await autumnV2_1.customers.get<ApiCustomerV5>(
+		customerId,
+		{
+			expand: [CustomerExpand.AutoTopupsPurchaseLimit],
+			skip_cache: "true",
+		},
+	);
+	expect(
+		phaseBUncached.billing_controls?.auto_topups?.[0]?.purchase_limit,
+	).toEqual(phaseBPurchaseLimit);
+
+	// ── Phase C: drop purchase_limit from config; the existing DB row keeps
+	// tracking. Expand should report null config fields plus the cumulative
+	// runtime count.
+	await autumnV2_2.customers.update(customerId, {
+		billing_controls: makeAutoTopupConfig({ threshold: 50, quantity: 100 }),
+	});
+	await autumnV2_2.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 100,
+	});
+	await timeout(AUTO_TOPUP_WAIT_MS);
+
+	const phaseC = await autumnV2_2.customers.get<ApiCustomerV5>(customerId, {
+		expand: [CustomerExpand.AutoTopupsPurchaseLimit],
+	});
+	const phaseCPurchaseLimit = phaseC.billing_controls?.auto_topups?.[0]
+		?.purchase_limit as
+		| {
+				interval: PurchaseLimitInterval | null;
+				interval_count: number | null;
+				limit: number | null;
+				count: number;
+				next_reset_at: number;
+		  }
+		| undefined;
+	expect(phaseCPurchaseLimit).toMatchObject({
+		interval: null,
+		interval_count: null,
+		limit: null,
+		// count stays at 1 — see header comment: Phase C's top-up fires but
+		// does not increment purchase_count because no purchase_limit is
+		// configured.
+		count: 1,
+	});
+	expect(typeof phaseCPurchaseLimit?.next_reset_at).toBe("number");
 });

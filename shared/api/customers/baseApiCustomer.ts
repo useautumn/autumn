@@ -1,4 +1,4 @@
-import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls";
+import { CustomerBillingControlsResponseSchema } from "@models/cusModels/billingControls/customerBillingControls";
 import { AppEnv } from "@models/genModels/genEnums";
 import { z } from "zod/v4";
 
@@ -34,7 +34,7 @@ export const BaseApiCustomerSchema = z.object({
 	send_email_receipts: z.boolean().meta({
 		description: "Whether to send email receipts to the customer.",
 	}),
-	billing_controls: CustomerBillingControlsSchema.meta({
+	billing_controls: CustomerBillingControlsResponseSchema.meta({
 		description: "Billing controls for the customer (auto top-ups, etc.)",
 	}),
 });

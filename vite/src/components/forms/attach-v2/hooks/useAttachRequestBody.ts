@@ -37,6 +37,7 @@ export interface BuildAttachRequestBodyParams {
 	resetBillingCycle: boolean;
 	discounts: FormDiscount[];
 	noBillingChanges: boolean;
+	enablePlanImmediately: boolean;
 	carryOverBalances: boolean;
 	carryOverBalanceFeatureIds: string[];
 	carryOverUsages: boolean;
@@ -65,6 +66,7 @@ export function buildAttachRequestBody({
 	resetBillingCycle,
 	discounts,
 	noBillingChanges,
+	enablePlanImmediately,
 	carryOverBalances,
 	carryOverBalanceFeatureIds = [],
 	carryOverUsages,
@@ -152,6 +154,10 @@ export function buildAttachRequestBody({
 		body.no_billing_changes = true;
 	}
 
+	if (enablePlanImmediately) {
+		body.enable_product_immediately = true;
+	}
+
 	if (carryOverBalances) {
 		body.carry_over_balances =
 			carryOverBalanceFeatureIds.length > 0
@@ -199,6 +205,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		resetBillingCycle,
 		discounts,
 		noBillingChanges,
+		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -228,6 +235,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				resetBillingCycle,
 				discounts,
 				noBillingChanges,
+				enablePlanImmediately,
 				carryOverBalances,
 				carryOverBalanceFeatureIds,
 				carryOverUsages,
@@ -254,6 +262,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			resetBillingCycle,
 			discounts,
 			noBillingChanges,
+			enablePlanImmediately,
 			carryOverBalances,
 			carryOverBalanceFeatureIds,
 			carryOverUsages,
@@ -280,8 +289,15 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 
 				if (useInvoice) {
 					body.invoice = true;
-					body.enable_product_immediately = enableProductImmediately;
 					body.finalize_invoice = finalizeInvoice ?? false;
+				}
+
+				// `enable_product_immediately` applies to both invoice mode and the
+				// stripe_checkout "enable plan immediately" flow. Keep it independent
+				// of `useInvoice` so the dashboard can attach the cusProduct when
+				// copying a checkout URL too.
+				if (enableProductImmediately !== undefined) {
+					body.enable_product_immediately = enableProductImmediately;
 				}
 
 				return body;

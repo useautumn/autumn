@@ -151,7 +151,7 @@ describeDb("invalidateCachedFullSubject", () => {
 
 		expect(await ctx.redisV2.exists(entityBKey)).toBe(1);
 
-		const cachedEntityB = await getCachedFullSubject({
+		const { fullSubject: cachedEntityB } = await getCachedFullSubject({
 			ctx,
 			customerId: scenario.ids.customerId,
 			entityId: scenario.ids.entityIds[1],

@@ -130,6 +130,7 @@
 						"group": "Additional Resources",
 						"pages": [
 							"documentation/webhooks",
+							"documentation/slack-discord-notifications",
 							"documentation/fail-open",
 							"documentation/rate-limits",
 							"documentation/external-providers/convex",
@@ -269,6 +270,12 @@
 								"pages": [
 									"api-reference/webhooks/balancesUsageAlertTriggered",
 									"api-reference/webhooks/balancesLimitReached"
+								]
+							},
+							{
+								"group": "Billing",
+								"pages": [
+									"api-reference/webhooks/billingAutoTopupSucceeded"
 								]
 							},
 							{

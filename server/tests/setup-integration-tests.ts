@@ -1,9 +1,9 @@
 import { execSync } from "node:child_process";
 import { loadLocalEnv } from "@/utils/envUtils";
-
-const isUnitTest = () => {
-	return process.argv.some((arg) => arg.includes("unit"));
-};
+import {
+	createTestContext,
+	type TestContext,
+} from "./utils/testInitUtils/createTestContext";
 
 const loadInfisicalSecrets = async () => {
 	try {
@@ -27,15 +27,35 @@ const loadInfisicalSecrets = async () => {
 };
 
 /**
- * Bun test preload script for integration tests.
- * Loads environment variables before any test file runs.
+ * Bun test preload — runs once per `bun test` before any test file evaluates.
+ * Loads env vars and eagerly creates the master-org `TestContext`, stashing
+ * it on `globalThis.__autumnTestContext`. `createTestContext.ts`'s default
+ * export is a Proxy that reads the stash lazily, sidestepping import-order
+ * races and top-level-await TDZ.
+ *
+ * `createTestContext` is wrapped in try/catch so pure-unit lanes (no
+ * TESTS_ORG) still preload cleanly — unit tests don't read the default ctx.
+ * argv-based unit/integration branching isn't reliable (bun only passes the
+ * first path).
  */
 
-if (isUnitTest()) {
-	console.log("--- Skipping integration setup for unit tests ---");
-} else {
-	console.log("--- Setup integration tests ---");
-	await loadInfisicalSecrets();
-	loadLocalEnv({ force: true });
+declare global {
+	// biome-ignore lint/style/noVar: required for global declaration in TS
+	var __autumnTestContext: TestContext | null | undefined;
+}
+
+console.log("--- Setup integration tests ---");
+await loadInfisicalSecrets();
+loadLocalEnv({ force: true });
+
+try {
+	globalThis.__autumnTestContext = await createTestContext();
 	console.log("--- Setup integration tests complete ---");
+} catch (err) {
+	console.warn(
+		"[preload] Skipping master-org TestContext initialization. " +
+			"Integration tests that read the default ctx will fail with a clear " +
+			"error. Reason:",
+		err instanceof Error ? err.message : err,
+	);
 }

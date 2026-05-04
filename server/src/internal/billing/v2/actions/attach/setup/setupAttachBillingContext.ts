@@ -248,6 +248,7 @@ export const setupAttachBillingContext = async ({
 			: params.proration_behavior,
 
 		invoiceMode,
+		enablePlanImmediately: params.enable_plan_immediately ?? false,
 
 		customPrices,
 		customEnts,
