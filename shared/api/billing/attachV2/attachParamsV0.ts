@@ -4,6 +4,7 @@ import { ProductItemSchema } from "../../../models/productV2Models/productItemMo
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
+import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { AttachDiscountSchema } from "./attachDiscount";
 
 export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
@@ -21,7 +22,7 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	billing_cycle_anchor: BillingCycleAnchorSchema.optional(),
 
     plan_schedule: PlanTimingSchema.optional(),
-    start_date: z.number().optional(),
+    start_date: UnixMsTimestampSchema.optional(),
 
     // Discounts to apply (Stripe coupon IDs or human-readable promo code strings)
     discounts: z.array(AttachDiscountSchema).optional(),
