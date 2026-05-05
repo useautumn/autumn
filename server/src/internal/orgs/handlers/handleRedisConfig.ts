@@ -5,6 +5,8 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import { OrgService } from "../OrgService.js";
 
+const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);
+
 export const handleUpsertRedisConfig = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	body: z.object({
@@ -43,6 +45,13 @@ export const handleUpsertRedisConfig = createRoute({
 				statusCode: 400,
 			});
 		}
+		if (!REDIS_PROTOCOLS.has(redisUrl.protocol)) {
+			throw new RecaseError({
+				message: "Invalid connection string: expected redis:// or rediss://",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
 
 		const now = Date.now();
 		const updatedOrg = await OrgService.update({
@@ -62,7 +71,7 @@ export const handleUpsertRedisConfig = createRoute({
 		if (updatedOrg) {
 			getOrgRedis({ org: updatedOrg });
 			logger.info(
-				`[handleUpsertRedisConfig] org=${org.id}: redis_config created, url=${redisUrl.host}`,
+				`[handleUpsertRedisConfig] org=${org.id}: redis_config created, url=${redisUrl.host}, actor=${ctx.user?.email ?? ctx.userId ?? "unknown"}`,
 			);
 		}
 
@@ -123,6 +132,8 @@ export const handleDeleteRedisConfig = createRoute({
 			});
 		}
 
+		// Intended for use after migrationPercent has settled at 0; in-flight
+		// requests may still hold the old org config for a short window.
 		await OrgService.update({
 			db,
 			orgId: org.id,

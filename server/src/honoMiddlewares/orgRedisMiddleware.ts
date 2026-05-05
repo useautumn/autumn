@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import { setCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
+import { assignCustomerRedisToCtx } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 
 export const orgRedisMiddleware = async (
@@ -7,6 +7,6 @@ export const orgRedisMiddleware = async (
 	next: Next,
 ): Promise<void> => {
 	const ctx = c.get("ctx");
-	setCustomerRedisRouting({ ctx });
+	assignCustomerRedisToCtx({ ctx });
 	await next();
 };

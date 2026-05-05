@@ -6,7 +6,7 @@ import {
 	ProcessorType,
 	RecaseError,
 } from "@shared/index";
-import { setCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
+import { assignCustomerRedisToCtx } from "@/external/redis/customerRedisRouting.js";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
@@ -103,7 +103,7 @@ export const resolveRevenuecatResources = async ({
 		orgId: ctx.org.id,
 		customerId: ctx.customerId,
 	});
-	setCustomerRedisRouting({ ctx, customerId: ctx.customerId });
+	assignCustomerRedisToCtx({ ctx, customerId: ctx.customerId });
 
 	return { product, customer, cusProducts };
 };

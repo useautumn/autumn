@@ -16,6 +16,26 @@ import { addRequestToLogs } from "@/utils/logging/addContextToLogs";
 import { resolveCustomerId } from "./utils/resolveCustomerId.js";
 import { resolveEntityId } from "./utils/resolveEntityId.js";
 
+const SENSITIVE_REQUEST_BODY_KEYS = new Set(["connectionString"]);
+const REDACTED_REQUEST_BODY_VALUE = "[REDACTED]";
+
+const redactSensitiveRequestBody = ({ body }: { body: unknown }): unknown => {
+	if (!body || typeof body !== "object") return body;
+
+	if (Array.isArray(body)) {
+		return body.map((item) => redactSensitiveRequestBody({ body: item }));
+	}
+
+	return Object.fromEntries(
+		Object.entries(body).map(([key, value]) => [
+			key,
+			SENSITIVE_REQUEST_BODY_KEYS.has(key)
+				? REDACTED_REQUEST_BODY_VALUE
+				: redactSensitiveRequestBody({ body: value }),
+		]),
+	);
+};
+
 /**
  * Base middleware that sets up the request context
  * Sets up: db, logger, id, timestamp
@@ -61,7 +81,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			ip_address: c.req.header("x-forwarded-for"),
 			region: process.env.AWS_REGION,
 			query: c.req.query(),
-			body,
+			body: redactSensitiveRequestBody({ body }),
 
 			name: `${c.req.method} ${c.req.path}`,
 		},

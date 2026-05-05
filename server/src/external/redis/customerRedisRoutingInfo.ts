@@ -1,9 +1,5 @@
 import type { OrgRedisConfig } from "@autumn/shared";
-
-type OrgWithRedisConfig = {
-	id: string;
-	redis_config?: OrgRedisConfig | null;
-};
+import type { OrgWithRedisConfig } from "./orgRedisPool.js";
 
 export type CustomerRedisRoutingInfo = {
 	bucket?: number;
@@ -11,6 +7,7 @@ export type CustomerRedisRoutingInfo = {
 	usesDedicatedRedis: boolean;
 };
 
+// Deterministic rollout bucket, not a cryptographic hash.
 export const getCustomerBucket = (customerId: string): number =>
 	Number(BigInt(Bun.hash(customerId)) % 100n);
 
