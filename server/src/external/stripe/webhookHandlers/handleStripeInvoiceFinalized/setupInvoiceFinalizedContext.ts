@@ -12,6 +12,7 @@ import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/
 import { getExpandedStripeSubscription } from "@/external/stripe/subscriptions";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
+import { processVercelInvoice } from "./tasks/processVercelInvoice";
 
 export interface InvoiceFinalizedContext {
 	stripeInvoice: ExpandedStripeInvoice<
@@ -22,6 +23,20 @@ export interface InvoiceFinalizedContext {
 	fullCustomer: FullCustomer;
 	customerProducts: FullCusProduct[];
 }
+
+const isVercelInvoice = ({
+	stripeInvoice,
+	stripeSubscription,
+}: {
+	stripeInvoice: Stripe.Invoice;
+	stripeSubscription: Stripe.Subscription | null;
+}): boolean => {
+	const invoiceMeta = stripeInvoice.metadata as Record<string, string> | null;
+	return Boolean(
+		stripeSubscription?.metadata?.vercel_installation_id ||
+			invoiceMeta?.vercel_installation_id,
+	);
+};
 
 export const setupInvoiceFinalizedContext = async ({
 	ctx,
@@ -60,7 +75,13 @@ export const setupInvoiceFinalizedContext = async ({
 		subscriptionId: stripeSubscriptionId,
 	});
 
-	// 5. Get customer products by subscription ID
+	// 5. Vercel custom-PM invoices submit out-of-band BEFORE the cus_product
+	// gate — the cus_product is created downstream by marketplace.invoice.paid.
+	if (isVercelInvoice({ stripeInvoice, stripeSubscription })) {
+		await processVercelInvoice({ ctx, stripeInvoice, stripeSubscription });
+	}
+
+	// 6. Get customer products by subscription ID
 	const currentCustomerProducts = fullCustomer.customer_products.filter((cp) =>
 		isCustomerProductOnStripeSubscription({
 			customerProduct: cp,
@@ -81,7 +102,7 @@ export const setupInvoiceFinalizedContext = async ({
 		return null;
 	}
 
-	// 6. Update fullCustomer.customer_products with fresh data
+	// 7. Update fullCustomer.customer_products with fresh data
 	fullCustomer.customer_products = customerProducts;
 
 	return {
