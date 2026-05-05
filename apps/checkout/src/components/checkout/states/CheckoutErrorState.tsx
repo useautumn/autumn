@@ -5,6 +5,13 @@ import {
 } from "@phosphor-icons/react";
 import { CheckoutTerminalState } from "./CheckoutTerminalState";
 
+const variantConfig = {
+	completed: { Icon: CheckIcon, tone: "muted" },
+	expired: { Icon: TimerIcon, tone: "muted" },
+	unavailable: { Icon: WarningIcon, tone: "muted" },
+	generic: { Icon: WarningIcon, tone: "destructive" },
+} as const;
+
 export function CheckoutErrorState({
 	title,
 	message,
@@ -12,21 +19,16 @@ export function CheckoutErrorState({
 }: {
 	title: string;
 	message: string;
-	variant: "completed" | "expired" | "unavailable" | "generic";
+	variant: keyof typeof variantConfig;
 }) {
-	const Icon =
-		variant === "completed"
-			? CheckIcon
-			: variant === "expired"
-				? TimerIcon
-				: WarningIcon;
+	const { Icon, tone } = variantConfig[variant];
 
 	return (
 		<CheckoutTerminalState
 			title={title}
 			message={message}
 			Icon={Icon}
-			iconClassName={variant === "generic" ? "text-destructive/85" : undefined}
+			tone={tone}
 		/>
 	);
 }

@@ -5,9 +5,9 @@ export function CheckoutSuccessState() {
 	return (
 		<CheckoutTerminalState
 			title="Purchase complete"
-			message="Your order has been confirmed"
+			message="Your order has been confirmed."
 			Icon={CheckIcon}
-			iconClassName="text-primary"
+			tone="primary"
 		/>
 	);
 }
