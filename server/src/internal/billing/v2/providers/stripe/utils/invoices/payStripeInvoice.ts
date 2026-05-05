@@ -50,6 +50,17 @@ export const payStripeInvoice = async ({
 		});
 	}
 
+	if (paymentMethod.type === "custom") {
+		return {
+			paid: false,
+			invoice,
+			requiredAction: {
+				code: "payment_method_required",
+				reason: "Custom payment method requires out-of-band payment",
+			},
+		};
+	}
+
 	// 4. Attempt payment
 	const { data: paidInvoice, error } = await tryCatch(
 		stripeCli.invoices.pay(invoiceId, {

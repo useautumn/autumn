@@ -89,8 +89,9 @@ export const autoTopup = async ({
 
 		const isInvoiceMode = Boolean(autoTopupContext.invoiceMode);
 		const invoiceStatus = billingResult.stripe?.stripeInvoice?.status;
+		const isCustomPm = autoTopupContext.paymentMethod?.type === "custom";
 
-		if (!isInvoiceMode && invoiceStatus !== "paid") {
+		if (!isInvoiceMode && !isCustomPm && invoiceStatus !== "paid") {
 			await voidStripeInvoiceIfOpen({
 				ctx,
 				stripeInvoice: billingResult.stripe?.stripeInvoice,
@@ -99,7 +100,10 @@ export const autoTopup = async ({
 			return;
 		}
 
-		// Manually update cached options here since we're not refreshing cache.
+		if (isCustomPm) {
+			return;
+		}
+
 		const customerProductUpdate = autumnBillingPlan.updateCustomerProduct;
 		if (customerProductUpdate?.updates.options) {
 			const cusProductId = customerProductUpdate.customerProduct.id;
