@@ -31,6 +31,11 @@ export const BasePriceParamsSchema = BasePriceSchema.omit({
 		price_id: z.string().optional().meta({
 			internal: true,
 		}),
+		stripe_price_id: z.string().optional().meta({
+			description:
+				"Stripe price id this base price is billed under. Set by sync flows to capture the actual Stripe price when it differs from the catalog default.",
+			internal: true,
+		}),
 	})
 	.meta({
 		title: "BasePrice",

@@ -7,10 +7,7 @@ import {
 import { differenceInDays } from "date-fns";
 import type Stripe from "stripe";
 import { getStripeSubItems2 } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
-import {
-	priceToScheduleItem,
-	scheduleItemInCusProduct,
-} from "@/external/stripe/stripeSubUtils/stripeSubItemUtils.js";
+import { findPhaseItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findPhaseItemForAutumnPrice.js";
 import { formatPrice } from "@/internal/products/prices/priceUtils.js";
 import { formatUnixToDateTime } from "@/utils/genUtils.js";
 import type { ItemSet } from "@/utils/models/ItemSet.js";
@@ -46,10 +43,10 @@ const removeCusProductFromScheduleItems = async ({
 
 	const printRemoveLogs = false;
 	for (const price of prices) {
-		const existingScheduleItem = priceToScheduleItem({
+		const existingScheduleItem = findPhaseItemForAutumnPrice({
 			price,
-			scheduleItems: curScheduleItems,
-			stripeProdId: cusProduct.product.processor?.id,
+			product: cusProduct.product,
+			phaseItems: curScheduleItems,
 		});
 
 		if (printRemoveLogs) {
@@ -69,9 +66,9 @@ const removeCusProductFromScheduleItems = async ({
 		// 1. If arrear price
 		if (isConsumablePrice(price)) {
 			if (
-				allCusProducts.some((cp) => {
-					if (cp.id === cusProduct.id) return false;
-					if (cp.canceled) return false;
+				allCusProducts.some((customerProduct) => {
+					if (customerProduct.id === cusProduct.id) return false;
+					if (customerProduct.canceled) return false;
 
 					if (
 						phaseStart &&
@@ -80,10 +77,16 @@ const removeCusProductFromScheduleItems = async ({
 						return false;
 
 					if (
-						scheduleItemInCusProduct({
-							cusProduct: cp,
-							scheduleItem: existingScheduleItem as any,
-						})
+						cusProductToPrices({ cusProduct: customerProduct }).some(
+							(autumnPrice) =>
+								Boolean(
+									findPhaseItemForAutumnPrice({
+										price: autumnPrice,
+										product: customerProduct.product,
+										phaseItems: [existingScheduleItem],
+									}),
+								),
+						)
 					) {
 						return true;
 					}

@@ -1,8 +1,5 @@
 import { test } from "bun:test";
-import {
-	type ApiCustomerV5,
-	type AttachParamsV1Input,
-} from "@autumn/shared";
+import type { ApiCustomerV5, AttachParamsV1Input } from "@autumn/shared";
 import { expectProductScheduled } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -64,14 +61,18 @@ test(`${chalk.yellowBright("attach-start-date: already scheduled paid recurring 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
 		plan_id: pro.id,
-		start_date: startDate,
+		starts_at: startDate,
 	});
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	await expectProductScheduled({ customer, productId: pro.id, startsAt: startDate });
+	await expectProductScheduled({
+		customer,
+		productId: pro.id,
+		startsAt: startDate,
+	});
 });
 
-test(`${chalk.yellowBright("attach-start-date: active subscription hides start date option")}`, async () => {
+test(`${chalk.yellowBright("attach-start-date: active subscription hides starts_at option")}`, async () => {
 	const customerId = "attach-start-date-active-sub";
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 	const pro = products.pro({ items: [messagesItem] });

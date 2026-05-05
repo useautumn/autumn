@@ -1,9 +1,14 @@
-import { hasCustomerProductStarted, secondsToMs } from "@autumn/shared";
+import { hasCustomerProductStarted } from "@autumn/shared";
+import { fromUnixTime } from "date-fns";
 import type Stripe from "stripe";
-import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+
+const getScheduleId = (subscription: Stripe.Subscription) => {
+	const { schedule } = subscription;
+	return typeof schedule === "string" ? schedule : schedule?.id;
+};
 
 export const linkScheduledCustomerProductsToSubscription = async ({
 	ctx,
@@ -12,9 +17,7 @@ export const linkScheduledCustomerProductsToSubscription = async ({
 	ctx: StripeWebhookContext;
 	subscription: Stripe.Subscription;
 }) => {
-	const scheduleId = stripeSubscriptionToScheduleId({
-		stripeSubscription: subscription,
-	});
+	const scheduleId = getScheduleId(subscription);
 	if (!scheduleId) return;
 
 	const { db, org, env, logger } = ctx;
@@ -25,10 +28,9 @@ export const linkScheduledCustomerProductsToSubscription = async ({
 		env,
 	});
 
-	const subscriptionStartMs = secondsToMs(
+	const subscriptionStartMs = fromUnixTime(
 		subscription.start_date ?? subscription.created,
-	);
-
+	).getTime();
 	let linkedCount = 0;
 
 	for (const cusProduct of cusProducts) {
