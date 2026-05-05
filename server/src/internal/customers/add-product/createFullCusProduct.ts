@@ -21,7 +21,10 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext.js";
-import { resolveCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
+import {
+	getCustomerRedisRoutingId,
+	resolveCustomerRedisRouting,
+} from "@/external/redis/customerRedisRouting.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { triggerVerifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/triggerVerifyCacheConsistency.js";
 import { searchCusProducts } from "@/internal/customers/cusProducts/cusProductUtils.js";
@@ -365,7 +368,7 @@ export const createFullCusProduct = async ({
 		logger,
 		redisV2: resolveCustomerRedisRouting({
 			org,
-			customerId: customer.id ?? customer.internal_id,
+			customerId: getCustomerRedisRoutingId({ customer }),
 		}).redis,
 	};
 
