@@ -1,4 +1,7 @@
 import type Stripe from "stripe";
+import { getStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
+import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
+import { getExpandedStripeSubscription } from "@/external/stripe/subscriptions";
 import { storeRenewalLineItems } from "@/external/stripe/webhookHandlers/common";
 import { invoiceActions } from "@/internal/invoices/actions";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
@@ -18,6 +21,24 @@ export const handleStripeInvoiceFinalized = async ({
 	ctx: StripeWebhookContext;
 	event: Stripe.InvoiceFinalizedEvent;
 }) => {
+	const stripeInvoice = await getStripeInvoice({
+		stripeClient: ctx.stripeCli,
+		invoiceId: event.data.object.id!,
+		expand: ["discounts.source.coupon", "total_discount_amounts"],
+	});
+
+	const stripeSubscriptionId =
+		stripeInvoiceToStripeSubscriptionId(stripeInvoice);
+
+	const stripeSubscription = stripeSubscriptionId
+		? await getExpandedStripeSubscription({
+				ctx,
+				subscriptionId: stripeSubscriptionId,
+			})
+		: null;
+
+	await processVercelInvoice({ ctx, stripeInvoice, stripeSubscription });
+
 	const eventContext = await setupInvoiceFinalizedContext({ ctx, event });
 
 	if (!eventContext) {
@@ -28,9 +49,6 @@ export const handleStripeInvoiceFinalized = async ({
 	ctx.logger.info(
 		`[invoice.finalized] Processing for invoice ${eventContext.stripeInvoice.id}`,
 	);
-
-	// 1. Handle Vercel custom payment method invoices
-	await processVercelInvoice({ ctx, eventContext });
 
 	// 2. Upsert Autumn invoice record
 	const autumnInvoice = await invoiceActions.updateFromStripe({
