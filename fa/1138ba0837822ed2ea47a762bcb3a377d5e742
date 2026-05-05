@@ -1,0 +1,50 @@
+vite/src/views/customers2/components/sheets/AttachProductSheet.tsx
+  a1454da1b4393c4f 29,138,175,177
+shared/api/billing/common/billingPreviewResponse.ts
+  a1454da1b4393c4f 71-72,76
+shared/api/billing/updateSubscription/previewUpdateSubscriptionResponse.ts
+  a1454da1b4393c4f 5-6,21-25,27,34-35
+vite/src/components/forms/update-subscription-v2/components/UpdateSubscriptionPreviewSection.tsx
+  a1454da1b4393c4f 6,34-42,74,77-81
+vite/src/views/customers2/components/table/customer-list/CustomerListTable.tsx
+  b38ef8b87f138c52 11,14,44-50,115-119
+vite/src/views/customers2/components/table/customer-list/CustomerListColumns.tsx
+  b38ef8b87f138c52 226-251
+vite/src/components/v2/preview-totals/PreviewTotalsBlock.tsx
+  a1454da1b4393c4f 1-88,90-107
+vite/src/views/customers2/hooks/useCustomerListColumns.ts
+  b38ef8b87f138c52 10,17,21,61-77,79,83,86,88,91,99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "fa1138ba0837822ed2ea47a762bcb3a377d5e742",
+  "prompts": {
+    "a1454da1b4393c4f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_206ef4575ffeBB0Hg72onI1JF4",
+        "model": "openai/gpt-5.5-fast"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 1193,
+      "total_deletions": 394,
+      "accepted_lines": 875,
+      "overriden_lines": 7
+    },
+    "b38ef8b87f138c52": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_206a8e651fferEtxKco9aYJd0a",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 87,
+      "total_deletions": 27,
+      "accepted_lines": 72,
+      "overriden_lines": 0
+    }
+  }
+}
