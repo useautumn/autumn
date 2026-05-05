@@ -171,6 +171,7 @@ export const CreateScheduleFormSchema = z
 		phases: z.array(SchedulePhaseSchema).min(1),
 		billingBehavior: BillingBehaviorSchema.nullable(),
 		resetBillingCycle: z.boolean(),
+		enablePlanImmediately: z.boolean(),
 	})
 	.refine(
 		(data) =>

@@ -1,5 +1,6 @@
 import {
 	type CreateScheduleBillingContext,
+	ErrCode,
 	ms,
 	RecaseError,
 } from "@autumn/shared";
@@ -13,6 +14,19 @@ export const handleCreateScheduleErrors = ({
 }) => {
 	const { currentEpochMs, immediatePhase, stripeSubscriptionSchedule } =
 		billingContext;
+
+	if (
+		billingContext.checkoutMode === "stripe_checkout" &&
+		billingContext.enablePlanImmediately &&
+		(billingContext.adjustableFeatureQuantities?.length ?? 0) > 0
+	) {
+		throw new RecaseError({
+			message:
+				"enable_plan_immediately cannot be used with adjustable feature quantities — set adjustable_quantity to false on each option, or remove enable_plan_immediately.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 
 	// Updates reuse the existing schedule's current-phase start_date downstream
 	// (see executeStripeSubscriptionScheduleAction.buildAnchoredPhases), so the

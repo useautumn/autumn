@@ -911,6 +911,8 @@ class MultiAttachParamsTypedDict(TypedDict):
     r"""Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects."""
     new_billing_subscription: NotRequired[bool]
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
+    enable_plan_immediately: NotRequired[bool]
+    r"""If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout."""
     customer_data: NotRequired[CustomerDataTypedDict]
     r"""Customer details to set when creating a customer"""
     entity_data: NotRequired[MultiAttachEntityDataTypedDict]
@@ -947,6 +949,9 @@ class MultiAttachParams(BaseModel):
     new_billing_subscription: Optional[bool] = None
     r"""Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one."""
 
+    enable_plan_immediately: Optional[bool] = None
+    r"""If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout."""
+
     customer_data: Optional[CustomerData] = None
     r"""Customer details to set when creating a customer"""
 
@@ -964,6 +969,7 @@ class MultiAttachParams(BaseModel):
                 "checkout_session_params",
                 "redirect_mode",
                 "new_billing_subscription",
+                "enable_plan_immediately",
                 "customer_data",
                 "entity_data",
             ]

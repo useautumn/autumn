@@ -778,7 +778,9 @@ class Balances(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.FinalizeLockResponse, http_res)
+            return unmarshal_json_response(models.FinalizeLockResponseBody1, http_res)
+        if utils.match_response(http_res, "202", "application/json"):
+            return unmarshal_json_response(models.FinalizeLockResponseBody2, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = utils.stream_to_text(http_res)
             raise errors.AutumnDefaultError(
@@ -877,7 +879,9 @@ class Balances(BaseSDK):
         )
 
         if utils.match_response(http_res, "200", "application/json"):
-            return unmarshal_json_response(models.FinalizeLockResponse, http_res)
+            return unmarshal_json_response(models.FinalizeLockResponseBody1, http_res)
+        if utils.match_response(http_res, "202", "application/json"):
+            return unmarshal_json_response(models.FinalizeLockResponseBody2, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

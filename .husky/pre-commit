@@ -1,14 +1,13 @@
 set -e
 
-bun knip
-(cd server && bun ts)
-
 changed_files="$(git diff --cached --name-only)"
 
+bun knip
+
 if printf '%s\n' "$changed_files" | grep -q '^server/'; then
-	(cd server && bun test tests/unit)
+	bunx turbo run ts --filter=@autumn/server
 fi
 
 if printf '%s\n' "$changed_files" | grep -q '^vite/'; then
-	(cd vite && bun test tests/)
+	bunx turbo run ts --filter=@autumn/vite
 fi

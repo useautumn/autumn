@@ -3,6 +3,7 @@ export {
 	generateMintlifyDocs,
 	resolveSchemaExample,
 	stripJsDocTags,
+	syncSvixTransforms,
 	transformNode,
 	transformOpenApiForMintlify,
 	transformPythonCodeSample,

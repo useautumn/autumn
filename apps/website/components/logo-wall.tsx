@@ -1,71 +1,101 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { getGsap } from "@/lib/lazyGsap";
 
 const LOGOS = [
-	{ id: 1, name: "Mintlify", src: "/images/logos/mintlify_logo.svg.svg" },
-	{ id: 2, name: "Browser Use", src: "/images/logos/Browser use.svg" },
-	{ id: 3, name: "Firecrawl", src: "/images/logos/Firecrawl.svg.svg" },
-	{ id: 4, name: "Mastra", src: "/images/logos/Mastra.svg.svg" },
-	{ id: 5, name: "T3.chat", src: "/images/logos/T3_svg.svg" },
-	{ id: 6, name: "", src: null },
+	{ id: 1, name: "Mintlify", src: "/images/logos/mintlify_logo.svg.svg", className: "scale-90 md:scale-70" },
+	{ id: 3, name: "Firecrawl", src: "/images/logos/Firecrawl.svg.svg", className: "scale-95 md:scale-75 -translate-y-0.5" },
+	{ id: 4, name: "Mastra", src: "/images/logos/Mastra.svg.svg", className: "scale-105 md:scale-95" },
+	{ id: 2, name: "Browser Use", src: "/images/logos/Browser use.svg", className: "scale-85 md:scale-65" },
+	{ id: 5, name: "T3.chat", src: "/images/logos/T3_svg.svg", className: "scale-65 md:scale-55" },
 ];
 
-const NUM_MOBILE_COLS = 2;
-const NUM_DESKTOP_COLS = 3;
-
 export default function LogoWall() {
+	const sectionRef = useRef<HTMLElement | null>(null);
+
+	useEffect(() => {
+		const section = sectionRef.current;
+		if (!section) return;
+
+		let ctx: { revert: () => void } | null = null;
+		let cancelled = false;
+
+		if (window.innerWidth < 1024) return;
+
+		getGsap().then((gsap) => {
+			if (cancelled) return;
+			ctx = gsap.context(() => {
+				gsap.set(".logo-wall-title", {
+					opacity: 0,
+					y: 20,
+					scale: 0.97,
+					transformOrigin: "center bottom",
+				});
+				gsap.set(".logo-wall-item", {
+					opacity: 0,
+					y: 15,
+					scale: 0.96,
+				});
+
+				const tl = gsap.timeline({
+					defaults: { overwrite: "auto" },
+					delay: 0.35,
+				});
+
+				tl.to(".logo-wall-title, .logo-wall-item", {
+					opacity: 1,
+					y: 0,
+					scale: 1,
+					duration: 1.1,
+					ease: "power3.out",
+				});
+			}, section);
+		});
+
+		return () => {
+			cancelled = true;
+			ctx?.revert();
+		};
+	}, []);
+
 	return (
-		<section className="w-full bg-[#000000]">
-			<div className="flex flex-col md:flex-row">
-				{/* Left heading — full width on mobile, 42% on desktop */}
-				<div className="md:w-[42%] px-4 xl:px-22.75 py-8 md:py-0 flex items-center border-b md:border-b-0 md:border-r border-[#292929]">
-					<div>
-						<p className="font-sans text-[28px] md:text-[36px] xl:text-[40px] font-normal leading-[1.1] tracking-[-0.03em]">
-							<span className="text-[#FFFFFF66]">Trusted by </span>
-							<span className="text-white">AI teams</span>
-						</p>
-						<p className="font-sans text-[28px] md:text-[36px] xl:text-[40px] font-normal leading-[1.1] tracking-[-0.03em] text-white">
-							shipping fast
-						</p>
-					</div>
+		<section
+			ref={sectionRef}
+			className="w-full bg-[#0F0F0F]"
+			style={{
+				backgroundImage:
+					"radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)",
+				backgroundSize: "14px 14px",
+			}}
+		>
+			<div className="flex flex-col">
+				<div className="px-4 xl:px-22.75 pt-10.5 flex items-center justify-center">
+					<span className="logo-wall-title lg:opacity-0 font-sans text-[14px] font-light text-[#FFFFFF99] tracking-[-2%] leading-5">
+						Powering millions of customers for growing startups
+					</span>
 				</div>
 
-				{/* Logo grid — 2 cols on mobile, 3 cols on desktop */}
-				<div className="flex-1 grid grid-cols-2 md:grid-cols-3">
-					{LOGOS.map((logo, i) => {
-						const isLastMobileCol = (i + 1) % NUM_MOBILE_COLS === 0;
-						const isLastDesktopCol = (i + 1) % NUM_DESKTOP_COLS === 0;
-						const isLastMobileRow = i >= LOGOS.length - NUM_MOBILE_COLS;
-						const isLastDesktopRow = i >= LOGOS.length - NUM_DESKTOP_COLS;
-
-						return (
-							<div
-								key={logo.id}
-								className={cn(
-									"flex items-center justify-center min-h-[90px] md:min-h-[166px] border-[#292929]",
-									!isLastMobileCol && "border-r",
-									!isLastMobileRow && "border-b",
-									isLastDesktopCol ? "md:border-r-0" : "md:border-r",
-									isLastDesktopRow ? "md:border-b-0" : "md:border-b",
-								)}
-								style={{
-									backgroundImage:
-										"radial-gradient(circle, rgba(255,255,255,0.06) 1px, transparent 1px)",
-									backgroundSize: "14px 14px",
-								}}
-							>
-								{logo.src && (
-									<img
-										src={logo.src}
-										alt={logo.name}
-										className="h-5 md:h-7 w-auto max-w-[110px] md:max-w-[150px] object-contain"
-										loading="lazy"
-									/>
-								)}
-							</div>
-						);
-					})}
+				<div className="flex-1 flex flex-wrap justify-center md:grid md:grid-cols-5 px-4 py-4 md:py-0">
+					{LOGOS.map((logo) => (
+						<div
+							key={logo.id}
+							className="logo-wall-item lg:opacity-0 flex items-center justify-center min-h-[50px] md:min-h-[100px] border-[#292929] w-1/3 md:w-auto"
+						>
+							{logo.src && (
+								<img
+									src={logo.src}
+									alt={logo.name}
+									className={cn(
+										"h-5 md:h-7 w-auto max-w-full object-contain",
+										logo.className,
+									)}
+									loading="lazy"
+								/>
+							)}
+						</div>
+					))}
 				</div>
 			</div>
 		</section>

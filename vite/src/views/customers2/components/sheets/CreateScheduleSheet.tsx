@@ -145,6 +145,7 @@ export function buildInitialValues({
 			})),
 			billingBehavior: null,
 			resetBillingCycle: false,
+			enablePlanImmediately: false,
 		};
 	}
 
@@ -169,6 +170,7 @@ export function buildInitialValues({
 		],
 		billingBehavior: null,
 		resetBillingCycle: false,
+		enablePlanImmediately: false,
 	};
 }
 

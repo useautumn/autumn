@@ -60,9 +60,6 @@ export const handleCancelV2 = createRoute({
 		const billingContext = await setupUpdateSubscriptionBillingContext({
 			ctx,
 			params: updateSubscriptionBody,
-			contextOverride: {
-				inheritBillingVersion: true,
-			},
 		});
 		logUpdateSubscriptionContext({ ctx, billingContext });
 

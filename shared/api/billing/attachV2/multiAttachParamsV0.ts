@@ -93,6 +93,11 @@ export const MultiAttachParamsV0Schema = z.object({
 			"Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.",
 	}),
 
+	enable_plan_immediately: z.boolean().optional().meta({
+		description:
+			"If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.",
+	}),
+
 	// Internal
 	customer_data: CustomerDataSchema.optional().meta({
 		internal: true,

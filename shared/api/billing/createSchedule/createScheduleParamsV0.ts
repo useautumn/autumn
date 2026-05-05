@@ -91,6 +91,10 @@ export const CreateScheduleParamsV0Schema = z
 			description:
 				"Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.",
 		}),
+		enable_plan_immediately: z.boolean().optional().meta({
+			description:
+				"If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.",
+		}),
 		phases: z
 			.tuple([CreateSchedulePhaseSchema])
 			.rest(CreateSchedulePhaseSchema)

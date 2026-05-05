@@ -541,6 +541,10 @@ export type AttachParams = {
    * If true, skips any billing changes for the attach operation.
    */
   noBillingChanges?: boolean | undefined;
+  /**
+   * If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+   */
+  enablePlanImmediately?: boolean | undefined;
 };
 
 /**
@@ -1186,6 +1190,7 @@ export type AttachParams$Outbound = {
   carry_over_usages?: AttachCarryOverUsages$Outbound | undefined;
   metadata?: { [k: string]: string } | undefined;
   no_billing_changes?: boolean | undefined;
+  enable_plan_immediately?: boolean | undefined;
 };
 
 /** @internal */
@@ -1226,6 +1231,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     ),
     metadata: z.optional(z.record(z.string(), z.string())),
     noBillingChanges: z.optional(z.boolean()),
+    enablePlanImmediately: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1247,6 +1253,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       carryOverBalances: "carry_over_balances",
       carryOverUsages: "carry_over_usages",
       noBillingChanges: "no_billing_changes",
+      enablePlanImmediately: "enable_plan_immediately",
     });
   }),
 );

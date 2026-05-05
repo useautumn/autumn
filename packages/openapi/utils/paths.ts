@@ -23,6 +23,8 @@ export interface OpenApiPaths {
 	autumnJsGeneratedDir: string;
 	/** packages/autumn-js/src/generated/schemas.ts */
 	autumnJsSchemasPath: string;
+	/** others/svix-transforms/ directory */
+	svixTransformsDir: string;
 }
 
 /**
@@ -43,6 +45,10 @@ export function resolvePaths(): OpenApiPaths {
 		openApiDir,
 		"../autumn-js/src/generated",
 	);
+	const svixTransformsDir = path.resolve(
+		openApiDir,
+		"../../others/svix-transforms",
+	);
 	// Ensure directories exist
 	mkdirSync(openApiDir, { recursive: true });
 	mkdirSync(docsApiDir, { recursive: true });
@@ -59,5 +65,6 @@ export function resolvePaths(): OpenApiPaths {
 		docsDir,
 		autumnJsGeneratedDir,
 		autumnJsSchemasPath: path.join(autumnJsGeneratedDir, "schemas.ts"),
+		svixTransformsDir,
 	};
 }

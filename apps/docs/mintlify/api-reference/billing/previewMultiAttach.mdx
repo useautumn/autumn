@@ -255,6 +255,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
 </DynamicParamField>
 
+<DynamicParamField body="enable_plan_immediately" type="boolean">
+  If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
+</DynamicParamField>
+
 <DynamicParamField body="customer_data" type="object">
   Customer details to set when creating a customer
   <Expandable title="properties">
@@ -942,6 +946,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           If this is a variant, the ID of the base plan it was created from.
         </DynamicResponseField>
 
+        <DynamicResponseField name="config" type="object">
+          Miscellaneous plan-level configuration flags.
+          <Expandable title="properties">
+            <DynamicResponseField name="ignore_past_due" type="boolean">
+              If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
         <DynamicResponseField name="customer_eligibility" type="object">
           <Expandable title="properties">
             <DynamicResponseField name="trial_available" type="boolean">
@@ -1257,6 +1271,16 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
           If this is a variant, the ID of the base plan it was created from.
         </DynamicResponseField>
 
+        <DynamicResponseField name="config" type="object">
+          Miscellaneous plan-level configuration flags.
+          <Expandable title="properties">
+            <DynamicResponseField name="ignore_past_due" type="boolean">
+              If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
         <DynamicResponseField name="customer_eligibility" type="object">
           <Expandable title="properties">
             <DynamicResponseField name="trial_available" type="boolean">
@@ -1320,6 +1344,32 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 <DynamicResponseField name="checkout_type" type="'stripe_checkout' | 'autumn_checkout'">
   The type of checkout that will be used if the customer is redirected to a checkout page.
+</DynamicResponseField>
+
+<DynamicResponseField name="tax" type="object">
+  Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
+  <Expandable title="properties">
+    <DynamicResponseField name="total" type="number">
+      Total tax amount in major currency units.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="amount_inclusive" type="number">
+      Tax included in line item subtotals.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="amount_exclusive" type="number">
+      Tax added on top of subtotals.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string">
+      Three-letter currency code.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="status" type="'complete' | 'incomplete'">
+      Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+    </DynamicResponseField>
+
+  </Expandable>
 </DynamicResponseField>
 
 

@@ -29,13 +29,12 @@ export function CustomerInvoicesTable() {
 		[customer?.invoices, products],
 	);
 
-	// Fetch line items for all invoices
 	const invoiceIds = useMemo(
 		() => customer?.invoices?.map((inv: Invoice) => inv.id) ?? [],
 		[customer?.invoices],
 	);
 
-	const { lineItemsByInvoiceId } = useInvoiceLineItemsQuery({
+	const { lineItemsByInvoiceId, taxInfo } = useInvoiceLineItemsQuery({
 		customerId: customer?.id || customer?.internal_id,
 		invoiceIds,
 		enabled: invoiceIds.length > 0,
@@ -43,11 +42,13 @@ export function CustomerInvoicesTable() {
 
 	const handleRowClick = (invoice: Invoice) => {
 		const lineItems = lineItemsByInvoiceId[invoice.id] ?? [];
+		const taxedAmount = taxInfo[invoice.id]?.taxed_amount;
 		setSheet({
 			type: "invoice-detail",
 			data: {
 				invoice,
 				lineItems,
+				taxedAmount,
 			},
 		});
 	};
