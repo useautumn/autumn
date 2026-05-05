@@ -1,4 +1,17 @@
-import { AppEnv, type FullProduct, formatAmount, getProductItemDisplay, isFixedPrice, isPrepaidPrice, isPriceItem, mapToProductV2, type Organization, productV2ToBasePrice, type UsagePriceConfig, Scopes } from "@autumn/shared";
+import {
+	AppEnv,
+	type FullProduct,
+	formatAmount,
+	getProductItemDisplay,
+	isFixedPrice,
+	isPrepaidPrice,
+	isPriceItem,
+	mapToProductV2,
+	type Organization,
+	productV2ToBasePrice,
+	Scopes,
+	type UsagePriceConfig,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { parseVercelPrepaidQuantities } from "@/external/vercel/misc/vercelInvoicing.js";
@@ -122,6 +135,27 @@ export function productToBillingPlan({
 	return bp;
 }
 
+const getVercelPlanFilterReason = ({ product }: { product: FullProduct }) => {
+	if (
+		product.prices.some(
+			(price) => !isFixedPrice(price) && !isPrepaidPrice(price),
+		)
+	) {
+		return "Has usage prices";
+	}
+
+	if (product.is_add_on) return "Is add-on";
+	if (isOneOff(product.prices) && !isFreeProduct(product.prices)) {
+		return "Is paid one-off";
+	}
+	if (product.archived) return "Is archived";
+	if (product.entitlements.length === 0 && !product.is_default) {
+		return "Has no entitlements and is not default";
+	}
+
+	return null;
+};
+
 const listVercelPlansForOrg = async ({
 	db,
 	org,
@@ -150,25 +184,30 @@ const listVercelPlansForOrg = async ({
 	});
 
 	sortProductsByPrice({ products });
-
+	console.log(
+		"Products before filtering",
+		products.map((p) => p.name),
+	);
 	// 1. Get rid of products that have usage prices
 	// 2. Get rid of products that are archived
 	// 3. Get rid of products that are one off, only if they are not free
-	const filteredProducts = products
-		.filter(
-			(p) =>
-				// If the product has any prices that are not fixed or prepaid, filter it out
-				!p.prices.some(
-					(price) => !isFixedPrice(price) && !isPrepaidPrice(price),
-				),
-		)
-		.filter(
-			(p) =>
-				!p.is_add_on &&
-				(!isOneOff(p.prices) || isFreeProduct(p.prices)) &&
-				!p.archived &&
-				(p.entitlements.length > 0 || p.is_default),
-		);
+	const filteredProducts = products.filter(
+		(product) => !getVercelPlanFilterReason({ product }),
+	);
+
+	console.log(
+		"Products after filtering",
+		filteredProducts.map((p) => p.name),
+	);
+	console.log(
+		"For each product, here is the reason it was filtered out",
+		products
+			.map((product) => ({
+				name: product.name,
+				reason: getVercelPlanFilterReason({ product }),
+			}))
+			.filter(({ reason }) => reason),
+	);
 
 	return [
 		...filteredProducts.map((product) =>
@@ -195,7 +234,7 @@ const listVercelPlansForOrg = async ({
 	] satisfies VercelBillingPlan[];
 };
 
-export const handleListBillingPlansPerInstall = createRoute({
+export const handleVercelListBillingPlans = createRoute({
 	scopes: [Scopes.Public],
 	query: z.object({
 		metadata: z.string().optional(),
@@ -265,6 +304,8 @@ export const handleListBillingPlansPerInstall = createRoute({
 				customer?.customer_products?.length === 0 ||
 				customer?.customer_products?.every((p) => !p?.product?.is_default),
 		});
+
+		console.log("plans", plans);
 
 		return c.json({ plans });
 	},
