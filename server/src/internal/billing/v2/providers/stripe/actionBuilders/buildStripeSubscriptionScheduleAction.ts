@@ -8,6 +8,7 @@ import {
 	cp,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
+	stripePhaseStartsInFuture,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { buildStripePhasesUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
@@ -21,6 +22,7 @@ type StripeSubscriptionScheduleResult = {
 	scheduleAction?: StripeSubscriptionScheduleAction;
 	/** number = set cancel_at, null = clear cancel_at, undefined = don't touch */
 	subscriptionCancelAt?: number | null;
+	subscriptionStartsAt?: number | "now";
 };
 
 /**
@@ -28,12 +30,14 @@ type StripeSubscriptionScheduleResult = {
  * - no_phases: No phases with items, nothing to do
  * - single_indefinite: 1 phase with no end_date (e.g., uncancel)
  * - simple_cancel: 1 phase + trailing empty (cancel at end of cycle)
+ * - future_standalone: A standalone schedule that starts in the future
  * - multi_phase: Multiple phases requiring a schedule
  */
 type ScheduleScenario =
 	| "no_phases"
 	| "single_indefinite"
 	| "simple_cancel"
+	| "future_standalone"
 	| "multi_phase";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -70,11 +74,14 @@ const filterEmptyPhases = (
 const getScheduleScenario = ({
 	scheduledPhases,
 	endsWithEmptyPhase,
+	shouldCreateFutureSchedule,
 }: {
 	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
 	endsWithEmptyPhase: boolean;
+	shouldCreateFutureSchedule: boolean;
 }): ScheduleScenario => {
 	if (scheduledPhases.length === 0) return "no_phases";
+	if (shouldCreateFutureSchedule) return "future_standalone";
 
 	if (scheduledPhases.length === 1) {
 		if (endsWithEmptyPhase) return "simple_cancel";
@@ -94,6 +101,7 @@ const buildActionForScenario = ({
 	scheduledPhases,
 	cancelAtSeconds,
 	endsWithEmptyPhase,
+	subscriptionStartsAt,
 }: {
 	scenario: ScheduleScenario;
 	hasSchedule: boolean;
@@ -101,6 +109,7 @@ const buildActionForScenario = ({
 	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
 	cancelAtSeconds: number | undefined;
 	endsWithEmptyPhase: boolean;
+	subscriptionStartsAt?: number | "now";
 }): StripeSubscriptionScheduleResult => {
 	switch (scenario) {
 		case "no_phases":
@@ -130,6 +139,7 @@ const buildActionForScenario = ({
 				subscriptionCancelAt: cancelAtSeconds,
 			};
 
+		case "future_standalone":
 		case "multi_phase": {
 			// Multiple transitions: need a schedule
 			const endBehavior = endsWithEmptyPhase ? "cancel" : "release";
@@ -144,6 +154,7 @@ const buildActionForScenario = ({
 								end_behavior: endBehavior,
 							},
 						},
+						subscriptionStartsAt,
 					}
 				: {
 						scheduleAction: {
@@ -153,9 +164,27 @@ const buildActionForScenario = ({
 								end_behavior: endBehavior,
 							},
 						},
+						subscriptionStartsAt,
 					};
 		}
 	}
+};
+
+const shouldCreateFutureSchedule = ({
+	billingContext,
+	scheduledPhases,
+	stripeSubscription,
+}: {
+	billingContext: BillingContext;
+	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
+	stripeSubscription?: Stripe.Subscription;
+}) => {
+	if (stripeSubscription) return false;
+
+	return stripePhaseStartsInFuture(
+		scheduledPhases[0]?.start_date,
+		billingContext.currentEpochMs,
+	);
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -232,6 +261,11 @@ export const buildStripeSubscriptionScheduleAction = ({
 	});
 
 	const scheduledPhases = filterEmptyPhases(phases);
+	const isFutureSchedule = shouldCreateFutureSchedule({
+		billingContext,
+		scheduledPhases,
+		stripeSubscription,
+	});
 
 	// 3. Derive cancel info from trailing empty phase
 	const lastPhase = phases[phases.length - 1];
@@ -242,7 +276,11 @@ export const buildStripeSubscriptionScheduleAction = ({
 			: undefined;
 
 	// 4. Determine scenario and build action
-	const scenario = getScheduleScenario({ scheduledPhases, endsWithEmptyPhase });
+	const scenario = getScheduleScenario({
+		scheduledPhases,
+		endsWithEmptyPhase,
+		shouldCreateFutureSchedule: isFutureSchedule,
+	});
 
 	return buildActionForScenario({
 		scenario,
@@ -251,5 +289,8 @@ export const buildStripeSubscriptionScheduleAction = ({
 		scheduledPhases,
 		cancelAtSeconds,
 		endsWithEmptyPhase,
+		subscriptionStartsAt: isFutureSchedule
+			? scheduledPhases[0]?.start_date
+			: undefined,
 	});
 };
