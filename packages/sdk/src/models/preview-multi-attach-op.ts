@@ -568,6 +568,10 @@ export type PreviewMultiAttachParams = {
    */
   newBillingSubscription?: boolean | undefined;
   /**
+   * If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
+   */
+  enablePlanImmediately?: boolean | undefined;
+  /**
    * Customer details to set when creating a customer
    */
   customerData?: CustomerData | undefined;
@@ -832,6 +836,46 @@ export type PreviewMultiAttachCheckoutType = OpenEnum<
 >;
 
 /**
+ * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ */
+export const PreviewMultiAttachStatus = {
+  Complete: "complete",
+  Incomplete: "incomplete",
+} as const;
+/**
+ * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ */
+export type PreviewMultiAttachStatus = OpenEnum<
+  typeof PreviewMultiAttachStatus
+>;
+
+/**
+ * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
+ */
+export type PreviewMultiAttachTax = {
+  /**
+   * Total tax amount in major currency units.
+   */
+  total: number;
+  /**
+   * Tax included in line item subtotals.
+   */
+  amountInclusive: number;
+  /**
+   * Tax added on top of subtotals.
+   */
+  amountExclusive: number;
+  /**
+   * Three-letter currency code.
+   */
+  currency: string;
+  /**
+   * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+   */
+  status: PreviewMultiAttachStatus;
+};
+
+/**
  * OK
  */
 export type PreviewMultiAttachResponse = {
@@ -876,6 +920,10 @@ export type PreviewMultiAttachResponse = {
    * The type of checkout that will be used if the customer is redirected to a checkout page.
    */
   checkoutType: PreviewMultiAttachCheckoutType | null;
+  /**
+   * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
+   */
+  tax?: PreviewMultiAttachTax | undefined;
 };
 
 /** @internal */
@@ -1622,6 +1670,7 @@ export type PreviewMultiAttachParams$Outbound = {
   checkout_session_params?: { [k: string]: any } | undefined;
   redirect_mode: string;
   new_billing_subscription?: boolean | undefined;
+  enable_plan_immediately?: boolean | undefined;
   customer_data?: CustomerData$Outbound | undefined;
   entity_data?: PreviewMultiAttachEntityData$Outbound | undefined;
 };
@@ -1653,6 +1702,7 @@ export const PreviewMultiAttachParams$outboundSchema: z.ZodMiniType<
       "if_required",
     ),
     newBillingSubscription: z.optional(z.boolean()),
+    enablePlanImmediately: z.optional(z.boolean()),
     customerData: z.optional(CustomerData$outboundSchema),
     entityData: z.optional(
       z.lazy(() => PreviewMultiAttachEntityData$outboundSchema),
@@ -1668,6 +1718,7 @@ export const PreviewMultiAttachParams$outboundSchema: z.ZodMiniType<
       checkoutSessionParams: "checkout_session_params",
       redirectMode: "redirect_mode",
       newBillingSubscription: "new_billing_subscription",
+      enablePlanImmediately: "enable_plan_immediately",
       customerData: "customer_data",
       entityData: "entity_data",
     });
@@ -2092,6 +2143,42 @@ export const PreviewMultiAttachCheckoutType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PreviewMultiAttachCheckoutType);
 
 /** @internal */
+export const PreviewMultiAttachStatus$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachStatus,
+  unknown
+> = openEnums.inboundSchema(PreviewMultiAttachStatus);
+
+/** @internal */
+export const PreviewMultiAttachTax$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachTax,
+  unknown
+> = z.pipe(
+  z.object({
+    total: types.number(),
+    amount_inclusive: types.number(),
+    amount_exclusive: types.number(),
+    currency: types.string(),
+    status: PreviewMultiAttachStatus$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_inclusive": "amountInclusive",
+      "amount_exclusive": "amountExclusive",
+    });
+  }),
+);
+
+export function previewMultiAttachTaxFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewMultiAttachTax, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewMultiAttachTax$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewMultiAttachTax' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
   PreviewMultiAttachResponse,
   unknown
@@ -2110,6 +2197,7 @@ export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
     outgoing: z.array(z.lazy(() => PreviewMultiAttachOutgoing$inboundSchema)),
     redirect_to_checkout: types.boolean(),
     checkout_type: types.nullable(PreviewMultiAttachCheckoutType$inboundSchema),
+    tax: types.optional(z.lazy(() => PreviewMultiAttachTax$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

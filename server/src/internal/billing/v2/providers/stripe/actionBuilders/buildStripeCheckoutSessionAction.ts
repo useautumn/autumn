@@ -8,6 +8,7 @@ import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
+import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { stripeDiscountsToCheckoutParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
 
 export const buildStripeCheckoutSessionAction = ({
@@ -65,7 +66,9 @@ export const buildStripeCheckoutSessionAction = ({
 							end_behavior: { missing_payment_method: "cancel" },
 						},
 					}),
-					metadata: { autumn_managed: "true" },
+					metadata: buildAutumnSubscriptionMetadata({
+						actionSource: billingContext.actionSource,
+					}),
 				}
 			: undefined;
 
@@ -74,7 +77,18 @@ export const buildStripeCheckoutSessionAction = ({
 		? stripeDiscountsToCheckoutParams({ stripeDiscounts })
 		: undefined;
 
-	// 7. Build params (only variable params - static params added in execute)
+	// 7. Build params. Tax policy is baked in here (not at execute time) so
+	// the action object is self-describing in logs/EXTRA_LOGS.
+	const autumnAutoTax: Partial<Stripe.Checkout.SessionCreateParams> = org
+		.config.automatic_tax
+		? {
+				automatic_tax: { enabled: true },
+				billing_address_collection: "required",
+				customer_update: { address: "auto", name: "auto" },
+				tax_id_collection: { enabled: true },
+			}
+		: {};
+
 	const params: Stripe.Checkout.SessionCreateParams = {
 		customer: stripeCustomer?.id ?? "none",
 		mode,
@@ -82,6 +96,7 @@ export const buildStripeCheckoutSessionAction = ({
 		subscription_data: subscriptionData,
 		success_url: billingContext.successUrl ?? orgToReturnUrl({ org, env }),
 		discounts,
+		...autumnAutoTax,
 	};
 
 	return {

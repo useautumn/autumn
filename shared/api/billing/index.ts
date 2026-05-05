@@ -20,9 +20,14 @@ export * from "./openBillingPortal/openBillingPortalResponse";
 export * from "./setupPayment/setupPaymentParamsV0";
 export * from "./setupPayment/setupPaymentParamsV1";
 
+// Restore
+export * from "./restore/restoreParamsV1";
+
 // Sync
 export * from "./sync/syncParamsV0";
+export * from "./sync/syncParamsV1";
 export * from "./sync/syncProposalsParamsV0";
+export * from "./sync/syncProposalsV2";
 
 // Update Subscription
 export * from "./updateSubscription/previewUpdateSubscriptionResponse";

@@ -13,6 +13,7 @@ export * from "./customLineItem";
 export * from "./featureQuantity/featureQuantityParamsV0";
 export * from "./featureQuantity/mappers/featureQuantityParamsToCusProductOptions";
 export * from "./invoiceModeParams";
+export * from "./multi/index";
 export * from "./redirectMode";
 export * from "./refundLastPayment";
 export * from "./transitionRules";

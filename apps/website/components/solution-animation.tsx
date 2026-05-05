@@ -66,9 +66,16 @@ export default function SolutionAnimation() {
 		// Defer the 1.4–2.1 MB Lottie JSON fetch until the element is close to
 		// the viewport. Without this the browser fetches it during initial load
 		// and blocks the main thread while parsing the large JSON blob.
+		if (!("IntersectionObserver" in window)) {
+			initAnimation();
+			return;
+		}
+
 		const observer = new IntersectionObserver(
 			(entries) => {
-				if (entries[0].isIntersecting) {
+				// intersectionRatio > 0 guards against a Safari bug where
+				// isIntersecting fires as false on the initial sync callback.
+				if (entries[0].isIntersecting || entries[0].intersectionRatio > 0) {
 					observer.disconnect();
 					initAnimation();
 				}

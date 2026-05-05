@@ -178,10 +178,18 @@ const processSyncMapping = async ({
 		});
 		if (!feature) continue;
 
+		const prepaidFeatureOption = mapping.prepaid_feature_options?.find(
+			(featureOption) =>
+				featureOption.feature_id === feature.id ||
+				featureOption.internal_feature_id === feature.internal_id,
+		);
+
 		featureQuantities.push({
 			feature_id: feature.id,
 			internal_feature_id: feature.internal_id,
-			quantity: 0,
+			quantity: prepaidFeatureOption?.quantity ?? 0,
+			upcoming_quantity: prepaidFeatureOption?.upcoming_quantity,
+			adjustable_quantity: prepaidFeatureOption?.adjustable_quantity,
 		});
 	}
 

@@ -73,7 +73,7 @@ export type CheckParams = {
 /**
  * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
  */
-export const FlagType = {
+export const FlagType2 = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
@@ -81,9 +81,9 @@ export const FlagType = {
 /**
  * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
  */
-export type FlagType = OpenEnum<typeof FlagType>;
+export type FlagType2 = OpenEnum<typeof FlagType2>;
 
-export type CheckCreditSchema = {
+export type CheckCreditSchema2 = {
   /**
    * ID of the metered feature that draws from this credit system.
    */
@@ -97,7 +97,7 @@ export type CheckCreditSchema = {
 /**
  * Display names for the feature in billing UI and customer-facing components.
  */
-export type FlagDisplay = {
+export type FlagDisplay2 = {
   /**
    * Singular form for UI display (e.g., 'API call', 'seat').
    */
@@ -111,7 +111,7 @@ export type FlagDisplay = {
 /**
  * The full feature object if expanded.
  */
-export type CheckFeature = {
+export type CheckFeature2 = {
   /**
    * The unique identifier for this feature, used in /check and /track calls.
    */
@@ -123,7 +123,7 @@ export type CheckFeature = {
   /**
    * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
    */
-  type: FlagType;
+  type: FlagType2;
   /**
    * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
    */
@@ -135,18 +135,18 @@ export type CheckFeature = {
   /**
    * For credit_system features: maps metered features to their credit costs.
    */
-  creditSchema?: Array<CheckCreditSchema> | undefined;
+  creditSchema?: Array<CheckCreditSchema2> | undefined;
   /**
    * Display names for the feature in billing UI and customer-facing components.
    */
-  display?: FlagDisplay | undefined;
+  display?: FlagDisplay2 | undefined;
   /**
    * Whether the feature is archived and hidden from the dashboard.
    */
   archived: boolean;
 };
 
-export type Flag = {
+export type Flag2 = {
   /**
    * The unique identifier for this flag.
    */
@@ -166,51 +166,51 @@ export type Flag = {
   /**
    * The full feature object if expanded.
    */
-  feature?: CheckFeature | undefined;
+  feature?: CheckFeature2 | undefined;
 };
 
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export const Scenario = {
+export const Scenario2 = {
   UsageLimit: "usage_limit",
   FeatureFlag: "feature_flag",
 } as const;
 /**
  * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
  */
-export type Scenario = OpenEnum<typeof Scenario>;
+export type Scenario2 = OpenEnum<typeof Scenario2>;
 
 /**
  * The environment of the product
  */
-export const CheckEnv = {
+export const CheckEnv2 = {
   Sandbox: "sandbox",
   Live: "live",
 } as const;
 /**
  * The environment of the product
  */
-export type CheckEnv = OpenEnum<typeof CheckEnv>;
+export type CheckEnv2 = OpenEnum<typeof CheckEnv2>;
 
-export const ProductType = {
+export const ProductType2 = {
   Feature: "feature",
   PricedFeature: "priced_feature",
   Price: "price",
 } as const;
-export type ProductType = OpenEnum<typeof ProductType>;
+export type ProductType2 = OpenEnum<typeof ProductType2>;
 
-export const FeatureType = {
+export const FeatureType2 = {
   SingleUse: "single_use",
   ContinuousUse: "continuous_use",
   Boolean: "boolean",
   Static: "static",
 } as const;
-export type FeatureType = OpenEnum<typeof FeatureType>;
+export type FeatureType2 = OpenEnum<typeof FeatureType2>;
 
-export type IncludedUsage = number | string;
+export type IncludedUsage2 = number | string;
 
-export const CheckInterval = {
+export const CheckInterval2 = {
   Minute: "minute",
   Hour: "hour",
   Day: "day",
@@ -220,69 +220,69 @@ export const CheckInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type CheckInterval = OpenEnum<typeof CheckInterval>;
+export type CheckInterval2 = OpenEnum<typeof CheckInterval2>;
 
-export const CheckTierBehavior = {
+export const CheckTierBehavior2 = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type CheckTierBehavior = OpenEnum<typeof CheckTierBehavior>;
+export type CheckTierBehavior2 = OpenEnum<typeof CheckTierBehavior2>;
 
-export const UsageModel = {
+export const UsageModel2 = {
   Prepaid: "prepaid",
   PayPerUse: "pay_per_use",
 } as const;
-export type UsageModel = OpenEnum<typeof UsageModel>;
+export type UsageModel2 = OpenEnum<typeof UsageModel2>;
 
-export type ProductDisplay = {
+export type ProductDisplay2 = {
   primaryText: string;
   secondaryText?: string | null | undefined;
 };
 
-export const ConfigDuration = {
+export const ConfigDuration2 = {
   Month: "month",
   Forever: "forever",
 } as const;
-export type ConfigDuration = OpenEnum<typeof ConfigDuration>;
+export type ConfigDuration2 = OpenEnum<typeof ConfigDuration2>;
 
-export type CheckRollover = {
+export type CheckRollover2 = {
   max?: number | null | undefined;
   maxPercentage?: number | null | undefined;
-  duration: ConfigDuration;
+  duration: ConfigDuration2;
   length: number;
 };
 
-export const CheckOnIncrease = {
+export const CheckOnIncrease2 = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
   BillNextCycle: "bill_next_cycle",
 } as const;
-export type CheckOnIncrease = OpenEnum<typeof CheckOnIncrease>;
+export type CheckOnIncrease2 = OpenEnum<typeof CheckOnIncrease2>;
 
-export const CheckOnDecrease = {
+export const CheckOnDecrease2 = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
   None: "none",
   NoProrations: "no_prorations",
 } as const;
-export type CheckOnDecrease = OpenEnum<typeof CheckOnDecrease>;
+export type CheckOnDecrease2 = OpenEnum<typeof CheckOnDecrease2>;
 
-export type CheckConfig = {
-  rollover?: CheckRollover | null | undefined;
-  onIncrease?: CheckOnIncrease | null | undefined;
-  onDecrease?: CheckOnDecrease | null | undefined;
+export type CheckConfig2 = {
+  rollover?: CheckRollover2 | null | undefined;
+  onIncrease?: CheckOnIncrease2 | null | undefined;
+  onDecrease?: CheckOnDecrease2 | null | undefined;
 };
 
 /**
  * Product item defining features and pricing within a product
  */
-export type CheckItem = {
+export type CheckItem2 = {
   /**
    * The type of the product item
    */
-  type?: ProductType | null | undefined;
+  type?: ProductType2 | null | undefined;
   /**
    * The feature ID of the product item. If the item is a fixed price, should be `null`
    */
@@ -290,7 +290,7 @@ export type CheckItem = {
   /**
    * Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats.
    */
-  featureType?: FeatureType | null | undefined;
+  featureType?: FeatureType2 | null | undefined;
   /**
    * The amount of usage included for this feature.
    */
@@ -298,7 +298,7 @@ export type CheckItem = {
   /**
    * The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off.
    */
-  interval?: CheckInterval | null | undefined;
+  interval?: CheckInterval2 | null | undefined;
   /**
    * The interval count of the product item.
    */
@@ -314,11 +314,11 @@ export type CheckItem = {
   /**
    * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated.
    */
-  tierBehavior?: CheckTierBehavior | null | undefined;
+  tierBehavior?: CheckTierBehavior2 | null | undefined;
   /**
    * Whether the feature should be prepaid upfront or billed for how much they use end of billing period.
    */
-  usageModel?: UsageModel | null | undefined;
+  usageModel?: UsageModel2 | null | undefined;
   /**
    * The amount per billing unit (eg. $9 / 250 units)
    */
@@ -334,7 +334,7 @@ export type CheckItem = {
   /**
    * The display of the product item.
    */
-  display?: ProductDisplay | null | undefined;
+  display?: ProductDisplay2 | null | undefined;
   /**
    * Used in customer context. Quantity of the feature the customer has prepaid for.
    */
@@ -346,13 +346,13 @@ export type CheckItem = {
   /**
    * Configuration for rollover and proration behavior of the feature.
    */
-  config?: CheckConfig | null | undefined;
+  config?: CheckConfig2 | null | undefined;
 };
 
 /**
  * The duration type of the free trial
  */
-export const FreeTrialDuration = {
+export const FreeTrialDuration2 = {
   Day: "day",
   Month: "month",
   Year: "year",
@@ -360,13 +360,13 @@ export const FreeTrialDuration = {
 /**
  * The duration type of the free trial
  */
-export type FreeTrialDuration = OpenEnum<typeof FreeTrialDuration>;
+export type FreeTrialDuration2 = OpenEnum<typeof FreeTrialDuration2>;
 
-export type CheckFreeTrial = {
+export type CheckFreeTrial2 = {
   /**
    * The duration type of the free trial
    */
-  duration: FreeTrialDuration;
+  duration: FreeTrialDuration2;
   /**
    * The length of the duration type specified
    */
@@ -388,7 +388,7 @@ export type CheckFreeTrial = {
 /**
  * Scenario for when this product is used in attach flows
  */
-export const ProductScenario = {
+export const ProductScenario2 = {
   Scheduled: "scheduled",
   Active: "active",
   New: "new",
@@ -403,9 +403,9 @@ export const ProductScenario = {
 /**
  * Scenario for when this product is used in attach flows
  */
-export type ProductScenario = OpenEnum<typeof ProductScenario>;
+export type ProductScenario2 = OpenEnum<typeof ProductScenario2>;
 
-export type Properties = {
+export type Properties2 = {
   /**
    * True if the product has no base price or usage prices
    */
@@ -428,7 +428,7 @@ export type Properties = {
   updateable?: boolean | null | undefined;
 };
 
-export type Product = {
+export type Product2 = {
   /**
    * The ID of the product you set when creating the product
    */
@@ -444,7 +444,7 @@ export type Product = {
   /**
    * The environment of the product
    */
-  env: CheckEnv;
+  env: CheckEnv2;
   /**
    * Whether the product is an add-on and can be purchased alongside other products
    */
@@ -468,11 +468,11 @@ export type Product = {
   /**
    * Array of product items that define the product's features and pricing
    */
-  items: Array<CheckItem>;
+  items: Array<CheckItem2>;
   /**
    * Free trial configuration for this product, if available
    */
-  freeTrial: CheckFreeTrial | null;
+  freeTrial: CheckFreeTrial2 | null;
   /**
    * ID of the base variant this product is derived from
    */
@@ -480,18 +480,18 @@ export type Product = {
   /**
    * Scenario for when this product is used in attach flows
    */
-  scenario?: ProductScenario | undefined;
-  properties?: Properties | undefined;
+  scenario?: ProductScenario2 | undefined;
+  properties?: Properties2 | undefined;
 };
 
 /**
  * Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
  */
-export type Preview = {
+export type Preview2 = {
   /**
    * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
    */
-  scenario: Scenario;
+  scenario: Scenario2;
   /**
    * A title suitable for displaying in a paywall or upgrade modal.
    */
@@ -511,13 +511,13 @@ export type Preview = {
   /**
    * Products that would grant access to this feature. Use to display upgrade options.
    */
-  products: Array<Product>;
+  products: Array<Product2>;
 };
 
 /**
- * OK
+ * Accepted. Autumn is experiencing degraded service from a downstream provider, so access was allowed fail-open.
  */
-export type CheckResponse = {
+export type CheckResponseBody2 = {
   /**
    * Whether the customer is allowed to use the feature. True if they have sufficient balance or the feature is unlimited/boolean.
    */
@@ -541,12 +541,492 @@ export type CheckResponse = {
   /**
    * The flag associated with this check, if any.
    */
-  flag: Flag | null;
+  flag: Flag2 | null;
   /**
    * Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
    */
-  preview?: Preview | undefined;
+  preview?: Preview2 | undefined;
 };
+
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export const FlagType1 = {
+  Boolean: "boolean",
+  Metered: "metered",
+  CreditSystem: "credit_system",
+} as const;
+/**
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ */
+export type FlagType1 = OpenEnum<typeof FlagType1>;
+
+export type CheckCreditSchema1 = {
+  /**
+   * ID of the metered feature that draws from this credit system.
+   */
+  meteredFeatureId: string;
+  /**
+   * Credits consumed per unit of the metered feature.
+   */
+  creditCost: number;
+};
+
+/**
+ * Display names for the feature in billing UI and customer-facing components.
+ */
+export type FlagDisplay1 = {
+  /**
+   * Singular form for UI display (e.g., 'API call', 'seat').
+   */
+  singular?: string | null | undefined;
+  /**
+   * Plural form for UI display (e.g., 'API calls', 'seats').
+   */
+  plural?: string | null | undefined;
+};
+
+/**
+ * The full feature object if expanded.
+ */
+export type CheckFeature1 = {
+  /**
+   * The unique identifier for this feature, used in /check and /track calls.
+   */
+  id: string;
+  /**
+   * Human-readable name displayed in the dashboard and billing UI.
+   */
+  name: string;
+  /**
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   */
+  type: FlagType1;
+  /**
+   * For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage).
+   */
+  consumable: boolean;
+  /**
+   * Event names that trigger this feature's balance. Allows multiple features to respond to a single event.
+   */
+  eventNames?: Array<string> | undefined;
+  /**
+   * For credit_system features: maps metered features to their credit costs.
+   */
+  creditSchema?: Array<CheckCreditSchema1> | undefined;
+  /**
+   * Display names for the feature in billing UI and customer-facing components.
+   */
+  display?: FlagDisplay1 | undefined;
+  /**
+   * Whether the feature is archived and hidden from the dashboard.
+   */
+  archived: boolean;
+};
+
+export type Flag1 = {
+  /**
+   * The unique identifier for this flag.
+   */
+  id: string;
+  /**
+   * The plan ID this flag originates from, or null for standalone flags.
+   */
+  planId: string | null;
+  /**
+   * Timestamp when this flag expires, or null for no expiration.
+   */
+  expiresAt: number | null;
+  /**
+   * The feature ID this flag is for.
+   */
+  featureId: string;
+  /**
+   * The full feature object if expanded.
+   */
+  feature?: CheckFeature1 | undefined;
+};
+
+/**
+ * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
+ */
+export const Scenario1 = {
+  UsageLimit: "usage_limit",
+  FeatureFlag: "feature_flag",
+} as const;
+/**
+ * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
+ */
+export type Scenario1 = OpenEnum<typeof Scenario1>;
+
+/**
+ * The environment of the product
+ */
+export const CheckEnv1 = {
+  Sandbox: "sandbox",
+  Live: "live",
+} as const;
+/**
+ * The environment of the product
+ */
+export type CheckEnv1 = OpenEnum<typeof CheckEnv1>;
+
+export const ProductType1 = {
+  Feature: "feature",
+  PricedFeature: "priced_feature",
+  Price: "price",
+} as const;
+export type ProductType1 = OpenEnum<typeof ProductType1>;
+
+export const FeatureType1 = {
+  SingleUse: "single_use",
+  ContinuousUse: "continuous_use",
+  Boolean: "boolean",
+  Static: "static",
+} as const;
+export type FeatureType1 = OpenEnum<typeof FeatureType1>;
+
+export type IncludedUsage1 = number | string;
+
+export const CheckInterval1 = {
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type CheckInterval1 = OpenEnum<typeof CheckInterval1>;
+
+export const CheckTierBehavior1 = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type CheckTierBehavior1 = OpenEnum<typeof CheckTierBehavior1>;
+
+export const UsageModel1 = {
+  Prepaid: "prepaid",
+  PayPerUse: "pay_per_use",
+} as const;
+export type UsageModel1 = OpenEnum<typeof UsageModel1>;
+
+export type ProductDisplay1 = {
+  primaryText: string;
+  secondaryText?: string | null | undefined;
+};
+
+export const ConfigDuration1 = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+export type ConfigDuration1 = OpenEnum<typeof ConfigDuration1>;
+
+export type CheckRollover1 = {
+  max?: number | null | undefined;
+  maxPercentage?: number | null | undefined;
+  duration: ConfigDuration1;
+  length: number;
+};
+
+export const CheckOnIncrease1 = {
+  BillImmediately: "bill_immediately",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  BillNextCycle: "bill_next_cycle",
+} as const;
+export type CheckOnIncrease1 = OpenEnum<typeof CheckOnIncrease1>;
+
+export const CheckOnDecrease1 = {
+  Prorate: "prorate",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  None: "none",
+  NoProrations: "no_prorations",
+} as const;
+export type CheckOnDecrease1 = OpenEnum<typeof CheckOnDecrease1>;
+
+export type CheckConfig1 = {
+  rollover?: CheckRollover1 | null | undefined;
+  onIncrease?: CheckOnIncrease1 | null | undefined;
+  onDecrease?: CheckOnDecrease1 | null | undefined;
+};
+
+/**
+ * Product item defining features and pricing within a product
+ */
+export type CheckItem1 = {
+  /**
+   * The type of the product item
+   */
+  type?: ProductType1 | null | undefined;
+  /**
+   * The feature ID of the product item. If the item is a fixed price, should be `null`
+   */
+  featureId?: string | null | undefined;
+  /**
+   * Single use features are used once and then depleted, like API calls or credits. Continuous use features are those being used on an ongoing-basis, like storage or seats.
+   */
+  featureType?: FeatureType1 | null | undefined;
+  /**
+   * The amount of usage included for this feature.
+   */
+  includedUsage?: number | string | null | undefined;
+  /**
+   * The reset or billing interval of the product item. If null, feature will have no reset date, and if there's a price, it will be billed one-off.
+   */
+  interval?: CheckInterval1 | null | undefined;
+  /**
+   * The interval count of the product item.
+   */
+  intervalCount?: number | null | undefined;
+  /**
+   * The price of the product item. Should be `null` if tiered pricing is set.
+   */
+  price?: number | null | undefined;
+  /**
+   * Tiered pricing for the product item. Not applicable for fixed price items.
+   */
+  tiers?: Array<any | null> | null | undefined;
+  /**
+   * How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier). Defaults to graduated.
+   */
+  tierBehavior?: CheckTierBehavior1 | null | undefined;
+  /**
+   * Whether the feature should be prepaid upfront or billed for how much they use end of billing period.
+   */
+  usageModel?: UsageModel1 | null | undefined;
+  /**
+   * The amount per billing unit (eg. $9 / 250 units)
+   */
+  billingUnits?: number | null | undefined;
+  /**
+   * Whether the usage should be reset when the product is enabled.
+   */
+  resetUsageWhenEnabled?: boolean | null | undefined;
+  /**
+   * The entity feature ID of the product item if applicable.
+   */
+  entityFeatureId?: string | null | undefined;
+  /**
+   * The display of the product item.
+   */
+  display?: ProductDisplay1 | null | undefined;
+  /**
+   * Used in customer context. Quantity of the feature the customer has prepaid for.
+   */
+  quantity?: number | null | undefined;
+  /**
+   * Used in customer context. Quantity of the feature the customer will prepay for in the next cycle.
+   */
+  nextCycleQuantity?: number | null | undefined;
+  /**
+   * Configuration for rollover and proration behavior of the feature.
+   */
+  config?: CheckConfig1 | null | undefined;
+};
+
+/**
+ * The duration type of the free trial
+ */
+export const FreeTrialDuration1 = {
+  Day: "day",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * The duration type of the free trial
+ */
+export type FreeTrialDuration1 = OpenEnum<typeof FreeTrialDuration1>;
+
+export type CheckFreeTrial1 = {
+  /**
+   * The duration type of the free trial
+   */
+  duration: FreeTrialDuration1;
+  /**
+   * The length of the duration type specified
+   */
+  length: number;
+  /**
+   * Whether the free trial is limited to one per customer fingerprint
+   */
+  uniqueFingerprint: boolean;
+  /**
+   * Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file.
+   */
+  cardRequired: boolean;
+  /**
+   * Used in customer context. Whether the free trial is available for the customer if they were to attach the product.
+   */
+  trialAvailable: boolean | null;
+};
+
+/**
+ * Scenario for when this product is used in attach flows
+ */
+export const ProductScenario1 = {
+  Scheduled: "scheduled",
+  Active: "active",
+  New: "new",
+  Renew: "renew",
+  Upgrade: "upgrade",
+  UpdatePrepaidQuantity: "update_prepaid_quantity",
+  Downgrade: "downgrade",
+  Cancel: "cancel",
+  Expired: "expired",
+  PastDue: "past_due",
+} as const;
+/**
+ * Scenario for when this product is used in attach flows
+ */
+export type ProductScenario1 = OpenEnum<typeof ProductScenario1>;
+
+export type Properties1 = {
+  /**
+   * True if the product has no base price or usage prices
+   */
+  isFree: boolean;
+  /**
+   * True if the product only contains a one-time price
+   */
+  isOneOff: boolean;
+  /**
+   * The billing interval group for recurring products (e.g., 'monthly', 'yearly')
+   */
+  intervalGroup?: string | null | undefined;
+  /**
+   * True if the product includes a free trial
+   */
+  hasTrial?: boolean | null | undefined;
+  /**
+   * True if the product can be updated after creation (only applicable if there are prepaid recurring prices)
+   */
+  updateable?: boolean | null | undefined;
+};
+
+export type Product1 = {
+  /**
+   * The ID of the product you set when creating the product
+   */
+  id: string;
+  /**
+   * The name of the product
+   */
+  name: string;
+  /**
+   * Product group which this product belongs to
+   */
+  group: string | null;
+  /**
+   * The environment of the product
+   */
+  env: CheckEnv1;
+  /**
+   * Whether the product is an add-on and can be purchased alongside other products
+   */
+  isAddOn: boolean;
+  /**
+   * Whether the product is the default product
+   */
+  isDefault: boolean;
+  /**
+   * Whether this product has been archived and is no longer available
+   */
+  archived: boolean;
+  /**
+   * The current version of the product
+   */
+  version: number;
+  /**
+   * The timestamp of when the product was created in milliseconds since epoch
+   */
+  createdAt: number;
+  /**
+   * Array of product items that define the product's features and pricing
+   */
+  items: Array<CheckItem1>;
+  /**
+   * Free trial configuration for this product, if available
+   */
+  freeTrial: CheckFreeTrial1 | null;
+  /**
+   * ID of the base variant this product is derived from
+   */
+  baseVariantId: string | null;
+  /**
+   * Scenario for when this product is used in attach flows
+   */
+  scenario?: ProductScenario1 | undefined;
+  properties?: Properties1 | undefined;
+};
+
+/**
+ * Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
+ */
+export type Preview1 = {
+  /**
+   * The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.
+   */
+  scenario: Scenario1;
+  /**
+   * A title suitable for displaying in a paywall or upgrade modal.
+   */
+  title: string;
+  /**
+   * A message explaining why access was denied.
+   */
+  message: string;
+  /**
+   * The ID of the feature that was checked.
+   */
+  featureId: string;
+  /**
+   * The display name of the feature.
+   */
+  featureName: string;
+  /**
+   * Products that would grant access to this feature. Use to display upgrade options.
+   */
+  products: Array<Product1>;
+};
+
+/**
+ * OK
+ */
+export type CheckResponseBody1 = {
+  /**
+   * Whether the customer is allowed to use the feature. True if they have sufficient balance or the feature is unlimited/boolean.
+   */
+  allowed: boolean;
+  /**
+   * The ID of the customer that was checked.
+   */
+  customerId: string;
+  /**
+   * The ID of the entity, if an entity-scoped check was performed.
+   */
+  entityId?: string | null | undefined;
+  /**
+   * The required balance that was checked against.
+   */
+  requiredBalance?: number | undefined;
+  /**
+   * The customer's balance for this feature. Null if the customer has no balance for this feature.
+   */
+  balance: Balance | null;
+  /**
+   * The flag associated with this check, if any.
+   */
+  flag: Flag1 | null;
+  /**
+   * Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false.
+   */
+  preview?: Preview1 | undefined;
+};
+
+export type CheckResponse = CheckResponseBody1 | CheckResponseBody2;
 
 /** @internal */
 export type CheckLock$Outbound = {
@@ -621,12 +1101,12 @@ export function checkParamsToJSON(checkParams: CheckParams): string {
 }
 
 /** @internal */
-export const FlagType$inboundSchema: z.ZodMiniType<FlagType, unknown> =
-  openEnums.inboundSchema(FlagType);
+export const FlagType2$inboundSchema: z.ZodMiniType<FlagType2, unknown> =
+  openEnums.inboundSchema(FlagType2);
 
 /** @internal */
-export const CheckCreditSchema$inboundSchema: z.ZodMiniType<
-  CheckCreditSchema,
+export const CheckCreditSchema2$inboundSchema: z.ZodMiniType<
+  CheckCreditSchema2,
   unknown
 > = z.pipe(
   z.object({
@@ -641,74 +1121,76 @@ export const CheckCreditSchema$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function checkCreditSchemaFromJSON(
+export function checkCreditSchema2FromJSON(
   jsonString: string,
-): SafeParseResult<CheckCreditSchema, SDKValidationError> {
+): SafeParseResult<CheckCreditSchema2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckCreditSchema$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckCreditSchema' from JSON`,
+    (x) => CheckCreditSchema2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckCreditSchema2' from JSON`,
   );
 }
 
 /** @internal */
-export const FlagDisplay$inboundSchema: z.ZodMiniType<FlagDisplay, unknown> = z
-  .object({
+export const FlagDisplay2$inboundSchema: z.ZodMiniType<FlagDisplay2, unknown> =
+  z.object({
     singular: z.optional(z.nullable(types.string())),
     plural: z.optional(z.nullable(types.string())),
   });
 
-export function flagDisplayFromJSON(
+export function flagDisplay2FromJSON(
   jsonString: string,
-): SafeParseResult<FlagDisplay, SDKValidationError> {
+): SafeParseResult<FlagDisplay2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => FlagDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'FlagDisplay' from JSON`,
+    (x) => FlagDisplay2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'FlagDisplay2' from JSON`,
   );
 }
 
 /** @internal */
-export const CheckFeature$inboundSchema: z.ZodMiniType<CheckFeature, unknown> =
-  z.pipe(
-    z.object({
-      id: types.string(),
-      name: types.string(),
-      type: FlagType$inboundSchema,
-      consumable: types.boolean(),
-      event_names: types.optional(z.array(types.string())),
-      credit_schema: types.optional(
-        z.array(z.lazy(() => CheckCreditSchema$inboundSchema)),
-      ),
-      display: types.optional(z.lazy(() => FlagDisplay$inboundSchema)),
-      archived: types.boolean(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "event_names": "eventNames",
-        "credit_schema": "creditSchema",
-      });
-    }),
-  );
+export const CheckFeature2$inboundSchema: z.ZodMiniType<
+  CheckFeature2,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: types.string(),
+    type: FlagType2$inboundSchema,
+    consumable: types.boolean(),
+    event_names: types.optional(z.array(types.string())),
+    credit_schema: types.optional(
+      z.array(z.lazy(() => CheckCreditSchema2$inboundSchema)),
+    ),
+    display: types.optional(z.lazy(() => FlagDisplay2$inboundSchema)),
+    archived: types.boolean(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "event_names": "eventNames",
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
 
-export function checkFeatureFromJSON(
+export function checkFeature2FromJSON(
   jsonString: string,
-): SafeParseResult<CheckFeature, SDKValidationError> {
+): SafeParseResult<CheckFeature2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckFeature$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckFeature' from JSON`,
+    (x) => CheckFeature2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckFeature2' from JSON`,
   );
 }
 
 /** @internal */
-export const Flag$inboundSchema: z.ZodMiniType<Flag, unknown> = z.pipe(
+export const Flag2$inboundSchema: z.ZodMiniType<Flag2, unknown> = z.pipe(
   z.object({
     id: types.string(),
     plan_id: types.nullable(types.string()),
     expires_at: types.nullable(types.number()),
     feature_id: types.string(),
-    feature: types.optional(z.lazy(() => CheckFeature$inboundSchema)),
+    feature: types.optional(z.lazy(() => CheckFeature2$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -719,67 +1201,67 @@ export const Flag$inboundSchema: z.ZodMiniType<Flag, unknown> = z.pipe(
   }),
 );
 
-export function flagFromJSON(
+export function flag2FromJSON(
   jsonString: string,
-): SafeParseResult<Flag, SDKValidationError> {
+): SafeParseResult<Flag2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Flag$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Flag' from JSON`,
+    (x) => Flag2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Flag2' from JSON`,
   );
 }
 
 /** @internal */
-export const Scenario$inboundSchema: z.ZodMiniType<Scenario, unknown> =
-  openEnums.inboundSchema(Scenario);
+export const Scenario2$inboundSchema: z.ZodMiniType<Scenario2, unknown> =
+  openEnums.inboundSchema(Scenario2);
 
 /** @internal */
-export const CheckEnv$inboundSchema: z.ZodMiniType<CheckEnv, unknown> =
-  openEnums.inboundSchema(CheckEnv);
+export const CheckEnv2$inboundSchema: z.ZodMiniType<CheckEnv2, unknown> =
+  openEnums.inboundSchema(CheckEnv2);
 
 /** @internal */
-export const ProductType$inboundSchema: z.ZodMiniType<ProductType, unknown> =
-  openEnums.inboundSchema(ProductType);
+export const ProductType2$inboundSchema: z.ZodMiniType<ProductType2, unknown> =
+  openEnums.inboundSchema(ProductType2);
 
 /** @internal */
-export const FeatureType$inboundSchema: z.ZodMiniType<FeatureType, unknown> =
-  openEnums.inboundSchema(FeatureType);
+export const FeatureType2$inboundSchema: z.ZodMiniType<FeatureType2, unknown> =
+  openEnums.inboundSchema(FeatureType2);
 
 /** @internal */
-export const IncludedUsage$inboundSchema: z.ZodMiniType<
-  IncludedUsage,
+export const IncludedUsage2$inboundSchema: z.ZodMiniType<
+  IncludedUsage2,
   unknown
 > = smartUnion([types.number(), types.string()]);
 
-export function includedUsageFromJSON(
+export function includedUsage2FromJSON(
   jsonString: string,
-): SafeParseResult<IncludedUsage, SDKValidationError> {
+): SafeParseResult<IncludedUsage2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => IncludedUsage$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'IncludedUsage' from JSON`,
+    (x) => IncludedUsage2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'IncludedUsage2' from JSON`,
   );
 }
 
 /** @internal */
-export const CheckInterval$inboundSchema: z.ZodMiniType<
-  CheckInterval,
+export const CheckInterval2$inboundSchema: z.ZodMiniType<
+  CheckInterval2,
   unknown
-> = openEnums.inboundSchema(CheckInterval);
+> = openEnums.inboundSchema(CheckInterval2);
 
 /** @internal */
-export const CheckTierBehavior$inboundSchema: z.ZodMiniType<
-  CheckTierBehavior,
+export const CheckTierBehavior2$inboundSchema: z.ZodMiniType<
+  CheckTierBehavior2,
   unknown
-> = openEnums.inboundSchema(CheckTierBehavior);
+> = openEnums.inboundSchema(CheckTierBehavior2);
 
 /** @internal */
-export const UsageModel$inboundSchema: z.ZodMiniType<UsageModel, unknown> =
-  openEnums.inboundSchema(UsageModel);
+export const UsageModel2$inboundSchema: z.ZodMiniType<UsageModel2, unknown> =
+  openEnums.inboundSchema(UsageModel2);
 
 /** @internal */
-export const ProductDisplay$inboundSchema: z.ZodMiniType<
-  ProductDisplay,
+export const ProductDisplay2$inboundSchema: z.ZodMiniType<
+  ProductDisplay2,
   unknown
 > = z.pipe(
   z.object({
@@ -794,31 +1276,31 @@ export const ProductDisplay$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function productDisplayFromJSON(
+export function productDisplay2FromJSON(
   jsonString: string,
-): SafeParseResult<ProductDisplay, SDKValidationError> {
+): SafeParseResult<ProductDisplay2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => ProductDisplay$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ProductDisplay' from JSON`,
+    (x) => ProductDisplay2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ProductDisplay2' from JSON`,
   );
 }
 
 /** @internal */
-export const ConfigDuration$inboundSchema: z.ZodMiniType<
-  ConfigDuration,
+export const ConfigDuration2$inboundSchema: z.ZodMiniType<
+  ConfigDuration2,
   unknown
-> = openEnums.inboundSchema(ConfigDuration);
+> = openEnums.inboundSchema(ConfigDuration2);
 
 /** @internal */
-export const CheckRollover$inboundSchema: z.ZodMiniType<
-  CheckRollover,
+export const CheckRollover2$inboundSchema: z.ZodMiniType<
+  CheckRollover2,
   unknown
 > = z.pipe(
   z.object({
     max: z.optional(z.nullable(types.number())),
     max_percentage: z.optional(z.nullable(types.number())),
-    duration: z._default(ConfigDuration$inboundSchema, "month"),
+    duration: z._default(ConfigDuration2$inboundSchema, "month"),
     length: types.number(),
   }),
   z.transform((v) => {
@@ -828,37 +1310,37 @@ export const CheckRollover$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function checkRolloverFromJSON(
+export function checkRollover2FromJSON(
   jsonString: string,
-): SafeParseResult<CheckRollover, SDKValidationError> {
+): SafeParseResult<CheckRollover2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckRollover$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckRollover' from JSON`,
+    (x) => CheckRollover2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckRollover2' from JSON`,
   );
 }
 
 /** @internal */
-export const CheckOnIncrease$inboundSchema: z.ZodMiniType<
-  CheckOnIncrease,
+export const CheckOnIncrease2$inboundSchema: z.ZodMiniType<
+  CheckOnIncrease2,
   unknown
-> = openEnums.inboundSchema(CheckOnIncrease);
+> = openEnums.inboundSchema(CheckOnIncrease2);
 
 /** @internal */
-export const CheckOnDecrease$inboundSchema: z.ZodMiniType<
-  CheckOnDecrease,
+export const CheckOnDecrease2$inboundSchema: z.ZodMiniType<
+  CheckOnDecrease2,
   unknown
-> = openEnums.inboundSchema(CheckOnDecrease);
+> = openEnums.inboundSchema(CheckOnDecrease2);
 
 /** @internal */
-export const CheckConfig$inboundSchema: z.ZodMiniType<CheckConfig, unknown> = z
-  .pipe(
+export const CheckConfig2$inboundSchema: z.ZodMiniType<CheckConfig2, unknown> =
+  z.pipe(
     z.object({
       rollover: z.optional(
-        z.nullable(z.lazy(() => CheckRollover$inboundSchema)),
+        z.nullable(z.lazy(() => CheckRollover2$inboundSchema)),
       ),
-      on_increase: z.optional(z.nullable(CheckOnIncrease$inboundSchema)),
-      on_decrease: z.optional(z.nullable(CheckOnDecrease$inboundSchema)),
+      on_increase: z.optional(z.nullable(CheckOnIncrease2$inboundSchema)),
+      on_decrease: z.optional(z.nullable(CheckOnDecrease2$inboundSchema)),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -868,41 +1350,41 @@ export const CheckConfig$inboundSchema: z.ZodMiniType<CheckConfig, unknown> = z
     }),
   );
 
-export function checkConfigFromJSON(
+export function checkConfig2FromJSON(
   jsonString: string,
-): SafeParseResult<CheckConfig, SDKValidationError> {
+): SafeParseResult<CheckConfig2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckConfig$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckConfig' from JSON`,
+    (x) => CheckConfig2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckConfig2' from JSON`,
   );
 }
 
 /** @internal */
-export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
+export const CheckItem2$inboundSchema: z.ZodMiniType<CheckItem2, unknown> = z
   .pipe(
     z.object({
-      type: z.optional(z.nullable(ProductType$inboundSchema)),
+      type: z.optional(z.nullable(ProductType2$inboundSchema)),
       feature_id: z.optional(z.nullable(types.string())),
-      feature_type: z.optional(z.nullable(FeatureType$inboundSchema)),
+      feature_type: z.optional(z.nullable(FeatureType2$inboundSchema)),
       included_usage: z.optional(
         z.nullable(smartUnion([types.number(), types.string()])),
       ),
-      interval: z.optional(z.nullable(CheckInterval$inboundSchema)),
+      interval: z.optional(z.nullable(CheckInterval2$inboundSchema)),
       interval_count: z.optional(z.nullable(types.number())),
       price: z.optional(z.nullable(types.number())),
       tiers: z.optional(z.nullable(z.array(types.nullable(z.any())))),
-      tier_behavior: z.optional(z.nullable(CheckTierBehavior$inboundSchema)),
-      usage_model: z.optional(z.nullable(UsageModel$inboundSchema)),
+      tier_behavior: z.optional(z.nullable(CheckTierBehavior2$inboundSchema)),
+      usage_model: z.optional(z.nullable(UsageModel2$inboundSchema)),
       billing_units: z.optional(z.nullable(types.number())),
       reset_usage_when_enabled: z.optional(z.nullable(types.boolean())),
       entity_feature_id: z.optional(z.nullable(types.string())),
       display: z.optional(
-        z.nullable(z.lazy(() => ProductDisplay$inboundSchema)),
+        z.nullable(z.lazy(() => ProductDisplay2$inboundSchema)),
       ),
       quantity: z.optional(z.nullable(types.number())),
       next_cycle_quantity: z.optional(z.nullable(types.number())),
-      config: z.optional(z.nullable(z.lazy(() => CheckConfig$inboundSchema))),
+      config: z.optional(z.nullable(z.lazy(() => CheckConfig2$inboundSchema))),
     }),
     z.transform((v) => {
       return remap$(v, {
@@ -920,29 +1402,29 @@ export const CheckItem$inboundSchema: z.ZodMiniType<CheckItem, unknown> = z
     }),
   );
 
-export function checkItemFromJSON(
+export function checkItem2FromJSON(
   jsonString: string,
-): SafeParseResult<CheckItem, SDKValidationError> {
+): SafeParseResult<CheckItem2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckItem$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckItem' from JSON`,
+    (x) => CheckItem2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckItem2' from JSON`,
   );
 }
 
 /** @internal */
-export const FreeTrialDuration$inboundSchema: z.ZodMiniType<
-  FreeTrialDuration,
+export const FreeTrialDuration2$inboundSchema: z.ZodMiniType<
+  FreeTrialDuration2,
   unknown
-> = openEnums.inboundSchema(FreeTrialDuration);
+> = openEnums.inboundSchema(FreeTrialDuration2);
 
 /** @internal */
-export const CheckFreeTrial$inboundSchema: z.ZodMiniType<
-  CheckFreeTrial,
+export const CheckFreeTrial2$inboundSchema: z.ZodMiniType<
+  CheckFreeTrial2,
   unknown
 > = z.pipe(
   z.object({
-    duration: FreeTrialDuration$inboundSchema,
+    duration: FreeTrialDuration2$inboundSchema,
     length: types.number(),
     unique_fingerprint: types.boolean(),
     card_required: types.boolean(),
@@ -957,24 +1439,24 @@ export const CheckFreeTrial$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function checkFreeTrialFromJSON(
+export function checkFreeTrial2FromJSON(
   jsonString: string,
-): SafeParseResult<CheckFreeTrial, SDKValidationError> {
+): SafeParseResult<CheckFreeTrial2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CheckFreeTrial$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CheckFreeTrial' from JSON`,
+    (x) => CheckFreeTrial2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckFreeTrial2' from JSON`,
   );
 }
 
 /** @internal */
-export const ProductScenario$inboundSchema: z.ZodMiniType<
-  ProductScenario,
+export const ProductScenario2$inboundSchema: z.ZodMiniType<
+  ProductScenario2,
   unknown
-> = openEnums.inboundSchema(ProductScenario);
+> = openEnums.inboundSchema(ProductScenario2);
 
 /** @internal */
-export const Properties$inboundSchema: z.ZodMiniType<Properties, unknown> = z
+export const Properties2$inboundSchema: z.ZodMiniType<Properties2, unknown> = z
   .pipe(
     z.object({
       is_free: types.boolean(),
@@ -993,33 +1475,33 @@ export const Properties$inboundSchema: z.ZodMiniType<Properties, unknown> = z
     }),
   );
 
-export function propertiesFromJSON(
+export function properties2FromJSON(
   jsonString: string,
-): SafeParseResult<Properties, SDKValidationError> {
+): SafeParseResult<Properties2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Properties$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Properties' from JSON`,
+    (x) => Properties2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Properties2' from JSON`,
   );
 }
 
 /** @internal */
-export const Product$inboundSchema: z.ZodMiniType<Product, unknown> = z.pipe(
+export const Product2$inboundSchema: z.ZodMiniType<Product2, unknown> = z.pipe(
   z.object({
     id: types.string(),
     name: types.string(),
     group: types.nullable(types.string()),
-    env: CheckEnv$inboundSchema,
+    env: CheckEnv2$inboundSchema,
     is_add_on: types.boolean(),
     is_default: types.boolean(),
     archived: types.boolean(),
     version: types.number(),
     created_at: types.number(),
-    items: z.array(z.lazy(() => CheckItem$inboundSchema)),
-    free_trial: types.nullable(z.lazy(() => CheckFreeTrial$inboundSchema)),
+    items: z.array(z.lazy(() => CheckItem2$inboundSchema)),
+    free_trial: types.nullable(z.lazy(() => CheckFreeTrial2$inboundSchema)),
     base_variant_id: types.nullable(types.string()),
-    scenario: types.optional(ProductScenario$inboundSchema),
-    properties: types.optional(z.lazy(() => Properties$inboundSchema)),
+    scenario: types.optional(ProductScenario2$inboundSchema),
+    properties: types.optional(z.lazy(() => Properties2$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1032,25 +1514,25 @@ export const Product$inboundSchema: z.ZodMiniType<Product, unknown> = z.pipe(
   }),
 );
 
-export function productFromJSON(
+export function product2FromJSON(
   jsonString: string,
-): SafeParseResult<Product, SDKValidationError> {
+): SafeParseResult<Product2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Product$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Product' from JSON`,
+    (x) => Product2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Product2' from JSON`,
   );
 }
 
 /** @internal */
-export const Preview$inboundSchema: z.ZodMiniType<Preview, unknown> = z.pipe(
+export const Preview2$inboundSchema: z.ZodMiniType<Preview2, unknown> = z.pipe(
   z.object({
-    scenario: Scenario$inboundSchema,
+    scenario: Scenario2$inboundSchema,
     title: types.string(),
     message: types.string(),
     feature_id: types.string(),
     feature_name: types.string(),
-    products: z.array(z.lazy(() => Product$inboundSchema)),
+    products: z.array(z.lazy(() => Product2$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1060,19 +1542,19 @@ export const Preview$inboundSchema: z.ZodMiniType<Preview, unknown> = z.pipe(
   }),
 );
 
-export function previewFromJSON(
+export function preview2FromJSON(
   jsonString: string,
-): SafeParseResult<Preview, SDKValidationError> {
+): SafeParseResult<Preview2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Preview$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Preview' from JSON`,
+    (x) => Preview2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Preview2' from JSON`,
   );
 }
 
 /** @internal */
-export const CheckResponse$inboundSchema: z.ZodMiniType<
-  CheckResponse,
+export const CheckResponseBody2$inboundSchema: z.ZodMiniType<
+  CheckResponseBody2,
   unknown
 > = z.pipe(
   z.object({
@@ -1081,8 +1563,8 @@ export const CheckResponse$inboundSchema: z.ZodMiniType<
     entity_id: z.optional(z.nullable(types.string())),
     required_balance: types.optional(types.number()),
     balance: types.nullable(Balance$inboundSchema),
-    flag: types.nullable(z.lazy(() => Flag$inboundSchema)),
-    preview: types.optional(z.lazy(() => Preview$inboundSchema)),
+    flag: types.nullable(z.lazy(() => Flag2$inboundSchema)),
+    preview: types.optional(z.lazy(() => Preview2$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1092,6 +1574,510 @@ export const CheckResponse$inboundSchema: z.ZodMiniType<
     });
   }),
 );
+
+export function checkResponseBody2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckResponseBody2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckResponseBody2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckResponseBody2' from JSON`,
+  );
+}
+
+/** @internal */
+export const FlagType1$inboundSchema: z.ZodMiniType<FlagType1, unknown> =
+  openEnums.inboundSchema(FlagType1);
+
+/** @internal */
+export const CheckCreditSchema1$inboundSchema: z.ZodMiniType<
+  CheckCreditSchema1,
+  unknown
+> = z.pipe(
+  z.object({
+    metered_feature_id: types.string(),
+    credit_cost: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "metered_feature_id": "meteredFeatureId",
+      "credit_cost": "creditCost",
+    });
+  }),
+);
+
+export function checkCreditSchema1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckCreditSchema1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckCreditSchema1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckCreditSchema1' from JSON`,
+  );
+}
+
+/** @internal */
+export const FlagDisplay1$inboundSchema: z.ZodMiniType<FlagDisplay1, unknown> =
+  z.object({
+    singular: z.optional(z.nullable(types.string())),
+    plural: z.optional(z.nullable(types.string())),
+  });
+
+export function flagDisplay1FromJSON(
+  jsonString: string,
+): SafeParseResult<FlagDisplay1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => FlagDisplay1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'FlagDisplay1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckFeature1$inboundSchema: z.ZodMiniType<
+  CheckFeature1,
+  unknown
+> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: types.string(),
+    type: FlagType1$inboundSchema,
+    consumable: types.boolean(),
+    event_names: types.optional(z.array(types.string())),
+    credit_schema: types.optional(
+      z.array(z.lazy(() => CheckCreditSchema1$inboundSchema)),
+    ),
+    display: types.optional(z.lazy(() => FlagDisplay1$inboundSchema)),
+    archived: types.boolean(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "event_names": "eventNames",
+      "credit_schema": "creditSchema",
+    });
+  }),
+);
+
+export function checkFeature1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckFeature1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckFeature1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckFeature1' from JSON`,
+  );
+}
+
+/** @internal */
+export const Flag1$inboundSchema: z.ZodMiniType<Flag1, unknown> = z.pipe(
+  z.object({
+    id: types.string(),
+    plan_id: types.nullable(types.string()),
+    expires_at: types.nullable(types.number()),
+    feature_id: types.string(),
+    feature: types.optional(z.lazy(() => CheckFeature1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "plan_id": "planId",
+      "expires_at": "expiresAt",
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function flag1FromJSON(
+  jsonString: string,
+): SafeParseResult<Flag1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Flag1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Flag1' from JSON`,
+  );
+}
+
+/** @internal */
+export const Scenario1$inboundSchema: z.ZodMiniType<Scenario1, unknown> =
+  openEnums.inboundSchema(Scenario1);
+
+/** @internal */
+export const CheckEnv1$inboundSchema: z.ZodMiniType<CheckEnv1, unknown> =
+  openEnums.inboundSchema(CheckEnv1);
+
+/** @internal */
+export const ProductType1$inboundSchema: z.ZodMiniType<ProductType1, unknown> =
+  openEnums.inboundSchema(ProductType1);
+
+/** @internal */
+export const FeatureType1$inboundSchema: z.ZodMiniType<FeatureType1, unknown> =
+  openEnums.inboundSchema(FeatureType1);
+
+/** @internal */
+export const IncludedUsage1$inboundSchema: z.ZodMiniType<
+  IncludedUsage1,
+  unknown
+> = smartUnion([types.number(), types.string()]);
+
+export function includedUsage1FromJSON(
+  jsonString: string,
+): SafeParseResult<IncludedUsage1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => IncludedUsage1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'IncludedUsage1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckInterval1$inboundSchema: z.ZodMiniType<
+  CheckInterval1,
+  unknown
+> = openEnums.inboundSchema(CheckInterval1);
+
+/** @internal */
+export const CheckTierBehavior1$inboundSchema: z.ZodMiniType<
+  CheckTierBehavior1,
+  unknown
+> = openEnums.inboundSchema(CheckTierBehavior1);
+
+/** @internal */
+export const UsageModel1$inboundSchema: z.ZodMiniType<UsageModel1, unknown> =
+  openEnums.inboundSchema(UsageModel1);
+
+/** @internal */
+export const ProductDisplay1$inboundSchema: z.ZodMiniType<
+  ProductDisplay1,
+  unknown
+> = z.pipe(
+  z.object({
+    primary_text: types.string(),
+    secondary_text: z.optional(z.nullable(types.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "primary_text": "primaryText",
+      "secondary_text": "secondaryText",
+    });
+  }),
+);
+
+export function productDisplay1FromJSON(
+  jsonString: string,
+): SafeParseResult<ProductDisplay1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ProductDisplay1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ProductDisplay1' from JSON`,
+  );
+}
+
+/** @internal */
+export const ConfigDuration1$inboundSchema: z.ZodMiniType<
+  ConfigDuration1,
+  unknown
+> = openEnums.inboundSchema(ConfigDuration1);
+
+/** @internal */
+export const CheckRollover1$inboundSchema: z.ZodMiniType<
+  CheckRollover1,
+  unknown
+> = z.pipe(
+  z.object({
+    max: z.optional(z.nullable(types.number())),
+    max_percentage: z.optional(z.nullable(types.number())),
+    duration: z._default(ConfigDuration1$inboundSchema, "month"),
+    length: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "max_percentage": "maxPercentage",
+    });
+  }),
+);
+
+export function checkRollover1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckRollover1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckRollover1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckRollover1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckOnIncrease1$inboundSchema: z.ZodMiniType<
+  CheckOnIncrease1,
+  unknown
+> = openEnums.inboundSchema(CheckOnIncrease1);
+
+/** @internal */
+export const CheckOnDecrease1$inboundSchema: z.ZodMiniType<
+  CheckOnDecrease1,
+  unknown
+> = openEnums.inboundSchema(CheckOnDecrease1);
+
+/** @internal */
+export const CheckConfig1$inboundSchema: z.ZodMiniType<CheckConfig1, unknown> =
+  z.pipe(
+    z.object({
+      rollover: z.optional(
+        z.nullable(z.lazy(() => CheckRollover1$inboundSchema)),
+      ),
+      on_increase: z.optional(z.nullable(CheckOnIncrease1$inboundSchema)),
+      on_decrease: z.optional(z.nullable(CheckOnDecrease1$inboundSchema)),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "on_increase": "onIncrease",
+        "on_decrease": "onDecrease",
+      });
+    }),
+  );
+
+export function checkConfig1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckConfig1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckConfig1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckConfig1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckItem1$inboundSchema: z.ZodMiniType<CheckItem1, unknown> = z
+  .pipe(
+    z.object({
+      type: z.optional(z.nullable(ProductType1$inboundSchema)),
+      feature_id: z.optional(z.nullable(types.string())),
+      feature_type: z.optional(z.nullable(FeatureType1$inboundSchema)),
+      included_usage: z.optional(
+        z.nullable(smartUnion([types.number(), types.string()])),
+      ),
+      interval: z.optional(z.nullable(CheckInterval1$inboundSchema)),
+      interval_count: z.optional(z.nullable(types.number())),
+      price: z.optional(z.nullable(types.number())),
+      tiers: z.optional(z.nullable(z.array(types.nullable(z.any())))),
+      tier_behavior: z.optional(z.nullable(CheckTierBehavior1$inboundSchema)),
+      usage_model: z.optional(z.nullable(UsageModel1$inboundSchema)),
+      billing_units: z.optional(z.nullable(types.number())),
+      reset_usage_when_enabled: z.optional(z.nullable(types.boolean())),
+      entity_feature_id: z.optional(z.nullable(types.string())),
+      display: z.optional(
+        z.nullable(z.lazy(() => ProductDisplay1$inboundSchema)),
+      ),
+      quantity: z.optional(z.nullable(types.number())),
+      next_cycle_quantity: z.optional(z.nullable(types.number())),
+      config: z.optional(z.nullable(z.lazy(() => CheckConfig1$inboundSchema))),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "feature_id": "featureId",
+        "feature_type": "featureType",
+        "included_usage": "includedUsage",
+        "interval_count": "intervalCount",
+        "tier_behavior": "tierBehavior",
+        "usage_model": "usageModel",
+        "billing_units": "billingUnits",
+        "reset_usage_when_enabled": "resetUsageWhenEnabled",
+        "entity_feature_id": "entityFeatureId",
+        "next_cycle_quantity": "nextCycleQuantity",
+      });
+    }),
+  );
+
+export function checkItem1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckItem1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckItem1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckItem1' from JSON`,
+  );
+}
+
+/** @internal */
+export const FreeTrialDuration1$inboundSchema: z.ZodMiniType<
+  FreeTrialDuration1,
+  unknown
+> = openEnums.inboundSchema(FreeTrialDuration1);
+
+/** @internal */
+export const CheckFreeTrial1$inboundSchema: z.ZodMiniType<
+  CheckFreeTrial1,
+  unknown
+> = z.pipe(
+  z.object({
+    duration: FreeTrialDuration1$inboundSchema,
+    length: types.number(),
+    unique_fingerprint: types.boolean(),
+    card_required: types.boolean(),
+    trial_available: z.nullable(z._default(types.boolean(), true)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "unique_fingerprint": "uniqueFingerprint",
+      "card_required": "cardRequired",
+      "trial_available": "trialAvailable",
+    });
+  }),
+);
+
+export function checkFreeTrial1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckFreeTrial1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckFreeTrial1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckFreeTrial1' from JSON`,
+  );
+}
+
+/** @internal */
+export const ProductScenario1$inboundSchema: z.ZodMiniType<
+  ProductScenario1,
+  unknown
+> = openEnums.inboundSchema(ProductScenario1);
+
+/** @internal */
+export const Properties1$inboundSchema: z.ZodMiniType<Properties1, unknown> = z
+  .pipe(
+    z.object({
+      is_free: types.boolean(),
+      is_one_off: types.boolean(),
+      interval_group: z.optional(z.nullable(types.string())),
+      has_trial: z.optional(z.nullable(types.boolean())),
+      updateable: z.optional(z.nullable(types.boolean())),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "is_free": "isFree",
+        "is_one_off": "isOneOff",
+        "interval_group": "intervalGroup",
+        "has_trial": "hasTrial",
+      });
+    }),
+  );
+
+export function properties1FromJSON(
+  jsonString: string,
+): SafeParseResult<Properties1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Properties1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Properties1' from JSON`,
+  );
+}
+
+/** @internal */
+export const Product1$inboundSchema: z.ZodMiniType<Product1, unknown> = z.pipe(
+  z.object({
+    id: types.string(),
+    name: types.string(),
+    group: types.nullable(types.string()),
+    env: CheckEnv1$inboundSchema,
+    is_add_on: types.boolean(),
+    is_default: types.boolean(),
+    archived: types.boolean(),
+    version: types.number(),
+    created_at: types.number(),
+    items: z.array(z.lazy(() => CheckItem1$inboundSchema)),
+    free_trial: types.nullable(z.lazy(() => CheckFreeTrial1$inboundSchema)),
+    base_variant_id: types.nullable(types.string()),
+    scenario: types.optional(ProductScenario1$inboundSchema),
+    properties: types.optional(z.lazy(() => Properties1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "is_add_on": "isAddOn",
+      "is_default": "isDefault",
+      "created_at": "createdAt",
+      "free_trial": "freeTrial",
+      "base_variant_id": "baseVariantId",
+    });
+  }),
+);
+
+export function product1FromJSON(
+  jsonString: string,
+): SafeParseResult<Product1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Product1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Product1' from JSON`,
+  );
+}
+
+/** @internal */
+export const Preview1$inboundSchema: z.ZodMiniType<Preview1, unknown> = z.pipe(
+  z.object({
+    scenario: Scenario1$inboundSchema,
+    title: types.string(),
+    message: types.string(),
+    feature_id: types.string(),
+    feature_name: types.string(),
+    products: z.array(z.lazy(() => Product1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+      "feature_name": "featureName",
+    });
+  }),
+);
+
+export function preview1FromJSON(
+  jsonString: string,
+): SafeParseResult<Preview1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Preview1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Preview1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckResponseBody1$inboundSchema: z.ZodMiniType<
+  CheckResponseBody1,
+  unknown
+> = z.pipe(
+  z.object({
+    allowed: types.boolean(),
+    customer_id: types.string(),
+    entity_id: z.optional(z.nullable(types.string())),
+    required_balance: types.optional(types.number()),
+    balance: types.nullable(Balance$inboundSchema),
+    flag: types.nullable(z.lazy(() => Flag1$inboundSchema)),
+    preview: types.optional(z.lazy(() => Preview1$inboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "customer_id": "customerId",
+      "entity_id": "entityId",
+      "required_balance": "requiredBalance",
+    });
+  }),
+);
+
+export function checkResponseBody1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckResponseBody1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckResponseBody1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckResponseBody1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckResponse$inboundSchema: z.ZodMiniType<
+  CheckResponse,
+  unknown
+> = smartUnion([
+  z.lazy(() => CheckResponseBody1$inboundSchema),
+  z.lazy(() => CheckResponseBody2$inboundSchema),
+]);
 
 export function checkResponseFromJSON(
   jsonString: string,

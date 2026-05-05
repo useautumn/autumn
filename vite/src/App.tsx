@@ -89,6 +89,10 @@ export default function App() {
 						element={<EdgeConfigView />}
 					/>
 					<Route
+						path="/sandbox/impersonate-redirect"
+						element={<ImpersonateRedirect />}
+					/>
+					<Route
 						path="/impersonate-redirect"
 						element={<ImpersonateRedirect />}
 					/>

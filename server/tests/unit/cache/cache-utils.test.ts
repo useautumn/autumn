@@ -5,21 +5,28 @@ const mockState = {
 };
 const defaultRedis = { status: "ready" };
 
-mock.module("@/external/logtail/logtailUtils.js", () => ({
-	logger: {
-		info: () => undefined,
-		warn: (data: Record<string, unknown> | string, message?: string) => {
-			if (typeof data === "string") {
-				mockState.warnings.push({ message: data });
-				return;
-			}
+// Stub the full `Logger` shape — Bun's `mock.module` is process-wide, so
+// later unit tests inherit this stub. Missing methods crash unrelated code.
+const mockLogger = {
+	debug: () => undefined,
+	info: () => undefined,
+	warn: (data: Record<string, unknown> | string, message?: string) => {
+		if (typeof data === "string") {
+			mockState.warnings.push({ message: data });
+			return;
+		}
 
-			mockState.warnings.push({
-				message: message || "",
-				data,
-			});
-		},
+		mockState.warnings.push({
+			message: message || "",
+			data,
+		});
 	},
+	error: () => undefined,
+	child: () => mockLogger,
+};
+
+mock.module("@/external/logtail/logtailUtils.js", () => ({
+	logger: mockLogger,
 }));
 
 mock.module("@/external/redis/initUtils/redisConfig.js", () => ({

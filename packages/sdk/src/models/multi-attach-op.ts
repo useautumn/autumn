@@ -563,6 +563,10 @@ export type MultiAttachParams = {
    */
   newBillingSubscription?: boolean | undefined;
   /**
+   * If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
+   */
+  enablePlanImmediately?: boolean | undefined;
+  /**
    * Customer details to set when creating a customer
    */
   customerData?: CustomerData | undefined;
@@ -1340,6 +1344,7 @@ export type MultiAttachParams$Outbound = {
   checkout_session_params?: { [k: string]: any } | undefined;
   redirect_mode: string;
   new_billing_subscription?: boolean | undefined;
+  enable_plan_immediately?: boolean | undefined;
   customer_data?: CustomerData$Outbound | undefined;
   entity_data?: MultiAttachEntityData$Outbound | undefined;
 };
@@ -1369,6 +1374,7 @@ export const MultiAttachParams$outboundSchema: z.ZodMiniType<
       "if_required",
     ),
     newBillingSubscription: z.optional(z.boolean()),
+    enablePlanImmediately: z.optional(z.boolean()),
     customerData: z.optional(CustomerData$outboundSchema),
     entityData: z.optional(z.lazy(() => MultiAttachEntityData$outboundSchema)),
   }),
@@ -1382,6 +1388,7 @@ export const MultiAttachParams$outboundSchema: z.ZodMiniType<
       checkoutSessionParams: "checkout_session_params",
       redirectMode: "redirect_mode",
       newBillingSubscription: "new_billing_subscription",
+      enablePlanImmediately: "enable_plan_immediately",
       customerData: "customer_data",
       entityData: "entity_data",
     });

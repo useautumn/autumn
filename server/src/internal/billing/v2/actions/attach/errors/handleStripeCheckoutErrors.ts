@@ -63,4 +63,20 @@ export const handleStripeCheckoutErrors = ({
 			statusCode: 400,
 		});
 	}
+
+	// enable_plan_immediately pre-inserts the cusProduct (with its feature
+	// quantities) at attach time. If the customer can change quantities on the
+	// Stripe checkout page, those changes won't propagate back to the row,
+	// leaving Autumn out of sync with Stripe. Block the combination explicitly.
+	if (
+		billingContext.enablePlanImmediately &&
+		(billingContext.adjustableFeatureQuantities?.length ?? 0) > 0
+	) {
+		throw new RecaseError({
+			message:
+				"enable_plan_immediately cannot be used with adjustable feature quantities — set adjustable_quantity to false on each option, or remove enable_plan_immediately.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 };

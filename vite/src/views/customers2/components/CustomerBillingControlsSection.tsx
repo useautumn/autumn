@@ -1,19 +1,14 @@
-import {
-	ACTIVE_STATUSES,
-	type AutoTopup,
-	cusEntsToBalance,
-	cusEntsToGrantedBalance,
-	cusEntsToPrepaidQuantity,
-	type DbOverageAllowed,
-	type DbSpendLimit,
-	type DbUsageAlert,
-	type Entity,
-	type Feature,
-	type FullCustomer,
-	fullCustomerToCustomerEntitlements,
-	nullish,
+import type {
+	AutoTopupResponse,
+	DbOverageAllowed,
+	DbSpendLimit,
+	DbUsageAlert,
+	Entity,
+	Feature,
+	FullCustomer,
 } from "@autumn/shared";
 import { GavelIcon, PlusIcon } from "@phosphor-icons/react";
+import { format } from "date-fns";
 import { type ReactNode, useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { SectionTag } from "@/components/v2/badges/SectionTag";
@@ -91,11 +86,12 @@ const AutoTopupRow = ({
 	featureNameById,
 	onClick,
 }: {
-	autoTopup: AutoTopup;
+	autoTopup: AutoTopupResponse;
 	featureNameById: Map<string, string>;
 	onClick: () => void;
 }) => {
 	const purchaseLimit = autoTopup.purchase_limit;
+	const hasExpandedLimit = purchaseLimit && "count" in purchaseLimit;
 
 	return (
 		<button type="button" className={rowClassName} onClick={onClick}>
@@ -111,7 +107,14 @@ const AutoTopupRow = ({
 				<Pill>Qty: {autoTopup.quantity.toLocaleString()}</Pill>
 				{purchaseLimit && (
 					<Pill className="hidden lg:inline">
-						Limit: {purchaseLimit.limit}/{purchaseLimit.interval}
+						{hasExpandedLimit
+							? `${purchaseLimit.count}/${purchaseLimit.limit} per ${purchaseLimit.interval}`
+							: `Limit: ${purchaseLimit.limit} per ${purchaseLimit.interval}`}
+					</Pill>
+				)}
+				{hasExpandedLimit && purchaseLimit.next_reset_at && (
+					<Pill className="hidden xl:inline">
+						Resets {format(new Date(purchaseLimit.next_reset_at), "MMM d")}
 					</Pill>
 				)}
 			</div>
@@ -150,26 +153,15 @@ const SpendLimitRow = ({
 const UsageAlertRow = ({
 	usageAlert,
 	featureNameById,
-	featureBalance,
 	onClick,
 }: {
 	usageAlert: DbUsageAlert;
 	featureNameById: Map<string, string>;
-	featureBalance: {
-		remaining: number;
-		remainingPercentage: number | null;
-		usage: number;
-		usagePercentage: number | null;
-	} | null;
 	onClick: () => void;
 }) => {
 	const isPercentageType =
 		usageAlert.threshold_type === "usage_percentage" ||
 		usageAlert.threshold_type === "remaining_percentage";
-
-	const isUsageType =
-		usageAlert.threshold_type === "usage" ||
-		usageAlert.threshold_type === "usage_percentage";
 
 	const thresholdLabel = isPercentageType
 		? `${usageAlert.threshold}%`
@@ -181,28 +173,6 @@ const UsageAlertRow = ({
 		remaining: "absolute remaining",
 		remaining_percentage: "% remaining of allowance",
 	};
-
-	const statusPill = (() => {
-		if (!featureBalance) return null;
-
-		if (isUsageType) {
-			const percentage = featureBalance.usagePercentage;
-			return (
-				<Pill>
-					Usage: {featureBalance.usage.toLocaleString()}
-					{percentage !== null && ` (${Math.round(percentage)}%)`}
-				</Pill>
-			);
-		}
-
-		return (
-			<Pill>
-				Remaining: {featureBalance.remaining.toLocaleString()}
-				{featureBalance.remainingPercentage !== null &&
-					` (${Math.round(featureBalance.remainingPercentage)}%)`}
-			</Pill>
-		);
-	})();
 
 	return (
 		<button type="button" className={rowClassName} onClick={onClick}>
@@ -219,7 +189,6 @@ const UsageAlertRow = ({
 				</span>
 			)}
 			<div className="ml-auto flex items-center gap-1.5 shrink-0">
-				{statusPill}
 				<Pill>At: {thresholdLabel}</Pill>
 				<Pill className="hidden sm:inline">
 					{thresholdTypeLabel[usageAlert.threshold_type]}
@@ -283,72 +252,6 @@ export function CustomerBillingControlsSection() {
 	const overageAllowed = selectedEntity
 		? (selectedEntity.overage_allowed ?? [])
 		: (fullCustomer?.overage_allowed ?? []);
-
-	const balanceByFeatureId = useMemo(() => {
-		if (!fullCustomer)
-			return new Map<
-				string,
-				{
-					remaining: number;
-					remainingPercentage: number | null;
-					usage: number;
-					usagePercentage: number | null;
-				}
-			>();
-
-		const featureIds = [
-			...new Set(
-				usageAlerts
-					.map((alert) => alert.feature_id)
-					.filter((id): id is string => !!id),
-			),
-		];
-
-		const result = new Map<
-			string,
-			{
-				remaining: number;
-				remainingPercentage: number | null;
-				usage: number;
-				usagePercentage: number | null;
-			}
-		>();
-		for (const featureId of featureIds) {
-			const cusEnts = fullCustomerToCustomerEntitlements({
-				fullCustomer,
-				featureId,
-				entity: selectedEntity ?? undefined,
-				inStatuses: ACTIVE_STATUSES,
-			});
-
-			const grantedBalance = cusEntsToGrantedBalance({
-				cusEnts,
-				entityId: entityId ?? undefined,
-			});
-			const prepaid = cusEntsToPrepaidQuantity({
-				cusEnts,
-				sumAcrossEntities: nullish(entityId),
-			});
-			const totalAllowance = grantedBalance + prepaid;
-
-			const balance = cusEntsToBalance({
-				cusEnts,
-				entityId: entityId ?? undefined,
-			});
-
-			const usage = totalAllowance - balance;
-
-			result.set(featureId, {
-				remaining: balance,
-				remainingPercentage:
-					totalAllowance > 0 ? (balance / totalAllowance) * 100 : null,
-				usage,
-				usagePercentage:
-					totalAllowance > 0 ? (usage / totalAllowance) * 100 : null,
-			});
-		}
-		return result;
-	}, [fullCustomer, usageAlerts, selectedEntity, entityId]);
 
 	const hasAnyControls =
 		autoTopups.length > 0 ||
@@ -527,26 +430,19 @@ export function CustomerBillingControlsSection() {
 					{usageAlerts.length > 0 && (
 						<BillingControlsGroup title="Usage alerts" emptyText="" hasItems>
 							<div className="flex flex-col gap-1.5 rounded-lg">
-								{usageAlerts.map((usageAlert, index) => {
-									const featureBalance = usageAlert.feature_id
-										? balanceByFeatureId.get(usageAlert.feature_id) ??
-											null
-										: null;
-									return (
-										<UsageAlertRow
-											key={`usage-alert-${usageAlert.feature_id ?? "global"}-${usageAlert.name ?? index}`}
-											usageAlert={usageAlert}
-											featureNameById={featureNameById}
-											featureBalance={featureBalance}
-											onClick={() =>
-												setSheet({
-													type: "billing-usage-alert-edit",
-													data: { index, item: usageAlert },
-												})
-											}
-										/>
-									);
-								})}
+								{usageAlerts.map((usageAlert, index) => (
+									<UsageAlertRow
+										key={`usage-alert-${usageAlert.feature_id ?? "global"}-${usageAlert.name ?? index}`}
+										usageAlert={usageAlert}
+										featureNameById={featureNameById}
+										onClick={() =>
+											setSheet({
+												type: "billing-usage-alert-edit",
+												data: { index, item: usageAlert },
+											})
+										}
+									/>
+								))}
 							</div>
 						</BillingControlsGroup>
 					)}

@@ -9,6 +9,7 @@ import * as openEnums from "../types/enums.js";
 import { OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { Balance, Balance$inboundSchema } from "./balance.js";
 import { Plan, Plan$inboundSchema } from "./plan.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
@@ -25,10 +26,41 @@ export const CustomerEnv = {
  */
 export type CustomerEnv = OpenEnum<typeof CustomerEnv>;
 
+export const CustomerInterval2 = {
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+} as const;
+export type CustomerInterval2 = OpenEnum<typeof CustomerInterval2>;
+
+export type CustomerPurchaseLimit2 = {
+  /**
+   * The time interval for the purchase limit window. Null when no purchase limit is configured.
+   */
+  interval: CustomerInterval2 | null;
+  /**
+   * Number of intervals in the purchase limit window. Null when no purchase limit is configured.
+   */
+  intervalCount: number | null;
+  /**
+   * Maximum number of auto top-ups allowed within the interval. Null when no purchase limit is configured.
+   */
+  limit: number | null;
+  /**
+   * Number of auto top-ups already consumed in the current window.
+   */
+  count: number;
+  /**
+   * Unix ms timestamp when the current purchase window ends and the count resets.
+   */
+  nextResetAt: number;
+};
+
 /**
  * The time interval for the purchase limit window.
  */
-export const CustomerInterval = {
+export const CustomerInterval1 = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -37,16 +69,13 @@ export const CustomerInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type CustomerInterval = OpenEnum<typeof CustomerInterval>;
+export type CustomerInterval1 = OpenEnum<typeof CustomerInterval1>;
 
-/**
- * Optional rate limit to cap how often auto top-ups occur.
- */
-export type CustomerPurchaseLimit = {
+export type CustomerPurchaseLimit1 = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: CustomerInterval;
+  interval: CustomerInterval1;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -56,6 +85,13 @@ export type CustomerPurchaseLimit = {
    */
   limit: number;
 };
+
+/**
+ * Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at.
+ */
+export type CustomerPurchaseLimitUnion =
+  | CustomerPurchaseLimit2
+  | CustomerPurchaseLimit1;
 
 export type CustomerAutoTopup = {
   /**
@@ -75,9 +111,9 @@ export type CustomerAutoTopup = {
    */
   quantity: number;
   /**
-   * Optional rate limit to cap how often auto top-ups occur.
+   * Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at.
    */
-  purchaseLimit?: CustomerPurchaseLimit | undefined;
+  purchaseLimit?: CustomerPurchaseLimit2 | CustomerPurchaseLimit1 | undefined;
   /**
    * When true, auto top-up creates a send_invoice invoice instead of auto-charging.
    */
@@ -628,18 +664,54 @@ export const CustomerEnv$inboundSchema: z.ZodMiniType<CustomerEnv, unknown> =
   openEnums.inboundSchema(CustomerEnv);
 
 /** @internal */
-export const CustomerInterval$inboundSchema: z.ZodMiniType<
-  CustomerInterval,
+export const CustomerInterval2$inboundSchema: z.ZodMiniType<
+  CustomerInterval2,
   unknown
-> = openEnums.inboundSchema(CustomerInterval);
+> = openEnums.inboundSchema(CustomerInterval2);
 
 /** @internal */
-export const CustomerPurchaseLimit$inboundSchema: z.ZodMiniType<
-  CustomerPurchaseLimit,
+export const CustomerPurchaseLimit2$inboundSchema: z.ZodMiniType<
+  CustomerPurchaseLimit2,
   unknown
 > = z.pipe(
   z.object({
-    interval: CustomerInterval$inboundSchema,
+    interval: types.nullable(CustomerInterval2$inboundSchema),
+    interval_count: types.nullable(types.number()),
+    limit: types.nullable(types.number()),
+    count: types.number(),
+    next_reset_at: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+      "next_reset_at": "nextResetAt",
+    });
+  }),
+);
+
+export function customerPurchaseLimit2FromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerPurchaseLimit2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerPurchaseLimit2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerPurchaseLimit2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CustomerInterval1$inboundSchema: z.ZodMiniType<
+  CustomerInterval1,
+  unknown
+> = openEnums.inboundSchema(CustomerInterval1);
+
+/** @internal */
+export const CustomerPurchaseLimit1$inboundSchema: z.ZodMiniType<
+  CustomerPurchaseLimit1,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: CustomerInterval1$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
   }),
@@ -650,13 +722,32 @@ export const CustomerPurchaseLimit$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function customerPurchaseLimitFromJSON(
+export function customerPurchaseLimit1FromJSON(
   jsonString: string,
-): SafeParseResult<CustomerPurchaseLimit, SDKValidationError> {
+): SafeParseResult<CustomerPurchaseLimit1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => CustomerPurchaseLimit$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'CustomerPurchaseLimit' from JSON`,
+    (x) => CustomerPurchaseLimit1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerPurchaseLimit1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CustomerPurchaseLimitUnion$inboundSchema: z.ZodMiniType<
+  CustomerPurchaseLimitUnion,
+  unknown
+> = smartUnion([
+  z.lazy(() => CustomerPurchaseLimit2$inboundSchema),
+  z.lazy(() => CustomerPurchaseLimit1$inboundSchema),
+]);
+
+export function customerPurchaseLimitUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<CustomerPurchaseLimitUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CustomerPurchaseLimitUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CustomerPurchaseLimitUnion' from JSON`,
   );
 }
 
@@ -670,9 +761,10 @@ export const CustomerAutoTopup$inboundSchema: z.ZodMiniType<
     enabled: z._default(types.boolean(), false),
     threshold: types.number(),
     quantity: types.number(),
-    purchase_limit: types.optional(
-      z.lazy(() => CustomerPurchaseLimit$inboundSchema),
-    ),
+    purchase_limit: types.optional(smartUnion([
+      z.lazy(() => CustomerPurchaseLimit2$inboundSchema),
+      z.lazy(() => CustomerPurchaseLimit1$inboundSchema),
+    ])),
     invoice_mode: types.optional(types.boolean()),
   }),
   z.transform((v) => {

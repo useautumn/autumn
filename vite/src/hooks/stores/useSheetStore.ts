@@ -12,6 +12,7 @@ export type SheetType =
 	| "attach-product"
 	| "attach-review"
 	| "attach-send-invoice"
+	| "attach-checkout-session"
 	| "subscription-detail"
 	| "subscription-update"
 	| "subscription-update-send-invoice"
@@ -22,6 +23,7 @@ export type SheetType =
 	| "balance-create"
 	| "invoice-detail"
 	| "sync-stripe"
+	| "sync-stripe-v2"
 	| "billing-auto-topup-add"
 	| "billing-auto-topup-edit"
 	| "billing-spend-limit-add"
@@ -108,7 +110,8 @@ export const useIsAttachingProduct = () =>
 		(s) =>
 			s.type === "attach-product" ||
 			s.type === "attach-review" ||
-			s.type === "attach-send-invoice",
+			s.type === "attach-send-invoice" ||
+			s.type === "attach-checkout-session",
 	);
 
 /**

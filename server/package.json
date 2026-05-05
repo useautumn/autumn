@@ -29,6 +29,7 @@
 		"clear-master": "ENV_FILE=.env infisical run --env=dev --recursive -- bun tests/clearMasterOrg.ts",
 		"cm": "ENV_FILE=.env infisical run --env=dev --recursive -- bun tests/clearMaster.ts",
 		"ts": "bunx tsgo --build --noEmit",
+		"test:unit": "ENV_FILE=.env infisical run --env=dev --recursive -- bun test tests/unit",
 		"test:integration": "ENV_FILE=.env infisical run --env=dev --recursive -- bun test --timeout 0 --preload ./tests/setup-integration-tests.ts",
 		"loadtest": "ENV_FILE=.env infisical run --env=dev --recursive -- npx artillery run perf/load-test/artillery.yml",
 		"loadtest:leak": "ENV_FILE=.env infisical run --env=dev --recursive -- bun perf/load-test/runLeakTest.ts",

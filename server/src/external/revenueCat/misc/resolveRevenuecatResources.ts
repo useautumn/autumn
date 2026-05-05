@@ -10,6 +10,7 @@ import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
+import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { ProductService } from "@/internal/products/ProductService";
 import { getOrCreateCustomer } from "../../../internal/customers/cusUtils/getOrCreateCustomer";
 
@@ -69,8 +70,16 @@ export const resolveRevenuecatResources = async ({
 				}),
 	]);
 
-	// If the customer has a product from a different processor than RevenueCat and it has no subscriptions, throw an error
+	// If the customer has a product from a different processor than RevenueCat and it has no subscriptions, throw an error.
+	//
+	// Exception: true one-off purchases (no recurring intervals) are safe to mix
+	// across processors because they create a parallel cus_product without
+	// replacing the customer's existing subscription. This lets a Stripe-subscribed
+	// customer buy a one-off pack via RevenueCat (and vice versa).
+	const incomingIsOneOff = pricesOnlyOneOff(product.prices);
+
 	if (
+		!incomingIsOneOff &&
 		customer.customer_products.some(
 			(cp) =>
 				cp.processor?.type !== ProcessorType.RevenueCat &&

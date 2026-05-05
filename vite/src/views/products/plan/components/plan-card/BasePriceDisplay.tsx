@@ -1,5 +1,9 @@
 import type { FrontendProduct } from "@autumn/shared";
 
+import {
+	AdminPlanIdsTooltip,
+	type AdminPlanIds,
+} from "@/components/forms/shared/admin/AdminPlanIdsTooltip";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	useCurrentItem,
@@ -14,10 +18,12 @@ export const BasePriceDisplay = ({
 	isOnboarding,
 	product,
 	readOnly = false,
+	adminIds,
 }: {
 	isOnboarding?: boolean;
 	product: FrontendProduct;
 	readOnly?: boolean;
+	adminIds?: AdminPlanIds;
 }) => {
 	const { sheetType, setSheet } = useSheet();
 	const { org } = useOrg();
@@ -67,7 +73,27 @@ export const BasePriceDisplay = ({
 		}
 	};
 
-	return (
+	// readOnly: render a plain span so hover events reach the admin tooltip
+	// (the editable Button uses `pointer-events-none` on readOnly which would
+	// suppress hover detection).
+	if (readOnly) {
+		const content = (
+			<span
+				className={cn(
+					"inline-flex items-center gap-1 cursor-default",
+					isOnboarding && "mt-1",
+				)}
+			>
+				{renderPriceContent()}
+			</span>
+		);
+		if (!adminIds) return content;
+		return (
+			<AdminPlanIdsTooltip ids={adminIds}>{content}</AdminPlanIdsTooltip>
+		);
+	}
+
+	const button = (
 		<Button
 			variant="secondary"
 			size="default"
@@ -76,11 +102,8 @@ export const BasePriceDisplay = ({
 				isEditingPlanPrice && !isOnboarding && "btn-secondary-active z-95",
 				isOnboarding &&
 					"bg-transparent! border-none! outline-0! border-transparent! pointer-events-none shadow-none! p-0! h-fit! mt-1",
-				readOnly &&
-					"pointer-events-none bg-transparent! border-none! shadow-none! p-0!",
 			)}
 			onClick={() => {
-				if (readOnly) return;
 				if (item && !checkItemIsValid(item)) return;
 				handleClick();
 			}}
@@ -88,4 +111,7 @@ export const BasePriceDisplay = ({
 			{renderPriceContent()}
 		</Button>
 	);
+
+	if (!adminIds) return button;
+	return <AdminPlanIdsTooltip ids={adminIds}>{button}</AdminPlanIdsTooltip>;
 };

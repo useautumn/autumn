@@ -231,6 +231,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 					.map((featureQuantity) => featureQuantity.feature_id) ?? [],
 		),
 		invoiceMode,
+		enablePlanImmediately: params.enable_plan_immediately ?? false,
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
@@ -249,6 +250,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 			invoiceMode,
 		}),
 		billingVersion: BillingVersion.V2,
+		actionSource: "multiAttach",
 		successUrl:
 			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
 		checkoutSessionParams: params.checkout_session_params,
