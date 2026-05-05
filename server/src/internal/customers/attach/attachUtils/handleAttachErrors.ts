@@ -2,6 +2,7 @@ import {
 	type AttachBodyV0,
 	AttachBranch,
 	type AttachConfig,
+	type BillingContext,
 	BillingType,
 	ErrCode,
 	RecaseError,
@@ -149,6 +150,29 @@ export const handleCustomPaymentMethodErrors = ({
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
 		});
 	} else if (attachParams.customer.processors?.vercel?.installation_id) {
+		throw new RecaseError({
+			message:
+				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
+		});
+	}
+};
+
+export const handleCustomPaymentMethodErrorsV2 = ({
+	billingContext,
+}: {
+	billingContext: BillingContext;
+}) => {
+	const { paymentMethod } = billingContext;
+	if (
+		paymentMethod?.type === "custom" &&
+		billingContext.fullCustomer.processors?.vercel?.custom_payment_method_id ===
+			paymentMethod?.custom?.type
+	) {
+		throw new RecaseError({
+			message:
+				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
+		});
+	} else if (billingContext.fullCustomer.processors?.vercel?.installation_id) {
 		throw new RecaseError({
 			message:
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
