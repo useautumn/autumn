@@ -68,6 +68,21 @@ export const stripeSubscriptionToTrialEndsAtMs = ({
 		: undefined;
 };
 
+/** Gets the earliest current period start for a Stripe subscription. */
+export const stripeSubscriptionToStartDate = ({
+	stripeSubscription,
+}: {
+	stripeSubscription: Stripe.Subscription;
+}) => {
+	if (stripeSubscription.items.data.length === 0) {
+		return stripeSubscription.start_date;
+	}
+
+	return stripeSubscription.items.data.reduce((earliestStartDate, item) => {
+		return Math.min(earliestStartDate, item.current_period_start);
+	}, stripeSubscription.items.data[0].current_period_start);
+};
+
 /**
  * Gets the latest invoice for a Stripe subscription.
  * Handles both expanded (object) and unexpanded (string ID) cases.

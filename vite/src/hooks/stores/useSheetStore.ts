@@ -23,6 +23,7 @@ export type SheetType =
 	| "balance-create"
 	| "invoice-detail"
 	| "sync-stripe"
+	| "sync-stripe-v2"
 	| "billing-auto-topup-add"
 	| "billing-auto-topup-edit"
 	| "billing-spend-limit-add"

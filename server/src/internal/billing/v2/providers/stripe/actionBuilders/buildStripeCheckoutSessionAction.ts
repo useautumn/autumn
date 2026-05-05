@@ -8,6 +8,7 @@ import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
+import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { stripeDiscountsToCheckoutParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
 
 export const buildStripeCheckoutSessionAction = ({
@@ -64,6 +65,9 @@ export const buildStripeCheckoutSessionAction = ({
 						trial_settings: {
 							end_behavior: { missing_payment_method: "cancel" },
 						},
+					}),
+					metadata: buildAutumnSubscriptionMetadata({
+						actionSource: billingContext.actionSource,
 					}),
 				}
 			: undefined;
