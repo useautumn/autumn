@@ -3,7 +3,6 @@ import { storeRenewalLineItems } from "@/external/stripe/webhookHandlers/common"
 import { invoiceActions } from "@/internal/invoices/actions";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 import { setupInvoiceFinalizedContext } from "./setupInvoiceFinalizedContext";
-import { processVercelInvoice } from "./tasks/processVercelInvoice";
 
 /**
  * Handles invoice.finalized webhook.
@@ -24,11 +23,6 @@ export const handleStripeInvoiceFinalized = async ({
 		ctx.logger.debug("[invoice.finalized] Skipping - context not found");
 		return;
 	}
-
-	const stripeInvoice = eventContext.stripeInvoice;
-	const stripeSubscription = eventContext.stripeSubscription;
-
-	await processVercelInvoice({ ctx, stripeInvoice, stripeSubscription });
 
 	ctx.logger.info(
 		`[invoice.finalized] Processing for invoice ${eventContext.stripeInvoice.id}`,
