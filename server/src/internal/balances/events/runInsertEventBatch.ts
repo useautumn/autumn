@@ -1,4 +1,4 @@
-import { AppEnv, RecaseError, tryCatch } from "@autumn/shared";
+import { RecaseError, tryCatch } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { Logger } from "pino";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -21,11 +21,10 @@ export const runInsertEventBatch = async ({
 	payload: InsertEventBatchPayload;
 	logger: Logger;
 }) => {
-	let { events: eventInserts } = payload;
+	const { events: eventInserts } = payload;
 
 	if (!eventInserts || eventInserts.length === 0) return;
-	// Only insert sandbox events
-	eventInserts = eventInserts.filter((x) => x.env === AppEnv.Sandbox);
+	if (process.env.NODE_ENV !== "development") return;
 	if (eventInserts.length === 0) return;
 
 	// Normalize timestamps
