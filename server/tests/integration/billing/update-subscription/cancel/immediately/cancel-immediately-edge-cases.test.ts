@@ -5,8 +5,8 @@
  * Focuses on complex multi-product scenarios with subscription schedules.
  */
 
-import { test } from "bun:test";
-import type { ApiCustomerV3 } from "@autumn/shared";
+import { expect, test } from "bun:test";
+import { type ApiCustomerV3, CusProductStatus } from "@autumn/shared";
 import {
 	expectCustomerProducts,
 	expectProductCanceling,
@@ -16,6 +16,8 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { CusService } from "@/internal/customers/CusService";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Cancel pro immediately after entity cancel/uncancel/cancel cycle
@@ -110,4 +112,69 @@ test.concurrent(`${chalk.yellowBright("cancel immediately edge: cancel pro after
 		env: ctx.env,
 		// shouldBeCanceled: true,
 	});
+});
+
+test(`${chalk.yellowBright("cancel orphaned base: cancel_immediately on a paid recurring orphan does not create a new sub")}`, async () => {
+	const customerId = "cancel-orphaned-base-immediately";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const priceItem = items.monthlyPrice({ price: 20 });
+	const pro = products.base({ id: "pro", items: [messagesItem, priceItem] });
+
+	const { customerId: cid, autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.attach({ productId: pro.id })],
+	});
+
+	const fullCustomerBefore = await CusService.getFull({
+		ctx,
+		idOrInternalId: cid,
+	});
+	const proCusProduct = fullCustomerBefore.customer_products.find(
+		(cp) => cp.product_id === pro.id,
+	);
+	expect(proCusProduct).toBeDefined();
+
+	const stripeCustomerId = fullCustomerBefore.processor?.id;
+	if (!stripeCustomerId) throw new Error("missing stripe customer id");
+
+	const subsBefore = await ctx.stripeCli.subscriptions.list({
+		customer: stripeCustomerId,
+	});
+	expect(subsBefore.data.length).toBe(1);
+	const originalProSubId = subsBefore.data[0].id;
+
+	// Orphan the cusProduct — sub still exists in Stripe, link cleared in autumn
+	await CusProductService.update({
+		ctx,
+		cusProductId: proCusProduct!.id,
+		updates: { subscription_ids: [] },
+	});
+
+	// Cancel immediately on the orphan should not create a new Stripe sub.
+	await autumnV1.subscriptions.update({
+		customer_id: cid,
+		product_id: pro.id,
+		cancel_action: "cancel_immediately" as const,
+	});
+
+	const subsAfter = await ctx.stripeCli.subscriptions.list({
+		customer: stripeCustomerId,
+	});
+	expect(subsAfter.data.length).toBe(1);
+	expect(subsAfter.data[0].id).toBe(originalProSubId);
+
+	const fullCustomerAfter = await CusService.getFull({
+		ctx,
+		idOrInternalId: cid,
+	});
+	const activePro = fullCustomerAfter.customer_products.find(
+		(cp) =>
+			cp.product_id === pro.id && cp.status === CusProductStatus.Active,
+	);
+	expect(activePro).toBeUndefined();
 });

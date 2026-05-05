@@ -2,6 +2,7 @@ import {
 	type AutumnBillingPlan,
 	type BillingContext,
 	cusProductToProduct,
+	isPrepaidPrice,
 	nullish,
 } from "@autumn/shared";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
@@ -35,7 +36,7 @@ export const initStripeResourcesForBillingPlan = async ({
 			prices: product.prices.filter(
 				(price) =>
 					nullish(price.config.stripe_price_id) ||
-					("stripe_prepaid_price_v2_id" in price.config &&
+					(isPrepaidPrice(price) &&
 						nullish(price.config.stripe_prepaid_price_v2_id)),
 			),
 		}))
