@@ -4,6 +4,7 @@ import {
 	ms,
 	orgToFeaturesByOrgEnv,
 } from "@autumn/shared";
+import { resolveCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 import { ProductService } from "@/internal/products/ProductService";
@@ -77,6 +78,11 @@ export const runProductCron = async ({
 						customers: customersToDelete,
 						featuresByOrgEnv,
 						redisV2: ctx.redisV2,
+						getRedisForCustomer: ({ customer }) =>
+							resolveCustomerRedisRouting({
+								org,
+								customerId: customer.customerId,
+							}).redis,
 					});
 					console.log(`Expired ${rows.length} customer products`);
 					continue;
