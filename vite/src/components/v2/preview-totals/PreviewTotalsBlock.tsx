@@ -47,7 +47,12 @@ export function PreviewTotalsBlock({
 		!willRedirectToStripeCheckout && creditBalance > 0
 			? Math.min(creditBalance, subtotalBeforeCredit)
 			: 0;
-	const showCreditRow = creditApplied > 0;
+	// Hide the row entirely when there's no credit on file. We also hide
+	// when redirecting to Stripe Checkout (Stripe applies the balance in
+	// their hosted form — showing it here would diverge) or when nothing
+	// would actually be applied (e.g. $0 plan with credit).
+	const showCreditRow =
+		creditBalance > 0 && !willRedirectToStripeCheckout && creditApplied > 0;
 	const creditRollover = creditBalance - creditApplied;
 
 	const { currency } = previewData;
@@ -94,7 +99,7 @@ export function PreviewTotalsBlock({
 				</div>
 			)}
 
-			<div className="flex items-center justify-between border-t border-border/60 pt-2 mt-1">
+			<div className="flex items-center justify-between border-t border-border pt-2 mt-1">
 				<span className="text-sm font-semibold text-foreground">
 					Total Due Now
 				</span>
