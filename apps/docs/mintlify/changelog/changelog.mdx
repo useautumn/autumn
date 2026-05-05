@@ -4,6 +4,70 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 5th 2026">
+  ## Stripe automatic tax
+
+  Autumn now supports Stripe's automatic tax calculation end-to-end. When enabled on your organisation, taxes are computed and applied automatically on checkout sessions, subscription updates, prorations, and one-off invoices — based on the customer's location.
+
+  - **Works everywhere**: Checkout, plan upgrades, prorations, and one-off charges all compute tax through Stripe Tax
+  - **Address-aware**: Customers without a usable address are surfaced with a clear error so you can collect one before billing
+  - **Contact us to enable**: Reach out to flip the tax flag on for your organisation
+
+  ## Tax previews on attach and update
+
+  Preview endpoints now return a `tax` object alongside the immediate charge so you can show customers exactly what they'll pay — including taxes — before they confirm.
+
+  - **Inclusive and exclusive breakdowns**: See total tax, amount included in subtotals, and amount added on top
+  - **Status-aware**: A `complete` or `incomplete` status tells you whether Stripe Tax was able to calculate
+  - Available on [`/billing.preview_attach`](/api-reference/billing/previewAttach) and [`/billing.preview_multi_attach`](/api-reference/billing/previewMultiAttach)
+
+  ## `billing.auto_topup_succeeded` webhook
+
+  A new webhook fires every time an auto top-up successfully grants credits to a customer — whether it auto-charged a saved payment method or generated a `send_invoice` invoice.
+
+  - **Stable dedupe key**: The Stripe invoice ID is included so you can safely process events idempotently
+  - **Full context**: Payload includes `customer_id`, `feature_id`, `quantity_granted`, `threshold`, `balance_after`, and the originating invoice
+  - See the [auto top-up webhook reference](/api-reference/webhooks/billingAutoTopupSucceeded) for the full payload
+
+  ## Auto top-ups in the Vercel Marketplace
+
+  Auto top-ups now work for customers billed through the Vercel Marketplace, matching the experience available for direct Stripe customers.
+
+  ## "Enable plan immediately" on checkout sessions
+
+  When generating a checkout URL from the dashboard, you can now choose whether the plan activates immediately or waits until payment completes — mirroring the behaviour previously available only for invoice-based attaches.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Stripe automatic tax support across checkout, prorations, one-off invoices, and subscription updates - [#1417](https://github.com/useautumn/autumn/pull/1417)
+      - Tax preview on `preview_attach` and `preview_multi_attach` responses - [#1424](https://github.com/useautumn/autumn/pull/1424)
+      - `billing.auto_topup_succeeded` webhook - [#1429](https://github.com/useautumn/autumn/pull/1429)
+      - Auto top-ups now supported in the Vercel Marketplace - [#1455](https://github.com/useautumn/autumn/pull/1455)
+      - Auto top-up purchase limit count and next reset surfaced on the customer dashboard - [#1436](https://github.com/useautumn/autumn/pull/1436)
+      - Checkout session stage with "Enable plan immediately" option in the dashboard attach flow - [#1436](https://github.com/useautumn/autumn/pull/1436), [#1415](https://github.com/useautumn/autumn/pull/1415)
+      - Cross-processor one-off product purchases for RevenueCat customers - [#1386](https://github.com/useautumn/autumn/pull/1386)
+      - SDKs and OpenAPI updated with `202 Accepted` response shapes for async endpoints - [#1409](https://github.com/useautumn/autumn/pull/1409)
+      - `billing.auto_topup_succeeded` exposed under `expand=billing_controls` on customer responses - [#1423](https://github.com/useautumn/autumn/pull/1423)
+    </Accordion>
+
+    <Accordion title="Bug fixes">
+      - Fixed prepaid prices defaulting to 0 in the Vercel Marketplace - [#1455](https://github.com/useautumn/autumn/pull/1455)
+      - Filter Stripe-only customer products correctly so Vercel customers don't appear under unrelated Stripe queries - [#1458](https://github.com/useautumn/autumn/pull/1458)
+      - Fixed prepaid v2 price initialisation under specific Stripe configurations - [#1451](https://github.com/useautumn/autumn/pull/1451)
+      - Fixed sync-schedules and webhook acknowledgement reliability - [#1443](https://github.com/useautumn/autumn/pull/1443)
+      - Fixed orphaned customer products lingering after add-on attaches - [#1440](https://github.com/useautumn/autumn/pull/1440)
+      - Fixed legacy `update_quantity` flow on the `billing.update` endpoint - [#1410](https://github.com/useautumn/autumn/pull/1410)
+      - Blocked recurring add-ons across processors and prevented non-Stripe products from leaking into new Stripe subscriptions - [#1400](https://github.com/useautumn/autumn/pull/1400)
+      - Fixed balance edits on entity-scoped entitlements when no entity was selected - [#1407](https://github.com/useautumn/autumn/pull/1407)
+      - Fixed past-due cache state not resetting in cache v2 - [#1396](https://github.com/useautumn/autumn/pull/1396)
+      - Network errors are no longer silently swallowed - [#1404](https://github.com/useautumn/autumn/pull/1404)
+      - Non-net tax preview calculation corrected - [#1434](https://github.com/useautumn/autumn/pull/1434)
+      - Fixed customer cache occasionally missing prices - [#1387](https://github.com/useautumn/autumn/pull/1387), [#1388](https://github.com/useautumn/autumn/pull/1388)
+      - Hotfix for past-due customer config edge case - [#1297](https://github.com/useautumn/autumn/pull/1297)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
