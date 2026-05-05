@@ -104,6 +104,10 @@ export function EditPlanSection() {
 				currency={currency}
 				onEditPlan={handleEditPlan}
 				priceChange={priceChange}
+				adminIds={{
+					stripe_product_id: product?.stripe_id ?? null,
+					internal_product_id: product?.internal_id ?? null,
+				}}
 			/>
 		</SheetSection>
 	);

@@ -2,16 +2,16 @@
   "id": "get-cus-multi-ent-v2",
   "name": "get-cus-multi-ent-v2",
   "email": "get-cus-multi-ent-v2@example.com",
-  "created_at": 1776681093029,
+  "created_at": 1777974355227,
   "fingerprint": null,
-  "stripe_id": "cus_UMz5mvPwIP5PS3",
+  "stripe_id": "cus_USajNwvM0pax2M",
   "env": "sandbox",
   "metadata": {},
   "send_email_receipts": false,
   "billing_controls": {},
   "subscriptions": [
     {
-      "id": "cus_prod_3CcNrGiJGlmGt6kWD0DmRWURUQw",
+      "id": "cus_prod_3DIfA2BFN0oEtwT1ZjkWrehY58P",
       "plan_id": "cus-lvl_get-cus-multi-ent-v2",
       "auto_enable": false,
       "add_on": false,
@@ -20,13 +20,13 @@
       "canceled_at": null,
       "expires_at": null,
       "trial_ends_at": null,
-      "started_at": 1776681092000,
-      "current_period_start": 1776681092000,
-      "current_period_end": 1779273092000,
+      "started_at": 1777974354000,
+      "current_period_start": 1777974354000,
+      "current_period_end": 1780652754000,
       "quantity": 1
     },
     {
-      "id": "cus_prod_3CcNtXszM7noCNIdjl9H6gs8hdj",
+      "id": "cus_prod_3DIfCpfcDc0YS0zEcf1WvNNQvBp",
       "plan_id": "ent-prod_get-cus-multi-ent-v2",
       "auto_enable": false,
       "add_on": false,
@@ -35,7 +35,7 @@
       "canceled_at": null,
       "expires_at": null,
       "trial_ends_at": null,
-      "started_at": 1776681113920,
+      "started_at": 1777974379436,
       "current_period_start": null,
       "current_period_end": null,
       "quantity": 1
@@ -52,11 +52,11 @@
       "unlimited": false,
       "overage_allowed": false,
       "max_purchase": null,
-      "next_reset_at": 1779273092000,
+      "next_reset_at": 1780652754000,
       "breakdown": [
         {
           "object": "balance_breakdown",
-          "id": "cus_ent_3CcNrCvPuPFhzyhShn1g64uZeJ6",
+          "id": "cus_ent_3DIfA2PIor7pWp92N3fowXUmmue",
           "plan_id": "cus-lvl_get-cus-multi-ent-v2",
           "included_grant": 100,
           "prepaid_grant": 0,
@@ -65,7 +65,7 @@
           "unlimited": false,
           "reset": {
             "interval": "month",
-            "resets_at": 1779273092000
+            "resets_at": 1780652754000
           },
           "price": null,
           "expires_at": null,
@@ -89,23 +89,24 @@
   "flags": {
     "dashboard": {
       "object": "flag",
-      "id": "cus_ent_3CcNrCFvKwLC3y0XoUiLazztjwy",
+      "id": "cus_ent_3DIfA2SgxKclfL3Px24NWnwwdag",
       "plan_id": "cus-lvl_get-cus-multi-ent-v2",
       "expires_at": null,
       "feature_id": "dashboard"
     }
   },
+  "config": {},
   "invoices": [
     {
       "plan_ids": [
         "cus-lvl_get-cus-multi-ent-v2"
       ],
-      "stripe_id": "in_1TOF756GVhH8pLcDfKcFgsHu",
+      "stripe_id": "in_1TTfYB6GVhvcrrMKf6xxH63K",
       "status": "paid",
       "total": 20,
       "currency": "usd",
-      "created_at": 1776681092000,
-      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3CcNrtgUERTv8MnmpqncpHXIwRk"
+      "created_at": 1777974354000,
+      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3DIfAkOjiIKZGi9svU7RnJrrSxy"
     }
   ]
 }

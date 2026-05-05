@@ -3,7 +3,7 @@ import {
 	stripeCheckoutSessionToInvoiceId,
 	stripeCheckoutSessionToSubscriptionId,
 } from "@/external/stripe/checkoutSessions/utils/convertStripeCheckoutSession";
-import { findCheckoutLineItemByAutumnPrice } from "@/external/stripe/checkoutSessions/utils/findCheckoutLineItem";
+import { findCheckoutLineItemForAutumnPrice } from "@/internal/billing/v2/providers/stripe/utils/sync/autumnToStripe/findCheckoutLineItemForAutumnPrice";
 
 export const stripeCheckoutSessionUtils = {
 	convert: {
@@ -12,6 +12,6 @@ export const stripeCheckoutSessionUtils = {
 		toFeatureOptionsQuantity: stripeCheckoutSessionToFeatureOptionsQuantity,
 	},
 	find: {
-		lineItemByAutumnPrice: findCheckoutLineItemByAutumnPrice,
+		lineItemByAutumnPrice: findCheckoutLineItemForAutumnPrice,
 	},
 };
