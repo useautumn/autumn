@@ -4,6 +4,92 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 5th 2026">
+  ## Automatic tax
+
+  Autumn now supports **Stripe Automatic Tax** end-to-end. When enabled, taxes are calculated automatically based on the customer's address across checkout sessions, subscription updates, prorations, and one-off invoices.
+
+  - **Calculated everywhere**: Checkout, subscription create/update, proration invoices, and one-off charges
+  - **Visible upfront**: Tax appears in attach previews so customers see the full charge before confirming
+  - **Address-aware**: Returns a clear error if a tax-required jurisdiction is missing customer address details
+
+  See the [attach API reference](/api-reference/billing/attach) and [preview attach](/api-reference/billing/previewAttach) for the new tax fields in responses.
+
+  ## Scheduled plan start with `starts_at`
+
+  Attach calls now accept a `starts_at` parameter so you can schedule a plan to begin at a future time instead of activating immediately. Useful for trials starting after onboarding, plan changes timed to a future date, or migrating customers in bulk on a specific cutover.
+
+  - **Schedule-first activation**: Subscription is created on Stripe as a schedule and activates at the chosen timestamp
+  - **Validation included**: Clear errors for past timestamps or conflicting overlapping plans
+  - **Webhook-aware**: Linked to Stripe schedule webhooks so the customer's plan flips state on schedule
+
+  See the [attach API reference](/api-reference/billing/attach) for usage.
+
+  ## Promo codes in Autumn Checkout
+
+  Customers can now apply **promo codes** directly inside Autumn Checkout. Discounts are reflected live in the order summary before confirmation, with full support for percentage and fixed-amount rewards.
+
+  - **Inline entry**: Customers paste a promo code on the checkout page and see the discount applied instantly
+  - **Live preview**: The order summary updates with the new total before the customer confirms
+  - **Works with existing rewards**: Any [reward](/documentation/modelling-pricing/rewards) you've configured in Autumn is redeemable in checkout
+
+  ## `billing.auto_topup_succeeded` webhook
+
+  A new webhook fires whenever an [auto top-up](/documentation/modelling-pricing/auto-top-ups) successfully grants additional prepaid balance. The payload includes the granted quantity, the new balance, and the underlying invoice — useful for sending receipts, updating internal ledgers, or reconciling balances after a recharge.
+
+  See the [webhooks reference](/documentation/webhooks) and the [billingAutoTopupSucceeded event](/api-reference/webhooks/billingAutoTopupSucceeded) for the payload schema.
+
+  ## Auto top-up purchase limits in customer responses
+
+  Customer responses now expose **auto top-up purchase limit usage** when you expand `billing_controls.auto_topups.purchase_limit`. You'll get the current count of top-ups in the interval and the `next_reset_at` timestamp, making it easy to surface "X of Y top-ups used this month" in your UI.
+
+  See the [customer endpoints](/api-reference/customers/getOrCreateCustomer) for the expanded fields.
+
+  ## Discounts on subscription updates
+
+  The dashboard's subscription update sheet now supports applying and adjusting **discounts** on existing subscriptions, and active coupons are shown in the subscription detail view. No more bouncing to Stripe to attach a coupon to a live subscription.
+
+  ## Credit notes in attach previews
+
+  Plan upgrade and subscription update previews now surface **credit notes** alongside prorations and tax — so the preview shown to customers and surfaced in your dashboard matches exactly what Stripe will issue.
+
+  See [previewAttach](/api-reference/billing/previewAttach) and [previewUpdate](/api-reference/billing/previewUpdate) for the new fields.
+
+  ## Activate scheduled plans immediately from checkout
+
+  When a customer completes checkout for a plan that was previously scheduled, Autumn now activates that plan **immediately** instead of waiting for the original schedule date. This avoids confusing gaps where a paying customer has no active plan after completing payment.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Stripe Automatic Tax across checkout, subscription updates, prorations, and one-off invoices - [#1417](https://github.com/useautumn/autumn/pull/1417)
+      - Tax shown in attach previews (`computeAttachTaxPreview`) - [#1424](https://github.com/useautumn/autumn/pull/1424)
+      - `starts_at` parameter on `billing.attach` for scheduled plan start - [#1411](https://github.com/useautumn/autumn/pull/1411)
+      - Promo code entry and discount application in Autumn Checkout - [#1446](https://github.com/useautumn/autumn/pull/1446)
+      - New `billing.auto_topup_succeeded` webhook - [#1429](https://github.com/useautumn/autumn/pull/1429)
+      - Auto top-up `purchase_limit` count and `next_reset_at` available via customer expand - [#1423](https://github.com/useautumn/autumn/pull/1423)
+      - Discount support in subscription updates and coupons displayed in subscription detail view - [#1463](https://github.com/useautumn/autumn/pull/1463)
+      - Credit notes included in attach and update subscription previews - [#1464](https://github.com/useautumn/autumn/pull/1464)
+      - Scheduled plans can be activated immediately when checkout completes - [#1415](https://github.com/useautumn/autumn/pull/1415)
+      - Auto-sync paid feature mappings with new restore action - [#1448](https://github.com/useautumn/autumn/pull/1448)
+      - Dashboard: generate checkout session stage when attaching products and improved auto top-up controls - [#1436](https://github.com/useautumn/autumn/pull/1436)
+      - Updated OpenAPI spec, Python SDK, and TypeScript SDK - [#1409](https://github.com/useautumn/autumn/pull/1409)
+    </Accordion>
+
+    <Accordion title="Bug fixes">
+      - Vercel Marketplace: filter Stripe subscriptions by active status, fix prepaid prices defaulting to 0, auto top-ups now work, grace handling, and other reliability fixes - [#1455](https://github.com/useautumn/autumn/pull/1455), [#1458](https://github.com/useautumn/autumn/pull/1458), [#1461](https://github.com/useautumn/autumn/pull/1461)
+      - Fixed prepaid price calculation in V2 attach flow - [#1451](https://github.com/useautumn/autumn/pull/1451)
+      - Fixed schedule sync edge cases and webhook telemetry - [#1443](https://github.com/useautumn/autumn/pull/1443)
+      - Fixed orphaned customer products no longer cleaned up correctly - [#1440](https://github.com/useautumn/autumn/pull/1440)
+      - Fixed non-net tax calculation in preview totals - [#1434](https://github.com/useautumn/autumn/pull/1434)
+      - Fixed multi-attach being incorrectly included in sync flow - [#1426](https://github.com/useautumn/autumn/pull/1426)
+      - Fixed legacy `update_quantity` flow - [#1410](https://github.com/useautumn/autumn/pull/1410)
+      - Fixed attach errors for RevenueCat-linked customers - [#1400](https://github.com/useautumn/autumn/pull/1400)
+      - Fixed balance edit failing for entity-scoped entitlements when no entity is selected - [#1406](https://github.com/useautumn/autumn/pull/1406), [#1407](https://github.com/useautumn/autumn/pull/1407)
+      - Fixed network errors being silently swallowed in the dashboard - [#1404](https://github.com/useautumn/autumn/pull/1404)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
