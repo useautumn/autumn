@@ -32,11 +32,25 @@ export function PlanActivationSection({
 	enableImmediately,
 	setEnableImmediately,
 	disabled,
+	scheduledStartDate,
 }: {
 	enableImmediately: boolean;
 	setEnableImmediately: (value: boolean) => void;
 	disabled?: boolean;
+	scheduledStartDate?: number | null;
 }) {
+	const hasScheduledStartDate =
+		scheduledStartDate !== null && scheduledStartDate !== undefined;
+	const immediateTitle = hasScheduledStartDate
+		? "Enable plan at start date"
+		: "Enable plan immediately";
+	const immediateDescription = hasScheduledStartDate
+		? `Plan activates on ${format(new Date(scheduledStartDate), "MMM d, yyyy")}, payment is collected separately.`
+		: "Plan activates now, payment is collected separately.";
+	const delayedDescription = hasScheduledStartDate
+		? "Plan activates after the customer completes payment and the start date is reached."
+		: "Plan activates only after the customer completes payment.";
+
 	return (
 		<SheetSection
 			title="Plan Activation"
@@ -51,11 +65,9 @@ export function PlanActivationSection({
 						icon={<LightningIcon size={18} weight="duotone" />}
 					/>
 					<div className="flex-1">
-						<div className="text-body-highlight mb-1">
-							Enable plan immediately
-						</div>
+						<div className="text-body-highlight mb-1">{immediateTitle}</div>
 						<div className="text-body-secondary leading-tight">
-							Plan activates now, payment is collected separately.
+							{immediateDescription}
 						</div>
 					</div>
 				</div>
@@ -71,7 +83,7 @@ export function PlanActivationSection({
 							Enable plan after payment
 						</div>
 						<div className="text-body-secondary leading-tight">
-							Plan activates only after the customer completes payment.
+							{delayedDescription}
 						</div>
 					</div>
 				</div>
@@ -89,6 +101,7 @@ export function SendInvoiceStage({
 	lineItems,
 	currency,
 	totals,
+	scheduledStartDate,
 }: {
 	productName?: string;
 	isPending: boolean;
@@ -106,6 +119,7 @@ export function SendInvoiceStage({
 		variant?: "primary" | "secondary";
 		badge?: string;
 	}[];
+	scheduledStartDate?: number | null;
 }) {
 	const { customer, refetch } = useCusQuery();
 	const axiosInstance = useAxiosInstance();
@@ -273,6 +287,7 @@ export function SendInvoiceStage({
 				enableImmediately={enableImmediately}
 				setEnableImmediately={setEnableImmediately}
 				disabled={needsEmail}
+				scheduledStartDate={scheduledStartDate}
 			/>
 
 			<LineItemsPreview
@@ -317,6 +332,7 @@ export function SendInvoiceStageWithPreview({
 	stripeAccount,
 	env,
 	onBack,
+	scheduledStartDate,
 }: {
 	productName?: string;
 	previewQuery: {
@@ -338,8 +354,11 @@ export function SendInvoiceStageWithPreview({
 	stripeAccount: { id?: string } | undefined;
 	env: AppEnv;
 	onBack: () => void;
+	scheduledStartDate?: number | null;
 }) {
 	const previewData = previewQuery.data;
+	const effectiveScheduledStartDate =
+		scheduledStartDate ?? previewData?.next_cycle?.starts_at ?? null;
 
 	const totals = useMemo(() => {
 		const result: {
@@ -389,6 +408,7 @@ export function SendInvoiceStageWithPreview({
 			lineItems={previewData?.line_items}
 			currency={previewData?.currency}
 			totals={totals}
+			scheduledStartDate={effectiveScheduledStartDate}
 		/>
 	);
 }

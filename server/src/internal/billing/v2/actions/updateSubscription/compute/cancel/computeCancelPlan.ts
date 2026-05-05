@@ -1,6 +1,10 @@
+import {
+	type AutumnBillingPlan,
+	cp,
+	type FullCusProduct,
+	type UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
 import { applyUncancelToPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/applyUncancelToPlan";
 import { applyCancelPlan } from "./applyCancelPlan";
 import { computeCancelLineItems } from "./computeCancelLineItems";
@@ -8,6 +12,31 @@ import { computeCancelUpdates } from "./computeCancelUpdates";
 import { computeCustomerProductToDelete } from "./computeCustomerProductToDelete";
 import { computeDefaultCustomerProduct } from "./computeDefaultCustomerProduct";
 import { computeEndOfCycleMs } from "./computeEndOfCycleMs";
+
+const computeScheduledAddOnsToDelete = ({
+	billingContext,
+}: {
+	billingContext: UpdateSubscriptionBillingContext;
+}): FullCusProduct[] => {
+	const { cancelAction, customerProduct, fullCustomer } = billingContext;
+	if (cancelAction !== "cancel_immediately") return [];
+	if (!cp(customerProduct).main().recurring().valid) return [];
+
+	const internalEntityId =
+		customerProduct.internal_entity_id ??
+		fullCustomer.entity?.internal_id ??
+		undefined;
+
+	return fullCustomer.customer_products.filter((candidateProduct) => {
+		if (candidateProduct.id === customerProduct.id) return false;
+
+		return cp(candidateProduct)
+			.addOn()
+			.scheduled()
+			.recurring()
+			.onEntity({ internalEntityId }).valid;
+	});
+};
 
 /**
  * Computes and applies the cancel plan for a subscription.
@@ -57,6 +86,7 @@ export const computeCancelPlan = ({
 
 	// Step 4: Find existing scheduled product to delete
 	const productToDelete = computeCustomerProductToDelete({ billingContext });
+	const productsToDelete = computeScheduledAddOnsToDelete({ billingContext });
 
 	// Step 5: Compute prorated refund line items for immediate cancellation
 	const cancelLineItems = computeCancelLineItems({ ctx, billingContext });
@@ -67,6 +97,7 @@ export const computeCancelPlan = ({
 		cancelUpdates,
 		defaultCustomerProduct,
 		productToDelete,
+		productsToDelete,
 		cancelLineItems,
 		existingCustomerProduct: billingContext.customerProduct,
 	});
