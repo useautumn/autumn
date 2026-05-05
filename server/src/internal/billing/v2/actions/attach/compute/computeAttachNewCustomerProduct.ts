@@ -74,10 +74,10 @@ export const computeAttachNewCustomerProduct = ({
 	);
 
 	const isScheduled = planTiming === "end_of_cycle";
-	const startsAt = params.start_date ?? (isScheduled ? endOfCycleMs : undefined);
+	const startsAt = params.starts_at ?? (isScheduled ? endOfCycleMs : undefined);
 	const resetCycleAnchor =
-		resetCycleAnchorMs === "now" && params.start_date !== undefined
-			? params.start_date
+		resetCycleAnchorMs === "now" && params.starts_at !== undefined
+			? params.starts_at
 			: resetCycleAnchorMs;
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =

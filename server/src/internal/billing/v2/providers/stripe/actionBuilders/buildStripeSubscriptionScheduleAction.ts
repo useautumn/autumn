@@ -8,10 +8,10 @@ import {
 	cp,
 	isCustomerProductOnStripeSubscription,
 	isCustomerProductOnStripeSubscriptionSchedule,
+	stripePhaseStartsInFuture,
 } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { buildStripePhasesUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
-import { stripePhaseStartsInFuture } from "@server/internal/billing/v2/utils/startDateUtils";
 import type Stripe from "stripe";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -22,6 +22,7 @@ type StripeSubscriptionScheduleResult = {
 	scheduleAction?: StripeSubscriptionScheduleAction;
 	/** number = set cancel_at, null = clear cancel_at, undefined = don't touch */
 	subscriptionCancelAt?: number | null;
+	subscriptionStartsAt?: number | "now";
 };
 
 /**
@@ -98,6 +99,7 @@ const buildActionForScenario = ({
 	scheduledPhases,
 	cancelAtSeconds,
 	endsWithEmptyPhase,
+	subscriptionStartsAt,
 }: {
 	scenario: ScheduleScenario;
 	hasSchedule: boolean;
@@ -105,6 +107,7 @@ const buildActionForScenario = ({
 	scheduledPhases: Stripe.SubscriptionScheduleUpdateParams.Phase[];
 	cancelAtSeconds: number | undefined;
 	endsWithEmptyPhase: boolean;
+	subscriptionStartsAt?: number | "now";
 }): StripeSubscriptionScheduleResult => {
 	switch (scenario) {
 		case "no_phases":
@@ -148,6 +151,7 @@ const buildActionForScenario = ({
 								end_behavior: endBehavior,
 							},
 						},
+						subscriptionStartsAt,
 					}
 				: {
 						scheduleAction: {
@@ -157,6 +161,7 @@ const buildActionForScenario = ({
 								end_behavior: endBehavior,
 							},
 						},
+						subscriptionStartsAt,
 					};
 		}
 	}
@@ -281,5 +286,8 @@ export const buildStripeSubscriptionScheduleAction = ({
 		scheduledPhases,
 		cancelAtSeconds,
 		endsWithEmptyPhase,
+		subscriptionStartsAt: isFutureSchedule
+			? scheduledPhases[0]?.start_date
+			: undefined,
 	});
 };

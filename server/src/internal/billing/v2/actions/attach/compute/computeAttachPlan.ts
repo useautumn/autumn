@@ -11,6 +11,17 @@ import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProdu
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
 
+const shouldBuildImmediateLineItems = ({
+	planTiming,
+	customerProductStatus,
+}: {
+	planTiming: AttachBillingContext["planTiming"];
+	customerProductStatus: CusProductStatus;
+}): boolean => {
+	if (planTiming !== "immediate") return false;
+	return customerProductStatus !== CusProductStatus.Scheduled;
+};
+
 /**
  * Computes the billing plan for attaching a product.
  *
@@ -57,9 +68,10 @@ export const computeAttachPlan = ({
 	});
 
 	const includeArrearLineItems = !params.carry_over_usages?.enabled;
-	const shouldBuildLineItems =
-		planTiming === "immediate" &&
-		newCustomerProduct.status !== CusProductStatus.Scheduled;
+	const shouldBuildLineItems = shouldBuildImmediateLineItems({
+		planTiming,
+		customerProductStatus: newCustomerProduct.status,
+	});
 
 	const { allLineItems: lineItems, updateCustomerEntitlements } =
 		shouldBuildLineItems
