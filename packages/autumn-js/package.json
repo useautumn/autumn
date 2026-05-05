@@ -95,6 +95,7 @@
 		"access": "public"
 	},
 	"dependencies": {
+		"@useautumn/sdk": "workspace:*",
 		"query-string": "^9.2.2",
 		"rou3": "^0.6.1",
 		"zod": "^4.0.0"
@@ -105,7 +106,6 @@
 		"@types/node": "^22.15.32",
 		"@types/react": "^19",
 		"@typescript/native-preview": "catalog:",
-		"@useautumn/sdk": "workspace:*",
 		"esbuild-plugin-path-alias": "^1.0.7",
 		"hono": "^4.7.9",
 		"next": "^15.2.3",
