@@ -1,19 +1,8 @@
 import { Scopes } from "@autumn/shared";
 import type { Checkout, GetCheckoutResponse } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { getAdjustableFeatureIds } from "../utils/getAdjustableFeatureIds";
 import { previewCheckoutAction } from "../utils/previewCheckoutAction/previewCheckoutAction";
-
-const getAdjustableFeatureIds = ({ checkout }: { checkout: Checkout }) => {
-	if (!("feature_quantities" in checkout.params)) {
-		return [];
-	}
-
-	return (
-		checkout.params.feature_quantities
-			?.filter((featureQuantity) => featureQuantity.adjustable === true)
-			.map((featureQuantity) => featureQuantity.feature_id) ?? []
-	);
-};
 
 /**
  * GET /checkouts/:checkout_id

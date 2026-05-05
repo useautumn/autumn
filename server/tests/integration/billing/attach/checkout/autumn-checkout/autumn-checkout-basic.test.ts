@@ -17,9 +17,16 @@
 import { expect, test } from "bun:test";
 import {
 	confirmAutumnCheckoutAndGetCustomer,
+	expectAutumnCheckoutPreviewError,
 	fetchAutumnCheckout,
+	previewAutumnCheckout,
 } from "@tests/integration/billing/utils/checkout/autumnCheckoutUtils";
 import { expectAutumnCheckoutPreview } from "@tests/integration/billing/utils/checkout/expectAutumnCheckout";
+import {
+	createPercentCoupon,
+	createPromotionCode,
+	getStripeSubscription,
+} from "@tests/integration/billing/utils/discounts/discountTestUtils";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import {
 	expectProductActive,
@@ -32,6 +39,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { createStripeCli } from "@/external/connect/createStripeCli";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Paid upgrade with mixed feature types → fetch preview + confirm
@@ -206,6 +214,115 @@ test.concurrent(`${chalk.yellowBright("autumn-checkout: no PM + free product + r
 
 	expect(result.payment_url).toBeDefined();
 	expect(isAutumnCheckoutUrl(result.payment_url!)).toBe(true);
+});
+
+test.concurrent(`${chalk.yellowBright("autumn-checkout: attach applies promo code from checkout")}`, async () => {
+	const customerId = "autumn-checkout-attach-promo";
+	const starter = products.base({
+		id: "starter-autumn-checkout-promo",
+		items: [items.monthlyPrice({ price: 19 })],
+	});
+	const pro = products.base({
+		id: "pro-autumn-checkout-promo",
+		items: [items.monthlyPrice({ price: 99 })],
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [starter, pro] }),
+		],
+		actions: [s.attach({ productId: starter.id })],
+	});
+
+	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+	const coupon = await createPercentCoupon({ stripeCli, percentOff: 50 });
+	const promo = await createPromotionCode({
+		stripeCli,
+		coupon,
+		code: "ATMNATTACH",
+	});
+	const result = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "always",
+	});
+	const checkoutId = result.payment_url!.split("/c/")[1];
+
+	const preview = await previewAutumnCheckout({
+		checkoutId,
+		body: { discounts: [{ promotion_code: promo.code }] },
+	});
+
+	expect(
+		preview.preview.line_items.some((item) => item.discounts.length > 0),
+	).toBe(true);
+
+	await confirmAutumnCheckoutAndGetCustomer({
+		autumnV1,
+		checkoutId,
+		customerId,
+		productId: pro.id,
+		discounts: [{ promotion_code: promo.code }],
+	});
+
+	const { subscription } = await getStripeSubscription({
+		customerId,
+		expand: ["data.discounts.source.coupon"],
+	});
+
+	expect(
+		subscription.discounts?.some((discount) => {
+			if (typeof discount === "string") return false;
+			const sourceCoupon = discount.source?.coupon;
+			return typeof sourceCoupon !== "string" && sourceCoupon?.id === coupon.id;
+		}),
+	).toBe(true);
+});
+
+test.concurrent(`${chalk.yellowBright("autumn-checkout: invalid promo preview leaves checkout confirmable")}`, async () => {
+	const customerId = "autumn-checkout-invalid-promo";
+	const starter = products.base({
+		id: "starter-autumn-checkout-invalid-promo",
+		items: [items.monthlyPrice({ price: 19 })],
+	});
+	const pro = products.base({
+		id: "pro-autumn-checkout-invalid-promo",
+		items: [items.monthlyPrice({ price: 99 })],
+	});
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [starter, pro] }),
+		],
+		actions: [s.attach({ productId: starter.id })],
+	});
+	const result = await autumnV1.billing.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		redirect_mode: "always",
+	});
+	const checkoutId = result.payment_url!.split("/c/")[1];
+
+	await expectAutumnCheckoutPreviewError({
+		checkoutId,
+		body: { discounts: [{ promotion_code: "NOT_A_REAL_PROMO_CODE" }] },
+	});
+
+	const { customer } = await confirmAutumnCheckoutAndGetCustomer({
+		autumnV1,
+		checkoutId,
+		customerId,
+		productId: pro.id,
+	});
+
+	await expectProductActive({
+		customer,
+		productId: pro.id,
+	});
 });
 
 // Future tests to implement once autumn checkout is built:
