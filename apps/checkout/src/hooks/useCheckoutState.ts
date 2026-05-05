@@ -164,11 +164,7 @@ export function useCheckoutState({
 		const incomingPlan = incomingChange?.plan;
 		const freeTrial = incomingPlan?.free_trial;
 		const hasActiveTrial = !!freeTrial;
-		const hasPrepaidFeatures = !!incoming?.some((change) =>
-			change.plan?.items.some(
-				(item) => item.price?.billing_method === "prepaid",
-			),
-		);
+		const hasAdjustableFeatures = adjustableFeatureIds.length > 0;
 
 		const headerDescription = buildHeaderDescription({
 			preview,
@@ -197,7 +193,7 @@ export function useCheckoutState({
 			hasActiveTrial,
 			isSandbox: env === "sandbox",
 			headerDescription,
-			hasPrepaidFeatures,
+			hasAdjustableFeatures,
 			adjustableFeatureIds,
 			isUnchangedQuantityUpdate,
 		};
