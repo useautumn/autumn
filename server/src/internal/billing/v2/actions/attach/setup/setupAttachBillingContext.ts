@@ -8,6 +8,7 @@ import {
 	cusProductToPrices,
 	hasCustomItems,
 	isFreeProduct,
+	isFutureStartDate,
 	isOneOffProduct,
 	notNullish,
 	orgDisableStripeWrites,
@@ -197,6 +198,11 @@ export const setupAttachBillingContext = async ({
 			currentEpochMs,
 		});
 
+	const hasFutureStartDate = isFutureStartDate(
+		params.starts_at,
+		currentEpochMs,
+	);
+
 	const checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
 		redirectMode: params.redirect_mode,
@@ -204,6 +210,7 @@ export const setupAttachBillingContext = async ({
 		stripeSubscription,
 		trialContext,
 		invoiceMode,
+		hasFutureStartDate,
 	});
 
 	const transitionConfig = setupTransitionConfigs({

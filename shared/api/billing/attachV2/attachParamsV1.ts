@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { CustomLineItemSchema } from "../common/customLineItem";
+import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { AttachDiscountSchema } from "./attachDiscount";
 
 export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
@@ -25,6 +26,10 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 	plan_schedule: PlanTimingSchema.optional().meta({
 		description:
 			"When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.",
+	}),
+	starts_at: UnixMsTimestampSchema.optional().meta({
+		description:
+			"Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.",
 	}),
 
 	checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({

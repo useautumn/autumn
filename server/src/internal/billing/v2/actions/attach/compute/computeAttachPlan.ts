@@ -9,6 +9,7 @@ import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/uti
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
+import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
 /**
  * Computes the billing plan for attaching a product.
@@ -56,9 +57,13 @@ export const computeAttachPlan = ({
 	});
 
 	const includeArrearLineItems = !params.carry_over_usages?.enabled;
+	const shouldBuildLineItems = shouldBuildImmediateLineItems({
+		planTiming,
+		customerProductStatus: newCustomerProduct.status,
+	});
 
 	const { allLineItems: lineItems, updateCustomerEntitlements } =
-		planTiming === "immediate"
+		shouldBuildLineItems
 			? buildAutumnLineItems({
 					ctx,
 					newCustomerProducts: [newCustomerProduct],

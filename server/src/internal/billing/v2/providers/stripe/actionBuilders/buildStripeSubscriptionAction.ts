@@ -5,11 +5,24 @@ import type {
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
 } from "@autumn/shared";
+import { stripePhaseStartsInFuture } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
 import { billingPlanToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/billingPlanToOneOffStripeItemSpecs";
+
+const subscriptionStartsInFuture = ({
+	billingContext,
+	subscriptionStartsAt,
+}: {
+	billingContext: BillingContext;
+	subscriptionStartsAt?: number | "now";
+}): boolean =>
+	stripePhaseStartsInFuture(
+		subscriptionStartsAt,
+		billingContext.currentEpochMs,
+	);
 
 export const buildStripeSubscriptionAction = ({
 	ctx,
@@ -18,6 +31,7 @@ export const buildStripeSubscriptionAction = ({
 	finalCustomerProducts,
 	stripeSubscriptionScheduleAction,
 	subscriptionCancelAt,
+	subscriptionStartsAt,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
@@ -25,6 +39,7 @@ export const buildStripeSubscriptionAction = ({
 	finalCustomerProducts: FullCusProduct[];
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 	subscriptionCancelAt?: number | null;
+	subscriptionStartsAt?: number | "now";
 }): StripeSubscriptionAction | undefined => {
 	const { stripeSubscription } = billingContext;
 
@@ -52,7 +67,19 @@ export const buildStripeSubscriptionAction = ({
 		return undefined;
 	}
 
-	// Case 2: No subscription and sub items update not empty -> create subscription
+	const shouldCreateScheduleOnly =
+		!stripeSubscription &&
+		subscriptionStartsInFuture({
+			billingContext,
+			subscriptionStartsAt,
+		});
+
+	// Case 2: No subscription and future schedule exists -> schedule creates subscription later
+	if (shouldCreateScheduleOnly) {
+		return undefined;
+	}
+
+	// Case 3: No subscription and sub items update not empty -> create subscription
 	if (!stripeSubscription && subItemsUpdate.length > 0) {
 		return buildStripeSubscriptionCreateAction({
 			ctx,
@@ -64,7 +91,7 @@ export const buildStripeSubscriptionAction = ({
 		});
 	}
 
-	// Case 3: Cancel subscription
+	// Case 4: Cancel subscription
 	if (
 		stripeSubscription &&
 		subItemsUpdate.length === stripeSubscription.items.data.length &&
@@ -76,7 +103,7 @@ export const buildStripeSubscriptionAction = ({
 		};
 	}
 
-	// Case 4: Update subscription
+	// Case 5: Update subscription
 	if (stripeSubscription) {
 		return buildStripeSubscriptionUpdateAction({
 			ctx,

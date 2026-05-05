@@ -1,7 +1,6 @@
 import { type Entity, type FullCustomer, formatAmount } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import type { AxiosError } from "axios";
-import { format } from "date-fns";
 import { Decimal } from "decimal.js";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
@@ -16,6 +15,7 @@ import {
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
+import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
@@ -131,16 +131,6 @@ function ReviewPreviewBlock() {
 		? getBackendErr(queryError as AxiosError, "Failed to load preview")
 		: undefined;
 
-	// Only "Next Cycle" lives in the LineItemsPreview totals array. The
-	// immediate "Tax" + "Total Due Now" rows are rendered in a bespoke
-	// section below to match the InvoiceDetailSheet pattern.
-	const previewTotals: {
-		label: string;
-		amount: number;
-		variant: "primary" | "secondary";
-		badge?: string;
-	}[] = [];
-
 	// Tax-aware totals. Only show the Tax row when status is "complete" AND
 	// total > 0 — incomplete is surfaced via toast above; zero tax means
 	// nothing taxable in this jurisdiction (no value in showing $0).
@@ -150,30 +140,13 @@ function ReviewPreviewBlock() {
 	const totalDueNow = previewData
 		? Math.max(previewData.total, 0) + taxAmount
 		: 0;
-
-	// When there's no Tax row to display, fall back to rendering "Total
-	// Due Now" via the LineItemsPreview totals array — same layout as
-	// before. Only render the bespoke Tax + Total section when we're
-	// actually showing a Tax row, so we don't add an extra empty
-	// SheetSection padding when tax is absent or hidden.
-	if (!showTaxRow && previewData) {
-		previewTotals.push({
-			label: "Total Due Now",
-			amount: Math.max(previewData.total, 0),
-			variant: "primary",
-		});
-	}
-
-	if (previewData?.next_cycle) {
-		previewTotals.push({
-			label: "Next Cycle",
-			amount: previewData.next_cycle.total,
-			variant: "secondary",
-			badge: previewData.next_cycle.starts_at
-				? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
-				: undefined,
-		});
-	}
+	const previewTotals = buildAttachPreviewTotals({
+		previewData,
+		startDate: formValues.startDate,
+	});
+	const lineItemTotals = showTaxRow
+		? previewTotals.filter((total) => total.variant !== "primary")
+		: previewTotals;
 
 	return (
 		<AnimatePresence mode="popLayout">
@@ -205,7 +178,7 @@ function ReviewPreviewBlock() {
 								title="Pricing Preview"
 								lineItems={previewData?.line_items}
 								currency={previewData?.currency}
-								totals={previewTotals}
+								totals={lineItemTotals}
 								filterZeroAmounts
 							/>
 							{showTaxRow && previewData && (

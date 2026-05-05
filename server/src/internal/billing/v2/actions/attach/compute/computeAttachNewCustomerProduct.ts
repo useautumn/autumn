@@ -74,6 +74,11 @@ export const computeAttachNewCustomerProduct = ({
 	);
 
 	const isScheduled = planTiming === "end_of_cycle";
+	const startsAt = params.starts_at ?? (isScheduled ? endOfCycleMs : undefined);
+	const resetCycleAnchor =
+		resetCycleAnchorMs === "now" && params.starts_at !== undefined
+			? params.starts_at
+			: resetCycleAnchorMs;
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
 		!isScheduled && currentCustomerProduct
@@ -106,7 +111,7 @@ export const computeAttachNewCustomerProduct = ({
 			featureQuantities,
 			// existingUsages: isScheduled ? undefined : existingUsages,
 			// existingRollovers,
-			resetCycleAnchor: resetCycleAnchorMs,
+			resetCycleAnchor,
 			now: currentEpochMs,
 			freeTrial: trialContext?.freeTrial ?? null,
 			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
@@ -122,7 +127,7 @@ export const computeAttachNewCustomerProduct = ({
 			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 			status: isScheduled ? CusProductStatus.Scheduled : undefined,
-			startsAt: isScheduled ? endOfCycleMs : undefined,
+			startsAt,
 			externalId,
 			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor,
