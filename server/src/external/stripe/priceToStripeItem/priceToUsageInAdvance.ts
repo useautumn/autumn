@@ -37,6 +37,8 @@ export const priceToOneOffAndTiered = ({
 	} else if (nullish(optionsQuantity) && isCheckout) {
 		// 2. If quantity is nullish and is checkout, default to 1
 		finalQuantity = 1;
+	} else if (nullish(optionsQuantity) || optionsQuantity === 0) {
+		return null;
 	}
 
 	const overage = new Decimal(finalQuantity ?? 0)
@@ -106,6 +108,8 @@ export const priceToUsageInAdvance = ({
 	} else if (nullish(optionsQuantity) && isCheckout) {
 		// 2. If quantity is nullish and is checkout, default to 1
 		finalQuantity = 1;
+	} else if (nullish(optionsQuantity) || optionsQuantity === 0) {
+		return null;
 	}
 
 	const adjustableQuantity =
