@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr, notNullish } from "@/utils/genUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import {
 	getRevenueCatCusLink,
 	getStripeConnectViewAsLink,
@@ -69,7 +69,7 @@ export function CustomerActions() {
 	const stripeCustomerId = customer?.processor?.id;
 	const stripeConnectViewAsCustomerLink =
 		isAdmin &&
-		notNullish(sessionData?.session?.impersonatedBy) &&
+		// notNullish(sessionData?.session?.impersonatedBy) &&
 		masterStripeAccount?.id &&
 		stripeAccount?.id &&
 		stripeCustomerId
@@ -174,11 +174,26 @@ export function CustomerActions() {
 						<BracketsSquareIcon />
 						Show customer object
 					</DropdownMenuItem>
+					{/* Old sync sheet — superseded by sync-stripe-v2 below. Kept for reference.
 					{stripeCustomerId &&
 						customer?.processor?.type === ProcessorType.Stripe && (
 							<DropdownMenuItem
 								onClick={() => {
 									setSheet({ type: "sync-stripe" });
+									setActionsOpen(false);
+								}}
+								className="flex gap-2"
+							>
+								<ArrowsClockwiseIcon />
+								Sync from Stripe
+							</DropdownMenuItem>
+						)}
+					*/}
+					{stripeCustomerId &&
+						customer?.processor?.type === ProcessorType.Stripe && (
+							<DropdownMenuItem
+								onClick={() => {
+									setSheet({ type: "sync-stripe-v2" });
 									setActionsOpen(false);
 								}}
 								className="flex gap-2"

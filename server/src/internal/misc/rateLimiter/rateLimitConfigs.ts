@@ -47,7 +47,9 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "POST", url: "/v1/billing.setup_payment" }),
 			route({ method: "POST", url: "/v1/billing.open_customer_portal" }),
 			route({ method: "POST", url: "/v1/billing.sync_proposals" }),
+			route({ method: "POST", url: "/v1/billing.sync_proposals_v2" }),
 			route({ method: "POST", url: "/v1/billing.sync" }),
+			route({ method: "POST", url: "/v1/billing.sync_v2" }),
 		],
 	},
 	{

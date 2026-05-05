@@ -1,10 +1,19 @@
-import type { SyncMappingV0 } from "@autumn/shared";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext.js";
-import { sync } from "@/internal/billing/v2/actions/sync/sync.js";
-import { findAutumnProductsForSubscription } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/findAutumnProductsForSubscription.js";
-import { subscriptionToPrepaidFeatureOptions } from "@/internal/billing/v2/providers/stripe/utils/sync/stripeToAutumn/subscriptionToFeatureOptions.js";
+import { billingActions } from "@/internal/billing/v2/actions";
+import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync.js";
+import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams.js";
 import type { StripeSubscriptionCreatedContext } from "../setupStripeSubscriptionCreatedContext.js";
 
+/**
+ * On Stripe subscription create, run detection on the new subscription and
+ * (when safe) execute a syncV2 to materialize the matching Autumn customer
+ * products.
+ *
+ * Eligibility is gated by `canAutoSync` — conservative defaults: any
+ * unmatched Stripe item, custom feature price, plan warning, or
+ * unresolvable base price aborts auto-sync. Custom BASE prices are
+ * accepted (handled via `customize.price`).
+ */
 export const autoSyncFromSubscription = async ({
 	ctx,
 	subscriptionCreatedContext,
@@ -13,53 +22,22 @@ export const autoSyncFromSubscription = async ({
 	subscriptionCreatedContext: StripeSubscriptionCreatedContext;
 }) => {
 	const { logger } = ctx;
-	const { subscription, fullCustomer, candidateProducts } =
-		subscriptionCreatedContext;
+	const { subscription, fullCustomer } = subscriptionCreatedContext;
+	const customerId = fullCustomer.id ?? fullCustomer.internal_id;
 
-	const matchedProducts = findAutumnProductsForSubscription({
-		stripeSubscription: subscription,
-		products: candidateProducts,
+	const { match, params } = await subscriptionToSyncParams({
+		ctx,
+		customerId,
+		subscription,
 	});
 
-	if (matchedProducts.length === 0) {
+	const eligibility = canAutoSync({ match });
+	if (!eligibility.eligible) {
 		logger.info(
-			`sub.created auto-sync: no Autumn product matched stripe sub ${subscription.id}, skipping`,
+			`sub.created auto-sync skipping ${subscription.id}: ${eligibility.reason} — ${eligibility.details}`,
 		);
 		return;
 	}
 
-	if (matchedProducts.length > 1) {
-		logger.warn(
-			`sub.created auto-sync: stripe sub ${subscription.id} matched ${matchedProducts.length} Autumn products (${matchedProducts
-				.map((product) => product.id)
-				.join(
-					", ",
-				)}); skipping due to ambiguity. Check for overlapping stripe price IDs across products.`,
-		);
-		return;
-	}
-
-	const [matchedProduct] = matchedProducts;
-	const prepaidFeatureOptions = subscriptionToPrepaidFeatureOptions({
-		ctx,
-		stripeSubscription: subscription,
-		matchedProduct,
-	});
-
-	const mappings: SyncMappingV0[] = [
-		{
-			stripe_subscription_id: subscription.id,
-			plan_id: matchedProduct.id,
-			prepaid_feature_options: prepaidFeatureOptions,
-			expire_previous: true,
-		},
-	];
-
-	await sync({
-		ctx,
-		params: {
-			customer_id: fullCustomer.id ?? fullCustomer.internal_id,
-			mappings,
-		},
-	});
+	await billingActions.syncV2({ ctx, params });
 };

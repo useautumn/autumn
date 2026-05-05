@@ -1,4 +1,8 @@
 import type { FrontendProduct } from "@autumn/shared";
+import {
+	AdminPlanIdsTooltip,
+	type AdminPlanIds,
+} from "@/components/forms/shared/admin/AdminPlanIdsTooltip";
 import { PriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 
 interface PriceChange {
@@ -13,10 +17,12 @@ export function PlanPriceHeader({
 	priceChange,
 	product,
 	currency,
+	adminIds,
 }: {
 	priceChange?: PriceChange | null;
 	product: FrontendProduct | undefined;
 	currency: string;
+	adminIds?: AdminPlanIds;
 }) {
 	const content = priceChange ? (
 		<span className="flex items-center gap-1.5">
@@ -32,9 +38,17 @@ export function PlanPriceHeader({
 		<PriceDisplay product={product} currency={currency} />
 	);
 
+	const wrapped = adminIds ? (
+		<AdminPlanIdsTooltip ids={adminIds}>
+			<span className="inline-flex">{content}</span>
+		</AdminPlanIdsTooltip>
+	) : (
+		content
+	);
+
 	return (
 		<div className="flex gap-2 justify-between items-center mb-3">
-			{content}
+			{wrapped}
 		</div>
 	);
 }

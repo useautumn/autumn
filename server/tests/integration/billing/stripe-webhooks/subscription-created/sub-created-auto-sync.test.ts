@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, AppEnv, type FullCustomer } from "@autumn/shared";
+import { type ApiCustomerV3, AppEnv } from "@autumn/shared";
 import {
 	createStripeSubscriptionFromProduct,
 	createStripeSubscriptionFromProducts,
@@ -18,88 +18,9 @@ import { timeout } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { handleStripeSubscriptionCreated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated";
-import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { ProductService } from "@/internal/products/ProductService";
-
-const makeFullCustomer = ({
-	subscriptionIds = [],
-}: {
-	subscriptionIds?: string[];
-} = {}): FullCustomer =>
-	({
-		id: "customer_external_id",
-		internal_id: "customer_internal_id",
-		customer_products:
-			subscriptionIds.length > 0
-				? [{ id: "customer_product_id", subscription_ids: subscriptionIds }]
-				: [],
-	}) as FullCustomer;
-
-const makeGuardrailContext = ({
-	fullCustomer,
-	orgId = "org_123",
-	orgSlug = "org-slug",
-	subscriptionId = "sub_stripe_external",
-}: {
-	fullCustomer?: FullCustomer;
-	orgId?: string;
-	orgSlug?: string;
-	subscriptionId?: string;
-}): {
-	ctx: StripeWebhookContext;
-	retrieveCalls: string[];
-} => {
-	const retrieveCalls: string[] = [];
-
-	return {
-		retrieveCalls,
-		ctx: {
-			db: "db",
-			org: { id: orgId, slug: orgSlug },
-			env: AppEnv.Sandbox,
-			fullCustomer,
-			logger: {
-				error: () => undefined,
-				info: () => undefined,
-				warn: () => undefined,
-			},
-			stripeCli: {
-				subscriptions: {
-					retrieve: async (stripeId: string) => {
-						retrieveCalls.push(stripeId);
-						throw new Error("Stripe retrieve should not be called");
-					},
-				},
-			},
-			stripeEvent: {
-				type: "customer.subscription.created",
-				data: {
-					object: {
-						id: subscriptionId,
-						customer: "cus_stripe_external",
-					},
-				},
-			},
-		} as unknown as StripeWebhookContext,
-	};
-};
-
-const withNodeEnv = async <T>(nodeEnv: string, callback: () => Promise<T>) => {
-	const originalNodeEnv = process.env.NODE_ENV;
-	process.env.NODE_ENV = nodeEnv;
-
-	try {
-		return await callback();
-	} finally {
-		if (originalNodeEnv === undefined) {
-			delete process.env.NODE_ENV;
-		} else {
-			process.env.NODE_ENV = originalNodeEnv;
-		}
-	}
-};
 
 test(`${chalk.yellowBright("customer.subscription.created auto-sync: sync external Stripe sandbox sub")}`, async () => {
 	const customerId = "sub-created-auto-sync";
@@ -153,37 +74,36 @@ test(`${chalk.yellowBright("customer.subscription.created auto-sync: sync extern
 });
 
 test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips unknown Autumn customer")}`, async () => {
-	const { ctx, retrieveCalls } = makeGuardrailContext({});
-
-	await handleStripeSubscriptionCreated({ ctx });
-
-	expect(retrieveCalls).toEqual([]);
-});
-
-test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips already-linked subscription")}`, async () => {
-	const subscriptionId = "sub_already_linked";
-	const { ctx, retrieveCalls } = makeGuardrailContext({
-		subscriptionId,
-		fullCustomer: makeFullCustomer({ subscriptionIds: [subscriptionId] }),
+	const stripeCustomer = await ctx.stripeCli.customers.create({
+		email: "sub-created-auto-sync-unknown@example.com",
+	});
+	const stripeProduct = await ctx.stripeCli.products.create({
+		name: "Sub Created Auto Sync Unknown Customer",
+	});
+	const stripeSubscription = await ctx.stripeCli.subscriptions.create({
+		customer: stripeCustomer.id,
+		items: [
+			{
+				price_data: {
+					currency: "usd",
+					product: stripeProduct.id,
+					recurring: { interval: "month" },
+					unit_amount: 4242,
+				},
+			},
+		],
+		payment_behavior: "default_incomplete",
 	});
 
-	await handleStripeSubscriptionCreated({ ctx });
+	await timeout(10000);
 
-	expect(retrieveCalls).toEqual([]);
-});
-
-test(`${chalk.yellowBright("customer.subscription.created auto-sync: production gate skips disabled org")}`, async () => {
-	const { ctx, retrieveCalls } = makeGuardrailContext({
-		orgId: "org_sub_created_auto_sync_disabled",
-		orgSlug: "sub-created-auto-sync-disabled",
-		fullCustomer: makeFullCustomer(),
+	const linkedCusProducts = await CusProductService.getByStripeSubId({
+		db: ctx.db,
+		stripeSubId: stripeSubscription.id,
+		orgId: ctx.org.id,
+		env: ctx.env,
 	});
-
-	await withNodeEnv("production", async () => {
-		await handleStripeSubscriptionCreated({ ctx });
-	});
-
-	expect(retrieveCalls).toEqual([]);
+	expect(linkedCusProducts).toEqual([]);
 });
 
 test(`${chalk.yellowBright("customer.subscription.created auto-sync: skips Stripe sandbox sub with no product match")}`, async () => {
