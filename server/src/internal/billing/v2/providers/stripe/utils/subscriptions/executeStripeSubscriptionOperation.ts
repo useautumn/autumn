@@ -2,6 +2,7 @@ import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
 import { InternalError, nullish } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { willStripeSubscriptionUpdateCreateInvoice } from "./willStripeSubscriptionUpdateCreateInvoice";
 
@@ -45,10 +46,12 @@ export const executeStripeSubscriptionOperation = async ({
 			? { default_payment_method: paymentMethod.id }
 			: {};
 
-	const userMeta = mergeStripeMetadata({
+	const autumnMeta = mergeStripeMetadata({
 		userMetadata: billingContext.userMetadata,
+		autumnMetadata: buildAutumnSubscriptionMetadata({
+			actionSource: billingContext.actionSource,
+		}),
 	});
-
 	// Skip auto_tax in invoice mode: send_invoice has no address-collection
 	// UI so Stripe Tax rejects.
 	const wantsAutoTax =
@@ -79,9 +82,7 @@ export const executeStripeSubscriptionOperation = async ({
 				stripeSubscription = await stripeClient.subscriptions.update(
 					subscriptionAction.stripeSubscriptionId,
 					{
-						...(subscriptionHasDefaultPm
-							? {}
-							: fallbackPaymentMethodParams),
+						...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
 						...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 						billing_cycle_anchor: "now",
 						proration_behavior: "none",
@@ -100,11 +101,9 @@ export const executeStripeSubscriptionOperation = async ({
 				subscriptionAction.stripeSubscriptionId,
 				{
 					...paramsWithoutAutoTax,
-					...(subscriptionHasDefaultPm
-						? {}
-						: fallbackPaymentMethodParams),
+					...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
 					...(updateWillCreateInvoice ? invoiceModeParams : {}),
-					...(userMeta && { metadata: userMeta }),
+					...(autumnMeta && { metadata: autumnMeta }),
 					...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 					payment_behavior: "error_if_incomplete",
 					expand: ["latest_invoice"],
@@ -116,7 +115,7 @@ export const executeStripeSubscriptionOperation = async ({
 				...subscriptionAction.params,
 				...invoiceModeParams,
 				...fallbackPaymentMethodParams,
-				...(userMeta && { metadata: userMeta }),
+				...(autumnMeta && { metadata: autumnMeta }),
 				...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 
 				billing_mode: { type: "flexible" },

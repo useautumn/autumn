@@ -80,3 +80,24 @@ export const timestampsMatch = (
 	b: number,
 	toleranceMs = ms.seconds(1),
 ): boolean => Math.abs(a - b) <= toleranceMs;
+
+const START_DATE_TOLERANCE_MS = ms.minutes(1);
+
+export const isFutureStartDate = (
+	startDate: number | undefined,
+	currentEpochMs: number,
+	toleranceMs = START_DATE_TOLERANCE_MS,
+): boolean =>
+	startDate !== undefined && startDate > currentEpochMs + toleranceMs;
+
+export const isPastStartDate = (
+	startDate: number,
+	currentEpochMs: number,
+): boolean => startDate < currentEpochMs - START_DATE_TOLERANCE_MS;
+
+export const stripePhaseStartsInFuture = (
+	startDate: number | "now" | undefined,
+	currentEpochMs: number,
+): boolean =>
+	typeof startDate === "number" &&
+	isFutureStartDate(secondsToMs(startDate), currentEpochMs, 0);

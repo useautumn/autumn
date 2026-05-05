@@ -122,7 +122,7 @@ export function buildAttachRequestBody({
 	}
 
 	if (startDate && !trialEnabled) {
-		body.start_date = startDate;
+		body.starts_at = startDate;
 	} else if (planSchedule) {
 		body.plan_schedule = planSchedule;
 	}

@@ -48,10 +48,14 @@ function SubscriptionDetailItems({
 	items,
 	product,
 	prepaidDisplayQuantities,
+	adminIds,
 }: {
 	items: ProductItem[];
 	product: FrontendProduct;
 	prepaidDisplayQuantities: Record<string, number>;
+	adminIds?: import(
+		"@/components/forms/shared/admin/AdminPlanIdsTooltip"
+	).AdminPlanIds;
 }) {
 	const sortedItems = useMemo(() => sortPlanItems({ items }), [items]);
 	const { visibleItems, collapsedBooleanItems } = useMemo(
@@ -80,7 +84,11 @@ function SubscriptionDetailItems({
 	return (
 		<SheetSection>
 			<div className="flex gap-2 justify-between items-center h-6 mb-3">
-				<BasePriceDisplay product={product} readOnly={true} />
+				<BasePriceDisplay
+					product={product}
+					readOnly={true}
+					adminIds={adminIds}
+				/>
 			</div>
 
 			<div className="space-y-2">
@@ -141,6 +149,16 @@ export function SubscriptionDetailSheet() {
 		prepaidItems,
 	});
 
+	const baseCustomerPrice = cusProduct.customer_prices?.find(
+		(cp: { price: { config?: { stripe_price_id?: string } } }) =>
+			Boolean(cp.price?.config?.stripe_price_id),
+	);
+	const adminIds = {
+		stripe_price_id: baseCustomerPrice?.price?.config?.stripe_price_id ?? null,
+		stripe_product_id: cusProduct.product?.processor?.id ?? null,
+		internal_product_id: cusProduct.product?.internal_id ?? null,
+	};
+
 	const formatDate = (timestamp: number | null | undefined) => {
 		if (!timestamp) return "—";
 		return format(new Date(timestamp), "MMM d, yyyy, HH:mm");
@@ -186,6 +204,7 @@ export function SubscriptionDetailSheet() {
 					items={productV2.items}
 					product={productV2}
 					prepaidDisplayQuantities={prepaidDisplayQuantities}
+					adminIds={adminIds}
 				/>
 			)}
 

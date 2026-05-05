@@ -119,4 +119,5 @@ test.concurrent(`${chalk.yellowBright("checkout_session_params: subscription_dat
 	// Verify user-provided metadata is on the subscription
 	expect(subscription!.metadata.user_id).toBe("test-user-123");
 	expect(subscription!.metadata.custom_field).toBe("custom-value");
+	expect(subscription!.metadata.autumn_managed).toBe("true");
 });

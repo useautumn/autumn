@@ -15,10 +15,7 @@ import {
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
-import {
-	buildAttachPreviewTotals,
-	isFutureStartDate,
-} from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
@@ -134,25 +131,22 @@ function ReviewPreviewBlock() {
 		? getBackendErr(queryError as AxiosError, "Failed to load preview")
 		: undefined;
 
-	const totals = buildAttachPreviewTotals({
-		previewData,
-		startDate: formValues.startDate,
-	});
-
 	// Tax-aware totals. Only show the Tax row when status is "complete" AND
 	// total > 0 — incomplete is surfaced via toast above; zero tax means
 	// nothing taxable in this jurisdiction (no value in showing $0).
-	const hasFutureStartDate = isFutureStartDate(formValues.startDate);
 	const showTaxRow =
-		!hasFutureStartDate &&
 		previewData?.tax?.status === "complete" && previewData.tax.total > 0;
 	const taxAmount = showTaxRow ? (previewData?.tax?.total ?? 0) : 0;
 	const totalDueNow = previewData
 		? Math.max(previewData.total, 0) + taxAmount
 		: 0;
-	const previewTotals = showTaxRow
-		? totals.filter((total) => total.label !== "Total Due Now")
-		: totals;
+	const previewTotals = buildAttachPreviewTotals({
+		previewData,
+		startDate: formValues.startDate,
+	});
+	const lineItemTotals = showTaxRow
+		? previewTotals.filter((total) => total.label !== "Total Due Now")
+		: previewTotals;
 
 	return (
 		<AnimatePresence mode="popLayout">
@@ -184,7 +178,7 @@ function ReviewPreviewBlock() {
 								title="Pricing Preview"
 								lineItems={previewData?.line_items}
 								currency={previewData?.currency}
-								totals={previewTotals}
+								totals={lineItemTotals}
 								filterZeroAmounts
 							/>
 							{showTaxRow && previewData && (

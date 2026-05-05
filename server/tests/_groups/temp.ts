@@ -2,7 +2,12 @@ import type { TestGroup } from "./types";
 
 export const temp: TestGroup = {
 	name: "temp",
-	description: "Billing rollover regression suite (rollover carry-over fix)",
+	description:
+		"sub.created auto-sync + sync param detection + restore (Autumn → Stripe)",
 	tier: "domain",
-	paths: ["_temp/volume-tiers-inspect.test.ts"],
+	paths: [
+		// "integration/billing/stripe-webhooks/subscription-created",
+		"integration/billing/sync/to-sync-params",
+		// "integration/billing/restore",
+	],
 };

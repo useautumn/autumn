@@ -1,10 +1,15 @@
 import { z } from "zod/v4";
-import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels";
+import { FeatureOptionsSchema } from "../../../models/cusProductModels/cusProductModels.js";
+import { ProductItemSchema } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 
 export const SyncMappingV0Schema = z.object({
 	stripe_subscription_id: z.string(),
 	plan_id: z.string(),
 	items: z.array(ProductItemSchema).optional(),
+	prepaid_feature_options: z
+		.array(FeatureOptionsSchema)
+		.optional()
+		.meta({ internal: true }),
 	expire_previous: z.boolean().optional(),
 });
 
