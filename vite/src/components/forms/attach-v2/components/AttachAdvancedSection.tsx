@@ -167,7 +167,6 @@ export function AttachAdvancedSection() {
 
 	const showStartDate =
 		isPaidRecurringProduct &&
-		!hasActiveSubscription &&
 		!trialEnabled &&
 		effectivePlanSchedule !== "end_of_cycle";
 
