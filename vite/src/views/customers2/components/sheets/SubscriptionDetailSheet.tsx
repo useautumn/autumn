@@ -51,7 +51,7 @@ function formatDiscountLabel({ discount }: { discount: ApiDiscount }): string {
 	const value =
 		discount.type === "percentage_discount"
 			? `${discount.discount_value}% off`
-			: `${discount.discount_value} ${discount.currency?.toUpperCase() ?? ""} off`;
+			: `${discount.discount_value / 100} ${discount.currency?.toUpperCase() ?? ""} off`;
 
 	return discount.name ? `${discount.name} (${value})` : value;
 }
