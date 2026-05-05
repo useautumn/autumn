@@ -1,6 +1,5 @@
 import type { AttachBillingContext, AttachParamsV1 } from "@autumn/shared";
 import {
-	CusProductStatus,
 	deduplicateArray,
 	type ExistingUsagesConfig,
 	type FullCusProduct,
@@ -8,6 +7,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
+import { applyAttachStartDates } from "./applyAttachStartDates";
+import { getAttachStartTiming } from "./getAttachStartTiming";
 
 const getScheduledBillingCycleAnchorResetAt = ({
 	requestedBillingCycleAnchor,
@@ -58,6 +59,7 @@ export const computeAttachNewCustomerProduct = ({
 		transitionConfig,
 		externalId,
 		requestedBillingCycleAnchor,
+		billingStartsAt,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -73,12 +75,16 @@ export const computeAttachNewCustomerProduct = ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
+	const { accessStartsAt, billingAnchorStartsAt, resetCycleAnchor, status } =
+		getAttachStartTiming({
+			planTiming,
+			endOfCycleMs,
+			params,
+			resetCycleAnchorMs,
+			currentEpochMs,
+			billingStartsAt,
+		});
 	const isScheduled = planTiming === "end_of_cycle";
-	const startsAt = params.starts_at ?? (isScheduled ? endOfCycleMs : undefined);
-	const resetCycleAnchor =
-		resetCycleAnchorMs === "now" && params.starts_at !== undefined
-			? params.starts_at
-			: resetCycleAnchorMs;
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
 		!isScheduled && currentCustomerProduct
@@ -126,14 +132,22 @@ export const computeAttachNewCustomerProduct = ({
 			// subscriptionId: isScheduled ? undefined : stripeSubscription?.id,
 			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
-			status: isScheduled ? CusProductStatus.Scheduled : undefined,
-			startsAt,
+			status,
+			startsAt: billingAnchorStartsAt,
 			externalId,
 			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor,
 				currentEpochMs,
 			}),
 		},
+	});
+
+	applyAttachStartDates({
+		newFullCustomerProduct,
+		billingStartsAt,
+		accessStartsAt,
+		billingAnchorStartsAt,
+		currentEpochMs,
 	});
 
 	return newFullCustomerProduct;

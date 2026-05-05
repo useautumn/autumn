@@ -44,6 +44,13 @@ export const expectResetAnchoredTo = ({
 		(ce) => ce.feature_id === featureId,
 	);
 	const expectedResetAt = addMonths(startDate, 1).getTime();
+	console.log("reset anchor debug", {
+		productId: cusProduct.product_id,
+		featureId,
+		startDate,
+		actual: entitlement?.next_reset_at,
+		expectedResetAt,
+	});
 	expect(
 		Math.abs((entitlement?.next_reset_at ?? 0) - expectedResetAt) <
 			ms.minutes(10),

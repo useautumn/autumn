@@ -3,13 +3,13 @@ import type {
 	BillingContext,
 	StripeCheckoutSessionAction,
 } from "@autumn/shared";
-import { msToSeconds, orgToReturnUrl } from "@autumn/shared";
-import { addMinutes } from "date-fns";
+import { orgToReturnUrl } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { stripeDiscountsToCheckoutParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import { getCheckoutSubscriptionTrialEnd } from "./getCheckoutSubscriptionTrialEnd";
 
 export const buildStripeCheckoutSessionAction = ({
 	ctx,
@@ -48,11 +48,11 @@ export const buildStripeCheckoutSessionAction = ({
 		...oneOffLineItems.filter((item) => item.quantity !== 0),
 	];
 
-	// 4. Trial handling (only for subscription mode)
-	const trialEnd =
-		mode === "subscription" && trialContext?.trialEndsAt
-			? msToSeconds(addMinutes(trialContext.trialEndsAt, 10).getTime())
-			: undefined;
+	// 4. Trial handling (also used for deferred billing starts in Checkout)
+	const trialEnd = getCheckoutSubscriptionTrialEnd({
+		mode,
+		billingContext,
+	});
 
 	// 5. Build subscription_data (only for subscription mode)
 	const subscriptionData:
@@ -79,8 +79,8 @@ export const buildStripeCheckoutSessionAction = ({
 
 	// 7. Build params. Tax policy is baked in here (not at execute time) so
 	// the action object is self-describing in logs/EXTRA_LOGS.
-	const autumnAutoTax: Partial<Stripe.Checkout.SessionCreateParams> = org
-		.config.automatic_tax
+	const autumnAutoTax: Partial<Stripe.Checkout.SessionCreateParams> = org.config
+		.automatic_tax
 		? {
 				automatic_tax: { enabled: true },
 				billing_address_collection: "required",

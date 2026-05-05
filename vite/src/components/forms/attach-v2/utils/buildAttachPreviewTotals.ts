@@ -19,6 +19,27 @@ export const isFutureStartDate = (
 	startDate !== null &&
 	isAfter(startDate, addMinutes(now, FUTURE_START_TOLERANCE_MINUTES));
 
+export const getAttachScheduledStartDate = ({
+	startDate,
+	previewData,
+}: {
+	startDate?: number | null;
+	previewData: AttachPreviewResponse | null | undefined;
+}): number | null => {
+	if (startDate) return startDate;
+	if (!previewData) return null;
+
+	const incomingStartDate = previewData.incoming.find(
+		(change) => change.effective_at !== null,
+	)?.effective_at;
+	if (incomingStartDate) return incomingStartDate;
+
+	const outgoingStartDate = previewData.outgoing.find(
+		(change) => change.effective_at !== null,
+	)?.effective_at;
+	return outgoingStartDate ?? previewData.next_cycle?.starts_at ?? null;
+};
+
 /**
  * Builds the totals rows for the Attach pricing preview.
  * Future startDate → single "Total Due [date]" row using the next-cycle amount.

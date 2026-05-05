@@ -9,6 +9,7 @@ import type {
 } from "@autumn/shared";
 import { orgToCurrency } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { buildCustomerProductsForStripe } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildCustomerProductsForStripe";
 import { buildStripeRefundAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeRefundAction.js";
 import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
 import { shouldCreateManualStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/shouldCreateManualStripeInvoice";
@@ -44,6 +45,11 @@ export const evaluateStripeBillingPlan = async ({
 		billingContext,
 		autumnBillingPlan,
 	});
+	const stripeCustomerProducts = buildCustomerProductsForStripe({
+		billingContext,
+		autumnBillingPlan,
+		finalCustomerProducts: finalFullCustomer.customer_products,
+	});
 
 	// Build stripe subscription schedule action
 	const {
@@ -54,7 +60,7 @@ export const evaluateStripeBillingPlan = async ({
 		ctx,
 		billingContext,
 		autumnBillingPlan,
-		finalCustomerProducts: finalFullCustomer.customer_products,
+		finalCustomerProducts: stripeCustomerProducts,
 		trialEndsAt: billingContext.trialContext?.trialEndsAt ?? undefined,
 	});
 
@@ -62,7 +68,7 @@ export const evaluateStripeBillingPlan = async ({
 		ctx,
 		billingContext,
 		autumnBillingPlan,
-		finalCustomerProducts: finalFullCustomer.customer_products,
+		finalCustomerProducts: stripeCustomerProducts,
 		stripeSubscriptionScheduleAction,
 		subscriptionCancelAt,
 		subscriptionStartsAt,

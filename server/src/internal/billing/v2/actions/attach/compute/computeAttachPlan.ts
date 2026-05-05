@@ -46,6 +46,7 @@ export const computeAttachPlan = ({
 
 	const updateCustomerProduct = computeAttachTransitionUpdates({
 		attachBillingContext,
+		params,
 	});
 
 	const {
@@ -60,6 +61,7 @@ export const computeAttachPlan = ({
 	const shouldBuildLineItems = shouldBuildImmediateLineItems({
 		planTiming,
 		customerProductStatus: newCustomerProduct.status,
+		billingStartsAt: attachBillingContext.billingStartsAt,
 	});
 
 	const { allLineItems: lineItems, updateCustomerEntitlements } =

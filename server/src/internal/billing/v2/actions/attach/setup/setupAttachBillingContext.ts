@@ -202,6 +202,11 @@ export const setupAttachBillingContext = async ({
 		params.starts_at,
 		currentEpochMs,
 	);
+	const shouldDeferBillingStart =
+		params.enable_plan_immediately === true && hasFutureStartDate;
+	const billingStartsAt = shouldDeferBillingStart
+		? params.starts_at
+		: undefined;
 
 	const checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
@@ -250,6 +255,7 @@ export const setupAttachBillingContext = async ({
 
 		invoiceMode,
 		enablePlanImmediately: params.enable_plan_immediately ?? false,
+		billingStartsAt,
 
 		customPrices,
 		customEnts,

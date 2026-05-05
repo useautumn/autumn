@@ -1,5 +1,6 @@
 import { type Entity, type FullCustomer, formatAmount } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
+import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
 import { Decimal } from "decimal.js";
 import { AnimatePresence, motion } from "motion/react";
@@ -15,7 +16,10 @@ import {
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
-import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import {
+	buildAttachPreviewTotals,
+	getAttachScheduledStartDate,
+} from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
@@ -392,12 +396,17 @@ function ReviewContent() {
 }
 
 function SendInvoiceContent() {
-	const { product, previewQuery, isPending, handleInvoiceAttach } =
+	const { form, product, previewQuery, isPending, handleInvoiceAttach } =
 		useAttachFormContext();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
+	const startDate = useStore(form.store, (state) => state.values.startDate);
+	const scheduledStartDate = getAttachScheduledStartDate({
+		startDate,
+		previewData: previewQuery.data,
+	});
 
 	return (
 		<SendInvoiceStageWithPreview
@@ -408,15 +417,21 @@ function SendInvoiceContent() {
 			stripeAccount={stripeAccount}
 			env={env}
 			onBack={() => setSheet({ type: "attach-review", itemId })}
+			scheduledStartDate={scheduledStartDate}
 		/>
 	);
 }
 
 function CheckoutSessionContent() {
-	const { product, previewQuery, isPending, handleCheckoutAttach } =
+	const { form, product, previewQuery, isPending, handleCheckoutAttach } =
 		useAttachFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
+	const startDate = useStore(form.store, (state) => state.values.startDate);
+	const scheduledStartDate = getAttachScheduledStartDate({
+		startDate,
+		previewData: previewQuery.data,
+	});
 
 	return (
 		<GenerateCheckoutStageWithPreview
@@ -425,6 +440,7 @@ function CheckoutSessionContent() {
 			isPending={isPending}
 			onSubmit={handleCheckoutAttach}
 			onBack={() => setSheet({ type: "attach-review", itemId })}
+			scheduledStartDate={scheduledStartDate}
 		/>
 	);
 }
