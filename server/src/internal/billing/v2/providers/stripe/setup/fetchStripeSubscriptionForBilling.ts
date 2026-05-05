@@ -56,10 +56,7 @@ export const fetchStripeSubscriptionForBilling = async ({
 	if (!subId) return undefined;
 
 	const sub = await stripeCli.subscriptions.retrieve(subId, {
-		expand: [
-			"discounts.source.coupon.applies_to",
-			"latest_invoice.lines.data.discount_amounts",
-		],
+		expand: ["discounts.source.coupon.applies_to"],
 	});
 
 	if (!sub) {

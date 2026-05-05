@@ -60,6 +60,7 @@ export const V1_2_AttachParamsChange = defineVersionChange({
 			plan_id: newPlanId,
 			feature_quantities: featureQuantities,
 			invoice_mode: invoiceMode,
+			enable_plan_immediately: input.enable_product_immediately,
 			customize: customizeV1,
 			proration_behavior: input.billing_behavior,
 		};

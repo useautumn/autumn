@@ -7,6 +7,7 @@ import {
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
 	type FullProduct,
+	type ProcessorType,
 } from "@autumn/shared";
 import { products } from "./products";
 
@@ -26,6 +27,7 @@ const create = ({
 	status = CusProductStatus.Active,
 	startsAt,
 	endedAt,
+	processorType,
 }: {
 	id?: string;
 	productId?: string;
@@ -39,6 +41,7 @@ const create = ({
 	status?: CusProductStatus;
 	startsAt?: number;
 	endedAt?: number | null;
+	processorType?: ProcessorType;
 }): FullCusProduct => ({
 	id,
 	internal_product_id: `internal_${productId}`,
@@ -59,6 +62,7 @@ const create = ({
 	collection_method: CollectionMethod.ChargeAutomatically,
 	subscription_ids: subscriptionIds,
 	scheduled_ids: [],
+	processor: processorType ? { type: processorType } : undefined,
 	quantity: 1,
 	api_semver: null,
 	is_custom: false,

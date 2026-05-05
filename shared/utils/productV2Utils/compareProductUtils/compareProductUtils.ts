@@ -94,6 +94,26 @@ export const compareDetails = ({
 	return detailsSame;
 };
 
+export const compareConfig = ({
+	newConfig,
+	curConfig,
+}: {
+	newConfig?: ProductV2["config"];
+	curConfig?: ProductV2["config"];
+}) => {
+	const checks = {
+		ignore_past_due: {
+			condition: newConfig?.ignore_past_due === curConfig?.ignore_past_due,
+			message: `Ignore past due different: ${newConfig?.ignore_past_due} !== ${curConfig?.ignore_past_due}`,
+		},
+	};
+
+	const detailsSame = Object.values(checks).every((d) => d.condition);
+
+
+	return detailsSame;
+};
+
 export const prodOptionsAreSame = ({
 	curProduct,
 	newProduct,
@@ -150,12 +170,18 @@ export const productsAreSame = ({
 	let itemsSame = true;
 	let pricesChanged = false;
 	let detailsSame = true;
+	let configSame = true;
 	const newItems: ProductItem[] = [];
 	const removedItems: ProductItem[] = [];
 
 	detailsSame = compareDetails({
 		newProductV2,
 		curProductV2,
+	});
+
+	configSame = compareConfig({
+		newConfig: newProductV2?.config,
+		curConfig: curProductV2?.config,
 	});
 
 	if (items1.length !== items2.length) {
@@ -245,5 +271,6 @@ export const productsAreSame = ({
 		removedItems,
 		detailsSame,
 		optionsSame,
+		configSame,
 	};
 };

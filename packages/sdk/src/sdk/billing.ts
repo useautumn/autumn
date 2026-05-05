@@ -60,6 +60,7 @@ export class Billing extends ClientSDK {
    * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
    * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
    * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
+   * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
    *
    * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
    */
@@ -107,6 +108,7 @@ export class Billing extends ClientSDK {
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
    * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
    * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+   * @param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
    *
    * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
    */
@@ -154,6 +156,7 @@ export class Billing extends ClientSDK {
    * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
    * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
    * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
+   * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
    *
    * @returns A preview response with line items, totals, and effective dates for the proposed changes.
    */
@@ -189,6 +192,7 @@ export class Billing extends ClientSDK {
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
    * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
    * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
+   * @param enablePlanImmediately - If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout. (optional)
    *
    * @returns A preview response with line items, totals, and effective dates for the proposed multi-plan attachment.
    */

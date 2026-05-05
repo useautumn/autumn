@@ -47,9 +47,7 @@ export const cancelSubsForEntity = async ({
 				proration_behavior: "none",
 				redirect_mode: "if_required",
 			},
-			contextOverride: {
-				inheritBillingVersion: true,
-			},
+
 			options: {
 				skipAutumnCheckout: true,
 			},

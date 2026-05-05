@@ -29,6 +29,27 @@
 		"planetscale": {
 			"type": "remote",
 			"url": "https://mcp.pscale.dev/mcp/planetscale"
+		},
+		"incident-io": {
+			"type": "remote",
+			"url": "https://mcp.incident.io/mcp",
+			"oauth": {}
+		},
+		"plain": {
+			"type": "remote",
+			"url": "https://mcp.plain.com/mcp",
+			"oauth": {}
+		},
+		"autumn-internal": {
+			"type": "local",
+			"command": [
+				"sh",
+				"-c",
+				"cd \"/Users/johnyeocx/Autumn/autumn-cloud\" && exec infisical run --env=prod --recursive -- bun run \"/Users/johnyeocx/Autumn/autumn-cloud/ai/src/mcp/index.ts\""
+			],
+			"env": {
+				"AUTUMN_REPO_ROOT": "/Users/johnyeocx/Autumn"
+			}
 		}
 	},
 	"plugin": [

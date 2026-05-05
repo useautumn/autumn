@@ -373,6 +373,16 @@ export const ListPlansEnv = {
 export type ListPlansEnv = OpenEnum<typeof ListPlansEnv>;
 
 /**
+ * Miscellaneous plan-level configuration flags.
+ */
+export type ListPlansConfig = {
+  /**
+   * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+   */
+  ignorePastDue: boolean;
+};
+
+/**
  * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
  */
 export const ListPlansStatus = {
@@ -482,6 +492,10 @@ export type ListPlansList = {
    * If this is a variant, the ID of the base plan it was created from.
    */
   baseVariantId: string | null;
+  /**
+   * Miscellaneous plan-level configuration flags.
+   */
+  config: ListPlansConfig;
   customerEligibility?: ListPlansCustomerEligibility | undefined;
 };
 
@@ -892,6 +906,31 @@ export const ListPlansEnv$inboundSchema: z.ZodMiniType<ListPlansEnv, unknown> =
   openEnums.inboundSchema(ListPlansEnv);
 
 /** @internal */
+export const ListPlansConfig$inboundSchema: z.ZodMiniType<
+  ListPlansConfig,
+  unknown
+> = z.pipe(
+  z.object({
+    ignore_past_due: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "ignore_past_due": "ignorePastDue",
+    });
+  }),
+);
+
+export function listPlansConfigFromJSON(
+  jsonString: string,
+): SafeParseResult<ListPlansConfig, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListPlansConfig$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListPlansConfig' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListPlansStatus$inboundSchema: z.ZodMiniType<
   ListPlansStatus,
   unknown
@@ -953,6 +992,7 @@ export const ListPlansList$inboundSchema: z.ZodMiniType<
     env: ListPlansEnv$inboundSchema,
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
+    config: z.lazy(() => ListPlansConfig$inboundSchema),
     customer_eligibility: types.optional(
       z.lazy(() => ListPlansCustomerEligibility$inboundSchema),
     ),

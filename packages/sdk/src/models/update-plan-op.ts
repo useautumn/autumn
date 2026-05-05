@@ -316,6 +316,16 @@ export type UpdatePlanFreeTrialParams = {
   cardRequired?: boolean | undefined;
 };
 
+/**
+ * Miscellaneous plan-level configuration flags.
+ */
+export type UpdatePlanConfigRequest = {
+  /**
+   * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+   */
+  ignorePastDue?: boolean | undefined;
+};
+
 export type UpdatePlanParams = {
   /**
    * The ID of the plan to update.
@@ -350,6 +360,10 @@ export type UpdatePlanParams = {
    * The free trial of the plan. Set to null to remove the free trial.
    */
   freeTrial?: UpdatePlanFreeTrialParams | null | undefined;
+  /**
+   * Miscellaneous plan-level configuration flags.
+   */
+  config?: UpdatePlanConfigRequest | undefined;
   version?: number | undefined;
   archived?: boolean | undefined;
   /**
@@ -711,6 +725,16 @@ export const UpdatePlanEnv = {
 export type UpdatePlanEnv = OpenEnum<typeof UpdatePlanEnv>;
 
 /**
+ * Miscellaneous plan-level configuration flags.
+ */
+export type UpdatePlanConfigResponse = {
+  /**
+   * If true, entitlements attached to this plan will still reset on schedule even when the customer's product is in a past_due state.
+   */
+  ignorePastDue: boolean;
+};
+
+/**
  * The customer's current status with this plan. 'active' if attached, 'scheduled' if pending activation.
  */
 export const UpdatePlanStatus = {
@@ -820,6 +844,10 @@ export type UpdatePlanResponse = {
    * If this is a variant, the ID of the base plan it was created from.
    */
   baseVariantId: string | null;
+  /**
+   * Miscellaneous plan-level configuration flags.
+   */
+  config: UpdatePlanConfigResponse;
   customerEligibility?: UpdatePlanCustomerEligibility | undefined;
 };
 
@@ -1164,6 +1192,34 @@ export function updatePlanFreeTrialParamsToJSON(
 }
 
 /** @internal */
+export type UpdatePlanConfigRequest$Outbound = {
+  ignore_past_due: boolean;
+};
+
+/** @internal */
+export const UpdatePlanConfigRequest$outboundSchema: z.ZodMiniType<
+  UpdatePlanConfigRequest$Outbound,
+  UpdatePlanConfigRequest
+> = z.pipe(
+  z.object({
+    ignorePastDue: z._default(z.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      ignorePastDue: "ignore_past_due",
+    });
+  }),
+);
+
+export function updatePlanConfigRequestToJSON(
+  updatePlanConfigRequest: UpdatePlanConfigRequest,
+): string {
+  return JSON.stringify(
+    UpdatePlanConfigRequest$outboundSchema.parse(updatePlanConfigRequest),
+  );
+}
+
+/** @internal */
 export type UpdatePlanParams$Outbound = {
   plan_id: string;
   group: string;
@@ -1174,6 +1230,7 @@ export type UpdatePlanParams$Outbound = {
   price?: UpdatePlanBasePrice$Outbound | null | undefined;
   items?: Array<UpdatePlanPlanItem$Outbound> | undefined;
   free_trial?: UpdatePlanFreeTrialParams$Outbound | null | undefined;
+  config?: UpdatePlanConfigRequest$Outbound | undefined;
   version?: number | undefined;
   archived: boolean;
   new_plan_id?: string | undefined;
@@ -1198,6 +1255,7 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
     freeTrial: z.optional(
       z.nullable(z.lazy(() => UpdatePlanFreeTrialParams$outboundSchema)),
     ),
+    config: z.optional(z.lazy(() => UpdatePlanConfigRequest$outboundSchema)),
     version: z.optional(z.number()),
     archived: z._default(z.boolean(), false),
     newPlanId: z.optional(z.string()),
@@ -1595,6 +1653,31 @@ export const UpdatePlanEnv$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(UpdatePlanEnv);
 
 /** @internal */
+export const UpdatePlanConfigResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanConfigResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    ignore_past_due: z._default(types.boolean(), false),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "ignore_past_due": "ignorePastDue",
+    });
+  }),
+);
+
+export function updatePlanConfigResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdatePlanConfigResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdatePlanConfigResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanConfigResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdatePlanStatus$inboundSchema: z.ZodMiniType<
   UpdatePlanStatus,
   unknown
@@ -1656,6 +1739,7 @@ export const UpdatePlanResponse$inboundSchema: z.ZodMiniType<
     env: UpdatePlanEnv$inboundSchema,
     archived: types.boolean(),
     base_variant_id: types.nullable(types.string()),
+    config: z.lazy(() => UpdatePlanConfigResponse$inboundSchema),
     customer_eligibility: types.optional(
       z.lazy(() => UpdatePlanCustomerEligibility$inboundSchema),
     ),

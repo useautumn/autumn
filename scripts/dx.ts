@@ -47,7 +47,7 @@ const portArgs = [
 	`-ti:${checkoutPort}`,
 ].join(" ");
 const killCmd = `lsof ${portArgs} | xargs kill -9 2>/dev/null || true`;
-const devCmd = `ENV_FILE=.env infisical run --env=dev -- bun scripts/dev.ts --worktree ${worktreeNum}`;
+const devCmd = `ENV_FILE=.env infisical run --recursive --env=dev -- bun scripts/dev.ts --worktree ${worktreeNum}`;
 
 const rootDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(rootDir, "..");

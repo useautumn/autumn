@@ -52,7 +52,7 @@ export default function Pricing() {
 			>
 				{/* Desktop Background */}
 				<Image
-					src="/images/pricing/pricing.webp"
+					src="/images/pricing/pricing.avif"
 					alt="pricing background desktop"
 					fill
 					className="object-cover absolute z-10 lg:z-50 hidden md:block"
@@ -60,7 +60,7 @@ export default function Pricing() {
 				/>
 				{/* Mobile Background */}
 				<Image
-					src="/images/pricing/pricing-mob.webp"
+					src="/images/pricing/pricing-mob.avif"
 					alt="pricing background mobile"
 					fill
 					className="object-cover absolute z-10 lg:z-50 block md:hidden"
@@ -86,6 +86,7 @@ export default function Pricing() {
 										index === 1 ? "lg:border-r" : ""
 									} ${index === 2 ? "md:col-span-2 lg:col-span-1 md:w-[calc(50%-16px)] md:justify-self-center lg:w-full lg:justify-self-auto" : ""}`}
 								>
+									
 									{plan.isPro && (
 										<div className="hidden lg:block absolute -inset-px z-20 pointer-events-none border border-transparent [border-image:linear-gradient(to_bottom,#A175FF,#000000)_1]"></div>
 									)}

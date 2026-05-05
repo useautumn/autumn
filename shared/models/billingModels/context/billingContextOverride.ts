@@ -47,5 +47,29 @@ export interface UpdateSubscriptionBillingContextOverride
 		customEnts?: Entitlement[];
 	};
 
-	inheritBillingVersion?: boolean;
+	/**
+	 * When true, `buildAutumnLineItems` is called with
+	 * `includeArrearLineItems: true` — existing consumable overage on the
+	 * outgoing customer_product is invoiced as part of this update. Default
+	 * (`updateSubscription`) skips arrear line items; `attach` includes them.
+	 */
+	chargeExistingOverages?: boolean;
+
+	/**
+	 * When true, the new customer_product is initialized WITHOUT carrying
+	 * existing consumable usages from the outgoing customer_product (balances
+	 * reset to the canonical starting balance from `getStartingBalance`).
+	 * Default behavior carries all consumable usages forward. Pair with
+	 * `chargeExistingOverages: true` to invoice the prior overage AND start
+	 * the new cycle fresh.
+	 */
+	skipExistingUsageCarry?: boolean;
+
+	/**
+	 * Override the auto-computed `is_custom` flag on the new customer_product
+	 * (default derives from `hasCustomItems(params.customize)`). Pass `false`
+	 * to force the new cusProduct to be marked as a canonical (non-custom)
+	 * instance even when the customize plan would otherwise look custom.
+	 */
+	forceIsCustom?: boolean;
 }

@@ -8,9 +8,9 @@ import type { CachedFullSubject } from "../../fullSubjectCacheModel.js";
 /**
  * Deletes shared balance hash fields for a customer during structural
  * invalidation. Reads the subject view manifest to target specific cusEnt
- * fields + _aggregated per feature hash. Falls back to UNLINK-ing all
- * possible balance hash keys (built from ctx.features) when the subject
- * view is already gone.
+ * fields + _aggregated per feature hash. No-op when the subject view is
+ * already gone — paired with HSET-on-write semantics in setCachedFullSubject,
+ * stale fields are overwritten on the next populate.
  *
  * Must be called BEFORE the subject view key is deleted.
  */
@@ -27,13 +27,9 @@ export const invalidateSharedBalanceFields = async ({
 	const subjectKey = buildFullSubjectKey({ orgId: org.id, env, customerId });
 
 	const cachedRaw = await tryRedisRead(() => redisV2.get(subjectKey), redisV2);
+	if (!cachedRaw) return;
 
-	if (cachedRaw) {
-		await deleteFieldsFromManifest({ ctx, customerId, cachedRaw });
-		return;
-	}
-
-	await deleteAllBalanceKeys({ ctx, customerId });
+	await deleteFieldsFromManifest({ ctx, customerId, cachedRaw });
 };
 
 async function deleteFieldsFromManifest({
@@ -83,32 +79,4 @@ async function deleteFieldsFromManifest({
 			`[invalidateSharedBalanceFields] ${customerId}: HDEL ${fieldCount} fields from manifest`,
 		);
 	}
-}
-
-async function deleteAllBalanceKeys({
-	ctx,
-	customerId,
-}: {
-	ctx: AutumnContext;
-	customerId: string;
-}) {
-	const { org, env, features, logger, redisV2 } = ctx;
-	if (features.length === 0) return;
-
-	const pipeline = redisV2.pipeline();
-
-	for (const feature of features) {
-		const balanceKey = buildSharedFullSubjectBalanceKey({
-			orgId: org.id,
-			env,
-			customerId,
-			featureId: feature.id,
-		});
-		pipeline.unlink(balanceKey);
-	}
-
-	await tryRedisWrite(() => pipeline.exec(), redisV2);
-	logger.info(
-		`[invalidateSharedBalanceFields] ${customerId}: UNLINK ${features.length} balance keys (fallback)`,
-	);
 }

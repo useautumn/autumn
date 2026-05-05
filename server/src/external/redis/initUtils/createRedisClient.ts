@@ -4,7 +4,7 @@ import { cacheBackupUrl } from "./redisConfig.js";
 import { registerRedisCommands } from "./registerRedisCommands.js";
 
 const REDIS_COMMAND_TIMEOUT_MS =
-	process.env.NODE_ENV === "production" ? 10_000 : 30_000;
+	process.env.NODE_ENV === "production" ? 10_000 : 60_000;
 
 /** Create a Redis connection for a specific region.
  *  `supportsUpstashShebang` defaults to true; set false for non-Upstash

@@ -1,7 +1,14 @@
-import type { BillingContext, StripeItemSpec } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+	StripeItemSpec,
+} from "@autumn/shared";
 import {
+	cp,
 	filterCustomerProductsByActiveStatuses,
+	filterCustomerProductsByProcessorType,
 	filterCustomerProductsByStripeSubscriptionId,
+	ProcessorType,
 } from "@autumn/shared";
 import type { FullCusProduct } from "@shared/models/cusProductModels/cusProductModels";
 import type Stripe from "stripe";
@@ -82,10 +89,12 @@ const stripeItemSpecsToSubItemsUpdate = ({
 export const buildStripeSubscriptionItemsUpdate = ({
 	ctx,
 	billingContext,
+	autumnBillingPlan,
 	finalCustomerProducts,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
+	autumnBillingPlan: AutumnBillingPlan;
 	finalCustomerProducts: FullCusProduct[];
 }): Stripe.SubscriptionUpdateParams.Item[] => {
 	// 1. Filter customer products by stripe subscription id
@@ -94,19 +103,44 @@ export const buildStripeSubscriptionItemsUpdate = ({
 		stripeSubscriptionId: billingContext.stripeSubscription?.id,
 	});
 
-	// 2. Filter customer products by active statuses
-	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
+	// 2. Drop customer products managed by a non-Stripe processor (e.g. RevenueCat).
+	//
+	// `filterCustomerProductsByStripeSubscriptionId` with `undefined` returns every
+	// customer product whose `subscription_ids` is empty — and RC-managed cus products
+	// have empty `subscription_ids`. Without this step, an RC product's Stripe price
+	// would leak into a brand-new Stripe subscription created for an add-on attach.
+	const stripeManagedCustomerProducts = filterCustomerProductsByProcessorType({
 		customerProducts: relatedCustomerProducts,
+		processorType: ProcessorType.Stripe,
 	});
 
-	// 3. Get recurring subscription item array (doesn't include one-off items)
+	// 2a. Exclude orphan paid-recurring cusProducts (no sub link, not freshly inserted) — their recurring prices would otherwise leak into a new sub on the next attach.
+	const insertedIds = new Set(
+		autumnBillingPlan.insertCustomerProducts.map((cp) => cp.id),
+	);
+	const nonOrphanCustomerProducts = stripeManagedCustomerProducts.filter(
+		(customerProduct) => {
+			if (insertedIds.has(customerProduct.id)) return true;
+			const isPaidRecurringOrphan =
+				cp(customerProduct).paid().recurring().valid &&
+				!cp(customerProduct).hasSubscription().valid;
+			return !isPaidRecurringOrphan;
+		},
+	);
+
+	// 3. Filter customer products by active statuses
+	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
+		customerProducts: nonOrphanCustomerProducts,
+	});
+
+	// 4. Get recurring subscription item array (doesn't include one-off items)
 	const recurringStripeItemSpecs = customerProductsToRecurringStripeItemSpecs({
 		ctx,
 		billingContext,
 		customerProducts: activeCustomerProducts,
 	});
 
-	// 4. Diff against current subscription items
+	// 5. Diff against current subscription items
 	return stripeItemSpecsToSubItemsUpdate({
 		billingContext,
 		stripeItemSpecs: recurringStripeItemSpecs,

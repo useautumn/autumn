@@ -1,36 +1,47 @@
 import type { Page } from "playwright-core";
 
 /**
- * Self-contained Playwright function for completing a Stripe Checkout session page.
- * NO external imports — this function must be serializable via fn.toString()
- * for Kernel Playwright Execution. (type imports are fine — Bun strips them)
+ * Billing address override (defaults to US / 10001). Supply when the
+ * session uses auto_tax + `customer_update: { address: "auto" }`, which
+ * makes Stripe present a full address form. Field names mirror
+ * Stripe.AddressParam.
+ */
+export type StripeCheckoutBillingAddress = {
+	country?: string;
+	line1?: string;
+	city?: string;
+	state?: string;
+	postal_code?: string;
+};
+
+/**
+ * Self-contained Playwright function for completing a Stripe Checkout page.
+ * NO runtime imports — must be serializable via `fn.toString()` for Kernel
+ * Playwright Execution (type imports are fine; Bun strips them).
  *
- * Handles checkout.stripe.com pages which have:
- * 1. Direct DOM selectors (#cardNumber, #cardExpiry, #cardCvc, #billingName)
- * 2. Optional adjustable quantity (.AdjustableQuantitySelector)
- * 3. Optional promo code (#promotionCode)
- * 4. Submit button (.SubmitButton-TextContainer)
+ * Handles card fields, optional quantity selector, promo code, optional
+ * full billing address (when `customer_update.address: "auto"`), and submit.
  */
 export const stripeCheckout = async ({
 	page,
 	url,
 	overrideQuantity,
 	promoCode,
+	billingAddress,
 }: {
 	page: Page;
 	url: string;
 	overrideQuantity?: number;
 	promoCode?: string;
+	billingAddress?: StripeCheckoutBillingAddress;
 }) => {
 	await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
 	console.log("[stripeCheckout] Page loaded");
 
-	// Wait for the checkout page to render
 	await page.waitForTimeout(3000);
 
-	// Select the Card payment method. The radio input is hidden behind an
-	// AccordionButton overlay with expandedClickArea. Use JS click on the
-	// data-testid button, with a fallback to the radio input directly.
+	// Select Card. The radio is hidden by an AccordionButton overlay; click
+	// the data-testid button via JS, fall back to the radio.
 	try {
 		const cardBtn = page.locator('[data-testid="card-accordion-item-button"]');
 		if ((await cardBtn.count()) > 0) {
@@ -48,12 +59,11 @@ export const stripeCheckout = async ({
 			await page.waitForTimeout(500);
 		}
 	} catch {
-		// Card might already be selected or not present
+		// Card may already be selected or absent.
 	}
 
-	// Stripe's card inputs are custom components that require individual key events.
-	// .fill() sets the value programmatically and skips keydown/keypress/keyup,
-	// so Stripe never registers the input. Use .pressSequentially() instead.
+	// Card fields require real key events — `.fill()` skips keydown/up so
+	// Stripe never registers the input. Use `.pressSequentially()`.
 	const cardNumber = page.locator("#cardNumber");
 	await cardNumber.waitFor({ timeout: 120000 });
 	await cardNumber.pressSequentially("4242424242424242");
@@ -81,32 +91,72 @@ export const stripeCheckout = async ({
 			console.log("[stripeCheckout] Email filled");
 		}
 	} catch {
-		// Email field not present
+		// Email field absent.
 	}
 
-	// Force country to US so a postal code input is always shown
+	// Address fields. Defaults: US / 10001.
+	const country = billingAddress?.country ?? "US";
+	const postalCode = billingAddress?.postal_code ?? "10001";
+	const line1 = billingAddress?.line1;
+	const city = billingAddress?.city;
+	const state = billingAddress?.state;
+
 	try {
 		const countrySelect = page.locator("#billingCountry");
 		if ((await countrySelect.count()) > 0) {
-			await countrySelect.selectOption("US");
-			console.log("[stripeCheckout] Country set to US");
+			await countrySelect.selectOption(country);
+			console.log(`[stripeCheckout] Country set to ${country}`);
 			await page.waitForTimeout(500);
 		}
 	} catch {
-		// Country selector not present
+		// Country selector absent.
+	}
+
+	// Full address form (line1/city/state) appears only when the session
+	// uses `customer_update: { address: "auto" }`. Feature-detect each.
+	if (line1) {
+		try {
+			const line1Field = page.locator("#billingAddressLine1");
+			if ((await line1Field.count()) > 0) {
+				await line1Field.pressSequentially(line1);
+				console.log(`[stripeCheckout] Address line 1 filled: ${line1}`);
+			}
+		} catch {}
+	}
+
+	if (city) {
+		try {
+			const cityField = page.locator("#billingLocality");
+			if ((await cityField.count()) > 0) {
+				await cityField.pressSequentially(city);
+				console.log(`[stripeCheckout] City filled: ${city}`);
+			}
+		} catch {}
+	}
+
+	if (state) {
+		try {
+			const stateField = page.locator("#billingAdministrativeArea");
+			if ((await stateField.count()) > 0) {
+				// State is a select on US/CA/AU; fall back to typing.
+				try {
+					await stateField.selectOption(state);
+				} catch {
+					await stateField.pressSequentially(state);
+				}
+				console.log(`[stripeCheckout] State filled: ${state}`);
+			}
+		} catch {}
 	}
 
 	try {
-		const postalCode = page.locator("#billingPostalCode");
-		if ((await postalCode.count()) > 0) {
-			await postalCode.pressSequentially("10001");
-			console.log("[stripeCheckout] Postal code filled");
+		const postalField = page.locator("#billingPostalCode");
+		if ((await postalField.count()) > 0) {
+			await postalField.pressSequentially(postalCode);
+			console.log(`[stripeCheckout] Postal code filled: ${postalCode}`);
 		}
-	} catch {
-		// Postal code field not present
-	}
+	} catch {}
 
-	// Handle adjustable quantity if requested
 	if (overrideQuantity !== undefined && overrideQuantity !== null) {
 		const quantityBtn = page.locator(".AdjustableQuantitySelector").first();
 		if ((await quantityBtn.count()) === 0) {
@@ -132,7 +182,6 @@ export const stripeCheckout = async ({
 		await page.waitForTimeout(1000);
 	}
 
-	// Handle promo code if provided
 	if (promoCode) {
 		const promoInput = page.locator("#promotionCode");
 		await promoInput.waitFor({ timeout: 60000 });
@@ -143,8 +192,8 @@ export const stripeCheckout = async ({
 		await page.waitForTimeout(5000);
 	}
 
-	// Click submit button — use force:true because Stripe overlays (Link, phone number)
-	// can obscure the button and cause Playwright's actionability checks to time out.
+	// Submit via JS click — Stripe overlays (Link, phone) can obscure the
+	// button and break Playwright's actionability check.
 	const submitBtn = page.locator(".SubmitButton-TextContainer").first();
 	if ((await submitBtn.count()) === 0) {
 		throw new Error(".SubmitButton-TextContainer not found");
@@ -152,7 +201,7 @@ export const stripeCheckout = async ({
 	await submitBtn.evaluate((el) => (el as HTMLElement).click());
 	console.log("[stripeCheckout] Submit clicked");
 
-	// Wait for checkout to process + webhook delivery
+	// Wait for checkout processing + webhook delivery.
 	await page.waitForTimeout(20000);
 	console.log("[stripeCheckout] Checkout complete");
 };

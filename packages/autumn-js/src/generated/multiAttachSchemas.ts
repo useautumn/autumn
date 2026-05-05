@@ -345,6 +345,7 @@ export const multiAttachParamsSchema = z.object({
 		.union([multiAttachRedirectModeSchema, z.undefined()])
 		.optional(),
 	newBillingSubscription: z.union([z.boolean(), z.undefined()]).optional(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	customerData: z.union([customerDataSchema, z.undefined()]).optional(),
 	entityData: z.union([multiAttachEntityDataSchema, z.undefined()]).optional(),
 });
@@ -386,6 +387,7 @@ export const multiAttachParamsOutboundSchema = z.object({
 		.optional(),
 	redirect_mode: z.string(),
 	new_billing_subscription: z.union([z.boolean(), z.undefined()]).optional(),
+	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
 	customer_data: z
 		.union([customerDataOutboundSchema, z.undefined()])
 		.optional(),
