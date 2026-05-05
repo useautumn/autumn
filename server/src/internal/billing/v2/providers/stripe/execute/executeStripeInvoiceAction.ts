@@ -59,9 +59,10 @@ export const executeStripeInvoiceAction = async ({
 			billingPlan,
 			billingContext,
 			stripeInvoice: invoice,
-			expiresAt: deferredInvoiceMode
-				? Date.now() + ms.days(10)
-				: Date.now() + ms.minutes(10),
+			expiresAt:
+				deferredInvoiceMode || billingContext.paymentMethod?.type === "custom"
+					? Date.now() + ms.days(10)
+					: Date.now() + ms.minutes(10),
 			resumeAfter: StripeBillingStage.InvoiceAction,
 		});
 
