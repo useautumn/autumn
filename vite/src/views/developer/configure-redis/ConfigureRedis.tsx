@@ -156,9 +156,9 @@ export const ConfigureRedis = () => {
 					{isConfigured ? (
 						<div className="flex flex-col gap-4">
 							<div className="flex flex-col gap-1">
-								<FormLabel>Connected Instance</FormLabel>
+								<FormLabel>Connected Host</FormLabel>
 								<Input
-									value={redisConfig.url}
+									value={redisConfig.host}
 									readOnly
 									className="font-mono text-xs"
 								/>

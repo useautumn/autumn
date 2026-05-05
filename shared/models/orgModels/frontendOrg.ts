@@ -26,7 +26,7 @@ export const FrontendOrgSchema = z.object({
 	deployed: z.boolean(),
 	redis_config: z
 		.object({
-			url: z.string(),
+			host: z.string(),
 			migrationPercent: z.number(),
 		})
 		.nullable(),
