@@ -10,14 +10,18 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 
 /**
  * Maps update phase format to create phase format (strips start_date).
- * Preserves inline `price_data` items so standalone schedule creation
- * can carry entity-scoped recurring prices forward correctly.
+ *
+ * Phase metadata carries `autumn_managed: "true"` because Stripe's
+ * `default_settings` has no metadata field — phase metadata is the only
+ * vehicle to propagate the flag onto the spawned sub.
  */
 const toCreatePhase = (
 	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
 ): Stripe.SubscriptionScheduleCreateParams.Phase => ({
 	items: phase.items?.map((item) => ({
-		...(item.price_data ? { price_data: item.price_data } : { price: item.price }),
+		...(item.price_data
+			? { price_data: item.price_data }
+			: { price: item.price }),
 		quantity: item.quantity,
 		...(item.metadata && { metadata: item.metadata }),
 	})),
@@ -25,6 +29,7 @@ const toCreatePhase = (
 	discounts: phase.discounts as
 		| Stripe.SubscriptionScheduleCreateParams.Phase.Discount[]
 		| undefined,
+	metadata: { ...(phase.metadata ?? {}), autumn_managed: "true" },
 });
 
 /**
@@ -170,10 +175,12 @@ export const executeStripeSubscriptionScheduleAction = async ({
 			}
 
 			// No subscription - create standalone schedule
+			const startDate = params.phases?.[0]?.start_date;
 			return await stripeCli.subscriptionSchedules.create({
 				customer: billingContext.stripeCustomer?.id ?? "none",
 				phases: params.phases?.map(toCreatePhase) ?? [],
 				end_behavior: params.end_behavior,
+				start_date: startDate,
 			});
 		}
 
@@ -181,20 +188,23 @@ export const executeStripeSubscriptionScheduleAction = async ({
 			const { stripeSubscriptionScheduleId, params } =
 				subscriptionScheduleAction;
 
+			// Get the subscription ID from the existing schedule
+			const subscriptionId =
+				billingContext.stripeSubscriptionSchedule?.subscription;
+			if (!subscriptionId) {
+				// Standalone future schedules have no subscription until they start.
+				// Update them in place instead of releasing and recreating from a sub.
+				return await stripeCli.subscriptionSchedules.update(
+					stripeSubscriptionScheduleId,
+					params,
+				);
+			}
+
 			// Always release + recreate to avoid "can't modify active phase" errors
 			// The subscription may have been updated first, changing its items
 			await stripeCli.subscriptionSchedules.release(
 				stripeSubscriptionScheduleId,
 			);
-
-			// Get the subscription ID from the existing schedule
-			const subscriptionId =
-				billingContext.stripeSubscriptionSchedule?.subscription;
-			if (!subscriptionId) {
-				throw new Error(
-					"Cannot update schedule: no subscription ID found on existing schedule",
-				);
-			}
 
 			const newSchedule = await createScheduleFromSubscription({
 				stripeCli,

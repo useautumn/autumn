@@ -120,7 +120,12 @@ export function useUpdateSubscriptionRequestBody({
 			refundBehavior,
 			refundAmount,
 			noBillingChanges,
+			discounts,
 		} = formValues;
+
+		const validDiscounts = discounts?.length
+			? discounts.filter((d) => "reward_id" in d && d.reward_id)
+			: undefined;
 
 		const base = {
 			customer_id: customerId ?? "",
@@ -172,6 +177,7 @@ export function useUpdateSubscriptionRequestBody({
 			billing_behavior: billingBehavior || undefined,
 			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
 			no_billing_changes: noBillingChanges || undefined,
+			discounts: validDiscounts,
 		};
 	}, [
 		form.store,

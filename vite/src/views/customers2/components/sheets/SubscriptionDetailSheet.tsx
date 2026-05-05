@@ -1,3 +1,4 @@
+import type { ApiDiscount } from "@autumn/shared";
 import {
 	CusProductStatus,
 	type Entity,
@@ -19,6 +20,7 @@ import {
 	Info,
 	SubtractIcon,
 	TagIcon,
+	TicketIcon,
 	TimerIcon,
 	XCircle,
 } from "@phosphor-icons/react";
@@ -30,6 +32,7 @@ import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
@@ -44,14 +47,25 @@ import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/Bas
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
 
+function formatDiscountLabel({ discount }: { discount: ApiDiscount }): string {
+	const value =
+		discount.type === "percentage_discount"
+			? `${discount.discount_value}% off`
+			: `${discount.discount_value / 100} ${discount.currency?.toUpperCase() ?? ""} off`;
+
+	return discount.name ? `${discount.name} (${value})` : value;
+}
+
 function SubscriptionDetailItems({
 	items,
 	product,
 	prepaidDisplayQuantities,
+	adminIds,
 }: {
 	items: ProductItem[];
 	product: FrontendProduct;
 	prepaidDisplayQuantities: Record<string, number>;
+	adminIds?: import("@/components/forms/shared/admin/AdminPlanIdsTooltip").AdminPlanIds;
 }) {
 	const sortedItems = useMemo(() => sortPlanItems({ items }), [items]);
 	const { visibleItems, collapsedBooleanItems } = useMemo(
@@ -80,7 +94,11 @@ function SubscriptionDetailItems({
 	return (
 		<SheetSection>
 			<div className="flex gap-2 justify-between items-center h-6 mb-3">
-				<BasePriceDisplay product={product} readOnly={true} />
+				<BasePriceDisplay
+					product={product}
+					readOnly={true}
+					adminIds={adminIds}
+				/>
 			</div>
 
 			<div className="space-y-2">
@@ -106,6 +124,7 @@ export function SubscriptionDetailSheet() {
 	const setSheet = useSheetStore((s) => s.setSheet);
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+	const { getDiscountsForSubscription } = useCusRewardsQuery();
 
 	// Prefetch product version data so the update sheet has it cached immediately
 	useProductVersionQuery({ productId: productV2?.id });
@@ -134,10 +153,26 @@ export function SubscriptionDetailSheet() {
 	);
 
 	const isScheduled = cusProduct.status === CusProductStatus.Scheduled;
+	const subscriptionDiscounts = getDiscountsForSubscription({
+		subscriptionIds: cusProduct.subscription_ids ?? [],
+	});
+
+	const canCancel = !isExpired;
+	const canUpdate = !isExpired && !isScheduled;
 	const prepaidDisplayQuantities = backendToDisplayQuantity({
 		backendOptions: cusProduct.options,
 		prepaidItems,
 	});
+
+	const baseCustomerPrice = cusProduct.customer_prices?.find(
+		(cp: { price: { config?: { stripe_price_id?: string } } }) =>
+			Boolean(cp.price?.config?.stripe_price_id),
+	);
+	const adminIds = {
+		stripe_price_id: baseCustomerPrice?.price?.config?.stripe_price_id ?? null,
+		stripe_product_id: cusProduct.product?.processor?.id ?? null,
+		internal_product_id: cusProduct.product?.internal_id ?? null,
+	};
 
 	const formatDate = (timestamp: number | null | undefined) => {
 		if (!timestamp) return "—";
@@ -184,6 +219,7 @@ export function SubscriptionDetailSheet() {
 					items={productV2.items}
 					product={productV2}
 					prepaidDisplayQuantities={prepaidDisplayQuantities}
+					adminIds={adminIds}
 				/>
 			)}
 
@@ -289,6 +325,15 @@ export function SubscriptionDetailSheet() {
 						}
 					/>
 
+					{subscriptionDiscounts.map((discount: ApiDiscount) => (
+						<InfoRow
+							key={discount.id}
+							icon={<TicketIcon size={16} weight="duotone" />}
+							label="Coupon"
+							value={formatDiscountLabel({ discount })}
+						/>
+					))}
+
 					<InfoRow
 						icon={<CalendarBlankIcon size={16} weight="duotone" />}
 						label="Started"
@@ -321,34 +366,39 @@ export function SubscriptionDetailSheet() {
 				</div>
 			</SheetSection>
 
-			{!isExpired && !isScheduled && (
+			{(canCancel || canUpdate) && (
 				<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
-					{isCanceled ? (
+					{canCancel &&
+						(isCanceled ? (
+							<Button
+								variant="secondary"
+								className="flex-1"
+								onClick={() =>
+									setSheet({ type: "subscription-uncancel", itemId })
+								}
+							>
+								Manage Cancellation
+							</Button>
+						) : (
+							<Button
+								variant="secondary"
+								className="flex-1"
+								onClick={() =>
+									setSheet({ type: "subscription-cancel", itemId })
+								}
+							>
+								{isScheduled ? "Cancel Scheduled Plan" : "Cancel Subscription"}
+							</Button>
+						))}
+					{canUpdate && (
 						<Button
-							variant="secondary"
+							variant="primary"
 							className="flex-1"
-							onClick={() =>
-								setSheet({ type: "subscription-uncancel", itemId })
-							}
+							onClick={handleUpdateSubscription}
 						>
-							Manage Cancellation
-						</Button>
-					) : (
-						<Button
-							variant="secondary"
-							className="flex-1"
-							onClick={() => setSheet({ type: "subscription-cancel", itemId })}
-						>
-							Cancel Subscription
+							Update Subscription
 						</Button>
 					)}
-					<Button
-						variant="primary"
-						className="flex-1"
-						onClick={handleUpdateSubscription}
-					>
-						Update Subscription
-					</Button>
 				</div>
 			)}
 		</div>
