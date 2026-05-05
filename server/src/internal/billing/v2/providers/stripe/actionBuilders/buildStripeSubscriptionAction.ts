@@ -5,27 +5,24 @@ import type {
 	StripeSubscriptionAction,
 	StripeSubscriptionScheduleAction,
 } from "@autumn/shared";
+import { stripePhaseStartsInFuture } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { buildStripeSubscriptionItemsUpdate } from "@server/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import { buildStripeSubscriptionCreateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction";
 import { buildStripeSubscriptionUpdateAction } from "@server/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction";
-import { stripePhaseStartsInFuture } from "@server/internal/billing/v2/utils/startDateUtils";
 import { billingPlanToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/billingPlanToOneOffStripeItemSpecs";
 
-const scheduleStartsInFuture = ({
+const subscriptionStartsInFuture = ({
 	billingContext,
-	stripeSubscriptionScheduleAction,
+	subscriptionStartsAt,
 }: {
 	billingContext: BillingContext;
-	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
-}) => {
-	if (stripeSubscriptionScheduleAction?.type !== "create") return false;
-
-	return stripePhaseStartsInFuture(
-		stripeSubscriptionScheduleAction.params.phases?.[0]?.start_date,
+	subscriptionStartsAt?: number | "now";
+}): boolean =>
+	stripePhaseStartsInFuture(
+		subscriptionStartsAt,
 		billingContext.currentEpochMs,
 	);
-};
 
 export const buildStripeSubscriptionAction = ({
 	ctx,
@@ -34,6 +31,7 @@ export const buildStripeSubscriptionAction = ({
 	finalCustomerProducts,
 	stripeSubscriptionScheduleAction,
 	subscriptionCancelAt,
+	subscriptionStartsAt,
 }: {
 	ctx: AutumnContext;
 	billingContext: BillingContext;
@@ -41,6 +39,7 @@ export const buildStripeSubscriptionAction = ({
 	finalCustomerProducts: FullCusProduct[];
 	stripeSubscriptionScheduleAction?: StripeSubscriptionScheduleAction;
 	subscriptionCancelAt?: number | null;
+	subscriptionStartsAt?: number | "now";
 }): StripeSubscriptionAction | undefined => {
 	const { stripeSubscription } = billingContext;
 
@@ -70,7 +69,10 @@ export const buildStripeSubscriptionAction = ({
 
 	const shouldCreateScheduleOnly =
 		!stripeSubscription &&
-		scheduleStartsInFuture({ billingContext, stripeSubscriptionScheduleAction });
+		subscriptionStartsInFuture({
+			billingContext,
+			subscriptionStartsAt,
+		});
 
 	// Case 2: No subscription and future schedule exists -> schedule creates subscription later
 	if (shouldCreateScheduleOnly) {
