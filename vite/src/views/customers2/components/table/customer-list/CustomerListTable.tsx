@@ -8,8 +8,10 @@ import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { useEnv } from "@/utils/envUtils";
+import { getVersionCounts } from "@/utils/productUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { FULL_CUSTOMERS_QUERY_KEY } from "@/views/customers/hooks/useFullCusSearchQuery";
@@ -39,6 +41,13 @@ export function CustomerListTable({
 		env === AppEnv.Sandbox ? "calc(100vh - 174px)" : "calc(100vh - 134px)";
 
 	const { features } = useFeaturesQuery();
+	const { products } = useProductsQuery();
+	const showProductVersions = useMemo(() => {
+		const versionCounts = getVersionCounts(products);
+		return Object.values(versionCounts).some(
+			(v) => typeof v === "number" && v > 1,
+		);
+	}, [products]);
 	const { queryStates } = useCustomerFilters();
 	const buildKey = useQueryKeyFactory();
 
@@ -103,7 +112,11 @@ export function CustomerListTable({
 
 	// Create columns including dynamic usage columns from metered features
 	const { columns, defaultVisibleColumnIds, columnGroups } =
-		useCustomerListColumns({ features, storageKey: columnStorageKey });
+		useCustomerListColumns({
+			features,
+			storageKey: columnStorageKey,
+			showProductVersions,
+		});
 
 	const {
 		columnVisibility,

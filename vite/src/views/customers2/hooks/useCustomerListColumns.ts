@@ -7,15 +7,18 @@ import {
 import {
 	BASE_COLUMN_IDS,
 	createCustomerListColumns,
+	createProductVersionColumn,
 	createUsageColumn,
 } from "../components/table/customer-list/CustomerListColumns";
 
 export function useCustomerListColumns({
 	features,
 	storageKey,
+	showProductVersions,
 }: {
 	features: Feature[];
 	storageKey: string;
+	showProductVersions?: boolean;
 }) {
 	return useMemo(() => {
 		const baseColumns = createCustomerListColumns();
@@ -55,20 +58,37 @@ export function useCustomerListColumns({
 			});
 		}
 
+		// Optionally insert a Product Version column right after the Products
+		// column when the org has any product with more than one version.
+		// Hidden by default; togglable via the Display dropdown.
+		let columnsWithVersion = baseColumns;
+		if (showProductVersions) {
+			const productsIndex = baseColumns.findIndex(
+				(col) => col.id === "customer_products",
+			);
+			const insertAt =
+				productsIndex !== -1 ? productsIndex + 1 : baseColumns.length;
+			columnsWithVersion = [
+				...baseColumns.slice(0, insertAt),
+				createProductVersionColumn(),
+				...baseColumns.slice(insertAt),
+			];
+		}
+
 		// Insert usage columns before created_at (so created_at and actions stay at the end)
-		const createdAtIndex = baseColumns.findIndex(
+		const createdAtIndex = columnsWithVersion.findIndex(
 			(col) => col.id === "created_at",
 		);
 
-		let allColumns: typeof baseColumns;
+		let allColumns: typeof columnsWithVersion;
 		if (createdAtIndex !== -1 && usageColumns.length > 0) {
 			allColumns = [
-				...baseColumns.slice(0, createdAtIndex),
+				...columnsWithVersion.slice(0, createdAtIndex),
 				...usageColumns,
-				...baseColumns.slice(createdAtIndex),
+				...columnsWithVersion.slice(createdAtIndex),
 			];
 		} else {
-			allColumns = [...baseColumns, ...usageColumns];
+			allColumns = [...columnsWithVersion, ...usageColumns];
 		}
 
 		return {
@@ -76,5 +96,5 @@ export function useCustomerListColumns({
 			defaultVisibleColumnIds: BASE_COLUMN_IDS,
 			columnGroups,
 		};
-	}, [features, storageKey]);
+	}, [features, storageKey, showProductVersions]);
 }
