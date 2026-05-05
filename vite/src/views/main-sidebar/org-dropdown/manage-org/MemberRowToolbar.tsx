@@ -94,10 +94,10 @@ export const MemberRowToolbar = ({
 					size="icon"
 					iconOrientation="center"
 					icon={<EllipsisVertical />}
-					className="!h-5 !w-5 rounded-lg hover:bg-stone-50"
+					className="!h-5 !w-5 rounded-lg hover:bg-interactive-secondary-hover"
 				/>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end">
+			<DropdownMenuContent align="end" className="z-[200]">
 				<DropdownMenuItem
 					variant="destructive"
 					shimmer={deleteLoading}
