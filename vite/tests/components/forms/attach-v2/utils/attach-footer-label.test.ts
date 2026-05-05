@@ -21,6 +21,19 @@ describe("getConfirmLabel", () => {
 		).toBe("Schedule Plan");
 	});
 
+	test("checkout redirect takes precedence over future startDate", () => {
+		expect(
+			getConfirmLabel({
+				previewData: {
+					...previewData,
+					redirect_to_checkout: true,
+				},
+				startDate: addDays(NOW, 1).getTime(),
+				now: NOW,
+			}),
+		).toBe("Generate Checkout URL");
+	});
+
 	test("immediate paid attach charges customer", () => {
 		expect(
 			getConfirmLabel({

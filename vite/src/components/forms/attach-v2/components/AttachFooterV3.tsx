@@ -29,6 +29,7 @@ export function getConfirmLabel({
 	now?: number;
 }): string {
 	if (!previewData) return "Attach Plan";
+	if (previewData.redirect_to_checkout) return "Generate Checkout URL";
 	if (isFutureStartDate(startDate, now)) return "Schedule Plan";
 
 	const sixHoursFromNow = addHours(now ?? Date.now(), 6);
@@ -38,8 +39,6 @@ export function getConfirmLabel({
 			isAfter(change.effective_at, sixHoursFromNow),
 	);
 	if (isScheduled) return "Schedule Change";
-
-	if (previewData.redirect_to_checkout) return "Generate Checkout URL";
 
 	if (previewData.total <= 0) return "Attach Plan";
 
@@ -67,9 +66,9 @@ export function AttachFooterV3() {
 		? "Invoices are not available for end of cycle changes as there is no immediate charge to invoice"
 		: hasFutureStartDate
 			? "Invoices are not available for future start dates. Schedule the plan instead."
-		: isZeroAmount
-			? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
-			: null;
+			: isZeroAmount
+				? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
+				: null;
 
 	return (
 		<SheetFooter className="flex flex-col grid-cols-1 mt-0">

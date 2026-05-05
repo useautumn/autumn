@@ -65,8 +65,8 @@ export const setupAttachCheckoutMode = ({
 	};
 
 	const checkoutMode = getStripeCheckoutOrDirectBilling();
-	if (hasFutureStartDate && checkoutMode === null) {
-		return null;
+	if (hasFutureStartDate && !hasPaymentMethod) {
+		return "stripe_checkout";
 	}
 
 	if (checkoutMode === null && redirectMode === "always") {
