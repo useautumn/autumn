@@ -3,6 +3,7 @@ import {
 	ErrCode,
 	type Feature,
 	FeatureType,
+	type ModelMarkups,
 	notNullish,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -31,6 +32,34 @@ interface UpdateFeatureParams {
  * Checks if the credit schema has changed between old and new config.
  * Returns true if schema changed (different items or different credit amounts).
  */
+const areModelMarkupsEqual = ({
+	a,
+	b,
+}: {
+	a: ModelMarkups;
+	b: ModelMarkups;
+}): boolean => {
+	const aIsAbsent = a == null;
+	const bIsAbsent = b == null;
+	if (aIsAbsent && bIsAbsent) return true;
+	if (aIsAbsent || bIsAbsent) return false;
+
+	const aKeys = Object.keys(a);
+	const bKeys = Object.keys(b);
+	if (aKeys.length !== bKeys.length) return false;
+
+	for (const key of aKeys) {
+		const aEntry = a[key];
+		const bEntry = b[key];
+		if (!bEntry) return false;
+		if (aEntry.markup !== bEntry.markup) return false;
+		if (aEntry.input_cost !== bEntry.input_cost) return false;
+		if (aEntry.output_cost !== bEntry.output_cost) return false;
+	}
+
+	return true;
+};
+
 const hasCreditSchemaChanged = ({
 	oldSchema,
 	newSchema,
@@ -147,10 +176,18 @@ export const updateFeature = async ({
 	}
 
 	// Validate config based on feature type
+	const effectiveType = updates.type ?? feature.type;
+	const isAiCreditSystem =
+		effectiveType === FeatureType.CreditSystem &&
+		(updates.model_markups !== undefined
+			? updates.model_markups != null &&
+				Object.keys(updates.model_markups).length > 0
+			: feature.is_ai_credit_system);
+
 	const newConfig =
 		updates.config !== undefined
 			? feature.type === FeatureType.CreditSystem
-				? validateCreditSystem(updates.config)
+				? validateCreditSystem(updates.config, { isAiCreditSystem })
 				: feature.type === FeatureType.Metered
 					? validateMeteredConfig(updates.config)
 					: updates.config
@@ -169,6 +206,11 @@ export const updateFeature = async ({
 			archived: updates.archived,
 			event_names: updates.event_names,
 			config: newConfig,
+			model_markups: updates.model_markups,
+			is_ai_credit_system:
+				updates.model_markups === undefined
+					? feature.is_ai_credit_system
+					: isAiCreditSystem,
 		},
 	});
 
@@ -181,18 +223,23 @@ export const updateFeature = async ({
 		});
 	}
 
-	// Queue cache clear for credit system if schema changed
-	if (
-		feature.type === FeatureType.CreditSystem &&
-		updates.config?.schema &&
-		updatedFeature
-	) {
-		const schemaChanged = hasCreditSchemaChanged({
-			oldSchema: feature.config?.schema,
-			newSchema: updates.config.schema,
-		});
+	// Queue cache clear for credit system if schema or model markups changed
+	if (feature.type === FeatureType.CreditSystem && updatedFeature) {
+		const schemaChanged =
+			updates.config != null &&
+			hasCreditSchemaChanged({
+				oldSchema: feature.config?.schema,
+				newSchema: updates.config.schema,
+			});
 
-		if (schemaChanged) {
+		const markupsChanged =
+			updates.model_markups !== undefined &&
+			!areModelMarkupsEqual({
+				a: updates.model_markups,
+				b: feature.model_markups,
+			});
+
+		if (schemaChanged || markupsChanged) {
 			await addTaskToQueue({
 				jobName: JobName.ClearCreditSystemCustomerCache,
 				payload: {

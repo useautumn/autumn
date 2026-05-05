@@ -140,13 +140,15 @@ const getFeatureString = ({
 	item: ProductItem;
 	features: Feature[];
 }) => {
-	const feature = features.find((f: Feature) => f.id == item.feature_id);
+	// This function isn't exported or used
+	// Just updated it to account for the new AI Credit System features, but it may be unused and can probably be deleted
+	const feature = features.find((f: Feature) => f.id === item.feature_id);
 
 	if (feature?.type === FeatureType.Boolean) {
 		return `${feature.name}`;
 	}
 
-	if (item.included_usage == Infinite) {
+	if (item.included_usage === Infinite) {
 		return `Unlimited ${feature?.name}`;
 	}
 
@@ -154,6 +156,14 @@ const getFeatureString = ({
 		interval: item.interval ?? undefined,
 		intervalCount: item.interval_count ?? undefined,
 	});
+
+	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
+	if (isAiCreditSystem) {
+		const amount = item.included_usage ?? 0;
+		const formattedAmount =
+			amount === 0 ? "$0.00" : `$${Number(amount).toFixed(2)}`;
+		return `${formattedAmount} of ${feature?.name}${notNullish(item.interval) ? ` ${intervalStr}` : ""}`;
+	}
 
 	return `${item.included_usage ?? 0} ${feature?.name}${item.entity_feature_id ? ` per ${getFeature(item.entity_feature_id, features)?.name}` : ""}${notNullish(item.interval) ? ` ${intervalStr}` : ""}`;
 };
@@ -171,13 +181,13 @@ export const formatProductItemText = ({
 
 	const itemType = getItemType(item);
 
-	if (itemType == ProductItemType.FeaturePrice) {
+	if (itemType === ProductItemType.FeaturePrice) {
 		return getPaidFeatureString({
 			item,
 			currency: org?.default_currency,
 			features,
 		});
-	} else if (itemType == ProductItemType.Price) {
+	} else if (itemType === ProductItemType.Price) {
 		return getFixedPriceString({ item, currency: org?.default_currency });
 	}
 };

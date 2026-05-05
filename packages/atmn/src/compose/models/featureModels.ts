@@ -5,6 +5,12 @@
 import { z } from "zod/v4";
 
 
+const ModelMarkupEntrySchema = z.object({
+  markup: z.number().meta({ description: "Markup percentage, e.g. 20 for 20%" }),
+  inputCost: z.number().optional().meta({ description: "Input cost in $/M tokens (required for custom models)" }),
+  outputCost: z.number().optional().meta({ description: "Output cost in $/M tokens (required for custom models)" }),
+});
+
 export const FeatureSchema = z.object({
   id: z.string().meta({
     description:
@@ -34,6 +40,10 @@ export const FeatureSchema = z.object({
     .meta({
     description:
     "For credit_system features: maps metered features to their credit costs.",
+    }),
+  modelMarkups: z.record(z.string(), ModelMarkupEntrySchema).optional().meta({
+    description:
+    "For ai_credit_system features: maps model IDs (provider/model format) to markup config.",
     }),
   archived: z.boolean().meta({
     description:
@@ -85,11 +95,29 @@ export type CreditSystemFeature = FeatureBase & {
   }>;
 };
 
+/** Model markup entry for AI credit systems */
+export type ModelMarkupEntry = {
+  /** Markup percentage, e.g. 20 for 20% */
+  markup: number;
+  /** Input cost in $/M tokens (required for custom models) */
+  inputCost?: number;
+  /** Output cost in $/M tokens (required for custom models) */
+  outputCost?: number;
+};
+
+/** AI credit system feature - uses model-based pricing */
+export type AiCreditSystemFeature = FeatureBase & {
+  type: "ai_credit_system";
+  /** Maps model IDs (provider/model format) to markup config */
+  modelMarkups: Record<string, ModelMarkupEntry>;
+};
+
 /**
  * Feature definition with type-safe constraints:
  * - Boolean features cannot have consumable
  * - Metered features require consumable (true = single_use style, false = continuous_use style)
  * - Credit system features are always consumable and require creditSchema
+ * - AI credit system features use modelMarkups for per-model pricing
  */
-export type Feature = BooleanFeature | MeteredFeature | CreditSystemFeature;
+export type Feature = BooleanFeature | MeteredFeature | CreditSystemFeature | AiCreditSystemFeature;
 

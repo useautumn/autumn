@@ -42,6 +42,11 @@ export function buildFeatureCode(feature: Feature, varNameOverride?: string): st
 		lines.push(`\tcreditSchema: ${formatValue(feature.creditSchema)},`);
 	}
 
+	// Add modelMarkups for ai_credit_system features
+	if (feature.type === "ai_credit_system" && feature.modelMarkups) {
+		lines.push(`\tmodelMarkups: ${formatValue(feature.modelMarkups)},`);
+	}
+
 	lines.push(`});`);
 
 	return lines.join("\n");

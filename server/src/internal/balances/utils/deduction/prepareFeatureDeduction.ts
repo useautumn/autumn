@@ -27,7 +27,7 @@ import type { FeatureDeduction } from "../types/featureDeduction.js";
  * Prepares all the inputs needed to execute a deduction for a single feature.
  * Shared by both Redis (Lua) and Postgres (SQL) deduction paths.
  */
-export const prepareFeatureDeduction = ({
+export const prepareFeatureDeduction = async ({
 	ctx,
 	fullCustomer,
 	deduction,
@@ -37,7 +37,7 @@ export const prepareFeatureDeduction = ({
 	fullCustomer: FullCustomer;
 	deduction: FeatureDeduction;
 	options?: DeductionOptions;
-}): PreparedFeatureDeduction => {
+}): Promise<PreparedFeatureDeduction> => {
 	const { org } = ctx;
 	const { env } = ctx;
 	const { feature, lock, targetBalance } = deduction;
@@ -101,14 +101,29 @@ export const prepareFeatureDeduction = ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
+	// Compute credit cost once per customer entitlement
+	const creditCostByEntitlementId = new Map<string, number>();
+	await Promise.all(
+		cusEnts.map(async (ce) => {
+			const creditCost = await getCreditCost({
+				featureId: feature.id,
+				creditSystem: ce.entitlement.feature,
+				modelName: deduction.tokenUsage?.modelName,
+				tokens: deduction.tokenUsage
+					? {
+							input: deduction.tokenUsage.inputTokens,
+							output: deduction.tokenUsage.outputTokens,
+						}
+					: undefined,
+			});
+			creditCostByEntitlementId.set(ce.id, creditCost);
+		}),
+	);
+
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
 		cusEnts.map((ce) => {
-			const creditCost = getCreditCost({
-				featureId: feature.id,
-				creditSystem: ce.entitlement.feature,
-			});
-
+			const creditCost = creditCostByEntitlementId.get(ce.id)!;
 			const maxOverage = getMaxOverage({ cusEnt: ce });
 
 			const isFreeAllocated =
@@ -148,10 +163,7 @@ export const prepareFeatureDeduction = ({
 	// Collect and sort rollovers by expires_at (oldest first), including credit_cost from parent entitlement
 	const sortedRollovers = cusEnts
 		.flatMap((ce) => {
-			const creditCost = getCreditCost({
-				featureId: feature.id,
-				creditSystem: ce.entitlement.feature,
-			});
+			const creditCost = creditCostByEntitlementId.get(ce.id)!;
 			return (ce.rollovers || []).map((r) => ({
 				...r,
 				credit_cost: creditCost,

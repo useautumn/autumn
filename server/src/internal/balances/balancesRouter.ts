@@ -7,6 +7,7 @@ import { handleFinalizeLock } from "./handlers/handleFinalizeLock.js";
 import { handleListBalances } from "./handlers/handleListBalances.js";
 import { handleSetUsage } from "./handlers/handleSetUsage.js";
 import { handleTrack } from "./handlers/handleTrack.js";
+import { handleTrackTokens } from "./handlers/handleTrackTokens.js";
 import { handleUpdateBalance } from "./handlers/handleUpdateBalance.js";
 
 // Create a Hono app for products
@@ -19,6 +20,7 @@ balancesRouter.post("/balances/update", ...handleUpdateBalance);
 // Track
 balancesRouter.post("/events", ...handleTrack);
 balancesRouter.post("/track", ...handleTrack);
+balancesRouter.post("/trackTokens", ...handleTrackTokens);
 
 // Check
 balancesRouter.post("/entitled", ...handleCheck);
@@ -33,5 +35,6 @@ balancesRpcRouter.post("/balances.update", ...handleUpdateBalance);
 balancesRpcRouter.post("/balances.delete", ...handleDeleteBalance);
 
 balancesRpcRouter.post("/balances.track", ...handleTrack);
+balancesRpcRouter.post("/balances.trackTokens", ...handleTrackTokens);
 balancesRpcRouter.post("/balances.check", ...handleCheck);
 balancesRpcRouter.post("/balances.finalize", ...handleFinalizeLock);

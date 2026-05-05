@@ -116,6 +116,7 @@ export function EditPlanFeatureSheet({
 
 	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
+	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
 
 	// Allow confirming a priced feature that has a $0 tier (valid zero-price config)
 	const isZeroPriceItem =
@@ -166,7 +167,7 @@ export function EditPlanFeatureSheet({
 							<IncludedUsage />
 						</SheetSection>
 
-						{isFeaturePrice && (
+						{isFeaturePrice && !isAiCreditSystem && (
 							<SheetSection
 								title={
 									item.tiers && item.tiers.length > 1 ? (

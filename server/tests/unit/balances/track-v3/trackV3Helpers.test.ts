@@ -32,6 +32,7 @@ const baseFeature: Feature = {
 	created_at: 1,
 	archived: false,
 	event_names: [],
+	is_ai_credit_system: false,
 } as Feature;
 
 const buildExtraCustomerEntitlement = ({

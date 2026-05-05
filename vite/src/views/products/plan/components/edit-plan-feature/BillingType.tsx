@@ -73,6 +73,7 @@ export function BillingType() {
 	};
 
 	const feature = features.find((f) => f.id === item.feature_id);
+	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
 	const featureName =
 		getFeatureName({
 			feature,
@@ -104,7 +105,9 @@ export function BillingType() {
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Included</div>
 					<div className="text-body-secondary leading-tight">
-						{isConsumable
+						{isAiCreditSystem
+							? "Set an included USD budget (eg, $10 per month)."
+							: isConsumable
 							? `Set an included usage limit (eg, 100 ${featureName} per month).`
 							: isAllocated
 								? `Set a usage limit (eg, 5 ${featureName}).`
@@ -124,7 +127,9 @@ export function BillingType() {
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Priced</div>
 					<div className="text-body-secondary leading-tight">
-						{isConsumable
+						{isAiCreditSystem
+							? "Bill model usage at the markup you set in USD after the included budget is used."
+							: isConsumable
 							? `Charge a price for usage (eg, $0.05 per ${singleFeatureName}).`
 							: isAllocated
 								? `Charge a price based on usage (eg, $10 per ${singleFeatureName}).`

@@ -77,7 +77,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs1: action track depletes cre
 	// Track 845 units → 845 × 0.2 = 169 credits deducted
 	// Balance: 200 - 169 = 31 → strictly above threshold (30) → does NOT trigger
 	// (exact threshold uses <= in code, so landing on 30 would fire auto top-up)
-	const action1Cost = getCreditCost({
+	const action1Cost = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
 		amount: 845,
@@ -98,7 +98,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs1: action track depletes cre
 
 	// Track 10 units of action1 → 10 × 0.2 = 2 credits
 	// Balance: 31 - 2 = 29 → 29 <= threshold → auto top-up fires → 29 + 100 = 129
-	const action1CostSmall = getCreditCost({
+	const action1CostSmall = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
 		amount: 10,
@@ -169,7 +169,7 @@ test.concurrent(`${chalk.yellowBright("auto-topup cs2: action track depletes cre
 	// Action1 costs 0.2 credits per unit
 	// Track 900 units of action1 → 900 × 0.2 = 180 credits deducted
 	// Balance: 200 - 180 = 20 → auto top-up fires
-	const action1Cost = getCreditCost({
+	const action1Cost = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditFeature!,
 		amount: 900,

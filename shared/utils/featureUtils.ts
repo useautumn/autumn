@@ -18,7 +18,7 @@ export const toApiFeature = ({ feature }: { feature: Feature }) => {
 	}
 
 	let creditSchema: CreditSchemaItem[] | undefined;
-	if (feature.type === FeatureType.CreditSystem) {
+	if (feature.type === FeatureType.CreditSystem && feature.config?.schema) {
 		creditSchema = feature.config.schema.map((s: CreditSchemaItem) => ({
 			metered_feature_id: s.metered_feature_id,
 			credit_cost: s.credit_amount,
