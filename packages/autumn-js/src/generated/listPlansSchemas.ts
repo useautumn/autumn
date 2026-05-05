@@ -31,6 +31,10 @@ export const listPlansItemDisplaySchema = z.object({
 	secondaryText: z.union([z.string(), z.undefined()]).optional(),
 });
 
+export const listPlansConfigSchema = z.object({
+	ignorePastDue: z.boolean(),
+});
+
 export const listPlansParamsOutboundSchema = z.object({
 	customer_id: z.union([z.string(), z.undefined()]).optional(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -148,6 +152,7 @@ export const listPlansListSchema = z.object({
 	env: listPlansEnvSchema,
 	archived: z.boolean(),
 	baseVariantId: z.string().nullable(),
+	config: listPlansConfigSchema,
 	customerEligibility: z
 		.union([listPlansCustomerEligibilitySchema, z.undefined()])
 		.optional(),

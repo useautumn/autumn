@@ -7,6 +7,7 @@ import { claimLockReceipt } from "@/internal/balances/utils/lock/claimLockReceip
 import { deleteLockReceipt } from "@/internal/balances/utils/lock/deleteLockReceipt.js";
 import { fetchLockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
 import { buildFinalizeLockContext } from "./buildFinalizeLockContext.js";
 import { runFinalizeLockV2 } from "./runFinalizeLockV2.js";
 import { runRedisFinalizeLock } from "./runRedisFinalizeLock.js";
@@ -24,7 +25,13 @@ export const runFinalizeLock = async (args: RunFinalizeLockArgs) => {
 	return withRedisFailOpen({
 		source: "runFinalizeLock",
 		run: () => runFinalizeLockInner(args),
-		fallback: () => ({ success: true }),
+		fallback: () => {
+			addToExtraLogs({
+				ctx: args.ctx,
+				extras: { finalizeLockFailedOpen: true },
+			});
+			return { success: true };
+		},
 	});
 };
 

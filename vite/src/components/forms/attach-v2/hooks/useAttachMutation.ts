@@ -27,10 +27,12 @@ export function useAttachMutation({
 			useInvoice,
 			enableProductImmediately,
 			finalizeInvoice,
+			skipDefaultSuccess,
 		}: {
 			useInvoice?: boolean;
 			enableProductImmediately?: boolean;
 			finalizeInvoice?: boolean;
+			skipDefaultSuccess?: boolean;
 		}) => {
 			if (!customerId) {
 				throw new Error("Customer ID is required");
@@ -51,9 +53,18 @@ export function useAttachMutation({
 				requestBody,
 			);
 
-			return { data: response.data, useInvoice };
+			return { data: response.data, useInvoice, skipDefaultSuccess };
 		},
-		onSuccess: ({ data, useInvoice }) => {
+		onSuccess: ({ data, useInvoice, skipDefaultSuccess }) => {
+			if (skipDefaultSuccess) {
+				if (customerId) {
+					queryClient.invalidateQueries({
+						queryKey: ["customer", customerId],
+					});
+				}
+				return;
+			}
+
 			if (useInvoice) {
 				if (data?.invoice) {
 					toast.success("Invoice created successfully");
@@ -80,8 +91,12 @@ export function useAttachMutation({
 		},
 	});
 
-	const handleConfirm = () => {
-		mutation.mutate({ useInvoice: false });
+	const handleConfirm = ({
+		enableProductImmediately,
+	}: {
+		enableProductImmediately?: boolean;
+	} = {}) => {
+		mutation.mutate({ useInvoice: false, enableProductImmediately });
 	};
 
 	const handleInvoiceAttach = async ({
@@ -102,10 +117,24 @@ export function useAttachMutation({
 		};
 	};
 
+	const handleCheckoutAttach = async ({
+		enablePlanImmediately,
+	}: {
+		enablePlanImmediately: boolean;
+	}) => {
+		const result = await mutation.mutateAsync({
+			useInvoice: false,
+			enableProductImmediately: enablePlanImmediately,
+			skipDefaultSuccess: true,
+		});
+		return { paymentUrl: result.data?.payment_url };
+	};
+
 	return {
 		mutation,
 		handleConfirm,
 		handleInvoiceAttach,
+		handleCheckoutAttach,
 		isPending: mutation.isPending,
 	};
 }

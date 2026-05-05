@@ -35,10 +35,11 @@ function logMemoryUsage(label: string) {
 
 	const lagMeanMs = Math.round((lagHistogram.mean / 1e6) * 10) / 10;
 	const lagP99Ms = Math.round((lagHistogram.percentile(99) / 1e6) * 10) / 10;
+	const lagMaxMs = Math.round((lagHistogram.max / 1e6) * 10) / 10;
 	lagHistogram.reset();
 
 	logger.info(
-		`memory_log, rss: ${toMB(mem.rss)}MB, heapUsed: ${toMB(mem.heapUsed)}MB, eventLoopLagP99: ${lagP99Ms}ms`,
+		`memory_log, rss: ${toMB(mem.rss)}MB, heapUsed: ${toMB(mem.heapUsed)}MB, eventLoopLagP99: ${lagP99Ms}ms, eventLoopLagMax: ${lagMaxMs}ms`,
 		{
 			type: "memory_log",
 			data: {
@@ -52,6 +53,7 @@ function logMemoryUsage(label: string) {
 				nativeGapMB: toMB(mem.rss - mem.heapTotal - mem.external),
 				eventLoopLagMeanMs: lagMeanMs,
 				eventLoopLagP99Ms: lagP99Ms,
+				eventLoopLagMaxMs: lagMaxMs,
 			},
 		},
 	);

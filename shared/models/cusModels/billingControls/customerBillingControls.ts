@@ -47,8 +47,81 @@ export const AutoTopupSchema = z.object({
 	}),
 });
 
+/**
+ * Expanded purchase_limit shape that augments the static config with runtime
+ * tracking state from `auto_topup_limit_states`. Only emitted on responses
+ * when expand=billing_controls.auto_topups.purchase_limit is requested.
+ *
+ * When no `purchase_limit` is configured for the auto_topup, the original
+ * config fields (interval, interval_count, limit) are returned as null and
+ * only `count` / `next_reset_at` reflect runtime state.
+ */
+export const ExpandedPurchaseLimitSchema = z.object({
+	interval: PurchaseLimitIntervalEnum.nullable().meta({
+		description:
+			"The time interval for the purchase limit window. Null when no purchase limit is configured.",
+	}),
+	interval_count: z.number().min(1).nullable().meta({
+		description:
+			"Number of intervals in the purchase limit window. Null when no purchase limit is configured.",
+	}),
+	limit: z.number().min(1).nullable().meta({
+		description:
+			"Maximum number of auto top-ups allowed within the interval. Null when no purchase limit is configured.",
+	}),
+	count: z.number().meta({
+		description:
+			"Number of auto top-ups already consumed in the current window.",
+	}),
+	next_reset_at: z.number().meta({
+		description:
+			"Unix ms timestamp when the current purchase window ends and the count resets.",
+	}),
+});
+
+/**
+ * Response-only variant of AutoTopupSchema. The `purchase_limit` field can be
+ * either the static config shape (default) or the expanded runtime shape (when
+ * the corresponding expand path is requested). Input/params schemas remain
+ * strict — see `CustomerBillingControlsParamsSchema`.
+ */
+export const AutoTopupResponseSchema = AutoTopupSchema.extend({
+	purchase_limit: z
+		.union([AutoTopupPurchaseLimitSchema, ExpandedPurchaseLimitSchema])
+		.optional()
+		.meta({
+			description:
+				"Optional rate limit to cap how often auto top-ups occur. Expand billing_controls.auto_topups.purchase_limit for a count of top ups and the next_reset_at.",
+		}),
+});
+
 export const CustomerBillingControlsSchema = z.object({
 	auto_topups: z.array(AutoTopupSchema).optional().meta({
+		description: "List of auto top-up configurations per feature.",
+	}),
+	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
+		description: "List of overage spend limits per feature.",
+	}),
+	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
+		description: "List of usage alert configurations per feature.",
+	}),
+	overage_allowed: z.array(DbOverageAllowedSchema).optional().meta({
+		description:
+			"List of overage allowed controls per feature. When enabled, usage can exceed balance.",
+	}),
+});
+
+/**
+ * Response-only variant of CustomerBillingControlsSchema that uses
+ * `AutoTopupResponseSchema` for `auto_topups` so the `purchase_limit` field
+ * may be either the static config shape or the expanded runtime shape (when
+ * expand=billing_controls.auto_topups.purchase_limit is requested).
+ *
+ * Input/params validation continues to use `CustomerBillingControlsSchema` /
+ * `CustomerBillingControlsParamsSchema`, which remain strict.
+ */
+export const CustomerBillingControlsResponseSchema = z.object({
+	auto_topups: z.array(AutoTopupResponseSchema).optional().meta({
 		description: "List of auto top-up configurations per feature.",
 	}),
 	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
@@ -110,9 +183,14 @@ export const CustomerBillingControlsParamsSchema =
 export type AutoTopupPurchaseLimit = z.infer<
 	typeof AutoTopupPurchaseLimitSchema
 >;
+export type ExpandedPurchaseLimit = z.infer<typeof ExpandedPurchaseLimitSchema>;
 export type AutoTopup = z.infer<typeof AutoTopupSchema>;
+export type AutoTopupResponse = z.infer<typeof AutoTopupResponseSchema>;
 export type CustomerBillingControls = z.infer<
 	typeof CustomerBillingControlsSchema
+>;
+export type CustomerBillingControlsResponse = z.infer<
+	typeof CustomerBillingControlsResponseSchema
 >;
 
 export type CustomerBillingControlsParams = z.input<

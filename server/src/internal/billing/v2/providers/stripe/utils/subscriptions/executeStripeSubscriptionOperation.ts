@@ -2,6 +2,7 @@ import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
 import { InternalError, nullish } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
 import { willStripeSubscriptionUpdateCreateInvoice } from "./willStripeSubscriptionUpdateCreateInvoice";
 
@@ -30,15 +31,13 @@ export const executeStripeSubscriptionOperation = async ({
 		stripeSubscriptionAction: subscriptionAction,
 	});
 
-	// default incomplete used so that payment failure / 3ds errors are clearly handled
+	// default_incomplete surfaces payment/3DS errors clearly.
 	const createPaymentBehavior =
 		nullish(paymentMethod) || paymentMethod?.type === "custom"
 			? "default_incomplete"
 			: "allow_incomplete";
 
-	// If customer's invoice_settings.default_payment_method is null but we
-	// resolved a payment method from the customer's attached PMs, pass it
-	// explicitly so Stripe knows which PM to charge.
+	// Pass resolved PM explicitly when customer has no default PM set.
 	const customerHasDefaultPm =
 		billingContext.stripeCustomer?.invoice_settings?.default_payment_method;
 
@@ -47,14 +46,16 @@ export const executeStripeSubscriptionOperation = async ({
 			? { default_payment_method: paymentMethod.id }
 			: {};
 
-	const userMeta = mergeStripeMetadata({
+	const autumnMeta = mergeStripeMetadata({
 		userMetadata: billingContext.userMetadata,
+		autumnMetadata: buildAutumnSubscriptionMetadata({
+			actionSource: billingContext.actionSource,
+		}),
 	});
-
-	const createMeta = mergeStripeMetadata({
-		userMetadata: billingContext.userMetadata,
-		autumnMetadata: { autumn_managed: "true" },
-	});
+	// Skip auto_tax in invoice mode: send_invoice has no address-collection
+	// UI so Stripe Tax rejects.
+	const wantsAutoTax =
+		!!ctx.org.config.automatic_tax && !billingContext.invoiceMode;
 
 	switch (subscriptionAction.type) {
 		case "update": {
@@ -76,15 +77,13 @@ export const executeStripeSubscriptionOperation = async ({
 				stripeSubscription?.default_payment_method;
 			const shouldResetBillingCycleAnchorNow =
 				billingContext.requestedBillingCycleAnchor === "now";
-			// const shouldSkipResetForProrationNone =
-			// 	billingContext.requestedProrationBehavior === "none" &&
-			// 	!billingContext.anchorResetRefund?.noPartialRefund;
 
 			if (shouldResetBillingCycleAnchorNow) {
 				stripeSubscription = await stripeClient.subscriptions.update(
 					subscriptionAction.stripeSubscriptionId,
 					{
 						...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
+						...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 						billing_cycle_anchor: "now",
 						proration_behavior: "none",
 						payment_behavior: "error_if_incomplete",
@@ -93,13 +92,19 @@ export const executeStripeSubscriptionOperation = async ({
 				);
 			}
 
+			// Strip `automatic_tax` from the action params so we can re-apply
+			// it here conditioned on `wantsAutoTax` (invoice-mode skip).
+			const { automatic_tax: _builtAutoTax, ...paramsWithoutAutoTax } =
+				subscriptionAction.params;
+
 			return await stripeClient.subscriptions.update(
 				subscriptionAction.stripeSubscriptionId,
 				{
-					...subscriptionAction.params,
+					...paramsWithoutAutoTax,
 					...(subscriptionHasDefaultPm ? {} : fallbackPaymentMethodParams),
 					...(updateWillCreateInvoice ? invoiceModeParams : {}),
-					...(userMeta && { metadata: userMeta }),
+					...(autumnMeta && { metadata: autumnMeta }),
+					...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 					payment_behavior: "error_if_incomplete",
 					expand: ["latest_invoice"],
 				},
@@ -110,7 +115,8 @@ export const executeStripeSubscriptionOperation = async ({
 				...subscriptionAction.params,
 				...invoiceModeParams,
 				...fallbackPaymentMethodParams,
-				...(createMeta && { metadata: createMeta }),
+				...(autumnMeta && { metadata: autumnMeta }),
+				...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 
 				billing_mode: { type: "flexible" },
 

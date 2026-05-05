@@ -4,11 +4,16 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, type Organization, organizations } from "@autumn/shared";
 
 import chalk from "chalk";
+import { eq } from "drizzle-orm";
+import { initDrizzle } from "@/db/initDrizzle.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis } from "@/external/redis/initRedis.js";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
+import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import { clearOrg } from "./utils/setup/clearOrg.js";
 import { setupOrg } from "./utils/setup/setupOrg.js";
 
@@ -31,6 +36,68 @@ export const clearMasterOrg = async () => {
 			process.exit(1);
 		}
 
+		// This is the only path that deletes platform sub-orgs. Tests using
+		// `s.platform.create(...)` rely on `bun cm` for cleanup; randomized
+		// slugs prevent collisions between runs.
+		{
+			const { db, client } = initDrizzle();
+			try {
+				const masterOrg = await OrgService.getBySlug({
+					db,
+					slug: process.env.TESTS_ORG,
+				});
+
+				if (!masterOrg) {
+					console.log(
+						chalk.yellow(
+							`\n⚠️  Master org '${process.env.TESTS_ORG}' not found; skipping sub-org cleanup.\n`,
+						),
+					);
+				} else {
+					const subOrgs = (await db.query.organizations.findMany({
+						where: eq(organizations.created_by, masterOrg.id),
+					})) as Organization[];
+
+					console.log(
+						chalk.blue(
+							`\n🧹 Found ${subOrgs.length} platform sub-org(s) to delete...\n`,
+						),
+					);
+
+					const BATCH_SIZE = 10;
+					for (let i = 0; i < subOrgs.length; i += BATCH_SIZE) {
+						const batch = subOrgs.slice(i, i + BATCH_SIZE);
+						await Promise.all(
+							batch.map(async (subOrg) => {
+								try {
+									await deletePlatformSubOrg({
+										db,
+										org: subOrg,
+										logger,
+										skipLiveCustomerCheck: true,
+									});
+									console.log(
+										chalk.green(
+											`   ✅ Deleted sub-org ${subOrg.slug} (${subOrg.id})`,
+										),
+									);
+								} catch (err) {
+									console.error(
+										chalk.red(
+											`   ❌ Failed to delete sub-org ${subOrg.slug} (${subOrg.id}):`,
+										),
+										err,
+									);
+								}
+							}),
+						);
+					}
+				}
+			} finally {
+				await client.end();
+			}
+		}
+
 		const org = await clearOrg({
 			orgSlug: process.env.TESTS_ORG ?? "",
 			env: AppEnv.Sandbox,
@@ -47,7 +114,7 @@ export const clearMasterOrg = async () => {
 		const isRegionalRedisUrl = (url: string | undefined) =>
 			(url ?? "").toLowerCase().includes("redis-17710.mc1716-0.us");
 
-		// Flush primary cache if not pointed at regional Redis
+		// Flush primary cache unless pointed at regional Redis.
 		const redisUrl = process.env.REDIS_URL ?? process.env.BUN_REDIS_URL ?? "";
 		if (!isRegionalRedisUrl(redisUrl)) await redis.flushall();
 		else
@@ -57,7 +124,7 @@ export const clearMasterOrg = async () => {
 				),
 			);
 
-		// Flush v2 cache (CACHE_V2_URL) if it's a distinct, non-regional connection
+		// Flush v2 cache when distinct and non-regional.
 		const cacheV2Url = process.env.CACHE_V2_UPSTASH_URL?.trim();
 		if (redisV2 !== redis && cacheV2Url) {
 			if (!isRegionalRedisUrl(cacheV2Url)) {

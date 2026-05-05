@@ -8,6 +8,7 @@ import { stripeLegacySeederMiddleware } from "./webhookMiddlewares/stripeLegacyS
 import { stripeSyncMiddleware } from "./webhookMiddlewares/stripeSyncMiddleware.js";
 import { stripeToAutumnCustomerMiddleware } from "./webhookMiddlewares/stripeToAutumnCustomerMiddleware.js";
 import type { StripeWebhookHonoEnv } from "./webhookMiddlewares/stripeWebhookContext.js";
+import { stripeWebhookEarlyAckMiddleware } from "./webhookMiddlewares/stripeWebhookEarlyAckMiddleware.js";
 import { stripeWebhookRefreshMiddleware } from "./webhookMiddlewares/stripeWebhookRefreshMiddleware.js";
 
 export const stripeWebhookRouter = new Hono<StripeWebhookHonoEnv>();
@@ -16,12 +17,13 @@ export const stripeWebhookRouter = new Hono<StripeWebhookHonoEnv>();
 stripeWebhookRouter.post(
 	"/webhooks/stripe/:orgId/:env",
 	stripeLegacySeederMiddleware,
+	stripeIdempotencyMiddleware,
+	stripeWebhookEarlyAckMiddleware,
 	stripeWebhookRefreshMiddleware,
 	stripeSyncMiddleware,
 	stripeToAutumnCustomerMiddleware,
 	stripeLoggerMiddleware,
 	traceEnrichMiddleware,
-	stripeIdempotencyMiddleware,
 	handleStripeWebhookEvent,
 );
 
@@ -29,11 +31,12 @@ stripeWebhookRouter.post(
 stripeWebhookRouter.post(
 	"/webhooks/connect/:env",
 	stripeConnectSeederMiddleware,
+	stripeIdempotencyMiddleware,
+	stripeWebhookEarlyAckMiddleware,
 	stripeWebhookRefreshMiddleware,
 	stripeSyncMiddleware,
 	stripeToAutumnCustomerMiddleware,
 	stripeLoggerMiddleware,
 	traceEnrichMiddleware,
-	stripeIdempotencyMiddleware,
 	handleStripeWebhookEvent,
 );

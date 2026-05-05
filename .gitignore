@@ -16,6 +16,7 @@ supabase.sh
 **/dist/
 **/.next/
 **/.vercel/
+**/.turbo/
 **/.DS_Store
 **/.env*
 tests/
@@ -142,3 +143,5 @@ TAKEHOME.md
 .mcp.json
 .opencode/skills/
 AGENTS.md
+
+server/.turbo

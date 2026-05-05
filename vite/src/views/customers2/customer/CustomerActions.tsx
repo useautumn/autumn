@@ -5,7 +5,6 @@ import {
 	ArrowsClockwiseIcon,
 	BracketsSquareIcon,
 	CaretDownIcon,
-	LinkIcon,
 	PencilSimpleIcon,
 	SubtractIcon,
 	TicketIcon,
@@ -28,11 +27,12 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
+import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr } from "@/utils/genUtils";
+import { getBackendErr, notNullish } from "@/utils/genUtils";
 import {
 	getRevenueCatCusLink,
 	getStripeConnectViewAsLink,
@@ -64,8 +64,22 @@ export function CustomerActions() {
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
+	const { data: sessionData } = useSession();
 
 	const stripeCustomerId = customer?.processor?.id;
+	const stripeConnectViewAsCustomerLink =
+		isAdmin &&
+		notNullish(sessionData?.session?.impersonatedBy) &&
+		masterStripeAccount?.id &&
+		stripeAccount?.id &&
+		stripeCustomerId
+			? getStripeConnectViewAsLink({
+					masterAccountId: masterStripeAccount.id,
+					connectedAccountId: stripeAccount.id,
+					env,
+					path: `customers/${stripeCustomerId}`,
+				})
+			: null;
 
 	const hasContinuousUseFeatures = features?.some(
 		(feature: Feature) =>
@@ -187,11 +201,12 @@ export function CustomerActions() {
 							<DropdownMenuItem
 								onClick={() => {
 									window.open(
-										getStripeCusLink({
-											customerId: stripeCustomerId,
-											env,
-											accountId: stripeAccount?.id,
-										}),
+										stripeConnectViewAsCustomerLink ??
+											getStripeCusLink({
+												customerId: stripeCustomerId,
+												env,
+												accountId: stripeAccount?.id,
+											}),
 										"_blank",
 									);
 								}}
@@ -216,28 +231,6 @@ export function CustomerActions() {
 							Open in Admin Panel
 						</DropdownMenuItem>
 					)}
-					{isAdmin &&
-						masterStripeAccount?.id &&
-						stripeAccount?.id &&
-						customer?.processor?.type === ProcessorType.Stripe && (
-							<DropdownMenuItem
-								onClick={() => {
-									window.open(
-										getStripeConnectViewAsLink({
-											masterAccountId: masterStripeAccount.id,
-											connectedAccountId: stripeAccount.id,
-											env,
-											path: `customers/${stripeCustomerId}`,
-										}),
-										"_blank",
-									);
-								}}
-								className="flex gap-2"
-							>
-								<LinkIcon className="size-3.5" />
-								View in Stripe Connect
-							</DropdownMenuItem>
-						)}
 					{((customer?.processor?.id &&
 						customer.processor.type === ProcessorType.RevenueCat) ||
 						customer?.customer_products?.some(

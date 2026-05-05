@@ -8,6 +8,7 @@ import {
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getStripeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata.js";
 import { toSuccessUrl } from "@/internal/orgs/orgUtils/convertOrgUtils.js";
 import { orgToCurrency } from "@/internal/orgs/orgUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -114,7 +115,7 @@ export const handleCreateCheckout = async ({
 					: {}),
 				metadata: {
 					...(checkoutSubscriptionData?.metadata ?? {}),
-					autumn_managed: "true",
+					...buildAutumnSubscriptionMetadata({ actionSource: "v1Attach" }),
 				},
 			}
 		: undefined;
@@ -152,6 +153,19 @@ export const handleCreateCheckout = async ({
 		...rewardData,
 		...(attachParams.checkoutSessionParams || {}),
 		...(isRecurring ? { subscription_data: subscriptionData } : {}),
+		// Autumn auto_tax wins over user-supplied checkoutSessionParams.
+		// `billing_address_collection: "required"` is required: with "auto"
+		// Stripe only collects country, leaving auto_tax stuck at
+		// `requires_location_inputs`. `customer_update.address` writes the
+		// captured address back to the customer for future renewals.
+		...(org.config.automatic_tax
+			? {
+					automatic_tax: { enabled: true },
+					billing_address_collection: "required" as const,
+					customer_update: { address: "auto", name: "auto" },
+					tax_id_collection: { enabled: true },
+				}
+			: {}),
 		metadata: {
 			...(attachParams.metadata ? attachParams.metadata : {}),
 			...(checkoutParams?.metadata || {}),
@@ -172,6 +186,14 @@ export const handleCreateCheckout = async ({
 			success_url: successUrl || toSuccessUrl({ org, env: customer.env }),
 			currency: org.default_currency || "usd",
 			...checkoutParams,
+			...(org.config.automatic_tax
+				? {
+						automatic_tax: { enabled: true },
+						billing_address_collection: "required" as const,
+						customer_update: { address: "auto", name: "auto" },
+						tax_id_collection: { enabled: true },
+					}
+				: {}),
 			metadata: {
 				...(checkoutParams?.metadata || {}),
 				autumn_metadata_id: metadata.id,

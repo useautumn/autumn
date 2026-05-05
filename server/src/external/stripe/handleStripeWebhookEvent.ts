@@ -10,6 +10,7 @@ import { getSentryTags } from "../sentry/sentryUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
 import { handleStripeCheckoutSessionCompleted } from "./webhookHandlers/handleStripeCheckoutSessionCompleted/handleStripeCheckoutSessionCompleted.js";
+import { handleStripeCheckoutSessionExpired } from "./webhookHandlers/handleStripeCheckoutSessionExpired/handleStripeCheckoutSessionExpired.js";
 import { handleStripeInvoiceCreated } from "./webhookHandlers/handleStripeInvoiceCreated/handleStripeInvoiceCreated.js";
 import { handleStripeInvoiceFinalized } from "./webhookHandlers/handleStripeInvoiceFinalized/handleStripeInvoiceFinalized.js";
 import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
@@ -82,6 +83,11 @@ export const handleStripeWebhookEvent = async (
 
 			case "checkout.session.completed": {
 				await handleStripeCheckoutSessionCompleted({ ctx, event });
+				break;
+			}
+
+			case "checkout.session.expired": {
+				await handleStripeCheckoutSessionExpired({ ctx, event });
 				break;
 			}
 		}

@@ -242,6 +242,7 @@ export const setupAttachBillingContext = async ({
 			: params.proration_behavior,
 
 		invoiceMode,
+		enablePlanImmediately: params.enable_plan_immediately ?? false,
 
 		customPrices,
 		customEnts,
@@ -251,6 +252,7 @@ export const setupAttachBillingContext = async ({
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 
 		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
+		actionSource: "attach",
 		successUrl:
 			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
 		checkoutSessionParams: params.checkout_session_params,

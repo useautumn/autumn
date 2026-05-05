@@ -55,6 +55,7 @@ import {
 } from "../hooks/usePreviewDiff";
 
 interface AttachFormContextValue {
+	customerId: string | undefined;
 	form: UseAttachForm;
 	formValues: AttachForm;
 	features: Feature[];
@@ -84,13 +85,18 @@ interface AttachFormContextValue {
 	handleGrantFreeToggle: (params: { enabled: boolean }) => void;
 
 	isPending: boolean;
-	handleConfirm: () => void;
+	handleConfirm: (params?: { enableProductImmediately?: boolean }) => void;
 	handleInvoiceAttach: (params: {
 		enableProductImmediately: boolean;
 		finalizeInvoice: boolean;
 	}) => Promise<{
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
+	}>;
+	handleCheckoutAttach: (params: {
+		enablePlanImmediately: boolean;
+	}) => Promise<{
+		paymentUrl: string | null | undefined;
 	}>;
 }
 
@@ -178,6 +184,7 @@ export function AttachFormProvider({
 		discounts,
 		grantFree,
 		noBillingChanges,
+		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -314,7 +321,9 @@ export function AttachFormProvider({
 					? newInitialPrepaidOptions
 					: { ...newInitialPrepaidOptions, ...currentPrepaidOptions };
 			form.setFieldValue("prepaidOptions", resolvedPrepaidOptions);
-			setInitialPrepaidOptions(resolvedPrepaidOptions);
+			setInitialPrepaidOptions(
+				resolvedPrepaidOptions as Record<string, number>,
+			);
 
 			if (product.free_trial) {
 				form.setFieldValue("trialEnabled", true);
@@ -381,6 +390,7 @@ export function AttachFormProvider({
 		resetBillingCycle,
 		discounts,
 		noBillingChanges,
+		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -415,7 +425,12 @@ export function AttachFormProvider({
 		incomingItems: originalItems,
 	});
 
-	const { handleConfirm, handleInvoiceAttach, isPending } = useAttachMutation({
+	const {
+		handleConfirm,
+		handleInvoiceAttach,
+		handleCheckoutAttach,
+		isPending,
+	} = useAttachMutation({
 		customerId,
 		buildRequestBody,
 		onCheckoutRedirect,
@@ -475,6 +490,7 @@ export function AttachFormProvider({
 	const value = useMemo<AttachFormContextValue>(
 		() => ({
 			form,
+			customerId,
 			formValues,
 			features,
 			entityId,
@@ -498,8 +514,10 @@ export function AttachFormProvider({
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,
+			handleCheckoutAttach,
 		}),
 		[
+			customerId,
 			form,
 			formValues,
 			features,
@@ -523,6 +541,7 @@ export function AttachFormProvider({
 			isPending,
 			handleConfirm,
 			handleInvoiceAttach,
+			handleCheckoutAttach,
 		],
 	);
 

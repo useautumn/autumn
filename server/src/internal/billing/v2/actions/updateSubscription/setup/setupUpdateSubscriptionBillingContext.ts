@@ -162,9 +162,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	});
 
 	checkoutMode =
-		params.redirect_mode === "always" && Boolean(checkoutMode)
-			? checkoutMode
-			: null; // For update subscription, always use autumn_checkout for now
+		params.redirect_mode === "always" && checkoutMode ? checkoutMode : null; // For update subscription, always use autumn_checkout for now
 
 	const intent = setupUpdateSubscriptionIntent({
 		params,
@@ -202,9 +200,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		trialContext,
 		isCustom,
 
-		billingVersion: contextOverride.billingVersion
-			? contextOverride.billingVersion
-			: (customerProduct.billing_version ?? BillingVersion.V2),
+		billingVersion: contextOverride.billingVersion ?? BillingVersion.V2,
+
+		actionSource: "updateSubscription",
 
 		skipBillingChanges,
 

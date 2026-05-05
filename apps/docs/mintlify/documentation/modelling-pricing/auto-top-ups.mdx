@@ -171,3 +171,7 @@ This limits the customer to 5 auto top-ups per month. Supported intervals: `hour
 <Note>
 Auto top-ups use burst suppression to prevent duplicate purchases when multiple track events happen in quick succession. There's a 30-second cooldown between top-ups for the same feature.
 </Note>
+
+## Notifications
+
+Subscribe to the [`billing.auto_topup_succeeded`](/api-reference/webhooks/billingAutoTopupSucceeded) webhook to be notified when a top-up grants credits. The payload includes the granted quantity, the new balance, and the underlying invoice — useful for sending receipts, updating internal ledgers, or reconciling balance after a recharge.
