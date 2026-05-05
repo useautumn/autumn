@@ -1,0 +1,23 @@
+server/src/internal/balances/events/runInsertEventBatch.ts
+  b76adc7f38903939 1,24,27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "f50064725fd9433fce269313722c44689cd94704",
+  "prompts": {
+    "b76adc7f38903939": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20879e2d0ffeMiHluSlel53e16",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 3,
+      "total_deletions": 4,
+      "accepted_lines": 3,
+      "overriden_lines": 0
+    }
+  }
+}
