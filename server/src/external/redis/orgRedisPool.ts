@@ -1,6 +1,7 @@
 import type { OrgRedisConfig } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 import { createRedisConnection, currentRegion } from "./initRedis.js";
@@ -34,11 +35,11 @@ const createOrgRedisConnection = ({
 	});
 
 	instance.on("error", (error) => {
-		console.error(`[OrgRedis] org=${orgId}: ${error.message}`);
+		logger.error(`[OrgRedis] org=${orgId}: ${error.message}`);
 	});
 
 	instance.on("ready", () => {
-		console.log(`[OrgRedis] org=${orgId}: connected`);
+		logger.info(`[OrgRedis] org=${orgId}: connected`);
 	});
 
 	return instance;
@@ -57,10 +58,13 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 	let connectionString: string;
 	try {
 		connectionString = decryptData(org.redis_config.connectionString);
-	} catch {
-		console.error(
+	} catch (error) {
+		logger.error(
 			`[OrgRedis] Failed to decrypt redis_config for org ${org.id}, falling back to shared Redis V2`,
 		);
+		if (error instanceof Error) {
+			logger.error(error);
+		}
 		return resolveRedisV2();
 	}
 
@@ -70,14 +74,6 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 	});
 	pool.set(org.id, { instance, url: org.redis_config.url });
 	return instance;
-};
-
-export const getPooledOrgRedis = ({
-	orgId,
-}: {
-	orgId: string;
-}): Redis | null => {
-	return pool.get(orgId)?.instance ?? null;
 };
 
 export const removeOrgRedis = ({ orgId }: { orgId: string }): void => {
@@ -96,7 +92,7 @@ export const preWarmOrgRedisConnections = async ({
 
 	if (orgsWithRedis.length === 0) return;
 
-	console.log(
+	logger.info(
 		`[OrgRedis] Pre-warming connections for ${orgsWithRedis.length} orgs in ${currentRegion}...`,
 	);
 

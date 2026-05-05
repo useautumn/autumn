@@ -77,7 +77,6 @@ export const runProductCron = async ({
 					await batchInvalidateCachedFullSubjects({
 						customers: customersToDelete,
 						featuresByOrgEnv,
-						redisV2: ctx.redisV2,
 						getRedisForCustomer: ({ customer }) =>
 							resolveCustomerRedisRouting({
 								org,

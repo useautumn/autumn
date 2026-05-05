@@ -100,13 +100,11 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 export const batchInvalidateCachedFullSubjects = async ({
 	customers,
 	featuresByOrgEnv,
-	redisV2,
 	getRedisForCustomer,
 }: {
 	customers: BatchInvalidateCustomer[];
 	featuresByOrgEnv: FeaturesByOrgEnv;
-	redisV2: Redis;
-	getRedisForCustomer?: ({
+	getRedisForCustomer: ({
 		customer,
 	}: {
 		customer: BatchInvalidateCustomer;
@@ -115,15 +113,6 @@ export const batchInvalidateCachedFullSubjects = async ({
 	if (customers.length === 0) return 0;
 
 	const deleted = await batchDeleteCachedFullCustomers({ customers });
-
-	if (!getRedisForCustomer) {
-		await batchInvalidateCachedFullSubjectsOnRedis({
-			customers,
-			featuresByOrgEnv,
-			redisV2,
-		});
-		return deleted;
-	}
 
 	const customersByRedis = new Map<Redis, BatchInvalidateCustomer[]>();
 	for (const customer of customers) {

@@ -50,7 +50,7 @@ export const resolveCustomerRedisRouting = ({
 	};
 };
 
-export const setCustomerRedisRouting = ({
+export const assignCustomerRedisToCtx = ({
 	ctx,
 	customerId = ctx.customerId,
 }: {

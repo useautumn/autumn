@@ -9,7 +9,6 @@ import {
 import { and, asc, count, eq, gt, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { resolveCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
-import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import type { Logger } from "../../../external/logtail/logtailUtils";
@@ -166,7 +165,6 @@ export const runClearCreditSystemCacheTask = async ({
 			const deleted = await batchInvalidateCachedFullSubjects({
 				customers: customersToDelete,
 				featuresByOrgEnv,
-				redisV2: resolveRedisV2(),
 				getRedisForCustomer: ({ customer }) =>
 					resolveCustomerRedisRouting({
 						org: orgWithFeatures.org,
