@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { Organization, OrgRedisConfig } from "@autumn/shared";
 import {
 	getCustomerBucket,
+	getCustomerRedisRoutingId,
 	getCustomerRedisRoutingInfoForOrg,
 	getRedisUrlForCustomerFromOrg,
 } from "@/external/redis/customerRedisRoutingInfo.js";
@@ -43,6 +44,28 @@ const findCustomerInBucketRange = ({
 };
 
 describe("customer Redis routing", () => {
+	test("uses the public customer ID as the routing ID when present", () => {
+		expect(
+			getCustomerRedisRoutingId({
+				customer: {
+					id: "cus_public",
+					internal_id: "cus_internal",
+				},
+			}),
+		).toBe("cus_public");
+	});
+
+	test("falls back to internal ID for customers without a public ID", () => {
+		expect(
+			getCustomerRedisRoutingId({
+				customer: {
+					id: null,
+					internal_id: "cus_internal",
+				},
+			}),
+		).toBe("cus_internal");
+	});
+
 	test("assigns a deterministic bucket from 0 to 99", () => {
 		const bucket = getCustomerBucket("cus_abc123");
 

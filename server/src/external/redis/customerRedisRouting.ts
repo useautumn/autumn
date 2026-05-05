@@ -6,6 +6,7 @@ import { resolveRedisV2 } from "./resolveRedisV2.js";
 export {
 	type CustomerRedisRoutingInfo,
 	getCustomerBucket,
+	getCustomerRedisRoutingId,
 	getRedisUrlForCustomerFromOrg,
 	isRedisMigrationCacheStale,
 } from "./customerRedisRoutingInfo.js";

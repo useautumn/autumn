@@ -10,7 +10,10 @@ import { StatusCodes } from "http-status-codes";
 import type { Stripe } from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { resolveCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
+import {
+	getCustomerRedisRoutingId,
+	resolveCustomerRedisRouting,
+} from "@/external/redis/customerRedisRouting.js";
 import { createStripeCustomer } from "@/external/stripe/customers";
 import { CusService } from "@/internal/customers/CusService.js";
 
@@ -152,7 +155,7 @@ export const attachPmToCus = async ({
 			logger: logger,
 			redisV2: resolveCustomerRedisRouting({
 				org,
-				customerId: customer.id ?? customer.internal_id,
+				customerId: getCustomerRedisRoutingId({ customer }),
 			}).redis,
 		};
 
