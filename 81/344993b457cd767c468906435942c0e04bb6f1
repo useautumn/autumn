@@ -1,0 +1,53 @@
+server/src/internal/billing/v2/providers/stripe/utils/invoices/payStripeInvoice.ts
+  4390b22e3ed16722 53-63
+server/src/internal/balances/autoTopUp/autoTopup.ts
+  4390b22e3ed16722 92,94,103-106
+server/src/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling.ts
+  4390b22e3ed16722 72-76,82-88
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "81344993b457cd767c468906435942c0e04bb6f1",
+  "prompts": {
+    "1d80a02ef74e82ab": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_22bbbeabeffetb4y46a0SN2YEl",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 4,
+      "total_deletions": 2,
+      "accepted_lines": 0,
+      "overriden_lines": 2
+    },
+    "4269cfb5b98e06e3": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "75b0d739-358f-4ee1-aba1-15d6d232ceae",
+        "model": "gpt-5.5"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 32,
+      "total_deletions": 30,
+      "accepted_lines": 26,
+      "overriden_lines": 0
+    },
+    "4390b22e3ed16722": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_22bcdf4eeffemT4QvB608JFkSa",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 618,
+      "total_deletions": 450,
+      "accepted_lines": 317,
+      "overriden_lines": 1
+    }
+  }
+}
