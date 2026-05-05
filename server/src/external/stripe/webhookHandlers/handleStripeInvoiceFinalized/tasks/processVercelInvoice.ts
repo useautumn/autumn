@@ -1,11 +1,13 @@
+import type Stripe from "stripe";
+import type { ExpandedStripeInvoice } from "@/external/stripe/invoices/operations/getStripeInvoice";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import {
 	submitBillingDataToVercel,
 	submitInvoiceToVercel,
 } from "@/external/vercel/misc/vercelInvoicing";
 import { logVercelWebhook } from "@/external/vercel/misc/vercelMiddleware";
+import { FeatureService } from "@/internal/features/FeatureService";
 import { ProductService } from "@/internal/products/ProductService";
-import type { InvoiceFinalizedContext } from "../setupInvoiceFinalizedContext";
 
 /**
  * Handles Vercel custom payment method invoices.
@@ -13,38 +15,46 @@ import type { InvoiceFinalizedContext } from "../setupInvoiceFinalizedContext";
  */
 export const processVercelInvoice = async ({
 	ctx,
-	eventContext,
+	stripeInvoice,
+	stripeSubscription,
 }: {
 	ctx: StripeWebhookContext;
-	eventContext: InvoiceFinalizedContext;
+	stripeInvoice: ExpandedStripeInvoice<
+		["discounts.source.coupon", "total_discount_amounts"]
+	>;
+	stripeSubscription: Stripe.Subscription | null;
 }): Promise<void> => {
-	const { stripeCli, org, logger, fullCustomer } = ctx;
-	const { stripeInvoice, stripeSubscription, features } = eventContext;
+	const { stripeCli, org, env, db, logger, fullCustomer } = ctx;
 
-	// Skip zero-amount invoices
 	if (stripeInvoice.amount_due <= 0) {
 		return;
 	}
 
-	// Check for Vercel metadata
+	const invoiceMetadata = stripeInvoice.metadata as Record<
+		string,
+		string
+	> | null;
+
 	const vercelInstallationId =
-		stripeSubscription.metadata?.vercel_installation_id;
+		stripeSubscription?.metadata?.vercel_installation_id ??
+		invoiceMetadata?.vercel_installation_id;
 	const vercelBillingPlanId =
-		stripeSubscription.metadata?.vercel_billing_plan_id;
+		stripeSubscription?.metadata?.vercel_billing_plan_id ??
+		invoiceMetadata?.vercel_billing_plan_id;
 
 	if (!vercelInstallationId || !vercelBillingPlanId) {
 		return;
 	}
 
-	// Check for default payment method
-	if (!stripeSubscription.default_payment_method) {
+	const pmId =
+		(stripeSubscription?.default_payment_method as string | undefined) ??
+		fullCustomer?.processors?.vercel?.custom_payment_method_id;
+
+	if (!pmId) {
 		return;
 	}
 
-	// Verify it's a Vercel custom payment method
-	const paymentMethod = await stripeCli.paymentMethods.retrieve(
-		stripeSubscription.default_payment_method as string,
-	);
+	const paymentMethod = await stripeCli.paymentMethods.retrieve(pmId);
 
 	if (paymentMethod.type !== "custom" || !fullCustomer) {
 		return;
@@ -62,9 +72,9 @@ export const processVercelInvoice = async ({
 
 	// Get product for Vercel billing
 	const product = await ProductService.getFull({
-		db: ctx.db,
+		db,
 		orgId: org.id,
-		env: ctx.env,
+		env,
 		idOrInternalId: vercelBillingPlanId,
 	});
 
@@ -75,8 +85,13 @@ export const processVercelInvoice = async ({
 		return;
 	}
 
+	const features = await FeatureService.list({
+		db,
+		orgId: org.id,
+		env,
+	});
+
 	try {
-		// Submit billing data to Vercel (detailed usage breakdown)
 		await submitBillingDataToVercel({
 			installationId: vercelInstallationId,
 			invoice: stripeInvoice,
@@ -84,7 +99,6 @@ export const processVercelInvoice = async ({
 			product,
 		});
 
-		// Submit invoice to Vercel
 		await submitInvoiceToVercel({
 			installationId: vercelInstallationId,
 			invoice: stripeInvoice,
@@ -93,13 +107,6 @@ export const processVercelInvoice = async ({
 			org,
 			features,
 		});
-
-		// Note: Do NOT report payment to Stripe here - we've only submitted the invoice to Vercel
-		// Vercel will process payment asynchronously and send marketplace.invoice.paid webhook
-		// handleMarketplaceInvoicePaid will then:
-		//   1. Create cus_product (user gets access)
-		//   2. Report payment as "guaranteed" to Stripe
-		//   3. Attach payment record to invoice (marks it as paid)
 	} catch (error) {
 		logger.error("Failed to process Vercel invoice", {
 			data: {
