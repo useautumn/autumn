@@ -7,19 +7,8 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { augmentCheckoutParams } from "../utils/augmentCheckoutParams";
+import { getAdjustableFeatureIds } from "../utils/getAdjustableFeatureIds";
 import { previewCheckoutAction } from "../utils/previewCheckoutAction/previewCheckoutAction";
-
-const getAdjustableFeatureIds = ({ checkout }: { checkout: Checkout }) => {
-	if (!("feature_quantities" in checkout.params)) {
-		return [];
-	}
-
-	return (
-		checkout.params.feature_quantities
-			?.filter((featureQuantity) => featureQuantity.adjustable === true)
-			.map((featureQuantity) => featureQuantity.feature_id) ?? []
-	);
-};
 
 /**
  * POST /checkouts/:checkout_id/preview

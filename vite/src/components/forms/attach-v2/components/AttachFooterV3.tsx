@@ -1,3 +1,4 @@
+import { addHours, isAfter } from "date-fns";
 import { Button } from "@/components/v2/buttons/Button";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 import {
@@ -9,9 +10,12 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
+import { isFutureStartDate } from "../utils/buildAttachPreviewTotals";
 
-function getConfirmLabel({
+export function getConfirmLabel({
 	previewData,
+	startDate,
+	now,
 }: {
 	previewData:
 		| {
@@ -21,17 +25,20 @@ function getConfirmLabel({
 		  }
 		| null
 		| undefined;
+	startDate: number | null;
+	now?: number;
 }): string {
 	if (!previewData) return "Attach Plan";
+	if (previewData.redirect_to_checkout) return "Generate Checkout URL";
+	if (isFutureStartDate(startDate, now)) return "Schedule Plan";
 
-	const sixHoursFromNow = Date.now() + 6 * 60 * 60 * 1000;
+	const sixHoursFromNow = addHours(now ?? Date.now(), 6);
 	const isScheduled = previewData.outgoing?.some(
 		(change) =>
-			change.effective_at !== null && change.effective_at > sixHoursFromNow,
+			change.effective_at !== null &&
+			isAfter(change.effective_at, sixHoursFromNow),
 	);
 	if (isScheduled) return "Schedule Change";
-
-	if (previewData.redirect_to_checkout) return "Generate Checkout URL";
 
 	if (previewData.total <= 0) return "Attach Plan";
 
@@ -39,22 +46,29 @@ function getConfirmLabel({
 }
 
 export function AttachFooterV3() {
-	const { isPending, previewQuery, handleConfirm } = useAttachFormContext();
+	const { isPending, previewQuery, handleConfirm, formValues } =
+		useAttachFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 
 	const { isEndOfCycleSelected } = usePlanScheduleField();
 
 	const previewData = previewQuery.data;
-	const confirmLabel = getConfirmLabel({ previewData });
+	const hasFutureStartDate = isFutureStartDate(formValues.startDate);
+	const confirmLabel = getConfirmLabel({
+		previewData,
+		startDate: formValues.startDate,
+	});
 
 	const isZeroAmount = previewData && previewData.total <= 0;
 
 	const invoiceDisabledReason = isEndOfCycleSelected
 		? "Invoices are not available for end of cycle changes as there is no immediate charge to invoice"
-		: isZeroAmount
-			? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
-			: null;
+		: hasFutureStartDate
+			? "Invoices are not available for future start dates. Schedule the plan instead."
+			: isZeroAmount
+				? "Cannot send an invoice for $0 amounts. Please confirm the change instead."
+				: null;
 
 	return (
 		<SheetFooter className="flex flex-col grid-cols-1 mt-0">

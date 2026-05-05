@@ -53,8 +53,11 @@ export const submitBillingDataToVercel = async ({
 	});
 
 	const firstLineItem = invoice.lines.data[0];
-	const periodStart = firstLineItem?.period?.start || invoice.period_start;
-	const periodEnd = firstLineItem?.period?.end || invoice.period_end;
+	const rawPeriodStart = firstLineItem?.period?.start || invoice.period_start;
+	const rawPeriodEnd = firstLineItem?.period?.end || invoice.period_end;
+	const periodStart = rawPeriodStart;
+	const periodEnd =
+		rawPeriodEnd > rawPeriodStart ? rawPeriodEnd : rawPeriodStart + 1;
 
 	// Map invoice line items to Vercel billing format
 	const billingItems = invoice.lines.data
@@ -128,8 +131,11 @@ export const submitInvoiceToVercel = async ({
 
 	// Get the actual billing period from line items (invoice period_start/end can be the same on creation)
 	const firstLineItem = invoice.lines.data[0];
-	const periodStart = firstLineItem?.period?.start || invoice.period_start;
-	const periodEnd = firstLineItem?.period?.end || invoice.period_end;
+	const rawPeriodStart = firstLineItem?.period?.start || invoice.period_start;
+	const rawPeriodEnd = firstLineItem?.period?.end || invoice.period_end;
+	const periodStart = rawPeriodStart;
+	const periodEnd =
+		rawPeriodEnd > rawPeriodStart ? rawPeriodEnd : rawPeriodStart + 1;
 
 	// Calculate total amount from invoice (includes subscription + usage charges)
 	const totalAmount = invoice.amount_due / 100;

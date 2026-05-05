@@ -27,7 +27,6 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
-import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -64,15 +63,11 @@ export function CustomerActions() {
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
-	const { data: sessionData } = useSession();
 
 	const stripeCustomerId = customer?.processor?.id;
+
 	const stripeConnectViewAsCustomerLink =
-		isAdmin &&
-		// notNullish(sessionData?.session?.impersonatedBy) &&
-		masterStripeAccount?.id &&
-		stripeAccount?.id &&
-		stripeCustomerId
+		isAdmin && masterStripeAccount?.id && stripeAccount?.id && stripeCustomerId
 			? getStripeConnectViewAsLink({
 					masterAccountId: masterStripeAccount.id,
 					connectedAccountId: stripeAccount.id,

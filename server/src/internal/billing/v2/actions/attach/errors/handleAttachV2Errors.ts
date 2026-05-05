@@ -11,12 +11,14 @@ import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/actions/attac
 import { handleCurrentCustomerProductErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrentCustomerProductErrors";
 import { handleNewBillingSubscriptionErrors } from "@/internal/billing/v2/actions/attach/errors/handleNewBillingSubscriptionErrors";
 import { handleScheduledSwitchOneOffErrors } from "@/internal/billing/v2/actions/attach/errors/handleScheduledSwitchOneOffErrors";
+import { handleStartDateErrors } from "@/internal/billing/v2/actions/attach/errors/handleStartDateErrors";
 import { handleStripeCheckoutErrors } from "@/internal/billing/v2/actions/attach/errors/handleStripeCheckoutErrors";
 import { handleTransitionConfigErrors } from "@/internal/billing/v2/actions/attach/errors/handleTransitionConfigErrors";
 import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/errors/handleBillingBehaviorErrors";
 import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors/handleCustomLineItemsErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
+import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
 export const handleAttachV2Errors = async ({
@@ -32,12 +34,15 @@ export const handleAttachV2Errors = async ({
 }) => {
 	const { autumn: autumnBillingPlan } = billingPlan;
 
-	// 1. External PSP errors (RevenueCat)
+	// 1.1. External PSP errors (RevenueCat)
 	handleExternalPSPErrors({
 		customerProducts: billingContext.fullCustomer.customer_products,
 		attachProduct: billingContext.attachProduct,
 		action: "attach",
 	});
+
+	// 1.2. Custom Payment Method errors (Vercel)
+	handleCustomPaymentMethodErrorsV2({ billingContext });
 
 	// 2. Current customer product errors (same product)
 	handleCurrentCustomerProductErrors({ billingContext });
@@ -54,6 +59,7 @@ export const handleAttachV2Errors = async ({
 	// 6. Scheduled switch with one-off prepaid quantities
 	handleScheduledSwitchOneOffErrors({ ctx, billingContext });
 	handleBillingCycleAnchorErrors({ billingContext });
+	handleStartDateErrors({ billingContext, params });
 
 	// 7. Transition config errors (reset_after_trial_end on allocated features)
 	handleTransitionConfigErrors({ ctx, billingContext });

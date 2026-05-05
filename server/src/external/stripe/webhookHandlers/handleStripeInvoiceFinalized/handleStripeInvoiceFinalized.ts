@@ -3,7 +3,6 @@ import { storeRenewalLineItems } from "@/external/stripe/webhookHandlers/common"
 import { invoiceActions } from "@/internal/invoices/actions";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 import { setupInvoiceFinalizedContext } from "./setupInvoiceFinalizedContext";
-import { processVercelInvoice } from "./tasks/processVercelInvoice";
 
 /**
  * Handles invoice.finalized webhook.
@@ -28,9 +27,6 @@ export const handleStripeInvoiceFinalized = async ({
 	ctx.logger.info(
 		`[invoice.finalized] Processing for invoice ${eventContext.stripeInvoice.id}`,
 	);
-
-	// 1. Handle Vercel custom payment method invoices
-	await processVercelInvoice({ ctx, eventContext });
 
 	// 2. Upsert Autumn invoice record
 	const autumnInvoice = await invoiceActions.updateFromStripe({

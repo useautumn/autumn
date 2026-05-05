@@ -125,10 +125,9 @@ export const DateInputUnix = ({
 	};
 
 	const handleDaySelect = (newDay: Date | undefined) => {
-		if (!newDay) {
-			setUnixDate(null);
-			return;
-		}
+		// Ignore deselect (re-clicking the selected day fires onSelect(undefined));
+		// callers should clear via their own control (e.g. a toggle), not via the calendar.
+		if (!newDay) return;
 
 		if (!withTime) {
 			setUnixDate(clampUnixDate(newDay.getTime()));
