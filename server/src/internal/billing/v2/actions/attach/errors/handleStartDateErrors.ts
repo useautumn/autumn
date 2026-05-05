@@ -60,14 +60,6 @@ export const handleStartDateErrors = ({
 		});
 	}
 
-	if (!billingContext.paymentMethod) {
-		throw new RecaseError({
-			message: "Future starts_at requires a saved payment method.",
-			code: ErrCode.InvalidRequest,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
-	}
-
 	if (billingContext.trialContext?.trialEndsAt) {
 		throw new RecaseError({
 			message: "Future starts_at cannot be used together with a free trial.",

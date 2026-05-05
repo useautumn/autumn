@@ -1,6 +1,5 @@
 import type { CheckoutMode, InvoiceMode, TrialContext } from "@autumn/shared";
 import {
-	type FullCusProduct,
 	type FullProduct,
 	isFreeProduct,
 	isOneOffProduct,
@@ -16,14 +15,12 @@ export const setupAttachCheckoutMode = ({
 	paymentMethod,
 	redirectMode,
 	attachProduct,
-	currentCustomerProduct,
 	stripeSubscription,
 	trialContext,
 	invoiceMode,
 	hasFutureStartDate,
 }: {
 	paymentMethod?: Stripe.PaymentMethod;
-	currentCustomerProduct?: FullCusProduct;
 	redirectMode?: RedirectMode;
 	attachProduct: FullProduct;
 	stripeSubscription?: Stripe.Subscription;
@@ -38,6 +35,10 @@ export const setupAttachCheckoutMode = ({
 	const productIsOneOff = isOneOffProduct({ prices });
 	const productIsFree = isFreeProduct({ prices });
 	const productIsPaidRecurring = !productIsOneOff && !productIsFree;
+
+	if (hasFutureStartDate && !hasPaymentMethod) {
+		return "stripe_checkout";
+	}
 
 	if (redirectMode === "never") {
 		return null;
@@ -65,9 +66,6 @@ export const setupAttachCheckoutMode = ({
 	};
 
 	const checkoutMode = getStripeCheckoutOrDirectBilling();
-	if (hasFutureStartDate && !hasPaymentMethod) {
-		return "stripe_checkout";
-	}
 
 	if (checkoutMode === null && redirectMode === "always") {
 		// 1. If it's one off product, return stripe_checkout
