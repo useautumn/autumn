@@ -26,6 +26,7 @@ export const runInsertEventBatch = async ({
 	if (!eventInserts || eventInserts.length === 0) return;
 	// Only insert sandbox events
 	eventInserts = eventInserts.filter((x) => x.env === AppEnv.Sandbox);
+	if (eventInserts.length === 0) return;
 
 	// Normalize timestamps
 	eventInserts.forEach((event) => {
