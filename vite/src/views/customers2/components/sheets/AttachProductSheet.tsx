@@ -145,7 +145,7 @@ function ReviewPreviewBlock() {
 		startDate: formValues.startDate,
 	});
 	const lineItemTotals = showTaxRow
-		? previewTotals.filter((total) => total.label !== "Total Due Now")
+		? previewTotals.filter((total) => total.variant !== "primary")
 		: previewTotals;
 
 	return (
