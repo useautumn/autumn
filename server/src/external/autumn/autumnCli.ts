@@ -35,6 +35,8 @@ import {
 	type LegacyVersion,
 	type OrgConfig,
 	type ProductItem,
+	type RestoreParamsV1,
+	type RestoreResponse,
 	type RewardRedemption,
 	type SetUsageParams,
 	type SetupPaymentParamsV1,
@@ -1110,6 +1112,10 @@ export class AutumnInt {
 				redirect_mode: "if_required",
 			});
 			return data;
+		},
+
+		restore: async (params: RestoreParamsV1): Promise<RestoreResponse> => {
+			return await this.post(`/billing.restore`, params);
 		},
 	};
 }

@@ -26,6 +26,7 @@ import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
 import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
+import { SyncStripeSheetV2 } from "../components/sync-stripe-v2/SyncStripeSheetV2";
 import { SHEET_ANIMATION } from "./customerAnimations";
 
 export function CustomerSheets() {
@@ -73,6 +74,8 @@ export function CustomerSheets() {
 			}
 			case "sync-stripe":
 				return <SyncStripeSheet />;
+			case "sync-stripe-v2":
+				return <SyncStripeSheetV2 />;
 			case "billing-auto-topup-add":
 			case "billing-auto-topup-edit":
 				return <BillingAutoTopupSheet />;

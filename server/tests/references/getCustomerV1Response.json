@@ -1,10 +1,10 @@
 {
   "id": "get-cus-multi-ent-v2",
-  "created_at": 1776681093029,
+  "created_at": 1777974355227,
   "name": "get-cus-multi-ent-v2",
   "email": "get-cus-multi-ent-v2@example.com",
   "fingerprint": null,
-  "stripe_id": "cus_UMz5mvPwIP5PS3",
+  "stripe_id": "cus_USajNwvM0pax2M",
   "env": "sandbox",
   "metadata": {},
   "send_email_receipts": false,
@@ -15,13 +15,25 @@
       "group": "get-cus-multi-ent-v2",
       "status": "active",
       "canceled_at": null,
-      "started_at": 1776681092000,
+      "started_at": 1777974354000,
       "is_default": false,
       "is_add_on": false,
       "version": 1,
-      "current_period_start": 1776681092000,
-      "current_period_end": 1779273092000,
+      "current_period_start": 1777974354000,
+      "current_period_end": 1780652754000,
       "items": [
+        {
+          "type": "price",
+          "feature_id": null,
+          "feature": null,
+          "interval": "month",
+          "interval_count": 1,
+          "price": 20,
+          "display": {
+            "primary_text": "$20",
+            "secondary_text": "per month"
+          }
+        },
         {
           "type": "feature",
           "feature_id": "dashboard",
@@ -71,7 +83,7 @@
       "group": "get-cus-multi-ent-v2",
       "status": "active",
       "canceled_at": null,
-      "started_at": 1776681113920,
+      "started_at": 1777974379436,
       "is_default": false,
       "is_add_on": false,
       "version": 1,
@@ -92,7 +104,7 @@
       "balance": 90,
       "usage": 10,
       "included_usage": 100,
-      "next_reset_at": 1779273092000,
+      "next_reset_at": 1780652754000,
       "overage_allowed": false,
       "breakdown": [
         {
@@ -101,7 +113,7 @@
           "balance": 90,
           "usage": 10,
           "included_usage": 100,
-          "next_reset_at": 1779273092000,
+          "next_reset_at": 1780652754000,
           "expires_at": null,
           "overage_allowed": false
         }
@@ -161,12 +173,12 @@
       "product_ids": [
         "cus-lvl_get-cus-multi-ent-v2"
       ],
-      "stripe_id": "in_1TOF756GVhH8pLcDfKcFgsHu",
+      "stripe_id": "in_1TTfYB6GVhvcrrMKf6xxH63K",
       "status": "paid",
       "total": 20,
       "currency": "usd",
-      "created_at": 1776681092000,
-      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3CcNrtgUERTv8MnmpqncpHXIwRk"
+      "created_at": 1777974354000,
+      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3DIfAkOjiIKZGi9svU7RnJrrSxy"
     }
   ]
 }
