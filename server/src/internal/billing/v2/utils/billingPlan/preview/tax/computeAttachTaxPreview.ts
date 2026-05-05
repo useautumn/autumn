@@ -1,6 +1,6 @@
 import type {
-	AttachBillingContext,
 	AutumnBillingPlan,
+	BillingContext,
 	PreviewTax,
 } from "@autumn/shared";
 import {
@@ -56,7 +56,7 @@ export const computeAttachTaxPreview = async ({
 	autumnBillingPlan,
 }: {
 	ctx: AutumnContext;
-	billingContext: AttachBillingContext;
+	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }): Promise<PreviewTax | undefined> => {
 	if (!ctx.org.config.automatic_tax) return undefined;
