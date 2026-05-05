@@ -76,6 +76,20 @@ export function augmentCheckoutParams({
 		});
 	};
 
+	const mergeDiscounts = ({
+		originalDiscounts,
+	}: {
+		originalDiscounts:
+			| AttachParamsV1["discounts"]
+			| UpdateSubscriptionV1Params["discounts"];
+	}) => {
+		if (!body.discounts?.length) {
+			return originalDiscounts;
+		}
+
+		return [...(originalDiscounts ?? []), ...body.discounts];
+	};
+
 	switch (checkout.action) {
 		case CheckoutAction.Attach: {
 			const originalParams = checkout.params as AttachParamsV1;
@@ -84,6 +98,9 @@ export function augmentCheckoutParams({
 				...originalParams,
 				feature_quantities: mergeFeatureQuantities({
 					originalFeatureQuantities: originalParams.feature_quantities,
+				}),
+				discounts: mergeDiscounts({
+					originalDiscounts: originalParams.discounts,
 				}),
 			};
 		}
@@ -94,6 +111,9 @@ export function augmentCheckoutParams({
 				...originalParams,
 				feature_quantities: mergeFeatureQuantities({
 					originalFeatureQuantities: originalParams.feature_quantities,
+				}),
+				discounts: mergeDiscounts({
+					originalDiscounts: originalParams.discounts,
 				}),
 			};
 		}
