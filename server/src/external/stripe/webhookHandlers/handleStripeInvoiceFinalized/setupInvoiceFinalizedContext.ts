@@ -11,7 +11,6 @@ import {
 import { stripeInvoiceToStripeSubscriptionId } from "@/external/stripe/invoices/utils/convertStripeInvoice";
 import { getExpandedStripeSubscription } from "@/external/stripe/subscriptions";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
-import { FeatureService } from "@/internal/features/FeatureService";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 
 export interface InvoiceFinalizedContext {
@@ -22,7 +21,6 @@ export interface InvoiceFinalizedContext {
 	stripeSubscriptionId: string;
 	fullCustomer: FullCustomer;
 	customerProducts: FullCusProduct[];
-	features: Awaited<ReturnType<typeof FeatureService.list>>;
 }
 
 export const setupInvoiceFinalizedContext = async ({
@@ -32,7 +30,7 @@ export const setupInvoiceFinalizedContext = async ({
 	ctx: StripeWebhookContext;
 	event: Stripe.InvoiceFinalizedEvent;
 }): Promise<InvoiceFinalizedContext | null> => {
-	const { stripeCli, fullCustomer, db, org, env, logger } = ctx;
+	const { stripeCli, fullCustomer, logger } = ctx;
 
 	// 1. Get expanded invoice
 	const stripeInvoice = await getStripeInvoice({
@@ -86,19 +84,11 @@ export const setupInvoiceFinalizedContext = async ({
 	// 6. Update fullCustomer.customer_products with fresh data
 	fullCustomer.customer_products = customerProducts;
 
-	// 7. Get features for Vercel invoice processing
-	const features = await FeatureService.list({
-		db,
-		orgId: org.id,
-		env,
-	});
-
 	return {
 		stripeInvoice,
 		stripeSubscription,
 		stripeSubscriptionId,
 		fullCustomer,
 		customerProducts,
-		features,
 	};
 };
