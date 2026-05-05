@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
-import { getFullStripeSub } from "../stripeSubUtils.js";
+import { getFullStripeSub } from "../../stripeSubUtils.js";
 import { setupStripeSubscriptionCreatedContext } from "./setupStripeSubscriptionCreatedContext.js";
 import { autoSyncFromSubscription } from "./tasks/autoSyncFromSubscription.js";
 import { linkScheduledCustomerProductsToSubscription } from "./tasks/linkScheduledCustomerProductsToSubscription.js";

@@ -3,7 +3,7 @@ import { type FullCusProduct, ms } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { addMonths, getUnixTime } from "date-fns";
 import type Stripe from "stripe";
-import { handleSubCreated } from "@/external/stripe/webhookHandlers/handleSubCreated";
+import { handleStripeSubscriptionCreated } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
 
@@ -110,7 +110,7 @@ export const triggerSubscriptionCreated = async ({
 		type: "customer.subscription.created",
 	};
 
-	await handleSubCreated({
+	await handleStripeSubscriptionCreated({
 		ctx: {
 			...ctx,
 			fullCustomer,
