@@ -267,7 +267,7 @@ export const createOrgResponse = ({
 		deployed: org.deployed ?? true,
 		redis_config: org.redis_config
 			? {
-					url: org.redis_config.url,
+					host: org.redis_config.url,
 					migrationPercent: org.redis_config.migrationPercent,
 				}
 			: null,
