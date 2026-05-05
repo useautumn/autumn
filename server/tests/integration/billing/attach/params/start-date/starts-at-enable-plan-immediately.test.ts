@@ -149,7 +149,7 @@ test.concurrent(`${chalk.yellowBright("starts_at: add-on access can start before
 	});
 	const addon = products.recurringAddOn({
 		id: "addon",
-		items: [items.monthlyUsers({ includedUsage: 5 })],
+		items: [items.monthlyWords({ includedUsage: 5 })],
 	});
 
 	const { autumnV2_2, ctx, advancedTo } = await initScenario({
@@ -186,7 +186,7 @@ test.concurrent(`${chalk.yellowBright("starts_at: add-on access can start before
 	);
 	expectResetAnchoredTo({
 		cusProduct: addonCustomerProduct,
-		featureId: TestFeature.Users,
+		featureId: TestFeature.Words,
 		startDate: startsAt,
 	});
 
