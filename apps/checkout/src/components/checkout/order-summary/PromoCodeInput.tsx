@@ -20,6 +20,7 @@ export function PromoCodeInput({
 			className="flex h-9 items-stretch rounded-lg border border-border bg-background transition-[box-shadow,border-color] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50"
 			onSubmit={(event) => {
 				event.preventDefault();
+				if (!code || disabled) return;
 				onSubmit();
 			}}
 		>

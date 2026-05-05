@@ -17,12 +17,12 @@ export function CheckoutSharedContent() {
 		actionRequiredResponse,
 		confirmResult,
 		hasActionRequiredState,
-		hasPrepaidFeatures,
+		hasAdjustableFeatures,
 		status,
 		isSandbox,
 	} = useCheckoutContext();
 
-	const showPlanSection = status.isLoading || hasPrepaidFeatures;
+	const showPlanSection = status.isLoading || hasAdjustableFeatures;
 
 	if (confirmResult) {
 		return (

@@ -27,11 +27,13 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 	const { plan, feature_quantities } = change;
 	if (!plan) return null;
 
-	const prepaidItems = plan.items.filter(
-		(item) => item.price?.billing_method === "prepaid",
+	const adjustableItems = plan.items.filter(
+		(item) =>
+			item.price?.billing_method === "prepaid" &&
+			adjustableFeatureIds.includes(item.feature_id),
 	);
 
-	if (prepaidItems.length === 0) return null;
+	if (adjustableItems.length === 0) return null;
 
 	return (
 		<motion.div
@@ -49,7 +51,7 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 				animate="animate"
 			>
 				<AnimatePresence>
-					{prepaidItems.map((planItem, index) => {
+					{adjustableItems.map((planItem, index) => {
 						const price = planItem.price;
 						if (!price) return null;
 						const isTiered = (price.tiers?.length ?? 0) > 1;
@@ -59,9 +61,6 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 						);
 						const currentQuantity =
 							quantities[planItem.feature_id] ?? quantityInfo?.quantity ?? 0;
-						const isAdjustable = adjustableFeatureIds.includes(
-							planItem.feature_id,
-						);
 						const billingUnits = price.billing_units || 1;
 
 						return (
@@ -114,7 +113,6 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 													: undefined
 											}
 											step={billingUnits}
-											disabled={!isAdjustable}
 										/>
 									</div>
 								</div>
