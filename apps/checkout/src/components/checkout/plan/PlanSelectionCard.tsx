@@ -22,7 +22,8 @@ interface PlanSelectionCardProps {
 }
 
 export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
-	const { currency, quantities, handleQuantityChange } = useCheckoutContext();
+	const { adjustableFeatureIds, currency, quantities, handleQuantityChange } =
+		useCheckoutContext();
 	const { plan, feature_quantities } = change;
 	if (!plan) return null;
 
@@ -58,6 +59,9 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 						);
 						const currentQuantity =
 							quantities[planItem.feature_id] ?? quantityInfo?.quantity ?? 0;
+						const isAdjustable = adjustableFeatureIds.includes(
+							planItem.feature_id,
+						);
 						const billingUnits = price.billing_units || 1;
 
 						return (
@@ -110,6 +114,7 @@ export function PlanSelectionCard({ change }: PlanSelectionCardProps) {
 													: undefined
 											}
 											step={billingUnits}
+											disabled={!isAdjustable}
 										/>
 									</div>
 								</div>

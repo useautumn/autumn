@@ -144,6 +144,7 @@ export function useCheckoutState({
 	const derivedState = useMemo(() => {
 		const { action, env, preview, org, entity, status: checkoutStatus } =
 			checkoutData ?? {};
+		const adjustableFeatureIds = checkoutData?.adjustable_feature_ids ?? [];
 		const incoming = preview?.incoming;
 		const outgoing = preview?.outgoing;
 		const isUpdateQuantityIntent =
@@ -197,6 +198,7 @@ export function useCheckoutState({
 			isSandbox: env === "sandbox",
 			headerDescription,
 			hasPrepaidFeatures,
+			adjustableFeatureIds,
 			isUnchangedQuantityUpdate,
 		};
 	}, [checkoutData, routeMode]);
