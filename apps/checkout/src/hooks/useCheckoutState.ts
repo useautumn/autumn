@@ -216,20 +216,17 @@ export function useCheckoutState({
 		[checkoutData, quantities, debouncedPreview, buildCheckoutBody],
 	);
 
-	const handleApplyDiscount = useCallback((promotionCode: string) => {
-		const code = promotionCode.trim();
-		if (!code) return Promise.resolve();
+	const handleApplyDiscount = useCallback(
+		async (promotionCode: string) => {
+			await previewMutation.mutateAsync(buildCheckoutBody({ promotionCode }));
+			setAppliedPromotionCode(promotionCode);
+		},
+		[buildCheckoutBody, previewMutation],
+	);
 
-		return previewMutation
-			.mutateAsync(buildCheckoutBody({ promotionCode: code }))
-			.then(() => {
-				setAppliedPromotionCode(code);
-			});
-	}, [buildCheckoutBody, previewMutation]);
-
-	const handleClearDiscount = useCallback(() => {
+	const handleClearDiscount = useCallback(async () => {
+		await previewMutation.mutateAsync(buildCheckoutBody({ promotionCode: null }));
 		setAppliedPromotionCode(null);
-		previewMutation.mutate(buildCheckoutBody({ promotionCode: null }));
 	}, [buildCheckoutBody, previewMutation]);
 
 	const handleConfirm = useCallback(() => {

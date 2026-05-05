@@ -39,10 +39,10 @@ export function PromoCodeSection() {
 		}
 	};
 
-	const handleRemove = () => {
+	const handleRemove = async () => {
+		await handleClearDiscount();
 		setCodeInput("");
 		setDiscountError(null);
-		handleClearDiscount();
 	};
 
 	return (
