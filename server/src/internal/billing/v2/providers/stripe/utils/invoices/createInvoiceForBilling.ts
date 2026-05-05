@@ -42,6 +42,28 @@ const getInvoiceEligibleStripeDiscounts = ({
 	});
 };
 
+const subscriptionPaymentSettingsToInvoiceParams = ({
+	stripeSubscription,
+}: {
+	stripeSubscription?: Stripe.Subscription;
+}): Stripe.InvoiceCreateParams["payment_settings"] | undefined => {
+	const paymentSettings = stripeSubscription?.payment_settings;
+	const paymentMethodTypes = paymentSettings?.payment_method_types;
+	const paymentMethodOptions = paymentSettings?.payment_method_options;
+
+	if (!paymentMethodTypes?.length && !paymentMethodOptions) return undefined;
+
+	return {
+		...(paymentMethodTypes?.length && {
+			payment_method_types: paymentMethodTypes,
+		}),
+		...(paymentMethodOptions && {
+			payment_method_options:
+				paymentMethodOptions as Stripe.InvoiceCreateParams.PaymentSettings.PaymentMethodOptions,
+		}),
+	};
+};
+
 export const createInvoiceForBilling = async ({
 	ctx,
 	billingContext,
@@ -80,6 +102,9 @@ export const createInvoiceForBilling = async ({
 	const invoiceEligibleStripeDiscounts = getInvoiceEligibleStripeDiscounts({
 		stripeDiscounts: billingContext.stripeDiscounts ?? [],
 	});
+	const paymentSettings = subscriptionPaymentSettingsToInvoiceParams({
+		stripeSubscription: billingContext.stripeSubscription,
+	});
 
 	// Skip auto_tax in invoice mode: send_invoice has no address-collection
 	// UI so Stripe Tax rejects. charge_automatically relies on Stripe's
@@ -92,6 +117,7 @@ export const createInvoiceForBilling = async ({
 			? undefined
 			: billingContext.stripeSubscription?.id,
 		collectionMethod,
+		paymentSettings,
 		metadata: invoiceMetadata,
 		discounts: stripeDiscountsToInvoiceParams({
 			stripeDiscounts: invoiceEligibleStripeDiscounts,
