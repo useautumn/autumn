@@ -30,12 +30,14 @@ type StripeSubscriptionScheduleResult = {
  * - no_phases: No phases with items, nothing to do
  * - single_indefinite: 1 phase with no end_date (e.g., uncancel)
  * - simple_cancel: 1 phase + trailing empty (cancel at end of cycle)
+ * - future_standalone: A standalone schedule that starts in the future
  * - multi_phase: Multiple phases requiring a schedule
  */
 type ScheduleScenario =
 	| "no_phases"
 	| "single_indefinite"
 	| "simple_cancel"
+	| "future_standalone"
 	| "multi_phase";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -79,7 +81,7 @@ const getScheduleScenario = ({
 	shouldCreateFutureSchedule: boolean;
 }): ScheduleScenario => {
 	if (scheduledPhases.length === 0) return "no_phases";
-	if (shouldCreateFutureSchedule) return "multi_phase";
+	if (shouldCreateFutureSchedule) return "future_standalone";
 
 	if (scheduledPhases.length === 1) {
 		if (endsWithEmptyPhase) return "simple_cancel";
@@ -137,6 +139,7 @@ const buildActionForScenario = ({
 				subscriptionCancelAt: cancelAtSeconds,
 			};
 
+		case "future_standalone":
 		case "multi_phase": {
 			// Multiple transitions: need a schedule
 			const endBehavior = endsWithEmptyPhase ? "cancel" : "release";

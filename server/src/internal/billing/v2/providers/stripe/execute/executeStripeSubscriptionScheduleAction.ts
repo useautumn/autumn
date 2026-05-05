@@ -188,20 +188,23 @@ export const executeStripeSubscriptionScheduleAction = async ({
 			const { stripeSubscriptionScheduleId, params } =
 				subscriptionScheduleAction;
 
+			// Get the subscription ID from the existing schedule
+			const subscriptionId =
+				billingContext.stripeSubscriptionSchedule?.subscription;
+			if (!subscriptionId) {
+				// Standalone future schedules have no subscription until they start.
+				// Update them in place instead of releasing and recreating from a sub.
+				return await stripeCli.subscriptionSchedules.update(
+					stripeSubscriptionScheduleId,
+					params,
+				);
+			}
+
 			// Always release + recreate to avoid "can't modify active phase" errors
 			// The subscription may have been updated first, changing its items
 			await stripeCli.subscriptionSchedules.release(
 				stripeSubscriptionScheduleId,
 			);
-
-			// Get the subscription ID from the existing schedule
-			const subscriptionId =
-				billingContext.stripeSubscriptionSchedule?.subscription;
-			if (!subscriptionId) {
-				throw new Error(
-					"Cannot update schedule: no subscription ID found on existing schedule",
-				);
-			}
 
 			const newSchedule = await createScheduleFromSubscription({
 				stripeCli,
