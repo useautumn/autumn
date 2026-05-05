@@ -46,6 +46,7 @@ export const buildStripeSubscriptionAction = ({
 	const subItemsUpdate = buildStripeSubscriptionItemsUpdate({
 		ctx,
 		billingContext,
+		autumnBillingPlan,
 		finalCustomerProducts,
 	});
 
