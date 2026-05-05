@@ -25,12 +25,14 @@ export const handleStripeInvoiceFinalized = async ({
 		return;
 	}
 
+	const stripeInvoice = eventContext.stripeInvoice;
+	const stripeSubscription = eventContext.stripeSubscription;
+
+	await processVercelInvoice({ ctx, stripeInvoice, stripeSubscription });
+
 	ctx.logger.info(
 		`[invoice.finalized] Processing for invoice ${eventContext.stripeInvoice.id}`,
 	);
-
-	// 1. Handle Vercel custom payment method invoices
-	await processVercelInvoice({ ctx, eventContext });
 
 	// 2. Upsert Autumn invoice record
 	const autumnInvoice = await invoiceActions.updateFromStripe({
