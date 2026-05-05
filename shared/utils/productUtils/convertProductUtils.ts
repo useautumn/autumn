@@ -5,7 +5,10 @@ import type {
 	EntitlementWithFeature,
 } from "../../models/productModels/entModels/entModels.js";
 import type { Price } from "../../models/productModels/priceModels/priceModels.js";
-import type { FullProduct } from "../../models/productModels/productModels.js";
+import type {
+	FullProduct,
+	Product,
+} from "../../models/productModels/productModels.js";
 
 export const entToPrice = ({
 	ent,
@@ -68,6 +71,12 @@ export const entToOptions = ({
 			(ent.feature_id && option.feature_id === ent.feature_id),
 	);
 };
+
+export const productToStripeId = ({
+	product,
+}: {
+	product: Product | FullProduct;
+}): string | null => product.processor?.id ?? null;
 
 export const productToEnt = ({
 	product,

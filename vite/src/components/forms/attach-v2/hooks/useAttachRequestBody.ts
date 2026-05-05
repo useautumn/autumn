@@ -30,6 +30,7 @@ export interface BuildAttachRequestBodyParams {
 	trialEnabled: boolean;
 	trialCardRequired: boolean;
 	planSchedule: PlanTiming | null;
+	startDate: number | null;
 	prorationBehavior: BillingBehavior | null;
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
@@ -58,6 +59,7 @@ export function buildAttachRequestBody({
 	trialEnabled,
 	trialCardRequired,
 	planSchedule,
+	startDate,
 	prorationBehavior,
 	redirectMode,
 	newBillingSubscription,
@@ -119,7 +121,9 @@ export function buildAttachRequestBody({
 		body.free_trial = null;
 	}
 
-	if (planSchedule) {
+	if (startDate && !trialEnabled) {
+		body.starts_at = startDate;
+	} else if (planSchedule) {
 		body.plan_schedule = planSchedule;
 	}
 
@@ -194,6 +198,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		trialEnabled,
 		trialCardRequired,
 		planSchedule,
+		startDate,
 		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
@@ -223,6 +228,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				trialEnabled,
 				trialCardRequired,
 				planSchedule,
+				startDate,
 				prorationBehavior,
 				redirectMode,
 				newBillingSubscription,
@@ -249,6 +255,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			trialEnabled,
 			trialCardRequired,
 			planSchedule,
+			startDate,
 			prorationBehavior,
 			redirectMode,
 			newBillingSubscription,

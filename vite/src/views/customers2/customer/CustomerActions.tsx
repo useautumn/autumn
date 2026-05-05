@@ -27,12 +27,11 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
-import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr, notNullish } from "@/utils/genUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import {
 	getRevenueCatCusLink,
 	getStripeConnectViewAsLink,
@@ -64,15 +63,11 @@ export function CustomerActions() {
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
-	const { data: sessionData } = useSession();
 
 	const stripeCustomerId = customer?.processor?.id;
 
 	const stripeConnectViewAsCustomerLink =
-		(isAdmin || notNullish(sessionData?.session?.impersonatedBy)) &&
-		masterStripeAccount?.id &&
-		stripeAccount?.id &&
-		stripeCustomerId
+		isAdmin && masterStripeAccount?.id && stripeAccount?.id && stripeCustomerId
 			? getStripeConnectViewAsLink({
 					masterAccountId: masterStripeAccount.id,
 					connectedAccountId: stripeAccount.id,
@@ -174,11 +169,26 @@ export function CustomerActions() {
 						<BracketsSquareIcon />
 						Show customer object
 					</DropdownMenuItem>
+					{/* Old sync sheet — superseded by sync-stripe-v2 below. Kept for reference.
 					{stripeCustomerId &&
 						customer?.processor?.type === ProcessorType.Stripe && (
 							<DropdownMenuItem
 								onClick={() => {
 									setSheet({ type: "sync-stripe" });
+									setActionsOpen(false);
+								}}
+								className="flex gap-2"
+							>
+								<ArrowsClockwiseIcon />
+								Sync from Stripe
+							</DropdownMenuItem>
+						)}
+					*/}
+					{stripeCustomerId &&
+						customer?.processor?.type === ProcessorType.Stripe && (
+							<DropdownMenuItem
+								onClick={() => {
+									setSheet({ type: "sync-stripe-v2" });
 									setActionsOpen(false);
 								}}
 								className="flex gap-2"

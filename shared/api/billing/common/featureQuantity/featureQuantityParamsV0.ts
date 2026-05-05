@@ -11,6 +11,11 @@ export const FeatureQuantityParamsV0Schema = z
 		adjustable: z.boolean().optional().meta({
 			description: "Whether the customer can adjust the quantity.",
 		}),
+		stripe_price_id: z.string().optional().meta({
+			description:
+				"Stripe price id this prepaid feature is billed under. Set by sync flows when the Stripe sub references a price different from the catalog default.",
+			internal: true,
+		}),
 	})
 	.meta({
 		title: "FeatureQuantity",

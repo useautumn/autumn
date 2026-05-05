@@ -58,6 +58,10 @@ export interface PlanItemsSectionProps {
 
 	gateDeletedItemsByDiff?: boolean;
 	readOnly?: boolean;
+
+	adminIds?: import(
+		"@/components/forms/shared/admin/AdminPlanIdsTooltip"
+	).AdminPlanIds;
 }
 
 export function PlanItemsSection({
@@ -76,6 +80,7 @@ export function PlanItemsSection({
 	trialConfig,
 	gateDeletedItemsByDiff = false,
 	readOnly = false,
+	adminIds,
 }: PlanItemsSectionProps) {
 	const originalItemsMap = new Map<string, ProductItem>(
 		originalItems
@@ -138,6 +143,7 @@ export function PlanItemsSection({
 				priceChange={priceChange}
 				product={product}
 				currency={currency}
+				adminIds={adminIds}
 			/>
 			<LayoutGroup>
 				<motion.div

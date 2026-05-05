@@ -8,6 +8,7 @@ import {
 	getLatestPeriodStart,
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
+import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -78,9 +79,7 @@ export const createStripeSub2 = async ({
 				: "allow_incomplete",
 
 			add_invoice_items: invoiceItems,
-			collection_method: invoiceOnly
-				? "send_invoice"
-				: "charge_automatically",
+			collection_method: invoiceOnly ? "send_invoice" : "charge_automatically",
 			days_until_due: invoiceOnly ? 30 : undefined,
 			billing_cycle_anchor: billingCycleAnchorUnix
 				? Math.floor(billingCycleAnchorUnix / 1000)
@@ -89,8 +88,11 @@ export const createStripeSub2 = async ({
 			discounts,
 			expand: ["latest_invoice"],
 
-			// e.g. Vercel installation/billing plan IDs.
-			metadata: metadata || undefined,
+			// Pass metadata from attachParams (e.g., Vercel installation/billing plan IDs)
+			metadata: {
+				...(metadata || {}),
+				...buildAutumnSubscriptionMetadata({ actionSource: "v1Attach" }),
+			},
 
 			// Save the custom PM on the sub so webhook handlers and renewals
 			// can find it.

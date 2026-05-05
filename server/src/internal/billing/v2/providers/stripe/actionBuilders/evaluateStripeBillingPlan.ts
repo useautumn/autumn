@@ -49,6 +49,7 @@ export const evaluateStripeBillingPlan = async ({
 	const {
 		scheduleAction: stripeSubscriptionScheduleAction,
 		subscriptionCancelAt,
+		subscriptionStartsAt,
 	} = buildStripeSubscriptionScheduleAction({
 		ctx,
 		billingContext,
@@ -64,6 +65,7 @@ export const evaluateStripeBillingPlan = async ({
 		finalCustomerProducts: finalFullCustomer.customer_products,
 		stripeSubscriptionScheduleAction,
 		subscriptionCancelAt,
+		subscriptionStartsAt,
 	});
 
 	const stripeRefundAction = await buildStripeRefundAction({
