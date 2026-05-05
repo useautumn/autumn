@@ -157,6 +157,8 @@ export function SubscriptionDetailSheet() {
 		subscriptionIds: cusProduct.subscription_ids ?? [],
 	});
 
+	const canCancel = !isExpired;
+	const canUpdate = !isExpired && !isScheduled;
 	const prepaidDisplayQuantities = backendToDisplayQuantity({
 		backendOptions: cusProduct.options,
 		prepaidItems,
@@ -364,34 +366,39 @@ export function SubscriptionDetailSheet() {
 				</div>
 			</SheetSection>
 
-			{!isExpired && !isScheduled && (
+			{(canCancel || canUpdate) && (
 				<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
-					{isCanceled ? (
+					{canCancel &&
+						(isCanceled ? (
+							<Button
+								variant="secondary"
+								className="flex-1"
+								onClick={() =>
+									setSheet({ type: "subscription-uncancel", itemId })
+								}
+							>
+								Manage Cancellation
+							</Button>
+						) : (
+							<Button
+								variant="secondary"
+								className="flex-1"
+								onClick={() =>
+									setSheet({ type: "subscription-cancel", itemId })
+								}
+							>
+								{isScheduled ? "Cancel Scheduled Plan" : "Cancel Subscription"}
+							</Button>
+						))}
+					{canUpdate && (
 						<Button
-							variant="secondary"
+							variant="primary"
 							className="flex-1"
-							onClick={() =>
-								setSheet({ type: "subscription-uncancel", itemId })
-							}
+							onClick={handleUpdateSubscription}
 						>
-							Manage Cancellation
-						</Button>
-					) : (
-						<Button
-							variant="secondary"
-							className="flex-1"
-							onClick={() => setSheet({ type: "subscription-cancel", itemId })}
-						>
-							Cancel Subscription
+							Update Subscription
 						</Button>
 					)}
-					<Button
-						variant="primary"
-						className="flex-1"
-						onClick={handleUpdateSubscription}
-					>
-						Update Subscription
-					</Button>
 				</div>
 			)}
 		</div>

@@ -4,6 +4,7 @@ import { useCheckoutContext } from "@/contexts/CheckoutContext";
 import { FAST_TRANSITION, STANDARD_TRANSITION, fadeUpVariants } from "@/lib/animations";
 import { OrderSummary } from "./OrderSummary";
 import { OrderSummarySkeleton } from "./OrderSummarySkeleton";
+import { PromoCodeSection } from "./PromoCodeSection";
 import { SectionHeader } from "../shared/SectionHeader";
 
 export function OrderSummarySection() {
@@ -25,7 +26,10 @@ export function OrderSummarySection() {
 					isLoading={status.isLoading}
 					skeleton={<OrderSummarySkeleton />}
 				>
-					<OrderSummary />
+					<div className="flex flex-col gap-4">
+						<OrderSummary />
+						<PromoCodeSection />
+					</div>
 				</CrossfadeContainer>
 			</motion.div>
 		</motion.div>
