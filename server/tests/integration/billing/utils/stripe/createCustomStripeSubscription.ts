@@ -1,5 +1,6 @@
-import type Stripe from "stripe";
+import { msToSeconds } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
+import type Stripe from "stripe";
 import { CusService } from "@/internal/customers/CusService";
 import { ProductService } from "@/internal/products/ProductService";
 
@@ -13,12 +14,16 @@ export const createCustomStripeSubscription = async ({
 	productId,
 	unitAmount = 2000,
 	interval = "month",
+	billingCycleAnchorMs,
+	prorationBehavior,
 }: {
 	ctx: TestContext;
 	customerId: string;
 	productId: string;
 	unitAmount?: number;
 	interval?: Stripe.PriceCreateParams.Recurring.Interval;
+	billingCycleAnchorMs?: number;
+	prorationBehavior?: Stripe.SubscriptionCreateParams.ProrationBehavior;
 }): Promise<Stripe.Subscription> => {
 	const [fullCustomer, fullProduct] = await Promise.all([
 		CusService.getFull({ ctx, idOrInternalId: customerId }),
@@ -45,5 +50,11 @@ export const createCustomStripeSubscription = async ({
 				},
 			},
 		],
+		...(billingCycleAnchorMs !== undefined && {
+			billing_cycle_anchor: msToSeconds(billingCycleAnchorMs),
+		}),
+		...(prorationBehavior !== undefined && {
+			proration_behavior: prorationBehavior,
+		}),
 	});
 };

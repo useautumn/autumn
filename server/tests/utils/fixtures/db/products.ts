@@ -29,6 +29,7 @@ const create = ({
 	processor: stripeProductId ? { type: "stripe", id: stripeProductId } : null,
 	base_variant_id: null,
 	archived: false,
+	config: { ignore_past_due: false },
 });
 
 /**
@@ -64,6 +65,7 @@ const createFull = ({
 		processor: stripeProductId ? { type: "stripe", id: stripeProductId } : null,
 		base_variant_id: null,
 		archived: false,
+		config: { ignore_past_due: false },
 		prices,
 		entitlements,
 		free_trial: null,

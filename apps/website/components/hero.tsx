@@ -1,13 +1,12 @@
 "use client";
 
-import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
 import { motion } from "motion/react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { CTALines, IconCTADocs, IconCTAStart } from "@/app/constant";
+import { getGsap } from "@/lib/lazyGsap";
 
 // `AutumnConfig` pulls in `react-syntax-highlighter` + `highlight.js` (~100KB
 // gzipped + meaningful parse cost on mobile). It only renders on `xl+`
@@ -28,11 +27,7 @@ const getLoggedInHintCookie = () => {
 
 export default function Hero() {
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	// Start with the final text so SSR/first paint shows "// 100% open source"
-	// immediately. The typewriter effect only runs on fast desktop hydration
-	// (it intentionally clears and re-scrambles this value); everywhere else
-	// the initial text is left alone.
-	const [displayedText, setDisplayedText] = useState(BADGE_TEXT);
+	const [displayedText, setDisplayedText] = useState("");
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
 	// Gate the xl-only hero visual (background video + AutumnConfig syntax
 	// highlighter) behind an actual viewport check so mobile never downloads
@@ -55,18 +50,6 @@ export default function Hero() {
 
 	// Badge typewriter
 	useEffect(() => {
-		// Only run the typewriter scramble on fast desktop hydration. Initial
-		// state is already `BADGE_TEXT`, so bailing here leaves the SSR-rendered
-		// text in place. On mobile, tablets, or slow-hydration desktop this
-		// avoids a jarring "full text -> empty -> scrambled in" flash that
-		// fires many seconds after the page has already been visible.
-		if (
-			window.matchMedia("(max-width: 1023px)").matches ||
-			performance.now() > 300
-		) {
-			return;
-		}
-
 		const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*0123456789";
 		let intervalId: ReturnType<typeof setInterval> | null = null;
 		let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -104,89 +87,51 @@ export default function Hero() {
 		};
 	}, []);
 
-	useGSAP(
-		() => {
-			// IMPORTANT: do NOT gate `.hero-root` behind opacity:0 here or in JSX.
-			// GSAP ships in a code-split chunk, so if the class were `opacity-0`
-			// by default the hero would stay invisible for the full duration of
-			// the JS chunk download + parse + hydrate on mobile (~several seconds
-			// on Slow 4G). We use `gsap.from()` tweens so the content is visible
-			// by default and only animates if GSAP has loaded by first frame.
+	useEffect(() => {
+		const container = containerRef.current;
+		if (!container) return;
 
-			// Skip the entrance animation on non-desktop viewports, or on any
-			// device where hydration landed well after first paint. Running
-			// `.from()` tweens late would visibly hide already-painted content
-			// and animate it back in — a much worse UX than no animation.
-			// Threshold is tight (300ms) so the flash never happens on slow
-			// devices; only near-instant hydration earns the animation.
-			if (
-				window.matchMedia("(max-width: 1023px)").matches ||
-				performance.now() > 300
-			) {
-				return;
-			}
+		let ctx: { revert: () => void } | null = null;
+		let cancelled = false;
 
-			const tl = gsap.timeline({
-				defaults: { overwrite: "auto" },
-			});
+		// Mobile: CSS animations in globals.css handle the hero reveal.
+		// Guard here so mobile never initiates the ~60KB GSAP dynamic import.
+		if (window.innerWidth < 1024) return;
 
-			tl.from(".hero-bg", {
-				opacity: 0,
-				filter: "blur(6px) brightness(1)",
-				scale: 0.97,
-				transformOrigin: "center top",
-				duration: 0.4,
-				ease: "power2.out",
-			})
+		getGsap().then((gsap) => {
+			if (cancelled) return;
+			ctx = gsap.context(() => {
+				gsap.set(".hero-reveal", {
+					opacity: 0,
+					y: 25,
+					scale: 0.96,
+					transformOrigin: "center bottom",
+				});
+				gsap.set(".hero-cta", { opacity: 0, scale: 0.95 });
 
-				.to(".hero-bg", {
-					filter: "blur(0px) brightness(1.6)",
-					duration: 0.125,
-					ease: "power2.in",
-				})
+				const tl = gsap.timeline({ defaults: { overwrite: "auto" } });
 
-				.to(".hero-bg", {
-					filter: "blur(0px) brightness(1)",
-					duration: 0.125,
-					ease: "power2.out",
-				})
+				// hero-bg is intentionally NOT hidden — it is the LCP element and
+				// must be visible from first paint. The brightness flash still runs.
+				tl.to(".hero-bg", { filter: "brightness(1.6)", duration: 0.125, ease: "power2.in" })
+					.to(".hero-bg", { filter: "brightness(1)", duration: 0.125, ease: "power2.out" })
+					.to(".hero-reveal", { opacity: 1, y: 0, scale: 1, duration: 1.1, stagger: 0.1, ease: "power3.out" }, "-=0.2")
+					.to(".hero-cta", { opacity: 1, scale: 1, duration: 0.3, stagger: 0.06, ease: "back.out(1.5)" }, "-=0.1");
+			}, container);
+		});
 
-				.from(
-					".hero-reveal",
-					{
-						opacity: 0,
-						y: 25,
-						filter: "blur(12px)",
-						scale: 0.96,
-						transformOrigin: "center bottom",
-						duration: 1.1,
-						stagger: 0.1,
-						ease: "power3.out",
-					},
-					"-=0.2",
-				)
-
-				.from(
-					".hero-cta",
-					{
-						opacity: 0,
-						scale: 0.95,
-						duration: 0.3,
-						stagger: 0.06,
-						ease: "back.out(1.5)",
-					},
-					"-=0.1",
-				);
-		},
-		{ scope: containerRef },
-	);
+		return () => {
+			cancelled = true;
+			ctx?.revert();
+		};
+	}, []);
 
 	return (
 		<div ref={containerRef}>
-			<div className="relative hero-root flex flex-col items-stretch pb-0 md:pb-12 mb-0 bg-[#0F0F0F]">
+			<div className="relative hero-root flex flex-col items-stretch pb-0 mb-0 bg-[#0F0F0F]">
 				<div className="flex justify-between">
 					<div className="flex flex-col gap-6 px-4 xl:px-22.75 py-8 bg-[#0F0F0F] mt-26">
-						<h4 className="hero-reveal relative uppercase font-mono tracking-[-2%] text-[12px] md:text-sm leading-sm text-white md:text-[#FFFFFF99] bg-[#2c2c2d] w-fit p-2 min-h-[30px] md:min-h-[36px] flex items-center">
+						<h4 className="hero-reveal lg:opacity-0 relative uppercase font-mono tracking-[-2%] text-[12px] md:text-sm leading-sm text-white md:text-[#FFFFFF99] bg-[#2c2c2d] w-fit p-2 min-h-[30px] md:min-h-[36px] flex items-center">
 							<span className="invisible select-none" aria-hidden="true">
 								{BADGE_TEXT}
 							</span>
@@ -195,13 +140,13 @@ export default function Hero() {
 							</span>
 						</h4>
 						<div className="flex flex-col gap-6 w-full px-0 lg:px-0">
-							<h1 className="hero-reveal text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-5%] md:leading-14 font-sans">
+							<h1 className="hero-reveal lg:opacity-0 text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-5%] md:leading-14 font-sans">
 								<span className="text-[#FFFFFF99] font-normal">
 									Drop-in credits and billing for
 								</span>{" "}
 								<span className="text-white block md:inline">AI agents</span>
 							</h1>
-							<p className="hero-reveal tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
+							<p className="hero-reveal lg:opacity-0 tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
 								Stop rebuilding usage limits, credit ledgers and payment logic.{" "}
 								<span className="text-white font-light">
 									Autumn is the customer database
@@ -218,7 +163,7 @@ export default function Hero() {
 					  so mobile never downloads them, and desktop fills the
 					  already-reserved space once it hydrates.
 					*/}
-					<div className="hero-reveal relative w-[50vw] max-w-[720px] min-h-[525px] p-16 py-0 mx-auto hidden xl:block">
+					<div className="hero-reveal lg:opacity-0 relative w-[50vw] max-w-[720px] min-h-[525px] p-16 py-0 mx-auto hidden xl:block">
 						{isXl && (
 							<>
 								<div className="absolute inset-0 z-0 pointer-events-none">
@@ -241,7 +186,7 @@ export default function Hero() {
 				<div className="border-t border-[#292929]" />
 				<div className="flex flex-nowrap items-center xl:px-22.75 px-4 bg-[#0F0F0F] w-full overflow-hidden">
 					{/* Primary CTA */}
-					<div className="hero-cta w-full md:w-fit md:flex-shrink-0">
+					<div className="hero-cta lg:opacity-0 w-full md:w-fit md:flex-shrink-0">
 						<Link
 							href={
 								isLoggedIn
@@ -270,7 +215,7 @@ export default function Hero() {
 					</div>
 
 					{/* Secondary CTA */}
-					<div className="hero-cta w-full md:w-fit md:flex-shrink-0">
+					<div className="hero-cta lg:opacity-0 w-full md:w-fit md:flex-shrink-0">
 						<Link href={"https://cal.com/ayrod"}>
 							<motion.div
 								initial="initial"
@@ -291,7 +236,7 @@ export default function Hero() {
 						</Link>
 					</div>
 
-					<div className="hero-cta hidden md:flex flex-nowrap gap-2 md:gap-3 ml-2 md:ml-3 h-10.5 md:h-12.5 flex-1">
+					<div className="hero-cta lg:opacity-0 hidden md:flex flex-nowrap gap-2 md:gap-3 ml-2 md:ml-3 h-10.5 md:h-12.5 flex-1">
 						<div className="border-r border-[#292929] h-full hidden md:block" />
 						<div className="border-r border-[#292929] h-full hidden md:block" />
 						<div className="border-r border-[#292929] h-full hidden md:block" />
@@ -322,11 +267,12 @@ export default function Hero() {
 							aria-hidden="true"
 							fill
 							priority
+							fetchPriority="high"
 							sizes="100vw"
 							className="hero-bg absolute inset-0 w-full h-full object-cover mix-blend-screen opacity-100 pointer-events-none select-none"
 						/>
 
-						<div className="hero-reveal relative z-10 w-[96%] sm:w-[90%] max-w-[520px] flex justify-center items-center">
+						<div className="hero-reveal lg:opacity-0 relative z-10 w-[96%] sm:w-[90%] max-w-[520px] flex justify-center items-center">
 							{/* <AutumnConfig lines={16} initialDelay={1000} awaitEvent="preloader:complete" /> */}
 							<Image
 								src={"/images/hero/autumn_mobile.svg"}

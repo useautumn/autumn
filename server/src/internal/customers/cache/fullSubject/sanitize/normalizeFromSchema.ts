@@ -87,10 +87,13 @@ const normalize = (schema: ZodSchema, data: unknown): unknown => {
 	const unwrapped = unwrapSchema(schema);
 
 	if (unwrapped instanceof z.ZodObject) {
-		if (!isPlainObject(data)) return data;
+		// Upstash Lua cjson collapses empty `{}` to `[]`; treat as empty object
+		// so nested defaults (e.g. ProductConfigSchema) still get applied.
+		const objectData = isEmptyArray(data) ? {} : data;
+		if (!isPlainObject(objectData)) return data;
 
 		const shape = unwrapped._def.shape;
-		const normalized: Record<string, unknown> = { ...data };
+		const normalized: Record<string, unknown> = { ...objectData };
 		for (const key of Object.keys(shape)) {
 			normalized[key] = normalize(shape[key], normalized[key]);
 		}

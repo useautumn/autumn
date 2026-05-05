@@ -285,6 +285,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   If true, skips any billing changes for the attach operation.
 </DynamicParamField>
 
+<DynamicParamField body="enable_plan_immediately" type="boolean">
+  If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
+</DynamicParamField>
+
 
 ### Response
 

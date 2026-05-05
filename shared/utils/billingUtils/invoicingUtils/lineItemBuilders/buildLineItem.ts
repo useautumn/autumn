@@ -66,11 +66,16 @@ export const buildLineItem = ({
 		amount = -amount;
 	}
 
+	const entityLabel = context.entity?.name || context.entity?.id;
+	const finalDescription = entityLabel
+		? `${description} (${entityLabel})`
+		: description;
+
 	// 5. Return LineItem
 	const lineItemData = {
 		id: generateKsuid({ prefix: "invoice_li_" }),
 		amount,
-		description,
+		description: finalDescription,
 		context: updatedContext,
 		stripePriceId,
 		stripeProductId,

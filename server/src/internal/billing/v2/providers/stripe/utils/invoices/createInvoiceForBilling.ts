@@ -93,6 +93,10 @@ export const createInvoiceForBilling = async ({
 		stripeDiscounts: billingContext.stripeDiscounts ?? [],
 	});
 
+	// Skip auto_tax in invoice mode: send_invoice has no address-collection
+	// UI so Stripe Tax rejects. charge_automatically relies on Stripe's
+	// address waterfall.
+	const wantsAutoTax = !!ctx.org.config.automatic_tax && !isInvoiceMode;
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,
 		stripeCusId: billingContext.stripeCustomer?.id ?? "none",
@@ -104,6 +108,7 @@ export const createInvoiceForBilling = async ({
 		discounts: stripeDiscountsToInvoiceParams({
 			stripeDiscounts: invoiceEligibleStripeDiscounts,
 		}),
+		automaticTax: wantsAutoTax,
 	});
 
 	const invoiceWithLines = await addStripeInvoiceLines({
@@ -131,7 +136,7 @@ export const createInvoiceForBilling = async ({
 
 	return payStripeInvoice({
 		stripeCli,
-		invoiceId: finalizedInvoice.id,
+		invoice: finalizedInvoice,
 		paymentMethod: billingContext.paymentMethod,
 	});
 };

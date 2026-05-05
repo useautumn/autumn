@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { CusProductStatus } from "@autumn/shared";
+import { CusProductStatus, ProcessorType } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
@@ -89,6 +89,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entity1ProProduct, entity2ProProduct] } as never,
 					finalCustomerProducts: [entity1ProProduct, entity2ProProduct],
 				});
 
@@ -199,6 +200,11 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [
+						entity1ProProduct,
+						entity2ProProduct,
+						entity3ProProduct,
+					] } as never,
 					finalCustomerProducts: [
 						entity1ProProduct,
 						entity2ProProduct,
@@ -291,6 +297,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entity1ProProduct, entity2ProProduct] } as never,
 					finalCustomerProducts: [entity1ProProduct, entity2ProProduct],
 				});
 
@@ -372,6 +379,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entity1ProProduct] } as never,
 					finalCustomerProducts: [entity1ProProduct],
 				});
 
@@ -454,6 +462,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entity1ProProduct, entity2PremiumProduct] } as never,
 					finalCustomerProducts: [entity1ProProduct, entity2PremiumProduct],
 				});
 
@@ -529,6 +538,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProProduct, entityProProduct] } as never,
 					finalCustomerProducts: [customerProProduct, entityProProduct],
 				});
 
@@ -617,6 +627,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entityProProduct] } as never,
 					finalCustomerProducts: [entityProProduct],
 				});
 
@@ -700,6 +711,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerPremiumProduct, entityProProduct] } as never,
 					finalCustomerProducts: [customerPremiumProduct, entityProProduct],
 				});
 
@@ -774,6 +786,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proCustomerProduct, addOnCustomerProduct] } as never,
 					finalCustomerProducts: [proCustomerProduct, addOnCustomerProduct],
 				});
 
@@ -844,6 +857,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proCustomerProduct] } as never,
 					finalCustomerProducts: [proCustomerProduct],
 				});
 
@@ -918,6 +932,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proCustomerProduct, addOnCustomerProduct] } as never,
 					finalCustomerProducts: [proCustomerProduct, addOnCustomerProduct],
 				});
 
@@ -1016,6 +1031,11 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [
+						customerPremiumProduct,
+						entity1ProProduct,
+						entity2ProProduct,
+					] } as never,
 					finalCustomerProducts: [
 						customerPremiumProduct,
 						entity1ProProduct,
@@ -1098,6 +1118,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proProduct1, proProduct2] } as never,
 					finalCustomerProducts: [proProduct1, proProduct2],
 				});
 
@@ -1190,6 +1211,7 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proCustomerProduct, premiumCustomerProduct] } as never,
 					finalCustomerProducts: [proCustomerProduct, premiumCustomerProduct],
 				});
 
@@ -1198,6 +1220,134 @@ describe(
 				// Premium is filtered out entirely
 				expect(result).toHaveLength(1);
 				expect(result[0].price).toBe("stripe_pro_consumable");
+			});
+		});
+
+		describe(chalk.cyan("Processor Filtering"), () => {
+			test("Excludes RevenueCat-managed products when attaching a Stripe add-on (no existing subscription)", () => {
+				// Repro for Runable bug: a customer's main product is managed by
+				// RevenueCat (subscription_ids: []) and they attach a one-off /
+				// add-on via Stripe. Without filtering by processor type, the RC
+				// product's prices would leak into the new Stripe subscription.
+				const rcMain = createProductWithAllPriceTypes({
+					productId: "runable_pro_25_monthly",
+					productName: "Pro 25 Monthly (RevenueCat)",
+					customerProductId: "cus_prod_rc_main",
+				});
+
+				const stripeAddOn = createProductWithAllPriceTypes({
+					productId: "runable_topup_25",
+					productName: "Topup 25",
+					customerProductId: "cus_prod_topup",
+					isAddOn: true,
+				});
+
+				const rcMainCustomerProduct = customerProducts.create({
+					id: "cus_prod_rc_main",
+					productId: "runable_pro_25_monthly",
+					product: rcMain.product,
+					customerPrices: createCustomerPricesForProduct({
+						prices: rcMain.allPrices,
+						customerProductId: "cus_prod_rc_main",
+					}),
+					customerEntitlements: rcMain.allEntitlements,
+					options: rcMain.allOptions,
+					status: CusProductStatus.Active,
+					subscriptionIds: [], // RC products have no Stripe subscription
+					processorType: ProcessorType.RevenueCat,
+				});
+
+				const stripeAddOnCustomerProduct = customerProducts.create({
+					id: "cus_prod_topup",
+					productId: "runable_topup_25",
+					product: stripeAddOn.product,
+					customerPrices: createCustomerPricesForProduct({
+						prices: stripeAddOn.allPrices,
+						customerProductId: "cus_prod_topup",
+					}),
+					customerEntitlements: stripeAddOn.allEntitlements,
+					options: stripeAddOn.allOptions,
+					status: CusProductStatus.Active,
+					subscriptionIds: [],
+					// IMPORTANT: processor is intentionally unset here — legacy Stripe-managed
+					// cus products have no `processor` field. The filter must treat unset as
+					// Stripe (so this product's items get included). RevenueCat is always tagged.
+				});
+
+				const ctx = contexts.create({ features: [] });
+				// One-off / add-on attach: no existing Stripe subscription
+				const billingContext = contexts.createBilling({
+					customerProducts: [
+						rcMainCustomerProduct,
+						stripeAddOnCustomerProduct,
+					],
+					stripeSubscription: undefined,
+				});
+
+				const result = buildStripeSubscriptionItemsUpdate({
+					ctx,
+					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [
+						rcMainCustomerProduct,
+						stripeAddOnCustomerProduct,
+					] } as never,
+					finalCustomerProducts: [
+						rcMainCustomerProduct,
+						stripeAddOnCustomerProduct,
+					],
+				});
+
+				// No item should reference the RC-managed product's prices
+				const rcPriceIds = getStripePriceIds(rcMain);
+				for (const item of result) {
+					expect(rcPriceIds).not.toContain(item.price);
+				}
+
+				// Only the Stripe add-on contributes — get its expected items
+				const expectedItems = getExpectedNewProductItems(stripeAddOn);
+				expectSubscriptionItemsUpdate(result, expectedItems);
+			});
+
+			test("Excludes RevenueCat product even when only RC products are present", () => {
+				// If the only customer product is RC-managed (e.g. attaching a brand-new
+				// Stripe-managed product to a previously RC-only customer), no items
+				// should be produced for the RC product.
+				const rcMain = createProductWithAllPriceTypes({
+					productId: "rc_only",
+					productName: "RC Only",
+					customerProductId: "cus_prod_rc_only",
+				});
+
+				const rcMainCustomerProduct = customerProducts.create({
+					id: "cus_prod_rc_only",
+					productId: "rc_only",
+					product: rcMain.product,
+					customerPrices: createCustomerPricesForProduct({
+						prices: rcMain.allPrices,
+						customerProductId: "cus_prod_rc_only",
+					}),
+					customerEntitlements: rcMain.allEntitlements,
+					options: rcMain.allOptions,
+					status: CusProductStatus.Active,
+					subscriptionIds: [],
+					processorType: ProcessorType.RevenueCat,
+				});
+
+				const ctx = contexts.create({ features: [] });
+				const billingContext = contexts.createBilling({
+					customerProducts: [rcMainCustomerProduct],
+					stripeSubscription: undefined,
+				});
+
+				const result = buildStripeSubscriptionItemsUpdate({
+					ctx,
+					billingContext,
+					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [rcMainCustomerProduct] } as never,
+					finalCustomerProducts: [rcMainCustomerProduct],
+				});
+
+				// No items at all — the only customer product is RC-managed and gets filtered out.
+				expect(result).toHaveLength(0);
 			});
 		});
 	},

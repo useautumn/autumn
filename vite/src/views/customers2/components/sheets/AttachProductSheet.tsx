@@ -1,10 +1,10 @@
-import type { Entity, FullCustomer } from "@autumn/shared";
+import { type Entity, type FullCustomer, formatAmount } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import type { AxiosError } from "axios";
 import { format } from "date-fns";
-import { CheckIcon } from "lucide-react";
+import { Decimal } from "decimal.js";
 import { AnimatePresence, motion } from "motion/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
 	AttachAdvancedSection,
@@ -16,6 +16,7 @@ import {
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
+import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import {
@@ -26,7 +27,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/v2/buttons/Button";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -42,6 +42,7 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { CreateEntity } from "@/views/customers2/customer/components/CreateEntity";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
+import { EntityScopeSelector } from "./EntityScopeSelector";
 
 function ReviewPreviewSkeleton() {
 	return (
@@ -94,7 +95,7 @@ function ReviewPreviewSkeleton() {
 }
 
 function ReviewPreviewBlock() {
-	const { previewQuery, formValues } = useAttachFormContext();
+	const { previewQuery, formValues, customerId } = useAttachFormContext();
 	const hasProductSelected = !!formValues.productId;
 	const {
 		data: previewData,
@@ -107,36 +108,71 @@ function ReviewPreviewBlock() {
 	if (showSkeleton) hasShownSkeleton.current = true;
 	const animateIn = hasShownSkeleton.current && !showSkeleton;
 
+	// Surface "tax couldn't be computed" once per resolved preview as a
+	// non-blocking warning. We don't render the Tax row in that case — see
+	// the totals section below.
+	const incompleteToastShownFor = useRef<string | null>(null);
+	useEffect(() => {
+		if (!previewData?.tax) return;
+		if (previewData.tax.status !== "incomplete") return;
+		// Dedupe per request: keyed by the customer + plan in scope so flips
+		// on the same form don't spam.
+		const key = `${customerId ?? ""}|${formValues.productId ?? ""}`;
+		if (incompleteToastShownFor.current === key) return;
+		incompleteToastShownFor.current = key;
+		toast.warning(
+			"While preparing a tax preview for this purchase, we were unable to determine the customer's location. Tax will not be shown in this preview, but Stripe will compute it on the actual charge.",
+		);
+	}, [previewData?.tax, customerId, formValues.productId]);
+
 	if (!hasProductSelected) return null;
 
 	const error = queryError
 		? getBackendErr(queryError as AxiosError, "Failed to load preview")
 		: undefined;
 
-	const totals: {
+	// Only "Next Cycle" lives in the LineItemsPreview totals array. The
+	// immediate "Tax" + "Total Due Now" rows are rendered in a bespoke
+	// section below to match the InvoiceDetailSheet pattern.
+	const previewTotals: {
 		label: string;
 		amount: number;
 		variant: "primary" | "secondary";
 		badge?: string;
 	}[] = [];
 
-	if (previewData) {
-		totals.push({
+	// Tax-aware totals. Only show the Tax row when status is "complete" AND
+	// total > 0 — incomplete is surfaced via toast above; zero tax means
+	// nothing taxable in this jurisdiction (no value in showing $0).
+	const showTaxRow =
+		previewData?.tax?.status === "complete" && previewData.tax.total > 0;
+	const taxAmount = showTaxRow ? (previewData?.tax?.total ?? 0) : 0;
+	const totalDueNow = previewData
+		? Math.max(previewData.total, 0) + taxAmount
+		: 0;
+
+	// When there's no Tax row to display, fall back to rendering "Total
+	// Due Now" via the LineItemsPreview totals array — same layout as
+	// before. Only render the bespoke Tax + Total section when we're
+	// actually showing a Tax row, so we don't add an extra empty
+	// SheetSection padding when tax is absent or hidden.
+	if (!showTaxRow && previewData) {
+		previewTotals.push({
 			label: "Total Due Now",
 			amount: Math.max(previewData.total, 0),
 			variant: "primary",
 		});
+	}
 
-		if (previewData.next_cycle) {
-			totals.push({
-				label: "Next Cycle",
-				amount: previewData.next_cycle.total,
-				variant: "secondary",
-				badge: previewData.next_cycle.starts_at
-					? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
-					: undefined,
-			});
-		}
+	if (previewData?.next_cycle) {
+		previewTotals.push({
+			label: "Next Cycle",
+			amount: previewData.next_cycle.total,
+			variant: "secondary",
+			badge: previewData.next_cycle.starts_at
+				? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
+				: undefined,
+		});
 	}
 
 	return (
@@ -164,13 +200,53 @@ function ReviewPreviewBlock() {
 							<PreviewErrorDisplay error={error} />
 						</SheetSection>
 					) : (
-						<LineItemsPreview
-							title="Pricing Preview"
-							lineItems={previewData?.line_items}
-							currency={previewData?.currency}
-							totals={totals}
-							filterZeroAmounts
-						/>
+						<>
+							<LineItemsPreview
+								title="Pricing Preview"
+								lineItems={previewData?.line_items}
+								currency={previewData?.currency}
+								totals={previewTotals}
+								filterZeroAmounts
+							/>
+							{showTaxRow && previewData && (
+								<SheetSection withSeparator={false}>
+									<div className="space-y-2">
+										<div className="flex items-center justify-between">
+											<span className="text-sm text-t2">Tax</span>
+											<span className="text-sm tabular-nums text-t2">
+												{formatAmount({
+													amount: new Decimal(taxAmount)
+														.toDecimalPlaces(2)
+														.toNumber(),
+													currency: previewData.currency,
+													minFractionDigits: 2,
+													amountFormatOptions: {
+														currencyDisplay: "narrowSymbol",
+													},
+												})}
+											</span>
+										</div>
+										<div className="flex items-center justify-between">
+											<span className="text-sm font-medium text-foreground">
+												Total Due Now
+											</span>
+											<span className="text-sm font-semibold text-foreground tabular-nums">
+												{formatAmount({
+													amount: new Decimal(totalDueNow)
+														.toDecimalPlaces(2)
+														.toNumber(),
+													currency: previewData.currency,
+													minFractionDigits: 2,
+													amountFormatOptions: {
+														currencyDisplay: "narrowSymbol",
+													},
+												})}
+											</span>
+										</div>
+									</div>
+								</SheetSection>
+							)}
+						</>
 					)}
 					<AttachFooterV3 />
 				</motion.div>
@@ -219,16 +295,6 @@ function SelectContent() {
 
 	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 
-	const CUSTOMER_LEVEL_VALUE = "";
-	type EntityOption = Entity | null;
-	const entityOptions: EntityOption[] = [null, ...entities];
-
-	const getEntityOptionValue = (option: EntityOption) =>
-		option === null ? CUSTOMER_LEVEL_VALUE : option.id || option.internal_id;
-
-	const getEntityOptionLabel = (option: EntityOption) =>
-		option === null ? "Customer-level" : option.name || option.id || "PENDING";
-
 	return (
 		<>
 			<SheetHeader
@@ -241,77 +307,27 @@ function SelectContent() {
 					<AttachProductSelection />
 
 					{entities.length > 0 && (
-						<div>
-							<div className="text-form-label block mb-1">Select scope</div>
-							<SearchableSelect<EntityOption>
-								value={entityId ?? CUSTOMER_LEVEL_VALUE}
-								onValueChange={(value) =>
-									onScopeChange?.(
-										value === CUSTOMER_LEVEL_VALUE ? undefined : value,
-									)
-								}
-								options={entityOptions}
-								getOptionValue={getEntityOptionValue}
-								getOptionLabel={getEntityOptionLabel}
-								placeholder="Select entity"
-								searchable
-								searchPlaceholder="Search entities..."
-								emptyText="No entities found"
-								triggerClassName="w-full"
-								renderValue={(option) =>
-									option === null || option === undefined ? (
-										<span className="text-t2">Customer-level</span>
-									) : (
-										<span className="text-t2 truncate">
-											{option.name || option.id || "PENDING"}
-										</span>
-									)
-								}
-								renderOption={(option, isSelected) => {
-									if (option === null) {
-										return (
-											<>
-												<span className="text-sm">Customer-level</span>
-												{isSelected && (
-													<CheckIcon className="size-4 shrink-0" />
-												)}
-											</>
-										);
-									}
-									const entityLabel = option.id || "PENDING";
-									return (
-										<>
-											<div className="flex gap-2 items-center min-w-0 flex-1">
-												{option.name && (
-													<span className="text-sm shrink-0">
-														{option.name}
-													</span>
-												)}
-												<span className="truncate text-t3 font-mono text-xs min-w-0">
-													{entityLabel}
-												</span>
-											</div>
-											{isSelected && <CheckIcon className="size-4 shrink-0" />}
-										</>
-									);
-								}}
-								footer={
-									<div className="border-t py-1.5 px-2">
-										<Button
-											variant="muted"
-											className="w-full"
-											onClick={() => setCreateEntityOpen(true)}
-										>
-											<PlusIcon
-												className="size-[14px] text-t2"
-												weight="regular"
-											/>
-											Create new entity
-										</Button>
-									</div>
-								}
-							/>
-						</div>
+						<EntityScopeSelector
+							entities={entities}
+							scopeEntityId={entityId ?? undefined}
+							onScopeChange={(value) => onScopeChange?.(value)}
+							wrapInSection={false}
+							footer={
+								<div className="border-t py-1.5 px-2">
+									<Button
+										variant="muted"
+										className="w-full"
+										onClick={() => setCreateEntityOpen(true)}
+									>
+										<PlusIcon
+											className="size-[14px] text-t2"
+											weight="regular"
+										/>
+										Create new entity
+									</Button>
+								</div>
+							}
+						/>
 					)}
 
 					{entityId ? (
@@ -423,6 +439,23 @@ function SendInvoiceContent() {
 	);
 }
 
+function CheckoutSessionContent() {
+	const { product, previewQuery, isPending, handleCheckoutAttach } =
+		useAttachFormContext();
+	const { setSheet } = useSheetStore();
+	const itemId = useSheetStore((s) => s.itemId);
+
+	return (
+		<GenerateCheckoutStageWithPreview
+			productName={product?.name}
+			previewQuery={previewQuery}
+			isPending={isPending}
+			onSubmit={handleCheckoutAttach}
+			onBack={() => setSheet({ type: "attach-review", itemId })}
+		/>
+	);
+}
+
 function SheetContent() {
 	const sheetType = useSheetStore((s) => s.type);
 	const {
@@ -432,16 +465,19 @@ function SheetContent() {
 		handlePlanEditorCancel,
 	} = useAttachFormContext();
 
+	const StageContent =
+		sheetType === "attach-send-invoice"
+			? SendInvoiceContent
+			: sheetType === "attach-checkout-session"
+				? CheckoutSessionContent
+				: sheetType === "attach-review"
+					? ReviewContent
+					: SelectContent;
+
 	return (
 		<LayoutGroup>
 			<div className="flex flex-col h-full overflow-y-auto">
-				{sheetType === "attach-send-invoice" ? (
-					<SendInvoiceContent />
-				) : sheetType === "attach-review" ? (
-					<ReviewContent />
-				) : (
-					<SelectContent />
-				)}
+				<StageContent />
 
 				{productWithFormItems && (
 					<InlinePlanEditor

@@ -2,14 +2,19 @@ import { describe, expect, test } from "bun:test";
 import {
 	type AggregatedFeatureBalanceSchema,
 	AppEnv,
+	ProductSchema,
 	type SubjectBalance,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-import type { CachedFullSubject } from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
+import {
+	type CachedFullSubject,
+	CachedFullSubjectSchema,
+} from "@/internal/customers/cache/fullSubject/fullSubjectCacheModel.js";
 import { normalizeFromSchema } from "@/internal/customers/cache/fullSubject/sanitize/normalizeFromSchema.js";
 import { sanitizeCachedAggregatedFeatureBalance } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedAggregatedFeatureBalance.js";
 import { sanitizeCachedFullSubject } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedFullSubject.js";
 import { sanitizeCachedSubjectBalance } from "@/internal/customers/cache/fullSubject/sanitize/sanitizeCachedSubjectBalance.js";
+import { normalizeFromSchema as normalizeFromSchemaCacheUtils } from "@/utils/cacheUtils/normalizeFromSchema.js";
 
 describe("normalizeFromSchema (core walker)", () => {
 	test("fills undefined at nullable position with null", () => {
@@ -499,5 +504,402 @@ describe("sanitizeCachedAggregatedFeatureBalance", () => {
 		expect(result.rollover_balance).toBe(0);
 		expect(result.rollover_usage).toBe(0);
 		expect(result.prepaid_grant_from_options).toBe(0);
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Cache sanitization regression — commit ce100dbf
+//
+// Upstash's Lua cjson collapses empty `{}` to `[]`, and pre-existing cache
+// entries that pre-date a new schema field will be missing it entirely. The
+// sanitizer must:
+//   1. coerce empty arrays back to objects when the schema says "object"
+//      (so nested defaults like `ProductConfigSchema.ignore_past_due=false`
+//      are re-applied),
+//   2. defensively coerce `product.config` to `{}` when it's an array or
+//      missing (belt-and-suspenders for downstream consumers),
+//   3. never throw "Expected object, received array" for any nested object
+//      shape regardless of what fields are added in the future.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const buildBaseCachedFullSubjectForSanitize = (): CachedFullSubject =>
+	({
+		subjectType: "customer",
+		customerId: "cus_sanitize",
+		internalCustomerId: "cus_int_sanitize",
+		_cachedAt: Date.now(),
+		subjectViewEpoch: 0,
+		meteredFeatures: [],
+		customerEntitlementIdsByFeatureId: {},
+		customer: {
+			internal_id: "cus_int_sanitize",
+			org_id: "org_sanitize",
+			env: AppEnv.Live,
+			created_at: 1,
+		},
+		customer_products: [],
+		products: [],
+		entitlements: [],
+		prices: [],
+		free_trials: [],
+		subscriptions: [],
+		invoices: [],
+		flags: {},
+	}) as unknown as CachedFullSubject;
+
+const buildBaseProductForSanitize = (planId = "plan_sanitize") =>
+	({
+		// Just enough fields to look like a Product; the sanitizer only
+		// inspects `config` for this regression.
+		id: planId,
+		internal_id: `ip_${planId}`,
+		name: planId,
+		group: `grp_${planId}`,
+		created_at: 1,
+		env: AppEnv.Live,
+		org_id: "org_sanitize",
+		is_add_on: false,
+		is_default: false,
+		version: 1,
+		archived: false,
+	}) as Record<string, unknown>;
+
+describe("sanitizeCachedFullSubject — product.config (commit ce100dbf)", () => {
+	test("coerces product.config: [] -> {} and re-applies ignore_past_due default", () => {
+		// Simulates what Upstash hands back: ignore_past_due defaulted to {},
+		// cjson encoded it as [], so on read we get `config: []`. The walker
+		// must rebuild it as `{ ignore_past_due: false }`.
+		const malformed = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
+			string,
+			unknown
+		>;
+		malformed.products = [
+			{
+				...buildBaseProductForSanitize("plan_sanitize_empty_array_config"),
+				config: [],
+			},
+		];
+
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: malformed as unknown as CachedFullSubject,
+		});
+
+		const product = result.products[0] as unknown as {
+			config: { ignore_past_due?: boolean };
+		};
+
+		// Layer 1 (walker): config is an object, not an array.
+		expect(Array.isArray(product.config)).toBe(false);
+		expect(product.config).toBeDefined();
+		expect(typeof product.config).toBe("object");
+
+		// Layer 2 (walker default-application): nested ZodDefault hydrated.
+		// If this fails the walker isn't recursing into the rebuilt object.
+		expect(product.config.ignore_past_due).toBe(false);
+	});
+
+	test("fills missing product.config entirely (pre-field-existed cache entries)", () => {
+		// Pre-existing cache entries written before `config` existed simply
+		// don't have the field — the belt-and-suspenders block in
+		// sanitizeCachedFullSubject must inject {}.
+		const malformed = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
+			string,
+			unknown
+		>;
+		malformed.products = [buildBaseProductForSanitize("plan_sanitize_missing_config")];
+
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: malformed as unknown as CachedFullSubject,
+		});
+
+		const product = result.products[0] as unknown as {
+			config: Record<string, unknown>;
+		};
+		expect(product.config).toBeDefined();
+		expect(Array.isArray(product.config)).toBe(false);
+		expect(typeof product.config).toBe("object");
+	});
+
+	test("preserves explicit ignore_past_due=true (no over-correction)", () => {
+		// If Upstash cjson encoded `{ ignore_past_due: true }` faithfully (only
+		// fully-empty objects collapse), the value must survive untouched.
+		const malformed = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
+			string,
+			unknown
+		>;
+		malformed.products = [
+			{
+				...buildBaseProductForSanitize("plan_sanitize_preserve_true"),
+				config: { ignore_past_due: true },
+			},
+		];
+
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: malformed as unknown as CachedFullSubject,
+		});
+
+		const product = result.products[0] as unknown as {
+			config: { ignore_past_due: boolean };
+		};
+		expect(product.config.ignore_past_due).toBe(true);
+	});
+});
+
+describe("normalizeFromSchema — empty-array-as-object regression (commit ce100dbf)", () => {
+	test("cacheUtils walker rebuilds ZodObject from empty array on nested products", () => {
+		// Direct exercise of the cacheUtils walker — used by
+		// getCachedFullCustomer. The structural fix from commit ce100dbf:
+		// nested `config: []` must become `config: {}` so downstream
+		// "Expected object, received array" errors stop firing. (This walker
+		// does NOT re-apply ZodDefault values; the belt-and-suspenders block
+		// in getCachedFullCustomer handles defaults for product.config.)
+		const TestSchema = z.object({
+			products: z.array(ProductSchema),
+		});
+
+		const result = normalizeFromSchemaCacheUtils<{
+			products: Array<{ config: unknown }>;
+		}>({
+			schema: TestSchema as unknown as z.ZodTypeAny,
+			data: {
+				products: [
+					{
+						...buildBaseProductForSanitize("plan_sanitize_cacheutils"),
+						config: [],
+					},
+				],
+			},
+		});
+
+		const product = result.products[0]!;
+		expect(Array.isArray(product.config)).toBe(false);
+		expect(typeof product.config).toBe("object");
+		expect(product.config).not.toBeNull();
+	});
+
+	test("full-subject walker rebuilds ZodObject from empty array on nested products", () => {
+		const result = normalizeFromSchema<{
+			products: Array<{ config: { ignore_past_due: boolean } }>;
+		}>({
+			schema: CachedFullSubjectSchema,
+			data: {
+				...(buildBaseCachedFullSubjectForSanitize() as unknown as Record<
+					string,
+					unknown
+				>),
+				products: [
+					{
+						...buildBaseProductForSanitize("plan_sanitize_fullsubject"),
+						config: [],
+					},
+				],
+			},
+		});
+
+		const product = result.products[0]!;
+		expect(Array.isArray(product.config)).toBe(false);
+		expect(product.config.ignore_past_due).toBe(false);
+	});
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Generic fuzz: mutate every field of a sample subject across multiple
+// "Upstash-style" corruption modes and assert sanitization always returns a
+// stable, downstream-consumable shape (no thrown errors, no array-shaped
+// values at object positions). This is the regression net for any future
+// field added to ProductSchema or peer schemas — new fields get fuzzed for
+// free on the next test run.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type SanitizerCorruptionMode =
+	| "object_to_empty_array"
+	| "array_to_empty_object"
+	| "drop_field"
+	| "set_null"
+	| "set_undefined";
+
+const ALL_SANITIZER_CORRUPTION_MODES: SanitizerCorruptionMode[] = [
+	"object_to_empty_array",
+	"array_to_empty_object",
+	"drop_field",
+	"set_null",
+	"set_undefined",
+];
+
+const corruptValueForSanitizer = (
+	value: unknown,
+	mode: SanitizerCorruptionMode,
+): unknown => {
+	switch (mode) {
+		case "object_to_empty_array":
+			// Only objects can collapse to [] in Upstash cjson.
+			return value && typeof value === "object" && !Array.isArray(value)
+				? []
+				: value;
+		case "array_to_empty_object":
+			return Array.isArray(value) ? {} : value;
+		case "drop_field":
+			return undefined;
+		case "set_null":
+			return null;
+		case "set_undefined":
+			return undefined;
+	}
+};
+
+/**
+ * Walk `data` shape-blind and return a new structure where every leaf has had
+ * `corruptValueForSanitizer(_, mode)` applied. Recurses into objects and
+ * arrays so nested fields (like `products[*].config`) get hit. Generic — never
+ * references `config` or `ignore_past_due` directly.
+ */
+const corruptAllFieldsForSanitizer = (
+	data: unknown,
+	mode: SanitizerCorruptionMode,
+	depth = 0,
+): unknown => {
+	if (depth > 4) return data; // safety against pathological cycles
+	if (Array.isArray(data)) {
+		return data.map((item) =>
+			corruptAllFieldsForSanitizer(item, mode, depth + 1),
+		);
+	}
+	if (data && typeof data === "object") {
+		const out: Record<string, unknown> = {};
+		for (const [key, value] of Object.entries(data)) {
+			const recursed = corruptAllFieldsForSanitizer(value, mode, depth + 1);
+			out[key] = corruptValueForSanitizer(recursed, mode);
+		}
+		return out;
+	}
+	return data;
+};
+
+const assertNoArrayShapedObjects = (
+	value: unknown,
+	schema: z.ZodTypeAny,
+	path = "$",
+): void => {
+	// Unwrap optional/nullable/default chains to the inner shape-bearing schema.
+	let unwrapped: z.ZodTypeAny = schema;
+	while (
+		unwrapped instanceof z.ZodOptional ||
+		unwrapped instanceof z.ZodNullable ||
+		unwrapped instanceof z.ZodDefault
+	) {
+		unwrapped = (unwrapped as unknown as { _def: { innerType: z.ZodTypeAny } })
+			._def.innerType;
+	}
+
+	if (unwrapped instanceof z.ZodObject) {
+		// Critical assertion: the object position must NOT carry an Array
+		// payload — that's exactly the "Expected object, received array"
+		// breakage commit ce100dbf is fixing.
+		if (Array.isArray(value)) {
+			throw new Error(
+				`Sanitizer left an array at object position ${path} (caller would see "Expected object, received array")`,
+			);
+		}
+		if (value && typeof value === "object") {
+			const shape = (unwrapped as unknown as { _def: { shape: Record<string, z.ZodTypeAny> } })._def.shape;
+			for (const [key, childSchema] of Object.entries(shape)) {
+				assertNoArrayShapedObjects(
+					(value as Record<string, unknown>)[key],
+					childSchema,
+					`${path}.${key}`,
+				);
+			}
+		}
+		return;
+	}
+
+	if (unwrapped instanceof z.ZodArray) {
+		if (Array.isArray(value)) {
+			const element = (unwrapped as unknown as { _def: { element: z.ZodTypeAny } })._def.element;
+			value.forEach((item, idx) =>
+				assertNoArrayShapedObjects(item, element, `${path}[${idx}]`),
+			);
+		}
+		return;
+	}
+};
+
+describe("sanitizeCachedFullSubject — generic fuzz (regression net for new fields)", () => {
+	test("every Upstash corruption mode is recovered without leaving array payloads at object positions", () => {
+		// Build a "fully-populated" subject so the walker has every nested
+		// shape to traverse. New fields on any nested schema get fuzzed for
+		// free on the next test run.
+		const populated = buildBaseCachedFullSubjectForSanitize() as unknown as Record<
+			string,
+			unknown
+		>;
+		populated.products = [
+			{
+				...buildBaseProductForSanitize("plan_sanitize_fuzz_1"),
+				config: { ignore_past_due: true },
+			},
+			{
+				...buildBaseProductForSanitize("plan_sanitize_fuzz_2"),
+				config: { ignore_past_due: false },
+			},
+		];
+
+		for (const mode of ALL_SANITIZER_CORRUPTION_MODES) {
+			// We corrupt only the *interior* of products[i] — the field-shape
+			// bug commit ce100dbf addresses. The top-level container shape
+			// (products is an array, the subject is an object, etc.) is what
+			// the cache layer guarantees on write, so corrupting it is
+			// outside the bug class. Mutating each product's interior is
+			// sufficient to fuzz every nested field of ProductSchema —
+			// including `config` and any future field added to it.
+			const corruptedProducts = (
+				populated.products as Array<Record<string, unknown>>
+			).map((p, i) => {
+				const corruptedProduct = corruptAllFieldsForSanitizer(
+					p,
+					mode,
+				) as Record<string, unknown>;
+				// Restore the structural identifier fields so the sanitizer
+				// has a stable record to work on. (The bug isn't about
+				// missing IDs.)
+				return {
+					...corruptedProduct,
+					id: `plan_sanitize_fuzz_${i + 1}_${mode}`,
+					internal_id: `ip_plan_sanitize_fuzz_${i + 1}_${mode}`,
+				};
+			});
+
+			const corrupted: Record<string, unknown> = {
+				...populated,
+				products: corruptedProducts,
+			};
+
+			let sanitized: CachedFullSubject;
+			expect(() => {
+				sanitized = sanitizeCachedFullSubject({
+					cachedFullSubject: corrupted as unknown as CachedFullSubject,
+				});
+			}).not.toThrow();
+
+			// Walk the full schema and prove no object position is left holding
+			// an array payload (the exact symptom of the bug).
+			expect(() =>
+				assertNoArrayShapedObjects(
+					sanitized!,
+					CachedFullSubjectSchema as unknown as z.ZodTypeAny,
+				),
+			).not.toThrow();
+
+			// Spot-check the specific known target of commit ce100dbf:
+			// `product.config` is always an object after sanitization,
+			// regardless of corruption mode.
+			for (const product of (sanitized!.products ?? []) as Array<{
+				config: unknown;
+			}>) {
+				expect(Array.isArray(product.config)).toBe(false);
+				expect(typeof product.config).toBe("object");
+				expect(product.config).not.toBeNull();
+			}
+		}
 	});
 });

@@ -1,17 +1,27 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect } from "react";
-import FAQ from "./faq";
-import Features from "./features";
-import Footer from "./footer";
 import Hero from "./hero";
-import Pricing from "./pricing";
-import PricingModels from "./pricing-models";
-import Problem from "./problem";
-import ProductionScale from "./production-scale";
+import LazySection from "./lazy-section";
 import SectionDivider from "./section-divider";
-import Solution from "./solution";
-import Testimonials from "./testimonials";
+
+// All below-fold sections are code-split into separate lazy chunks so the
+// initial JS bundle only contains the hero. Framer-motion, GSAP ScrollTrigger,
+// and lottie-web are pulled into these chunks rather than the main bundle.
+// LazySection gates each component behind an IntersectionObserver so chunks
+// and their heavy assets (Lottie JSON, ScrollTrigger) only download as the
+// user scrolls toward them rather than all at once on page load.
+const LogoWall = dynamic(() => import("./logo-wall"));
+const Problem = dynamic(() => import("./problem"));
+const Solution = dynamic(() => import("./solution"));
+const PricingModels = dynamic(() => import("./pricing-models"));
+const Features = dynamic(() => import("./features"));
+const Testimonials = dynamic(() => import("./testimonials"));
+const ProductionScale = dynamic(() => import("./production-scale"));
+const Pricing = dynamic(() => import("./pricing"));
+const FAQ = dynamic(() => import("./faq"));
+const Footer = dynamic(() => import("./footer"));
 
 function scrollToHash() {
 	const hash = window.location.hash;
@@ -36,23 +46,25 @@ export default function HomeSections() {
 	return (
 		<>
 			<Hero />
+
+ <LogoWall />
 			<SectionDivider title="THE PROBLEM" />
-			<Problem />
+			<LazySection><Problem /></LazySection>
 			<SectionDivider title="THE SOLUTION" />
-			<Solution />
+			<LazySection><Solution /></LazySection>
 			<SectionDivider title="PRICING MODELS" />
-			<PricingModels />
+			<LazySection><PricingModels /></LazySection>
 			<SectionDivider title="FEATURES" />
-			<Features />
+			<LazySection><Features /></LazySection>
 			<SectionDivider title="TESTIMONIALS" />
-			<Testimonials />
+			<LazySection><Testimonials /></LazySection>
 			<SectionDivider title="PRODUCTION SCALE" />
-			<ProductionScale />
+			<LazySection><ProductionScale /></LazySection>
 			<SectionDivider title="PRICING" />
-			<Pricing />
+			<LazySection><Pricing /></LazySection>
 			<SectionDivider title="FAQ" />
-			<FAQ />
-			<Footer />
+			<LazySection><FAQ /></LazySection>
+			<LazySection><Footer /></LazySection>
 		</>
 	);
 }

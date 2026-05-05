@@ -49,7 +49,7 @@ import { Result } from "../types/fp.js";
  * @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
  * @param properties - Additional properties to attach to this usage event. (optional)
  *
- * @returns The usage value recorded, with either a single updated balance or a map of updated balances.
+ * @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
  */
 export function track(
   client: AutumnCore,
@@ -175,6 +175,7 @@ async function $do(
     | SDKValidationError
   >(
     M.json(200, models.TrackResponse$inboundSchema),
+    M.json(202, models.TrackResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

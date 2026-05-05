@@ -1,10 +1,11 @@
 import { ApiVersion, type CustomerData } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
+import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { attachPaymentMethod } from "../initCustomer.js";
 
-// V3 initializes the customer in Stripe, then creates the customer in Autumn
+// Creates the Stripe customer first, then the Autumn customer linked to it.
 export const initCustomerV3 = async ({
 	ctx,
 	customerId,
@@ -18,6 +19,7 @@ export const initCustomerV3 = async ({
 	sendEmailReceipts,
 	nameOverride,
 	emailOverride,
+	stripeCustomerOverrides,
 }: {
 	ctx: TestContext;
 	customerId: string;
@@ -31,8 +33,9 @@ export const initCustomerV3 = async ({
 	sendEmailReceipts?: boolean;
 	nameOverride?: string | null;
 	emailOverride?: string | null;
+	stripeCustomerOverrides?: Partial<Stripe.CustomerCreateParams>;
 }) => {
-	// Use override if provided (including null), otherwise default to customerId-based values
+	// Use override if provided (including null), otherwise default from customerId.
 	const name =
 		nameOverride !== undefined ? (nameOverride ?? undefined) : customerId;
 	const email =
@@ -54,15 +57,15 @@ export const initCustomerV3 = async ({
 		testClockId = testClock.id;
 	}
 
-	// 1. Create stripe customer
+	// 1. Stripe customer.
 	const stripeCus = await stripeCli.customers.create({
 		email,
 		name,
 		test_clock: testClockId,
+		...(stripeCustomerOverrides ?? {}),
 	});
 
-	// 2. Create customer
-
+	// 2. Autumn customer.
 	try {
 		await autumn.customers.delete(customerId);
 	} catch (_error) {}
@@ -77,13 +80,12 @@ export const initCustomerV3 = async ({
 		config: customerData?.config,
 		internalOptions: {
 			disable_defaults: !withDefault,
-			// Only pass default_group when defaults are enabled
 			...(withDefault && { default_group: defaultGroup }),
 		},
 		skipWebhooks,
 	});
 
-	// 3. Attach payment method
+	// 3. Payment method.
 	if (attachPm) {
 		await attachPaymentMethod({
 			stripeCli,

@@ -255,6 +255,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
 </DynamicParamField>
 
+<DynamicParamField body="enable_plan_immediately" type="boolean">
+  If true, the cusProducts are activated immediately even when payment is pending via Stripe checkout.
+</DynamicParamField>
+
 <DynamicParamField body="customer_data" type="object">
   Customer details to set when creating a customer
   <Expandable title="properties">

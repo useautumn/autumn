@@ -92,6 +92,7 @@ export const setupCreateScheduleBillingContext = async ({
 		success_url: params.success_url,
 		checkout_session_params: params.checkout_session_params,
 		redirect_mode: params.redirect_mode ?? "if_required",
+		enable_plan_immediately: params.enable_plan_immediately,
 	} satisfies MultiAttachParamsV0;
 
 	const billingContext = await setupImmediateMultiProductBillingContext({

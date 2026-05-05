@@ -7,8 +7,8 @@ from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
 from pydantic.functional_validators import AfterValidator
-from typing import Any, Dict, Literal, Optional
-from typing_extensions import Annotated, NotRequired, TypedDict
+from typing import Any, Dict, Literal, Optional, Union
+from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
 class TrackGlobalsTypedDict(TypedDict):
@@ -134,7 +134,71 @@ class TrackParams(BaseModel):
         return m
 
 
-class TrackResponseTypedDict(TypedDict):
+class TrackResponseBody2TypedDict(TypedDict):
+    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored."""
+
+    customer_id: str
+    r"""The ID of the customer whose usage was tracked."""
+    value: float
+    r"""The amount of usage that was recorded."""
+    balance: Nullable[BalanceTypedDict]
+    r"""The updated balance for the tracked feature. Null if tracking by event_name that affects multiple features."""
+    entity_id: NotRequired[str]
+    r"""The ID of the entity, if entity-scoped tracking was performed."""
+    event_name: NotRequired[str]
+    r"""The event name that was tracked, if event_name was used instead of feature_id."""
+    balances: NotRequired[Dict[str, BalanceTypedDict]]
+    r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
+
+
+class TrackResponseBody2(BaseModel):
+    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored."""
+
+    customer_id: str
+    r"""The ID of the customer whose usage was tracked."""
+
+    value: float
+    r"""The amount of usage that was recorded."""
+
+    balance: Nullable[Balance]
+    r"""The updated balance for the tracked feature. Null if tracking by event_name that affects multiple features."""
+
+    entity_id: Optional[str] = None
+    r"""The ID of the entity, if entity-scoped tracking was performed."""
+
+    event_name: Optional[str] = None
+    r"""The event name that was tracked, if event_name was used instead of feature_id."""
+
+    balances: Optional[Dict[str, Balance]] = None
+    r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["entity_id", "event_name", "balances"])
+        nullable_fields = set(["balance"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class TrackResponseBody1TypedDict(TypedDict):
     r"""OK"""
 
     customer_id: str
@@ -151,7 +215,7 @@ class TrackResponseTypedDict(TypedDict):
     r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
 
 
-class TrackResponse(BaseModel):
+class TrackResponseBody1(BaseModel):
     r"""OK"""
 
     customer_id: str
@@ -196,6 +260,17 @@ class TrackResponse(BaseModel):
                     m[k] = val
 
         return m
+
+
+TrackResponseTypedDict = TypeAliasType(
+    "TrackResponseTypedDict",
+    Union[TrackResponseBody1TypedDict, TrackResponseBody2TypedDict],
+)
+
+
+TrackResponse = TypeAliasType(
+    "TrackResponse", Union[TrackResponseBody1, TrackResponseBody2]
+)
 
 
 try:

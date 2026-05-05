@@ -32,6 +32,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 		trialContext,
 		cancelAction,
 		billingVersion,
+		skipExistingUsageCarry,
 	} = updateSubscriptionContext;
 
 	const cancelFields = computeCancelFields({
@@ -65,10 +66,12 @@ export const computeCustomPlanNewCustomerProduct = ({
 			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
 			billingVersion: billingVersion,
 
-			existingUsagesConfig: {
-				fromCustomerProduct: customerProduct,
-				carryAllConsumableFeatures: true,
-			},
+			existingUsagesConfig: skipExistingUsageCarry
+				? undefined
+				: {
+						fromCustomerProduct: customerProduct,
+						carryAllConsumableFeatures: true,
+					},
 
 			existingRolloversConfig: {
 				fromCustomerProduct: customerProduct,
