@@ -1,4 +1,5 @@
 import type { Context, Next } from "hono";
+import { setCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
@@ -43,6 +44,7 @@ export const vercelCustomerMiddleware = async (
 			orgId: ctx.org.id,
 			customerId,
 		});
+		setCustomerRedisRouting({ ctx, customerId });
 	}
 
 	await next();

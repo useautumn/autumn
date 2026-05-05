@@ -1,0 +1,139 @@
+import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
+import { z } from "zod/v4";
+import { getOrgRedis, removeOrgRedis } from "@/external/redis/orgRedisPool.js";
+import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { encryptData } from "@/utils/encryptUtils.js";
+import { OrgService } from "../OrgService.js";
+
+export const handleUpsertRedisConfig = createRoute({
+	scopes: [Scopes.Organisation.Write],
+	body: z.object({
+		connectionString: z.string().min(1),
+	}),
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { db, org, logger } = ctx;
+		const { connectionString: rawConnectionString } = c.req.valid("json");
+		const connectionString = rawConnectionString.trim();
+
+		if (!connectionString) {
+			throw new RecaseError({
+				message: "Connection string is required",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		if (org.redis_config) {
+			throw new RecaseError({
+				message:
+					"Redis config already exists. Remove it before creating a new one.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		let redisUrl: URL;
+		try {
+			redisUrl = new URL(connectionString);
+		} catch {
+			throw new RecaseError({
+				message: "Invalid connection string: could not parse URL",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		const now = Date.now();
+		const updatedOrg = await OrgService.update({
+			db,
+			orgId: org.id,
+			updates: {
+				redis_config: {
+					connectionString: encryptData(connectionString),
+					url: redisUrl.host,
+					migrationPercent: 0,
+					previousMigrationPercent: 0,
+					migrationChangedAt: now,
+				},
+			},
+		});
+
+		if (updatedOrg) {
+			getOrgRedis({ org: updatedOrg });
+			logger.info(
+				`[handleUpsertRedisConfig] org=${org.id}: redis_config created, url=${redisUrl.host}`,
+			);
+		}
+
+		return c.json({ success: true });
+	},
+});
+
+export const handleUpdateRedisMigration = createRoute({
+	scopes: [Scopes.Organisation.Write],
+	body: z.object({
+		migrationPercent: z.number().int().min(0).max(100),
+	}),
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { db, org, logger } = ctx;
+		const { migrationPercent } = c.req.valid("json");
+
+		if (!org.redis_config) {
+			throw new RecaseError({
+				message: "No Redis config set on this org",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		await OrgService.update({
+			db,
+			orgId: org.id,
+			updates: {
+				redis_config: {
+					...org.redis_config,
+					previousMigrationPercent: org.redis_config.migrationPercent,
+					migrationPercent,
+					migrationChangedAt: Date.now(),
+				},
+			},
+		});
+
+		logger.info(
+			`[handleUpdateRedisMigration] org=${org.id}: ${org.redis_config.migrationPercent}% -> ${migrationPercent}%`,
+		);
+
+		return c.json({ success: true });
+	},
+});
+
+export const handleDeleteRedisConfig = createRoute({
+	scopes: [Scopes.Organisation.Write],
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { db, org, logger } = ctx;
+
+		if (org.redis_config && org.redis_config.migrationPercent > 0) {
+			throw new RecaseError({
+				message: `Cannot remove Redis config while migrationPercent is ${org.redis_config.migrationPercent}%. Set it to 0 first.`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		await OrgService.update({
+			db,
+			orgId: org.id,
+			updates: { redis_config: null },
+		});
+		removeOrgRedis({ orgId: org.id });
+
+		logger.info(
+			`[handleDeleteRedisConfig] org=${org.id}: redis_config removed`,
+		);
+
+		return c.json({ success: true });
+	},
+});

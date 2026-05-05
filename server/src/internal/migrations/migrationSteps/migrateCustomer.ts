@@ -5,6 +5,7 @@ import {
 	type MigrationJob,
 	ProcessorType,
 } from "@autumn/shared";
+import { setCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -34,7 +35,12 @@ export const migrateCustomer = async ({
 		customerId,
 	});
 
-	const customerCtx: AutumnContext = { ...ctx, logger: customerLogger };
+	const customerCtx: AutumnContext = {
+		...ctx,
+		customerId,
+		logger: customerLogger,
+	};
+	setCustomerRedisRouting({ ctx: customerCtx, customerId });
 
 	try {
 		const fullCus = await CusService.getFull({
@@ -95,7 +101,7 @@ export const migrateCustomer = async ({
 
 			await deleteCachedFullCustomer({
 				customerId: fullCus.id ?? "",
-				ctx,
+				ctx: customerCtx,
 			});
 		}
 

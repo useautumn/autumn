@@ -24,6 +24,12 @@ export const FrontendOrgSchema = z.object({
 	through_master: z.boolean(),
 	onboarded: z.boolean(),
 	deployed: z.boolean(),
+	redis_config: z
+		.object({
+			url: z.string(),
+			migrationPercent: z.number(),
+		})
+		.nullable(),
 	processor_configs: z.object({
 		vercel: z.object({
 			connected: z.boolean(),
