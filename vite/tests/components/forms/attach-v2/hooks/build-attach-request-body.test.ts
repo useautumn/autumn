@@ -11,7 +11,7 @@ function makeProduct({ items }: { items: ProductV2["items"] }): ProductV2 {
 		is_default: false,
 		version: 1,
 		group: null,
-		env: "sandbox" as any,
+		env: "sandbox" as ProductV2["env"],
 		items,
 		created_at: Date.now(),
 	};
@@ -172,7 +172,7 @@ describe("buildAttachRequestBody — billing_units handling", () => {
 	});
 });
 
-describe("buildAttachRequestBody — start_date handling", () => {
+describe("buildAttachRequestBody — starts_at handling", () => {
 	const product = makeProduct({
 		items: [
 			{
@@ -182,7 +182,7 @@ describe("buildAttachRequestBody — start_date handling", () => {
 		],
 	});
 
-	test("sends start_date instead of silently falling back to plan_schedule", () => {
+	test("sends starts_at instead of silently falling back to plan_schedule", () => {
 		const startDate = addDays(Date.now(), 1).getTime();
 
 		const result = buildAttachRequestBody({
@@ -193,11 +193,11 @@ describe("buildAttachRequestBody — start_date handling", () => {
 			startDate,
 		});
 
-		expect(result?.start_date).toBe(startDate);
+		expect(result?.starts_at).toBe(startDate);
 		expect(result?.plan_schedule).toBeUndefined();
 	});
 
-	test("keeps plan_schedule when no start_date is selected", () => {
+	test("keeps plan_schedule when no starts_at is selected", () => {
 		const result = buildAttachRequestBody({
 			...baseParams,
 			product,
@@ -206,10 +206,10 @@ describe("buildAttachRequestBody — start_date handling", () => {
 		});
 
 		expect(result?.plan_schedule).toBe("end_of_cycle");
-		expect(result?.start_date).toBeUndefined();
+		expect(result?.starts_at).toBeUndefined();
 	});
 
-	test("does not send start_date with a trial", () => {
+	test("does not send starts_at with a trial", () => {
 		const result = buildAttachRequestBody({
 			...baseParams,
 			product,
@@ -219,6 +219,6 @@ describe("buildAttachRequestBody — start_date handling", () => {
 			trialLength: 7,
 		});
 
-		expect(result?.start_date).toBeUndefined();
+		expect(result?.starts_at).toBeUndefined();
 	});
 });

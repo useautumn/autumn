@@ -1,27 +1,31 @@
 import { expect } from "bun:test";
 import { type FullCusProduct, ms } from "@autumn/shared";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { addMonths, getUnixTime } from "date-fns";
 import type Stripe from "stripe";
 import { handleSubCreated } from "@/external/stripe/webhookHandlers/handleSubCreated";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
-import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 
 export const getCustomerProduct = async ({
 	ctx,
 	customerId,
 	productId,
+	entityId,
 }: {
 	ctx: Parameters<typeof CusService.getFull>[0]["ctx"];
 	customerId: string;
 	productId: string;
+	entityId?: string;
 }): Promise<FullCusProduct> => {
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId,
 	});
 	const cusProduct = fullCustomer.customer_products.find(
-		(cp) => cp.product_id === productId,
+		(cp) =>
+			cp.product_id === productId &&
+			(entityId === undefined || cp.entity_id === entityId),
 	);
 	expect(cusProduct).toBeDefined();
 	return cusProduct!;
@@ -80,8 +84,9 @@ export const triggerSubscriptionCreated = async ({
 		created: getUnixTime(subscriptionCreatedAtMs ?? Date.now()),
 		schedule: scheduleId ?? null,
 	} as Stripe.Subscription;
-	const retrieveSubscription: Stripe.SubscriptionsResource["retrieve"] = async () =>
-		stripeResponse({ object: subscription, requestId: `req_${stripeSubId}` });
+	const retrieveSubscription: Stripe.SubscriptionsResource["retrieve"] =
+		async () =>
+			stripeResponse({ object: subscription, requestId: `req_${stripeSubId}` });
 
 	const stripeCli = {
 		...ctx.stripeCli,
