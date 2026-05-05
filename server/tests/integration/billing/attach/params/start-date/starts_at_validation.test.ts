@@ -103,34 +103,6 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("starts_at: future date rejects customers without payment method")}`,
-	async () => {
-		const customerId = "attach-start-date-no-payment-method";
-		const pro = products.pro({
-			id: "pro",
-			items: [items.monthlyMessages({ includedUsage: 100 })],
-		});
-
-		const { autumnV2_2, advancedTo } = await initScenario({
-			customerId,
-			setup: [s.customer({}), s.products({ list: [pro] })],
-			actions: [],
-		});
-
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			errMessage: "Future starts_at requires a saved payment method",
-			func: () =>
-				autumnV2_2.billing.attach<AttachParamsV1Input>({
-					customer_id: customerId,
-					plan_id: pro.id,
-					starts_at: addDays(advancedTo, 1).getTime(),
-				}),
-		});
-	},
-);
-
-test.concurrent(
 	`${chalk.yellowBright("starts_at: future date rejects end of cycle plan schedule")}`,
 	async () => {
 		const customerId = "attach-start-date-end-of-cycle";

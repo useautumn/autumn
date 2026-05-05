@@ -1,8 +1,7 @@
-import {
-	type AttachBillingContext,
-	type AttachParamsV1,
-	type AutumnBillingPlan,
-	CusProductStatus,
+import type {
+	AttachBillingContext,
+	AttachParamsV1,
+	AutumnBillingPlan,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
@@ -10,17 +9,7 @@ import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/uti
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
-
-const shouldBuildImmediateLineItems = ({
-	planTiming,
-	customerProductStatus,
-}: {
-	planTiming: AttachBillingContext["planTiming"];
-	customerProductStatus: CusProductStatus;
-}): boolean => {
-	if (planTiming !== "immediate") return false;
-	return customerProductStatus !== CusProductStatus.Scheduled;
-};
+import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
 /**
  * Computes the billing plan for attaching a product.

@@ -17,14 +17,7 @@ export const handleStripeSubscriptionCreated = async ({
 		stripeId: stripeObject.id,
 	});
 
-	try {
-		await linkScheduledCustomerProductsToSubscription({ ctx, subscription });
-	} catch (err) {
-		ctx.logger.error(
-			`[sub.created] failed to link scheduled customer products for subscription ${subscription.id}`,
-			err,
-		);
-	}
+	await linkScheduledCustomerProductsToSubscription({ ctx, subscription });
 
 	const subscriptionCreatedContext =
 		await setupStripeSubscriptionCreatedContext({

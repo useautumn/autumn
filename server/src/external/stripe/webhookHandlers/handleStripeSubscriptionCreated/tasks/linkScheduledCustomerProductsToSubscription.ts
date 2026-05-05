@@ -10,7 +10,7 @@ const getScheduleId = (subscription: Stripe.Subscription) => {
 	return typeof schedule === "string" ? schedule : schedule?.id;
 };
 
-export const linkScheduledCustomerProductsToSubscription = async ({
+const executeLinkScheduledCustomerProductsToSubscription = async ({
 	ctx,
 	subscription,
 }: {
@@ -76,6 +76,26 @@ export const linkScheduledCustomerProductsToSubscription = async ({
 	if (linkedCount > 0) {
 		logger.info(
 			`[sub.created] linked ${linkedCount} scheduled customer product(s) to subscription ${subscription.id}`,
+		);
+	}
+};
+
+export const linkScheduledCustomerProductsToSubscription = async ({
+	ctx,
+	subscription,
+}: {
+	ctx: StripeWebhookContext;
+	subscription: Stripe.Subscription;
+}) => {
+	try {
+		await executeLinkScheduledCustomerProductsToSubscription({
+			ctx,
+			subscription,
+		});
+	} catch (err) {
+		ctx.logger.error(
+			`[sub.created] failed to link scheduled customer products for subscription ${subscription.id}`,
+			err,
 		);
 	}
 };
