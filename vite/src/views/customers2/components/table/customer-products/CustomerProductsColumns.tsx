@@ -1,4 +1,9 @@
-import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	hasCustomerProductEnded,
+	isCustomerProductTrialing,
+} from "@autumn/shared";
 import { FlaskIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
@@ -52,10 +57,13 @@ export const CustomerProductsColumns = [
 			table: Table<FullCusProduct>;
 		}) => {
 			const nowMs = (table.options.meta as { nowMs?: number })?.nowMs;
+			const status = hasCustomerProductEnded(row.original, { nowMs })
+				? CusProductStatus.Expired
+				: row.original.status;
 
 			return (
 				<CustomerProductsStatus
-					status={row.original.status}
+					status={status}
 					starts_at={row.original.starts_at ?? undefined}
 					canceled={row.original.canceled}
 					canceled_at={row.original.canceled_at ?? undefined}

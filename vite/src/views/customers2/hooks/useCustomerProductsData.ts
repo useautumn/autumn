@@ -42,8 +42,9 @@ export function useCustomerProductsData() {
 			filterCustomerProductsByType({
 				customer,
 				showExpired: showExpired ?? false,
+				nowMs: testClockFrozenTimeMs,
 			}),
-		[customer, showExpired],
+		[customer, showExpired, testClockFrozenTimeMs],
 	);
 
 	// Filter entity-level products by selected entity (if any)

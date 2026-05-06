@@ -1,14 +1,17 @@
 import {
 	CusProductStatus,
 	type FullCusEntWithFullCusProduct,
+	hasCustomerProductEnded,
 } from "@autumn/shared";
 
 export function filterCustomerFeatureUsage({
 	entitlements,
 	showExpired,
+	nowMs,
 }: {
 	entitlements: FullCusEntWithFullCusProduct[];
 	showExpired: boolean;
+	nowMs?: number;
 }): FullCusEntWithFullCusProduct[] {
 	return entitlements
 		.filter((ent: FullCusEntWithFullCusProduct) => {
@@ -22,7 +25,8 @@ export function filterCustomerFeatureUsage({
 			// Exclude expired and scheduled products from balance calculations
 			return (
 				ent.customer_product.status !== CusProductStatus.Expired &&
-				ent.customer_product.status !== CusProductStatus.Scheduled
+				ent.customer_product.status !== CusProductStatus.Scheduled &&
+				!hasCustomerProductEnded(ent.customer_product, { nowMs })
 			);
 		})
 		.sort(

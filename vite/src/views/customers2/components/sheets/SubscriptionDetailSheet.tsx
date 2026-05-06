@@ -1,8 +1,10 @@
 import type { ApiDiscount } from "@autumn/shared";
 import {
 	CusProductStatus,
+	cp,
 	type Entity,
 	type FrontendProduct,
+	hasCustomerProductEnded,
 	isCustomerProductTrialing,
 	type ProductItem,
 	sortPlanItems,
@@ -129,8 +131,12 @@ export function SubscriptionDetailSheet() {
 	// Prefetch product version data so the update sheet has it cached immediately
 	useProductVersionQuery({ productId: productV2?.id });
 
-	const isExpired = cusProduct?.status === CusProductStatus.Expired;
+	const nowMs = testClockFrozenTimeMs ?? Date.now();
+	const isExpired =
+		cusProduct?.status === CusProductStatus.Expired ||
+		(!!cusProduct && hasCustomerProductEnded(cusProduct, { nowMs }));
 	const isCanceled = cusProduct?.canceled;
+	const isOneOff = cp(cusProduct).oneOff().valid;
 
 	// Check for prepaid items in the product (must be called before any returns)
 	const { prepaidItems } = usePrepaidItems({ product: productV2 ?? undefined });
@@ -159,7 +165,6 @@ export function SubscriptionDetailSheet() {
 
 	const canCancel = !isExpired;
 	const canUpdate = !isExpired && !isScheduled;
-	const nowMs = testClockFrozenTimeMs ?? Date.now();
 	const prepaidDisplayQuantities = backendToDisplayQuantity({
 		backendOptions: cusProduct.options,
 		prepaidItems,
@@ -313,7 +318,7 @@ export function SubscriptionDetailSheet() {
 						label="Status"
 						value={
 							<CustomerProductsStatus
-								status={cusProduct.status}
+								status={isExpired ? CusProductStatus.Expired : cusProduct.status}
 								canceled={cusProduct.canceled}
 								canceled_at={cusProduct.canceled_at ?? undefined}
 								trialing={
@@ -361,7 +366,7 @@ export function SubscriptionDetailSheet() {
 					{cusProduct.ended_at && (
 						<InfoRow
 							icon={<XCircle size={16} weight="duotone" />}
-							label="Ended"
+							label={isOneOff ? "Access Ends" : "Ended"}
 							value={formatDate(cusProduct.ended_at)}
 						/>
 					)}
