@@ -91,10 +91,12 @@ export const prepareFeatureDeductionV2 = async ({
 			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
 	);
 
-	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
-		await Promise.all(
-			customerEntitlements.map(async (customerEntitlement) => {
-				const creditCost = await getCreditCost({
+	const creditCostByCustomerEntitlementId = new Map<string, number>();
+	await Promise.all(
+		customerEntitlements.map(async (customerEntitlement) => {
+			const creditCost =
+				deduction.precomputedCreditCost ??
+				(await getCreditCost({
 					featureId: feature.id,
 					creditSystem: customerEntitlement.entitlement.feature,
 					modelName: deduction.tokenUsage?.modelName,
@@ -104,69 +106,66 @@ export const prepareFeatureDeductionV2 = async ({
 								output: deduction.tokenUsage.outputTokens,
 							}
 						: undefined,
-				});
-
-				const maxOverage = getMaxOverage({
-					cusEnt: customerEntitlement,
-				});
-				const isFreeAllocated =
-					isFreeCustomerEntitlement(customerEntitlement) &&
-					isAllocatedCustomerEntitlement(customerEntitlement);
-				const resetBalance = cusEntToStartingBalance({
-					cusEnt: customerEntitlement,
-				});
-				const isFreeAllocatedUsageAllowed =
-					isFreeAllocated && overageBehaviour !== "reject";
-				const overageAllowedControl =
-					overageAllowedByFeatureId[customerEntitlement.entitlement.feature.id];
-
-				let effectiveUsageAllowed =
-					customerEntitlement.usage_allowed || isFreeAllocatedUsageAllowed;
-
-				if (
-					overageAllowedControl?.enabled === true &&
-					!nativeUsageAllowedFeatureIds.has(
-						customerEntitlement.entitlement.feature.id,
-					)
-				) {
-					effectiveUsageAllowed = true;
-				} else if (overageAllowedControl?.enabled === false) {
-					effectiveUsageAllowed = false;
-				}
-
-				return {
-					customer_entitlement_id: customerEntitlement.id,
-					credit_cost: creditCost,
-					feature_id: customerEntitlement.entitlement.feature.id,
-					entity_feature_id:
-						customerEntitlement.entitlement.entity_feature_id ?? null,
-					usage_allowed: effectiveUsageAllowed,
-					min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
-					max_balance: resetBalance,
-				};
-			}),
-		);
-
-	const rolloverArrays = await Promise.all(
-		customerEntitlements.map(async (customerEntitlement) => {
-			const creditCost = await getCreditCost({
-				featureId: feature.id,
-				creditSystem: customerEntitlement.entitlement.feature,
-				modelName: deduction.tokenUsage?.modelName,
-				tokens: deduction.tokenUsage
-					? {
-							input: deduction.tokenUsage.inputTokens,
-							output: deduction.tokenUsage.outputTokens,
-						}
-					: undefined,
-			});
-
-			return (customerEntitlement.rollovers || []).map((rollover) => ({
-				...rollover,
-				credit_cost: creditCost,
-			}));
+				}));
+			creditCostByCustomerEntitlementId.set(customerEntitlement.id, creditCost);
 		}),
 	);
+
+	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
+		customerEntitlements.map((customerEntitlement) => {
+			const creditCost = creditCostByCustomerEntitlementId.get(
+				customerEntitlement.id,
+			)!;
+
+			const maxOverage = getMaxOverage({
+				cusEnt: customerEntitlement,
+			});
+			const isFreeAllocated =
+				isFreeCustomerEntitlement(customerEntitlement) &&
+				isAllocatedCustomerEntitlement(customerEntitlement);
+			const resetBalance = cusEntToStartingBalance({
+				cusEnt: customerEntitlement,
+			});
+			const isFreeAllocatedUsageAllowed =
+				isFreeAllocated && overageBehaviour !== "reject";
+			const overageAllowedControl =
+				overageAllowedByFeatureId[customerEntitlement.entitlement.feature.id];
+
+			let effectiveUsageAllowed =
+				customerEntitlement.usage_allowed || isFreeAllocatedUsageAllowed;
+
+			if (
+				overageAllowedControl?.enabled === true &&
+				!nativeUsageAllowedFeatureIds.has(
+					customerEntitlement.entitlement.feature.id,
+				)
+			) {
+				effectiveUsageAllowed = true;
+			} else if (overageAllowedControl?.enabled === false) {
+				effectiveUsageAllowed = false;
+			}
+
+			return {
+				customer_entitlement_id: customerEntitlement.id,
+				credit_cost: creditCost,
+				feature_id: customerEntitlement.entitlement.feature.id,
+				entity_feature_id:
+					customerEntitlement.entitlement.entity_feature_id ?? null,
+				usage_allowed: effectiveUsageAllowed,
+				min_balance: notNullish(maxOverage) ? -maxOverage : undefined,
+				max_balance: resetBalance,
+			};
+		});
+
+	const rolloverArrays = customerEntitlements.map((customerEntitlement) => {
+		const creditCost = creditCostByCustomerEntitlementId.get(
+			customerEntitlement.id,
+		)!;
+		return (customerEntitlement.rollovers || []).map((rollover) => ({
+			...rollover,
+			credit_cost: creditCost,
+		}));
+	});
 
 	const sortedRollovers = rolloverArrays.flat().sort((left, right) => {
 		if (left.expires_at && right.expires_at) {

@@ -11,6 +11,9 @@ export type FeatureDeduction = {
 		outputTokens: number;
 	};
 
+	/** Pre-computed dollar cost; if set, the deduction layer skips its own getCreditCost call. */
+	precomputedCreditCost?: number;
+
 	lock?: LockParams;
 	lockReceipt?: LockReceipt;
 	lockReceiptKey?: string;

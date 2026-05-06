@@ -4,12 +4,58 @@ import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 import {
 	AffectedResource,
 	ErrCode,
+	type Feature,
 	RecaseError,
 	Scopes,
 	type TrackParams,
 	TrackTokensParamsSchema,
 } from "@autumn/shared";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
+
+const resolveAiCreditFeature = ({
+	features,
+	featureId,
+}: {
+	features: Feature[];
+	featureId?: string;
+}): Feature => {
+	if (featureId) {
+		const candidate = features.find((f) => f.id === featureId);
+		if (!candidate) {
+			throw new RecaseError({
+				message: `Feature ${featureId} not found`,
+				code: ErrCode.FeatureNotFound,
+				statusCode: 404,
+			});
+		}
+		if (!candidate.is_ai_credit_system) {
+			throw new RecaseError({
+				message: `Feature ${featureId} is not an AI credit system feature`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		return candidate;
+	}
+
+	const matches = features.filter((f) => f.is_ai_credit_system === true);
+	if (matches.length === 0) {
+		throw new RecaseError({
+			message: "No AI credit system feature found for this organization",
+			code: ErrCode.FeatureNotFound,
+			statusCode: 404,
+		});
+	}
+	if (matches.length > 1) {
+		throw new RecaseError({
+			message:
+				"Multiple AI credit system features found. Please specify a feature_id to disambiguate.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+	return matches[0];
+};
 
 export const handleTrackTokens = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -19,47 +65,15 @@ export const handleTrackTokens = createRoute({
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 
-		// Auto-detect AI credit system feature
-		const aiCreditFeatures = body.feature_id
-			? ctx.features.filter(
-					(f) => f.id === body.feature_id && f.is_ai_credit_system === true,
-				)
-			: ctx.features.filter((f) => f.is_ai_credit_system === true);
+		const aiCreditFeature = resolveAiCreditFeature({
+			features: ctx.features,
+			featureId: body.feature_id,
+		});
 
-		const aiCreditFeature = aiCreditFeatures[0];
-
-		if (!aiCreditFeature) {
-			throw new RecaseError({
-				message: body.feature_id
-					? `Feature ${body.feature_id} is not an AI credit system feature`
-					: "No AI credit system feature found for this organization",
-				code: ErrCode.FeatureNotFound,
-				statusCode: 404,
-			});
-		}
-		if (aiCreditFeatures.length > 1) {
-			throw new RecaseError({
-				message:
-					"Multiple AI credit system features found for this organization with no explicit feature_id provided. Please specify a feature_id to disambiguate.",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
 		const rawModelName = body.model_id;
 
-		const featureDeductions: FeatureDeduction[] = [
-			{
-				feature: aiCreditFeature,
-				deduction: 1, // 1 unit — actual cost is determined by credit_cost in Lua
-				tokenUsage: {
-					modelName: rawModelName,
-					inputTokens: body.input_tokens,
-					outputTokens: body.output_tokens,
-				},
-			},
-		];
-
-		// Compute the dollar cost so we can return it in the response
+		// Compute the dollar cost once and reuse it for both the response/event row
+		// and the deduction layer (avoids a second getCreditCost call per entitlement).
 		const cost = await getCreditCost({
 			featureId: aiCreditFeature.id,
 			creditSystem: aiCreditFeature,
@@ -69,6 +83,19 @@ export const handleTrackTokens = createRoute({
 				output: body.output_tokens,
 			},
 		});
+
+		const featureDeductions: FeatureDeduction[] = [
+			{
+				feature: aiCreditFeature,
+				deduction: 1, // multiplied by per-entitlement credit_cost in the deduction layer (Postgres)
+				tokenUsage: {
+					modelName: rawModelName,
+					inputTokens: body.input_tokens,
+					outputTokens: body.output_tokens,
+				},
+				precomputedCreditCost: cost,
+			},
+		];
 
 		// Build TrackParams body — store model/tokens in properties for audit
 		const trackBody: TrackParams = {

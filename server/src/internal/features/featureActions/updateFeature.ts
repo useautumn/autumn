@@ -184,6 +184,22 @@ export const updateFeature = async ({
 				Object.keys(updates.model_markups).length > 0
 			: feature.is_ai_credit_system);
 
+	// Toggling AI mode without re-sending config would leave config.schema in a
+	// state that mismatches the new mode (AI mode ignores schema; classic mode
+	// requires non-empty schema). Force callers to send a matching config.
+	if (
+		effectiveType === FeatureType.CreditSystem &&
+		isAiCreditSystem !== feature.is_ai_credit_system &&
+		updates.config === undefined
+	) {
+		throw new RecaseError({
+			message:
+				"Toggling is_ai_credit_system also requires updating config (AI mode ignores schema; classic mode requires schema entries).",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	const newConfig =
 		updates.config !== undefined
 			? feature.type === FeatureType.CreditSystem
