@@ -16,6 +16,8 @@ export * from "./api/billing/createSchedule/createScheduleResponse";
 export * from "./api/billing/openBillingPortal/openBillingPortalParamsV1";
 export * from "./api/billing/openBillingPortal/openBillingPortalResponse";
 export * from "./api/billing/updateSubscription/previewUpdateSubscriptionResponse";
+// Migrations v2 (operations + entity schemas)
+export * from "./api/migrations/operations/index";
 // Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas";
 export * from "./api/customers/components/customerExpand/customerExpand";
@@ -117,6 +119,7 @@ export * from "./models/genModels/processorSchemas";
 export * from "./models/migrationModels/migrationErrorTable";
 export * from "./models/migrationModels/migrationJobTable";
 export * from "./models/migrationModels/migrationModels";
+export * from "./models/migrationV2Models/migrationTable";
 export * from "./models/orgModels/frontendOrg";
 // 1. Org Models
 export * from "./models/orgModels/frontendOrg";

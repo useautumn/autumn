@@ -14,6 +14,7 @@ import { honoAdminRouter } from "../internal/admin/adminRouter";
 import { internalAnalyticsRouter } from "../internal/analytics/internalAnalyticsRouter";
 import { internalCusRouter } from "../internal/customers/internalCusRouter";
 import { internalDevRouter } from "../internal/dev/devRouter";
+import { migrationRpcRouter } from "../internal/migrations/v2/migrationRouter";
 import { consentRouter } from "../internal/misc/consent/consentRouter";
 import { feedbackRouter } from "../internal/misc/feedback/feedbackRouter";
 import { pricingAgentRouter } from "../internal/misc/pricingAgent/pricingAgentRouter";
@@ -45,6 +46,7 @@ internalRouter.route("/trmnl", internalTrmnlRouter);
 internalRouter.route("/feedback", feedbackRouter);
 internalRouter.route("/saved_views", savedViewsRouter);
 internalRouter.route("/query", internalAnalyticsRouter);
+internalRouter.route("", migrationRpcRouter);
 
 // Autumn SDK handler (requires session auth)
 if (process.env.AUTUMN_SECRET_KEY) {

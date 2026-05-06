@@ -1,4 +1,5 @@
 import {
+	ArrowsClockwiseIcon,
 	BalloonIcon,
 	BasketIcon,
 	ChartBarIcon,
@@ -178,6 +179,12 @@ export const MainSidebar = ({
 							value="customers"
 							icon={<UserCircleIcon size={16} weight="fill" />}
 							title="Customers"
+							env={env}
+						/>
+						<NavButton
+							value="migrations"
+							icon={<ArrowsClockwiseIcon size={16} weight="fill" />}
+							title="Migrations"
 							env={env}
 						/>
 						<NavButton
