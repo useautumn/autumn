@@ -74,6 +74,27 @@ export const featureToCreditSystem = ({
 
 	return amount;
 };
+// Costs are in $/M tokens; markup is a percentage (e.g. 20 = +20%).
+const computeMarkedUpCost = ({
+	inputCostPerMillion,
+	outputCostPerMillion,
+	input,
+	output,
+	markup,
+}: {
+	inputCostPerMillion: Decimal.Value;
+	outputCostPerMillion: Decimal.Value;
+	input: number;
+	output: number;
+	markup: number;
+}) =>
+	new Decimal(inputCostPerMillion)
+		.mul(input)
+		.add(new Decimal(outputCostPerMillion).mul(output))
+		.div(1_000_000)
+		.mul(new Decimal(1).add(new Decimal(markup).div(100)))
+		.toNumber();
+
 const getModelCreditCost = async ({
 	modelName,
 	creditSystem,
@@ -86,8 +107,6 @@ const getModelCreditCost = async ({
 	output: number;
 }) => {
 	const markups = creditSystem.model_markups || {};
-
-	// Try exact match first (new "providerKey/modelKey" format)
 	const markupEntry = markups[modelName];
 	const { markup } = markupEntry ?? { markup: 0 };
 
@@ -99,16 +118,13 @@ const getModelCreditCost = async ({
 				data: { modelName },
 			});
 		}
-		const actualInputCost = new Decimal(markupEntry.input_cost);
-		const actualOutputCost = new Decimal(markupEntry.output_cost);
-		const totalCost = actualInputCost
-			.mul(input)
-			.add(actualOutputCost.mul(output))
-			.div(1_000_000);
-		const markedUpCost = totalCost.mul(
-			new Decimal(1).add(new Decimal(markup).div(100)),
-		);
-		return markedUpCost.toNumber();
+		return computeMarkedUpCost({
+			inputCostPerMillion: markupEntry.input_cost,
+			outputCostPerMillion: markupEntry.output_cost,
+			input,
+			output,
+			markup,
+		});
 	}
 
 	const pricingData = await getModelsDevPricing();
@@ -119,7 +135,6 @@ const getModelCreditCost = async ({
 		});
 	}
 
-	// Try to find model by parsing "providerKey/modelKey" format
 	const [providerKey, ...modelParts] = modelName.split("/");
 	const modelKey = modelParts.join("/");
 	const model = pricingData[providerKey]?.models[modelKey];
@@ -133,17 +148,13 @@ const getModelCreditCost = async ({
 		});
 	}
 
-	// model.cost.input / model.cost.output are in $/M tokens
-	const actualInputCost = new Decimal(model.cost.input);
-	const actualOutputCost = new Decimal(model.cost.output);
-	const totalCost = actualInputCost
-		.mul(input)
-		.add(actualOutputCost.mul(output))
-		.div(1_000_000);
-	const markedUpCost = totalCost.mul(
-		new Decimal(1).add(new Decimal(markup).div(100)),
-	);
-	return markedUpCost.toNumber();
+	return computeMarkedUpCost({
+		inputCostPerMillion: model.cost.input,
+		outputCostPerMillion: model.cost.output,
+		input,
+		output,
+		markup,
+	});
 };
 
 export const getCreditCost = async ({
