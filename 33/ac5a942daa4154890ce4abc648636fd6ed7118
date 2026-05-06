@@ -1,0 +1,47 @@
+packages/openapi/v2.1/contracts/index.ts
+  b7539cb1bd2acb8d 12,81
+  85bbe055bb859e0d 23,60
+packages/openapi/v2.1/openapi2.1.ts
+  b7539cb1bd2acb8d 19,58
+packages/openapi/v2.1/contracts/customersContract.ts
+  85bbe055bb859e0d 12,16-19,47-78
+packages/openapi/v2.1/jsDocs/customerJsDocs.ts
+  85bbe055bb859e0d 1-4,25-47
+packages/openapi/v2.1/jsDocs/billingJsDocs.ts
+  b7539cb1bd2acb8d 3,183-211
+packages/openapi/v2.1/contracts/billingContract.ts
+  b7539cb1bd2acb8d 5-6,19,233-292
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "33ac5a942daa4154890ce4abc648636fd6ed7118",
+  "prompts": {
+    "85bbe055bb859e0d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20362c526ffesuwcSxmLDHAHKe",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 67,
+      "overriden_lines": 0
+    },
+    "b7539cb1bd2acb8d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2035ef9b5ffe5BgzrHRlzcpE57",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 108,
+      "overriden_lines": 0
+    }
+  }
+}
