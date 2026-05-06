@@ -4,6 +4,85 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 6th 2026">
+  ## Stripe auto-tax support
+
+  Autumn now supports Stripe's automatic tax calculation end-to-end. Once you enable auto-tax on your Stripe account, taxes are calculated and applied automatically on attach, plan changes, and invoices.
+
+  - **Tax in previews**: Preview responses (`billing.preview_attach`, `billing.preview_update`, `billing.preview_multi_attach`) now show net and tax-inclusive amounts so customers see the final price before confirming
+  - **Vercel Marketplace compatible**: Auto-tax works for both Stripe-billed and Vercel-billed customers
+
+  ## Scheduled subscription start dates via `starts_at`
+
+  The [`billing.attach`](/api-reference/billing/attach) endpoint now accepts a `starts_at` parameter — a Unix timestamp (in milliseconds) that lets you schedule a plan to begin in the future instead of starting immediately. Useful for delayed onboarding, free-trial extensions, or aligning with a customer's preferred billing date.
+
+  ## `billing.auto_topup_succeeded` webhook
+
+  A new webhook fires every time an auto top-up runs successfully, so you can grant credits, send receipts, or reconcile usage in real time.
+
+  - Includes `customer_id`, `feature_id`, `quantity_granted`, `threshold`, `balance_after`, `invoice_mode`, and the full Stripe `invoice` payload
+  - Use the `invoice.stripe_id` as a stable dedupe key
+  - See the [auto top-up webhook reference](/api-reference/webhooks/billingAutoTopupSucceeded) and the [auto top-ups guide](/documentation/modelling-pricing/auto-top-ups)
+
+  ## Credit notes in preview responses
+
+  Preview endpoints now return `credit_notes` alongside invoice items, so you can show customers exactly how prior credits will be applied to an upcoming charge before they confirm.
+
+  ## `customers.get` endpoint
+
+  A new dedicated [`customers.get`](/api-reference/customers/get-customer) route returns the full customer object — balances, flags, subscriptions, purchases, entities, invoices, rewards, and referrals — with a flexible `expand` parameter for nested fields like `balances.feature` and `billing_controls.auto_topups.purchase_limit`.
+
+  ## `track` returns updated balances
+
+  The [`/track`](/api-reference/core/track) endpoint now returns the customer's updated balances in the response, so you can skip a follow-up `check` call when displaying real-time usage in your UI.
+
+  ## `autumn-js` SDK 6.5.26
+
+  Released a new SDK version with first-class support for the new `customers.get`, billing schedules, and credit-note types. Run `npm i autumn-js@latest` to upgrade.
+
+  ## Subscription discounts in the dashboard
+
+  You can now apply, view, and remove subscription discounts directly from the customer's subscription detail sheet — no more switching to Stripe to attach a coupon.
+
+  ## Auto top-up visibility in the dashboard
+
+  Customer pages now expose the configured auto top-up purchase limit and the next reset timestamp, so you can quickly see how close a customer is to hitting their cap.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Stripe auto-tax applied on attach, plan changes, and invoices - [#1417](https://github.com/useautumn/autumn/pull/1417)
+      - Tax shown on preview endpoints (net + inclusive) - [#1424](https://github.com/useautumn/autumn/pull/1424)
+      - `starts_at` parameter on `billing.attach` for scheduled plan starts - [#1411](https://github.com/useautumn/autumn/pull/1411)
+      - `billing.auto_topup_succeeded` webhook - [#1429](https://github.com/useautumn/autumn/pull/1429)
+      - Auto top-up purchase limit and next reset surfaced in customer expand - [#1423](https://github.com/useautumn/autumn/pull/1423)
+      - Auto top-up purchase limit and next reset shown in dashboard - [#1436](https://github.com/useautumn/autumn/pull/1436)
+      - Credit notes returned in `billing.preview_*` responses - [#1464](https://github.com/useautumn/autumn/pull/1464)
+      - New `customers.get` endpoint - [#1471](https://github.com/useautumn/autumn/pull/1471)
+      - `/track` returns updated balances in the response - [#1470](https://github.com/useautumn/autumn/pull/1470)
+      - Subscription discount support in the dashboard - [#1463](https://github.com/useautumn/autumn/pull/1463)
+      - Discounts displayed on Autumn Checkout - [#1446](https://github.com/useautumn/autumn/pull/1446)
+      - Faster webhook delivery via early acknowledgement - [#1397](https://github.com/useautumn/autumn/pull/1397)
+      - Option to enable plan immediately on a checkout session - [#1415](https://github.com/useautumn/autumn/pull/1415)
+      - SDKs return `202` for accepted-but-async finalize requests - [#1409](https://github.com/useautumn/autumn/pull/1409)
+      - `autumn-js` SDK `6.5.26` released with schedules, `customers.get`, and credit-note types - [#1471](https://github.com/useautumn/autumn/pull/1471)
+    </Accordion>
+
+    <Accordion title="Bug fixes">
+      - Fixed multiple Vercel Marketplace issues: prepaid prices defaulting to 0, grace-period handling, duplicate Stripe fetches, and inactive subscription filtering - [#1458](https://github.com/useautumn/autumn/pull/1458), [#1461](https://github.com/useautumn/autumn/pull/1461)
+      - Fixed prepaid price calculation for plan v2 - [#1451](https://github.com/useautumn/autumn/pull/1451)
+      - Fixed sync drift on schedules and improved webhook tracing - [#1443](https://github.com/useautumn/autumn/pull/1443)
+      - Fixed orphaned customer-product records during failed attaches - [#1440](https://github.com/useautumn/autumn/pull/1440)
+      - Fixed tax preview returning gross instead of net amount - [#1434](https://github.com/useautumn/autumn/pull/1434)
+      - Fixed legacy `update_quantity` flow on certain plans - [#1410](https://github.com/useautumn/autumn/pull/1410)
+      - Fixed RevenueCat attach bugs around add-ons and processor filtering - [#1400](https://github.com/useautumn/autumn/pull/1400)
+      - Fixed network errors being silently swallowed - [#1404](https://github.com/useautumn/autumn/pull/1404)
+      - Fixed balance edits failing for entity-scoped entitlements when no entity was selected - [#1406](https://github.com/useautumn/autumn/pull/1406), [#1407](https://github.com/useautumn/autumn/pull/1407)
+      - Fixed past-due customers not resetting in cache v2 - [#1396](https://github.com/useautumn/autumn/pull/1396)
+      - Fixed member toolbar dropdown visibility inside dialogs - [#1449](https://github.com/useautumn/autumn/pull/1449)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
