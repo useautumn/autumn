@@ -1,7 +1,9 @@
 import { ArrowLeft, CheckCircleIcon, LinkIcon } from "@phosphor-icons/react";
+import { useStore } from "@tanstack/react-form";
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
+import { useAttachFormContext } from "@/components/forms/attach-v2";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
@@ -12,10 +14,6 @@ import {
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { PlanActivationSection } from "./SendInvoiceStage";
-
-export interface GenerateCheckoutSubmitParams {
-	enablePlanImmediately: boolean;
-}
 
 export function GenerateCheckoutStage({
 	productName,
@@ -30,7 +28,7 @@ export function GenerateCheckoutStage({
 	productName?: string;
 	isPending: boolean;
 	onBack: () => void;
-	onSubmit: (params: GenerateCheckoutSubmitParams) => Promise<{
+	onSubmit: () => Promise<{
 		paymentUrl: string | null | undefined;
 	}>;
 	lineItems?: BillingLineItem[];
@@ -43,7 +41,11 @@ export function GenerateCheckoutStage({
 	}[];
 	scheduledStartDate?: number | null;
 }) {
-	const [enableImmediately, setEnableImmediately] = useState(true);
+	const { form } = useAttachFormContext();
+	const enablePlanImmediately = useStore(
+		form.store,
+		(state) => state.values.enablePlanImmediately,
+	);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [completedCheckoutUrl, setCompletedCheckoutUrl] = useState<
 		string | null
@@ -52,9 +54,7 @@ export function GenerateCheckoutStage({
 	const handleGenerate = async () => {
 		setIsSubmitting(true);
 		try {
-			const { paymentUrl } = await onSubmit({
-				enablePlanImmediately: enableImmediately,
-			});
+			const { paymentUrl } = await onSubmit();
 			if (paymentUrl) {
 				setCompletedCheckoutUrl(paymentUrl);
 				navigator.clipboard.writeText(paymentUrl);
@@ -133,8 +133,10 @@ export function GenerateCheckoutStage({
 			</SheetHeader>
 
 			<PlanActivationSection
-				enableImmediately={enableImmediately}
-				setEnableImmediately={setEnableImmediately}
+				enableImmediately={enablePlanImmediately}
+				setEnableImmediately={(value) =>
+					form.setFieldValue("enablePlanImmediately", value)
+				}
 				scheduledStartDate={scheduledStartDate}
 			/>
 
@@ -183,7 +185,7 @@ export function GenerateCheckoutStageWithPreview({
 			| undefined;
 	};
 	isPending: boolean;
-	onSubmit: (params: GenerateCheckoutSubmitParams) => Promise<{
+	onSubmit: () => Promise<{
 		paymentUrl: string | null | undefined;
 	}>;
 	onBack: () => void;

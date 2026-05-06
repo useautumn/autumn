@@ -5,14 +5,17 @@ import { addMinutes } from "date-fns";
 export const getCheckoutSubscriptionTrialEnd = ({
 	mode,
 	billingContext,
+	deferredStartsAt,
 }: {
 	mode: "subscription" | "payment";
 	billingContext: BillingContext;
+	deferredStartsAt?: number;
 }): number | undefined => {
 	if (mode !== "subscription") return undefined;
 	if (billingContext.billingStartsAt) {
 		return msToSeconds(billingContext.billingStartsAt);
 	}
+	if (deferredStartsAt) return msToSeconds(deferredStartsAt);
 	if (!billingContext.trialContext?.trialEndsAt) return undefined;
 
 	return msToSeconds(

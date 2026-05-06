@@ -114,8 +114,9 @@ const applyAdjustableQuantityToPrepaidLineItem = ({
 	}
 
 	const feature = autumnEntitlement.feature;
-	const isAdjustable =
-		billingContext.adjustableFeatureQuantities?.includes(feature.id);
+	const isAdjustable = billingContext.adjustableFeatureQuantities?.includes(
+		feature.id,
+	);
 
 	if (!isAdjustable) {
 		return lineItem;
@@ -150,19 +151,23 @@ export const buildStripeCheckoutSessionItems = ({
 	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
 		customerProducts: newCustomerProducts,
 	});
+	const checkoutCustomerProducts =
+		activeCustomerProducts.length > 0
+			? activeCustomerProducts
+			: newCustomerProducts;
 
 	// 2. Get recurring item specs (accumulated by price ID)
 	let recurringStripeItemSpecs = customerProductsToRecurringStripeItemSpecs({
 		ctx,
 		billingContext,
-		customerProducts: activeCustomerProducts,
+		customerProducts: checkoutCustomerProducts,
 	});
 
 	// 3. Get one-off item specs
 	const oneOffItemSpecs = customerProductsToOneOffStripeItemSpecs({
 		ctx,
 		billingContext,
-		customerProducts: activeCustomerProducts,
+		customerProducts: checkoutCustomerProducts,
 	});
 
 	// 4. Filter recurring items by largest interval (for Stripe Checkout)
