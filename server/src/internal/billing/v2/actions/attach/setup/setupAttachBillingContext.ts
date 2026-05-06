@@ -25,6 +25,7 @@ import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCyc
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
+import { getAttachBillingStartsAt } from "./getAttachBillingStartsAt";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
@@ -202,11 +203,10 @@ export const setupAttachBillingContext = async ({
 		params.starts_at,
 		currentEpochMs,
 	);
-	const shouldDeferBillingStart =
-		params.enable_plan_immediately === true && hasFutureStartDate;
-	const billingStartsAt = shouldDeferBillingStart
-		? params.starts_at
-		: undefined;
+	const billingStartsAt = getAttachBillingStartsAt({
+		params,
+		currentEpochMs,
+	});
 
 	const checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
