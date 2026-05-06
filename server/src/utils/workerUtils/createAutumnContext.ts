@@ -8,6 +8,7 @@ import {
 
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
@@ -50,7 +51,7 @@ export const createWorkerAutumnContext = async ({
 
 	const rolloutSnapshot = computeRolloutSnapshot({ orgId: org.id });
 
-	return {
+	const ctx = {
 		org,
 		env,
 		features,
@@ -71,4 +72,5 @@ export const createWorkerAutumnContext = async ({
 		extraLogs: {},
 		rolloutSnapshot,
 	} satisfies AutumnContext;
+	return getCtxWithCustomerRedis({ ctx }).ctx;
 };

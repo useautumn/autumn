@@ -7,6 +7,11 @@ import { handleDeleteOrg } from "./handlers/crudHandlers/handleDeleteOrg.js";
 import { handleGetOrg } from "./handlers/crudHandlers/handleGetOrg.js";
 import { handleGetOrgFlags } from "./handlers/handleGetOrgFlags.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
+import {
+	handleDeleteRedisConfig,
+	handleUpdateRedisMigration,
+	handleUpsertRedisConfig,
+} from "./handlers/handleRedisConfig.js";
 import { handleResetDefaultAccount } from "./handlers/handleResetDefaultAccount.js";
 import {
 	handleGetRevenueCatConfig,
@@ -51,6 +56,10 @@ honoOrgRouter.delete("/stripe", ...handleDeleteStripe);
 honoOrgRouter.post("/stripe", ...handleConnectStripe);
 honoOrgRouter.get("/stripe/oauth_url", ...handleGetOAuthUrl);
 honoOrgRouter.post("/reset_default_account", ...handleResetDefaultAccount);
+
+honoOrgRouter.patch("/redis", ...handleUpsertRedisConfig);
+honoOrgRouter.delete("/redis", ...handleDeleteRedisConfig);
+honoOrgRouter.patch("/redis/migration", ...handleUpdateRedisMigration);
 
 honoOrgRouter.patch("/vercel", ...handleUpsertVercelConfig);
 honoOrgRouter.get("/vercel_sink", ...handleGetVercelSink);

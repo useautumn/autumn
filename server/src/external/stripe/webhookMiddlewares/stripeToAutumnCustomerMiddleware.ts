@@ -1,5 +1,6 @@
 import { RELEVANT_STATUSES } from "@autumn/shared";
 import type { Context, Next } from "hono";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { CusService } from "../../../internal/customers/CusService";
 import type {
@@ -63,11 +64,18 @@ export const stripeToAutumnCustomerMiddleware = async (
 		ctx.fullCustomer?.id || ctx.fullCustomer?.internal_id || undefined;
 
 	if (customerId) {
-		ctx.customerId = customerId;
-		ctx.rolloutSnapshot = computeRolloutSnapshot({
-			orgId: ctx.org.id,
+		const { ctx: routedCtx } = getCtxWithCustomerRedis({
+			ctx: {
+				...ctx,
+				customerId,
+				rolloutSnapshot: computeRolloutSnapshot({
+					orgId: ctx.org.id,
+					customerId,
+				}),
+			},
 			customerId,
 		});
+		c.set("ctx", routedCtx);
 	}
 
 	await next();

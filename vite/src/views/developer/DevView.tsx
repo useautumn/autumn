@@ -6,9 +6,11 @@ import { useTheme } from "@/contexts/ThemeProvider";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
+import { useAdmin } from "../admin/hooks/useAdmin";
 import LoadingScreen from "../general/LoadingScreen";
 import { OnboardingGuide } from "../onboarding4/OnboardingGuide";
 import { ApiKeysPage } from "./api-keys/ApiKeysPage";
+import { ConfigureRedis } from "./configure-redis/ConfigureRedis";
 import { ConfigureRevenueCat } from "./configure-revenuecat/ConfigureRevenueCat";
 import { ConfigureStripe } from "./configure-stripe/ConfigureStripe";
 import { ConfigureVercel } from "./configure-vercel/ConfigureVercel";
@@ -17,6 +19,7 @@ import { PublishableKeySection } from "./publishable-key";
 export default function DevScreen() {
 	const { apiKeys, svixDashboardUrl, isLoading, error } = useDevQuery();
 	const { queryStates } = useAppQueryStates({ defaultTab: "api_keys" });
+	const { isAdmin } = useAdmin();
 
 	const tab = queryStates.tab;
 	const { pkey, webhooks, vercel, revenuecat } = useAutumnFlags();
@@ -42,6 +45,8 @@ export default function DevScreen() {
 			{tab === "vercel" && vercel && <ConfigureVercel />}
 
 			{tab === "revenuecat" && revenuecat && <ConfigureRevenueCat />}
+
+			{tab === "redis" && isAdmin && <ConfigureRedis />}
 		</div>
 	);
 }

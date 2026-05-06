@@ -29,7 +29,12 @@ export const handleInitialPurchase = async ({
 	const { db, org, env, logger, features } = ctx;
 	const { product_id, app_user_id } = event;
 
-	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+	const {
+		ctx: customerCtx,
+		product,
+		customer,
+		cusProducts,
+	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
@@ -73,7 +78,7 @@ export const handleInitialPurchase = async ({
 
 		// Expire old cus_product
 		await CusProductService.update({
-			ctx,
+			ctx: customerCtx,
 			cusProductId: curMainProduct.id,
 			updates: {
 				status: CusProductStatus.Expired,

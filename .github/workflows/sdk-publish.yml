@@ -83,6 +83,10 @@ jobs:
         run: |
           curl -fsSL https://go.speakeasy.com/cli-install.sh | sh
           echo "$HOME/.speakeasy/bin" >> $GITHUB_PATH
+      
+      - name: Log Speakeasy CLI version
+        run: |
+          echo "Speakeasy CLI version: $(speakeasy --version)"
 
       - name: Determine version bump type
         id: version-type

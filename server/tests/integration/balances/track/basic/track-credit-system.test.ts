@@ -190,6 +190,8 @@ test.concurrent(`${chalk.yellowBright("track-credit-system3: test deduction orde
 		current_balance: 100 - deduct1,
 		usage: deduct1,
 	});
+	expect(trackRes1.balances?.[TestFeature.Action1]).toBeDefined();
+	expect(trackRes1.balances?.[TestFeature.Credits]).toBeDefined();
 
 	await timeout(2000);
 	const customer1 = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
@@ -224,6 +226,8 @@ test.concurrent(`${chalk.yellowBright("track-credit-system3: test deduction orde
 		current_balance: 0,
 		usage: 100,
 	});
+	expect(trackRes2.balances?.[TestFeature.Action1]).toBeDefined();
+	expect(trackRes2.balances?.[TestFeature.Credits]).toBeDefined();
 
 	await timeout(2000);
 	const customer2 = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
@@ -256,6 +260,8 @@ test.concurrent(`${chalk.yellowBright("track-credit-system3: test deduction orde
 		feature_id: TestFeature.Credits,
 		current_balance: new Decimal(creditsBefore!).minus(creditCost3).toNumber(),
 	});
+	expect(trackRes3.balances?.[TestFeature.Action1]).toBeDefined();
+	expect(trackRes3.balances?.[TestFeature.Credits]).toBeDefined();
 
 	await timeout(2000);
 	const customer3 = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
@@ -337,8 +343,8 @@ test.concurrent(`${chalk.yellowBright("track-credit-system4: test deduction with
 
 	expect(trackRes1.balances?.[TestFeature.Action1]).toBeDefined();
 	expect(trackRes1.balances?.[TestFeature.Action3]).toBeDefined();
-	expect(trackRes1.balances?.[TestFeature.Credits]).toBeUndefined();
-	expect(trackRes1.balances?.[TestFeature.Credits2]).toBeUndefined();
+	expect(trackRes1.balances?.[TestFeature.Credits]).toBeDefined();
+	expect(trackRes1.balances?.[TestFeature.Credits2]).toBeDefined();
 
 	const customer1 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer1.features[TestFeature.Action1]).toMatchObject({
@@ -381,8 +387,8 @@ test.concurrent(`${chalk.yellowBright("track-credit-system4: test deduction with
 
 	expect(trackRes2.balances?.[TestFeature.Action1]).toBeDefined();
 	expect(trackRes2.balances?.[TestFeature.Action3]).toBeDefined();
-	expect(trackRes2.balances?.[TestFeature.Credits]).toBeUndefined();
-	expect(trackRes2.balances?.[TestFeature.Credits2]).toBeUndefined();
+	expect(trackRes2.balances?.[TestFeature.Credits]).toBeDefined();
+	expect(trackRes2.balances?.[TestFeature.Credits2]).toBeDefined();
 
 	const customer2 = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer2.features[TestFeature.Action1]).toMatchObject({
@@ -431,8 +437,8 @@ test.concurrent(`${chalk.yellowBright("track-credit-system4: test deduction with
 		value: deduct3,
 	});
 
-	expect(trackRes3.balances?.[TestFeature.Action1]).toBeUndefined();
-	expect(trackRes3.balances?.[TestFeature.Action3]).toBeUndefined();
+	expect(trackRes3.balances?.[TestFeature.Action1]).toBeDefined();
+	expect(trackRes3.balances?.[TestFeature.Action3]).toBeDefined();
 	expect(trackRes3.balances?.[TestFeature.Credits]).toBeDefined();
 	expect(trackRes3.balances?.[TestFeature.Credits2]).toBeDefined();
 
@@ -531,6 +537,8 @@ test.concurrent(`${chalk.yellowBright("track-credit-system5: test deduction orde
 		current_balance: 100 - deduct1,
 		usage: deduct1,
 	});
+	expect(trackRes1.balances?.[TestFeature.Action1]).toBeDefined();
+	expect(trackRes1.balances?.[TestFeature.Credits]).toBeDefined();
 
 	await timeout(2000);
 	const customer1 = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
@@ -570,6 +578,8 @@ test.concurrent(`${chalk.yellowBright("track-credit-system5: test deduction orde
 		current_balance: 0,
 		usage: 100,
 	});
+	expect(trackRes2.balances?.[TestFeature.Action1]).toBeDefined();
+	expect(trackRes2.balances?.[TestFeature.Credits]).toBeDefined();
 
 	await timeout(2000);
 	const customer2 = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
@@ -607,6 +617,8 @@ test.concurrent(`${chalk.yellowBright("track-credit-system5: test deduction orde
 		feature_id: TestFeature.Credits,
 		current_balance: new Decimal(creditsBefore!).minus(creditCost3).toNumber(),
 	});
+	expect(trackRes3.balances?.[TestFeature.Action1]).toBeDefined();
+	expect(trackRes3.balances?.[TestFeature.Credits]).toBeDefined();
 
 	await timeout(2000);
 	const customer3 = await autumnV1.customers.get<ApiCustomerV3>(customerId, {
