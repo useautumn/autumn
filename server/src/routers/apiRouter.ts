@@ -9,6 +9,7 @@ import { criticalDbMiddleware } from "../honoMiddlewares/criticalDbMiddleware.js
 import { customerBlockMiddleware } from "../honoMiddlewares/customerBlockMiddleware.js";
 import { idempotencyMiddleware } from "../honoMiddlewares/idempotencyMiddleware.js";
 import { orgConfigMiddleware } from "../honoMiddlewares/orgConfigMiddleware.js";
+import { orgRedisMiddleware } from "../honoMiddlewares/orgRedisMiddleware.js";
 import { queryMiddleware } from "../honoMiddlewares/queryMiddleware.js";
 import { rateLimitMiddleware } from "../honoMiddlewares/rateLimitMiddleware.js";
 import { refreshCacheMiddleware } from "../honoMiddlewares/refreshCacheMiddleware.js";
@@ -48,6 +49,7 @@ apiRouter.use("*", secretKeyMiddleware);
 apiRouter.use("*", requestBlockMiddleware);
 apiRouter.use("*", orgConfigMiddleware);
 apiRouter.use("*", rolloutMiddleware);
+apiRouter.use("*", orgRedisMiddleware);
 apiRouter.use("*", apiVersionMiddleware);
 apiRouter.use("*", traceEnrichMiddleware);
 apiRouter.use("*", refreshCacheMiddleware);
