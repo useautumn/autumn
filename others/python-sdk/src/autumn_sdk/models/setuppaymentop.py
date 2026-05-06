@@ -715,6 +715,8 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""URL to redirect to after successful checkout."""
     billing_cycle_anchor: Literal["now"]
     r"""Reset the billing cycle anchor immediately with 'now'."""
+    starts_at: NotRequired[int]
+    r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
     checkout_session_params: NotRequired[Dict[str, Any]]
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     custom_line_items: NotRequired[List[SetupPaymentCustomLineItemTypedDict]]
@@ -770,6 +772,9 @@ class SetupPaymentParams(BaseModel):
     ] = "now"
     r"""Reset the billing cycle anchor immediately with 'now'."""
 
+    starts_at: Optional[int] = None
+    r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
+
     checkout_session_params: Optional[Dict[str, Any]] = None
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
 
@@ -808,6 +813,7 @@ class SetupPaymentParams(BaseModel):
                 "discounts",
                 "success_url",
                 "billing_cycle_anchor",
+                "starts_at",
                 "checkout_session_params",
                 "custom_line_items",
                 "processor_subscription_id",
