@@ -1,0 +1,352 @@
+---
+title: "Create Schedule"
+openapi: "openapi POST /v1/billing.create_schedule"
+---
+
+import { DynamicParamField } from "/components/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The ID of the customer to create the schedule for.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  Optional entity ID for an entity-scoped schedule.
+</DynamicParamField>
+
+<DynamicParamField body="invoice_mode" type="object">
+  Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required>
+      When true, creates an invoice and sends it to the customer instead of charging their card immediately. Uses Stripe's send_invoice collection method.
+    </DynamicParamField>
+
+    <DynamicParamField body="enable_plan_immediately" type="boolean">
+      If true, enables the plan immediately even though the invoice is not paid yet.
+    </DynamicParamField>
+
+    <DynamicParamField body="finalize" type="boolean">
+      If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="success_url" type="string">
+  URL to redirect to after successful checkout.
+</DynamicParamField>
+
+<DynamicParamField body="checkout_session_params" type="object">
+  Additional parameters to pass into the creation of the Stripe checkout session.
+</DynamicParamField>
+
+<DynamicParamField body="redirect_mode" type="'always' | 'if_required' | 'never'">
+  Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
+</DynamicParamField>
+
+<DynamicParamField body="billing_behavior" type="'prorate_immediately' | 'none'">
+  Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+</DynamicParamField>
+
+<DynamicParamField body="billing_cycle_anchor" type="any">
+  Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time.
+</DynamicParamField>
+
+<DynamicParamField body="enable_plan_immediately" type="boolean">
+  If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
+</DynamicParamField>
+
+<DynamicParamField body="phases" type="object[]" required>
+  Ordered phase definitions for the schedule.
+  <Expandable title="properties">
+    <DynamicParamField body="starts_at" type="number" required>
+      When this phase should start, in epoch milliseconds.
+    </DynamicParamField>
+
+    <DynamicParamField body="plans" type="object[]" required>
+      Plans to materialize for this phase.
+      <Expandable title="properties">
+        <DynamicParamField body="plan_id" type="string" required>
+          The ID of the plan to schedule in this phase.
+        </DynamicParamField>
+
+        <DynamicParamField body="feature_quantities" type="object[]">
+          Optional prepaid feature quantities for this phase's plan.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The ID of the feature to set quantity for.
+            </DynamicParamField>
+
+            <DynamicParamField body="quantity" type="number">
+              The quantity of the feature.
+            </DynamicParamField>
+
+            <DynamicParamField body="adjustable" type="boolean">
+              Whether the customer can adjust the quantity.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="version" type="number">
+          Optional explicit plan version to schedule.
+        </DynamicParamField>
+
+        <DynamicParamField body="customize" type="object">
+          Customize the plan to schedule. Can override the price, items, or both.
+          <Expandable title="properties">
+            <DynamicParamField body="price" type="object | null">
+              Base price configuration for a plan.
+              <Expandable title="properties">
+                <DynamicParamField body="amount" type="number" required>
+                  Base price amount for the plan.
+                </DynamicParamField>
+
+                <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Billing interval (e.g. 'month', 'year').
+                </DynamicParamField>
+
+                <DynamicParamField body="interval_count" type="number">
+                  Number of intervals per billing cycle. Defaults to 1.
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+            <DynamicParamField body="items" type="object[]">
+              Override the items in the plan.
+              <Expandable title="properties">
+                <DynamicParamField body="feature_id" type="string" required>
+                  The ID of the feature to configure.
+                </DynamicParamField>
+
+                <DynamicParamField body="included" type="number">
+                  Number of free units included. Balance resets to this each interval for consumable features.
+                </DynamicParamField>
+
+                <DynamicParamField body="unlimited" type="boolean">
+                  If true, customer has unlimited access to this feature.
+                </DynamicParamField>
+
+                <DynamicParamField body="reset" type="object">
+                  Reset configuration for consumable features. Omit for non-consumable features like seats.
+                  <Expandable title="properties">
+                    <DynamicParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                      Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval_count" type="number">
+                      Number of intervals between resets. Defaults to 1.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="price" type="object">
+                  Pricing for usage beyond included units. Omit for free features.
+                  <Expandable title="properties">
+                    <DynamicParamField body="amount" type="number">
+                      Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tiers" type="object[]">
+                      Tiered pricing. Either 'amount' or 'tiers' is required.
+                      <Expandable title="properties">
+                        <DynamicParamField body="to" type="any" />
+
+                        <DynamicParamField body="amount" type="any" />
+
+                        <DynamicParamField body="flat_amount" type="any" />
+
+                      </Expandable>
+                    </DynamicParamField>
+
+                    <DynamicParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                    <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                      Billing interval. For consumable features, should match reset.interval.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="interval_count" type="number">
+                      Number of intervals per billing cycle. Defaults to 1.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_units" type="number">
+                      Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+                    </DynamicParamField>
+
+                    <DynamicParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                      'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="max_purchase" type="number">
+                      Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="proration" type="object">
+                  Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+                  <Expandable title="properties">
+                    <DynamicParamField body="on_increase" type="'bill_immediately' | 'prorate_immediately' | 'prorate_next_cycle' | 'bill_next_cycle'" required>
+                      Billing behavior when quantity increases mid-cycle.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="on_decrease" type="'prorate' | 'prorate_immediately' | 'prorate_next_cycle' | 'none' | 'no_prorations'" required>
+                      Credit behavior when quantity decreases mid-cycle.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+                <DynamicParamField body="rollover" type="object">
+                  Rollover config for unused units. If set, unused included units carry over.
+                  <Expandable title="properties">
+                    <DynamicParamField body="max" type="number">
+                      Max rollover units. Omit for unlimited rollover.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="max_percentage" type="number">
+                      Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+                      When rolled over units expire.
+                    </DynamicParamField>
+
+                    <DynamicParamField body="expiry_duration_length" type="number">
+                      Number of periods before expiry.
+                    </DynamicParamField>
+
+                  </Expandable>
+                </DynamicParamField>
+
+              </Expandable>
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="subscription_id" type="string">
+          Unsupported for create_schedule today. Requests that include this field will be rejected.
+        </DynamicParamField>
+
+      </Expandable>
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string">
+  The ID of the customer.
+</DynamicResponseField>
+
+<DynamicResponseField name="entity_id" type="string | null">
+  The entity ID for the schedule, or null when customer-level.
+</DynamicResponseField>
+
+<DynamicResponseField name="status" type="'created' | 'pending_payment'">
+  Whether the schedule is fully created or waiting for payment or confirmation to complete.
+</DynamicResponseField>
+
+<DynamicResponseField name="schedule_id" type="string | null">
+  The ID of the created schedule. Null when the schedule is waiting on Autumn checkout confirmation.
+</DynamicResponseField>
+
+<DynamicResponseField name="phases" type="object[]">
+  Persisted phases in ascending starts_at order. Empty when waiting on Autumn checkout confirmation.
+  <Expandable title="properties">
+    <DynamicResponseField name="phase_id" type="string">
+      The ID of the persisted phase row.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="starts_at" type="number">
+      When this phase starts, in epoch milliseconds.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="customer_product_ids" type="string[]">
+      Customer products materialized for this phase.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="invoice" type="object">
+  Invoice details if an invoice was created. Only present when a charge was made.
+  <Expandable title="properties">
+    <DynamicResponseField name="status" type="string | null">
+      The status of the invoice (e.g., 'paid', 'open', 'draft').
+    </DynamicResponseField>
+
+    <DynamicResponseField name="stripe_id" type="string">
+      The Stripe invoice ID.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="total" type="number">
+      The total amount of the invoice in cents.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string">
+      The three-letter ISO currency code (e.g., 'usd').
+    </DynamicResponseField>
+
+    <DynamicResponseField name="hosted_invoice_url" type="string | null">
+      URL to the hosted invoice page where the customer can view and pay the invoice.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="payment_url" type="string | null">
+  URL to redirect the customer to complete payment. Null if no payment action is required.
+</DynamicResponseField>
+
+<DynamicResponseField name="required_action" type="object">
+  <Expandable title="properties">
+    <DynamicResponseField name="code" type="'3ds_required' | 'payment_method_required' | 'payment_failed'">
+      The type of action required to complete the payment.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="reason" type="string">
+      A human-readable explanation of why this action is required.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "customer_id": "cus_123",
+  "entity_id": null,
+  "status": "created",
+  "schedule_id": "sch_1234",
+  "phases": [
+    {
+      "phase_id": "sphs_1111",
+      "starts_at": 1735689600000,
+      "customer_product_ids": [
+        "cus_prod_1111"
+      ]
+    },
+    {
+      "phase_id": "sphs_2222",
+      "starts_at": 1736899200000,
+      "customer_product_ids": [
+        "cus_prod_2222"
+      ]
+    }
+  ],
+  "invoice": null,
+  "payment_url": null
+}
+```
+</ResponseExample>
