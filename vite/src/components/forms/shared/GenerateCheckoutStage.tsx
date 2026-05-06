@@ -23,7 +23,6 @@ export function GenerateCheckoutStage({
 	lineItems,
 	currency,
 	totals,
-	scheduledStartDate,
 }: {
 	productName?: string;
 	isPending: boolean;
@@ -39,7 +38,6 @@ export function GenerateCheckoutStage({
 		variant?: "primary" | "secondary";
 		badge?: string;
 	}[];
-	scheduledStartDate?: number | null;
 }) {
 	const { form } = useAttachFormContext();
 	const enablePlanImmediately = useStore(
@@ -137,7 +135,6 @@ export function GenerateCheckoutStage({
 				setEnableImmediately={(value) =>
 					form.setFieldValue("enablePlanImmediately", value)
 				}
-				scheduledStartDate={scheduledStartDate}
 			/>
 
 			<LineItemsPreview
@@ -170,7 +167,6 @@ export function GenerateCheckoutStageWithPreview({
 	isPending,
 	onSubmit,
 	onBack,
-	scheduledStartDate,
 }: {
 	productName?: string;
 	previewQuery: {
@@ -189,11 +185,8 @@ export function GenerateCheckoutStageWithPreview({
 		paymentUrl: string | null | undefined;
 	}>;
 	onBack: () => void;
-	scheduledStartDate?: number | null;
 }) {
 	const previewData = previewQuery.data;
-	const effectiveScheduledStartDate =
-		scheduledStartDate ?? previewData?.next_cycle?.starts_at ?? null;
 
 	const totals = useMemo(() => {
 		const result: {
@@ -232,7 +225,6 @@ export function GenerateCheckoutStageWithPreview({
 			lineItems={previewData?.line_items}
 			currency={previewData?.currency}
 			totals={totals}
-			scheduledStartDate={effectiveScheduledStartDate}
 		/>
 	);
 }

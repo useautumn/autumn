@@ -4,6 +4,7 @@ import {
 	type ApiEntityV0,
 	type AttachParamsV0Input,
 	type AttachParamsV1Input,
+	CollectionMethod,
 	CusProductStatus,
 	ms,
 } from "@autumn/shared";
@@ -78,6 +79,9 @@ test.concurrent(`${chalk.yellowBright("starts_at: future attach creates schedule
 	});
 	expect(cusProduct.status).toBe(CusProductStatus.Scheduled);
 	expect(cusProduct.access_starts_at).toBeNull();
+	expect(cusProduct.collection_method).toBe(
+		CollectionMethod.ChargeAutomatically,
+	);
 	expect(cusProduct.subscription_ids ?? []).toEqual([]);
 	expect(cusProduct.scheduled_ids).toHaveLength(1);
 	expectResetAnchoredTo({
@@ -89,6 +93,62 @@ test.concurrent(`${chalk.yellowBright("starts_at: future attach creates schedule
 	const stripeSchedule = (await ctx.stripeCli.subscriptionSchedules.retrieve(
 		cusProduct.scheduled_ids![0]!,
 	)) as Stripe.SubscriptionSchedule;
+	expect(stripeSchedule.phases[0]?.start_date).toBe(
+		Math.floor(startDate / 1000),
+	);
+	await expectCustomerInvoiceCorrect({ customerId, count: 0 });
+});
+
+test.concurrent(`${chalk.yellowBright("starts_at: future attach without payment method creates invoice schedule")}`, async () => {
+	const customerId = "attach-start-date-future-invoice";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV2_2, ctx, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ email: "future-invoice@example.com" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	const startDate = addDays(advancedTo, 1).getTime();
+	const result = await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		starts_at: startDate,
+	});
+	expect(result.payment_url).toBeUndefined();
+
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	await expectProductScheduled({
+		customer,
+		productId: pro.id,
+		startsAt: startDate,
+	});
+
+	const cusProduct = await getCustomerProduct({
+		ctx,
+		customerId,
+		productId: pro.id,
+	});
+	expect(cusProduct.status).toBe(CusProductStatus.Scheduled);
+	expect(cusProduct.collection_method).toBe(CollectionMethod.SendInvoice);
+	expect(cusProduct.subscription_ids ?? []).toEqual([]);
+	expect(cusProduct.scheduled_ids).toHaveLength(1);
+
+	const stripeSchedule = (await ctx.stripeCli.subscriptionSchedules.retrieve(
+		cusProduct.scheduled_ids![0]!,
+	)) as Stripe.SubscriptionSchedule;
+	expect(stripeSchedule.default_settings.collection_method).toBe(
+		"send_invoice",
+	);
+	expect(stripeSchedule.default_settings.invoice_settings.days_until_due).toBe(
+		30,
+	);
 	expect(stripeSchedule.phases[0]?.start_date).toBe(
 		Math.floor(startDate / 1000),
 	);

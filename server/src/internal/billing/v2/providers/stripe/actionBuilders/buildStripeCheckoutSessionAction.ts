@@ -3,13 +3,13 @@ import type {
 	BillingContext,
 	StripeCheckoutSessionAction,
 } from "@autumn/shared";
-import { orgToReturnUrl } from "@autumn/shared";
+import { msToSeconds, orgToReturnUrl } from "@autumn/shared";
+import { addMinutes } from "date-fns";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { stripeDiscountsToCheckoutParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
-import { getCheckoutSubscriptionTrialEnd } from "./getCheckoutSubscriptionTrialEnd";
 
 export const buildStripeCheckoutSessionAction = ({
 	ctx,
@@ -48,16 +48,11 @@ export const buildStripeCheckoutSessionAction = ({
 		...oneOffLineItems.filter((item) => item.quantity !== 0),
 	];
 
-	const deferredStartsAt = autumnBillingPlan.insertCustomerProducts.find(
-		({ starts_at }) => starts_at > billingContext.currentEpochMs,
-	)?.starts_at;
-
-	// 4. Trial handling (also used for deferred billing starts in Checkout)
-	const trialEnd = getCheckoutSubscriptionTrialEnd({
-		mode,
-		billingContext,
-		deferredStartsAt,
-	});
+	// 4. Trial handling (only for subscription mode)
+	const trialEnd =
+		mode === "subscription" && trialContext?.trialEndsAt
+			? msToSeconds(addMinutes(trialContext.trialEndsAt, 10).getTime())
+			: undefined;
 
 	// 5. Build subscription_data (only for subscription mode)
 	const subscriptionData:

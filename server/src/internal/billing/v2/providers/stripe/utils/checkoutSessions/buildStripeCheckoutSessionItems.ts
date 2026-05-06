@@ -151,23 +151,19 @@ export const buildStripeCheckoutSessionItems = ({
 	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({
 		customerProducts: newCustomerProducts,
 	});
-	const checkoutCustomerProducts =
-		activeCustomerProducts.length > 0
-			? activeCustomerProducts
-			: newCustomerProducts;
 
 	// 2. Get recurring item specs (accumulated by price ID)
 	let recurringStripeItemSpecs = customerProductsToRecurringStripeItemSpecs({
 		ctx,
 		billingContext,
-		customerProducts: checkoutCustomerProducts,
+		customerProducts: activeCustomerProducts,
 	});
 
 	// 3. Get one-off item specs
 	const oneOffItemSpecs = customerProductsToOneOffStripeItemSpecs({
 		ctx,
 		billingContext,
-		customerProducts: checkoutCustomerProducts,
+		customerProducts: activeCustomerProducts,
 	});
 
 	// 4. Filter recurring items by largest interval (for Stripe Checkout)
