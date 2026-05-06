@@ -3,7 +3,6 @@ import {
 	type ApiCustomer,
 	type ApiCustomerV3,
 	customerEntitlements,
-	type OrgConfig,
 } from "@autumn/shared";
 import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
 import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntitlement.js";
@@ -20,7 +19,6 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
 
 const setBalanceInDb = async ({
 	cusEntId,
@@ -35,33 +33,14 @@ const setBalanceInDb = async ({
 		.where(eq(customerEntitlements.id, cusEntId));
 };
 
-const enablePersistFreeOverage = async ({
-	orgId,
-	orgConfig,
-}: {
-	orgId: string;
-	orgConfig: OrgConfig;
-}) => {
-	await OrgService.update({
-		db,
-		orgId,
-		updates: { config: { ...orgConfig, persist_free_overage: true } },
+const persistFreeOverageOrg = ({ slug }: { slug: string }) =>
+	s.platform.create({
+		userEmail: `persist-overage-${slug}-${Math.random()
+			.toString(36)
+			.slice(2, 8)}@autumn.test`,
+		configOverrides: { persist_free_overage: true },
+		setupDefaultFeatures: true,
 	});
-};
-
-const disablePersistFreeOverage = async ({
-	orgId,
-	orgConfig,
-}: {
-	orgId: string;
-	orgConfig: OrgConfig;
-}) => {
-	await OrgService.update({
-		db,
-		orgId,
-		updates: { config: { ...orgConfig, persist_free_overage: false } },
-	});
-};
 
 // ─────────────────────────────────────────────────────────────────
 // 1. Lazy reset (DB path)
@@ -73,41 +52,33 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (DB): lazy reset deduc
 
 	const { customerId, autumnV2, ctx } = await initScenario({
 		customerId: "persist-ovg-on-db",
-		setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+		setup: [
+			persistFreeOverageOrg({ slug: "db" }),
+			s.customer({ testClock: false }),
+			s.products({ list: [free] }),
+		],
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	await enablePersistFreeOverage({
-		orgId: ctx.org.id,
-		orgConfig: ctx.org.config,
+	const cusEnt = await findCustomerEntitlement({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+	expect(cusEnt).toBeDefined();
+
+	await setBalanceInDb({ cusEntId: cusEnt!.id, balance: -100 });
+	await expireCusEntForReset({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
 	});
 
-	try {
-		const cusEnt = await findCustomerEntitlement({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-		expect(cusEnt).toBeDefined();
-
-		await setBalanceInDb({ cusEntId: cusEnt!.id, balance: -100 });
-		await expireCusEntForReset({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-
-		const after = await autumnV2.customers.get<ApiCustomer>(customerId, {
-			skip_cache: "true",
-		});
-		expect(after.balances[TestFeature.Messages].current_balance).toBe(0);
-		expect(after.balances[TestFeature.Messages].usage).toBe(100);
-	} finally {
-		await disablePersistFreeOverage({
-			orgId: ctx.org.id,
-			orgConfig: ctx.org.config,
-		});
-	}
+	const after = await autumnV2.customers.get<ApiCustomer>(customerId, {
+		skip_cache: "true",
+	});
+	expect(after.balances[TestFeature.Messages].current_balance).toBe(0);
+	expect(after.balances[TestFeature.Messages].usage).toBe(100);
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -120,59 +91,51 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (cache): lazy reset de
 
 	const { customerId, autumnV2, ctx } = await initScenario({
 		customerId: "persist-ovg-on-cache",
-		setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+		setup: [
+			persistFreeOverageOrg({ slug: "cache" }),
+			s.customer({ testClock: false }),
+			s.products({ list: [free] }),
+		],
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	await enablePersistFreeOverage({
+	await autumnV2.customers.get<ApiCustomer>(customerId);
+
+	const cusEnt = await findCustomerEntitlement({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+	expect(cusEnt).toBeDefined();
+
+	await setBalanceInDb({ cusEntId: cusEnt!.id, balance: -50 });
+	await setCachedCusEntField({
 		orgId: ctx.org.id,
-		orgConfig: ctx.org.config,
+		env: ctx.env,
+		customerId,
+		cusEntId: cusEnt!.id,
+		field: "balance",
+		value: -50,
+	});
+	await setCachedSubjectBalanceField({
+		ctx,
+		orgId: ctx.org.id,
+		env: ctx.env,
+		customerId,
+		featureId: TestFeature.Messages,
+		customerEntitlementId: cusEnt!.id,
+		field: "balance",
+		value: -50,
+	});
+	await expireCusEntForReset({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
 	});
 
-	try {
-		await autumnV2.customers.get<ApiCustomer>(customerId);
-
-		const cusEnt = await findCustomerEntitlement({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-		expect(cusEnt).toBeDefined();
-
-		await setBalanceInDb({ cusEntId: cusEnt!.id, balance: -50 });
-		await setCachedCusEntField({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			cusEntId: cusEnt!.id,
-			field: "balance",
-			value: -50,
-		});
-		await setCachedSubjectBalanceField({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			customerId,
-			featureId: TestFeature.Messages,
-			customerEntitlementId: cusEnt!.id,
-			field: "balance",
-			value: -50,
-			redisV2: ctx.redisV2,
-		});
-		await expireCusEntForReset({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-
-		const after = await autumnV2.customers.get<ApiCustomer>(customerId);
-		expect(after.balances[TestFeature.Messages].current_balance).toBe(50);
-		expect(after.balances[TestFeature.Messages].usage).toBe(50);
-	} finally {
-		await disablePersistFreeOverage({
-			orgId: ctx.org.id,
-			orgConfig: ctx.org.config,
-		});
-	}
+	const after = await autumnV2.customers.get<ApiCustomer>(customerId);
+	expect(after.balances[TestFeature.Messages].current_balance).toBe(50);
+	expect(after.balances[TestFeature.Messages].usage).toBe(50);
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -185,7 +148,11 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (cron): cron reset ded
 
 	const { customerId, ctx, customer } = await initScenario({
 		customerId: "persist-ovg-on-cron",
-		setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+		setup: [
+			persistFreeOverageOrg({ slug: "cron" }),
+			s.customer({ testClock: false }),
+			s.products({ list: [free] }),
+		],
 		actions: [s.attach({ productId: free.id })],
 	});
 
@@ -219,41 +186,33 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (no overage): positive
 
 	const { customerId, autumnV2, ctx } = await initScenario({
 		customerId: "persist-ovg-on-positive",
-		setup: [s.customer({ testClock: false }), s.products({ list: [free] })],
+		setup: [
+			persistFreeOverageOrg({ slug: "positive" }),
+			s.customer({ testClock: false }),
+			s.products({ list: [free] }),
+		],
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	await enablePersistFreeOverage({
-		orgId: ctx.org.id,
-		orgConfig: ctx.org.config,
+	const cusEnt = await findCustomerEntitlement({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+	expect(cusEnt).toBeDefined();
+
+	await setBalanceInDb({ cusEntId: cusEnt!.id, balance: 50 });
+	await expireCusEntForReset({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
 	});
 
-	try {
-		const cusEnt = await findCustomerEntitlement({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-		expect(cusEnt).toBeDefined();
-
-		await setBalanceInDb({ cusEntId: cusEnt!.id, balance: 50 });
-		await expireCusEntForReset({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-
-		const after = await autumnV2.customers.get<ApiCustomer>(customerId, {
-			skip_cache: "true",
-		});
-		expect(after.balances[TestFeature.Messages].current_balance).toBe(100);
-		expect(after.balances[TestFeature.Messages].usage).toBe(0);
-	} finally {
-		await disablePersistFreeOverage({
-			orgId: ctx.org.id,
-			orgConfig: ctx.org.config,
-		});
-	}
+	const after = await autumnV2.customers.get<ApiCustomer>(customerId, {
+		skip_cache: "true",
+	});
+	expect(after.balances[TestFeature.Messages].current_balance).toBe(100);
+	expect(after.balances[TestFeature.Messages].usage).toBe(0);
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -270,6 +229,7 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (per-entity): each ent
 	const { customerId, ctx } = await initScenario({
 		customerId: "persist-ovg-on-entity",
 		setup: [
+			persistFreeOverageOrg({ slug: "entity" }),
 			s.customer({ testClock: false }),
 			s.products({ list: [free] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
@@ -277,56 +237,43 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (per-entity): each ent
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	await enablePersistFreeOverage({
-		orgId: ctx.org.id,
-		orgConfig: ctx.org.config,
+	const cusEnt = await findCustomerEntitlement({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
 	});
-	ctx.org.config = { ...ctx.org.config, persist_free_overage: true };
+	expect(cusEnt).toBeDefined();
+	expect(cusEnt!.entities).toBeDefined();
 
-	try {
-		const cusEnt = await findCustomerEntitlement({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-		expect(cusEnt).toBeDefined();
-		expect(cusEnt!.entities).toBeDefined();
+	const entities = { ...cusEnt!.entities! };
+	const entityIds = Object.keys(entities);
+	expect(entityIds.length).toBe(2);
 
-		const entities = { ...cusEnt!.entities! };
-		const entityIds = Object.keys(entities);
-		expect(entityIds.length).toBe(2);
+	entities[entityIds[0]].balance = -50;
+	entities[entityIds[0]].adjustment = 0;
+	entities[entityIds[1]].balance = 30;
+	entities[entityIds[1]].adjustment = 0;
 
-		entities[entityIds[0]].balance = -50;
-		entities[entityIds[0]].adjustment = 0;
-		entities[entityIds[1]].balance = 30;
-		entities[entityIds[1]].adjustment = 0;
+	await db
+		.update(customerEntitlements)
+		.set({ entities })
+		.where(eq(customerEntitlements.id, cusEnt!.id));
+	await expireCusEntForReset({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
 
-		await db
-			.update(customerEntitlements)
-			.set({ entities })
-			.where(eq(customerEntitlements.id, cusEnt!.id));
-		await expireCusEntForReset({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
+	const cusEntAfter = await findCustomerEntitlement({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+	expect(cusEntAfter).toBeDefined();
+	expect(cusEntAfter!.entities).toBeDefined();
 
-		const cusEntAfter = await findCustomerEntitlement({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-		expect(cusEntAfter).toBeDefined();
-		expect(cusEntAfter!.entities).toBeDefined();
-
-		expect(cusEntAfter!.entities![entityIds[0]].balance).toBe(50);
-		expect(cusEntAfter!.entities![entityIds[1]].balance).toBe(100);
-	} finally {
-		await disablePersistFreeOverage({
-			orgId: ctx.org.id,
-			orgConfig: ctx.org.config,
-		});
-	}
+	expect(cusEntAfter!.entities![entityIds[0]].balance).toBe(50);
+	expect(cusEntAfter!.entities![entityIds[1]].balance).toBe(100);
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -343,6 +290,7 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (per-entity mixed): di
 	const { customerId, ctx } = await initScenario({
 		customerId: "persist-ovg-on-ent-mix",
 		setup: [
+			persistFreeOverageOrg({ slug: "entity-mixed" }),
 			s.customer({ testClock: false }),
 			s.products({ list: [free] }),
 			s.entities({ count: 2, featureId: TestFeature.Users }),
@@ -350,56 +298,43 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (per-entity mixed): di
 		actions: [s.attach({ productId: free.id })],
 	});
 
-	await enablePersistFreeOverage({
-		orgId: ctx.org.id,
-		orgConfig: ctx.org.config,
+	const cusEnt = await findCustomerEntitlement({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
 	});
-	ctx.org.config = { ...ctx.org.config, persist_free_overage: true };
+	expect(cusEnt).toBeDefined();
+	expect(cusEnt!.entities).toBeDefined();
 
-	try {
-		const cusEnt = await findCustomerEntitlement({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-		expect(cusEnt).toBeDefined();
-		expect(cusEnt!.entities).toBeDefined();
+	const entities = { ...cusEnt!.entities! };
+	const entityIds = Object.keys(entities);
+	expect(entityIds.length).toBe(2);
 
-		const entities = { ...cusEnt!.entities! };
-		const entityIds = Object.keys(entities);
-		expect(entityIds.length).toBe(2);
+	entities[entityIds[0]].balance = -30;
+	entities[entityIds[0]].adjustment = 0;
+	entities[entityIds[1]].balance = -200;
+	entities[entityIds[1]].adjustment = 0;
 
-		entities[entityIds[0]].balance = -30;
-		entities[entityIds[0]].adjustment = 0;
-		entities[entityIds[1]].balance = -200;
-		entities[entityIds[1]].adjustment = 0;
+	await db
+		.update(customerEntitlements)
+		.set({ entities })
+		.where(eq(customerEntitlements.id, cusEnt!.id));
+	await expireCusEntForReset({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
 
-		await db
-			.update(customerEntitlements)
-			.set({ entities })
-			.where(eq(customerEntitlements.id, cusEnt!.id));
-		await expireCusEntForReset({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
+	const cusEntAfter = await findCustomerEntitlement({
+		ctx,
+		customerId,
+		featureId: TestFeature.Messages,
+	});
+	expect(cusEntAfter).toBeDefined();
+	expect(cusEntAfter!.entities).toBeDefined();
 
-		const cusEntAfter = await findCustomerEntitlement({
-			ctx,
-			customerId,
-			featureId: TestFeature.Messages,
-		});
-		expect(cusEntAfter).toBeDefined();
-		expect(cusEntAfter!.entities).toBeDefined();
-
-		expect(cusEntAfter!.entities![entityIds[0]].balance).toBe(70);
-		expect(cusEntAfter!.entities![entityIds[1]].balance).toBe(-100);
-	} finally {
-		await disablePersistFreeOverage({
-			orgId: ctx.org.id,
-			orgConfig: ctx.org.config,
-		});
-	}
+	expect(cusEntAfter!.entities![entityIds[0]].balance).toBe(70);
+	expect(cusEntAfter!.entities![entityIds[1]].balance).toBe(-100);
 });
 
 // ─────────────────────────────────────────────────────────────────
@@ -418,6 +353,7 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (prepaid): invoice res
 	const { customerId, autumnV1, ctx, testClockId } = await initScenario({
 		customerId: "persist-ovg-on-prepaid",
 		setup: [
+			persistFreeOverageOrg({ slug: "prepaid" }),
 			s.customer({ paymentMethod: "success" }),
 			s.products({ list: [pro] }),
 		],
@@ -430,38 +366,24 @@ test.concurrent(`${chalk.yellowBright("persist overage ON (prepaid): invoice res
 		],
 	});
 
-	// Enable flag BEFORE advancing, so the webhook handler sees it in DB
-	await enablePersistFreeOverage({
-		orgId: ctx.org.id,
-		orgConfig: ctx.org.config,
+	// After attach: prepaid balance = 200 (quantity=200, billingUnits=100, so 2*100=200), lifetime = 50
+	// Total messages balance = 200 + 50 = 250
+	// After track 300: deducted 300 from messages
+	// The prepaid cusEnt's balance should be negative (overage)
+	// On advance, handlePrepaidPrices resets prepaid with persistFreeOverage
+	await advanceToNextInvoice({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		withPause: true,
 	});
 
-	try {
-		// After attach: prepaid balance = 200 (quantity=200, billingUnits=100, so 2*100=200), lifetime = 50
-		// Total messages balance = 200 + 50 = 250
-		// After track 300: deducted 300 from messages
-		// The prepaid cusEnt's balance should be negative (overage)
-		// On advance, handlePrepaidPrices resets prepaid with persistFreeOverage
+	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 
-		await advanceToNextInvoice({
-			stripeCli: ctx.stripeCli,
-			testClockId: testClockId!,
-			withPause: true,
-		});
-
-		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-
-		// Lifetime messages (50) should be untouched by the prepaid reset
-		// Prepaid: was 200, used 300 -> overage of some amount on the prepaid cusEnt
-		// After reset with persist_free_overage: new prepaid balance = 200 - overage
-		// The exact split depends on deduction order, so just verify the feature exists
-		// and the balance is less than the full 250 (200 prepaid + 50 lifetime)
-		expect(customer.features[TestFeature.Messages]).toBeDefined();
-		expect(customer.features[TestFeature.Messages].balance).toBeLessThan(250);
-	} finally {
-		await disablePersistFreeOverage({
-			orgId: ctx.org.id,
-			orgConfig: ctx.org.config,
-		});
-	}
+	// Lifetime messages (50) should be untouched by the prepaid reset
+	// Prepaid: was 200, used 300 -> overage of some amount on the prepaid cusEnt
+	// After reset with persist_free_overage: new prepaid balance = 200 - overage
+	// The exact split depends on deduction order, so just verify the feature exists
+	// and the balance is less than the full 250 (200 prepaid + 50 lifetime)
+	expect(customer.features[TestFeature.Messages]).toBeDefined();
+	expect(customer.features[TestFeature.Messages].balance).toBeLessThan(250);
 });
