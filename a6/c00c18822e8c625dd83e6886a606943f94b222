@@ -1,0 +1,25 @@
+apps/docs/mintlify/docs.json
+  b7539cb1bd2acb8d 199-200,218
+apps/docs/api-reference-generator/billing/createSchedule.mdx
+  b7539cb1bd2acb8d 1-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "a6c00c18822e8c625dd83e6886a606943f94b222",
+  "prompts": {
+    "b7539cb1bd2acb8d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2035ef9b5ffe5BgzrHRlzcpE57",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 11,
+      "overriden_lines": 0
+    }
+  }
+}
