@@ -63,7 +63,8 @@ test.concurrent(`${chalk.yellowBright("starts_at: enable_plan_immediately activa
 	expect(cusProduct.status).toBe(CusProductStatus.Active);
 	expect(cusProduct.subscription_ids ?? []).toEqual([]);
 	expect(cusProduct.scheduled_ids).toHaveLength(1);
-	expect(Math.abs(cusProduct.starts_at - advancedTo)).toBeLessThan(
+	expect(cusProduct.starts_at).toBe(startDate);
+	expect(Math.abs(cusProduct.access_starts_at! - advancedTo)).toBeLessThan(
 		ms.minutes(10),
 	);
 	expectResetAnchoredTo({
@@ -123,9 +124,10 @@ test.concurrent(`${chalk.yellowBright("starts_at: upgrade access can start befor
 	});
 	expect(premiumCustomerProduct.status).toBe(CusProductStatus.Active);
 	expect(premiumCustomerProduct.scheduled_ids).toHaveLength(1);
-	expect(Math.abs(premiumCustomerProduct.starts_at - advancedTo)).toBeLessThan(
-		ms.minutes(10),
-	);
+	expect(premiumCustomerProduct.starts_at).toBe(startsAt);
+	expect(
+		Math.abs(premiumCustomerProduct.access_starts_at! - advancedTo),
+	).toBeLessThan(ms.minutes(10));
 	expectResetAnchoredTo({
 		cusProduct: premiumCustomerProduct,
 		featureId: TestFeature.Messages,
@@ -181,9 +183,10 @@ test.concurrent(`${chalk.yellowBright("starts_at: add-on access can start before
 	});
 	expect(addonCustomerProduct.status).toBe(CusProductStatus.Active);
 	expect(addonCustomerProduct.scheduled_ids).toHaveLength(1);
-	expect(Math.abs(addonCustomerProduct.starts_at - advancedTo)).toBeLessThan(
-		ms.minutes(10),
-	);
+	expect(addonCustomerProduct.starts_at).toBe(startsAt);
+	expect(
+		Math.abs(addonCustomerProduct.access_starts_at! - advancedTo),
+	).toBeLessThan(ms.minutes(10));
 	expectResetAnchoredTo({
 		cusProduct: addonCustomerProduct,
 		featureId: TestFeature.Words,

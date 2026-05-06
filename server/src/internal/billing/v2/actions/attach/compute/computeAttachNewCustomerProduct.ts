@@ -7,8 +7,6 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
-import { applyAttachStartDates } from "./applyAttachStartDates";
-import { getAttachStartTiming } from "./getAttachStartTiming";
 
 const getScheduledBillingCycleAnchorResetAt = ({
 	requestedBillingCycleAnchor,
@@ -47,6 +45,7 @@ export const computeAttachNewCustomerProduct = ({
 		fullCustomer,
 		currentCustomerProduct,
 		planTiming,
+		endOfCycleMs,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		currentEpochMs,
@@ -57,6 +56,8 @@ export const computeAttachNewCustomerProduct = ({
 		transitionConfig,
 		externalId,
 		requestedBillingCycleAnchor,
+		resetCycleAnchorMs,
+		accessStartsAt,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -72,12 +73,8 @@ export const computeAttachNewCustomerProduct = ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
-	const attachStartTiming = getAttachStartTiming({
-		attachBillingContext,
-		params,
-	});
-	const { billingAnchorStartsAt, resetCycleAnchor, status } = attachStartTiming;
 	const isScheduled = planTiming === "end_of_cycle";
+	const startsAt = params.starts_at ?? (isScheduled ? endOfCycleMs : undefined);
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
 		!isScheduled && currentCustomerProduct
@@ -110,7 +107,7 @@ export const computeAttachNewCustomerProduct = ({
 			featureQuantities,
 			// existingUsages: isScheduled ? undefined : existingUsages,
 			// existingRollovers,
-			resetCycleAnchor,
+			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
 			freeTrial: trialContext?.freeTrial ?? null,
 			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
@@ -125,20 +122,14 @@ export const computeAttachNewCustomerProduct = ({
 			// subscriptionId: isScheduled ? undefined : stripeSubscription?.id,
 			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
-			status,
-			startsAt: billingAnchorStartsAt,
+			startsAt,
+			accessStartsAt,
 			externalId,
 			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor,
 				currentEpochMs,
 			}),
 		},
-	});
-
-	applyAttachStartDates({
-		newFullCustomerProduct,
-		attachBillingContext,
-		attachStartTiming,
 	});
 
 	return newFullCustomerProduct;

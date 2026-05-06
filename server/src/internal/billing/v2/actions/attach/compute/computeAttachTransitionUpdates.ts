@@ -41,7 +41,7 @@ export const computeAttachTransitionUpdates = ({
 	}
 
 	const startsAt = params.starts_at;
-	const transitionEndMs = isFutureStartDate(startsAt, currentEpochMs)
+	const transitionAtMs = isFutureStartDate(startsAt, currentEpochMs)
 		? startsAt
 		: endOfCycleMs;
 
@@ -54,7 +54,7 @@ export const computeAttachTransitionUpdates = ({
 				: undefined,
 			canceled: true,
 			canceled_at: currentEpochMs,
-			ended_at: transitionEndMs,
+			ended_at: transitionAtMs,
 		},
 	};
 };

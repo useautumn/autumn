@@ -3,13 +3,13 @@ import { type AttachBillingContext, CusProductStatus } from "@autumn/shared";
 export const shouldBuildImmediateLineItems = ({
 	planTiming,
 	customerProductStatus,
-	billingStartsAt,
+	accessStartsAt,
 }: {
 	planTiming: AttachBillingContext["planTiming"];
 	customerProductStatus: CusProductStatus;
-	billingStartsAt?: number;
+	accessStartsAt?: number;
 }): boolean => {
-	if (billingStartsAt !== undefined) return false;
+	if (accessStartsAt !== undefined) return false;
 	if (planTiming !== "immediate") return false;
 	return customerProductStatus !== CusProductStatus.Scheduled;
 };

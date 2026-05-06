@@ -1,6 +1,6 @@
 import { CusProductStatus, formatMsToDate } from "@autumn/shared";
 import { DotIcon, ExclamationMarkIcon, XIcon } from "@phosphor-icons/react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistance } from "date-fns";
 import { BanIcon, CalendarIcon, CheckIcon, ClockIcon } from "lucide-react";
 import {
 	Tooltip,
@@ -15,6 +15,7 @@ const StatusItem = ({
 	text,
 	trial_ends_at,
 	canceled_at,
+	nowMs,
 	tooltip,
 	className,
 }: {
@@ -22,15 +23,16 @@ const StatusItem = ({
 	text: string;
 	trial_ends_at?: number;
 	canceled_at?: number;
+	nowMs?: number;
 	tooltip?: boolean;
 	className?: string;
 }) => {
 	const getSubtext = () => {
 		if (trial_ends_at) {
-			return `${formatDistanceToNow(trial_ends_at)} left`;
+			return `${formatDistance(trial_ends_at, nowMs ?? Date.now())} left`;
 		}
 		if (canceled_at) {
-			return `${formatDistanceToNow(canceled_at)} ago`;
+			return `${formatDistance(canceled_at, nowMs ?? Date.now())} ago`;
 		}
 		return null;
 	};
@@ -75,6 +77,7 @@ export const CustomerProductsStatus = ({
 	trialing,
 	trial_ends_at,
 	starts_at,
+	nowMs,
 }: {
 	status?: CusProductStatus;
 	tooltip?: boolean;
@@ -83,7 +86,10 @@ export const CustomerProductsStatus = ({
 	trialing?: boolean;
 	trial_ends_at?: number;
 	starts_at?: number;
+	nowMs?: number;
 }) => {
+	const effectiveNowMs = nowMs ?? Date.now();
+
 	// Expired status takes priority over canceled
 	if (status === CusProductStatus.Expired) {
 		return (
@@ -115,7 +121,12 @@ export const CustomerProductsStatus = ({
 	// If product is canceled, show that status
 	if (canceled) {
 		return (
-			<StatusItem text="Cancelling" tooltip={tooltip} canceled_at={canceled_at}>
+			<StatusItem
+				text="Cancelling"
+				tooltip={tooltip}
+				canceled_at={canceled_at}
+				nowMs={effectiveNowMs}
+			>
 				<BanIcon
 					className="text-white bg-orange-500 dark:bg-orange-600 rounded-full p-0.5"
 					size={12}
@@ -126,7 +137,12 @@ export const CustomerProductsStatus = ({
 
 	if (trialing) {
 		return (
-			<StatusItem text="Trial" trial_ends_at={trial_ends_at} tooltip={tooltip}>
+			<StatusItem
+				text="Trial"
+				trial_ends_at={trial_ends_at}
+				tooltip={tooltip}
+				nowMs={effectiveNowMs}
+			>
 				<ClockIcon
 					className="text-white bg-blue-500 dark:bg-blue-600 rounded-full p-0.5"
 					size={12}

@@ -30,7 +30,7 @@ function filterBySelectedEntity({
 }
 
 export function useCustomerProductsData() {
-	const { customer, isLoading } = useCusQuery();
+	const { customer, isLoading, testClockFrozenTimeMs } = useCusQuery();
 	const { entityId } = useEntity();
 	const [showExpired, setShowExpired] = useQueryState(
 		"customerProductsShowExpired",
@@ -81,6 +81,7 @@ export function useCustomerProductsData() {
 	return {
 		customer,
 		isLoading,
+		testClockFrozenTimeMs,
 		showExpired,
 		setShowExpired,
 		entityId,
