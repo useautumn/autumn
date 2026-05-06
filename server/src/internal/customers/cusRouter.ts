@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { handleGetCustomerV3 } from "@/internal/customers/handlers/handleGetCustomerV3.js";
 import { handleGetOrCreateCustomerV2 } from "@/internal/customers/handlers/handleGetOrCreateCustomer/handleGetOrCreateCustomerV2.js";
 import { handleUpdateCustomerV2 } from "@/internal/customers/handlers/handleUpdateCustomer/handleUpdateCustomerV2.js";
 import { handleAddCouponToCusV2 } from "./handlers/handleAddCouponToCusV2.js";
@@ -53,7 +54,7 @@ customerRpcRouter.post(
 	"/customers.get_or_create",
 	...handleGetOrCreateCustomerV2,
 );
-
+customerRpcRouter.post("/customers.get", ...handleGetCustomerV3);
 customerRpcRouter.post("/customers.update", ...handleUpdateCustomerV2);
 customerRpcRouter.post("/customers.list", ...handleListCustomersV2);
 customerRpcRouter.post("/customers.delete", ...handleDeleteCustomerV2);
