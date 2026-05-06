@@ -147,11 +147,7 @@ export const OrgDropdown = () => {
 								<Settings size={14} />
 							</div>
 						</DropdownMenuItem>
-						<DropdownMenuItem
-							onClick={(e) => {
-								setDialogType("create");
-							}}
-						>
+						<DropdownMenuItem onClick={() => setDialogType("create")}>
 							<div className="flex justify-between w-full items-center gap-2 text-t2">
 								<span>Create Organization</span>
 								<Plus size={14} />
@@ -159,7 +155,7 @@ export const OrgDropdown = () => {
 						</DropdownMenuItem>
 						{!expanded && (
 							<DropdownMenuItem
-								onClick={(e) => {
+								onClick={() => {
 									setExpanded(true);
 									setDropdownOpen(false);
 								}}
@@ -213,7 +209,7 @@ export const OrgDropdown = () => {
 										Switch Organization
 									</DropdownMenuSubTrigger>
 									<DropdownMenuPortal>
-										<DropdownMenuSubContent className="w-48">
+										<DropdownMenuSubContent className="w-64 max-h-[min(28rem,calc(100vh-4rem))] overflow-y-auto">
 											{orgs.map((org) => (
 												<SwitchOrgItem
 													key={org.id}
@@ -271,15 +267,25 @@ export const useOrgSwitch = () => {
 				const search = window.location.search;
 				navigate(`/sandbox${pathname}${search}`);
 			}
-		} catch (error: any) {
-			toast.error(error.message);
+		} catch (error) {
+			toast.error(
+				error instanceof Error
+					? error.message
+					: "Failed to switch organization",
+			);
 		} finally {
 			setLoading?.(false);
 		}
 	};
 };
 
-const SwitchOrgItem = ({ org, setDropdownOpen }: any) => {
+const SwitchOrgItem = ({
+	org,
+	setDropdownOpen,
+}: {
+	org: { id: string; name: string };
+	setDropdownOpen: (open: boolean) => void;
+}) => {
 	const [loading, setLoading] = useState(false);
 	const switchOrg = useOrgSwitch();
 
