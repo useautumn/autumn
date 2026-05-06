@@ -5,6 +5,7 @@ from typing import (
     Any,
     Dict,
     List,
+    Optional,
     Tuple,
 )
 from pydantic import BaseModel
@@ -16,7 +17,9 @@ from .metadata import (
 )
 
 
-def get_security(security: Any) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
+def get_security(
+    security: Any, allowed_fields: Optional[List[str]] = None
+) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
     headers: Dict[str, str] = {}
     query_params: Dict[str, List[str]] = {}
 
@@ -27,7 +30,14 @@ def get_security(security: Any) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
         raise TypeError("security must be a pydantic model")
 
     sec_fields: Dict[str, FieldInfo] = security.__class__.model_fields
-    for name in sec_fields:
+    sec_field_names = (
+        list(sec_fields.keys()) if allowed_fields is None else allowed_fields
+    )
+
+    for name in sec_field_names:
+        if name not in sec_fields:
+            continue
+
         sec_field = sec_fields[name]
 
         value = getattr(security, name)
@@ -49,6 +59,9 @@ def get_security(security: Any) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
             else:
                 _parse_security_scheme(headers, query_params, metadata, name, value)
 
+            if not metadata.composite:
+                return headers, query_params
+
     return headers, query_params
 
 
@@ -59,15 +72,24 @@ def _parse_security_option(
         raise TypeError("security option must be a pydantic model")
 
     opt_fields: Dict[str, FieldInfo] = option.__class__.model_fields
+
     for name in opt_fields:
         opt_field = opt_fields[name]
 
         metadata = find_field_metadata(opt_field, SecurityMetadata)
         if metadata is None or not metadata.scheme:
             continue
-        _parse_security_scheme(
-            headers, query_params, metadata, name, getattr(option, name)
-        )
+
+        value = getattr(option, name)
+        if (
+            metadata.scheme_type == "http"
+            and metadata.sub_type == "basic"
+            and not isinstance(value, BaseModel)
+        ):
+            _parse_basic_auth_scheme(headers, option)
+            return
+
+        _parse_security_scheme(headers, query_params, metadata, name, value)
 
 
 def _parse_security_scheme(

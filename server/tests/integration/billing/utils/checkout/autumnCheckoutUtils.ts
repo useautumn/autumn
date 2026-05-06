@@ -1,8 +1,10 @@
 import { expect } from "bun:test";
 import type {
 	ApiCustomerV3,
+	ConfirmCheckoutParams,
 	ConfirmCheckoutResponse,
 	GetCheckoutResponse,
+	PreviewCheckoutResponse,
 } from "@autumn/shared";
 
 const CHECKOUT_BASE_URL = "http://localhost:8080";
@@ -22,16 +24,64 @@ export const fetchAutumnCheckout = async ({
 	return (await response.json()) as GetCheckoutResponse;
 };
 
+export const previewAutumnCheckout = async ({
+	checkoutId,
+	body,
+}: {
+	checkoutId: string;
+	body: ConfirmCheckoutParams;
+}): Promise<PreviewCheckoutResponse> => {
+	const response = await fetch(
+		`${CHECKOUT_BASE_URL}/checkouts/${checkoutId}/preview`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(CHECKOUT_TIMEOUT_MS),
+		},
+	);
+
+	expect(response.ok).toBe(true);
+
+	return (await response.json()) as PreviewCheckoutResponse;
+};
+
+export const expectAutumnCheckoutPreviewError = async ({
+	checkoutId,
+	body,
+}: {
+	checkoutId: string;
+	body: ConfirmCheckoutParams;
+}) => {
+	const response = await fetch(
+		`${CHECKOUT_BASE_URL}/checkouts/${checkoutId}/preview`,
+		{
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(body),
+			signal: AbortSignal.timeout(CHECKOUT_TIMEOUT_MS),
+		},
+	);
+
+	expect(response.ok).toBe(false);
+};
+
 export const confirmAutumnCheckout = async ({
 	checkoutId,
 	customerId,
 	productId,
 	featureQuantities,
+	discounts,
 }: {
 	checkoutId: string;
 	customerId: string;
 	productId: string;
 	featureQuantities?: Array<{ feature_id: string; quantity: number }>;
+	discounts?: ConfirmCheckoutParams["discounts"];
 }): Promise<ConfirmCheckoutResponse> => {
 	const response = await fetch(
 		`${CHECKOUT_BASE_URL}/checkouts/${checkoutId}/confirm`,
@@ -40,9 +90,10 @@ export const confirmAutumnCheckout = async ({
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(
-				featureQuantities ? { feature_quantities: featureQuantities } : {},
-			),
+			body: JSON.stringify({
+				...(featureQuantities ? { feature_quantities: featureQuantities } : {}),
+				...(discounts ? { discounts } : {}),
+			}),
 			signal: AbortSignal.timeout(CHECKOUT_TIMEOUT_MS),
 		},
 	);
@@ -65,6 +116,7 @@ export const confirmAutumnCheckoutAndGetCustomer = async ({
 	customerId,
 	productId,
 	featureQuantities,
+	discounts,
 }: {
 	autumnV1: {
 		customers: {
@@ -75,12 +127,14 @@ export const confirmAutumnCheckoutAndGetCustomer = async ({
 	customerId: string;
 	productId: string;
 	featureQuantities?: Array<{ feature_id: string; quantity: number }>;
+	discounts?: ConfirmCheckoutParams["discounts"];
 }) => {
 	const confirmData = await confirmAutumnCheckout({
 		checkoutId,
 		customerId,
 		productId,
 		featureQuantities,
+		discounts,
 	});
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 

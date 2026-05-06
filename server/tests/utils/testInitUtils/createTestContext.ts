@@ -111,6 +111,19 @@ const lazyDefaultCtx = new Proxy({} as TestContext, {
 		}
 		return Reflect.get(ctx, prop);
 	},
+	set(_target, prop, value, _receiver) {
+		const ctx = (globalThis as { __autumnTestContext?: TestContext | null })
+			.__autumnTestContext;
+		if (ctx == null) {
+			throw new Error(
+				`Default TestContext is not initialized. The integration test ` +
+					`preload (server/tests/setup-integration-tests.ts) did not ` +
+					`populate globalThis.__autumnTestContext before "${String(prop)}" ` +
+					`was assigned.`,
+			);
+		}
+		return Reflect.set(ctx, prop, value);
+	},
 	has(_target, prop) {
 		const ctx = (globalThis as { __autumnTestContext?: TestContext | null })
 			.__autumnTestContext;
@@ -125,7 +138,15 @@ const lazyDefaultCtx = new Proxy({} as TestContext, {
 		const ctx = (globalThis as { __autumnTestContext?: TestContext | null })
 			.__autumnTestContext;
 		if (ctx == null) return undefined;
-		return Reflect.getOwnPropertyDescriptor(ctx, prop);
+		const descriptor = Reflect.getOwnPropertyDescriptor(ctx, prop);
+		if (!descriptor) return undefined;
+
+		return {
+			configurable: true,
+			enumerable: descriptor.enumerable,
+			writable: true,
+			value: Reflect.get(ctx, prop),
+		};
 	},
 });
 

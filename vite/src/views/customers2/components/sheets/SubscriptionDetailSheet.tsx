@@ -1,3 +1,4 @@
+import type { ApiDiscount } from "@autumn/shared";
 import {
 	CusProductStatus,
 	type Entity,
@@ -19,6 +20,7 @@ import {
 	Info,
 	SubtractIcon,
 	TagIcon,
+	TicketIcon,
 	TimerIcon,
 	XCircle,
 } from "@phosphor-icons/react";
@@ -30,6 +32,7 @@ import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
@@ -44,6 +47,15 @@ import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/Bas
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
 
+function formatDiscountLabel({ discount }: { discount: ApiDiscount }): string {
+	const value =
+		discount.type === "percentage_discount"
+			? `${discount.discount_value}% off`
+			: `${discount.discount_value / 100} ${discount.currency?.toUpperCase() ?? ""} off`;
+
+	return discount.name ? `${discount.name} (${value})` : value;
+}
+
 function SubscriptionDetailItems({
 	items,
 	product,
@@ -53,9 +65,7 @@ function SubscriptionDetailItems({
 	items: ProductItem[];
 	product: FrontendProduct;
 	prepaidDisplayQuantities: Record<string, number>;
-	adminIds?: import(
-		"@/components/forms/shared/admin/AdminPlanIdsTooltip"
-	).AdminPlanIds;
+	adminIds?: import("@/components/forms/shared/admin/AdminPlanIdsTooltip").AdminPlanIds;
 }) {
 	const sortedItems = useMemo(() => sortPlanItems({ items }), [items]);
 	const { visibleItems, collapsedBooleanItems } = useMemo(
@@ -114,6 +124,7 @@ export function SubscriptionDetailSheet() {
 	const setSheet = useSheetStore((s) => s.setSheet);
 	// Get customer product and productV2 by itemId
 	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+	const { getDiscountsForSubscription } = useCusRewardsQuery();
 
 	// Prefetch product version data so the update sheet has it cached immediately
 	useProductVersionQuery({ productId: productV2?.id });
@@ -142,6 +153,10 @@ export function SubscriptionDetailSheet() {
 	);
 
 	const isScheduled = cusProduct.status === CusProductStatus.Scheduled;
+	const subscriptionDiscounts = getDiscountsForSubscription({
+		subscriptionIds: cusProduct.subscription_ids ?? [],
+	});
+
 	const canCancel = !isExpired;
 	const canUpdate = !isExpired && !isScheduled;
 	const nowMs = testClockFrozenTimeMs ?? Date.now();
@@ -311,6 +326,15 @@ export function SubscriptionDetailSheet() {
 							/>
 						}
 					/>
+
+					{subscriptionDiscounts.map((discount: ApiDiscount) => (
+						<InfoRow
+							key={discount.id}
+							icon={<TicketIcon size={16} weight="duotone" />}
+							label="Coupon"
+							value={formatDiscountLabel({ discount })}
+						/>
+					))}
 
 					<InfoRow
 						icon={<CalendarBlankIcon size={16} weight="duotone" />}

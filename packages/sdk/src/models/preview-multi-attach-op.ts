@@ -609,11 +609,11 @@ export type PreviewMultiAttachLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts for this line item.
+   * The amount in cents before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for this line item.
+   * The final amount in cents after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -669,11 +669,11 @@ export type PreviewMultiAttachNextCycleLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts for this line item.
+   * The amount in cents before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for this line item.
+   * The final amount in cents after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -740,11 +740,11 @@ export type PreviewMultiAttachNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents before discounts for the next cycle.
+   * The total amount in cents before discounts and tax for the next cycle.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for the next cycle.
+   * The final amount in cents after discounts and tax for the next cycle.
    */
   total: number;
   /**
@@ -876,6 +876,20 @@ export type PreviewMultiAttachTax = {
 };
 
 /**
+ * Stripe customer invoice credits preview.
+ */
+export type PreviewMultiAttachInvoiceCredits = {
+  /**
+   * Stripe customer credit balance available, expressed as a positive number in major currency units.
+   */
+  balance: number;
+  /**
+   * Three-letter currency code.
+   */
+  currency: string;
+};
+
+/**
  * OK
  */
 export type PreviewMultiAttachResponse = {
@@ -885,11 +899,11 @@ export type PreviewMultiAttachResponse = {
   customerId: string;
   lineItems: Array<PreviewMultiAttachLineItem>;
   /**
-   * The total amount in cents before discounts for the current billing period.
+   * The total amount in cents before discounts and tax for the current billing period.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for the current billing period.
+   * The final amount in cents after discounts and tax for the current billing period.
    */
   total: number;
   /**
@@ -924,6 +938,10 @@ export type PreviewMultiAttachResponse = {
    * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
    */
   tax?: PreviewMultiAttachTax | undefined;
+  /**
+   * Stripe customer invoice credits preview.
+   */
+  invoiceCredits?: PreviewMultiAttachInvoiceCredits | undefined;
 };
 
 /** @internal */
@@ -2179,6 +2197,25 @@ export function previewMultiAttachTaxFromJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachInvoiceCredits$inboundSchema: z.ZodMiniType<
+  PreviewMultiAttachInvoiceCredits,
+  unknown
+> = z.object({
+  balance: types.number(),
+  currency: types.string(),
+});
+
+export function previewMultiAttachInvoiceCreditsFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewMultiAttachInvoiceCredits, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewMultiAttachInvoiceCredits$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewMultiAttachInvoiceCredits' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
   PreviewMultiAttachResponse,
   unknown
@@ -2198,6 +2235,9 @@ export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
     redirect_to_checkout: types.boolean(),
     checkout_type: types.nullable(PreviewMultiAttachCheckoutType$inboundSchema),
     tax: types.optional(z.lazy(() => PreviewMultiAttachTax$inboundSchema)),
+    invoice_credits: types.optional(
+      z.lazy(() => PreviewMultiAttachInvoiceCredits$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2206,6 +2246,7 @@ export const PreviewMultiAttachResponse$inboundSchema: z.ZodMiniType<
       "next_cycle": "nextCycle",
       "redirect_to_checkout": "redirectToCheckout",
       "checkout_type": "checkoutType",
+      "invoice_credits": "invoiceCredits",
     });
   }),
 );

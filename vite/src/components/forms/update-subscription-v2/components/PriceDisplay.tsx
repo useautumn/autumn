@@ -52,7 +52,9 @@ export function PriceDisplay({ product, currency }: PriceDisplayProps) {
 
 	return (
 		<span className="flex items-center gap-1">
-			<span className="text-t1 font-semibold">{priceDisplay.formattedPrice}</span>
+			<span className="text-t1 font-semibold">
+				{priceDisplay.formattedPrice}
+			</span>
 			<span className="text-t3">{priceDisplay.intervalText}</span>
 		</span>
 	);

@@ -27,6 +27,13 @@ export const CheckResponseV3Schema = z.object({
 		description:
 			"The customer's balance for this feature. Null if the customer has no balance for this feature.",
 	}),
+	balances: z
+		.record(z.string(), ApiBalanceV1Schema.nullable())
+		.optional()
+		.meta({
+			description:
+				"Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems). ",
+		}),
 	flag: ApiFlagV0Schema.nullable().meta({
 		description: "The flag associated with this check, if any.",
 	}),

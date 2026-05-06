@@ -19,7 +19,7 @@ type BatchInvalidateCustomer = {
 
 type FeaturesByOrgEnv = Record<string, Feature[]>;
 
-export const batchInvalidateCachedFullSubjects = async ({
+const batchInvalidateCachedFullSubjectsOnRedis = async ({
 	customers,
 	featuresByOrgEnv,
 	redisV2,
@@ -27,11 +27,8 @@ export const batchInvalidateCachedFullSubjects = async ({
 	customers: BatchInvalidateCustomer[];
 	featuresByOrgEnv: FeaturesByOrgEnv;
 	redisV2: Redis;
-}): Promise<number> => {
-	if (customers.length === 0) return 0;
-
-	const deleted = await batchDeleteCachedFullCustomers({ customers });
-	if (redisV2.status !== "ready") return deleted;
+}): Promise<void> => {
+	if (customers.length === 0 || redisV2.status !== "ready") return;
 
 	for (
 		let offset = 0;
@@ -98,6 +95,45 @@ export const batchInvalidateCachedFullSubjects = async ({
 
 		await tryRedisWrite(() => writePipeline.exec(), redisV2);
 	}
+};
+
+export const batchInvalidateCachedFullSubjects = async ({
+	customers,
+	featuresByOrgEnv,
+	getRedisTargetsForCustomer,
+}: {
+	customers: BatchInvalidateCustomer[];
+	featuresByOrgEnv: FeaturesByOrgEnv;
+	getRedisTargetsForCustomer: ({
+		customer,
+	}: {
+		customer: BatchInvalidateCustomer;
+	}) => Redis[];
+}): Promise<number> => {
+	if (customers.length === 0) return 0;
+
+	const deleted = await batchDeleteCachedFullCustomers({ customers });
+
+	const customersByRedis = new Map<Redis, BatchInvalidateCustomer[]>();
+	for (const customer of customers) {
+		for (const targetRedis of new Set(
+			getRedisTargetsForCustomer({ customer }),
+		)) {
+			const existing = customersByRedis.get(targetRedis) ?? [];
+			existing.push(customer);
+			customersByRedis.set(targetRedis, existing);
+		}
+	}
+
+	await Promise.all(
+		[...customersByRedis.entries()].map(([targetRedis, redisCustomers]) =>
+			batchInvalidateCachedFullSubjectsOnRedis({
+				customers: redisCustomers,
+				featuresByOrgEnv,
+				redisV2: targetRedis,
+			}),
+		),
+	);
 
 	return deleted;
 };

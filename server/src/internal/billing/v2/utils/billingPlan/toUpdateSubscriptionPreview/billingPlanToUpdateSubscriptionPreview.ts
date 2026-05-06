@@ -28,5 +28,7 @@ export const billingPlanToUpdateSubscriptionPreview = async ({
 		intent: billingPlanToUpdateSubscriptionPreviewIntent({
 			billingContext,
 		}),
+		tax: billingPlan.preview?.tax,
+		invoice_credits: billingPlan.preview?.invoiceCredits,
 	} satisfies PreviewUpdateSubscriptionResponse;
 };

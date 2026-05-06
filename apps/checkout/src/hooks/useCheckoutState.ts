@@ -1,6 +1,7 @@
 import {
 	type BillingResponse,
 	CheckoutAction,
+	type ConfirmCheckoutParams,
 	type ConfirmCheckoutResponse,
 	type GetCheckoutResponse,
 	CheckoutStatus,
@@ -76,6 +77,9 @@ export function useCheckoutState({
 	const [actionRequiredResponse, setActionRequiredResponse] =
 		useState<BillingResponse | null>(null);
 	const [quantities, setQuantities] = useState<Record<string, number>>({});
+	const [appliedPromotionCode, setAppliedPromotionCode] = useState<string | null>(
+		null,
+	);
 
 	// === API hooks ===
 	const { data: checkoutData, isLoading, error } = useCheckout({ checkoutId });
@@ -107,10 +111,31 @@ export function useCheckoutState({
 		};
 	}, [confirmResult]);
 
+	const buildCheckoutBody = useCallback(
+		({
+			nextQuantities = quantities,
+			promotionCode = appliedPromotionCode,
+		}: {
+			nextQuantities?: Record<string, number>;
+			promotionCode?: string | null;
+		} = {}): ConfirmCheckoutParams => {
+			const featureQuantities = checkoutData?.preview?.incoming
+				? buildFeatureQuantities(checkoutData.preview.incoming, nextQuantities)
+				: [];
+			const code = promotionCode?.trim();
+
+			return {
+				feature_quantities: featureQuantities,
+				...(code ? { discounts: [{ promotion_code: code }] } : {}),
+			};
+		},
+		[appliedPromotionCode, checkoutData, quantities],
+	);
+
 	// === Debounced preview ===
 	const debouncedPreview = useDebouncedCallback(
-		(feature_quantities: { feature_id: string; quantity: number }[]) => {
-			previewMutation.mutate({ feature_quantities });
+		(body: ConfirmCheckoutParams) => {
+			previewMutation.mutate(body);
 		},
 		600,
 	);
@@ -139,6 +164,7 @@ export function useCheckoutState({
 		const incomingPlan = incomingChange?.plan;
 		const freeTrial = incomingPlan?.free_trial;
 		const hasActiveTrial = !!freeTrial;
+		const hasAdjustableFeatures = adjustableFeatureIds.length > 0;
 
 		const headerDescription = buildHeaderDescription({
 			preview,
@@ -167,6 +193,7 @@ export function useCheckoutState({
 			hasActiveTrial,
 			isSandbox: env === "sandbox",
 			headerDescription,
+			hasAdjustableFeatures,
 			adjustableFeatureIds,
 			isUnchangedQuantityUpdate,
 		};
@@ -179,22 +206,31 @@ export function useCheckoutState({
 
 			if (checkoutData?.preview?.incoming) {
 				const newQuantities = { ...quantities, [featureId]: quantity };
-				const featureQuantities = buildFeatureQuantities(
-					checkoutData.preview.incoming,
-					newQuantities,
+				debouncedPreview(
+					buildCheckoutBody({
+						nextQuantities: newQuantities,
+					}),
 				);
-				debouncedPreview(featureQuantities);
 			}
 		},
-		[checkoutData, quantities, debouncedPreview],
+		[checkoutData, quantities, debouncedPreview, buildCheckoutBody],
 	);
 
-	const handleConfirm = useCallback(() => {
-		const featureQuantities = checkoutData?.preview?.incoming
-			? buildFeatureQuantities(checkoutData.preview.incoming, quantities)
-			: [];
+	const handleApplyDiscount = useCallback(
+		async (promotionCode: string) => {
+			await previewMutation.mutateAsync(buildCheckoutBody({ promotionCode }));
+			setAppliedPromotionCode(promotionCode);
+		},
+		[buildCheckoutBody, previewMutation],
+	);
 
-		confirmMutation.mutate({ feature_quantities: featureQuantities }, {
+	const handleClearDiscount = useCallback(async () => {
+		await previewMutation.mutateAsync(buildCheckoutBody({ promotionCode: null }));
+		setAppliedPromotionCode(null);
+	}, [buildCheckoutBody, previewMutation]);
+
+	const handleConfirm = useCallback(() => {
+		confirmMutation.mutate(buildCheckoutBody(), {
 			onSuccess: (result) => {
 				if (!result.success) {
 					setActionRequiredResponse(result);
@@ -204,7 +240,7 @@ export function useCheckoutState({
 				setConfirmResult(result);
 			},
 		});
-	}, [checkoutData, confirmMutation, quantities]);
+	}, [buildCheckoutBody, confirmMutation]);
 
 	const hasActionRequiredState = !!(
 		actionRequiredResponse?.payment_url && actionRequiredResponse.required_action
@@ -232,11 +268,14 @@ export function useCheckoutState({
 		checkoutId,
 		...derivedState,
 		quantities,
+		appliedPromotionCode,
 		actionRequiredResponse,
 		hasActionRequiredState,
 		confirmResult,
 		status,
 		handleQuantityChange,
+		handleApplyDiscount,
+		handleClearDiscount,
 		handleConfirm,
 	};
 }

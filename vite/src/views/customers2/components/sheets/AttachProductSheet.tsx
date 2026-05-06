@@ -1,8 +1,7 @@
-import { type Entity, type FullCustomer, formatAmount } from "@autumn/shared";
+import type { Entity, FullCustomer } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
-import { Decimal } from "decimal.js";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -35,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/v2/buttons/Button";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
+import { PreviewTotalsBlock } from "@/components/v2/preview-totals/PreviewTotalsBlock";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -139,15 +139,6 @@ function ReviewPreviewBlock() {
 		? getBackendErr(queryError as AxiosError, "Failed to load preview")
 		: undefined;
 
-	// Tax-aware totals. Only show the Tax row when status is "complete" AND
-	// total > 0 — incomplete is surfaced via toast above; zero tax means
-	// nothing taxable in this jurisdiction (no value in showing $0).
-	const showTaxRow =
-		previewData?.tax?.status === "complete" && previewData.tax.total > 0;
-	const taxAmount = showTaxRow ? (previewData?.tax?.total ?? 0) : 0;
-	const totalDueNow = previewData
-		? Math.max(previewData.total, 0) + taxAmount
-		: 0;
 	const previewTotals = buildAttachPreviewTotals({
 		previewData,
 		startDate: formValues.startDate,
@@ -156,7 +147,7 @@ function ReviewPreviewBlock() {
 		previewData,
 		startDate: formValues.startDate,
 	});
-	const lineItemTotals = showTaxRow
+	const lineItemTotals = previewData
 		? previewTotals.filter((total) => total.variant !== "primary")
 		: previewTotals;
 
@@ -193,42 +184,9 @@ function ReviewPreviewBlock() {
 								totals={lineItemTotals}
 								filterZeroAmounts
 							/>
-							{showTaxRow && previewData && (
+							{previewData && (
 								<SheetSection withSeparator={false}>
-									<div className="space-y-2">
-										<div className="flex items-center justify-between">
-											<span className="text-sm text-t2">Tax</span>
-											<span className="text-sm tabular-nums text-t2">
-												{formatAmount({
-													amount: new Decimal(taxAmount)
-														.toDecimalPlaces(2)
-														.toNumber(),
-													currency: previewData.currency,
-													minFractionDigits: 2,
-													amountFormatOptions: {
-														currencyDisplay: "narrowSymbol",
-													},
-												})}
-											</span>
-										</div>
-										<div className="flex items-center justify-between">
-											<span className="text-sm font-medium text-foreground">
-												Total Due Now
-											</span>
-											<span className="text-sm font-semibold text-foreground tabular-nums">
-												{formatAmount({
-													amount: new Decimal(totalDueNow)
-														.toDecimalPlaces(2)
-														.toNumber(),
-													currency: previewData.currency,
-													minFractionDigits: 2,
-													amountFormatOptions: {
-														currencyDisplay: "narrowSymbol",
-													},
-												})}
-											</span>
-										</div>
-									</div>
+									<PreviewTotalsBlock previewData={previewData} />
 								</SheetSection>
 							)}
 						</>

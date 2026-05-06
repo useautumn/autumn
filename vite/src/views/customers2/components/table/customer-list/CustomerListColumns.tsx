@@ -224,6 +224,33 @@ export const createCustomerListColumns = (): ColumnDef<
 ];
 
 /**
+ * Creates the product version column. Shows the active (non-expired,
+ * non-scheduled) product's version, prefixed with "v", in light grey.
+ */
+export const createProductVersionColumn = (): ColumnDef<
+	CustomerWithProducts,
+	unknown
+> => ({
+	id: "product_version",
+	header: "Version",
+	size: 80,
+	enableSorting: false,
+	cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
+		const customer = row.original;
+		const activeProduct = customer.customer_products?.find(
+			(cusProduct) =>
+				(cusProduct as FullCusProduct).status !== CusProductStatus.Expired &&
+				(cusProduct as FullCusProduct).status !== CusProductStatus.Scheduled,
+		) as FullCusProduct | undefined;
+
+		const version = activeProduct?.product?.version;
+		if (version == null) return null;
+
+		return <span className="text-t6">v{version}</span>;
+	},
+});
+
+/**
  * Creates a usage column for a specific metered feature
  */
 export const createUsageColumn = ({

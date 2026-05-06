@@ -324,6 +324,10 @@ This is useful for attaching custom metadata to the Stripe subscription created 
   When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
 </DynamicParamField>
 
+<DynamicParamField body="starts_at" type="integer">
+  Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+</DynamicParamField>
+
 <DynamicParamField body="checkout_session_params" type="object">
   Additional parameters to pass into the creation of the Stripe checkout session.
 </DynamicParamField>
