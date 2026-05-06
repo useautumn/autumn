@@ -3,6 +3,7 @@ import type { ApiCustomerV5 } from "@autumn/shared";
 import { expectCustomerEventsCorrect } from "@tests/integration/balances/utils/events/expectCustomerEventsCorrect.js";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
 import { expectLockReceiptDeleted } from "@tests/integration/balances/utils/lockUtils/expectLockReceiptDeleted.js";
+import { warmEntityCaches } from "@tests/integration/balances/utils/warmEntityCaches";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -63,6 +64,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-2: entity-level lock=30 co
 	});
 
 	await deleteLock({ ctx, lockId: lockKey });
+	await warmEntityCaches({ autumn: autumnV2_1, customerId, entities });
 
 	// Lock at entity level (ent-1)
 	await autumnV2_1.check({
@@ -139,6 +141,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-3: entity-level lock=30 co
 	});
 
 	await deleteLock({ ctx, lockId: lockKey });
+	await warmEntityCaches({ autumn: autumnV2_1, customerId, entities });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
@@ -310,6 +313,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-5: entity-level across loc
 	});
 
 	await deleteLock({ ctx, lockId: lockKey });
+	await warmEntityCaches({ autumn: autumnV2_1, customerId, entities });
 
 	// Customer-level lock (no entity_id)
 	await autumnV2_1.check({
@@ -392,6 +396,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-6: customer-level lock=120
 	});
 
 	await deleteLock({ ctx, lockId: lockKey });
+	await warmEntityCaches({ autumn: autumnV2_1, customerId, entities });
 
 	await autumnV2_1.check({
 		customer_id: customerId,
@@ -477,6 +482,7 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-7: ent-1 lock held while c
 	});
 
 	await deleteLock({ ctx, lockId: lockKey });
+	await warmEntityCaches({ autumn: autumnV2_1, customerId, entities });
 
 	// Lock ent-1 (deducts 30 from ent-1 bucket)
 	await autumnV2_1.check({
@@ -568,6 +574,8 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-8: two concurrent entity l
 		deleteLock({ ctx, lockId: lockKeyB }),
 	]);
 
+	await warmEntityCaches({ autumn: autumnV2_1, customerId, entities });
+
 	// Fire both locks concurrently
 	await Promise.all([
 		autumnV2_1.check({
@@ -600,15 +608,6 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-8: two concurrent entity l
 		}),
 	]);
 
-	// Lock A confirm: delta=15-30=-15 → restore 15 to ent-1 (→35)
-	// Lock B confirm: delta=25-20=+5 → deduct 5 more from ent-2 (→25)
-	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
-	expectBalanceCorrect({
-		customer,
-		featureId: TestFeature.Messages,
-		remaining: 160,
-	});
-
 	const ent1 = await autumnV2_1.entities.get<ApiCustomerV5>(
 		customerId,
 		entities[0].id,
@@ -617,6 +616,15 @@ test.concurrent(`${chalk.yellowBright("lock-entity EP-8: two concurrent entity l
 		customer: ent1,
 		featureId: TestFeature.Messages,
 		remaining: 135,
+	});
+
+	// Lock A confirm: delta=15-30=-15 → restore 15 to ent-1 (→35)
+	// Lock B confirm: delta=25-20=+5 → deduct 5 more from ent-2 (→25)
+	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 160,
 	});
 
 	const ent2 = await autumnV2_1.entities.get<ApiCustomerV5>(

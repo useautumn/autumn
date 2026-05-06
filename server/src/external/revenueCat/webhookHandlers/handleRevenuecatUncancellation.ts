@@ -14,7 +14,12 @@ export const handleUncancellation = async ({
 	const { logger } = ctx;
 	const { product_id, original_app_user_id, app_user_id } = event;
 
-	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+	const {
+		ctx: customerCtx,
+		product,
+		customer,
+		cusProducts,
+	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id ?? original_app_user_id,
@@ -35,7 +40,7 @@ export const handleUncancellation = async ({
 	}
 
 	await customerProductActions.uncancel({
-		ctx,
+		ctx: customerCtx,
 		customerProduct: cusProduct,
 		fullCustomer: customer,
 	});

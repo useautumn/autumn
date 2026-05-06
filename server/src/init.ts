@@ -5,7 +5,7 @@ import cluster from "node:cluster";
 import http from "node:http";
 import os from "node:os";
 import { getRequestListener } from "@hono/node-server";
-import { client, clientCritical, clientReplica } from "./db/initDrizzle.js";
+import { client, clientCritical, clientReplica, db } from "./db/initDrizzle.js";
 import {
 	initPgHealthMonitor,
 	shutdownPgHealthMonitor,
@@ -38,6 +38,7 @@ import {
 	startRedisV2Monitor,
 	stopRedisV2Monitor,
 } from "./external/redis/initUtils/redisV2Availability.js";
+import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
 import { checkEnvVars } from "./utils/initUtils.js";
@@ -58,6 +59,9 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 
 	void warmupRegionalRedis().catch((error) => {
 		logger.warn("[Redis] Warmup failed", { error });
+	});
+	void preWarmOrgRedisConnections({ db }).catch((error) => {
+		logger.warn("[OrgRedis] Warmup failed", { error });
 	});
 	await startAllEdgeConfigPolling({ logger });
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
