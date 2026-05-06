@@ -1,9 +1,20 @@
-import { ArrowLeft, CheckCircleIcon, LinkIcon } from "@phosphor-icons/react";
+import type { AttachPreviewResponse } from "@autumn/shared";
+import {
+	ArrowLeft,
+	CalendarCheckIcon,
+	CheckCircleIcon,
+	LinkIcon,
+} from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
-import { format } from "date-fns";
+import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useAttachFormContext } from "@/components/forms/attach-v2";
+import {
+	buildAttachPreviewTotals,
+	getAttachPreviewLineItems,
+	getAttachScheduledStartDate,
+} from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
@@ -14,6 +25,112 @@ import {
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { PlanActivationSection } from "./SendInvoiceStage";
+
+type PreviewData = AttachPreviewResponse | null | undefined;
+
+function usePreviewTotals({
+	previewData,
+	startDate = null,
+}: {
+	previewData: PreviewData;
+	startDate?: number | null;
+}) {
+	return useMemo(
+		() => buildAttachPreviewTotals({ previewData, startDate }),
+		[previewData, startDate],
+	);
+}
+
+function ActivationPreviewStage({
+	title,
+	description,
+	isPending,
+	onBack,
+	onSubmit,
+	lineItems,
+	currency,
+	totals,
+	buttonLabel,
+	buttonIcon,
+	scheduledStartDate,
+}: {
+	title: string;
+	description: string;
+	isPending: boolean;
+	onBack: () => void;
+	onSubmit: () => void | Promise<void>;
+	lineItems?: BillingLineItem[];
+	currency?: string;
+	totals?: {
+		label: string;
+		amount: number;
+		variant?: "primary" | "secondary";
+		badge?: string;
+	}[];
+	buttonLabel: string;
+	buttonIcon: ReactNode;
+	scheduledStartDate?: number | null;
+}) {
+	const { form } = useAttachFormContext();
+	const enablePlanImmediately = useStore(
+		form.store,
+		(state) => state.values.enablePlanImmediately,
+	);
+	const [isSubmitting, setIsSubmitting] = useState(false);
+
+	const handleSubmit = async () => {
+		setIsSubmitting(true);
+		try {
+			await onSubmit();
+		} finally {
+			setIsSubmitting(false);
+		}
+	};
+
+	return (
+		<>
+			<SheetHeader title={title} description={description}>
+				<button
+					type="button"
+					onClick={onBack}
+					className="flex items-center gap-1 text-t3 text-sm cursor-pointer mt-2 hover:text-foreground transition-colors"
+				>
+					<ArrowLeft size={14} />
+					Back
+				</button>
+			</SheetHeader>
+
+			<PlanActivationSection
+				enableImmediately={enablePlanImmediately}
+				setEnableImmediately={(value) =>
+					form.setFieldValue("enablePlanImmediately", value)
+				}
+				scheduledStartDate={scheduledStartDate}
+			/>
+
+			<LineItemsPreview
+				title="Pricing Preview"
+				lineItems={lineItems}
+				currency={currency}
+				totals={totals}
+				filterZeroAmounts
+			/>
+
+			<SheetFooter className="flex flex-col grid-cols-1 mt-0">
+				<Button
+					variant="primary"
+					className="w-full"
+					onClick={handleSubmit}
+					isLoading={isSubmitting || isPending}
+					disabled={isPending || isSubmitting}
+				>
+					{buttonIcon}
+					{buttonLabel}
+				</Button>
+			</SheetFooter>
+		</>
+	);
+}
 
 export function GenerateCheckoutStage({
 	productName,
@@ -39,29 +156,18 @@ export function GenerateCheckoutStage({
 		badge?: string;
 	}[];
 }) {
-	const { form } = useAttachFormContext();
-	const enablePlanImmediately = useStore(
-		form.store,
-		(state) => state.values.enablePlanImmediately,
-	);
-	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [completedCheckoutUrl, setCompletedCheckoutUrl] = useState<
 		string | null
 	>(null);
 
 	const handleGenerate = async () => {
-		setIsSubmitting(true);
-		try {
-			const { paymentUrl } = await onSubmit();
-			if (paymentUrl) {
-				setCompletedCheckoutUrl(paymentUrl);
-				navigator.clipboard.writeText(paymentUrl);
-				toast.success("Checkout URL copied to clipboard");
-			} else {
-				toast.error("No checkout URL was returned. Please try again.");
-			}
-		} finally {
-			setIsSubmitting(false);
+		const { paymentUrl } = await onSubmit();
+		if (paymentUrl) {
+			setCompletedCheckoutUrl(paymentUrl);
+			navigator.clipboard.writeText(paymentUrl);
+			toast.success("Checkout URL copied to clipboard");
+		} else {
+			toast.error("No checkout URL was returned. Please try again.");
 		}
 	};
 
@@ -111,53 +217,22 @@ export function GenerateCheckoutStage({
 	}
 
 	return (
-		<>
-			<SheetHeader
-				title="Generate Checkout"
-				description={
-					productName
-						? `Create a checkout session for ${productName}`
-						: "Configure checkout session"
-				}
-			>
-				<button
-					type="button"
-					onClick={onBack}
-					className="flex items-center gap-1 text-t3 text-sm cursor-pointer mt-2 hover:text-foreground transition-colors"
-				>
-					<ArrowLeft size={14} />
-					Back
-				</button>
-			</SheetHeader>
-
-			<PlanActivationSection
-				enableImmediately={enablePlanImmediately}
-				setEnableImmediately={(value) =>
-					form.setFieldValue("enablePlanImmediately", value)
-				}
-			/>
-
-			<LineItemsPreview
-				title="Pricing Preview"
-				lineItems={lineItems}
-				currency={currency}
-				totals={totals}
-				filterZeroAmounts
-			/>
-
-			<SheetFooter className="flex flex-col grid-cols-1 mt-0">
-				<Button
-					variant="primary"
-					className="w-full"
-					onClick={handleGenerate}
-					isLoading={isSubmitting}
-					disabled={isPending}
-				>
-					<LinkIcon size={16} weight="bold" />
-					Generate Checkout URL
-				</Button>
-			</SheetFooter>
-		</>
+		<ActivationPreviewStage
+			title="Generate Checkout"
+			description={
+				productName
+					? `Create a checkout session for ${productName}`
+					: "Configure checkout session"
+			}
+			isPending={isPending}
+			onBack={onBack}
+			onSubmit={handleGenerate}
+			lineItems={lineItems}
+			currency={currency}
+			totals={totals}
+			buttonLabel="Generate Checkout URL"
+			buttonIcon={<LinkIcon size={16} weight="bold" />}
+		/>
 	);
 }
 
@@ -170,15 +245,7 @@ export function GenerateCheckoutStageWithPreview({
 }: {
 	productName?: string;
 	previewQuery: {
-		data?:
-			| {
-					total: number;
-					next_cycle?: { total: number; starts_at?: number };
-					line_items: BillingLineItem[];
-					currency?: string;
-			  }
-			| null
-			| undefined;
+		data?: PreviewData;
 	};
 	isPending: boolean;
 	onSubmit: () => Promise<{
@@ -187,34 +254,7 @@ export function GenerateCheckoutStageWithPreview({
 	onBack: () => void;
 }) {
 	const previewData = previewQuery.data;
-
-	const totals = useMemo(() => {
-		const result: {
-			label: string;
-			amount: number;
-			variant: "primary" | "secondary";
-			badge?: string;
-		}[] = [];
-		if (!previewData) return result;
-
-		result.push({
-			label: "Total Due Now",
-			amount: Math.max(previewData.total, 0),
-			variant: "primary",
-		});
-
-		if (previewData.next_cycle) {
-			result.push({
-				label: "Next Cycle",
-				amount: previewData.next_cycle.total,
-				variant: "secondary",
-				badge: previewData.next_cycle.starts_at
-					? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
-					: undefined,
-			});
-		}
-		return result;
-	}, [previewData]);
+	const totals = usePreviewTotals({ previewData });
 
 	return (
 		<GenerateCheckoutStage
@@ -225,6 +265,58 @@ export function GenerateCheckoutStageWithPreview({
 			lineItems={previewData?.line_items}
 			currency={previewData?.currency}
 			totals={totals}
+		/>
+	);
+}
+
+export function SchedulePlanStageWithPreview({
+	productName,
+	startDate,
+	previewQuery,
+	isPending,
+	onSubmit,
+	onBack,
+}: {
+	productName?: string;
+	startDate: number | null;
+	previewQuery: {
+		data?: PreviewData;
+	};
+	isPending: boolean;
+	onSubmit: () => void | Promise<void>;
+	onBack: () => void;
+}) {
+	const previewData = previewQuery.data;
+	const scheduledStartDate = getAttachScheduledStartDate({
+		startDate,
+		previewData,
+	});
+	const totals = usePreviewTotals({
+		previewData,
+		startDate: scheduledStartDate,
+	});
+	const lineItems = getAttachPreviewLineItems({
+		previewData,
+		startDate: scheduledStartDate,
+	});
+
+	return (
+		<ActivationPreviewStage
+			title="Preview Schedule"
+			description={
+				productName
+					? `Schedule ${productName} for a future start date`
+					: "Review the scheduled plan before confirming"
+			}
+			isPending={isPending}
+			onBack={onBack}
+			onSubmit={onSubmit}
+			lineItems={lineItems}
+			currency={previewData?.currency}
+			totals={totals}
+			buttonLabel="Schedule Plan"
+			buttonIcon={<CalendarCheckIcon size={16} weight="bold" />}
+			scheduledStartDate={scheduledStartDate}
 		/>
 	);
 }
