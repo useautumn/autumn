@@ -1,5 +1,5 @@
 import type { Context, Next } from "hono";
-import { assignCustomerRedisToCtx } from "@/external/redis/customerRedisRouting.js";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
@@ -35,16 +35,26 @@ export const vercelCustomerMiddleware = async (
 		vercelInstallationId: integrationConfigurationId,
 	});
 
-	ctx.fullCustomer = customer ?? undefined;
-
 	const customerId = customer?.id || customer?.internal_id || undefined;
 	if (customerId) {
-		ctx.customerId = customerId;
-		ctx.rolloutSnapshot = computeRolloutSnapshot({
-			orgId: ctx.org.id,
+		const { ctx: routedCtx } = getCtxWithCustomerRedis({
+			ctx: {
+				...ctx,
+				fullCustomer: customer ?? undefined,
+				customerId,
+				rolloutSnapshot: computeRolloutSnapshot({
+					orgId: ctx.org.id,
+					customerId,
+				}),
+			},
 			customerId,
 		});
-		assignCustomerRedisToCtx({ ctx, customerId });
+		c.set("ctx", routedCtx);
+	} else {
+		c.set("ctx", {
+			...ctx,
+			fullCustomer: customer ?? undefined,
+		});
 	}
 
 	await next();

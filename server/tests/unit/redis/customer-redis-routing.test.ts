@@ -4,7 +4,6 @@ import {
 	getCustomerBucket,
 	getCustomerRedisRoutingId,
 	getCustomerRedisRoutingInfoForOrg,
-	getRedisUrlForCustomerFromOrg,
 } from "@/external/redis/customerRedisRoutingInfo.js";
 
 const makeRedisConfig = (
@@ -93,9 +92,9 @@ describe("customer Redis routing", () => {
 		});
 
 		expect(
-			getRedisUrlForCustomerFromOrg({
+			getCustomerRedisRoutingInfoForOrg({
 				org,
-			}),
+			}).redisUrl,
 		).toBeUndefined();
 	});
 
@@ -105,10 +104,10 @@ describe("customer Redis routing", () => {
 		const customerId = findCustomerInBucketRange({ min: 0, max: 50 });
 
 		expect(
-			getRedisUrlForCustomerFromOrg({
+			getCustomerRedisRoutingInfoForOrg({
 				org,
 				customerId,
-			}),
+			}).redisUrl,
 		).toBe(config.url);
 		expect(
 			getCustomerRedisRoutingInfoForOrg({
@@ -128,10 +127,10 @@ describe("customer Redis routing", () => {
 		const customerId = findCustomerInBucketRange({ min: 50, max: 100 });
 
 		expect(
-			getRedisUrlForCustomerFromOrg({
+			getCustomerRedisRoutingInfoForOrg({
 				org,
 				customerId,
-			}),
+			}).redisUrl,
 		).toBeUndefined();
 		expect(
 			getCustomerRedisRoutingInfoForOrg({
