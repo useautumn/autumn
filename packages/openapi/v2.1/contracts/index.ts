@@ -9,6 +9,7 @@ import {
 } from "./balancesContract.js";
 import {
 	billingAttachContract,
+	billingCreateScheduleContract,
 	billingMultiAttachContract,
 	billingOpenCustomerPortalContract,
 	billingPreviewAttachContract,
@@ -19,6 +20,7 @@ import {
 } from "./billingContract.js";
 import {
 	deleteCustomerContract,
+	getCustomerContract,
 	getOrCreateCustomerContract,
 	listCustomersContract,
 	updateCustomerContract,
@@ -55,6 +57,7 @@ import {
 export const v2_1ContractRouter = oc.router({
 	// Customers
 	getOrCreateCustomer: getOrCreateCustomerContract,
+	getCustomer: getCustomerContract,
 	listCustomers: listCustomersContract,
 	updateCustomer: updateCustomerContract,
 	deleteCustomer: deleteCustomerContract,
@@ -75,6 +78,7 @@ export const v2_1ContractRouter = oc.router({
 
 	// Billing
 	billingAttach: billingAttachContract,
+	billingCreateSchedule: billingCreateScheduleContract,
 	billingMultiAttach: billingMultiAttachContract,
 	billingPreviewAttach: billingPreviewAttachContract,
 	billingPreviewMultiAttach: billingPreviewMultiAttachContract,
