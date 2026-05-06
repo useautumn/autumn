@@ -2,7 +2,7 @@ import { AppEnv, AuthType, type Organization } from "@autumn/shared";
 import chalk from "chalk";
 import type { Context, Next } from "hono";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { assignCustomerRedisToCtx } from "@/external/redis/customerRedisRouting.js";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
@@ -13,43 +13,49 @@ export const vercelSeederMiddleware = async (
 	c: Context<HonoEnv>,
 	next: Next,
 ) => {
-	const { orgId, env } = c.req.param();
+	const { orgId, env: routeEnv } = c.req.param();
 	const ctx = c.get("ctx");
 
-	if (!ctx.org && orgId) {
-		ctx.org = await OrgService.get({ db: ctx.db, orgId });
-	}
+	const org =
+		!ctx.org && orgId ? await OrgService.get({ db: ctx.db, orgId }) : ctx.org;
+	const env = ctx.env !== routeEnv ? (routeEnv as AppEnv) : ctx.env;
 
-	if (ctx.env !== env) {
-		ctx.env = env as AppEnv;
-	}
+	const features =
+		!ctx.features && orgId
+			? await FeatureService.list({
+					db: ctx.db,
+					orgId,
+					env: env ?? AppEnv.Sandbox,
+				})
+			: ctx.features;
 
-	if (!ctx.features && orgId) {
-		ctx.features = await FeatureService.list({
-			db: ctx.db,
-			orgId,
-			env: ctx.env ?? AppEnv.Sandbox,
-		});
-	}
+	const nextCtx = {
+		...ctx,
+		org,
+		env,
+		features,
+		rolloutSnapshot: computeRolloutSnapshot({
+			orgId: org?.id,
+			customerId: ctx.customerId,
+		}),
+	};
 
-	ctx.rolloutSnapshot = computeRolloutSnapshot({
-		orgId: ctx.org?.id,
-		customerId: ctx.customerId,
-	});
-	if (ctx.org) {
-		assignCustomerRedisToCtx({ ctx });
-	}
+	const routedCtx = org
+		? getCtxWithCustomerRedis({ ctx: nextCtx }).ctx
+		: nextCtx;
 
-	ctx.logger = addAppContextToLogs({
-		logger: ctx.logger,
+	routedCtx.logger = addAppContextToLogs({
+		logger: routedCtx.logger,
 		appContext: {
-			org_id: ctx.org?.id,
-			org_slug: ctx.org?.slug,
-			env: ctx.env,
+			org_id: routedCtx.org?.id,
+			org_slug: routedCtx.org?.slug,
+			env: routedCtx.env,
 			auth_type: AuthType.Vercel,
-			api_version: ctx.apiVersion?.semver,
+			api_version: routedCtx.apiVersion?.semver,
 		},
 	});
+
+	c.set("ctx", routedCtx);
 
 	await next();
 };
@@ -61,7 +67,7 @@ export const logVercelWebhook = ({
 }: {
 	logger: Logger;
 	org: Organization;
-	event: any;
+	event: { type: string; id: string };
 }) => {
 	logger.info(
 		`${chalk.magenta("VERCEL").padEnd(18)} ${event.type.padEnd(30)} ${org.slug} | ${event.id}`,

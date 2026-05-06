@@ -5,7 +5,7 @@ import {
 	type MigrationJob,
 	ProcessorType,
 } from "@autumn/shared";
-import { assignCustomerRedisToCtx } from "@/external/redis/customerRedisRouting.js";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingActions } from "@/internal/billing/v2/actions/index.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -40,11 +40,14 @@ export const migrateCustomer = async ({
 		customerId,
 		logger: customerLogger,
 	};
-	assignCustomerRedisToCtx({ ctx: customerCtx, customerId });
+	const { ctx: routedCustomerCtx } = getCtxWithCustomerRedis({
+		ctx: customerCtx,
+		customerId,
+	});
 
 	try {
 		const fullCus = await CusService.getFull({
-			ctx: customerCtx,
+			ctx: routedCustomerCtx,
 			idOrInternalId: customerId,
 			withEntities: true,
 			inStatuses: ACTIVE_STATUSES,
@@ -64,7 +67,7 @@ export const migrateCustomer = async ({
 			const cusProduct = filteredCusProducts[i];
 			if (cusProduct.processor?.type === ProcessorType.RevenueCat) {
 				await migrateRevenueCatCustomer({
-					ctx: customerCtx,
+					ctx: routedCustomerCtx,
 					fullCus,
 					cusProduct,
 					toProduct,
@@ -72,7 +75,7 @@ export const migrateCustomer = async ({
 				});
 			} else {
 				await billingActions.migrate({
-					ctx: customerCtx,
+					ctx: routedCustomerCtx,
 					fullCustomer: fullCus,
 					currentCustomerProduct: cusProduct,
 					newProduct: toProduct,
@@ -101,7 +104,7 @@ export const migrateCustomer = async ({
 
 			await deleteCachedFullCustomer({
 				customerId: fullCus.id ?? "",
-				ctx: customerCtx,
+				ctx: routedCustomerCtx,
 			});
 		}
 

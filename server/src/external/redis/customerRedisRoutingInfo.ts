@@ -41,18 +41,6 @@ export const getCustomerRedisRoutingInfoForOrg = ({
 	};
 };
 
-export const getRedisUrlForCustomerFromOrg = ({
-	org,
-	customerId,
-}: {
-	org: OrgWithRedisConfig;
-	customerId?: string;
-}): string | undefined =>
-	getCustomerRedisRoutingInfoForOrg({
-		org,
-		customerId,
-	}).redisUrl;
-
 export const isRedisMigrationCacheStale = ({
 	cachedAt,
 	customerId,
