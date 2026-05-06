@@ -70,6 +70,7 @@ export function CustomerProductsTable() {
 		subscriptions,
 		hasEntities,
 		purchases,
+		testClockFrozenTimeMs,
 	} = useCustomerProductsData();
 
 	const { setEntityId } = useEntity();
@@ -130,6 +131,7 @@ export function CustomerProductsTable() {
 		onUncancelClick: handleUncancelClick,
 		onTransferClick: handleTransferClick,
 		hasEntities,
+		nowMs: testClockFrozenTimeMs,
 	};
 
 	const subscriptionTable = useCustomerTable({

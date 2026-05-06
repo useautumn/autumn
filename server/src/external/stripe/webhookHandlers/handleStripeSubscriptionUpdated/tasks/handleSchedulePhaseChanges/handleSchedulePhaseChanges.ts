@@ -34,6 +34,9 @@ export const handleSchedulePhaseChanges = async ({
 		return;
 	}
 
+	// Step 1: Activate scheduled products; checkout trial-end updates have no schedule phase change.
+	await activateScheduledCustomerProducts({ ctx, eventContext });
+
 	// Check if phase possibly changed (items changed and schedule exists)
 	const phasePossiblyChanged =
 		notNullish(previousAttributes?.items) &&
@@ -52,10 +55,7 @@ export const handleSchedulePhaseChanges = async ({
 		`[handleSchedulePhaseChanges] sub: ${stripeSubscription.id}, now: ${formatMs(nowMs)}, currentPhase: ${currentPhaseIndex + 1}/${stripeSubscriptionSchedule.phases.length}`,
 	);
 
-	// Step 1: Activate scheduled customer products
-	await activateScheduledCustomerProducts({ ctx, eventContext });
-
-	// Step 2: Expire ended customer products (uses updated customerProducts from step 1)
+	// Step 2: Expire ended customer products (uses updated customerProducts)
 	await expireEndedCustomerProducts({ ctx, eventContext });
 
 	// Step 3: Release schedule if at last phase

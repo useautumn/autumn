@@ -1,4 +1,4 @@
-import type { AppEnv } from "@autumn/shared";
+import type { AppEnv, AttachPreviewResponse } from "@autumn/shared";
 import {
 	ArrowLeft,
 	CheckCircleIcon,
@@ -12,6 +12,7 @@ import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { Input } from "@/components/v2/inputs/Input";
+import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import {
@@ -28,15 +29,48 @@ export interface SendInvoiceSubmitParams {
 	finalizeInvoice: boolean;
 }
 
+const IMMEDIATE_ACTIVATION_DESCRIPTION =
+	"Plan activates now, payment is collected separately.";
+
+const DEFAULT_ACTIVATION_COPY = {
+	immediate: {
+		title: "Enable plan immediately",
+		description: IMMEDIATE_ACTIVATION_DESCRIPTION,
+	},
+	delayed: {
+		title: "Enable plan after payment",
+		description: "Plan activates only after the customer completes payment.",
+	},
+} as const;
+
+const getScheduledActivationCopy = (scheduledStartDate: number) =>
+	({
+		immediate: {
+			title: "Enable Immediately",
+			description: IMMEDIATE_ACTIVATION_DESCRIPTION,
+		},
+		delayed: {
+			title: "Enable at Start Date",
+			description: `Plan activates on ${format(new Date(scheduledStartDate), "MMM d, yyyy")}, payment is collected separately.`,
+		},
+	}) as const;
+
 export function PlanActivationSection({
 	enableImmediately,
 	setEnableImmediately,
 	disabled,
+	scheduledStartDate,
 }: {
 	enableImmediately: boolean;
 	setEnableImmediately: (value: boolean) => void;
 	disabled?: boolean;
+	scheduledStartDate?: number | null;
 }) {
+	const activationCopy =
+		scheduledStartDate != null
+			? getScheduledActivationCopy(scheduledStartDate)
+			: DEFAULT_ACTIVATION_COPY;
+
 	return (
 		<SheetSection
 			title="Plan Activation"
@@ -52,10 +86,10 @@ export function PlanActivationSection({
 					/>
 					<div className="flex-1">
 						<div className="text-body-highlight mb-1">
-							Enable plan immediately
+							{activationCopy.immediate.title}
 						</div>
 						<div className="text-body-secondary leading-tight">
-							Plan activates now, payment is collected separately.
+							{activationCopy.immediate.description}
 						</div>
 					</div>
 				</div>
@@ -68,10 +102,10 @@ export function PlanActivationSection({
 					/>
 					<div className="flex-1">
 						<div className="text-body-highlight mb-1">
-							Enable plan after payment
+							{activationCopy.delayed.title}
 						</div>
 						<div className="text-body-secondary leading-tight">
-							Plan activates only after the customer completes payment.
+							{activationCopy.delayed.description}
 						</div>
 					</div>
 				</div>
@@ -89,6 +123,7 @@ export function SendInvoiceStage({
 	lineItems,
 	currency,
 	totals,
+	scheduledStartDate,
 }: {
 	productName?: string;
 	isPending: boolean;
@@ -106,6 +141,7 @@ export function SendInvoiceStage({
 		variant?: "primary" | "secondary";
 		badge?: string;
 	}[];
+	scheduledStartDate?: number | null;
 }) {
 	const { customer, refetch } = useCusQuery();
 	const axiosInstance = useAxiosInstance();
@@ -273,6 +309,7 @@ export function SendInvoiceStage({
 				enableImmediately={enableImmediately}
 				setEnableImmediately={setEnableImmediately}
 				disabled={needsEmail}
+				scheduledStartDate={scheduledStartDate}
 			/>
 
 			<LineItemsPreview
@@ -317,18 +354,11 @@ export function SendInvoiceStageWithPreview({
 	stripeAccount,
 	env,
 	onBack,
+	scheduledStartDate,
 }: {
 	productName?: string;
 	previewQuery: {
-		data?:
-			| {
-					total: number;
-					next_cycle?: { total: number; starts_at?: number };
-					line_items: BillingLineItem[];
-					currency?: string;
-			  }
-			| null
-			| undefined;
+		data?: AttachPreviewResponse | null | undefined;
 	};
 	isPending: boolean;
 	onSubmit: (params: SendInvoiceSubmitParams) => Promise<{
@@ -338,36 +368,16 @@ export function SendInvoiceStageWithPreview({
 	stripeAccount: { id?: string } | undefined;
 	env: AppEnv;
 	onBack: () => void;
+	scheduledStartDate?: number | null;
 }) {
 	const previewData = previewQuery.data;
+	const effectiveScheduledStartDate =
+		scheduledStartDate ?? previewData?.next_cycle?.starts_at ?? null;
 
-	const totals = useMemo(() => {
-		const result: {
-			label: string;
-			amount: number;
-			variant: "primary" | "secondary";
-			badge?: string;
-		}[] = [];
-		if (!previewData) return result;
-
-		result.push({
-			label: "Total Due Now",
-			amount: Math.max(previewData.total, 0),
-			variant: "primary",
-		});
-
-		if (previewData.next_cycle) {
-			result.push({
-				label: "Next Cycle",
-				amount: previewData.next_cycle.total,
-				variant: "secondary",
-				badge: previewData.next_cycle.starts_at
-					? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
-					: undefined,
-			});
-		}
-		return result;
-	}, [previewData]);
+	const totals = useMemo(
+		() => buildAttachPreviewTotals({ previewData, startDate: null }),
+		[previewData],
+	);
 
 	const getInvoiceUrl = useCallback(
 		(invoiceStripeId: string) =>
@@ -389,6 +399,7 @@ export function SendInvoiceStageWithPreview({
 			lineItems={previewData?.line_items}
 			currency={previewData?.currency}
 			totals={totals}
+			scheduledStartDate={effectiveScheduledStartDate}
 		/>
 	);
 }

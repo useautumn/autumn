@@ -257,6 +257,7 @@ const buildCustomerProduct = ({
 	canceled_at: null,
 	ended_at: null,
 	starts_at: now,
+	access_starts_at: null,
 	options: [],
 	product_id: product.id,
 	free_trial_id: null,
