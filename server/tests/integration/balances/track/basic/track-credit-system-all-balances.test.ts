@@ -210,8 +210,6 @@ test.concurrent(`${chalk.yellowBright("track-all-balances-E: missing entitlement
 		value: 5,
 	});
 
-	console.log("Track response:", JSON.stringify(trackRes, null, 2));
-
 	// `balance` falls back to Action1 (Credits is not entitled)
 	expect(trackRes.balance).not.toBeNull();
 	expect(trackRes.balance?.feature_id).toBe(TestFeature.Action1);

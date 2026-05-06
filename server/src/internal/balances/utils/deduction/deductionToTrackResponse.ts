@@ -190,9 +190,9 @@ export const deductionToTrackResponse = async ({
 
 	// `balances` exposes the full record of related features (main + linked
 	// credit systems). `balance` keeps the legacy single-feature heuristic.
-	const balances = await deductionToBalancesResponse({
+	const balances = deductionToBalancesResponse({
 		ctx,
-		fullCus,
+		apiCustomer,
 		featureDeductions,
 	});
 
