@@ -12,10 +12,11 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
+import { deductionToBalancesResponse } from "./deductionToBalancesResponse.js";
 
 type TrackBalanceResponse = {
 	balance: ApiBalanceV1 | null;
-	balances?: Record<string, ApiBalanceV1>;
+	balances?: Record<string, ApiBalanceV1 | null>;
 };
 
 /**
@@ -187,23 +188,21 @@ export const deductionToTrackResponse = async ({
 		}
 	}
 
-	// 5. Return appropriate response based on number of balances
+	// `balances` exposes the full record of related features (main + linked
+	// credit systems). `balance` keeps the legacy single-feature heuristic.
+	const balances = await deductionToBalancesResponse({
+		ctx,
+		fullCus,
+		featureDeductions,
+	});
+
 	if (Object.keys(finalBalances).length === 0) {
-		return {
-			balance: null,
-			balances: undefined,
-		};
+		return { balance: null, balances };
 	}
 
 	if (Object.keys(finalBalances).length === 1) {
-		return {
-			balance: Object.values(finalBalances)[0],
-			balances: undefined,
-		};
+		return { balance: Object.values(finalBalances)[0], balances };
 	}
 
-	return {
-		balance: null,
-		balances: finalBalances,
-	};
+	return { balance: null, balances };
 };
