@@ -6,6 +6,7 @@ import {
 	ErrCode,
 } from "@autumn/shared";
 import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { TestFeature } from "@tests/setup/v2Features";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -53,6 +54,49 @@ test.concurrent(`${chalk.yellowBright("ends-at: immediate attach sets subscripti
 		cusProduct.subscription_ids![0]!,
 	);
 	expect(stripeSubscription.cancel_at).toBe(Math.floor(endsAt / 1000));
+});
+
+test.concurrent(`${chalk.yellowBright("ends-at: one-off attach sets access expiry")}`, async () => {
+	const customerId = "attach-ends-at-one-off";
+	const oneOff = products.oneOff({
+		id: "one-off",
+		items: [
+			items.oneOffMessages({
+				includedUsage: 0,
+				billingUnits: 100,
+				price: 10,
+			}),
+		],
+	});
+
+	const { autumnV2_2, ctx, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [oneOff] }),
+		],
+		actions: [],
+	});
+
+	const endsAt = addDays(advancedTo, 7).getTime();
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: oneOff.id,
+		feature_quantities: [{ feature_id: TestFeature.Messages, quantity: 100 }],
+		ends_at: endsAt,
+	});
+
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	await expectProductActive({ customer, productId: oneOff.id });
+
+	const cusProduct = await getCustomerProduct({
+		ctx,
+		customerId,
+		productId: oneOff.id,
+	});
+	expect(cusProduct.ended_at).toBe(endsAt);
+	expect(cusProduct.subscription_ids ?? []).toHaveLength(0);
+	expect(cusProduct.scheduled_ids ?? []).toHaveLength(0);
 });
 
 test.concurrent(`${chalk.yellowBright("ends-at: future attach creates bounded schedule phase")}`, async () => {
@@ -180,7 +224,7 @@ test.concurrent(
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
-			errMessage: "ends_at is only supported for paid recurring plans",
+			errMessage: "ends_at is only supported for paid plans",
 			func: () =>
 				autumnV2_2.billing.attach<AttachParamsV1Input>({
 					customer_id: customerId,
