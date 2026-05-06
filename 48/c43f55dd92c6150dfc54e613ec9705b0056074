@@ -1,0 +1,23 @@
+server/src/internal/misc/rateLimiter/rateLimitConfigs.ts
+  29c21bd44ba216c0 97
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "48c43f55dd92c6150dfc54e613ec9705b0056074",
+  "prompts": {
+    "29c21bd44ba216c0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_202fd4ce0ffeUqnWuCO5CWK8kh",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 1,
+      "total_deletions": 0,
+      "accepted_lines": 1,
+      "overriden_lines": 0
+    }
+  }
+}
