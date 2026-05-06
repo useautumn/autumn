@@ -4,6 +4,7 @@
 
 import { customersDelete } from "../funcs/customers-delete.js";
 import { customersGetOrCreate } from "../funcs/customers-get-or-create.js";
+import { customersGet } from "../funcs/customers-get.js";
 import { customersList } from "../funcs/customers-list.js";
 import { customersUpdate } from "../funcs/customers-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
@@ -40,6 +41,37 @@ export class Customers extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.Customer> {
     return unwrapAsync(customersGetOrCreate(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Fetches a customer by ID, optionally expanding related data such as invoices or entities.
+   *
+   * Use this when you know the customer exists or assert they exist without creating them.
+   *
+   * @example
+   * ```typescript
+   * // Fetch a customer by external ID
+   * const response = await client.get({ customerId: "cus_123" });
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // Fetch a customer with expanded invoices and entities
+   * const response = await client.get({ customerId: "cus_123", expand: ["invoices","entities"] });
+   * ```
+   *
+   * @param customerId - ID of the customer to fetch
+   * @param expand - Expand related customer data like invoices or entities, or expand nested objects like balances.feature, flags.feature, subscriptions.plan, and purchases.plan. (optional)
+   */
+  async get(
+    request: models.GetCustomerParams,
+    options?: RequestOptions,
+  ): Promise<models.GetCustomerResponse> {
+    return unwrapAsync(customersGet(
       this,
       request,
       options,

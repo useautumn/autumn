@@ -533,6 +533,10 @@ export type PreviewAttachParams = {
    */
   planSchedule?: PreviewAttachPlanSchedule | undefined;
   /**
+   * Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+   */
+  startsAt?: number | undefined;
+  /**
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
@@ -597,11 +601,11 @@ export type PreviewAttachLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts for this line item.
+   * The amount in cents before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for this line item.
+   * The final amount in cents after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -657,11 +661,11 @@ export type PreviewAttachNextCycleLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts for this line item.
+   * The amount in cents before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for this line item.
+   * The final amount in cents after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -728,11 +732,11 @@ export type PreviewAttachNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents before discounts for the next cycle.
+   * The total amount in cents before discounts and tax for the next cycle.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for the next cycle.
+   * The final amount in cents after discounts and tax for the next cycle.
    */
   total: number;
   /**
@@ -862,6 +866,20 @@ export type PreviewAttachTax = {
 };
 
 /**
+ * Stripe customer invoice credits preview.
+ */
+export type PreviewAttachInvoiceCredits = {
+  /**
+   * Stripe customer credit balance available, expressed as a positive number in major currency units.
+   */
+  balance: number;
+  /**
+   * Three-letter currency code.
+   */
+  currency: string;
+};
+
+/**
  * OK
  */
 export type PreviewAttachResponse = {
@@ -871,11 +889,11 @@ export type PreviewAttachResponse = {
   customerId: string;
   lineItems: Array<PreviewAttachLineItem>;
   /**
-   * The total amount in cents before discounts for the current billing period.
+   * The total amount in cents before discounts and tax for the current billing period.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for the current billing period.
+   * The final amount in cents after discounts and tax for the current billing period.
    */
   total: number;
   /**
@@ -910,6 +928,10 @@ export type PreviewAttachResponse = {
    * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
    */
   tax?: PreviewAttachTax | undefined;
+  /**
+   * Stripe customer invoice credits preview.
+   */
+  invoiceCredits?: PreviewAttachInvoiceCredits | undefined;
 };
 
 /** @internal */
@@ -1515,6 +1537,7 @@ export type PreviewAttachParams$Outbound = {
   new_billing_subscription?: boolean | undefined;
   billing_cycle_anchor?: "now" | undefined;
   plan_schedule?: string | undefined;
+  starts_at?: number | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<PreviewAttachCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
@@ -1557,6 +1580,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     newBillingSubscription: z.optional(z.boolean()),
     billingCycleAnchor: z.optional(z.literal("now")),
     planSchedule: z.optional(PreviewAttachPlanSchedule$outboundSchema),
+    startsAt: z.optional(z.int()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
       z.array(z.lazy(() => PreviewAttachCustomLineItem$outboundSchema)),
@@ -1586,6 +1610,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       newBillingSubscription: "new_billing_subscription",
       billingCycleAnchor: "billing_cycle_anchor",
       planSchedule: "plan_schedule",
+      startsAt: "starts_at",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",
@@ -2039,6 +2064,25 @@ export function previewAttachTaxFromJSON(
 }
 
 /** @internal */
+export const PreviewAttachInvoiceCredits$inboundSchema: z.ZodMiniType<
+  PreviewAttachInvoiceCredits,
+  unknown
+> = z.object({
+  balance: types.number(),
+  currency: types.string(),
+});
+
+export function previewAttachInvoiceCreditsFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewAttachInvoiceCredits, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewAttachInvoiceCredits$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewAttachInvoiceCredits' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
   PreviewAttachResponse,
   unknown
@@ -2058,6 +2102,9 @@ export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
     redirect_to_checkout: types.boolean(),
     checkout_type: types.nullable(PreviewAttachCheckoutType$inboundSchema),
     tax: types.optional(z.lazy(() => PreviewAttachTax$inboundSchema)),
+    invoice_credits: types.optional(
+      z.lazy(() => PreviewAttachInvoiceCredits$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2066,6 +2113,7 @@ export const PreviewAttachResponse$inboundSchema: z.ZodMiniType<
       "next_cycle": "nextCycle",
       "redirect_to_checkout": "redirectToCheckout",
       "checkout_type": "checkoutType",
+      "invoice_credits": "invoiceCredits",
     });
   }),
 );

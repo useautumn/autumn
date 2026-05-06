@@ -133,6 +133,11 @@ export const previewAttachOutgoingFeatureQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const previewAttachInvoiceCreditsSchema = z.object({
+	balance: z.number(),
+	currency: z.string(),
+});
+
 export const previewAttachFeatureQuantityRequestOutboundSchema = z.object({
 	feature_id: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
@@ -270,6 +275,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 	new_billing_subscription: z.union([z.boolean(), z.undefined()]).optional(),
 	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	plan_schedule: z.union([z.string(), z.undefined()]).optional(),
+	starts_at: z.union([z.number(), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
@@ -416,6 +422,7 @@ export const previewAttachParamsSchema = z.object({
 	planSchedule: z
 		.union([previewAttachPlanScheduleSchema, z.undefined()])
 		.optional(),
+	startsAt: z.union([z.number(), z.undefined()]).optional(),
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
@@ -479,4 +486,7 @@ export const previewAttachResponseSchema = z.object({
 	redirectToCheckout: z.boolean(),
 	checkoutType: previewAttachCheckoutTypeSchema.nullable(),
 	tax: z.union([previewAttachTaxSchema, z.undefined()]).optional(),
+	invoiceCredits: z
+		.union([previewAttachInvoiceCreditsSchema, z.undefined()])
+		.optional(),
 });

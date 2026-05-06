@@ -2,7 +2,9 @@ import type { Customer } from "@autumn/shared";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import { clearCusEntsFromCache } from "@/cron/resetCron/clearCusEntsFromCache";
 import { resetCustomerEntitlement } from "@/cron/resetCron/resetCustomerEntitlement.js";
-import { invalidateCustomerEntitlementBalance } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateCustomerEntitlementBalance";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
+import { waitForRedisReady } from "@/external/redis/initRedis.js";
+import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { cusProductToCusEnt } from "@/internal/customers/cusProducts/cusProductUtils/convertCusProduct.js";
 import { getMainCusProduct } from "@/internal/customers/cusProducts/cusProductUtils.js";
@@ -40,21 +42,27 @@ export const resetAndGetCusEnt = async ({
 		customer,
 	};
 
-	const updatedCusEnt = await resetCustomerEntitlement({
+	const { ctx: routedCtx } = getCtxWithCustomerRedis({
 		ctx,
+		customerId: customer.id ?? "",
+	});
+	await waitForRedisReady(routedCtx.redisV2, "customer-redis", 5000).catch(
+		() => undefined,
+	);
+
+	const updatedCusEnt = await resetCustomerEntitlement({
+		ctx: routedCtx,
+		org: ctx.org,
 		cusEnt: resetCusEnt,
 		updatedCusEnts: [],
 		persistFreeOverage,
 	});
 
 	if (!skipCacheDeletion) {
-		await invalidateCustomerEntitlementBalance({
-			orgId: customer.org_id,
-			env: customer.env,
+		await invalidateCachedFullSubject({
+			ctx: routedCtx,
 			customerId: customer.id ?? "",
-			featureId,
-			customerEntitlementId: resetCusEnt.id,
-			redisV2: ctx.redisV2,
+			source: "resetAndGetCusEnt",
 		});
 
 		await clearCusEntsFromCache({

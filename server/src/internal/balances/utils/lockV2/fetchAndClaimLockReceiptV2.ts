@@ -21,6 +21,7 @@ type FetchAndClaimResult =
 			claimed: boolean;
 			receipt: LockReceipt;
 			lockReceiptKey: string;
+			redisInstance: Redis;
 	  };
 
 const normalizeLockReceiptItems = ({
@@ -118,5 +119,6 @@ export const fetchAndClaimLockReceiptV2 = async ({
 		claimed: claimResult === "OK",
 		receipt,
 		lockReceiptKey,
+		redisInstance,
 	};
 };

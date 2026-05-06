@@ -12,55 +12,6 @@ type CheckoutPreview = GetCheckoutResponse["preview"];
 type CheckoutPreviewChange = CheckoutPreview["incoming"][number];
 
 /**
- * Builds a phrase describing applied discounts.
- * Examples: "Discount code 20OFF applied for 20% off.", "Discount codes 20OFF (20% off) and SAVE10 ($10 off) applied."
- */
-function buildDiscountPhrase({
-	lineItems,
-	currency,
-}: {
-	lineItems: BillingPreviewResponse["line_items"];
-	currency: string;
-}): string {
-	type PreviewLineItemDiscount =
-		BillingPreviewResponse["line_items"][number]["discounts"][number];
-
-	// Collect all discounts from line items
-	const allDiscounts = lineItems.flatMap((item) => item.discounts);
-	if (allDiscounts.length === 0) return "";
-
-	// Deduplicate by reward_name (or reward_id as fallback)
-	const uniqueDiscounts = new Map<string, PreviewLineItemDiscount>();
-	for (const discount of allDiscounts) {
-		const key = discount.reward_name || discount.reward_id || "unknown";
-		if (!uniqueDiscounts.has(key)) {
-			uniqueDiscounts.set(key, discount);
-		}
-	}
-
-	const discountList = Array.from(uniqueDiscounts.values());
-	if (discountList.length === 0) return "";
-
-	// Format each discount
-	const formatDiscount = (d: PreviewLineItemDiscount): string => {
-		const name = d.reward_name || d.reward_id || "Discount";
-		if (d.percent_off) {
-			return `${name} applied for ${d.percent_off}% off`;
-		}
-		return `${name} applied for ${formatAmount(d.amount_off, currency)} off`;
-	};
-
-	if (discountList.length === 1) {
-		return `Discount code ${formatDiscount(discountList[0])}.`;
-	}
-
-	// Multiple discounts
-	const formatted = discountList.map(formatDiscount);
-	const lastDiscount = formatted.pop();
-	return `Discount codes ${formatted.join(", ")} and ${lastDiscount}.`;
-}
-
-/**
  * Builds the action phrase based on the checkout scenario.
  * Examples: "Upgrading from Pro to Enterprise", "Subscribing to Enterprise", "Purchasing Starter"
  */
@@ -157,12 +108,6 @@ export function buildHeaderDescription({
 	const isScheduledChange =
 		line_items.length === 0 && total === 0 && next_cycle;
 
-	// Build discount phrase
-	const discountPhrase = buildDiscountPhrase({
-		lineItems: line_items,
-		currency,
-	});
-
 	// Build the action phrase
 	let action = isUpdateSubscriptionPreview
 		? incomingPlanName
@@ -188,7 +133,7 @@ export function buildHeaderDescription({
 	const credit = preview.total < 0 ? Math.abs(preview.total) : 0;
 	if (credit) {
 		const creditAmount = formatAmount(credit, currency);
-		let sentence = `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} You'll receive a ${creditAmount} credit applied to your next invoice.`;
+		let sentence = `${action}. You'll receive a ${creditAmount} credit applied to your next invoice.`;
 
 		if (hasActiveTrial && next_cycle) {
 			const nextDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
@@ -216,19 +161,19 @@ export function buildHeaderDescription({
 			nextCycle: next_cycle,
 			currency,
 		});
-		return `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} Includes a ${trialDuration} free trial, then you'll be charged ${nextAmount} on ${nextDate}.`;
+		return `${action}. Includes a ${trialDuration} free trial, then you'll be charged ${nextAmount} on ${nextDate}.`;
 	}
 
 	// Handle scheduled changes (no immediate charges)
 	if (isScheduledChange) {
 		if (previewIntent === "update_quantity") {
-			return `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} ${formatAmount(total, currency)} due today.`;
+			return `${action}. ${formatAmount(total, currency)} due today.`;
 		}
 
 		const effectiveDate = format(new Date(next_cycle.starts_at), "do MMMM yyyy");
-		return `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} ${formatAmount(total, currency)} due today. Changes take effect ${effectiveDate}.`;
+		return `${action}. ${formatAmount(total, currency)} due today. Changes take effect ${effectiveDate}.`;
 	}
 
 	// Standard format
-	return `${action}.${discountPhrase ? ` ${discountPhrase}` : ""} ${formatAmount(total, currency)} due today.`;
+	return `${action}. ${formatAmount(total, currency)} due today.`;
 }

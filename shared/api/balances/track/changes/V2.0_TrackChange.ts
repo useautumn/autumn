@@ -38,12 +38,14 @@ export const V2_0_TrackChange = defineVersionChange({
 			? balanceV1ToV0({ input: input.balance })
 			: null;
 
-		// Transform balances record
-		let transformedBalances: Record<string, ApiBalance> | undefined;
+		// Transform balances record (preserve null entries)
+		let transformedBalances: Record<string, ApiBalance | null> | undefined;
 		if (input.balances) {
 			transformedBalances = {};
 			for (const [featureId, balance] of Object.entries(input.balances)) {
-				transformedBalances[featureId] = balanceV1ToV0({ input: balance });
+				transformedBalances[featureId] = balance
+					? balanceV1ToV0({ input: balance })
+					: null;
 			}
 		}
 

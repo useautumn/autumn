@@ -6,12 +6,13 @@ import {
 	ProcessorType,
 	RecaseError,
 } from "@shared/index";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { CusService } from "@/internal/customers/CusService";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { ProductService } from "@/internal/products/ProductService";
+import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { getOrCreateCustomer } from "../../../internal/customers/cusUtils/getOrCreateCustomer";
 
 /**
@@ -30,6 +31,7 @@ export const resolveRevenuecatResources = async ({
 	customerId: string;
 	autoCreateCustomer?: boolean;
 }): Promise<{
+	ctx: RevenueCatWebhookContext;
 	product: FullProduct;
 	customer: FullCustomer;
 	cusProducts: FullCusProduct[];
@@ -102,6 +104,10 @@ export const resolveRevenuecatResources = async ({
 		orgId: ctx.org.id,
 		customerId: ctx.customerId,
 	});
+	const { ctx: routedCtx } = getCtxWithCustomerRedis({
+		ctx,
+		customerId: ctx.customerId,
+	});
 
-	return { product, customer, cusProducts };
+	return { ctx: routedCtx, product, customer, cusProducts };
 };

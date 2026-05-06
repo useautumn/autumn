@@ -22,12 +22,15 @@ export const extractLocalEndpoint = ({
 	}
 };
 
-const getSqsClientConfig = () => {
-	const queueUrl = process.env.SQS_QUEUE_URL_V2;
-	const endpoint = extractLocalEndpoint({ queueUrl });
+const getSqsClientConfig = ({ queueUrl }: { queueUrl?: string } = {}) => {
+	const resolvedQueueUrl = queueUrl ?? process.env.SQS_QUEUE_URL_V2;
+	const endpoint = extractLocalEndpoint({ queueUrl: resolvedQueueUrl });
+	const region =
+		extractRegionFromQueueUrl({ queueUrl: resolvedQueueUrl }) ||
+		DEFAULT_AWS_REGION;
+
 	return {
-		region:
-			extractRegionFromQueueUrl({ queueUrl }) || DEFAULT_AWS_REGION,
+		region,
 		...(endpoint ? { endpoint } : {}),
 		credentials: {
 			accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
@@ -36,19 +39,57 @@ const getSqsClientConfig = () => {
 	};
 };
 
+const getSqsClientCacheKey = ({ queueUrl }: { queueUrl?: string } = {}) => {
+	const resolvedQueueUrl = queueUrl ?? process.env.SQS_QUEUE_URL_V2;
+	const endpoint = extractLocalEndpoint({ queueUrl: resolvedQueueUrl });
+	const region =
+		extractRegionFromQueueUrl({ queueUrl: resolvedQueueUrl }) ||
+		DEFAULT_AWS_REGION;
+
+	return `${region}:${endpoint ?? "aws"}`;
+};
+
+const sqsClientsByCacheKey = new Map<string, SQSClient>();
+
 let sqsClient = new SQSClient(getSqsClientConfig());
+sqsClientsByCacheKey.set(getSqsClientCacheKey(), sqsClient);
 
 export const sqs = sqsClient;
 
 /** Recreates the SQS client with fresh connections */
-export const recreateSqsClient = (): SQSClient => {
+export const recreateSqsClient = ({
+	queueUrl,
+}: {
+	queueUrl?: string;
+} = {}): SQSClient => {
 	console.log(`[SQS] Recreating SQS client (stale connection suspected)`);
-	sqsClient.destroy();
-	sqsClient = new SQSClient(getSqsClientConfig());
-	return sqsClient;
+	const cacheKey = getSqsClientCacheKey({ queueUrl });
+	const existingClient = sqsClientsByCacheKey.get(cacheKey);
+	existingClient?.destroy();
+
+	const nextClient = new SQSClient(getSqsClientConfig({ queueUrl }));
+	sqsClientsByCacheKey.set(cacheKey, nextClient);
+
+	if (!queueUrl || queueUrl === process.env.SQS_QUEUE_URL_V2) {
+		sqsClient = nextClient;
+	}
+
+	return nextClient;
 };
 
 /** Get the current SQS client (use this instead of direct sqs export for refreshable access) */
-export const getSqsClient = (): SQSClient => sqsClient;
+export const getSqsClient = ({
+	queueUrl,
+}: {
+	queueUrl?: string;
+} = {}): SQSClient => {
+	const cacheKey = getSqsClientCacheKey({ queueUrl });
+	const existingClient = sqsClientsByCacheKey.get(cacheKey);
+	if (existingClient) return existingClient;
+
+	const nextClient = new SQSClient(getSqsClientConfig({ queueUrl }));
+	sqsClientsByCacheKey.set(cacheKey, nextClient);
+	return nextClient;
+};
 
 export const QUEUE_URL = process.env.SQS_QUEUE_URL_V2 || "";

@@ -227,6 +227,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   Reset the billing cycle anchor immediately with 'now'.
 </DynamicParamField>
 
+<DynamicParamField body="starts_at" type="integer">
+  Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+</DynamicParamField>
+
 <DynamicParamField body="checkout_session_params" type="object">
   Additional parameters to pass into the creation of the Stripe checkout session.
 </DynamicParamField>

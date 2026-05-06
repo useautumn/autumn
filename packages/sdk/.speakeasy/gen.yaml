@@ -83,6 +83,7 @@ typescript:
   enumFormat: union
   envVarPrefix: AUTUMN
   exportZodModelNamespace: false
+  fixEnumNameSanitization: false
   flatAdditionalProperties: true
   flattenGlobalSecurity: true
   flatteningOrder: parameters-first

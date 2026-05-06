@@ -780,6 +780,8 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""Reset the billing cycle anchor immediately with 'now'."""
     plan_schedule: NotRequired[PreviewAttachPlanSchedule]
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
+    starts_at: NotRequired[int]
+    r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
     checkout_session_params: NotRequired[Dict[str, Any]]
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     custom_line_items: NotRequired[List[PreviewAttachCustomLineItemTypedDict]]
@@ -847,6 +849,9 @@ class PreviewAttachParams(BaseModel):
     plan_schedule: Optional[PreviewAttachPlanSchedule] = None
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
 
+    starts_at: Optional[int] = None
+    r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
+
     checkout_session_params: Optional[Dict[str, Any]] = None
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
 
@@ -888,6 +893,7 @@ class PreviewAttachParams(BaseModel):
                 "new_billing_subscription",
                 "billing_cycle_anchor",
                 "plan_schedule",
+                "starts_at",
                 "checkout_session_params",
                 "custom_line_items",
                 "processor_subscription_id",
@@ -970,9 +976,9 @@ class PreviewAttachLineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -993,10 +999,10 @@ class PreviewAttachLineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -1097,9 +1103,9 @@ class PreviewAttachNextCycleLineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -1120,10 +1126,10 @@ class PreviewAttachNextCycleLineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -1241,9 +1247,9 @@ class PreviewAttachNextCycleTypedDict(TypedDict):
     starts_at: float
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
     subtotal: float
-    r"""The total amount in cents before discounts for the next cycle."""
+    r"""The total amount in cents before discounts and tax for the next cycle."""
     total: float
-    r"""The final amount in cents after discounts for the next cycle."""
+    r"""The final amount in cents after discounts and tax for the next cycle."""
     line_items: List[PreviewAttachNextCycleLineItemTypedDict]
     r"""List of line items for the next billing cycle."""
     usage_line_items: List[PreviewAttachUsageLineItemTypedDict]
@@ -1257,10 +1263,10 @@ class PreviewAttachNextCycle(BaseModel):
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
 
     subtotal: float
-    r"""The total amount in cents before discounts for the next cycle."""
+    r"""The total amount in cents before discounts and tax for the next cycle."""
 
     total: float
-    r"""The final amount in cents after discounts for the next cycle."""
+    r"""The final amount in cents after discounts and tax for the next cycle."""
 
     line_items: List[PreviewAttachNextCycleLineItem]
     r"""List of line items for the next billing cycle."""
@@ -1468,6 +1474,25 @@ class PreviewAttachTax(BaseModel):
     r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
 
 
+class PreviewAttachInvoiceCreditsTypedDict(TypedDict):
+    r"""Stripe customer invoice credits preview."""
+
+    balance: float
+    r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
+    currency: str
+    r"""Three-letter currency code."""
+
+
+class PreviewAttachInvoiceCredits(BaseModel):
+    r"""Stripe customer invoice credits preview."""
+
+    balance: float
+    r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
+
+    currency: str
+    r"""Three-letter currency code."""
+
+
 class PreviewAttachResponseTypedDict(TypedDict):
     r"""OK"""
 
@@ -1475,9 +1500,9 @@ class PreviewAttachResponseTypedDict(TypedDict):
     r"""The ID of the customer."""
     line_items: List[PreviewAttachLineItemTypedDict]
     subtotal: float
-    r"""The total amount in cents before discounts for the current billing period."""
+    r"""The total amount in cents before discounts and tax for the current billing period."""
     total: float
-    r"""The final amount in cents after discounts for the current billing period."""
+    r"""The final amount in cents after discounts and tax for the current billing period."""
     currency: str
     r"""The three-letter ISO currency code (e.g., 'usd')."""
     incoming: List[PreviewAttachIncomingTypedDict]
@@ -1494,6 +1519,8 @@ class PreviewAttachResponseTypedDict(TypedDict):
     r"""Expand the response with additional data."""
     tax: NotRequired[PreviewAttachTaxTypedDict]
     r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
+    invoice_credits: NotRequired[PreviewAttachInvoiceCreditsTypedDict]
+    r"""Stripe customer invoice credits preview."""
 
 
 class PreviewAttachResponse(BaseModel):
@@ -1505,10 +1532,10 @@ class PreviewAttachResponse(BaseModel):
     line_items: List[PreviewAttachLineItem]
 
     subtotal: float
-    r"""The total amount in cents before discounts for the current billing period."""
+    r"""The total amount in cents before discounts and tax for the current billing period."""
 
     total: float
-    r"""The final amount in cents after discounts for the current billing period."""
+    r"""The final amount in cents after discounts and tax for the current billing period."""
 
     currency: str
     r"""The three-letter ISO currency code (e.g., 'usd')."""
@@ -1534,9 +1561,12 @@ class PreviewAttachResponse(BaseModel):
     tax: Optional[PreviewAttachTax] = None
     r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
 
+    invoice_credits: Optional[PreviewAttachInvoiceCredits] = None
+    r"""Stripe customer invoice credits preview."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["next_cycle", "expand", "tax"])
+        optional_fields = set(["next_cycle", "expand", "tax", "invoice_credits"])
         nullable_fields = set(["checkout_type"])
         serialized = handler(self)
         m = {}

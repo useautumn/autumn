@@ -19,6 +19,7 @@ import { handleProrationBehaviorErrors } from "@/internal/billing/v2/common/erro
 import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors/handleCustomLineItemsErrors";
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
+import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
 export const handleAttachV2Errors = async ({
@@ -34,12 +35,15 @@ export const handleAttachV2Errors = async ({
 }) => {
 	const { autumn: autumnBillingPlan } = billingPlan;
 
-	// 1. External PSP errors (RevenueCat)
+	// 1.1. External PSP errors (RevenueCat)
 	handleExternalPSPErrors({
 		customerProducts: billingContext.fullCustomer.customer_products,
 		attachProduct: billingContext.attachProduct,
 		action: "attach",
 	});
+
+	// 1.2. Custom Payment Method errors (Vercel)
+	handleCustomPaymentMethodErrorsV2({ billingContext });
 
 	// 2. Current customer product errors (same product)
 	handleCurrentCustomerProductErrors({ billingContext });
