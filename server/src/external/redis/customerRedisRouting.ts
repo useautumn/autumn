@@ -7,7 +7,6 @@ export {
 	type CustomerRedisRoutingInfo,
 	getCustomerBucket,
 	getCustomerRedisRoutingId,
-	getRedisUrlForCustomerFromOrg,
 	isRedisMigrationCacheStale,
 } from "./customerRedisRoutingInfo.js";
 
@@ -51,28 +50,37 @@ export const resolveCustomerRedisRouting = ({
 	};
 };
 
-export const assignCustomerRedisToCtx = ({
+export const getCtxWithCustomerRedis = <T extends AutumnContext>({
 	ctx,
 	customerId = ctx.customerId,
 }: {
-	ctx: AutumnContext;
+	ctx: T;
 	customerId?: string;
-}): CustomerRedisRoutingInfo => {
+}): { ctx: T; routingInfo: CustomerRedisRoutingInfo } => {
 	const routingInfo = resolveCustomerRedisRouting({
 		org: ctx.org,
 		customerId,
 	});
 
-	ctx.redisV2 = routingInfo.redis;
-	return routingInfo;
+	return {
+		ctx: {
+			...ctx,
+			redisV2: routingInfo.redis,
+		} as T,
+		routingInfo,
+	};
 };
 
-export const getRedisUrlForCustomer = ({
+export const getRedisTargetsForCustomer = ({
 	org,
-	customerId,
+	currentRedis,
 }: {
 	org: OrgWithRedisConfig;
-	customerId?: string;
-}): string | undefined => {
-	return getCustomerRedisRoutingInfo({ org, customerId }).redisUrl;
+	currentRedis?: Redis;
+}): Redis[] => {
+	const redisTargets = [currentRedis ?? resolveRedisV2()];
+	if (org.redis_config) {
+		redisTargets.push(resolveRedisV2(), getOrgRedis({ org }));
+	}
+	return [...new Set(redisTargets)];
 };

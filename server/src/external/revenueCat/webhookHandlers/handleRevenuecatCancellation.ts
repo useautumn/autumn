@@ -16,7 +16,12 @@ export const handleCancellation = async ({
 	const { product_id, original_app_user_id, app_user_id, expiration_at_ms } =
 		event;
 
-	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+	const {
+		ctx: customerCtx,
+		product,
+		customer,
+		cusProducts,
+	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id ?? original_app_user_id,
@@ -36,7 +41,7 @@ export const handleCancellation = async ({
 	}
 
 	await customerProductActions.cancel({
-		ctx,
+		ctx: customerCtx,
 		customerProduct: curSameProduct,
 		fullCustomer: customer,
 		endedAt: expiration_at_ms,

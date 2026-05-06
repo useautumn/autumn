@@ -100,15 +100,15 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 export const batchInvalidateCachedFullSubjects = async ({
 	customers,
 	featuresByOrgEnv,
-	getRedisForCustomer,
+	getRedisTargetsForCustomer,
 }: {
 	customers: BatchInvalidateCustomer[];
 	featuresByOrgEnv: FeaturesByOrgEnv;
-	getRedisForCustomer: ({
+	getRedisTargetsForCustomer: ({
 		customer,
 	}: {
 		customer: BatchInvalidateCustomer;
-	}) => Redis;
+	}) => Redis[];
 }): Promise<number> => {
 	if (customers.length === 0) return 0;
 
@@ -116,10 +116,13 @@ export const batchInvalidateCachedFullSubjects = async ({
 
 	const customersByRedis = new Map<Redis, BatchInvalidateCustomer[]>();
 	for (const customer of customers) {
-		const targetRedis = getRedisForCustomer({ customer });
-		const existing = customersByRedis.get(targetRedis) ?? [];
-		existing.push(customer);
-		customersByRedis.set(targetRedis, existing);
+		for (const targetRedis of new Set(
+			getRedisTargetsForCustomer({ customer }),
+		)) {
+			const existing = customersByRedis.get(targetRedis) ?? [];
+			existing.push(customer);
+			customersByRedis.set(targetRedis, existing);
+		}
 	}
 
 	await Promise.all(

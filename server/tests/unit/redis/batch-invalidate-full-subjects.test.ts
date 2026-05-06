@@ -109,10 +109,11 @@ describe("batchInvalidateCachedFullSubjects", () => {
 		const deleted = await batchInvalidateCachedFullSubjects({
 			customers,
 			featuresByOrgEnv: {},
-			getRedisForCustomer: ({ customer }) =>
+			getRedisTargetsForCustomer: ({ customer }) => [
 				customer.customerId === "cus_dedicated"
 					? dedicated.redis
 					: primary.redis,
+			],
 		});
 
 		expect(deleted).toBe(2);
@@ -131,6 +132,28 @@ describe("batchInvalidateCachedFullSubjects", () => {
 		).toBe(true);
 		expect(
 			dedicated.calls.writeOps.some((op) => op.includes("cus_dedicated")),
+		).toBe(true);
+	});
+
+	test("dedupes duplicate Redis targets for the same customer", async () => {
+		const primary = createFakeRedis();
+		const customers = [
+			{
+				orgId: "org_test",
+				env: "sandbox" as AppEnv,
+				customerId: "cus_primary",
+			},
+		];
+
+		await batchInvalidateCachedFullSubjects({
+			customers,
+			featuresByOrgEnv: {},
+			getRedisTargetsForCustomer: () => [primary.redis, primary.redis],
+		});
+
+		expect(primary.calls.readKeys).toHaveLength(1);
+		expect(
+			primary.calls.writeOps.some((op) => op.includes("cus_primary")),
 		).toBe(true);
 	});
 });
