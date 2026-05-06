@@ -1,0 +1,62 @@
+shared/api/customers/apiCustomerV5.ts
+  1e1d09d877c89b4e 9,19-21,115-116,118
+server/src/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.ts
+  1e1d09d877c89b4e 13,81-85
+shared/api/customers/index.ts
+  1e1d09d877c89b4e 12
+server/src/internal/customers/cusUtils/getApiCustomerV2/getApiCustomerBaseV2.ts
+  1e1d09d877c89b4e 12,78-81
+server/tests/integration/crud/customers/customer-processors.test.ts
+  48f10bce432a4c43 1-273,276-277,279-334,336-394,396-463,465-529,531-609,611-642
+  1f32b12fced28a78 274-275,278,335,395,464,530,610
+shared/api/customers/cusProcessors/index.ts
+  1e1d09d877c89b4e 1
+server/src/internal/customers/cusUtils/cusResponseUtils/getCusProcessors.ts
+  1e1d09d877c89b4e 1-51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "07ed170c195ff199b7354f35a2d441feb2381d7e",
+  "prompts": {
+    "1e1d09d877c89b4e": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_202bcf9d6ffefG2pn7Eam96gJ5",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 72,
+      "total_deletions": 0,
+      "accepted_lines": 71,
+      "overriden_lines": 1
+    },
+    "1f32b12fced28a78": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_202e6ad75ffetNy7SzuE6BN56z",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 8,
+      "total_deletions": 12,
+      "accepted_lines": 8,
+      "overriden_lines": 0
+    },
+    "48f10bce432a4c43": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_202bc1853ffePoCUuy11tvOOsj",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 673,
+      "total_deletions": 27,
+      "accepted_lines": 634,
+      "overriden_lines": 0
+    }
+  }
+}
