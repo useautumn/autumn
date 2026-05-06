@@ -33,6 +33,9 @@ import {
 	ErrCode,
 	type FinalizeLockParamsV0,
 	type LegacyVersion,
+	type Migration,
+	type MigrationFilter,
+	type Operations,
 	type OrgConfig,
 	type ProductItem,
 	type RestoreParamsV1,
@@ -926,6 +929,32 @@ export class AutumnInt {
 	}) => {
 		const data = await this.post(`/migrations`, params);
 		return data;
+	};
+
+	migrationsV2 = {
+		create: async (params: {
+			id: string;
+			filter?: MigrationFilter | null;
+			operations?: Operations | null;
+		}): Promise<Migration> => {
+			const data = await this.post(`/migrations.create`, params);
+			return data as Migration;
+		},
+		list: async (): Promise<{ list: Migration[] }> => {
+			const data = await this.post(`/migrations.list`, {});
+			return data as { list: Migration[] };
+		},
+		update: async (params: {
+			id: string;
+			updates: {
+				id?: string;
+				filter?: MigrationFilter | null;
+				operations?: Operations | null;
+			};
+		}): Promise<Migration> => {
+			const data = await this.post(`/migrations.update`, params);
+			return data as Migration;
+		},
 	};
 
 	balances = {
