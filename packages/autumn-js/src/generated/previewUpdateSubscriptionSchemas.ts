@@ -122,6 +122,11 @@ export const previewUpdateOutgoingFeatureQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const previewUpdateInvoiceCreditsSchema = z.object({
+	balance: z.number(),
+	currency: z.string(),
+});
+
 export const previewUpdateFeatureQuantityRequestOutboundSchema = z.object({
 	feature_id: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
@@ -402,6 +407,16 @@ export const previewUpdateOutgoingSchema = z.object({
 
 export const intentSchema = openEnumSchema;
 
+export const previewUpdateStatusSchema = openEnumSchema;
+
+export const previewUpdateTaxSchema = z.object({
+	total: z.number(),
+	amountInclusive: z.number(),
+	amountExclusive: z.number(),
+	currency: z.string(),
+	status: previewUpdateStatusSchema,
+});
+
 export const previewUpdateResponseSchema = z.object({
 	customerId: z.string(),
 	lineItems: z.array(previewUpdateLineItemSchema),
@@ -413,4 +428,8 @@ export const previewUpdateResponseSchema = z.object({
 	incoming: z.array(previewUpdateIncomingSchema),
 	outgoing: z.array(previewUpdateOutgoingSchema),
 	intent: intentSchema,
+	tax: z.union([previewUpdateTaxSchema, z.undefined()]).optional(),
+	invoiceCredits: z
+		.union([previewUpdateInvoiceCreditsSchema, z.undefined()])
+		.optional(),
 });
