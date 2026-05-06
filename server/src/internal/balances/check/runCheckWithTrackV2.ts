@@ -1,4 +1,5 @@
 import {
+	type ApiBalanceV1,
 	ApiVersion,
 	CheckResponseV3Schema,
 	ErrCode,
@@ -77,6 +78,7 @@ export const runCheckWithTrackV2 = async ({
 	};
 
 	let allowed = true;
+	let trackBalances: Record<string, ApiBalanceV1 | null> | undefined;
 
 	try {
 		const response = await runTrackV3({
@@ -86,8 +88,11 @@ export const runCheckWithTrackV2 = async ({
 			apiVersion: ApiVersion.V2_1,
 		});
 
-		checkData.apiBalance = response.balance ?? undefined;
-		checkData.evaluationApiBalance = response.balance ?? undefined;
+		const trackedBalance =
+			response.balance ?? response.balances?.[body.feature_id] ?? undefined;
+		checkData.apiBalance = trackedBalance ?? undefined;
+		checkData.evaluationApiBalance = trackedBalance ?? undefined;
+		trackBalances = response.balances;
 	} catch (error) {
 		if (error instanceof InsufficientBalanceError) {
 			allowed = false;
@@ -140,6 +145,7 @@ export const runCheckWithTrackV2 = async ({
 		entity_id: checkData.entityId,
 		required_balance: requiredBalance,
 		balance: checkData.apiBalance ?? null,
+		balances: trackBalances,
 		flag: checkData.apiFlag ?? null,
 	});
 };
