@@ -5,12 +5,14 @@ import {
 	AffectedResource,
 	ErrCode,
 	RecaseError,
+	Scopes,
 	type TrackParams,
 	TrackTokensParamsSchema,
 } from "@autumn/shared";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 
 export const handleTrackTokens = createRoute({
+	scopes: [Scopes.Balances.Write],
 	body: TrackTokensParamsSchema,
 	resource: AffectedResource.Track,
 	handler: async (c) => {

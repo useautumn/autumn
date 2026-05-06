@@ -165,10 +165,6 @@ export const getCreditCost = async ({
 	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return amount;
 	}
-	// If tracking the credit system feature itself, 1:1 mapping
-	if (featureId === creditSystem.id) {
-		return amount;
-	}
 	if (creditSystem.is_ai_credit_system) {
 		if (!tokens || !modelName) {
 			throw new RecaseError({
@@ -177,12 +173,15 @@ export const getCreditCost = async ({
 				statusCode: 400,
 			});
 		}
-		const modelPricing = await getModelCreditCost({
+		return await getModelCreditCost({
 			modelName,
 			creditSystem,
 			...tokens,
 		});
-		return modelPricing;
+	}
+	// If tracking the credit system feature itself, 1:1 mapping
+	if (featureId === creditSystem.id) {
+		return amount;
 	}
 	const schema: CreditSchemaItem[] = creditSystem.config.schema;
 	for (const schemaItem of schema) {
