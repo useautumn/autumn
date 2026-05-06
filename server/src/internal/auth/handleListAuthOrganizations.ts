@@ -1,8 +1,10 @@
-import { member, organizations } from "@autumn/shared";
+import { ErrCode, member, organizations, RecaseError } from "@autumn/shared";
 import { asc, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
+
+const AUTH_ORGANIZATION_LIST_LIMIT = 1000;
 
 export const handleListAuthOrganizations = async (c: Context) => {
 	const session = await auth.api.getSession({
@@ -10,7 +12,11 @@ export const handleListAuthOrganizations = async (c: Context) => {
 	});
 
 	if (!session?.user?.id) {
-		return c.json({ message: "Unauthorized" }, 401);
+		throw new RecaseError({
+			message: "Unauthorized - no session found",
+			code: ErrCode.NoAuthHeader,
+			statusCode: 401,
+		});
 	}
 
 	const orgs = await db
@@ -29,7 +35,8 @@ export const handleListAuthOrganizations = async (c: Context) => {
 			asc(organizations.name),
 			asc(organizations.slug),
 			asc(organizations.id),
-		);
+		)
+		.limit(AUTH_ORGANIZATION_LIST_LIMIT);
 
 	return c.json(orgs);
 };
