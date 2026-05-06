@@ -47,10 +47,8 @@ export const computeAttachNewCustomerProduct = ({
 		fullCustomer,
 		currentCustomerProduct,
 		planTiming,
-		endOfCycleMs,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
-		resetCycleAnchorMs,
 		currentEpochMs,
 		featureQuantities,
 		trialContext,
@@ -77,12 +75,8 @@ export const computeAttachNewCustomerProduct = ({
 
 	const { accessStartsAt, billingAnchorStartsAt, resetCycleAnchor, status } =
 		getAttachStartTiming({
-			planTiming,
-			endOfCycleMs,
+			attachBillingContext,
 			params,
-			resetCycleAnchorMs,
-			currentEpochMs,
-			billingStartsAt,
 		});
 	const isScheduled = planTiming === "end_of_cycle";
 

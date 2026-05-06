@@ -28,25 +28,24 @@ const resolveCustomerProductStatus = ({
 };
 
 export const getAttachStartTiming = ({
-	planTiming,
-	endOfCycleMs,
+	attachBillingContext,
 	params,
-	resetCycleAnchorMs,
-	currentEpochMs,
-	billingStartsAt,
 }: {
-	planTiming: AttachBillingContext["planTiming"];
-	endOfCycleMs?: number;
+	attachBillingContext: AttachBillingContext;
 	params: AttachParamsV1;
-	resetCycleAnchorMs: number | "now";
-	currentEpochMs: number;
-	billingStartsAt?: number;
 }): {
 	accessStartsAt?: number;
 	billingAnchorStartsAt?: number;
 	resetCycleAnchor: number | "now";
 	status?: CusProductStatus;
 } => {
+	const {
+		planTiming,
+		endOfCycleMs,
+		resetCycleAnchorMs,
+		currentEpochMs,
+		billingStartsAt,
+	} = attachBillingContext;
 	const isScheduled = planTiming === "end_of_cycle";
 	const requestedStartsAt =
 		params.starts_at ?? (isScheduled ? endOfCycleMs : undefined);
