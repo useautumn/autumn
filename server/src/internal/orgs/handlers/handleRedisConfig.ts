@@ -4,6 +4,7 @@ import { getOrgRedis, removeOrgRedis } from "@/external/redis/orgRedisPool.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 import { OrgService } from "../OrgService.js";
+import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
 
 const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);
 
@@ -70,6 +71,7 @@ export const handleUpsertRedisConfig = createRoute({
 
 		if (updatedOrg) {
 			getOrgRedis({ org: updatedOrg });
+			await clearOrgCache({ db, orgId: org.id, env: ctx.env, logger });
 			logger.info(
 				`[handleUpsertRedisConfig] org=${org.id}: redis_config created, url=${redisUrl.host}, actor=${ctx.user?.email ?? ctx.userId ?? "unknown"}`,
 			);
@@ -109,6 +111,7 @@ export const handleUpdateRedisMigration = createRoute({
 				},
 			},
 		});
+		await clearOrgCache({ db, orgId: org.id, env: ctx.env, logger });
 
 		logger.info(
 			`[handleUpdateRedisMigration] org=${org.id}: ${org.redis_config.migrationPercent}% -> ${migrationPercent}%`,
@@ -139,6 +142,7 @@ export const handleDeleteRedisConfig = createRoute({
 			orgId: org.id,
 			updates: { redis_config: null },
 		});
+		await clearOrgCache({ db, orgId: org.id, env: ctx.env, logger });
 		removeOrgRedis({ orgId: org.id });
 
 		logger.info(

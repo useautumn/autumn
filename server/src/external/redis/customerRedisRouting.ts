@@ -64,7 +64,22 @@ export const assignCustomerRedisToCtx = ({
 	});
 
 	ctx.redisV2 = routingInfo.redis;
+
 	return routingInfo;
+};
+
+export const overrideCtxRedisV2 = ({
+	ctx,
+	redisV2,
+}: {
+	ctx: AutumnContext;
+	redisV2: Redis;
+}): AutumnContext => {
+	if (ctx.redisV2 === redisV2) return ctx;
+
+	const injectedCtx = Object.create(ctx) as AutumnContext;
+	injectedCtx.redisV2 = redisV2;
+	return injectedCtx;
 };
 
 export const getRedisUrlForCustomer = ({

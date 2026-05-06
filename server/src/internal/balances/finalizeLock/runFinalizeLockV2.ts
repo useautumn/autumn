@@ -5,6 +5,7 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
+import type { Redis } from "ioredis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { cancelLockExpiry } from "@/internal/balances/utils/lock/cancelLockExpiry.js";
 import type { LockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
@@ -24,12 +25,14 @@ export const runFinalizeLockV2 = async ({
 	receipt,
 	lockReceiptKey,
 	claimed,
+	lockRedisInstance,
 }: {
 	ctx: AutumnContext;
 	params: FinalizeLockParamsV0;
 	receipt: LockReceipt;
 	lockReceiptKey: string;
 	claimed: boolean;
+	lockRedisInstance: Redis;
 }) => {
 	if (!claimed) {
 		throw new RecaseError({
@@ -45,6 +48,7 @@ export const runFinalizeLockV2 = async ({
 		params,
 		receipt,
 		lockReceiptKey,
+		redisInstance: lockRedisInstance,
 	});
 	const { redisInstance, finalValue, lockValue } = finalizeLockContext;
 
