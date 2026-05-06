@@ -1,0 +1,41 @@
+shared/api/customers/crud/getCustomerParams.ts
+  85bbe055bb859e0d 1-4,10-11
+  b7539cb1bd2acb8d 5-9
+shared/api/customers/crud/index.ts
+  85bbe055bb859e0d 3
+server/src/internal/customers/handlers/handleGetCustomerV3.ts
+  85bbe055bb859e0d 5-27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "b556c7d68eed887474f21dd722d7d4b1705971c2",
+  "prompts": {
+    "85bbe055bb859e0d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20362c526ffesuwcSxmLDHAHKe",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 79,
+      "overriden_lines": 0
+    },
+    "b7539cb1bd2acb8d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2035ef9b5ffe5BgzrHRlzcpE57",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 113,
+      "overriden_lines": 0
+    }
+  }
+}
