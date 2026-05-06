@@ -129,6 +129,11 @@ export const previewMultiAttachOutgoingFeatureQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const previewMultiAttachInvoiceCreditsSchema = z.object({
+	balance: z.number(),
+	currency: z.string(),
+});
+
 export const previewMultiAttachBasePriceOutboundSchema = z.object({
 	amount: z.number(),
 	interval: z.string(),
@@ -503,6 +508,9 @@ export const previewMultiAttachResponseSchema = z.object({
 	redirectToCheckout: z.boolean(),
 	checkoutType: previewMultiAttachCheckoutTypeSchema.nullable(),
 	tax: z.union([previewMultiAttachTaxSchema, z.undefined()]).optional(),
+	invoiceCredits: z
+		.union([previewMultiAttachInvoiceCreditsSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewMultiAttachParamsOutboundSchema = z.object({

@@ -464,6 +464,10 @@ export type SetupPaymentParams = {
    */
   billingCycleAnchor?: "now" | undefined;
   /**
+   * Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+   */
+  startsAt?: number | undefined;
+  /**
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
@@ -1064,6 +1068,7 @@ export type SetupPaymentParams$Outbound = {
   discounts?: Array<SetupPaymentAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   billing_cycle_anchor?: "now" | undefined;
+  starts_at?: number | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<SetupPaymentCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
@@ -1095,6 +1100,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     ),
     successUrl: z.optional(z.string()),
     billingCycleAnchor: z.optional(z.literal("now")),
+    startsAt: z.optional(z.int()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
       z.array(z.lazy(() => SetupPaymentCustomLineItem$outboundSchema)),
@@ -1120,6 +1126,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       subscriptionId: "subscription_id",
       successUrl: "success_url",
       billingCycleAnchor: "billing_cycle_anchor",
+      startsAt: "starts_at",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",

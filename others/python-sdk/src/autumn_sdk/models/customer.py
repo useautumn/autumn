@@ -819,7 +819,7 @@ class Invoice(BaseModel):
         return m
 
 
-EntityEnv = Union[
+CustomerEntityEnv = Union[
     Literal[
         "sandbox",
         "live",
@@ -836,7 +836,7 @@ class EntityTypedDict(TypedDict):
     r"""The name of the entity"""
     created_at: float
     r"""Unix timestamp when the entity was created"""
-    env: EntityEnv
+    env: CustomerEntityEnv
     r"""The environment (sandbox/live)"""
     customer_id: NotRequired[Nullable[str]]
     r"""The customer ID this entity belongs to"""
@@ -854,7 +854,7 @@ class Entity(BaseModel):
     created_at: float
     r"""Unix timestamp when the entity was created"""
 
-    env: EntityEnv
+    env: CustomerEntityEnv
     r"""The environment (sandbox/live)"""
 
     customer_id: OptionalNullable[str] = UNSET
@@ -928,7 +928,7 @@ class TrialsUsed(BaseModel):
         return m
 
 
-RewardsType = Union[
+CustomerRewardsType = Union[
     Literal[
         "percentage_discount",
         "fixed_discount",
@@ -956,7 +956,7 @@ class DiscountTypedDict(TypedDict):
     r"""The unique identifier for this discount"""
     name: str
     r"""The name of the discount or coupon"""
-    type: RewardsType
+    type: CustomerRewardsType
     r"""The type of reward"""
     discount_value: float
     r"""The discount value (percentage or fixed amount)"""
@@ -983,7 +983,7 @@ class Discount(BaseModel):
     name: str
     r"""The name of the discount or coupon"""
 
-    type: RewardsType
+    type: CustomerRewardsType
     r"""The type of reward"""
 
     discount_value: float

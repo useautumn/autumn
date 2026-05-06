@@ -9,10 +9,14 @@ import {
 	DeleteCustomerParamsSchema,
 	DeleteCustomerResponseSchema,
 } from "@api/customers/crud/deleteCustomerParams.js";
+import { GetCustomerParamsV1Schema } from "@api/customers/crud/getCustomerParams.js";
 import { ListCustomersV2ParamsSchema } from "@api/customers/crud/listCustomersParamsV2.js";
 import { UpdateCustomerParamsV1Schema } from "@api/customers/crud/updateCustomerParams.js";
 import { oc } from "@orpc/contract";
-import { getOrCreateCustomerJsDoc } from "../jsDocs/customerJsDocs";
+import {
+	getCustomerJsDoc,
+	getOrCreateCustomerJsDoc,
+} from "../jsDocs/customerJsDocs";
 
 export const getOrCreateCustomerContract = oc
 	.route({
@@ -39,6 +43,38 @@ export const getOrCreateCustomerContract = oc
 		}),
 	)
 	.output(ApiCustomerV5Schema);
+
+export const getCustomerContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/customers.get",
+		operationId: "getCustomer",
+		tags: ["customers"],
+		description: getCustomerJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "get",
+		}),
+	})
+	.input(
+		GetCustomerParamsV1Schema.meta({
+			title: "GetCustomerParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+				},
+				{
+					customer_id: "cus_123",
+					expand: ["invoices", "entities"],
+				},
+			],
+		}),
+	)
+	.output(
+		ApiCustomerV5Schema.meta({
+			examples: [API_CUSTOMER_V5_EXAMPLE],
+		}),
+	);
 
 export const listCustomersContract = oc
 	.route({

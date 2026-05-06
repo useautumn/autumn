@@ -537,11 +537,11 @@ export type PreviewUpdateLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts for this line item.
+   * The amount in cents before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for this line item.
+   * The final amount in cents after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -597,11 +597,11 @@ export type PreviewUpdateNextCycleLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts for this line item.
+   * The amount in cents before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for this line item.
+   * The final amount in cents after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -668,11 +668,11 @@ export type PreviewUpdateNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents before discounts for the next cycle.
+   * The total amount in cents before discounts and tax for the next cycle.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for the next cycle.
+   * The final amount in cents after discounts and tax for the next cycle.
    */
   total: number;
   /**
@@ -766,6 +766,58 @@ export const Intent = {
 export type Intent = OpenEnum<typeof Intent>;
 
 /**
+ * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ */
+export const PreviewUpdateStatus = {
+  Complete: "complete",
+  Incomplete: "incomplete",
+} as const;
+/**
+ * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ */
+export type PreviewUpdateStatus = OpenEnum<typeof PreviewUpdateStatus>;
+
+/**
+ * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
+ */
+export type PreviewUpdateTax = {
+  /**
+   * Total tax amount in major currency units.
+   */
+  total: number;
+  /**
+   * Tax included in line item subtotals.
+   */
+  amountInclusive: number;
+  /**
+   * Tax added on top of subtotals.
+   */
+  amountExclusive: number;
+  /**
+   * Three-letter currency code.
+   */
+  currency: string;
+  /**
+   * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+   */
+  status: PreviewUpdateStatus;
+};
+
+/**
+ * Stripe customer invoice credits preview.
+ */
+export type PreviewUpdateInvoiceCredits = {
+  /**
+   * Stripe customer credit balance available, expressed as a positive number in major currency units.
+   */
+  balance: number;
+  /**
+   * Three-letter currency code.
+   */
+  currency: string;
+};
+
+/**
  * OK
  */
 export type PreviewUpdateResponse = {
@@ -778,11 +830,11 @@ export type PreviewUpdateResponse = {
    */
   lineItems: Array<PreviewUpdateLineItem>;
   /**
-   * The total amount in cents before discounts for the current billing period.
+   * The total amount in cents before discounts and tax for the current billing period.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for the current billing period.
+   * The final amount in cents after discounts and tax for the current billing period.
    */
   total: number;
   /**
@@ -806,6 +858,14 @@ export type PreviewUpdateResponse = {
    */
   outgoing: Array<PreviewUpdateOutgoing>;
   intent: Intent;
+  /**
+   * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
+   */
+  tax?: PreviewUpdateTax | undefined;
+  /**
+   * Stripe customer invoice credits preview.
+   */
+  invoiceCredits?: PreviewUpdateInvoiceCredits | undefined;
 };
 
 /** @internal */
@@ -1804,6 +1864,61 @@ export const Intent$inboundSchema: z.ZodMiniType<Intent, unknown> = openEnums
   .inboundSchema(Intent);
 
 /** @internal */
+export const PreviewUpdateStatus$inboundSchema: z.ZodMiniType<
+  PreviewUpdateStatus,
+  unknown
+> = openEnums.inboundSchema(PreviewUpdateStatus);
+
+/** @internal */
+export const PreviewUpdateTax$inboundSchema: z.ZodMiniType<
+  PreviewUpdateTax,
+  unknown
+> = z.pipe(
+  z.object({
+    total: types.number(),
+    amount_inclusive: types.number(),
+    amount_exclusive: types.number(),
+    currency: types.string(),
+    status: PreviewUpdateStatus$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_inclusive": "amountInclusive",
+      "amount_exclusive": "amountExclusive",
+    });
+  }),
+);
+
+export function previewUpdateTaxFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateTax, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateTax$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateTax' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewUpdateInvoiceCredits$inboundSchema: z.ZodMiniType<
+  PreviewUpdateInvoiceCredits,
+  unknown
+> = z.object({
+  balance: types.number(),
+  currency: types.string(),
+});
+
+export function previewUpdateInvoiceCreditsFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateInvoiceCredits, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateInvoiceCredits$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateInvoiceCredits' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewUpdateResponse$inboundSchema: z.ZodMiniType<
   PreviewUpdateResponse,
   unknown
@@ -1821,12 +1936,17 @@ export const PreviewUpdateResponse$inboundSchema: z.ZodMiniType<
     incoming: z.array(z.lazy(() => PreviewUpdateIncoming$inboundSchema)),
     outgoing: z.array(z.lazy(() => PreviewUpdateOutgoing$inboundSchema)),
     intent: Intent$inboundSchema,
+    tax: types.optional(z.lazy(() => PreviewUpdateTax$inboundSchema)),
+    invoice_credits: types.optional(
+      z.lazy(() => PreviewUpdateInvoiceCredits$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "customer_id": "customerId",
       "line_items": "lineItems",
       "next_cycle": "nextCycle",
+      "invoice_credits": "invoiceCredits",
     });
   }),
 );
