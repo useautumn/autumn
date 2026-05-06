@@ -31,12 +31,14 @@ export type OneOffCleanupResult = {
  * 3. All its entitlements are either:
  *    - Boolean features, OR
  *    - Single-use consumables with balance=0 and usage_allowed=false
- * 4. A newer active customer product exists for the same product
+ * 4. A newer active customer product exists for the same product, or ended_at has passed
  */
 export const getOneOffCustomerProductsToCleanup = async ({
 	ctx,
+	nowMs = Date.now(),
 }: {
 	ctx: CronContext;
+	nowMs?: number;
 }): Promise<OneOffCleanupResult[]> => {
 	const result = await ctx.db.execute<{
 		customer_product: CustomerProduct;
@@ -148,6 +150,14 @@ export const getOneOffCustomerProductsToCleanup = async ({
 				  	  )
 				  )
 			)
+		),
+
+		-- CTE 7: One-off customer products with explicit access expiry
+		ended_one_off_cus_products AS (
+			SELECT id
+			FROM one_off_cus_products
+			WHERE ended_at IS NOT NULL
+			  AND ended_at <= ${nowMs}
 		)
 		
 		-- Final query: Get full data for customer products meeting all criteria
@@ -164,7 +174,11 @@ export const getOneOffCustomerProductsToCleanup = async ({
 		INNER JOIN customers c ON c.internal_id = cp.internal_customer_id
 		INNER JOIN products prod ON prod.internal_id = cp.internal_product_id
 		INNER JOIN organizations o ON o.id = c.org_id
-		WHERE cp.id IN (SELECT id FROM cus_products_with_newer_active_product)
+		WHERE cp.id IN (
+			SELECT id FROM cus_products_with_newer_active_product
+			UNION
+			SELECT id FROM ended_one_off_cus_products
+		)
 	`);
 
 	return result as OneOffCleanupResult[];
