@@ -61,7 +61,7 @@ export const computeAttachPlan = ({
 	const shouldBuildLineItems = shouldBuildImmediateLineItems({
 		planTiming,
 		customerProductStatus: newCustomerProduct.status,
-		billingStartsAt: attachBillingContext.billingStartsAt,
+		accessStartsAt: attachBillingContext.accessStartsAt,
 	});
 
 	const { allLineItems: lineItems, updateCustomerEntitlements } =

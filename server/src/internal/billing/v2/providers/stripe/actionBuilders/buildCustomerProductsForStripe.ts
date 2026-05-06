@@ -17,14 +17,21 @@ export const buildCustomerProductsForStripe = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	finalCustomerProducts: FullCusProduct[];
 }): FullCusProduct[] => {
-	const { billingStartsAt } = billingContext;
-	if (billingStartsAt === undefined) return finalCustomerProducts;
+	if (billingContext.accessStartsAt === undefined) return finalCustomerProducts;
 
 	const insertedCustomerProductIds = new Set(
 		autumnBillingPlan.insertCustomerProducts.map(
 			(customerProduct) => customerProduct.id,
 		),
 	);
+	const billingStartMs = autumnBillingPlan.insertCustomerProducts.find(
+		(customerProduct) =>
+			customerProduct.access_starts_at !== undefined &&
+			customerProduct.access_starts_at !== null,
+	)?.starts_at;
+
+	if (billingStartMs === undefined) return finalCustomerProducts;
+
 	const outgoingCustomerProduct =
 		autumnBillingPlan.updateCustomerProduct?.customerProduct;
 
@@ -33,7 +40,7 @@ export const buildCustomerProductsForStripe = ({
 			return {
 				...customerProduct,
 				status: CusProductStatus.Scheduled,
-				starts_at: billingStartsAt,
+				starts_at: billingStartMs,
 			};
 		}
 
@@ -41,7 +48,7 @@ export const buildCustomerProductsForStripe = ({
 			return {
 				...outgoingCustomerProduct,
 				status: CusProductStatus.Active,
-				ended_at: billingStartsAt,
+				ended_at: billingStartMs,
 				canceled: true,
 				canceled_at: billingContext.currentEpochMs,
 			};

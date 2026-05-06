@@ -77,6 +77,7 @@ test.concurrent(`${chalk.yellowBright("starts_at: future attach creates schedule
 		productId: pro.id,
 	});
 	expect(cusProduct.status).toBe(CusProductStatus.Scheduled);
+	expect(cusProduct.access_starts_at).toBeNull();
 	expect(cusProduct.subscription_ids ?? []).toEqual([]);
 	expect(cusProduct.scheduled_ids).toHaveLength(1);
 	expectResetAnchoredTo({

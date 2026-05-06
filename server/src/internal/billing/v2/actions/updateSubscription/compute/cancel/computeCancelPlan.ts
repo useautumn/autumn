@@ -18,6 +18,7 @@ const computeScheduledAddOnsToDelete = ({
 }: {
 	billingContext: UpdateSubscriptionBillingContext;
 }): FullCusProduct[] => {
+	// Immediate main-plan cancellation invalidates future add-on phases in the same scope.
 	const { cancelAction, customerProduct, fullCustomer } = billingContext;
 	if (cancelAction !== "cancel_immediately") return [];
 	if (!cp(customerProduct).main().recurring().valid) return [];
