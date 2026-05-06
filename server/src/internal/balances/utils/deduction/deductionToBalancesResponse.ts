@@ -1,10 +1,9 @@
 import {
 	type ApiBalanceV1,
-	type FullCustomer,
+	type ApiCustomerV5,
 	getRelevantFeatures,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
 /**
@@ -16,17 +15,15 @@ import type { FeatureDeduction } from "../types/featureDeduction.js";
  * the single balance is exposed via the legacy `balance` field by
  * deductionToTrackResponse).
  */
-export const deductionToBalancesResponse = async ({
+export const deductionToBalancesResponse = ({
 	ctx,
-	fullCus,
+	apiCustomer,
 	featureDeductions,
 }: {
 	ctx: AutumnContext;
-	fullCus: FullCustomer;
+	apiCustomer: ApiCustomerV5;
 	featureDeductions: FeatureDeduction[];
-}): Promise<Record<string, ApiBalanceV1 | null> | undefined> => {
-	const { apiCustomer } = await getApiCustomerBase({ ctx, fullCus });
-
+}): Record<string, ApiBalanceV1 | null> | undefined => {
 	const balances: Record<string, ApiBalanceV1 | null> = {};
 
 	for (const deduction of featureDeductions) {

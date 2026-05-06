@@ -38,8 +38,6 @@ test.concurrent(`${chalk.yellowBright("check-send-event-credit-system: returns b
 		send_event: true,
 	});
 
-	console.log("Check response:", JSON.stringify(checkRes, null, 2));
-
 	expect(checkRes.allowed).toBe(true);
 	// Backwards-compat single balance
 	expect(checkRes.balance).not.toBeNull();
