@@ -93,9 +93,7 @@ interface AttachFormContextValue {
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
 	}>;
-	handleCheckoutAttach: (params: {
-		enablePlanImmediately: boolean;
-	}) => Promise<{
+	handleCheckoutAttach: () => Promise<{
 		paymentUrl: string | null | undefined;
 	}>;
 }

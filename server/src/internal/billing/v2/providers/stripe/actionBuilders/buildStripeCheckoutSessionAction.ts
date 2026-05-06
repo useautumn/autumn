@@ -48,10 +48,15 @@ export const buildStripeCheckoutSessionAction = ({
 		...oneOffLineItems.filter((item) => item.quantity !== 0),
 	];
 
+	const deferredStartsAt = autumnBillingPlan.insertCustomerProducts.find(
+		({ starts_at }) => starts_at > billingContext.currentEpochMs,
+	)?.starts_at;
+
 	// 4. Trial handling (also used for deferred billing starts in Checkout)
 	const trialEnd = getCheckoutSubscriptionTrialEnd({
 		mode,
 		billingContext,
+		deferredStartsAt,
 	});
 
 	// 5. Build subscription_data (only for subscription mode)

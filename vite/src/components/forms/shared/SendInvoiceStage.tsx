@@ -42,13 +42,16 @@ export function PlanActivationSection({
 	const hasScheduledStartDate =
 		scheduledStartDate !== null && scheduledStartDate !== undefined;
 	const immediateTitle = hasScheduledStartDate
-		? "Enable plan at start date"
+		? "Enable Immediately"
 		: "Enable plan immediately";
 	const immediateDescription = hasScheduledStartDate
-		? `Plan activates on ${format(new Date(scheduledStartDate), "MMM d, yyyy")}, payment is collected separately.`
+		? "Plan activates now, payment is collected separately."
 		: "Plan activates now, payment is collected separately.";
+	const delayedTitle = hasScheduledStartDate
+		? "Enable at Start Date"
+		: "Enable plan after payment";
 	const delayedDescription = hasScheduledStartDate
-		? "Plan activates after the customer completes payment and the start date is reached."
+		? `Plan activates on ${format(new Date(scheduledStartDate), "MMM d, yyyy")}, payment is collected separately.`
 		: "Plan activates only after the customer completes payment.";
 
 	return (
@@ -79,9 +82,7 @@ export function PlanActivationSection({
 						icon={<HourglassIcon size={18} weight="duotone" />}
 					/>
 					<div className="flex-1">
-						<div className="text-body-highlight mb-1">
-							Enable plan after payment
-						</div>
+						<div className="text-body-highlight mb-1">{delayedTitle}</div>
 						<div className="text-body-secondary leading-tight">
 							{delayedDescription}
 						</div>

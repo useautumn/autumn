@@ -1,6 +1,13 @@
 import type { AttachBillingContext, AttachParamsV1 } from "@autumn/shared";
 import { CusProductStatus } from "@autumn/shared";
 
+export type AttachStartTiming = {
+	accessStartsAt?: number;
+	billingAnchorStartsAt?: number;
+	resetCycleAnchor: number | "now";
+	status?: CusProductStatus;
+};
+
 const resolveResetCycleAnchor = ({
 	billingStartsAt,
 	billingAnchorStartsAt,
@@ -33,12 +40,7 @@ export const getAttachStartTiming = ({
 }: {
 	attachBillingContext: AttachBillingContext;
 	params: AttachParamsV1;
-}): {
-	accessStartsAt?: number;
-	billingAnchorStartsAt?: number;
-	resetCycleAnchor: number | "now";
-	status?: CusProductStatus;
-} => {
+}): AttachStartTiming => {
 	const {
 		planTiming,
 		endOfCycleMs,

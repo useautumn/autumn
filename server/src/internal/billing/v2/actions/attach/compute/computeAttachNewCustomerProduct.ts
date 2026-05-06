@@ -57,7 +57,6 @@ export const computeAttachNewCustomerProduct = ({
 		transitionConfig,
 		externalId,
 		requestedBillingCycleAnchor,
-		billingStartsAt,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -73,11 +72,11 @@ export const computeAttachNewCustomerProduct = ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
-	const { accessStartsAt, billingAnchorStartsAt, resetCycleAnchor, status } =
-		getAttachStartTiming({
-			attachBillingContext,
-			params,
-		});
+	const attachStartTiming = getAttachStartTiming({
+		attachBillingContext,
+		params,
+	});
+	const { billingAnchorStartsAt, resetCycleAnchor, status } = attachStartTiming;
 	const isScheduled = planTiming === "end_of_cycle";
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
@@ -138,10 +137,8 @@ export const computeAttachNewCustomerProduct = ({
 
 	applyAttachStartDates({
 		newFullCustomerProduct,
-		billingStartsAt,
-		accessStartsAt,
-		billingAnchorStartsAt,
-		currentEpochMs,
+		attachBillingContext,
+		attachStartTiming,
 	});
 
 	return newFullCustomerProduct;
