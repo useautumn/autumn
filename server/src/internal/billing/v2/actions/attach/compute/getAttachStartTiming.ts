@@ -15,6 +15,18 @@ const resolveResetCycleAnchor = ({
 	return billingAnchorStartsAt ?? resetCycleAnchorMs;
 };
 
+const resolveCustomerProductStatus = ({
+	billingStartsAt,
+	isScheduled,
+}: {
+	billingStartsAt?: number;
+	isScheduled: boolean;
+}): CusProductStatus | undefined => {
+	if (billingStartsAt !== undefined) return CusProductStatus.Active;
+	if (isScheduled) return CusProductStatus.Scheduled;
+	return undefined;
+};
+
 export const getAttachStartTiming = ({
 	planTiming,
 	endOfCycleMs,
@@ -46,12 +58,10 @@ export const getAttachStartTiming = ({
 		billingAnchorStartsAt,
 		resetCycleAnchorMs,
 	});
-	const status =
-		billingStartsAt !== undefined
-			? CusProductStatus.Active
-			: isScheduled
-				? CusProductStatus.Scheduled
-				: undefined;
+	const status = resolveCustomerProductStatus({
+		billingStartsAt,
+		isScheduled,
+	});
 
 	return {
 		accessStartsAt,

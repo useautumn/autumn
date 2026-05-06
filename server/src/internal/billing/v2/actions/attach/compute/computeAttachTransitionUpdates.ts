@@ -40,8 +40,9 @@ export const computeAttachTransitionUpdates = ({
 		};
 	}
 
-	const transitionEndMs = isFutureStartDate(params.starts_at, currentEpochMs)
-		? params.starts_at!
+	const startsAt = params.starts_at;
+	const transitionEndMs = isFutureStartDate(startsAt, currentEpochMs)
+		? startsAt
 		: endOfCycleMs;
 
 	// Downgrade: mark as canceling when the scheduled replacement starts.
