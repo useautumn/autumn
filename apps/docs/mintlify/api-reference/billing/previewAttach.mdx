@@ -257,6 +257,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
 </DynamicParamField>
 
+<DynamicParamField body="starts_at" type="integer">
+  Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+</DynamicParamField>
+
 <DynamicParamField body="checkout_session_params" type="object">
   Additional parameters to pass into the creation of the Stripe checkout session.
 </DynamicParamField>
@@ -337,11 +341,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
     </DynamicResponseField>
 
     <DynamicResponseField name="subtotal" type="number">
-      The amount in cents before discounts for this line item.
+      The amount in cents before discounts and tax for this line item.
     </DynamicResponseField>
 
     <DynamicResponseField name="total" type="number">
-      The final amount in cents after discounts for this line item.
+      The final amount in cents after discounts and tax for this line item.
     </DynamicResponseField>
 
     <DynamicResponseField name="discounts" type="object[]">
@@ -388,11 +392,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicResponseField>
 
 <DynamicResponseField name="subtotal" type="number">
-  The total amount in cents before discounts for the current billing period.
+  The total amount in cents before discounts and tax for the current billing period.
 </DynamicResponseField>
 
 <DynamicResponseField name="total" type="number">
-  The final amount in cents after discounts for the current billing period.
+  The final amount in cents after discounts and tax for the current billing period.
 </DynamicResponseField>
 
 <DynamicResponseField name="currency" type="string">
@@ -407,11 +411,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
     </DynamicResponseField>
 
     <DynamicResponseField name="subtotal" type="number">
-      The total amount in cents before discounts for the next cycle.
+      The total amount in cents before discounts and tax for the next cycle.
     </DynamicResponseField>
 
     <DynamicResponseField name="total" type="number">
-      The final amount in cents after discounts for the next cycle.
+      The final amount in cents after discounts and tax for the next cycle.
     </DynamicResponseField>
 
     <DynamicResponseField name="line_items" type="object[]">
@@ -426,11 +430,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
         </DynamicResponseField>
 
         <DynamicResponseField name="subtotal" type="number">
-          The amount in cents before discounts for this line item.
+          The amount in cents before discounts and tax for this line item.
         </DynamicResponseField>
 
         <DynamicResponseField name="total" type="number">
-          The final amount in cents after discounts for this line item.
+          The final amount in cents after discounts and tax for this line item.
         </DynamicResponseField>
 
         <DynamicResponseField name="discounts" type="object[]">
@@ -1194,6 +1198,20 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
     <DynamicResponseField name="status" type="'complete' | 'incomplete'">
       Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="invoice_credits" type="object">
+  Stripe customer invoice credits preview.
+  <Expandable title="properties">
+    <DynamicResponseField name="balance" type="number">
+      Stripe customer credit balance available, expressed as a positive number in major currency units.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="currency" type="string">
+      Three-letter currency code.
     </DynamicResponseField>
 
   </Expandable>

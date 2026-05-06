@@ -196,7 +196,8 @@
 							"api-reference/billing/openCustomerPortal",
 							"api-reference/billing/setupPayment",
 							"api-reference/billing/previewMultiAttach",
-							"api-reference/billing/multiAttach"
+							"api-reference/billing/multiAttach",
+							"api-reference/billing/createSchedule"
 						]
 					},
 					{
@@ -214,6 +215,7 @@
 						"group": "Customers",
 						"pages": [
 							"api-reference/customers/getOrCreateCustomer",
+							"api-reference/customers/getCustomer",
 							"api-reference/customers/listCustomers",
 							"api-reference/customers/updateCustomer",
 							"api-reference/customers/deleteCustomer"

@@ -7,10 +7,25 @@ import { findCustomerEntitlement } from "@tests/balances/utils/findCustomerEntit
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { eq } from "drizzle-orm";
 import type { Redis } from "ioredis";
-import { redis } from "@/external/redis/initRedis.js";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
+import { redis, waitForRedisReady } from "@/external/redis/initRedis.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
+
+const getRoutedRedisForCustomer = async ({
+	ctx,
+	customerId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+}): Promise<Redis> => {
+	const { ctx: routedCtx } = getCtxWithCustomerRedis({ ctx, customerId });
+	await waitForRedisReady(routedCtx.redisV2, "customer-redis", 5000).catch(
+		() => undefined,
+	);
+	return routedCtx.redisV2;
+};
 
 /**
  * Update next_reset_at for a specific cusEnt in the Redis FullCustomer cache.
@@ -70,6 +85,7 @@ export const setCachedCusEntField = async ({
 
 /** Patch next_reset_at on a SubjectBalance in the V2 shared balance hash. */
 export const setCachedSubjectBalanceField = async ({
+	ctx,
 	orgId,
 	env,
 	customerId,
@@ -79,6 +95,7 @@ export const setCachedSubjectBalanceField = async ({
 	value,
 	redisV2,
 }: {
+	ctx?: TestContext;
 	orgId: string;
 	env: string;
 	customerId: string;
@@ -86,8 +103,15 @@ export const setCachedSubjectBalanceField = async ({
 	customerEntitlementId: string;
 	field: string;
 	value: number | string | null;
-	redisV2: Redis;
+	redisV2?: Redis;
 }): Promise<void> => {
+	const targetRedisV2 =
+		redisV2 ??
+		(ctx ? await getRoutedRedisForCustomer({ ctx, customerId }) : null);
+	if (!targetRedisV2) {
+		throw new Error("setCachedSubjectBalanceField requires redisV2 or ctx");
+	}
+
 	const balanceKey = buildSharedFullSubjectBalanceKey({
 		orgId,
 		env,
@@ -95,12 +119,12 @@ export const setCachedSubjectBalanceField = async ({
 		featureId,
 	});
 
-	const raw = await redisV2.hget(balanceKey, customerEntitlementId);
+	const raw = await targetRedisV2.hget(balanceKey, customerEntitlementId);
 	if (!raw) return;
 
 	const subjectBalance = JSON.parse(raw);
 	subjectBalance[field] = value;
-	await redisV2.hset(
+	await targetRedisV2.hset(
 		balanceKey,
 		customerEntitlementId,
 		JSON.stringify(subjectBalance),
@@ -136,6 +160,7 @@ export const expireCusEntForReset = async ({
 	}
 
 	const pastTime = pastTimeMs ?? Date.now() - 1000;
+	const routedRedisV2 = await getRoutedRedisForCustomer({ ctx, customerId });
 
 	// Update Postgres
 	await ctx.db
@@ -162,7 +187,7 @@ export const expireCusEntForReset = async ({
 		customerEntitlementId: cusEnt.id,
 		field: "next_reset_at",
 		value: pastTime,
-		redisV2: ctx.redisV2,
+		redisV2: routedRedisV2,
 	});
 
 	return cusEnt;
@@ -200,6 +225,7 @@ export const expireAllCusEntsForReset = async ({
 	}
 
 	const pastTime = pastTimeMs ?? Date.now() - 1000;
+	const routedRedisV2 = await getRoutedRedisForCustomer({ ctx, customerId });
 
 	for (const cusEnt of cusEnts) {
 		await ctx.db
@@ -224,7 +250,7 @@ export const expireAllCusEntsForReset = async ({
 			customerEntitlementId: cusEnt.id,
 			field: "next_reset_at",
 			value: pastTime,
-			redisV2: ctx.redisV2,
+			redisV2: routedRedisV2,
 		});
 	}
 
