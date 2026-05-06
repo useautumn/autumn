@@ -78,9 +78,13 @@ export const computeAttachNewCustomerProduct = ({
 
 	const isScheduled = planTiming === "end_of_cycle";
 	const startsAt = params.starts_at ?? (isScheduled ? endOfCycleMs : undefined);
+	const hasAutoChargePaymentMethod =
+		paymentMethod !== undefined && paymentMethod.type !== "custom";
 	const shouldSendInvoiceForFutureStart =
-		isFutureStartDate(startsAt, currentEpochMs) &&
-		(!paymentMethod || paymentMethod.type === "custom");
+		isFutureStartDate(startsAt, currentEpochMs) && !hasAutoChargePaymentMethod;
+	const collectionMethod = shouldSendInvoiceForFutureStart
+		? CollectionMethod.SendInvoice
+		: undefined;
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
 		!isScheduled && currentCustomerProduct
@@ -131,9 +135,7 @@ export const computeAttachNewCustomerProduct = ({
 			startsAt,
 			endedAt: params.ends_at,
 			accessStartsAt,
-			collectionMethod: shouldSendInvoiceForFutureStart
-				? CollectionMethod.SendInvoice
-				: undefined,
+			collectionMethod,
 			externalId,
 			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor,
