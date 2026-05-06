@@ -58,6 +58,8 @@ test.concurrent(`${chalk.yellowBright("starts_at: future attach creates schedule
 		starts_at: startDate,
 	});
 	expect(preview.total).toBe(0);
+	expect(preview.next_cycle?.starts_at).toBe(startDate);
+	expect(preview.next_cycle?.total).toBe(20);
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,
@@ -121,7 +123,7 @@ test.concurrent(`${chalk.yellowBright("starts_at: future attach without payment 
 		plan_id: pro.id,
 		starts_at: startDate,
 	});
-	expect(result.payment_url).toBeUndefined();
+	expect(result.payment_url).toBeNull();
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	await expectProductScheduled({

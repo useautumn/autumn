@@ -18,9 +18,13 @@ import {
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
 import {
 	buildAttachPreviewTotals,
+	getAttachPreviewLineItems,
 	getAttachScheduledStartDate,
 } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
-import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
+import {
+	GenerateCheckoutStageWithPreview,
+	SchedulePlanStageWithPreview,
+} from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import {
@@ -148,6 +152,10 @@ function ReviewPreviewBlock() {
 		previewData,
 		startDate: formValues.startDate,
 	});
+	const previewLineItems = getAttachPreviewLineItems({
+		previewData,
+		startDate: formValues.startDate,
+	});
 	const lineItemTotals = showTaxRow
 		? previewTotals.filter((total) => total.variant !== "primary")
 		: previewTotals;
@@ -180,7 +188,7 @@ function ReviewPreviewBlock() {
 						<>
 							<LineItemsPreview
 								title="Pricing Preview"
-								lineItems={previewData?.line_items}
+								lineItems={previewLineItems}
 								currency={previewData?.currency}
 								totals={lineItemTotals}
 								filterZeroAmounts
@@ -439,6 +447,24 @@ function CheckoutSessionContent() {
 	);
 }
 
+function SchedulePlanContent() {
+	const { product, formValues, previewQuery, isPending, handleConfirm } =
+		useAttachFormContext();
+	const { setSheet } = useSheetStore();
+	const itemId = useSheetStore((s) => s.itemId);
+
+	return (
+		<SchedulePlanStageWithPreview
+			productName={product?.name}
+			startDate={formValues.startDate}
+			previewQuery={previewQuery}
+			isPending={isPending}
+			onSubmit={handleConfirm}
+			onBack={() => setSheet({ type: "attach-review", itemId })}
+		/>
+	);
+}
+
 function SheetContent() {
 	const sheetType = useSheetStore((s) => s.type);
 	const {
@@ -453,9 +479,11 @@ function SheetContent() {
 			? SendInvoiceContent
 			: sheetType === "attach-checkout-session"
 				? CheckoutSessionContent
-				: sheetType === "attach-review"
-					? ReviewContent
-					: SelectContent;
+				: sheetType === "attach-schedule-plan"
+					? SchedulePlanContent
+					: sheetType === "attach-review"
+						? ReviewContent
+						: SelectContent;
 
 	return (
 		<LayoutGroup>

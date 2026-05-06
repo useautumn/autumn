@@ -1,4 +1,4 @@
-import type { AppEnv } from "@autumn/shared";
+import type { AppEnv, AttachPreviewResponse } from "@autumn/shared";
 import {
 	ArrowLeft,
 	CheckCircleIcon,
@@ -12,6 +12,7 @@ import { Button } from "@/components/v2/buttons/Button";
 import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { Input } from "@/components/v2/inputs/Input";
+import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import {
@@ -357,15 +358,7 @@ export function SendInvoiceStageWithPreview({
 }: {
 	productName?: string;
 	previewQuery: {
-		data?:
-			| {
-					total: number;
-					next_cycle?: { total: number; starts_at?: number };
-					line_items: BillingLineItem[];
-					currency?: string;
-			  }
-			| null
-			| undefined;
+		data?: AttachPreviewResponse | null | undefined;
 	};
 	isPending: boolean;
 	onSubmit: (params: SendInvoiceSubmitParams) => Promise<{
@@ -381,33 +374,10 @@ export function SendInvoiceStageWithPreview({
 	const effectiveScheduledStartDate =
 		scheduledStartDate ?? previewData?.next_cycle?.starts_at ?? null;
 
-	const totals = useMemo(() => {
-		const result: {
-			label: string;
-			amount: number;
-			variant: "primary" | "secondary";
-			badge?: string;
-		}[] = [];
-		if (!previewData) return result;
-
-		result.push({
-			label: "Total Due Now",
-			amount: Math.max(previewData.total, 0),
-			variant: "primary",
-		});
-
-		if (previewData.next_cycle) {
-			result.push({
-				label: "Next Cycle",
-				amount: previewData.next_cycle.total,
-				variant: "secondary",
-				badge: previewData.next_cycle.starts_at
-					? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
-					: undefined,
-			});
-		}
-		return result;
-	}, [previewData]);
+	const totals = useMemo(
+		() => buildAttachPreviewTotals({ previewData, startDate: null }),
+		[previewData],
+	);
 
 	const getInvoiceUrl = useCallback(
 		(invoiceStripeId: string) =>

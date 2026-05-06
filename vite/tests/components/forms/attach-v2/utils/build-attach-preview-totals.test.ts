@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { AttachPreviewResponse } from "@autumn/shared";
-import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import {
+	buildAttachPreviewTotals,
+	getAttachPreviewLineItems,
+} from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 
 const NOW = new Date("2026-04-30T10:00:00Z").getTime();
 const ONE_DAY = 24 * 60 * 60 * 1000;
@@ -140,5 +143,29 @@ describe("buildAttachPreviewTotals", () => {
 				now: NOW,
 			})[0]?.amount,
 		).toBe(0);
+	});
+});
+
+describe("getAttachPreviewLineItems", () => {
+	test("future startDate uses next_cycle line items", () => {
+		const startDate = NOW + 14 * ONE_DAY;
+		const result = getAttachPreviewLineItems({
+			previewData: basePreview({
+				line_items: [
+					{ description: "Due now", total: 0 },
+				] as AttachPreviewResponse["line_items"],
+				next_cycle: {
+					total: 20,
+					starts_at: startDate,
+					line_items: [
+						{ description: "Scheduled charge", total: 20 },
+					],
+				} as AttachPreviewResponse["next_cycle"],
+			}),
+			startDate,
+			now: NOW,
+		});
+
+		expect(result?.[0]?.description).toBe("Scheduled charge");
 	});
 });
