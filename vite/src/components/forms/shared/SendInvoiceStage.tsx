@@ -28,6 +28,32 @@ export interface SendInvoiceSubmitParams {
 	finalizeInvoice: boolean;
 }
 
+const IMMEDIATE_ACTIVATION_DESCRIPTION =
+	"Plan activates now, payment is collected separately.";
+
+const DEFAULT_ACTIVATION_COPY = {
+	immediate: {
+		title: "Enable plan immediately",
+		description: IMMEDIATE_ACTIVATION_DESCRIPTION,
+	},
+	delayed: {
+		title: "Enable plan after payment",
+		description: "Plan activates only after the customer completes payment.",
+	},
+} as const;
+
+const getScheduledActivationCopy = (scheduledStartDate: number) =>
+	({
+		immediate: {
+			title: "Enable Immediately",
+			description: IMMEDIATE_ACTIVATION_DESCRIPTION,
+		},
+		delayed: {
+			title: "Enable at Start Date",
+			description: `Plan activates on ${format(new Date(scheduledStartDate), "MMM d, yyyy")}, payment is collected separately.`,
+		},
+	}) as const;
+
 export function PlanActivationSection({
 	enableImmediately,
 	setEnableImmediately,
@@ -39,20 +65,10 @@ export function PlanActivationSection({
 	disabled?: boolean;
 	scheduledStartDate?: number | null;
 }) {
-	const hasScheduledStartDate =
-		scheduledStartDate !== null && scheduledStartDate !== undefined;
-	const immediateTitle = hasScheduledStartDate
-		? "Enable Immediately"
-		: "Enable plan immediately";
-	const immediateDescription = hasScheduledStartDate
-		? "Plan activates now, payment is collected separately."
-		: "Plan activates now, payment is collected separately.";
-	const delayedTitle = hasScheduledStartDate
-		? "Enable at Start Date"
-		: "Enable plan after payment";
-	const delayedDescription = hasScheduledStartDate
-		? `Plan activates on ${format(new Date(scheduledStartDate), "MMM d, yyyy")}, payment is collected separately.`
-		: "Plan activates only after the customer completes payment.";
+	const activationCopy =
+		scheduledStartDate != null
+			? getScheduledActivationCopy(scheduledStartDate)
+			: DEFAULT_ACTIVATION_COPY;
 
 	return (
 		<SheetSection
@@ -68,9 +84,11 @@ export function PlanActivationSection({
 						icon={<LightningIcon size={18} weight="duotone" />}
 					/>
 					<div className="flex-1">
-						<div className="text-body-highlight mb-1">{immediateTitle}</div>
+						<div className="text-body-highlight mb-1">
+							{activationCopy.immediate.title}
+						</div>
 						<div className="text-body-secondary leading-tight">
-							{immediateDescription}
+							{activationCopy.immediate.description}
 						</div>
 					</div>
 				</div>
@@ -82,9 +100,11 @@ export function PlanActivationSection({
 						icon={<HourglassIcon size={18} weight="duotone" />}
 					/>
 					<div className="flex-1">
-						<div className="text-body-highlight mb-1">{delayedTitle}</div>
+						<div className="text-body-highlight mb-1">
+							{activationCopy.delayed.title}
+						</div>
 						<div className="text-body-secondary leading-tight">
-							{delayedDescription}
+							{activationCopy.delayed.description}
 						</div>
 					</div>
 				</div>

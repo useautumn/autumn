@@ -15,19 +15,19 @@ export const setupResetCycleAnchor = ({
 	billingCycleAnchorMs,
 	customerProduct,
 	newFullProduct,
-	startsAt,
+	billingStartsAt,
 }: {
 	billingCycleAnchorMs: number | "now";
 	customerProduct?: FullCusProduct;
 	newFullProduct: FullProduct;
-	startsAt?: number;
+	billingStartsAt?: number;
 }): number | "now" => {
-	const hasFutureBillingStart = startsAt !== undefined;
+	const hasFutureBillingStart = billingStartsAt !== undefined;
 	const shouldAnchorToBillingStart =
 		hasFutureBillingStart && !customerProduct;
 
 	if (shouldAnchorToBillingStart) {
-		return startsAt;
+		return billingStartsAt;
 	}
 
 	if (!customerProduct) {
