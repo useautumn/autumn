@@ -4,6 +4,66 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 6th 2026">
+  ## Scheduled subscription starts with `starts_at`
+
+  You can now schedule a plan to start at a future date. Pass a `starts_at` Unix timestamp (milliseconds) to [`billing.attach`](/api-reference/billing/attach) and Autumn creates a scheduled subscription that activates at the chosen time. Useful for sales-led signups, contract start dates, and post-trial activations.
+
+  ## `customers.get` endpoint
+
+  Fetch a customer by ID with the new [`customers.get`](/api-reference/customers/getCustomer) endpoint. Supports the same `expand` options as `getOrCreate` — including `invoices`, `subscriptions.plan`, `balances.feature`, `flags.feature`, and `billing_controls.auto_topups.purchase_limit` — without the side effect of creating a new customer if one doesn't exist.
+
+  ## `billing.create_schedule` endpoint
+
+  The new [`billing.create_schedule`](/api-reference/billing/createSchedule) endpoint lets you build multi-phase subscription schedules in a single API call. Each phase has its own start time, plan(s), feature quantities, and customizations. Supports invoice mode, prorated transitions, and custom billing cycle anchors.
+
+  ## `billing.auto_topup_succeeded` webhook
+
+  A new [`billing.auto_topup_succeeded`](/api-reference/webhooks/billingAutoTopupSucceeded) webhook fires whenever an auto top-up grants additional balance to a customer. The payload includes the feature, quantity granted, threshold that triggered the top-up, the customer's new balance, and the resulting Stripe invoice — making it easy to log, notify, or reconcile top-up events. See the [auto top-ups guide](/documentation/modelling-pricing/auto-top-ups) for setup.
+
+  ## Stripe automatic tax in checkout and previews
+
+  Autumn now supports Stripe automatic tax across checkout sessions, proration invoices, one-off invoices, and subscription updates. When tax is enabled on your organization, [`billing.preview_attach`](/api-reference/billing/previewAttach) and [`billing.preview_update`](/api-reference/billing/previewUpdate) responses include a `tax` object showing inclusive and exclusive tax amounts so customers see accurate totals before paying.
+
+  ## Stripe customer credits in previews
+
+  Preview responses now include an `invoice_credits` object showing any Stripe customer credit balance that will be applied to the immediate charge. Available on both [`billing.preview_attach`](/api-reference/billing/previewAttach) and [`billing.preview_update`](/api-reference/billing/previewUpdate).
+
+  ## Discounts on subscription updates and Autumn Checkout
+
+  Promo codes can now be applied during subscription updates from the dashboard, alongside the existing attach flow. Autumn Checkout also gained a promo code field so customers can redeem coupons themselves at confirmation.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - `starts_at` parameter on `billing.attach` for scheduling future plan starts
+      - New `customers.get` endpoint for fetching customers without auto-creation
+      - New `billing.create_schedule` endpoint for multi-phase subscription schedules
+      - New `billing.auto_topup_succeeded` webhook with invoice and balance details
+      - Stripe automatic tax in checkout sessions, invoices, and proration flows
+      - `tax` object returned in `billing.preview_attach` and `billing.preview_update` responses
+      - `invoice_credits` returned in preview responses to surface Stripe customer credits
+      - Discount/promo code support on subscription updates and Autumn Checkout
+      - `enable_plan_immediately` option on checkout sessions to activate plans before payment confirms
+      - `balances` object returned by `balances.track` showing all features affected by an event
+      - Auto top-up purchase limit count and next reset surfaced in the dashboard
+      - Auto-sync paid feature mapping when Stripe sends `subscription.created` with a price match
+      - SDKs released at `6.5.26` covering schedules, `customers.get`, and credit notes
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Fixed prepaid prices defaulting to 0 in the Vercel Marketplace integration
+      - Fixed auto top-ups in the Vercel Marketplace integration
+      - Fixed Stripe subscription filtering to only consider active subscriptions during sync
+      - Fixed tax preview calculation to return non-net amounts
+      - Fixed orphaned customer products being left behind in certain failure paths
+      - Fixed schedule sync inconsistencies and webhook telemetry gaps
+      - Fixed a bug when importing trialing subscriptions
+      - Fixed balances validation edge cases
+      - Fixed entity rollover reset handling
+      - Fixed member toolbar dropdown visibility inside dialogs
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
