@@ -193,7 +193,7 @@ export const setupAttachBillingContext = async ({
 			currentEpochMs,
 		});
 
-	const attachStartsAt =
+	const billingStartsAt =
 		params.starts_at ?? (planTiming === "end_of_cycle" ? endOfCycleMs : undefined);
 	const hasFutureStartDate = isFutureStartDate(
 		params.starts_at,
@@ -208,7 +208,7 @@ export const setupAttachBillingContext = async ({
 		billingCycleAnchorMs,
 		customerProduct: undefined, // don't pass in current customer product here (paid products should have the reset cycle anchor correctly...)
 		newFullProduct: attachProduct,
-		startsAt: attachStartsAt,
+		billingStartsAt,
 	});
 
 	const checkoutMode = setupAttachCheckoutMode({
