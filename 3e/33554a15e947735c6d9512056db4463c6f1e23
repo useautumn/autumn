@@ -1,0 +1,34 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "3e33554a15e947735c6d9512056db4463c6f1e23",
+  "prompts": {
+    "baf9e99320bb4884": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_22afef00bffeteDiFPqWAjwx3H",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 24,
+      "total_deletions": 0,
+      "accepted_lines": 14,
+      "overriden_lines": 12
+    },
+    "ebaef5a7b131dc4b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_22b5551e3ffeRhDheLWriEYeoC",
+        "model": "anthropic/claude-opus-4-7"
+      },
+      "human_author": "amianthus",
+      "messages": [],
+      "total_additions": 561,
+      "total_deletions": 78,
+      "accepted_lines": 473,
+      "overriden_lines": 13
+    }
+  }
+}
