@@ -423,15 +423,10 @@ function SendInvoiceContent() {
 }
 
 function CheckoutSessionContent() {
-	const { form, product, previewQuery, isPending, handleCheckoutAttach } =
+	const { product, previewQuery, isPending, handleCheckoutAttach } =
 		useAttachFormContext();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
-	const startDate = useStore(form.store, (state) => state.values.startDate);
-	const scheduledStartDate = getAttachScheduledStartDate({
-		startDate,
-		previewData: previewQuery.data,
-	});
 
 	return (
 		<GenerateCheckoutStageWithPreview
@@ -440,7 +435,6 @@ function CheckoutSessionContent() {
 			isPending={isPending}
 			onSubmit={handleCheckoutAttach}
 			onBack={() => setSheet({ type: "attach-review", itemId })}
-			scheduledStartDate={scheduledStartDate}
 		/>
 	);
 }

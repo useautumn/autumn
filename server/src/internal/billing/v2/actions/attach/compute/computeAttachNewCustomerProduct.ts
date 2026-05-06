@@ -1,8 +1,10 @@
 import type { AttachBillingContext, AttachParamsV1 } from "@autumn/shared";
 import {
+	CollectionMethod,
 	deduplicateArray,
 	type ExistingUsagesConfig,
 	type FullCusProduct,
+	isFutureStartDate,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
@@ -58,6 +60,7 @@ export const computeAttachNewCustomerProduct = ({
 		requestedBillingCycleAnchor,
 		resetCycleAnchorMs,
 		accessStartsAt,
+		paymentMethod,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -75,6 +78,9 @@ export const computeAttachNewCustomerProduct = ({
 
 	const isScheduled = planTiming === "end_of_cycle";
 	const startsAt = params.starts_at ?? (isScheduled ? endOfCycleMs : undefined);
+	const shouldSendInvoiceForFutureStart =
+		isFutureStartDate(startsAt, currentEpochMs) &&
+		(!paymentMethod || paymentMethod.type === "custom");
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
 		!isScheduled && currentCustomerProduct
@@ -123,7 +129,11 @@ export const computeAttachNewCustomerProduct = ({
 			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 			startsAt,
+			endedAt: params.ends_at,
 			accessStartsAt,
+			collectionMethod: shouldSendInvoiceForFutureStart
+				? CollectionMethod.SendInvoice
+				: undefined,
 			externalId,
 			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor,
