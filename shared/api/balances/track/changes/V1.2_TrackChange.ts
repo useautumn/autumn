@@ -55,10 +55,12 @@ export const V1_2_TrackChange = defineVersionChange({
 		if (input.balance?.feature_id) {
 			feature_id = input.balance.feature_id;
 		} else if (input.balances) {
-			// Get first feature_id from balances record
-			const balanceKeys = Object.keys(input.balances);
-			if (balanceKeys.length > 0) {
-				feature_id = input.balances[balanceKeys[0]]?.feature_id;
+			// Pick first non-null entry's feature_id
+			for (const balance of Object.values(input.balances)) {
+				if (balance?.feature_id) {
+					feature_id = balance.feature_id;
+					break;
+				}
 			}
 		}
 

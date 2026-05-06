@@ -12,10 +12,11 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
+import { deductionToBalancesResponseV2 } from "./deductionToBalancesResponseV2.js";
 
 type TrackBalanceResponse = {
 	balance: ApiBalanceV1 | null;
-	balances?: Record<string, ApiBalanceV1>;
+	balances?: Record<string, ApiBalanceV1 | null>;
 };
 
 const computeActualDeductions = ({
@@ -176,22 +177,19 @@ export const deductionToTrackResponseV2 = async ({
 		}
 	}
 
+	const balances = await deductionToBalancesResponseV2({
+		ctx,
+		fullSubject,
+		featureDeductions,
+	});
+
 	if (Object.keys(finalBalances).length === 0) {
-		return {
-			balance: null,
-			balances: undefined,
-		};
+		return { balance: null, balances };
 	}
 
 	if (Object.keys(finalBalances).length === 1) {
-		return {
-			balance: Object.values(finalBalances)[0],
-			balances: undefined,
-		};
+		return { balance: Object.values(finalBalances)[0], balances };
 	}
 
-	return {
-		balance: null,
-		balances: finalBalances,
-	};
+	return { balance: null, balances };
 };
