@@ -48,7 +48,7 @@
 				"cd \"/Users/johnyeocx/Autumn/autumn-cloud\" && exec infisical run --env=prod --recursive -- bun run \"/Users/johnyeocx/Autumn/autumn-cloud/ai/src/mcp/index.ts\""
 			],
 			"env": {
-				"AUTUMN_REPO_ROOT": "/Users/johnyeocx/Autumn"
+				"AUTUMN_CLOUD_ROOT": "/Users/johnyeocx/Autumn/autumn-cloud"
 			}
 		}
 	},
