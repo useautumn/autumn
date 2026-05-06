@@ -47,6 +47,7 @@ import {
 	type UpdateBalanceParamsV0,
 	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
+import type { PrepareResponse } from "@/internal/migrations/v2/prepare/types";
 import { defaultApiVersion } from "@tests/constants.js";
 import { timeout } from "@tests/utils/genUtils";
 
@@ -954,6 +955,13 @@ export class AutumnInt {
 		}): Promise<Migration> => {
 			const data = await this.post(`/migrations.update`, params);
 			return data as Migration;
+		},
+		prepare: async (params: {
+			id: string;
+			dry_run: boolean;
+		}): Promise<PrepareResponse> => {
+			const data = await this.post(`/migrations.prepare`, params);
+			return data as PrepareResponse;
 		},
 	};
 

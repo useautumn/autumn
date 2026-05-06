@@ -11,42 +11,40 @@
 
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
-import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 test.concurrent(
-	`${chalk.yellowBright("migrations-v2 add-items: create migration on pro customers adding a feature item")}`,
+	`${chalk.yellowBright("migrations-v2 add-items: create migration on free customers adding a feature item")}`,
 	async () => {
 		const customerId = "migrations-v2-add-items";
 
-		const proMessages = items.monthlyMessages({ includedUsage: 200 });
-		const pro = products.pro({ id: "pro", items: [proMessages] });
+		// Default free product so the seeded customer auto-attaches to it.
+		const free = products.base({ id: "free", items: [], isDefault: true });
 
 		const { autumnV2_2 } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
+				s.products({ list: [free] }),
 			],
-			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		const migrationId = `add-dashboard-to-pro-${Date.now()}`;
-
+		// migrationId reuses the suffixed customerId so it's unique per concurrent
+		// test run without needing a Date.now() hack.
 		const created = await autumnV2_2.migrationsV2.create({
-			id: migrationId,
+			id: customerId,
 			filter: {
 				customer: {
-					plan: { plan_id: "pro" },
+					plan: { plan_id: free.id },
 				},
 			},
 			operations: {
 				customer: {
 					update_plans: [
 						{
-							target: { plan_id: "pro" },
+							target: { plan_id: free.id },
 							add_items: [
 								{
 									feature_id: TestFeature.Dashboard,
@@ -58,16 +56,16 @@ test.concurrent(
 			},
 		});
 
-		expect(created.id).toBe(migrationId);
+		expect(created.id).toBe(customerId);
 		expect(created.internal_id).toBeTruthy();
-		expect(created.filter?.customer?.plan).toMatchObject({ plan_id: "pro" });
+		expect(created.filter?.customer?.plan).toMatchObject({ plan_id: free.id });
 		expect(created.operations?.customer?.update_plans?.[0]).toMatchObject({
-			target: { plan_id: "pro" },
+			target: { plan_id: free.id },
 			add_items: [{ feature_id: TestFeature.Dashboard }],
 		});
 
 		// Round-trip: list and confirm presence.
 		const { list } = await autumnV2_2.migrationsV2.list();
-		expect(list.some((m) => m.id === migrationId)).toBe(true);
+		expect(list.some((m) => m.id === customerId)).toBe(true);
 	},
 );

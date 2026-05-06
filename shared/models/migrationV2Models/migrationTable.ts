@@ -11,6 +11,14 @@ import type { Operations } from "../../api/migrations/operations/operations.js";
 import { organizations } from "../orgModels/orgTable.js";
 
 /**
+ * Loose typing here — the structured `PreparedState` definition lives
+ * server-side under `server/src/internal/migrations/v2/prepare/types.ts`
+ * (alongside the prep modules that produce it). Server callers narrow as
+ * needed via the Zod schema there.
+ */
+type LoosePreparedState = Record<string, unknown>;
+
+/**
  * User-authored, customer-state-mutating migrations. Distinct from the
  * legacy `migration_jobs` table (product-version migration system).
  *
@@ -29,6 +37,9 @@ export const migrations = pgTable(
 
 		filter: jsonb().$type<MigrationFilter>(),
 		operations: jsonb().$type<Operations>(),
+		// Snapshot of the last successful prepare-run output, keyed by
+		// module key. See shared/api/migrations/prepare/preparedStateTypes.ts.
+		prepared_state: jsonb().$type<LoosePreparedState>(),
 
 		created_at: numeric({ mode: "number" }).notNull(),
 		updated_at: numeric({ mode: "number" }),
