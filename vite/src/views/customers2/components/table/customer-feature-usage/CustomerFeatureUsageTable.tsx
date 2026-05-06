@@ -28,7 +28,7 @@ import {
 } from "./customerFeatureUsageUtils";
 
 export function CustomerFeatureUsageTable() {
-	const { customer, features, isLoading } = useCusQuery();
+	const { customer, features, isLoading, testClockFrozenTimeMs } = useCusQuery();
 	const { setSheet } = useSheetStore();
 
 	const { entityId } = useEntity();
@@ -96,8 +96,9 @@ export function CustomerFeatureUsageTable() {
 			filterCustomerFeatureUsage({
 				entitlements: cusEnts,
 				showExpired: false,
+				nowMs: testClockFrozenTimeMs,
 			}),
-		[cusEnts],
+		[cusEnts, testClockFrozenTimeMs],
 	);
 
 	const { entitlements: deduplicatedCusEnts, aggregatedMap } = useMemo(

@@ -124,6 +124,7 @@ export function AttachAdvancedSection() {
 		customLineItems,
 		trialEnabled,
 		startDate,
+		endDate,
 	} = formValues;
 	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | null;
@@ -168,6 +169,8 @@ export function AttachAdvancedSection() {
 		isPaidRecurringProduct &&
 		!trialEnabled &&
 		effectivePlanSchedule !== "end_of_cycle";
+	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
+	const endDateMin = Math.max(Date.now(), startDate ?? 0);
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
@@ -232,6 +235,33 @@ export function AttachAdvancedSection() {
 						setUnixDate={(value) => form.setFieldValue("startDate", value)}
 						disablePastDates
 						minUnixDate={Date.now()}
+						withTime
+					/>
+				</ConfigRow>
+			)}
+
+			{showEndDate && (
+				<ConfigRow
+					title="End Date"
+					description="End the plan on a future date"
+					expanded={endDate !== null}
+					action={
+						<Switch
+							checked={endDate !== null}
+							onCheckedChange={(checked) =>
+								form.setFieldValue(
+									"endDate",
+									checked ? addDays(endDateMin, 1).getTime() : null,
+								)
+							}
+						/>
+					}
+				>
+					<DateInputUnix
+						unixDate={endDate}
+						setUnixDate={(value) => form.setFieldValue("endDate", value)}
+						disablePastDates
+						minUnixDate={endDateMin}
 						withTime
 					/>
 				</ConfigRow>
