@@ -2,6 +2,8 @@ import {
 	AttachParamsV1Schema,
 	BILLING_PREVIEW_RESPONSE_EXAMPLE,
 	BillingResponseSchema,
+	CreateScheduleParamsV0Schema,
+	CreateScheduleResponseSchema,
 	ExtAttachPreviewResponseSchema,
 	ExtPreviewUpdateSubscriptionResponseSchema,
 	ExtUpdateSubscriptionV1ParamsSchema,
@@ -14,6 +16,7 @@ import {
 import { oc } from "@orpc/contract";
 import {
 	billingAttachJsDoc,
+	billingCreateScheduleJsDoc,
 	billingMultiAttachJsDoc,
 	billingPreviewAttachJsDoc,
 	billingPreviewMultiAttachJsDoc,
@@ -222,6 +225,66 @@ export const billingSetupPaymentContract = oc
 				{
 					customer_id: "cus_123",
 					url: "https://checkout.stripe.com/...",
+				},
+			],
+		}),
+	);
+
+export const billingCreateScheduleContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/billing.create_schedule",
+		operationId: "createSchedule",
+		tags: ["billing"],
+		description: billingCreateScheduleJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "createSchedule",
+		}),
+	})
+	.input(
+		CreateScheduleParamsV0Schema.meta({
+			title: "CreateScheduleParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					phases: [
+						{
+							starts_at: 1735689600000,
+							plans: [{ plan_id: "trial_plan" }],
+						},
+						{
+							starts_at: 1736899200000,
+							plans: [{ plan_id: "pro_plan" }],
+						},
+					],
+				},
+			],
+		}),
+	)
+	.output(
+		CreateScheduleResponseSchema.meta({
+			title: "CreateScheduleResponse",
+			examples: [
+				{
+					customer_id: "cus_123",
+					entity_id: null,
+					status: "created",
+					schedule_id: "sch_1234",
+					phases: [
+						{
+							phase_id: "sphs_1111",
+							starts_at: 1735689600000,
+							customer_product_ids: ["cus_prod_1111"],
+						},
+						{
+							phase_id: "sphs_2222",
+							starts_at: 1736899200000,
+							customer_product_ids: ["cus_prod_2222"],
+						},
+					],
+					invoice: null,
+					payment_url: null,
 				},
 			],
 		}),
