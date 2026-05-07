@@ -42,7 +42,11 @@ export const getRedemptionsByCustomer = async ({
 		with: {
 			reward_program: {
 				with: {
-					reward: true,
+					reward: {
+						with: {
+							entitlements: true,
+						},
+					},
 				},
 			},
 			referral_code: true,

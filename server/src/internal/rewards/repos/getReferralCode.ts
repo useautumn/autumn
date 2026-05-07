@@ -33,7 +33,11 @@ export const getReferralCode = async ({
 			? {
 					reward_program: {
 						with: {
-							reward: true,
+							reward: {
+								with: {
+									entitlements: true,
+								},
+							},
 						},
 					},
 				}

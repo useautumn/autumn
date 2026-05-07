@@ -1,24 +1,19 @@
 import { z } from "zod/v4";
 import {
-	CouponDurationType,
-	FeatureGrantDuration,
-	RewardType,
-} from "./rewardEnums";
+	EntitlementExpirySchema,
+	EntitlementSchema,
+} from "../../productModels/entModels/entModels";
+import { CouponDurationType, RewardType } from "./rewardEnums";
 
 const PromoCodeSchema = z.object({
 	code: z.string(),
 	max_redemptions: z.number().optional(),
 });
 
-const RewardEntitlementExpirySchema = z.object({
-	duration: z.nativeEnum(FeatureGrantDuration),
-	length: z.number(),
-});
-
 const RewardEntitlementSchema = z.object({
 	internal_feature_id: z.string(),
 	allowance: z.number(),
-	expiry: RewardEntitlementExpirySchema.optional(),
+	expiry: EntitlementExpirySchema.optional(),
 });
 
 export const DiscountConfigSchema = z.object({
@@ -45,7 +40,7 @@ const RewardSchema = z.object({
 	free_product_id: z.string().nullish(),
 	discount_config: DiscountConfigSchema.nullish(),
 	free_product_config: FreeProductConfigSchema.nullish(),
-	entitlements: z.array(RewardEntitlementSchema).nullish(),
+	entitlements: z.array(EntitlementSchema).nullish(),
 
 	internal_id: z.string(),
 	org_id: z.string(),
@@ -70,6 +65,3 @@ export type Reward = z.infer<typeof RewardSchema>;
 export type DiscountConfig = z.infer<typeof DiscountConfigSchema>;
 export type FreeProductConfig = z.infer<typeof FreeProductConfigSchema>;
 export type RewardEntitlement = z.infer<typeof RewardEntitlementSchema>;
-export type RewardEntitlementExpiry = z.infer<
-	typeof RewardEntitlementExpirySchema
->;
