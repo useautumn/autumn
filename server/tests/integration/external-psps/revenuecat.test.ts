@@ -14,9 +14,12 @@
 
 import { expect, test } from "bun:test";
 import {
+	type ApiCustomerV3,
+	type ApiCustomerV5,
 	AppEnv,
 	CusProductStatus,
 	customers,
+	invoices,
 	ProcessorType,
 } from "@autumn/shared";
 import { expectFeaturesCorrect } from "@tests/utils/expectUtils/expectFeaturesCorrect";
@@ -28,6 +31,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
+import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { encryptData } from "@/utils/encryptUtils";
@@ -391,3 +395,259 @@ test.concurrent(`${chalk.yellowBright("revenuecat 2: customer migration v1 to v2
 		],
 	});
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 3: RevenueCat invoice rows
+//
+// Contract under test:
+//   New behaviors:
+//     - INITIAL_PURCHASE event ⇒ INSERT invoices row with
+//         { stripe_id: transaction_id, processor_type: "revenuecat",
+//           status: "paid", total: price, amount_paid: price,
+//           refunded_amount: 0, currency, items: [], discounts: [] }
+//     - RENEWAL with new transaction_id ⇒ INSERT another row
+//     - NON_RENEWING_PURCHASE ⇒ INSERT same shape as INITIAL_PURCHASE
+//     - CANCELLATION + cancel_reason="CUSTOMER_SUPPORT" (or price<0) ⇒
+//         UPDATE matching row SET refunded_amount = total
+//     - CANCELLATION without refund signal ⇒ existing row unchanged
+//   Side effects:
+//     - DB: invoices rows
+//     - Cache: invalidated (deleteCachedFullCustomer + invalidateCachedFullSubject)
+//     - NO Stripe API calls; NO Lua patch
+//   Wire round-trip:
+//     - autumnV1.customers.get<ApiCustomerV3>(id).invoices contains the RC invoice
+//       with stripe_id == transaction_id, total == price, currency, status=paid.
+//     - autumnV2_1.customers.get<ApiCustomerV5>(id, { expand:["invoices"] }).invoices
+//       additionally exposes processor_type === "revenuecat".
+//     - Direct DB read (CusService.getFull with expand=invoices) confirms
+//       processor_type stored as "revenuecat".
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("revenuecat 3: writes invoice rows for INITIAL_PURCHASE / RENEWAL / NON_RENEWING_PURCHASE, refunds existing invoice for CANCELLATION-as-refund")}`,
+	async () => {
+		const customerId = "rc-invoices-1";
+		const nonRenewingCustomerId = "rc-invoices-nonrenewing-1";
+
+		const RC_PRO_MONTHLY_ID = "com.app.rc3_pro_monthly";
+		const RC_ADD_ON_ID = "com.app.rc3_add_on_pack";
+
+		const proMonthly = products.pro({
+			id: "rc3-pro-monthly",
+			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
+		const addOnPack = products.base({
+			id: "rc3-add-on",
+			items: [items.lifetimeMessages({ includedUsage: 100 })],
+			isAddOn: true,
+		});
+
+		await setupRevenueCatOrg();
+
+		const { autumnV1, autumnV2_1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [proMonthly, addOnPack] }),
+			],
+			actions: [],
+		});
+
+		// Initialize the second (non-renewing) customer in the same scenario context
+		await initScenario({
+			customerId: nonRenewingCustomerId,
+			setup: [s.customer({ testClock: false })],
+			actions: [],
+		});
+
+		await Promise.all([
+			RCMappingService.upsert({
+				db: ctx.db,
+				data: {
+					org_id: ctx.org.id,
+					env: AppEnv.Sandbox,
+					autumn_product_id: proMonthly.id,
+					revenuecat_product_ids: [RC_PRO_MONTHLY_ID],
+				},
+			}),
+			RCMappingService.upsert({
+				db: ctx.db,
+				data: {
+					org_id: ctx.org.id,
+					env: AppEnv.Sandbox,
+					autumn_product_id: addOnPack.id,
+					revenuecat_product_ids: [RC_ADD_ON_ID],
+				},
+			}),
+		]);
+
+		const rcClient = new RevenueCatWebhookClient({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			webhookSecret: RC_WEBHOOK_SECRET,
+		});
+
+		// ─── Assertion 1: INITIAL_PURCHASE writes an invoice row ────────────────
+		const initialTxId = "rc3_tx_initial_001";
+		const initialPrice = 9.99;
+		const initialCurrency = "usd";
+		const initialPurchasedAt = Date.now();
+
+		expectWebhookSuccess(
+			await rcClient.initialPurchase({
+				productId: RC_PRO_MONTHLY_ID,
+				appUserId: customerId,
+				originalTransactionId: "rc3_orig_tx_001",
+				transactionId: initialTxId,
+				price: initialPrice,
+				currency: initialCurrency,
+				purchasedAtMs: initialPurchasedAt,
+			}),
+		);
+
+		let v1Customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expect(v1Customer.invoices).toBeDefined();
+		expect(v1Customer.invoices).toHaveLength(1);
+
+		const initialInvoiceV1 = v1Customer.invoices![0]!;
+		expect(initialInvoiceV1.stripe_id).toBe(initialTxId);
+		expect(initialInvoiceV1.total).toBe(initialPrice);
+		expect(initialInvoiceV1.currency).toBe(initialCurrency);
+		expect(initialInvoiceV1.status).toBe("paid");
+
+		// V5 fetch exposes processor_type
+		const v5Customer =
+			await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expect(v5Customer.invoices).toBeDefined();
+		expect(v5Customer.invoices).toHaveLength(1);
+		const initialInvoiceV5 = v5Customer.invoices![0]!;
+		expect(initialInvoiceV5.processor_type).toBe(ProcessorType.RevenueCat);
+		expect(initialInvoiceV5.stripe_id).toBe(initialTxId);
+		expect(initialInvoiceV5.total).toBe(initialPrice);
+		expect(initialInvoiceV5.currency).toBe(initialCurrency);
+		expect(initialInvoiceV5.status).toBe("paid");
+
+		// ─── Assertion 2: RENEWAL with new transaction_id writes a second row ──
+		const renewalTxId = "rc3_tx_renewal_002";
+		const renewalPrice = 9.99;
+
+		expectWebhookSuccess(
+			await rcClient.renewal({
+				productId: RC_PRO_MONTHLY_ID,
+				appUserId: customerId,
+				originalTransactionId: "rc3_orig_tx_001",
+				transactionId: renewalTxId,
+				price: renewalPrice,
+				currency: initialCurrency,
+				purchasedAtMs: Date.now(),
+			}),
+		);
+
+		v1Customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expect(v1Customer.invoices).toHaveLength(2);
+		const renewalInvoice = v1Customer.invoices!.find(
+			(inv) => inv.stripe_id === renewalTxId,
+		);
+		expect(renewalInvoice).toBeDefined();
+		expect(renewalInvoice!.total).toBe(renewalPrice);
+		expect(renewalInvoice!.status).toBe("paid");
+
+		// ─── Assertion 3: NON_RENEWING_PURCHASE on a different customer ────────
+		const nonRenewingTxId = "rc3_tx_nonrenewing_001";
+		const nonRenewingPrice = 4.99;
+
+		expectWebhookSuccess(
+			await rcClient.nonRenewingPurchase({
+				productId: RC_ADD_ON_ID,
+				appUserId: nonRenewingCustomerId,
+				originalTransactionId: "rc3_orig_tx_nr_001",
+				transactionId: nonRenewingTxId,
+				price: nonRenewingPrice,
+				currency: initialCurrency,
+				purchasedAtMs: Date.now(),
+			}),
+		);
+
+		const nrV1Customer =
+			await autumnV1.customers.get<ApiCustomerV3>(nonRenewingCustomerId);
+		expect(nrV1Customer.invoices).toBeDefined();
+		expect(nrV1Customer.invoices).toHaveLength(1);
+		const nrInvoice = nrV1Customer.invoices![0]!;
+		expect(nrInvoice.stripe_id).toBe(nonRenewingTxId);
+		expect(nrInvoice.total).toBe(nonRenewingPrice);
+		expect(nrInvoice.status).toBe("paid");
+
+		// ─── Assertion 4: CANCELLATION without refund signal — invoice unchanged
+		expectWebhookSuccess(
+			await rcClient.cancellation({
+				productId: RC_PRO_MONTHLY_ID,
+				appUserId: customerId,
+				originalTransactionId: "rc3_orig_tx_001",
+				transactionId: renewalTxId,
+				cancelReason: "UNSUBSCRIBE",
+				price: renewalPrice,
+				expirationAtMs: Date.now() + 1000 * 60 * 60 * 24 * 30,
+			}),
+		);
+
+		const renewalRowAfterPlainCancel = await ctx.db.query.invoices.findFirst({
+			where: eq(invoices.stripe_id, renewalTxId),
+		});
+		expect(renewalRowAfterPlainCancel).toBeDefined();
+		expect(Number(renewalRowAfterPlainCancel!.refunded_amount)).toBe(0);
+
+		// Also reactivate the cus_product so a second cancellation refund can fire
+		// (the previous CANCELLATION marked it cancelled; uncancellation reactivates).
+		expectWebhookSuccess(
+			await rcClient.uncancellation({
+				productId: RC_PRO_MONTHLY_ID,
+				appUserId: customerId,
+				originalAppUserId: "rc3_orig_tx_001",
+			}),
+		);
+
+		// ─── Assertion 5: CANCELLATION with cancel_reason CUSTOMER_SUPPORT bumps refund
+		expectWebhookSuccess(
+			await rcClient.cancellation({
+				productId: RC_PRO_MONTHLY_ID,
+				appUserId: customerId,
+				originalTransactionId: "rc3_orig_tx_001",
+				transactionId: renewalTxId,
+				cancelReason: "CUSTOMER_SUPPORT",
+				price: -renewalPrice,
+				expirationAtMs: Date.now(),
+			}),
+		);
+
+		const renewalRowAfterRefund = await ctx.db.query.invoices.findFirst({
+			where: eq(invoices.stripe_id, renewalTxId),
+		});
+		expect(renewalRowAfterRefund).toBeDefined();
+		expect(Number(renewalRowAfterRefund!.refunded_amount)).toBe(renewalPrice);
+		expect(Number(renewalRowAfterRefund!.total)).toBe(renewalPrice);
+
+		// ─── Assertion 6: V1 fetch returns RC invoices with stripe_id populated ─
+		v1Customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const v1TxIds = v1Customer.invoices!.map((inv) => inv.stripe_id).sort();
+		expect(v1TxIds).toContain(initialTxId);
+		expect(v1TxIds).toContain(renewalTxId);
+
+		// ─── Assertion 7: Direct DB read confirms processor_type = "revenuecat"
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			expand: ["invoices" as any],
+		});
+		expect(fullCustomer.invoices).toBeDefined();
+		const invoiceTxIdsInDb = (fullCustomer.invoices ?? [])
+			.map((inv) => inv.stripe_id)
+			.sort();
+		expect(invoiceTxIdsInDb).toContain(initialTxId);
+		expect(invoiceTxIdsInDb).toContain(renewalTxId);
+		for (const inv of fullCustomer.invoices ?? []) {
+			if (inv.stripe_id === initialTxId || inv.stripe_id === renewalTxId) {
+				expect(inv.processor_type).toBe(ProcessorType.RevenueCat);
+			}
+		}
+	},
+);
