@@ -213,6 +213,9 @@ Use this after an action happens to decrement usage, or send a negative value to
 * [attach](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
 
 Use this endpoint to subscribe a customer to a plan, upgrade/downgrade between plans, or add an add-on product.
+* [create_schedule](docs/sdks/billing/README.md#create_schedule) - Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
+
+Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
 * [multi_attach](docs/sdks/billing/README.md#multi_attach) - Attaches multiple plans to a customer in a single request. Creates a single Stripe subscription with all plans consolidated.
 
 Use this endpoint when you need to subscribe a customer to multiple plans at once, such as a base plan plus add-ons, or to create a bundle of products.
@@ -236,6 +239,9 @@ Use this endpoint to show customers prorated charges or refunds before confirmin
 * [get_or_create](docs/sdks/customers/README.md#get_or_create) - Creates a customer if they do not exist, or returns the existing customer by your external customer ID.
 
 Use this as the primary entrypoint before billing operations so the customer record is always present and up to date.
+* [get](docs/sdks/customers/README.md#get) - Fetches a customer by ID, optionally expanding related data such as invoices or entities.
+
+Use this when you know the customer exists or assert they exist without creating them.
 * [list](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.

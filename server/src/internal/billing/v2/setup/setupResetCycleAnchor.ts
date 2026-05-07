@@ -8,16 +8,28 @@ import {
 
 /**
  * Determine the billing cycle anchor based on product transitions.
+ *
+ * For future starts, feature resets anchor to the billing start (`startsAt`).
  */
 export const setupResetCycleAnchor = ({
 	billingCycleAnchorMs,
 	customerProduct,
 	newFullProduct,
+	billingStartsAt,
 }: {
 	billingCycleAnchorMs: number | "now";
 	customerProduct?: FullCusProduct;
 	newFullProduct: FullProduct;
+	billingStartsAt?: number;
 }): number | "now" => {
+	const hasFutureBillingStart = billingStartsAt !== undefined;
+	const shouldAnchorToBillingStart =
+		hasFutureBillingStart && !customerProduct;
+
+	if (shouldAnchorToBillingStart) {
+		return billingStartsAt;
+	}
+
 	if (!customerProduct) {
 		return billingCycleAnchorMs;
 	}

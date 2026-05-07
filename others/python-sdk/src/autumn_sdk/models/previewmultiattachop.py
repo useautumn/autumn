@@ -1060,9 +1060,9 @@ class PreviewMultiAttachLineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -1083,10 +1083,10 @@ class PreviewMultiAttachLineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -1187,9 +1187,9 @@ class PreviewMultiAttachNextCycleLineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -1210,10 +1210,10 @@ class PreviewMultiAttachNextCycleLineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -1331,9 +1331,9 @@ class PreviewMultiAttachNextCycleTypedDict(TypedDict):
     starts_at: float
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
     subtotal: float
-    r"""The total amount in cents before discounts for the next cycle."""
+    r"""The total amount in cents before discounts and tax for the next cycle."""
     total: float
-    r"""The final amount in cents after discounts for the next cycle."""
+    r"""The final amount in cents after discounts and tax for the next cycle."""
     line_items: List[PreviewMultiAttachNextCycleLineItemTypedDict]
     r"""List of line items for the next billing cycle."""
     usage_line_items: List[PreviewMultiAttachUsageLineItemTypedDict]
@@ -1347,10 +1347,10 @@ class PreviewMultiAttachNextCycle(BaseModel):
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
 
     subtotal: float
-    r"""The total amount in cents before discounts for the next cycle."""
+    r"""The total amount in cents before discounts and tax for the next cycle."""
 
     total: float
-    r"""The final amount in cents after discounts for the next cycle."""
+    r"""The final amount in cents after discounts and tax for the next cycle."""
 
     line_items: List[PreviewMultiAttachNextCycleLineItem]
     r"""List of line items for the next billing cycle."""
@@ -1558,6 +1558,25 @@ class PreviewMultiAttachTax(BaseModel):
     r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
 
 
+class PreviewMultiAttachInvoiceCreditsTypedDict(TypedDict):
+    r"""Stripe customer invoice credits preview."""
+
+    balance: float
+    r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
+    currency: str
+    r"""Three-letter currency code."""
+
+
+class PreviewMultiAttachInvoiceCredits(BaseModel):
+    r"""Stripe customer invoice credits preview."""
+
+    balance: float
+    r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
+
+    currency: str
+    r"""Three-letter currency code."""
+
+
 class PreviewMultiAttachResponseTypedDict(TypedDict):
     r"""OK"""
 
@@ -1565,9 +1584,9 @@ class PreviewMultiAttachResponseTypedDict(TypedDict):
     r"""The ID of the customer."""
     line_items: List[PreviewMultiAttachLineItemTypedDict]
     subtotal: float
-    r"""The total amount in cents before discounts for the current billing period."""
+    r"""The total amount in cents before discounts and tax for the current billing period."""
     total: float
-    r"""The final amount in cents after discounts for the current billing period."""
+    r"""The final amount in cents after discounts and tax for the current billing period."""
     currency: str
     r"""The three-letter ISO currency code (e.g., 'usd')."""
     incoming: List[PreviewMultiAttachIncomingTypedDict]
@@ -1584,6 +1603,8 @@ class PreviewMultiAttachResponseTypedDict(TypedDict):
     r"""Expand the response with additional data."""
     tax: NotRequired[PreviewMultiAttachTaxTypedDict]
     r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
+    invoice_credits: NotRequired[PreviewMultiAttachInvoiceCreditsTypedDict]
+    r"""Stripe customer invoice credits preview."""
 
 
 class PreviewMultiAttachResponse(BaseModel):
@@ -1595,10 +1616,10 @@ class PreviewMultiAttachResponse(BaseModel):
     line_items: List[PreviewMultiAttachLineItem]
 
     subtotal: float
-    r"""The total amount in cents before discounts for the current billing period."""
+    r"""The total amount in cents before discounts and tax for the current billing period."""
 
     total: float
-    r"""The final amount in cents after discounts for the current billing period."""
+    r"""The final amount in cents after discounts and tax for the current billing period."""
 
     currency: str
     r"""The three-letter ISO currency code (e.g., 'usd')."""
@@ -1624,9 +1645,12 @@ class PreviewMultiAttachResponse(BaseModel):
     tax: Optional[PreviewMultiAttachTax] = None
     r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
 
+    invoice_credits: Optional[PreviewMultiAttachInvoiceCredits] = None
+    r"""Stripe customer invoice credits preview."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["next_cycle", "expand", "tax"])
+        optional_fields = set(["next_cycle", "expand", "tax", "invoice_credits"])
         nullable_fields = set(["checkout_type"])
         serialized = handler(self)
         m = {}

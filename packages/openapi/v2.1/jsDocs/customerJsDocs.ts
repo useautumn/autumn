@@ -1,4 +1,7 @@
-import { CreateCustomerParamsV0Schema } from "@autumn/shared";
+import {
+	CreateCustomerParamsV0Schema,
+	GetCustomerParamsV1Schema,
+} from "@autumn/shared";
 import { createJSDocDescription, example } from "../../utils/jsDocs/index.js";
 
 export const getOrCreateCustomerJsDoc = createJSDocDescription({
@@ -18,4 +21,28 @@ export const getOrCreateCustomerJsDoc = createJSDocDescription({
 		}),
 	],
 	methodName: "getOrCreate",
+});
+
+export const getCustomerJsDoc = createJSDocDescription({
+	description:
+		"Fetches a customer by ID, optionally expanding related data such as invoices or entities.",
+	whenToUse:
+		"Use this when you know the customer exists or assert they exist without creating them.",
+	body: GetCustomerParamsV1Schema,
+	examples: [
+		example({
+			description: "Fetch a customer by external ID",
+			values: {
+				customerId: "cus_123",
+			},
+		}),
+		example({
+			description: "Fetch a customer with expanded invoices and entities",
+			values: {
+				customerId: "cus_123",
+				expand: ["invoices", "entities"],
+			},
+		}),
+	],
+	methodName: "get",
 });

@@ -1,9 +1,10 @@
 import type { AttachBillingContext, AttachParamsV1 } from "@autumn/shared";
 import {
-	CusProductStatus,
+	CollectionMethod,
 	deduplicateArray,
 	type ExistingUsagesConfig,
 	type FullCusProduct,
+	isFutureStartDate,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
@@ -49,7 +50,6 @@ export const computeAttachNewCustomerProduct = ({
 		endOfCycleMs,
 		stripeSubscription,
 		stripeSubscriptionSchedule,
-		resetCycleAnchorMs,
 		currentEpochMs,
 		featureQuantities,
 		trialContext,
@@ -58,6 +58,9 @@ export const computeAttachNewCustomerProduct = ({
 		transitionConfig,
 		externalId,
 		requestedBillingCycleAnchor,
+		resetCycleAnchorMs,
+		accessStartsAt,
+		paymentMethod,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -75,10 +78,13 @@ export const computeAttachNewCustomerProduct = ({
 
 	const isScheduled = planTiming === "end_of_cycle";
 	const startsAt = params.starts_at ?? (isScheduled ? endOfCycleMs : undefined);
-	const resetCycleAnchor =
-		resetCycleAnchorMs === "now" && params.starts_at !== undefined
-			? params.starts_at
-			: resetCycleAnchorMs;
+	const hasAutoChargePaymentMethod =
+		paymentMethod !== undefined && paymentMethod.type !== "custom";
+	const shouldSendInvoiceForFutureStart =
+		isFutureStartDate(startsAt, currentEpochMs) && !hasAutoChargePaymentMethod;
+	const collectionMethod = shouldSendInvoiceForFutureStart
+		? CollectionMethod.SendInvoice
+		: undefined;
 
 	let existingUsagesConfig: ExistingUsagesConfig | undefined =
 		!isScheduled && currentCustomerProduct
@@ -111,7 +117,7 @@ export const computeAttachNewCustomerProduct = ({
 			featureQuantities,
 			// existingUsages: isScheduled ? undefined : existingUsages,
 			// existingRollovers,
-			resetCycleAnchor,
+			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
 			freeTrial: trialContext?.freeTrial ?? null,
 			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
@@ -126,8 +132,10 @@ export const computeAttachNewCustomerProduct = ({
 			// subscriptionId: isScheduled ? undefined : stripeSubscription?.id,
 			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
-			status: isScheduled ? CusProductStatus.Scheduled : undefined,
 			startsAt,
+			endedAt: params.ends_at,
+			accessStartsAt,
+			collectionMethod,
 			externalId,
 			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor,

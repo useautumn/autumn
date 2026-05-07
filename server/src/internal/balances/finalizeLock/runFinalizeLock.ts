@@ -48,6 +48,7 @@ const runFinalizeLockInner = async ({ ctx, params }: RunFinalizeLockArgs) => {
 			receipt: fetchedReceipt.receipt,
 			lockReceiptKey: fetchedReceipt.lockReceiptKey,
 			claimed: fetchedReceipt.claimed,
+			lockRedisInstance: fetchedReceipt.redisInstance,
 		});
 	}
 

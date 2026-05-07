@@ -8,7 +8,8 @@ import {
 import { UTCDate } from "@date-fns/utc";
 import { format } from "date-fns";
 import type { RepoContext } from "@/db/repoContext";
-import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
+import { resolveCustomerRedisRouting } from "@/external/redis/customerRedisRouting.js";
+import type { OrgWithRedisConfig } from "@/external/redis/orgRedisPool.js";
 import { invalidateCustomerEntitlementBalance } from "@/internal/customers/cache/fullSubject/actions/invalidate/invalidateCustomerEntitlementBalance.js";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
@@ -26,15 +27,21 @@ const shortDurations = [EntInterval.Minute, EntInterval.Hour, EntInterval.Day];
 
 const resetCustomerEntitlementInDb = async ({
 	ctx,
+	org,
 	cusEnt,
 	updatedCusEnts,
 	persistFreeOverage = false,
 }: {
 	ctx: CronContext;
+	org: OrgWithRedisConfig;
 	cusEnt: ResetCusEnt;
 	updatedCusEnts: ResetCusEnt[];
 	persistFreeOverage?: boolean;
 }) => {
+	const redisRouting = resolveCustomerRedisRouting({
+		org,
+		customerId: cusEnt.customer_id ?? "",
+	});
 	const repoContext: RepoContext = {
 		db: ctx.db,
 		logger: ctx.logger,
@@ -43,7 +50,7 @@ const resetCustomerEntitlementInDb = async ({
 		},
 		env: cusEnt.customer.env,
 		customerId: cusEnt.customer_id ?? "",
-		redisV2: resolveRedisV2(),
+		redisV2: redisRouting.redis,
 	};
 
 	try {
@@ -186,17 +193,25 @@ const resetCustomerEntitlementInDb = async ({
 
 export const resetCustomerEntitlement = async ({
 	ctx,
+	org,
 	cusEnt,
 	updatedCusEnts,
 	persistFreeOverage = false,
 }: {
 	ctx: CronContext;
+	org?: OrgWithRedisConfig;
 	cusEnt: ResetCusEnt;
 	updatedCusEnts: ResetCusEnt[];
 	persistFreeOverage?: boolean;
 }) => {
+	const routingOrg = org ?? { id: cusEnt.customer.org_id, redis_config: null };
+	const redisRouting = resolveCustomerRedisRouting({
+		org: routingOrg,
+		customerId: cusEnt.customer_id ?? "",
+	});
 	const result = await resetCustomerEntitlementInDb({
 		ctx,
+		org: routingOrg,
 		cusEnt,
 		updatedCusEnts,
 		persistFreeOverage,
@@ -207,7 +222,7 @@ export const resetCustomerEntitlement = async ({
 		customerId: cusEnt.customer_id ?? "",
 		featureId: cusEnt.entitlement.feature.id,
 		customerEntitlementId: cusEnt.id,
-		redisV2: resolveRedisV2(),
+		redisV2: redisRouting.redis,
 	});
 	return result;
 };
