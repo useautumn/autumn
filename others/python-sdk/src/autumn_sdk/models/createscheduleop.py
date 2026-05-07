@@ -572,7 +572,7 @@ class CreateSchedulePlan2TypedDict(TypedDict):
     customize: NotRequired[CreateScheduleCustomize2TypedDict]
     r"""Customize the plan to schedule. Can override the price, items, or both."""
     subscription_id: NotRequired[str]
-    r"""Unsupported for create_schedule today. Requests that include this field will be rejected."""
+    r"""A unique ID to identify this subscription. Useful when scheduling the same plan multiple times."""
 
 
 class CreateSchedulePlan2(BaseModel):
@@ -589,7 +589,7 @@ class CreateSchedulePlan2(BaseModel):
     r"""Customize the plan to schedule. Can override the price, items, or both."""
 
     subscription_id: Optional[str] = None
-    r"""Unsupported for create_schedule today. Requests that include this field will be rejected."""
+    r"""A unique ID to identify this subscription. Useful when scheduling the same plan multiple times."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

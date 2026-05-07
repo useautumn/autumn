@@ -71,7 +71,7 @@ export type AttachBasePrice = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const AttachResetInterval = {
+export const AttachItemResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -85,35 +85,37 @@ export const AttachResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type AttachResetInterval = ClosedEnum<typeof AttachResetInterval>;
+export type AttachItemResetInterval = ClosedEnum<
+  typeof AttachItemResetInterval
+>;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
  */
-export type AttachReset = {
+export type AttachItemReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: AttachResetInterval;
+  interval: AttachItemResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type AttachTo = number | string;
+export type AttachItemTo = number | string;
 
-export type AttachTier = {
+export type AttachItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
 };
 
-export const AttachTierBehavior = {
+export const AttachItemTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type AttachTierBehavior = ClosedEnum<typeof AttachTierBehavior>;
+export type AttachItemTierBehavior = ClosedEnum<typeof AttachItemTierBehavior>;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
@@ -136,19 +138,21 @@ export type AttachItemPriceInterval = ClosedEnum<
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const AttachBillingMethod = {
+export const AttachItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type AttachBillingMethod = ClosedEnum<typeof AttachBillingMethod>;
+export type AttachItemBillingMethod = ClosedEnum<
+  typeof AttachItemBillingMethod
+>;
 
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type AttachPrice = {
+export type AttachItemPrice = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -156,8 +160,8 @@ export type AttachPrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<AttachTier> | undefined;
-  tierBehavior?: AttachTierBehavior | undefined;
+  tiers?: Array<AttachItemTier> | undefined;
+  tierBehavior?: AttachItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -173,7 +177,7 @@ export type AttachPrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: AttachBillingMethod;
+  billingMethod: AttachItemBillingMethod;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
    */
@@ -183,7 +187,7 @@ export type AttachPrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const AttachOnIncrease = {
+export const AttachItemOnIncrease = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -192,12 +196,12 @@ export const AttachOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type AttachOnIncrease = ClosedEnum<typeof AttachOnIncrease>;
+export type AttachItemOnIncrease = ClosedEnum<typeof AttachItemOnIncrease>;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const AttachOnDecrease = {
+export const AttachItemOnDecrease = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -207,40 +211,40 @@ export const AttachOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type AttachOnDecrease = ClosedEnum<typeof AttachOnDecrease>;
+export type AttachItemOnDecrease = ClosedEnum<typeof AttachItemOnDecrease>;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type AttachProration = {
+export type AttachItemProration = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: AttachOnIncrease;
+  onIncrease: AttachItemOnIncrease;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: AttachOnDecrease;
+  onDecrease: AttachItemOnDecrease;
 };
 
 /**
  * When rolled over units expire.
  */
-export const AttachExpiryDurationType = {
+export const AttachItemExpiryDurationType = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type AttachExpiryDurationType = ClosedEnum<
-  typeof AttachExpiryDurationType
+export type AttachItemExpiryDurationType = ClosedEnum<
+  typeof AttachItemExpiryDurationType
 >;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
  */
-export type AttachRollover = {
+export type AttachItemRollover = {
   /**
    * Max rollover units. Omit for unlimited rollover.
    */
@@ -252,7 +256,7 @@ export type AttachRollover = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: AttachExpiryDurationType;
+  expiryDurationType: AttachItemExpiryDurationType;
   /**
    * Number of periods before expiry.
    */
@@ -262,7 +266,7 @@ export type AttachRollover = {
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type AttachPlanItem = {
+export type AttachItemPlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -278,19 +282,304 @@ export type AttachPlanItem = {
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
-  reset?: AttachReset | undefined;
+  reset?: AttachItemReset | undefined;
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: AttachPrice | undefined;
+  price?: AttachItemPrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: AttachProration | undefined;
+  proration?: AttachItemProration | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
-  rollover?: AttachRollover | undefined;
+  rollover?: AttachItemRollover | undefined;
+};
+
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export const AttachAddItemResetInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export type AttachAddItemResetInterval = ClosedEnum<
+  typeof AttachAddItemResetInterval
+>;
+
+/**
+ * Reset configuration for consumable features. Omit for non-consumable features like seats.
+ */
+export type AttachAddItemReset = {
+  /**
+   * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+   */
+  interval: AttachAddItemResetInterval;
+  /**
+   * Number of intervals between resets. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+};
+
+export type AttachAddItemTo = number | string;
+
+export type AttachAddItemTier = {
+  to: number | string;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
+};
+
+export const AttachAddItemTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type AttachAddItemTierBehavior = ClosedEnum<
+  typeof AttachAddItemTierBehavior
+>;
+
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export const AttachAddItemPriceInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export type AttachAddItemPriceInterval = ClosedEnum<
+  typeof AttachAddItemPriceInterval
+>;
+
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export const AttachAddItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export type AttachAddItemBillingMethod = ClosedEnum<
+  typeof AttachAddItemBillingMethod
+>;
+
+/**
+ * Pricing for usage beyond included units. Omit for free features.
+ */
+export type AttachAddItemPrice = {
+  /**
+   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+   */
+  amount?: number | undefined;
+  /**
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
+   */
+  tiers?: Array<AttachAddItemTier> | undefined;
+  tierBehavior?: AttachAddItemTierBehavior | undefined;
+  /**
+   * Billing interval. For consumable features, should match reset.interval.
+   */
+  interval: AttachAddItemPriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+   */
+  billingUnits?: number | undefined;
+  /**
+   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+   */
+  billingMethod: AttachAddItemBillingMethod;
+  /**
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   */
+  maxPurchase?: number | undefined;
+};
+
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export const AttachAddItemOnIncrease = {
+  BillImmediately: "bill_immediately",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  BillNextCycle: "bill_next_cycle",
+} as const;
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export type AttachAddItemOnIncrease = ClosedEnum<
+  typeof AttachAddItemOnIncrease
+>;
+
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export const AttachAddItemOnDecrease = {
+  Prorate: "prorate",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  None: "none",
+  NoProrations: "no_prorations",
+} as const;
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export type AttachAddItemOnDecrease = ClosedEnum<
+  typeof AttachAddItemOnDecrease
+>;
+
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
+export type AttachAddItemProration = {
+  /**
+   * Billing behavior when quantity increases mid-cycle.
+   */
+  onIncrease: AttachAddItemOnIncrease;
+  /**
+   * Credit behavior when quantity decreases mid-cycle.
+   */
+  onDecrease: AttachAddItemOnDecrease;
+};
+
+/**
+ * When rolled over units expire.
+ */
+export const AttachAddItemExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type AttachAddItemExpiryDurationType = ClosedEnum<
+  typeof AttachAddItemExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type AttachAddItemRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: AttachAddItemExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
+
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type AttachAddItemPlanItem = {
+  /**
+   * The ID of the feature to configure.
+   */
+  featureId: string;
+  /**
+   * Number of free units included. Balance resets to this each interval for consumable features.
+   */
+  included?: number | undefined;
+  /**
+   * If true, customer has unlimited access to this feature.
+   */
+  unlimited?: boolean | undefined;
+  /**
+   * Reset configuration for consumable features. Omit for non-consumable features like seats.
+   */
+  reset?: AttachAddItemReset | undefined;
+  /**
+   * Pricing for usage beyond included units. Omit for free features.
+   */
+  price?: AttachAddItemPrice | undefined;
+  /**
+   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+   */
+  proration?: AttachAddItemProration | undefined;
+  /**
+   * Rollover config for unused units. If set, unused included units carry over.
+   */
+  rollover?: AttachAddItemRollover | undefined;
+};
+
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export const AttachRemoveItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export type AttachRemoveItemBillingMethod = ClosedEnum<
+  typeof AttachRemoveItemBillingMethod
+>;
+
+/**
+ * Match items with this interval.
+ */
+export const AttachRemoveItemInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Match items with this interval.
+ */
+export type AttachRemoveItemInterval = ClosedEnum<
+  typeof AttachRemoveItemInterval
+>;
+
+/**
+ * Filter for matching plan items. All provided fields must match (AND).
+ */
+export type AttachPlanItemFilter = {
+  /**
+   * Match items linked to this feature.
+   */
+  featureId?: string | undefined;
+  /**
+   * Match items with this billing method (prepaid or usage_based).
+   */
+  billingMethod?: AttachRemoveItemBillingMethod | undefined;
+  /**
+   * Match items with this interval.
+   */
+  interval?: AttachRemoveItemInterval | undefined;
 };
 
 /**
@@ -333,9 +622,17 @@ export type AttachCustomize = {
    */
   price?: AttachBasePrice | null | undefined;
   /**
-   * Override the items in the plan.
+   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items.
    */
-  items?: Array<AttachPlanItem> | undefined;
+  items?: Array<AttachItemPlanItem> | undefined;
+  /**
+   * Items to add to the plan.
+   */
+  addItems?: Array<AttachAddItemPlanItem> | undefined;
+  /**
+   * Filters selecting items to remove from the plan.
+   */
+  removeItems?: Array<AttachPlanItemFilter> | undefined;
   /**
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
@@ -518,6 +815,10 @@ export type AttachParams = {
    */
   startsAt?: number | undefined;
   /**
+   * Unix timestamp in milliseconds for when the attached plan should end.
+   */
+  endsAt?: number | undefined;
+  /**
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
@@ -698,23 +999,23 @@ export function attachBasePriceToJSON(
 }
 
 /** @internal */
-export const AttachResetInterval$outboundSchema: z.ZodMiniEnum<
-  typeof AttachResetInterval
-> = z.enum(AttachResetInterval);
+export const AttachItemResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof AttachItemResetInterval
+> = z.enum(AttachItemResetInterval);
 
 /** @internal */
-export type AttachReset$Outbound = {
+export type AttachItemReset$Outbound = {
   interval: string;
   interval_count?: number | undefined;
 };
 
 /** @internal */
-export const AttachReset$outboundSchema: z.ZodMiniType<
-  AttachReset$Outbound,
-  AttachReset
+export const AttachItemReset$outboundSchema: z.ZodMiniType<
+  AttachItemReset$Outbound,
+  AttachItemReset
 > = z.pipe(
   z.object({
-    interval: AttachResetInterval$outboundSchema,
+    interval: AttachItemResetInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -724,34 +1025,36 @@ export const AttachReset$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function attachResetToJSON(attachReset: AttachReset): string {
-  return JSON.stringify(AttachReset$outboundSchema.parse(attachReset));
+export function attachItemResetToJSON(
+  attachItemReset: AttachItemReset,
+): string {
+  return JSON.stringify(AttachItemReset$outboundSchema.parse(attachItemReset));
 }
 
 /** @internal */
-export type AttachTo$Outbound = number | string;
+export type AttachItemTo$Outbound = number | string;
 
 /** @internal */
-export const AttachTo$outboundSchema: z.ZodMiniType<
-  AttachTo$Outbound,
-  AttachTo
+export const AttachItemTo$outboundSchema: z.ZodMiniType<
+  AttachItemTo$Outbound,
+  AttachItemTo
 > = smartUnion([z.number(), z.string()]);
 
-export function attachToToJSON(attachTo: AttachTo): string {
-  return JSON.stringify(AttachTo$outboundSchema.parse(attachTo));
+export function attachItemToToJSON(attachItemTo: AttachItemTo): string {
+  return JSON.stringify(AttachItemTo$outboundSchema.parse(attachItemTo));
 }
 
 /** @internal */
-export type AttachTier$Outbound = {
+export type AttachItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
 };
 
 /** @internal */
-export const AttachTier$outboundSchema: z.ZodMiniType<
-  AttachTier$Outbound,
-  AttachTier
+export const AttachItemTier$outboundSchema: z.ZodMiniType<
+  AttachItemTier$Outbound,
+  AttachItemTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -765,14 +1068,14 @@ export const AttachTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function attachTierToJSON(attachTier: AttachTier): string {
-  return JSON.stringify(AttachTier$outboundSchema.parse(attachTier));
+export function attachItemTierToJSON(attachItemTier: AttachItemTier): string {
+  return JSON.stringify(AttachItemTier$outboundSchema.parse(attachItemTier));
 }
 
 /** @internal */
-export const AttachTierBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof AttachTierBehavior
-> = z.enum(AttachTierBehavior);
+export const AttachItemTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof AttachItemTierBehavior
+> = z.enum(AttachItemTierBehavior);
 
 /** @internal */
 export const AttachItemPriceInterval$outboundSchema: z.ZodMiniEnum<
@@ -780,14 +1083,14 @@ export const AttachItemPriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(AttachItemPriceInterval);
 
 /** @internal */
-export const AttachBillingMethod$outboundSchema: z.ZodMiniEnum<
-  typeof AttachBillingMethod
-> = z.enum(AttachBillingMethod);
+export const AttachItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof AttachItemBillingMethod
+> = z.enum(AttachItemBillingMethod);
 
 /** @internal */
-export type AttachPrice$Outbound = {
+export type AttachItemPrice$Outbound = {
   amount?: number | undefined;
-  tiers?: Array<AttachTier$Outbound> | undefined;
+  tiers?: Array<AttachItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -797,18 +1100,18 @@ export type AttachPrice$Outbound = {
 };
 
 /** @internal */
-export const AttachPrice$outboundSchema: z.ZodMiniType<
-  AttachPrice$Outbound,
-  AttachPrice
+export const AttachItemPrice$outboundSchema: z.ZodMiniType<
+  AttachItemPrice$Outbound,
+  AttachItemPrice
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(z.array(z.lazy(() => AttachTier$outboundSchema))),
-    tierBehavior: z.optional(AttachTierBehavior$outboundSchema),
+    tiers: z.optional(z.array(z.lazy(() => AttachItemTier$outboundSchema))),
+    tierBehavior: z.optional(AttachItemTierBehavior$outboundSchema),
     interval: AttachItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
-    billingMethod: AttachBillingMethod$outboundSchema,
+    billingMethod: AttachItemBillingMethod$outboundSchema,
     maxPurchase: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -822,34 +1125,36 @@ export const AttachPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function attachPriceToJSON(attachPrice: AttachPrice): string {
-  return JSON.stringify(AttachPrice$outboundSchema.parse(attachPrice));
+export function attachItemPriceToJSON(
+  attachItemPrice: AttachItemPrice,
+): string {
+  return JSON.stringify(AttachItemPrice$outboundSchema.parse(attachItemPrice));
 }
 
 /** @internal */
-export const AttachOnIncrease$outboundSchema: z.ZodMiniEnum<
-  typeof AttachOnIncrease
-> = z.enum(AttachOnIncrease);
+export const AttachItemOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof AttachItemOnIncrease
+> = z.enum(AttachItemOnIncrease);
 
 /** @internal */
-export const AttachOnDecrease$outboundSchema: z.ZodMiniEnum<
-  typeof AttachOnDecrease
-> = z.enum(AttachOnDecrease);
+export const AttachItemOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof AttachItemOnDecrease
+> = z.enum(AttachItemOnDecrease);
 
 /** @internal */
-export type AttachProration$Outbound = {
+export type AttachItemProration$Outbound = {
   on_increase: string;
   on_decrease: string;
 };
 
 /** @internal */
-export const AttachProration$outboundSchema: z.ZodMiniType<
-  AttachProration$Outbound,
-  AttachProration
+export const AttachItemProration$outboundSchema: z.ZodMiniType<
+  AttachItemProration$Outbound,
+  AttachItemProration
 > = z.pipe(
   z.object({
-    onIncrease: AttachOnIncrease$outboundSchema,
-    onDecrease: AttachOnDecrease$outboundSchema,
+    onIncrease: AttachItemOnIncrease$outboundSchema,
+    onDecrease: AttachItemOnDecrease$outboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -859,19 +1164,21 @@ export const AttachProration$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function attachProrationToJSON(
-  attachProration: AttachProration,
+export function attachItemProrationToJSON(
+  attachItemProration: AttachItemProration,
 ): string {
-  return JSON.stringify(AttachProration$outboundSchema.parse(attachProration));
+  return JSON.stringify(
+    AttachItemProration$outboundSchema.parse(attachItemProration),
+  );
 }
 
 /** @internal */
-export const AttachExpiryDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof AttachExpiryDurationType
-> = z.enum(AttachExpiryDurationType);
+export const AttachItemExpiryDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof AttachItemExpiryDurationType
+> = z.enum(AttachItemExpiryDurationType);
 
 /** @internal */
-export type AttachRollover$Outbound = {
+export type AttachItemRollover$Outbound = {
   max?: number | undefined;
   max_percentage?: number | undefined;
   expiry_duration_type: string;
@@ -879,14 +1186,14 @@ export type AttachRollover$Outbound = {
 };
 
 /** @internal */
-export const AttachRollover$outboundSchema: z.ZodMiniType<
-  AttachRollover$Outbound,
-  AttachRollover
+export const AttachItemRollover$outboundSchema: z.ZodMiniType<
+  AttachItemRollover$Outbound,
+  AttachItemRollover
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
     maxPercentage: z.optional(z.number()),
-    expiryDurationType: AttachExpiryDurationType$outboundSchema,
+    expiryDurationType: AttachItemExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -898,34 +1205,38 @@ export const AttachRollover$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function attachRolloverToJSON(attachRollover: AttachRollover): string {
-  return JSON.stringify(AttachRollover$outboundSchema.parse(attachRollover));
+export function attachItemRolloverToJSON(
+  attachItemRollover: AttachItemRollover,
+): string {
+  return JSON.stringify(
+    AttachItemRollover$outboundSchema.parse(attachItemRollover),
+  );
 }
 
 /** @internal */
-export type AttachPlanItem$Outbound = {
+export type AttachItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
-  reset?: AttachReset$Outbound | undefined;
-  price?: AttachPrice$Outbound | undefined;
-  proration?: AttachProration$Outbound | undefined;
-  rollover?: AttachRollover$Outbound | undefined;
+  reset?: AttachItemReset$Outbound | undefined;
+  price?: AttachItemPrice$Outbound | undefined;
+  proration?: AttachItemProration$Outbound | undefined;
+  rollover?: AttachItemRollover$Outbound | undefined;
 };
 
 /** @internal */
-export const AttachPlanItem$outboundSchema: z.ZodMiniType<
-  AttachPlanItem$Outbound,
-  AttachPlanItem
+export const AttachItemPlanItem$outboundSchema: z.ZodMiniType<
+  AttachItemPlanItem$Outbound,
+  AttachItemPlanItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
-    reset: z.optional(z.lazy(() => AttachReset$outboundSchema)),
-    price: z.optional(z.lazy(() => AttachPrice$outboundSchema)),
-    proration: z.optional(z.lazy(() => AttachProration$outboundSchema)),
-    rollover: z.optional(z.lazy(() => AttachRollover$outboundSchema)),
+    reset: z.optional(z.lazy(() => AttachItemReset$outboundSchema)),
+    price: z.optional(z.lazy(() => AttachItemPrice$outboundSchema)),
+    proration: z.optional(z.lazy(() => AttachItemProration$outboundSchema)),
+    rollover: z.optional(z.lazy(() => AttachItemRollover$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -934,8 +1245,320 @@ export const AttachPlanItem$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function attachPlanItemToJSON(attachPlanItem: AttachPlanItem): string {
-  return JSON.stringify(AttachPlanItem$outboundSchema.parse(attachPlanItem));
+export function attachItemPlanItemToJSON(
+  attachItemPlanItem: AttachItemPlanItem,
+): string {
+  return JSON.stringify(
+    AttachItemPlanItem$outboundSchema.parse(attachItemPlanItem),
+  );
+}
+
+/** @internal */
+export const AttachAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof AttachAddItemResetInterval
+> = z.enum(AttachAddItemResetInterval);
+
+/** @internal */
+export type AttachAddItemReset$Outbound = {
+  interval: string;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const AttachAddItemReset$outboundSchema: z.ZodMiniType<
+  AttachAddItemReset$Outbound,
+  AttachAddItemReset
+> = z.pipe(
+  z.object({
+    interval: AttachAddItemResetInterval$outboundSchema,
+    intervalCount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function attachAddItemResetToJSON(
+  attachAddItemReset: AttachAddItemReset,
+): string {
+  return JSON.stringify(
+    AttachAddItemReset$outboundSchema.parse(attachAddItemReset),
+  );
+}
+
+/** @internal */
+export type AttachAddItemTo$Outbound = number | string;
+
+/** @internal */
+export const AttachAddItemTo$outboundSchema: z.ZodMiniType<
+  AttachAddItemTo$Outbound,
+  AttachAddItemTo
+> = smartUnion([z.number(), z.string()]);
+
+export function attachAddItemToToJSON(
+  attachAddItemTo: AttachAddItemTo,
+): string {
+  return JSON.stringify(AttachAddItemTo$outboundSchema.parse(attachAddItemTo));
+}
+
+/** @internal */
+export type AttachAddItemTier$Outbound = {
+  to: number | string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const AttachAddItemTier$outboundSchema: z.ZodMiniType<
+  AttachAddItemTier$Outbound,
+  AttachAddItemTier
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
+
+export function attachAddItemTierToJSON(
+  attachAddItemTier: AttachAddItemTier,
+): string {
+  return JSON.stringify(
+    AttachAddItemTier$outboundSchema.parse(attachAddItemTier),
+  );
+}
+
+/** @internal */
+export const AttachAddItemTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof AttachAddItemTierBehavior
+> = z.enum(AttachAddItemTierBehavior);
+
+/** @internal */
+export const AttachAddItemPriceInterval$outboundSchema: z.ZodMiniEnum<
+  typeof AttachAddItemPriceInterval
+> = z.enum(AttachAddItemPriceInterval);
+
+/** @internal */
+export const AttachAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof AttachAddItemBillingMethod
+> = z.enum(AttachAddItemBillingMethod);
+
+/** @internal */
+export type AttachAddItemPrice$Outbound = {
+  amount?: number | undefined;
+  tiers?: Array<AttachAddItemTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
+  interval: string;
+  interval_count: number;
+  billing_units: number;
+  billing_method: string;
+  max_purchase?: number | undefined;
+};
+
+/** @internal */
+export const AttachAddItemPrice$outboundSchema: z.ZodMiniType<
+  AttachAddItemPrice$Outbound,
+  AttachAddItemPrice
+> = z.pipe(
+  z.object({
+    amount: z.optional(z.number()),
+    tiers: z.optional(z.array(z.lazy(() => AttachAddItemTier$outboundSchema))),
+    tierBehavior: z.optional(AttachAddItemTierBehavior$outboundSchema),
+    interval: AttachAddItemPriceInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    billingUnits: z._default(z.number(), 1),
+    billingMethod: AttachAddItemBillingMethod$outboundSchema,
+    maxPurchase: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+      intervalCount: "interval_count",
+      billingUnits: "billing_units",
+      billingMethod: "billing_method",
+      maxPurchase: "max_purchase",
+    });
+  }),
+);
+
+export function attachAddItemPriceToJSON(
+  attachAddItemPrice: AttachAddItemPrice,
+): string {
+  return JSON.stringify(
+    AttachAddItemPrice$outboundSchema.parse(attachAddItemPrice),
+  );
+}
+
+/** @internal */
+export const AttachAddItemOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof AttachAddItemOnIncrease
+> = z.enum(AttachAddItemOnIncrease);
+
+/** @internal */
+export const AttachAddItemOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof AttachAddItemOnDecrease
+> = z.enum(AttachAddItemOnDecrease);
+
+/** @internal */
+export type AttachAddItemProration$Outbound = {
+  on_increase: string;
+  on_decrease: string;
+};
+
+/** @internal */
+export const AttachAddItemProration$outboundSchema: z.ZodMiniType<
+  AttachAddItemProration$Outbound,
+  AttachAddItemProration
+> = z.pipe(
+  z.object({
+    onIncrease: AttachAddItemOnIncrease$outboundSchema,
+    onDecrease: AttachAddItemOnDecrease$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      onIncrease: "on_increase",
+      onDecrease: "on_decrease",
+    });
+  }),
+);
+
+export function attachAddItemProrationToJSON(
+  attachAddItemProration: AttachAddItemProration,
+): string {
+  return JSON.stringify(
+    AttachAddItemProration$outboundSchema.parse(attachAddItemProration),
+  );
+}
+
+/** @internal */
+export const AttachAddItemExpiryDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof AttachAddItemExpiryDurationType
+> = z.enum(AttachAddItemExpiryDurationType);
+
+/** @internal */
+export type AttachAddItemRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const AttachAddItemRollover$outboundSchema: z.ZodMiniType<
+  AttachAddItemRollover$Outbound,
+  AttachAddItemRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
+    expiryDurationType: AttachAddItemExpiryDurationType$outboundSchema,
+    expiryDurationLength: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+      expiryDurationType: "expiry_duration_type",
+      expiryDurationLength: "expiry_duration_length",
+    });
+  }),
+);
+
+export function attachAddItemRolloverToJSON(
+  attachAddItemRollover: AttachAddItemRollover,
+): string {
+  return JSON.stringify(
+    AttachAddItemRollover$outboundSchema.parse(attachAddItemRollover),
+  );
+}
+
+/** @internal */
+export type AttachAddItemPlanItem$Outbound = {
+  feature_id: string;
+  included?: number | undefined;
+  unlimited?: boolean | undefined;
+  reset?: AttachAddItemReset$Outbound | undefined;
+  price?: AttachAddItemPrice$Outbound | undefined;
+  proration?: AttachAddItemProration$Outbound | undefined;
+  rollover?: AttachAddItemRollover$Outbound | undefined;
+};
+
+/** @internal */
+export const AttachAddItemPlanItem$outboundSchema: z.ZodMiniType<
+  AttachAddItemPlanItem$Outbound,
+  AttachAddItemPlanItem
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    included: z.optional(z.number()),
+    unlimited: z.optional(z.boolean()),
+    reset: z.optional(z.lazy(() => AttachAddItemReset$outboundSchema)),
+    price: z.optional(z.lazy(() => AttachAddItemPrice$outboundSchema)),
+    proration: z.optional(z.lazy(() => AttachAddItemProration$outboundSchema)),
+    rollover: z.optional(z.lazy(() => AttachAddItemRollover$outboundSchema)),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function attachAddItemPlanItemToJSON(
+  attachAddItemPlanItem: AttachAddItemPlanItem,
+): string {
+  return JSON.stringify(
+    AttachAddItemPlanItem$outboundSchema.parse(attachAddItemPlanItem),
+  );
+}
+
+/** @internal */
+export const AttachRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof AttachRemoveItemBillingMethod
+> = z.enum(AttachRemoveItemBillingMethod);
+
+/** @internal */
+export const AttachRemoveItemInterval$outboundSchema: z.ZodMiniEnum<
+  typeof AttachRemoveItemInterval
+> = z.enum(AttachRemoveItemInterval);
+
+/** @internal */
+export type AttachPlanItemFilter$Outbound = {
+  feature_id?: string | undefined;
+  billing_method?: string | undefined;
+  interval?: string | undefined;
+};
+
+/** @internal */
+export const AttachPlanItemFilter$outboundSchema: z.ZodMiniType<
+  AttachPlanItemFilter$Outbound,
+  AttachPlanItemFilter
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    billingMethod: z.optional(AttachRemoveItemBillingMethod$outboundSchema),
+    interval: z.optional(AttachRemoveItemInterval$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      billingMethod: "billing_method",
+    });
+  }),
+);
+
+export function attachPlanItemFilterToJSON(
+  attachPlanItemFilter: AttachPlanItemFilter,
+): string {
+  return JSON.stringify(
+    AttachPlanItemFilter$outboundSchema.parse(attachPlanItemFilter),
+  );
 }
 
 /** @internal */
@@ -980,7 +1603,9 @@ export function attachFreeTrialParamsToJSON(
 /** @internal */
 export type AttachCustomize$Outbound = {
   price?: AttachBasePrice$Outbound | null | undefined;
-  items?: Array<AttachPlanItem$Outbound> | undefined;
+  items?: Array<AttachItemPlanItem$Outbound> | undefined;
+  add_items?: Array<AttachAddItemPlanItem$Outbound> | undefined;
+  remove_items?: Array<AttachPlanItemFilter$Outbound> | undefined;
   free_trial?: AttachFreeTrialParams$Outbound | null | undefined;
 };
 
@@ -991,13 +1616,21 @@ export const AttachCustomize$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     price: z.optional(z.nullable(z.lazy(() => AttachBasePrice$outboundSchema))),
-    items: z.optional(z.array(z.lazy(() => AttachPlanItem$outboundSchema))),
+    items: z.optional(z.array(z.lazy(() => AttachItemPlanItem$outboundSchema))),
+    addItems: z.optional(
+      z.array(z.lazy(() => AttachAddItemPlanItem$outboundSchema)),
+    ),
+    removeItems: z.optional(
+      z.array(z.lazy(() => AttachPlanItemFilter$outboundSchema)),
+    ),
     freeTrial: z.optional(
       z.nullable(z.lazy(() => AttachFreeTrialParams$outboundSchema)),
     ),
   }),
   z.transform((v) => {
     return remap$(v, {
+      addItems: "add_items",
+      removeItems: "remove_items",
       freeTrial: "free_trial",
     });
   }),
@@ -1188,6 +1821,7 @@ export type AttachParams$Outbound = {
   billing_cycle_anchor?: "now" | undefined;
   plan_schedule?: string | undefined;
   starts_at?: number | undefined;
+  ends_at?: number | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<AttachCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
@@ -1224,6 +1858,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     billingCycleAnchor: z.optional(z.literal("now")),
     planSchedule: z.optional(AttachPlanSchedule$outboundSchema),
     startsAt: z.optional(z.int()),
+    endsAt: z.optional(z.int()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
       z.array(z.lazy(() => AttachCustomLineItem$outboundSchema)),
@@ -1254,6 +1889,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       billingCycleAnchor: "billing_cycle_anchor",
       planSchedule: "plan_schedule",
       startsAt: "starts_at",
+      endsAt: "ends_at",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",

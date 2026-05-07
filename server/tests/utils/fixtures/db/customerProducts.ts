@@ -51,6 +51,7 @@ const create = ({
 	internal_entity_id: internalEntityId ?? null,
 	entity_id: entityId ?? null,
 	created_at: Date.now(),
+	updated_at: Date.now(),
 	status,
 	canceled: false,
 	starts_at: startsAt ?? Date.now(),

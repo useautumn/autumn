@@ -57,6 +57,9 @@ export const logUpdateSubscriptionContext = ({
 				defaultProduct: billingContext.defaultProduct?.name ?? "undefined",
 				cancelAction: cancelAction ? cancelAction : "no cancel operation",
 				skipBillingChanges: billingContext.skipBillingChanges,
+				patchContext: billingContext.patchContext
+					? `${billingContext.patchContext.mode} ${billingContext.patchContext.originalCustomerProduct.id} -> ${billingContext.patchContext.finalCustomerProduct.id} | +${billingContext.patchContext.customEntitlements.length} ent, +${billingContext.patchContext.customPrices.length} price | -${billingContext.patchContext.deleteCustomerEntitlements.length} ent, -${billingContext.patchContext.deleteCustomerPrices.length} price`
+					: "none",
 
 				anchorResetRefund: billingContext.anchorResetRefund
 					? `noPartialRefund: ${billingContext.anchorResetRefund.noPartialRefund} | refundCycle: ${billingContext.anchorResetRefund.refundCycle ? `${billingContext.anchorResetRefund.refundCycle.interval} x${billingContext.anchorResetRefund.refundCycle.intervalCount}` : "none"}`

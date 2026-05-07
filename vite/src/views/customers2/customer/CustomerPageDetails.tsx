@@ -15,12 +15,18 @@ export const CustomerPageDetails = () => {
 
 	const appliedCoupon = stripeCus?.discount?.source;
 
+	const emailTitle = customer.email ?? "This user's email is undefined";
+	const idTitle = customer.id ?? "This user's id is undefined";
+	const fingerprintTitle =
+		customer.fingerprint ?? "This user's fingerprint is undefined";
+
 	return (
 		<div className="flex min-w-0 items-center">
 			<div className="flex gap-2 flex-wrap">
 				{customer.email && (
 					<CopyButton
 						text={customer.email ?? placeholderText}
+						title={emailTitle}
 						size="mini"
 						className="text-t3"
 						innerClassName="max-w-30 text-tiny-id truncate !font-normal"
@@ -28,12 +34,13 @@ export const CustomerPageDetails = () => {
 				)}
 				<CopyButton
 					text={customer.id ?? placeholderText}
+					title={idTitle}
 					size="mini"
 					className="text-t3"
 					innerClassName="max-w-30 text-tiny-id truncate !font-normal"
 				></CopyButton>
 				{customer.fingerprint && (
-					<div className={mutedDivClassName}>
+					<div className={mutedDivClassName} title={fingerprintTitle}>
 						<FingerprintIcon size={12} className="shrink-0" />
 						<span className="truncate">
 							{customer.fingerprint ?? placeholderText}
@@ -41,7 +48,7 @@ export const CustomerPageDetails = () => {
 					</div>
 				)}
 				{appliedCoupon && (
-					<div className={mutedDivClassName}>
+					<div className={mutedDivClassName} title={appliedCoupon.coupon}>
 						<TicketIcon size={13} className="shrink-0" />
 						<span className="truncate">{appliedCoupon.coupon}</span>
 					</div>

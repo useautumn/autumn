@@ -41,6 +41,7 @@ class Billing(BaseSDK):
         new_billing_subscription: Optional[bool] = None,
         plan_schedule: Optional[models.AttachPlanSchedule] = None,
         starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -84,6 +85,7 @@ class Billing(BaseSDK):
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -131,6 +133,7 @@ class Billing(BaseSDK):
             new_billing_subscription=new_billing_subscription,
             plan_schedule=plan_schedule,
             starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
@@ -238,6 +241,7 @@ class Billing(BaseSDK):
         new_billing_subscription: Optional[bool] = None,
         plan_schedule: Optional[models.AttachPlanSchedule] = None,
         starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -281,6 +285,7 @@ class Billing(BaseSDK):
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -328,6 +333,7 @@ class Billing(BaseSDK):
             new_billing_subscription=new_billing_subscription,
             plan_schedule=plan_schedule,
             starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
@@ -996,6 +1002,7 @@ class Billing(BaseSDK):
         new_billing_subscription: Optional[bool] = None,
         plan_schedule: Optional[models.PreviewAttachPlanSchedule] = None,
         starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -1043,6 +1050,7 @@ class Billing(BaseSDK):
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -1091,6 +1099,7 @@ class Billing(BaseSDK):
             new_billing_subscription=new_billing_subscription,
             plan_schedule=plan_schedule,
             starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
@@ -1201,6 +1210,7 @@ class Billing(BaseSDK):
         new_billing_subscription: Optional[bool] = None,
         plan_schedule: Optional[models.PreviewAttachPlanSchedule] = None,
         starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -1248,6 +1258,7 @@ class Billing(BaseSDK):
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -1296,6 +1307,7 @@ class Billing(BaseSDK):
             new_billing_subscription=new_billing_subscription,
             plan_schedule=plan_schedule,
             starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
@@ -2569,6 +2581,7 @@ class Billing(BaseSDK):
         ] = None,
         success_url: Optional[str] = None,
         starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -2610,6 +2623,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -2651,6 +2665,7 @@ class Billing(BaseSDK):
             ),
             success_url=success_url,
             starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.SetupPaymentCustomLineItem]]
@@ -2752,6 +2767,7 @@ class Billing(BaseSDK):
         ] = None,
         success_url: Optional[str] = None,
         starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -2793,6 +2809,7 @@ class Billing(BaseSDK):
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -2834,6 +2851,7 @@ class Billing(BaseSDK):
             ),
             success_url=success_url,
             starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.SetupPaymentCustomLineItem]]

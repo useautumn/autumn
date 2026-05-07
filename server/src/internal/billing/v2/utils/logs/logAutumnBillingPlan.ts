@@ -46,6 +46,24 @@ export const logAutumnBillingPlan = ({
 					? formatCustomerProduct(plan.deleteCustomerProduct)
 					: "none",
 
+				patchCustomerProducts:
+					plan.patchCustomerProducts
+						?.map(
+							(patch) =>
+								`${formatCustomerProduct(patch.customerProduct)}: +${patch.insertCustomerEntitlements.length} ent, +${patch.insertCustomerPrices.length} price | -${patch.deleteCustomerEntitlements.length} ent, -${patch.deleteCustomerPrices.length} price`,
+						)
+						.join(", ") || "none",
+
+				customPrices:
+					(plan.customPrices?.length ?? 0) > 0
+						? `${plan.customPrices?.length} custom price(s)`
+						: "none",
+
+				customEntitlements:
+					(plan.customEntitlements?.length ?? 0) > 0
+						? `${plan.customEntitlements?.length} custom ent(s)`
+						: "none",
+
 				trialTransition: `${isTrialing ? "trialing" : "not trialing"} -> ${willBeTrialing ? "will trial" : "no trial"}`,
 
 				updateCustomerEntitlements:

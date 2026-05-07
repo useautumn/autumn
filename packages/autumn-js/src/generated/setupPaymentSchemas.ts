@@ -11,9 +11,17 @@ export const setupPaymentFeatureQuantitySchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const setupPaymentToSchema = z.union([z.number(), z.string()]);
+export const setupPaymentItemToSchema = z.union([z.number(), z.string()]);
 
-export const setupPaymentTierSchema = z.object({
+export const setupPaymentItemTierSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemToSchema = z.union([z.number(), z.string()]);
+
+export const setupPaymentAddItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
@@ -57,23 +65,26 @@ export const setupPaymentBasePriceOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentResetOutboundSchema = z.object({
+export const setupPaymentItemResetOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentToOutboundSchema = z.union([z.number(), z.string()]);
+export const setupPaymentItemToOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
 
-export const setupPaymentTierOutboundSchema = z.object({
+export const setupPaymentItemTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentPriceOutboundSchema = z.object({
+export const setupPaymentItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	tiers: z
-		.union([z.array(setupPaymentTierOutboundSchema), z.undefined()])
+		.union([z.array(setupPaymentItemTierOutboundSchema), z.undefined()])
 		.optional(),
 	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.string(),
@@ -83,30 +94,99 @@ export const setupPaymentPriceOutboundSchema = z.object({
 	max_purchase: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentProrationOutboundSchema = z.object({
+export const setupPaymentItemProrationOutboundSchema = z.object({
 	on_increase: z.string(),
 	on_decrease: z.string(),
 });
 
-export const setupPaymentRolloverOutboundSchema = z.object({
+export const setupPaymentItemRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
 	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentPlanItemOutboundSchema = z.object({
+export const setupPaymentItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-	reset: z.union([setupPaymentResetOutboundSchema, z.undefined()]).optional(),
-	price: z.union([setupPaymentPriceOutboundSchema, z.undefined()]).optional(),
+	reset: z
+		.union([setupPaymentItemResetOutboundSchema, z.undefined()])
+		.optional(),
+	price: z
+		.union([setupPaymentItemPriceOutboundSchema, z.undefined()])
+		.optional(),
 	proration: z
-		.union([setupPaymentProrationOutboundSchema, z.undefined()])
+		.union([setupPaymentItemProrationOutboundSchema, z.undefined()])
 		.optional(),
 	rollover: z
-		.union([setupPaymentRolloverOutboundSchema, z.undefined()])
+		.union([setupPaymentItemRolloverOutboundSchema, z.undefined()])
 		.optional(),
+});
+
+export const setupPaymentAddItemResetOutboundSchema = z.object({
+	interval: z.string(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemToOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const setupPaymentAddItemTierOutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemPriceOutboundSchema = z.object({
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(setupPaymentAddItemTierOutboundSchema), z.undefined()])
+		.optional(),
+	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.string(),
+	interval_count: z.number(),
+	billing_units: z.number(),
+	billing_method: z.string(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemProrationOutboundSchema = z.object({
+	on_increase: z.string(),
+	on_decrease: z.string(),
+});
+
+export const setupPaymentAddItemRolloverOutboundSchema = z.object({
+	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
+	expiry_duration_type: z.string(),
+	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemPlanItemOutboundSchema = z.object({
+	feature_id: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z
+		.union([setupPaymentAddItemResetOutboundSchema, z.undefined()])
+		.optional(),
+	price: z
+		.union([setupPaymentAddItemPriceOutboundSchema, z.undefined()])
+		.optional(),
+	proration: z
+		.union([setupPaymentAddItemProrationOutboundSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([setupPaymentAddItemRolloverOutboundSchema, z.undefined()])
+		.optional(),
+});
+
+export const setupPaymentPlanItemFilterOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	billing_method: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const setupPaymentFreeTrialParamsOutboundSchema = z.object({
@@ -121,7 +201,13 @@ export const setupPaymentCustomizeOutboundSchema = z.object({
 		.optional()
 		.nullable(),
 	items: z
-		.union([z.array(setupPaymentPlanItemOutboundSchema), z.undefined()])
+		.union([z.array(setupPaymentItemPlanItemOutboundSchema), z.undefined()])
+		.optional(),
+	add_items: z
+		.union([z.array(setupPaymentAddItemPlanItemOutboundSchema), z.undefined()])
+		.optional(),
+	remove_items: z
+		.union([z.array(setupPaymentPlanItemFilterOutboundSchema), z.undefined()])
 		.optional(),
 	free_trial: z
 		.union([setupPaymentFreeTrialParamsOutboundSchema, z.undefined()])
@@ -168,6 +254,7 @@ export const setupPaymentParamsOutboundSchema = z.object({
 	success_url: z.union([z.string(), z.undefined()]).optional(),
 	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	starts_at: z.union([z.number(), z.undefined()]).optional(),
+	ends_at: z.union([z.number(), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
@@ -198,58 +285,136 @@ export const setupPaymentBasePriceSchema = z.object({
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentResetIntervalSchema = closedEnumSchema;
+export const setupPaymentItemResetIntervalSchema = closedEnumSchema;
 
-export const setupPaymentResetSchema = z.object({
-	interval: setupPaymentResetIntervalSchema,
+export const setupPaymentItemResetSchema = z.object({
+	interval: setupPaymentItemResetIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentTierBehaviorSchema = closedEnumSchema;
+export const setupPaymentItemTierBehaviorSchema = closedEnumSchema;
 
 export const setupPaymentItemPriceIntervalSchema = closedEnumSchema;
 
-export const setupPaymentBillingMethodSchema = closedEnumSchema;
+export const setupPaymentItemBillingMethodSchema = closedEnumSchema;
 
-export const setupPaymentPriceSchema = z.object({
+export const setupPaymentItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	tiers: z.union([z.array(setupPaymentTierSchema), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(setupPaymentItemTierSchema), z.undefined()])
+		.optional(),
 	tierBehavior: z
-		.union([setupPaymentTierBehaviorSchema, z.undefined()])
+		.union([setupPaymentItemTierBehaviorSchema, z.undefined()])
 		.optional(),
 	interval: setupPaymentItemPriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	billingMethod: setupPaymentBillingMethodSchema,
+	billingMethod: setupPaymentItemBillingMethodSchema,
 	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentOnIncreaseSchema = closedEnumSchema;
+export const setupPaymentItemOnIncreaseSchema = closedEnumSchema;
 
-export const setupPaymentOnDecreaseSchema = closedEnumSchema;
+export const setupPaymentItemOnDecreaseSchema = closedEnumSchema;
 
-export const setupPaymentProrationSchema = z.object({
-	onIncrease: setupPaymentOnIncreaseSchema,
-	onDecrease: setupPaymentOnDecreaseSchema,
+export const setupPaymentItemProrationSchema = z.object({
+	onIncrease: setupPaymentItemOnIncreaseSchema,
+	onDecrease: setupPaymentItemOnDecreaseSchema,
 });
 
-export const setupPaymentExpiryDurationTypeSchema = closedEnumSchema;
+export const setupPaymentItemExpiryDurationTypeSchema = closedEnumSchema;
 
-export const setupPaymentRolloverSchema = z.object({
+export const setupPaymentItemRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
 	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
-	expiryDurationType: setupPaymentExpiryDurationTypeSchema,
+	expiryDurationType: setupPaymentItemExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentPlanItemSchema = z.object({
+export const setupPaymentItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-	reset: z.union([setupPaymentResetSchema, z.undefined()]).optional(),
-	price: z.union([setupPaymentPriceSchema, z.undefined()]).optional(),
-	proration: z.union([setupPaymentProrationSchema, z.undefined()]).optional(),
-	rollover: z.union([setupPaymentRolloverSchema, z.undefined()]).optional(),
+	reset: z.union([setupPaymentItemResetSchema, z.undefined()]).optional(),
+	price: z.union([setupPaymentItemPriceSchema, z.undefined()]).optional(),
+	proration: z
+		.union([setupPaymentItemProrationSchema, z.undefined()])
+		.optional(),
+	rollover: z.union([setupPaymentItemRolloverSchema, z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemResetIntervalSchema = closedEnumSchema;
+
+export const setupPaymentAddItemResetSchema = z.object({
+	interval: setupPaymentAddItemResetIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemTierBehaviorSchema = closedEnumSchema;
+
+export const setupPaymentAddItemPriceIntervalSchema = closedEnumSchema;
+
+export const setupPaymentAddItemBillingMethodSchema = closedEnumSchema;
+
+export const setupPaymentAddItemPriceSchema = z.object({
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(setupPaymentAddItemTierSchema), z.undefined()])
+		.optional(),
+	tierBehavior: z
+		.union([setupPaymentAddItemTierBehaviorSchema, z.undefined()])
+		.optional(),
+	interval: setupPaymentAddItemPriceIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	billingMethod: setupPaymentAddItemBillingMethodSchema,
+	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemOnIncreaseSchema = closedEnumSchema;
+
+export const setupPaymentAddItemOnDecreaseSchema = closedEnumSchema;
+
+export const setupPaymentAddItemProrationSchema = z.object({
+	onIncrease: setupPaymentAddItemOnIncreaseSchema,
+	onDecrease: setupPaymentAddItemOnDecreaseSchema,
+});
+
+export const setupPaymentAddItemExpiryDurationTypeSchema = closedEnumSchema;
+
+export const setupPaymentAddItemRolloverSchema = z.object({
+	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
+	expiryDurationType: setupPaymentAddItemExpiryDurationTypeSchema,
+	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const setupPaymentAddItemPlanItemSchema = z.object({
+	featureId: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z.union([setupPaymentAddItemResetSchema, z.undefined()]).optional(),
+	price: z.union([setupPaymentAddItemPriceSchema, z.undefined()]).optional(),
+	proration: z
+		.union([setupPaymentAddItemProrationSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([setupPaymentAddItemRolloverSchema, z.undefined()])
+		.optional(),
+});
+
+export const setupPaymentRemoveItemBillingMethodSchema = closedEnumSchema;
+
+export const setupPaymentRemoveItemIntervalSchema = closedEnumSchema;
+
+export const setupPaymentPlanItemFilterSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	billingMethod: z
+		.union([setupPaymentRemoveItemBillingMethodSchema, z.undefined()])
+		.optional(),
+	interval: z
+		.union([setupPaymentRemoveItemIntervalSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentDurationTypeSchema = closedEnumSchema;
@@ -268,7 +433,13 @@ export const setupPaymentCustomizeSchema = z.object({
 		.optional()
 		.nullable(),
 	items: z
-		.union([z.array(setupPaymentPlanItemSchema), z.undefined()])
+		.union([z.array(setupPaymentItemPlanItemSchema), z.undefined()])
+		.optional(),
+	addItems: z
+		.union([z.array(setupPaymentAddItemPlanItemSchema), z.undefined()])
+		.optional(),
+	removeItems: z
+		.union([z.array(setupPaymentPlanItemFilterSchema), z.undefined()])
 		.optional(),
 	freeTrial: z
 		.union([setupPaymentFreeTrialParamsSchema, z.undefined()])
@@ -297,6 +468,7 @@ export const setupPaymentParamsSchema = z.object({
 	successUrl: z.union([z.string(), z.undefined()]).optional(),
 	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	startsAt: z.union([z.number(), z.undefined()]).optional(),
+	endsAt: z.union([z.number(), z.undefined()]).optional(),
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),

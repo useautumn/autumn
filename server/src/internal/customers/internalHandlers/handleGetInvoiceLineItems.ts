@@ -1,4 +1,4 @@
-import { Scopes, stripeToAtmnAmount } from "@autumn/shared";
+import { ProcessorType, Scopes, stripeToAtmnAmount } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -32,10 +32,15 @@ export const handleGetInvoiceLineItems = createRoute({
 				org: ctx.org,
 				env: ctx.env,
 			});
-			const autumnInvoices = await InvoiceService.getMany({
-				db,
-				ids: invoice_ids,
-			});
+			const autumnInvoices = (
+				await InvoiceService.getMany({
+					db,
+					ids: invoice_ids,
+				})
+			).filter(
+				(inv) =>
+					(inv.processor_type ?? ProcessorType.Stripe) === ProcessorType.Stripe,
+			);
 			const stripeInvoices = [];
 			for (const invoice of autumnInvoices) {
 				// Throttle to avoid Stripe rate limits.

@@ -647,6 +647,46 @@ components:
               type: boolean
               description: Whether to disable the shared customer-level pool for entities.
           description: Configuration for the customer.
+        processors:
+          type: object
+          properties:
+            stripe:
+              type: object
+              properties:
+                id:
+                  type: string
+                  description: Stripe customer ID.
+              required:
+                - id
+              description: Stripe processor connection for the customer.
+            vercel:
+              type: object
+              properties:
+                installation_id:
+                  type: string
+                  description: Vercel marketplace installation ID for this customer.
+                account_id:
+                  type: string
+                  description: Vercel account ID associated with the installation.
+              required:
+                - installation_id
+                - account_id
+              description: Vercel processor connection for the customer (public-safe subset).
+            revenuecat:
+              type: object
+              properties:
+                id:
+                  anyOf:
+                    - type: string
+                    - type: "null"
+                  description: Customer's external ID, used as the RevenueCat app user ID. Null if
+                    the customer has no external ID set.
+              required:
+                - id
+              description: RevenueCat processor connection for the customer.
+          description: Payment processors this customer is connected to (Stripe, Vercel,
+            RevenueCat). Omitted entirely when the customer has not been created
+            in any processor.
         invoices:
           type: array
           items:
@@ -660,6 +700,13 @@ components:
               stripe_id:
                 type: string
                 description: The Stripe invoice ID
+              processor_type:
+                enum:
+                  - stripe
+                  - revenuecat
+                type: string
+                default: stripe
+                description: The billing processor that owns this invoice.
               status:
                 type: string
                 description: The status of the invoice
@@ -877,6 +924,9 @@ components:
           createdAt: 1771409161016
           fingerprint: null
           stripeId: cus_U0BKxpq1mFhuJO
+          processors:
+            stripe:
+              id: cus_U0BKxpq1mFhuJO
           env: sandbox
           metadata: {}
           sendEmailReceipts: false
@@ -2314,6 +2364,46 @@ paths:
                         type: boolean
                         description: Whether to disable the shared customer-level pool for entities.
                     description: Configuration for the customer.
+                  processors:
+                    type: object
+                    properties:
+                      stripe:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: Stripe customer ID.
+                        required:
+                          - id
+                        description: Stripe processor connection for the customer.
+                      vercel:
+                        type: object
+                        properties:
+                          installation_id:
+                            type: string
+                            description: Vercel marketplace installation ID for this customer.
+                          account_id:
+                            type: string
+                            description: Vercel account ID associated with the installation.
+                        required:
+                          - installation_id
+                          - account_id
+                        description: Vercel processor connection for the customer (public-safe subset).
+                      revenuecat:
+                        type: object
+                        properties:
+                          id:
+                            anyOf:
+                              - type: string
+                              - type: "null"
+                            description: Customer's external ID, used as the RevenueCat app user ID. Null if
+                              the customer has no external ID set.
+                        required:
+                          - id
+                        description: RevenueCat processor connection for the customer.
+                    description: Payment processors this customer is connected to (Stripe, Vercel,
+                      RevenueCat). Omitted entirely when the customer has not
+                      been created in any processor.
                   invoices:
                     type: array
                     items:
@@ -2327,6 +2417,13 @@ paths:
                         stripe_id:
                           type: string
                           description: The Stripe invoice ID
+                        processor_type:
+                          enum:
+                            - stripe
+                            - revenuecat
+                          type: string
+                          default: stripe
+                          description: The billing processor that owns this invoice.
                         status:
                           type: string
                           description: The status of the invoice
@@ -2544,6 +2641,9 @@ paths:
                     createdAt: 1771409161016
                     fingerprint: null
                     stripeId: cus_U0BKxpq1mFhuJO
+                    processors:
+                      stripe:
+                        id: cus_U0BKxpq1mFhuJO
                     env: sandbox
                     metadata: {}
                     sendEmailReceipts: false
@@ -3121,6 +3221,46 @@ paths:
                               type: boolean
                               description: Whether to disable the shared customer-level pool for entities.
                           description: Configuration for the customer.
+                        processors:
+                          type: object
+                          properties:
+                            stripe:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                  description: Stripe customer ID.
+                              required:
+                                - id
+                              description: Stripe processor connection for the customer.
+                            vercel:
+                              type: object
+                              properties:
+                                installation_id:
+                                  type: string
+                                  description: Vercel marketplace installation ID for this customer.
+                                account_id:
+                                  type: string
+                                  description: Vercel account ID associated with the installation.
+                              required:
+                                - installation_id
+                                - account_id
+                              description: Vercel processor connection for the customer (public-safe subset).
+                            revenuecat:
+                              type: object
+                              properties:
+                                id:
+                                  anyOf:
+                                    - type: string
+                                    - type: "null"
+                                  description: Customer's external ID, used as the RevenueCat app user ID. Null if
+                                    the customer has no external ID set.
+                              required:
+                                - id
+                              description: RevenueCat processor connection for the customer.
+                          description: Payment processors this customer is connected to (Stripe, Vercel,
+                            RevenueCat). Omitted entirely when the customer has
+                            not been created in any processor.
                       required:
                         - id
                         - name
@@ -3143,6 +3283,9 @@ paths:
                           createdAt: 1771409161016
                           fingerprint: null
                           stripeId: cus_U0BKxpq1mFhuJO
+                          processors:
+                            stripe:
+                              id: cus_U0BKxpq1mFhuJO
                           env: sandbox
                           metadata: {}
                           sendEmailReceipts: false
@@ -3231,6 +3374,9 @@ paths:
                         createdAt: 1771409161016
                         fingerprint: null
                         stripeId: cus_U0BKxpq1mFhuJO
+                        processors:
+                          stripe:
+                            id: cus_U0BKxpq1mFhuJO
                         env: sandbox
                         metadata: {}
                         sendEmailReceipts: false
@@ -3938,6 +4084,46 @@ paths:
                         type: boolean
                         description: Whether to disable the shared customer-level pool for entities.
                     description: Configuration for the customer.
+                  processors:
+                    type: object
+                    properties:
+                      stripe:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            description: Stripe customer ID.
+                        required:
+                          - id
+                        description: Stripe processor connection for the customer.
+                      vercel:
+                        type: object
+                        properties:
+                          installation_id:
+                            type: string
+                            description: Vercel marketplace installation ID for this customer.
+                          account_id:
+                            type: string
+                            description: Vercel account ID associated with the installation.
+                        required:
+                          - installation_id
+                          - account_id
+                        description: Vercel processor connection for the customer (public-safe subset).
+                      revenuecat:
+                        type: object
+                        properties:
+                          id:
+                            anyOf:
+                              - type: string
+                              - type: "null"
+                            description: Customer's external ID, used as the RevenueCat app user ID. Null if
+                              the customer has no external ID set.
+                        required:
+                          - id
+                        description: RevenueCat processor connection for the customer.
+                    description: Payment processors this customer is connected to (Stripe, Vercel,
+                      RevenueCat). Omitted entirely when the customer has not
+                      been created in any processor.
                 required:
                   - id
                   - name
@@ -3961,6 +4147,9 @@ paths:
                     createdAt: 1771409161016
                     fingerprint: null
                     stripeId: cus_U0BKxpq1mFhuJO
+                    processors:
+                      stripe:
+                        id: cus_U0BKxpq1mFhuJO
                     env: sandbox
                     metadata: {}
                     sendEmailReceipts: false
@@ -7466,7 +7655,193 @@ paths:
                         title: PlanItem
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
-                      description: Override the items in the plan.
+                      description: Override the items in the plan (PUT-style — replaces all existing
+                        items). Mutually exclusive with add_items /
+                        remove_items.
+                    add_items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The ID of the feature to configure.
+                          included:
+                            type: number
+                            description: Number of free units included. Balance resets to this each interval
+                              for consumable features.
+                          unlimited:
+                            type: boolean
+                            description: If true, customer has unlimited access to this feature.
+                          reset:
+                            type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                  consumable features only.
+                              interval_count:
+                                type: number
+                                description: Number of intervals between resets. Defaults to 1.
+                            required:
+                              - interval
+                            description: Reset configuration for consumable features. Omit for
+                              non-consumable features like seats.
+                          price:
+                            type: object
+                            properties:
+                              amount:
+                                type: number
+                                description: Price per billing_units after included usage. Either 'amount' or
+                                  'tiers' is required.
+                              tiers:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    to:
+                                      anyOf:
+                                        - type: number
+                                        - const: inf
+                                    amount:
+                                      type: number
+                                    flat_amount:
+                                      type: number
+                                  required:
+                                    - to
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                              tier_behavior:
+                                enum:
+                                  - graduated
+                                  - volume
+                                type: string
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Billing interval. For consumable features, should match
+                                  reset.interval.
+                              interval_count:
+                                type: number
+                                default: 1
+                                description: Number of intervals per billing cycle. Defaults to 1.
+                              billing_units:
+                                type: number
+                                default: 1
+                                description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                  billing_units=100 means 101 rounds to 200).
+                              billing_method:
+                                enum:
+                                  - prepaid
+                                  - usage_based
+                                type: string
+                                description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                  pay-as-you-go."
+                              max_purchase:
+                                type: number
+                                description: Max units purchasable beyond included. E.g. included=100,
+                                  max_purchase=300 allows 400 total.
+                            required:
+                              - interval
+                              - billing_method
+                            description: Pricing for usage beyond included units. Omit for free features.
+                          proration:
+                            type: object
+                            properties:
+                              on_increase:
+                                enum:
+                                  - bill_immediately
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - bill_next_cycle
+                                type: string
+                                description: Billing behavior when quantity increases mid-cycle.
+                              on_decrease:
+                                enum:
+                                  - prorate
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - none
+                                  - no_prorations
+                                type: string
+                                description: Credit behavior when quantity decreases mid-cycle.
+                            required:
+                              - on_increase
+                              - on_decrease
+                            description: Proration settings for prepaid features. Controls mid-cycle
+                              quantity change billing.
+                          rollover:
+                            type: object
+                            properties:
+                              max:
+                                type: number
+                                description: Max rollover units. Omit for unlimited rollover.
+                              max_percentage:
+                                type: number
+                                description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                  grant. Mutually exclusive with max.
+                              expiry_duration_type:
+                                enum:
+                                  - month
+                                  - forever
+                                type: string
+                                description: When rolled over units expire.
+                              expiry_duration_length:
+                                type: number
+                                description: Number of periods before expiry.
+                            required:
+                              - expiry_duration_type
+                            description: Rollover config for unused units. If set, unused included units
+                              carry over.
+                        required:
+                          - feature_id
+                        title: PlanItem
+                        description: Configuration for a feature item in a plan, including usage limits,
+                          pricing, and rollover settings.
+                      description: Items to add to the plan.
+                    remove_items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: Match items linked to this feature.
+                          billing_method:
+                            enum:
+                              - prepaid
+                              - usage_based
+                            type: string
+                            description: Match items with this billing method (prepaid or usage_based).
+                          interval:
+                            enum:
+                              - one_off
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                            type: string
+                            description: Match items with this interval.
+                        title: PlanItemFilter
+                        description: Filter for matching plan items. All provided fields must match
+                          (AND).
+                      description: Filters selecting items to remove from the plan.
                     free_trial:
                       anyOf:
                         - type: object
@@ -7583,6 +7958,12 @@ paths:
                   maximum: 9007199254740991
                   description: Unix timestamp in milliseconds for when the attached plan should
                     start. Future dates create a scheduled subscription.
+                ends_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Unix timestamp in milliseconds for when the attached plan should
+                    end.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -8064,8 +8445,8 @@ paths:
                                   both.
                               subscription_id:
                                 type: string
-                                description: Unsupported for create_schedule today. Requests that include this
-                                  field will be rejected.
+                                description: A unique ID to identify this subscription. Useful when scheduling
+                                  the same plan multiple times.
                             required:
                               - plan_id
                           description: Plans to materialize for this phase.
@@ -8297,8 +8678,8 @@ paths:
                                 both.
                             subscription_id:
                               type: string
-                              description: Unsupported for create_schedule today. Requests that include this
-                                field will be rejected.
+                              description: A unique ID to identify this subscription. Useful when scheduling
+                                the same plan multiple times.
                           required:
                             - plan_id
                         description: Plans to materialize for this phase.
@@ -9228,7 +9609,193 @@ paths:
                         title: PlanItem
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
-                      description: Override the items in the plan.
+                      description: Override the items in the plan (PUT-style — replaces all existing
+                        items). Mutually exclusive with add_items /
+                        remove_items.
+                    add_items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The ID of the feature to configure.
+                          included:
+                            type: number
+                            description: Number of free units included. Balance resets to this each interval
+                              for consumable features.
+                          unlimited:
+                            type: boolean
+                            description: If true, customer has unlimited access to this feature.
+                          reset:
+                            type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                  consumable features only.
+                              interval_count:
+                                type: number
+                                description: Number of intervals between resets. Defaults to 1.
+                            required:
+                              - interval
+                            description: Reset configuration for consumable features. Omit for
+                              non-consumable features like seats.
+                          price:
+                            type: object
+                            properties:
+                              amount:
+                                type: number
+                                description: Price per billing_units after included usage. Either 'amount' or
+                                  'tiers' is required.
+                              tiers:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    to:
+                                      anyOf:
+                                        - type: number
+                                        - const: inf
+                                    amount:
+                                      type: number
+                                    flat_amount:
+                                      type: number
+                                  required:
+                                    - to
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                              tier_behavior:
+                                enum:
+                                  - graduated
+                                  - volume
+                                type: string
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Billing interval. For consumable features, should match
+                                  reset.interval.
+                              interval_count:
+                                type: number
+                                default: 1
+                                description: Number of intervals per billing cycle. Defaults to 1.
+                              billing_units:
+                                type: number
+                                default: 1
+                                description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                  billing_units=100 means 101 rounds to 200).
+                              billing_method:
+                                enum:
+                                  - prepaid
+                                  - usage_based
+                                type: string
+                                description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                  pay-as-you-go."
+                              max_purchase:
+                                type: number
+                                description: Max units purchasable beyond included. E.g. included=100,
+                                  max_purchase=300 allows 400 total.
+                            required:
+                              - interval
+                              - billing_method
+                            description: Pricing for usage beyond included units. Omit for free features.
+                          proration:
+                            type: object
+                            properties:
+                              on_increase:
+                                enum:
+                                  - bill_immediately
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - bill_next_cycle
+                                type: string
+                                description: Billing behavior when quantity increases mid-cycle.
+                              on_decrease:
+                                enum:
+                                  - prorate
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - none
+                                  - no_prorations
+                                type: string
+                                description: Credit behavior when quantity decreases mid-cycle.
+                            required:
+                              - on_increase
+                              - on_decrease
+                            description: Proration settings for prepaid features. Controls mid-cycle
+                              quantity change billing.
+                          rollover:
+                            type: object
+                            properties:
+                              max:
+                                type: number
+                                description: Max rollover units. Omit for unlimited rollover.
+                              max_percentage:
+                                type: number
+                                description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                  grant. Mutually exclusive with max.
+                              expiry_duration_type:
+                                enum:
+                                  - month
+                                  - forever
+                                type: string
+                                description: When rolled over units expire.
+                              expiry_duration_length:
+                                type: number
+                                description: Number of periods before expiry.
+                            required:
+                              - expiry_duration_type
+                            description: Rollover config for unused units. If set, unused included units
+                              carry over.
+                        required:
+                          - feature_id
+                        title: PlanItem
+                        description: Configuration for a feature item in a plan, including usage limits,
+                          pricing, and rollover settings.
+                      description: Items to add to the plan.
+                    remove_items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: Match items linked to this feature.
+                          billing_method:
+                            enum:
+                              - prepaid
+                              - usage_based
+                            type: string
+                            description: Match items with this billing method (prepaid or usage_based).
+                          interval:
+                            enum:
+                              - one_off
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                            type: string
+                            description: Match items with this interval.
+                        title: PlanItemFilter
+                        description: Filter for matching plan items. All provided fields must match
+                          (AND).
+                      description: Filters selecting items to remove from the plan.
                     free_trial:
                       anyOf:
                         - type: object
@@ -9345,6 +9912,12 @@ paths:
                   maximum: 9007199254740991
                   description: Unix timestamp in milliseconds for when the attached plan should
                     start. Future dates create a scheduled subscription.
+                ends_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Unix timestamp in milliseconds for when the attached plan should
+                    end.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -10939,7 +11512,193 @@ paths:
                         title: PlanItem
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
-                      description: Override the items in the plan.
+                      description: Override the items in the plan (PUT-style — replaces all existing
+                        items). Mutually exclusive with add_items /
+                        remove_items.
+                    add_items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The ID of the feature to configure.
+                          included:
+                            type: number
+                            description: Number of free units included. Balance resets to this each interval
+                              for consumable features.
+                          unlimited:
+                            type: boolean
+                            description: If true, customer has unlimited access to this feature.
+                          reset:
+                            type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                  consumable features only.
+                              interval_count:
+                                type: number
+                                description: Number of intervals between resets. Defaults to 1.
+                            required:
+                              - interval
+                            description: Reset configuration for consumable features. Omit for
+                              non-consumable features like seats.
+                          price:
+                            type: object
+                            properties:
+                              amount:
+                                type: number
+                                description: Price per billing_units after included usage. Either 'amount' or
+                                  'tiers' is required.
+                              tiers:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    to:
+                                      anyOf:
+                                        - type: number
+                                        - const: inf
+                                    amount:
+                                      type: number
+                                    flat_amount:
+                                      type: number
+                                  required:
+                                    - to
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                              tier_behavior:
+                                enum:
+                                  - graduated
+                                  - volume
+                                type: string
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Billing interval. For consumable features, should match
+                                  reset.interval.
+                              interval_count:
+                                type: number
+                                default: 1
+                                description: Number of intervals per billing cycle. Defaults to 1.
+                              billing_units:
+                                type: number
+                                default: 1
+                                description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                  billing_units=100 means 101 rounds to 200).
+                              billing_method:
+                                enum:
+                                  - prepaid
+                                  - usage_based
+                                type: string
+                                description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                  pay-as-you-go."
+                              max_purchase:
+                                type: number
+                                description: Max units purchasable beyond included. E.g. included=100,
+                                  max_purchase=300 allows 400 total.
+                            required:
+                              - interval
+                              - billing_method
+                            description: Pricing for usage beyond included units. Omit for free features.
+                          proration:
+                            type: object
+                            properties:
+                              on_increase:
+                                enum:
+                                  - bill_immediately
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - bill_next_cycle
+                                type: string
+                                description: Billing behavior when quantity increases mid-cycle.
+                              on_decrease:
+                                enum:
+                                  - prorate
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - none
+                                  - no_prorations
+                                type: string
+                                description: Credit behavior when quantity decreases mid-cycle.
+                            required:
+                              - on_increase
+                              - on_decrease
+                            description: Proration settings for prepaid features. Controls mid-cycle
+                              quantity change billing.
+                          rollover:
+                            type: object
+                            properties:
+                              max:
+                                type: number
+                                description: Max rollover units. Omit for unlimited rollover.
+                              max_percentage:
+                                type: number
+                                description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                  grant. Mutually exclusive with max.
+                              expiry_duration_type:
+                                enum:
+                                  - month
+                                  - forever
+                                type: string
+                                description: When rolled over units expire.
+                              expiry_duration_length:
+                                type: number
+                                description: Number of periods before expiry.
+                            required:
+                              - expiry_duration_type
+                            description: Rollover config for unused units. If set, unused included units
+                              carry over.
+                        required:
+                          - feature_id
+                        title: PlanItem
+                        description: Configuration for a feature item in a plan, including usage limits,
+                          pricing, and rollover settings.
+                      description: Items to add to the plan.
+                    remove_items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: Match items linked to this feature.
+                          billing_method:
+                            enum:
+                              - prepaid
+                              - usage_based
+                            type: string
+                            description: Match items with this billing method (prepaid or usage_based).
+                          interval:
+                            enum:
+                              - one_off
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                            type: string
+                            description: Match items with this interval.
+                        title: PlanItemFilter
+                        description: Filter for matching plan items. All provided fields must match
+                          (AND).
+                      description: Filters selecting items to remove from the plan.
                     free_trial:
                       anyOf:
                         - type: object
@@ -11395,7 +12154,193 @@ paths:
                         title: PlanItem
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
-                      description: Override the items in the plan.
+                      description: Override the items in the plan (PUT-style — replaces all existing
+                        items). Mutually exclusive with add_items /
+                        remove_items.
+                    add_items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The ID of the feature to configure.
+                          included:
+                            type: number
+                            description: Number of free units included. Balance resets to this each interval
+                              for consumable features.
+                          unlimited:
+                            type: boolean
+                            description: If true, customer has unlimited access to this feature.
+                          reset:
+                            type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                  consumable features only.
+                              interval_count:
+                                type: number
+                                description: Number of intervals between resets. Defaults to 1.
+                            required:
+                              - interval
+                            description: Reset configuration for consumable features. Omit for
+                              non-consumable features like seats.
+                          price:
+                            type: object
+                            properties:
+                              amount:
+                                type: number
+                                description: Price per billing_units after included usage. Either 'amount' or
+                                  'tiers' is required.
+                              tiers:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    to:
+                                      anyOf:
+                                        - type: number
+                                        - const: inf
+                                    amount:
+                                      type: number
+                                    flat_amount:
+                                      type: number
+                                  required:
+                                    - to
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                              tier_behavior:
+                                enum:
+                                  - graduated
+                                  - volume
+                                type: string
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Billing interval. For consumable features, should match
+                                  reset.interval.
+                              interval_count:
+                                type: number
+                                default: 1
+                                description: Number of intervals per billing cycle. Defaults to 1.
+                              billing_units:
+                                type: number
+                                default: 1
+                                description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                  billing_units=100 means 101 rounds to 200).
+                              billing_method:
+                                enum:
+                                  - prepaid
+                                  - usage_based
+                                type: string
+                                description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                  pay-as-you-go."
+                              max_purchase:
+                                type: number
+                                description: Max units purchasable beyond included. E.g. included=100,
+                                  max_purchase=300 allows 400 total.
+                            required:
+                              - interval
+                              - billing_method
+                            description: Pricing for usage beyond included units. Omit for free features.
+                          proration:
+                            type: object
+                            properties:
+                              on_increase:
+                                enum:
+                                  - bill_immediately
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - bill_next_cycle
+                                type: string
+                                description: Billing behavior when quantity increases mid-cycle.
+                              on_decrease:
+                                enum:
+                                  - prorate
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - none
+                                  - no_prorations
+                                type: string
+                                description: Credit behavior when quantity decreases mid-cycle.
+                            required:
+                              - on_increase
+                              - on_decrease
+                            description: Proration settings for prepaid features. Controls mid-cycle
+                              quantity change billing.
+                          rollover:
+                            type: object
+                            properties:
+                              max:
+                                type: number
+                                description: Max rollover units. Omit for unlimited rollover.
+                              max_percentage:
+                                type: number
+                                description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                  grant. Mutually exclusive with max.
+                              expiry_duration_type:
+                                enum:
+                                  - month
+                                  - forever
+                                type: string
+                                description: When rolled over units expire.
+                              expiry_duration_length:
+                                type: number
+                                description: Number of periods before expiry.
+                            required:
+                              - expiry_duration_type
+                            description: Rollover config for unused units. If set, unused included units
+                              carry over.
+                        required:
+                          - feature_id
+                        title: PlanItem
+                        description: Configuration for a feature item in a plan, including usage limits,
+                          pricing, and rollover settings.
+                      description: Items to add to the plan.
+                    remove_items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: Match items linked to this feature.
+                          billing_method:
+                            enum:
+                              - prepaid
+                              - usage_based
+                            type: string
+                            description: Match items with this billing method (prepaid or usage_based).
+                          interval:
+                            enum:
+                              - one_off
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                            type: string
+                            description: Match items with this interval.
+                        title: PlanItemFilter
+                        description: Filter for matching plan items. All provided fields must match
+                          (AND).
+                      description: Filters selecting items to remove from the plan.
                     free_trial:
                       anyOf:
                         - type: object
@@ -12224,7 +13169,193 @@ paths:
                         title: PlanItem
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
-                      description: Override the items in the plan.
+                      description: Override the items in the plan (PUT-style — replaces all existing
+                        items). Mutually exclusive with add_items /
+                        remove_items.
+                    add_items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The ID of the feature to configure.
+                          included:
+                            type: number
+                            description: Number of free units included. Balance resets to this each interval
+                              for consumable features.
+                          unlimited:
+                            type: boolean
+                            description: If true, customer has unlimited access to this feature.
+                          reset:
+                            type: object
+                            properties:
+                              interval:
+                                enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                  consumable features only.
+                              interval_count:
+                                type: number
+                                description: Number of intervals between resets. Defaults to 1.
+                            required:
+                              - interval
+                            description: Reset configuration for consumable features. Omit for
+                              non-consumable features like seats.
+                          price:
+                            type: object
+                            properties:
+                              amount:
+                                type: number
+                                description: Price per billing_units after included usage. Either 'amount' or
+                                  'tiers' is required.
+                              tiers:
+                                type: array
+                                items:
+                                  type: object
+                                  properties:
+                                    to:
+                                      anyOf:
+                                        - type: number
+                                        - const: inf
+                                    amount:
+                                      type: number
+                                    flat_amount:
+                                      type: number
+                                  required:
+                                    - to
+                                description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                              tier_behavior:
+                                enum:
+                                  - graduated
+                                  - volume
+                                type: string
+                              interval:
+                                enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Billing interval. For consumable features, should match
+                                  reset.interval.
+                              interval_count:
+                                type: number
+                                default: 1
+                                description: Number of intervals per billing cycle. Defaults to 1.
+                              billing_units:
+                                type: number
+                                default: 1
+                                description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                  billing_units=100 means 101 rounds to 200).
+                              billing_method:
+                                enum:
+                                  - prepaid
+                                  - usage_based
+                                type: string
+                                description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                  pay-as-you-go."
+                              max_purchase:
+                                type: number
+                                description: Max units purchasable beyond included. E.g. included=100,
+                                  max_purchase=300 allows 400 total.
+                            required:
+                              - interval
+                              - billing_method
+                            description: Pricing for usage beyond included units. Omit for free features.
+                          proration:
+                            type: object
+                            properties:
+                              on_increase:
+                                enum:
+                                  - bill_immediately
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - bill_next_cycle
+                                type: string
+                                description: Billing behavior when quantity increases mid-cycle.
+                              on_decrease:
+                                enum:
+                                  - prorate
+                                  - prorate_immediately
+                                  - prorate_next_cycle
+                                  - none
+                                  - no_prorations
+                                type: string
+                                description: Credit behavior when quantity decreases mid-cycle.
+                            required:
+                              - on_increase
+                              - on_decrease
+                            description: Proration settings for prepaid features. Controls mid-cycle
+                              quantity change billing.
+                          rollover:
+                            type: object
+                            properties:
+                              max:
+                                type: number
+                                description: Max rollover units. Omit for unlimited rollover.
+                              max_percentage:
+                                type: number
+                                description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                  grant. Mutually exclusive with max.
+                              expiry_duration_type:
+                                enum:
+                                  - month
+                                  - forever
+                                type: string
+                                description: When rolled over units expire.
+                              expiry_duration_length:
+                                type: number
+                                description: Number of periods before expiry.
+                            required:
+                              - expiry_duration_type
+                            description: Rollover config for unused units. If set, unused included units
+                              carry over.
+                        required:
+                          - feature_id
+                        title: PlanItem
+                        description: Configuration for a feature item in a plan, including usage limits,
+                          pricing, and rollover settings.
+                      description: Items to add to the plan.
+                    remove_items:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: Match items linked to this feature.
+                          billing_method:
+                            enum:
+                              - prepaid
+                              - usage_based
+                            type: string
+                            description: Match items with this billing method (prepaid or usage_based).
+                          interval:
+                            enum:
+                              - one_off
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                            type: string
+                            description: Match items with this interval.
+                        title: PlanItemFilter
+                        description: Filter for matching plan items. All provided fields must match
+                          (AND).
+                      description: Filters selecting items to remove from the plan.
                     free_trial:
                       anyOf:
                         - type: object
@@ -12294,6 +13425,12 @@ paths:
                   maximum: 9007199254740991
                   description: Unix timestamp in milliseconds for when the attached plan should
                     start. Future dates create a scheduled subscription.
+                ends_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Unix timestamp in milliseconds for when the attached plan should
+                    end.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -12863,6 +14000,16 @@ paths:
                       - type: "null"
                     description: The customer's balance for this feature. Null if the customer has
                       no balance for this feature.
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to balance for the checked feature and any
+                      related features (e.g. linked credit systems).
                   flag:
                     anyOf:
                       - type: object
@@ -13391,6 +14538,16 @@ paths:
                       - type: "null"
                     description: The customer's balance for this feature. Null if the customer has
                       no balance for this feature.
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to balance for the checked feature and any
+                      related features (e.g. linked credit systems).
                   flag:
                     anyOf:
                       - type: object
@@ -13993,9 +15150,12 @@ paths:
                     propertyNames:
                       type: string
                     additionalProperties:
-                      $ref: "#/components/schemas/Balance"
-                    description: Map of feature_id to updated balance when tracking by event_name
-                      affects multiple features.
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to updated balance for the tracked feature and
+                      any related features (e.g. linked credit systems). Value
+                      is null when the customer has no balance for that feature.
                 required:
                   - customer_id
                   - value
@@ -14060,9 +15220,12 @@ paths:
                     propertyNames:
                       type: string
                     additionalProperties:
-                      $ref: "#/components/schemas/Balance"
-                    description: Map of feature_id to updated balance when tracking by event_name
-                      affects multiple features.
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to updated balance for the tracked feature and
+                      any related features (e.g. linked credit systems). Value
+                      is null when the customer has no balance for that feature.
                 required:
                   - customer_id
                   - value
@@ -14915,6 +16078,13 @@ paths:
                         stripe_id:
                           type: string
                           description: The Stripe invoice ID
+                        processor_type:
+                          enum:
+                            - stripe
+                            - revenuecat
+                          type: string
+                          default: stripe
+                          description: The billing processor that owns this invoice.
                         status:
                           type: string
                           description: The status of the invoice
@@ -15371,6 +16541,13 @@ paths:
                         stripe_id:
                           type: string
                           description: The Stripe invoice ID
+                        processor_type:
+                          enum:
+                            - stripe
+                            - revenuecat
+                          type: string
+                          default: stripe
+                          description: The billing processor that owns this invoice.
                         status:
                           type: string
                           description: The status of the invoice
@@ -15904,6 +17081,13 @@ paths:
                         stripe_id:
                           type: string
                           description: The Stripe invoice ID
+                        processor_type:
+                          enum:
+                            - stripe
+                            - revenuecat
+                          type: string
+                          default: stripe
+                          description: The billing processor that owns this invoice.
                         status:
                           type: string
                           description: The status of the invoice

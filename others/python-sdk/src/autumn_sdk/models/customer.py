@@ -754,6 +754,117 @@ class CustomerConfig(BaseModel):
         return m
 
 
+class StripeTypedDict(TypedDict):
+    r"""Stripe processor connection for the customer."""
+
+    id: str
+    r"""Stripe customer ID."""
+
+
+class Stripe(BaseModel):
+    r"""Stripe processor connection for the customer."""
+
+    id: str
+    r"""Stripe customer ID."""
+
+
+class VercelTypedDict(TypedDict):
+    r"""Vercel processor connection for the customer (public-safe subset)."""
+
+    installation_id: str
+    r"""Vercel marketplace installation ID for this customer."""
+    account_id: str
+    r"""Vercel account ID associated with the installation."""
+
+
+class Vercel(BaseModel):
+    r"""Vercel processor connection for the customer (public-safe subset)."""
+
+    installation_id: str
+    r"""Vercel marketplace installation ID for this customer."""
+
+    account_id: str
+    r"""Vercel account ID associated with the installation."""
+
+
+class RevenuecatTypedDict(TypedDict):
+    r"""RevenueCat processor connection for the customer."""
+
+    id: Nullable[str]
+    r"""Customer's external ID, used as the RevenueCat app user ID. Null if the customer has no external ID set."""
+
+
+class Revenuecat(BaseModel):
+    r"""RevenueCat processor connection for the customer."""
+
+    id: Nullable[str]
+    r"""Customer's external ID, used as the RevenueCat app user ID. Null if the customer has no external ID set."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
+
+
+class ProcessorsTypedDict(TypedDict):
+    r"""Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor."""
+
+    stripe: NotRequired[StripeTypedDict]
+    r"""Stripe processor connection for the customer."""
+    vercel: NotRequired[VercelTypedDict]
+    r"""Vercel processor connection for the customer (public-safe subset)."""
+    revenuecat: NotRequired[RevenuecatTypedDict]
+    r"""RevenueCat processor connection for the customer."""
+
+
+class Processors(BaseModel):
+    r"""Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor."""
+
+    stripe: Optional[Stripe] = None
+    r"""Stripe processor connection for the customer."""
+
+    vercel: Optional[Vercel] = None
+    r"""Vercel processor connection for the customer (public-safe subset)."""
+
+    revenuecat: Optional[Revenuecat] = None
+    r"""RevenueCat processor connection for the customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe", "vercel", "revenuecat"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ProcessorType = Union[
+    Literal[
+        "stripe",
+        "revenuecat",
+    ],
+    UnrecognizedStr,
+]
+r"""The billing processor that owns this invoice."""
+
+
 class InvoiceTypedDict(TypedDict):
     plan_ids: List[str]
     r"""Array of plan IDs included in this invoice"""
@@ -767,6 +878,8 @@ class InvoiceTypedDict(TypedDict):
     r"""The currency code for the invoice"""
     created_at: float
     r"""Timestamp when the invoice was created"""
+    processor_type: NotRequired[ProcessorType]
+    r"""The billing processor that owns this invoice."""
     hosted_invoice_url: NotRequired[Nullable[str]]
     r"""URL to the Stripe-hosted invoice page"""
 
@@ -790,12 +903,15 @@ class Invoice(BaseModel):
     created_at: float
     r"""Timestamp when the invoice was created"""
 
+    processor_type: Optional[ProcessorType] = "stripe"
+    r"""The billing processor that owns this invoice."""
+
     hosted_invoice_url: OptionalNullable[str] = UNSET
     r"""URL to the Stripe-hosted invoice page"""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["hosted_invoice_url"])
+        optional_fields = set(["processor_type", "hosted_invoice_url"])
         nullable_fields = set(["hosted_invoice_url"])
         serialized = handler(self)
         m = {}
@@ -1151,6 +1267,8 @@ class CustomerTypedDict(TypedDict):
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
     config: NotRequired[CustomerConfigTypedDict]
     r"""Configuration for the customer."""
+    processors: NotRequired[ProcessorsTypedDict]
+    r"""Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor."""
     invoices: NotRequired[List[InvoiceTypedDict]]
     r"""Invoices for this customer."""
     entities: NotRequired[List[EntityTypedDict]]
@@ -1211,6 +1329,9 @@ class Customer(BaseModel):
     config: Optional[CustomerConfig] = None
     r"""Configuration for the customer."""
 
+    processors: Optional[Processors] = None
+    r"""Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor."""
+
     invoices: Optional[List[Invoice]] = None
     r"""Invoices for this customer."""
 
@@ -1234,6 +1355,7 @@ class Customer(BaseModel):
         optional_fields = set(
             [
                 "config",
+                "processors",
                 "invoices",
                 "entities",
                 "trials_used",

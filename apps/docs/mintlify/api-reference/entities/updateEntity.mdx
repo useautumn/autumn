@@ -1113,6 +1113,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       The Stripe invoice ID
     </DynamicResponseField>
 
+    <DynamicResponseField name="processor_type" type="'stripe' | 'revenuecat'">
+      The billing processor that owns this invoice.
+    </DynamicResponseField>
+
     <DynamicResponseField name="status" type="string">
       The status of the invoice
     </DynamicResponseField>

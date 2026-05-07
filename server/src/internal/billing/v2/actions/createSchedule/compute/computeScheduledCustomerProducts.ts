@@ -33,6 +33,7 @@ export const computeScheduledCustomerProducts = ({
 				startsAt: phaseContext.startsAt,
 				endsAt: phaseContext.endsAt,
 				currentEpochMs: billingContext.currentEpochMs,
+				externalId: productContext.externalId,
 			});
 			insertCustomerProducts.push(customerProduct);
 			phaseCustomerProductIds.push(customerProduct.id);
