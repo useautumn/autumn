@@ -35,18 +35,18 @@ if (process.env.AXIOM_TOKEN) {
 		scheduledDelayMillis: isDev ? 1000 : 5000,
 	});
 	const filteredExportProcessor = new FilteringSpanProcessor(exportProcessor);
-	const metricExporter = new OTLPMetricExporter({
-		url: "https://api.axiom.co/v1/metrics",
-		headers: {
-			Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
-			"x-axiom-metrics-dataset":
-				process.env.AXIOM_METRICS_DATASET ?? "metrics-v2",
-		},
-	});
-	const metricReader = new PeriodicExportingMetricReader({
-		exporter: metricExporter,
-		exportIntervalMillis: 60_000,
-	});
+	const metricReader = process.env.AXIOM_METRICS_DATASET
+		? new PeriodicExportingMetricReader({
+				exporter: new OTLPMetricExporter({
+					url: "https://api.axiom.co/v1/metrics",
+					headers: {
+						Authorization: `Bearer ${process.env.AXIOM_TOKEN}`,
+						"x-axiom-metrics-dataset": process.env.AXIOM_METRICS_DATASET,
+					},
+				}),
+				exportIntervalMillis: 60_000,
+			})
+		: undefined;
 
 	// No auto-instrumentations — Bun doesn't support require-in-the-middle.
 	// Stripe, Drizzle, and Redis are instrumented via manual patchers in utils/otel/.
