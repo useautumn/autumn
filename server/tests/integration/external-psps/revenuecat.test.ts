@@ -18,6 +18,7 @@ import {
 	type ApiCustomerV5,
 	AppEnv,
 	CusProductStatus,
+	CustomerExpand,
 	customers,
 	invoices,
 	ProcessorType,
@@ -516,8 +517,12 @@ test.concurrent(
 		expect(initialInvoiceV1.status).toBe("paid");
 
 		// V5 fetch exposes processor_type
-		const v5Customer =
-			await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		const v5Customer = await autumnV2_1.customers.get<ApiCustomerV5>(
+			customerId,
+			{
+				expand: [CustomerExpand.Invoices],
+			},
+		);
 		expect(v5Customer.invoices).toBeDefined();
 		expect(v5Customer.invoices).toHaveLength(1);
 		const initialInvoiceV5 = v5Customer.invoices![0]!;

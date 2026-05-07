@@ -30,16 +30,21 @@ export const processInvoice = ({
 	withItems?: boolean;
 	features?: Feature[];
 }): ApiInvoiceV1 => {
+	const processorType = invoice.processor_type ?? ProcessorType.Stripe;
+	const isStripe = processorType === ProcessorType.Stripe;
+
 	return {
 		// product_ids: invoice.product_ids,
 		plan_ids: invoice.product_ids,
 		stripe_id: invoice.stripe_id,
-		processor_type: invoice.processor_type ?? ProcessorType.Stripe,
+		processor_type: processorType,
 		status: invoice.status ?? "",
 		total: invoice.total,
 		currency: invoice.currency,
 		created_at: invoice.created_at,
-		hosted_invoice_url: `${process.env.BETTER_AUTH_URL}/invoices/hosted_invoice_url/${invoice.id}`,
+		hosted_invoice_url: isStripe
+			? `${process.env.BETTER_AUTH_URL}/invoices/hosted_invoice_url/${invoice.id}`
+			: null,
 		// hosted_invoice_url: invoice.hosted_invoice_url,
 		// items: withItems
 		// 	? (invoice.items || []).map((i) => {
