@@ -1108,6 +1108,46 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicResponseField>
 
+<DynamicResponseField name="processors" type="object">
+  Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor.
+  <Expandable title="properties">
+    <DynamicResponseField name="stripe" type="object">
+      Stripe processor connection for the customer.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string">
+          Stripe customer ID.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="vercel" type="object">
+      Vercel processor connection for the customer (public-safe subset).
+      <Expandable title="properties">
+        <DynamicResponseField name="installation_id" type="string">
+          Vercel marketplace installation ID for this customer.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="account_id" type="string">
+          Vercel account ID associated with the installation.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="revenuecat" type="object">
+      RevenueCat processor connection for the customer.
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string | null">
+          Customer's external ID, used as the RevenueCat app user ID. Null if the customer has no external ID set.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
 <DynamicResponseField name="invoices" type="object[]">
   Invoices for this customer.
   <Expandable title="properties">
@@ -1117,6 +1157,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
     <DynamicResponseField name="stripe_id" type="string">
       The Stripe invoice ID
+    </DynamicResponseField>
+
+    <DynamicResponseField name="processor_type" type="'stripe' | 'revenuecat'">
+      The billing processor that owns this invoice.
     </DynamicResponseField>
 
     <DynamicResponseField name="status" type="string">
@@ -1277,6 +1321,11 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   "createdAt": 1771409161016,
   "fingerprint": null,
   "stripeId": "cus_U0BKxpq1mFhuJO",
+  "processors": {
+    "stripe": {
+      "id": "cus_U0BKxpq1mFhuJO"
+    }
+  },
   "env": "sandbox",
   "metadata": {},
   "sendEmailReceipts": false,

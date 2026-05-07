@@ -135,7 +135,7 @@ class SetupPaymentBasePrice(BaseModel):
         return m
 
 
-SetupPaymentResetInterval = Literal[
+SetupPaymentItemResetInterval = Literal[
     "one_off",
     "minute",
     "hour",
@@ -149,19 +149,19 @@ SetupPaymentResetInterval = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class SetupPaymentResetTypedDict(TypedDict):
+class SetupPaymentItemResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: SetupPaymentResetInterval
+    interval: SetupPaymentItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class SetupPaymentReset(BaseModel):
+class SetupPaymentItemReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: SetupPaymentResetInterval
+    interval: SetupPaymentItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -184,20 +184,22 @@ class SetupPaymentReset(BaseModel):
         return m
 
 
-SetupPaymentToTypedDict = TypeAliasType("SetupPaymentToTypedDict", Union[float, str])
+SetupPaymentItemToTypedDict = TypeAliasType(
+    "SetupPaymentItemToTypedDict", Union[float, str]
+)
 
 
-SetupPaymentTo = TypeAliasType("SetupPaymentTo", Union[float, str])
+SetupPaymentItemTo = TypeAliasType("SetupPaymentItemTo", Union[float, str])
 
 
-class SetupPaymentTierTypedDict(TypedDict):
-    to: SetupPaymentToTypedDict
+class SetupPaymentItemTierTypedDict(TypedDict):
+    to: SetupPaymentItemToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
 
 
-class SetupPaymentTier(BaseModel):
-    to: SetupPaymentTo
+class SetupPaymentItemTier(BaseModel):
+    to: SetupPaymentItemTo
 
     amount: Optional[float] = None
 
@@ -220,7 +222,7 @@ class SetupPaymentTier(BaseModel):
         return m
 
 
-SetupPaymentTierBehavior = Literal[
+SetupPaymentItemTierBehavior = Literal[
     "graduated",
     "volume",
 ]
@@ -237,25 +239,25 @@ SetupPaymentItemPriceInterval = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-SetupPaymentBillingMethod = Literal[
+SetupPaymentItemBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class SetupPaymentPriceTypedDict(TypedDict):
+class SetupPaymentItemPriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: SetupPaymentItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: SetupPaymentBillingMethod
+    billing_method: SetupPaymentItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    tiers: NotRequired[List[SetupPaymentTierTypedDict]]
+    tiers: NotRequired[List[SetupPaymentItemTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[SetupPaymentTierBehavior]
+    tier_behavior: NotRequired[SetupPaymentItemTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -264,22 +266,22 @@ class SetupPaymentPriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
 
 
-class SetupPaymentPrice(BaseModel):
+class SetupPaymentItemPrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: SetupPaymentItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: SetupPaymentBillingMethod
+    billing_method: SetupPaymentItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    tiers: Optional[List[SetupPaymentTier]] = None
+    tiers: Optional[List[SetupPaymentItemTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[SetupPaymentTierBehavior] = None
+    tier_behavior: Optional[SetupPaymentItemTierBehavior] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -316,7 +318,7 @@ class SetupPaymentPrice(BaseModel):
         return m
 
 
-SetupPaymentOnIncrease = Literal[
+SetupPaymentItemOnIncrease = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -325,7 +327,7 @@ SetupPaymentOnIncrease = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-SetupPaymentOnDecrease = Literal[
+SetupPaymentItemOnDecrease = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -335,36 +337,36 @@ SetupPaymentOnDecrease = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class SetupPaymentProrationTypedDict(TypedDict):
+class SetupPaymentItemProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: SetupPaymentOnIncrease
+    on_increase: SetupPaymentItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: SetupPaymentOnDecrease
+    on_decrease: SetupPaymentItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class SetupPaymentProration(BaseModel):
+class SetupPaymentItemProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: SetupPaymentOnIncrease
+    on_increase: SetupPaymentItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: SetupPaymentOnDecrease
+    on_decrease: SetupPaymentItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-SetupPaymentExpiryDurationType = Literal[
+SetupPaymentItemExpiryDurationType = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class SetupPaymentRolloverTypedDict(TypedDict):
+class SetupPaymentItemRolloverTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: SetupPaymentExpiryDurationType
+    expiry_duration_type: SetupPaymentItemExpiryDurationType
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -374,10 +376,10 @@ class SetupPaymentRolloverTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class SetupPaymentRollover(BaseModel):
+class SetupPaymentItemRollover(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: SetupPaymentExpiryDurationType
+    expiry_duration_type: SetupPaymentItemExpiryDurationType
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -406,7 +408,7 @@ class SetupPaymentRollover(BaseModel):
         return m
 
 
-class SetupPaymentPlanItemTypedDict(TypedDict):
+class SetupPaymentItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -415,17 +417,17 @@ class SetupPaymentPlanItemTypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
-    reset: NotRequired[SetupPaymentResetTypedDict]
+    reset: NotRequired[SetupPaymentItemResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[SetupPaymentPriceTypedDict]
+    price: NotRequired[SetupPaymentItemPriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[SetupPaymentProrationTypedDict]
+    proration: NotRequired[SetupPaymentItemProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[SetupPaymentRolloverTypedDict]
+    rollover: NotRequired[SetupPaymentItemRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
-class SetupPaymentPlanItem(BaseModel):
+class SetupPaymentItemPlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -437,16 +439,16 @@ class SetupPaymentPlanItem(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
-    reset: Optional[SetupPaymentReset] = None
+    reset: Optional[SetupPaymentItemReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[SetupPaymentPrice] = None
+    price: Optional[SetupPaymentItemPrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[SetupPaymentProration] = None
+    proration: Optional[SetupPaymentItemProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[SetupPaymentRollover] = None
+    rollover: Optional[SetupPaymentItemRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
     @model_serializer(mode="wrap")
@@ -454,6 +456,399 @@ class SetupPaymentPlanItem(BaseModel):
         optional_fields = set(
             ["included", "unlimited", "reset", "price", "proration", "rollover"]
         )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+SetupPaymentAddItemResetInterval = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+
+class SetupPaymentAddItemResetTypedDict(TypedDict):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: SetupPaymentAddItemResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals between resets. Defaults to 1."""
+
+
+class SetupPaymentAddItemReset(BaseModel):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: SetupPaymentAddItemResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals between resets. Defaults to 1."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+SetupPaymentAddItemToTypedDict = TypeAliasType(
+    "SetupPaymentAddItemToTypedDict", Union[float, str]
+)
+
+
+SetupPaymentAddItemTo = TypeAliasType("SetupPaymentAddItemTo", Union[float, str])
+
+
+class SetupPaymentAddItemTierTypedDict(TypedDict):
+    to: SetupPaymentAddItemToTypedDict
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
+
+
+class SetupPaymentAddItemTier(BaseModel):
+    to: SetupPaymentAddItemTo
+
+    amount: Optional[float] = None
+
+    flat_amount: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+SetupPaymentAddItemTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
+
+
+SetupPaymentAddItemPriceInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval. For consumable features, should match reset.interval."""
+
+
+SetupPaymentAddItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+
+class SetupPaymentAddItemPriceTypedDict(TypedDict):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: SetupPaymentAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+    billing_method: SetupPaymentAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+    amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    tiers: NotRequired[List[SetupPaymentAddItemTierTypedDict]]
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[SetupPaymentAddItemTierBehavior]
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+    max_purchase: NotRequired[float]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+
+
+class SetupPaymentAddItemPrice(BaseModel):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: SetupPaymentAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+
+    billing_method: SetupPaymentAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+    amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+
+    tiers: Optional[List[SetupPaymentAddItemTier]] = None
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[SetupPaymentAddItemTierBehavior] = None
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+
+    max_purchase: Optional[float] = None
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "amount",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "max_purchase",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+SetupPaymentAddItemOnIncrease = Literal[
+    "bill_immediately",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "bill_next_cycle",
+]
+r"""Billing behavior when quantity increases mid-cycle."""
+
+
+SetupPaymentAddItemOnDecrease = Literal[
+    "prorate",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "none",
+    "no_prorations",
+]
+r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class SetupPaymentAddItemProrationTypedDict(TypedDict):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: SetupPaymentAddItemOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+    on_decrease: SetupPaymentAddItemOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class SetupPaymentAddItemProration(BaseModel):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: SetupPaymentAddItemOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+
+    on_decrease: SetupPaymentAddItemOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+SetupPaymentAddItemExpiryDurationType = Literal[
+    "month",
+    "forever",
+]
+r"""When rolled over units expire."""
+
+
+class SetupPaymentAddItemRolloverTypedDict(TypedDict):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: SetupPaymentAddItemExpiryDurationType
+    r"""When rolled over units expire."""
+    max: NotRequired[float]
+    r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+    expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
+
+
+class SetupPaymentAddItemRollover(BaseModel):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: SetupPaymentAddItemExpiryDurationType
+    r"""When rolled over units expire."""
+
+    max: Optional[float] = None
+    r"""Max rollover units. Omit for unlimited rollover."""
+
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
+    expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class SetupPaymentAddItemPlanItemTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+    included: NotRequired[float]
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+    unlimited: NotRequired[bool]
+    r"""If true, customer has unlimited access to this feature."""
+    reset: NotRequired[SetupPaymentAddItemResetTypedDict]
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+    price: NotRequired[SetupPaymentAddItemPriceTypedDict]
+    r"""Pricing for usage beyond included units. Omit for free features."""
+    proration: NotRequired[SetupPaymentAddItemProrationTypedDict]
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+    rollover: NotRequired[SetupPaymentAddItemRolloverTypedDict]
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+
+class SetupPaymentAddItemPlanItem(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+
+    included: Optional[float] = None
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+
+    unlimited: Optional[bool] = None
+    r"""If true, customer has unlimited access to this feature."""
+
+    reset: Optional[SetupPaymentAddItemReset] = None
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    price: Optional[SetupPaymentAddItemPrice] = None
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    proration: Optional[SetupPaymentAddItemProration] = None
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    rollover: Optional[SetupPaymentAddItemRollover] = None
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+SetupPaymentRemoveItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Match items with this billing method (prepaid or usage_based)."""
+
+
+SetupPaymentRemoveItemInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Match items with this interval."""
+
+
+class SetupPaymentPlanItemFilterTypedDict(TypedDict):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: NotRequired[str]
+    r"""Match items linked to this feature."""
+    billing_method: NotRequired[SetupPaymentRemoveItemBillingMethod]
+    r"""Match items with this billing method (prepaid or usage_based)."""
+    interval: NotRequired[SetupPaymentRemoveItemInterval]
+    r"""Match items with this interval."""
+
+
+class SetupPaymentPlanItemFilter(BaseModel):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: Optional[str] = None
+    r"""Match items linked to this feature."""
+
+    billing_method: Optional[SetupPaymentRemoveItemBillingMethod] = None
+    r"""Match items with this billing method (prepaid or usage_based)."""
+
+    interval: Optional[SetupPaymentRemoveItemInterval] = None
+    r"""Match items with this interval."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "billing_method", "interval"])
         serialized = handler(self)
         m = {}
 
@@ -521,8 +916,12 @@ class SetupPaymentCustomizeTypedDict(TypedDict):
 
     price: NotRequired[Nullable[SetupPaymentBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
-    items: NotRequired[List[SetupPaymentPlanItemTypedDict]]
-    r"""Override the items in the plan."""
+    items: NotRequired[List[SetupPaymentItemPlanItemTypedDict]]
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+    add_items: NotRequired[List[SetupPaymentAddItemPlanItemTypedDict]]
+    r"""Items to add to the plan."""
+    remove_items: NotRequired[List[SetupPaymentPlanItemFilterTypedDict]]
+    r"""Filters selecting items to remove from the plan."""
     free_trial: NotRequired[Nullable[SetupPaymentFreeTrialParamsTypedDict]]
     r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
 
@@ -533,15 +932,23 @@ class SetupPaymentCustomize(BaseModel):
     price: OptionalNullable[SetupPaymentBasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
-    items: Optional[List[SetupPaymentPlanItem]] = None
-    r"""Override the items in the plan."""
+    items: Optional[List[SetupPaymentItemPlanItem]] = None
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+
+    add_items: Optional[List[SetupPaymentAddItemPlanItem]] = None
+    r"""Items to add to the plan."""
+
+    remove_items: Optional[List[SetupPaymentPlanItemFilter]] = None
+    r"""Filters selecting items to remove from the plan."""
 
     free_trial: OptionalNullable[SetupPaymentFreeTrialParams] = UNSET
     r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["price", "items", "free_trial"])
+        optional_fields = set(
+            ["price", "items", "add_items", "remove_items", "free_trial"]
+        )
         nullable_fields = set(["price", "free_trial"])
         serialized = handler(self)
         m = {}
