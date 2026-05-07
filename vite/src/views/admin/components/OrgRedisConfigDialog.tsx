@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
@@ -16,6 +17,13 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
 const CONFIRM_REMOVE_TEXT = "remove";
+
+const migrationPercentSchema = z
+	.string()
+	.trim()
+	.regex(/^\d+$/)
+	.transform(Number)
+	.pipe(z.number().int().min(0).max(100));
 
 type AdminOrgRedisConfigResponse = {
 	org_id: string;
@@ -44,7 +52,13 @@ export function OrgRedisConfigDialog({
 	const axiosInstance = useAxiosInstance();
 
 	const [connectionString, setConnectionString] = useState("");
-	const [migrationInput, setMigrationInput] = useState("");
+	// `null` = "show the current server value". A string means the admin has
+	// typed something; that draft takes precedence until a successful update
+	// or a dialog reopen clears it. Deriving `migrationInput` during render
+	// (below) lets us avoid a useEffect that watches `data` to sync state.
+	const [migrationInputDraft, setMigrationInputDraft] = useState<string | null>(
+		null,
+	);
 	const [removeConfirm, setRemoveConfirm] = useState("");
 
 	const [saving, setSaving] = useState(false);
@@ -63,6 +77,10 @@ export function OrgRedisConfigDialog({
 			enabled: open && !!orgId,
 		});
 
+	const cfg = data?.redis_config ?? null;
+	const migrationInput =
+		migrationInputDraft ?? (cfg ? String(cfg.migrationPercent) : "");
+
 	// Surface load failures as a toast — only when there's no data to fall
 	// back on. After a successful mutation triggers a refetch, transient GET
 	// failures shouldn't surface as "Failed to load" since the dialog can
@@ -71,32 +89,16 @@ export function OrgRedisConfigDialog({
 		if (isError && !data) toast.error("Failed to load Redis config");
 	}, [isError, data]);
 
-	// Sync the editable migration input from server data when it loads or
-	// changes (e.g. after a successful update).
-	useEffect(() => {
-		if (data) {
-			setMigrationInput(
-				data.redis_config ? String(data.redis_config.migrationPercent) : "0",
-			);
-		}
-	}, [data]);
-
-	// Reset transient inputs when (re)opening — including same-org reopens.
-	// React Query's structural sharing means cached `data` may be returned
-	// with the same reference on reopen, so the `[data]` effect above won't
-	// fire. Without resetting `migrationInput` here, a previously typed but
-	// unsaved value would persist into the next session and the admin could
-	// silently apply a stale edit.
+	// Reset transient inputs whenever the dialog opens (or switches org).
+	// `migrationInputDraft = null` falls back to the server value during
+	// render, so a previously typed but unsaved value can't carry over into
+	// the next session.
 	useEffect(() => {
 		if (open && orgId) {
 			setConnectionString("");
 			setRemoveConfirm("");
-			setMigrationInput(
-				data?.redis_config ? String(data.redis_config.migrationPercent) : "",
-			);
+			setMigrationInputDraft(null);
 		}
-		// `data` deliberately excluded — refetches shouldn't clobber edits.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open, orgId]);
 
 	// Best-effort post-mutation refetch + parent notification. Failures here
@@ -137,27 +139,20 @@ export function OrgRedisConfigDialog({
 
 	const handleUpdateMigration = async () => {
 		if (!orgId) return;
-		const normalizedInput = migrationInput.trim();
-		if (normalizedInput === "") {
+		const parsed = migrationPercentSchema.safeParse(migrationInput);
+		if (!parsed.success) {
 			toast.error("Migration percent must be an integer between 0 and 100");
 			return;
 		}
-		const percent = Number(normalizedInput);
-		if (
-			Number.isNaN(percent) ||
-			!Number.isInteger(percent) ||
-			percent < 0 ||
-			percent > 100
-		) {
-			toast.error("Migration percent must be an integer between 0 and 100");
-			return;
-		}
+		const percent = parsed.data;
 		setUpdatingMigration(true);
 		try {
 			await axiosInstance.patch(`/admin/orgs/${orgId}/redis/migration`, {
 				migrationPercent: percent,
 			});
 			toast.success(`Migration updated to ${percent}%`);
+			// Drop the draft so the input re-derives from the new server value.
+			setMigrationInputDraft(null);
 			await refreshAfterMutation();
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to update migration"));
@@ -180,8 +175,6 @@ export function OrgRedisConfigDialog({
 			setRemoving(false);
 		}
 	};
-
-	const cfg = data?.redis_config ?? null;
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -211,7 +204,7 @@ export function OrgRedisConfigDialog({
 									min={0}
 									max={100}
 									value={migrationInput}
-									onChange={(e) => setMigrationInput(e.target.value)}
+									onChange={(e) => setMigrationInputDraft(e.target.value)}
 									className="w-24 font-mono text-xs"
 								/>
 								<span className="text-t3 text-xs">
