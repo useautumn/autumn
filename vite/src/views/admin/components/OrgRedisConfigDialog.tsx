@@ -93,6 +93,19 @@ export function OrgRedisConfigDialog({
 		);
 	};
 
+	// Best-effort post-mutation refetch + parent notification. Failures here
+	// must not surface as errors because the mutation itself has already
+	// persisted — a transient GET failure should not be reported as
+	// "Failed to connect/update/remove".
+	const refreshAfterMutation = async () => {
+		try {
+			await refresh();
+			await onSaved();
+		} catch {
+			// intentionally swallowed — see comment above
+		}
+	};
+
 	const handleConnect = async () => {
 		if (!orgId || !connectionString.trim()) return;
 		setSaving(true);
@@ -100,10 +113,9 @@ export function OrgRedisConfigDialog({
 			await axiosInstance.patch(`/admin/orgs/${orgId}/redis`, {
 				connectionString: connectionString.trim(),
 			});
-			await refresh();
-			await onSaved();
 			setConnectionString("");
 			toast.success("Redis connected");
+			await refreshAfterMutation();
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to connect Redis"));
 		} finally {
@@ -113,7 +125,12 @@ export function OrgRedisConfigDialog({
 
 	const handleUpdateMigration = async () => {
 		if (!orgId) return;
-		const percent = Number(migrationInput);
+		const normalizedInput = migrationInput.trim();
+		if (normalizedInput === "") {
+			toast.error("Migration percent must be an integer between 0 and 100");
+			return;
+		}
+		const percent = Number(normalizedInput);
 		if (
 			Number.isNaN(percent) ||
 			!Number.isInteger(percent) ||
@@ -128,9 +145,8 @@ export function OrgRedisConfigDialog({
 			await axiosInstance.patch(`/admin/orgs/${orgId}/redis/migration`, {
 				migrationPercent: percent,
 			});
-			await refresh();
-			await onSaved();
 			toast.success(`Migration updated to ${percent}%`);
+			await refreshAfterMutation();
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to update migration"));
 		} finally {
@@ -143,10 +159,9 @@ export function OrgRedisConfigDialog({
 		setRemoving(true);
 		try {
 			await axiosInstance.delete(`/admin/orgs/${orgId}/redis`);
-			await refresh();
-			await onSaved();
 			setRemoveConfirm("");
 			toast.success("Redis config removed");
+			await refreshAfterMutation();
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to remove Redis config"));
 		} finally {
