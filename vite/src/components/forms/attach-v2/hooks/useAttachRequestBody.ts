@@ -44,7 +44,7 @@ export interface BuildAttachRequestBodyParams {
 	carryOverUsages: boolean;
 	carryOverUsageFeatureIds: string[];
 	customLineItems: FormCustomLineItem[];
-	isFreeToPaidTransition: boolean;
+	disableProration: boolean;
 }
 
 /** Pure function to build the attach request body. Extracted for testability. */
@@ -74,7 +74,7 @@ export function buildAttachRequestBody({
 	carryOverUsages,
 	carryOverUsageFeatureIds = [],
 	customLineItems,
-	isFreeToPaidTransition,
+	disableProration,
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
 	if (!customerId || !product) {
 		return null;
@@ -136,7 +136,7 @@ export function buildAttachRequestBody({
 	const normalizedProrationBehavior = normalizeAttachProrationBehavior({
 		prorationBehavior,
 		newBillingSubscription,
-		blocksNextCycleOnly: isFreeToPaidTransition,
+		disableProration,
 	});
 
 	if (normalizedProrationBehavior) {
@@ -218,7 +218,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		carryOverUsages,
 		carryOverUsageFeatureIds,
 		customLineItems,
-		isFreeToPaidTransition,
+		disableProration,
 	} = params;
 
 	const requestBody = useMemo(
@@ -249,7 +249,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				carryOverUsages,
 				carryOverUsageFeatureIds,
 				customLineItems,
-				isFreeToPaidTransition,
+				disableProration,
 			}),
 		[
 			customerId,
@@ -277,7 +277,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			carryOverUsages,
 			carryOverUsageFeatureIds,
 			customLineItems,
-			isFreeToPaidTransition,
+			disableProration,
 		],
 	);
 

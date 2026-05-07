@@ -75,7 +75,6 @@ export const handleAttachV2Errors = async ({
 	// 10. Proration behavior errors (none restrictions)
 	handleProrationBehaviorErrors({
 		billingContext,
-		currentCustomerProduct: billingContext.currentCustomerProduct,
 		billingPlan,
 		params,
 	});
