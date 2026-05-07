@@ -4,6 +4,60 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 7th 2026">
+  ## Schedule a plan with `starts_at` and `ends_at`
+
+  You can now schedule plans to start or end at a future date directly from `billing.attach`. Pass a Unix timestamp (in milliseconds) to defer the start of a subscription, schedule a one-off plan to expire, or pre-load an upgrade for the next billing cycle.
+
+  - **`starts_at`**: Future-date a plan attach. Autumn creates a scheduled subscription that activates on that date
+  - **`ends_at`**: Set a hard end date for a plan, including one-off products. Autumn cleans up access automatically when the date passes
+  - **Frontend support**: Both fields are available in the Attach sheet under Advanced settings
+
+  See the [attach API reference](/api-reference/billing/attach) for details.
+
+  ## `customers.get` endpoint and `processors` field
+
+  A dedicated [`customers.get`](/api-reference/customers/getCustomer) endpoint is now available — read a customer by ID without going through `getOrCreate`.
+
+  Customer responses now include a `processors` object showing which payment processors (Stripe, Vercel, RevenueCat) the customer is connected to, along with their external IDs.
+
+  ## Credit notes in attach previews
+
+  Plan change previews now surface credit notes alongside proration adjustments, so customers and dashboard users see the full picture — including refunds for unused time — before confirming a change. Available in [`billing.previewAttach`](/api-reference/billing/previewAttach) and [`billing.previewUpdate`](/api-reference/billing/previewUpdate).
+
+  ## Balances returned from `track`
+
+  The [`track`](/api-reference/core/track) endpoint now returns updated balances in the response, so you can read the customer's remaining usage right after recording an event without a follow-up `check` call.
+
+  ## RevenueCat invoices
+
+  RevenueCat purchases, renewals, cancellations, and non-renewing transactions now create invoice records in Autumn — visible in the customer's invoice timeline alongside Stripe invoices. Refunds are recorded when subscriptions are cancelled.
+
+  ## Promo codes in Autumn Checkout
+
+  Autumn Checkout now supports promo codes. Customers can apply discount codes directly on the hosted checkout page before confirming their purchase.
+
+  ## Subscription discounts in the dashboard
+
+  You can now attach and view per-subscription discounts from the customer dashboard. Apply a coupon when updating a subscription, and see all active coupons on the subscription detail sheet.
+
+  ## Auto-sync paid feature mappings
+
+  When a Stripe subscription is created outside Autumn, Autumn now automatically maps Stripe price IDs to your prepaid feature configuration — so externally-created subscriptions show up with the correct feature quantities without manual reconciliation.
+
+  <AccordionGroup>
+    <Accordion title="Bug fixes">
+      - Fixed proration toggle being hidden during cross-entity free-to-paid attach when another entity had an active subscription
+      - Fixed prepaid prices defaulting to `0` in the Vercel Marketplace integration
+      - Fixed auto top-ups not triggering for Vercel customers
+      - Fixed orphaned customer products created during failed plan changes
+      - Fixed schedule sync issues with Stripe subscription schedules
+      - Fixed balances validation when returning balances from `track`
+      - Fixed several Vercel Marketplace edge cases including stale Stripe subscription filtering and grace handling
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
