@@ -17,13 +17,7 @@ export const handlePrepareMigration = createRoute({
 		const ctx = c.get("ctx");
 		const { id, dry_run } = c.req.valid("json");
 
-		const [migration] = await migrationRepo.get({ ctx, id });
-		if (!migration)
-			throw new RecaseError({
-				message: `Migration ${id} not found`,
-				code: ErrCode.MigrationNotFound,
-				statusCode: 404,
-			});
+		const migration = await migrationRepo.find({ ctx, id });
 
 		if (!migration.operations)
 			throw new RecaseError({
@@ -32,7 +26,7 @@ export const handlePrepareMigration = createRoute({
 				statusCode: 400,
 			});
 
-		const response = await runPrepare({ ctx, migration, dry_run });
+		const { response } = await runPrepare({ ctx, migration, dry_run });
 		return c.json(response);
 	},
 });

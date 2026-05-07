@@ -2,7 +2,7 @@ import { AppEnv } from "@autumn/shared";
 import {
     buildCustomerCount,
     buildCustomerSelect,
-} from "@autumn/shared/api/migrations/compiler/buildCustomerQuery.js";
+} from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
 import type { CustomerFilter } from "@autumn/shared/api/migrations/filters/customerFilter.js";
 import { sql, type SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";

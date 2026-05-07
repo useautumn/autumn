@@ -26,6 +26,8 @@ import "./internal/misc/edgeConfig/orgLimitsStore.js";
 import "./internal/misc/stripeSync/stripeSyncStore.js";
 import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
 import "./internal/misc/jobQueues/jobQueueStore.js";
+// Side-effect: configures trigger.dev SDK to use TRIGGER_SERVER_SECRET_KEY.
+import "./trigger/configureTrigger.js";
 import { closeStripeSyncEngine } from "@autumn/stripe-sync";
 import {
 	startRedisMonitor,

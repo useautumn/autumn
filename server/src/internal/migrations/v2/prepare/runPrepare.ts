@@ -2,18 +2,18 @@ import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { migrationRepo } from "../repos/index.js";
 import { inferImplicitPrep } from "./inferImplicitPrep.js";
-import type {
-	PrepareModuleResult,
-	PrepareResponse,
-	PreparedState,
-} from "./types/index.js";
+import { runPrepareModules } from "./runPrepareModules.js";
+import type { PreparedState, PrepareResponse } from "./types/index.js";
+
+/** Stable scope_id for a Migration. Preserves the historical entitlement ID format. */
+const scopeIdFor = (migration: Migration): string =>
+	`mig_${migration.internal_id}`;
 
 /**
- * Orchestrate a migration's prepare phase. Walks implicit prep modules,
- * runs plan → apply per module, persists prepared_state.
- *
- * On `dry_run: true`, plan runs but apply is skipped and prepared_state
- * is not written.
+ * Migration-fed shim around `runPrepareModules`. Walks implicit prep
+ * modules from `migration.operations`, runs the pure orchestrator, then
+ * persists the new `prepared_state` back to the migrations row (skipped
+ * on dry-run).
  */
 export const runPrepare = async ({
 	ctx,
@@ -23,40 +23,32 @@ export const runPrepare = async ({
 	ctx: AutumnContext;
 	migration: Migration;
 	dry_run: boolean;
-}): Promise<PrepareResponse> => {
-	const instances = inferImplicitPrep(migration);
-	const warnings: string[] = [];
-	const modules: PrepareModuleResult[] = [];
-	const nextState: PreparedState = { ...(migration.prepared_state ?? {}) };
+}): Promise<{ response: PrepareResponse; prepared_state: PreparedState }> => {
+	const modules = inferImplicitPrep(migration);
 
-	for (const { key, module, input } of instances) {
-		const planned = await module.plan({ ctx, migration, input });
-
-		if (planned.entitlements.length === 0) {
-			warnings.push(`No products matched target for ${key}`);
-		}
-
-		const result = dry_run
-			? planned
-			: await module.apply({ ctx, migration, input, planned });
-
-		if (!dry_run) nextState[key] = result;
-
-		modules.push({ key, kind: module.kind, result });
-	}
+	const { results, prepared_state } = await runPrepareModules({
+		ctx,
+		scope_id: scopeIdFor(migration),
+		modules,
+		dry_run,
+		prior_state: migration.prepared_state ?? {},
+	});
 
 	if (!dry_run) {
 		await migrationRepo.update({
 			ctx,
 			id: migration.id,
-			updates: { prepared_state: nextState },
+			updates: { prepared_state },
 		});
 	}
 
 	return {
-		migration_id: migration.id,
-		dry_run,
-		modules,
-		warnings,
+		response: {
+			migration_id: migration.id,
+			dry_run,
+			modules: results,
+			warnings: [],
+		},
+		prepared_state,
 	};
 };

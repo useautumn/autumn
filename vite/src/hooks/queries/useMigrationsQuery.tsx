@@ -1,18 +1,66 @@
 import type { Migration } from "@autumn/shared";
-import { useQuery } from "@tanstack/react-query";
+import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
+import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
-import { MigrationService } from "@/services/MigrationService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useMigrationsQuery = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
+	const queryClient = useQueryClient();
+	const queryKey = buildKey(["migrations"]);
 
-	const { data, isLoading, error, refetch } = useQuery<{
-		list: Migration[];
-	}>({
-		queryKey: buildKey(["migrations"]),
-		queryFn: () => MigrationService.list(axiosInstance),
+	const { data, isLoading, error, refetch } = useQuery<{ list: Migration[] }>({
+		queryKey,
+		queryFn: async () => {
+			const { data } = await axiosInstance.post<{ list: Migration[] }>(
+				"/migrations.list",
+			);
+			return data;
+		},
+	});
+
+	const invalidate = () => queryClient.invalidateQueries({ queryKey });
+
+	const createMutation = useMutation({
+		mutationFn: async (body: { id: string }) => {
+			const { data } = await axiosInstance.post<Migration>(
+				"/migrations.create",
+				body,
+			);
+			return data;
+		},
+		onSuccess: invalidate,
+	});
+
+	const updateMutation = useMutation({
+		mutationFn: async (body: {
+			id: string;
+			updates: {
+				id?: string;
+				filter?: MigrationFilter | null;
+				operations?: Operations | null;
+			};
+		}) => {
+			const { data } = await axiosInstance.post<Migration>(
+				"/migrations.update",
+				body,
+			);
+			return data;
+		},
+		onSuccess: invalidate,
+	});
+
+	const runMutation = useMutation({
+		mutationFn: async (body: { id: string; dry_run?: boolean }) => {
+			const { data } = await axiosInstance.post<{
+				migration_id: string;
+				dry_run: boolean;
+				run_id: string;
+			}>("/migrations.run", body);
+			return data;
+		},
 	});
 
 	return {
@@ -20,5 +68,11 @@ export const useMigrationsQuery = () => {
 		isLoading,
 		error,
 		refetch,
+		createMigration: createMutation.mutateAsync,
+		isCreating: createMutation.isPending,
+		updateMigration: updateMutation.mutateAsync,
+		isUpdating: updateMutation.isPending,
+		runMigration: runMutation.mutateAsync,
+		isRunning: runMutation.isPending,
 	};
 };
