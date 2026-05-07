@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
@@ -41,8 +42,6 @@ export function OrgRedisConfigDialog({
 	onSaved: () => void | Promise<void>;
 }) {
 	const axiosInstance = useAxiosInstance();
-	const [loading, setLoading] = useState(false);
-	const [data, setData] = useState<AdminOrgRedisConfigResponse | null>(null);
 
 	const [connectionString, setConnectionString] = useState("");
 	const [migrationInput, setMigrationInput] = useState("");
@@ -52,56 +51,50 @@ export function OrgRedisConfigDialog({
 	const [updatingMigration, setUpdatingMigration] = useState(false);
 	const [removing, setRemoving] = useState(false);
 
-	useEffect(() => {
-		if (!open || !orgId) return;
-
-		let cancelled = false;
-		setLoading(true);
-		setConnectionString("");
-		setRemoveConfirm("");
-
-		axiosInstance
-			.get<AdminOrgRedisConfigResponse>(`/admin/orgs/${orgId}/redis`)
-			.then(({ data }) => {
-				if (cancelled) return;
-				setData(data);
-				setMigrationInput(
-					data.redis_config ? String(data.redis_config.migrationPercent) : "0",
+	const { data, isLoading, isError, refetch } =
+		useQuery<AdminOrgRedisConfigResponse>({
+			queryKey: ["admin-org-redis", orgId],
+			queryFn: async () => {
+				const { data } = await axiosInstance.get<AdminOrgRedisConfigResponse>(
+					`/admin/orgs/${orgId}/redis`,
 				);
-			})
-			.catch((error) => {
-				if (cancelled) return;
-				toast.error(getBackendErr(error, "Failed to load Redis config"));
-			})
-			.finally(() => {
-				if (!cancelled) setLoading(false);
-			});
+				return data;
+			},
+			enabled: open && !!orgId,
+		});
 
-		return () => {
-			cancelled = true;
-		};
-	}, [open, orgId, axiosInstance]);
+	// Surface load failures as a toast (parity with previous behavior).
+	useEffect(() => {
+		if (isError) toast.error("Failed to load Redis config");
+	}, [isError]);
 
-	const refresh = async () => {
-		if (!orgId) return;
-		const { data } = await axiosInstance.get<AdminOrgRedisConfigResponse>(
-			`/admin/orgs/${orgId}/redis`,
-		);
-		setData(data);
-		setMigrationInput(
-			data.redis_config ? String(data.redis_config.migrationPercent) : "0",
-		);
-	};
+	// Sync the editable migration input from server data when it loads or
+	// changes (e.g. after a successful update).
+	useEffect(() => {
+		if (data) {
+			setMigrationInput(
+				data.redis_config ? String(data.redis_config.migrationPercent) : "0",
+			);
+		}
+	}, [data]);
+
+	// Reset transient inputs when (re)opening for a different org.
+	useEffect(() => {
+		if (open && orgId) {
+			setConnectionString("");
+			setRemoveConfirm("");
+		}
+	}, [open, orgId]);
 
 	// Best-effort post-mutation refetch + parent notification. Failures here
-	// must not surface as errors because the mutation itself has already
-	// persisted — a transient GET failure should not be reported as
-	// "Failed to connect/update/remove". Each step is also independent so a
-	// failure in `refresh()` (local dialog state) doesn't skip `onSaved()`
-	// (parent table refetch), and vice versa.
+	// must not surface as errors because the mutation has already persisted —
+	// a transient GET failure should not be reported as
+	// "Failed to connect/update/remove". Each step is independent so a failure
+	// in `refetch()` (local dialog state) doesn't skip `onSaved()` (parent
+	// table refetch), and vice versa.
 	const refreshAfterMutation = async () => {
 		try {
-			await refresh();
+			await refetch();
 		} catch {
 			// non-fatal: dialog will display stale state until reopened
 		}
@@ -188,7 +181,7 @@ export function OrgRedisConfigDialog({
 					</DialogDescription>
 				</DialogHeader>
 
-				{loading ? (
+				{isLoading ? (
 					<div className="py-8 text-center text-t3 text-sm">Loading…</div>
 				) : cfg ? (
 					<div className="flex flex-col gap-4">
