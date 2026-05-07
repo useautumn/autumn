@@ -29,7 +29,12 @@ export const handleRenewal = async ({
 	const { db, org, env, logger, features } = ctx;
 	const { product_id, app_user_id } = event;
 
-	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+	const {
+		ctx: customerCtx,
+		product,
+		customer,
+		cusProducts,
+	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
@@ -50,7 +55,7 @@ export const handleRenewal = async ({
 
 		// Send webhook for simple renewal (no state change)
 		await addProductsUpdatedWebhookTask({
-			ctx,
+			ctx: customerCtx,
 			internalCustomerId: curSameProduct.internal_customer_id,
 			org,
 			env,
@@ -68,7 +73,7 @@ export const handleRenewal = async ({
 			`Renewal for existing past due product ${product.id}, marking as active`,
 		);
 		await CusProductService.update({
-			ctx,
+			ctx: customerCtx,
 			cusProductId: curSameProduct.id,
 			updates: {
 				status: CusProductStatus.Active,
@@ -77,7 +82,7 @@ export const handleRenewal = async ({
 
 		// Send webhook for past_due → active recovery
 		await addProductsUpdatedWebhookTask({
-			ctx,
+			ctx: customerCtx,
 			internalCustomerId: curSameProduct.internal_customer_id,
 			org,
 			env,
@@ -111,7 +116,7 @@ export const handleRenewal = async ({
 
 		// Expire old cus_product
 		await CusProductService.update({
-			ctx,
+			ctx: customerCtx,
 			cusProductId: curMainProduct.id,
 			updates: {
 				status: CusProductStatus.Expired,
@@ -121,7 +126,7 @@ export const handleRenewal = async ({
 
 		// Send webhook for the expired product
 		await addProductsUpdatedWebhookTask({
-			ctx,
+			ctx: customerCtx,
 			internalCustomerId: curMainProduct.internal_customer_id,
 			org,
 			env,
@@ -134,7 +139,7 @@ export const handleRenewal = async ({
 	} else if (curSameProduct) {
 		// Reactivate the same product if it was expired/cancelled
 		await CusProductService.update({
-			ctx,
+			ctx: customerCtx,
 			cusProductId: curSameProduct.id,
 			updates: {
 				status: CusProductStatus.Active,
@@ -146,7 +151,7 @@ export const handleRenewal = async ({
 
 		// Send webhook for reactivation
 		await addProductsUpdatedWebhookTask({
-			ctx,
+			ctx: customerCtx,
 			internalCustomerId: curSameProduct.internal_customer_id,
 			org,
 			env,

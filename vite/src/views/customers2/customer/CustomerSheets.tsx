@@ -48,6 +48,7 @@ export function CustomerSheets() {
 			case "attach-review":
 			case "attach-send-invoice":
 			case "attach-checkout-session":
+			case "attach-schedule-plan":
 				return <AttachProductSheet />;
 			// case "attach-product-v2":
 			// 	return <AttachProductSheetV3 />;

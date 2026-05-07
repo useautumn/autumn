@@ -12,6 +12,7 @@ import {
 import type { Context, Next } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import { StatusCodes } from "http-status-codes";
+import { getCtxWithCustomerRedis } from "@/external/redis/customerRedisRouting.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import { checkoutActions } from "@/internal/checkouts/actions";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
@@ -117,8 +118,7 @@ export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		});
 	}
 
-	// Set up context with org/env/features for handlers
-	c.set("ctx", {
+	const nextCtx = {
 		...ctx,
 		org: orgWithFeatures.org,
 		env,
@@ -129,7 +129,11 @@ export const checkoutMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			orgId: orgWithFeatures.org.id,
 			customerId: validCheckout.customer_id,
 		}),
-	});
+	};
+	const { ctx: routedCtx } = getCtxWithCustomerRedis({ ctx: nextCtx });
+
+	// Set up context with org/env/features for handlers
+	c.set("ctx", routedCtx);
 
 	// Attach checkout to context for handlers
 	c.set("checkout", validCheckout);

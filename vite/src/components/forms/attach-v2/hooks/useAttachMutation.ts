@@ -117,14 +117,9 @@ export function useAttachMutation({
 		};
 	};
 
-	const handleCheckoutAttach = async ({
-		enablePlanImmediately,
-	}: {
-		enablePlanImmediately: boolean;
-	}) => {
+	const handleCheckoutAttach = async () => {
 		const result = await mutation.mutateAsync({
 			useInvoice: false,
-			enableProductImmediately: enablePlanImmediately,
 			skipDefaultSuccess: true,
 		});
 		return { paymentUrl: result.data?.payment_url };

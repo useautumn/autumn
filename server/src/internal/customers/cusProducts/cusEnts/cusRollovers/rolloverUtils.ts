@@ -31,8 +31,13 @@ export const getRolloverUpdates = ({
 		toUpdate: [],
 	};
 	const ent = cusEnt.entitlement;
-	const shouldRollover =
-		cusEnt.balance && cusEnt.balance > 0 && notNullish(ent.rollover);
+	const hasEntityBalanceToRollover =
+		notNullish(ent.entity_feature_id) &&
+		Object.values(cusEnt.entities ?? {}).some((entity) => entity.balance > 0);
+	const hasBalanceToRollover = notNullish(ent.entity_feature_id)
+		? hasEntityBalanceToRollover
+		: cusEnt.balance != null && cusEnt.balance > 0;
+	const shouldRollover = hasBalanceToRollover && notNullish(ent.rollover);
 
 	if (!shouldRollover) return update;
 
@@ -176,21 +181,6 @@ export function performMaximumClearing({
 		return { toDelete, toUpdate };
 	}
 
-	const allEntityIds = new Set<string>();
-	rows.forEach((row) => {
-		if (row.entities && Array.isArray(row.entities)) {
-			row.entities.forEach((entity: any) => {
-				if (entity.id) {
-					allEntityIds.add(entity.id);
-				}
-			});
-		}
-	});
-
-	const entityTotals = new Map<string, number>();
-	allEntityIds.forEach((id) => {
-		entityTotals.set(id, 0);
-	});
 	const entityIdToTotal: Record<string, number> = {};
 	rows.forEach((row) => {
 		for (const entityId in row.entities) {

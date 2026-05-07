@@ -1,5 +1,8 @@
-import type { FullCusProduct, LineItem } from "@autumn/shared";
-import type { AutumnBillingPlan } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	FullCusProduct,
+	LineItem,
+} from "@autumn/shared";
 import type { CancelUpdates } from "./computeCancelUpdates";
 
 /**
@@ -14,6 +17,7 @@ export const applyCancelPlan = ({
 	cancelUpdates,
 	defaultCustomerProduct,
 	productToDelete,
+	productsToDelete,
 	cancelLineItems,
 	existingCustomerProduct,
 }: {
@@ -21,6 +25,7 @@ export const applyCancelPlan = ({
 	cancelUpdates: CancelUpdates;
 	defaultCustomerProduct: FullCusProduct | undefined;
 	productToDelete: FullCusProduct | undefined;
+	productsToDelete: FullCusProduct[];
 	cancelLineItems: LineItem[];
 	existingCustomerProduct: FullCusProduct;
 }): AutumnBillingPlan => {
@@ -59,6 +64,13 @@ export const applyCancelPlan = ({
 	// Set product to delete if there's an existing scheduled product
 	if (productToDelete) {
 		plan.deleteCustomerProduct = productToDelete;
+	}
+
+	if (productsToDelete.length > 0) {
+		plan.deleteCustomerProducts = [
+			...(plan.deleteCustomerProducts ?? []),
+			...productsToDelete,
+		];
 	}
 
 	// Merge cancel line items (prorated refunds for immediate cancellation)

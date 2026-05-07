@@ -30,6 +30,52 @@ export type NextCyclePreviewResult = {
 	debug: NextCyclePreviewDebug;
 };
 
+const getScheduledStartPreviewContext = ({
+	customerProducts,
+	currentCustomerProducts,
+	currentEpochMs,
+}: {
+	customerProducts: FullCusProduct[];
+	currentCustomerProducts: FullCusProduct[];
+	currentEpochMs: number;
+}) => {
+	let scheduledStartMs: number | null = null;
+
+	for (const customerProduct of customerProducts) {
+		if (!cp(customerProduct).scheduled().valid) continue;
+		if (customerProduct.starts_at <= currentEpochMs) continue;
+
+		scheduledStartMs =
+			scheduledStartMs === null
+				? customerProduct.starts_at
+				: Math.min(scheduledStartMs, customerProduct.starts_at);
+	}
+
+	const scheduledStartCustomerProducts =
+		scheduledStartMs === null
+			? []
+			: customerProducts.filter(
+					(customerProduct) => customerProduct.starts_at === scheduledStartMs,
+				);
+
+	const currentPrices = cusProductsToPrices({
+		cusProducts: currentCustomerProducts,
+		filters: { excludeOneOffPrices: true },
+	});
+	const scheduledStartPrices = cusProductsToPrices({
+		cusProducts: scheduledStartCustomerProducts,
+		filters: { excludeOneOffPrices: true },
+	});
+
+	return {
+		scheduledStartMs,
+		scheduledStartCustomerProducts,
+		smallestInterval: getSmallestInterval({
+			prices: currentPrices.length > 0 ? currentPrices : scheduledStartPrices,
+		}),
+	};
+};
+
 export const billingPlanToNextCyclePreview = ({
 	ctx,
 	billingContext,
@@ -62,12 +108,15 @@ export const billingPlanToNextCyclePreview = ({
 			cp(customerProduct).paid().recurring().hasActiveStatus().valid,
 	);
 
-	const currentPrices = cusProductsToPrices({
-		cusProducts: currentCustomerProducts,
-		filters: { excludeOneOffPrices: true },
+	const {
+		scheduledStartMs,
+		scheduledStartCustomerProducts,
+		smallestInterval,
+	} = getScheduledStartPreviewContext({
+		customerProducts,
+		currentCustomerProducts,
+		currentEpochMs: billingContext.currentEpochMs,
 	});
-
-	const smallestInterval = getSmallestInterval({ prices: currentPrices });
 
 	// Calculate anchor
 	const anchorMs =
@@ -82,7 +131,7 @@ export const billingPlanToNextCyclePreview = ({
 		anchorMs,
 	};
 
-	if (billingCycleAnchorMs === "now") {
+	if (billingCycleAnchorMs === "now" && scheduledStartMs === null) {
 		return {
 			nextCycle: undefined,
 			debug: {
@@ -120,6 +169,8 @@ export const billingPlanToNextCyclePreview = ({
 		nextCycleStart = result.nextCycleStart;
 		prorationRatio = result.prorationRatio;
 		lineItemsBillingContext = result.lineItemsBillingContext;
+	} else if (billingCycleAnchorMs === "now" && scheduledStartMs !== null) {
+		nextCycleStart = scheduledStartMs;
 	} else {
 		nextCycleStart = getCycleEnd({
 			anchor: anchorMs,
@@ -130,7 +181,11 @@ export const billingPlanToNextCyclePreview = ({
 		});
 	}
 
-	const filteredCustomerProducts = customerProducts.filter(
+	const nextCycleCustomerProducts =
+		billingCycleAnchorMs === "now" && scheduledStartMs !== null
+			? scheduledStartCustomerProducts
+			: customerProducts;
+	const filteredCustomerProducts = nextCycleCustomerProducts.filter(
 		(customerProduct) => {
 			return !hasCustomerProductEnded(customerProduct, {
 				nowMs: nextCycleStart,
