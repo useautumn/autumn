@@ -1,4 +1,8 @@
-import { type AppEnv, CusProductStatus } from "@autumn/shared";
+import {
+	type AppEnv,
+	CusProductStatus,
+	type Organization,
+} from "@autumn/shared";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 import type { RepoContext } from "@/db/repoContext.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
@@ -19,7 +23,7 @@ export const expireOneOffCustomerProductResults = async ({
 	const grouped = new Map<
 		string,
 		{
-			orgId: string;
+			org: Organization;
 			env: AppEnv;
 			customerProductIds: Set<string>;
 			customerIds: Set<string>;
@@ -28,14 +32,12 @@ export const expireOneOffCustomerProductResults = async ({
 
 	for (const result of results) {
 		const key = `${result.org.id}:${result.customer.env}`;
-		const group =
-			grouped.get(key) ??
-			{
-				orgId: result.org.id,
-				env: result.customer.env,
-				customerProductIds: new Set<string>(),
-				customerIds: new Set<string>(),
-			};
+		const group = grouped.get(key) ?? {
+			org: result.org,
+			env: result.customer.env,
+			customerProductIds: new Set<string>(),
+			customerIds: new Set<string>(),
+		};
 		group.customerProductIds.add(result.customer_product.id);
 		if (result.customer.id) group.customerIds.add(result.customer.id);
 		grouped.set(key, group);
@@ -44,7 +46,7 @@ export const expireOneOffCustomerProductResults = async ({
 	for (const group of grouped.values()) {
 		const repoContext: RepoContext = {
 			db: ctx.db,
-			org: { id: group.orgId },
+			org: group.org,
 			env: group.env,
 			logger: ctx.logger,
 			redisV2: resolveRedisV2(),
