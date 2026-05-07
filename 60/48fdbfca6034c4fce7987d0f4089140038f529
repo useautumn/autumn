@@ -1,0 +1,25 @@
+server/tests/integration/external-psps/revenuecat.test.ts
+  s_2f30962efa7045::t_c228c7a02551ba 519-520
+  s_2f30962efa7045::t_6fb21a447f3eeb 17-18,22
+  s_2f30962efa7045::t_011777625b53b1 34
+  s_2f30962efa7045::t_0e075e204bb69a 398-518,521-653
+server/tests/integration/external-psps/utils/revenue-cat-webhook-client.ts
+  s_2f30962efa7045::t_e4daedb1bca442 95-98,104-107,118-121,134-137,143-146,157-160,174-176,183-185,198-200
+  s_2f30962efa7045::t_8674ca549c1a05 265-268,274-277,288-291
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "6048fdbfca6034c4fce7987d0f4089140038f529",
+  "prompts": {},
+  "sessions": {
+    "s_2f30962efa7045": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1fd2e6200ffeaOgCY5FuB0V060",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
