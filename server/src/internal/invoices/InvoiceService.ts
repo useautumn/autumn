@@ -9,6 +9,7 @@ import {
 	type InvoiceStatus,
 	invoices,
 	type Organization,
+	ProcessorType,
 	RecaseError,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
@@ -33,6 +34,7 @@ export const processInvoice = ({
 		// product_ids: invoice.product_ids,
 		plan_ids: invoice.product_ids,
 		stripe_id: invoice.stripe_id,
+		processor_type: invoice.processor_type ?? ProcessorType.Stripe,
 		status: invoice.status ?? "",
 		total: invoice.total,
 		currency: invoice.currency,
@@ -227,6 +229,7 @@ export class InvoiceService {
 			product_ids: uniqueProductIds,
 			created_at: stripeInvoice.created * 1000,
 			stripe_id: stripeInvoice.id!,
+			processor_type: ProcessorType.Stripe,
 			hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
 			status: status || (stripeInvoice.status as InvoiceStatus | null),
 			internal_product_ids: uniqueInternalProductIds,

@@ -19,6 +19,7 @@ import {
 	FeatureType,
 	type InvoiceRow,
 	InvoiceStatus,
+	ProcessorType,
 	type SubscriptionRow,
 } from "@autumn/shared";
 import { AllowanceType } from "@shared/models/productModels/entModels/entModels.js";
@@ -401,6 +402,7 @@ const buildInvoice = ({
 	internal_customer_id: customer.internal_id,
 	internal_entity_id: internalEntityId,
 	stripe_id: `stripe_inv_${key}_${suffix}`,
+	processor_type: ProcessorType.Stripe,
 	status: InvoiceStatus.Paid,
 	hosted_invoice_url: null,
 	total: 1000,

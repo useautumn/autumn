@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	type AggregatedFeatureBalanceSchema,
 	AppEnv,
+	ProcessorType,
 	ProductSchema,
 	type SubjectBalance,
 } from "@autumn/shared";
@@ -141,6 +142,66 @@ describe("normalizeFromSchema (core walker)", () => {
 		expect(() =>
 			normalizeFromSchema({ schema, data: "not an object" }),
 		).not.toThrow();
+	});
+
+	// processor_type cache safety: confirms `.default()` fires symmetrically
+	// through both walkers. This is the core guarantee Option A relies on —
+	// Upstash cjson strips the field for old cached entries and the walker
+	// must hydrate it back to ProcessorType.Stripe so consumers see a defined
+	// value. The explicit-null case is documented as walker passthrough; the
+	// `?? ProcessorType.Stripe` consumer mask is what handles that.
+
+	test("ZodDefault fires for ProcessorType enum on undefined (FullSubject walker)", () => {
+		const schema = z.object({
+			processor_type: z.enum(ProcessorType).default(ProcessorType.Stripe),
+		});
+		const result = normalizeFromSchema<{ processor_type: ProcessorType }>({
+			schema,
+			data: {},
+		});
+		expect(result.processor_type).toBe(ProcessorType.Stripe);
+	});
+
+	test("ZodDefault passes through explicit null (FullSubject walker)", () => {
+		const schema = z.object({
+			processor_type: z.enum(ProcessorType).default(ProcessorType.Stripe),
+		});
+		const result = normalizeFromSchema<{
+			processor_type: ProcessorType | null;
+		}>({
+			schema,
+			data: { processor_type: null },
+		});
+		// Documents Option A's known limitation: `.default()` only fires for
+		// undefined. The consumer-side `?? ProcessorType.Stripe` (in
+		// processInvoice / latent breakage filters) covers this case.
+		expect(result.processor_type).toBeNull();
+	});
+
+	test("ZodDefault does NOT fire on primitive leaves in cacheUtils walker (documented limitation)", () => {
+		// The FullCustomer / cacheUtils walker has no leaf-level ZodDefault
+		// application — for primitive types like ZodEnum, it returns `data`
+		// unchanged (see normalizeFromSchema.ts:139). This is a known
+		// asymmetry vs the FullSubject walker (which DOES handle ZodDefault
+		// at primitive leaves). Out of scope to fix in this stage; tracked as
+		// follow-up in the invoice-schema-rename-plan.
+		//
+		// Why this is OK for processor_type: the consumer-side
+		// `?? ProcessorType.Stripe` mask in `processInvoice` and the latent
+		// breakage filters covers the undefined case from this walker just
+		// as it covers the null case from the FullSubject walker. The wire
+		// always emits a defined value.
+		const schema = z.object({
+			processor_type: z.enum(ProcessorType).default(ProcessorType.Stripe),
+		});
+		const result = normalizeFromSchemaCacheUtils<{
+			processor_type: ProcessorType | undefined;
+		}>({
+			schema: schema as unknown as z.ZodTypeAny,
+			data: {},
+		});
+		// Walker returns the field undefined. Consumer `??` is what masks it.
+		expect(result.processor_type).toBeUndefined();
 	});
 });
 
@@ -451,6 +512,141 @@ describe("sanitizeCachedFullSubject", () => {
 		const result = sanitizeCachedFullSubject({ cachedFullSubject: malformed });
 		expect(result.customerId).toBe("cus_1");
 		expect(result.subjectViewEpoch).toBe(1);
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// processor_type — multi-processor invoice scaffolding
+//
+// Locks in the Option A contract: the schema's `.default(ProcessorType.Stripe)`
+// fires through the walker for `undefined` (covers cjson-stripped fields on
+// pre-deploy cached entries), `null` is passed through unchanged (consumers
+// mask via `?? ProcessorType.Stripe`), and explicit `"stripe"` / `"revenuecat"`
+// values round-trip cleanly without over-correction.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("sanitizeCachedFullSubject — processor_type (Option A walker behavior)", () => {
+	const buildCachedFullSubject = (): unknown => ({
+		subjectType: "customer",
+		customerId: "cus_proc",
+		internalCustomerId: "cus_int_proc",
+		_cachedAt: Date.now(),
+		subjectViewEpoch: 1,
+		meteredFeatures: [],
+		customerEntitlementIdsByFeatureId: {},
+		customer: {
+			internal_id: "cus_int_proc",
+			org_id: "org_proc",
+			env: AppEnv.Live,
+			created_at: 1,
+		},
+		customer_products: [],
+		products: [],
+		entitlements: [],
+		prices: [],
+		free_trials: [],
+		subscriptions: [],
+		invoices: [],
+		flags: {},
+	});
+
+	const buildInvoice = (
+		overrides: Record<string, unknown> = {},
+	): Record<string, unknown> => ({
+		id: "inv_proc",
+		created_at: 1,
+		internal_customer_id: "cus_int_proc",
+		product_ids: [],
+		internal_product_ids: [],
+		stripe_id: "in_proc",
+		total: 100,
+		currency: "usd",
+		discounts: [],
+		items: [],
+		...overrides,
+	});
+
+	test("walker fills missing processor_type via ZodDefault → stripe", () => {
+		// Pre-deploy cache entries don't have the field at all (cjson stripped
+		// or never written).
+		const malformed = buildCachedFullSubject() as unknown as Record<
+			string,
+			unknown
+		>;
+		malformed.invoices = [buildInvoice()]; // no processor_type key
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: malformed as unknown as CachedFullSubject,
+		});
+		expect(result.invoices[0].processor_type).toBe(ProcessorType.Stripe);
+	});
+
+	test("walker passes through explicit null processor_type unchanged", () => {
+		// Documents the Option A limitation: `.default()` only fires for
+		// undefined. Consumers (processInvoice, latent breakage filters)
+		// handle the null case via `?? ProcessorType.Stripe`. This test
+		// guards against any future "convenience" change that silently
+		// coerces null at the walker level — consumer code relies on the
+		// passthrough semantics.
+		const malformed = buildCachedFullSubject() as unknown as Record<
+			string,
+			unknown
+		>;
+		malformed.invoices = [buildInvoice({ processor_type: null })];
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: malformed as unknown as CachedFullSubject,
+		});
+		expect(result.invoices[0].processor_type).toBeNull();
+	});
+
+	test("walker preserves explicit processor_type='stripe'", () => {
+		const malformed = buildCachedFullSubject() as unknown as Record<
+			string,
+			unknown
+		>;
+		malformed.invoices = [
+			buildInvoice({ processor_type: ProcessorType.Stripe }),
+		];
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: malformed as unknown as CachedFullSubject,
+		});
+		expect(result.invoices[0].processor_type).toBe(ProcessorType.Stripe);
+	});
+
+	test("walker preserves explicit processor_type='revenuecat' (no over-correction)", () => {
+		const malformed = buildCachedFullSubject() as unknown as Record<
+			string,
+			unknown
+		>;
+		malformed.invoices = [
+			buildInvoice({ processor_type: ProcessorType.RevenueCat }),
+		];
+		const result = sanitizeCachedFullSubject({
+			cachedFullSubject: malformed as unknown as CachedFullSubject,
+		});
+		expect(result.invoices[0].processor_type).toBe(ProcessorType.RevenueCat);
+	});
+
+	test("end-to-end: walker null + processInvoice consumer → wire stripe", async () => {
+		// Composite contract: walker leaves null, consumer masks. Documents the
+		// agreed Option A pattern as runnable code so a future regression in
+		// either the walker OR the consumer trips this test.
+		const malformed = buildCachedFullSubject() as unknown as Record<
+			string,
+			unknown
+		>;
+		malformed.invoices = [buildInvoice({ processor_type: null })];
+		const sanitized = sanitizeCachedFullSubject({
+			cachedFullSubject: malformed as unknown as CachedFullSubject,
+		});
+		expect(sanitized.invoices[0].processor_type).toBeNull();
+
+		const { processInvoice } = await import(
+			"@/internal/invoices/InvoiceService.js"
+		);
+		const wire = processInvoice({
+			invoice: sanitized.invoices[0],
+		});
+		expect(wire.processor_type).toBe(ProcessorType.Stripe);
 	});
 });
 
