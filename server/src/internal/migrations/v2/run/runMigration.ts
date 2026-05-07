@@ -2,7 +2,10 @@ import type { Migration, Operations } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { runFilter } from "../filters/runFilter.js";
-import { recordMigrationCustomerEvent } from "./events/index.js";
+import {
+	getMigrationRunEventType,
+	recordMigrationCustomerEvent,
+} from "./events/index.js";
 import { iterateScope, runPreparation } from "./orchestrators/index.js";
 import { runOpsForCustomer } from "./perItem/runOpsForCustomer.js";
 import type {
@@ -109,20 +112,20 @@ export const runMigration = async ({
 		const failedResults = summary.results.filter(
 			(result) => result.status === "failed",
 		);
-		if (failedResults.length > 0) {
+		for (const result of failedResults) {
 			await recordMigrationCustomerEvent({
 				ctx,
 				migration,
 				migrationRunId,
 				dryRun: dry_run,
-				eventType: "customers_failed",
+				eventType: "customer_failed",
+				internalCustomerId: result.item.internal_id,
+				customerId: result.item.id,
 				details: {
 					kind,
-					errors: failedResults.map((result) => ({
-						internalCustomerId: result.item.internal_id,
-						customerId: result.item.id,
+					error: {
 						message: result.error.message,
-					})),
+					},
 				},
 			});
 		}
@@ -130,20 +133,22 @@ export const runMigration = async ({
 		scopeResults.push({ kind, count, summary });
 	}
 
+	const scopes = scopeResults.map(({ kind, count, summary }) => ({
+		kind,
+		count,
+		processed: summary.processed,
+		succeeded: summary.succeeded,
+		failed: summary.failed,
+	}));
+
 	await recordMigrationCustomerEvent({
 		ctx,
 		migration,
 		migrationRunId,
 		dryRun: dry_run,
-		eventType: "migration_completed",
+		eventType: getMigrationRunEventType({ scopes }),
 		details: {
-			scopes: scopeResults.map(({ kind, count, summary }) => ({
-				kind,
-				count,
-				processed: summary.processed,
-				succeeded: summary.succeeded,
-				failed: summary.failed,
-			})),
+			scopes,
 		},
 	});
 

@@ -1,11 +1,11 @@
 export type MigrationCustomerEventType =
 	| "migration_started"
-	| "migration_completed"
+	| "migration_succeeded"
+	| "migration_partially_failed"
 	| "migration_failed"
 	| "customer_started"
 	| "customer_succeeded"
 	| "customer_failed"
-	| "customers_failed"
 	| "customer_skipped";
 
 export type MigrationCustomerEventDetails = Record<string, unknown>;
