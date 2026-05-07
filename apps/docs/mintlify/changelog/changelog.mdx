@@ -4,6 +4,68 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 7th 2026">
+  ## Schedule plan changes with `starts_at`
+
+  You can now schedule when an attached plan should start by passing a future `starts_at` (and optional `ends_at`) timestamp to `billing.attach`. Use it to line subscriptions up with a customer's existing billing date, run pre-sales, or expire one-off products on a fixed date.
+
+  - **Future-dated plans**: Pass a millisecond Unix timestamp to schedule the plan to begin in the future
+  - **One-off expiry**: Set `ends_at` on one-off products so access ends automatically
+  - **Preview support**: Previews now reflect the scheduled `starts_at` so customers see exactly what they're signing up for
+
+  See the [attach API reference](/api-reference/billing/attach) for details.
+
+  ## New `customers.get` and `billing.create_schedule` endpoints
+
+  Two new endpoints are now available in the API and SDKs.
+
+  - **[`customers.get`](/api-reference/customers/getCustomer)**: Fetch a single customer with `expand` support for invoices, entities, balances, flags, subscriptions, and more
+  - **[`billing.create_schedule`](/api-reference/billing/createSchedule)**: Create multi-phase subscription schedules with optional invoice mode for the first phase
+
+  ## `track` returns updated balances
+
+  The `/v1/balances.track` endpoint now returns the affected balances in the response, so you can update your UI without a follow-up `check` call. Credit-system features see all impacted balances after a deduction.
+
+  See the [track endpoint](/api-reference/core/track) for the updated response shape.
+
+  ## `billing.auto_topup_succeeded` webhook
+
+  A new webhook fires when an [auto top-up](/documentation/modelling-pricing/auto-top-ups) successfully grants additional prepaid balance — useful for sending receipts, updating internal ledgers, and reconciling balances. Includes the granted quantity, threshold, post-deduction balance, and Stripe invoice details.
+
+  See the [webhooks reference](/documentation/webhooks) for the payload schema.
+
+  ## Discounts on subscription updates
+
+  You can now apply discounts when updating an existing subscription via `billing.update`. Pass an Autumn reward ID, Stripe coupon, or promotion code in `discounts`, and applied coupons are now visible per-subscription in the dashboard.
+
+  See the [billing update API reference](/api-reference/billing/billingUpdate) for details.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Schedule plans with `starts_at` and `ends_at` on `billing.attach` - [#1467](https://github.com/useautumn/autumn/pull/1467), [#1476](https://github.com/useautumn/autumn/pull/1476)
+      - New `customers.get` endpoint and SDK support - [#1472](https://github.com/useautumn/autumn/pull/1472)
+      - New `billing.create_schedule` endpoint - [#1472](https://github.com/useautumn/autumn/pull/1472)
+      - `balances.track` now returns updated balances - [#1472](https://github.com/useautumn/autumn/pull/1472)
+      - `billing.auto_topup_succeeded` webhook - [#1437](https://github.com/useautumn/autumn/pull/1437)
+      - Auto top-ups now work with the Vercel Marketplace - [#1454](https://github.com/useautumn/autumn/pull/1454)
+      - Discounts on `billing.update` and per-subscription coupons in the dashboard - [#1454](https://github.com/useautumn/autumn/pull/1454)
+      - Credit notes shown in attach and update previews - [#1454](https://github.com/useautumn/autumn/pull/1454)
+      - Auto top-up purchase limit count and next reset surfaced in the dashboard - [#1437](https://github.com/useautumn/autumn/pull/1437)
+    </Accordion>
+
+    <Accordion title="Bug fixes">
+      - Fixed prepaid prices defaulting to 0 in the Vercel Marketplace - [#1451](https://github.com/useautumn/autumn/pull/1451), [#1454](https://github.com/useautumn/autumn/pull/1454)
+      - Fixed Stripe subscription filtering to only consider active subscriptions - [#1454](https://github.com/useautumn/autumn/pull/1454)
+      - Fixed grace period handling for Vercel customers - [#1454](https://github.com/useautumn/autumn/pull/1454)
+      - Fixed orphaned customer products on subscription updates - [#1440](https://github.com/useautumn/autumn/pull/1440)
+      - Fixed schedule sync and webhook tracing - [#1443](https://github.com/useautumn/autumn/pull/1443)
+      - Fixed non-net tax calculation in previews - [#1434](https://github.com/useautumn/autumn/pull/1434)
+      - Fixed balances validation in track responses - [#1477](https://github.com/useautumn/autumn/pull/1477)
+      - Fixed dashboard org switcher truncating large org lists - [#1475](https://github.com/useautumn/autumn/pull/1475)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
