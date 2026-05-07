@@ -1,0 +1,35 @@
+server/src/external/revenueCat/webhookHandlers/handleRevenuecatInitialPurchase.ts
+  s_2f30962efa7045::t_78b11a981418af 12
+  s_2f30962efa7045::t_6dc5861f0f5654 124-125
+server/src/external/revenueCat/utils/recordRevenueCatInvoice.ts
+  s_2f30962efa7045::t_debb8e6082f94e 1-86
+server/src/external/revenueCat/webhookHandlers/handleRevenuecatNonRenewingPurchase.ts
+  s_2f30962efa7045::t_3071ea53ab4cce 10
+  s_2f30962efa7045::t_e2ec5e05752a20 78-79
+  s_2f30962efa7045::t_9a50f319bdc6c8 25-30
+server/src/external/revenueCat/webhookHandlers/handleRevenuecatCancellation.ts
+  s_2f30962efa7045::t_1d604c121479e8 4,9-14,42-63
+server/src/external/revenueCat/utils/refundRevenueCatInvoice.ts
+  s_2f30962efa7045::t_5e732d10956c47 1-64
+server/src/external/revenueCat/webhookHandlers/handleRevenucatRenewal.ts
+  s_2f30962efa7045::t_39a7d9f4b567e8 68-74,103-110
+  s_2f30962efa7045::t_95c739fe842233 223-224
+  s_2f30962efa7045::t_1388ec69277dc2 11
+  s_2f30962efa7045::t_92f4b75d91da82 180-187
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "ed6bbc09aa53d8ecf24e183264b83ffe8644a009",
+  "prompts": {},
+  "sessions": {
+    "s_2f30962efa7045": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1fd2e6200ffeaOgCY5FuB0V060",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
