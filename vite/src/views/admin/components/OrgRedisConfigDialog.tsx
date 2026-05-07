@@ -96,13 +96,19 @@ export function OrgRedisConfigDialog({
 	// Best-effort post-mutation refetch + parent notification. Failures here
 	// must not surface as errors because the mutation itself has already
 	// persisted — a transient GET failure should not be reported as
-	// "Failed to connect/update/remove".
+	// "Failed to connect/update/remove". Each step is also independent so a
+	// failure in `refresh()` (local dialog state) doesn't skip `onSaved()`
+	// (parent table refetch), and vice versa.
 	const refreshAfterMutation = async () => {
 		try {
 			await refresh();
+		} catch {
+			// non-fatal: dialog will display stale state until reopened
+		}
+		try {
 			await onSaved();
 		} catch {
-			// intentionally swallowed — see comment above
+			// non-fatal: parent table will refetch on its next render cycle
 		}
 	};
 
