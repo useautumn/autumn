@@ -65,18 +65,27 @@ jobs:
       
       - name: Extract metadata for Docker
         id: meta
+        env:
+          DEPLOY_STAGING_OVERRIDE: ${{ github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/axiom-ingest-cuts' && github.event.inputs.tag == 'deploy-staging' }}
         run: |
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
           COMMIT_SHA=${GITHUB_SHA::8}
           
           # Sanitize branch name for Docker tag (replace / with -)
           SAFE_BRANCH=$(echo $BRANCH_NAME | sed 's/\//-/g')
+
+          if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then
+            # deployStaging expects the staging ECR image tag to be dev-<sha>.
+            IMAGE_BRANCH="dev"
+          else
+            IMAGE_BRANCH="$SAFE_BRANCH"
+          fi
           
-          echo "branch=$SAFE_BRANCH" >> $GITHUB_OUTPUT
+          echo "branch=$IMAGE_BRANCH" >> $GITHUB_OUTPUT
           echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
           
           # Select ECR repository based on branch
-          if [ "$BRANCH_NAME" = "dev" ]; then
+          if [ "$BRANCH_NAME" = "dev" ] || [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then
             echo "ecr_repo=autumn-staging" >> $GITHUB_OUTPUT
           else
             echo "ecr_repo=autumn" >> $GITHUB_OUTPUT
@@ -152,7 +161,7 @@ jobs:
           fi
 
       - name: Auto-deploy staging
-        if: github.ref == 'refs/heads/dev'
+        if: github.ref == 'refs/heads/dev' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/axiom-ingest-cuts' && github.event.inputs.tag == 'deploy-staging')
         env:
           DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
           DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
