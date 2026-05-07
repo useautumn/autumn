@@ -252,6 +252,7 @@ const buildCustomerProduct = ({
 	internal_product_id: product.internal_id,
 	internal_entity_id: internalEntityId,
 	created_at: now,
+	updated_at: now,
 	status: CusProductStatus.Active,
 	processor: null,
 	canceled: false,
