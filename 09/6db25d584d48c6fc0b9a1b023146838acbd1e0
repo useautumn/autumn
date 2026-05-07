@@ -1,0 +1,55 @@
+vite/src/components/v2/icons/ProcessorIcon.tsx
+  s_99d39b679de549::t_a0a79d685bb8cd 1-43
+vite/src/views/customers2/components/sheets/InvoiceDetailSheet.tsx
+  s_99d39b679de549::t_43a05fee5cc117 159-162,168,172,184-188
+  s_1f32b12fced28a::t_62806b2bfe9b02 343-346
+  s_1f32b12fced28a::t_211471a3c51901 163
+  s_99d39b679de549::t_7a50a270430407 349
+  s_99d39b679de549::t_69fd5f7778fa5f 225-228
+  s_99d39b679de549::t_bd23888e91a35e 371-380
+vite/src/views/customers2/customer/CustomerPageDetails.tsx
+  s_1f32b12fced28a::t_f62150163ee629 18-22,29,37,43,51
+vite/src/views/customers2/components/table/customer-invoices/CustomerInvoicesTable.tsx
+  s_f48f7bae382468::t_ac5b7e4520cd70 92
+  s_1f32b12fced28a::t_fe424d4fa321a2 59-66,70
+  s_1f32b12fced28a::t_1884a66cc28756 87
+  s_1f32b12fced28a::t_e2a69c0f49e5f5 10-13
+vite/src/views/customers2/components/table/customer-invoices/CustomerInvoicesColumns.tsx
+  s_1f32b12fced28a::t_27d01c1b0ba669 29,57-59
+  s_f48f7bae382468::t_53814db5d6c883 31,38-41,43-45
+  s_f48f7bae382468::t_e3493990ac404f 71,74-78,87
+  s_1f32b12fced28a::t_df10b91ee9b0a3 28,30,32-37,42,46-51,53-56,60-67
+  s_99d39b679de549::t_666e49e66902bf 1,4-10,23-27,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "096db25d584d48c6fc0b9a1b023146838acbd1e0",
+  "prompts": {},
+  "sessions": {
+    "s_1f32b12fced28a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_202e6ad75ffetNy7SzuE6BN56z",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_99d39b679de549": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1fd2dadb2ffeqVyArY0XDv3t6y",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_f48f7bae382468": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1fd115395ffebmWMqPfixNmlg4",
+        "model": "gpt-5.5"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
