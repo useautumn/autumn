@@ -5,7 +5,6 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
-import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 
 const FIRST_PHASE_TOLERANCE_MS = ms.minutes(15);
 
@@ -47,19 +46,4 @@ export const handleCreateScheduleErrors = async ({
 		});
 	}
 
-	const immediateSubscriptionIds = billingContext.productContexts.map(
-		(productContext) => productContext.externalId,
-	);
-	const scheduledSubscriptionIds = billingContext.scheduledPhaseContexts.flatMap(
-		(phaseContext) =>
-			phaseContext.productContexts.map(
-				(productContext) => productContext.externalId,
-			),
-	);
-
-	await handleSubscriptionIdErrors({
-		db,
-		internalCustomerId: billingContext.fullCustomer.internal_id,
-		subscriptionIds: [...immediateSubscriptionIds, ...scheduledSubscriptionIds],
-	});
 };

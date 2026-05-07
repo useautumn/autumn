@@ -29,6 +29,8 @@ export const pricesAreSame = (
 	const config1 = price1.config;
 	const config2 = price2.config;
 
+	if (config1.type !== config2.type) return false;
+
 	if (config1.type === PriceType.Fixed) {
 		const fixedConfig1 = FixedPriceConfigSchema.parse(config1);
 		const fixedConfig2 = FixedPriceConfigSchema.parse(config2);
