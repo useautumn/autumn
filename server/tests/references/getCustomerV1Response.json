@@ -1,10 +1,10 @@
 {
   "id": "get-cus-multi-ent-v2",
-  "created_at": 1777974355227,
+  "created_at": 1778167866112,
   "name": "get-cus-multi-ent-v2",
   "email": "get-cus-multi-ent-v2@example.com",
   "fingerprint": null,
-  "stripe_id": "cus_USajNwvM0pax2M",
+  "stripe_id": "cus_UTQkXDkzlY2hGh",
   "env": "sandbox",
   "metadata": {},
   "send_email_receipts": false,
@@ -15,12 +15,12 @@
       "group": "get-cus-multi-ent-v2",
       "status": "active",
       "canceled_at": null,
-      "started_at": 1777974354000,
+      "started_at": 1778167865000,
       "is_default": false,
       "is_add_on": false,
       "version": 1,
-      "current_period_start": 1777974354000,
-      "current_period_end": 1780652754000,
+      "current_period_start": 1778167865000,
+      "current_period_end": 1780846265000,
       "items": [
         {
           "type": "price",
@@ -83,7 +83,7 @@
       "group": "get-cus-multi-ent-v2",
       "status": "active",
       "canceled_at": null,
-      "started_at": 1777974379436,
+      "started_at": 1778167888784,
       "is_default": false,
       "is_add_on": false,
       "version": 1,
@@ -104,7 +104,7 @@
       "balance": 90,
       "usage": 10,
       "included_usage": 100,
-      "next_reset_at": 1780652754000,
+      "next_reset_at": 1780846265000,
       "overage_allowed": false,
       "breakdown": [
         {
@@ -113,7 +113,7 @@
           "balance": 90,
           "usage": 10,
           "included_usage": 100,
-          "next_reset_at": 1780652754000,
+          "next_reset_at": 1780846265000,
           "expires_at": null,
           "overage_allowed": false
         }
@@ -173,12 +173,12 @@
       "product_ids": [
         "cus-lvl_get-cus-multi-ent-v2"
       ],
-      "stripe_id": "in_1TTfYB6GVhvcrrMKf6xxH63K",
+      "stripe_id": "in_1TUTtJIidku0FvdnavizBNAV",
       "status": "paid",
       "total": 20,
       "currency": "usd",
-      "created_at": 1777974354000,
-      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3DIfAkOjiIKZGi9svU7RnJrrSxy"
+      "created_at": 1778167865000,
+      "hosted_invoice_url": "http://localhost:8080/invoices/hosted_invoice_url/inv_3DOzOeMdn7GMFP4N5ZN2KoTqDi8"
     }
   ]
 }
