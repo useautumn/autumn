@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
+import { ErrCode, ProcessorType, RecaseError, Scopes } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -24,6 +24,16 @@ export const handleRedirectToInvoice = createRoute({
 			throw new RecaseError({
 				message: "Invoice not found",
 
+				statusCode: StatusCodes.NOT_FOUND,
+			});
+		}
+
+		if (
+			(invoice.processor_type ?? ProcessorType.Stripe) !== ProcessorType.Stripe
+		) {
+			throw new RecaseError({
+				message: "Hosted invoice URL is not available for this invoice",
+				code: ErrCode.InvalidRequest,
 				statusCode: StatusCodes.NOT_FOUND,
 			});
 		}
