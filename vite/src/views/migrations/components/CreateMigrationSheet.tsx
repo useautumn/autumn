@@ -10,8 +10,6 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
-import { MigrationService } from "@/services/MigrationService";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
 function CreateMigrationSheet({
@@ -23,15 +21,13 @@ function CreateMigrationSheet({
 	onOpenChange?: (open: boolean) => void;
 	onSuccess?: (migrationId: string) => void;
 } = {}) {
-	const [loading, setLoading] = useState(false);
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [id, setId] = useState("");
 
 	const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
 	const setOpen = controlledOnOpenChange || setInternalOpen;
 
-	const axiosInstance = useAxiosInstance();
-	const { refetch } = useMigrationsQuery();
+	const { createMigration, isCreating } = useMigrationsQuery();
 
 	const handleCreateMigration = async () => {
 		if (!id.trim()) {
@@ -39,12 +35,8 @@ function CreateMigrationSheet({
 			return;
 		}
 
-		setLoading(true);
 		try {
-			const created = await MigrationService.create(axiosInstance, {
-				id: id.trim(),
-			});
-			await refetch();
+			const created = await createMigration({ id: id.trim() });
 			toast.success("Migration created");
 			setOpen(false);
 			onSuccess?.(created.id);
@@ -52,8 +44,6 @@ function CreateMigrationSheet({
 			toast.error(
 				getBackendErr(error as AxiosError, "Failed to create migration"),
 			);
-		} finally {
-			setLoading(false);
 		}
 	};
 
@@ -94,7 +84,7 @@ function CreateMigrationSheet({
 						className="w-full"
 						onClick={handleCreateMigration}
 						metaShortcut="enter"
-						isLoading={loading}
+						isLoading={isCreating}
 					>
 						Create migration
 					</ShortcutButton>

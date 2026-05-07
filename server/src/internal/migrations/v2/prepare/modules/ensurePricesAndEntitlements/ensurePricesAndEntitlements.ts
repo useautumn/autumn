@@ -13,17 +13,20 @@ export type EnsurePricesAndEntitlementsInput = {
 	feature_id: string;
 };
 
-/** Deterministic ID per (migration, product version, feature). Idempotent across runs. */
+/**
+ * Deterministic ID per (scope, product version, feature). Migration
+ * scopes pass `scopeId = mig_<internal_id>` to preserve the original
+ * `ent_mig_<id>_<...>` format; scripts pass their own prefix.
+ */
 export const entitlementIdFor = ({
-	migrationInternalId,
+	scopeId,
 	productInternalId,
 	internalFeatureId,
 }: {
-	migrationInternalId: string;
+	scopeId: string;
 	productInternalId: string;
 	internalFeatureId: string;
-}): string =>
-	`ent_mig_${migrationInternalId}_${productInternalId}_${internalFeatureId}`;
+}): string => `ent_${scopeId}_${productInternalId}_${internalFeatureId}`;
 
 export const ensurePricesAndEntitlements: PrepareModule<
 	EnsurePricesAndEntitlementsInput,
@@ -31,7 +34,7 @@ export const ensurePricesAndEntitlements: PrepareModule<
 > = {
 	kind: "ensure_prices_and_entitlements",
 
-	async plan({ ctx, migration, input }) {
+	async plan({ ctx, scope_id, input }) {
 		const feature = ctx.features.find((f) => f.id === input.feature_id);
 		if (!feature)
 			throw new Error(
@@ -50,7 +53,7 @@ export const ensurePricesAndEntitlements: PrepareModule<
 
 		const desired: EntitlementItemRef[] = matchingProducts.map((product) => ({
 			entitlement_id: entitlementIdFor({
-				migrationInternalId: migration.internal_id,
+				scopeId: scope_id,
 				productInternalId: product.internal_id,
 				internalFeatureId: feature.internal_id,
 			}),
@@ -67,7 +70,7 @@ export const ensurePricesAndEntitlements: PrepareModule<
 		const desired = planned.entitlements;
 		const ids = desired.map((d) => d.entitlement_id);
 
-		// Skip rows that already exist in DB. Deterministic IDs make this safe.
+		// Deterministic IDs let us skip rows already present in DB.
 		const existing = ids.length
 			? await ctx.db
 					.select({ id: entitlements.id })

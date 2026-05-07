@@ -21,6 +21,6 @@ export const handleCreateMigration = createRoute({
 
 		const migration = await migrationRepo.insert({ ctx, insert });
 
-		return c.json(migration, 201);
+		return c.json(migration);
 	},
 });

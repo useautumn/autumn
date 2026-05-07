@@ -67,6 +67,7 @@
 		"date-fns": "^3.6.0",
 		"decimal.js": "^10.5.0",
 		"input-otp": "^1.4.2",
+		"json5": "^2.2.3",
 		"lodash": "^4.17.21",
 		"lucide-react": "^0.562.0",
 		"motion": "^12.26.1",
