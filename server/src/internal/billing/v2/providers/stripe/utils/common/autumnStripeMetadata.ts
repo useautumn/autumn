@@ -37,6 +37,14 @@ export const isAutumnManagedSubscriptionMetadata = ({
 }): { skip: boolean; reason?: string } => {
 	if (!metadata) return { skip: false };
 
+	const source = metadata[AUTUMN_STRIPE_METADATA_KEYS.managedSource];
+	if (source) {
+		return {
+			skip: true,
+			reason: `autumn_managed_source=${source}`,
+		};
+	}
+
 	const managedAtRaw = metadata[AUTUMN_STRIPE_METADATA_KEYS.managedAt];
 	if (!managedAtRaw) return { skip: false };
 
@@ -45,10 +53,8 @@ export const isAutumnManagedSubscriptionMetadata = ({
 		return { skip: false };
 	}
 
-	const source =
-		metadata[AUTUMN_STRIPE_METADATA_KEYS.managedSource] ?? "unknown";
 	return {
 		skip: true,
-		reason: `recent autumn_managed_at (${now - managedAt}ms ago, source=${source})`,
+		reason: `recent autumn_managed_at (${now - managedAt}ms ago, source=unknown)`,
 	};
 };

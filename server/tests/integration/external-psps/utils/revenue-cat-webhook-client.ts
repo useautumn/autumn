@@ -92,11 +92,19 @@ export class RevenueCatWebhookClient {
 		appUserId,
 		originalAppUserId,
 		originalTransactionId,
+		transactionId,
+		price,
+		currency,
+		purchasedAtMs,
 	}: {
 		productId: string;
 		appUserId: string;
 		originalAppUserId?: string;
 		originalTransactionId?: string;
+		transactionId?: string;
+		price?: number | null;
+		currency?: string;
+		purchasedAtMs?: number;
 	}) {
 		return this.sendEvent({
 			type: "INITIAL_PURCHASE",
@@ -107,6 +115,10 @@ export class RevenueCatWebhookClient {
 				original_transaction_id:
 					originalTransactionId ??
 					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+				transaction_id: transactionId,
+				price,
+				currency,
+				purchased_at_ms: purchasedAtMs,
 			},
 		});
 	}
@@ -119,11 +131,19 @@ export class RevenueCatWebhookClient {
 		appUserId,
 		originalAppUserId,
 		originalTransactionId,
+		transactionId,
+		price,
+		currency,
+		purchasedAtMs,
 	}: {
 		productId: string;
 		appUserId: string;
 		originalAppUserId?: string;
 		originalTransactionId?: string;
+		transactionId?: string;
+		price?: number | null;
+		currency?: string;
+		purchasedAtMs?: number;
 	}) {
 		return this.sendEvent({
 			type: "RENEWAL",
@@ -134,6 +154,10 @@ export class RevenueCatWebhookClient {
 				original_transaction_id:
 					originalTransactionId ??
 					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+				transaction_id: transactionId,
+				price,
+				currency,
+				purchased_at_ms: purchasedAtMs,
 			},
 		});
 	}
@@ -147,12 +171,18 @@ export class RevenueCatWebhookClient {
 		originalAppUserId,
 		expirationAtMs,
 		originalTransactionId,
+		transactionId,
+		cancelReason,
+		price,
 	}: {
 		productId: string;
 		appUserId: string;
 		originalAppUserId?: string;
 		expirationAtMs?: number;
 		originalTransactionId?: string;
+		transactionId?: string;
+		cancelReason?: string;
+		price?: number | null;
 	}) {
 		return this.sendEvent({
 			type: "CANCELLATION",
@@ -165,6 +195,9 @@ export class RevenueCatWebhookClient {
 				original_transaction_id:
 					originalTransactionId ??
 					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+				transaction_id: transactionId,
+				cancel_reason: cancelReason,
+				price,
 			},
 		});
 	}
@@ -229,11 +262,19 @@ export class RevenueCatWebhookClient {
 		appUserId,
 		originalAppUserId,
 		originalTransactionId,
+		transactionId,
+		price,
+		currency,
+		purchasedAtMs,
 	}: {
 		productId: string;
 		appUserId: string;
 		originalAppUserId?: string;
 		originalTransactionId?: string;
+		transactionId?: string;
+		price?: number | null;
+		currency?: string;
+		purchasedAtMs?: number;
 	}) {
 		return this.sendEvent({
 			type: "NON_RENEWING_PURCHASE",
@@ -244,6 +285,10 @@ export class RevenueCatWebhookClient {
 				original_transaction_id:
 					originalTransactionId ??
 					`tx_${Date.now()}_${Math.random().toString(36).slice(2)}`,
+				transaction_id: transactionId,
+				price,
+				currency,
+				purchased_at_ms: purchasedAtMs,
 			},
 		});
 	}

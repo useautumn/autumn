@@ -9,6 +9,7 @@ import {
 } from "@shared/index";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
+import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -120,4 +121,6 @@ export const handleInitialPurchase = async ({
 	logger.info(
 		`Created cus_product for ${product.id} with scenario: ${scenario}`,
 	);
+
+	await recordRevenueCatInvoice({ ctx: customerCtx, event, customer, product });
 };

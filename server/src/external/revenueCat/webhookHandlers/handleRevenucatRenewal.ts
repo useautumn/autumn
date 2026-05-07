@@ -8,6 +8,7 @@ import {
 } from "@shared/index";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
+import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
@@ -64,6 +65,13 @@ export const handleRenewal = async ({
 			cusProduct: curSameProduct,
 		});
 
+		await recordRevenueCatInvoice({
+			ctx: customerCtx,
+			event,
+			customer,
+			product,
+		});
+
 		return { success: true };
 	} else if (
 		curSameProduct &&
@@ -92,6 +100,14 @@ export const handleRenewal = async ({
 		});
 
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);
+
+		await recordRevenueCatInvoice({
+			ctx: customerCtx,
+			event,
+			customer,
+			product,
+		});
+
 		return { success: true };
 	}
 
@@ -161,6 +177,14 @@ export const handleRenewal = async ({
 		});
 
 		logger.info(`Reactivated cus_product: ${curSameProduct.id}`);
+
+		await recordRevenueCatInvoice({
+			ctx: customerCtx,
+			event,
+			customer,
+			product,
+		});
+
 		return { success: true };
 	}
 
@@ -195,6 +219,8 @@ export const handleRenewal = async ({
 	logger.info(
 		`Created cus_product for ${product.id} with scenario: ${scenario} (renewal)`,
 	);
+
+	await recordRevenueCatInvoice({ ctx: customerCtx, event, customer, product });
 
 	return { success: true };
 };

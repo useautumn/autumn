@@ -7,7 +7,10 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useInvoiceLineItemsQuery } from "@/views/customers2/hooks/useInvoiceLineItemsQuery";
-import { CustomerInvoicesColumns } from "./CustomerInvoicesColumns";
+import {
+	getCustomerInvoicesColumns,
+	hasNonStripeInvoice,
+} from "./CustomerInvoicesColumns";
 
 export function CustomerInvoicesTable() {
 	const { customer, products, isLoading } = useCusQuery();
@@ -53,10 +56,18 @@ export function CustomerInvoicesTable() {
 		});
 	};
 
+	const columns = useMemo(
+		() =>
+			getCustomerInvoicesColumns({
+				showProcessor: hasNonStripeInvoice(invoices),
+			}),
+		[invoices],
+	);
+
 	const enableSorting = false;
 	const table = useCustomerTable({
 		data: invoices,
-		columns: CustomerInvoicesColumns,
+		columns,
 		options: {
 			getPaginationRowModel: getPaginationRowModel(),
 			initialState: {
@@ -73,12 +84,12 @@ export function CustomerInvoicesTable() {
 		<Table.Provider
 			config={{
 				table,
-				numberOfColumns: CustomerInvoicesColumns.length,
+				numberOfColumns: columns.length,
 				enableSorting,
 				isLoading,
 				onRowClick: handleRowClick,
 				emptyStateText: "Invoices will display when a customer makes a payment",
-				flexibleTableColumns: true,
+				flexibleTableColumns: false,
 				// rowClassName: "h-14 py-4 cursor-pointer",
 			}}
 		>

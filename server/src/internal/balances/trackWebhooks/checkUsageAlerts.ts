@@ -139,9 +139,22 @@ const processAlerts = async ({
 
 		const customerId = newFullCus.id || newFullCus.internal_id;
 
+		const minuteBucket = Math.floor(Date.now() / 60_000);
+		const idempotencyKey = [
+			ctx.org.id,
+			ctx.env,
+			customerId,
+			entityId ?? "_",
+			feature.id,
+			alert.threshold_type,
+			alert.threshold,
+			minuteBucket,
+		].join(":");
+
 		await sendSvixEvent({
 			ctx,
 			eventType: WebhookEventType.BalancesUsageAlertTriggered,
+			idempotencyKey,
 			data: {
 				customer_id: customerId,
 				feature_id: feature.id,
