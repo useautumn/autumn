@@ -611,6 +611,16 @@ class GetEntityBillingControls(BaseModel):
         return m
 
 
+GetEntityProcessorType = Union[
+    Literal[
+        "stripe",
+        "revenuecat",
+    ],
+    UnrecognizedStr,
+]
+r"""The billing processor that owns this invoice."""
+
+
 class GetEntityInvoiceTypedDict(TypedDict):
     plan_ids: List[str]
     r"""Array of plan IDs included in this invoice"""
@@ -624,6 +634,8 @@ class GetEntityInvoiceTypedDict(TypedDict):
     r"""The currency code for the invoice"""
     created_at: float
     r"""Timestamp when the invoice was created"""
+    processor_type: NotRequired[GetEntityProcessorType]
+    r"""The billing processor that owns this invoice."""
     hosted_invoice_url: NotRequired[Nullable[str]]
     r"""URL to the Stripe-hosted invoice page"""
 
@@ -647,12 +659,15 @@ class GetEntityInvoice(BaseModel):
     created_at: float
     r"""Timestamp when the invoice was created"""
 
+    processor_type: Optional[GetEntityProcessorType] = "stripe"
+    r"""The billing processor that owns this invoice."""
+
     hosted_invoice_url: OptionalNullable[str] = UNSET
     r"""URL to the Stripe-hosted invoice page"""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["hosted_invoice_url"])
+        optional_fields = set(["processor_type", "hosted_invoice_url"])
         nullable_fields = set(["hosted_invoice_url"])
         serialized = handler(self)
         m = {}
