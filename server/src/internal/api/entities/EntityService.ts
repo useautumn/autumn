@@ -1,15 +1,20 @@
 import {
+	type AppEnv,
+	type Customer,
+	CustomerNotFoundError,
 	customers,
 	type Entity,
 	EntityErrorCode,
 	ErrCode,
 	entities,
 } from "@autumn/shared";
-import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { isUniqueConstraintError } from "@/db/dbUtils";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import RecaseError from "@/utils/errorUtils.js";
+
+type EntityListCustomer = Pick<Customer, "id" | "internal_id" | "env">;
 
 export class EntityService {
 	static async listById({
@@ -140,10 +145,70 @@ export class EntityService {
 					inFeatureIds
 						? inArray(entities.internal_feature_id, inFeatureIds)
 						: undefined,
-					isDeleted ? eq(entities.deleted, isDeleted) : undefined,
+					isDeleted !== undefined ? eq(entities.deleted, isDeleted) : undefined,
 				),
 			limit,
 		})) as Entity[];
+	}
+
+	static async listByCustomerId({
+		db,
+		customerId,
+		orgId,
+		env,
+		isDeleted = false,
+		limit,
+		offset,
+	}: {
+		db: DrizzleCli;
+		customerId: string;
+		orgId: string;
+		env: AppEnv;
+		isDeleted?: boolean;
+		limit: number;
+		offset: number;
+	}): Promise<{
+		customer: EntityListCustomer;
+		entities: Entity[];
+		totalCount: number;
+	}> {
+		const customer = await db.query.customers.findFirst({
+			columns: {
+				id: true,
+				internal_id: true,
+				env: true,
+			},
+			where: and(
+				eq(customers.id, customerId),
+				eq(customers.org_id, orgId),
+				eq(customers.env, env),
+			),
+		});
+		if (!customer) {
+			throw new CustomerNotFoundError({ customerId });
+		}
+		const whereClause = and(
+			eq(entities.internal_customer_id, customer.internal_id),
+			eq(entities.deleted, isDeleted),
+		);
+		const [customerEntities, [countResult]] = await Promise.all([
+			db.query.entities.findMany({
+				where: whereClause,
+				orderBy: [desc(entities.internal_id)],
+				limit,
+				offset,
+			}),
+			db.select({ total_count: count() }).from(entities).where(whereClause),
+		]);
+		return {
+			customer: {
+				id: customer.id,
+				internal_id: customer.internal_id,
+				env,
+			},
+			entities: customerEntities as Entity[],
+			totalCount: countResult?.total_count ?? 0,
+		};
 	}
 
 	static async listForInvalidation({

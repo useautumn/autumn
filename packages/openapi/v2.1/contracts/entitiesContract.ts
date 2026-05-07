@@ -5,6 +5,8 @@ import {
 	CreateEntityParamsV1Schema,
 	DeleteEntityParamsV0Schema,
 	GetEntityParamsV0Schema,
+	ListEntitiesParamsSchema,
+	ListEntitiesResponseSchema,
 	UpdateEntityParamsSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
@@ -12,6 +14,7 @@ import {
 	createEntityJsDoc,
 	deleteEntityJsDoc,
 	getEntityJsDoc,
+	listEntitiesJsDoc,
 	updateEntityJsDoc,
 } from "../jsDocs/entityJsDocs";
 
@@ -105,6 +108,55 @@ export const getEntityContract = oc
 	.output(
 		ApiEntityV2Schema.meta({
 			examples: [API_ENTITY_V2_EXAMPLE],
+		}),
+	);
+
+export const listEntitiesContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/entities.list",
+		operationId: "listEntities",
+		tags: ["entities"],
+		description: listEntitiesJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "list",
+		}),
+	})
+	.input(
+		ListEntitiesParamsSchema.meta({
+			title: "ListEntitiesParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					offset: 0,
+					limit: 100,
+				},
+			],
+		}),
+	)
+	.output(
+		ListEntitiesResponseSchema.meta({
+			examples: [
+				{
+					list: [
+						{
+							id: "seat_42",
+							name: "Seat 42",
+							customer_id: "cus_123",
+							feature_id: "seats",
+							created_at: 1771409161016,
+							env: "sandbox",
+						},
+					],
+					total: 1,
+					total_count: 1,
+					total_filtered_count: 1,
+					offset: 0,
+					limit: 100,
+					has_more: false,
+				},
+			],
 		}),
 	);
 

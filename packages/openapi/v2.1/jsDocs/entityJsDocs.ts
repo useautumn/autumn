@@ -2,6 +2,7 @@ import {
 	CreateEntityParamsV1Schema,
 	DeleteEntityParamsV0Schema,
 	GetEntityParamsV0Schema,
+	ListEntitiesParamsSchema,
 	UpdateEntityParamsSchema,
 } from "@autumn/shared";
 import { createJSDocDescription, example } from "../../utils/jsDocs/index.js";
@@ -51,6 +52,26 @@ export const getEntityJsDoc = createJSDocDescription({
 	methodName: "entities.get",
 	returns:
 		"The entity object including its current subscriptions, purchases, and balances.",
+});
+
+export const listEntitiesJsDoc = createJSDocDescription({
+	description: "Lists lightweight entities for a customer.",
+	whenToUse:
+		"Use this to enumerate a customer's entity resources without fetching balances, subscriptions, or invoices for each entity.",
+	body: ListEntitiesParamsSchema,
+	examples: [
+		example({
+			description: "List entities for a customer",
+			values: {
+				customerId: "cus_123",
+				offset: 0,
+				limit: 100,
+			},
+		}),
+	],
+	methodName: "entities.list",
+	returns:
+		"A paginated list of entity records with identity, feature, and billing control fields.",
 });
 
 export const deleteEntityJsDoc = createJSDocDescription({
