@@ -42,6 +42,25 @@ const TinybirdEventSchema = z.object({
 	properties: z.string().nullable(),
 });
 
+/** Zod schema for migration_customer_events.datasource */
+const TinybirdMigrationCustomerEventSchema = z.object({
+	id: z.string(),
+	timestamp: z.string(),
+	orgId: z.string(),
+	env: z.string(),
+	migrationId: z.string(),
+	migrationRunId: z.string(),
+	eventType: z.string(),
+	dryRun: z.number(),
+	internalCustomerId: z.string().nullable(),
+	customerId: z.string().nullable(),
+	details: z.string().nullable(),
+});
+
+export type TinybirdMigrationCustomerEvent = z.infer<
+	typeof TinybirdMigrationCustomerEventSchema
+>;
+
 /** Pre-built pipe callers */
 export const tinybirdPipes = tinybirdClient
 	? {
@@ -60,6 +79,11 @@ export const tinybirdIngest = tinybirdClient
 			events: tinybirdClient.buildIngestEndpoint({
 				datasource: "events",
 				event: TinybirdEventSchema,
+				wait: true,
+			}),
+			migrationCustomerEvents: tinybirdClient.buildIngestEndpoint({
+				datasource: "migration_customer_events",
+				event: TinybirdMigrationCustomerEventSchema,
 				wait: true,
 			}),
 		}

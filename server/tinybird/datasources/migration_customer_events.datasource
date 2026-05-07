@@ -1,0 +1,19 @@
+DESCRIPTION >
+    Per-customer lifecycle events for migrations v2. Append-only audit stream.
+
+SCHEMA >
+    `id` String `json:$.id`,
+    `timestamp` DateTime64(6) `json:$.timestamp`,
+    `org_id` String `json:$.orgId`,
+    `env` LowCardinality(String) `json:$.env`,
+    `migration_id` String `json:$.migrationId`,
+    `migration_run_id` String `json:$.migrationRunId`,
+    `event_type` LowCardinality(String) `json:$.eventType`,
+    `dry_run` UInt8 `json:$.dryRun`,
+    `internal_customer_id` Nullable(String) `json:$.internalCustomerId`,
+    `customer_id` Nullable(String) `json:$.customerId`,
+    `details` Nullable(String) `json:$.details`
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_SORTING_KEY "org_id, env, migration_run_id, internal_customer_id, timestamp"

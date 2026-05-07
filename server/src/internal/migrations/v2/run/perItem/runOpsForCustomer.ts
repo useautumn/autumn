@@ -1,6 +1,5 @@
-import type { Operations } from "@autumn/shared";
+import type { FullCustomer, Operations } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusService } from "@/internal/customers/CusService.js";
 import type { PreparedState } from "@/internal/migrations/v2/prepare/types/index.js";
 import { type ApplyAddItemResult, applyAddItem } from "./applyAddItem.js";
 import { matchCustomerProductsByTarget } from "./matchPlanFilter.js";
@@ -18,24 +17,19 @@ export type RunOpsForCustomerResult = {
  */
 export const runOpsForCustomer = async ({
 	ctx,
-	scope_id,
-	internal_customer_id,
+	scopeId,
+	fullCustomer,
 	operations,
-	prepared_state,
-	dry_run,
+	preparedState,
+	dryRun,
 }: {
 	ctx: AutumnContext;
-	scope_id: string;
-	internal_customer_id: string;
+	scopeId: string;
+	fullCustomer: FullCustomer;
 	operations: Operations;
-	prepared_state: PreparedState;
-	dry_run: boolean;
+	preparedState: PreparedState;
+	dryRun: boolean;
 }): Promise<RunOpsForCustomerResult> => {
-	const fullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: internal_customer_id,
-	});
-
 	const updatePlans = operations.customer?.update_plans ?? [];
 	let matched = 0;
 	const upsertItemResults: ApplyAddItemResult[] = [];
@@ -51,11 +45,11 @@ export const runOpsForCustomer = async ({
 			for (const addItem of op.upsert_items ?? []) {
 				const result = await applyAddItem({
 					ctx,
-					scope_id,
+					scope_id: scopeId,
 					cusProduct,
 					addItem,
-					prepared_state,
-					dry_run,
+					prepared_state: preparedState,
+					dry_run: dryRun,
 				});
 				upsertItemResults.push(result);
 			}
@@ -63,7 +57,7 @@ export const runOpsForCustomer = async ({
 	}
 
 	return {
-		internal_customer_id,
+		internal_customer_id: fullCustomer.internal_id,
 		matched_cusproducts: matched,
 		upsert_items: upsertItemResults,
 	};
