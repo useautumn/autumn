@@ -16,7 +16,9 @@ description: Write integration tests for Autumn billing. Covers initScenario set
 import { expect, test } from "bun:test";
 import { type ApiCustomerV5, type AttachParamsV1Input } from "@autumn/shared";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
+import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -43,6 +45,7 @@ test.concurrent(`${chalk.yellowBright("feature: description")}`, async () => {
   await autumnV2_2.billing.attach<AttachParamsV1Input>(params);
 
   const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+  await expectCustomerProducts({ customer, active: [pro.id] });
   expectBalanceCorrect({
     customer,
     featureId: TestFeature.Messages,
@@ -167,6 +170,8 @@ await expectProductScheduled({ customer, productId: free.id });
 await expectProductNotPresent({ customer, productId: pro.id });
 ```
 
+For new billing tests, prefer fetching with `autumnV2_2.customers.get<ApiCustomerV5>()` and passing that response to `expectCustomerProducts`.
+
 ### Balances
 
 ```typescript
@@ -180,6 +185,28 @@ expectBalanceCorrect({
   planId: pro.id,
 });
 ```
+
+Use `expectBalanceCorrect` for metered features in V2.2 responses instead of reading `customer.features`.
+
+### Flags
+
+```typescript
+import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect";
+
+expectFlagCorrect({
+  customer,
+  featureId: TestFeature.Dashboard,
+  planId: pro.id,
+});
+
+expectFlagCorrect({
+  customer,
+  featureId: TestFeature.Dashboard,
+  present: false,
+});
+```
+
+Use `expectFlagCorrect` for boolean features in V2.2 customer/entity responses instead of reading `customer.features`.
 
 ### Features
 

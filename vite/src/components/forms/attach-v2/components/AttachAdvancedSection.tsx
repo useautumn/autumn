@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
+import { useAttachBillingOptionsState } from "../hooks/useAttachBillingOptionsState";
 import { addDiscount } from "../utils/discountUtils";
 import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
 import { AttachDiscountRow } from "./AttachDiscountRow";
@@ -160,7 +160,7 @@ export function AttachAdvancedSection() {
 		handleScheduleChange,
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
-	} = usePlanScheduleField();
+	} = useAttachBillingOptionsState();
 
 	const isPaidRecurringProduct =
 		!!product &&

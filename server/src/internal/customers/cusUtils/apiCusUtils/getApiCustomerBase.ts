@@ -10,6 +10,7 @@ import {
 import { z } from "zod/v4";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
 import { invoicesToResponse } from "../../../invoices/invoiceUtils.js";
+import { getCusProcessors } from "../cusResponseUtils/getCusProcessors.js";
 import { getApiSubscriptions } from "./getApiSubscription/getApiSubscriptions.js";
 
 /**
@@ -76,6 +77,11 @@ export const getApiCustomerBase = async ({
 					disable_pooled_balance: fullCus.config.disable_pooled_balance,
 				}
 			: undefined,
+
+		processors: getCusProcessors({
+			customer: fullCus,
+			customer_products: fullCus.customer_products,
+		}),
 
 		invoices:
 			fullCus.invoices && ctx.expand.includes(CustomerExpand.Invoices)

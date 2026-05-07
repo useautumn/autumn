@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ProcessorType } from "../../../models/genModels/genEnums";
 
 export const ApiInvoiceV1Schema = z.object({
 	plan_ids: z.array(z.string()).meta({
@@ -9,6 +10,13 @@ export const ApiInvoiceV1Schema = z.object({
 		description: "The Stripe invoice ID",
 		example: "in_1A2B3C4D5E6F7G8H",
 	}),
+	processor_type: z
+		.enum(ProcessorType)
+		.default(ProcessorType.Stripe)
+		.meta({
+			description: "The billing processor that owns this invoice.",
+			example: "stripe",
+		}),
 	status: z.string().meta({
 		description: "The status of the invoice",
 		example: "paid",

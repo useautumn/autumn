@@ -43,11 +43,13 @@ export const sendSvixEvent = async ({
 	eventType,
 	data,
 	payloadFields,
+	idempotencyKey,
 }: {
 	ctx: AutumnContext;
 	eventType: string;
 	data: unknown;
 	payloadFields?: { id?: string; occurred_at?: number };
+	idempotencyKey?: string;
 }) => {
 	if (!process.env.SVIX_API_KEY) return;
 
@@ -60,14 +62,18 @@ export const sendSvixEvent = async ({
 		const appId = getSvixAppId({ org, env });
 		if (!appId) return null;
 
-		return await svix.message.create(appId, {
-			eventType,
-			payload: {
-				type: eventType,
-				...payloadFields,
-				data,
+		return await svix.message.create(
+			appId,
+			{
+				eventType,
+				payload: {
+					type: eventType,
+					...payloadFields,
+					data,
+				},
 			},
-		});
+			idempotencyKey ? { idempotencyKey } : undefined,
+		);
 	} catch (error) {
 		ctx.logger.error(`[svix] Failed to send ${eventType}: ${error}`);
 		Sentry.captureException(error, {

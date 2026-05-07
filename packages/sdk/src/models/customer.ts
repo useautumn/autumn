@@ -402,6 +402,70 @@ export type CustomerConfig = {
   disablePooledBalance?: boolean | undefined;
 };
 
+/**
+ * Stripe processor connection for the customer.
+ */
+export type Stripe = {
+  /**
+   * Stripe customer ID.
+   */
+  id: string;
+};
+
+/**
+ * Vercel processor connection for the customer (public-safe subset).
+ */
+export type Vercel = {
+  /**
+   * Vercel marketplace installation ID for this customer.
+   */
+  installationId: string;
+  /**
+   * Vercel account ID associated with the installation.
+   */
+  accountId: string;
+};
+
+/**
+ * RevenueCat processor connection for the customer.
+ */
+export type Revenuecat = {
+  /**
+   * Customer's external ID, used as the RevenueCat app user ID. Null if the customer has no external ID set.
+   */
+  id: string | null;
+};
+
+/**
+ * Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor.
+ */
+export type Processors = {
+  /**
+   * Stripe processor connection for the customer.
+   */
+  stripe?: Stripe | undefined;
+  /**
+   * Vercel processor connection for the customer (public-safe subset).
+   */
+  vercel?: Vercel | undefined;
+  /**
+   * RevenueCat processor connection for the customer.
+   */
+  revenuecat?: Revenuecat | undefined;
+};
+
+/**
+ * The billing processor that owns this invoice.
+ */
+export const ProcessorType = {
+  Stripe: "stripe",
+  Revenuecat: "revenuecat",
+} as const;
+/**
+ * The billing processor that owns this invoice.
+ */
+export type ProcessorType = OpenEnum<typeof ProcessorType>;
+
 export type Invoice = {
   /**
    * Array of plan IDs included in this invoice
@@ -411,6 +475,10 @@ export type Invoice = {
    * The Stripe invoice ID
    */
   stripeId: string;
+  /**
+   * The billing processor that owns this invoice.
+   */
+  processorType: ProcessorType;
   /**
    * The status of the invoice
    */
@@ -633,6 +701,10 @@ export type Customer = {
    * Configuration for the customer.
    */
   config?: CustomerConfig | undefined;
+  /**
+   * Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor.
+   */
+  processors?: Processors | undefined;
   /**
    * Invoices for this customer.
    */
@@ -1135,10 +1207,90 @@ export function customerConfigFromJSON(
 }
 
 /** @internal */
+export const Stripe$inboundSchema: z.ZodMiniType<Stripe, unknown> = z.object({
+  id: types.string(),
+});
+
+export function stripeFromJSON(
+  jsonString: string,
+): SafeParseResult<Stripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Stripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Stripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const Vercel$inboundSchema: z.ZodMiniType<Vercel, unknown> = z.pipe(
+  z.object({
+    installation_id: types.string(),
+    account_id: types.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "installation_id": "installationId",
+      "account_id": "accountId",
+    });
+  }),
+);
+
+export function vercelFromJSON(
+  jsonString: string,
+): SafeParseResult<Vercel, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Vercel$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Vercel' from JSON`,
+  );
+}
+
+/** @internal */
+export const Revenuecat$inboundSchema: z.ZodMiniType<Revenuecat, unknown> = z
+  .object({
+    id: types.nullable(types.string()),
+  });
+
+export function revenuecatFromJSON(
+  jsonString: string,
+): SafeParseResult<Revenuecat, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Revenuecat$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Revenuecat' from JSON`,
+  );
+}
+
+/** @internal */
+export const Processors$inboundSchema: z.ZodMiniType<Processors, unknown> = z
+  .object({
+    stripe: types.optional(z.lazy(() => Stripe$inboundSchema)),
+    vercel: types.optional(z.lazy(() => Vercel$inboundSchema)),
+    revenuecat: types.optional(z.lazy(() => Revenuecat$inboundSchema)),
+  });
+
+export function processorsFromJSON(
+  jsonString: string,
+): SafeParseResult<Processors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Processors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Processors' from JSON`,
+  );
+}
+
+/** @internal */
+export const ProcessorType$inboundSchema: z.ZodMiniType<
+  ProcessorType,
+  unknown
+> = openEnums.inboundSchema(ProcessorType);
+
+/** @internal */
 export const Invoice$inboundSchema: z.ZodMiniType<Invoice, unknown> = z.pipe(
   z.object({
     plan_ids: z.array(types.string()),
     stripe_id: types.string(),
+    processor_type: z._default(ProcessorType$inboundSchema, "stripe"),
     status: types.string(),
     total: types.number(),
     currency: types.string(),
@@ -1149,6 +1301,7 @@ export const Invoice$inboundSchema: z.ZodMiniType<Invoice, unknown> = z.pipe(
     return remap$(v, {
       "plan_ids": "planIds",
       "stripe_id": "stripeId",
+      "processor_type": "processorType",
       "created_at": "createdAt",
       "hosted_invoice_url": "hostedInvoiceUrl",
     });
@@ -1354,6 +1507,7 @@ export const Customer$inboundSchema: z.ZodMiniType<Customer, unknown> = z.pipe(
     balances: z.record(z.string(), Balance$inboundSchema),
     flags: z.record(z.string(), z.lazy(() => Flags$inboundSchema)),
     config: types.optional(z.lazy(() => CustomerConfig$inboundSchema)),
+    processors: types.optional(z.lazy(() => Processors$inboundSchema)),
     invoices: types.optional(z.array(z.lazy(() => Invoice$inboundSchema))),
     entities: types.optional(z.array(z.lazy(() => Entity$inboundSchema))),
     trials_used: types.optional(

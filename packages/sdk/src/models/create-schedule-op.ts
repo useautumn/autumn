@@ -379,7 +379,7 @@ export type CreateSchedulePlan2 = {
    */
   customize?: CreateScheduleCustomize2 | undefined;
   /**
-   * Unsupported for create_schedule today. Requests that include this field will be rejected.
+   * A unique ID to identify this subscription. Useful when scheduling the same plan multiple times.
    */
   subscriptionId?: string | undefined;
 };

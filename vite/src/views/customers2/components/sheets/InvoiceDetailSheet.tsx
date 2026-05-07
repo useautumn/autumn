@@ -19,6 +19,7 @@ import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { InfoRow } from "@/components/v2/InfoRow";
+import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -34,7 +35,6 @@ import {
 } from "@/utils/linkUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
-import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
 
@@ -91,7 +91,6 @@ export function InvoiceDetailSheet({
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const { data: sessionData } = useSession();
 	const [refundDialogOpen, setRefundDialogOpen] = useState(false);
-	const { customer } = useCusQuery();
 
 	const productGroups = useMemo(() => {
 		// Bucket line items by product_id, then group within each bucket.
@@ -157,15 +156,20 @@ export function InvoiceDetailSheet({
 
 	if (!invoice) return null;
 
-	const isStripeCustomer = customer?.processor?.type === ProcessorType.Stripe;
+	const invoiceProcessor = invoice.processor_type ?? ProcessorType.Stripe;
+	const invoiceIsStripe = invoiceProcessor === ProcessorType.Stripe;
+	const processorLabel =
+		invoiceProcessor === ProcessorType.RevenueCat ? "RevenueCat" : "Stripe";
+	const idLabel = `${processorLabel} ID`;
 	const refundableAmount = Math.abs(invoice.amount_paid ?? invoice.total);
 	const isFullyRefunded =
 		invoice.refunded_amount > 0 && invoice.refunded_amount >= refundableAmount;
 	const canRefund =
-		isStripeCustomer &&
+		invoiceIsStripe &&
 		invoice.status === InvoiceStatus.Paid &&
 		!isFullyRefunded;
 	const stripeConnectViewAsInvoiceLink =
+		invoiceIsStripe &&
 		isAdmin &&
 		notNullish(sessionData?.session?.impersonatedBy) &&
 		masterStripeAccount?.id &&
@@ -177,6 +181,11 @@ export function InvoiceDetailSheet({
 					path: `invoices/${invoice.stripe_id}`,
 				})
 			: null;
+	const canOpenInvoice = Boolean(
+		invoice.hosted_invoice_url ||
+			stripeConnectViewAsInvoiceLink ||
+			invoiceIsStripe,
+	);
 
 	const formatAmount = (amount: number, currency: string) => {
 		const absAmount = Math.abs(amount);
@@ -213,7 +222,10 @@ export function InvoiceDetailSheet({
 
 		if (invoice.hosted_invoice_url) {
 			window.open(invoice.hosted_invoice_url, "_blank");
-		} else {
+			return;
+		}
+
+		if (invoiceIsStripe) {
 			window.open(
 				getStripeInvoiceLink({
 					stripeInvoice: invoice.stripe_id,
@@ -328,8 +340,13 @@ export function InvoiceDetailSheet({
 						}
 					/>
 					<InfoRow
+						icon={<ProcessorIcon processor={invoiceProcessor} size={16} />}
+						label="Processor"
+						value={<span className="text-sm text-t1">{processorLabel}</span>}
+					/>
+					<InfoRow
 						icon={<CreditCardIcon size={16} weight="duotone" />}
-						label="Stripe ID"
+						label={idLabel}
 						value={
 							<MiniCopyButton
 								text={invoice.stripe_id}
@@ -351,14 +368,16 @@ export function InvoiceDetailSheet({
 			</SheetSection>
 
 			<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
-				<Button
-					variant="secondary"
-					className="flex-1"
-					onClick={handleViewInvoice}
-				>
-					<ArrowSquareOutIcon size={16} className="mr-1.5" />
-					Open Invoice
-				</Button>
+				{canOpenInvoice && (
+					<Button
+						variant="secondary"
+						className="flex-1"
+						onClick={handleViewInvoice}
+					>
+						<ArrowSquareOutIcon size={16} className="mr-1.5" />
+						Open Invoice
+					</Button>
+				)}
 				{canRefund && (
 					<Button
 						variant="primary"

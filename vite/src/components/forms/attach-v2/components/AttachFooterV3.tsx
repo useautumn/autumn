@@ -9,7 +9,7 @@ import {
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
+import { useAttachBillingOptionsState } from "../hooks/useAttachBillingOptionsState";
 import { isFutureStartDate } from "../utils/buildAttachPreviewTotals";
 
 export function getConfirmLabel({
@@ -51,7 +51,7 @@ export function AttachFooterV3() {
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 
-	const { isEndOfCycleSelected } = usePlanScheduleField();
+	const { isEndOfCycleSelected } = useAttachBillingOptionsState();
 
 	const previewData = previewQuery.data;
 	const hasFutureStartDate = isFutureStartDate(formValues.startDate);
