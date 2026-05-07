@@ -180,6 +180,7 @@ export const attachParamsOutboundSchema = z.object({
 	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	plan_schedule: z.union([z.string(), z.undefined()]).optional(),
 	starts_at: z.union([z.number(), z.undefined()]).optional(),
+	ends_at: z.union([z.number(), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
@@ -310,6 +311,7 @@ export const attachParamsSchema = z.object({
 	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	planSchedule: z.union([attachPlanScheduleSchema, z.undefined()]).optional(),
 	startsAt: z.union([z.number(), z.undefined()]).optional(),
+	endsAt: z.union([z.number(), z.undefined()]).optional(),
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),

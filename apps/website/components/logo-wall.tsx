@@ -73,7 +73,7 @@ export default function LogoWall() {
 			<div className="flex flex-col">
 				<div className="px-4 xl:px-22.75 pt-10.5 flex items-center justify-center">
 					<span className="logo-wall-title lg:opacity-0 font-sans text-[14px] font-light text-[#FFFFFF99] tracking-[-2%] leading-5">
-						Powering millions of customers for growing startups
+						Powering millions of customers for the best startups
 					</span>
 				</div>
 

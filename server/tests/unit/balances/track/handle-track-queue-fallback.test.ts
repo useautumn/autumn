@@ -16,6 +16,8 @@ const mockState = {
 	runTrackV3Calls: [] as Record<string, unknown>[],
 	v3Error: null as unknown,
 };
+const trackQueueUrl =
+	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
 
 mock.module("@/internal/balances/track/runTrackV2.js", () => ({
 	runTrackV2: async (args: Record<string, unknown>) => {
@@ -69,10 +71,9 @@ describe("track queue fallback", () => {
 		mockState.runTrackV2Calls = [];
 		mockState.runTrackV3Calls = [];
 		mockState.v3Error = null;
-		process.env.TRACK_SQS_QUEUE_URL =
-			"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
+		process.env.TRACK_SQS_QUEUE_URL = trackQueueUrl;
 
-		const sqsClient = getSqsClient();
+		const sqsClient = getSqsClient({ queueUrl: trackQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			if (mockState.queueError) {
@@ -100,8 +101,7 @@ describe("track queue fallback", () => {
 		expect(mockState.runTrackV2Calls).toHaveLength(0);
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
-			QueueUrl:
-				"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo",
+			QueueUrl: trackQueueUrl,
 		});
 		expect(response).toEqual({
 			customer_id: "cus_123",
@@ -149,7 +149,7 @@ describe("track queue fallback", () => {
 	});
 
 	afterEach(() => {
-		const sqsClient = getSqsClient();
+		const sqsClient = getSqsClient({ queueUrl: trackQueueUrl });
 		if (mockState.originalSend) {
 			sqsClient.send = mockState.originalSend;
 		}

@@ -9,6 +9,7 @@ import {
 import { parseAsString, useQueryStates } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { withEffectiveCustomerProductStatus } from "@/views/customers2/utils/effectiveCustomerProductStatus";
 
 // Hook to sync entity_id between query params and store
 export const useEntity = () => {
@@ -46,14 +47,19 @@ export const useEntity = () => {
 
 // Hook to get a customer product and its productV2 by customer product ID
 export const useSubscriptionById = ({ itemId }: { itemId: string | null }) => {
-	const { customer } = useCusQuery();
+	const { customer, testClockFrozenTimeMs } = useCusQuery();
 
 	const cusProduct = useMemo(() => {
 		if (!itemId || !customer?.customer_products) return null;
-		return customer.customer_products.find(
+		const customerProduct = customer.customer_products.find(
 			(p: FullCusProduct) => p.id === itemId,
 		);
-	}, [itemId, customer?.customer_products]);
+		if (!customerProduct) return null;
+		return withEffectiveCustomerProductStatus({
+			customerProduct,
+			nowMs: testClockFrozenTimeMs,
+		});
+	}, [itemId, customer?.customer_products, testClockFrozenTimeMs]);
 
 	const productV2 = useMemo(() => {
 		if (!cusProduct) return null;

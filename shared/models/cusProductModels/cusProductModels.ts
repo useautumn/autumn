@@ -41,6 +41,7 @@ export const CusProductSchema = z.object({
 	canceled: z.boolean().default(false),
 
 	starts_at: z.number().default(Date.now()),
+	access_starts_at: z.number().optional().nullable(),
 	trial_ends_at: z.number().optional().nullable(),
 	billing_cycle_anchor_resets_at: z.number().optional().nullable(),
 	canceled_at: z.number().optional().nullable(),

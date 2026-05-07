@@ -19,6 +19,15 @@ import { cusProductToBalances } from "@/internal/customers/cusUtils/apiCusUtils/
 import { getApiSubscription } from "@/internal/customers/cusUtils/apiCusUtils/getApiSubscription/getApiSubscription.js";
 import { billingPlanToOutgoingEffectiveAt } from "./billingPlanToEffectiveAt";
 
+function getIncomingEffectiveAt({
+	customerProduct,
+}: {
+	customerProduct: FullCusProduct;
+}): number | null {
+	if (customerProduct.status !== CusProductStatus.Scheduled) return null;
+	return customerProduct.starts_at ?? null;
+}
+
 function cusProductToFeatureQuantities({
 	ctx,
 	cusProduct,
@@ -161,7 +170,7 @@ export const billingPlanToChanges = async ({
 				ctx: incomingCtx,
 				cusProduct,
 			}),
-			effective_at: null,
+			effective_at: getIncomingEffectiveAt({ customerProduct: cusProduct }),
 			canceled_at: subscription.canceled_at,
 			expires_at: subscription.expires_at,
 		});
@@ -202,7 +211,9 @@ export const billingPlanToChanges = async ({
 					ctx: incomingCtx,
 					cusProduct: updatedCustomerProduct,
 				}),
-				effective_at: null,
+				effective_at: getIncomingEffectiveAt({
+					customerProduct: updatedCustomerProduct,
+				}),
 				canceled_at: subscription.canceled_at,
 				expires_at: subscription.expires_at,
 			});

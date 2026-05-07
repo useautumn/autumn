@@ -17,6 +17,7 @@ import { replicaDbMiddleware } from "./honoMiddlewares/replicaDbMiddleware.js";
 import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { handleReadyCheck } from "./honoUtils/handleReadyCheck.js";
+import { handleListAuthOrganizations } from "./internal/auth/handleListAuthOrganizations.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
@@ -72,6 +73,9 @@ export const createHonoApp = () => {
 	app.get("/.well-known/oauth-authorization-server/api/auth", (c) => {
 		return oauthProviderAuthServerMetadata(auth)(c.req.raw);
 	});
+
+	// Better Auth's joined Drizzle query defaults to 100 memberships.
+	app.get("/api/auth/organization/list", handleListAuthOrganizations);
 
 	app.on(["POST", "GET"], "/api/auth/*", (c) => {
 		return auth.handler(c.req.raw);

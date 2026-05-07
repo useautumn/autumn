@@ -23,6 +23,7 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 
 	plan_schedule: PlanTimingSchema.optional(),
 	starts_at: UnixMsTimestampSchema.optional(),
+	ends_at: UnixMsTimestampSchema.optional(),
 
 	// Discounts to apply (Stripe coupon IDs or human-readable promo code strings)
 	discounts: z.array(AttachDiscountSchema).optional(),

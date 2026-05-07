@@ -8027,6 +8027,12 @@ paths:
                   maximum: 9007199254740991
                   description: Unix timestamp in milliseconds for when the attached plan should
                     start. Future dates create a scheduled subscription.
+                ends_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Unix timestamp in milliseconds for when the attached plan should
+                    end.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -9939,6 +9945,12 @@ paths:
                   maximum: 9007199254740991
                   description: Unix timestamp in milliseconds for when the attached plan should
                     start. Future dates create a scheduled subscription.
+                ends_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Unix timestamp in milliseconds for when the attached plan should
+                    end.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -13087,6 +13099,12 @@ paths:
                   maximum: 9007199254740991
                   description: Unix timestamp in milliseconds for when the attached plan should
                     start. Future dates create a scheduled subscription.
+                ends_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Unix timestamp in milliseconds for when the attached plan should
+                    end.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -13809,6 +13827,16 @@ paths:
                       - type: "null"
                     description: The customer's balance for this feature. Null if the customer has
                       no balance for this feature.
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to balance for the checked feature and any
+                      related features (e.g. linked credit systems).
                   flag:
                     anyOf:
                       - type: object
@@ -14337,6 +14365,16 @@ paths:
                       - type: "null"
                     description: The customer's balance for this feature. Null if the customer has
                       no balance for this feature.
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to balance for the checked feature and any
+                      related features (e.g. linked credit systems).
                   flag:
                     anyOf:
                       - type: object
@@ -14968,9 +15006,12 @@ paths:
                     propertyNames:
                       type: string
                     additionalProperties:
-                      $ref: "#/components/schemas/Balance"
-                    description: Map of feature_id to updated balance when tracking by event_name
-                      affects multiple features.
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to updated balance for the tracked feature and
+                      any related features (e.g. linked credit systems). Value
+                      is null when the customer has no balance for that feature.
                 required:
                   - customer_id
                   - value
@@ -15035,9 +15076,12 @@ paths:
                     propertyNames:
                       type: string
                     additionalProperties:
-                      $ref: "#/components/schemas/Balance"
-                    description: Map of feature_id to updated balance when tracking by event_name
-                      affects multiple features.
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to updated balance for the tracked feature and
+                      any related features (e.g. linked credit systems). Value
+                      is null when the customer has no balance for that feature.
                 required:
                   - customer_id
                   - value
