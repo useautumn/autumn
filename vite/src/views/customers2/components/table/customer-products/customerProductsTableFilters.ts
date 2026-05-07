@@ -2,7 +2,6 @@ import {
 	cusProductToProduct,
 	type FullCusProduct,
 	type FullCustomer,
-	hasCustomerProductEnded,
 	isOneOffProductV2,
 	mapToProductV2,
 } from "@autumn/shared";
@@ -20,17 +19,12 @@ function isOneOffCusProduct(cusProduct: FullCusProduct): boolean {
 function filterCustomerProducts({
 	customer,
 	showExpired,
-	nowMs,
 }: {
 	customer: FullCustomer;
 	showExpired: boolean;
-	nowMs?: number;
 }): FullCusProduct[] {
 	return filterByExpiredStatus({
-		items: customer.customer_products.filter(
-			(customerProduct) =>
-				showExpired || !hasCustomerProductEnded(customerProduct, { nowMs }),
-		),
+		items: customer.customer_products,
 		showExpired,
 	});
 }
@@ -38,20 +32,15 @@ function filterCustomerProducts({
 function filterCustomerProductsByEntity({
 	customer,
 	showExpired,
-	nowMs,
 }: {
 	customer: FullCustomer;
 	showExpired: boolean;
-	nowMs?: number;
 }): {
 	regularProducts: FullCusProduct[];
 	entityProducts: FullCusProduct[];
 } {
 	const allProducts = filterByExpiredStatus({
-		items: customer.customer_products.filter(
-			(customerProduct) =>
-				showExpired || !hasCustomerProductEnded(customerProduct, { nowMs }),
-		),
+		items: customer.customer_products,
 		showExpired,
 	});
 
@@ -71,11 +60,9 @@ function filterCustomerProductsByEntity({
 export function filterCustomerProductsByType({
 	customer,
 	showExpired,
-	nowMs,
 }: {
 	customer: FullCustomer;
 	showExpired: boolean;
-	nowMs?: number;
 }): {
 	subscriptions: {
 		customerLevel: FullCusProduct[];
@@ -89,7 +76,6 @@ export function filterCustomerProductsByType({
 	const { regularProducts, entityProducts } = filterCustomerProductsByEntity({
 		customer,
 		showExpired,
-		nowMs,
 	});
 
 	return {

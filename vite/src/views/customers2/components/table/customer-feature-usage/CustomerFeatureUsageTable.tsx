@@ -14,6 +14,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
+import { withEffectiveCustomerProductStatus } from "@/views/customers2/utils/effectiveCustomerProductStatus";
 import { CustomerBalanceTable } from "../customer-balance/CustomerBalanceTable";
 import { EmptyState } from "../EmptyState";
 import { CustomerFeatureUsageColumns } from "./CustomerFeatureUsageColumns";
@@ -43,17 +44,25 @@ export function CustomerFeatureUsageTable() {
 	}, [customer?.entities, entityId]);
 
 	const filteredCustomerProducts = useMemo(() => {
+		const customerProducts = (customer?.customer_products ?? []).map(
+			(customerProduct) =>
+				withEffectiveCustomerProductStatus({
+					customerProduct,
+					nowMs: testClockFrozenTimeMs,
+				}),
+		);
+
 		if (!selectedEntity) {
-			return customer?.customer_products ?? [];
+			return customerProducts;
 		}
 
-		return (customer?.customer_products ?? []).filter(
+		return customerProducts.filter(
 			(cp: FullCusProduct) =>
 				(!cp.internal_entity_id && !cp.entity_id) ||
 				cp.internal_entity_id === selectedEntity.internal_id ||
 				cp.entity_id === selectedEntity.id,
 		);
-	}, [customer?.customer_products, selectedEntity]);
+	}, [customer?.customer_products, selectedEntity, testClockFrozenTimeMs]);
 
 	const cusEnts = useMemo((): FullCusEntWithFullCusProduct[] => {
 		const productEnts = flattenCustomerEntitlements({
@@ -96,9 +105,8 @@ export function CustomerFeatureUsageTable() {
 			filterCustomerFeatureUsage({
 				entitlements: cusEnts,
 				showExpired: false,
-				nowMs: testClockFrozenTimeMs,
 			}),
-		[cusEnts, testClockFrozenTimeMs],
+		[cusEnts],
 	);
 
 	const { entitlements: deduplicatedCusEnts, aggregatedMap } = useMemo(

@@ -4,7 +4,6 @@ import {
 	cp,
 	type Entity,
 	type FrontendProduct,
-	hasCustomerProductEnded,
 	isCustomerProductTrialing,
 	type ProductItem,
 	sortPlanItems,
@@ -132,9 +131,7 @@ export function SubscriptionDetailSheet() {
 	useProductVersionQuery({ productId: productV2?.id });
 
 	const nowMs = testClockFrozenTimeMs ?? Date.now();
-	const isExpired =
-		cusProduct?.status === CusProductStatus.Expired ||
-		(!!cusProduct && hasCustomerProductEnded(cusProduct, { nowMs }));
+	const isExpired = cusProduct?.status === CusProductStatus.Expired;
 	const isCanceled = cusProduct?.canceled;
 	const isOneOff = cp(cusProduct).oneOff().valid;
 
@@ -318,7 +315,7 @@ export function SubscriptionDetailSheet() {
 						label="Status"
 						value={
 							<CustomerProductsStatus
-								status={isExpired ? CusProductStatus.Expired : cusProduct.status}
+								status={cusProduct.status}
 								canceled={cusProduct.canceled}
 								canceled_at={cusProduct.canceled_at ?? undefined}
 								trialing={
