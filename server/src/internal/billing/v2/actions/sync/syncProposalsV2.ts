@@ -2,6 +2,7 @@ import {
 	ErrCode,
 	type FullCusProduct,
 	RecaseError,
+	type SyncPhase,
 	type SyncProposalsV2Params,
 	type SyncProposalsV2Response,
 	type SyncProposalV2,
@@ -42,10 +43,17 @@ const buildProposal = async ({
 		subscription,
 	});
 
+	const detectedPhases = params.phases ?? [];
+
+	// Always include at least one phase so the UI can display the Stripe
+	// subscription items and let the user manually pick Autumn plans.
+	const fallbackPhase: SyncPhase = { starts_at: "now", plans: [] };
+	const phases = detectedPhases.length > 0 ? detectedPhases : [fallbackPhase];
+
 	return {
 		stripe_subscription_id: params.stripe_subscription_id,
 		stripe_schedule_id: params.stripe_schedule_id,
-		phases: params.phases ?? [],
+		phases,
 		stripe_subscription: subscription,
 		stripe_schedule: schedule,
 		already_linked_product_id: findAlreadyLinkedProductId({
