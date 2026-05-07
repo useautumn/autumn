@@ -21,7 +21,7 @@ export * from "./hooks/useAttachMutation";
 export * from "./hooks/useAttachPreview";
 export * from "./hooks/useAttachRequestBody";
 export * from "./hooks/useGrantFree";
-export * from "./hooks/usePlanScheduleField";
+export * from "./hooks/useAttachBillingOptionsState";
 export * from "./hooks/usePreviewDiff";
 
 // Utils
