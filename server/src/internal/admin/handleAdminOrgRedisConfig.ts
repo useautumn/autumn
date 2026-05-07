@@ -31,7 +31,7 @@ export const handleGetAdminOrgRedisConfig = createRoute({
 	params: orgIdParam,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { org_id: orgId } = c.req.valid("param");
+		const { org_id: orgId } = c.req.param();
 		const org = await loadTargetOrg({ db: ctx.db, orgId });
 
 		return c.json({
@@ -61,7 +61,7 @@ export const handleUpsertAdminOrgRedisConfig = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, logger } = ctx;
-		const { org_id: orgId } = c.req.valid("param");
+		const { org_id: orgId } = c.req.param();
 		const { connectionString: rawConnectionString } = c.req.valid("json");
 		const connectionString = rawConnectionString.trim();
 
@@ -134,7 +134,7 @@ export const handleUpdateAdminOrgRedisMigration = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, logger } = ctx;
-		const { org_id: orgId } = c.req.valid("param");
+		const { org_id: orgId } = c.req.param();
 		const { migrationPercent } = c.req.valid("json");
 
 		const org = await loadTargetOrg({ db, orgId });
@@ -180,7 +180,7 @@ export const handleDeleteAdminOrgRedisConfig = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, logger } = ctx;
-		const { org_id: orgId } = c.req.valid("param");
+		const { org_id: orgId } = c.req.param();
 
 		const org = await loadTargetOrg({ db, orgId });
 

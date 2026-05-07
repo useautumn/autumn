@@ -153,10 +153,10 @@ export const createAdminOrgColumns = ({
 			const users = row.original.users;
 			const firstNonAdminUser = users.find((user) => user.role !== "admin");
 
-			if (!firstNonAdminUser) {
-				return null;
-			}
-
+			// Org-level admin actions (Block, Redis) must remain reachable even when
+			// the org has only admin users — gating them on `firstNonAdminUser`
+			// would silently hide them. Only `ImpersonateButton` requires a
+			// non-admin user to target.
 			return (
 				<div onClick={(e) => e.stopPropagation()} className="flex gap-2">
 					<Button
@@ -173,7 +173,9 @@ export const createAdminOrgColumns = ({
 					>
 						Redis
 					</Button>
-					<ImpersonateButton userId={firstNonAdminUser.id} />
+					{firstNonAdminUser && (
+						<ImpersonateButton userId={firstNonAdminUser.id} />
+					)}
 				</div>
 			);
 		},
