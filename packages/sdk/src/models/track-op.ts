@@ -83,9 +83,9 @@ export type TrackResponseBody2 = {
    */
   balance: Balance | null;
   /**
-   * Map of feature_id to updated balance when tracking by event_name affects multiple features.
+   * Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature.
    */
-  balances?: { [k: string]: Balance } | undefined;
+  balances?: { [k: string]: Balance | null } | undefined;
 };
 
 /**
@@ -113,9 +113,9 @@ export type TrackResponseBody1 = {
    */
   balance: Balance | null;
   /**
-   * Map of feature_id to updated balance when tracking by event_name affects multiple features.
+   * Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature.
    */
-  balances?: { [k: string]: Balance } | undefined;
+  balances?: { [k: string]: Balance | null } | undefined;
 };
 
 export type TrackResponse = TrackResponseBody1 | TrackResponseBody2;
@@ -199,7 +199,9 @@ export const TrackResponseBody2$inboundSchema: z.ZodMiniType<
     event_name: types.optional(types.string()),
     value: types.number(),
     balance: types.nullable(Balance$inboundSchema),
-    balances: types.optional(z.record(z.string(), Balance$inboundSchema)),
+    balances: types.optional(
+      z.record(z.string(), types.nullable(Balance$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -231,7 +233,9 @@ export const TrackResponseBody1$inboundSchema: z.ZodMiniType<
     event_name: types.optional(types.string()),
     value: types.number(),
     balance: types.nullable(Balance$inboundSchema),
-    balances: types.optional(z.record(z.string(), Balance$inboundSchema)),
+    balances: types.optional(
+      z.record(z.string(), types.nullable(Balance$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
