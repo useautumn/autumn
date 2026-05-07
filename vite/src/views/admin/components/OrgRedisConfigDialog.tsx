@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
