@@ -21,10 +21,3 @@ export enum RewardType {
 	InvoiceCredits = "invoice_credits",
 	FeatureGrant = "feature_grant",
 }
-
-export enum FeatureGrantDuration {
-	Day = "day",
-	Week = "week",
-	Month = "month",
-	Year = "year",
-}

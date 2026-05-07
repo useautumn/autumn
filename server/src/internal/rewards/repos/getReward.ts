@@ -23,6 +23,9 @@ export const getReward = async ({
 			eq(rewards.org_id, orgId),
 			eq(rewards.env, env),
 		),
+		with: {
+			entitlements: true,
+		},
 	});
 
 	if (!result) {
