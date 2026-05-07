@@ -84,3 +84,44 @@ describe("processInvoice — processor_type wire mapping", () => {
 		expect(wire.processor_type).toBe(ProcessorType.Stripe);
 	});
 });
+
+describe("processInvoice — hosted_invoice_url processor gating", () => {
+	test("stripe invoice gets a hosted_invoice_url redirect", () => {
+		const wire = processInvoice({
+			invoice: buildBaseInvoice({ processor_type: ProcessorType.Stripe }),
+		});
+		expect(wire.hosted_invoice_url).toContain(
+			"/invoices/hosted_invoice_url/inv_test",
+		);
+	});
+
+	test("revenuecat invoice has hosted_invoice_url === null", () => {
+		const wire = processInvoice({
+			invoice: buildBaseInvoice({
+				processor_type: ProcessorType.RevenueCat,
+				stripe_id: "rc:txn_test",
+			}),
+		});
+		expect(wire.hosted_invoice_url).toBeNull();
+	});
+
+	test("null processor_type still produces a hosted_invoice_url (legacy stripe rows)", () => {
+		const wire = processInvoice({
+			invoice: buildBaseInvoice({
+				processor_type: null as unknown as ProcessorType,
+			}),
+		});
+		expect(wire.hosted_invoice_url).toContain(
+			"/invoices/hosted_invoice_url/inv_test",
+		);
+	});
+
+	test("undefined processor_type still produces a hosted_invoice_url (cjson-stripped legacy stripe rows)", () => {
+		const raw = buildBaseInvoice();
+		delete (raw as Record<string, unknown>).processor_type;
+		const wire = processInvoice({ invoice: raw });
+		expect(wire.hosted_invoice_url).toContain(
+			"/invoices/hosted_invoice_url/inv_test",
+		);
+	});
+});
