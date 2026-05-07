@@ -27,6 +27,7 @@ import { cleanupOneOffCustomerProducts } from "@/internal/customers/cusProducts/
 import {
 	expectProductStatusesByOrder,
 	getFullCustomerWithExpired,
+	trackUsageForCleanup,
 } from "./utils/oneOffCleanupTestUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -58,7 +59,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: oneoff-monthly-messages-both-act
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 50,
@@ -121,7 +122,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: lifetime-then-monthly-both-activ
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
@@ -192,7 +193,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: oneoff-prepaid-boolean-only-late
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
@@ -264,7 +265,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: oneoff-boolean-newer-without-boo
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
@@ -328,13 +329,13 @@ test.concurrent(`${chalk.yellowBright("cleanup: oneoff-lifetime-allocated-both-a
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
 	});
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Users,
 		value: 5,

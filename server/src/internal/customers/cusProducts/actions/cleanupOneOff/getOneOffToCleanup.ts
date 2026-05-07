@@ -2,25 +2,11 @@ import {
 	AllowanceType,
 	BillingInterval,
 	CusProductStatus,
-	type Customer,
-	type CustomerPrice,
-	type CustomerProduct,
 	FeatureType,
 	FeatureUsageType,
-	type Organization,
-	type Price,
-	type Product,
 } from "@autumn/shared";
-import type { CronContext } from "@/cron/utils/CronContext";
-
-export type OneOffCleanupResult = {
-	customer_product: CustomerProduct;
-	customer_price: CustomerPrice;
-	price: Price;
-	customer: Customer;
-	product: Product;
-	org: Organization;
-};
+import type { CronContext } from "@/cron/utils/CronContext.js";
+import type { OneOffCustomerProductResult } from "../oneOffCustomerProductResult.js";
 
 /**
  * Fetches one-off customer products eligible for cleanup.
@@ -31,23 +17,14 @@ export type OneOffCleanupResult = {
  * 3. All its entitlements are either:
  *    - Boolean features, OR
  *    - Single-use consumables with balance=0 and usage_allowed=false
- * 4. A newer active customer product exists for the same product, or ended_at has passed
+ * 4. A newer active customer product exists for the same product
  */
 export const getOneOffCustomerProductsToCleanup = async ({
 	ctx,
-	nowMs = Date.now(),
 }: {
 	ctx: CronContext;
-	nowMs?: number;
-}): Promise<OneOffCleanupResult[]> => {
-	const result = await ctx.db.execute<{
-		customer_product: CustomerProduct;
-		customer_price: CustomerPrice;
-		price: Price;
-		customer: Customer;
-		product: Product;
-		org: Organization;
-	}>(`
+}): Promise<OneOffCustomerProductResult[]> => {
+	const result = await ctx.db.execute<OneOffCustomerProductResult>(`
 		WITH 
 		-- CTE 1: Active customer products with at least one price
 		active_cus_products_with_prices AS (
@@ -150,15 +127,6 @@ export const getOneOffCustomerProductsToCleanup = async ({
 				  	  )
 				  )
 			)
-		),
-
-		-- CTE 7: One-off customer products with explicit access expiry
-		ended_one_off_cus_products AS (
-			SELECT cp.id
-			FROM customer_products cp
-			WHERE cp.id IN (SELECT id FROM one_off_cus_products)
-			  AND cp.ended_at IS NOT NULL
-			  AND cp.ended_at <= ${nowMs}
 		)
 		
 		-- Final query: Get full data for customer products meeting all criteria
@@ -177,10 +145,8 @@ export const getOneOffCustomerProductsToCleanup = async ({
 		INNER JOIN organizations o ON o.id = c.org_id
 		WHERE cp.id IN (
 			SELECT id FROM cus_products_with_newer_active_product
-			UNION
-			SELECT id FROM ended_one_off_cus_products
 		)
 	`);
 
-	return result as OneOffCleanupResult[];
+	return result as OneOffCustomerProductResult[];
 };
