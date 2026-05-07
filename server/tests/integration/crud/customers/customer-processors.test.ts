@@ -12,9 +12,9 @@ import {
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
@@ -79,6 +79,7 @@ const seedCusProduct = async ({
 		customer_id: customerId,
 		internal_entity_id: null,
 		entity_id: null,
+		updated_at: Date.now(),
 		created_at: Date.now(),
 		status,
 		canceled: false,
@@ -270,7 +271,10 @@ test.concurrent(`${chalk.yellowBright("customer processors: active RevenueCat cu
 		actions: [],
 	});
 
-	const customer = await CusService.getFull({ ctx, idOrInternalId: customerId });
+	const customer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
 	// pro.id is mutated in place by addPrefixToProducts during initScenario,
 	// so it already carries the productPrefix suffix here.
 	const product = await ProductService.get({
@@ -329,7 +333,10 @@ test.concurrent(`${chalk.yellowBright("customer processors: expired-only Revenue
 		actions: [],
 	});
 
-	const customer = await CusService.getFull({ ctx, idOrInternalId: customerId });
+	const customer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
 	const product = await ProductService.get({
 		db: ctx.db,
 		id: pro.id, // mutated to include productPrefix by initScenario
@@ -412,9 +419,8 @@ test.concurrent(`${chalk.yellowBright("customer processors: anonymous customer w
 		source: "test:rc-anon-seed",
 	});
 
-	const cached = await autumnV2_1.customers.get<ApiCustomerV5>(
-		internalCustomerId,
-	);
+	const cached =
+		await autumnV2_1.customers.get<ApiCustomerV5>(internalCustomerId);
 	expect(cached.processors?.revenuecat).toEqual({ id: null });
 	// id: null contract — must round-trip through ApiCustomerV5Schema cleanly.
 	// (Zod parse is exercised implicitly by the response builder; the explicit
@@ -458,7 +464,10 @@ test.concurrent(`${chalk.yellowBright("customer processors: multi-PSP customer s
 	});
 
 	// RevenueCat cusProduct seed
-	const customer = await CusService.getFull({ ctx, idOrInternalId: customerId });
+	const customer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
 	const product = await ProductService.get({
 		db: ctx.db,
 		id: pro.id, // mutated to include productPrefix by initScenario
@@ -524,7 +533,10 @@ test.concurrent(`${chalk.yellowBright("customer processors: unrelated update (na
 		},
 	});
 
-	const customer = await CusService.getFull({ ctx, idOrInternalId: customerId });
+	const customer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
 	const product = await ProductService.get({
 		db: ctx.db,
 		id: pro.id, // mutated to include productPrefix by initScenario
@@ -604,7 +616,10 @@ test.concurrent(`${chalk.yellowBright("customer processors: ApiCustomerV3 respon
 		},
 	});
 
-	const customer = await CusService.getFull({ ctx, idOrInternalId: customerId });
+	const customer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
 	const product = await ProductService.get({
 		db: ctx.db,
 		id: pro.id, // mutated to include productPrefix by initScenario
