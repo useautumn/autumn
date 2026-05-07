@@ -1,10 +1,25 @@
 import chalk from "chalk";
 import type { Context } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
-import {
-	addExtrasToLogs,
-} from "@/utils/logging/addContextToLogs";
+import { addExtrasToLogs } from "@/utils/logging/addContextToLogs";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
+
+const HIGH_VOLUME_SUCCESS_ROUTES = new Set([
+	"/v1/balances.track",
+	"/v1/balances.check",
+	"/v1/check",
+	"/v1/track",
+	"/v1/customers.get_or_create",
+	"/v1/entities.get",
+]);
+
+const SUCCESS_REQUEST_LOG_SAMPLE_RATE = Number.parseFloat(
+	process.env.AXIOM_SUCCESS_REQUEST_LOG_SAMPLE_RATE ?? "0",
+);
+
+const shouldSampleSuccessLog = () =>
+	SUCCESS_REQUEST_LOG_SAMPLE_RATE > 0 &&
+	Math.random() < Math.min(SUCCESS_REQUEST_LOG_SAMPLE_RATE, 1);
 
 export const logRequestResult = async ({
 	ctx,
@@ -26,13 +41,25 @@ export const logRequestResult = async ({
 			return;
 		}
 
+		const isSuccess = statusCode >= 200 && statusCode < 300;
+		const isHighVolumeSuccess =
+			isSuccess && HIGH_VOLUME_SUCCESS_ROUTES.has(c.req.path);
+
+		if (isHighVolumeSuccess && !shouldSampleSuccessLog()) {
+			return;
+		}
+
 		ctx.logger = addExtrasToLogs({
 			logger: ctx.logger,
 			extras: ctx.extraLogs,
 		});
 
 		let finalResponseBody = responseBody;
-		if (finalResponseBody === undefined && c.req.path.includes("/v1")) {
+		if (
+			!isSuccess &&
+			finalResponseBody === undefined &&
+			c.req.path.includes("/v1")
+		) {
 			const contentType = c.res.headers.get("content-type");
 			if (contentType?.includes("application/json")) {
 				try {
@@ -44,15 +71,15 @@ export const logRequestResult = async ({
 			}
 		}
 
-		const log = statusCode === 200 ? ctx.logger.info : ctx.logger.warn;
-		const statusColor = statusCode === 200 ? chalk.green : chalk.yellow;
+		const log = isSuccess ? ctx.logger.info : ctx.logger.warn;
+		const statusColor = isSuccess ? chalk.green : chalk.yellow;
 
 		log(
 			`[${statusColor(statusCode)}] ${c.req.path} (${ctx.org?.slug}) ${durationMs}ms`,
 			{
 				statusCode,
 				durationMs,
-				res: finalResponseBody ?? null,
+				...(isSuccess ? {} : { res: finalResponseBody ?? null }),
 			},
 		);
 
