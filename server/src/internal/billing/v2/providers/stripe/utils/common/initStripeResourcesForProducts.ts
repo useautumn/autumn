@@ -40,8 +40,16 @@ export const initStripeResourcesForBillingPlan = async ({
 				}),
 			}),
 	);
+	const patchedCustomerProductIds = new Set(
+		getPatchCustomerProducts({ autumnBillingPlan }).map(
+			(patchCustomerProduct) => patchCustomerProduct.customerProduct.id,
+		),
+	);
 
 	const existingProducts = fullCustomer.customer_products
+		.filter(
+			(customerProduct) => !patchedCustomerProductIds.has(customerProduct.id),
+		)
 		.map((customerProduct) =>
 			cusProductToProduct({ cusProduct: customerProduct }),
 		)
