@@ -131,11 +131,13 @@ export function literalBigInt<T extends bigint>(value: T): z.ZodMiniType<T> {
 }
 
 export function optional<T extends z.ZodMiniType>(t: T) {
-  return z.optional(z.union([
+  return z.union([
+    z.undefined(),
+
     // Null -> undefined
     z.pipe(z.null(), z.transform(() => unrecognized(undefined))),
     t,
-  ]));
+  ]);
 }
 
 export function nullable<T extends z.ZodMiniType>(t: T) {

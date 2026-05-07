@@ -7132,6 +7132,8 @@ paths:
 
         @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
 
+        @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
+
         @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 
         @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
@@ -7459,6 +7461,11 @@ paths:
                   minimum: 0
                   maximum: 9.007199254740991e+15
                   description: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+                ends_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9.007199254740991e+15
+                  description: Unix timestamp in milliseconds for when the attached plan should end.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -7616,7 +7623,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778065018741,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779274618741,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778164992062,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779374592062,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -8836,6 +8843,8 @@ paths:
 
         @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
 
+        @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
+
         @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 
         @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
@@ -9163,6 +9172,11 @@ paths:
                   minimum: 0
                   maximum: 9.007199254740991e+15
                   description: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+                ends_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9.007199254740991e+15
+                  description: Unix timestamp in milliseconds for when the attached plan should end.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -11986,6 +12000,11 @@ paths:
                   minimum: 0
                   maximum: 9.007199254740991e+15
                   description: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+                ends_at:
+                  type: integer
+                  minimum: 0
+                  maximum: 9.007199254740991e+15
+                  description: Unix timestamp in milliseconds for when the attached plan should end.
                 checkout_session_params:
                   type: object
                   propertyNames:
@@ -12536,6 +12555,15 @@ paths:
                       - $ref: "#/components/schemas/Balance"
                       - type: "null"
                     description: The customer's balance for this feature. Null if the customer has no balance for this feature.
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: "Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems). "
                   flag:
                     anyOf:
                       - type: object
@@ -13022,6 +13050,15 @@ paths:
                       - $ref: "#/components/schemas/Balance"
                       - type: "null"
                     description: The customer's balance for this feature. Null if the customer has no balance for this feature.
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: "Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems). "
                   flag:
                     anyOf:
                       - type: object
@@ -13613,8 +13650,10 @@ paths:
                     propertyNames:
                       type: string
                     additionalProperties:
-                      $ref: "#/components/schemas/Balance"
-                    description: Map of feature_id to updated balance when tracking by event_name affects multiple features.
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature.
                 required:
                   - customer_id
                   - value
@@ -13673,8 +13712,10 @@ paths:
                     propertyNames:
                       type: string
                     additionalProperties:
-                      $ref: "#/components/schemas/Balance"
-                    description: Map of feature_id to updated balance when tracking by event_name affects multiple features.
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature.
                 required:
                   - customer_id
                   - value
