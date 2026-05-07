@@ -87,7 +87,9 @@ test.concurrent(`${chalk.yellowBright("ends-at: one-off attach sets access expir
 	});
 
 	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	await expectProductActive({ customer, productId: oneOff.id });
+	const purchase = customer.purchases.find((p) => p.plan_id === oneOff.id);
+	expect(purchase).toBeDefined();
+	expect(purchase?.expires_at).toBe(endsAt);
 
 	const cusProduct = await getCustomerProduct({
 		ctx,

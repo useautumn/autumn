@@ -1,23 +1,20 @@
-import { CusProductStatus } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
-import { batchUpdateCustomerProducts } from "../../repos/batchUpdateCustomerProducts.js";
+import type { CronContext } from "@/cron/utils/CronContext.js";
+import { expireOneOffCustomerProductResults } from "../expireOneOffCustomerProductResults.js";
+import { logOneOffCustomerProductResults } from "../logOneOffCustomerProductResults.js";
+import type { OneOffCustomerProductResult } from "../oneOffCustomerProductResult.js";
 import {
 	getOneOffCustomerProductsToCleanup,
-	type OneOffCleanupResult,
 } from "./getOneOffToCleanup.js";
-import { logOneOffCleanup } from "./logOneOffCleanup.js";
 
 export type CleanupOneOffResult = {
 	cleanedUp: number;
-	results: OneOffCleanupResult[];
+	results: OneOffCustomerProductResult[];
 };
 
 /**
  * Cleanup one-off customer products by expiring those that:
  * 1. Have all one_off interval prices
- * 2. Have ended_at in the past, or
- * 3. Have all entitlements either boolean or depleted (balance=0, usage_allowed=false)
+ * 2. Have all entitlements either boolean or depleted (balance=0, usage_allowed=false)
  *    and a newer active customer product for the same product
  *
  * This prevents the FullCustomer object from growing unboundedly when
@@ -25,15 +22,13 @@ export type CleanupOneOffResult = {
  */
 export const cleanupOneOffCustomerProducts = async ({
 	ctx,
-	nowMs,
 }: {
-	ctx: AutumnContext;
-	nowMs?: number;
+	ctx: CronContext;
 }): Promise<CleanupOneOffResult> => {
 	const { logger } = ctx;
 
 	// 1. Get customer products eligible for cleanup
-	const toCleanup = await getOneOffCustomerProductsToCleanup({ ctx, nowMs });
+	const toCleanup = await getOneOffCustomerProductsToCleanup({ ctx });
 
 	if (toCleanup.length === 0) {
 		logger.info("[One-off Cleanup] No customer products to cleanup");
@@ -41,40 +36,20 @@ export const cleanupOneOffCustomerProducts = async ({
 	}
 
 	// 2. Log what we're about to cleanup
-	logOneOffCleanup({ logger, cleanupResults: toCleanup });
-
-	// 3. Batch update status to 'expired'
-	// Get unique customer product IDs (query may return duplicates due to JOINs)
-	const uniqueIds = Array.from(
-		new Set(toCleanup.map((item) => item.customer_product.id)),
-	);
-
-	await batchUpdateCustomerProducts({
-		ctx,
-		updates: uniqueIds.map((id) => ({
-			id,
-			updates: { status: CusProductStatus.Expired },
-		})),
+	logOneOffCustomerProductResults({
+		logger,
+		results: toCleanup,
+		label: "One-off Cleanup",
 	});
 
-	// 4. Invalidate cache for affected customers
-	// Get unique customer IDs
-	const uniqueCustomerIds = Array.from(
-		new Set(toCleanup.map((item) => item.customer.id).filter(Boolean)),
-	) as string[];
-
-	const cacheInvalidationPromises = uniqueCustomerIds.map((customerId) =>
-		deleteCachedFullCustomer({
-			customerId,
-			ctx,
-			source: "cleanupOneOffCustomerProducts",
-		}),
-	);
-
-	await Promise.all(cacheInvalidationPromises);
+	const cleanedUp = await expireOneOffCustomerProductResults({
+		ctx,
+		results: toCleanup,
+		source: "cleanupOneOffCustomerProducts",
+	});
 
 	return {
-		cleanedUp: uniqueIds.length,
+		cleanedUp,
 		results: toCleanup,
 	};
 };
