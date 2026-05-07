@@ -10,18 +10,6 @@ const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);
 
 const orgIdParam = z.object({ org_id: z.string().min(1) });
 
-const loadTargetOrg = async ({ db, orgId }: { db: any; orgId: string }) => {
-	const org = await OrgService.get({ db, orgId });
-	if (!org) {
-		throw new RecaseError({
-			message: `Org not found: ${orgId}`,
-			code: ErrCode.InvalidRequest,
-			statusCode: 404,
-		});
-	}
-	return org;
-};
-
 /**
  * GET /admin/orgs/:org_id/redis
  * Returns the org's redis_config in frontend-safe shape (host + percent only).
@@ -32,7 +20,7 @@ export const handleGetAdminOrgRedisConfig = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org_id: orgId } = c.req.param();
-		const org = await loadTargetOrg({ db: ctx.db, orgId });
+		const org = await OrgService.get({ db: ctx.db, orgId });
 
 		return c.json({
 			org_id: org.id,
@@ -65,7 +53,7 @@ export const handleUpsertAdminOrgRedisConfig = createRoute({
 		const { connectionString: rawConnectionString } = c.req.valid("json");
 		const connectionString = rawConnectionString.trim();
 
-		const org = await loadTargetOrg({ db, orgId });
+		const org = await OrgService.get({ db, orgId });
 
 		if (org.redis_config) {
 			throw new RecaseError({
@@ -137,7 +125,7 @@ export const handleUpdateAdminOrgRedisMigration = createRoute({
 		const { org_id: orgId } = c.req.param();
 		const { migrationPercent } = c.req.valid("json");
 
-		const org = await loadTargetOrg({ db, orgId });
+		const org = await OrgService.get({ db, orgId });
 
 		if (!org.redis_config) {
 			throw new RecaseError({
@@ -182,7 +170,7 @@ export const handleDeleteAdminOrgRedisConfig = createRoute({
 		const { db, logger } = ctx;
 		const { org_id: orgId } = c.req.param();
 
-		const org = await loadTargetOrg({ db, orgId });
+		const org = await OrgService.get({ db, orgId });
 
 		if (org.redis_config && org.redis_config.migrationPercent > 0) {
 			throw new RecaseError({
