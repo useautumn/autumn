@@ -37,6 +37,7 @@ import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
 import { addDiscount } from "../utils/discountUtils";
+import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
 import { AttachDiscountRow } from "./AttachDiscountRow";
 
 let customLineItemCounter = 0;
@@ -111,7 +112,8 @@ function FeatureSelectDropdown({
 }
 
 export function AttachAdvancedSection() {
-	const { form, formValues, features, product } = useAttachFormContext();
+	const { form, formValues, features, product, previewQuery } =
+		useAttachFormContext();
 	const {
 		discounts,
 		newBillingSubscription,
@@ -170,7 +172,11 @@ export function AttachAdvancedSection() {
 		!trialEnabled &&
 		effectivePlanSchedule !== "end_of_cycle";
 	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
-	const endDateMin = Math.max(Date.now(), startDate ?? 0);
+	const attachStartsAt =
+		effectivePlanSchedule === "end_of_cycle"
+			? getAttachScheduledStartDate({ previewData: previewQuery.data })
+			: startDate;
+	const endDateMin = Math.max(Date.now(), attachStartsAt ?? 0);
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
