@@ -7,32 +7,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
 
-const getPatchTrialUpdates = ({
-	updateSubscriptionContext,
-}: {
-	updateSubscriptionContext: UpdateSubscriptionBillingContext;
-}) => {
-	const { trialContext } = updateSubscriptionContext;
-
-	if (!trialContext) return {};
-
-	if (trialContext.customFreeTrial) {
-		return {
-			free_trial_id: trialContext.customFreeTrial.id,
-			trial_ends_at: trialContext.trialEndsAt ?? null,
-		};
-	}
-
-	if (trialContext.trialEndsAt === null) {
-		return {
-			free_trial_id: null,
-			trial_ends_at: null,
-		};
-	}
-
-	return {};
-};
-
 export const computePatchCustomerProductPlan = ({
 	ctx,
 	updateSubscriptionContext,
@@ -47,11 +21,12 @@ export const computePatchCustomerProductPlan = ({
 		throw new Error("Patch context is required to compute patch customer plan");
 	}
 
-	const finalCustomerProduct = initPatchCustomerProduct({
-		ctx,
-		billingContext: updateSubscriptionContext,
-		patchContext,
-	});
+	const { finalCustomerProduct, customerProductUpdates } =
+		initPatchCustomerProduct({
+			ctx,
+			billingContext: updateSubscriptionContext,
+			patchContext,
+		});
 
 	const { allLineItems } = buildAutumnLineItems({
 		ctx,
@@ -93,9 +68,8 @@ export const computePatchCustomerProductPlan = ({
 			{
 				customerProduct: patchContext.originalCustomerProduct,
 				updates: {
-					options: finalCustomerProduct.options,
+					...customerProductUpdates,
 					updated_at: Date.now(),
-					...getPatchTrialUpdates({ updateSubscriptionContext }),
 				},
 			},
 		],
