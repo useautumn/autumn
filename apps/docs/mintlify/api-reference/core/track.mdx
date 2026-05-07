@@ -300,8 +300,8 @@ await autumn.track({
   </Expandable>
 </DynamicResponseField>
 
-<DynamicResponseField name="balances.{key}" type="object">
-  Map of feature_id to updated balance when tracking by event_name affects multiple features.
+<DynamicResponseField name="balances.{key}" type="object | null">
+  Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature.
   <Expandable title="properties">
     <DynamicResponseField name="feature_id" type="string">
       The feature ID this balance is for.
