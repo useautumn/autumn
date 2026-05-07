@@ -1,6 +1,7 @@
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
+import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter";
 import { z } from "zod/v4";
 
 export const CustomizePlanV1Schema = z
@@ -10,7 +11,14 @@ export const CustomizePlanV1Schema = z
 				"Override the base price of the plan. Pass null to remove the base price.",
 		}),
 		items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
-			description: "Override the items in the plan.",
+			description:
+				"Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items.",
+		}),
+		add_items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
+			description: "Items to add to the plan.",
+		}),
+		remove_items: z.array(PlanItemFilterSchema).optional().meta({
+			description: "Filters selecting items to remove from the plan.",
 		}),
 		free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
 			description:
@@ -21,10 +29,23 @@ export const CustomizePlanV1Schema = z
 		(data) =>
 			data.items !== undefined ||
 			data.price !== undefined ||
-			data.free_trial !== undefined,
+			data.free_trial !== undefined ||
+			data.add_items !== undefined ||
+			data.remove_items !== undefined,
 		{
 			message:
-				"When using customize, either items, price, or free_trial must be provided",
+				"When using customize, at least one of price, items, add_items, remove_items, or free_trial must be provided",
+		},
+	)
+	.refine(
+		(data) =>
+			!(
+				data.items !== undefined &&
+				(data.add_items !== undefined || data.remove_items !== undefined)
+			),
+		{
+			message:
+				"customize.items (PUT-style) cannot be combined with add_items/remove_items (PATCH-style); pick one approach",
 		},
 	)
 	.meta({
@@ -40,5 +61,18 @@ export const hasCustomItems = (
 	customize?: CustomizePlanV1,
 ): customize is CustomizePlanV1 => {
 	if (!customize) return false;
-	return customize.price !== undefined || customize.items !== undefined;
+	return (
+		customize.price !== undefined ||
+		customize.items !== undefined ||
+		customize.add_items !== undefined ||
+		customize.remove_items !== undefined
+	);
 };
+
+export const isCustomizePlanPatchStyle = (
+	customize?: CustomizePlanV1,
+): customize is CustomizePlanV1 =>
+	customize?.items === undefined &&
+	(customize?.price !== undefined ||
+		customize?.add_items !== undefined ||
+		customize?.remove_items !== undefined);

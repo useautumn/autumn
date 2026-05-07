@@ -7,6 +7,10 @@ import {
 } from "@autumn/shared";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import {
+	applyCustomerProductPatch,
+	getPatchCustomerProducts,
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 
 export const initStripeResourcesForBillingPlan = async ({
@@ -27,6 +31,16 @@ export const initStripeResourcesForBillingPlan = async ({
 		cusProductToProduct({ cusProduct: cp }),
 	);
 
+	const patchProducts = getPatchCustomerProducts({ autumnBillingPlan }).map(
+		(patchCustomerProduct) =>
+			cusProductToProduct({
+				cusProduct: applyCustomerProductPatch({
+					customerProduct: patchCustomerProduct.customerProduct,
+					patch: patchCustomerProduct,
+				}),
+			}),
+	);
+
 	const existingProducts = fullCustomer.customer_products
 		.map((customerProduct) =>
 			cusProductToProduct({ cusProduct: customerProduct }),
@@ -44,7 +58,7 @@ export const initStripeResourcesForBillingPlan = async ({
 			(product) => nullish(product.processor?.id) || product.prices.length > 0,
 		);
 
-	const allProducts = [...newProducts, ...existingProducts];
+	const allProducts = [...newProducts, ...patchProducts, ...existingProducts];
 
 	const batchProductUpdates = [];
 	for (const product of allProducts) {

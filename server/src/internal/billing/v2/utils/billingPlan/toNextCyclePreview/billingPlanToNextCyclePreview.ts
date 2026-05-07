@@ -12,7 +12,12 @@ import {
 } from "@autumn/shared";
 import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { billingPlanToUpdatedCustomerProduct } from "@/internal/billing/v2/utils/billingPlan/billingPlanToUpdatedCustomerProduct";
+import {
+	applyCustomerProductPatch,
+	applyCustomerProductUpdate,
+	getPatchCustomerProducts,
+	getUpdateCustomerProducts,
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { billingPlanToNextCycleLineItems } from "./billingPlanToNextCycleLineItems";
 import { computeScheduledAnchorResetPreview } from "./computeScheduledAnchorResetPreview";
 
@@ -30,6 +35,39 @@ export type NextCyclePreviewResult = {
 	debug: NextCyclePreviewDebug;
 };
 
+const applyPatchCustomerProducts = ({
+	allCustomerProducts,
+	billingPlan,
+}: {
+	allCustomerProducts: FullCusProduct[];
+	billingPlan: BillingPlan;
+}): FullCusProduct[] => {
+	const patchCustomerProducts = getPatchCustomerProducts({
+		autumnBillingPlan: billingPlan.autumn,
+	});
+	if (patchCustomerProducts.length === 0) return allCustomerProducts;
+
+	const patchedCustomerProducts = patchCustomerProducts.map((patch) =>
+		applyCustomerProductPatch({
+			customerProduct:
+				allCustomerProducts.find(
+					(customerProduct) => customerProduct.id === patch.customerProduct.id,
+				) ?? patch.customerProduct,
+			patch,
+		}),
+	);
+	const patchedCustomerProductIds = new Set(
+		patchedCustomerProducts.map((customerProduct) => customerProduct.id),
+	);
+
+	return [
+		...allCustomerProducts.filter(
+			(customerProduct) => !patchedCustomerProductIds.has(customerProduct.id),
+		),
+		...patchedCustomerProducts,
+	];
+};
+
 export const billingPlanToNextCyclePreview = ({
 	ctx,
 	billingContext,
@@ -41,16 +79,18 @@ export const billingPlanToNextCyclePreview = ({
 }): NextCyclePreviewResult => {
 	const { billingCycleAnchorMs } = billingContext;
 
-	const updatedCustomerProduct = billingPlanToUpdatedCustomerProduct({
-		autumnBillingPlan: billingPlan.autumn,
-	});
 	const { insertCustomerProducts } = billingPlan.autumn;
+	const updateCustomerProducts = getUpdateCustomerProducts({
+		autumnBillingPlan: billingPlan.autumn,
+	}).map(({ customerProduct, updates }) =>
+		applyCustomerProductUpdate({ customerProduct, updates }),
+	);
 
 	// Get all customer products
-	const allCustomerProducts = [
-		...insertCustomerProducts,
-		...(updatedCustomerProduct ? [updatedCustomerProduct] : []),
-	];
+	const allCustomerProducts = applyPatchCustomerProducts({
+		allCustomerProducts: [...insertCustomerProducts, ...updateCustomerProducts],
+		billingPlan,
+	});
 
 	const customerProducts = allCustomerProducts.filter(
 		(customerProduct) =>

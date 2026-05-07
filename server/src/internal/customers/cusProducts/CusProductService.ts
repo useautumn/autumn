@@ -447,7 +447,7 @@ export class CusProductService {
 		const { db } = ctx;
 		return await db
 			.update(customerProducts)
-			.set(updates)
+			.set({ ...updates, updated_at: Date.now() })
 			.where(eq(customerProducts.id, cusProductId));
 	}
 
@@ -466,7 +466,7 @@ export class CusProductService {
 	}) {
 		const updated = await db
 			.update(customerProducts)
-			.set(updates)
+			.set({ ...updates, updated_at: Date.now() })
 			.where(
 				and(
 					arrayContains(customerProducts.subscription_ids, [stripeSubId]),
@@ -501,11 +501,11 @@ export class CusProductService {
 	}: {
 		db: DrizzleCli;
 		stripeScheduledId: string;
-		updates: Partial<CusProduct>;
+		updates: Partial<InsertCustomerProduct>;
 	}) {
 		const updated = await db
 			.update(customerProducts)
-			.set(updates as any)
+			.set({ ...updates, updated_at: Date.now() })
 			.where(
 				and(
 					arrayContains(customerProducts.scheduled_ids, [stripeScheduledId]),

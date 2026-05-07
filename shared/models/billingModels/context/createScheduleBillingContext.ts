@@ -10,6 +10,8 @@ export interface ScheduledProductContext {
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
 	featureQuantities: FeatureOptions[];
+	/** User-provided subscription ID for this scheduled product. */
+	externalId?: string;
 }
 
 export interface ScheduledPhaseContext {
