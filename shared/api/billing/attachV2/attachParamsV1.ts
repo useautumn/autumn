@@ -31,6 +31,10 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		description:
 			"Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.",
 	}),
+	ends_at: UnixMsTimestampSchema.optional().meta({
+		description:
+			"Unix timestamp in milliseconds for when the attached plan should end.",
+	}),
 
 	checkout_session_params: z.record(z.string(), z.unknown()).optional().meta({
 		description:

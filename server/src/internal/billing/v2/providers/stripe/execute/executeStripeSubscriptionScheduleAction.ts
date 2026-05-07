@@ -136,6 +136,26 @@ const createScheduleFromSubscription = async ({
 	});
 };
 
+const getStandaloneScheduleDefaults = ({
+	billingContext,
+}: {
+	billingContext: BillingContext;
+}): Partial<Stripe.SubscriptionScheduleCreateParams> => {
+	const paymentMethod = billingContext.paymentMethod;
+	const shouldSendInvoice = !paymentMethod || paymentMethod.type === "custom";
+
+	if (!shouldSendInvoice) return {};
+
+	return {
+		default_settings: {
+			collection_method: "send_invoice",
+			invoice_settings: {
+				days_until_due: 30,
+			},
+		},
+	};
+};
+
 export const executeStripeSubscriptionScheduleAction = async ({
 	ctx,
 	billingContext,
@@ -181,6 +201,7 @@ export const executeStripeSubscriptionScheduleAction = async ({
 				phases: params.phases?.map(toCreatePhase) ?? [],
 				end_behavior: params.end_behavior,
 				start_date: startDate,
+				...getStandaloneScheduleDefaults({ billingContext }),
 			});
 		}
 

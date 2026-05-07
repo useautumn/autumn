@@ -42,7 +42,7 @@ const baseParams: Omit<
 	carryOverUsages: false,
 	carryOverUsageFeatureIds: [],
 	customLineItems: [],
-	isFreeToPaidTransition: false,
+	disableProration: false,
 };
 
 describe("buildAttachRequestBody — billing_units handling", () => {
