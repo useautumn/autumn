@@ -93,9 +93,7 @@ interface AttachFormContextValue {
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
 	}>;
-	handleCheckoutAttach: (params: {
-		enablePlanImmediately: boolean;
-	}) => Promise<{
+	handleCheckoutAttach: () => Promise<{
 		paymentUrl: string | null | undefined;
 	}>;
 }
@@ -178,6 +176,7 @@ export function AttachFormProvider({
 		trialCardRequired,
 		planSchedule,
 		startDate,
+		endDate,
 		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
@@ -386,6 +385,7 @@ export function AttachFormProvider({
 		trialCardRequired,
 		planSchedule,
 		startDate,
+		endDate,
 		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,

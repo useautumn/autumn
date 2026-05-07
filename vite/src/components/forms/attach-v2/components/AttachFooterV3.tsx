@@ -29,8 +29,8 @@ export function getConfirmLabel({
 	now?: number;
 }): string {
 	if (!previewData) return "Attach Plan";
+	if (isFutureStartDate(startDate, now)) return "Preview Schedule";
 	if (previewData.redirect_to_checkout) return "Generate Checkout URL";
-	if (isFutureStartDate(startDate, now)) return "Schedule Plan";
 
 	const sixHoursFromNow = addHours(now ?? Date.now(), 6);
 	const isScheduled = previewData.outgoing?.some(
@@ -109,7 +109,9 @@ export function AttachFooterV3() {
 					variant="primary"
 					className="w-full"
 					onClick={() => {
-						if (previewData?.redirect_to_checkout) {
+						if (hasFutureStartDate) {
+							setSheet({ type: "attach-schedule-plan", itemId });
+						} else if (previewData?.redirect_to_checkout) {
 							setSheet({ type: "attach-checkout-session", itemId });
 						} else {
 							handleConfirm();

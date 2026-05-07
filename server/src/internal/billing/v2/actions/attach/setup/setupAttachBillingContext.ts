@@ -25,6 +25,7 @@ import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCyc
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
+import { getAttachAccessStartsAt } from "./getAttachAccessStartsAt";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
 import { setupAttachProductContext } from "./setupAttachProductContext";
@@ -182,12 +183,6 @@ export const setupAttachBillingContext = async ({
 		billingCycleAnchorMs = trialContext.trialEndsAt;
 	}
 
-	const resetCycleAnchorMs = setupResetCycleAnchor({
-		billingCycleAnchorMs,
-		customerProduct: undefined, // don't pass in current customer product here (paid products should have the reset cycle anchor correctly...)
-		newFullProduct: attachProduct,
-	});
-
 	const endOfCycleMs =
 		contextOverride.endOfCycleMsOverride ??
 		setupAttachEndOfCycleMs({
@@ -198,10 +193,23 @@ export const setupAttachBillingContext = async ({
 			currentEpochMs,
 		});
 
+	const billingStartsAt =
+		params.starts_at ?? (planTiming === "end_of_cycle" ? endOfCycleMs : undefined);
 	const hasFutureStartDate = isFutureStartDate(
 		params.starts_at,
 		currentEpochMs,
 	);
+	const accessStartsAt = getAttachAccessStartsAt({
+		params,
+		currentEpochMs,
+	});
+
+	const resetCycleAnchorMs = setupResetCycleAnchor({
+		billingCycleAnchorMs,
+		customerProduct: undefined, // don't pass in current customer product here (paid products should have the reset cycle anchor correctly...)
+		newFullProduct: attachProduct,
+		billingStartsAt,
+	});
 
 	const checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
@@ -250,6 +258,7 @@ export const setupAttachBillingContext = async ({
 
 		invoiceMode,
 		enablePlanImmediately: params.enable_plan_immediately ?? false,
+		accessStartsAt,
 
 		customPrices,
 		customEnts,

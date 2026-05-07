@@ -22,11 +22,8 @@ import { cleanupOneOffCustomerProducts } from "@/internal/customers/cusProducts/
 import {
 	expectProductStatusesByOrder,
 	getFullCustomerWithExpired,
+	trackUsageForCleanup,
 } from "./utils/oneOffCleanupTestUtils.js";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Two one-time prepaid, both track to 0, cleanup - first expired
-// ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("cleanup: two-oneoff-both-depleted")}`, async () => {
 	const customerId = "cleanup-two-oneoff-both-depleted";
@@ -61,7 +58,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: two-oneoff-both-depleted")}`, as
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
@@ -79,7 +76,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: two-oneoff-both-depleted")}`, as
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
@@ -137,7 +134,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: oneoff-depleted-newer-active")}`
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
@@ -195,7 +192,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: oneoff-lifetime-messages-only-la
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
@@ -261,7 +258,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: oneoff-prepaid-then-attach-again
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
@@ -328,7 +325,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: base-oneoff-prepaid-depleted")}`
 	);
 
 	// 2. Use up credits
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,

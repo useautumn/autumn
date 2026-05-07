@@ -35,7 +35,7 @@ class SetupPaymentGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -75,7 +75,7 @@ class SetupPaymentFeatureQuantity(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -126,7 +126,7 @@ class SetupPaymentBasePrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -175,7 +175,7 @@ class SetupPaymentReset(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -211,7 +211,7 @@ class SetupPaymentTier(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -307,7 +307,7 @@ class SetupPaymentPrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -397,7 +397,7 @@ class SetupPaymentRollover(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -459,7 +459,7 @@ class SetupPaymentPlanItem(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -507,7 +507,7 @@ class SetupPaymentFreeTrialParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -548,7 +548,7 @@ class SetupPaymentCustomize(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -598,7 +598,7 @@ class SetupPaymentAttachDiscount(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -648,7 +648,7 @@ class SetupPaymentCarryOverBalances(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -683,7 +683,7 @@ class SetupPaymentCarryOverUsages(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -717,6 +717,8 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""Reset the billing cycle anchor immediately with 'now'."""
     starts_at: NotRequired[int]
     r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
+    ends_at: NotRequired[int]
+    r"""Unix timestamp in milliseconds for when the attached plan should end."""
     checkout_session_params: NotRequired[Dict[str, Any]]
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     custom_line_items: NotRequired[List[SetupPaymentCustomLineItemTypedDict]]
@@ -775,6 +777,9 @@ class SetupPaymentParams(BaseModel):
     starts_at: Optional[int] = None
     r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
 
+    ends_at: Optional[int] = None
+    r"""Unix timestamp in milliseconds for when the attached plan should end."""
+
     checkout_session_params: Optional[Dict[str, Any]] = None
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
 
@@ -814,6 +819,7 @@ class SetupPaymentParams(BaseModel):
                 "success_url",
                 "billing_cycle_anchor",
                 "starts_at",
+                "ends_at",
                 "checkout_session_params",
                 "custom_line_items",
                 "processor_subscription_id",
@@ -829,7 +835,7 @@ class SetupPaymentParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -869,7 +875,7 @@ class SetupPaymentResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:

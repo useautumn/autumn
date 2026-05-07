@@ -18,10 +18,10 @@ describe("getConfirmLabel", () => {
 				startDate: addDays(NOW, 1).getTime(),
 				now: NOW,
 			}),
-		).toBe("Schedule Plan");
+		).toBe("Preview Schedule");
 	});
 
-	test("checkout redirect takes precedence over future startDate", () => {
+	test("future startDate takes precedence over checkout redirect", () => {
 		expect(
 			getConfirmLabel({
 				previewData: {
@@ -31,7 +31,7 @@ describe("getConfirmLabel", () => {
 				startDate: addDays(NOW, 1).getTime(),
 				now: NOW,
 			}),
-		).toBe("Generate Checkout URL");
+		).toBe("Preview Schedule");
 	});
 
 	test("immediate paid attach charges customer", () => {
