@@ -518,6 +518,10 @@ export type AttachParams = {
    */
   startsAt?: number | undefined;
   /**
+   * Unix timestamp in milliseconds for when the attached plan should end.
+   */
+  endsAt?: number | undefined;
+  /**
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
@@ -1188,6 +1192,7 @@ export type AttachParams$Outbound = {
   billing_cycle_anchor?: "now" | undefined;
   plan_schedule?: string | undefined;
   starts_at?: number | undefined;
+  ends_at?: number | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<AttachCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
@@ -1224,6 +1229,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
     billingCycleAnchor: z.optional(z.literal("now")),
     planSchedule: z.optional(AttachPlanSchedule$outboundSchema),
     startsAt: z.optional(z.int()),
+    endsAt: z.optional(z.int()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
       z.array(z.lazy(() => AttachCustomLineItem$outboundSchema)),
@@ -1254,6 +1260,7 @@ export const AttachParams$outboundSchema: z.ZodMiniType<
       billingCycleAnchor: "billing_cycle_anchor",
       planSchedule: "plan_schedule",
       startsAt: "starts_at",
+      endsAt: "ends_at",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",
