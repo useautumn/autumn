@@ -154,10 +154,11 @@ export const getOneOffCustomerProductsToCleanup = async ({
 
 		-- CTE 7: One-off customer products with explicit access expiry
 		ended_one_off_cus_products AS (
-			SELECT id
-			FROM one_off_cus_products
-			WHERE ended_at IS NOT NULL
-			  AND ended_at <= ${nowMs}
+			SELECT cp.id
+			FROM customer_products cp
+			WHERE cp.id IN (SELECT id FROM one_off_cus_products)
+			  AND cp.ended_at IS NOT NULL
+			  AND cp.ended_at <= ${nowMs}
 		)
 		
 		-- Final query: Get full data for customer products meeting all criteria
