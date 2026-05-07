@@ -24,6 +24,8 @@ export const runInsertEventBatch = async ({
 	const { events: eventInserts } = payload;
 
 	if (!eventInserts || eventInserts.length === 0) return;
+	if (process.env.NODE_ENV !== "development") return;
+	if (eventInserts.length === 0) return;
 
 	// Normalize timestamps
 	eventInserts.forEach((event) => {
