@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { redis } from "@/external/redis/initRedis.js";
+import { getRedisV2OrgCleanupCandidates } from "@/external/redis/orgRedisUtils/orgRedisMigrationUtils.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 
 /** Asserts that the lock receipt for the given ID no longer exists in Redis. */
@@ -20,4 +21,13 @@ export const expectLockReceiptDeleted = async ({
 
 	const receipt = await redis.call("JSON.GET", redisReceiptKey, "$");
 	expect(receipt).toBeNull();
+
+	const v2ReceiptCounts = await Promise.all(
+		getRedisV2OrgCleanupCandidates({ ctx }).map((redisInstance) =>
+			redisInstance.exists(redisReceiptKey),
+		),
+	);
+	for (const receiptCount of v2ReceiptCounts) {
+		expect(receiptCount).toBe(0);
+	}
 };

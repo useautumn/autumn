@@ -8,6 +8,8 @@ const mockState = {
 	queueCommands: [] as Record<string, unknown>[],
 	originalSend: null as null | SQSClient["send"],
 };
+const trackQueueUrl =
+	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
 
 mock.module("@/internal/balances/track/utils/getQueuedTrackResponse.js", () => ({
 	getQueuedTrackResponse: () => ({
@@ -24,9 +26,8 @@ describe("queueTrack", () => {
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
-		process.env.TRACK_SQS_QUEUE_URL =
-			"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
-		const sqsClient = getSqsClient();
+		process.env.TRACK_SQS_QUEUE_URL = trackQueueUrl;
+		const sqsClient = getSqsClient({ queueUrl: trackQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			mockState.queueCommands.push(command.input);
@@ -57,8 +58,7 @@ describe("queueTrack", () => {
 
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
-			QueueUrl:
-				"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo",
+			QueueUrl: trackQueueUrl,
 			MessageGroupId: "org_123:sandbox:cus_123:ent_123",
 			MessageDeduplicationId: "req_123",
 		});
@@ -77,7 +77,7 @@ describe("queueTrack", () => {
 
 	afterEach(() => {
 		if (mockState.originalSend) {
-			const sqsClient = getSqsClient();
+			const sqsClient = getSqsClient({ queueUrl: trackQueueUrl });
 			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
 		}
 		process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;

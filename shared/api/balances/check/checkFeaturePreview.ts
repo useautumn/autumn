@@ -8,7 +8,8 @@ export const CheckFeaturePreviewSchema = z.object({
 			"The reason access was denied. 'usage_limit' means the customer exceeded their balance, 'feature_flag' means the feature is not included in their plan.",
 	}),
 	title: z.string().meta({
-		description: "A title suitable for displaying in a paywall or upgrade modal.",
+		description:
+			"A title suitable for displaying in a paywall or upgrade modal.",
 	}),
 	message: z.string().meta({
 		description: "A message explaining why access was denied.",

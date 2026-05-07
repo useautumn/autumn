@@ -41,6 +41,19 @@ export type StripeConnectConfig = {
 	master_org_id?: string;
 };
 
+export type OrgRedisConfig = {
+	/** AES-256-CBC encrypted full Redis connection string via encryptData() */
+	connectionString: string;
+	/** Plain domain/host only, used for pool URL-change detection */
+	url: string;
+	/** Percentage of customers routed to the dedicated Redis (0-100) */
+	migrationPercent: number;
+	/** The migrationPercent before the last change, used for staleness detection */
+	previousMigrationPercent: number;
+	/** Epoch ms when migrationPercent was last changed */
+	migrationChangedAt: number;
+};
+
 export const organizations = pgTable(
 	"organizations",
 	{
@@ -86,6 +99,8 @@ export const organizations = pgTable(
 		created_by: text("created_by"),
 		onboarded: boolean("onboarded").default(false),
 		deployed: boolean("deployed").default(false),
+
+		redis_config: jsonb("redis_config").$type<OrgRedisConfig>(),
 	},
 	(table) => [
 		index("idx_organizations_name_trgm")

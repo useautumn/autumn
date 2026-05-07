@@ -100,7 +100,35 @@ if (cluster.isPrimary) {
 	startMemoryMonitor("worker", 60_000);
 	await startAllEdgeConfigPolling({ logger });
 
-	process.once("exit", stopAllEdgeConfigPolling);
+	const { db } = await import("./db/initDrizzle.js");
+	const { primeRedisMonitor } = await import(
+		"./external/redis/initUtils/redisAvailability.js"
+	);
+	const {
+		primeRedisV2Monitor,
+		startRedisV2Monitor,
+		stopRedisV2Monitor,
+	} = await import("./external/redis/initUtils/redisV2Availability.js");
+	const { startRedisMonitor, stopRedisMonitor } = await import(
+		"./external/redis/initRedis.js"
+	);
+	const { preWarmOrgRedisConnections } = await import(
+		"./external/redis/orgRedisPool.js"
+	);
+
+	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
+	startRedisMonitor();
+	startRedisV2Monitor();
+
+	void preWarmOrgRedisConnections({ db }).catch((error) => {
+		logger.warn("[OrgRedis] Warmup failed", { error });
+	});
+
+	process.once("exit", () => {
+		stopAllEdgeConfigPolling();
+		stopRedisMonitor();
+		stopRedisV2Monitor();
+	});
 
 	const { initWorkers } = await import("./queue/initWorkers.js");
 	await initWorkers({ startupStartedAt, queueImplementation });

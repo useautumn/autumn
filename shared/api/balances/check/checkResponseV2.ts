@@ -9,6 +9,7 @@ export const CheckResponseV2Schema = z.object({
 	required_balance: z.number().optional(),
 
 	balance: ApiBalanceSchema.nullable(),
+	balances: z.record(z.string(), ApiBalanceSchema.nullable()).optional(),
 
 	preview: CheckFeaturePreviewSchema.optional(),
 });

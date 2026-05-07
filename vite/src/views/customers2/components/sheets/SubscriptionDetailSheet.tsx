@@ -117,7 +117,7 @@ function SubscriptionDetailItems({
 }
 
 export function SubscriptionDetailSheet() {
-	const { customer } = useCusQuery();
+	const { customer, testClockFrozenTimeMs } = useCusQuery();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
 	const itemId = useSheetStore((s) => s.itemId);
@@ -159,6 +159,7 @@ export function SubscriptionDetailSheet() {
 
 	const canCancel = !isExpired;
 	const canUpdate = !isExpired && !isScheduled;
+	const nowMs = testClockFrozenTimeMs ?? Date.now();
 	const prepaidDisplayQuantities = backendToDisplayQuantity({
 		backendOptions: cusProduct.options,
 		prepaidItems,
@@ -317,10 +318,11 @@ export function SubscriptionDetailSheet() {
 								canceled_at={cusProduct.canceled_at ?? undefined}
 								trialing={
 									isCustomerProductTrialing(cusProduct, {
-										nowMs: Date.now(),
+										nowMs,
 									}) || false
 								}
 								trial_ends_at={cusProduct.trial_ends_at ?? undefined}
+								nowMs={nowMs}
 							/>
 						}
 					/>

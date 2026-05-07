@@ -1,5 +1,9 @@
-import type { AttachBillingContext, AutumnBillingPlan } from "@autumn/shared";
-import { CusProductStatus } from "@autumn/shared";
+import type {
+	AttachBillingContext,
+	AttachParamsV1,
+	AutumnBillingPlan,
+} from "@autumn/shared";
+import { CusProductStatus, isFutureStartDate } from "@autumn/shared";
 
 /**
  * Computes the updates to apply to the current customer product during an attach transition.
@@ -9,8 +13,10 @@ import { CusProductStatus } from "@autumn/shared";
  */
 export const computeAttachTransitionUpdates = ({
 	attachBillingContext,
+	params = {} as AttachParamsV1,
 }: {
 	attachBillingContext: AttachBillingContext;
+	params?: AttachParamsV1;
 }): AutumnBillingPlan["updateCustomerProduct"] => {
 	const { currentCustomerProduct, planTiming, currentEpochMs, endOfCycleMs } =
 		attachBillingContext;
@@ -34,7 +40,12 @@ export const computeAttachTransitionUpdates = ({
 		};
 	}
 
-	// Downgrade: mark as canceling at end of cycle
+	const startsAt = params.starts_at;
+	const transitionAtMs = isFutureStartDate(startsAt, currentEpochMs)
+		? startsAt
+		: endOfCycleMs;
+
+	// Downgrade: mark as canceling when the scheduled replacement starts.
 	return {
 		customerProduct: currentCustomerProduct,
 		updates: {
@@ -43,7 +54,7 @@ export const computeAttachTransitionUpdates = ({
 				: undefined,
 			canceled: true,
 			canceled_at: currentEpochMs,
-			ended_at: endOfCycleMs,
+			ended_at: transitionAtMs,
 		},
 	};
 };
