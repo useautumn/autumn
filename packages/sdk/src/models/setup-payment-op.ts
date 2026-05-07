@@ -468,6 +468,10 @@ export type SetupPaymentParams = {
    */
   startsAt?: number | undefined;
   /**
+   * Unix timestamp in milliseconds for when the attached plan should end.
+   */
+  endsAt?: number | undefined;
+  /**
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
@@ -1069,6 +1073,7 @@ export type SetupPaymentParams$Outbound = {
   success_url?: string | undefined;
   billing_cycle_anchor?: "now" | undefined;
   starts_at?: number | undefined;
+  ends_at?: number | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<SetupPaymentCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
@@ -1101,6 +1106,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     successUrl: z.optional(z.string()),
     billingCycleAnchor: z.optional(z.literal("now")),
     startsAt: z.optional(z.int()),
+    endsAt: z.optional(z.int()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
       z.array(z.lazy(() => SetupPaymentCustomLineItem$outboundSchema)),
@@ -1127,6 +1133,7 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       successUrl: "success_url",
       billingCycleAnchor: "billing_cycle_anchor",
       startsAt: "starts_at",
+      endsAt: "ends_at",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",

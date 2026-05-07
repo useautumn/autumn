@@ -328,6 +328,10 @@ This is useful for attaching custom metadata to the Stripe subscription created 
   Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
 </DynamicParamField>
 
+<DynamicParamField body="ends_at" type="integer">
+  Unix timestamp in milliseconds for when the attached plan should end.
+</DynamicParamField>
+
 <DynamicParamField body="checkout_session_params" type="object">
   Additional parameters to pass into the creation of the Stripe checkout session.
 </DynamicParamField>

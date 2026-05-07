@@ -33,7 +33,7 @@ export const deductionToBalancesResponse = ({
 		});
 
 		for (const feature of relevantFeatures) {
-			balances[feature.id] = apiCustomer.balances[feature.id] ?? null;
+			balances[feature.id] = apiCustomer.balances[feature.id] ?? undefined;
 		}
 	}
 
