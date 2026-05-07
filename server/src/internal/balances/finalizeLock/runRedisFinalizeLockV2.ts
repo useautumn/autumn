@@ -15,7 +15,7 @@ export const runRedisFinalizeLockV2 = async ({
 	ctx: AutumnContext;
 	finalizeLockContext: FinalizeLockContextV2;
 }) => {
-	const { receipt, fullSubject, deduction, deductionOptions } =
+	const { receipt, fullSubject, deduction, deductionOptions, redisInstance } =
 		finalizeLockContext;
 
 	let redisResult: Awaited<ReturnType<typeof executeRedisDeductionV2>>;
@@ -27,6 +27,7 @@ export const runRedisFinalizeLockV2 = async ({
 			entityId: receipt.entity_id ?? undefined,
 			deductions: [deduction],
 			deductionOptions,
+			redisInstance,
 		});
 	} catch (error) {
 		if (error instanceof RedisDeductionError && error.shouldFallback()) {

@@ -5,6 +5,10 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { ClosedEnum } from "../types/enums.js";
+import {
+  CustomerExpand,
+  CustomerExpand$outboundSchema,
+} from "./customer-expand.js";
 
 export type GetOrCreateCustomerGlobals = {
   xApiVersion?: string | undefined;
@@ -213,7 +217,7 @@ export type GetOrCreateCustomerParams = {
   /**
    * Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature.
    */
-  expand?: Array<string> | undefined;
+  expand?: Array<CustomerExpand> | undefined;
 };
 
 /** @internal */
@@ -522,7 +526,7 @@ export const GetOrCreateCustomerParams$outboundSchema: z.ZodMiniType<
       z.lazy(() => GetOrCreateCustomerBillingControls$outboundSchema),
     ),
     config: z.optional(z.lazy(() => GetOrCreateCustomerConfig$outboundSchema)),
-    expand: z.optional(z.array(z.string())),
+    expand: z.optional(z.array(CustomerExpand$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

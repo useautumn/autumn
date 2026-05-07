@@ -121,6 +121,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 					batchResets.push(
 						resetCustomerEntitlement({
 							ctx,
+							org: orgWithFeatures.org,
 							cusEnt: cusEnt,
 							updatedCusEnts,
 							persistFreeOverage:

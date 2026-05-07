@@ -36,15 +36,15 @@ export const setupAttachCheckoutMode = ({
 	const productIsFree = isFreeProduct({ prices });
 	const productIsPaidRecurring = !productIsOneOff && !productIsFree;
 
-	if (hasFutureStartDate && !hasPaymentMethod) {
-		return "stripe_checkout";
-	}
-
 	if (redirectMode === "never") {
 		return null;
 	}
 
 	if (invoiceMode) {
+		return null;
+	}
+
+	if (hasFutureStartDate) {
 		return null;
 	}
 

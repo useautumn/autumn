@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import {
 	BillingPreviewResponseSchema,
+	PreviewInvoiceCreditsSchema,
 	PreviewTaxSchema,
 } from "./billingPreviewResponse.js";
 
@@ -22,6 +23,10 @@ export const AttachPreviewResponseSchema = BillingPreviewResponseSchema.extend({
 	tax: PreviewTaxSchema.optional().meta({
 		description:
 			"Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.",
+	}),
+
+	invoice_credits: PreviewInvoiceCreditsSchema.optional().meta({
+		description: "Stripe customer invoice credits preview.",
 	}),
 	// redirect_type: z.enum(["stripe_checkout", "autumn_checkout", "none"]),
 });

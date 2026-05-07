@@ -436,14 +436,14 @@ export type Invoice = {
 /**
  * The environment (sandbox/live)
  */
-export const EntityEnv = {
+export const CustomerEntityEnv = {
   Sandbox: "sandbox",
   Live: "live",
 } as const;
 /**
  * The environment (sandbox/live)
  */
-export type EntityEnv = OpenEnum<typeof EntityEnv>;
+export type CustomerEntityEnv = OpenEnum<typeof CustomerEntityEnv>;
 
 export type Entity = {
   /**
@@ -469,7 +469,7 @@ export type Entity = {
   /**
    * The environment (sandbox/live)
    */
-  env: EntityEnv;
+  env: CustomerEntityEnv;
 };
 
 export type TrialsUsed = {
@@ -481,7 +481,7 @@ export type TrialsUsed = {
 /**
  * The type of reward
  */
-export const RewardsType = {
+export const CustomerRewardsType = {
   PercentageDiscount: "percentage_discount",
   FixedDiscount: "fixed_discount",
   FreeProduct: "free_product",
@@ -490,7 +490,7 @@ export const RewardsType = {
 /**
  * The type of reward
  */
-export type RewardsType = OpenEnum<typeof RewardsType>;
+export type CustomerRewardsType = OpenEnum<typeof CustomerRewardsType>;
 
 /**
  * How long the discount lasts
@@ -517,7 +517,7 @@ export type Discount = {
   /**
    * The type of reward
    */
-  type: RewardsType;
+  type: CustomerRewardsType;
   /**
    * The discount value (percentage or fixed amount)
    */
@@ -1166,8 +1166,10 @@ export function invoiceFromJSON(
 }
 
 /** @internal */
-export const EntityEnv$inboundSchema: z.ZodMiniType<EntityEnv, unknown> =
-  openEnums.inboundSchema(EntityEnv);
+export const CustomerEntityEnv$inboundSchema: z.ZodMiniType<
+  CustomerEntityEnv,
+  unknown
+> = openEnums.inboundSchema(CustomerEntityEnv);
 
 /** @internal */
 export const Entity$inboundSchema: z.ZodMiniType<Entity, unknown> = z.pipe(
@@ -1177,7 +1179,7 @@ export const Entity$inboundSchema: z.ZodMiniType<Entity, unknown> = z.pipe(
     customer_id: z.optional(z.nullable(types.string())),
     feature_id: z.optional(z.nullable(types.string())),
     created_at: types.number(),
-    env: EntityEnv$inboundSchema,
+    env: CustomerEntityEnv$inboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1225,8 +1227,10 @@ export function trialsUsedFromJSON(
 }
 
 /** @internal */
-export const RewardsType$inboundSchema: z.ZodMiniType<RewardsType, unknown> =
-  openEnums.inboundSchema(RewardsType);
+export const CustomerRewardsType$inboundSchema: z.ZodMiniType<
+  CustomerRewardsType,
+  unknown
+> = openEnums.inboundSchema(CustomerRewardsType);
 
 /** @internal */
 export const CustomerDurationType$inboundSchema: z.ZodMiniType<
@@ -1239,7 +1243,7 @@ export const Discount$inboundSchema: z.ZodMiniType<Discount, unknown> = z.pipe(
   z.object({
     id: types.string(),
     name: types.string(),
-    type: RewardsType$inboundSchema,
+    type: CustomerRewardsType$inboundSchema,
     discount_value: types.number(),
     duration_type: CustomerDurationType$inboundSchema,
     duration_value: z.optional(z.nullable(types.number())),

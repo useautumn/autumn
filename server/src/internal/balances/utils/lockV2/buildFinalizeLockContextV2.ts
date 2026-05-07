@@ -1,6 +1,7 @@
 import type { Feature, FullSubject } from "@autumn/shared";
 import { type FinalizeLockParamsV0, findFeatureById } from "@autumn/shared";
 import type { Redis } from "ioredis";
+import { overrideCtxRedisV2 } from "@/external/redis/customerRedisRouting.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { LockReceipt } from "@/internal/balances/utils/lock/fetchLockReceipt.js";
 import {
@@ -30,14 +31,18 @@ export const buildFinalizeLockContextV2 = async ({
 	params,
 	receipt,
 	lockReceiptKey,
+	redisInstance,
 }: {
 	ctx: AutumnContext;
 	params: FinalizeLockParamsV0;
 	receipt: LockReceipt;
 	lockReceiptKey: string;
+	redisInstance: Redis;
 }): Promise<FinalizeLockContextV2> => {
+	const ctxWithRedisV2 = overrideCtxRedisV2({ ctx, redisV2: redisInstance });
+
 	const fullSubject = await getOrSetCachedFullSubject({
-		ctx,
+		ctx: ctxWithRedisV2,
 		customerId: receipt.customer_id,
 		entityId: receipt.entity_id ?? undefined,
 		source: "runFinalizeLockV2",
@@ -61,7 +66,7 @@ export const buildFinalizeLockContextV2 = async ({
 	return {
 		receipt,
 		lockReceiptKey,
-		redisInstance: ctx.redisV2,
+		redisInstance,
 		fullSubject,
 		feature,
 		lockValue,

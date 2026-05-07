@@ -1,6 +1,6 @@
 import { EntityNotFoundError } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import { CusService } from "@server/internal/customers/CusService";
+import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer";
 
 export const setupFullCustomerContext = async ({
 	ctx,
@@ -11,12 +11,11 @@ export const setupFullCustomerContext = async ({
 }) => {
 	const { customer_id: customerId } = params;
 
-	const fullCustomer = await CusService.getFull({
+	const fullCustomer = await getOrSetCachedFullCustomer({
 		ctx,
-		idOrInternalId: customerId,
-		withSubs: true,
-		withEntities: true,
+		customerId,
 		entityId: params.entity_id ?? undefined,
+		source: "setupFullCustomerContext",
 	});
 
 	if (params.entity_id && !fullCustomer.entity) {

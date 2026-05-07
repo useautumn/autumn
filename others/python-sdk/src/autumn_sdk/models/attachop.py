@@ -779,6 +779,8 @@ class AttachParamsTypedDict(TypedDict):
     r"""Reset the billing cycle anchor immediately with 'now'."""
     plan_schedule: NotRequired[AttachPlanSchedule]
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
+    starts_at: NotRequired[int]
+    r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
     checkout_session_params: NotRequired[Dict[str, Any]]
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     custom_line_items: NotRequired[List[AttachCustomLineItemTypedDict]]
@@ -846,6 +848,9 @@ class AttachParams(BaseModel):
     plan_schedule: Optional[AttachPlanSchedule] = None
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
 
+    starts_at: Optional[int] = None
+    r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
+
     checkout_session_params: Optional[Dict[str, Any]] = None
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
 
@@ -887,6 +892,7 @@ class AttachParams(BaseModel):
                 "new_billing_subscription",
                 "billing_cycle_anchor",
                 "plan_schedule",
+                "starts_at",
                 "checkout_session_params",
                 "custom_line_items",
                 "processor_subscription_id",

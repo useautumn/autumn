@@ -114,8 +114,9 @@ const applyAdjustableQuantityToPrepaidLineItem = ({
 	}
 
 	const feature = autumnEntitlement.feature;
-	const isAdjustable =
-		billingContext.adjustableFeatureQuantities?.includes(feature.id);
+	const isAdjustable = billingContext.adjustableFeatureQuantities?.includes(
+		feature.id,
+	);
 
 	if (!isAdjustable) {
 		return lineItem;

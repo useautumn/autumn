@@ -4,6 +4,7 @@ import {
 	ChartBarIcon,
 	CoinVerticalIcon,
 	CubeIcon,
+	DatabaseIcon,
 	LegoIcon,
 	OptionIcon,
 	TerminalWindowIcon,
@@ -20,6 +21,7 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
 import { OrgDropdown } from "./components/OrgDropdown";
 import { EnvDropdown } from "./EnvDropdown";
@@ -30,12 +32,14 @@ import { SidebarRail } from "./SidebarRail";
 
 const buildDevSubTabs = ({
 	flags,
+	isAdmin,
 }: {
 	flags: {
 		webhooks: boolean;
 		vercel: boolean;
 		revenuecat: boolean;
 	};
+	isAdmin: boolean;
 }) => {
 	return [
 		{
@@ -76,6 +80,15 @@ const buildDevSubTabs = ({
 					},
 				]
 			: []),
+		...(isAdmin
+			? [
+					{
+						title: "Redis",
+						value: "redis",
+						icon: <DatabaseIcon size={16} weight="fill" />,
+					},
+				]
+			: []),
 	];
 };
 
@@ -88,6 +101,7 @@ export const MainSidebar = ({
 
 	const flags = useAutumnFlags();
 	const { has } = useScopes();
+	const { isAdmin } = useAdmin();
 	const canSeeDev = has("apiKeys:read");
 
 	const [storedExpanded, setExpanded] = useLocalStorage<boolean>(
@@ -194,7 +208,7 @@ export const MainSidebar = ({
 								env={env}
 								isOpen={devGroupOpen}
 								onToggle={() => setDevGroupOpen((prev) => !prev)}
-								subTabs={buildDevSubTabs({ flags })}
+								subTabs={buildDevSubTabs({ flags, isAdmin })}
 							/>
 						)}
 					</div>

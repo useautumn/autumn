@@ -94,6 +94,7 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 				url: "/v1/customers/:customer_id/entities/:entity_id",
 			}),
 			route({ method: "POST", url: "/v1/customers" }),
+			route({ method: "POST", url: "/v1/customers.get" }),
 			route({ method: "POST", url: "/v1/customers.get_or_create" }),
 			route({ method: "POST", url: "/v1/entities.get" }),
 		],

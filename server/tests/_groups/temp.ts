@@ -9,5 +9,7 @@ export const temp: TestGroup = {
 		// "integration/billing/stripe-webhooks/subscription-created",
 		"integration/billing/sync/to-sync-params",
 		// "integration/billing/restore",
+		"integration/balances/track/basic/track-credit-system-all-balances",
+		"integration/balances/check/check-send-event-credit-system",
 	],
 };

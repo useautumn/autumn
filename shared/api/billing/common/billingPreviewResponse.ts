@@ -46,6 +46,18 @@ export const PreviewTaxSchema = z.object({
 
 export type PreviewTax = z.infer<typeof PreviewTaxSchema>;
 
+export const PreviewInvoiceCreditsSchema = z.object({
+	balance: z.number().meta({
+		description:
+			"Stripe customer credit balance available, expressed as a positive number in major currency units.",
+	}),
+	currency: z.string().meta({
+		description: "Three-letter currency code.",
+	}),
+});
+
+export type PreviewInvoiceCredits = z.infer<typeof PreviewInvoiceCreditsSchema>;
+
 export const ExtPreviewLineItemSchema = z.object({
 	display_name: z.string().meta({
 		description:
@@ -56,11 +68,12 @@ export const ExtPreviewLineItemSchema = z.object({
 		.string()
 		.meta({ description: "A detailed description of the line item." }),
 	subtotal: z.number().meta({
-		description: "The amount in cents before discounts for this line item.",
+		description:
+			"The amount in cents before discounts and tax for this line item.",
 	}),
 	total: z.number().meta({
 		description:
-			"The final amount in cents after discounts for this line item.",
+			"The final amount in cents after discounts and tax for this line item.",
 	}),
 	discounts: z.array(PreviewLineItemDiscountSchema).default([]).meta({
 		description: "List of discounts applied to this line item.",
@@ -110,12 +123,12 @@ export const ExtBillingPreviewResponseSchema = z.object({
 	}),
 	subtotal: z.number().meta({
 		description:
-			"The total amount in cents before discounts for the current billing period.",
+			"The total amount in cents before discounts and tax for the current billing period.",
 	}),
 
 	total: z.number().meta({
 		description:
-			"The final amount in cents after discounts for the current billing period.",
+			"The final amount in cents after discounts and tax for the current billing period.",
 	}),
 
 	currency: z.string().meta({
@@ -130,11 +143,11 @@ export const ExtBillingPreviewResponseSchema = z.object({
 			}),
 			subtotal: z.number().meta({
 				description:
-					"The total amount in cents before discounts for the next cycle.",
+					"The total amount in cents before discounts and tax for the next cycle.",
 			}),
 			total: z.number().meta({
 				description:
-					"The final amount in cents after discounts for the next cycle.",
+					"The final amount in cents after discounts and tax for the next cycle.",
 			}),
 			line_items: z.array(PreviewLineItemSchema).meta({
 				description: "List of line items for the next billing cycle.",

@@ -1,3 +1,4 @@
+import type { Redis } from "ioredis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
@@ -17,11 +18,13 @@ import type { CachedFullSubject } from "../../fullSubjectCacheModel.js";
 export const invalidateSharedBalanceFields = async ({
 	ctx,
 	customerId,
+	redisV2 = ctx.redisV2,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	redisV2?: Redis;
 }): Promise<void> => {
-	const { org, env, redisV2 } = ctx;
+	const { org, env } = ctx;
 	if (!customerId || redisV2.status !== "ready") return;
 
 	const subjectKey = buildFullSubjectKey({ orgId: org.id, env, customerId });
@@ -29,19 +32,21 @@ export const invalidateSharedBalanceFields = async ({
 	const cachedRaw = await tryRedisRead(() => redisV2.get(subjectKey), redisV2);
 	if (!cachedRaw) return;
 
-	await deleteFieldsFromManifest({ ctx, customerId, cachedRaw });
+	await deleteFieldsFromManifest({ ctx, customerId, cachedRaw, redisV2 });
 };
 
 async function deleteFieldsFromManifest({
 	ctx,
 	customerId,
 	cachedRaw,
+	redisV2,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	cachedRaw: string;
+	redisV2: Redis;
 }) {
-	const { org, env, logger, redisV2 } = ctx;
+	const { org, env, logger } = ctx;
 
 	let manifest: CachedFullSubject;
 	try {
