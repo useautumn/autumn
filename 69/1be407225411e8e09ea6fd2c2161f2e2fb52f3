@@ -1,0 +1,41 @@
+server/src/internal/balances/trackWebhooks/checkUsageAlerts.ts
+  s_a70fce88712fcd::t_dca4738acbf07a 142-153,157
+server/tests/unit/full-subject-cache/sanitizeCachedPayloads.test.ts
+  s_1f32b12fced28a::t_35a8599c620b28 653-727
+  s_1f32b12fced28a::t_c6bfbdd80fe506 5-6
+  s_1f32b12fced28a::t_2770680d766091 730-922
+server/src/external/svix/svixHelpers.ts
+  s_a70fce88712fcd::t_21c57369efbb79 46,52,65-73,75-76
+server/tests/integration/balances/track/usage-alerts/usage-alerts-race-condition.test.ts
+  s_a70fce88712fcd::t_b96613c2639a25 116
+  s_a70fce88712fcd::t_a507cefb688735 99-101,110
+  s_a70fce88712fcd::t_ebbbbf07fd11fb 1-98,114,118,129,131
+  s_a70fce88712fcd::t_043fc04854105f 102-103
+  s_a70fce88712fcd::t_0dbf0784c1bbfa 105-109,111-113
+  s_a70fce88712fcd::t_a3476d8013f142 115,117,119-128,130
+  s_a70fce88712fcd::t_62d201bf72a18b 104
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "691be407225411e8e09ea6fd2c2161f2e2fb52f3",
+  "prompts": {},
+  "sessions": {
+    "s_1f32b12fced28a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_202e6ad75ffetNy7SzuE6BN56z",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_a70fce88712fcd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1fce5797affeK0CZaaAs3Us4dk",
+        "model": "gpt-5.5"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
