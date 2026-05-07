@@ -264,14 +264,17 @@ export function AttachFormProvider({
 		return isFreeProduct({ prices: outgoingPrices });
 	}, [effectiveProduct, fullCustomer, entityId]);
 
-	const hasActiveSubscription =
-		((fullCustomer?.customer_products ?? []) as CusProduct[]).some(
-			(customerProduct) =>
-				(ACTIVE_STATUSES.includes(customerProduct.status) ||
-					customerProduct.status === CusProductStatus.Trialing) &&
-				customerProduct.subscription_ids &&
-				customerProduct.subscription_ids.length > 0,
-		);
+	const hasActiveSubscription = useMemo(
+		() =>
+			((fullCustomer?.customer_products ?? []) as CusProduct[]).some(
+				(customerProduct) =>
+					(ACTIVE_STATUSES.includes(customerProduct.status) ||
+						customerProduct.status === CusProductStatus.Trialing) &&
+					customerProduct.subscription_ids &&
+					customerProduct.subscription_ids.length > 0,
+			),
+		[fullCustomer?.customer_products],
+	);
 
 	const disableProration =
 		isFreeToPaidTransition && !hasActiveSubscription;
