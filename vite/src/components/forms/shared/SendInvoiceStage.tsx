@@ -9,7 +9,6 @@ import { format } from "date-fns";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { Input } from "@/components/v2/inputs/Input";
 import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
@@ -23,6 +22,7 @@ import {
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { UrlSuccessView } from "./UrlSuccessView";
 
 export interface SendInvoiceSubmitParams {
 	enableProductImmediately: boolean;
@@ -153,6 +153,9 @@ export function SendInvoiceStage({
 	const [completedInvoiceUrl, setCompletedInvoiceUrl] = useState<string | null>(
 		null,
 	);
+	const [completedDraftUrl, setCompletedDraftUrl] = useState<string | null>(
+		null,
+	);
 	const [activeAction, setActiveAction] = useState<"draft" | "finalize" | null>(
 		null,
 	);
@@ -185,7 +188,9 @@ export function SendInvoiceStage({
 				finalizeInvoice: false,
 			});
 			if (stripeId) {
-				window.open(getInvoiceUrl(stripeId), "_blank");
+				const invoiceUrl = getInvoiceUrl(stripeId);
+				window.open(invoiceUrl, "_blank");
+				setCompletedDraftUrl(invoiceUrl);
 			}
 		} finally {
 			setActiveAction(null);
@@ -211,48 +216,35 @@ export function SendInvoiceStage({
 
 	const needsEmail = !customer?.email && !emailSaved;
 
+	if (completedDraftUrl) {
+		return (
+			<UrlSuccessView
+				title="Invoice Drafted"
+				description={
+					productName
+						? `Draft invoice for ${productName} created in Stripe`
+						: "Draft invoice created in Stripe"
+				}
+				message="Stripe should have opened in a new tab. If it was blocked, use the link below."
+				buttonLabel="Open in Stripe"
+				url={completedDraftUrl}
+			/>
+		);
+	}
+
 	if (completedInvoiceUrl) {
 		return (
-			<>
-				<SheetHeader
-					title="Invoice Sent"
-					description={
-						productName
-							? `Invoice for ${productName} has been finalized and sent`
-							: "Invoice has been finalized and sent"
-					}
-					noSeparator
-				/>
-
-				<SheetSection withSeparator={false}>
-					<div className="flex flex-col items-center gap-2 pt-4">
-						<div className="size-10 rounded-full bg-green-500/10 flex items-center justify-center">
-							<CheckCircleIcon
-								size={24}
-								weight="duotone"
-								className="text-green-500"
-							/>
-						</div>
-						<p className="text-sm text-t2 text-center">
-							The invoice has been finalized and sent to the customer.
-						</p>
-					</div>
-				</SheetSection>
-
-				<SheetFooter className="flex flex-col grid-cols-1 mt-0">
-					<Button
-						variant="primary"
-						className="w-full"
-						onClick={() => window.open(completedInvoiceUrl, "_blank")}
-					>
-						View Stripe invoice
-					</Button>
-					<CopyButton
-						text={completedInvoiceUrl}
-						innerClassName="text-xs text-t3 font-mono w-96"
-					/>
-				</SheetFooter>
-			</>
+			<UrlSuccessView
+				title="Invoice Sent"
+				description={
+					productName
+						? `Invoice for ${productName} has been finalized and sent`
+						: "Invoice has been finalized and sent"
+				}
+				message="The invoice has been finalized and sent to the customer."
+				buttonLabel="View Stripe invoice"
+				url={completedInvoiceUrl}
+			/>
 		);
 	}
 
