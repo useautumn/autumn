@@ -7,29 +7,29 @@ const NO_CHARGES_FREE_TO_PAID_DISABLED_REASON =
 
 export function isNoChargesAllowedForAttach({
 	newBillingSubscription,
-	blocksNextCycleOnly = false,
+	disableProration = false,
 }: {
 	newBillingSubscription: boolean;
-	blocksNextCycleOnly?: boolean;
+	disableProration?: boolean;
 }) {
-	return !newBillingSubscription && !blocksNextCycleOnly;
+	return !newBillingSubscription && !disableProration;
 }
 
 export function normalizeAttachProrationBehavior({
 	prorationBehavior,
 	newBillingSubscription,
-	blocksNextCycleOnly = false,
+	disableProration = false,
 }: {
 	prorationBehavior: BillingBehavior | null;
 	newBillingSubscription: boolean;
-	blocksNextCycleOnly?: boolean;
+	disableProration?: boolean;
 }) {
 	if (prorationBehavior !== "none") {
 		return prorationBehavior;
 	}
 
 	if (
-		isNoChargesAllowedForAttach({ newBillingSubscription, blocksNextCycleOnly })
+		isNoChargesAllowedForAttach({ newBillingSubscription, disableProration })
 	) {
 		return prorationBehavior;
 	}
@@ -39,16 +39,16 @@ export function normalizeAttachProrationBehavior({
 
 export function getNoChargesDisabledReason({
 	newBillingSubscription,
-	blocksNextCycleOnly = false,
+	disableProration = false,
 }: {
 	newBillingSubscription: boolean;
-	blocksNextCycleOnly?: boolean;
+	disableProration?: boolean;
 }) {
 	if (newBillingSubscription) {
 		return NO_CHARGES_NEW_CYCLE_DISABLED_REASON;
 	}
 
-	if (blocksNextCycleOnly) {
+	if (disableProration) {
 		return NO_CHARGES_FREE_TO_PAID_DISABLED_REASON;
 	}
 
