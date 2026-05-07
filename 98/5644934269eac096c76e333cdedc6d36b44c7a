@@ -1,0 +1,24 @@
+server/src/internal/invoices/InvoiceService.ts
+  s_1f32b12fced28a::t_6f48fadda578da 33-35,40,45-47
+server/tests/unit/invoices/processInvoice.test.ts
+  s_1f32b12fced28a::t_3e814aa38e0c84 87-127
+server/tests/integration/external-psps/revenuecat.test.ts
+  s_1f32b12fced28a::t_eec10759246eff 520-525
+  s_1f32b12fced28a::t_167bc50726ddac 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "985644934269eac096c76e333cdedc6d36b44c7a",
+  "prompts": {},
+  "sessions": {
+    "s_1f32b12fced28a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_202e6ad75ffetNy7SzuE6BN56z",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
