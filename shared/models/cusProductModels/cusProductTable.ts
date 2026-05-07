@@ -28,6 +28,7 @@ export const customerProducts = pgTable(
 		internal_entity_id: text("internal_entity_id"),
 
 		created_at: numeric({ mode: "number" }),
+		updated_at: numeric({ mode: "number" }),
 		status: text(),
 		processor: jsonb().$type<CustomerProductProcessor>(),
 		// processors: jsonb().$type<ExternalCusProductProcessors>(),

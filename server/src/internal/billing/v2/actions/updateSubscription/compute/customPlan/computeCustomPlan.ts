@@ -8,6 +8,7 @@ import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import { computeDeleteCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/computeDeleteCustomerProduct";
 import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computePatchCustomerProductPlan } from "@/internal/billing/v2/compute/computePatchPlan";
 
 export const computeCustomPlan = async ({
 	ctx,
@@ -18,6 +19,13 @@ export const computeCustomPlan = async ({
 	params: UpdateSubscriptionV1Params;
 	updateSubscriptionContext: UpdateSubscriptionBillingContext;
 }) => {
+	if (updateSubscriptionContext.patchContext) {
+		return computePatchCustomerProductPlan({
+			ctx,
+			updateSubscriptionContext,
+		});
+	}
+
 	const {
 		customerProduct,
 		customPrices,

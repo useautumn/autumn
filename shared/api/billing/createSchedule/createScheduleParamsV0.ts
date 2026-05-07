@@ -43,12 +43,8 @@ export const CreateSchedulePlanSchema = z
 		}),
 		subscription_id: z.string().optional().meta({
 			description:
-				"Unsupported for create_schedule today. Requests that include this field will be rejected.",
+				"A unique ID to identify this subscription. Useful when scheduling the same plan multiple times.",
 		}),
-	})
-	.refine((plan) => plan.subscription_id === undefined, {
-		message: "subscription_id is not supported for create_schedule",
-		path: ["subscription_id"],
 	});
 
 export const CreateSchedulePhaseSchema = z.object({

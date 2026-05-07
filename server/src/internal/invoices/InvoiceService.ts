@@ -9,6 +9,7 @@ import {
 	type InvoiceStatus,
 	invoices,
 	type Organization,
+	ProcessorType,
 	RecaseError,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
@@ -29,15 +30,21 @@ export const processInvoice = ({
 	withItems?: boolean;
 	features?: Feature[];
 }): ApiInvoiceV1 => {
+	const processorType = invoice.processor_type ?? ProcessorType.Stripe;
+	const isStripe = processorType === ProcessorType.Stripe;
+
 	return {
 		// product_ids: invoice.product_ids,
 		plan_ids: invoice.product_ids,
 		stripe_id: invoice.stripe_id,
+		processor_type: processorType,
 		status: invoice.status ?? "",
 		total: invoice.total,
 		currency: invoice.currency,
 		created_at: invoice.created_at,
-		hosted_invoice_url: `${process.env.BETTER_AUTH_URL}/invoices/hosted_invoice_url/${invoice.id}`,
+		hosted_invoice_url: isStripe
+			? `${process.env.BETTER_AUTH_URL}/invoices/hosted_invoice_url/${invoice.id}`
+			: null,
 		// hosted_invoice_url: invoice.hosted_invoice_url,
 		// items: withItems
 		// 	? (invoice.items || []).map((i) => {
@@ -227,6 +234,7 @@ export class InvoiceService {
 			product_ids: uniqueProductIds,
 			created_at: stripeInvoice.created * 1000,
 			stripe_id: stripeInvoice.id!,
+			processor_type: ProcessorType.Stripe,
 			hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
 			status: status || (stripeInvoice.status as InvoiceStatus | null),
 			internal_product_ids: uniqueInternalProductIds,

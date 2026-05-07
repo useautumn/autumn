@@ -3,6 +3,7 @@ import {
 	customizePlanV1ToV0,
 	type FullProduct,
 	hasCustomItems,
+	type PatchContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils";
@@ -13,13 +14,15 @@ export const setupCustomFullProduct = async ({
 	// customItems,
 	currentFullProduct,
 	customizePlan,
+	patchContext,
 }: {
 	ctx: AutumnContext;
 	// customItems?: ProductItem[];
 	currentFullProduct: FullProduct;
 	customizePlan?: CustomizePlanV1;
+	patchContext?: PatchContext;
 }) => {
-	if (!hasCustomItems(customizePlan)) {
+	if (patchContext || !hasCustomItems(customizePlan)) {
 		return {
 			fullProduct: currentFullProduct,
 			customPrices: [],
