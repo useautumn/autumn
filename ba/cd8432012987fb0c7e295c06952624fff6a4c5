@@ -1,0 +1,21 @@
+server/src/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata.ts
+  s_596eae037cc46b::t_18020e99e098f8 40-47,58
+server/tests/unit/billing/is-autumn-managed-subscription-metadata.test.ts
+  s_596eae037cc46b::t_39efd66305a454 1-125
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "bacd8432012987fb0c7e295c06952624fff6a4c5",
+  "prompts": {},
+  "sessions": {
+    "s_596eae037cc46b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1fe289d41ffezvT9hQkJNEIHde",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
