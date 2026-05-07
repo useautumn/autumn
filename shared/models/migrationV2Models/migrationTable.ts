@@ -1,4 +1,5 @@
 import {
+	boolean,
 	foreignKey,
 	jsonb,
 	numeric,
@@ -40,6 +41,11 @@ export const migrations = pgTable(
 		// Snapshot of the last successful prepare-run output, keyed by
 		// module key. See shared/api/migrations/prepare/preparedStateTypes.ts.
 		prepared_state: jsonb().$type<LoosePreparedState>(),
+
+		// `null` (default) → infer from compute output.
+		// `true` → force DB-only path; throw if any Stripe-relevant mutation slips in.
+		// `false` → force Stripe path even when inference would say DB-only.
+		no_billing_changes: boolean(),
 
 		created_at: numeric({ mode: "number" }).notNull(),
 		updated_at: numeric({ mode: "number" }),

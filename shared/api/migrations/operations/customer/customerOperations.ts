@@ -2,9 +2,12 @@ import { z } from "zod/v4";
 import { UpdatePlanOpSchema } from "./updatePlan/index.js";
 
 /**
- * Operations applied to a matched customer's resources. Phase 1 ships
- * only `update_plans`. `add_plans` / `remove_plans` slots reserved for
- * phase 2+.
+ * Operations applied to each matched customer.
+ *
+ * Phase 1 ships only `update_plans`. Slots reserved for phase 2+:
+ * `remove_plans`, `add_plans` — when added, the orchestrator will
+ * process them in the order remove → add → update so update_plans
+ * can target plans the prior phases just attached.
  */
 export const CustomerOperationsSchema = z
 	.object({

@@ -1,0 +1,36 @@
+import type { BillingPlan } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan.js";
+import type { MigrateCustomerBillingContext } from "@/internal/migrations/v2/operations/types/index.js";
+
+export type MigrateCustomerExecuteMode = "no_changes" | "stripe";
+
+/**
+ * Routes execution based on resolved billing mode.
+ *  - `no_changes`: DB-only via `executeAutumnBillingPlan` (no Stripe)
+ *  - `stripe`: full path via `executeBillingPlan` (Stripe + DB)
+ *
+ * Mode resolution lives in `evaluateMigrateCustomerStripe`; this fn
+ * just dispatches.
+ */
+export const executeMigrateCustomerPlan = async ({
+	ctx,
+	billingContext,
+	billingPlan,
+	mode,
+}: {
+	ctx: AutumnContext;
+	billingContext: MigrateCustomerBillingContext;
+	billingPlan: BillingPlan;
+	mode: MigrateCustomerExecuteMode;
+}): Promise<void> => {
+	if (mode === "no_changes") {
+		await executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan: billingPlan.autumn,
+		});
+		return;
+	}
+	await executeBillingPlan({ ctx, billingContext, billingPlan });
+};

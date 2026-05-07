@@ -8,13 +8,13 @@ import { matchCustomerProductsByTarget } from "./matchPlanFilter.js";
 export type RunOpsForCustomerResult = {
 	internal_customer_id: string;
 	matched_cusproducts: number;
-	add_items: ApplyAddItemResult[];
+	upsert_items: ApplyAddItemResult[];
 };
 
 /**
  * Walk a customer's matching cusproducts × the migration's update_plans
- * × add_items. Phase 1 only — delete_items + priced add_items will be
- * routed in here as their handlers ship.
+ * × upsert_items. Phase 1 only — delete_items + priced upsert_items
+ * will be routed in here as their handlers ship.
  */
 export const runOpsForCustomer = async ({
 	ctx,
@@ -38,7 +38,7 @@ export const runOpsForCustomer = async ({
 
 	const updatePlans = operations.customer?.update_plans ?? [];
 	let matched = 0;
-	const addItemResults: ApplyAddItemResult[] = [];
+	const upsertItemResults: ApplyAddItemResult[] = [];
 
 	for (const op of updatePlans) {
 		const cps = matchCustomerProductsByTarget({
@@ -48,7 +48,7 @@ export const runOpsForCustomer = async ({
 		matched += cps.length;
 
 		for (const cusProduct of cps) {
-			for (const addItem of op.add_items ?? []) {
+			for (const addItem of op.upsert_items ?? []) {
 				const result = await applyAddItem({
 					ctx,
 					scope_id,
@@ -57,7 +57,7 @@ export const runOpsForCustomer = async ({
 					prepared_state,
 					dry_run,
 				});
-				addItemResults.push(result);
+				upsertItemResults.push(result);
 			}
 		}
 	}
@@ -65,6 +65,6 @@ export const runOpsForCustomer = async ({
 	return {
 		internal_customer_id,
 		matched_cusproducts: matched,
-		add_items: addItemResults,
+		upsert_items: upsertItemResults,
 	};
 };
