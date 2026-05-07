@@ -63,10 +63,13 @@ export function OrgRedisConfigDialog({
 			enabled: open && !!orgId,
 		});
 
-	// Surface load failures as a toast (parity with previous behavior).
+	// Surface load failures as a toast — only when there's no data to fall
+	// back on. After a successful mutation triggers a refetch, transient GET
+	// failures shouldn't surface as "Failed to load" since the dialog can
+	// keep displaying the previous data.
 	useEffect(() => {
-		if (isError) toast.error("Failed to load Redis config");
-	}, [isError]);
+		if (isError && !data) toast.error("Failed to load Redis config");
+	}, [isError, data]);
 
 	// Sync the editable migration input from server data when it loads or
 	// changes (e.g. after a successful update).
@@ -78,12 +81,22 @@ export function OrgRedisConfigDialog({
 		}
 	}, [data]);
 
-	// Reset transient inputs when (re)opening for a different org.
+	// Reset transient inputs when (re)opening — including same-org reopens.
+	// React Query's structural sharing means cached `data` may be returned
+	// with the same reference on reopen, so the `[data]` effect above won't
+	// fire. Without resetting `migrationInput` here, a previously typed but
+	// unsaved value would persist into the next session and the admin could
+	// silently apply a stale edit.
 	useEffect(() => {
 		if (open && orgId) {
 			setConnectionString("");
 			setRemoveConfirm("");
+			setMigrationInput(
+				data?.redis_config ? String(data.redis_config.migrationPercent) : "",
+			);
 		}
+		// `data` deliberately excluded — refetches shouldn't clobber edits.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open, orgId]);
 
 	// Best-effort post-mutation refetch + parent notification. Failures here
