@@ -44,6 +44,7 @@ export const setupScheduledProductsContext = async ({
 						customPrices,
 						customEntitlements,
 						featureQuantities,
+						externalId: plan.subscription_id,
 					};
 				}),
 			);

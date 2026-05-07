@@ -77,7 +77,8 @@ export const initCustomerProduct = ({
 		internal_product_id: fullProduct.internal_id,
 		product_id: fullProduct.id,
 
-		created_at: Date.now(),
+		created_at: now,
+		updated_at: now,
 
 		status,
 
