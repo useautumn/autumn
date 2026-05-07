@@ -2,6 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
 	type AggregatedFeatureBalanceSchema,
 	AppEnv,
+	type FullCustomer,
+	FullCustomerSchema,
 	ProcessorType,
 	ProductSchema,
 	type SubjectBalance,
@@ -645,6 +647,276 @@ describe("sanitizeCachedFullSubject — processor_type (Option A walker behavior
 		);
 		const wire = processInvoice({
 			invoice: sanitized.invoices[0],
+		});
+		expect(wire.processor_type).toBe(ProcessorType.Stripe);
+	});
+
+	test("end-to-end pre-update rollover: cache JSON missing field → JSON.parse → walker → processInvoice → wire stripe", async () => {
+		// Simulates the deploy-boundary rollover scenario:
+		//   1. An invoice was cached BEFORE this Phase shipped (no
+		//      `processor_type` key in the JSON).
+		//   2. After deploy, `getCachedFullSubject` reads that JSON, parses
+		//      it, and sanitizes via the walker.
+		//   3. `processInvoice` then maps the sanitized row to the V5 wire
+		//      shape.
+		// The wire MUST emit `processor_type === "stripe"` for the row to
+		// remain valid in V5 consumers. Any regression in the walker's
+		// ZodDefault handling OR the consumer-side `??` mask trips this test.
+		const preUpdateInvoice = buildInvoice();
+		delete (preUpdateInvoice as Record<string, unknown>).processor_type;
+
+		const cachedJson = JSON.stringify({
+			...(buildCachedFullSubject() as Record<string, unknown>),
+			invoices: [preUpdateInvoice],
+		});
+
+		const deserialized = JSON.parse(cachedJson) as Record<string, unknown>;
+		expect(
+			(deserialized.invoices as Record<string, unknown>[])[0]
+				.processor_type,
+		).toBeUndefined();
+
+		const sanitized = sanitizeCachedFullSubject({
+			cachedFullSubject: deserialized as unknown as CachedFullSubject,
+		});
+		expect(sanitized.invoices[0].processor_type).toBe(ProcessorType.Stripe);
+
+		const { processInvoice } = await import(
+			"@/internal/invoices/InvoiceService.js"
+		);
+		const wire = processInvoice({ invoice: sanitized.invoices[0] });
+		expect(wire.processor_type).toBe(ProcessorType.Stripe);
+		expect(wire.stripe_id).toBe("in_proc");
+	});
+
+	test("end-to-end post-update revenuecat row: cache JSON with revenuecat → roundtrip → wire revenuecat", async () => {
+		// Mirror of the rollover test for the post-deploy path: an RC invoice
+		// is written with `processor_type: "revenuecat"`, cached as JSON,
+		// then read back. The wire MUST surface "revenuecat" intact (no
+		// over-correction to "stripe" by the walker, the consumer mask, or
+		// processInvoice).
+		const postUpdateInvoice = buildInvoice({
+			processor_type: ProcessorType.RevenueCat,
+			stripe_id: "rc_txn_42",
+		});
+
+		const cachedJson = JSON.stringify({
+			...(buildCachedFullSubject() as Record<string, unknown>),
+			invoices: [postUpdateInvoice],
+		});
+
+		const deserialized = JSON.parse(cachedJson) as Record<string, unknown>;
+		expect(
+			(deserialized.invoices as Record<string, unknown>[])[0]
+				.processor_type,
+		).toBe(ProcessorType.RevenueCat);
+
+		const sanitized = sanitizeCachedFullSubject({
+			cachedFullSubject: deserialized as unknown as CachedFullSubject,
+		});
+		expect(sanitized.invoices[0].processor_type).toBe(
+			ProcessorType.RevenueCat,
+		);
+
+		const { processInvoice } = await import(
+			"@/internal/invoices/InvoiceService.js"
+		);
+		const wire = processInvoice({ invoice: sanitized.invoices[0] });
+		expect(wire.processor_type).toBe(ProcessorType.RevenueCat);
+		expect(wire.stripe_id).toBe("rc_txn_42");
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// processor_type — FullCustomer (v1) cache rollover
+//
+// The FullCustomer cache (`getCachedFullCustomer`) uses the cacheUtils walker
+// at `server/src/utils/cacheUtils/normalizeFromSchema.ts`, NOT the FullSubject
+// sanitize walker. The cacheUtils walker has a known asymmetry: it does not
+// apply leaf-level ZodDefault for primitives (documented limitation; the
+// "ZodDefault does NOT fire on primitive leaves in cacheUtils walker" test
+// in the core walker block proves this). For pre-update cached invoices
+// missing `processor_type`, the walker leaves the field undefined and the
+// consumer-side `?? ProcessorType.Stripe` mask in `processInvoice` is what
+// makes the rollover safe.
+//
+// These tests exercise the v1 cache path end-to-end through JSON roundtrip
+// + cacheUtils walker + processInvoice, mirroring the FullSubject (v2)
+// rollover tests above.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+describe("FullCustomer v1 cache — processor_type rollover", () => {
+	const buildFullCustomer = (
+		overrides: Record<string, unknown> = {},
+	): Record<string, unknown> => ({
+		internal_id: "cus_int_v1",
+		org_id: "org_v1",
+		env: AppEnv.Live,
+		created_at: 1,
+		id: "cus_v1",
+		name: null,
+		email: null,
+		fingerprint: null,
+		processor: null,
+		processors: {},
+		metadata: {},
+		send_email_receipts: false,
+		auto_topups: null,
+		spend_limits: null,
+		usage_alerts: null,
+		overage_allowed: null,
+		config: null,
+		customer_products: [],
+		entities: [],
+		extra_customer_entitlements: [],
+		invoices: [],
+		...overrides,
+	});
+
+	const buildInvoice = (
+		overrides: Record<string, unknown> = {},
+	): Record<string, unknown> => ({
+		id: "inv_v1",
+		created_at: 1,
+		internal_customer_id: "cus_int_v1",
+		internal_entity_id: null,
+		product_ids: [],
+		internal_product_ids: [],
+		stripe_id: "in_v1",
+		status: "paid",
+		hosted_invoice_url: null,
+		total: 100,
+		amount_paid: 100,
+		refunded_amount: 0,
+		currency: "usd",
+		discounts: [],
+		items: [],
+		...overrides,
+	});
+
+	test("pre-update rollover: cache JSON missing processor_type → cacheUtils walker → processInvoice → wire stripe", async () => {
+		// Pre-deploy FullCustomer cache entry: invoice has no `processor_type`
+		// key. The cacheUtils walker does NOT fill the default (orthogonal
+		// bug); it leaves the field undefined. The consumer mask in
+		// processInvoice converts undefined → ProcessorType.Stripe on the
+		// wire. End-to-end safety relies on this two-layer behavior.
+		const preUpdateInvoice = buildInvoice();
+		delete (preUpdateInvoice as Record<string, unknown>).processor_type;
+
+		const cachedJson = JSON.stringify(
+			buildFullCustomer({ invoices: [preUpdateInvoice] }),
+		);
+		const deserialized = JSON.parse(cachedJson) as Record<string, unknown>;
+		expect(
+			(deserialized.invoices as Record<string, unknown>[])[0]
+				.processor_type,
+		).toBeUndefined();
+
+		const fullCustomer = normalizeFromSchemaCacheUtils<FullCustomer>({
+			schema: FullCustomerSchema as unknown as z.ZodTypeAny,
+			data: deserialized,
+		});
+
+		expect(
+			(fullCustomer.invoices ?? [])[0]?.processor_type,
+		).toBeUndefined();
+
+		const { processInvoice } = await import(
+			"@/internal/invoices/InvoiceService.js"
+		);
+		const wire = processInvoice({
+			invoice: (fullCustomer.invoices ?? [])[0]!,
+		});
+		expect(wire.processor_type).toBe(ProcessorType.Stripe);
+		expect(wire.stripe_id).toBe("in_v1");
+	});
+
+	test("explicit null processor_type → cacheUtils walker passthrough → processInvoice → wire stripe", async () => {
+		// Post-deploy DB row with NULL processor_type cached as JSON. The
+		// cacheUtils walker passes null through unchanged. Consumer mask
+		// converts null → ProcessorType.Stripe.
+		const cachedJson = JSON.stringify(
+			buildFullCustomer({
+				invoices: [buildInvoice({ processor_type: null })],
+			}),
+		);
+		const deserialized = JSON.parse(cachedJson) as Record<string, unknown>;
+
+		const fullCustomer = normalizeFromSchemaCacheUtils<FullCustomer>({
+			schema: FullCustomerSchema as unknown as z.ZodTypeAny,
+			data: deserialized,
+		});
+		expect((fullCustomer.invoices ?? [])[0]?.processor_type).toBeNull();
+
+		const { processInvoice } = await import(
+			"@/internal/invoices/InvoiceService.js"
+		);
+		const wire = processInvoice({
+			invoice: (fullCustomer.invoices ?? [])[0]!,
+		});
+		expect(wire.processor_type).toBe(ProcessorType.Stripe);
+	});
+
+	test("post-update revenuecat row → cacheUtils walker preserves → wire revenuecat", async () => {
+		// RC invoice cached after Phase 3 deploys. Walker passes the value
+		// through unchanged; consumer mask is a no-op for defined values.
+		const cachedJson = JSON.stringify(
+			buildFullCustomer({
+				invoices: [
+					buildInvoice({
+						processor_type: ProcessorType.RevenueCat,
+						stripe_id: "rc_txn_v1",
+					}),
+				],
+			}),
+		);
+		const deserialized = JSON.parse(cachedJson) as Record<string, unknown>;
+
+		const fullCustomer = normalizeFromSchemaCacheUtils<FullCustomer>({
+			schema: FullCustomerSchema as unknown as z.ZodTypeAny,
+			data: deserialized,
+		});
+		expect((fullCustomer.invoices ?? [])[0]?.processor_type).toBe(
+			ProcessorType.RevenueCat,
+		);
+
+		const { processInvoice } = await import(
+			"@/internal/invoices/InvoiceService.js"
+		);
+		const wire = processInvoice({
+			invoice: (fullCustomer.invoices ?? [])[0]!,
+		});
+		expect(wire.processor_type).toBe(ProcessorType.RevenueCat);
+		expect(wire.stripe_id).toBe("rc_txn_v1");
+	});
+
+	test("post-update stripe row with explicit processor_type → cacheUtils walker preserves → wire stripe", async () => {
+		// Post-Phase-2 stripe writes set processor_type explicitly via
+		// initInvoiceFromStripe. New cached entries have the field present.
+		// Walker preserves; consumer mask is a no-op. Sanity check that
+		// nothing over-corrects.
+		const cachedJson = JSON.stringify(
+			buildFullCustomer({
+				invoices: [
+					buildInvoice({ processor_type: ProcessorType.Stripe }),
+				],
+			}),
+		);
+		const deserialized = JSON.parse(cachedJson) as Record<string, unknown>;
+
+		const fullCustomer = normalizeFromSchemaCacheUtils<FullCustomer>({
+			schema: FullCustomerSchema as unknown as z.ZodTypeAny,
+			data: deserialized,
+		});
+		expect((fullCustomer.invoices ?? [])[0]?.processor_type).toBe(
+			ProcessorType.Stripe,
+		);
+
+		const { processInvoice } = await import(
+			"@/internal/invoices/InvoiceService.js"
+		);
+		const wire = processInvoice({
+			invoice: (fullCustomer.invoices ?? [])[0]!,
 		});
 		expect(wire.processor_type).toBe(ProcessorType.Stripe);
 	});
