@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import type { ApiCustomerV5 } from "@autumn/shared";
+import type { ApiCustomerV5, ApiEntityV2 } from "@autumn/shared";
 
 export const expectFlagCorrect = ({
 	customer,
@@ -7,14 +7,21 @@ export const expectFlagCorrect = ({
 	planId,
 	expiresAt,
 	withFeature,
+	present = true,
 }: {
-	customer: ApiCustomerV5;
+	customer: ApiCustomerV5 | ApiEntityV2;
 	featureId: string;
 	planId?: string | null;
 	expiresAt?: number | null;
 	withFeature?: boolean;
+	present?: boolean;
 }) => {
 	const flag = customer.flags[featureId];
+
+	if (!present) {
+		expect(flag).toBeUndefined();
+		return;
+	}
 
 	expect(flag).toBeDefined();
 	expect(flag.feature_id).toBe(featureId);

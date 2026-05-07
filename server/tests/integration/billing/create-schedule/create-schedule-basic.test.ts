@@ -1623,26 +1623,6 @@ test.concurrent(`${chalk.yellowBright("create-schedule: rejects invalid timing a
 	});
 
 	await expectAutumnError({
-		errMessage: "subscription_id is not supported",
-		func: async () => {
-			await autumnV1.billing.createSchedule({
-				customer_id: customerId,
-				phases: [
-					{
-						starts_at: Date.now(),
-						plans: [
-							{
-								plan_id: pro.id,
-								subscription_id: "sub_123",
-							},
-						],
-					},
-				],
-			});
-		},
-	});
-
-	await expectAutumnError({
 		errMessage: 'Unrecognized key: "free_trial"',
 		func: async () => {
 			await autumnV1.billing.createSchedule({

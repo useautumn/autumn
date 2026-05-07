@@ -1,7 +1,9 @@
 import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
 import {
+	applyCustomerProductPatch,
 	applyCustomerProductUpdate,
 	getDeleteCustomerProducts,
+	getPatchCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
@@ -12,12 +14,15 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
-	const {
-		insertCustomerProducts,
-		updateCustomerEntitlements,
-	} = autumnBillingPlan;
-	const deleteCustomerProducts = getDeleteCustomerProducts({ autumnBillingPlan });
-	const updateCustomerProducts = getUpdateCustomerProducts({ autumnBillingPlan });
+	const { insertCustomerProducts, updateCustomerEntitlements } =
+		autumnBillingPlan;
+	const deleteCustomerProducts = getDeleteCustomerProducts({
+		autumnBillingPlan,
+	});
+	const patchCustomerProducts = getPatchCustomerProducts({ autumnBillingPlan });
+	const updateCustomerProducts = getUpdateCustomerProducts({
+		autumnBillingPlan,
+	});
 
 	const finalFullCustomer = structuredClone(billingContext.fullCustomer);
 
@@ -27,21 +32,32 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 		...insertCustomerProducts,
 	];
 
-	let customerProducts = combinedCustomerProducts.map((customerProduct) =>
-		updateCustomerProducts.find(
+	let customerProducts = combinedCustomerProducts.map((customerProduct) => {
+		const updateCustomerProduct = updateCustomerProducts.find(
 			(updateCustomerProduct) =>
 				updateCustomerProduct.customerProduct.id === customerProduct.id,
-		)
-			? applyCustomerProductUpdate({
-					customerProduct,
-					updates:
-						updateCustomerProducts.find(
-							(updateCustomerProduct) =>
-								updateCustomerProduct.customerProduct.id === customerProduct.id,
-						)!.updates,
-				})
-			: customerProduct,
-	);
+		);
+		const patchCustomerProduct = patchCustomerProducts.find(
+			(patchCustomerProduct) =>
+				patchCustomerProduct.customerProduct.id === customerProduct.id,
+		);
+
+		let result = customerProduct;
+		if (updateCustomerProduct) {
+			result = applyCustomerProductUpdate({
+				customerProduct: result,
+				updates: updateCustomerProduct.updates,
+			});
+		}
+		if (patchCustomerProduct) {
+			result = applyCustomerProductPatch({
+				customerProduct: result,
+				patch: patchCustomerProduct,
+			});
+		}
+
+		return result;
+	});
 
 	// 3. Remove deleted customer product if applicable
 	if (deleteCustomerProducts.length > 0) {

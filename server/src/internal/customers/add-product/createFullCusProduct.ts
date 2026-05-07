@@ -122,13 +122,17 @@ const initCusProduct = ({
 		trialEnds = freeTrialToStripeTimestamp({ freeTrial })! * 1000;
 	}
 
+	const now = Date.now();
+	const created = createdAt || now;
+
 	return {
 		id: cusProdId,
 		internal_customer_id: customer.internal_id,
 		customer_id: customer.id,
 		internal_product_id: product.internal_id,
 		product_id: product.id,
-		created_at: createdAt || Date.now(),
+		created_at: created,
+		updated_at: created,
 		canceled: notNullish(canceledAt),
 		ended_at: endedAt,
 		status: subscriptionStatus
@@ -144,7 +148,7 @@ const initCusProduct = ({
 			// last_invoice_id: lastInvoiceId,
 		},
 
-		starts_at: startsAt || Date.now(),
+		starts_at: startsAt || now,
 		trial_ends_at: trialEnds,
 		options: optionsList || [],
 		free_trial_id: freeTrial?.id || null,
