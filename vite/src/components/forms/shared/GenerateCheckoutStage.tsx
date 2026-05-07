@@ -16,15 +16,14 @@ import {
 	getAttachScheduledStartDate,
 } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import {
 	SheetFooter,
 	SheetHeader,
-	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { PlanActivationSection } from "./SendInvoiceStage";
+import { UrlSuccessView } from "./UrlSuccessView";
 
 type PreviewData = AttachPreviewResponse | null | undefined;
 
@@ -173,46 +172,17 @@ export function GenerateCheckoutStage({
 
 	if (completedCheckoutUrl) {
 		return (
-			<>
-				<SheetHeader
-					title="Checkout URL Generated"
-					description={
-						productName
-							? `Checkout session created for ${productName}`
-							: "Checkout session has been created"
-					}
-					noSeparator
-				/>
-
-				<SheetSection withSeparator={false}>
-					<div className="flex flex-col items-center gap-2 pt-4">
-						<div className="size-10 rounded-full bg-green-500/10 flex items-center justify-center">
-							<CheckCircleIcon
-								size={24}
-								weight="duotone"
-								className="text-green-500"
-							/>
-						</div>
-						<p className="text-sm text-t2 text-center">
-							The checkout URL has been generated and copied to your clipboard.
-						</p>
-					</div>
-				</SheetSection>
-
-				<SheetFooter className="flex flex-col grid-cols-1 mt-0">
-					<Button
-						variant="primary"
-						className="w-full"
-						onClick={() => window.open(completedCheckoutUrl, "_blank")}
-					>
-						Open checkout URL
-					</Button>
-					<CopyButton
-						text={completedCheckoutUrl}
-						innerClassName="text-xs text-t3 font-mono w-96"
-					/>
-				</SheetFooter>
-			</>
+			<UrlSuccessView
+				title="Checkout URL Generated"
+				description={
+					productName
+						? `Checkout session created for ${productName}`
+						: "Checkout session has been created"
+				}
+				message="The checkout URL has been generated and copied to your clipboard."
+				buttonLabel="Open checkout URL"
+				url={completedCheckoutUrl}
+			/>
 		);
 	}
 

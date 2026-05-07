@@ -26,6 +26,7 @@ export const AttachFormSchema = z.object({
 	trialCardRequired: z.boolean(),
 	planSchedule: z.custom<PlanTiming>().nullable(),
 	startDate: z.number().nullable(),
+	endDate: z.number().nullable(),
 	prorationBehavior: z.custom<BillingBehavior>().nullable(),
 	redirectMode: RedirectModeSchema,
 	newBillingSubscription: z.boolean(),

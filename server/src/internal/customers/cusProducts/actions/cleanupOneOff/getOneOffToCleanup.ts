@@ -2,25 +2,11 @@ import {
 	AllowanceType,
 	BillingInterval,
 	CusProductStatus,
-	type Customer,
-	type CustomerPrice,
-	type CustomerProduct,
 	FeatureType,
 	FeatureUsageType,
-	type Organization,
-	type Price,
-	type Product,
 } from "@autumn/shared";
-import type { CronContext } from "@/cron/utils/CronContext";
-
-export type OneOffCleanupResult = {
-	customer_product: CustomerProduct;
-	customer_price: CustomerPrice;
-	price: Price;
-	customer: Customer;
-	product: Product;
-	org: Organization;
-};
+import type { CronContext } from "@/cron/utils/CronContext.js";
+import type { OneOffCustomerProductResult } from "../oneOffCustomerProductResult.js";
 
 /**
  * Fetches one-off customer products eligible for cleanup.
@@ -37,15 +23,8 @@ export const getOneOffCustomerProductsToCleanup = async ({
 	ctx,
 }: {
 	ctx: CronContext;
-}): Promise<OneOffCleanupResult[]> => {
-	const result = await ctx.db.execute<{
-		customer_product: CustomerProduct;
-		customer_price: CustomerPrice;
-		price: Price;
-		customer: Customer;
-		product: Product;
-		org: Organization;
-	}>(`
+}): Promise<OneOffCustomerProductResult[]> => {
+	const result = await ctx.db.execute<OneOffCustomerProductResult>(`
 		WITH 
 		-- CTE 1: Active customer products with at least one price
 		active_cus_products_with_prices AS (
@@ -164,8 +143,10 @@ export const getOneOffCustomerProductsToCleanup = async ({
 		INNER JOIN customers c ON c.internal_id = cp.internal_customer_id
 		INNER JOIN products prod ON prod.internal_id = cp.internal_product_id
 		INNER JOIN organizations o ON o.id = c.org_id
-		WHERE cp.id IN (SELECT id FROM cus_products_with_newer_active_product)
+		WHERE cp.id IN (
+			SELECT id FROM cus_products_with_newer_active_product
+		)
 	`);
 
-	return result as OneOffCleanupResult[];
+	return result as OneOffCustomerProductResult[];
 };

@@ -23,6 +23,7 @@ import { cleanupOneOffCustomerProducts } from "@/internal/customers/cusProducts/
 import {
 	expectProductStatusesByOrder,
 	getFullCustomerWithExpired,
+	trackUsageForCleanup,
 } from "./utils/oneOffCleanupTestUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -62,7 +63,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: single-oneoff-no-newer")}`, asyn
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
@@ -140,7 +141,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: oneoff-not-depleted-both-active"
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 3: Three purchases, all depleted, cleanup - all stay active
+// TEST 3: Three purchases, middle depleted, cleanup - first expires
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(`${chalk.yellowBright("cleanup: three-oneoff-all-depleted")}`, async () => {
@@ -185,8 +186,8 @@ test.concurrent(`${chalk.yellowBright("cleanup: three-oneoff-all-depleted")}`, a
 		{ timeout: 2000 },
 	);
 
-	// Track 100 to deplete the second product that has been attached
-	await autumnV1.track({
+	// Track 100 to deplete the oldest active balance.
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,
@@ -215,9 +216,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: three-oneoff-all-depleted")}`, a
 	// Run cleanup
 	await cleanupOneOffCustomerProducts({ ctx });
 
-	// Verify: all three stay active
-	// All three are depleted, but the query requires a newer ACTIVE product
-	// Since all are depleted, none should be expired
+	// Verify: first product expires, later purchases stay active.
 	const fullCus = await getFullCustomerWithExpired(customerId);
 	expectProductStatusesByOrder({
 		fullCus,

@@ -3,7 +3,6 @@ import {
 	type AttachParamsV1,
 	ErrCode,
 	isFreeProduct,
-	isOneOffProduct,
 	isPastStartDate,
 	RecaseError,
 } from "@autumn/shared";
@@ -41,11 +40,9 @@ export const handleEndDateErrors = ({
 	}
 
 	const prices = billingContext.attachProduct.prices;
-	const isPaidRecurring =
-		!isFreeProduct({ prices }) && !isOneOffProduct({ prices });
-	if (!isPaidRecurring) {
+	if (isFreeProduct({ prices })) {
 		throw new RecaseError({
-			message: "ends_at is only supported for paid recurring plans.",
+			message: "ends_at is only supported for paid plans.",
 			code: ErrCode.InvalidRequest,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});
