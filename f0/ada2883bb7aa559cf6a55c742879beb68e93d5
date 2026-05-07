@@ -1,0 +1,44 @@
+shared/api/others/apiInvoice/apiInvoiceV1.ts
+  s_1f32b12fced28a::t_73d8e31919a23a 2,13-19
+server/tests/unit/full-subject-cache/sanitizeCachedPayloads.test.ts
+  s_1f32b12fced28a::t_6ec29fab843477 518-652
+  s_1f32b12fced28a::t_4683cd9f9ba9f8 5
+  s_1f32b12fced28a::t_555ce90636e7c8 146-180,194-197,199-202,205
+  s_1f32b12fced28a::t_c342171d61ba76 181-193,198,203-204
+server/src/internal/invoices/handlers/handleRedirectToInvoice.ts
+  s_1f32b12fced28a::t_2f40967c71cc70 1
+  s_1f32b12fced28a::t_48ac894b60279a 31-37
+server/src/internal/customers/internalHandlers/handleGetInvoiceLineItems.ts
+  s_1f32b12fced28a::t_77b96f04a8cbf4 35-43
+shared/models/cusModels/invoiceModels/invoiceModels.ts
+  s_1f32b12fced28a::t_5ab39dfd18c3a5 38
+  s_1f32b12fced28a::t_31b56a96378134 2
+server/src/internal/invoices/InvoiceService.ts
+  s_1f32b12fced28a::t_b3691052e3889b 232
+  s_1f32b12fced28a::t_5cd81e41d899c3 37
+  s_1f32b12fced28a::t_d5a0cbee44224e 12
+server/src/internal/invoices/utils/initInvoiceFromStripe.ts
+  s_1f32b12fced28a::t_26cfd2f929522d 66
+  s_1f32b12fced28a::t_6aceace6136a02 6
+server/tests/integration/db/full-subject/utils/fullSubjectScenarioBuilders.ts
+  s_1f32b12fced28a::t_2fe588213278c5 22
+  s_1f32b12fced28a::t_9f7b8d480a80f4 405
+shared/models/cusModels/invoiceModels/invoiceTable.ts
+  s_1f32b12fced28a::t_a5bdbbe00498da 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "f0ada2883bb7aa559cf6a55c742879beb68e93d5",
+  "prompts": {},
+  "sessions": {
+    "s_1f32b12fced28a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_202e6ad75ffetNy7SzuE6BN56z",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
