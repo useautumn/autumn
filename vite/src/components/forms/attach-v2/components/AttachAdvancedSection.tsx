@@ -35,8 +35,9 @@ import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
+import { useAttachBillingOptionsState } from "../hooks/useAttachBillingOptionsState";
 import { addDiscount } from "../utils/discountUtils";
+import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
 import { AttachDiscountRow } from "./AttachDiscountRow";
 
 let customLineItemCounter = 0;
@@ -111,13 +112,13 @@ function FeatureSelectDropdown({
 }
 
 export function AttachAdvancedSection() {
-	const { form, formValues, features, product } = useAttachFormContext();
+	const { form, formValues, features, product, previewQuery } =
+		useAttachFormContext();
 	const {
 		discounts,
 		newBillingSubscription,
 		resetBillingCycle,
 		noBillingChanges,
-		enablePlanImmediately,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -125,6 +126,7 @@ export function AttachAdvancedSection() {
 		customLineItems,
 		trialEnabled,
 		startDate,
+		endDate,
 	} = formValues;
 	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | null;
@@ -158,7 +160,7 @@ export function AttachAdvancedSection() {
 		handleScheduleChange,
 		handleBillingCycleChange,
 		handleProrationBehaviorChange,
-	} = usePlanScheduleField();
+	} = useAttachBillingOptionsState();
 
 	const isPaidRecurringProduct =
 		!!product &&
@@ -169,6 +171,12 @@ export function AttachAdvancedSection() {
 		isPaidRecurringProduct &&
 		!trialEnabled &&
 		effectivePlanSchedule !== "end_of_cycle";
+	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
+	const attachStartsAt =
+		effectivePlanSchedule === "end_of_cycle"
+			? getAttachScheduledStartDate({ previewData: previewQuery.data })
+			: startDate;
+	const endDateMin = Math.max(Date.now(), attachStartsAt ?? 0);
 
 	const handleAddDiscount = () => {
 		form.setFieldValue("discounts", addDiscount(discounts));
@@ -233,6 +241,33 @@ export function AttachAdvancedSection() {
 						setUnixDate={(value) => form.setFieldValue("startDate", value)}
 						disablePastDates
 						minUnixDate={Date.now()}
+						withTime
+					/>
+				</ConfigRow>
+			)}
+
+			{showEndDate && (
+				<ConfigRow
+					title="End Date"
+					description="End the plan on a future date"
+					expanded={endDate !== null}
+					action={
+						<Switch
+							checked={endDate !== null}
+							onCheckedChange={(checked) =>
+								form.setFieldValue(
+									"endDate",
+									checked ? addDays(endDateMin, 1).getTime() : null,
+								)
+							}
+						/>
+					}
+				>
+					<DateInputUnix
+						unixDate={endDate}
+						setUnixDate={(value) => form.setFieldValue("endDate", value)}
+						disablePastDates
+						minUnixDate={endDateMin}
 						withTime
 					/>
 				</ConfigRow>
@@ -412,19 +447,6 @@ export function AttachAdvancedSection() {
 						checked={noBillingChanges}
 						onCheckedChange={(checked) =>
 							form.setFieldValue("noBillingChanges", !!checked)
-						}
-					/>
-				}
-			/>
-
-			<ConfigRow
-				title="Enable Plan Immediately"
-				description="Grant access as soon as the checkout session is created, before payment is completed"
-				action={
-					<Switch
-						checked={enablePlanImmediately}
-						onCheckedChange={(checked) =>
-							form.setFieldValue("enablePlanImmediately", !!checked)
 						}
 					/>
 				}

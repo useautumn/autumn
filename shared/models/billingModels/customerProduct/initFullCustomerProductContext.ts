@@ -65,6 +65,7 @@ export interface InitFullCustomerProductOptions {
 	canceledAt?: number;
 	status?: CusProductStatus; // Used for scheduling product
 	startsAt?: number; // Used for scheduling product
+	accessStartsAt?: number;
 	endedAt?: number; // Used for scheduling product
 
 	// Optional + random

@@ -9,6 +9,7 @@ import { handleBillingCycleAnchorErrors } from "@/internal/billing/v2/actions/at
 import { handleCarryOverBalancesErrors } from "@/internal/billing/v2/actions/attach/errors/handleCarryOverBalancesErrors";
 import { handleCarryOverUsagesErrors } from "@/internal/billing/v2/actions/attach/errors/handleCarryOverUsagesErrors";
 import { handleCurrentCustomerProductErrors } from "@/internal/billing/v2/actions/attach/errors/handleCurrentCustomerProductErrors";
+import { handleEndDateErrors } from "@/internal/billing/v2/actions/attach/errors/handleEndDateErrors";
 import { handleNewBillingSubscriptionErrors } from "@/internal/billing/v2/actions/attach/errors/handleNewBillingSubscriptionErrors";
 import { handleScheduledSwitchOneOffErrors } from "@/internal/billing/v2/actions/attach/errors/handleScheduledSwitchOneOffErrors";
 import { handleStartDateErrors } from "@/internal/billing/v2/actions/attach/errors/handleStartDateErrors";
@@ -60,6 +61,7 @@ export const handleAttachV2Errors = async ({
 	handleScheduledSwitchOneOffErrors({ ctx, billingContext });
 	handleBillingCycleAnchorErrors({ billingContext });
 	handleStartDateErrors({ billingContext, params });
+	handleEndDateErrors({ billingContext, params });
 
 	// 7. Transition config errors (reset_after_trial_end on allocated features)
 	handleTransitionConfigErrors({ ctx, billingContext });
@@ -73,7 +75,6 @@ export const handleAttachV2Errors = async ({
 	// 10. Proration behavior errors (none restrictions)
 	handleProrationBehaviorErrors({
 		billingContext,
-		currentCustomerProduct: billingContext.currentCustomerProduct,
 		billingPlan,
 		params,
 	});

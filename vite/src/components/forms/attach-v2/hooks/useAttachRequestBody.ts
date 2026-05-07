@@ -31,6 +31,7 @@ export interface BuildAttachRequestBodyParams {
 	trialCardRequired: boolean;
 	planSchedule: PlanTiming | null;
 	startDate: number | null;
+	endDate: number | null;
 	prorationBehavior: BillingBehavior | null;
 	redirectMode: RedirectMode;
 	newBillingSubscription: boolean;
@@ -43,7 +44,7 @@ export interface BuildAttachRequestBodyParams {
 	carryOverUsages: boolean;
 	carryOverUsageFeatureIds: string[];
 	customLineItems: FormCustomLineItem[];
-	isFreeToPaidTransition: boolean;
+	disableProration: boolean;
 }
 
 /** Pure function to build the attach request body. Extracted for testability. */
@@ -60,6 +61,7 @@ export function buildAttachRequestBody({
 	trialCardRequired,
 	planSchedule,
 	startDate,
+	endDate,
 	prorationBehavior,
 	redirectMode,
 	newBillingSubscription,
@@ -72,7 +74,7 @@ export function buildAttachRequestBody({
 	carryOverUsages,
 	carryOverUsageFeatureIds = [],
 	customLineItems,
-	isFreeToPaidTransition,
+	disableProration,
 }: BuildAttachRequestBodyParams): AttachParamsV0 | null {
 	if (!customerId || !product) {
 		return null;
@@ -127,10 +129,14 @@ export function buildAttachRequestBody({
 		body.plan_schedule = planSchedule;
 	}
 
+	if (endDate) {
+		body.ends_at = endDate;
+	}
+
 	const normalizedProrationBehavior = normalizeAttachProrationBehavior({
 		prorationBehavior,
 		newBillingSubscription,
-		blocksNextCycleOnly: isFreeToPaidTransition,
+		disableProration,
 	});
 
 	if (normalizedProrationBehavior) {
@@ -199,6 +205,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		trialCardRequired,
 		planSchedule,
 		startDate,
+		endDate,
 		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
@@ -211,7 +218,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		carryOverUsages,
 		carryOverUsageFeatureIds,
 		customLineItems,
-		isFreeToPaidTransition,
+		disableProration,
 	} = params;
 
 	const requestBody = useMemo(
@@ -229,6 +236,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				trialCardRequired,
 				planSchedule,
 				startDate,
+				endDate,
 				prorationBehavior,
 				redirectMode,
 				newBillingSubscription,
@@ -241,7 +249,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				carryOverUsages,
 				carryOverUsageFeatureIds,
 				customLineItems,
-				isFreeToPaidTransition,
+				disableProration,
 			}),
 		[
 			customerId,
@@ -256,6 +264,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			trialCardRequired,
 			planSchedule,
 			startDate,
+			endDate,
 			prorationBehavior,
 			redirectMode,
 			newBillingSubscription,
@@ -268,7 +277,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			carryOverUsages,
 			carryOverUsageFeatureIds,
 			customLineItems,
-			isFreeToPaidTransition,
+			disableProration,
 		],
 	);
 

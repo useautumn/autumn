@@ -6,6 +6,8 @@ const mockState = {
 	commands: [] as Record<string, unknown>[],
 	originalSend: null as null | SQSClient["send"],
 };
+const overrideQueueUrl =
+	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
 
 import { JobName } from "@/queue/JobName.js";
 import { getSqsClient } from "@/queue/initSqs.js";
@@ -17,7 +19,7 @@ describe("addTaskToQueue queue override", () => {
 
 	beforeEach(() => {
 		mockState.commands = [];
-		const sqsClient = getSqsClient();
+		const sqsClient = getSqsClient({ queueUrl: overrideQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			mockState.commands.push(command.input);
@@ -29,7 +31,7 @@ describe("addTaskToQueue queue override", () => {
 
 	afterEach(() => {
 		if (mockState.originalSend) {
-			const sqsClient = getSqsClient();
+			const sqsClient = getSqsClient({ queueUrl: overrideQueueUrl });
 			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
 		}
 		process.env.SQS_QUEUE_URL_V2 = originalSqsQueueUrl;
@@ -39,8 +41,7 @@ describe("addTaskToQueue queue override", () => {
 	test("uses the provided SQS queueUrl override", async () => {
 		await addTaskToQueue({
 			jobName: JobName.Track,
-			queueUrl:
-				"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo",
+			queueUrl: overrideQueueUrl,
 			messageGroupId: "org:sandbox:cus_123",
 			messageDeduplicationId: "idem_123",
 			payload: {
@@ -57,9 +58,7 @@ describe("addTaskToQueue queue override", () => {
 		});
 
 		expect(mockState.commands).toHaveLength(1);
-		expect(mockState.commands[0]?.QueueUrl).toBe(
-			"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo",
-		);
+		expect(mockState.commands[0]?.QueueUrl).toBe(overrideQueueUrl);
 		expect(mockState.commands[0]?.MessageGroupId).toBe("org:sandbox:cus_123");
 		expect(mockState.commands[0]?.MessageDeduplicationId).toBe("idem_123");
 	});

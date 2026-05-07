@@ -30,7 +30,7 @@ class TrackGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -69,7 +69,7 @@ class TrackLock(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -125,7 +125,7 @@ class TrackParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -147,8 +147,8 @@ class TrackResponseBody2TypedDict(TypedDict):
     r"""The ID of the entity, if entity-scoped tracking was performed."""
     event_name: NotRequired[str]
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
-    balances: NotRequired[Dict[str, BalanceTypedDict]]
-    r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
+    balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
+    r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
 
 class TrackResponseBody2(BaseModel):
@@ -169,8 +169,8 @@ class TrackResponseBody2(BaseModel):
     event_name: Optional[str] = None
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
 
-    balances: Optional[Dict[str, Balance]] = None
-    r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
+    balances: Optional[Dict[str, Nullable[Balance]]] = None
+    r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -181,7 +181,7 @@ class TrackResponseBody2(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -211,8 +211,8 @@ class TrackResponseBody1TypedDict(TypedDict):
     r"""The ID of the entity, if entity-scoped tracking was performed."""
     event_name: NotRequired[str]
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
-    balances: NotRequired[Dict[str, BalanceTypedDict]]
-    r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
+    balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
+    r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
 
 class TrackResponseBody1(BaseModel):
@@ -233,8 +233,8 @@ class TrackResponseBody1(BaseModel):
     event_name: Optional[str] = None
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
 
-    balances: Optional[Dict[str, Balance]] = None
-    r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
+    balances: Optional[Dict[str, Nullable[Balance]]] = None
+    r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -245,7 +245,7 @@ class TrackResponseBody1(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

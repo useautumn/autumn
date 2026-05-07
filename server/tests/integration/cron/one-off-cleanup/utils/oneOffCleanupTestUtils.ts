@@ -5,7 +5,21 @@ import {
 	type FullCustomer,
 } from "@autumn/shared";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
+
+type TrackParams = Parameters<AutumnInt["track"]>[0];
+
+/**
+ * Cleanup reads balances from Postgres, so setup tracks must write there
+ * directly instead of relying on async cache sync.
+ */
+export const trackUsageForCleanup = async (
+	autumnV1: Pick<AutumnInt, "track">,
+	params: TrackParams,
+) => {
+	await autumnV1.track(params, { skipCache: true });
+};
 
 /** Gets full customer including expired products. */
 export const getFullCustomerWithExpired = async (

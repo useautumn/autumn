@@ -539,6 +539,10 @@ export type CheckResponseBody2 = {
    */
   balance: Balance | null;
   /**
+   * Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems).
+   */
+  balances?: { [k: string]: Balance | null } | undefined;
+  /**
    * The flag associated with this check, if any.
    */
   flag: Flag2 | null;
@@ -1016,6 +1020,10 @@ export type CheckResponseBody1 = {
    * The customer's balance for this feature. Null if the customer has no balance for this feature.
    */
   balance: Balance | null;
+  /**
+   * Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems).
+   */
+  balances?: { [k: string]: Balance | null } | undefined;
   /**
    * The flag associated with this check, if any.
    */
@@ -1563,6 +1571,9 @@ export const CheckResponseBody2$inboundSchema: z.ZodMiniType<
     entity_id: z.optional(z.nullable(types.string())),
     required_balance: types.optional(types.number()),
     balance: types.nullable(Balance$inboundSchema),
+    balances: types.optional(
+      z.record(z.string(), types.nullable(Balance$inboundSchema)),
+    ),
     flag: types.nullable(z.lazy(() => Flag2$inboundSchema)),
     preview: types.optional(z.lazy(() => Preview2$inboundSchema)),
   }),
@@ -2048,6 +2059,9 @@ export const CheckResponseBody1$inboundSchema: z.ZodMiniType<
     entity_id: z.optional(z.nullable(types.string())),
     required_balance: types.optional(types.number()),
     balance: types.nullable(Balance$inboundSchema),
+    balances: types.optional(
+      z.record(z.string(), types.nullable(Balance$inboundSchema)),
+    ),
     flag: types.nullable(z.lazy(() => Flag1$inboundSchema)),
     preview: types.optional(z.lazy(() => Preview1$inboundSchema)),
   }),
