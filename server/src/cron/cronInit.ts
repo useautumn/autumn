@@ -13,6 +13,7 @@ import {
 import { stopBlueGreenSlotStorePolling } from "../queue/blueGreen/blueGreenSlotStore.js";
 import { runInvoiceCron } from "./invoiceCron/runInvoiceCron.js";
 import { runOneOffCleanup } from "./oneoffCron/runOneOffCleanup.js";
+import { runOneOffExpiry } from "./oneoffCron/runOneOffExpiry.js";
 import { runProductCron } from "./productCron/runProductCron.js";
 import { runResetCron } from "./resetCron/runResetCron.js";
 import type { CronContext } from "./utils/CronContext.js";
@@ -61,6 +62,7 @@ const main = async () => {
 		runResetCron({ ctx }),
 		runInvoiceCron({ ctx }),
 		runOneOffCleanup({ ctx }),
+		runOneOffExpiry({ ctx }),
 	]);
 };
 
