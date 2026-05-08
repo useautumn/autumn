@@ -29,6 +29,7 @@ import {
 	createEntityContract,
 	deleteEntityContract,
 	getEntityContract,
+	listEntitiesContract,
 	updateEntityContract,
 } from "./entitiesContract.js";
 import {
@@ -102,6 +103,7 @@ export const v2_1ContractRouter = oc.router({
 	// Entities
 	entitiesCreate: createEntityContract,
 	entitiesGet: getEntityContract,
+	entitiesList: listEntitiesContract,
 	entitiesUpdate: updateEntityContract,
 	entitiesDelete: deleteEntityContract,
 

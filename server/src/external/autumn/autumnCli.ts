@@ -33,6 +33,7 @@ import {
 	ErrCode,
 	type FinalizeLockParamsV0,
 	type LegacyVersion,
+	type ListEntitiesParams,
 	type OrgConfig,
 	type ProductItem,
 	type RestoreParamsV1,
@@ -659,6 +660,24 @@ export class AutumnInt {
 	};
 
 	entitiesV2 = {
+		list: async <TResponse = any>(
+			params?: Partial<ListEntitiesParams> & {
+				keepInternalFields?: boolean;
+			},
+		) => {
+			const { keepInternalFields, ...listParams } = params ?? {};
+			const headers: Record<string, string> = {};
+			if (keepInternalFields) {
+				headers["x-strip-internal"] = "false";
+			}
+
+			return (await this.post(
+				`/entities.list`,
+				listParams,
+				Object.keys(headers).length > 0 ? headers : undefined,
+			)) as TResponse;
+		},
+
 		create: async ({
 			customer_id,
 			entity_id,

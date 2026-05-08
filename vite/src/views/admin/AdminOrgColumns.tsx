@@ -16,12 +16,18 @@ export type AdminOrg = {
 		blockAll: boolean;
 		ruleCount: number;
 	};
+	redis_config: {
+		url: string;
+		migrationPercent: number;
+	} | null;
 };
 
 export const createAdminOrgColumns = ({
 	onManageRequestBlocks,
+	onManageRedis,
 }: {
 	onManageRequestBlocks: (org: AdminOrg) => void;
+	onManageRedis: (org: AdminOrg) => void;
 }): ColumnDef<AdminOrg, unknown>[] => [
 	{
 		id: "id",
@@ -111,6 +117,34 @@ export const createAdminOrgColumns = ({
 		},
 	},
 	{
+		id: "redisConfig",
+		header: "Redis",
+		accessorKey: "redis_config",
+		cell: ({ row }: { row: Row<AdminOrg> }) => {
+			const cfg = row.original.redis_config;
+			if (!cfg) return <Badge variant="muted">Shared V2</Badge>;
+			if (cfg.migrationPercent === 0) {
+				return (
+					<Badge className="bg-amber-50 text-amber-700 border-amber-200">
+						Configured (0%)
+					</Badge>
+				);
+			}
+			if (cfg.migrationPercent === 100) {
+				return (
+					<Badge className="bg-emerald-50 text-emerald-700 border-emerald-200">
+						100% routed
+					</Badge>
+				);
+			}
+			return (
+				<Badge className="bg-blue-50 text-blue-700 border-blue-200">
+					{cfg.migrationPercent}% routed
+				</Badge>
+			);
+		},
+	},
+	{
 		id: "impersonate",
 		header: "Actions",
 		enableSorting: false,
@@ -119,10 +153,10 @@ export const createAdminOrgColumns = ({
 			const users = row.original.users;
 			const firstNonAdminUser = users.find((user) => user.role !== "admin");
 
-			if (!firstNonAdminUser) {
-				return null;
-			}
-
+			// Org-level admin actions (Block, Redis) must remain reachable even when
+			// the org has only admin users — gating them on `firstNonAdminUser`
+			// would silently hide them. Only `ImpersonateButton` requires a
+			// non-admin user to target.
 			return (
 				<div onClick={(e) => e.stopPropagation()} className="flex gap-2">
 					<Button
@@ -132,7 +166,16 @@ export const createAdminOrgColumns = ({
 					>
 						Block
 					</Button>
-					<ImpersonateButton userId={firstNonAdminUser.id} />
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={() => onManageRedis(row.original)}
+					>
+						Redis
+					</Button>
+					{firstNonAdminUser && (
+						<ImpersonateButton userId={firstNonAdminUser.id} />
+					)}
 				</div>
 			);
 		},
