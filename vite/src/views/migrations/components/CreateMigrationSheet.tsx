@@ -1,5 +1,6 @@
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { Input } from "@/components/v2/inputs/Input";
@@ -10,19 +11,18 @@ import {
 } from "@/components/v2/sheets/SharedSheetComponents";
 import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
-import { getBackendErr } from "@/utils/genUtils";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
 
 function CreateMigrationSheet({
 	open: controlledOpen,
 	onOpenChange: controlledOnOpenChange,
-	onSuccess,
 }: {
 	open?: boolean;
 	onOpenChange?: (open: boolean) => void;
-	onSuccess?: (migrationId: string) => void;
 } = {}) {
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [id, setId] = useState("");
+	const navigate = useNavigate();
 
 	const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
 	const setOpen = controlledOnOpenChange || setInternalOpen;
@@ -39,7 +39,7 @@ function CreateMigrationSheet({
 			const created = await createMigration({ id: id.trim() });
 			toast.success("Migration created");
 			setOpen(false);
-			onSuccess?.(created.id);
+			navigateTo(`/migrations/${created.id}`, navigate);
 		} catch (error: unknown) {
 			toast.error(
 				getBackendErr(error as AxiosError, "Failed to create migration"),
