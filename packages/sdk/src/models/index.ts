@@ -31,6 +31,7 @@ export * from "./get-or-create-customer-op.js";
 export * from "./get-plan-op.js";
 export * from "./http-client-errors.js";
 export * from "./list-customers-op.js";
+export * from "./list-entities-op.js";
 export * from "./list-events-op.js";
 export * from "./list-features-op.js";
 export * from "./list-plans-op.js";

@@ -27,36 +27,38 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
+ * Lists entities across the organization with pagination and optional filters.
  *
- * Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
+ * Use this to page through entities globally, including filtering by plans inherited from parent customers or attached directly to entities.
  *
  * @example
  * ```typescript
- * // Schedule a transition from a trial plan to a paid plan
- * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778251788467,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779461388467,"plans":[{"planId":"pro_plan"}]}] });
+ * // List entities on a plan
+ * const response = await client.entities.list({ plans: [{"id":"pro_plan"}], limit: 10, offset: 0 });
  * ```
  *
- * @param customerId - The ID of the customer to create the schedule for.
- * @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
- * @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
- * @param successUrl - URL to redirect to after successful checkout. (optional)
- * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
- * @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
- * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits. (optional)
- * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
- * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
- * @param phases - Ordered phase definitions for the schedule.
+ * @example
+ * ```typescript
+ * // Search entities by ID or name
+ * const response = await client.entities.list({ search: "workspace" });
+ * ```
  *
- * @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.
+ * @param offset - Number of items to skip (optional)
+ * @param limit - Number of items to return. Default 10, max 1000. (optional)
+ * @param plans - Filter by plan ID and version. Returns entities with active subscriptions to this plan, including plans inherited from the parent customer. (optional)
+ * @param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
+ * @param search - Search entities by id or name. (optional)
+ * @param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+ *
+ * @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
  */
-export function billingCreateSchedule(
+export function entitiesList(
   client: AutumnCore,
-  request: models.CreateScheduleParams,
+  request?: models.ListEntitiesParams | undefined,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.CreateScheduleResponse,
+    models.ListEntitiesResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -76,12 +78,12 @@ export function billingCreateSchedule(
 
 async function $do(
   client: AutumnCore,
-  request: models.CreateScheduleParams,
+  request?: models.ListEntitiesParams | undefined,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.CreateScheduleResponse,
+      models.ListEntitiesResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -96,16 +98,19 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.CreateScheduleParams$outboundSchema, value),
+    (value) =>
+      z.parse(z.optional(models.ListEntitiesParams$outboundSchema), value),
     "Input validation failed",
   );
   if (!parsed.ok) {
     return [parsed, { status: "invalid" }];
   }
   const payload = parsed.value;
-  const body = encodeJSON("body", payload, { explode: true });
+  const body = payload === undefined
+    ? null
+    : encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/billing.create_schedule")();
+  const path = pathToFunc("/v1/entities.list")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -124,7 +129,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "createSchedule",
+    operationID: "listEntities",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -164,7 +169,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.CreateScheduleResponse,
+    models.ListEntitiesResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -174,7 +179,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.CreateScheduleResponse$inboundSchema),
+    M.json(200, models.ListEntitiesResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);
