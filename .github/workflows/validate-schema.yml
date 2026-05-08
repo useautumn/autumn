@@ -4,9 +4,15 @@ on:
   pull_request:
     branches:
       - main
+    paths:
+      - "shared/**"
+      - "server/**"
   push:
     branches:
       - main
+    paths:
+      - "shared/**"
+      - "server/**"
 
 jobs:
   validate-schema:
