@@ -98,17 +98,28 @@ export const handleListAdminOrgs = createRoute({
 			.where(inArray(member.organizationId, orgIds));
 
 		return c.json({
-			rows: orgs.slice(0, 20).map((org) => ({
-				...org,
-				users: memberships
-					.filter((membership) => membership.member.organizationId === org.id)
-					.map((membership) => membership.user),
-				requestBlockSummary: {
-					blockAll: requestBlockConfig.orgs[org.id]?.blockAll ?? false,
-					ruleCount:
-						requestBlockConfig.orgs[org.id]?.blockedEndpoints.length ?? 0,
-				},
-			})),
+			rows: orgs.slice(0, 20).map((org) => {
+				const { redis_config: rawRedisConfig, ...rest } = org;
+				return {
+					...rest,
+					// Redact encrypted connection string from admin list — UI only
+					// needs host + percent for the table column.
+					redis_config: rawRedisConfig
+						? {
+								url: rawRedisConfig.url,
+								migrationPercent: rawRedisConfig.migrationPercent,
+							}
+						: null,
+					users: memberships
+						.filter((membership) => membership.member.organizationId === org.id)
+						.map((membership) => membership.user),
+					requestBlockSummary: {
+						blockAll: requestBlockConfig.orgs[org.id]?.blockAll ?? false,
+						ruleCount:
+							requestBlockConfig.orgs[org.id]?.blockedEndpoints.length ?? 0,
+					},
+				};
+			}),
 			hasNextPage: orgs.length > 20,
 		});
 	},
