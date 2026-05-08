@@ -106,7 +106,7 @@ export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		},
 	});
 
-	ctx.logger.info(
+	ctx.logger.debug(
 		`${c.req.method} ${c.req.path} (${ctx.org?.slug}) [${ctx.id}]`,
 	);
 
