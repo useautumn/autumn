@@ -1,15 +1,20 @@
-import type { AutumnBillingPlan } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	FullCustomer,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { MigrateCustomerContext } from "./migrateCustomerContext.js";
 
 /**
- * Output of one processor: the updated AutumnBillingPlan plus the
- * migration context. Keep this minimal until operation processors need
- * richer projected state.
+ * Output of one processor: the updated AutumnBillingPlan plus lightweight
+ * metadata used by the ordered operation fold.
  */
 export type ProcessOperationResult = {
 	plan: AutumnBillingPlan;
-	migrationContext: MigrateCustomerContext;
+	projectedFullCustomer: FullCustomer;
+	matchedCustomerProducts: number;
+	billingContexts: UpdateSubscriptionBillingContext[];
 };
 
 /**
@@ -20,7 +25,8 @@ export type ProcessOperationResult = {
  */
 export type OperationProcessor<Op> = (args: {
 	ctx: AutumnContext;
-	migrationContext: MigrateCustomerContext;
 	op: Op;
+	context: MigrateCustomerContext;
 	plan: AutumnBillingPlan;
+	projectedFullCustomer: FullCustomer;
 }) => Promise<ProcessOperationResult>;

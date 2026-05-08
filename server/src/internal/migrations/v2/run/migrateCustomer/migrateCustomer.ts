@@ -8,13 +8,11 @@ import { setupMigrateCustomerContext } from "./setup/setupMigrateCustomerContext
 /**
  * Top-level per-customer migration runner.
  *
- *   1. Customer-level setup once (FullCustomer + bucket ops by Stripe sub).
- *   2. For each bucket, run a familiar one-sub-per-action pipeline:
- *      setup → process → evaluate → execute.
- *   3. Aggregate per-bucket results.
+ *   1. Customer-level setup once (FullCustomer + migration facts).
+ *   2. Fold ordered operations onto one AutumnBillingPlan.
+ *   3. Evaluate/execute the plan.
  *
- * `preview: true` short-circuits each bucket after evaluate — no DB or
- * Stripe writes. Bucket plans are returned for inspection.
+ * `preview: true` short-circuits after evaluate — no DB or Stripe writes.
  */
 export const migrateCustomer = async ({
 	ctx,
@@ -27,64 +25,37 @@ export const migrateCustomer = async ({
 	migration: Migration;
 	preview?: boolean;
 }) => {
-	const migrateCustomerContext = await setupMigrateCustomerContext({
+	const context = await setupMigrateCustomerContext({
 		ctx,
 		migration,
 		customerId,
 	});
 
-	const bucketResults = [];
+	const { plan: autumnPlan, billingContexts } = await processOperations({
+		ctx,
+		context,
+		plan: {
+			customerId: context.fullCustomer.internal_id,
+			insertCustomerProducts: [],
+		},
+	});
 
-	for (const bucket of migrateCustomerContext.buckets) {
-		const { plan: autumnPlan } = await processOperations({
-			ctx,
-			migrationContext: migrateCustomerContext,
-			bucket,
-			plan: {
-				customerId: migrateCustomerContext.fullCustomer.internal_id,
-				insertCustomerProducts: [],
-			},
-		});
+	const billingPlan = await evaluateMigrateCustomerStripe({
+		ctx,
+		context,
+		billingContexts,
+		autumnBillingPlan: autumnPlan,
+	});
 
-		const billingPlan = await evaluateMigrateCustomerStripe({
-			ctx,
-			migrationContext: migrateCustomerContext,
-			autumnBillingPlan: autumnPlan,
-		});
+	const mode =
+		Object.keys(billingPlan.stripe).length === 0 ? "no_changes" : "stripe";
 
-		const mode =
-			Object.keys(billingPlan.stripe).length === 0 ? "no_changes" : "stripe";
-
-		if (preview) {
-			bucketResults.push({
-				stripe_subscription_id: bucket.stripeSubscriptionId,
-				billing_plan: billingPlan,
-				matched_cusproducts: bucket.matches.length,
-				applied: false,
-				mode,
-			});
-			continue;
-		}
-
+	if (!preview) {
 		await executeMigrateCustomerPlan({
 			ctx,
-			migrationContext: migrateCustomerContext,
+			context,
 			billingPlan,
 			mode,
 		});
-
-		bucketResults.push({
-			stripe_subscription_id: bucket.stripeSubscriptionId,
-			billing_plan: billingPlan,
-			matched_cusproducts: bucket.matches.length,
-			applied: true,
-			mode,
-		});
 	}
-
-	return {
-		customer_id: customerId,
-		internal_customer_id: migrateCustomerContext.fullCustomer.internal_id,
-		buckets: bucketResults,
-	};
 };
