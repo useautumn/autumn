@@ -28,6 +28,9 @@ export const getRewardsByIdOrCode = async ({
 				),
 			),
 		),
+		with: {
+			entitlements: true,
+		},
 	});
 
 	return reward as Reward[];

@@ -20,5 +20,8 @@ export const getRewardsInIds = async ({
 			eq(rewards.org_id, orgId),
 			eq(rewards.env, env),
 		),
+		with: {
+			entitlements: true,
+		},
 	})) as Reward[];
 };

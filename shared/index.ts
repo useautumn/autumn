@@ -176,6 +176,7 @@ export * from "./models/rewardModels/referralModels/rewardRedemptionTable";
 export * from "./models/rewardModels/rewardModels/rewardEnums";
 // Reward Models
 export * from "./models/rewardModels/rewardModels/rewardModels";
+export * from "./models/rewardModels/rewardModels/rewardRelations";
 export * from "./models/rewardModels/rewardModels/rewardResponseModels";
 export * from "./models/rewardModels/rewardModels/rewardTable";
 export * from "./models/rewardModels/rewardProgramModels/rewardProgramEnums";
