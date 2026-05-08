@@ -33,7 +33,12 @@ export const runMigrationTask = task({
 
 		const migration = await migrationRepo.find({ ctx, id: migrationId });
 
-		const result = await runMigration({ ctx, migration, dry_run: dryRun });
+		const result = await runMigration({
+			ctx,
+			migration,
+			dry_run: dryRun,
+			migrationRunId: triggerCtx.run.id,
+		});
 
 		logger.info("run-migration: done", {
 			data: {

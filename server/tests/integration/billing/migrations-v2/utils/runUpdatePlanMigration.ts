@@ -28,7 +28,7 @@ const waitForMigrationResult = async ({
 	timeoutMs,
 	pollIntervalMs,
 }: {
-	waitFor: () => Promise<void>;
+	waitFor: () => Promise<unknown>;
 	timeoutMs: number;
 	pollIntervalMs: number;
 }) => {
@@ -71,7 +71,7 @@ export const runUpdatePlanMigration = async ({
 	filter: MigrationFilter;
 	operations: Operations;
 	runOnServer?: boolean;
-	waitFor?: () => Promise<void>;
+	waitFor?: () => Promise<unknown>;
 	timeoutMs?: number;
 	pollIntervalMs?: number;
 }) => {
@@ -108,6 +108,7 @@ export const runUpdatePlanMigration = async ({
 		ctx,
 		customerId,
 		migration: preparedMigration,
+		migrationRunId: `${migrationId}-local-run`,
 	});
 
 	return preparedMigration;

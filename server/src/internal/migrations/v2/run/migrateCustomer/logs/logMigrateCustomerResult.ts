@@ -16,7 +16,7 @@ const getMigrationCustomerExtras = ({
 }): Record<string, unknown> => {
 	const extras = ctx.extraLogs.migrationCustomer;
 	return extras && typeof extras === "object" && !Array.isArray(extras)
-		? extras
+		? (extras as Record<string, unknown>)
 		: {};
 };
 
