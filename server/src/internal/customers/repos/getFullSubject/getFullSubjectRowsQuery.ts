@@ -2,8 +2,8 @@ import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 
-const CUSTOMER_PRODUCT_LIMIT = 50;
-const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 30;
+const CUSTOMER_PRODUCT_LIMIT = 200;
+const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 200;
 
 const emptyEntityFragments = {
 	ctes: sql``,
