@@ -200,7 +200,7 @@ export function generateItemChanges({
 				: formatItemValue(updated);
 
 			changes.push({
-				id: `item-added-${featureId}`,
+				id: `item-added-${itemKey}`,
 				type: "item",
 				label: getFeatureName(updated),
 				icon: "item",
