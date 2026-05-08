@@ -4,13 +4,13 @@ import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { addExtrasToLogs } from "@/utils/logging/addContextToLogs";
 import { maskExtraLogs } from "@/utils/logging/maskExtraLogs.js";
 
-const HIGH_VOLUME_SUCCESS_ROUTES = new Set([
-	"/v1/balances.track",
-	"/v1/balances.check",
-	"/v1/check",
-	"/v1/track",
-	"/v1/customers.get_or_create",
-	"/v1/entities.get",
+const HIGH_VOLUME_SUCCESS_ROUTES = new Set<string>([
+	// "/v1/balances.track",
+	// "/v1/balances.check",
+	// "/v1/check",
+	// "/v1/track",
+	// "/v1/customers.get_or_create",
+	// "/v1/entities.get",
 ]);
 
 const SUCCESS_REQUEST_LOG_SAMPLE_RATE = Number.parseFloat(
