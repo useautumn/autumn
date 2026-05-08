@@ -1,0 +1,24 @@
+server/tests/integration/billing/migrations/migrate-states.test.ts
+  s_00f5b7f5ac659f::t_ca977128eb5189 12,26
+  s_00f5b7f5ac659f::t_56c4bb36d958ab 222-283,291-303
+  s_00f5b7f5ac659f::t_b73e878148bf1e 284-290
+server/src/internal/billing/v2/actions/migrate/migrate.ts
+  s_00f5b7f5ac659f::t_6707e0e949dca6 41-52
+  s_00f5b7f5ac659f::t_42bf82cca6f539 5,10-11,15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "42eb32b47ecb4cf40e401dac5f26fb9c8cb1a838",
+  "prompts": {},
+  "sessions": {
+    "s_00f5b7f5ac659f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1f8e6542effepkD1s95qs9sp0q",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
