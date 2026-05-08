@@ -257,5 +257,14 @@ export const executeStripeSubscriptionScheduleAction = async ({
 				subscriptionScheduleAction.stripeSubscriptionScheduleId,
 			);
 			return null;
+
+		case "cancel":
+			ctx.logger.debug(
+				`[executeStripeSubscriptionScheduleAction] Canceling schedule: ${subscriptionScheduleAction.stripeSubscriptionScheduleId}`,
+			);
+			await stripeCli.subscriptionSchedules.cancel(
+				subscriptionScheduleAction.stripeSubscriptionScheduleId,
+			);
+			return null;
 	}
 };

@@ -80,5 +80,5 @@ export const handleUpdateSubscriptionErrors = async ({
 	handleUpdateCheckoutErrors({ billingContext });
 
 	// 12. Stripe billing plan errors (validate Stripe resources)
-	handleStripeBillingPlanErrors({ billingContext });
+	handleStripeBillingPlanErrors({ billingContext, billingPlan });
 };
