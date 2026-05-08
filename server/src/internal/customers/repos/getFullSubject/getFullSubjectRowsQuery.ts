@@ -1,0 +1,462 @@
+import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
+import { type SQL, sql } from "drizzle-orm";
+import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
+
+const CUSTOMER_PRODUCT_LIMIT = 50;
+const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 30;
+
+const emptyEntityFragments = {
+	ctes: sql``,
+	productRefsUnion: sql``,
+	entitlementRefsUnion: sql``,
+	priceRefsUnion: sql``,
+	freeTrialRefsUnion: sql``,
+	selectColumns: sql``,
+};
+
+export const getFullSubjectRowsQuery = ({
+	leadingCtes,
+	inStatuses,
+	includeInvoices,
+	includeEntityAggregations,
+}: {
+	leadingCtes: SQL;
+	inStatuses: CusProductStatus[];
+	includeInvoices: boolean;
+	includeEntityAggregations: boolean;
+}) => {
+	const statusFilter =
+		inStatuses.length > 0
+			? sql`AND cp.status = ANY(ARRAY[${sql.join(
+					inStatuses.map((status) => sql`${status}`),
+					sql`, `,
+				)}])`
+			: sql``;
+
+	const relevantStatusFirst = sql`CASE WHEN cp.status = ANY(ARRAY[${sql.join(
+		RELEVANT_STATUSES.map((status) => sql`${status}`),
+		sql`, `,
+	)}]) THEN 0 ELSE 1 END`;
+
+	const hasCustomerPrices = sql`EXISTS (
+		SELECT 1
+		FROM customer_prices cpr_exists
+		WHERE cpr_exists.customer_product_id = cp.id
+	)`;
+
+	const entityFragments = includeEntityAggregations
+		? getEntityAggregateFragments({
+				statusFilter,
+			})
+		: emptyEntityFragments;
+
+	const invoicesCte = includeInvoices
+		? sql`,
+
+		customer_invoices AS (
+			SELECT *
+			FROM invoices i
+			WHERE i.internal_customer_id IN (
+				SELECT internal_customer_id
+				FROM subject_records
+			)
+			ORDER BY i.created_at DESC, i.id DESC
+			LIMIT 10
+		)`
+		: sql``;
+
+	const invoicesSelect = includeInvoices
+		? sql`,
+
+			COALESCE(
+				(
+					SELECT json_agg(row_to_json(ci) ORDER BY ci.created_at DESC, ci.id DESC)
+						FILTER (WHERE ci.id IS NOT NULL)
+					FROM customer_invoices ci
+					WHERE ci.internal_customer_id = sr.internal_customer_id
+				),
+				'[]'::json
+			) AS invoices`
+		: sql``;
+
+	return sql`
+		${leadingCtes}
+		,
+
+		subject_customer_records AS (
+			SELECT DISTINCT c.*
+			FROM customers c
+			JOIN subject_records sr
+				ON sr.internal_customer_id = c.internal_id
+		),
+
+		all_cus_products AS (
+			SELECT
+				cp_candidates.*,
+				ROW_NUMBER() OVER (
+					PARTITION BY cp_candidates.subject_key
+					ORDER BY
+						cp_candidates.subject_entity_priority ASC,
+						cp_candidates.status_priority ASC,
+						cp_candidates.has_customer_prices DESC,
+						cp_candidates.product_is_add_on ASC,
+						cp_candidates.created_at DESC
+				) AS subject_rank
+			FROM subject_records sr
+			JOIN LATERAL (
+				SELECT
+					sr.subject_key,
+					CASE
+						WHEN sr.internal_entity_id IS NOT NULL
+							AND cp.internal_entity_id = sr.internal_entity_id
+						THEN 0
+						ELSE 1
+					END AS subject_entity_priority,
+					${relevantStatusFirst} AS status_priority,
+					${hasCustomerPrices} AS has_customer_prices,
+					prod.is_add_on AS product_is_add_on,
+					cp.*
+				FROM customer_products cp
+				JOIN products prod
+					ON prod.internal_id = cp.internal_product_id
+				WHERE cp.internal_customer_id = sr.internal_customer_id
+					AND (
+						(sr.internal_entity_id IS NULL AND cp.internal_entity_id IS NULL)
+						OR
+						(sr.internal_entity_id IS NOT NULL AND (
+							cp.internal_entity_id IS NULL
+							OR cp.internal_entity_id = sr.internal_entity_id
+						))
+					)
+					${statusFilter}
+			) cp_candidates ON true
+		),
+
+		cus_products AS (
+			SELECT *
+			FROM all_cus_products
+			WHERE subject_rank <= ${CUSTOMER_PRODUCT_LIMIT}
+		),
+
+		cus_entitlements AS (
+			SELECT
+				cp.subject_key,
+				ce.*
+			FROM customer_entitlements ce
+			JOIN cus_products cp
+				ON cp.id = ce.customer_product_id
+		),
+
+		extra_cus_entitlements AS (
+			SELECT ce_ordered.*
+			FROM subject_records sr
+			JOIN LATERAL (
+				SELECT
+					sr.subject_key,
+					CASE
+						WHEN sr.internal_entity_id IS NOT NULL
+							AND ce.internal_entity_id = sr.internal_entity_id
+						THEN 0
+						ELSE 1
+					END AS subject_entity_priority,
+					ce.*
+				FROM customer_entitlements ce
+				WHERE ce.internal_customer_id = sr.internal_customer_id
+					AND ce.customer_product_id IS NULL
+					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+					AND (
+						ce.balance != 0
+						OR ce.unlimited IS TRUE
+						OR EXISTS (
+							SELECT 1
+							FROM entitlements e
+							JOIN features f ON f.internal_id = e.internal_feature_id
+							WHERE e.id = ce.entitlement_id
+								AND f.type = 'boolean'
+						)
+					)
+					AND (
+						(sr.internal_entity_id IS NULL AND ce.internal_entity_id IS NULL)
+						OR
+						(sr.internal_entity_id IS NOT NULL AND (
+							ce.internal_entity_id IS NULL
+							OR ce.internal_entity_id = sr.internal_entity_id
+						))
+					)
+				ORDER BY subject_entity_priority ASC, ce.id DESC
+				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
+			) ce_ordered ON true
+		),
+
+		all_cus_ent_ids AS (
+			SELECT subject_key, id FROM cus_entitlements
+			UNION ALL
+			SELECT subject_key, id FROM extra_cus_entitlements
+		),
+
+		cus_rollovers AS (
+			SELECT ro.*
+			FROM rollovers ro
+			WHERE ro.cus_ent_id IN (SELECT id FROM all_cus_ent_ids)
+				AND (ro.expires_at IS NULL OR ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+		),
+
+		cus_replaceables AS (
+			SELECT rep.*
+			FROM replaceables rep
+			WHERE rep.cus_ent_id IN (SELECT id FROM all_cus_ent_ids)
+		),
+
+		cus_prices AS (
+			SELECT
+				cp.subject_key,
+				cpr.*
+			FROM customer_prices cpr
+			JOIN cus_products cp
+				ON cp.id = cpr.customer_product_id
+		)
+
+		${invoicesCte}
+		${entityFragments.ctes}
+		,
+
+		distinct_products AS (
+			SELECT DISTINCT ON (src.subject_key, p.internal_id)
+				src.subject_key,
+				src.internal_customer_id,
+				p.*
+			FROM products p
+			JOIN (
+				SELECT
+					cp.subject_key,
+					cp.internal_customer_id,
+					cp.internal_product_id
+				FROM cus_products cp
+				${entityFragments.productRefsUnion}
+			) src ON p.internal_id = src.internal_product_id
+			ORDER BY src.subject_key, p.internal_id
+		),
+
+		relevant_entitlement_records AS (
+			SELECT DISTINCT
+				ce.subject_key,
+				ce.internal_customer_id,
+				ce.entitlement_id
+			FROM cus_entitlements ce
+			UNION
+			SELECT DISTINCT
+				ece.subject_key,
+				ece.internal_customer_id,
+				ece.entitlement_id
+			FROM extra_cus_entitlements ece
+			${entityFragments.entitlementRefsUnion}
+		),
+
+		distinct_entitlements AS (
+			SELECT
+				rer.subject_key,
+				rer.internal_customer_id,
+				e.*,
+				row_to_json(f) AS feature
+			FROM relevant_entitlement_records rer
+			JOIN entitlements e
+				ON e.id = rer.entitlement_id
+			JOIN features f
+				ON e.internal_feature_id = f.internal_id
+		),
+
+		distinct_prices AS (
+			SELECT DISTINCT ON (src.subject_key, p.id)
+				src.subject_key,
+				src.internal_customer_id,
+				p.*
+			FROM prices p
+			JOIN (
+				SELECT
+					cpr.subject_key,
+					cpr.price_id,
+					cp.internal_customer_id
+				FROM cus_prices cpr
+				JOIN cus_products cp ON cp.id = cpr.customer_product_id
+					AND cp.subject_key = cpr.subject_key
+				${entityFragments.priceRefsUnion}
+			) src ON p.id = src.price_id
+			ORDER BY src.subject_key, p.id
+		),
+
+		distinct_free_trials AS (
+			SELECT DISTINCT ON (src.subject_key, ft.id)
+				src.subject_key,
+				src.internal_customer_id,
+				ft.*
+			FROM free_trials ft
+			JOIN (
+				SELECT
+					cp.subject_key,
+					cp.free_trial_id,
+					cp.internal_customer_id
+				FROM cus_products cp
+				WHERE cp.free_trial_id IS NOT NULL
+				${entityFragments.freeTrialRefsUnion}
+			) src ON ft.id = src.free_trial_id
+			ORDER BY src.subject_key, ft.id
+		)
+
+		SELECT
+			row_to_json(scr) AS customer,
+
+			COALESCE(
+				(
+					SELECT json_agg(
+						(
+							row_to_json(cp)::jsonb
+							- 'subject_key'
+							- 'subject_entity_priority'
+							- 'status_priority'
+							- 'has_customer_prices'
+							- 'product_is_add_on'
+							- 'subject_rank'
+						)::json
+						ORDER BY
+							cp.subject_entity_priority ASC,
+							cp.status_priority ASC,
+							cp.has_customer_prices DESC,
+							cp.product_is_add_on ASC,
+							cp.created_at DESC
+					)
+					FROM cus_products cp
+					WHERE cp.subject_key = sr.subject_key
+				),
+				'[]'::json
+			) AS customer_products,
+
+			COALESCE(
+				(
+					SELECT json_agg((row_to_json(ce)::jsonb - 'subject_key')::json)
+					FROM cus_entitlements ce
+					WHERE ce.subject_key = sr.subject_key
+				),
+				'[]'::json
+			) AS customer_entitlements,
+
+			COALESCE(
+				(
+					SELECT json_agg((row_to_json(cpr)::jsonb - 'subject_key')::json)
+					FROM cus_prices cpr
+					WHERE cpr.subject_key = sr.subject_key
+				),
+				'[]'::json
+			) AS customer_prices,
+
+			COALESCE(
+				(
+					SELECT json_agg(
+						(
+							row_to_json(ece)::jsonb
+							- 'subject_key'
+							- 'subject_entity_priority'
+						)::json
+						ORDER BY ece.subject_entity_priority ASC, ece.id DESC
+					)
+					FROM extra_cus_entitlements ece
+					WHERE ece.subject_key = sr.subject_key
+				),
+				'[]'::json
+			) AS extra_customer_entitlements,
+
+			COALESCE(
+				(
+					SELECT json_agg(row_to_json(rep) ORDER BY rep.created_at ASC, rep.id ASC)
+					FROM cus_replaceables rep
+					WHERE rep.cus_ent_id IN (
+						SELECT ace.id
+						FROM all_cus_ent_ids ace
+						WHERE ace.subject_key = sr.subject_key
+					)
+				),
+				'[]'::json
+			) AS replaceables,
+
+			COALESCE(
+				(
+					SELECT json_agg(
+						row_to_json(ro)
+						ORDER BY ro.expires_at ASC NULLS LAST, ro.id ASC
+					)
+					FROM cus_rollovers ro
+					WHERE ro.cus_ent_id IN (
+						SELECT ace.id
+						FROM all_cus_ent_ids ace
+						WHERE ace.subject_key = sr.subject_key
+					)
+				),
+				'[]'::json
+			) AS rollovers,
+
+			COALESCE(
+				(
+					SELECT json_agg((row_to_json(p)::jsonb - 'internal_customer_id' - 'subject_key')::json)
+					FROM distinct_products p
+					WHERE p.subject_key = sr.subject_key
+				),
+				'[]'::json
+			) AS products,
+
+			COALESCE(
+				(
+					SELECT json_agg((row_to_json(ent)::jsonb - 'internal_customer_id' - 'subject_key')::json)
+					FROM distinct_entitlements ent
+					WHERE ent.subject_key = sr.subject_key
+				),
+				'[]'::json
+			) AS entitlements,
+
+			COALESCE(
+				(
+					SELECT json_agg((row_to_json(pr)::jsonb - 'internal_customer_id' - 'subject_key')::json)
+					FROM distinct_prices pr
+					WHERE pr.subject_key = sr.subject_key
+				),
+				'[]'::json
+			) AS prices,
+
+			COALESCE(
+				(
+					SELECT json_agg((row_to_json(ft)::jsonb - 'internal_customer_id' - 'subject_key')::json)
+					FROM distinct_free_trials ft
+					WHERE ft.subject_key = sr.subject_key
+				),
+				'[]'::json
+			) AS free_trials,
+
+			COALESCE(
+				(
+					SELECT json_agg(row_to_json(cs)) FILTER (WHERE cs.stripe_id IS NOT NULL)
+					FROM (
+						SELECT DISTINCT s.*
+						FROM cus_products cp
+						JOIN LATERAL unnest(cp.subscription_ids) AS cp_sub(stripe_id) ON true
+						JOIN subscriptions s
+							ON s.stripe_id = cp_sub.stripe_id
+						WHERE cp.subject_key = sr.subject_key
+					) cs
+				),
+				'[]'::json
+			) AS subscriptions
+
+			${invoicesSelect},
+
+			CASE
+				WHEN er.internal_id IS NULL THEN NULL
+				ELSE row_to_json(er)
+			END AS entity
+			${entityFragments.selectColumns}
+
+		FROM subject_records sr
+		JOIN subject_customer_records scr
+			ON scr.internal_id = sr.internal_customer_id
+		LEFT JOIN entities er
+			ON er.internal_id = sr.internal_entity_id
+		ORDER BY sr.subject_order
+	`;
+};
