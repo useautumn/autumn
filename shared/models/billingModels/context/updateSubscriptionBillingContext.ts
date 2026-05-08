@@ -2,6 +2,8 @@ import type {
 	CancelAction,
 	Entitlement,
 	FullCusProduct,
+	FullCustomerEntitlement,
+	FullCustomerPrice,
 	FullProduct,
 	Price,
 	StripeBillingContextOverride,
@@ -14,8 +16,23 @@ export enum UpdateSubscriptionIntent {
 	CancelAction = "cancel_action",
 	None = "none",
 }
+
+export type PatchContext = {
+	originalCustomerProduct: FullCusProduct;
+	mode: "new" | "existing";
+	finalCustomerProduct: FullCusProduct;
+	fullProduct: FullProduct;
+	insertCustomerPrices: FullCustomerPrice[];
+	insertCustomerEntitlements: FullCustomerEntitlement[];
+	deleteCustomerPrices: FullCustomerPrice[];
+	deleteCustomerEntitlements: FullCustomerEntitlement[];
+	customPrices: Price[];
+	customEntitlements: Entitlement[];
+};
+
 export interface UpdateSubscriptionBillingContext extends BillingContext {
 	customerProduct: FullCusProduct; // target customer product
+	patchContext?: PatchContext;
 	defaultProduct?: FullProduct; // for cancel flows
 	cancelAction?: CancelAction; // for cancel flows
 	recalculateBalances?: boolean;

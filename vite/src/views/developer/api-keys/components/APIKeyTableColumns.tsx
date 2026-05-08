@@ -1,4 +1,4 @@
-import type { ApiKey } from "@autumn/shared";
+import { type ApiKey, groupAndFormatScopes } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import {
 	CalendarIcon,
@@ -6,7 +6,7 @@ import {
 	TerminalIcon,
 	UserIcon,
 } from "lucide-react";
-import { ScopePreview } from "@/components/v2/scope-selector";
+import { Badge } from "@/components/v2/badges/Badge";
 import {
 	Tooltip,
 	TooltipContent,
@@ -118,10 +118,41 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 	{
 		header: "Scopes",
 		accessorKey: "scopes",
-		size: 200,
+		size: 150,
 		enableSorting: false,
 		cell: ({ row }: { row: Row<ApiKey> }) => {
-			return <ScopePreview scopes={row.original.scopes ?? null} />;
+			const scopes = row.original.scopes;
+			if (!scopes || scopes.length === 0) {
+				return <Badge variant="muted">Full access (unrestricted)</Badge>;
+			}
+
+			const grouped = groupAndFormatScopes(scopes);
+			if (grouped.length === 0) {
+				return <Badge variant="muted">Full access (unrestricted)</Badge>;
+			}
+
+			return (
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<span>
+							<Badge variant="muted">Scoped</Badge>
+						</span>
+					</TooltipTrigger>
+					<TooltipContent>
+						<div className="flex flex-col gap-1">
+							{grouped.map((g) => {
+								const label = g.actions.includes("write") ? "write" : "read";
+								return (
+									<div key={g.resource} className="flex items-center gap-2">
+										<span className="text-xs text-muted-foreground w-20 shrink-0">{g.resourceName.toLowerCase()}</span>
+										<span className="text-tiny-id bg-muted px-1.5 py-0.5 rounded-md">{label}</span>
+									</div>
+								);
+							})}
+						</div>
+					</TooltipContent>
+				</Tooltip>
+			);
 		},
 	},
 	{

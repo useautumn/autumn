@@ -228,12 +228,20 @@ export const getFeaturePriceItemDisplay = ({
 		? `${numberWithCommas(includedUsage)} ${includedFeatureName}`
 		: "";
 
-	// Build price string (e.g., "$0.01")
-	const priceStr =
-		formatTiers({ item, currency, amountFormatOptions }) ??
-		(notNullish(item.price)
+	const volumeFlatAmount = isVolumeFlatAmountItem(item);
+
+	// For volume flat-amount items, tier.amount is always 0 — the real price
+	// lives in tier.flat_amount, so we must pass useFlatAmount: true.
+	let priceStr: string;
+	if (volumeFlatAmount) {
+		priceStr = formatTiers({ item, currency, amountFormatOptions, useFlatAmount: true }) ?? "";
+	} else if (item.tiers) {
+		priceStr = formatTiers({ item, currency, amountFormatOptions }) ?? "";
+	} else {
+		priceStr = notNullish(item.price)
 			? formatAmount({ currency, amount: item.price, amountFormatOptions })
-			: "");
+			: "";
+	}
 
 	// Build billing unit string (e.g., "credit" or "100 credits")
 	const billingUnits = item.billing_units ?? 1;
@@ -260,25 +268,32 @@ export const getFeaturePriceItemDisplay = ({
 
 	// Format output based on what we have
 	if (hasIncludedUsage) {
-		if (isVolumeFlatAmountItem(item)) {
-			const flatPriceStr =
-				formatTiers({
-					item,
-					currency,
-					amountFormatOptions,
-					useFlatAmount: true,
-				}) ?? "";
+		if (volumeFlatAmount) {
 			const featureName = getFeatureName({ feature, units: 2 });
 			return {
 				primary_text: includedUsageStr,
 				secondary_text:
-					`then ${flatPriceStr} for ${featureName} ${intervalStr}`.trim(),
+					`then ${priceStr} for ${featureName} ${intervalStr}`.trim(),
 			};
 		}
 		return {
 			primary_text: includedUsageStr,
 			secondary_text:
 				`then ${priceStr} per ${perUnitStr} ${intervalStr}`.trim(),
+		};
+	}
+
+	if (volumeFlatAmount) {
+		const featureName = getFeatureName({ feature, units: 2 });
+		if (showInterval) {
+			return {
+				primary_text: priceStr,
+				secondary_text: `for ${featureName} ${intervalStr}`.trim(),
+			};
+		}
+		return {
+			primary_text: `${priceStr} for ${featureName}`.trim(),
+			secondary_text: undefined,
 		};
 	}
 

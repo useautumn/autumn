@@ -72,7 +72,7 @@ export type SetupPaymentBasePrice = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const SetupPaymentResetInterval = {
+export const SetupPaymentItemResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -86,38 +86,38 @@ export const SetupPaymentResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type SetupPaymentResetInterval = ClosedEnum<
-  typeof SetupPaymentResetInterval
+export type SetupPaymentItemResetInterval = ClosedEnum<
+  typeof SetupPaymentItemResetInterval
 >;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
  */
-export type SetupPaymentReset = {
+export type SetupPaymentItemReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: SetupPaymentResetInterval;
+  interval: SetupPaymentItemResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type SetupPaymentTo = number | string;
+export type SetupPaymentItemTo = number | string;
 
-export type SetupPaymentTier = {
+export type SetupPaymentItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
 };
 
-export const SetupPaymentTierBehavior = {
+export const SetupPaymentItemTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type SetupPaymentTierBehavior = ClosedEnum<
-  typeof SetupPaymentTierBehavior
+export type SetupPaymentItemTierBehavior = ClosedEnum<
+  typeof SetupPaymentItemTierBehavior
 >;
 
 /**
@@ -141,21 +141,21 @@ export type SetupPaymentItemPriceInterval = ClosedEnum<
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const SetupPaymentBillingMethod = {
+export const SetupPaymentItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type SetupPaymentBillingMethod = ClosedEnum<
-  typeof SetupPaymentBillingMethod
+export type SetupPaymentItemBillingMethod = ClosedEnum<
+  typeof SetupPaymentItemBillingMethod
 >;
 
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type SetupPaymentPrice = {
+export type SetupPaymentItemPrice = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -163,8 +163,8 @@ export type SetupPaymentPrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<SetupPaymentTier> | undefined;
-  tierBehavior?: SetupPaymentTierBehavior | undefined;
+  tiers?: Array<SetupPaymentItemTier> | undefined;
+  tierBehavior?: SetupPaymentItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -180,7 +180,7 @@ export type SetupPaymentPrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: SetupPaymentBillingMethod;
+  billingMethod: SetupPaymentItemBillingMethod;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
    */
@@ -190,7 +190,7 @@ export type SetupPaymentPrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const SetupPaymentOnIncrease = {
+export const SetupPaymentItemOnIncrease = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -199,12 +199,14 @@ export const SetupPaymentOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type SetupPaymentOnIncrease = ClosedEnum<typeof SetupPaymentOnIncrease>;
+export type SetupPaymentItemOnIncrease = ClosedEnum<
+  typeof SetupPaymentItemOnIncrease
+>;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const SetupPaymentOnDecrease = {
+export const SetupPaymentItemOnDecrease = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -214,40 +216,42 @@ export const SetupPaymentOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type SetupPaymentOnDecrease = ClosedEnum<typeof SetupPaymentOnDecrease>;
+export type SetupPaymentItemOnDecrease = ClosedEnum<
+  typeof SetupPaymentItemOnDecrease
+>;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type SetupPaymentProration = {
+export type SetupPaymentItemProration = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: SetupPaymentOnIncrease;
+  onIncrease: SetupPaymentItemOnIncrease;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: SetupPaymentOnDecrease;
+  onDecrease: SetupPaymentItemOnDecrease;
 };
 
 /**
  * When rolled over units expire.
  */
-export const SetupPaymentExpiryDurationType = {
+export const SetupPaymentItemExpiryDurationType = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type SetupPaymentExpiryDurationType = ClosedEnum<
-  typeof SetupPaymentExpiryDurationType
+export type SetupPaymentItemExpiryDurationType = ClosedEnum<
+  typeof SetupPaymentItemExpiryDurationType
 >;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
  */
-export type SetupPaymentRollover = {
+export type SetupPaymentItemRollover = {
   /**
    * Max rollover units. Omit for unlimited rollover.
    */
@@ -259,7 +263,7 @@ export type SetupPaymentRollover = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: SetupPaymentExpiryDurationType;
+  expiryDurationType: SetupPaymentItemExpiryDurationType;
   /**
    * Number of periods before expiry.
    */
@@ -269,7 +273,7 @@ export type SetupPaymentRollover = {
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type SetupPaymentPlanItem = {
+export type SetupPaymentItemPlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -285,19 +289,304 @@ export type SetupPaymentPlanItem = {
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
-  reset?: SetupPaymentReset | undefined;
+  reset?: SetupPaymentItemReset | undefined;
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: SetupPaymentPrice | undefined;
+  price?: SetupPaymentItemPrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: SetupPaymentProration | undefined;
+  proration?: SetupPaymentItemProration | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
-  rollover?: SetupPaymentRollover | undefined;
+  rollover?: SetupPaymentItemRollover | undefined;
+};
+
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export const SetupPaymentAddItemResetInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export type SetupPaymentAddItemResetInterval = ClosedEnum<
+  typeof SetupPaymentAddItemResetInterval
+>;
+
+/**
+ * Reset configuration for consumable features. Omit for non-consumable features like seats.
+ */
+export type SetupPaymentAddItemReset = {
+  /**
+   * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+   */
+  interval: SetupPaymentAddItemResetInterval;
+  /**
+   * Number of intervals between resets. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+};
+
+export type SetupPaymentAddItemTo = number | string;
+
+export type SetupPaymentAddItemTier = {
+  to: number | string;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
+};
+
+export const SetupPaymentAddItemTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type SetupPaymentAddItemTierBehavior = ClosedEnum<
+  typeof SetupPaymentAddItemTierBehavior
+>;
+
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export const SetupPaymentAddItemPriceInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export type SetupPaymentAddItemPriceInterval = ClosedEnum<
+  typeof SetupPaymentAddItemPriceInterval
+>;
+
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export const SetupPaymentAddItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export type SetupPaymentAddItemBillingMethod = ClosedEnum<
+  typeof SetupPaymentAddItemBillingMethod
+>;
+
+/**
+ * Pricing for usage beyond included units. Omit for free features.
+ */
+export type SetupPaymentAddItemPrice = {
+  /**
+   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+   */
+  amount?: number | undefined;
+  /**
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
+   */
+  tiers?: Array<SetupPaymentAddItemTier> | undefined;
+  tierBehavior?: SetupPaymentAddItemTierBehavior | undefined;
+  /**
+   * Billing interval. For consumable features, should match reset.interval.
+   */
+  interval: SetupPaymentAddItemPriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+   */
+  billingUnits?: number | undefined;
+  /**
+   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+   */
+  billingMethod: SetupPaymentAddItemBillingMethod;
+  /**
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   */
+  maxPurchase?: number | undefined;
+};
+
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export const SetupPaymentAddItemOnIncrease = {
+  BillImmediately: "bill_immediately",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  BillNextCycle: "bill_next_cycle",
+} as const;
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export type SetupPaymentAddItemOnIncrease = ClosedEnum<
+  typeof SetupPaymentAddItemOnIncrease
+>;
+
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export const SetupPaymentAddItemOnDecrease = {
+  Prorate: "prorate",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  None: "none",
+  NoProrations: "no_prorations",
+} as const;
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export type SetupPaymentAddItemOnDecrease = ClosedEnum<
+  typeof SetupPaymentAddItemOnDecrease
+>;
+
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
+export type SetupPaymentAddItemProration = {
+  /**
+   * Billing behavior when quantity increases mid-cycle.
+   */
+  onIncrease: SetupPaymentAddItemOnIncrease;
+  /**
+   * Credit behavior when quantity decreases mid-cycle.
+   */
+  onDecrease: SetupPaymentAddItemOnDecrease;
+};
+
+/**
+ * When rolled over units expire.
+ */
+export const SetupPaymentAddItemExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type SetupPaymentAddItemExpiryDurationType = ClosedEnum<
+  typeof SetupPaymentAddItemExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type SetupPaymentAddItemRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: SetupPaymentAddItemExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
+
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type SetupPaymentAddItemPlanItem = {
+  /**
+   * The ID of the feature to configure.
+   */
+  featureId: string;
+  /**
+   * Number of free units included. Balance resets to this each interval for consumable features.
+   */
+  included?: number | undefined;
+  /**
+   * If true, customer has unlimited access to this feature.
+   */
+  unlimited?: boolean | undefined;
+  /**
+   * Reset configuration for consumable features. Omit for non-consumable features like seats.
+   */
+  reset?: SetupPaymentAddItemReset | undefined;
+  /**
+   * Pricing for usage beyond included units. Omit for free features.
+   */
+  price?: SetupPaymentAddItemPrice | undefined;
+  /**
+   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+   */
+  proration?: SetupPaymentAddItemProration | undefined;
+  /**
+   * Rollover config for unused units. If set, unused included units carry over.
+   */
+  rollover?: SetupPaymentAddItemRollover | undefined;
+};
+
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export const SetupPaymentRemoveItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export type SetupPaymentRemoveItemBillingMethod = ClosedEnum<
+  typeof SetupPaymentRemoveItemBillingMethod
+>;
+
+/**
+ * Match items with this interval.
+ */
+export const SetupPaymentRemoveItemInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Match items with this interval.
+ */
+export type SetupPaymentRemoveItemInterval = ClosedEnum<
+  typeof SetupPaymentRemoveItemInterval
+>;
+
+/**
+ * Filter for matching plan items. All provided fields must match (AND).
+ */
+export type SetupPaymentPlanItemFilter = {
+  /**
+   * Match items linked to this feature.
+   */
+  featureId?: string | undefined;
+  /**
+   * Match items with this billing method (prepaid or usage_based).
+   */
+  billingMethod?: SetupPaymentRemoveItemBillingMethod | undefined;
+  /**
+   * Match items with this interval.
+   */
+  interval?: SetupPaymentRemoveItemInterval | undefined;
 };
 
 /**
@@ -342,9 +631,17 @@ export type SetupPaymentCustomize = {
    */
   price?: SetupPaymentBasePrice | null | undefined;
   /**
-   * Override the items in the plan.
+   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items.
    */
-  items?: Array<SetupPaymentPlanItem> | undefined;
+  items?: Array<SetupPaymentItemPlanItem> | undefined;
+  /**
+   * Items to add to the plan.
+   */
+  addItems?: Array<SetupPaymentAddItemPlanItem> | undefined;
+  /**
+   * Filters selecting items to remove from the plan.
+   */
+  removeItems?: Array<SetupPaymentPlanItemFilter> | undefined;
   /**
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
@@ -463,6 +760,14 @@ export type SetupPaymentParams = {
    * Reset the billing cycle anchor immediately with 'now'.
    */
   billingCycleAnchor?: "now" | undefined;
+  /**
+   * Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+   */
+  startsAt?: number | undefined;
+  /**
+   * Unix timestamp in milliseconds for when the attached plan should end.
+   */
+  endsAt?: number | undefined;
   /**
    * Additional parameters to pass into the creation of the Stripe checkout session.
    */
@@ -587,23 +892,23 @@ export function setupPaymentBasePriceToJSON(
 }
 
 /** @internal */
-export const SetupPaymentResetInterval$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentResetInterval
-> = z.enum(SetupPaymentResetInterval);
+export const SetupPaymentItemResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentItemResetInterval
+> = z.enum(SetupPaymentItemResetInterval);
 
 /** @internal */
-export type SetupPaymentReset$Outbound = {
+export type SetupPaymentItemReset$Outbound = {
   interval: string;
   interval_count?: number | undefined;
 };
 
 /** @internal */
-export const SetupPaymentReset$outboundSchema: z.ZodMiniType<
-  SetupPaymentReset$Outbound,
-  SetupPaymentReset
+export const SetupPaymentItemReset$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemReset$Outbound,
+  SetupPaymentItemReset
 > = z.pipe(
   z.object({
-    interval: SetupPaymentResetInterval$outboundSchema,
+    interval: SetupPaymentItemResetInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -613,38 +918,42 @@ export const SetupPaymentReset$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function setupPaymentResetToJSON(
-  setupPaymentReset: SetupPaymentReset,
+export function setupPaymentItemResetToJSON(
+  setupPaymentItemReset: SetupPaymentItemReset,
 ): string {
   return JSON.stringify(
-    SetupPaymentReset$outboundSchema.parse(setupPaymentReset),
+    SetupPaymentItemReset$outboundSchema.parse(setupPaymentItemReset),
   );
 }
 
 /** @internal */
-export type SetupPaymentTo$Outbound = number | string;
+export type SetupPaymentItemTo$Outbound = number | string;
 
 /** @internal */
-export const SetupPaymentTo$outboundSchema: z.ZodMiniType<
-  SetupPaymentTo$Outbound,
-  SetupPaymentTo
+export const SetupPaymentItemTo$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemTo$Outbound,
+  SetupPaymentItemTo
 > = smartUnion([z.number(), z.string()]);
 
-export function setupPaymentToToJSON(setupPaymentTo: SetupPaymentTo): string {
-  return JSON.stringify(SetupPaymentTo$outboundSchema.parse(setupPaymentTo));
+export function setupPaymentItemToToJSON(
+  setupPaymentItemTo: SetupPaymentItemTo,
+): string {
+  return JSON.stringify(
+    SetupPaymentItemTo$outboundSchema.parse(setupPaymentItemTo),
+  );
 }
 
 /** @internal */
-export type SetupPaymentTier$Outbound = {
+export type SetupPaymentItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
 };
 
 /** @internal */
-export const SetupPaymentTier$outboundSchema: z.ZodMiniType<
-  SetupPaymentTier$Outbound,
-  SetupPaymentTier
+export const SetupPaymentItemTier$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemTier$Outbound,
+  SetupPaymentItemTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -658,18 +967,18 @@ export const SetupPaymentTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function setupPaymentTierToJSON(
-  setupPaymentTier: SetupPaymentTier,
+export function setupPaymentItemTierToJSON(
+  setupPaymentItemTier: SetupPaymentItemTier,
 ): string {
   return JSON.stringify(
-    SetupPaymentTier$outboundSchema.parse(setupPaymentTier),
+    SetupPaymentItemTier$outboundSchema.parse(setupPaymentItemTier),
   );
 }
 
 /** @internal */
-export const SetupPaymentTierBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentTierBehavior
-> = z.enum(SetupPaymentTierBehavior);
+export const SetupPaymentItemTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentItemTierBehavior
+> = z.enum(SetupPaymentItemTierBehavior);
 
 /** @internal */
 export const SetupPaymentItemPriceInterval$outboundSchema: z.ZodMiniEnum<
@@ -677,14 +986,14 @@ export const SetupPaymentItemPriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(SetupPaymentItemPriceInterval);
 
 /** @internal */
-export const SetupPaymentBillingMethod$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentBillingMethod
-> = z.enum(SetupPaymentBillingMethod);
+export const SetupPaymentItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentItemBillingMethod
+> = z.enum(SetupPaymentItemBillingMethod);
 
 /** @internal */
-export type SetupPaymentPrice$Outbound = {
+export type SetupPaymentItemPrice$Outbound = {
   amount?: number | undefined;
-  tiers?: Array<SetupPaymentTier$Outbound> | undefined;
+  tiers?: Array<SetupPaymentItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -694,18 +1003,20 @@ export type SetupPaymentPrice$Outbound = {
 };
 
 /** @internal */
-export const SetupPaymentPrice$outboundSchema: z.ZodMiniType<
-  SetupPaymentPrice$Outbound,
-  SetupPaymentPrice
+export const SetupPaymentItemPrice$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemPrice$Outbound,
+  SetupPaymentItemPrice
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(z.array(z.lazy(() => SetupPaymentTier$outboundSchema))),
-    tierBehavior: z.optional(SetupPaymentTierBehavior$outboundSchema),
+    tiers: z.optional(
+      z.array(z.lazy(() => SetupPaymentItemTier$outboundSchema)),
+    ),
+    tierBehavior: z.optional(SetupPaymentItemTierBehavior$outboundSchema),
     interval: SetupPaymentItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
-    billingMethod: SetupPaymentBillingMethod$outboundSchema,
+    billingMethod: SetupPaymentItemBillingMethod$outboundSchema,
     maxPurchase: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -719,38 +1030,38 @@ export const SetupPaymentPrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function setupPaymentPriceToJSON(
-  setupPaymentPrice: SetupPaymentPrice,
+export function setupPaymentItemPriceToJSON(
+  setupPaymentItemPrice: SetupPaymentItemPrice,
 ): string {
   return JSON.stringify(
-    SetupPaymentPrice$outboundSchema.parse(setupPaymentPrice),
+    SetupPaymentItemPrice$outboundSchema.parse(setupPaymentItemPrice),
   );
 }
 
 /** @internal */
-export const SetupPaymentOnIncrease$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentOnIncrease
-> = z.enum(SetupPaymentOnIncrease);
+export const SetupPaymentItemOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentItemOnIncrease
+> = z.enum(SetupPaymentItemOnIncrease);
 
 /** @internal */
-export const SetupPaymentOnDecrease$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentOnDecrease
-> = z.enum(SetupPaymentOnDecrease);
+export const SetupPaymentItemOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentItemOnDecrease
+> = z.enum(SetupPaymentItemOnDecrease);
 
 /** @internal */
-export type SetupPaymentProration$Outbound = {
+export type SetupPaymentItemProration$Outbound = {
   on_increase: string;
   on_decrease: string;
 };
 
 /** @internal */
-export const SetupPaymentProration$outboundSchema: z.ZodMiniType<
-  SetupPaymentProration$Outbound,
-  SetupPaymentProration
+export const SetupPaymentItemProration$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemProration$Outbound,
+  SetupPaymentItemProration
 > = z.pipe(
   z.object({
-    onIncrease: SetupPaymentOnIncrease$outboundSchema,
-    onDecrease: SetupPaymentOnDecrease$outboundSchema,
+    onIncrease: SetupPaymentItemOnIncrease$outboundSchema,
+    onDecrease: SetupPaymentItemOnDecrease$outboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -760,21 +1071,21 @@ export const SetupPaymentProration$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function setupPaymentProrationToJSON(
-  setupPaymentProration: SetupPaymentProration,
+export function setupPaymentItemProrationToJSON(
+  setupPaymentItemProration: SetupPaymentItemProration,
 ): string {
   return JSON.stringify(
-    SetupPaymentProration$outboundSchema.parse(setupPaymentProration),
+    SetupPaymentItemProration$outboundSchema.parse(setupPaymentItemProration),
   );
 }
 
 /** @internal */
-export const SetupPaymentExpiryDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentExpiryDurationType
-> = z.enum(SetupPaymentExpiryDurationType);
+export const SetupPaymentItemExpiryDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentItemExpiryDurationType
+> = z.enum(SetupPaymentItemExpiryDurationType);
 
 /** @internal */
-export type SetupPaymentRollover$Outbound = {
+export type SetupPaymentItemRollover$Outbound = {
   max?: number | undefined;
   max_percentage?: number | undefined;
   expiry_duration_type: string;
@@ -782,14 +1093,14 @@ export type SetupPaymentRollover$Outbound = {
 };
 
 /** @internal */
-export const SetupPaymentRollover$outboundSchema: z.ZodMiniType<
-  SetupPaymentRollover$Outbound,
-  SetupPaymentRollover
+export const SetupPaymentItemRollover$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemRollover$Outbound,
+  SetupPaymentItemRollover
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
     maxPercentage: z.optional(z.number()),
-    expiryDurationType: SetupPaymentExpiryDurationType$outboundSchema,
+    expiryDurationType: SetupPaymentItemExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -801,38 +1112,40 @@ export const SetupPaymentRollover$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function setupPaymentRolloverToJSON(
-  setupPaymentRollover: SetupPaymentRollover,
+export function setupPaymentItemRolloverToJSON(
+  setupPaymentItemRollover: SetupPaymentItemRollover,
 ): string {
   return JSON.stringify(
-    SetupPaymentRollover$outboundSchema.parse(setupPaymentRollover),
+    SetupPaymentItemRollover$outboundSchema.parse(setupPaymentItemRollover),
   );
 }
 
 /** @internal */
-export type SetupPaymentPlanItem$Outbound = {
+export type SetupPaymentItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
-  reset?: SetupPaymentReset$Outbound | undefined;
-  price?: SetupPaymentPrice$Outbound | undefined;
-  proration?: SetupPaymentProration$Outbound | undefined;
-  rollover?: SetupPaymentRollover$Outbound | undefined;
+  reset?: SetupPaymentItemReset$Outbound | undefined;
+  price?: SetupPaymentItemPrice$Outbound | undefined;
+  proration?: SetupPaymentItemProration$Outbound | undefined;
+  rollover?: SetupPaymentItemRollover$Outbound | undefined;
 };
 
 /** @internal */
-export const SetupPaymentPlanItem$outboundSchema: z.ZodMiniType<
-  SetupPaymentPlanItem$Outbound,
-  SetupPaymentPlanItem
+export const SetupPaymentItemPlanItem$outboundSchema: z.ZodMiniType<
+  SetupPaymentItemPlanItem$Outbound,
+  SetupPaymentItemPlanItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
-    reset: z.optional(z.lazy(() => SetupPaymentReset$outboundSchema)),
-    price: z.optional(z.lazy(() => SetupPaymentPrice$outboundSchema)),
-    proration: z.optional(z.lazy(() => SetupPaymentProration$outboundSchema)),
-    rollover: z.optional(z.lazy(() => SetupPaymentRollover$outboundSchema)),
+    reset: z.optional(z.lazy(() => SetupPaymentItemReset$outboundSchema)),
+    price: z.optional(z.lazy(() => SetupPaymentItemPrice$outboundSchema)),
+    proration: z.optional(
+      z.lazy(() => SetupPaymentItemProration$outboundSchema),
+    ),
+    rollover: z.optional(z.lazy(() => SetupPaymentItemRollover$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -841,11 +1154,336 @@ export const SetupPaymentPlanItem$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function setupPaymentPlanItemToJSON(
-  setupPaymentPlanItem: SetupPaymentPlanItem,
+export function setupPaymentItemPlanItemToJSON(
+  setupPaymentItemPlanItem: SetupPaymentItemPlanItem,
 ): string {
   return JSON.stringify(
-    SetupPaymentPlanItem$outboundSchema.parse(setupPaymentPlanItem),
+    SetupPaymentItemPlanItem$outboundSchema.parse(setupPaymentItemPlanItem),
+  );
+}
+
+/** @internal */
+export const SetupPaymentAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentAddItemResetInterval
+> = z.enum(SetupPaymentAddItemResetInterval);
+
+/** @internal */
+export type SetupPaymentAddItemReset$Outbound = {
+  interval: string;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemReset$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemReset$Outbound,
+  SetupPaymentAddItemReset
+> = z.pipe(
+  z.object({
+    interval: SetupPaymentAddItemResetInterval$outboundSchema,
+    intervalCount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function setupPaymentAddItemResetToJSON(
+  setupPaymentAddItemReset: SetupPaymentAddItemReset,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemReset$outboundSchema.parse(setupPaymentAddItemReset),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemTo$Outbound = number | string;
+
+/** @internal */
+export const SetupPaymentAddItemTo$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemTo$Outbound,
+  SetupPaymentAddItemTo
+> = smartUnion([z.number(), z.string()]);
+
+export function setupPaymentAddItemToToJSON(
+  setupPaymentAddItemTo: SetupPaymentAddItemTo,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemTo$outboundSchema.parse(setupPaymentAddItemTo),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemTier$Outbound = {
+  to: number | string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemTier$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemTier$Outbound,
+  SetupPaymentAddItemTier
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
+
+export function setupPaymentAddItemTierToJSON(
+  setupPaymentAddItemTier: SetupPaymentAddItemTier,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemTier$outboundSchema.parse(setupPaymentAddItemTier),
+  );
+}
+
+/** @internal */
+export const SetupPaymentAddItemTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentAddItemTierBehavior
+> = z.enum(SetupPaymentAddItemTierBehavior);
+
+/** @internal */
+export const SetupPaymentAddItemPriceInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentAddItemPriceInterval
+> = z.enum(SetupPaymentAddItemPriceInterval);
+
+/** @internal */
+export const SetupPaymentAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentAddItemBillingMethod
+> = z.enum(SetupPaymentAddItemBillingMethod);
+
+/** @internal */
+export type SetupPaymentAddItemPrice$Outbound = {
+  amount?: number | undefined;
+  tiers?: Array<SetupPaymentAddItemTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
+  interval: string;
+  interval_count: number;
+  billing_units: number;
+  billing_method: string;
+  max_purchase?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemPrice$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemPrice$Outbound,
+  SetupPaymentAddItemPrice
+> = z.pipe(
+  z.object({
+    amount: z.optional(z.number()),
+    tiers: z.optional(
+      z.array(z.lazy(() => SetupPaymentAddItemTier$outboundSchema)),
+    ),
+    tierBehavior: z.optional(SetupPaymentAddItemTierBehavior$outboundSchema),
+    interval: SetupPaymentAddItemPriceInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    billingUnits: z._default(z.number(), 1),
+    billingMethod: SetupPaymentAddItemBillingMethod$outboundSchema,
+    maxPurchase: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+      intervalCount: "interval_count",
+      billingUnits: "billing_units",
+      billingMethod: "billing_method",
+      maxPurchase: "max_purchase",
+    });
+  }),
+);
+
+export function setupPaymentAddItemPriceToJSON(
+  setupPaymentAddItemPrice: SetupPaymentAddItemPrice,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemPrice$outboundSchema.parse(setupPaymentAddItemPrice),
+  );
+}
+
+/** @internal */
+export const SetupPaymentAddItemOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentAddItemOnIncrease
+> = z.enum(SetupPaymentAddItemOnIncrease);
+
+/** @internal */
+export const SetupPaymentAddItemOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentAddItemOnDecrease
+> = z.enum(SetupPaymentAddItemOnDecrease);
+
+/** @internal */
+export type SetupPaymentAddItemProration$Outbound = {
+  on_increase: string;
+  on_decrease: string;
+};
+
+/** @internal */
+export const SetupPaymentAddItemProration$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemProration$Outbound,
+  SetupPaymentAddItemProration
+> = z.pipe(
+  z.object({
+    onIncrease: SetupPaymentAddItemOnIncrease$outboundSchema,
+    onDecrease: SetupPaymentAddItemOnDecrease$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      onIncrease: "on_increase",
+      onDecrease: "on_decrease",
+    });
+  }),
+);
+
+export function setupPaymentAddItemProrationToJSON(
+  setupPaymentAddItemProration: SetupPaymentAddItemProration,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemProration$outboundSchema.parse(
+      setupPaymentAddItemProration,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentAddItemExpiryDurationType$outboundSchema:
+  z.ZodMiniEnum<typeof SetupPaymentAddItemExpiryDurationType> = z.enum(
+    SetupPaymentAddItemExpiryDurationType,
+  );
+
+/** @internal */
+export type SetupPaymentAddItemRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemRollover$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemRollover$Outbound,
+  SetupPaymentAddItemRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
+    expiryDurationType: SetupPaymentAddItemExpiryDurationType$outboundSchema,
+    expiryDurationLength: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+      expiryDurationType: "expiry_duration_type",
+      expiryDurationLength: "expiry_duration_length",
+    });
+  }),
+);
+
+export function setupPaymentAddItemRolloverToJSON(
+  setupPaymentAddItemRollover: SetupPaymentAddItemRollover,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemRollover$outboundSchema.parse(
+      setupPaymentAddItemRollover,
+    ),
+  );
+}
+
+/** @internal */
+export type SetupPaymentAddItemPlanItem$Outbound = {
+  feature_id: string;
+  included?: number | undefined;
+  unlimited?: boolean | undefined;
+  reset?: SetupPaymentAddItemReset$Outbound | undefined;
+  price?: SetupPaymentAddItemPrice$Outbound | undefined;
+  proration?: SetupPaymentAddItemProration$Outbound | undefined;
+  rollover?: SetupPaymentAddItemRollover$Outbound | undefined;
+};
+
+/** @internal */
+export const SetupPaymentAddItemPlanItem$outboundSchema: z.ZodMiniType<
+  SetupPaymentAddItemPlanItem$Outbound,
+  SetupPaymentAddItemPlanItem
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    included: z.optional(z.number()),
+    unlimited: z.optional(z.boolean()),
+    reset: z.optional(z.lazy(() => SetupPaymentAddItemReset$outboundSchema)),
+    price: z.optional(z.lazy(() => SetupPaymentAddItemPrice$outboundSchema)),
+    proration: z.optional(
+      z.lazy(() => SetupPaymentAddItemProration$outboundSchema),
+    ),
+    rollover: z.optional(
+      z.lazy(() => SetupPaymentAddItemRollover$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function setupPaymentAddItemPlanItemToJSON(
+  setupPaymentAddItemPlanItem: SetupPaymentAddItemPlanItem,
+): string {
+  return JSON.stringify(
+    SetupPaymentAddItemPlanItem$outboundSchema.parse(
+      setupPaymentAddItemPlanItem,
+    ),
+  );
+}
+
+/** @internal */
+export const SetupPaymentRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentRemoveItemBillingMethod
+> = z.enum(SetupPaymentRemoveItemBillingMethod);
+
+/** @internal */
+export const SetupPaymentRemoveItemInterval$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentRemoveItemInterval
+> = z.enum(SetupPaymentRemoveItemInterval);
+
+/** @internal */
+export type SetupPaymentPlanItemFilter$Outbound = {
+  feature_id?: string | undefined;
+  billing_method?: string | undefined;
+  interval?: string | undefined;
+};
+
+/** @internal */
+export const SetupPaymentPlanItemFilter$outboundSchema: z.ZodMiniType<
+  SetupPaymentPlanItemFilter$Outbound,
+  SetupPaymentPlanItemFilter
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    billingMethod: z.optional(
+      SetupPaymentRemoveItemBillingMethod$outboundSchema,
+    ),
+    interval: z.optional(SetupPaymentRemoveItemInterval$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      billingMethod: "billing_method",
+    });
+  }),
+);
+
+export function setupPaymentPlanItemFilterToJSON(
+  setupPaymentPlanItemFilter: SetupPaymentPlanItemFilter,
+): string {
+  return JSON.stringify(
+    SetupPaymentPlanItemFilter$outboundSchema.parse(setupPaymentPlanItemFilter),
   );
 }
 
@@ -893,7 +1531,9 @@ export function setupPaymentFreeTrialParamsToJSON(
 /** @internal */
 export type SetupPaymentCustomize$Outbound = {
   price?: SetupPaymentBasePrice$Outbound | null | undefined;
-  items?: Array<SetupPaymentPlanItem$Outbound> | undefined;
+  items?: Array<SetupPaymentItemPlanItem$Outbound> | undefined;
+  add_items?: Array<SetupPaymentAddItemPlanItem$Outbound> | undefined;
+  remove_items?: Array<SetupPaymentPlanItemFilter$Outbound> | undefined;
   free_trial?: SetupPaymentFreeTrialParams$Outbound | null | undefined;
 };
 
@@ -907,7 +1547,13 @@ export const SetupPaymentCustomize$outboundSchema: z.ZodMiniType<
       z.nullable(z.lazy(() => SetupPaymentBasePrice$outboundSchema)),
     ),
     items: z.optional(
-      z.array(z.lazy(() => SetupPaymentPlanItem$outboundSchema)),
+      z.array(z.lazy(() => SetupPaymentItemPlanItem$outboundSchema)),
+    ),
+    addItems: z.optional(
+      z.array(z.lazy(() => SetupPaymentAddItemPlanItem$outboundSchema)),
+    ),
+    removeItems: z.optional(
+      z.array(z.lazy(() => SetupPaymentPlanItemFilter$outboundSchema)),
     ),
     freeTrial: z.optional(
       z.nullable(z.lazy(() => SetupPaymentFreeTrialParams$outboundSchema)),
@@ -915,6 +1561,8 @@ export const SetupPaymentCustomize$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      addItems: "add_items",
+      removeItems: "remove_items",
       freeTrial: "free_trial",
     });
   }),
@@ -1064,6 +1712,8 @@ export type SetupPaymentParams$Outbound = {
   discounts?: Array<SetupPaymentAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   billing_cycle_anchor?: "now" | undefined;
+  starts_at?: number | undefined;
+  ends_at?: number | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   custom_line_items?: Array<SetupPaymentCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
@@ -1095,6 +1745,8 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
     ),
     successUrl: z.optional(z.string()),
     billingCycleAnchor: z.optional(z.literal("now")),
+    startsAt: z.optional(z.int()),
+    endsAt: z.optional(z.int()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
     customLineItems: z.optional(
       z.array(z.lazy(() => SetupPaymentCustomLineItem$outboundSchema)),
@@ -1120,6 +1772,8 @@ export const SetupPaymentParams$outboundSchema: z.ZodMiniType<
       subscriptionId: "subscription_id",
       successUrl: "success_url",
       billingCycleAnchor: "billing_cycle_anchor",
+      startsAt: "starts_at",
+      endsAt: "ends_at",
       checkoutSessionParams: "checkout_session_params",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",

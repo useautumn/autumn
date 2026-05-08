@@ -124,7 +124,7 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	const resolvedQueueUrl = queueUrl || process.env.SQS_QUEUE_URL_V2;
 
 	if (resolvedQueueUrl) {
-		const sqsClient = getSqsClient();
+		const sqsClient = getSqsClient({ queueUrl: resolvedQueueUrl });
 
 		// SQS implementation
 		const isFifoQueue = resolvedQueueUrl.endsWith(".fifo");

@@ -74,7 +74,7 @@ export type PreviewUpdateBasePrice = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const PreviewUpdateResetInterval = {
+export const PreviewUpdateItemResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -88,38 +88,38 @@ export const PreviewUpdateResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type PreviewUpdateResetInterval = ClosedEnum<
-  typeof PreviewUpdateResetInterval
+export type PreviewUpdateItemResetInterval = ClosedEnum<
+  typeof PreviewUpdateItemResetInterval
 >;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
  */
-export type PreviewUpdateReset = {
+export type PreviewUpdateItemReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: PreviewUpdateResetInterval;
+  interval: PreviewUpdateItemResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type PreviewUpdateTo = number | string;
+export type PreviewUpdateItemTo = number | string;
 
-export type PreviewUpdateTier = {
+export type PreviewUpdateItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
 };
 
-export const PreviewUpdateTierBehavior = {
+export const PreviewUpdateItemTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type PreviewUpdateTierBehavior = ClosedEnum<
-  typeof PreviewUpdateTierBehavior
+export type PreviewUpdateItemTierBehavior = ClosedEnum<
+  typeof PreviewUpdateItemTierBehavior
 >;
 
 /**
@@ -143,21 +143,21 @@ export type PreviewUpdateItemPriceInterval = ClosedEnum<
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const PreviewUpdateBillingMethod = {
+export const PreviewUpdateItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type PreviewUpdateBillingMethod = ClosedEnum<
-  typeof PreviewUpdateBillingMethod
+export type PreviewUpdateItemBillingMethod = ClosedEnum<
+  typeof PreviewUpdateItemBillingMethod
 >;
 
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type PreviewUpdatePrice = {
+export type PreviewUpdateItemPrice = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -165,8 +165,8 @@ export type PreviewUpdatePrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<PreviewUpdateTier> | undefined;
-  tierBehavior?: PreviewUpdateTierBehavior | undefined;
+  tiers?: Array<PreviewUpdateItemTier> | undefined;
+  tierBehavior?: PreviewUpdateItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -182,7 +182,7 @@ export type PreviewUpdatePrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: PreviewUpdateBillingMethod;
+  billingMethod: PreviewUpdateItemBillingMethod;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
    */
@@ -192,7 +192,7 @@ export type PreviewUpdatePrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const PreviewUpdateOnIncrease = {
+export const PreviewUpdateItemOnIncrease = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -201,14 +201,14 @@ export const PreviewUpdateOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type PreviewUpdateOnIncrease = ClosedEnum<
-  typeof PreviewUpdateOnIncrease
+export type PreviewUpdateItemOnIncrease = ClosedEnum<
+  typeof PreviewUpdateItemOnIncrease
 >;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const PreviewUpdateOnDecrease = {
+export const PreviewUpdateItemOnDecrease = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -218,42 +218,42 @@ export const PreviewUpdateOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type PreviewUpdateOnDecrease = ClosedEnum<
-  typeof PreviewUpdateOnDecrease
+export type PreviewUpdateItemOnDecrease = ClosedEnum<
+  typeof PreviewUpdateItemOnDecrease
 >;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type PreviewUpdateProration = {
+export type PreviewUpdateItemProration = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: PreviewUpdateOnIncrease;
+  onIncrease: PreviewUpdateItemOnIncrease;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: PreviewUpdateOnDecrease;
+  onDecrease: PreviewUpdateItemOnDecrease;
 };
 
 /**
  * When rolled over units expire.
  */
-export const PreviewUpdateExpiryDurationType = {
+export const PreviewUpdateItemExpiryDurationType = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type PreviewUpdateExpiryDurationType = ClosedEnum<
-  typeof PreviewUpdateExpiryDurationType
+export type PreviewUpdateItemExpiryDurationType = ClosedEnum<
+  typeof PreviewUpdateItemExpiryDurationType
 >;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
  */
-export type PreviewUpdateRollover = {
+export type PreviewUpdateItemRollover = {
   /**
    * Max rollover units. Omit for unlimited rollover.
    */
@@ -265,7 +265,7 @@ export type PreviewUpdateRollover = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: PreviewUpdateExpiryDurationType;
+  expiryDurationType: PreviewUpdateItemExpiryDurationType;
   /**
    * Number of periods before expiry.
    */
@@ -275,7 +275,7 @@ export type PreviewUpdateRollover = {
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type PreviewUpdatePlanItem = {
+export type PreviewUpdateItemPlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -291,19 +291,304 @@ export type PreviewUpdatePlanItem = {
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
-  reset?: PreviewUpdateReset | undefined;
+  reset?: PreviewUpdateItemReset | undefined;
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: PreviewUpdatePrice | undefined;
+  price?: PreviewUpdateItemPrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: PreviewUpdateProration | undefined;
+  proration?: PreviewUpdateItemProration | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
-  rollover?: PreviewUpdateRollover | undefined;
+  rollover?: PreviewUpdateItemRollover | undefined;
+};
+
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export const PreviewUpdateAddItemResetInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export type PreviewUpdateAddItemResetInterval = ClosedEnum<
+  typeof PreviewUpdateAddItemResetInterval
+>;
+
+/**
+ * Reset configuration for consumable features. Omit for non-consumable features like seats.
+ */
+export type PreviewUpdateAddItemReset = {
+  /**
+   * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+   */
+  interval: PreviewUpdateAddItemResetInterval;
+  /**
+   * Number of intervals between resets. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+};
+
+export type PreviewUpdateAddItemTo = number | string;
+
+export type PreviewUpdateAddItemTier = {
+  to: number | string;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
+};
+
+export const PreviewUpdateAddItemTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type PreviewUpdateAddItemTierBehavior = ClosedEnum<
+  typeof PreviewUpdateAddItemTierBehavior
+>;
+
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export const PreviewUpdateAddItemPriceInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export type PreviewUpdateAddItemPriceInterval = ClosedEnum<
+  typeof PreviewUpdateAddItemPriceInterval
+>;
+
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export const PreviewUpdateAddItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export type PreviewUpdateAddItemBillingMethod = ClosedEnum<
+  typeof PreviewUpdateAddItemBillingMethod
+>;
+
+/**
+ * Pricing for usage beyond included units. Omit for free features.
+ */
+export type PreviewUpdateAddItemPrice = {
+  /**
+   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+   */
+  amount?: number | undefined;
+  /**
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
+   */
+  tiers?: Array<PreviewUpdateAddItemTier> | undefined;
+  tierBehavior?: PreviewUpdateAddItemTierBehavior | undefined;
+  /**
+   * Billing interval. For consumable features, should match reset.interval.
+   */
+  interval: PreviewUpdateAddItemPriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+   */
+  billingUnits?: number | undefined;
+  /**
+   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+   */
+  billingMethod: PreviewUpdateAddItemBillingMethod;
+  /**
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   */
+  maxPurchase?: number | undefined;
+};
+
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export const PreviewUpdateAddItemOnIncrease = {
+  BillImmediately: "bill_immediately",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  BillNextCycle: "bill_next_cycle",
+} as const;
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export type PreviewUpdateAddItemOnIncrease = ClosedEnum<
+  typeof PreviewUpdateAddItemOnIncrease
+>;
+
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export const PreviewUpdateAddItemOnDecrease = {
+  Prorate: "prorate",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  None: "none",
+  NoProrations: "no_prorations",
+} as const;
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export type PreviewUpdateAddItemOnDecrease = ClosedEnum<
+  typeof PreviewUpdateAddItemOnDecrease
+>;
+
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
+export type PreviewUpdateAddItemProration = {
+  /**
+   * Billing behavior when quantity increases mid-cycle.
+   */
+  onIncrease: PreviewUpdateAddItemOnIncrease;
+  /**
+   * Credit behavior when quantity decreases mid-cycle.
+   */
+  onDecrease: PreviewUpdateAddItemOnDecrease;
+};
+
+/**
+ * When rolled over units expire.
+ */
+export const PreviewUpdateAddItemExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type PreviewUpdateAddItemExpiryDurationType = ClosedEnum<
+  typeof PreviewUpdateAddItemExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type PreviewUpdateAddItemRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: PreviewUpdateAddItemExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
+
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type PreviewUpdateAddItemPlanItem = {
+  /**
+   * The ID of the feature to configure.
+   */
+  featureId: string;
+  /**
+   * Number of free units included. Balance resets to this each interval for consumable features.
+   */
+  included?: number | undefined;
+  /**
+   * If true, customer has unlimited access to this feature.
+   */
+  unlimited?: boolean | undefined;
+  /**
+   * Reset configuration for consumable features. Omit for non-consumable features like seats.
+   */
+  reset?: PreviewUpdateAddItemReset | undefined;
+  /**
+   * Pricing for usage beyond included units. Omit for free features.
+   */
+  price?: PreviewUpdateAddItemPrice | undefined;
+  /**
+   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+   */
+  proration?: PreviewUpdateAddItemProration | undefined;
+  /**
+   * Rollover config for unused units. If set, unused included units carry over.
+   */
+  rollover?: PreviewUpdateAddItemRollover | undefined;
+};
+
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export const PreviewUpdateRemoveItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export type PreviewUpdateRemoveItemBillingMethod = ClosedEnum<
+  typeof PreviewUpdateRemoveItemBillingMethod
+>;
+
+/**
+ * Match items with this interval.
+ */
+export const PreviewUpdateRemoveItemInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Match items with this interval.
+ */
+export type PreviewUpdateRemoveItemInterval = ClosedEnum<
+  typeof PreviewUpdateRemoveItemInterval
+>;
+
+/**
+ * Filter for matching plan items. All provided fields must match (AND).
+ */
+export type PreviewUpdatePlanItemFilter = {
+  /**
+   * Match items linked to this feature.
+   */
+  featureId?: string | undefined;
+  /**
+   * Match items with this billing method (prepaid or usage_based).
+   */
+  billingMethod?: PreviewUpdateRemoveItemBillingMethod | undefined;
+  /**
+   * Match items with this interval.
+   */
+  interval?: PreviewUpdateRemoveItemInterval | undefined;
 };
 
 /**
@@ -348,9 +633,17 @@ export type PreviewUpdateCustomize = {
    */
   price?: PreviewUpdateBasePrice | null | undefined;
   /**
-   * Override the items in the plan.
+   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items.
    */
-  items?: Array<PreviewUpdatePlanItem> | undefined;
+  items?: Array<PreviewUpdateItemPlanItem> | undefined;
+  /**
+   * Items to add to the plan.
+   */
+  addItems?: Array<PreviewUpdateAddItemPlanItem> | undefined;
+  /**
+   * Filters selecting items to remove from the plan.
+   */
+  removeItems?: Array<PreviewUpdatePlanItemFilter> | undefined;
   /**
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
@@ -537,11 +830,11 @@ export type PreviewUpdateLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts for this line item.
+   * The amount in cents before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for this line item.
+   * The final amount in cents after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -597,11 +890,11 @@ export type PreviewUpdateNextCycleLineItem = {
    */
   description: string;
   /**
-   * The amount in cents before discounts for this line item.
+   * The amount in cents before discounts and tax for this line item.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for this line item.
+   * The final amount in cents after discounts and tax for this line item.
    */
   total: number;
   /**
@@ -668,11 +961,11 @@ export type PreviewUpdateNextCycle = {
    */
   startsAt: number;
   /**
-   * The total amount in cents before discounts for the next cycle.
+   * The total amount in cents before discounts and tax for the next cycle.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for the next cycle.
+   * The final amount in cents after discounts and tax for the next cycle.
    */
   total: number;
   /**
@@ -766,6 +1059,58 @@ export const Intent = {
 export type Intent = OpenEnum<typeof Intent>;
 
 /**
+ * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ */
+export const PreviewUpdateStatus = {
+  Complete: "complete",
+  Incomplete: "incomplete",
+} as const;
+/**
+ * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+ */
+export type PreviewUpdateStatus = OpenEnum<typeof PreviewUpdateStatus>;
+
+/**
+ * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
+ */
+export type PreviewUpdateTax = {
+  /**
+   * Total tax amount in major currency units.
+   */
+  total: number;
+  /**
+   * Tax included in line item subtotals.
+   */
+  amountInclusive: number;
+  /**
+   * Tax added on top of subtotals.
+   */
+  amountExclusive: number;
+  /**
+   * Three-letter currency code.
+   */
+  currency: string;
+  /**
+   * Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored).
+   */
+  status: PreviewUpdateStatus;
+};
+
+/**
+ * Stripe customer invoice credits preview.
+ */
+export type PreviewUpdateInvoiceCredits = {
+  /**
+   * Stripe customer credit balance available, expressed as a positive number in major currency units.
+   */
+  balance: number;
+  /**
+   * Three-letter currency code.
+   */
+  currency: string;
+};
+
+/**
  * OK
  */
 export type PreviewUpdateResponse = {
@@ -778,11 +1123,11 @@ export type PreviewUpdateResponse = {
    */
   lineItems: Array<PreviewUpdateLineItem>;
   /**
-   * The total amount in cents before discounts for the current billing period.
+   * The total amount in cents before discounts and tax for the current billing period.
    */
   subtotal: number;
   /**
-   * The final amount in cents after discounts for the current billing period.
+   * The final amount in cents after discounts and tax for the current billing period.
    */
   total: number;
   /**
@@ -806,6 +1151,14 @@ export type PreviewUpdateResponse = {
    */
   outgoing: Array<PreviewUpdateOutgoing>;
   intent: Intent;
+  /**
+   * Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location.
+   */
+  tax?: PreviewUpdateTax | undefined;
+  /**
+   * Stripe customer invoice credits preview.
+   */
+  invoiceCredits?: PreviewUpdateInvoiceCredits | undefined;
 };
 
 /** @internal */
@@ -880,23 +1233,23 @@ export function previewUpdateBasePriceToJSON(
 }
 
 /** @internal */
-export const PreviewUpdateResetInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewUpdateResetInterval
-> = z.enum(PreviewUpdateResetInterval);
+export const PreviewUpdateItemResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateItemResetInterval
+> = z.enum(PreviewUpdateItemResetInterval);
 
 /** @internal */
-export type PreviewUpdateReset$Outbound = {
+export type PreviewUpdateItemReset$Outbound = {
   interval: string;
   interval_count?: number | undefined;
 };
 
 /** @internal */
-export const PreviewUpdateReset$outboundSchema: z.ZodMiniType<
-  PreviewUpdateReset$Outbound,
-  PreviewUpdateReset
+export const PreviewUpdateItemReset$outboundSchema: z.ZodMiniType<
+  PreviewUpdateItemReset$Outbound,
+  PreviewUpdateItemReset
 > = z.pipe(
   z.object({
-    interval: PreviewUpdateResetInterval$outboundSchema,
+    interval: PreviewUpdateItemResetInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -906,40 +1259,42 @@ export const PreviewUpdateReset$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewUpdateResetToJSON(
-  previewUpdateReset: PreviewUpdateReset,
+export function previewUpdateItemResetToJSON(
+  previewUpdateItemReset: PreviewUpdateItemReset,
 ): string {
   return JSON.stringify(
-    PreviewUpdateReset$outboundSchema.parse(previewUpdateReset),
+    PreviewUpdateItemReset$outboundSchema.parse(previewUpdateItemReset),
   );
 }
 
 /** @internal */
-export type PreviewUpdateTo$Outbound = number | string;
+export type PreviewUpdateItemTo$Outbound = number | string;
 
 /** @internal */
-export const PreviewUpdateTo$outboundSchema: z.ZodMiniType<
-  PreviewUpdateTo$Outbound,
-  PreviewUpdateTo
+export const PreviewUpdateItemTo$outboundSchema: z.ZodMiniType<
+  PreviewUpdateItemTo$Outbound,
+  PreviewUpdateItemTo
 > = smartUnion([z.number(), z.string()]);
 
-export function previewUpdateToToJSON(
-  previewUpdateTo: PreviewUpdateTo,
+export function previewUpdateItemToToJSON(
+  previewUpdateItemTo: PreviewUpdateItemTo,
 ): string {
-  return JSON.stringify(PreviewUpdateTo$outboundSchema.parse(previewUpdateTo));
+  return JSON.stringify(
+    PreviewUpdateItemTo$outboundSchema.parse(previewUpdateItemTo),
+  );
 }
 
 /** @internal */
-export type PreviewUpdateTier$Outbound = {
+export type PreviewUpdateItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
 };
 
 /** @internal */
-export const PreviewUpdateTier$outboundSchema: z.ZodMiniType<
-  PreviewUpdateTier$Outbound,
-  PreviewUpdateTier
+export const PreviewUpdateItemTier$outboundSchema: z.ZodMiniType<
+  PreviewUpdateItemTier$Outbound,
+  PreviewUpdateItemTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -953,18 +1308,18 @@ export const PreviewUpdateTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewUpdateTierToJSON(
-  previewUpdateTier: PreviewUpdateTier,
+export function previewUpdateItemTierToJSON(
+  previewUpdateItemTier: PreviewUpdateItemTier,
 ): string {
   return JSON.stringify(
-    PreviewUpdateTier$outboundSchema.parse(previewUpdateTier),
+    PreviewUpdateItemTier$outboundSchema.parse(previewUpdateItemTier),
   );
 }
 
 /** @internal */
-export const PreviewUpdateTierBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewUpdateTierBehavior
-> = z.enum(PreviewUpdateTierBehavior);
+export const PreviewUpdateItemTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateItemTierBehavior
+> = z.enum(PreviewUpdateItemTierBehavior);
 
 /** @internal */
 export const PreviewUpdateItemPriceInterval$outboundSchema: z.ZodMiniEnum<
@@ -972,14 +1327,14 @@ export const PreviewUpdateItemPriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewUpdateItemPriceInterval);
 
 /** @internal */
-export const PreviewUpdateBillingMethod$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewUpdateBillingMethod
-> = z.enum(PreviewUpdateBillingMethod);
+export const PreviewUpdateItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateItemBillingMethod
+> = z.enum(PreviewUpdateItemBillingMethod);
 
 /** @internal */
-export type PreviewUpdatePrice$Outbound = {
+export type PreviewUpdateItemPrice$Outbound = {
   amount?: number | undefined;
-  tiers?: Array<PreviewUpdateTier$Outbound> | undefined;
+  tiers?: Array<PreviewUpdateItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -989,18 +1344,20 @@ export type PreviewUpdatePrice$Outbound = {
 };
 
 /** @internal */
-export const PreviewUpdatePrice$outboundSchema: z.ZodMiniType<
-  PreviewUpdatePrice$Outbound,
-  PreviewUpdatePrice
+export const PreviewUpdateItemPrice$outboundSchema: z.ZodMiniType<
+  PreviewUpdateItemPrice$Outbound,
+  PreviewUpdateItemPrice
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(z.array(z.lazy(() => PreviewUpdateTier$outboundSchema))),
-    tierBehavior: z.optional(PreviewUpdateTierBehavior$outboundSchema),
+    tiers: z.optional(
+      z.array(z.lazy(() => PreviewUpdateItemTier$outboundSchema)),
+    ),
+    tierBehavior: z.optional(PreviewUpdateItemTierBehavior$outboundSchema),
     interval: PreviewUpdateItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
-    billingMethod: PreviewUpdateBillingMethod$outboundSchema,
+    billingMethod: PreviewUpdateItemBillingMethod$outboundSchema,
     maxPurchase: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -1014,38 +1371,38 @@ export const PreviewUpdatePrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewUpdatePriceToJSON(
-  previewUpdatePrice: PreviewUpdatePrice,
+export function previewUpdateItemPriceToJSON(
+  previewUpdateItemPrice: PreviewUpdateItemPrice,
 ): string {
   return JSON.stringify(
-    PreviewUpdatePrice$outboundSchema.parse(previewUpdatePrice),
+    PreviewUpdateItemPrice$outboundSchema.parse(previewUpdateItemPrice),
   );
 }
 
 /** @internal */
-export const PreviewUpdateOnIncrease$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewUpdateOnIncrease
-> = z.enum(PreviewUpdateOnIncrease);
+export const PreviewUpdateItemOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateItemOnIncrease
+> = z.enum(PreviewUpdateItemOnIncrease);
 
 /** @internal */
-export const PreviewUpdateOnDecrease$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewUpdateOnDecrease
-> = z.enum(PreviewUpdateOnDecrease);
+export const PreviewUpdateItemOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateItemOnDecrease
+> = z.enum(PreviewUpdateItemOnDecrease);
 
 /** @internal */
-export type PreviewUpdateProration$Outbound = {
+export type PreviewUpdateItemProration$Outbound = {
   on_increase: string;
   on_decrease: string;
 };
 
 /** @internal */
-export const PreviewUpdateProration$outboundSchema: z.ZodMiniType<
-  PreviewUpdateProration$Outbound,
-  PreviewUpdateProration
+export const PreviewUpdateItemProration$outboundSchema: z.ZodMiniType<
+  PreviewUpdateItemProration$Outbound,
+  PreviewUpdateItemProration
 > = z.pipe(
   z.object({
-    onIncrease: PreviewUpdateOnIncrease$outboundSchema,
-    onDecrease: PreviewUpdateOnDecrease$outboundSchema,
+    onIncrease: PreviewUpdateItemOnIncrease$outboundSchema,
+    onDecrease: PreviewUpdateItemOnDecrease$outboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1055,21 +1412,21 @@ export const PreviewUpdateProration$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewUpdateProrationToJSON(
-  previewUpdateProration: PreviewUpdateProration,
+export function previewUpdateItemProrationToJSON(
+  previewUpdateItemProration: PreviewUpdateItemProration,
 ): string {
   return JSON.stringify(
-    PreviewUpdateProration$outboundSchema.parse(previewUpdateProration),
+    PreviewUpdateItemProration$outboundSchema.parse(previewUpdateItemProration),
   );
 }
 
 /** @internal */
-export const PreviewUpdateExpiryDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewUpdateExpiryDurationType
-> = z.enum(PreviewUpdateExpiryDurationType);
+export const PreviewUpdateItemExpiryDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateItemExpiryDurationType
+> = z.enum(PreviewUpdateItemExpiryDurationType);
 
 /** @internal */
-export type PreviewUpdateRollover$Outbound = {
+export type PreviewUpdateItemRollover$Outbound = {
   max?: number | undefined;
   max_percentage?: number | undefined;
   expiry_duration_type: string;
@@ -1077,14 +1434,14 @@ export type PreviewUpdateRollover$Outbound = {
 };
 
 /** @internal */
-export const PreviewUpdateRollover$outboundSchema: z.ZodMiniType<
-  PreviewUpdateRollover$Outbound,
-  PreviewUpdateRollover
+export const PreviewUpdateItemRollover$outboundSchema: z.ZodMiniType<
+  PreviewUpdateItemRollover$Outbound,
+  PreviewUpdateItemRollover
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
     maxPercentage: z.optional(z.number()),
-    expiryDurationType: PreviewUpdateExpiryDurationType$outboundSchema,
+    expiryDurationType: PreviewUpdateItemExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -1096,38 +1453,42 @@ export const PreviewUpdateRollover$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewUpdateRolloverToJSON(
-  previewUpdateRollover: PreviewUpdateRollover,
+export function previewUpdateItemRolloverToJSON(
+  previewUpdateItemRollover: PreviewUpdateItemRollover,
 ): string {
   return JSON.stringify(
-    PreviewUpdateRollover$outboundSchema.parse(previewUpdateRollover),
+    PreviewUpdateItemRollover$outboundSchema.parse(previewUpdateItemRollover),
   );
 }
 
 /** @internal */
-export type PreviewUpdatePlanItem$Outbound = {
+export type PreviewUpdateItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
-  reset?: PreviewUpdateReset$Outbound | undefined;
-  price?: PreviewUpdatePrice$Outbound | undefined;
-  proration?: PreviewUpdateProration$Outbound | undefined;
-  rollover?: PreviewUpdateRollover$Outbound | undefined;
+  reset?: PreviewUpdateItemReset$Outbound | undefined;
+  price?: PreviewUpdateItemPrice$Outbound | undefined;
+  proration?: PreviewUpdateItemProration$Outbound | undefined;
+  rollover?: PreviewUpdateItemRollover$Outbound | undefined;
 };
 
 /** @internal */
-export const PreviewUpdatePlanItem$outboundSchema: z.ZodMiniType<
-  PreviewUpdatePlanItem$Outbound,
-  PreviewUpdatePlanItem
+export const PreviewUpdateItemPlanItem$outboundSchema: z.ZodMiniType<
+  PreviewUpdateItemPlanItem$Outbound,
+  PreviewUpdateItemPlanItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
-    reset: z.optional(z.lazy(() => PreviewUpdateReset$outboundSchema)),
-    price: z.optional(z.lazy(() => PreviewUpdatePrice$outboundSchema)),
-    proration: z.optional(z.lazy(() => PreviewUpdateProration$outboundSchema)),
-    rollover: z.optional(z.lazy(() => PreviewUpdateRollover$outboundSchema)),
+    reset: z.optional(z.lazy(() => PreviewUpdateItemReset$outboundSchema)),
+    price: z.optional(z.lazy(() => PreviewUpdateItemPrice$outboundSchema)),
+    proration: z.optional(
+      z.lazy(() => PreviewUpdateItemProration$outboundSchema),
+    ),
+    rollover: z.optional(
+      z.lazy(() => PreviewUpdateItemRollover$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1136,11 +1497,338 @@ export const PreviewUpdatePlanItem$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function previewUpdatePlanItemToJSON(
-  previewUpdatePlanItem: PreviewUpdatePlanItem,
+export function previewUpdateItemPlanItemToJSON(
+  previewUpdateItemPlanItem: PreviewUpdateItemPlanItem,
 ): string {
   return JSON.stringify(
-    PreviewUpdatePlanItem$outboundSchema.parse(previewUpdatePlanItem),
+    PreviewUpdateItemPlanItem$outboundSchema.parse(previewUpdateItemPlanItem),
+  );
+}
+
+/** @internal */
+export const PreviewUpdateAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateAddItemResetInterval
+> = z.enum(PreviewUpdateAddItemResetInterval);
+
+/** @internal */
+export type PreviewUpdateAddItemReset$Outbound = {
+  interval: string;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateAddItemReset$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAddItemReset$Outbound,
+  PreviewUpdateAddItemReset
+> = z.pipe(
+  z.object({
+    interval: PreviewUpdateAddItemResetInterval$outboundSchema,
+    intervalCount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function previewUpdateAddItemResetToJSON(
+  previewUpdateAddItemReset: PreviewUpdateAddItemReset,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAddItemReset$outboundSchema.parse(previewUpdateAddItemReset),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateAddItemTo$Outbound = number | string;
+
+/** @internal */
+export const PreviewUpdateAddItemTo$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAddItemTo$Outbound,
+  PreviewUpdateAddItemTo
+> = smartUnion([z.number(), z.string()]);
+
+export function previewUpdateAddItemToToJSON(
+  previewUpdateAddItemTo: PreviewUpdateAddItemTo,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAddItemTo$outboundSchema.parse(previewUpdateAddItemTo),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateAddItemTier$Outbound = {
+  to: number | string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateAddItemTier$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAddItemTier$Outbound,
+  PreviewUpdateAddItemTier
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
+
+export function previewUpdateAddItemTierToJSON(
+  previewUpdateAddItemTier: PreviewUpdateAddItemTier,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAddItemTier$outboundSchema.parse(previewUpdateAddItemTier),
+  );
+}
+
+/** @internal */
+export const PreviewUpdateAddItemTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateAddItemTierBehavior
+> = z.enum(PreviewUpdateAddItemTierBehavior);
+
+/** @internal */
+export const PreviewUpdateAddItemPriceInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateAddItemPriceInterval
+> = z.enum(PreviewUpdateAddItemPriceInterval);
+
+/** @internal */
+export const PreviewUpdateAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateAddItemBillingMethod
+> = z.enum(PreviewUpdateAddItemBillingMethod);
+
+/** @internal */
+export type PreviewUpdateAddItemPrice$Outbound = {
+  amount?: number | undefined;
+  tiers?: Array<PreviewUpdateAddItemTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
+  interval: string;
+  interval_count: number;
+  billing_units: number;
+  billing_method: string;
+  max_purchase?: number | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateAddItemPrice$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAddItemPrice$Outbound,
+  PreviewUpdateAddItemPrice
+> = z.pipe(
+  z.object({
+    amount: z.optional(z.number()),
+    tiers: z.optional(
+      z.array(z.lazy(() => PreviewUpdateAddItemTier$outboundSchema)),
+    ),
+    tierBehavior: z.optional(PreviewUpdateAddItemTierBehavior$outboundSchema),
+    interval: PreviewUpdateAddItemPriceInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    billingUnits: z._default(z.number(), 1),
+    billingMethod: PreviewUpdateAddItemBillingMethod$outboundSchema,
+    maxPurchase: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+      intervalCount: "interval_count",
+      billingUnits: "billing_units",
+      billingMethod: "billing_method",
+      maxPurchase: "max_purchase",
+    });
+  }),
+);
+
+export function previewUpdateAddItemPriceToJSON(
+  previewUpdateAddItemPrice: PreviewUpdateAddItemPrice,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAddItemPrice$outboundSchema.parse(previewUpdateAddItemPrice),
+  );
+}
+
+/** @internal */
+export const PreviewUpdateAddItemOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateAddItemOnIncrease
+> = z.enum(PreviewUpdateAddItemOnIncrease);
+
+/** @internal */
+export const PreviewUpdateAddItemOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateAddItemOnDecrease
+> = z.enum(PreviewUpdateAddItemOnDecrease);
+
+/** @internal */
+export type PreviewUpdateAddItemProration$Outbound = {
+  on_increase: string;
+  on_decrease: string;
+};
+
+/** @internal */
+export const PreviewUpdateAddItemProration$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAddItemProration$Outbound,
+  PreviewUpdateAddItemProration
+> = z.pipe(
+  z.object({
+    onIncrease: PreviewUpdateAddItemOnIncrease$outboundSchema,
+    onDecrease: PreviewUpdateAddItemOnDecrease$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      onIncrease: "on_increase",
+      onDecrease: "on_decrease",
+    });
+  }),
+);
+
+export function previewUpdateAddItemProrationToJSON(
+  previewUpdateAddItemProration: PreviewUpdateAddItemProration,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAddItemProration$outboundSchema.parse(
+      previewUpdateAddItemProration,
+    ),
+  );
+}
+
+/** @internal */
+export const PreviewUpdateAddItemExpiryDurationType$outboundSchema:
+  z.ZodMiniEnum<typeof PreviewUpdateAddItemExpiryDurationType> = z.enum(
+    PreviewUpdateAddItemExpiryDurationType,
+  );
+
+/** @internal */
+export type PreviewUpdateAddItemRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateAddItemRollover$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAddItemRollover$Outbound,
+  PreviewUpdateAddItemRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
+    expiryDurationType: PreviewUpdateAddItemExpiryDurationType$outboundSchema,
+    expiryDurationLength: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+      expiryDurationType: "expiry_duration_type",
+      expiryDurationLength: "expiry_duration_length",
+    });
+  }),
+);
+
+export function previewUpdateAddItemRolloverToJSON(
+  previewUpdateAddItemRollover: PreviewUpdateAddItemRollover,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAddItemRollover$outboundSchema.parse(
+      previewUpdateAddItemRollover,
+    ),
+  );
+}
+
+/** @internal */
+export type PreviewUpdateAddItemPlanItem$Outbound = {
+  feature_id: string;
+  included?: number | undefined;
+  unlimited?: boolean | undefined;
+  reset?: PreviewUpdateAddItemReset$Outbound | undefined;
+  price?: PreviewUpdateAddItemPrice$Outbound | undefined;
+  proration?: PreviewUpdateAddItemProration$Outbound | undefined;
+  rollover?: PreviewUpdateAddItemRollover$Outbound | undefined;
+};
+
+/** @internal */
+export const PreviewUpdateAddItemPlanItem$outboundSchema: z.ZodMiniType<
+  PreviewUpdateAddItemPlanItem$Outbound,
+  PreviewUpdateAddItemPlanItem
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    included: z.optional(z.number()),
+    unlimited: z.optional(z.boolean()),
+    reset: z.optional(z.lazy(() => PreviewUpdateAddItemReset$outboundSchema)),
+    price: z.optional(z.lazy(() => PreviewUpdateAddItemPrice$outboundSchema)),
+    proration: z.optional(
+      z.lazy(() => PreviewUpdateAddItemProration$outboundSchema),
+    ),
+    rollover: z.optional(
+      z.lazy(() => PreviewUpdateAddItemRollover$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function previewUpdateAddItemPlanItemToJSON(
+  previewUpdateAddItemPlanItem: PreviewUpdateAddItemPlanItem,
+): string {
+  return JSON.stringify(
+    PreviewUpdateAddItemPlanItem$outboundSchema.parse(
+      previewUpdateAddItemPlanItem,
+    ),
+  );
+}
+
+/** @internal */
+export const PreviewUpdateRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateRemoveItemBillingMethod
+> = z.enum(PreviewUpdateRemoveItemBillingMethod);
+
+/** @internal */
+export const PreviewUpdateRemoveItemInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewUpdateRemoveItemInterval
+> = z.enum(PreviewUpdateRemoveItemInterval);
+
+/** @internal */
+export type PreviewUpdatePlanItemFilter$Outbound = {
+  feature_id?: string | undefined;
+  billing_method?: string | undefined;
+  interval?: string | undefined;
+};
+
+/** @internal */
+export const PreviewUpdatePlanItemFilter$outboundSchema: z.ZodMiniType<
+  PreviewUpdatePlanItemFilter$Outbound,
+  PreviewUpdatePlanItemFilter
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    billingMethod: z.optional(
+      PreviewUpdateRemoveItemBillingMethod$outboundSchema,
+    ),
+    interval: z.optional(PreviewUpdateRemoveItemInterval$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      billingMethod: "billing_method",
+    });
+  }),
+);
+
+export function previewUpdatePlanItemFilterToJSON(
+  previewUpdatePlanItemFilter: PreviewUpdatePlanItemFilter,
+): string {
+  return JSON.stringify(
+    PreviewUpdatePlanItemFilter$outboundSchema.parse(
+      previewUpdatePlanItemFilter,
+    ),
   );
 }
 
@@ -1188,7 +1876,9 @@ export function previewUpdateFreeTrialParamsToJSON(
 /** @internal */
 export type PreviewUpdateCustomize$Outbound = {
   price?: PreviewUpdateBasePrice$Outbound | null | undefined;
-  items?: Array<PreviewUpdatePlanItem$Outbound> | undefined;
+  items?: Array<PreviewUpdateItemPlanItem$Outbound> | undefined;
+  add_items?: Array<PreviewUpdateAddItemPlanItem$Outbound> | undefined;
+  remove_items?: Array<PreviewUpdatePlanItemFilter$Outbound> | undefined;
   free_trial?: PreviewUpdateFreeTrialParams$Outbound | null | undefined;
 };
 
@@ -1202,7 +1892,13 @@ export const PreviewUpdateCustomize$outboundSchema: z.ZodMiniType<
       z.nullable(z.lazy(() => PreviewUpdateBasePrice$outboundSchema)),
     ),
     items: z.optional(
-      z.array(z.lazy(() => PreviewUpdatePlanItem$outboundSchema)),
+      z.array(z.lazy(() => PreviewUpdateItemPlanItem$outboundSchema)),
+    ),
+    addItems: z.optional(
+      z.array(z.lazy(() => PreviewUpdateAddItemPlanItem$outboundSchema)),
+    ),
+    removeItems: z.optional(
+      z.array(z.lazy(() => PreviewUpdatePlanItemFilter$outboundSchema)),
     ),
     freeTrial: z.optional(
       z.nullable(z.lazy(() => PreviewUpdateFreeTrialParams$outboundSchema)),
@@ -1210,6 +1906,8 @@ export const PreviewUpdateCustomize$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      addItems: "add_items",
+      removeItems: "remove_items",
       freeTrial: "free_trial",
     });
   }),
@@ -1804,6 +2502,61 @@ export const Intent$inboundSchema: z.ZodMiniType<Intent, unknown> = openEnums
   .inboundSchema(Intent);
 
 /** @internal */
+export const PreviewUpdateStatus$inboundSchema: z.ZodMiniType<
+  PreviewUpdateStatus,
+  unknown
+> = openEnums.inboundSchema(PreviewUpdateStatus);
+
+/** @internal */
+export const PreviewUpdateTax$inboundSchema: z.ZodMiniType<
+  PreviewUpdateTax,
+  unknown
+> = z.pipe(
+  z.object({
+    total: types.number(),
+    amount_inclusive: types.number(),
+    amount_exclusive: types.number(),
+    currency: types.string(),
+    status: PreviewUpdateStatus$inboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "amount_inclusive": "amountInclusive",
+      "amount_exclusive": "amountExclusive",
+    });
+  }),
+);
+
+export function previewUpdateTaxFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateTax, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateTax$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateTax' from JSON`,
+  );
+}
+
+/** @internal */
+export const PreviewUpdateInvoiceCredits$inboundSchema: z.ZodMiniType<
+  PreviewUpdateInvoiceCredits,
+  unknown
+> = z.object({
+  balance: types.number(),
+  currency: types.string(),
+});
+
+export function previewUpdateInvoiceCreditsFromJSON(
+  jsonString: string,
+): SafeParseResult<PreviewUpdateInvoiceCredits, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => PreviewUpdateInvoiceCredits$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'PreviewUpdateInvoiceCredits' from JSON`,
+  );
+}
+
+/** @internal */
 export const PreviewUpdateResponse$inboundSchema: z.ZodMiniType<
   PreviewUpdateResponse,
   unknown
@@ -1821,12 +2574,17 @@ export const PreviewUpdateResponse$inboundSchema: z.ZodMiniType<
     incoming: z.array(z.lazy(() => PreviewUpdateIncoming$inboundSchema)),
     outgoing: z.array(z.lazy(() => PreviewUpdateOutgoing$inboundSchema)),
     intent: Intent$inboundSchema,
+    tax: types.optional(z.lazy(() => PreviewUpdateTax$inboundSchema)),
+    invoice_credits: types.optional(
+      z.lazy(() => PreviewUpdateInvoiceCredits$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
       "customer_id": "customerId",
       "line_items": "lineItems",
       "next_cycle": "nextCycle",
+      "invoice_credits": "invoiceCredits",
     });
   }),
 );

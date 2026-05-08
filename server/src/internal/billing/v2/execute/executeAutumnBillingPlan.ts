@@ -2,6 +2,7 @@ import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
+import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
@@ -73,6 +75,15 @@ export const executeAutumnBillingPlan = async ({
 		});
 	}
 
+	if (autumnBillingPlan.patchCustomerProducts) {
+		// Custom prices/entitlements above must be inserted before customer rows can reference them.
+		// Patch execution only inserts/deletes customer_prices and customer_entitlements.
+		await executePatchCustomerProducts({
+			ctx,
+			patchCustomerProducts: autumnBillingPlan.patchCustomerProducts,
+		});
+	}
+
 	// ctx.logger.debug(
 	// 	`[execAutumnPlan] inserting new customer products: ${insertCustomerProducts.map((cp) => cp.product.id).join(", ")}`,
 	// );
@@ -115,7 +126,15 @@ export const executeAutumnBillingPlan = async ({
 		updates: autumnBillingPlan.updateCustomerEntitlements,
 	});
 
-	// 5a. Auto top-up rebalance: apply pre-computed paydown + remainder deltas as
+	// 5a. Migration `delete_items`: drop specific cusEnts/cusPrices by id.
+	for (const id of autumnBillingPlan.deleteCustomerEntitlementIds ?? []) {
+		await CusEntService.delete({ db, id });
+	}
+	for (const id of autumnBillingPlan.deleteCustomerPriceIds ?? []) {
+		await CusPriceService.delete({ db, id });
+	}
+
+	// 5b. Auto top-up rebalance: apply pre-computed paydown + remainder deltas as
 	// atomic SQL `balance + delta` increments.
 	if (autumnBillingPlan.autoTopupRebalance) {
 		await executeAutoTopupRebalance({

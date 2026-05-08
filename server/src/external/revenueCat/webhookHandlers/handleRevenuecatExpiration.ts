@@ -15,7 +15,12 @@ export const handleExpiration = async ({
 	const { logger } = ctx;
 	const { product_id, original_app_user_id, app_user_id } = event;
 
-	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+	const {
+		ctx: customerCtx,
+		product,
+		customer,
+		cusProducts,
+	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id ?? original_app_user_id,
@@ -35,7 +40,7 @@ export const handleExpiration = async ({
 	}
 
 	await customerProductActions.expireAndActivateDefault({
-		ctx,
+		ctx: customerCtx,
 		customerProduct: curSameProduct,
 		fullCustomer: customer,
 		updates: {

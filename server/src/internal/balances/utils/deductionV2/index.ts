@@ -1,5 +1,6 @@
 export { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullSubject.js";
 export { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
+export { deductionToBalancesResponseV2 } from "./deductionToBalancesResponseV2.js";
 export { deductionToTrackResponseV2 } from "./deductionToTrackResponseV2.js";
 export { executePostgresDeductionV2 } from "./executePostgresDeductionV2.js";
 export { executeRedisDeductionV2 } from "./executeRedisDeductionV2.js";

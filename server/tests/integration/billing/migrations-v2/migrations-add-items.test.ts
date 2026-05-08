@@ -1,73 +1,68 @@
 /**
- * Migrations V2 — add_items
+ * Migrations V2 — add_items end-to-end (integration).
  *
- * Phase 1 acceptance: a user can create a migration definition whose
- * filter selects customers on a given plan and whose operation adds a
- * plan item to their matching cusproducts.
- *
- * This test only verifies the CREATE path (storing the migration
- * definition end-to-end). Execution / preview is phase 2+.
+ * Seeds 5 customers, parallel-attaches them all to a `free` product,
+ * creates a migration adding the Dashboard feature, and triggers
+ * `migrations.run`. Verifies the API call dispatches; downstream
+ * trigger.dev side effects are out of scope here.
  */
 
 import { expect, test } from "bun:test";
 import { TestFeature } from "@tests/setup/v2Features";
-import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-test.concurrent(
-	`${chalk.yellowBright("migrations-v2 add-items: create migration on pro customers adding a feature item")}`,
-	async () => {
-		const customerId = "migrations-v2-add-items";
+test.concurrent(`${chalk.yellowBright("migrations-v2 add-items: triggers run for 5 customers on free")}`, async () => {
+	const customerId = "migration-run-add-items";
+	const otherIds = [1, 2, 3, 4].map((i) => `${customerId}-c${i}`);
+	const free = products.base({ id: "free", items: [], isDefault: true });
 
-		const proMessages = items.monthlyMessages({ includedUsage: 200 });
-		const pro = products.pro({ id: "pro", items: [proMessages] });
-
-		const { autumnV2_2 } = await initScenario({
+	const { autumnV1, autumnV2_2, customer, otherCustomers } = await initScenario(
+		{
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
+				s.products({ list: [free] }),
+				s.otherCustomers(
+					otherIds.map((id) => ({ id, paymentMethod: "success" as const })),
+				),
 			],
-			actions: [s.billing.attach({ productId: pro.id })],
-		});
+			actions: [],
+		},
+	);
 
-		const migrationId = `add-dashboard-to-pro-${Date.now()}`;
+	expect(customer).toBeTruthy();
+	expect(otherCustomers.size).toBe(4);
 
-		const created = await autumnV2_2.migrationsV2.create({
-			id: migrationId,
-			filter: {
-				customer: {
-					plan: { plan_id: "pro" },
-				},
+	// Explicit parallel attach of all 5 customers to free. `free.id` was
+	// mutated by initProductsV0 to include the prefix.
+	const allCustomerIds = [customerId, ...otherIds];
+	await Promise.all(
+		allCustomerIds.map((id) =>
+			autumnV1.attach({ customer_id: id, product_id: free.id }),
+		),
+	);
+
+	await autumnV2_2.migrationsV2.create({
+		id: customerId,
+		filter: { customer: { plan: { plan_id: free.id } } },
+		operations: {
+			customer: {
+				update_plans: [
+					{
+						target: { plan_id: free.id },
+						upsert_items: [{ feature_id: TestFeature.Dashboard }],
+					},
+				],
 			},
-			operations: {
-				customer: {
-					update_plans: [
-						{
-							target: { plan_id: "pro" },
-							add_items: [
-								{
-									feature_id: TestFeature.Dashboard,
-								},
-							],
-						},
-					],
-				},
-			},
-		});
+		},
+	});
 
-		expect(created.id).toBe(migrationId);
-		expect(created.internal_id).toBeTruthy();
-		expect(created.filter?.customer?.plan).toMatchObject({ plan_id: "pro" });
-		expect(created.operations?.customer?.update_plans?.[0]).toMatchObject({
-			target: { plan_id: "pro" },
-			add_items: [{ feature_id: TestFeature.Dashboard }],
-		});
-
-		// Round-trip: list and confirm presence.
-		const { list } = await autumnV2_2.migrationsV2.list();
-		expect(list.some((m) => m.id === migrationId)).toBe(true);
-	},
-);
+	const runHandle = await autumnV2_2.migrationsV2.run({
+		id: customerId,
+		dry_run: false,
+	});
+	expect(runHandle.run_id).toBeTruthy();
+	expect(runHandle.dry_run).toBe(false);
+});

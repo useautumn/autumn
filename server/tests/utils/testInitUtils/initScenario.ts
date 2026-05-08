@@ -199,6 +199,7 @@ type PlatformCreateConfig = {
 	userEmail?: string;
 	configOverrides?: Partial<OrgConfig>;
 	taxRegistrations?: TaxRegistrationCountry[];
+	setupDefaultFeatures?: boolean;
 };
 
 type ScenarioConfig = {
@@ -789,6 +790,7 @@ const createAndRedeemReferralCode = ({
  * @param userEmail - Owner email; defaults to "platform-tests@autumn.test".
  * @param configOverrides - Merged into the sub-org's config jsonb.
  * @param taxRegistrations - Countries to register Stripe Tax for.
+ * @param setupDefaultFeatures - Inserts standard test features on the sub-org.
  *
  * @example s.platform.create({ configOverrides: { automatic_tax: true }, taxRegistrations: ["AU"] })
  */
@@ -965,6 +967,7 @@ export async function initScenario({
 			testSecretKey: response.test_secret_key,
 			configOverrides: config.platformConfig.configOverrides,
 			taxRegistrations: config.platformConfig.taxRegistrations,
+			setupDefaultFeatures: config.platformConfig.setupDefaultFeatures,
 		});
 
 		console.log(
@@ -1094,25 +1097,27 @@ export async function initScenario({
 		customer = result.customer;
 	}
 
-	// 2.5. Other customers — share the primary's test clock.
+	// 2.5. Other customers — share the primary's test clock. Created in
+	// parallel since they're independent (each gets its own Stripe customer);
+	// the shared `testClockId` is read-only here so concurrency is safe.
 	const otherCustomersMap = new Map<string, OtherCustomerResult>();
-	for (const otherCusConfig of config.otherCustomers) {
-		const otherResult = await initCustomerV3({
-			ctx,
-			customerId: otherCusConfig.id,
-			customerData: otherCusConfig.data,
-			attachPm: otherCusConfig.paymentMethod,
-			withTestClock: false,
-			...(testClockId ? { existingTestClockId: testClockId } : {}),
-			withDefault: false,
-			defaultGroup: productPrefix,
-			skipWebhooks: config.skipWebhooks,
-		});
-		otherCustomersMap.set(otherCusConfig.id, {
-			id: otherCusConfig.id,
-			customer: otherResult.customer,
-		});
-	}
+	const otherCustomersResults = await Promise.all(
+		config.otherCustomers.map(async (otherCusConfig) => {
+			const otherResult = await initCustomerV3({
+				ctx,
+				customerId: otherCusConfig.id,
+				customerData: otherCusConfig.data,
+				attachPm: otherCusConfig.paymentMethod,
+				withTestClock: false,
+				...(testClockId ? { existingTestClockId: testClockId } : {}),
+				withDefault: false,
+				defaultGroup: productPrefix,
+				skipWebhooks: config.skipWebhooks,
+			});
+			return { id: otherCusConfig.id, customer: otherResult.customer };
+		}),
+	);
+	for (const r of otherCustomersResults) otherCustomersMap.set(r.id, r);
 
 	// 3. Create autumn clients
 	const autumnV0 = new AutumnInt({

@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ProcessorType } from "../../genModels/genEnums.js";
 
 export enum InvoiceStatus {
 	Draft = "draft",
@@ -34,6 +35,7 @@ export const InvoiceSchema = z.object({
 
 	// Stripe fields
 	stripe_id: z.string(),
+	processor_type: z.enum(ProcessorType).default(ProcessorType.Stripe),
 	status: z.nativeEnum(InvoiceStatus).nullable().optional(),
 	hosted_invoice_url: z.string().nullable(),
 

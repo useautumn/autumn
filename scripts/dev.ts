@@ -174,6 +174,14 @@ async function startDev() {
 						? `"cd server && bun ${workersScript}"`
 						: `"cd server && bun ${workersScript}"`,
 				);
+
+				names.push("trigger");
+				colors.push("cyan");
+				cmds.push(
+					isWindows
+						? `"bunx trigger.dev@latest dev"`
+						: `"bunx trigger.dev@latest dev"`,
+				);
 			}
 
 			names.push("vite", "checkout");

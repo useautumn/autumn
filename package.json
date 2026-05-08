@@ -128,6 +128,7 @@
 		"@aws-sdk/client-sqs": "^3.985.0",
 		"@better-auth/core": "catalog:",
 		"@better-auth/oauth-provider": "catalog:",
+		"@trigger.dev/sdk": "4.4.5",
 		"@wooorm/starry-night": "^3.8.0",
 		"ag-charts-react": "^12.3.0",
 		"better-auth": "catalog:",
@@ -139,6 +140,7 @@
 	"devDependencies": {
 		"@better-auth/cli": "^1.4.21",
 		"@biomejs/biome": "^2.2.7",
+		"@trigger.dev/build": "4.4.5",
 		"@types/node": "^24.9.1",
 		"concurrently": "^9.2.1",
 		"dotenv": "^16.6.1",

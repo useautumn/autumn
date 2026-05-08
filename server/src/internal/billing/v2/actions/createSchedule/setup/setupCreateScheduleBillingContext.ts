@@ -87,6 +87,7 @@ export const setupCreateScheduleBillingContext = async ({
 			customize: plan.customize,
 			feature_quantities: plan.feature_quantities,
 			version: plan.version,
+			subscription_id: plan.subscription_id,
 		})),
 		invoice_mode: params.invoice_mode,
 		success_url: params.success_url,

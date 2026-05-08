@@ -8,6 +8,7 @@ import {
 } from "@shared/index";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
+import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
@@ -29,7 +30,12 @@ export const handleRenewal = async ({
 	const { db, org, env, logger, features } = ctx;
 	const { product_id, app_user_id } = event;
 
-	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+	const {
+		ctx: customerCtx,
+		product,
+		customer,
+		cusProducts,
+	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
@@ -50,13 +56,20 @@ export const handleRenewal = async ({
 
 		// Send webhook for simple renewal (no state change)
 		await addProductsUpdatedWebhookTask({
-			ctx,
+			ctx: customerCtx,
 			internalCustomerId: curSameProduct.internal_customer_id,
 			org,
 			env,
 			customerId: customer.id || "",
 			scenario: AttachScenario.Renew,
 			cusProduct: curSameProduct,
+		});
+
+		await recordRevenueCatInvoice({
+			ctx: customerCtx,
+			event,
+			customer,
+			product,
 		});
 
 		return { success: true };
@@ -68,7 +81,7 @@ export const handleRenewal = async ({
 			`Renewal for existing past due product ${product.id}, marking as active`,
 		);
 		await CusProductService.update({
-			ctx,
+			ctx: customerCtx,
 			cusProductId: curSameProduct.id,
 			updates: {
 				status: CusProductStatus.Active,
@@ -77,7 +90,7 @@ export const handleRenewal = async ({
 
 		// Send webhook for past_due → active recovery
 		await addProductsUpdatedWebhookTask({
-			ctx,
+			ctx: customerCtx,
 			internalCustomerId: curSameProduct.internal_customer_id,
 			org,
 			env,
@@ -87,6 +100,14 @@ export const handleRenewal = async ({
 		});
 
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);
+
+		await recordRevenueCatInvoice({
+			ctx: customerCtx,
+			event,
+			customer,
+			product,
+		});
+
 		return { success: true };
 	}
 
@@ -111,7 +132,7 @@ export const handleRenewal = async ({
 
 		// Expire old cus_product
 		await CusProductService.update({
-			ctx,
+			ctx: customerCtx,
 			cusProductId: curMainProduct.id,
 			updates: {
 				status: CusProductStatus.Expired,
@@ -121,7 +142,7 @@ export const handleRenewal = async ({
 
 		// Send webhook for the expired product
 		await addProductsUpdatedWebhookTask({
-			ctx,
+			ctx: customerCtx,
 			internalCustomerId: curMainProduct.internal_customer_id,
 			org,
 			env,
@@ -134,7 +155,7 @@ export const handleRenewal = async ({
 	} else if (curSameProduct) {
 		// Reactivate the same product if it was expired/cancelled
 		await CusProductService.update({
-			ctx,
+			ctx: customerCtx,
 			cusProductId: curSameProduct.id,
 			updates: {
 				status: CusProductStatus.Active,
@@ -146,7 +167,7 @@ export const handleRenewal = async ({
 
 		// Send webhook for reactivation
 		await addProductsUpdatedWebhookTask({
-			ctx,
+			ctx: customerCtx,
 			internalCustomerId: curSameProduct.internal_customer_id,
 			org,
 			env,
@@ -156,6 +177,14 @@ export const handleRenewal = async ({
 		});
 
 		logger.info(`Reactivated cus_product: ${curSameProduct.id}`);
+
+		await recordRevenueCatInvoice({
+			ctx: customerCtx,
+			event,
+			customer,
+			product,
+		});
+
 		return { success: true };
 	}
 
@@ -190,6 +219,8 @@ export const handleRenewal = async ({
 	logger.info(
 		`Created cus_product for ${product.id} with scenario: ${scenario} (renewal)`,
 	);
+
+	await recordRevenueCatInvoice({ ctx: customerCtx, event, customer, product });
 
 	return { success: true };
 };

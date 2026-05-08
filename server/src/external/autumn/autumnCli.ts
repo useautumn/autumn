@@ -49,6 +49,7 @@ import {
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
 import { timeout } from "@tests/utils/genUtils";
+import type { PrepareResponse } from "@/internal/migrations/v2/prepare/types";
 
 export default class AutumnError extends Error {
 	message: string;
@@ -954,6 +955,49 @@ export class AutumnInt {
 		}): Promise<Migration> => {
 			const data = await this.post(`/migrations.update`, params);
 			return data as Migration;
+		},
+		delete: async (params: { id: string }): Promise<Migration> => {
+			const data = await this.post(`/migrations.delete`, params);
+			return data as Migration;
+		},
+		/**
+		 * Idempotent setup helper for tests / scripts: best-effort deletes
+		 * the migration if it exists, then creates a fresh one with the
+		 * given filter + operations. Avoids the (org_id, env, id) unique
+		 * constraint when reseeding fixtures.
+		 */
+		deleteAndCreate: async (params: {
+			id: string;
+			filter?: MigrationFilter | null;
+			operations?: Operations | null;
+		}): Promise<Migration> => {
+			try {
+				await this.post(`/migrations.delete`, { id: params.id });
+			} catch {}
+			const data = await this.post(`/migrations.create`, params);
+			return data as Migration;
+		},
+		prepare: async (params: {
+			id: string;
+			dry_run: boolean;
+		}): Promise<PrepareResponse> => {
+			const data = await this.post(`/migrations.prepare`, params);
+			return data as PrepareResponse;
+		},
+		run: async (params: {
+			id: string;
+			dry_run?: boolean;
+		}): Promise<{
+			migration_id: string;
+			dry_run: boolean;
+			run_id: string;
+		}> => {
+			const data = await this.post(`/migrations.run`, params);
+			return data as {
+				migration_id: string;
+				dry_run: boolean;
+				run_id: string;
+			};
 		},
 	};
 

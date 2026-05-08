@@ -69,7 +69,6 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 9. Proration behavior errors
 	handleProrationBehaviorErrors({
 		billingContext,
-		currentCustomerProduct: customerProduct,
 		billingPlan,
 		params,
 	});

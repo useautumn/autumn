@@ -1,5 +1,6 @@
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext.js";
 import { redis } from "@/external/redis/initRedis.js";
+import { getRedisV2OrgCleanupCandidates } from "@/external/redis/orgRedisUtils/orgRedisMigrationUtils.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { buildClaimMarkerKey } from "@/internal/balances/utils/lockV2/buildClaimMarkerKey.js";
 
@@ -20,6 +21,8 @@ export const deleteLock = async ({
 
 	await Promise.all([
 		redis.del(redisReceiptKey),
-		ctx.redisV2.del(redisReceiptKey, claimMarkerKey),
+		...getRedisV2OrgCleanupCandidates({ ctx }).map((redisInstance) =>
+			redisInstance.del(redisReceiptKey, claimMarkerKey),
+		),
 	]);
 };

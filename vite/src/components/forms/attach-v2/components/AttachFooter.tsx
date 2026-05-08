@@ -13,7 +13,7 @@ import {
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
-import { usePlanScheduleField } from "../hooks/usePlanScheduleField";
+import { useAttachBillingOptionsState } from "../hooks/useAttachBillingOptionsState";
 import { AttachFooterSkeleton } from "./AttachPreviewSkeleton";
 
 export function AttachFooter() {
@@ -25,7 +25,7 @@ export function AttachFooter() {
 		formValues,
 	} = useAttachFormContext();
 
-	const { isEndOfCycleSelected } = usePlanScheduleField();
+	const { isEndOfCycleSelected } = useAttachBillingOptionsState();
 
 	const invoiceDisabledReason = isEndOfCycleSelected
 		? "Invoices are not available for end of cycle changes as there is no immediate charge to invoice"

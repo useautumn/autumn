@@ -1,4 +1,4 @@
-import { flagV0ToBalanceV0 } from "@api/models.js";
+import { type ApiBalance, flagV0ToBalanceV0 } from "@api/models.js";
 import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import {
 	AffectedResource,
@@ -32,6 +32,16 @@ export const V2_0_CheckChange = defineVersionChange({
 	}: {
 		input: z.infer<typeof CheckResponseV3Schema>;
 	}): z.infer<typeof CheckResponseV2Schema> => {
+		let transformedBalances: Record<string, ApiBalance | null> | undefined;
+		if (input.balances) {
+			transformedBalances = {};
+			for (const [featureId, balance] of Object.entries(input.balances)) {
+				transformedBalances[featureId] = balance
+					? balanceV1ToV0({ input: balance })
+					: null;
+			}
+		}
+
 		return {
 			...input,
 			balance: input.balance
@@ -39,6 +49,7 @@ export const V2_0_CheckChange = defineVersionChange({
 				: input.flag
 					? flagV0ToBalanceV0({ input: input.flag })
 					: null,
+			balances: transformedBalances,
 		};
 	},
 });

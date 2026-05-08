@@ -69,11 +69,23 @@ export const createInvoiceForBilling = async ({
 		? "send_invoice"
 		: "charge_automatically";
 
+	const vercelInstallationId =
+		billingContext.paymentMethod?.type === "custom"
+			? billingContext.fullCustomer?.processors?.vercel?.installation_id
+			: undefined;
+
 	const invoiceMetadata = mergeStripeMetadata({
 		userMetadata: billingContext.userMetadata,
 		autumnMetadata: {
 			autumn_billing_update: "true",
 			autumn_invoice_mode: billingContext.invoiceMode ? "true" : "false",
+			...(vercelInstallationId
+				? {
+						vercel_installation_id: vercelInstallationId,
+						vercel_billing_plan_id:
+							billingContext.fullProducts?.[0]?.id ?? "",
+					}
+				: {}),
 		},
 	});
 

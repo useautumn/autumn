@@ -1028,6 +1028,8 @@ class CheckResponseBody2TypedDict(TypedDict):
     r"""The ID of the entity, if an entity-scoped check was performed."""
     required_balance: NotRequired[float]
     r"""The required balance that was checked against."""
+    balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
+    r"""Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems)."""
     preview: NotRequired[Preview2TypedDict]
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
@@ -1053,12 +1055,15 @@ class CheckResponseBody2(BaseModel):
     required_balance: Optional[float] = None
     r"""The required balance that was checked against."""
 
+    balances: Optional[Dict[str, Nullable[Balance]]] = None
+    r"""Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems)."""
+
     preview: Optional[Preview2] = None
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["entity_id", "required_balance", "preview"])
+        optional_fields = set(["entity_id", "required_balance", "balances", "preview"])
         nullable_fields = set(["entity_id", "balance", "flag"])
         serialized = handler(self)
         m = {}
@@ -1951,6 +1956,8 @@ class CheckResponseBody1TypedDict(TypedDict):
     r"""The ID of the entity, if an entity-scoped check was performed."""
     required_balance: NotRequired[float]
     r"""The required balance that was checked against."""
+    balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
+    r"""Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems)."""
     preview: NotRequired[Preview1TypedDict]
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
@@ -1976,12 +1983,15 @@ class CheckResponseBody1(BaseModel):
     required_balance: Optional[float] = None
     r"""The required balance that was checked against."""
 
+    balances: Optional[Dict[str, Nullable[Balance]]] = None
+    r"""Map of feature_id to balance for the checked feature and any related features (e.g. linked credit systems)."""
+
     preview: Optional[Preview1] = None
     r"""Upgrade/upsell information when access is denied. Only present if with_preview was true and allowed is false."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["entity_id", "required_balance", "preview"])
+        optional_fields = set(["entity_id", "required_balance", "balances", "preview"])
         nullable_fields = set(["entity_id", "balance", "flag"])
         serialized = handler(self)
         m = {}

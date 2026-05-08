@@ -66,7 +66,9 @@ export const handleUpdateVercelBillingPlan = createRoute({
 			}
 
 			const existingSubscription = stripeCustomer.subscriptions?.data.find(
-				(s) => s.metadata.vercel_installation_id === integrationConfigurationId,
+				(s) =>
+					s.metadata.vercel_installation_id === integrationConfigurationId &&
+					s.status === "active",
 			);
 
 			if (!existingSubscription && billingPlanId === "cancel_plan") {

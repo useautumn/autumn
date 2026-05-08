@@ -1,4 +1,3 @@
-export * from "./buildCustomerQuery.js";
 export * from "./compileFilter.js";
 export * from "./compilePlanFilter.js";
 export * from "./filterToIr/index.js";

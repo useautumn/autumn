@@ -19,7 +19,9 @@ export const updateMigration = async ({
 }: {
 	ctx: RepoContext;
 	id: string;
-	updates: Partial<Pick<MigrationInsert, "id" | "filter" | "operations">>;
+	updates: Partial<
+		Pick<MigrationInsert, "id" | "filter" | "operations" | "prepared_state">
+	>;
 }): Promise<Migration | null> => {
 	const [row] = await ctx.db
 		.update(migrations)

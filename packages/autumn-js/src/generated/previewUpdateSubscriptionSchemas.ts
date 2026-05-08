@@ -11,9 +11,17 @@ export const previewUpdateFeatureQuantityRequestSchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const previewUpdateToSchema = z.union([z.number(), z.string()]);
+export const previewUpdateItemToSchema = z.union([z.number(), z.string()]);
 
-export const previewUpdateTierSchema = z.object({
+export const previewUpdateItemTierSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewUpdateAddItemToSchema = z.union([z.number(), z.string()]);
+
+export const previewUpdateAddItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
@@ -122,6 +130,11 @@ export const previewUpdateOutgoingFeatureQuantitySchema = z.object({
 	quantity: z.number(),
 });
 
+export const previewUpdateInvoiceCreditsSchema = z.object({
+	balance: z.number(),
+	currency: z.string(),
+});
+
 export const previewUpdateFeatureQuantityRequestOutboundSchema = z.object({
 	feature_id: z.string(),
 	quantity: z.union([z.number(), z.undefined()]).optional(),
@@ -134,23 +147,26 @@ export const previewUpdateBasePriceOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewUpdateResetOutboundSchema = z.object({
+export const previewUpdateItemResetOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewUpdateToOutboundSchema = z.union([z.number(), z.string()]);
+export const previewUpdateItemToOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
 
-export const previewUpdateTierOutboundSchema = z.object({
+export const previewUpdateItemTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewUpdatePriceOutboundSchema = z.object({
+export const previewUpdateItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	tiers: z
-		.union([z.array(previewUpdateTierOutboundSchema), z.undefined()])
+		.union([z.array(previewUpdateItemTierOutboundSchema), z.undefined()])
 		.optional(),
 	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.string(),
@@ -160,30 +176,99 @@ export const previewUpdatePriceOutboundSchema = z.object({
 	max_purchase: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewUpdateProrationOutboundSchema = z.object({
+export const previewUpdateItemProrationOutboundSchema = z.object({
 	on_increase: z.string(),
 	on_decrease: z.string(),
 });
 
-export const previewUpdateRolloverOutboundSchema = z.object({
+export const previewUpdateItemRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
 	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewUpdatePlanItemOutboundSchema = z.object({
+export const previewUpdateItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-	reset: z.union([previewUpdateResetOutboundSchema, z.undefined()]).optional(),
-	price: z.union([previewUpdatePriceOutboundSchema, z.undefined()]).optional(),
+	reset: z
+		.union([previewUpdateItemResetOutboundSchema, z.undefined()])
+		.optional(),
+	price: z
+		.union([previewUpdateItemPriceOutboundSchema, z.undefined()])
+		.optional(),
 	proration: z
-		.union([previewUpdateProrationOutboundSchema, z.undefined()])
+		.union([previewUpdateItemProrationOutboundSchema, z.undefined()])
 		.optional(),
 	rollover: z
-		.union([previewUpdateRolloverOutboundSchema, z.undefined()])
+		.union([previewUpdateItemRolloverOutboundSchema, z.undefined()])
 		.optional(),
+});
+
+export const previewUpdateAddItemResetOutboundSchema = z.object({
+	interval: z.string(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewUpdateAddItemToOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
+
+export const previewUpdateAddItemTierOutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewUpdateAddItemPriceOutboundSchema = z.object({
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(previewUpdateAddItemTierOutboundSchema), z.undefined()])
+		.optional(),
+	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.string(),
+	interval_count: z.number(),
+	billing_units: z.number(),
+	billing_method: z.string(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewUpdateAddItemProrationOutboundSchema = z.object({
+	on_increase: z.string(),
+	on_decrease: z.string(),
+});
+
+export const previewUpdateAddItemRolloverOutboundSchema = z.object({
+	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
+	expiry_duration_type: z.string(),
+	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewUpdateAddItemPlanItemOutboundSchema = z.object({
+	feature_id: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z
+		.union([previewUpdateAddItemResetOutboundSchema, z.undefined()])
+		.optional(),
+	price: z
+		.union([previewUpdateAddItemPriceOutboundSchema, z.undefined()])
+		.optional(),
+	proration: z
+		.union([previewUpdateAddItemProrationOutboundSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([previewUpdateAddItemRolloverOutboundSchema, z.undefined()])
+		.optional(),
+});
+
+export const previewUpdatePlanItemFilterOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	billing_method: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const previewUpdateFreeTrialParamsOutboundSchema = z.object({
@@ -198,7 +283,13 @@ export const previewUpdateCustomizeOutboundSchema = z.object({
 		.optional()
 		.nullable(),
 	items: z
-		.union([z.array(previewUpdatePlanItemOutboundSchema), z.undefined()])
+		.union([z.array(previewUpdateItemPlanItemOutboundSchema), z.undefined()])
+		.optional(),
+	add_items: z
+		.union([z.array(previewUpdateAddItemPlanItemOutboundSchema), z.undefined()])
+		.optional(),
+	remove_items: z
+		.union([z.array(previewUpdatePlanItemFilterOutboundSchema), z.undefined()])
 		.optional(),
 	free_trial: z
 		.union([previewUpdateFreeTrialParamsOutboundSchema, z.undefined()])
@@ -266,58 +357,138 @@ export const previewUpdateBasePriceSchema = z.object({
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewUpdateResetIntervalSchema = closedEnumSchema;
+export const previewUpdateItemResetIntervalSchema = closedEnumSchema;
 
-export const previewUpdateResetSchema = z.object({
-	interval: previewUpdateResetIntervalSchema,
+export const previewUpdateItemResetSchema = z.object({
+	interval: previewUpdateItemResetIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewUpdateTierBehaviorSchema = closedEnumSchema;
+export const previewUpdateItemTierBehaviorSchema = closedEnumSchema;
 
 export const previewUpdateItemPriceIntervalSchema = closedEnumSchema;
 
-export const previewUpdateBillingMethodSchema = closedEnumSchema;
+export const previewUpdateItemBillingMethodSchema = closedEnumSchema;
 
-export const previewUpdatePriceSchema = z.object({
+export const previewUpdateItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	tiers: z.union([z.array(previewUpdateTierSchema), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(previewUpdateItemTierSchema), z.undefined()])
+		.optional(),
 	tierBehavior: z
-		.union([previewUpdateTierBehaviorSchema, z.undefined()])
+		.union([previewUpdateItemTierBehaviorSchema, z.undefined()])
 		.optional(),
 	interval: previewUpdateItemPriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	billingMethod: previewUpdateBillingMethodSchema,
+	billingMethod: previewUpdateItemBillingMethodSchema,
 	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewUpdateOnIncreaseSchema = closedEnumSchema;
+export const previewUpdateItemOnIncreaseSchema = closedEnumSchema;
 
-export const previewUpdateOnDecreaseSchema = closedEnumSchema;
+export const previewUpdateItemOnDecreaseSchema = closedEnumSchema;
 
-export const previewUpdateProrationSchema = z.object({
-	onIncrease: previewUpdateOnIncreaseSchema,
-	onDecrease: previewUpdateOnDecreaseSchema,
+export const previewUpdateItemProrationSchema = z.object({
+	onIncrease: previewUpdateItemOnIncreaseSchema,
+	onDecrease: previewUpdateItemOnDecreaseSchema,
 });
 
-export const previewUpdateExpiryDurationTypeSchema = closedEnumSchema;
+export const previewUpdateItemExpiryDurationTypeSchema = closedEnumSchema;
 
-export const previewUpdateRolloverSchema = z.object({
+export const previewUpdateItemRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
 	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
-	expiryDurationType: previewUpdateExpiryDurationTypeSchema,
+	expiryDurationType: previewUpdateItemExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const previewUpdatePlanItemSchema = z.object({
+export const previewUpdateItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-	reset: z.union([previewUpdateResetSchema, z.undefined()]).optional(),
-	price: z.union([previewUpdatePriceSchema, z.undefined()]).optional(),
-	proration: z.union([previewUpdateProrationSchema, z.undefined()]).optional(),
-	rollover: z.union([previewUpdateRolloverSchema, z.undefined()]).optional(),
+	reset: z.union([previewUpdateItemResetSchema, z.undefined()]).optional(),
+	price: z.union([previewUpdateItemPriceSchema, z.undefined()]).optional(),
+	proration: z
+		.union([previewUpdateItemProrationSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([previewUpdateItemRolloverSchema, z.undefined()])
+		.optional(),
+});
+
+export const previewUpdateAddItemResetIntervalSchema = closedEnumSchema;
+
+export const previewUpdateAddItemResetSchema = z.object({
+	interval: previewUpdateAddItemResetIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewUpdateAddItemTierBehaviorSchema = closedEnumSchema;
+
+export const previewUpdateAddItemPriceIntervalSchema = closedEnumSchema;
+
+export const previewUpdateAddItemBillingMethodSchema = closedEnumSchema;
+
+export const previewUpdateAddItemPriceSchema = z.object({
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(previewUpdateAddItemTierSchema), z.undefined()])
+		.optional(),
+	tierBehavior: z
+		.union([previewUpdateAddItemTierBehaviorSchema, z.undefined()])
+		.optional(),
+	interval: previewUpdateAddItemPriceIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	billingMethod: previewUpdateAddItemBillingMethodSchema,
+	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewUpdateAddItemOnIncreaseSchema = closedEnumSchema;
+
+export const previewUpdateAddItemOnDecreaseSchema = closedEnumSchema;
+
+export const previewUpdateAddItemProrationSchema = z.object({
+	onIncrease: previewUpdateAddItemOnIncreaseSchema,
+	onDecrease: previewUpdateAddItemOnDecreaseSchema,
+});
+
+export const previewUpdateAddItemExpiryDurationTypeSchema = closedEnumSchema;
+
+export const previewUpdateAddItemRolloverSchema = z.object({
+	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
+	expiryDurationType: previewUpdateAddItemExpiryDurationTypeSchema,
+	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const previewUpdateAddItemPlanItemSchema = z.object({
+	featureId: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z.union([previewUpdateAddItemResetSchema, z.undefined()]).optional(),
+	price: z.union([previewUpdateAddItemPriceSchema, z.undefined()]).optional(),
+	proration: z
+		.union([previewUpdateAddItemProrationSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([previewUpdateAddItemRolloverSchema, z.undefined()])
+		.optional(),
+});
+
+export const previewUpdateRemoveItemBillingMethodSchema = closedEnumSchema;
+
+export const previewUpdateRemoveItemIntervalSchema = closedEnumSchema;
+
+export const previewUpdatePlanItemFilterSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	billingMethod: z
+		.union([previewUpdateRemoveItemBillingMethodSchema, z.undefined()])
+		.optional(),
+	interval: z
+		.union([previewUpdateRemoveItemIntervalSchema, z.undefined()])
+		.optional(),
 });
 
 export const previewUpdateDurationTypeSchema = closedEnumSchema;
@@ -336,7 +507,13 @@ export const previewUpdateCustomizeSchema = z.object({
 		.optional()
 		.nullable(),
 	items: z
-		.union([z.array(previewUpdatePlanItemSchema), z.undefined()])
+		.union([z.array(previewUpdateItemPlanItemSchema), z.undefined()])
+		.optional(),
+	addItems: z
+		.union([z.array(previewUpdateAddItemPlanItemSchema), z.undefined()])
+		.optional(),
+	removeItems: z
+		.union([z.array(previewUpdatePlanItemFilterSchema), z.undefined()])
 		.optional(),
 	freeTrial: z
 		.union([previewUpdateFreeTrialParamsSchema, z.undefined()])
@@ -402,6 +579,16 @@ export const previewUpdateOutgoingSchema = z.object({
 
 export const intentSchema = openEnumSchema;
 
+export const previewUpdateStatusSchema = openEnumSchema;
+
+export const previewUpdateTaxSchema = z.object({
+	total: z.number(),
+	amountInclusive: z.number(),
+	amountExclusive: z.number(),
+	currency: z.string(),
+	status: previewUpdateStatusSchema,
+});
+
 export const previewUpdateResponseSchema = z.object({
 	customerId: z.string(),
 	lineItems: z.array(previewUpdateLineItemSchema),
@@ -413,4 +600,8 @@ export const previewUpdateResponseSchema = z.object({
 	incoming: z.array(previewUpdateIncomingSchema),
 	outgoing: z.array(previewUpdateOutgoingSchema),
 	intent: intentSchema,
+	tax: z.union([previewUpdateTaxSchema, z.undefined()]).optional(),
+	invoiceCredits: z
+		.union([previewUpdateInvoiceCreditsSchema, z.undefined()])
+		.optional(),
 });

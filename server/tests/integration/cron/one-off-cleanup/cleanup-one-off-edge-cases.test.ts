@@ -23,6 +23,7 @@ import { cleanupOneOffCustomerProducts } from "@/internal/customers/cusProducts/
 import {
 	expectProductStatusesByOrder,
 	getFullCustomerWithExpired,
+	trackUsageForCleanup,
 } from "./utils/oneOffCleanupTestUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -122,7 +123,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: entity-isolation-only-same-entit
 	);
 
 	// Entity 0: Track first to 0
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		entity_id: entities[0].id,
@@ -143,7 +144,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: entity-isolation-only-same-entit
 	);
 
 	// Entity 0: Track second to 0
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		entity_id: entities[0].id,
@@ -300,7 +301,7 @@ test.concurrent(`${chalk.yellowBright("cleanup: boolean-coverage-same-product-al
 		{ timeout: 2000 },
 	);
 
-	await autumnV1.track({
+	await trackUsageForCleanup(autumnV1, {
 		customer_id: customerId,
 		feature_id: TestFeature.Messages,
 		value: 100,

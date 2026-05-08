@@ -10,6 +10,7 @@ import {
 	FreeTrialSchema,
 	FullCusProductSchema,
 	FullCustomerEntitlementSchema,
+	FullCustomerPriceSchema,
 	type InsertInvoice,
 	PriceSchema,
 	ReplaceableSchema,
@@ -45,13 +46,24 @@ export const CustomerProductUpdateSchema = z.object({
 		options: z.array(FeatureOptionsSchema).optional(),
 		status: z.enum(CusProductStatus).optional(),
 		billing_cycle_anchor_resets_at: z.number().nullish(),
+		free_trial_id: z.string().nullish(),
+		trial_ends_at: z.number().nullish(),
 		// Cancel fields (nullish to support uncancel - setting to null)
 		canceled: z.boolean().nullish(),
 		canceled_at: z.number().nullish(),
 		ended_at: z.number().nullish(),
 		scheduled_ids: z.array(z.string()).optional(),
 		subscription_ids: z.array(z.string()).optional(),
+		updated_at: z.number().optional(),
 	}),
+});
+
+export const PatchCustomerProductSchema = z.object({
+	customerProduct: FullCusProductSchema,
+	insertCustomerEntitlements: z.array(FullCustomerEntitlementSchema),
+	insertCustomerPrices: z.array(FullCustomerPriceSchema),
+	deleteCustomerEntitlements: z.array(FullCustomerEntitlementSchema),
+	deleteCustomerPrices: z.array(FullCustomerPriceSchema),
 });
 
 export const AutumnBillingPlanSchema = z.object({
@@ -71,6 +83,12 @@ export const AutumnBillingPlanSchema = z.object({
 	deleteCustomerProduct: FullCusProductSchema.optional(), // Scheduled product to delete (e.g., when updating while canceling)
 	deleteCustomerProducts: z.array(FullCusProductSchema).optional(),
 
+	// Used by migration `delete_items` to drop specific cusEnts/cusPrices
+	// without rebuilding the cusproduct. Honored by executeAutumnBillingPlan
+	// after insert/update phases.
+	deleteCustomerEntitlementIds: z.array(z.string()).optional(),
+	deleteCustomerPriceIds: z.array(z.string()).optional(),
+
 	customPrices: z.array(PriceSchema).optional(), // Custom prices to insert
 	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
@@ -81,6 +99,7 @@ export const AutumnBillingPlanSchema = z.object({
 	insertCustomerEntitlements: z
 		.array(z.custom<InsertCustomerEntitlement>())
 		.optional(),
+	patchCustomerProducts: z.array(PatchCustomerProductSchema).optional(),
 	updateCustomerEntitlements: z
 		.array(UpdateCustomerEntitlementSchema)
 		.optional(),

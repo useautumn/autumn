@@ -44,15 +44,24 @@ export const CustomerProductsColumns = [
 	{
 		header: "Status",
 		accessorKey: "status",
-		cell: ({ row }: { row: Row<FullCusProduct> }) => {
+		cell: ({
+			row,
+			table,
+		}: {
+			row: Row<FullCusProduct>;
+			table: Table<FullCusProduct>;
+		}) => {
+			const nowMs = (table.options.meta as { nowMs?: number })?.nowMs;
+
 			return (
 				<CustomerProductsStatus
 					status={row.original.status}
 					starts_at={row.original.starts_at ?? undefined}
 					canceled={row.original.canceled}
 					canceled_at={row.original.canceled_at ?? undefined}
-					trialing={isCustomerProductTrialing(row.original) || false}
+					trialing={isCustomerProductTrialing(row.original, { nowMs }) || false}
 					trial_ends_at={row.original.trial_ends_at ?? undefined}
+					nowMs={nowMs}
 				/>
 			);
 		},

@@ -7,6 +7,7 @@ import {
 } from "@shared/index";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
+import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { attachToInsertParams } from "@/internal/products/productUtils";
@@ -21,7 +22,12 @@ export const handleNonRenewingPurchase = async ({
 }) => {
 	const { db, org, env, logger, features } = ctx;
 
-	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+	const {
+		ctx: customerCtx,
+		product,
+		customer,
+		cusProducts,
+	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: event.product_id,
 		customerId: event.app_user_id,
@@ -69,4 +75,6 @@ export const handleNonRenewingPurchase = async ({
 	logger.info(
 		`Created cus_product for ${product.id} with scenario: ${scenario}`,
 	);
+
+	await recordRevenueCatInvoice({ ctx: customerCtx, event, customer, product });
 };

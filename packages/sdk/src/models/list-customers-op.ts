@@ -462,6 +462,58 @@ export type ListCustomersConfig = {
   disablePooledBalance?: boolean | undefined;
 };
 
+/**
+ * Stripe processor connection for the customer.
+ */
+export type ListCustomersStripe = {
+  /**
+   * Stripe customer ID.
+   */
+  id: string;
+};
+
+/**
+ * Vercel processor connection for the customer (public-safe subset).
+ */
+export type ListCustomersVercel = {
+  /**
+   * Vercel marketplace installation ID for this customer.
+   */
+  installationId: string;
+  /**
+   * Vercel account ID associated with the installation.
+   */
+  accountId: string;
+};
+
+/**
+ * RevenueCat processor connection for the customer.
+ */
+export type ListCustomersRevenuecat = {
+  /**
+   * Customer's external ID, used as the RevenueCat app user ID. Null if the customer has no external ID set.
+   */
+  id: string | null;
+};
+
+/**
+ * Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor.
+ */
+export type ListCustomersProcessors = {
+  /**
+   * Stripe processor connection for the customer.
+   */
+  stripe?: ListCustomersStripe | undefined;
+  /**
+   * Vercel processor connection for the customer (public-safe subset).
+   */
+  vercel?: ListCustomersVercel | undefined;
+  /**
+   * RevenueCat processor connection for the customer.
+   */
+  revenuecat?: ListCustomersRevenuecat | undefined;
+};
+
 export type ListCustomersList = {
   /**
    * Your unique identifier for the customer.
@@ -523,6 +575,10 @@ export type ListCustomersList = {
    * Configuration for the customer.
    */
   config?: ListCustomersConfig | undefined;
+  /**
+   * Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor.
+   */
+  processors?: ListCustomersProcessors | undefined;
 };
 
 /**
@@ -1116,6 +1172,91 @@ export function listCustomersConfigFromJSON(
 }
 
 /** @internal */
+export const ListCustomersStripe$inboundSchema: z.ZodMiniType<
+  ListCustomersStripe,
+  unknown
+> = z.object({
+  id: types.string(),
+});
+
+export function listCustomersStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListCustomersVercel$inboundSchema: z.ZodMiniType<
+  ListCustomersVercel,
+  unknown
+> = z.pipe(
+  z.object({
+    installation_id: types.string(),
+    account_id: types.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "installation_id": "installationId",
+      "account_id": "accountId",
+    });
+  }),
+);
+
+export function listCustomersVercelFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersVercel, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersVercel$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersVercel' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListCustomersRevenuecat$inboundSchema: z.ZodMiniType<
+  ListCustomersRevenuecat,
+  unknown
+> = z.object({
+  id: types.nullable(types.string()),
+});
+
+export function listCustomersRevenuecatFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersRevenuecat, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersRevenuecat$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersRevenuecat' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListCustomersProcessors$inboundSchema: z.ZodMiniType<
+  ListCustomersProcessors,
+  unknown
+> = z.object({
+  stripe: types.optional(z.lazy(() => ListCustomersStripe$inboundSchema)),
+  vercel: types.optional(z.lazy(() => ListCustomersVercel$inboundSchema)),
+  revenuecat: types.optional(
+    z.lazy(() => ListCustomersRevenuecat$inboundSchema),
+  ),
+});
+
+export function listCustomersProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListCustomersProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListCustomersProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListCustomersProcessors' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListCustomersList$inboundSchema: z.ZodMiniType<
   ListCustomersList,
   unknown
@@ -1138,6 +1279,9 @@ export const ListCustomersList$inboundSchema: z.ZodMiniType<
     balances: z.record(z.string(), Balance$inboundSchema),
     flags: z.record(z.string(), z.lazy(() => ListCustomersFlags$inboundSchema)),
     config: types.optional(z.lazy(() => ListCustomersConfig$inboundSchema)),
+    processors: types.optional(
+      z.lazy(() => ListCustomersProcessors$inboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

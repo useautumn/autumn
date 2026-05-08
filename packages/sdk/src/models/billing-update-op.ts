@@ -73,7 +73,7 @@ export type BillingUpdateBasePrice = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const BillingUpdateResetInterval = {
+export const BillingUpdateItemResetInterval = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -87,38 +87,38 @@ export const BillingUpdateResetInterval = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type BillingUpdateResetInterval = ClosedEnum<
-  typeof BillingUpdateResetInterval
+export type BillingUpdateItemResetInterval = ClosedEnum<
+  typeof BillingUpdateItemResetInterval
 >;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
  */
-export type BillingUpdateReset = {
+export type BillingUpdateItemReset = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: BillingUpdateResetInterval;
+  interval: BillingUpdateItemResetInterval;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type BillingUpdateTo = number | string;
+export type BillingUpdateItemTo = number | string;
 
-export type BillingUpdateTier = {
+export type BillingUpdateItemTier = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
 };
 
-export const BillingUpdateTierBehavior = {
+export const BillingUpdateItemTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type BillingUpdateTierBehavior = ClosedEnum<
-  typeof BillingUpdateTierBehavior
+export type BillingUpdateItemTierBehavior = ClosedEnum<
+  typeof BillingUpdateItemTierBehavior
 >;
 
 /**
@@ -142,21 +142,21 @@ export type BillingUpdateItemPriceInterval = ClosedEnum<
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const BillingUpdateBillingMethod = {
+export const BillingUpdateItemBillingMethod = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type BillingUpdateBillingMethod = ClosedEnum<
-  typeof BillingUpdateBillingMethod
+export type BillingUpdateItemBillingMethod = ClosedEnum<
+  typeof BillingUpdateItemBillingMethod
 >;
 
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type BillingUpdatePrice = {
+export type BillingUpdateItemPrice = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -164,8 +164,8 @@ export type BillingUpdatePrice = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<BillingUpdateTier> | undefined;
-  tierBehavior?: BillingUpdateTierBehavior | undefined;
+  tiers?: Array<BillingUpdateItemTier> | undefined;
+  tierBehavior?: BillingUpdateItemTierBehavior | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
@@ -181,7 +181,7 @@ export type BillingUpdatePrice = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: BillingUpdateBillingMethod;
+  billingMethod: BillingUpdateItemBillingMethod;
   /**
    * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
    */
@@ -191,7 +191,7 @@ export type BillingUpdatePrice = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export const BillingUpdateOnIncrease = {
+export const BillingUpdateItemOnIncrease = {
   BillImmediately: "bill_immediately",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -200,14 +200,14 @@ export const BillingUpdateOnIncrease = {
 /**
  * Billing behavior when quantity increases mid-cycle.
  */
-export type BillingUpdateOnIncrease = ClosedEnum<
-  typeof BillingUpdateOnIncrease
+export type BillingUpdateItemOnIncrease = ClosedEnum<
+  typeof BillingUpdateItemOnIncrease
 >;
 
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export const BillingUpdateOnDecrease = {
+export const BillingUpdateItemOnDecrease = {
   Prorate: "prorate",
   ProrateImmediately: "prorate_immediately",
   ProrateNextCycle: "prorate_next_cycle",
@@ -217,42 +217,42 @@ export const BillingUpdateOnDecrease = {
 /**
  * Credit behavior when quantity decreases mid-cycle.
  */
-export type BillingUpdateOnDecrease = ClosedEnum<
-  typeof BillingUpdateOnDecrease
+export type BillingUpdateItemOnDecrease = ClosedEnum<
+  typeof BillingUpdateItemOnDecrease
 >;
 
 /**
  * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
  */
-export type BillingUpdateProration = {
+export type BillingUpdateItemProration = {
   /**
    * Billing behavior when quantity increases mid-cycle.
    */
-  onIncrease: BillingUpdateOnIncrease;
+  onIncrease: BillingUpdateItemOnIncrease;
   /**
    * Credit behavior when quantity decreases mid-cycle.
    */
-  onDecrease: BillingUpdateOnDecrease;
+  onDecrease: BillingUpdateItemOnDecrease;
 };
 
 /**
  * When rolled over units expire.
  */
-export const BillingUpdateExpiryDurationType = {
+export const BillingUpdateItemExpiryDurationType = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type BillingUpdateExpiryDurationType = ClosedEnum<
-  typeof BillingUpdateExpiryDurationType
+export type BillingUpdateItemExpiryDurationType = ClosedEnum<
+  typeof BillingUpdateItemExpiryDurationType
 >;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
  */
-export type BillingUpdateRollover = {
+export type BillingUpdateItemRollover = {
   /**
    * Max rollover units. Omit for unlimited rollover.
    */
@@ -264,7 +264,7 @@ export type BillingUpdateRollover = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: BillingUpdateExpiryDurationType;
+  expiryDurationType: BillingUpdateItemExpiryDurationType;
   /**
    * Number of periods before expiry.
    */
@@ -274,7 +274,7 @@ export type BillingUpdateRollover = {
 /**
  * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
  */
-export type BillingUpdatePlanItem = {
+export type BillingUpdateItemPlanItem = {
   /**
    * The ID of the feature to configure.
    */
@@ -290,19 +290,304 @@ export type BillingUpdatePlanItem = {
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
-  reset?: BillingUpdateReset | undefined;
+  reset?: BillingUpdateItemReset | undefined;
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: BillingUpdatePrice | undefined;
+  price?: BillingUpdateItemPrice | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
-  proration?: BillingUpdateProration | undefined;
+  proration?: BillingUpdateItemProration | undefined;
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
-  rollover?: BillingUpdateRollover | undefined;
+  rollover?: BillingUpdateItemRollover | undefined;
+};
+
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export const BillingUpdateAddItemResetInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+ */
+export type BillingUpdateAddItemResetInterval = ClosedEnum<
+  typeof BillingUpdateAddItemResetInterval
+>;
+
+/**
+ * Reset configuration for consumable features. Omit for non-consumable features like seats.
+ */
+export type BillingUpdateAddItemReset = {
+  /**
+   * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
+   */
+  interval: BillingUpdateAddItemResetInterval;
+  /**
+   * Number of intervals between resets. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+};
+
+export type BillingUpdateAddItemTo = number | string;
+
+export type BillingUpdateAddItemTier = {
+  to: number | string;
+  amount?: number | undefined;
+  flatAmount?: number | undefined;
+};
+
+export const BillingUpdateAddItemTierBehavior = {
+  Graduated: "graduated",
+  Volume: "volume",
+} as const;
+export type BillingUpdateAddItemTierBehavior = ClosedEnum<
+  typeof BillingUpdateAddItemTierBehavior
+>;
+
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export const BillingUpdateAddItemPriceInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Billing interval. For consumable features, should match reset.interval.
+ */
+export type BillingUpdateAddItemPriceInterval = ClosedEnum<
+  typeof BillingUpdateAddItemPriceInterval
+>;
+
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export const BillingUpdateAddItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+ */
+export type BillingUpdateAddItemBillingMethod = ClosedEnum<
+  typeof BillingUpdateAddItemBillingMethod
+>;
+
+/**
+ * Pricing for usage beyond included units. Omit for free features.
+ */
+export type BillingUpdateAddItemPrice = {
+  /**
+   * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
+   */
+  amount?: number | undefined;
+  /**
+   * Tiered pricing.  Either 'amount' or 'tiers' is required.
+   */
+  tiers?: Array<BillingUpdateAddItemTier> | undefined;
+  tierBehavior?: BillingUpdateAddItemTierBehavior | undefined;
+  /**
+   * Billing interval. For consumable features, should match reset.interval.
+   */
+  interval: BillingUpdateAddItemPriceInterval;
+  /**
+   * Number of intervals per billing cycle. Defaults to 1.
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200).
+   */
+  billingUnits?: number | undefined;
+  /**
+   * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
+   */
+  billingMethod: BillingUpdateAddItemBillingMethod;
+  /**
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   */
+  maxPurchase?: number | undefined;
+};
+
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export const BillingUpdateAddItemOnIncrease = {
+  BillImmediately: "bill_immediately",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  BillNextCycle: "bill_next_cycle",
+} as const;
+/**
+ * Billing behavior when quantity increases mid-cycle.
+ */
+export type BillingUpdateAddItemOnIncrease = ClosedEnum<
+  typeof BillingUpdateAddItemOnIncrease
+>;
+
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export const BillingUpdateAddItemOnDecrease = {
+  Prorate: "prorate",
+  ProrateImmediately: "prorate_immediately",
+  ProrateNextCycle: "prorate_next_cycle",
+  None: "none",
+  NoProrations: "no_prorations",
+} as const;
+/**
+ * Credit behavior when quantity decreases mid-cycle.
+ */
+export type BillingUpdateAddItemOnDecrease = ClosedEnum<
+  typeof BillingUpdateAddItemOnDecrease
+>;
+
+/**
+ * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+ */
+export type BillingUpdateAddItemProration = {
+  /**
+   * Billing behavior when quantity increases mid-cycle.
+   */
+  onIncrease: BillingUpdateAddItemOnIncrease;
+  /**
+   * Credit behavior when quantity decreases mid-cycle.
+   */
+  onDecrease: BillingUpdateAddItemOnDecrease;
+};
+
+/**
+ * When rolled over units expire.
+ */
+export const BillingUpdateAddItemExpiryDurationType = {
+  Month: "month",
+  Forever: "forever",
+} as const;
+/**
+ * When rolled over units expire.
+ */
+export type BillingUpdateAddItemExpiryDurationType = ClosedEnum<
+  typeof BillingUpdateAddItemExpiryDurationType
+>;
+
+/**
+ * Rollover config for unused units. If set, unused included units carry over.
+ */
+export type BillingUpdateAddItemRollover = {
+  /**
+   * Max rollover units. Omit for unlimited rollover.
+   */
+  max?: number | undefined;
+  /**
+   * Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+   */
+  maxPercentage?: number | undefined;
+  /**
+   * When rolled over units expire.
+   */
+  expiryDurationType: BillingUpdateAddItemExpiryDurationType;
+  /**
+   * Number of periods before expiry.
+   */
+  expiryDurationLength?: number | undefined;
+};
+
+/**
+ * Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.
+ */
+export type BillingUpdateAddItemPlanItem = {
+  /**
+   * The ID of the feature to configure.
+   */
+  featureId: string;
+  /**
+   * Number of free units included. Balance resets to this each interval for consumable features.
+   */
+  included?: number | undefined;
+  /**
+   * If true, customer has unlimited access to this feature.
+   */
+  unlimited?: boolean | undefined;
+  /**
+   * Reset configuration for consumable features. Omit for non-consumable features like seats.
+   */
+  reset?: BillingUpdateAddItemReset | undefined;
+  /**
+   * Pricing for usage beyond included units. Omit for free features.
+   */
+  price?: BillingUpdateAddItemPrice | undefined;
+  /**
+   * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
+   */
+  proration?: BillingUpdateAddItemProration | undefined;
+  /**
+   * Rollover config for unused units. If set, unused included units carry over.
+   */
+  rollover?: BillingUpdateAddItemRollover | undefined;
+};
+
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export const BillingUpdateRemoveItemBillingMethod = {
+  Prepaid: "prepaid",
+  UsageBased: "usage_based",
+} as const;
+/**
+ * Match items with this billing method (prepaid or usage_based).
+ */
+export type BillingUpdateRemoveItemBillingMethod = ClosedEnum<
+  typeof BillingUpdateRemoveItemBillingMethod
+>;
+
+/**
+ * Match items with this interval.
+ */
+export const BillingUpdateRemoveItemInterval = {
+  OneOff: "one_off",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Match items with this interval.
+ */
+export type BillingUpdateRemoveItemInterval = ClosedEnum<
+  typeof BillingUpdateRemoveItemInterval
+>;
+
+/**
+ * Filter for matching plan items. All provided fields must match (AND).
+ */
+export type BillingUpdatePlanItemFilter = {
+  /**
+   * Match items linked to this feature.
+   */
+  featureId?: string | undefined;
+  /**
+   * Match items with this billing method (prepaid or usage_based).
+   */
+  billingMethod?: BillingUpdateRemoveItemBillingMethod | undefined;
+  /**
+   * Match items with this interval.
+   */
+  interval?: BillingUpdateRemoveItemInterval | undefined;
 };
 
 /**
@@ -347,9 +632,17 @@ export type BillingUpdateCustomize = {
    */
   price?: BillingUpdateBasePrice | null | undefined;
   /**
-   * Override the items in the plan.
+   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items.
    */
-  items?: Array<BillingUpdatePlanItem> | undefined;
+  items?: Array<BillingUpdateItemPlanItem> | undefined;
+  /**
+   * Items to add to the plan.
+   */
+  addItems?: Array<BillingUpdateAddItemPlanItem> | undefined;
+  /**
+   * Filters selecting items to remove from the plan.
+   */
+  removeItems?: Array<BillingUpdatePlanItemFilter> | undefined;
   /**
    * Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.
    */
@@ -656,23 +949,23 @@ export function billingUpdateBasePriceToJSON(
 }
 
 /** @internal */
-export const BillingUpdateResetInterval$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateResetInterval
-> = z.enum(BillingUpdateResetInterval);
+export const BillingUpdateItemResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateItemResetInterval
+> = z.enum(BillingUpdateItemResetInterval);
 
 /** @internal */
-export type BillingUpdateReset$Outbound = {
+export type BillingUpdateItemReset$Outbound = {
   interval: string;
   interval_count?: number | undefined;
 };
 
 /** @internal */
-export const BillingUpdateReset$outboundSchema: z.ZodMiniType<
-  BillingUpdateReset$Outbound,
-  BillingUpdateReset
+export const BillingUpdateItemReset$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemReset$Outbound,
+  BillingUpdateItemReset
 > = z.pipe(
   z.object({
-    interval: BillingUpdateResetInterval$outboundSchema,
+    interval: BillingUpdateItemResetInterval$outboundSchema,
     intervalCount: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -682,40 +975,42 @@ export const BillingUpdateReset$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingUpdateResetToJSON(
-  billingUpdateReset: BillingUpdateReset,
+export function billingUpdateItemResetToJSON(
+  billingUpdateItemReset: BillingUpdateItemReset,
 ): string {
   return JSON.stringify(
-    BillingUpdateReset$outboundSchema.parse(billingUpdateReset),
+    BillingUpdateItemReset$outboundSchema.parse(billingUpdateItemReset),
   );
 }
 
 /** @internal */
-export type BillingUpdateTo$Outbound = number | string;
+export type BillingUpdateItemTo$Outbound = number | string;
 
 /** @internal */
-export const BillingUpdateTo$outboundSchema: z.ZodMiniType<
-  BillingUpdateTo$Outbound,
-  BillingUpdateTo
+export const BillingUpdateItemTo$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemTo$Outbound,
+  BillingUpdateItemTo
 > = smartUnion([z.number(), z.string()]);
 
-export function billingUpdateToToJSON(
-  billingUpdateTo: BillingUpdateTo,
+export function billingUpdateItemToToJSON(
+  billingUpdateItemTo: BillingUpdateItemTo,
 ): string {
-  return JSON.stringify(BillingUpdateTo$outboundSchema.parse(billingUpdateTo));
+  return JSON.stringify(
+    BillingUpdateItemTo$outboundSchema.parse(billingUpdateItemTo),
+  );
 }
 
 /** @internal */
-export type BillingUpdateTier$Outbound = {
+export type BillingUpdateItemTier$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
 };
 
 /** @internal */
-export const BillingUpdateTier$outboundSchema: z.ZodMiniType<
-  BillingUpdateTier$Outbound,
-  BillingUpdateTier
+export const BillingUpdateItemTier$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemTier$Outbound,
+  BillingUpdateItemTier
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -729,18 +1024,18 @@ export const BillingUpdateTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingUpdateTierToJSON(
-  billingUpdateTier: BillingUpdateTier,
+export function billingUpdateItemTierToJSON(
+  billingUpdateItemTier: BillingUpdateItemTier,
 ): string {
   return JSON.stringify(
-    BillingUpdateTier$outboundSchema.parse(billingUpdateTier),
+    BillingUpdateItemTier$outboundSchema.parse(billingUpdateItemTier),
   );
 }
 
 /** @internal */
-export const BillingUpdateTierBehavior$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateTierBehavior
-> = z.enum(BillingUpdateTierBehavior);
+export const BillingUpdateItemTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateItemTierBehavior
+> = z.enum(BillingUpdateItemTierBehavior);
 
 /** @internal */
 export const BillingUpdateItemPriceInterval$outboundSchema: z.ZodMiniEnum<
@@ -748,14 +1043,14 @@ export const BillingUpdateItemPriceInterval$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdateItemPriceInterval);
 
 /** @internal */
-export const BillingUpdateBillingMethod$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateBillingMethod
-> = z.enum(BillingUpdateBillingMethod);
+export const BillingUpdateItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateItemBillingMethod
+> = z.enum(BillingUpdateItemBillingMethod);
 
 /** @internal */
-export type BillingUpdatePrice$Outbound = {
+export type BillingUpdateItemPrice$Outbound = {
   amount?: number | undefined;
-  tiers?: Array<BillingUpdateTier$Outbound> | undefined;
+  tiers?: Array<BillingUpdateItemTier$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
@@ -765,18 +1060,20 @@ export type BillingUpdatePrice$Outbound = {
 };
 
 /** @internal */
-export const BillingUpdatePrice$outboundSchema: z.ZodMiniType<
-  BillingUpdatePrice$Outbound,
-  BillingUpdatePrice
+export const BillingUpdateItemPrice$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemPrice$Outbound,
+  BillingUpdateItemPrice
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(z.array(z.lazy(() => BillingUpdateTier$outboundSchema))),
-    tierBehavior: z.optional(BillingUpdateTierBehavior$outboundSchema),
+    tiers: z.optional(
+      z.array(z.lazy(() => BillingUpdateItemTier$outboundSchema)),
+    ),
+    tierBehavior: z.optional(BillingUpdateItemTierBehavior$outboundSchema),
     interval: BillingUpdateItemPriceInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
-    billingMethod: BillingUpdateBillingMethod$outboundSchema,
+    billingMethod: BillingUpdateItemBillingMethod$outboundSchema,
     maxPurchase: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -790,38 +1087,38 @@ export const BillingUpdatePrice$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingUpdatePriceToJSON(
-  billingUpdatePrice: BillingUpdatePrice,
+export function billingUpdateItemPriceToJSON(
+  billingUpdateItemPrice: BillingUpdateItemPrice,
 ): string {
   return JSON.stringify(
-    BillingUpdatePrice$outboundSchema.parse(billingUpdatePrice),
+    BillingUpdateItemPrice$outboundSchema.parse(billingUpdateItemPrice),
   );
 }
 
 /** @internal */
-export const BillingUpdateOnIncrease$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateOnIncrease
-> = z.enum(BillingUpdateOnIncrease);
+export const BillingUpdateItemOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateItemOnIncrease
+> = z.enum(BillingUpdateItemOnIncrease);
 
 /** @internal */
-export const BillingUpdateOnDecrease$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateOnDecrease
-> = z.enum(BillingUpdateOnDecrease);
+export const BillingUpdateItemOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateItemOnDecrease
+> = z.enum(BillingUpdateItemOnDecrease);
 
 /** @internal */
-export type BillingUpdateProration$Outbound = {
+export type BillingUpdateItemProration$Outbound = {
   on_increase: string;
   on_decrease: string;
 };
 
 /** @internal */
-export const BillingUpdateProration$outboundSchema: z.ZodMiniType<
-  BillingUpdateProration$Outbound,
-  BillingUpdateProration
+export const BillingUpdateItemProration$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemProration$Outbound,
+  BillingUpdateItemProration
 > = z.pipe(
   z.object({
-    onIncrease: BillingUpdateOnIncrease$outboundSchema,
-    onDecrease: BillingUpdateOnDecrease$outboundSchema,
+    onIncrease: BillingUpdateItemOnIncrease$outboundSchema,
+    onDecrease: BillingUpdateItemOnDecrease$outboundSchema,
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -831,21 +1128,21 @@ export const BillingUpdateProration$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingUpdateProrationToJSON(
-  billingUpdateProration: BillingUpdateProration,
+export function billingUpdateItemProrationToJSON(
+  billingUpdateItemProration: BillingUpdateItemProration,
 ): string {
   return JSON.stringify(
-    BillingUpdateProration$outboundSchema.parse(billingUpdateProration),
+    BillingUpdateItemProration$outboundSchema.parse(billingUpdateItemProration),
   );
 }
 
 /** @internal */
-export const BillingUpdateExpiryDurationType$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateExpiryDurationType
-> = z.enum(BillingUpdateExpiryDurationType);
+export const BillingUpdateItemExpiryDurationType$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateItemExpiryDurationType
+> = z.enum(BillingUpdateItemExpiryDurationType);
 
 /** @internal */
-export type BillingUpdateRollover$Outbound = {
+export type BillingUpdateItemRollover$Outbound = {
   max?: number | undefined;
   max_percentage?: number | undefined;
   expiry_duration_type: string;
@@ -853,14 +1150,14 @@ export type BillingUpdateRollover$Outbound = {
 };
 
 /** @internal */
-export const BillingUpdateRollover$outboundSchema: z.ZodMiniType<
-  BillingUpdateRollover$Outbound,
-  BillingUpdateRollover
+export const BillingUpdateItemRollover$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemRollover$Outbound,
+  BillingUpdateItemRollover
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
     maxPercentage: z.optional(z.number()),
-    expiryDurationType: BillingUpdateExpiryDurationType$outboundSchema,
+    expiryDurationType: BillingUpdateItemExpiryDurationType$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -872,38 +1169,42 @@ export const BillingUpdateRollover$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingUpdateRolloverToJSON(
-  billingUpdateRollover: BillingUpdateRollover,
+export function billingUpdateItemRolloverToJSON(
+  billingUpdateItemRollover: BillingUpdateItemRollover,
 ): string {
   return JSON.stringify(
-    BillingUpdateRollover$outboundSchema.parse(billingUpdateRollover),
+    BillingUpdateItemRollover$outboundSchema.parse(billingUpdateItemRollover),
   );
 }
 
 /** @internal */
-export type BillingUpdatePlanItem$Outbound = {
+export type BillingUpdateItemPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
-  reset?: BillingUpdateReset$Outbound | undefined;
-  price?: BillingUpdatePrice$Outbound | undefined;
-  proration?: BillingUpdateProration$Outbound | undefined;
-  rollover?: BillingUpdateRollover$Outbound | undefined;
+  reset?: BillingUpdateItemReset$Outbound | undefined;
+  price?: BillingUpdateItemPrice$Outbound | undefined;
+  proration?: BillingUpdateItemProration$Outbound | undefined;
+  rollover?: BillingUpdateItemRollover$Outbound | undefined;
 };
 
 /** @internal */
-export const BillingUpdatePlanItem$outboundSchema: z.ZodMiniType<
-  BillingUpdatePlanItem$Outbound,
-  BillingUpdatePlanItem
+export const BillingUpdateItemPlanItem$outboundSchema: z.ZodMiniType<
+  BillingUpdateItemPlanItem$Outbound,
+  BillingUpdateItemPlanItem
 > = z.pipe(
   z.object({
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
-    reset: z.optional(z.lazy(() => BillingUpdateReset$outboundSchema)),
-    price: z.optional(z.lazy(() => BillingUpdatePrice$outboundSchema)),
-    proration: z.optional(z.lazy(() => BillingUpdateProration$outboundSchema)),
-    rollover: z.optional(z.lazy(() => BillingUpdateRollover$outboundSchema)),
+    reset: z.optional(z.lazy(() => BillingUpdateItemReset$outboundSchema)),
+    price: z.optional(z.lazy(() => BillingUpdateItemPrice$outboundSchema)),
+    proration: z.optional(
+      z.lazy(() => BillingUpdateItemProration$outboundSchema),
+    ),
+    rollover: z.optional(
+      z.lazy(() => BillingUpdateItemRollover$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -912,11 +1213,338 @@ export const BillingUpdatePlanItem$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function billingUpdatePlanItemToJSON(
-  billingUpdatePlanItem: BillingUpdatePlanItem,
+export function billingUpdateItemPlanItemToJSON(
+  billingUpdateItemPlanItem: BillingUpdateItemPlanItem,
 ): string {
   return JSON.stringify(
-    BillingUpdatePlanItem$outboundSchema.parse(billingUpdatePlanItem),
+    BillingUpdateItemPlanItem$outboundSchema.parse(billingUpdateItemPlanItem),
+  );
+}
+
+/** @internal */
+export const BillingUpdateAddItemResetInterval$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateAddItemResetInterval
+> = z.enum(BillingUpdateAddItemResetInterval);
+
+/** @internal */
+export type BillingUpdateAddItemReset$Outbound = {
+  interval: string;
+  interval_count?: number | undefined;
+};
+
+/** @internal */
+export const BillingUpdateAddItemReset$outboundSchema: z.ZodMiniType<
+  BillingUpdateAddItemReset$Outbound,
+  BillingUpdateAddItemReset
+> = z.pipe(
+  z.object({
+    interval: BillingUpdateAddItemResetInterval$outboundSchema,
+    intervalCount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      intervalCount: "interval_count",
+    });
+  }),
+);
+
+export function billingUpdateAddItemResetToJSON(
+  billingUpdateAddItemReset: BillingUpdateAddItemReset,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemReset$outboundSchema.parse(billingUpdateAddItemReset),
+  );
+}
+
+/** @internal */
+export type BillingUpdateAddItemTo$Outbound = number | string;
+
+/** @internal */
+export const BillingUpdateAddItemTo$outboundSchema: z.ZodMiniType<
+  BillingUpdateAddItemTo$Outbound,
+  BillingUpdateAddItemTo
+> = smartUnion([z.number(), z.string()]);
+
+export function billingUpdateAddItemToToJSON(
+  billingUpdateAddItemTo: BillingUpdateAddItemTo,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemTo$outboundSchema.parse(billingUpdateAddItemTo),
+  );
+}
+
+/** @internal */
+export type BillingUpdateAddItemTier$Outbound = {
+  to: number | string;
+  amount?: number | undefined;
+  flat_amount?: number | undefined;
+};
+
+/** @internal */
+export const BillingUpdateAddItemTier$outboundSchema: z.ZodMiniType<
+  BillingUpdateAddItemTier$Outbound,
+  BillingUpdateAddItemTier
+> = z.pipe(
+  z.object({
+    to: smartUnion([z.number(), z.string()]),
+    amount: z.optional(z.number()),
+    flatAmount: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      flatAmount: "flat_amount",
+    });
+  }),
+);
+
+export function billingUpdateAddItemTierToJSON(
+  billingUpdateAddItemTier: BillingUpdateAddItemTier,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemTier$outboundSchema.parse(billingUpdateAddItemTier),
+  );
+}
+
+/** @internal */
+export const BillingUpdateAddItemTierBehavior$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateAddItemTierBehavior
+> = z.enum(BillingUpdateAddItemTierBehavior);
+
+/** @internal */
+export const BillingUpdateAddItemPriceInterval$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateAddItemPriceInterval
+> = z.enum(BillingUpdateAddItemPriceInterval);
+
+/** @internal */
+export const BillingUpdateAddItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateAddItemBillingMethod
+> = z.enum(BillingUpdateAddItemBillingMethod);
+
+/** @internal */
+export type BillingUpdateAddItemPrice$Outbound = {
+  amount?: number | undefined;
+  tiers?: Array<BillingUpdateAddItemTier$Outbound> | undefined;
+  tier_behavior?: string | undefined;
+  interval: string;
+  interval_count: number;
+  billing_units: number;
+  billing_method: string;
+  max_purchase?: number | undefined;
+};
+
+/** @internal */
+export const BillingUpdateAddItemPrice$outboundSchema: z.ZodMiniType<
+  BillingUpdateAddItemPrice$Outbound,
+  BillingUpdateAddItemPrice
+> = z.pipe(
+  z.object({
+    amount: z.optional(z.number()),
+    tiers: z.optional(
+      z.array(z.lazy(() => BillingUpdateAddItemTier$outboundSchema)),
+    ),
+    tierBehavior: z.optional(BillingUpdateAddItemTierBehavior$outboundSchema),
+    interval: BillingUpdateAddItemPriceInterval$outboundSchema,
+    intervalCount: z._default(z.number(), 1),
+    billingUnits: z._default(z.number(), 1),
+    billingMethod: BillingUpdateAddItemBillingMethod$outboundSchema,
+    maxPurchase: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      tierBehavior: "tier_behavior",
+      intervalCount: "interval_count",
+      billingUnits: "billing_units",
+      billingMethod: "billing_method",
+      maxPurchase: "max_purchase",
+    });
+  }),
+);
+
+export function billingUpdateAddItemPriceToJSON(
+  billingUpdateAddItemPrice: BillingUpdateAddItemPrice,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemPrice$outboundSchema.parse(billingUpdateAddItemPrice),
+  );
+}
+
+/** @internal */
+export const BillingUpdateAddItemOnIncrease$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateAddItemOnIncrease
+> = z.enum(BillingUpdateAddItemOnIncrease);
+
+/** @internal */
+export const BillingUpdateAddItemOnDecrease$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateAddItemOnDecrease
+> = z.enum(BillingUpdateAddItemOnDecrease);
+
+/** @internal */
+export type BillingUpdateAddItemProration$Outbound = {
+  on_increase: string;
+  on_decrease: string;
+};
+
+/** @internal */
+export const BillingUpdateAddItemProration$outboundSchema: z.ZodMiniType<
+  BillingUpdateAddItemProration$Outbound,
+  BillingUpdateAddItemProration
+> = z.pipe(
+  z.object({
+    onIncrease: BillingUpdateAddItemOnIncrease$outboundSchema,
+    onDecrease: BillingUpdateAddItemOnDecrease$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      onIncrease: "on_increase",
+      onDecrease: "on_decrease",
+    });
+  }),
+);
+
+export function billingUpdateAddItemProrationToJSON(
+  billingUpdateAddItemProration: BillingUpdateAddItemProration,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemProration$outboundSchema.parse(
+      billingUpdateAddItemProration,
+    ),
+  );
+}
+
+/** @internal */
+export const BillingUpdateAddItemExpiryDurationType$outboundSchema:
+  z.ZodMiniEnum<typeof BillingUpdateAddItemExpiryDurationType> = z.enum(
+    BillingUpdateAddItemExpiryDurationType,
+  );
+
+/** @internal */
+export type BillingUpdateAddItemRollover$Outbound = {
+  max?: number | undefined;
+  max_percentage?: number | undefined;
+  expiry_duration_type: string;
+  expiry_duration_length?: number | undefined;
+};
+
+/** @internal */
+export const BillingUpdateAddItemRollover$outboundSchema: z.ZodMiniType<
+  BillingUpdateAddItemRollover$Outbound,
+  BillingUpdateAddItemRollover
+> = z.pipe(
+  z.object({
+    max: z.optional(z.number()),
+    maxPercentage: z.optional(z.number()),
+    expiryDurationType: BillingUpdateAddItemExpiryDurationType$outboundSchema,
+    expiryDurationLength: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      maxPercentage: "max_percentage",
+      expiryDurationType: "expiry_duration_type",
+      expiryDurationLength: "expiry_duration_length",
+    });
+  }),
+);
+
+export function billingUpdateAddItemRolloverToJSON(
+  billingUpdateAddItemRollover: BillingUpdateAddItemRollover,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemRollover$outboundSchema.parse(
+      billingUpdateAddItemRollover,
+    ),
+  );
+}
+
+/** @internal */
+export type BillingUpdateAddItemPlanItem$Outbound = {
+  feature_id: string;
+  included?: number | undefined;
+  unlimited?: boolean | undefined;
+  reset?: BillingUpdateAddItemReset$Outbound | undefined;
+  price?: BillingUpdateAddItemPrice$Outbound | undefined;
+  proration?: BillingUpdateAddItemProration$Outbound | undefined;
+  rollover?: BillingUpdateAddItemRollover$Outbound | undefined;
+};
+
+/** @internal */
+export const BillingUpdateAddItemPlanItem$outboundSchema: z.ZodMiniType<
+  BillingUpdateAddItemPlanItem$Outbound,
+  BillingUpdateAddItemPlanItem
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    included: z.optional(z.number()),
+    unlimited: z.optional(z.boolean()),
+    reset: z.optional(z.lazy(() => BillingUpdateAddItemReset$outboundSchema)),
+    price: z.optional(z.lazy(() => BillingUpdateAddItemPrice$outboundSchema)),
+    proration: z.optional(
+      z.lazy(() => BillingUpdateAddItemProration$outboundSchema),
+    ),
+    rollover: z.optional(
+      z.lazy(() => BillingUpdateAddItemRollover$outboundSchema),
+    ),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function billingUpdateAddItemPlanItemToJSON(
+  billingUpdateAddItemPlanItem: BillingUpdateAddItemPlanItem,
+): string {
+  return JSON.stringify(
+    BillingUpdateAddItemPlanItem$outboundSchema.parse(
+      billingUpdateAddItemPlanItem,
+    ),
+  );
+}
+
+/** @internal */
+export const BillingUpdateRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateRemoveItemBillingMethod
+> = z.enum(BillingUpdateRemoveItemBillingMethod);
+
+/** @internal */
+export const BillingUpdateRemoveItemInterval$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateRemoveItemInterval
+> = z.enum(BillingUpdateRemoveItemInterval);
+
+/** @internal */
+export type BillingUpdatePlanItemFilter$Outbound = {
+  feature_id?: string | undefined;
+  billing_method?: string | undefined;
+  interval?: string | undefined;
+};
+
+/** @internal */
+export const BillingUpdatePlanItemFilter$outboundSchema: z.ZodMiniType<
+  BillingUpdatePlanItemFilter$Outbound,
+  BillingUpdatePlanItemFilter
+> = z.pipe(
+  z.object({
+    featureId: z.optional(z.string()),
+    billingMethod: z.optional(
+      BillingUpdateRemoveItemBillingMethod$outboundSchema,
+    ),
+    interval: z.optional(BillingUpdateRemoveItemInterval$outboundSchema),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+      billingMethod: "billing_method",
+    });
+  }),
+);
+
+export function billingUpdatePlanItemFilterToJSON(
+  billingUpdatePlanItemFilter: BillingUpdatePlanItemFilter,
+): string {
+  return JSON.stringify(
+    BillingUpdatePlanItemFilter$outboundSchema.parse(
+      billingUpdatePlanItemFilter,
+    ),
   );
 }
 
@@ -964,7 +1592,9 @@ export function billingUpdateFreeTrialParamsToJSON(
 /** @internal */
 export type BillingUpdateCustomize$Outbound = {
   price?: BillingUpdateBasePrice$Outbound | null | undefined;
-  items?: Array<BillingUpdatePlanItem$Outbound> | undefined;
+  items?: Array<BillingUpdateItemPlanItem$Outbound> | undefined;
+  add_items?: Array<BillingUpdateAddItemPlanItem$Outbound> | undefined;
+  remove_items?: Array<BillingUpdatePlanItemFilter$Outbound> | undefined;
   free_trial?: BillingUpdateFreeTrialParams$Outbound | null | undefined;
 };
 
@@ -978,7 +1608,13 @@ export const BillingUpdateCustomize$outboundSchema: z.ZodMiniType<
       z.nullable(z.lazy(() => BillingUpdateBasePrice$outboundSchema)),
     ),
     items: z.optional(
-      z.array(z.lazy(() => BillingUpdatePlanItem$outboundSchema)),
+      z.array(z.lazy(() => BillingUpdateItemPlanItem$outboundSchema)),
+    ),
+    addItems: z.optional(
+      z.array(z.lazy(() => BillingUpdateAddItemPlanItem$outboundSchema)),
+    ),
+    removeItems: z.optional(
+      z.array(z.lazy(() => BillingUpdatePlanItemFilter$outboundSchema)),
     ),
     freeTrial: z.optional(
       z.nullable(z.lazy(() => BillingUpdateFreeTrialParams$outboundSchema)),
@@ -986,6 +1622,8 @@ export const BillingUpdateCustomize$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      addItems: "add_items",
+      removeItems: "remove_items",
       freeTrial: "free_trial",
     });
   }),
