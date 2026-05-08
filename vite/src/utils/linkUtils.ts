@@ -42,7 +42,7 @@ export const getStripeSubLink = ({
 	return `${baseUrl}${accountPath}${withTest}/subscriptions/${subscriptionId}`;
 };
 
-const getStripeSubScheduleLink = ({
+export const getStripeSubScheduleLink = ({
 	scheduledId,
 	env,
 	accountId,

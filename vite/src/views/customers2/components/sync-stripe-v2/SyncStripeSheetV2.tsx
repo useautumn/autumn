@@ -15,22 +15,21 @@ export function SyncStripeSheetV2() {
 		customerId,
 	});
 
-	const [selectedSubscriptionId, setSelectedSubscriptionId] = useState<
-		string | null
+	const [selectedProposalIndex, setSelectedProposalIndex] = useState<
+		number | null
 	>(null);
 
-	const selectedProposal = selectedSubscriptionId
-		? (proposals.find(
-				(p) => p.stripe_subscription_id === selectedSubscriptionId,
-			) ?? null)
+	const selectedProposal =
+		selectedProposalIndex !== null
+			? (proposals[selectedProposalIndex] ?? null)
 		: null;
 
 	const headerTitle = selectedProposal
 		? "Configure sync"
 		: "Sync from Stripe";
 	const headerDescription = selectedProposal
-		? "Pick the Autumn plans to attach for this subscription"
-		: "Pick a Stripe subscription to import";
+		? "Pick the Autumn plans to attach for this Stripe object"
+		: "Pick a Stripe subscription or schedule to import";
 
 	return (
 		<div className="flex flex-col h-full">
@@ -41,7 +40,7 @@ export function SyncStripeSheetV2() {
 					proposals={proposals}
 					isLoading={isLoading}
 					error={error}
-					onSelect={setSelectedSubscriptionId}
+					onSelect={setSelectedProposalIndex}
 				/>
 			)}
 
@@ -49,7 +48,7 @@ export function SyncStripeSheetV2() {
 				<SubscriptionEditorView
 					proposal={selectedProposal}
 					customerId={customerId}
-					onBack={() => setSelectedSubscriptionId(null)}
+					onBack={() => setSelectedProposalIndex(null)}
 					onSubmit={(params) =>
 						syncMutation.mutate(params, {
 							onSuccess: () => {

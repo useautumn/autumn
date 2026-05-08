@@ -29,6 +29,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useEnv } from "@/utils/envUtils";
 import {
 	getStripeConnectViewAsLink,
+	getStripeSubScheduleLink,
 	getStripeSubLink,
 } from "@/utils/linkUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
@@ -209,22 +210,32 @@ export function SubscriptionEditorView({
 
 	const handleOpenStripe = () => {
 		const subId = proposal.stripe_subscription_id;
-		if (!subId) return;
+		const scheduleId = proposal.stripe_schedule_id;
+		if (!subId && !scheduleId) return;
 		const stripeAccountId = stripeAccount?.id;
 		const masterStripeAccountId = masterStripeAccount?.id;
+		const path = subId
+			? `subscriptions/${subId}`
+			: `subscription_schedules/${scheduleId}`;
 		const url =
 			isAdmin && masterStripeAccountId && stripeAccountId
 				? getStripeConnectViewAsLink({
 						masterAccountId: masterStripeAccountId,
 						connectedAccountId: stripeAccountId,
 						env,
-						path: `subscriptions/${subId}`,
+						path,
 					})
-				: getStripeSubLink({
-						subscriptionId: subId,
-						env,
-						accountId: stripeAccountId,
-					});
+				: subId
+					? getStripeSubLink({
+							subscriptionId: subId,
+							env,
+							accountId: stripeAccountId,
+						})
+					: getStripeSubScheduleLink({
+							scheduledId: scheduleId!,
+							env,
+							accountId: stripeAccountId,
+						});
 		window.open(url, "_blank");
 	};
 
@@ -235,11 +246,18 @@ export function SubscriptionEditorView({
 	const isMultiPhase =
 		(proposal.stripe_schedule?.phases.length ?? 0) > 1 &&
 		phaseSections.length > 1;
+	const isNotStartedSchedule =
+		!proposal.stripe_subscription_id && Boolean(proposal.stripe_schedule_id);
+	const firstFuturePhaseIndex = phaseSections.findIndex(
+		(section) => section.phase.starts_at !== "now",
+	);
 
 	const [draftPlansByPhase, setDraftPlansByPhase] = useState<DraftPlan[][]>(
 		() => seedDraftPlansByPhase({ proposal }),
 	);
 	const [expirePrevious, setExpirePrevious] = useState<boolean>(true);
+	const [enablePlanImmediately, setEnablePlanImmediately] =
+		useState<boolean>(false);
 	const [editing, setEditing] = useState<{
 		phaseIndex: number;
 		planIndex: number;
@@ -370,9 +388,19 @@ export function SubscriptionEditorView({
 					Boolean(p.plan_id),
 				);
 				const planInstances: SyncPlanInstance[] = validPlans.map(
-					({ _key: _ignore, ...rest }) => ({
+					({
+						_key: _ignore,
+						enable_plan_immediately: _ignored,
+						...rest
+					}) => ({
 						...rest,
 						expire_previous: expirePrevious,
+						enable_plan_immediately:
+							isNotStartedSchedule &&
+							enablePlanImmediately &&
+							phaseIndex === firstFuturePhaseIndex
+								? true
+								: undefined,
 					}),
 				);
 				return { starts_at: section.phase.starts_at, plans: planInstances };
@@ -407,12 +435,17 @@ export function SubscriptionEditorView({
 				</button>
 
 				<div className="space-y-1">
-					<div className="text-xs text-t3">Stripe subscription</div>
+					<div className="text-xs text-t3">
+						{proposal.stripe_subscription_id
+							? "Stripe subscription"
+							: "Stripe schedule"}
+					</div>
 					<div className="flex items-center gap-1.5">
 						<code className="text-xs font-mono text-t1">
-							{proposal.stripe_subscription_id}
+							{proposal.stripe_subscription_id ?? proposal.stripe_schedule_id}
 						</code>
-						{proposal.stripe_subscription_id && (
+						{(proposal.stripe_subscription_id ||
+							proposal.stripe_schedule_id) && (
 							<button
 								type="button"
 								onClick={handleOpenStripe}
@@ -511,6 +544,20 @@ export function SubscriptionEditorView({
 						/>
 					}
 				/>
+				{isNotStartedSchedule && (
+					<ConfigRow
+						title="Enable plan immediately"
+						description="Grant access now while billing still starts when the Stripe schedule begins."
+						action={
+							<Switch
+								checked={enablePlanImmediately}
+								onCheckedChange={(checked) =>
+									setEnablePlanImmediately(!!checked)
+								}
+							/>
+						}
+					/>
+				)}
 			</div>
 
 			<div className="flex items-center gap-2 px-4 py-3 border-t border-border/40">
