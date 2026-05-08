@@ -1,0 +1,21 @@
+.github/workflows/validate-schema.yml
+  s_626fe2b2628415::t_b14f05e4298de9 7-9,13-15
+.github/workflows/build.yml
+  s_626fe2b2628415::t_949ff74042e9ec 138-139
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.1",
+  "base_commit_sha": "2d11c6279554e2b3dec07f8c03709ef220de7c34",
+  "prompts": {},
+  "sessions": {
+    "s_626fe2b2628415": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "894e21b7-7b10-42b3-bff0-74959f5a0c17",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
