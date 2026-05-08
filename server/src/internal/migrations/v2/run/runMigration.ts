@@ -19,16 +19,21 @@ export const runMigration = async ({
 	migration: Migration;
 	dry_run: boolean;
 }): Promise<RunMigrationResponse> => {
-	const { response: prepareResponse } = await runPreparation({
+	const { response: prepareResponse, prepared_state } = await runPreparation({
 		ctx,
 		migration,
 		dry_run,
 	});
+	const preparedMigration = { ...migration, prepared_state };
 
 	const scopeResults: RunMigrationScopeResult[] = [];
 
-	for (const kind of scopesForRun(migration)) {
-		const { count, iterate } = await runFilter({ ctx, migration, kind });
+	for (const kind of scopesForRun(preparedMigration)) {
+		const { count, iterate } = await runFilter({
+			ctx,
+			migration: preparedMigration,
+			kind,
+		});
 		ctx.logger.info(`run-migration: iterating scope`, {
 			data: { kind, count, dry_run },
 		});
@@ -43,7 +48,7 @@ export const runMigration = async ({
 				return migrateCustomer({
 					ctx,
 					customerId: item.internal_id,
-					migration,
+					migration: preparedMigration,
 					preview: dry_run,
 				});
 			},

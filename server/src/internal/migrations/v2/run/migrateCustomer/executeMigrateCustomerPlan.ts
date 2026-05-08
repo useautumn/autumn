@@ -15,16 +15,16 @@ export type MigrateCustomerExecuteMode = "no_changes" | "stripe";
  */
 export const executeMigrateCustomerPlan = async ({
 	ctx,
-	migrationContext,
+	context,
 	billingPlan,
 	mode,
 }: {
 	ctx: AutumnContext;
-	migrationContext: MigrateCustomerContext;
+	context: MigrateCustomerContext;
 	billingPlan: BillingPlan;
 	mode: MigrateCustomerExecuteMode;
 }): Promise<void> => {
-	void migrationContext;
+	void context;
 	if (mode === "no_changes") {
 		await executeAutumnBillingPlan({
 			ctx,

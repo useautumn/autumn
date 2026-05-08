@@ -1,0 +1,138 @@
+import {
+	BillingVersion,
+	type FullCusProduct,
+	type FullCustomer,
+	hasCustomItems,
+	orgDisableStripeWrites,
+	type UpdateSubscriptionBillingContext,
+	UpdateSubscriptionIntent,
+	type UpdateSubscriptionV1Params,
+} from "@autumn/shared";
+import type { CustomizePlanOp } from "@autumn/shared/api/migrations/operations/customer/customizePlan/index.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext.js";
+import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities.js";
+import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund.js";
+import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext.js";
+import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext.js";
+import { setupMigrationOperationBillingContext } from "@/internal/migrations/v2/run/migrateCustomer/setup/index.js";
+import type { MigrateCustomerContext } from "../../types/index.js";
+import { itemAlreadyExists } from "./itemAlreadyExists.js";
+import type { CustomizePlanProductContext } from "./types.js";
+
+export const setupCustomizePlanProductContext = async ({
+	ctx,
+	context,
+	op,
+	projectedFullCustomer,
+	customerProduct,
+}: {
+	ctx: AutumnContext;
+	context: MigrateCustomerContext;
+	op: CustomizePlanOp;
+	projectedFullCustomer: FullCustomer;
+	customerProduct: FullCusProduct;
+}): Promise<CustomizePlanProductContext | undefined> => {
+	const addItems = op.customize.add_items?.filter(
+		(item) => !itemAlreadyExists({ ctx, customerProduct, item }),
+	);
+	const customize = {
+		...op.customize,
+		...(addItems ? { add_items: addItems } : {}),
+	};
+	if (
+		customize.price === undefined &&
+		customize.add_items?.length === 0 &&
+		customize.remove_items === undefined
+	) {
+		return undefined;
+	}
+
+	const customerId =
+		projectedFullCustomer.id ?? projectedFullCustomer.internal_id;
+
+	const params: UpdateSubscriptionV1Params = {
+		customer_id: customerId,
+		customer_product_id: customerProduct.id,
+		plan_id: customerProduct.product.id,
+		customize,
+		proration_behavior: "none",
+		no_billing_changes:
+			context.migration.no_billing_changes === true ? true : undefined,
+	};
+
+	const {
+		customerProduct: targetCustomerProduct,
+		fullProduct,
+		patchContext,
+		customPrices,
+		customEnts,
+	} = await setupUpdateSubscriptionProductContext({
+		ctx,
+		fullCustomer: projectedFullCustomer,
+		params,
+	});
+
+	if (!patchContext) return undefined;
+
+	const operationBillingContext = await setupMigrationOperationBillingContext({
+		ctx,
+		context,
+		fullCustomer: projectedFullCustomer,
+		customerProduct: targetCustomerProduct,
+		fullProduct,
+	});
+
+	const featureQuantities = setupFeatureQuantitiesContext({
+		ctx,
+		featureQuantitiesParams: params,
+		fullProduct,
+		currentCustomerProduct: targetCustomerProduct,
+		initializeUndefinedQuantities: true,
+	});
+
+	const skipBillingChanges =
+		orgDisableStripeWrites({ ctx }) ||
+		params.no_billing_changes === true ||
+		operationBillingContext.stripeSubscription === undefined;
+
+	const billingContext: UpdateSubscriptionBillingContext = {
+		intent: UpdateSubscriptionIntent.UpdatePlan,
+		fullCustomer: projectedFullCustomer,
+		fullProducts: [fullProduct],
+		customerProduct: targetCustomerProduct,
+		patchContext,
+		recalculateBalances: false,
+		stripeSubscription: operationBillingContext.stripeSubscription,
+		stripeSubscriptionSchedule:
+			operationBillingContext.stripeSubscriptionSchedule,
+		stripeDiscounts: operationBillingContext.stripeDiscounts,
+		stripeCustomer: operationBillingContext.stripeCustomer,
+		paymentMethod: operationBillingContext.paymentMethod,
+		currentEpochMs: operationBillingContext.currentEpochMs,
+		billingCycleAnchorMs: operationBillingContext.billingCycleAnchorMs,
+		resetCycleAnchorMs: operationBillingContext.resetCycleAnchorMs,
+		invoiceMode: setupInvoiceModeContext({ params }),
+		featureQuantities,
+		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
+		customPrices,
+		customEnts,
+		trialContext: operationBillingContext.trialContext,
+		isCustom: hasCustomItems(params.customize),
+		billingVersion: BillingVersion.V2,
+		actionSource: "migration",
+		skipBillingChanges,
+		checkoutMode: null,
+		anchorResetRefund: setupAnchorResetRefund({
+			billingCycleAnchor: params.billing_cycle_anchor,
+			prorationBehavior: params.proration_behavior,
+			outgoingCustomerProduct: targetCustomerProduct,
+		}),
+	};
+
+	return {
+		customerProduct: targetCustomerProduct,
+		params,
+		billingContext,
+	};
+};

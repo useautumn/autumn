@@ -1,4 +1,8 @@
-import type { AutumnBillingPlan, BillingPlan } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	BillingPlan,
+	UpdateSubscriptionBillingContext,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations/types/index.js";
 
@@ -12,19 +16,22 @@ import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations
  * Skipped entirely when `mode === "no_changes"`.
  *
  * STUB: lands when the per-op processors emit Stripe-relevant
- * mutations (priced upsert_items, expire_plans with end_of_cycle, etc.).
+ * mutations (priced add_items, expire_plans with end_of_cycle, etc.).
  */
 export const evaluateMigrateCustomerStripe = async ({
 	ctx,
-	migrationContext,
+	context,
+	billingContexts,
 	autumnBillingPlan,
 }: {
 	ctx: AutumnContext;
-	migrationContext: MigrateCustomerContext;
+	context: MigrateCustomerContext;
+	billingContexts: UpdateSubscriptionBillingContext[];
 	autumnBillingPlan: AutumnBillingPlan;
 }): Promise<BillingPlan> => {
 	void ctx;
-	void migrationContext;
+	void context;
+	void billingContexts;
 	// TODO: call evaluateStripeBillingPlan + run no-charges guard.
 	return { autumn: autumnBillingPlan, stripe: {} };
 };

@@ -1,42 +1,54 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { applyAutumnBillingPlanToFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer.js";
+import { processCustomizePlan } from "@/internal/migrations/v2/operations/customizePlan/index.js";
 import type {
 	MigrateCustomerContext,
 	ProcessOperationResult,
 } from "@/internal/migrations/v2/operations/types/index.js";
-import { processUpsertItems } from "@/internal/migrations/v2/operations/upsertItems/index.js";
-import type { SubscriptionBucket } from "./setup/types.js";
 
 /**
- * Walk one subscription bucket's matches and fold each (op, cusProduct,
- * upsertItem) tuple onto the running plan + context. Phase 1 only walks
- * `update_plans` upsert_items; `delete_items` and future ops slot in
- * here as their processors land.
+ * Fold ordered customer operations onto one AutumnBillingPlan.
+ *
+ * Each op matches against the projected customer state produced by all
+ * previous ops, so later operations can target customer products created or
+ * patched earlier in the same migration.
  */
 export const processOperations = async ({
 	ctx,
-	migrationContext,
-	bucket,
+	context,
 	plan,
 }: {
 	ctx: AutumnContext;
-	migrationContext: MigrateCustomerContext;
-	bucket: SubscriptionBucket;
+	context: MigrateCustomerContext;
 	plan: AutumnBillingPlan;
 }): Promise<ProcessOperationResult> => {
-	let state: ProcessOperationResult = { plan, migrationContext };
+	let state: ProcessOperationResult = {
+		plan,
+		projectedFullCustomer: context.fullCustomer,
+		matchedCustomerProducts: 0,
+		billingContexts: [],
+	};
 
-	for (const { op, cusProduct } of bucket.matches) {
-		for (const upsertItem of op.upsert_items ?? []) {
-			state = await processUpsertItems({
-				ctx,
-				migrationContext: state.migrationContext,
-				cusProduct,
-				upsertItem,
-				plan: state.plan,
-			});
-		}
-		// TODO: delete_items processor
+	for (const op of context.migration.operations?.customer ?? []) {
+		const result = await processCustomizePlan({
+			ctx,
+			context,
+			op,
+			plan: state.plan,
+			projectedFullCustomer: state.projectedFullCustomer,
+		});
+
+		state = {
+			plan: result.plan,
+			projectedFullCustomer: applyAutumnBillingPlanToFullCustomer({
+				fullCustomer: context.fullCustomer,
+				autumnBillingPlan: result.plan,
+			}),
+			matchedCustomerProducts:
+				state.matchedCustomerProducts + result.matchedCustomerProducts,
+			billingContexts: [...state.billingContexts, ...result.billingContexts],
+		};
 	}
 
 	return state;

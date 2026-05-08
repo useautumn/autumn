@@ -1,5 +1,5 @@
 /**
- * Migrations V2 — add_items end-to-end (integration).
+ * Migrations V2 — customize_plan add_items end-to-end (integration).
  *
  * Seeds 5 customers, parallel-attaches them all to a `free` product,
  * creates a migration adding the Dashboard feature, and triggers
@@ -13,7 +13,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
-test.concurrent(`${chalk.yellowBright("migrations-v2 add-items: triggers run for 5 customers on free")}`, async () => {
+test.concurrent(`${chalk.yellowBright("migrations-v2 customize-plan add-items: triggers run for 5 customers on free")}`, async () => {
 	const customerId = "migration-run-add-items";
 	const otherIds = [1, 2, 3, 4].map((i) => `${customerId}-c${i}`);
 	const free = products.base({ id: "free", items: [], isDefault: true });
@@ -48,14 +48,15 @@ test.concurrent(`${chalk.yellowBright("migrations-v2 add-items: triggers run for
 		id: customerId,
 		filter: { customer: { plan: { plan_id: free.id } } },
 		operations: {
-			customer: {
-				update_plans: [
-					{
-						target: { plan_id: free.id },
-						upsert_items: [{ feature_id: TestFeature.Dashboard }],
+			customer: [
+				{
+					type: "customize_plan",
+					plan_filter: { plan_id: free.id },
+					customize: {
+						add_items: [{ feature_id: TestFeature.Dashboard }],
 					},
-				],
-			},
+				},
+			],
 		},
 	});
 
