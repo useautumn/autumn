@@ -14,6 +14,7 @@ export class EventService {
 		event: EventInsert | EventInsert[];
 		logger?: Logger;
 	}) {
+		if (process.env.NODE_ENV !== "development") return;
 		try {
 			const results = await db
 				.insert(events)
@@ -47,6 +48,7 @@ export class EventService {
 		env: string;
 		limit?: number;
 	}) {
+		if (process.env.NODE_ENV !== "development") return [];
 		const results = await db
 			.select({
 				id: events.id,
