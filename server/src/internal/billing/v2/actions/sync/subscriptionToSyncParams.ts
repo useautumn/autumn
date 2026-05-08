@@ -74,8 +74,7 @@ export const subscriptionToSyncParams = async ({
 	customerId: string;
 	subscription?: Stripe.Subscription;
 	/** Optional pre-fetched schedule. When omitted and `subscription` references
-	 * a schedule, it's fetched (with `phases.items.price` expanded — required
-	 * by `normalizePhaseItem` to resolve `stripe_product_id`). */
+	 * a schedule, it's fetched with schedule item prices expanded. */
 	schedule?: Stripe.SubscriptionSchedule;
 }): Promise<{
 	match: SubscriptionMatch;
@@ -91,7 +90,7 @@ export const subscriptionToSyncParams = async ({
 			resolvedSchedule = await getStripeActiveSubscriptionSchedule({
 				stripeClient: createStripeCli({ org: ctx.org, env: ctx.env }),
 				subscriptionScheduleId: scheduleId,
-				expand: ["phases.items.price"],
+				expand: ["phases.items.price.product"],
 			});
 		}
 	}
