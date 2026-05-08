@@ -8,6 +8,8 @@ import {
 import { mapMigrationCustomerEvent } from "./mapMigrationCustomerEvent.js";
 import type { MigrationCustomerEvent } from "./migrationCustomerEventTypes.js";
 
+const TINYBIRD_MIGRATION_EVENT_MAX_RETRIES = 2;
+
 /**
  * Best-effort Tinybird ingest for migration audit events.
  * Migration execution must not depend on analytics availability.
@@ -34,8 +36,8 @@ export const sendMigrationCustomerEventsToTinybird = async ({
 			MIGRATION_CUSTOMER_EVENTS_DATASOURCE,
 			tinybirdEvents,
 			{
-				wait: true,
-				maxRetries: 10,
+				wait: false,
+				maxRetries: TINYBIRD_MIGRATION_EVENT_MAX_RETRIES,
 			},
 		);
 		logger.info(`Sent ${events.length} migration events to Tinybird`, {
