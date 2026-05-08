@@ -1,11 +1,11 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { applyAutumnBillingPlanToFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer.js";
-import { processCustomizePlan } from "@/internal/migrations/v2/operations/customizePlan/index.js";
 import type {
 	MigrateCustomerContext,
 	ProcessOperationResult,
 } from "@/internal/migrations/v2/operations/types/index.js";
+import { processUpdatePlan } from "@/internal/migrations/v2/operations/updatePlan/index.js";
 
 /**
  * Fold ordered customer operations onto one AutumnBillingPlan.
@@ -31,7 +31,7 @@ export const processOperations = async ({
 	};
 
 	for (const op of context.migration.operations?.customer ?? []) {
-		const result = await processCustomizePlan({
+		const result = await processUpdatePlan({
 			ctx,
 			context,
 			op,

@@ -1,2 +1,2 @@
 export * from "./customerOperations.js";
-export * from "./customizePlan/index.js";
+export * from "./updatePlan/index.js";
