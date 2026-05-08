@@ -90,4 +90,3 @@ export type {
 	ListEventsPaginatedPipeParams,
 	ListEventsPaginatedPipeRow,
 } from "./pipes/index.js";
-export { isTinybirdConfigured } from "./tinybirdUtils.js";
