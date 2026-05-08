@@ -5,6 +5,12 @@ import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSourc
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
 import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
+import {
+	handleDeleteAdminOrgRedisConfig,
+	handleGetAdminOrgRedisConfig,
+	handleUpdateAdminOrgRedisMigration,
+	handleUpsertAdminOrgRedisConfig,
+} from "./handleAdminOrgRedisConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
@@ -42,6 +48,19 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/orgs/:org_id/request-block",
 	...handleUpsertAdminOrgRequestBlock,
+);
+honoAdminRouter.get("/orgs/:org_id/redis", ...handleGetAdminOrgRedisConfig);
+honoAdminRouter.patch(
+	"/orgs/:org_id/redis",
+	...handleUpsertAdminOrgRedisConfig,
+);
+honoAdminRouter.patch(
+	"/orgs/:org_id/redis/migration",
+	...handleUpdateAdminOrgRedisMigration,
+);
+honoAdminRouter.delete(
+	"/orgs/:org_id/redis",
+	...handleDeleteAdminOrgRedisConfig,
 );
 honoAdminRouter.get(
 	"/request-block-config",

@@ -1977,6 +1977,19 @@ const ROUTES = [
 		isWebhookExempt: false,
 	},
 	{
+		handlerName: "handleListEntitiesV2",
+		handlerFile: "src/internal/entities/handlers/handleListEntitiesV2.ts",
+		method: "POST",
+		path: "/v1/entities.list",
+		style: "RPC",
+		group: "v1/entities",
+		mountChain: ["/v1", "", "", "/entities.list"],
+		sourceRouterFile: "src/internal/entities/entityRouter.ts",
+		routeKind: "createRoute",
+		needsScopes: true,
+		isWebhookExempt: false,
+	},
+	{
 		handlerName: "handleUpdateEntity",
 		handlerFile:
 			"src/internal/entities/handlers/handleUpdateEntity/handleUpdateEntity.ts",
@@ -4455,6 +4468,12 @@ const SCOPE_DECISIONS: Record<
 		scopes: ["customers:read"],
 		shape: "array",
 		decidedAt: "2026-04-24T15:39:15.066Z",
+	},
+	"POST|/v1/entities.list|handleListEntitiesV2": {
+		decision: "decided",
+		scopes: ["customers:read"],
+		shape: "array",
+		decidedAt: "2026-05-08T00:00:00.000Z",
 	},
 	"POST|/v1/entities.update|handleUpdateEntity": {
 		decision: "decided",
