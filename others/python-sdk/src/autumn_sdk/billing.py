@@ -40,6 +40,8 @@ class Billing(BaseSDK):
         success_url: Optional[str] = None,
         new_billing_subscription: Optional[bool] = None,
         plan_schedule: Optional[models.AttachPlanSchedule] = None,
+        starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -82,6 +84,8 @@ class Billing(BaseSDK):
         :param success_url: URL to redirect to after successful checkout.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
+        :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -128,6 +132,8 @@ class Billing(BaseSDK):
             success_url=success_url,
             new_billing_subscription=new_billing_subscription,
             plan_schedule=plan_schedule,
+            starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
@@ -184,7 +190,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -234,6 +240,8 @@ class Billing(BaseSDK):
         success_url: Optional[str] = None,
         new_billing_subscription: Optional[bool] = None,
         plan_schedule: Optional[models.AttachPlanSchedule] = None,
+        starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -276,6 +284,8 @@ class Billing(BaseSDK):
         :param success_url: URL to redirect to after successful checkout.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
+        :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -322,6 +332,8 @@ class Billing(BaseSDK):
             success_url=success_url,
             new_billing_subscription=new_billing_subscription,
             plan_schedule=plan_schedule,
+            starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
@@ -378,12 +390,258 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
         if utils.match_response(http_res, "200", "application/json"):
             return unmarshal_json_response(models.AttachResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def create_schedule(
+        self,
+        *,
+        customer_id: str,
+        phases: Union[List[models.Phase], List[models.PhaseTypedDict]],
+        entity_id: Optional[str] = None,
+        invoice_mode: Optional[
+            Union[
+                models.CreateScheduleInvoiceMode,
+                models.CreateScheduleInvoiceModeTypedDict,
+            ]
+        ] = None,
+        success_url: Optional[str] = None,
+        checkout_session_params: Optional[Dict[str, Any]] = None,
+        redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
+        billing_behavior: Optional[models.BillingBehavior] = None,
+        enable_plan_immediately: Optional[bool] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.CreateScheduleResponse:
+        r"""Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
+
+        Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
+
+        :param customer_id: The ID of the customer to create the schedule for.
+        :param phases: Ordered phase definitions for the schedule.
+        :param entity_id: Optional entity ID for an entity-scoped schedule.
+        :param invoice_mode: Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
+        :param success_url: URL to redirect to after successful checkout.
+        :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
+        :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
+        :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+        :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.CreateScheduleParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.CreateScheduleInvoiceMode]
+            ),
+            success_url=success_url,
+            checkout_session_params=checkout_session_params,
+            redirect_mode=redirect_mode,
+            billing_behavior=billing_behavior,
+            enable_plan_immediately=enable_plan_immediately,
+            phases=utils.get_pydantic_model(phases, List[models.Phase]),
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/billing.create_schedule",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.CreateScheduleGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.CreateScheduleParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="createSchedule",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.CreateScheduleResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def create_schedule_async(
+        self,
+        *,
+        customer_id: str,
+        phases: Union[List[models.Phase], List[models.PhaseTypedDict]],
+        entity_id: Optional[str] = None,
+        invoice_mode: Optional[
+            Union[
+                models.CreateScheduleInvoiceMode,
+                models.CreateScheduleInvoiceModeTypedDict,
+            ]
+        ] = None,
+        success_url: Optional[str] = None,
+        checkout_session_params: Optional[Dict[str, Any]] = None,
+        redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
+        billing_behavior: Optional[models.BillingBehavior] = None,
+        enable_plan_immediately: Optional[bool] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.CreateScheduleResponse:
+        r"""Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
+
+        Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
+
+        :param customer_id: The ID of the customer to create the schedule for.
+        :param phases: Ordered phase definitions for the schedule.
+        :param entity_id: Optional entity ID for an entity-scoped schedule.
+        :param invoice_mode: Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
+        :param success_url: URL to redirect to after successful checkout.
+        :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
+        :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
+        :param billing_behavior: Whether to prorate the immediate phase. 'none' skips proration charges and credits.
+        :param enable_plan_immediately: If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.CreateScheduleParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            invoice_mode=utils.get_pydantic_model(
+                invoice_mode, Optional[models.CreateScheduleInvoiceMode]
+            ),
+            success_url=success_url,
+            checkout_session_params=checkout_session_params,
+            redirect_mode=redirect_mode,
+            billing_behavior=billing_behavior,
+            enable_plan_immediately=enable_plan_immediately,
+            phases=utils.get_pydantic_model(phases, List[models.Phase]),
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/billing.create_schedule",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.CreateScheduleGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.CreateScheduleParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="createSchedule",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.CreateScheduleResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(
@@ -534,7 +792,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -690,7 +948,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -743,6 +1001,8 @@ class Billing(BaseSDK):
         success_url: Optional[str] = None,
         new_billing_subscription: Optional[bool] = None,
         plan_schedule: Optional[models.PreviewAttachPlanSchedule] = None,
+        starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -789,6 +1049,8 @@ class Billing(BaseSDK):
         :param success_url: URL to redirect to after successful checkout.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
+        :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -836,6 +1098,8 @@ class Billing(BaseSDK):
             success_url=success_url,
             new_billing_subscription=new_billing_subscription,
             plan_schedule=plan_schedule,
+            starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
@@ -892,7 +1156,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -945,6 +1209,8 @@ class Billing(BaseSDK):
         success_url: Optional[str] = None,
         new_billing_subscription: Optional[bool] = None,
         plan_schedule: Optional[models.PreviewAttachPlanSchedule] = None,
+        starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -991,6 +1257,8 @@ class Billing(BaseSDK):
         :param success_url: URL to redirect to after successful checkout.
         :param new_billing_subscription: Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one.
         :param plan_schedule: When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled.
+        :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -1038,6 +1306,8 @@ class Billing(BaseSDK):
             success_url=success_url,
             new_billing_subscription=new_billing_subscription,
             plan_schedule=plan_schedule,
+            starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
@@ -1094,7 +1364,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -1257,7 +1527,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -1420,7 +1690,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -1583,7 +1853,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -1746,7 +2016,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -1910,7 +2180,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -2074,7 +2344,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -2170,7 +2440,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -2266,7 +2536,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -2310,6 +2580,8 @@ class Billing(BaseSDK):
             ]
         ] = None,
         success_url: Optional[str] = None,
+        starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -2350,6 +2622,8 @@ class Billing(BaseSDK):
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
+        :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -2390,6 +2664,8 @@ class Billing(BaseSDK):
                 discounts, Optional[List[models.SetupPaymentAttachDiscount]]
             ),
             success_url=success_url,
+            starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.SetupPaymentCustomLineItem]]
@@ -2446,7 +2722,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 
@@ -2490,6 +2766,8 @@ class Billing(BaseSDK):
             ]
         ] = None,
         success_url: Optional[str] = None,
+        starts_at: Optional[int] = None,
+        ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         custom_line_items: Optional[
             Union[
@@ -2530,6 +2808,8 @@ class Billing(BaseSDK):
         :param subscription_id: A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan.
         :param discounts: List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
+        :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
+        :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
@@ -2570,6 +2850,8 @@ class Billing(BaseSDK):
                 discounts, Optional[List[models.SetupPaymentAttachDiscount]]
             ),
             success_url=success_url,
+            starts_at=starts_at,
+            ends_at=ends_at,
             checkout_session_params=checkout_session_params,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.SetupPaymentCustomLineItem]]
@@ -2626,7 +2908,7 @@ class Billing(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            error_status_codes=["4XX", "5XX"],
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
             retry_config=retry_config,
         )
 

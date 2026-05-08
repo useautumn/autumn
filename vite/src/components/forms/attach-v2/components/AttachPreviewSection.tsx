@@ -1,10 +1,13 @@
 import type { AxiosError } from "axios";
-import { format } from "date-fns";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { getBackendErr } from "@/utils/genUtils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
+import {
+	buildAttachPreviewTotals,
+	getAttachPreviewLineItems,
+} from "../utils/buildAttachPreviewTotals";
 
 export function AttachPreviewSection() {
 	const { previewQuery, formValues } = useAttachFormContext();
@@ -16,26 +19,14 @@ export function AttachPreviewSection() {
 		? getBackendErr(queryError as AxiosError, "Failed to load preview")
 		: undefined;
 
-	const totals = [];
-
-	if (previewData) {
-		totals.push({
-			label: "Total Due Now",
-			amount: Math.max(previewData.total, 0),
-			variant: "primary" as const,
-		});
-
-		if (previewData.next_cycle) {
-			totals.push({
-				label: "Next Cycle",
-				amount: previewData.next_cycle.total,
-				variant: "secondary" as const,
-				badge: previewData.next_cycle.starts_at
-					? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
-					: undefined,
-			});
-		}
-	}
+	const totals = buildAttachPreviewTotals({
+		previewData,
+		startDate: formValues.startDate,
+	});
+	const lineItems = getAttachPreviewLineItems({
+		previewData,
+		startDate: formValues.startDate,
+	});
 
 	if (!hasProductSelected) return null;
 
@@ -51,7 +42,7 @@ export function AttachPreviewSection() {
 		<LineItemsPreview
 			title="Pricing Preview"
 			isLoading={isLoading}
-			lineItems={previewData?.line_items}
+			lineItems={lineItems}
 			currency={previewData?.currency}
 			totals={totals}
 			filterZeroAmounts

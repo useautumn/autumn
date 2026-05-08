@@ -1,0 +1,106 @@
+import type { AttachPreviewResponse } from "@autumn/shared";
+import { addMinutes, format, isAfter } from "date-fns";
+
+const FUTURE_START_TOLERANCE_MINUTES = 1;
+
+export interface AttachPreviewTotal {
+	label: string;
+	amount: number;
+	variant: "primary" | "secondary";
+	badge?: string;
+}
+
+const formatDate = (unixMs: number) => format(new Date(unixMs), "MMM d, yyyy");
+
+export const isFutureStartDate = (
+	startDate: number | null,
+	now = Date.now(),
+): startDate is number =>
+	startDate !== null &&
+	isAfter(startDate, addMinutes(now, FUTURE_START_TOLERANCE_MINUTES));
+
+export const getAttachScheduledStartDate = ({
+	startDate,
+	previewData,
+}: {
+	startDate?: number | null;
+	previewData: AttachPreviewResponse | null | undefined;
+}): number | null => {
+	if (startDate) return startDate;
+	if (!previewData) return null;
+
+	const incomingStartDate = previewData.incoming.find(
+		(change) => change.effective_at !== null,
+	)?.effective_at;
+	if (incomingStartDate) return incomingStartDate;
+
+	const outgoingStartDate = previewData.outgoing.find(
+		(change) => change.effective_at !== null,
+	)?.effective_at;
+	return outgoingStartDate ?? previewData.next_cycle?.starts_at ?? null;
+};
+
+export const getAttachPreviewLineItems = ({
+	previewData,
+	startDate,
+	now = Date.now(),
+}: {
+	previewData: AttachPreviewResponse | null | undefined;
+	startDate: number | null;
+	now?: number;
+}) => {
+	if (!previewData) return undefined;
+	if (isFutureStartDate(startDate, now)) {
+		return previewData.next_cycle?.line_items ?? previewData.line_items;
+	}
+
+	return previewData.line_items;
+};
+
+/**
+ * Builds the totals rows for the Attach pricing preview.
+ * Future startDate → single "Total Due [date]" row using the next-cycle amount.
+ * Otherwise → "Total Due Now" + optional "Next Cycle" row.
+ */
+export function buildAttachPreviewTotals({
+	previewData,
+	startDate,
+	now = Date.now(),
+}: {
+	previewData: AttachPreviewResponse | null | undefined;
+	startDate: number | null;
+	now?: number;
+}): AttachPreviewTotal[] {
+	if (!previewData) return [];
+
+	if (isFutureStartDate(startDate, now)) {
+		return [
+			{
+				label: `Total Due ${formatDate(startDate)}`,
+				amount: Math.max(previewData.next_cycle?.total ?? previewData.total, 0),
+				variant: "primary",
+			},
+		];
+	}
+
+	const totals: AttachPreviewTotal[] = [
+		{
+			label: "Total Due Now",
+			amount: Math.max(previewData.total, 0),
+			variant: "primary",
+		},
+	];
+
+	if (previewData.next_cycle) {
+		totals.push({
+			label: "Next Cycle",
+			amount: previewData.next_cycle.total,
+			variant: "secondary",
+			badge: previewData.next_cycle.starts_at
+				? formatDate(previewData.next_cycle.starts_at)
+				: undefined,
+		});
+	}
+
+	return totals;
+}

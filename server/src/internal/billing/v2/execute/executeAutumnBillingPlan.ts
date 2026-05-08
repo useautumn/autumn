@@ -2,6 +2,7 @@ import type { AutumnBillingPlan, Invoice } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { executeAutoTopupRebalance } from "@/internal/billing/v2/execute/executeAutumnActions/executeAutoTopupRebalance";
+import { executePatchCustomerProducts } from "@/internal/billing/v2/execute/executeAutumnActions/executePatchCustomerProducts";
 import { insertNewCusProducts } from "@/internal/billing/v2/execute/executeAutumnActions/insertNewCusProducts";
 import { updateCustomerEntitlements } from "@/internal/billing/v2/execute/executeAutumnActions/updateCustomerEntitlements";
 import {
@@ -71,6 +72,15 @@ export const executeAutumnBillingPlan = async ({
 		await CusEntService.insert({
 			ctx,
 			data: insertCustomerEntitlements,
+		});
+	}
+
+	if (autumnBillingPlan.patchCustomerProducts) {
+		// Custom prices/entitlements above must be inserted before customer rows can reference them.
+		// Patch execution only inserts/deletes customer_prices and customer_entitlements.
+		await executePatchCustomerProducts({
+			ctx,
+			patchCustomerProducts: autumnBillingPlan.patchCustomerProducts,
 		});
 	}
 

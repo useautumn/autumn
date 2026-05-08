@@ -16,7 +16,7 @@ export function InfoRow({ icon, label, value, className, mono }: InfoRowProps) {
 		<div className="flex items-center gap-2 min-w-0 overflow-hidden">
 			{icon && <div className="text-t4/60 shrink-0">{icon}</div>}
 			<div className="flex min-w-0 items-center overflow-hidden">
-				<div className="text-t3 text-sm font-medium w-20 whitespace-nowrap">
+				<div className="text-t3 text-sm font-medium w-24 shrink-0 whitespace-nowrap">
 					{label}
 				</div>
 				{isReactNode ? (

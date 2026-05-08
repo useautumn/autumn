@@ -1,5 +1,6 @@
 import { orgToFeaturesByOrgEnv, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
+import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 import { batchInvalidateCachedFullSubjects } from "../cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects";
 import { deleteCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
@@ -37,7 +38,10 @@ export const handleClearCustomerCache = createRoute({
 			await batchInvalidateCachedFullSubjects({
 				customers: customersToDelete,
 				featuresByOrgEnv,
-				redisV2: ctx.redisV2,
+				getRedisTargetsForCustomer: () =>
+					getRedisTargetsForCustomer({
+						org: ctx.org,
+					}),
 			});
 		}
 

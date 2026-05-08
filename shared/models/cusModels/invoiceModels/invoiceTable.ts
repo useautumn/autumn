@@ -25,6 +25,7 @@ export const invoices = pgTable(
 		internal_entity_id: text("internal_entity_id"),
 
 		stripe_id: text("stripe_id").notNull(),
+		processor_type: text("processor_type"),
 		status: text("status").notNull().default("draft"),
 		hosted_invoice_url: text("hosted_invoice_url"),
 		total: numeric({ mode: "number" }).notNull().default(0),

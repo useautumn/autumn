@@ -1,8 +1,7 @@
-import { type Entity, type FullCustomer, formatAmount } from "@autumn/shared";
+import type { Entity, FullCustomer } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
+import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
-import { format } from "date-fns";
-import { Decimal } from "decimal.js";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -16,7 +15,15 @@ import {
 	useAttachFormContext,
 } from "@/components/forms/attach-v2";
 import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFooterV3";
-import { GenerateCheckoutStageWithPreview } from "@/components/forms/shared/GenerateCheckoutStage";
+import {
+	buildAttachPreviewTotals,
+	getAttachPreviewLineItems,
+	getAttachScheduledStartDate,
+} from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import {
+	GenerateCheckoutStageWithPreview,
+	SchedulePlanStageWithPreview,
+} from "@/components/forms/shared/GenerateCheckoutStage";
 import { SendInvoiceStageWithPreview } from "@/components/forms/shared/SendInvoiceStage";
 import { PreviewErrorDisplay } from "@/components/forms/update-subscription-v2/components/PreviewErrorDisplay";
 import {
@@ -27,6 +34,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/v2/buttons/Button";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
+import { PreviewTotalsBlock } from "@/components/v2/preview-totals/PreviewTotalsBlock";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -131,49 +139,17 @@ function ReviewPreviewBlock() {
 		? getBackendErr(queryError as AxiosError, "Failed to load preview")
 		: undefined;
 
-	// Only "Next Cycle" lives in the LineItemsPreview totals array. The
-	// immediate "Tax" + "Total Due Now" rows are rendered in a bespoke
-	// section below to match the InvoiceDetailSheet pattern.
-	const previewTotals: {
-		label: string;
-		amount: number;
-		variant: "primary" | "secondary";
-		badge?: string;
-	}[] = [];
-
-	// Tax-aware totals. Only show the Tax row when status is "complete" AND
-	// total > 0 — incomplete is surfaced via toast above; zero tax means
-	// nothing taxable in this jurisdiction (no value in showing $0).
-	const showTaxRow =
-		previewData?.tax?.status === "complete" && previewData.tax.total > 0;
-	const taxAmount = showTaxRow ? (previewData?.tax?.total ?? 0) : 0;
-	const totalDueNow = previewData
-		? Math.max(previewData.total, 0) + taxAmount
-		: 0;
-
-	// When there's no Tax row to display, fall back to rendering "Total
-	// Due Now" via the LineItemsPreview totals array — same layout as
-	// before. Only render the bespoke Tax + Total section when we're
-	// actually showing a Tax row, so we don't add an extra empty
-	// SheetSection padding when tax is absent or hidden.
-	if (!showTaxRow && previewData) {
-		previewTotals.push({
-			label: "Total Due Now",
-			amount: Math.max(previewData.total, 0),
-			variant: "primary",
-		});
-	}
-
-	if (previewData?.next_cycle) {
-		previewTotals.push({
-			label: "Next Cycle",
-			amount: previewData.next_cycle.total,
-			variant: "secondary",
-			badge: previewData.next_cycle.starts_at
-				? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
-				: undefined,
-		});
-	}
+	const previewTotals = buildAttachPreviewTotals({
+		previewData,
+		startDate: formValues.startDate,
+	});
+	const previewLineItems = getAttachPreviewLineItems({
+		previewData,
+		startDate: formValues.startDate,
+	});
+	const lineItemTotals = previewData
+		? previewTotals.filter((total) => total.variant !== "primary")
+		: previewTotals;
 
 	return (
 		<AnimatePresence mode="popLayout">
@@ -203,47 +179,14 @@ function ReviewPreviewBlock() {
 						<>
 							<LineItemsPreview
 								title="Pricing Preview"
-								lineItems={previewData?.line_items}
+								lineItems={previewLineItems}
 								currency={previewData?.currency}
-								totals={previewTotals}
+								totals={lineItemTotals}
 								filterZeroAmounts
 							/>
-							{showTaxRow && previewData && (
+							{previewData && (
 								<SheetSection withSeparator={false}>
-									<div className="space-y-2">
-										<div className="flex items-center justify-between">
-											<span className="text-sm text-t2">Tax</span>
-											<span className="text-sm tabular-nums text-t2">
-												{formatAmount({
-													amount: new Decimal(taxAmount)
-														.toDecimalPlaces(2)
-														.toNumber(),
-													currency: previewData.currency,
-													minFractionDigits: 2,
-													amountFormatOptions: {
-														currencyDisplay: "narrowSymbol",
-													},
-												})}
-											</span>
-										</div>
-										<div className="flex items-center justify-between">
-											<span className="text-sm font-medium text-foreground">
-												Total Due Now
-											</span>
-											<span className="text-sm font-semibold text-foreground tabular-nums">
-												{formatAmount({
-													amount: new Decimal(totalDueNow)
-														.toDecimalPlaces(2)
-														.toNumber(),
-													currency: previewData.currency,
-													minFractionDigits: 2,
-													amountFormatOptions: {
-														currencyDisplay: "narrowSymbol",
-													},
-												})}
-											</span>
-										</div>
-									</div>
+									<PreviewTotalsBlock previewData={previewData} />
 								</SheetSection>
 							)}
 						</>
@@ -419,12 +362,17 @@ function ReviewContent() {
 }
 
 function SendInvoiceContent() {
-	const { product, previewQuery, isPending, handleInvoiceAttach } =
+	const { form, product, previewQuery, isPending, handleInvoiceAttach } =
 		useAttachFormContext();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
+	const startDate = useStore(form.store, (state) => state.values.startDate);
+	const scheduledStartDate = getAttachScheduledStartDate({
+		startDate,
+		previewData: previewQuery.data,
+	});
 
 	return (
 		<SendInvoiceStageWithPreview
@@ -435,6 +383,7 @@ function SendInvoiceContent() {
 			stripeAccount={stripeAccount}
 			env={env}
 			onBack={() => setSheet({ type: "attach-review", itemId })}
+			scheduledStartDate={scheduledStartDate}
 		/>
 	);
 }
@@ -456,6 +405,24 @@ function CheckoutSessionContent() {
 	);
 }
 
+function SchedulePlanContent() {
+	const { product, formValues, previewQuery, isPending, handleConfirm } =
+		useAttachFormContext();
+	const { setSheet } = useSheetStore();
+	const itemId = useSheetStore((s) => s.itemId);
+
+	return (
+		<SchedulePlanStageWithPreview
+			productName={product?.name}
+			startDate={formValues.startDate}
+			previewQuery={previewQuery}
+			isPending={isPending}
+			onSubmit={handleConfirm}
+			onBack={() => setSheet({ type: "attach-review", itemId })}
+		/>
+	);
+}
+
 function SheetContent() {
 	const sheetType = useSheetStore((s) => s.type);
 	const {
@@ -470,9 +437,11 @@ function SheetContent() {
 			? SendInvoiceContent
 			: sheetType === "attach-checkout-session"
 				? CheckoutSessionContent
-				: sheetType === "attach-review"
-					? ReviewContent
-					: SelectContent;
+				: sheetType === "attach-schedule-plan"
+					? SchedulePlanContent
+					: sheetType === "attach-review"
+						? ReviewContent
+						: SelectContent;
 
 	return (
 		<LayoutGroup>

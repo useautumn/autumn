@@ -49,6 +49,8 @@ test.concurrent(`${chalk.yellowBright("track-event-name1: track with event_name 
 	expect(trackRes.balance?.feature_id).toBe(TestFeature.Action1);
 	expect(trackRes.balance?.current_balance).toBe(expectedBalance);
 	expect(trackRes.balance?.usage).toBe(deductValue);
+	expect(trackRes.balances?.[TestFeature.Action1]).toBeDefined();
+	expect(trackRes.balances?.[TestFeature.Credits]).toBeNull();
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 	expect(customer.features[TestFeature.Action1]).toMatchObject({

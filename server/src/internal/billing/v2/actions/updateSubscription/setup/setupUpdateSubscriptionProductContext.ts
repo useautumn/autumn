@@ -8,6 +8,7 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { setupPatchContext } from "@/internal/billing/v2/setup/patch";
 import { ProductService } from "@/internal/products/ProductService";
 import { setupCustomFullProduct } from "../../../setup/setupCustomFullProduct";
 import { findTargetCustomerProduct } from "./findTargetCustomerProduct";
@@ -57,6 +58,13 @@ export const setupUpdateSubscriptionProductContext = async ({
 		});
 	}
 
+	const patchContext = setupPatchContext({
+		ctx,
+		params,
+		customerProduct: targetCustomerProduct,
+		fullProduct,
+	});
+
 	const {
 		fullProduct: customFullProduct,
 		customPrices,
@@ -65,15 +73,19 @@ export const setupUpdateSubscriptionProductContext = async ({
 		ctx,
 		currentFullProduct: fullProduct,
 		customizePlan: params.customize,
+		patchContext,
 	});
+
+	const finalFullProduct = patchContext?.fullProduct ?? customFullProduct;
 
 	const isUpdatingFreeCustomerProduct =
 		isCustomerProductFree(targetCustomerProduct) &&
-		isFreeProduct({ prices: customFullProduct.prices });
+		isFreeProduct({ prices: finalFullProduct.prices });
 
 	return {
 		customerProduct: targetCustomerProduct,
-		fullProduct: customFullProduct,
+		fullProduct: finalFullProduct,
+		patchContext,
 		customPrices,
 		customEnts,
 		isUpdatingFreeCustomerProduct,

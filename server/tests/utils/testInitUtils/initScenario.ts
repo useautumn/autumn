@@ -199,6 +199,7 @@ type PlatformCreateConfig = {
 	userEmail?: string;
 	configOverrides?: Partial<OrgConfig>;
 	taxRegistrations?: TaxRegistrationCountry[];
+	setupDefaultFeatures?: boolean;
 };
 
 type ScenarioConfig = {
@@ -789,6 +790,7 @@ const createAndRedeemReferralCode = ({
  * @param userEmail - Owner email; defaults to "platform-tests@autumn.test".
  * @param configOverrides - Merged into the sub-org's config jsonb.
  * @param taxRegistrations - Countries to register Stripe Tax for.
+ * @param setupDefaultFeatures - Inserts standard test features on the sub-org.
  *
  * @example s.platform.create({ configOverrides: { automatic_tax: true }, taxRegistrations: ["AU"] })
  */
@@ -965,6 +967,7 @@ export async function initScenario({
 			testSecretKey: response.test_secret_key,
 			configOverrides: config.platformConfig.configOverrides,
 			taxRegistrations: config.platformConfig.taxRegistrations,
+			setupDefaultFeatures: config.platformConfig.setupDefaultFeatures,
 		});
 
 		console.log(

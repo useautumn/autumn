@@ -54,23 +54,26 @@ describe(chalk.yellowBright("CreateScheduleParamsV0Schema"), () => {
 		).toThrow();
 	});
 
-	test("rejects subscription_id inputs", () => {
-		expect(() =>
-			CreateScheduleParamsV0Schema.parse({
-				customer_id: "cus_123",
-				phases: [
-					{
-						starts_at: 1_000,
-						plans: [
-							{
-								plan_id: "pro",
-								subscription_id: "sub_123",
-							},
-						],
-					},
-				],
-			}),
-		).toThrow("subscription_id is not supported for create_schedule");
+	test("preserves subscription_id on parsed plan items", () => {
+		const parsed = CreateScheduleParamsV0Schema.parse({
+			customer_id: "cus_123",
+			phases: [
+				{
+					starts_at: 1_000,
+					plans: [
+						{
+							plan_id: "pro",
+							subscription_id: "sub_123",
+						},
+					],
+				},
+			],
+		});
+
+		const [phase] = parsed.phases;
+		const [plan] = phase?.plans ?? [];
+
+		expect(plan?.subscription_id).toBe("sub_123");
 	});
 
 	test("rejects empty phases", () => {

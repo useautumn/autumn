@@ -147,8 +147,8 @@ class TrackResponseBody2TypedDict(TypedDict):
     r"""The ID of the entity, if entity-scoped tracking was performed."""
     event_name: NotRequired[str]
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
-    balances: NotRequired[Dict[str, BalanceTypedDict]]
-    r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
+    balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
+    r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
 
 class TrackResponseBody2(BaseModel):
@@ -169,8 +169,8 @@ class TrackResponseBody2(BaseModel):
     event_name: Optional[str] = None
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
 
-    balances: Optional[Dict[str, Balance]] = None
-    r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
+    balances: Optional[Dict[str, Nullable[Balance]]] = None
+    r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -211,8 +211,8 @@ class TrackResponseBody1TypedDict(TypedDict):
     r"""The ID of the entity, if entity-scoped tracking was performed."""
     event_name: NotRequired[str]
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
-    balances: NotRequired[Dict[str, BalanceTypedDict]]
-    r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
+    balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
+    r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
 
 class TrackResponseBody1(BaseModel):
@@ -233,8 +233,8 @@ class TrackResponseBody1(BaseModel):
     event_name: Optional[str] = None
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
 
-    balances: Optional[Dict[str, Balance]] = None
-    r"""Map of feature_id to updated balance when tracking by event_name affects multiple features."""
+    balances: Optional[Dict[str, Nullable[Balance]]] = None
+    r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):

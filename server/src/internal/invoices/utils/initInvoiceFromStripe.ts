@@ -3,6 +3,7 @@ import {
 	type FullCustomer,
 	type FullProduct,
 	type InsertInvoice,
+	ProcessorType,
 	secondsToMs,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
@@ -62,6 +63,7 @@ export const initInvoiceFromStripe = async ({
 		internal_product_ids: [...new Set(internalProductIds)],
 		created_at: secondsToMs(stripeInvoice.created),
 		stripe_id: stripeInvoice.id!,
+		processor_type: ProcessorType.Stripe,
 		hosted_invoice_url: stripeInvoice.hosted_invoice_url || null,
 		status: stripeInvoice.status as string | undefined,
 		internal_entity_id: internalEntityId || null,

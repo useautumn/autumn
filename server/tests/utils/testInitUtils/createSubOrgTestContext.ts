@@ -5,6 +5,7 @@ import {
 	LATEST_VERSION,
 	type OrgConfig,
 } from "@autumn/shared";
+import { getFeatures } from "@tests/setup/v2Features.js";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { resolveRedisV2 } from "@/external/redis/resolveRedisV2.js";
@@ -29,11 +30,13 @@ export const createSubOrgTestContext = async ({
 	testSecretKey,
 	configOverrides,
 	taxRegistrations,
+	setupDefaultFeatures,
 }: {
 	subOrgSlug: string;
 	testSecretKey: string;
 	configOverrides?: Partial<OrgConfig>;
 	taxRegistrations?: TaxRegistrationCountry[];
+	setupDefaultFeatures?: boolean;
 }): Promise<TestContext> => {
 	const { db } = initDrizzle();
 
@@ -188,6 +191,14 @@ export const createSubOrgTestContext = async ({
 				);
 			}
 		}
+	}
+
+	if (setupDefaultFeatures) {
+		await FeatureService.insert({
+			db,
+			data: Object.values(getFeatures({ orgId: subOrg.id })),
+			logger,
+		});
 	}
 
 	// 5. Sub-org features.

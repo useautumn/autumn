@@ -8,6 +8,7 @@ import {
 import { Decimal } from "decimal.js";
 import type { Redis } from "ioredis";
 import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
+import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRouting.js";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
@@ -167,6 +168,25 @@ export const getCachedFullCustomer = async ({
 			ctx,
 			customerId,
 			source: "stale-rollout",
+			skipGuard: true,
+		});
+		return undefined;
+	}
+
+	if (
+		isRedisMigrationCacheStale({
+			cachedAt,
+			customerId,
+			redisConfig: ctx.org.redis_config,
+		})
+	) {
+		ctx.logger.warn(
+			`[getCachedFullCustomer] Stale Redis migration cache for ${customerId}, evicting`,
+		);
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId,
+			source: "stale-redis-migration",
 			skipGuard: true,
 		});
 		return undefined;

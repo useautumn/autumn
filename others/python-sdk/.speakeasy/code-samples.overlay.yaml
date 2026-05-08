@@ -131,6 +131,41 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/billing.create_schedule"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.2.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.billing.create_schedule(customer_id="cus_123", phases=[
+                    {
+                        "starts_at": 1735689600000,
+                        "plans": [
+                            {
+                                "plan_id": "trial_plan",
+                            },
+                        ],
+                    },
+                    {
+                        "starts_at": 1736899200000,
+                        "plans": [
+                            {
+                                "plan_id": "pro_plan",
+                            },
+                        ],
+                    },
+                ], redirect_mode="if_required")
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/billing.multi_attach"]["post"]
     update:
       x-codeSamples:
@@ -308,6 +343,24 @@ actions:
             ) as autumn:
 
                 res = autumn.customers.delete(customer_id="cus_123", delete_in_stripe=False)
+
+                # Handle response
+                print(res)
+  - target: $["paths"]["/v1/customers.get"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.2.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.customers.get(customer_id="cus_123")
 
                 # Handle response
                 print(res)

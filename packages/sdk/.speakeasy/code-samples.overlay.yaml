@@ -169,6 +169,46 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/billing.create_schedule"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.2.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.billing.createSchedule({
+                customerId: "cus_123",
+                phases: [
+                  {
+                    startsAt: 1735689600000,
+                    plans: [
+                      {
+                        planId: "trial_plan",
+                      },
+                    ],
+                  },
+                  {
+                    startsAt: 1736899200000,
+                    plans: [
+                      {
+                        planId: "pro_plan",
+                      },
+                    ],
+                  },
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/billing.multi_attach"]["post"]
     update:
       x-codeSamples:
@@ -383,6 +423,28 @@ actions:
 
             async function run() {
               const result = await autumn.customers.delete({
+                customerId: "cus_123",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/customers.get"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.2.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.customers.get({
                 customerId: "cus_123",
               });
 

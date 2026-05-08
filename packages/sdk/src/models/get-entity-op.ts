@@ -308,6 +308,18 @@ export type GetEntityBillingControls = {
   overageAllowed?: Array<GetEntityOverageAllowed> | undefined;
 };
 
+/**
+ * The billing processor that owns this invoice.
+ */
+export const GetEntityProcessorType = {
+  Stripe: "stripe",
+  Revenuecat: "revenuecat",
+} as const;
+/**
+ * The billing processor that owns this invoice.
+ */
+export type GetEntityProcessorType = OpenEnum<typeof GetEntityProcessorType>;
+
 export type GetEntityInvoice = {
   /**
    * Array of plan IDs included in this invoice
@@ -317,6 +329,10 @@ export type GetEntityInvoice = {
    * The Stripe invoice ID
    */
   stripeId: string;
+  /**
+   * The billing processor that owns this invoice.
+   */
+  processorType: GetEntityProcessorType;
   /**
    * The status of the invoice
    */
@@ -742,6 +758,12 @@ export function getEntityBillingControlsFromJSON(
 }
 
 /** @internal */
+export const GetEntityProcessorType$inboundSchema: z.ZodMiniType<
+  GetEntityProcessorType,
+  unknown
+> = openEnums.inboundSchema(GetEntityProcessorType);
+
+/** @internal */
 export const GetEntityInvoice$inboundSchema: z.ZodMiniType<
   GetEntityInvoice,
   unknown
@@ -749,6 +771,7 @@ export const GetEntityInvoice$inboundSchema: z.ZodMiniType<
   z.object({
     plan_ids: z.array(types.string()),
     stripe_id: types.string(),
+    processor_type: z._default(GetEntityProcessorType$inboundSchema, "stripe"),
     status: types.string(),
     total: types.number(),
     currency: types.string(),
@@ -759,6 +782,7 @@ export const GetEntityInvoice$inboundSchema: z.ZodMiniType<
     return remap$(v, {
       "plan_ids": "planIds",
       "stripe_id": "stripeId",
+      "processor_type": "processorType",
       "created_at": "createdAt",
       "hosted_invoice_url": "hostedInvoiceUrl",
     });

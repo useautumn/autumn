@@ -2,8 +2,11 @@ import { describe, expect, test } from "bun:test";
 import type { CreateScheduleBillingContext } from "@autumn/shared";
 import { ms } from "@autumn/shared";
 import chalk from "chalk";
+import type { DrizzleCli } from "@/db/initDrizzle";
 import type Stripe from "stripe";
 import { handleCreateScheduleErrors } from "@/internal/billing/v2/actions/createSchedule/errors/handleCreateScheduleErrors";
+
+const db = undefined as unknown as DrizzleCli;
 
 const buildContext = ({
 	immediateStartsAt,
@@ -21,57 +24,67 @@ const buildContext = ({
 			plans: [{ plan_id: "plan" }],
 		},
 		stripeSubscriptionSchedule: existingSchedule,
+		productContexts: [],
+		scheduledPhaseContexts: [],
+		fullCustomer: {
+			internal_id: "internal_cus_123",
+			customer_products: [],
+		},
 	}) as unknown as CreateScheduleBillingContext;
 
 describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
-	test("allows an immediate phase within the tolerance window", () => {
+	test("allows an immediate phase within the tolerance window", async () => {
 		const now = Date.now();
 
-		expect(() =>
+		await expect(
 			handleCreateScheduleErrors({
+				db,
 				billingContext: buildContext({
 					immediateStartsAt: now,
 					currentEpochMs: now,
 				}),
 			}),
-		).not.toThrow();
+		).resolves.toBeUndefined();
 	});
 
-	test("rejects creation when the immediate phase is far in the past", () => {
+	test("rejects creation when the immediate phase is far in the past", async () => {
 		const now = Date.now();
 
-		expect(() =>
+		await expect(
 			handleCreateScheduleErrors({
+				db,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.hours(1),
 					currentEpochMs: now,
 				}),
 			}),
-		).toThrow("The first phase must start immediately");
+		).rejects.toThrow("The first phase must start immediately");
 	});
 
-	test("rejects creation when the immediate phase is far in the future", () => {
+	test("rejects creation when the immediate phase is far in the future", async () => {
 		const now = Date.now();
 
-		expect(() =>
+		await expect(
 			handleCreateScheduleErrors({
+				db,
 				billingContext: buildContext({
 					immediateStartsAt: now + ms.hours(1),
 					currentEpochMs: now,
 				}),
 			}),
-		).toThrow("The first phase must start immediately");
+		).rejects.toThrow("The first phase must start immediately");
 	});
 
-	test("skips the immediate-start guard on updates (existing schedule)", () => {
+	test("skips the immediate-start guard on updates (existing schedule)", async () => {
 		// Regression: when editing an existing schedule, the frontend preserves
 		// the persisted starts_at for phase 0. Downstream Stripe execution anchors
 		// the first phase to the schedule's current_phase.start_date anyway, so
 		// the tolerance check should not reject a historical starts_at here.
 		const now = Date.now();
 
-		expect(() =>
+		await expect(
 			handleCreateScheduleErrors({
+				db,
 				billingContext: buildContext({
 					immediateStartsAt: now - ms.days(30),
 					currentEpochMs: now,
@@ -80,6 +93,6 @@ describe(chalk.yellowBright("handleCreateScheduleErrors"), () => {
 					} as unknown as Stripe.SubscriptionSchedule,
 				}),
 			}),
-		).not.toThrow();
+		).resolves.toBeUndefined();
 	});
 });

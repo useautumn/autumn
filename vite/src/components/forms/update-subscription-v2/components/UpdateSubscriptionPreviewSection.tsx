@@ -3,6 +3,7 @@ import type { AxiosError } from "axios";
 import { format } from "date-fns";
 import { getPreviewCreditAmount } from "@/components/forms/shared/previewCreditUtils";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
+import { PreviewTotalsBlock } from "@/components/v2/preview-totals/PreviewTotalsBlock";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { getBackendErr } from "@/utils/genUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -30,25 +31,16 @@ export function UpdateSubscriptionPreviewSection() {
 			})
 		: null;
 
-	const totals = [];
-
-	if (previewData) {
-		totals.push({
-			label: "Total Due Now",
-			amount: Math.max(previewData.total, 0),
-			variant: "primary" as const,
+	const secondaryTotals = [];
+	if (previewData?.next_cycle) {
+		secondaryTotals.push({
+			label: "Next Cycle",
+			amount: previewData.next_cycle.total,
+			variant: "secondary" as const,
+			badge: previewData.next_cycle.starts_at
+				? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
+				: undefined,
 		});
-
-		if (previewData.next_cycle) {
-			totals.push({
-				label: "Next Cycle",
-				amount: previewData.next_cycle.total,
-				variant: "secondary" as const,
-				badge: previewData.next_cycle.starts_at
-					? format(new Date(previewData.next_cycle.starts_at), "MMM d, yyyy")
-					: undefined,
-			});
-		}
 	}
 
 	if (!hasChanges) return null;
@@ -79,9 +71,14 @@ export function UpdateSubscriptionPreviewSection() {
 				isLoading={isLoading}
 				lineItems={previewData?.line_items}
 				currency={previewData?.currency}
-				totals={totals}
+				totals={secondaryTotals}
 				filterZeroAmounts
 			/>
+			{previewData && (
+				<SheetSection withSeparator={false}>
+					<PreviewTotalsBlock previewData={previewData} />
+				</SheetSection>
+			)}
 		</>
 	);
 }

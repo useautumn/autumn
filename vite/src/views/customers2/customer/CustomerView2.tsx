@@ -13,6 +13,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
+import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
@@ -46,6 +47,7 @@ export default function CustomerView2() {
 	} = useCusQuery();
 
 	useCusReferralQuery();
+	useCusRewardsQuery();
 	const { entityId, setEntityId } = useEntity();
 
 	const sheetType = useSheetStore((s) => s.type);

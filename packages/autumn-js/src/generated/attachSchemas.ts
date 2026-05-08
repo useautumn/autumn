@@ -11,9 +11,17 @@ export const attachFeatureQuantitySchema = z.object({
 	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
-export const attachToSchema = z.union([z.number(), z.string()]);
+export const attachItemToSchema = z.union([z.number(), z.string()]);
 
-export const attachTierSchema = z.object({
+export const attachItemTierSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const attachAddItemToSchema = z.union([z.number(), z.string()]);
+
+export const attachAddItemTierSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flatAmount: z.union([z.number(), z.undefined()]).optional(),
@@ -65,22 +73,24 @@ export const attachBasePriceOutboundSchema = z.object({
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachResetOutboundSchema = z.object({
+export const attachItemResetOutboundSchema = z.object({
 	interval: z.string(),
 	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachToOutboundSchema = z.union([z.number(), z.string()]);
+export const attachItemToOutboundSchema = z.union([z.number(), z.string()]);
 
-export const attachTierOutboundSchema = z.object({
+export const attachItemTierOutboundSchema = z.object({
 	to: z.union([z.number(), z.string()]),
 	amount: z.union([z.number(), z.undefined()]).optional(),
 	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachPriceOutboundSchema = z.object({
+export const attachItemPriceOutboundSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	tiers: z.union([z.array(attachTierOutboundSchema), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(attachItemTierOutboundSchema), z.undefined()])
+		.optional(),
 	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
 	interval: z.string(),
 	interval_count: z.number(),
@@ -89,26 +99,88 @@ export const attachPriceOutboundSchema = z.object({
 	max_purchase: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachProrationOutboundSchema = z.object({
+export const attachItemProrationOutboundSchema = z.object({
 	on_increase: z.string(),
 	on_decrease: z.string(),
 });
 
-export const attachRolloverOutboundSchema = z.object({
+export const attachItemRolloverOutboundSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
 	max_percentage: z.union([z.number(), z.undefined()]).optional(),
 	expiry_duration_type: z.string(),
 	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachPlanItemOutboundSchema = z.object({
+export const attachItemPlanItemOutboundSchema = z.object({
 	feature_id: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-	reset: z.union([attachResetOutboundSchema, z.undefined()]).optional(),
-	price: z.union([attachPriceOutboundSchema, z.undefined()]).optional(),
-	proration: z.union([attachProrationOutboundSchema, z.undefined()]).optional(),
-	rollover: z.union([attachRolloverOutboundSchema, z.undefined()]).optional(),
+	reset: z.union([attachItemResetOutboundSchema, z.undefined()]).optional(),
+	price: z.union([attachItemPriceOutboundSchema, z.undefined()]).optional(),
+	proration: z
+		.union([attachItemProrationOutboundSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([attachItemRolloverOutboundSchema, z.undefined()])
+		.optional(),
+});
+
+export const attachAddItemResetOutboundSchema = z.object({
+	interval: z.string(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const attachAddItemToOutboundSchema = z.union([z.number(), z.string()]);
+
+export const attachAddItemTierOutboundSchema = z.object({
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const attachAddItemPriceOutboundSchema = z.object({
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(attachAddItemTierOutboundSchema), z.undefined()])
+		.optional(),
+	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.string(),
+	interval_count: z.number(),
+	billing_units: z.number(),
+	billing_method: z.string(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const attachAddItemProrationOutboundSchema = z.object({
+	on_increase: z.string(),
+	on_decrease: z.string(),
+});
+
+export const attachAddItemRolloverOutboundSchema = z.object({
+	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
+	expiry_duration_type: z.string(),
+	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const attachAddItemPlanItemOutboundSchema = z.object({
+	feature_id: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z.union([attachAddItemResetOutboundSchema, z.undefined()]).optional(),
+	price: z.union([attachAddItemPriceOutboundSchema, z.undefined()]).optional(),
+	proration: z
+		.union([attachAddItemProrationOutboundSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([attachAddItemRolloverOutboundSchema, z.undefined()])
+		.optional(),
+});
+
+export const attachPlanItemFilterOutboundSchema = z.object({
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	billing_method: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const attachFreeTrialParamsOutboundSchema = z.object({
@@ -123,7 +195,13 @@ export const attachCustomizeOutboundSchema = z.object({
 		.optional()
 		.nullable(),
 	items: z
-		.union([z.array(attachPlanItemOutboundSchema), z.undefined()])
+		.union([z.array(attachItemPlanItemOutboundSchema), z.undefined()])
+		.optional(),
+	add_items: z
+		.union([z.array(attachAddItemPlanItemOutboundSchema), z.undefined()])
+		.optional(),
+	remove_items: z
+		.union([z.array(attachPlanItemFilterOutboundSchema), z.undefined()])
 		.optional(),
 	free_trial: z
 		.union([attachFreeTrialParamsOutboundSchema, z.undefined()])
@@ -179,6 +257,8 @@ export const attachParamsOutboundSchema = z.object({
 	new_billing_subscription: z.union([z.boolean(), z.undefined()]).optional(),
 	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	plan_schedule: z.union([z.string(), z.undefined()]).optional(),
+	starts_at: z.union([z.number(), z.undefined()]).optional(),
+	ends_at: z.union([z.number(), z.undefined()]).optional(),
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
@@ -211,56 +291,124 @@ export const attachBasePriceSchema = z.object({
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachResetIntervalSchema = closedEnumSchema;
+export const attachItemResetIntervalSchema = closedEnumSchema;
 
-export const attachResetSchema = z.object({
-	interval: attachResetIntervalSchema,
+export const attachItemResetSchema = z.object({
+	interval: attachItemResetIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachTierBehaviorSchema = closedEnumSchema;
+export const attachItemTierBehaviorSchema = closedEnumSchema;
 
 export const attachItemPriceIntervalSchema = closedEnumSchema;
 
-export const attachBillingMethodSchema = closedEnumSchema;
+export const attachItemBillingMethodSchema = closedEnumSchema;
 
-export const attachPriceSchema = z.object({
+export const attachItemPriceSchema = z.object({
 	amount: z.union([z.number(), z.undefined()]).optional(),
-	tiers: z.union([z.array(attachTierSchema), z.undefined()]).optional(),
-	tierBehavior: z.union([attachTierBehaviorSchema, z.undefined()]).optional(),
+	tiers: z.union([z.array(attachItemTierSchema), z.undefined()]).optional(),
+	tierBehavior: z
+		.union([attachItemTierBehaviorSchema, z.undefined()])
+		.optional(),
 	interval: attachItemPriceIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	billingUnits: z.union([z.number(), z.undefined()]).optional(),
-	billingMethod: attachBillingMethodSchema,
+	billingMethod: attachItemBillingMethodSchema,
 	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachOnIncreaseSchema = closedEnumSchema;
+export const attachItemOnIncreaseSchema = closedEnumSchema;
 
-export const attachOnDecreaseSchema = closedEnumSchema;
+export const attachItemOnDecreaseSchema = closedEnumSchema;
 
-export const attachProrationSchema = z.object({
-	onIncrease: attachOnIncreaseSchema,
-	onDecrease: attachOnDecreaseSchema,
+export const attachItemProrationSchema = z.object({
+	onIncrease: attachItemOnIncreaseSchema,
+	onDecrease: attachItemOnDecreaseSchema,
 });
 
-export const attachExpiryDurationTypeSchema = closedEnumSchema;
+export const attachItemExpiryDurationTypeSchema = closedEnumSchema;
 
-export const attachRolloverSchema = z.object({
+export const attachItemRolloverSchema = z.object({
 	max: z.union([z.number(), z.undefined()]).optional(),
 	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
-	expiryDurationType: attachExpiryDurationTypeSchema,
+	expiryDurationType: attachItemExpiryDurationTypeSchema,
 	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const attachPlanItemSchema = z.object({
+export const attachItemPlanItemSchema = z.object({
 	featureId: z.string(),
 	included: z.union([z.number(), z.undefined()]).optional(),
 	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-	reset: z.union([attachResetSchema, z.undefined()]).optional(),
-	price: z.union([attachPriceSchema, z.undefined()]).optional(),
-	proration: z.union([attachProrationSchema, z.undefined()]).optional(),
-	rollover: z.union([attachRolloverSchema, z.undefined()]).optional(),
+	reset: z.union([attachItemResetSchema, z.undefined()]).optional(),
+	price: z.union([attachItemPriceSchema, z.undefined()]).optional(),
+	proration: z.union([attachItemProrationSchema, z.undefined()]).optional(),
+	rollover: z.union([attachItemRolloverSchema, z.undefined()]).optional(),
+});
+
+export const attachAddItemResetIntervalSchema = closedEnumSchema;
+
+export const attachAddItemResetSchema = z.object({
+	interval: attachAddItemResetIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const attachAddItemTierBehaviorSchema = closedEnumSchema;
+
+export const attachAddItemPriceIntervalSchema = closedEnumSchema;
+
+export const attachAddItemBillingMethodSchema = closedEnumSchema;
+
+export const attachAddItemPriceSchema = z.object({
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	tiers: z.union([z.array(attachAddItemTierSchema), z.undefined()]).optional(),
+	tierBehavior: z
+		.union([attachAddItemTierBehaviorSchema, z.undefined()])
+		.optional(),
+	interval: attachAddItemPriceIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	billingMethod: attachAddItemBillingMethodSchema,
+	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const attachAddItemOnIncreaseSchema = closedEnumSchema;
+
+export const attachAddItemOnDecreaseSchema = closedEnumSchema;
+
+export const attachAddItemProrationSchema = z.object({
+	onIncrease: attachAddItemOnIncreaseSchema,
+	onDecrease: attachAddItemOnDecreaseSchema,
+});
+
+export const attachAddItemExpiryDurationTypeSchema = closedEnumSchema;
+
+export const attachAddItemRolloverSchema = z.object({
+	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
+	expiryDurationType: attachAddItemExpiryDurationTypeSchema,
+	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
+});
+
+export const attachAddItemPlanItemSchema = z.object({
+	featureId: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z.union([attachAddItemResetSchema, z.undefined()]).optional(),
+	price: z.union([attachAddItemPriceSchema, z.undefined()]).optional(),
+	proration: z.union([attachAddItemProrationSchema, z.undefined()]).optional(),
+	rollover: z.union([attachAddItemRolloverSchema, z.undefined()]).optional(),
+});
+
+export const attachRemoveItemBillingMethodSchema = closedEnumSchema;
+
+export const attachRemoveItemIntervalSchema = closedEnumSchema;
+
+export const attachPlanItemFilterSchema = z.object({
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	billingMethod: z
+		.union([attachRemoveItemBillingMethodSchema, z.undefined()])
+		.optional(),
+	interval: z.union([attachRemoveItemIntervalSchema, z.undefined()]).optional(),
 });
 
 export const attachDurationTypeSchema = closedEnumSchema;
@@ -273,7 +421,13 @@ export const attachFreeTrialParamsSchema = z.object({
 
 export const attachCustomizeSchema = z.object({
 	price: z.union([attachBasePriceSchema, z.undefined()]).optional().nullable(),
-	items: z.union([z.array(attachPlanItemSchema), z.undefined()]).optional(),
+	items: z.union([z.array(attachItemPlanItemSchema), z.undefined()]).optional(),
+	addItems: z
+		.union([z.array(attachAddItemPlanItemSchema), z.undefined()])
+		.optional(),
+	removeItems: z
+		.union([z.array(attachPlanItemFilterSchema), z.undefined()])
+		.optional(),
 	freeTrial: z
 		.union([attachFreeTrialParamsSchema, z.undefined()])
 		.optional()
@@ -308,6 +462,8 @@ export const attachParamsSchema = z.object({
 	newBillingSubscription: z.union([z.boolean(), z.undefined()]).optional(),
 	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
 	planSchedule: z.union([attachPlanScheduleSchema, z.undefined()]).optional(),
+	startsAt: z.union([z.number(), z.undefined()]).optional(),
+	endsAt: z.union([z.number(), z.undefined()]).optional(),
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),

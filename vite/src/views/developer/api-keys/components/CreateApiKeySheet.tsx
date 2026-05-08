@@ -1,6 +1,5 @@
 import type { ScopeString } from "@autumn/shared";
 import { Check, Copy } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod/v4";
@@ -115,167 +114,99 @@ export const CreateApiKeySheet = ({
 				side="right"
 				className="!w-[28rem] !max-w-[28rem] sm:!w-[28rem] sm:!max-w-[28rem]"
 			>
-				<SheetHeader>
-					<SheetTitle>Create Secret API Key</SheetTitle>
-					<AnimatePresence mode="wait">
-						{apiKey && (
-							<motion.p
-								key="description"
-								initial={{ opacity: 0, height: 0 }}
-								animate={{ opacity: 1, height: "auto" }}
-								exit={{ opacity: 0, height: 0 }}
-								transition={{
-									type: "spring",
-									bounce: 0.15,
-									duration: 0.3,
-								}}
-								className="text-muted-foreground text-sm"
-							>
-								Please copy your API Key and keep it somewhere safe. You
-								won't be able to view it anymore after this
-							</motion.p>
-						)}
-					</AnimatePresence>
+			<SheetHeader>
+				<SheetTitle>Create Secret API Key</SheetTitle>
+					{apiKey && (
+						<p className="text-muted-foreground text-sm">
+							Please copy your API Key and keep it somewhere safe. You
+							won't be able to view it anymore after this
+						</p>
+					)}
 				</SheetHeader>
 
-				<div className="flex-1 overflow-y-auto px-4 pb-4">
-					<AnimatePresence mode="wait" initial={false}>
-						{apiKey ? (
-							<motion.div
-								key="api-key"
-								initial={{ opacity: 0, y: -10 }}
-								animate={{ opacity: 1, y: 0 }}
-								exit={{ opacity: 0, y: 10 }}
-								transition={{
-									type: "spring",
-									bounce: 0.15,
-									duration: 0.3,
-								}}
-								className="flex justify-between bg-input/50 dark:bg-input/30 p-2 px-3 text-t2 rounded-md items-center"
-							>
-								<p className="text-sm">{apiKey}</p>
-								<button
-									type="button"
-									className="text-t2 hover:text-t2/80 cursor-pointer"
-									onClick={() => {
-										setCopied(true);
-										navigator.clipboard.writeText(apiKey);
-									}}
-								>
-									{copied ? <Check size={15} /> : <Copy size={15} />}
-								</button>
-							</motion.div>
-						) : (
-							<motion.div
-								key="name-input"
-								initial={{ opacity: 0, y: -10 }}
-								animate={{ opacity: 1, y: 0 }}
-								exit={{ opacity: 0, y: 10 }}
-								transition={{
-									type: "spring",
-									bounce: 0.15,
-									duration: 0.3,
+				<div className="overflow-y-auto px-4 pb-4">
+					{apiKey ? (
+						<div className="flex justify-between bg-input/50 dark:bg-input/30 p-2 px-3 text-t2 rounded-md items-center">
+							<p className="text-sm truncate min-w-0">{apiKey}</p>
+							<button
+								type="button"
+								className="text-t2 hover:text-t2/80 cursor-pointer shrink-0 ml-2"
+								onClick={() => {
+									setCopied(true);
+									navigator.clipboard.writeText(apiKey);
 								}}
 							>
-								<p className="mb-2 text-sm text-t3">Name</p>
-								<Input
-									placeholder="Name"
-									value={name}
-									onChange={(e) => setName(e.target.value)}
-									variant={validationError ? "destructive" : undefined}
-									onKeyDown={(e) => {
-										if (
-											e.key === "Enter" &&
-											name.trim() &&
-											!loading &&
-											!validationError
-										) {
-											e.preventDefault();
-											handleCreate();
-										}
-									}}
-								/>
-								{validationError && (
-									<p className="mt-2 text-sm text-red-500">
-										{validationError}
-									</p>
-								)}
+								{copied ? <Check size={15} /> : <Copy size={15} />}
+							</button>
+						</div>
+					) : (
+						<div>
+							<p className="mb-2 text-sm text-t3">Name</p>
+							<Input
+								placeholder="Name"
+								value={name}
+								onChange={(e) => setName(e.target.value)}
+								variant={validationError ? "destructive" : undefined}
+								onKeyDown={(e) => {
+									if (
+										e.key === "Enter" &&
+										name.trim() &&
+										!loading &&
+										!validationError
+									) {
+										e.preventDefault();
+										handleCreate();
+									}
+								}}
+							/>
+							{validationError && (
+								<p className="mt-2 text-sm text-red-500">
+									{validationError}
+								</p>
+							)}
 
-								<div className="mt-6">
-									<ScopeSelector
-										value={scopes}
-										onChange={setScopes}
-										availableScopes={callerScopes}
-										disabled={loading}
-									/>
-								</div>
-							</motion.div>
-						)}
-					</AnimatePresence>
+							<div className="mt-6">
+								<ScopeSelector
+									value={scopes}
+									onChange={setScopes}
+									availableScopes={callerScopes}
+									disabled={loading}
+								/>
+							</div>
+						</div>
+					)}
 				</div>
 
-				{/*
-				  Footer matches the app-wide sheet pattern
-				  (see `InvoiceDetailSheet.tsx`):
-				    - `sticky bottom-0 p-4 flex gap-2 bg-card`
-				    - Buttons take `flex-1` so they share the row evenly.
-				*/}
-				<div className="sticky bottom-0 p-4 flex gap-2 bg-card">
-					<AnimatePresence mode="wait" initial={false}>
-						{apiKey ? (
-							<motion.div
-								key="close-button"
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								exit={{ opacity: 0 }}
-								transition={{
-									type: "spring",
-									bounce: 0.15,
-									duration: 0.2,
-								}}
-								className="flex flex-1"
+				<div className="pt-2 px-4 pb-4 flex gap-2">
+					{apiKey ? (
+						<Button
+							variant="primary"
+							onClick={() => onOpenChange(false)}
+							className="flex-1"
+						>
+							Close
+						</Button>
+					) : (
+						<>
+							<Button
+								variant="secondary"
+								onClick={() => onOpenChange(false)}
+								className="flex-1"
+								disabled={loading}
 							>
-								<Button
-									variant="primary"
-									onClick={() => onOpenChange(false)}
-									className="flex-1"
-								>
-									Close
-								</Button>
-							</motion.div>
-						) : (
-							<motion.div
-								key="create-button"
-								initial={{ opacity: 0 }}
-								animate={{ opacity: 1 }}
-								exit={{ opacity: 0 }}
-								transition={{
-									type: "spring",
-									bounce: 0.15,
-									duration: 0.2,
-								}}
-								className="flex flex-1 gap-2"
+								Cancel
+							</Button>
+							<Button
+								isLoading={loading}
+								onClick={handleCreate}
+								variant="primary"
+								className="flex-1"
+								disabled={!!validationError || !name.trim()}
 							>
-								<Button
-									variant="secondary"
-									onClick={() => onOpenChange(false)}
-									className="flex-1"
-									disabled={loading}
-								>
-									Cancel
-								</Button>
-								<Button
-									isLoading={loading}
-									onClick={handleCreate}
-									variant="primary"
-									className="flex-1"
-									disabled={!!validationError || !name.trim()}
-								>
-									Create key
-								</Button>
-							</motion.div>
-						)}
-					</AnimatePresence>
+								Create key
+							</Button>
+						</>
+					)}
 				</div>
 			</SheetContent>
 		</Sheet>

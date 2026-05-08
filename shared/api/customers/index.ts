@@ -9,6 +9,7 @@ export * from "./crud/createCustomerParams";
 export * from "./crud/index";
 export * from "./cusFeatures/index";
 export * from "./cusPlans/index";
+export * from "./cusProcessors/index";
 export * from "./customerLegacyData";
 export * from "./customerOpModels";
 export * from "./flags/index";

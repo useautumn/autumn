@@ -80,12 +80,15 @@ test.concurrent(`${chalk.yellowBright(
 	expect(preview.tax?.amount_exclusive).toBeGreaterThan(0);
 	expect(preview.tax?.amount_inclusive).toBe(0);
 
-	// Sanity: the existing autumn-side total stays separate from the
-	// stripe-side tax breakdown. They're computing different things —
-	// the autumn `total` may include credits that Stripe doesn't tax.
-	expect(preview.total).toBeGreaterThan(0);
-	// Don't assert preview.total === preview.tax.total — divergence is
-	// expected and documented on the schema.
+	// New contract: `total` includes tax and the (capped) credit balance.
+	// `subtotal` stays pre-tax, pre-credit. Customer here has no credit on
+	// file, so credit term is 0 and total = subtotal + tax.
+	expect(preview.invoice_credits?.balance ?? 0).toBe(0);
+	expect(preview.total).toBeCloseTo(
+		preview.subtotal + (preview.tax?.total ?? 0),
+		2,
+	);
+	expect(preview.total).toBeGreaterThan(preview.subtotal);
 }, 300_000);
 
 test.concurrent(`${chalk.yellowBright(

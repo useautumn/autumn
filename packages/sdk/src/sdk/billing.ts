@@ -3,6 +3,7 @@
  */
 
 import { billingAttach } from "../funcs/billing-attach.js";
+import { billingCreateSchedule } from "../funcs/billing-create-schedule.js";
 import { billingMultiAttach } from "../funcs/billing-multi-attach.js";
 import { billingOpenCustomerPortal } from "../funcs/billing-open-customer-portal.js";
 import { billingPreviewAttach } from "../funcs/billing-preview-attach.js";
@@ -53,6 +54,8 @@ export class Billing extends ClientSDK {
    * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
    * @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now'. (optional)
    * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
+   * @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
+   * @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
    * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
    * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
@@ -69,6 +72,41 @@ export class Billing extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.AttachResponse> {
     return unwrapAsync(billingAttach(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
+   *
+   * Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
+   *
+   * @example
+   * ```typescript
+   * // Schedule a transition from a trial plan to a paid plan
+   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778176810685,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779386410685,"plans":[{"planId":"pro_plan"}]}] });
+   * ```
+   *
+   * @param customerId - The ID of the customer to create the schedule for.
+   * @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
+   * @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
+   * @param successUrl - URL to redirect to after successful checkout. (optional)
+   * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+   * @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
+   * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits. (optional)
+   * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
+   * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
+   * @param phases - Ordered phase definitions for the schedule.
+   *
+   * @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.
+   */
+  async createSchedule(
+    request: models.CreateScheduleParams,
+    options?: RequestOptions,
+  ): Promise<models.CreateScheduleResponse> {
+    return unwrapAsync(billingCreateSchedule(
       this,
       request,
       options,
@@ -149,6 +187,8 @@ export class Billing extends ClientSDK {
    * @param newBillingSubscription - Only applicable when the customer has an existing Stripe subscription. If true, creates a new separate subscription instead of merging into the existing one. (optional)
    * @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now'. (optional)
    * @param planSchedule - When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled. (optional)
+   * @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
+   * @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
    * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
    * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)

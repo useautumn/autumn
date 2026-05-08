@@ -1,5 +1,6 @@
 import {
 	AttachParamsV1Schema,
+	CreateScheduleParamsV0Schema,
 	MultiAttachParamsV0Schema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared";
@@ -177,6 +178,35 @@ export const billingMultiAttachJsDoc = createJSDocDescription({
 	methodName: "billing.multiAttach",
 	returns:
 		"A billing response with customer ID, invoice details, and payment URL (if checkout required).",
+});
+
+export const billingCreateScheduleJsDoc = createJSDocDescription({
+	description:
+		"Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.",
+	whenToUse:
+		"Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.",
+	body: CreateScheduleParamsV0Schema,
+	examples: [
+		example({
+			description: "Schedule a transition from a trial plan to a paid plan",
+			values: {
+				customerId: "cus_123",
+				phases: [
+					{
+						startsAt: Date.now(),
+						plans: [{ planId: "trial_plan" }],
+					},
+					{
+						startsAt: Date.now() + 14 * 24 * 60 * 60 * 1000,
+						plans: [{ planId: "pro_plan" }],
+					},
+				],
+			},
+		}),
+	],
+	methodName: "billing.createSchedule",
+	returns:
+		"A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.",
 });
 
 export const billingPreviewMultiAttachJsDoc = createJSDocDescription({

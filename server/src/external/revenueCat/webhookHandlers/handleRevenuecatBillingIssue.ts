@@ -3,10 +3,8 @@ import { RecaseError } from "@shared/api/errors/base/RecaseError";
 import { ErrCode } from "@shared/enums/ErrCode";
 import { CusProductStatus } from "@shared/models/cusProductModels/cusProductEnums";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
-import {
-	ACTIVE_STATUSES,
-} from "@/internal/customers/cusProducts/CusProductService";
 import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
 import { resolveRevenuecatResources } from "../misc/resolveRevenuecatResources";
 
@@ -20,7 +18,12 @@ export const handleBillingIssue = async ({
 	const { logger } = ctx;
 	const { product_id, app_user_id } = event;
 
-	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+	const {
+		ctx: customerCtx,
+		product,
+		customer,
+		cusProducts,
+	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
@@ -48,7 +51,7 @@ export const handleBillingIssue = async ({
 
 	if (ACTIVE_STATUSES.includes(curSameProduct.status)) {
 		await customerProductActions.markPastDue({
-			ctx,
+			ctx: customerCtx,
 			customerProduct: curSameProduct,
 			fullCustomer: customer,
 		});
