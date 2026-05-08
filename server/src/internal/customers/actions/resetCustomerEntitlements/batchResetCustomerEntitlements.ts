@@ -1,13 +1,12 @@
 import { CusProductStatus } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { BatchResetCusEntsPayload } from "@/queue/workflows.js";
-// import { getFullSubject } from "../../repos/getFullSubject/getFullSubject.js";
 // import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { CusService } from "../../CusService.js";
+import { getFullSubject } from "../../repos/getFullSubject/getFullSubject.js";
 
 /**
- * SQS worker handler: fetches each FullCustomer via CusService.getFull,
- * which triggers the lazy reset internally.
+ * SQS worker handler: rehydrates each subject, which triggers lazy reset internally.
  */
 export const batchResetCustomerEntitlements = async ({
 	ctx,
@@ -27,6 +26,16 @@ export const batchResetCustomerEntitlements = async ({
 
 		await Promise.all(
 			batch.map(async (reset) => {
+				if (reset.internalEntityId || reset.entityId) {
+					await getFullSubject({
+						ctx,
+						customerId: reset.internalCustomerId,
+						entityId: reset.internalEntityId ?? reset.entityId,
+						inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
+					});
+					return;
+				}
+
 				await CusService.getFull({
 					ctx,
 					idOrInternalId: reset.internalCustomerId,
