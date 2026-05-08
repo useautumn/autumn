@@ -1,7 +1,7 @@
 import {
 	AffectedResource,
-	ApiVersion,
 	type ApiEntityV2,
+	ApiVersion,
 	applyResponseVersionChanges,
 	type CusProductStatus,
 	type EntityLegacyData,
@@ -10,12 +10,13 @@ import {
 	Scopes,
 	type SubjectQueryRow,
 } from "@autumn/shared";
+import * as Sentry from "@sentry/bun";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { triggerBatchResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/triggerBatchResetSubjectEntitlements.js";
 import {
 	ACTIVE_STATUSES,
 	RELEVANT_STATUSES,
 } from "@/internal/customers/cusProducts/CusProductService.js";
-import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { resultToFullSubject } from "@/internal/customers/repos/getFullSubject/index.js";
 import { getApiEntityBaseV2 } from "../entityUtils/getApiEntityV2/getApiEntityBaseV2.js";
 import {
@@ -84,18 +85,15 @@ export const handleListEntitiesV2 = createRoute({
 				})
 			: totalCount;
 
-		const entities = [];
-		for (const row of subjectRows) {
-			const fullSubject = resultToFullSubject({
+		const fullSubjects = subjectRows.map((row) =>
+			resultToFullSubject({
 				row: row as unknown as SubjectQueryRow,
 				entityIdRequested: true,
-			});
+			}),
+		);
 
-			await lazyResetSubjectEntitlements({
-				ctx,
-				fullSubject,
-			});
-
+		const entities = [];
+		for (const fullSubject of fullSubjects) {
 			const { apiEntity: baseEntity, legacyData } = await getApiEntityBaseV2({
 				ctx,
 				fullSubject,
@@ -120,7 +118,15 @@ export const handleListEntitiesV2 = createRoute({
 			);
 		}
 
-		const hasMore = subjectRows.length === body.limit;
+		triggerBatchResetSubjectEntitlements({
+			ctx,
+			fullSubjects,
+		}).catch((err) => {
+			ctx.logger.error("[handleListEntitiesV2] batch reset failed:", err);
+			Sentry.captureException(err);
+		});
+
+		const hasMore = body.offset + entities.length < totalFilteredCount;
 
 		return c.json<
 			PagePaginatedResponse<(typeof entities)[number]> & {
