@@ -1,3 +1,5 @@
+import type { Redis } from "ioredis";
+import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
 import { tryRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
@@ -5,30 +7,29 @@ import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectVie
 import { FULL_SUBJECT_EPOCH_TTL_SECONDS } from "../../config/fullSubjectCacheConfig.js";
 import { invalidateSharedBalanceFields } from "./invalidateSharedBalanceFields.js";
 
-export const invalidateCachedFullSubject = async ({
+const invalidateCachedFullSubjectOnRedis = async ({
 	customerId,
 	entityId,
 	ctx,
 	source,
+	redisV2,
 }: {
 	customerId: string;
 	entityId?: string;
 	ctx: AutumnContext;
 	source?: string;
+	redisV2: Redis;
 }): Promise<void> => {
-	if (!customerId) return;
+	if (redisV2.status !== "ready") return;
 
 	await invalidateSharedBalanceFields({
 		ctx,
 		customerId,
+		redisV2,
 	});
 
-	const { org, env, logger, redisV2 } = ctx;
+	const { org, env, logger } = ctx;
 
-	// All four ops share the `{customerId}` hash tag so they land on the same
-	// Redis slot. Bundling them into a single pipeline collapses what used to
-	// be 3–4 sequential RTTs (UNLINK subject + optional UNLINK entity subject
-	// + INCR epoch + EXPIRE epoch) into one.
 	const customerSubjectKey = buildFullSubjectKey({
 		orgId: org.id,
 		env,
@@ -66,4 +67,33 @@ export const invalidateCachedFullSubject = async ({
 			`[invalidateCachedFullSubject] subject: ${subjectLabel}, source: ${source}`,
 		);
 	}
+};
+
+export const invalidateCachedFullSubject = async ({
+	customerId,
+	entityId,
+	ctx,
+	source,
+}: {
+	customerId: string;
+	entityId?: string;
+	ctx: AutumnContext;
+	source?: string;
+}): Promise<void> => {
+	if (!customerId) return;
+
+	await Promise.all(
+		getRedisTargetsForCustomer({
+			org: ctx.org,
+			currentRedis: ctx.redisV2,
+		}).map((redisV2) =>
+			invalidateCachedFullSubjectOnRedis({
+				customerId,
+				entityId,
+				ctx,
+				source,
+				redisV2,
+			}),
+		),
+	);
 };

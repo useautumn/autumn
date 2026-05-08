@@ -5,7 +5,7 @@ import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware.js";
 import { traceEnrichMiddleware } from "@/honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { sendCustomSvixEvent } from "../svix/svixHelpers.js";
-import { handleListBillingPlansPerInstall } from "./handlers/handleListBillingPlans.js";
+import { handleVercelListBillingPlans } from "./handlers/handleListBillingPlans.js";
 import { handleUpdateVercelBillingPlan } from "./handlers/handleUpdateBillingPlan.js";
 import { handleDeleteInstallation } from "./handlers/installations/handleDeleteInstallation.js";
 import { handleGetInstallation } from "./handlers/installations/handleGetInstallation.js";
@@ -48,7 +48,7 @@ vercelWebhookRouter.use(
 vercelWebhookRouter.get(
 	"/:orgId/:env/v1/products/:productId/plans",
 	vercelOidcAuthMiddleware,
-	...handleListBillingPlansPerInstall,
+	...handleVercelListBillingPlans,
 );
 
 // --- Installation sub-router ---
@@ -68,7 +68,7 @@ installationsRouter.use(
 );
 
 // Plans
-installationsRouter.get("/plans", ...handleListBillingPlansPerInstall);
+installationsRouter.get("/plans", ...handleVercelListBillingPlans);
 
 // Installation CRUD
 installationsRouter.get("/", ...handleGetInstallation);
@@ -79,6 +79,10 @@ installationsRouter.delete("/", ...handleDeleteInstallation);
 // Resources
 installationsRouter.post("/resources", ...handleCreateResource);
 installationsRouter.get("/resources/:resourceId", ...handleGetResource);
+installationsRouter.get(
+	"/resources/:resourceId/plans",
+	...handleVercelListBillingPlans,
+);
 installationsRouter.patch("/resources/:resourceId", ...handleUpdateResource);
 installationsRouter.delete("/resources/:resourceId", ...handleDeleteResource);
 installationsRouter.post(
@@ -157,10 +161,13 @@ vercelWebhookRouter.post(
 			}
 		} catch (error: any) {
 			logger.error("Failed to process Vercel marketplace webhook", {
-				error,
 				eventType,
+				errorName: error?.name,
+				errorMessage: error?.message,
+				errorStack: error?.stack,
+				errorString: String(error),
 			});
-			return c.json({ error: error.message }, 500);
+			return c.json({ error: error?.message ?? String(error) }, 500);
 		}
 	},
 );

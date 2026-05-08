@@ -1179,6 +1179,107 @@ class UpdateCustomerConfigResponse(BaseModel):
         return m
 
 
+class UpdateCustomerStripeTypedDict(TypedDict):
+    r"""Stripe processor connection for the customer."""
+
+    id: str
+    r"""Stripe customer ID."""
+
+
+class UpdateCustomerStripe(BaseModel):
+    r"""Stripe processor connection for the customer."""
+
+    id: str
+    r"""Stripe customer ID."""
+
+
+class UpdateCustomerVercelTypedDict(TypedDict):
+    r"""Vercel processor connection for the customer (public-safe subset)."""
+
+    installation_id: str
+    r"""Vercel marketplace installation ID for this customer."""
+    account_id: str
+    r"""Vercel account ID associated with the installation."""
+
+
+class UpdateCustomerVercel(BaseModel):
+    r"""Vercel processor connection for the customer (public-safe subset)."""
+
+    installation_id: str
+    r"""Vercel marketplace installation ID for this customer."""
+
+    account_id: str
+    r"""Vercel account ID associated with the installation."""
+
+
+class UpdateCustomerRevenuecatTypedDict(TypedDict):
+    r"""RevenueCat processor connection for the customer."""
+
+    id: Nullable[str]
+    r"""Customer's external ID, used as the RevenueCat app user ID. Null if the customer has no external ID set."""
+
+
+class UpdateCustomerRevenuecat(BaseModel):
+    r"""RevenueCat processor connection for the customer."""
+
+    id: Nullable[str]
+    r"""Customer's external ID, used as the RevenueCat app user ID. Null if the customer has no external ID set."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
+
+
+class UpdateCustomerProcessorsTypedDict(TypedDict):
+    r"""Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor."""
+
+    stripe: NotRequired[UpdateCustomerStripeTypedDict]
+    r"""Stripe processor connection for the customer."""
+    vercel: NotRequired[UpdateCustomerVercelTypedDict]
+    r"""Vercel processor connection for the customer (public-safe subset)."""
+    revenuecat: NotRequired[UpdateCustomerRevenuecatTypedDict]
+    r"""RevenueCat processor connection for the customer."""
+
+
+class UpdateCustomerProcessors(BaseModel):
+    r"""Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor."""
+
+    stripe: Optional[UpdateCustomerStripe] = None
+    r"""Stripe processor connection for the customer."""
+
+    vercel: Optional[UpdateCustomerVercel] = None
+    r"""Vercel processor connection for the customer (public-safe subset)."""
+
+    revenuecat: Optional[UpdateCustomerRevenuecat] = None
+    r"""RevenueCat processor connection for the customer."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["stripe", "vercel", "revenuecat"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdateCustomerResponseTypedDict(TypedDict):
     r"""OK"""
 
@@ -1212,6 +1313,8 @@ class UpdateCustomerResponseTypedDict(TypedDict):
     r"""Boolean feature flags keyed by feature ID, showing enabled access for on/off features."""
     config: NotRequired[UpdateCustomerConfigResponseTypedDict]
     r"""Configuration for the customer."""
+    processors: NotRequired[UpdateCustomerProcessorsTypedDict]
+    r"""Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor."""
 
 
 class UpdateCustomerResponse(BaseModel):
@@ -1262,9 +1365,12 @@ class UpdateCustomerResponse(BaseModel):
     config: Optional[UpdateCustomerConfigResponse] = None
     r"""Configuration for the customer."""
 
+    processors: Optional[UpdateCustomerProcessors] = None
+    r"""Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["config"])
+        optional_fields = set(["config", "processors"])
         nullable_fields = set(["id", "name", "email", "fingerprint", "stripe_id"])
         serialized = handler(self)
         m = {}

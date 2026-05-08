@@ -1,4 +1,5 @@
 import { type FullSubject, normalizedToFullSubject } from "@autumn/shared";
+import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRouting.js";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
@@ -147,6 +148,28 @@ export const getCachedFullSubject = async ({
 			customerId,
 			entityId,
 			source: "stale-rollout",
+		});
+		return {
+			fullSubject: undefined,
+			subjectViewEpoch: currentSubjectViewEpoch,
+		};
+	}
+
+	if (
+		isRedisMigrationCacheStale({
+			cachedAt: cached._cachedAt,
+			customerId,
+			redisConfig: ctx.org.redis_config,
+		})
+	) {
+		logger.warn(
+			`[getCachedFullSubject] Stale Redis migration cache for ${customerId}${entityId ? `:${entityId}` : ""}, evicting`,
+		);
+		await invalidateCachedFullSubject({
+			ctx,
+			customerId,
+			entityId,
+			source: "stale-redis-migration",
 		});
 		return {
 			fullSubject: undefined,

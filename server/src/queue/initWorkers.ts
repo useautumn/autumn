@@ -471,8 +471,8 @@ export const initWorkers = async ({
 				db,
 				queueUrl,
 				isFifo: queueUrl.endsWith(".fifo"),
-				getSqsClientFn: getSqsClient,
-				recreateSqsClientFn: recreateSqsClient,
+				getSqsClientFn: () => getSqsClient({ queueUrl }),
+				recreateSqsClientFn: () => recreateSqsClient({ queueUrl }),
 				shouldPoll: () =>
 					isJobQueueEnabled({ queue: queueId }) &&
 					isActiveSlot({ serviceName: "workers" }),

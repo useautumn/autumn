@@ -16,6 +16,7 @@ import {
 	CustomerDataSchema,
 	CustomerExpandEnum,
 	CustomerIdSchema,
+	GetCustomerParamsV1Schema,
 	LATEST_VERSION,
 	PreviewUpdateSubscriptionResponseSchema,
 	SetupPaymentParamsV1Schema,
@@ -54,6 +55,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	// in the OpenAPI output, which removeInternalFields() will then strip
 	registerInternalSchemas(BaseApiCustomerSchema);
 	registerInternalSchemas(CreateCustomerParamsV1Schema);
+	registerInternalSchemas(GetCustomerParamsV1Schema);
 	registerInternalSchemas(AttachParamsV1Schema);
 	registerInternalSchemas(UpdateSubscriptionV1ParamsSchema);
 	registerInternalSchemas(SetupPaymentParamsV1Schema);

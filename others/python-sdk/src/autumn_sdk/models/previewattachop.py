@@ -137,7 +137,7 @@ class PreviewAttachBasePrice(BaseModel):
         return m
 
 
-PreviewAttachResetInterval = Literal[
+PreviewAttachItemResetInterval = Literal[
     "one_off",
     "minute",
     "hour",
@@ -151,19 +151,19 @@ PreviewAttachResetInterval = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class PreviewAttachResetTypedDict(TypedDict):
+class PreviewAttachItemResetTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: PreviewAttachResetInterval
+    interval: PreviewAttachItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class PreviewAttachReset(BaseModel):
+class PreviewAttachItemReset(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: PreviewAttachResetInterval
+    interval: PreviewAttachItemResetInterval
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -186,20 +186,22 @@ class PreviewAttachReset(BaseModel):
         return m
 
 
-PreviewAttachToTypedDict = TypeAliasType("PreviewAttachToTypedDict", Union[float, str])
+PreviewAttachItemToTypedDict = TypeAliasType(
+    "PreviewAttachItemToTypedDict", Union[float, str]
+)
 
 
-PreviewAttachTo = TypeAliasType("PreviewAttachTo", Union[float, str])
+PreviewAttachItemTo = TypeAliasType("PreviewAttachItemTo", Union[float, str])
 
 
-class PreviewAttachTierTypedDict(TypedDict):
-    to: PreviewAttachToTypedDict
+class PreviewAttachItemTierTypedDict(TypedDict):
+    to: PreviewAttachItemToTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
 
 
-class PreviewAttachTier(BaseModel):
-    to: PreviewAttachTo
+class PreviewAttachItemTier(BaseModel):
+    to: PreviewAttachItemTo
 
     amount: Optional[float] = None
 
@@ -222,7 +224,7 @@ class PreviewAttachTier(BaseModel):
         return m
 
 
-PreviewAttachTierBehavior = Literal[
+PreviewAttachItemTierBehavior = Literal[
     "graduated",
     "volume",
 ]
@@ -239,25 +241,25 @@ PreviewAttachItemPriceInterval = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-PreviewAttachBillingMethod = Literal[
+PreviewAttachItemBillingMethod = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class PreviewAttachPriceTypedDict(TypedDict):
+class PreviewAttachItemPriceTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: PreviewAttachItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: PreviewAttachBillingMethod
+    billing_method: PreviewAttachItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    tiers: NotRequired[List[PreviewAttachTierTypedDict]]
+    tiers: NotRequired[List[PreviewAttachItemTierTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[PreviewAttachTierBehavior]
+    tier_behavior: NotRequired[PreviewAttachItemTierBehavior]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
@@ -266,22 +268,22 @@ class PreviewAttachPriceTypedDict(TypedDict):
     r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
 
 
-class PreviewAttachPrice(BaseModel):
+class PreviewAttachItemPrice(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     interval: PreviewAttachItemPriceInterval
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: PreviewAttachBillingMethod
+    billing_method: PreviewAttachItemBillingMethod
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    tiers: Optional[List[PreviewAttachTier]] = None
+    tiers: Optional[List[PreviewAttachItemTier]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[PreviewAttachTierBehavior] = None
+    tier_behavior: Optional[PreviewAttachItemTierBehavior] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -318,7 +320,7 @@ class PreviewAttachPrice(BaseModel):
         return m
 
 
-PreviewAttachOnIncrease = Literal[
+PreviewAttachItemOnIncrease = Literal[
     "bill_immediately",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -327,7 +329,7 @@ PreviewAttachOnIncrease = Literal[
 r"""Billing behavior when quantity increases mid-cycle."""
 
 
-PreviewAttachOnDecrease = Literal[
+PreviewAttachItemOnDecrease = Literal[
     "prorate",
     "prorate_immediately",
     "prorate_next_cycle",
@@ -337,36 +339,36 @@ PreviewAttachOnDecrease = Literal[
 r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class PreviewAttachProrationTypedDict(TypedDict):
+class PreviewAttachItemProrationTypedDict(TypedDict):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: PreviewAttachOnIncrease
+    on_increase: PreviewAttachItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
-    on_decrease: PreviewAttachOnDecrease
+    on_decrease: PreviewAttachItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-class PreviewAttachProration(BaseModel):
+class PreviewAttachItemProration(BaseModel):
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    on_increase: PreviewAttachOnIncrease
+    on_increase: PreviewAttachItemOnIncrease
     r"""Billing behavior when quantity increases mid-cycle."""
 
-    on_decrease: PreviewAttachOnDecrease
+    on_decrease: PreviewAttachItemOnDecrease
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-PreviewAttachExpiryDurationType = Literal[
+PreviewAttachItemExpiryDurationType = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class PreviewAttachRolloverTypedDict(TypedDict):
+class PreviewAttachItemRolloverTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: PreviewAttachExpiryDurationType
+    expiry_duration_type: PreviewAttachItemExpiryDurationType
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -376,10 +378,10 @@ class PreviewAttachRolloverTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class PreviewAttachRollover(BaseModel):
+class PreviewAttachItemRollover(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: PreviewAttachExpiryDurationType
+    expiry_duration_type: PreviewAttachItemExpiryDurationType
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -408,7 +410,7 @@ class PreviewAttachRollover(BaseModel):
         return m
 
 
-class PreviewAttachPlanItemTypedDict(TypedDict):
+class PreviewAttachItemPlanItemTypedDict(TypedDict):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -417,17 +419,17 @@ class PreviewAttachPlanItemTypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
-    reset: NotRequired[PreviewAttachResetTypedDict]
+    reset: NotRequired[PreviewAttachItemResetTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[PreviewAttachPriceTypedDict]
+    price: NotRequired[PreviewAttachItemPriceTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
-    proration: NotRequired[PreviewAttachProrationTypedDict]
+    proration: NotRequired[PreviewAttachItemProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[PreviewAttachRolloverTypedDict]
+    rollover: NotRequired[PreviewAttachItemRolloverTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
-class PreviewAttachPlanItem(BaseModel):
+class PreviewAttachItemPlanItem(BaseModel):
     r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
 
     feature_id: str
@@ -439,16 +441,16 @@ class PreviewAttachPlanItem(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
-    reset: Optional[PreviewAttachReset] = None
+    reset: Optional[PreviewAttachItemReset] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[PreviewAttachPrice] = None
+    price: Optional[PreviewAttachItemPrice] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    proration: Optional[PreviewAttachProration] = None
+    proration: Optional[PreviewAttachItemProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[PreviewAttachRollover] = None
+    rollover: Optional[PreviewAttachItemRollover] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
     @model_serializer(mode="wrap")
@@ -456,6 +458,399 @@ class PreviewAttachPlanItem(BaseModel):
         optional_fields = set(
             ["included", "unlimited", "reset", "price", "proration", "rollover"]
         )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewAttachAddItemResetInterval = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+
+class PreviewAttachAddItemResetTypedDict(TypedDict):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: PreviewAttachAddItemResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals between resets. Defaults to 1."""
+
+
+class PreviewAttachAddItemReset(BaseModel):
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    interval: PreviewAttachAddItemResetInterval
+    r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals between resets. Defaults to 1."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewAttachAddItemToTypedDict = TypeAliasType(
+    "PreviewAttachAddItemToTypedDict", Union[float, str]
+)
+
+
+PreviewAttachAddItemTo = TypeAliasType("PreviewAttachAddItemTo", Union[float, str])
+
+
+class PreviewAttachAddItemTierTypedDict(TypedDict):
+    to: PreviewAttachAddItemToTypedDict
+    amount: NotRequired[float]
+    flat_amount: NotRequired[float]
+
+
+class PreviewAttachAddItemTier(BaseModel):
+    to: PreviewAttachAddItemTo
+
+    amount: Optional[float] = None
+
+    flat_amount: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["amount", "flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewAttachAddItemTierBehavior = Literal[
+    "graduated",
+    "volume",
+]
+
+
+PreviewAttachAddItemPriceInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Billing interval. For consumable features, should match reset.interval."""
+
+
+PreviewAttachAddItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+
+class PreviewAttachAddItemPriceTypedDict(TypedDict):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: PreviewAttachAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+    billing_method: PreviewAttachAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+    amount: NotRequired[float]
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+    tiers: NotRequired[List[PreviewAttachAddItemTierTypedDict]]
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+    tier_behavior: NotRequired[PreviewAttachAddItemTierBehavior]
+    interval_count: NotRequired[float]
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+    billing_units: NotRequired[float]
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+    max_purchase: NotRequired[float]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+
+
+class PreviewAttachAddItemPrice(BaseModel):
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    interval: PreviewAttachAddItemPriceInterval
+    r"""Billing interval. For consumable features, should match reset.interval."""
+
+    billing_method: PreviewAttachAddItemBillingMethod
+    r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
+
+    amount: Optional[float] = None
+    r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
+
+    tiers: Optional[List[PreviewAttachAddItemTier]] = None
+    r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
+
+    tier_behavior: Optional[PreviewAttachAddItemTierBehavior] = None
+
+    interval_count: Optional[float] = 1
+    r"""Number of intervals per billing cycle. Defaults to 1."""
+
+    billing_units: Optional[float] = 1
+    r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
+
+    max_purchase: Optional[float] = None
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "amount",
+                "tiers",
+                "tier_behavior",
+                "interval_count",
+                "billing_units",
+                "max_purchase",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewAttachAddItemOnIncrease = Literal[
+    "bill_immediately",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "bill_next_cycle",
+]
+r"""Billing behavior when quantity increases mid-cycle."""
+
+
+PreviewAttachAddItemOnDecrease = Literal[
+    "prorate",
+    "prorate_immediately",
+    "prorate_next_cycle",
+    "none",
+    "no_prorations",
+]
+r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class PreviewAttachAddItemProrationTypedDict(TypedDict):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: PreviewAttachAddItemOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+    on_decrease: PreviewAttachAddItemOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+class PreviewAttachAddItemProration(BaseModel):
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    on_increase: PreviewAttachAddItemOnIncrease
+    r"""Billing behavior when quantity increases mid-cycle."""
+
+    on_decrease: PreviewAttachAddItemOnDecrease
+    r"""Credit behavior when quantity decreases mid-cycle."""
+
+
+PreviewAttachAddItemExpiryDurationType = Literal[
+    "month",
+    "forever",
+]
+r"""When rolled over units expire."""
+
+
+class PreviewAttachAddItemRolloverTypedDict(TypedDict):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: PreviewAttachAddItemExpiryDurationType
+    r"""When rolled over units expire."""
+    max: NotRequired[float]
+    r"""Max rollover units. Omit for unlimited rollover."""
+    max_percentage: NotRequired[float]
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+    expiry_duration_length: NotRequired[float]
+    r"""Number of periods before expiry."""
+
+
+class PreviewAttachAddItemRollover(BaseModel):
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    expiry_duration_type: PreviewAttachAddItemExpiryDurationType
+    r"""When rolled over units expire."""
+
+    max: Optional[float] = None
+    r"""Max rollover units. Omit for unlimited rollover."""
+
+    max_percentage: Optional[float] = None
+    r"""Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max."""
+
+    expiry_duration_length: Optional[float] = None
+    r"""Number of periods before expiry."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["max", "max_percentage", "expiry_duration_length"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class PreviewAttachAddItemPlanItemTypedDict(TypedDict):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+    included: NotRequired[float]
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+    unlimited: NotRequired[bool]
+    r"""If true, customer has unlimited access to this feature."""
+    reset: NotRequired[PreviewAttachAddItemResetTypedDict]
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+    price: NotRequired[PreviewAttachAddItemPriceTypedDict]
+    r"""Pricing for usage beyond included units. Omit for free features."""
+    proration: NotRequired[PreviewAttachAddItemProrationTypedDict]
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+    rollover: NotRequired[PreviewAttachAddItemRolloverTypedDict]
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+
+class PreviewAttachAddItemPlanItem(BaseModel):
+    r"""Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings."""
+
+    feature_id: str
+    r"""The ID of the feature to configure."""
+
+    included: Optional[float] = None
+    r"""Number of free units included. Balance resets to this each interval for consumable features."""
+
+    unlimited: Optional[bool] = None
+    r"""If true, customer has unlimited access to this feature."""
+
+    reset: Optional[PreviewAttachAddItemReset] = None
+    r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
+
+    price: Optional[PreviewAttachAddItemPrice] = None
+    r"""Pricing for usage beyond included units. Omit for free features."""
+
+    proration: Optional[PreviewAttachAddItemProration] = None
+    r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
+
+    rollover: Optional[PreviewAttachAddItemRollover] = None
+    r"""Rollover config for unused units. If set, unused included units carry over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            ["included", "unlimited", "reset", "price", "proration", "rollover"]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+PreviewAttachRemoveItemBillingMethod = Literal[
+    "prepaid",
+    "usage_based",
+]
+r"""Match items with this billing method (prepaid or usage_based)."""
+
+
+PreviewAttachRemoveItemInterval = Literal[
+    "one_off",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Match items with this interval."""
+
+
+class PreviewAttachPlanItemFilterTypedDict(TypedDict):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: NotRequired[str]
+    r"""Match items linked to this feature."""
+    billing_method: NotRequired[PreviewAttachRemoveItemBillingMethod]
+    r"""Match items with this billing method (prepaid or usage_based)."""
+    interval: NotRequired[PreviewAttachRemoveItemInterval]
+    r"""Match items with this interval."""
+
+
+class PreviewAttachPlanItemFilter(BaseModel):
+    r"""Filter for matching plan items. All provided fields must match (AND)."""
+
+    feature_id: Optional[str] = None
+    r"""Match items linked to this feature."""
+
+    billing_method: Optional[PreviewAttachRemoveItemBillingMethod] = None
+    r"""Match items with this billing method (prepaid or usage_based)."""
+
+    interval: Optional[PreviewAttachRemoveItemInterval] = None
+    r"""Match items with this interval."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_id", "billing_method", "interval"])
         serialized = handler(self)
         m = {}
 
@@ -523,8 +918,12 @@ class PreviewAttachCustomizeTypedDict(TypedDict):
 
     price: NotRequired[Nullable[PreviewAttachBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
-    items: NotRequired[List[PreviewAttachPlanItemTypedDict]]
-    r"""Override the items in the plan."""
+    items: NotRequired[List[PreviewAttachItemPlanItemTypedDict]]
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+    add_items: NotRequired[List[PreviewAttachAddItemPlanItemTypedDict]]
+    r"""Items to add to the plan."""
+    remove_items: NotRequired[List[PreviewAttachPlanItemFilterTypedDict]]
+    r"""Filters selecting items to remove from the plan."""
     free_trial: NotRequired[Nullable[PreviewAttachFreeTrialParamsTypedDict]]
     r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
 
@@ -535,15 +934,23 @@ class PreviewAttachCustomize(BaseModel):
     price: OptionalNullable[PreviewAttachBasePrice] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
-    items: Optional[List[PreviewAttachPlanItem]] = None
-    r"""Override the items in the plan."""
+    items: Optional[List[PreviewAttachItemPlanItem]] = None
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+
+    add_items: Optional[List[PreviewAttachAddItemPlanItem]] = None
+    r"""Items to add to the plan."""
+
+    remove_items: Optional[List[PreviewAttachPlanItemFilter]] = None
+    r"""Filters selecting items to remove from the plan."""
 
     free_trial: OptionalNullable[PreviewAttachFreeTrialParams] = UNSET
     r"""Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["price", "items", "free_trial"])
+        optional_fields = set(
+            ["price", "items", "add_items", "remove_items", "free_trial"]
+        )
         nullable_fields = set(["price", "free_trial"])
         serialized = handler(self)
         m = {}
@@ -780,6 +1187,10 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""Reset the billing cycle anchor immediately with 'now'."""
     plan_schedule: NotRequired[PreviewAttachPlanSchedule]
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
+    starts_at: NotRequired[int]
+    r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
+    ends_at: NotRequired[int]
+    r"""Unix timestamp in milliseconds for when the attached plan should end."""
     checkout_session_params: NotRequired[Dict[str, Any]]
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
     custom_line_items: NotRequired[List[PreviewAttachCustomLineItemTypedDict]]
@@ -847,6 +1258,12 @@ class PreviewAttachParams(BaseModel):
     plan_schedule: Optional[PreviewAttachPlanSchedule] = None
     r"""When the plan change should take effect. 'immediate' applies now, 'end_of_cycle' schedules for the end of the current billing cycle. By default, upgrades are immediate and downgrades are scheduled."""
 
+    starts_at: Optional[int] = None
+    r"""Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription."""
+
+    ends_at: Optional[int] = None
+    r"""Unix timestamp in milliseconds for when the attached plan should end."""
+
     checkout_session_params: Optional[Dict[str, Any]] = None
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
 
@@ -888,6 +1305,8 @@ class PreviewAttachParams(BaseModel):
                 "new_billing_subscription",
                 "billing_cycle_anchor",
                 "plan_schedule",
+                "starts_at",
+                "ends_at",
                 "checkout_session_params",
                 "custom_line_items",
                 "processor_subscription_id",
@@ -970,9 +1389,9 @@ class PreviewAttachLineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -993,10 +1412,10 @@ class PreviewAttachLineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -1097,9 +1516,9 @@ class PreviewAttachNextCycleLineItemTypedDict(TypedDict):
     description: str
     r"""A detailed description of the line item."""
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
     feature_id: Nullable[str]
@@ -1120,10 +1539,10 @@ class PreviewAttachNextCycleLineItem(BaseModel):
     r"""A detailed description of the line item."""
 
     subtotal: float
-    r"""The amount in cents before discounts for this line item."""
+    r"""The amount in cents before discounts and tax for this line item."""
 
     total: float
-    r"""The final amount in cents after discounts for this line item."""
+    r"""The final amount in cents after discounts and tax for this line item."""
 
     plan_id: str
     r"""The ID of the plan that this line item belongs to."""
@@ -1241,9 +1660,9 @@ class PreviewAttachNextCycleTypedDict(TypedDict):
     starts_at: float
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
     subtotal: float
-    r"""The total amount in cents before discounts for the next cycle."""
+    r"""The total amount in cents before discounts and tax for the next cycle."""
     total: float
-    r"""The final amount in cents after discounts for the next cycle."""
+    r"""The final amount in cents after discounts and tax for the next cycle."""
     line_items: List[PreviewAttachNextCycleLineItemTypedDict]
     r"""List of line items for the next billing cycle."""
     usage_line_items: List[PreviewAttachUsageLineItemTypedDict]
@@ -1257,10 +1676,10 @@ class PreviewAttachNextCycle(BaseModel):
     r"""Unix timestamp (milliseconds) when the next billing cycle starts."""
 
     subtotal: float
-    r"""The total amount in cents before discounts for the next cycle."""
+    r"""The total amount in cents before discounts and tax for the next cycle."""
 
     total: float
-    r"""The final amount in cents after discounts for the next cycle."""
+    r"""The final amount in cents after discounts and tax for the next cycle."""
 
     line_items: List[PreviewAttachNextCycleLineItem]
     r"""List of line items for the next billing cycle."""
@@ -1468,6 +1887,25 @@ class PreviewAttachTax(BaseModel):
     r"""Calculation status ('complete' when Stripe Tax succeeds or 'incomplete' when Stripe Tax returned 0 or errored)."""
 
 
+class PreviewAttachInvoiceCreditsTypedDict(TypedDict):
+    r"""Stripe customer invoice credits preview."""
+
+    balance: float
+    r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
+    currency: str
+    r"""Three-letter currency code."""
+
+
+class PreviewAttachInvoiceCredits(BaseModel):
+    r"""Stripe customer invoice credits preview."""
+
+    balance: float
+    r"""Stripe customer credit balance available, expressed as a positive number in major currency units."""
+
+    currency: str
+    r"""Three-letter currency code."""
+
+
 class PreviewAttachResponseTypedDict(TypedDict):
     r"""OK"""
 
@@ -1475,9 +1913,9 @@ class PreviewAttachResponseTypedDict(TypedDict):
     r"""The ID of the customer."""
     line_items: List[PreviewAttachLineItemTypedDict]
     subtotal: float
-    r"""The total amount in cents before discounts for the current billing period."""
+    r"""The total amount in cents before discounts and tax for the current billing period."""
     total: float
-    r"""The final amount in cents after discounts for the current billing period."""
+    r"""The final amount in cents after discounts and tax for the current billing period."""
     currency: str
     r"""The three-letter ISO currency code (e.g., 'usd')."""
     incoming: List[PreviewAttachIncomingTypedDict]
@@ -1494,6 +1932,8 @@ class PreviewAttachResponseTypedDict(TypedDict):
     r"""Expand the response with additional data."""
     tax: NotRequired[PreviewAttachTaxTypedDict]
     r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
+    invoice_credits: NotRequired[PreviewAttachInvoiceCreditsTypedDict]
+    r"""Stripe customer invoice credits preview."""
 
 
 class PreviewAttachResponse(BaseModel):
@@ -1505,10 +1945,10 @@ class PreviewAttachResponse(BaseModel):
     line_items: List[PreviewAttachLineItem]
 
     subtotal: float
-    r"""The total amount in cents before discounts for the current billing period."""
+    r"""The total amount in cents before discounts and tax for the current billing period."""
 
     total: float
-    r"""The final amount in cents after discounts for the current billing period."""
+    r"""The final amount in cents after discounts and tax for the current billing period."""
 
     currency: str
     r"""The three-letter ISO currency code (e.g., 'usd')."""
@@ -1534,9 +1974,12 @@ class PreviewAttachResponse(BaseModel):
     tax: Optional[PreviewAttachTax] = None
     r"""Tax preview for the immediate charge. Contact us to enable the tax flag on your organisation. Shows only with flag enabled, a Stripe customer exists and has a location."""
 
+    invoice_credits: Optional[PreviewAttachInvoiceCredits] = None
+    r"""Stripe customer invoice credits preview."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["next_cycle", "expand", "tax"])
+        optional_fields = set(["next_cycle", "expand", "tax", "invoice_credits"])
         nullable_fields = set(["checkout_type"])
         serialized = handler(self)
         m = {}

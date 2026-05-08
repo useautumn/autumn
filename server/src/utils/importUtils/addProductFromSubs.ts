@@ -1,10 +1,10 @@
 import {
-	type EntitlementWithFeature,
-	type FullCustomer,
-	type FullProduct,
-	isUsagePrice,
-	type Price,
-	type UsagePriceConfig,
+    type EntitlementWithFeature,
+    type FullCustomer,
+    type FullProduct,
+    isUsagePrice,
+    type Price,
+    type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
@@ -67,7 +67,7 @@ export const addProductFromSubs = async ({
 	}
 
 	// Handle if trialing
-	const trialEndsAt = sub?.trial_end ? sub.trial_end * 1000 : null;
+	const trialEndsAt = (sub?.status === "trialing" && sub?.trial_end) ? sub.trial_end * 1000 : null;
 
 	// 1. Insert custom prices...
 	const customPrices = prices?.filter((p) => p.is_custom);

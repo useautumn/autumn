@@ -24,7 +24,9 @@ export const handleCustomPlanErrors = ({
 }) => {
 	if (!hasCustomItems(params.customize)) return;
 
-	const newCustomerProduct = autumnBillingPlan.insertCustomerProducts?.[0];
+	const newCustomerProduct =
+		billingContext.patchContext?.finalCustomerProduct ??
+		autumnBillingPlan.insertCustomerProducts?.[0];
 	const currentCustomerProduct = billingContext.customerProduct;
 
 	const currentFullProduct = cusProductToProduct({

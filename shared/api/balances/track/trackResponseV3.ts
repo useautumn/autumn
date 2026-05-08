@@ -10,10 +10,12 @@ export const TrackResponseV3Schema = z.object({
 		description: "The ID of the customer whose usage was tracked.",
 	}),
 	entity_id: z.string().optional().meta({
-		description: "The ID of the entity, if entity-scoped tracking was performed.",
+		description:
+			"The ID of the entity, if entity-scoped tracking was performed.",
 	}),
 	event_name: z.string().optional().meta({
-		description: "The event name that was tracked, if event_name was used instead of feature_id.",
+		description:
+			"The event name that was tracked, if event_name was used instead of feature_id.",
 	}),
 
 	value: z.number().meta({
@@ -23,10 +25,13 @@ export const TrackResponseV3Schema = z.object({
 		description:
 			"The updated balance for the tracked feature. Null if tracking by event_name that affects multiple features.",
 	}),
-	balances: z.record(z.string(), ApiBalanceV1Schema).optional().meta({
-		description:
-			"Map of feature_id to updated balance when tracking by event_name affects multiple features.",
-	}),
+	balances: z
+		.record(z.string(), ApiBalanceV1Schema.nullable())
+		.optional()
+		.meta({
+			description:
+				"Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature.",
+		}),
 });
 
 export type TrackResponseV3 = z.infer<typeof TrackResponseV3Schema>;

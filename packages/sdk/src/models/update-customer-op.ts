@@ -617,6 +617,58 @@ export type UpdateCustomerConfigResponse = {
 };
 
 /**
+ * Stripe processor connection for the customer.
+ */
+export type UpdateCustomerStripe = {
+  /**
+   * Stripe customer ID.
+   */
+  id: string;
+};
+
+/**
+ * Vercel processor connection for the customer (public-safe subset).
+ */
+export type UpdateCustomerVercel = {
+  /**
+   * Vercel marketplace installation ID for this customer.
+   */
+  installationId: string;
+  /**
+   * Vercel account ID associated with the installation.
+   */
+  accountId: string;
+};
+
+/**
+ * RevenueCat processor connection for the customer.
+ */
+export type UpdateCustomerRevenuecat = {
+  /**
+   * Customer's external ID, used as the RevenueCat app user ID. Null if the customer has no external ID set.
+   */
+  id: string | null;
+};
+
+/**
+ * Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor.
+ */
+export type UpdateCustomerProcessors = {
+  /**
+   * Stripe processor connection for the customer.
+   */
+  stripe?: UpdateCustomerStripe | undefined;
+  /**
+   * Vercel processor connection for the customer (public-safe subset).
+   */
+  vercel?: UpdateCustomerVercel | undefined;
+  /**
+   * RevenueCat processor connection for the customer.
+   */
+  revenuecat?: UpdateCustomerRevenuecat | undefined;
+};
+
+/**
  * OK
  */
 export type UpdateCustomerResponse = {
@@ -680,6 +732,10 @@ export type UpdateCustomerResponse = {
    * Configuration for the customer.
    */
   config?: UpdateCustomerConfigResponse | undefined;
+  /**
+   * Payment processors this customer is connected to (Stripe, Vercel, RevenueCat). Omitted entirely when the customer has not been created in any processor.
+   */
+  processors?: UpdateCustomerProcessors | undefined;
 };
 
 /** @internal */
@@ -1502,6 +1558,91 @@ export function updateCustomerConfigResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerStripe$inboundSchema: z.ZodMiniType<
+  UpdateCustomerStripe,
+  unknown
+> = z.object({
+  id: types.string(),
+});
+
+export function updateCustomerStripeFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerStripe, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerStripe$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerStripe' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerVercel$inboundSchema: z.ZodMiniType<
+  UpdateCustomerVercel,
+  unknown
+> = z.pipe(
+  z.object({
+    installation_id: types.string(),
+    account_id: types.string(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "installation_id": "installationId",
+      "account_id": "accountId",
+    });
+  }),
+);
+
+export function updateCustomerVercelFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerVercel, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerVercel$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerVercel' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerRevenuecat$inboundSchema: z.ZodMiniType<
+  UpdateCustomerRevenuecat,
+  unknown
+> = z.object({
+  id: types.nullable(types.string()),
+});
+
+export function updateCustomerRevenuecatFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerRevenuecat, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerRevenuecat$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerRevenuecat' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerProcessors$inboundSchema: z.ZodMiniType<
+  UpdateCustomerProcessors,
+  unknown
+> = z.object({
+  stripe: types.optional(z.lazy(() => UpdateCustomerStripe$inboundSchema)),
+  vercel: types.optional(z.lazy(() => UpdateCustomerVercel$inboundSchema)),
+  revenuecat: types.optional(
+    z.lazy(() => UpdateCustomerRevenuecat$inboundSchema),
+  ),
+});
+
+export function updateCustomerProcessorsFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerProcessors, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerProcessors$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerProcessors' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
   UpdateCustomerResponse,
   unknown
@@ -1530,6 +1671,9 @@ export const UpdateCustomerResponse$inboundSchema: z.ZodMiniType<
     ),
     config: types.optional(
       z.lazy(() => UpdateCustomerConfigResponse$inboundSchema),
+    ),
+    processors: types.optional(
+      z.lazy(() => UpdateCustomerProcessors$inboundSchema),
     ),
   }),
   z.transform((v) => {

@@ -28,6 +28,7 @@ export const customerProducts = pgTable(
 		internal_entity_id: text("internal_entity_id"),
 
 		created_at: numeric({ mode: "number" }),
+		updated_at: numeric({ mode: "number" }),
 		status: text(),
 		processor: jsonb().$type<CustomerProductProcessor>(),
 		// processors: jsonb().$type<ExternalCusProductProcessors>(),
@@ -36,6 +37,7 @@ export const customerProducts = pgTable(
 		canceled_at: numeric({ mode: "number" }),
 		ended_at: numeric({ mode: "number" }),
 		starts_at: numeric({ mode: "number" }),
+		access_starts_at: numeric({ mode: "number" }),
 		options: jsonb().array(),
 		product_id: text("product_id"),
 		free_trial_id: text("free_trial_id"),

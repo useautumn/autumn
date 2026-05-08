@@ -83,14 +83,16 @@ export const initDrizzle = ({
 	return { db, client };
 };
 
+// Strict latency limits in prod; relaxed locally so dev pool warm-up doesn't kill tests.
+const isProd = process.env.NODE_ENV === "production";
+
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	maxConnections: 5,
-	connectTimeout: 2,
+	connectTimeout: isProd ? 2 : 30,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
-		// Server-side timeout is configured on the DATABASE_CRITICAL_URL role.
-		query_timeout: 2_000,
+		query_timeout: isProd ? 2_000 : 30_000,
 	},
 });
 

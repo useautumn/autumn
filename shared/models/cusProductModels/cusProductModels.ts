@@ -35,12 +35,14 @@ export const CusProductSchema = z.object({
 	internal_entity_id: z.string().nullish(),
 	entity_id: z.string().nullish(),
 	created_at: z.number(),
+	updated_at: z.number().nullable(),
 
 	// Useful for event-driven subscriptions (and usage-based to check limits)
 	status: z.nativeEnum(CusProductStatus),
 	canceled: z.boolean().default(false),
 
 	starts_at: z.number().default(Date.now()),
+	access_starts_at: z.number().optional().nullable(),
 	trial_ends_at: z.number().optional().nullable(),
 	billing_cycle_anchor_resets_at: z.number().optional().nullable(),
 	canceled_at: z.number().optional().nullable(),

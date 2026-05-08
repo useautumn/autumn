@@ -1,4 +1,5 @@
 import type {
+	CusProduct,
 	Feature,
 	FrontendProduct,
 	FullCusProduct,
@@ -73,6 +74,7 @@ interface AttachFormContextValue {
 	previewPrepaidOptions: Record<string, number>;
 
 	isFreeToPaidTransition: boolean;
+	hasActiveSubscription: boolean;
 
 	previewQuery: UseAttachPreviewReturn;
 	previewDiff: UsePreviewDiffReturn;
@@ -93,9 +95,7 @@ interface AttachFormContextValue {
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
 	}>;
-	handleCheckoutAttach: (params: {
-		enablePlanImmediately: boolean;
-	}) => Promise<{
+	handleCheckoutAttach: () => Promise<{
 		paymentUrl: string | null | undefined;
 	}>;
 }
@@ -177,6 +177,8 @@ export function AttachFormProvider({
 		trialEnabled,
 		trialCardRequired,
 		planSchedule,
+		startDate,
+		endDate,
 		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
@@ -261,6 +263,21 @@ export function AttachFormProvider({
 		});
 		return isFreeProduct({ prices: outgoingPrices });
 	}, [effectiveProduct, fullCustomer, entityId]);
+
+	const hasActiveSubscription = useMemo(
+		() =>
+			((fullCustomer?.customer_products ?? []) as CusProduct[]).some(
+				(customerProduct) =>
+					(ACTIVE_STATUSES.includes(customerProduct.status) ||
+						customerProduct.status === CusProductStatus.Trialing) &&
+					customerProduct.subscription_ids &&
+					customerProduct.subscription_ids.length > 0,
+			),
+		[fullCustomer?.customer_products],
+	);
+
+	const disableProration =
+		isFreeToPaidTransition && !hasActiveSubscription;
 
 	const { prepaidItems } = usePrepaidItems({ product: effectiveProduct });
 
@@ -384,6 +401,8 @@ export function AttachFormProvider({
 		trialEnabled,
 		trialCardRequired,
 		planSchedule,
+		startDate,
+		endDate,
 		prorationBehavior,
 		redirectMode,
 		newBillingSubscription,
@@ -396,7 +415,7 @@ export function AttachFormProvider({
 		carryOverUsages,
 		carryOverUsageFeatureIds,
 		customLineItems,
-		isFreeToPaidTransition,
+		disableProration,
 	});
 
 	const previewQuery = useAttachPreview({
@@ -504,6 +523,7 @@ export function AttachFormProvider({
 			initialPrepaidOptions,
 			previewPrepaidOptions,
 			isFreeToPaidTransition,
+			hasActiveSubscription,
 			previewQuery,
 			previewDiff,
 			showPlanEditor,
@@ -531,6 +551,7 @@ export function AttachFormProvider({
 			numVersions,
 			previewPrepaidOptions,
 			isFreeToPaidTransition,
+			hasActiveSubscription,
 			previewQuery,
 			previewDiff,
 			showPlanEditor,

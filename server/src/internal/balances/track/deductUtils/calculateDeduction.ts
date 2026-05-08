@@ -34,10 +34,7 @@ export const calculateDeduction = ({
 		const maxAddable =
 			maxBalance === undefined
 				? amountToAdd
-				: Math.max(
-						0,
-						new Decimal(maxBalance).sub(currentBalance).toNumber(),
-					);
+				: Math.max(0, new Decimal(maxBalance).sub(currentBalance).toNumber());
 		const added = Math.min(amountToAdd, maxAddable);
 
 		deducted = -added;
@@ -46,10 +43,7 @@ export const calculateDeduction = ({
 		const maxDeductible =
 			minBalance === undefined
 				? amountToDeduct
-				: Math.max(
-						0,
-						new Decimal(currentBalance).sub(minBalance).toNumber(),
-					);
+				: Math.max(0, new Decimal(currentBalance).sub(minBalance).toNumber());
 		deducted = Math.min(amountToDeduct, maxDeductible);
 		newBalance = new Decimal(currentBalance).sub(deducted).toNumber();
 	}

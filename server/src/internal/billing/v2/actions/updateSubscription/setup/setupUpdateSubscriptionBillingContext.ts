@@ -54,6 +54,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	const {
 		customerProduct,
 		fullProduct,
+		patchContext,
 		customPrices,
 		customEnts,
 		isUpdatingFreeCustomerProduct,
@@ -175,6 +176,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		fullCustomer,
 		fullProducts: [fullProduct],
 		customerProduct,
+		patchContext,
 		defaultProduct,
 		cancelAction,
 		recalculateBalances: params.recalculate_balances?.enabled === true,

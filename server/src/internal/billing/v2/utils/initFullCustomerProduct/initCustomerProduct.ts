@@ -35,6 +35,7 @@ export const initCustomerProduct = ({
 		apiSemver,
 		externalId,
 		billingCycleAnchorResetsAt,
+		accessStartsAt,
 	} = initOptions ?? {};
 
 	const internalEntityId = fullCustomer.entity?.internal_id;
@@ -48,7 +49,11 @@ export const initCustomerProduct = ({
 
 		// 1 minute tolerance to determine if customer product should be scheduled. (for test clock time frozen issues)
 		const TOLERANCE_MS = ms.minutes(1);
-		if (startsAt && startsAt > now + TOLERANCE_MS) {
+		const effectiveAccessStartsAt = accessStartsAt ?? startsAt;
+		if (
+			effectiveAccessStartsAt &&
+			effectiveAccessStartsAt > now + TOLERANCE_MS
+		) {
 			return CusProductStatus.Scheduled;
 		}
 
@@ -77,7 +82,8 @@ export const initCustomerProduct = ({
 		internal_product_id: fullProduct.internal_id,
 		product_id: fullProduct.id,
 
-		created_at: Date.now(),
+		created_at: now,
+		updated_at: now,
 
 		status,
 
@@ -85,6 +91,7 @@ export const initCustomerProduct = ({
 		// processor: null,
 
 		starts_at: startsAt,
+		access_starts_at: accessStartsAt ?? null,
 		ended_at: endedAt,
 
 		trial_ends_at: trialEndsAt,

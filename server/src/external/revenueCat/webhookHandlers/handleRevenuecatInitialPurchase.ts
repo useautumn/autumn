@@ -9,6 +9,7 @@ import {
 } from "@shared/index";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
+import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
@@ -29,7 +30,12 @@ export const handleInitialPurchase = async ({
 	const { db, org, env, logger, features } = ctx;
 	const { product_id, app_user_id } = event;
 
-	const { product, customer, cusProducts } = await resolveRevenuecatResources({
+	const {
+		ctx: customerCtx,
+		product,
+		customer,
+		cusProducts,
+	} = await resolveRevenuecatResources({
 		ctx,
 		revenuecatProductId: product_id,
 		customerId: app_user_id,
@@ -73,7 +79,7 @@ export const handleInitialPurchase = async ({
 
 		// Expire old cus_product
 		await CusProductService.update({
-			ctx,
+			ctx: customerCtx,
 			cusProductId: curMainProduct.id,
 			updates: {
 				status: CusProductStatus.Expired,
@@ -115,4 +121,6 @@ export const handleInitialPurchase = async ({
 	logger.info(
 		`Created cus_product for ${product.id} with scenario: ${scenario}`,
 	);
+
+	await recordRevenueCatInvoice({ ctx: customerCtx, event, customer, product });
 };

@@ -26,7 +26,7 @@ openapi: "api/openapi.yml webhook billing.auto_topup_succeeded"
 </ParamField>
 
 <ParamField body="invoice_mode" type="boolean" required>
-  Whether the auto top-up created a `send_invoice` invoice instead of auto-charging the saved payment method.
+  Whether the auto top-up created a send_invoice invoice instead of auto-charging.
 </ParamField>
 
 <ParamField body="invoice" type="object" required>
@@ -36,19 +36,19 @@ openapi: "api/openapi.yml webhook billing.auto_topup_succeeded"
       The Stripe invoice ID. Use this as a stable dedupe key.
     </ParamField>
 
-    <ParamField body="status" type="string">
-      The status of the invoice. `"paid"` for auto-charged top-ups; `"open"` for `invoice_mode` top-ups where credits were granted but the invoice has not yet been paid.
+    <ParamField body="status" type="string | null">
+      The status of the invoice. "paid" for auto-charged top-ups; "open" for invoice-mode top-ups where credits were granted but the invoice has not yet been paid.
     </ParamField>
 
     <ParamField body="total" type="number" required>
-      The total amount of the invoice in the smallest currency unit (e.g. cents for USD), matching Stripe's `invoice.total`.
+      The total amount of the invoice in the smallest currency unit (e.g. cents for USD), matching Stripe's invoice.total.
     </ParamField>
 
     <ParamField body="currency" type="string" required>
       The ISO currency code for the invoice.
     </ParamField>
 
-    <ParamField body="hosted_invoice_url" type="string">
+    <ParamField body="hosted_invoice_url" type="string | null">
       URL to the hosted invoice page, if available.
     </ParamField>
 

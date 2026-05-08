@@ -1,5 +1,6 @@
 import type { AutumnBillingPlan, FullCusProduct } from "@autumn/shared";
 import { CusProductStatus } from "@autumn/shared";
+import { applyCustomerProductItemsPatch } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
 
 export const getUpdateCustomerProducts = ({
 	autumnBillingPlan,
@@ -23,6 +24,12 @@ export const getDeleteCustomerProducts = ({
 	...(autumnBillingPlan.deleteCustomerProducts ?? []),
 ];
 
+export const getPatchCustomerProducts = ({
+	autumnBillingPlan,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+}) => autumnBillingPlan.patchCustomerProducts ?? [];
+
 export const applyCustomerProductUpdate = ({
 	customerProduct,
 	updates,
@@ -36,6 +43,21 @@ export const applyCustomerProductUpdate = ({
 	...updates,
 	canceled: updates.canceled ?? customerProduct.canceled,
 });
+
+export const applyCustomerProductPatch = ({
+	customerProduct,
+	patch,
+}: {
+	customerProduct: FullCusProduct;
+	patch: NonNullable<AutumnBillingPlan["patchCustomerProducts"]>[number];
+}): FullCusProduct =>
+	applyCustomerProductItemsPatch({
+		customerProduct,
+		insertCustomerPrices: patch.insertCustomerPrices,
+		insertCustomerEntitlements: patch.insertCustomerEntitlements,
+		deleteCustomerPrices: patch.deleteCustomerPrices,
+		deleteCustomerEntitlements: patch.deleteCustomerEntitlements,
+	});
 
 type CustomerProductUpdate = NonNullable<
 	AutumnBillingPlan["updateCustomerProducts"]
