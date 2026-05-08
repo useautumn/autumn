@@ -1,7 +1,8 @@
 import { TinybirdClient } from "@tinybirdco/sdk";
+import { tinybirdConfig } from "./tinybirdUtils.js";
 
-const TINYBIRD_API_URL = process.env.TINYBIRD_API_URL;
-const TINYBIRD_TOKEN = process.env.TINYBIRD_TOKEN;
+export const MIGRATION_CUSTOMER_EVENTS_DATASOURCE =
+	"migration_customer_events" as const;
 
 export type TinybirdMigrationCustomerEvent = {
 	id: string;
@@ -11,20 +12,15 @@ export type TinybirdMigrationCustomerEvent = {
 	migration_id: string;
 	migration_run_id: string;
 	event_type: string;
-	dry_run: number;
+	dry_run: 0 | 1;
 	internal_customer_id: string | null;
 	customer_id: string | null;
 	details: string | null;
 };
 
-export const migrationCustomerEventsTinybird =
-	TINYBIRD_API_URL && TINYBIRD_TOKEN
-		? new TinybirdClient({
-				baseUrl: TINYBIRD_API_URL,
-				token: TINYBIRD_TOKEN,
-				devMode: false,
-			})
-		: null;
-
-export const isMigrationCustomerEventsTinybirdConfigured = (): boolean =>
-	migrationCustomerEventsTinybird !== null;
+export const migrationCustomerEventsTinybirdClient = tinybirdConfig
+	? new TinybirdClient({
+			...tinybirdConfig,
+			devMode: false,
+		})
+	: null;

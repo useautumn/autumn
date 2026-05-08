@@ -2,8 +2,8 @@ import * as crypto from "node:crypto";
 import * as Sentry from "@sentry/bun";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import {
-	isMigrationCustomerEventsTinybirdConfigured,
-	migrationCustomerEventsTinybird,
+	MIGRATION_CUSTOMER_EVENTS_DATASOURCE,
+	migrationCustomerEventsTinybirdClient,
 } from "@/external/tinybird/migrationCustomerEventsTinybird.js";
 import { mapMigrationCustomerEvent } from "./mapMigrationCustomerEvent.js";
 import type { MigrationCustomerEvent } from "./migrationCustomerEventTypes.js";
@@ -21,10 +21,7 @@ export const sendMigrationCustomerEventsToTinybird = async ({
 }): Promise<void> => {
 	if (events.length === 0) return;
 
-	if (
-		!isMigrationCustomerEventsTinybirdConfigured() ||
-		!migrationCustomerEventsTinybird
-	) {
+	if (!migrationCustomerEventsTinybirdClient) {
 		logger.debug("Tinybird not configured, skipping migration event send");
 		return;
 	}
@@ -33,8 +30,8 @@ export const sendMigrationCustomerEventsToTinybird = async ({
 		const tinybirdEvents = events.map((event) =>
 			mapMigrationCustomerEvent({ event }),
 		);
-		const result = await migrationCustomerEventsTinybird.ingestBatch(
-			"migration_customer_events",
+		const result = await migrationCustomerEventsTinybirdClient.ingestBatch(
+			MIGRATION_CUSTOMER_EVENTS_DATASOURCE,
 			tinybirdEvents,
 			{
 				wait: true,
