@@ -25,6 +25,9 @@ export const listRewards = async ({
 			eq(rewards.env, env),
 			inTypes ? inArray(rewards.type, inTypes) : undefined,
 		),
+		with: {
+			entitlements: true,
+		},
 		orderBy: [desc(rewards.internal_id)],
 	});
 
