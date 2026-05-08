@@ -44,7 +44,7 @@ test.concurrent(`${chalk.yellowBright("migrations-v2 add-items: triggers run for
 		),
 	);
 
-	await autumnV2_2.migrationsV2.deleteAndCreate({
+	await autumnV2_2.migrationsV2.create({
 		id: customerId,
 		filter: { customer: { plan: { plan_id: free.id } } },
 		operations: {
@@ -52,7 +52,7 @@ test.concurrent(`${chalk.yellowBright("migrations-v2 add-items: triggers run for
 				update_plans: [
 					{
 						target: { plan_id: free.id },
-						add_items: [{ feature_id: TestFeature.Dashboard }],
+						upsert_items: [{ feature_id: TestFeature.Dashboard }],
 					},
 				],
 			},

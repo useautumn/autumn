@@ -10,6 +10,7 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusPriceService";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
@@ -115,7 +116,15 @@ export const executeAutumnBillingPlan = async ({
 		updates: autumnBillingPlan.updateCustomerEntitlements,
 	});
 
-	// 5a. Auto top-up rebalance: apply pre-computed paydown + remainder deltas as
+	// 5a. Migration `delete_items`: drop specific cusEnts/cusPrices by id.
+	for (const id of autumnBillingPlan.deleteCustomerEntitlementIds ?? []) {
+		await CusEntService.delete({ db, id });
+	}
+	for (const id of autumnBillingPlan.deleteCustomerPriceIds ?? []) {
+		await CusPriceService.delete({ db, id });
+	}
+
+	// 5b. Auto top-up rebalance: apply pre-computed paydown + remainder deltas as
 	// atomic SQL `balance + delta` increments.
 	if (autumnBillingPlan.autoTopupRebalance) {
 		await executeAutoTopupRebalance({
