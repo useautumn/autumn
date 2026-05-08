@@ -1,17 +1,21 @@
 import { SuccessResponseSchema } from "@api/common/commonResponses.js";
+import { createPagePaginatedResponseSchema } from "@api/common/pagePaginationSchemas.js";
 import {
 	API_BALANCE_V1_EXAMPLE,
 	ApiEntityV2Schema,
 	CreateEntityParamsV1Schema,
 	DeleteEntityParamsV0Schema,
 	GetEntityParamsV0Schema,
+	ListEntitiesParamsSchema,
 	UpdateEntityParamsSchema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
+import { z } from "zod/v4";
 import {
 	createEntityJsDoc,
 	deleteEntityJsDoc,
 	getEntityJsDoc,
+	listEntityJsDoc,
 	updateEntityJsDoc,
 } from "../jsDocs/entityJsDocs";
 
@@ -106,6 +110,61 @@ export const getEntityContract = oc
 		ApiEntityV2Schema.meta({
 			examples: [API_ENTITY_V2_EXAMPLE],
 		}),
+	);
+
+export const listEntitiesContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/entities.list",
+		operationId: "listEntities",
+		tags: ["entities"],
+		description: listEntityJsDoc,
+		spec: (spec) => ({
+			...spec,
+			"x-speakeasy-name-override": "list",
+		}),
+	})
+	.input(
+		ListEntitiesParamsSchema.optional().meta({
+			title: "ListEntitiesParams",
+			examples: [
+				{
+					limit: 10,
+					offset: 0,
+				},
+				{
+					plans: [{ id: "pro_plan" }],
+				},
+			],
+		}),
+	)
+	.output(
+		createPagePaginatedResponseSchema(ApiEntityV2Schema)
+			.extend({
+				total_count: z
+					.number()
+					.describe(
+						"Total number of entities available in the current organization and environment",
+					),
+				total_filtered_count: z
+					.number()
+					.describe(
+						"Total number of entities matching the current filter before pagination is applied",
+					),
+			})
+			.meta({
+				examples: [
+					{
+						list: [API_ENTITY_V2_EXAMPLE],
+						has_more: false,
+						offset: 0,
+						total: 1,
+						limit: 10,
+						total_count: 100,
+						total_filtered_count: 42,
+					},
+				],
+			}),
 	);
 
 export const updateEntityContract = oc

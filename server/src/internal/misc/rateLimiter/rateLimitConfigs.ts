@@ -58,6 +58,7 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "GET", url: "/v1/customers" }),
 			route({ method: "POST", url: "/v1/customers/list" }),
 			route({ method: "POST", url: "/v1/customers.list" }),
+			route({ method: "POST", url: "/v1/entities.list" }),
 		],
 	},
 	{
