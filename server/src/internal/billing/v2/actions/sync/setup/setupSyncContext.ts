@@ -46,11 +46,13 @@ const buildProductContext = async ({
 	fullCustomer,
 	plan,
 	isImmediate,
+	accessStartsAt,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	plan: SyncPlanInstance;
 	isImmediate: boolean;
+	accessStartsAt?: number;
 }): Promise<SyncProductContext> => {
 	const {
 		fullProduct,
@@ -66,7 +68,7 @@ const buildProductContext = async ({
 	});
 
 	let currentCustomerProduct: FullCusProduct | undefined;
-	if (isImmediate && plan.expire_previous) {
+	if ((isImmediate || plan.enable_plan_immediately) && plan.expire_previous) {
 		const transition = setupAttachTransitionContext({
 			fullCustomer,
 			attachProduct: fullProduct,
@@ -81,6 +83,7 @@ const buildProductContext = async ({
 		customEntitlements,
 		featureQuantities,
 		currentCustomerProduct,
+		accessStartsAt,
 	};
 };
 
@@ -155,6 +158,9 @@ export const setupSyncContext = async ({
 						fullCustomer,
 						plan,
 						isImmediate: isImmediatePhase,
+						accessStartsAt: plan.enable_plan_immediately
+							? currentEpochMs
+							: undefined,
 					}),
 				),
 			);

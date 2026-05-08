@@ -19,6 +19,10 @@ export const SyncPlanInstanceSchema = MultiPlanInstanceSchema.extend({
 		description:
 			"If true, expire the customer's existing active customer product of the same plan family at sync time.",
 	}),
+	enable_plan_immediately: z.boolean().optional().meta({
+		description:
+			"If true for a future schedule-only sync plan, grant access immediately while billing still starts at the phase starts_at.",
+	}),
 });
 
 /**

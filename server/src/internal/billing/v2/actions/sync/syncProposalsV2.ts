@@ -2,6 +2,9 @@ import {
 	ErrCode,
 	type FullCusProduct,
 	RecaseError,
+	secondsToMs,
+	filterCustomerProductsByStripeSubscriptionId,
+	isCustomerProductOnStripeSubscriptionSchedule,
 	type SyncPhase,
 	type SyncProposalsV2Params,
 	type SyncProposalsV2Response,
@@ -9,55 +12,115 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
+import { isStripeSubscriptionSchedulePhaseCurrent } from "@/external/stripe/subscriptionSchedules";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { subscriptionToSyncParams } from "./subscriptionToSyncParams";
 
 const findAlreadyLinkedProductId = ({
 	stripeSubscriptionId,
+	stripeScheduleId,
 	customerProducts,
 }: {
-	stripeSubscriptionId: string;
+	stripeSubscriptionId?: string;
+	stripeScheduleId?: string;
 	customerProducts: FullCusProduct[];
 }): string | null => {
-	const linked = customerProducts.find((cp) =>
-		cp.subscription_ids?.includes(stripeSubscriptionId),
-	);
+	const linkedBySubscription = stripeSubscriptionId
+		? filterCustomerProductsByStripeSubscriptionId({
+				customerProducts,
+				stripeSubscriptionId,
+			})[0]
+		: undefined;
+	const linked =
+		linkedBySubscription ??
+		customerProducts.find((customerProduct) =>
+			isCustomerProductOnStripeSubscriptionSchedule({
+				customerProduct,
+				stripeSubscriptionScheduleId: stripeScheduleId,
+			}),
+		);
 	return linked?.product?.id ?? null;
+};
+
+const buildScheduleProposalPhases = ({
+	schedule,
+	detectedPhases,
+}: {
+	schedule: Stripe.SubscriptionSchedule;
+	detectedPhases: SyncPhase[];
+}): SyncPhase[] => {
+	const nowSeconds = Math.floor(Date.now() / 1000);
+
+	return schedule.phases.map((schedulePhase) => {
+		const isCurrent = isStripeSubscriptionSchedulePhaseCurrent({
+			phase: schedulePhase,
+			nowSeconds,
+		});
+		const startsAt = isCurrent
+			? "now"
+			: secondsToMs(schedulePhase.start_date);
+		const detectedPhase = detectedPhases.find(
+			(phase) => phase.starts_at === startsAt,
+		);
+
+		return {
+			starts_at: startsAt,
+			plans: detectedPhase?.plans ?? [],
+		};
+	});
+};
+
+const buildProposalPhases = ({
+	schedule,
+	detectedPhases,
+}: {
+	schedule: Stripe.SubscriptionSchedule | null;
+	detectedPhases: SyncPhase[];
+}): SyncPhase[] => {
+	if (schedule) {
+		return buildScheduleProposalPhases({ schedule, detectedPhases });
+	}
+
+	if (detectedPhases.length > 0) return detectedPhases;
+	return [{ starts_at: "now", plans: [] }];
 };
 
 const buildProposal = async ({
 	ctx,
 	customerId,
 	subscription,
+	schedule,
 	customerProducts,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-	subscription: Stripe.Subscription;
+	subscription?: Stripe.Subscription;
+	schedule?: Stripe.SubscriptionSchedule;
 	customerProducts: FullCusProduct[];
 }): Promise<SyncProposalV2> => {
-	const { params, schedule } = await subscriptionToSyncParams({
+	const { params, schedule: resolvedSchedule } = await subscriptionToSyncParams({
 		ctx,
 		customerId,
 		subscription,
+		schedule,
 	});
 
 	const detectedPhases = params.phases ?? [];
-
-	// Always include at least one phase so the UI can display the Stripe
-	// subscription items and let the user manually pick Autumn plans.
-	const fallbackPhase: SyncPhase = { starts_at: "now", plans: [] };
-	const phases = detectedPhases.length > 0 ? detectedPhases : [fallbackPhase];
+	const phases = buildProposalPhases({
+		schedule: resolvedSchedule,
+		detectedPhases,
+	});
 
 	return {
 		stripe_subscription_id: params.stripe_subscription_id,
 		stripe_schedule_id: params.stripe_schedule_id,
 		phases,
-		stripe_subscription: subscription,
-		stripe_schedule: schedule,
+		stripe_subscription: subscription ?? null,
+		stripe_schedule: resolvedSchedule,
 		already_linked_product_id: findAlreadyLinkedProductId({
-			stripeSubscriptionId: subscription.id,
+			stripeSubscriptionId: subscription?.id,
+			stripeScheduleId: params.stripe_schedule_id,
 			customerProducts,
 		}),
 	};
@@ -94,18 +157,25 @@ export const syncProposalsV2 = async ({
 	}
 
 	const stripeCli = createStripeCli({ org, env });
-	const subscriptionList = await stripeCli.subscriptions.list({
-		customer: stripeCustomerId,
-		limit: 100,
-	});
+	const [subscriptionList, scheduleList] = await Promise.all([
+		stripeCli.subscriptions.list({
+			customer: stripeCustomerId,
+			limit: 100,
+		}),
+		stripeCli.subscriptionSchedules.list({
+			customer: stripeCustomerId,
+			scheduled: true,
+			limit: 100,
+		}),
+	]);
 
-	if (subscriptionList.data.length === 0) {
+	if (subscriptionList.data.length === 0 && scheduleList.data.length === 0) {
 		return { customer_id: params.customer_id, proposals: [] };
 	}
 
 	// Stripe caps `expand` at 4 levels, so retrieve each subscription with
 	// `items.data.price.product` (4 levels) for the UI.
-	const proposals = await Promise.all(
+	const subscriptionProposals = await Promise.all(
 		subscriptionList.data.map(async ({ id }) => {
 			const subscription = await stripeCli.subscriptions.retrieve(id, {
 				expand: ["items.data.price.product"],
@@ -119,5 +189,22 @@ export const syncProposalsV2 = async ({
 		}),
 	);
 
-	return { customer_id: params.customer_id, proposals };
+	const scheduleProposals = await Promise.all(
+		scheduleList.data.map(async ({ id }) => {
+			const schedule = await stripeCli.subscriptionSchedules.retrieve(id, {
+				expand: ["phases.items.price.product"],
+			});
+			return buildProposal({
+				ctx,
+				customerId: params.customer_id,
+				schedule,
+				customerProducts: fullCustomer.customer_products,
+			});
+		}),
+	);
+
+	return {
+		customer_id: params.customer_id,
+		proposals: [...subscriptionProposals, ...scheduleProposals],
+	};
 };
