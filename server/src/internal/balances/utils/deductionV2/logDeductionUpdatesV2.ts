@@ -35,7 +35,7 @@ export const logDeductionUpdatesV2 = ({
 			? "entity"
 			: "customer";
 
-		ctx.logger.info(`[${source}] Deduction updates:`, {
+		ctx.logger.debug(`[${source}] Deduction updates:`, {
 			data2: {
 				cusEntId: customerEntitlementId,
 				featureId,
