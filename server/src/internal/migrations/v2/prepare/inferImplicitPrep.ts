@@ -29,7 +29,7 @@ export const inferPrepareModules = ({
 			typeof op.target.plan_id === "string" ? op.target.plan_id : undefined;
 		if (!planId) continue;
 
-		for (const item of op.add_items ?? []) {
+		for (const item of op.upsert_items ?? []) {
 			if (!item.feature_id) continue;
 			// Phase 1 constraint: entitlement-only items. Priced items will be
 			// handled by the same module in phase 2+.

@@ -1,8 +1,8 @@
-import type { Migration, Operations } from "@autumn/shared";
+import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { runFilter } from "../filters/runFilter.js";
+import { migrateCustomer } from "./migrateCustomer/index.js";
 import { iterateScope, runPreparation } from "./orchestrators/index.js";
-import { runOpsForCustomer } from "./perItem/runOpsForCustomer.js";
 import type {
 	RunMigrationResponse,
 	RunMigrationScopeResult,
@@ -19,14 +19,11 @@ export const runMigration = async ({
 	migration: Migration;
 	dry_run: boolean;
 }): Promise<RunMigrationResponse> => {
-	const { response: prepareResponse, prepared_state } = await runPreparation({
+	const { response: prepareResponse } = await runPreparation({
 		ctx,
 		migration,
 		dry_run,
 	});
-
-	const scope_id = `mig_${migration.internal_id}`;
-	const operations: Operations = migration.operations ?? {};
 
 	const scopeResults: RunMigrationScopeResult[] = [];
 
@@ -43,13 +40,11 @@ export const runMigration = async ({
 					throw new Error(
 						`runMigration: per-item handler missing for kind "${item.kind}"`,
 					);
-				return runOpsForCustomer({
+				return migrateCustomer({
 					ctx,
-					scope_id,
-					internal_customer_id: item.internal_id,
-					operations,
-					prepared_state,
-					dry_run,
+					customerId: item.internal_id,
+					migration,
+					preview: dry_run,
 				});
 			},
 		});

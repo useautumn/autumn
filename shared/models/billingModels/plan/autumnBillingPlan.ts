@@ -71,6 +71,12 @@ export const AutumnBillingPlanSchema = z.object({
 	deleteCustomerProduct: FullCusProductSchema.optional(), // Scheduled product to delete (e.g., when updating while canceling)
 	deleteCustomerProducts: z.array(FullCusProductSchema).optional(),
 
+	// Used by migration `delete_items` to drop specific cusEnts/cusPrices
+	// without rebuilding the cusproduct. Honored by executeAutumnBillingPlan
+	// after insert/update phases.
+	deleteCustomerEntitlementIds: z.array(z.string()).optional(),
+	deleteCustomerPriceIds: z.array(z.string()).optional(),
+
 	customPrices: z.array(PriceSchema).optional(), // Custom prices to insert
 	customEntitlements: z.array(EntitlementSchema).optional(), // Custom entitlements to insert
 	customFreeTrial: FreeTrialSchema.optional(), // Custom free trial to insert
