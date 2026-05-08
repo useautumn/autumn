@@ -8,7 +8,7 @@ import {
 	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
-import type { CustomizePlanOp } from "@autumn/shared/api/migrations/operations/customer/customizePlan/index.js";
+import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext.js";
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities.js";
@@ -18,9 +18,9 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupMigrationOperationBillingContext } from "@/internal/migrations/v2/run/migrateCustomer/setup/index.js";
 import type { MigrateCustomerContext } from "../../types/index.js";
 import { itemAlreadyExists } from "./itemAlreadyExists.js";
-import type { CustomizePlanProductContext } from "./types.js";
+import type { UpdatePlanProductContext } from "./types.js";
 
-export const setupCustomizePlanProductContext = async ({
+export const setupUpdatePlanProductContext = async ({
 	ctx,
 	context,
 	op,
@@ -29,18 +29,25 @@ export const setupCustomizePlanProductContext = async ({
 }: {
 	ctx: AutumnContext;
 	context: MigrateCustomerContext;
-	op: CustomizePlanOp;
+	op: UpdatePlanOp;
 	projectedFullCustomer: FullCustomer;
 	customerProduct: FullCusProduct;
-}): Promise<CustomizePlanProductContext | undefined> => {
-	const addItems = op.customize.add_items?.filter(
-		(item) => !itemAlreadyExists({ ctx, customerProduct, item }),
+}): Promise<UpdatePlanProductContext | undefined> => {
+	const addItems = op.customize?.add_items?.filter(
+		(item) =>
+			!itemAlreadyExists({
+				ctx,
+				customerProduct,
+				item,
+				removeItems: op.customize?.remove_items,
+			}),
 	);
 	const customize = {
 		...op.customize,
 		...(addItems ? { add_items: addItems } : {}),
 	};
 	if (
+		op.version === undefined &&
 		customize.price === undefined &&
 		customize.add_items?.length === 0 &&
 		customize.remove_items === undefined
@@ -50,12 +57,23 @@ export const setupCustomizePlanProductContext = async ({
 
 	const customerId =
 		projectedFullCustomer.id ?? projectedFullCustomer.internal_id;
+	const entity = customerProduct.internal_entity_id
+		? projectedFullCustomer.entities.find(
+				(candidate) =>
+					candidate.internal_id === customerProduct.internal_entity_id,
+			)
+		: undefined;
+	const productFullCustomer = entity
+		? { ...projectedFullCustomer, entity }
+		: projectedFullCustomer;
 
 	const params: UpdateSubscriptionV1Params = {
 		customer_id: customerId,
+		entity_id: customerProduct.entity_id ?? undefined,
 		customer_product_id: customerProduct.id,
 		plan_id: customerProduct.product.id,
-		customize,
+		version: op.version,
+		...(op.customize ? { customize } : {}),
 		proration_behavior: "none",
 		no_billing_changes:
 			context.migration.no_billing_changes === true ? true : undefined,
@@ -69,16 +87,14 @@ export const setupCustomizePlanProductContext = async ({
 		customEnts,
 	} = await setupUpdateSubscriptionProductContext({
 		ctx,
-		fullCustomer: projectedFullCustomer,
+		fullCustomer: productFullCustomer,
 		params,
 	});
-
-	if (!patchContext) return undefined;
 
 	const operationBillingContext = await setupMigrationOperationBillingContext({
 		ctx,
 		context,
-		fullCustomer: projectedFullCustomer,
+		fullCustomer: productFullCustomer,
 		customerProduct: targetCustomerProduct,
 		fullProduct,
 	});
@@ -98,7 +114,7 @@ export const setupCustomizePlanProductContext = async ({
 
 	const billingContext: UpdateSubscriptionBillingContext = {
 		intent: UpdateSubscriptionIntent.UpdatePlan,
-		fullCustomer: projectedFullCustomer,
+		fullCustomer: productFullCustomer,
 		fullProducts: [fullProduct],
 		customerProduct: targetCustomerProduct,
 		patchContext,
@@ -112,6 +128,8 @@ export const setupCustomizePlanProductContext = async ({
 		currentEpochMs: operationBillingContext.currentEpochMs,
 		billingCycleAnchorMs: operationBillingContext.billingCycleAnchorMs,
 		resetCycleAnchorMs: operationBillingContext.resetCycleAnchorMs,
+		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		requestedProrationBehavior: params.proration_behavior,
 		invoiceMode: setupInvoiceModeContext({ params }),
 		featureQuantities,
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),

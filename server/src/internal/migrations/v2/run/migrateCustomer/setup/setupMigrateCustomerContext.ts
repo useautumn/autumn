@@ -6,7 +6,7 @@ import { createMigrationStripeCache } from "@/internal/migrations/v2/stripeCache
 
 /**
  * Customer-level setup. Runs ONCE per customer:
- *   1. Fetch FullCustomer (with subs + entities).
+ *   1. Fetch FullCustomer through the standard billing setup path.
  *   2. Create a lazy Stripe cache for operation-level setup.
  *   3. Return immutable migration/customer facts.
  */

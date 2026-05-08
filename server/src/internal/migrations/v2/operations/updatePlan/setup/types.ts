@@ -4,7 +4,7 @@ import type {
 	UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 
-export interface CustomizePlanProductContext {
+export interface UpdatePlanProductContext {
 	customerProduct: FullCusProduct;
 	params: UpdateSubscriptionV1Params;
 	billingContext: UpdateSubscriptionBillingContext;
