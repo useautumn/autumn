@@ -24,6 +24,7 @@ export const initScheduledCustomerProduct = ({
 	startsAt,
 	endsAt,
 	currentEpochMs,
+	accessStartsAt,
 	externalId,
 	subscriptionId,
 	subscriptionScheduleId,
@@ -35,6 +36,7 @@ export const initScheduledCustomerProduct = ({
 	startsAt: number;
 	endsAt: number | null | undefined;
 	currentEpochMs: number;
+	accessStartsAt?: number;
 	/** Customer-facing Autumn subscription API id, stored on customer_products.external_id. */
 	externalId?: string;
 	/** When syncing from an existing Stripe sub/schedule, link the resulting
@@ -57,7 +59,8 @@ export const initScheduledCustomerProduct = ({
 		initOptions: {
 			startsAt,
 			endedAt: endsAt ?? undefined,
-			status: CusProductStatus.Scheduled,
+			status: accessStartsAt === undefined ? CusProductStatus.Scheduled : undefined,
+			accessStartsAt,
 			externalId,
 			subscriptionId,
 			subscriptionScheduleId,
