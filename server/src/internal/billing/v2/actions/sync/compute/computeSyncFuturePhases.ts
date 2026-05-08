@@ -1,8 +1,10 @@
-import type {
-	Entitlement,
-	FullCusProduct,
-	Price,
-	SyncBillingContext,
+import {
+	CusProductStatus,
+	type AutumnBillingPlan,
+	type Entitlement,
+	type FullCusProduct,
+	type Price,
+	type SyncBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { initScheduledCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initScheduledCustomerProduct";
@@ -13,12 +15,33 @@ export type ComputedSchedulePhase = {
 	customerProductIds: string[];
 };
 
+type CustomerProductUpdate = NonNullable<
+	AutumnBillingPlan["updateCustomerProducts"]
+>[number];
+
 export type FuturePhasesResult = {
 	insertCustomerProducts: FullCusProduct[];
+	updateCustomerProducts: CustomerProductUpdate[];
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
 	scheduledPhases: ComputedSchedulePhase[];
 };
+
+const expireCustomerProduct = ({
+	customerProduct,
+	currentEpochMs,
+}: {
+	customerProduct: FullCusProduct;
+	currentEpochMs: number;
+}): CustomerProductUpdate => ({
+	customerProduct,
+	updates: {
+		status: CusProductStatus.Expired,
+		ended_at: currentEpochMs,
+		canceled: true,
+		canceled_at: currentEpochMs,
+	},
+});
 
 /**
  * Build cusProducts (status=Scheduled) for every non-immediate phase plus
@@ -40,6 +63,7 @@ export const computeSyncFuturePhases = ({
 	} = syncContext;
 
 	const insertCustomerProducts: FullCusProduct[] = [];
+	const updateCustomerProducts: CustomerProductUpdate[] = [];
 	const customPrices: Price[] = [];
 	const customEntitlements: Entitlement[] = [];
 	const scheduledPhases: ComputedSchedulePhase[] = [];
@@ -56,6 +80,7 @@ export const computeSyncFuturePhases = ({
 				startsAt: phaseContext.startsAt,
 				endsAt: phaseContext.endsAt,
 				currentEpochMs,
+				accessStartsAt: productContext.accessStartsAt,
 				subscriptionId: stripeSubscription?.id,
 				subscriptionScheduleId: stripeSchedule?.id,
 			});
@@ -63,6 +88,15 @@ export const computeSyncFuturePhases = ({
 			phaseIds.push(cusProduct.id);
 			customPrices.push(...productContext.customPrices);
 			customEntitlements.push(...productContext.customEntitlements);
+
+			if (productContext.currentCustomerProduct) {
+				updateCustomerProducts.push(
+					expireCustomerProduct({
+						customerProduct: productContext.currentCustomerProduct,
+						currentEpochMs,
+					}),
+				);
+			}
 		}
 
 		scheduledPhases.push({
@@ -74,6 +108,7 @@ export const computeSyncFuturePhases = ({
 
 	return {
 		insertCustomerProducts,
+		updateCustomerProducts,
 		customPrices,
 		customEntitlements,
 		scheduledPhases,

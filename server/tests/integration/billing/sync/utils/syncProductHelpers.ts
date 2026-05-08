@@ -179,3 +179,34 @@ export const createStripeSubscriptionSchedule = async ({
 
 	return { subscription, schedule };
 };
+
+export const createFutureStripeSubscriptionSchedule = async ({
+	ctx,
+	customerId,
+	startDateMs,
+	phases,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	startDateMs: number;
+	phases: {
+		items: { price: string; quantity?: number }[];
+		iterations?: number;
+	}[];
+}): Promise<Stripe.SubscriptionSchedule> => {
+	const stripeCustomerId = await getStripeCustomerId({ ctx, customerId });
+
+	const created = await ctx.stripeCli.subscriptionSchedules.create({
+		customer: stripeCustomerId,
+		start_date: Math.floor(startDateMs / 1000),
+		end_behavior: "release",
+		phases: phases.map((phase) => ({
+			items: phase.items,
+			duration: { interval: "month", interval_count: phase.iterations ?? 1 },
+		})),
+	});
+
+	return ctx.stripeCli.subscriptionSchedules.retrieve(created.id, {
+		expand: ["phases.items.price"],
+	});
+};
