@@ -11,6 +11,7 @@ const DEFAULT_REWARD: FrontendReward = {
 	free_product_id: null,
 	discount_config: defaultDiscountConfig,
 	free_product_config: null,
+	featureGrantEntitlements: [],
 };
 
 interface RewardState {
