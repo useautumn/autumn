@@ -10,8 +10,7 @@ import {
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { RewardProgramService } from "../rewards/RewardProgramService.js";
-import { RewardRedemptionService } from "./RewardRedemptionService.js";
+import { redemptionRepo, referralCodeRepo } from "./repos/index.js";
 import { triggerFreeProduct } from "./referralUtils/triggerFreeProduct.js";
 import { triggerRedemption } from "./referralUtils.js";
 import { getRewardCat } from "./rewardUtils.js";
@@ -38,13 +37,10 @@ export const runTriggerCheckoutReward = async ({
 		});
 
 		// 1. Check if redemption exists
-		const redemptions = await RewardRedemptionService.getByCustomer({
+		const redemptions = await redemptionRepo.getByCustomer({
 			db,
 			internalCustomerId: customer.internal_id, // customer that redeemed code
-			withRewardProgram: true,
 			triggered: false,
-			withReferralCode: true,
-			triggerWhen: RewardTriggerEvent.Checkout,
 		});
 
 		for (const redemption of redemptions) {
@@ -98,12 +94,12 @@ export const runTriggerCheckoutReward = async ({
 			}
 
 			// Get redemption count
-			const redemptionCount = await RewardProgramService.getCodeRedemptionCount(
-				{
-					db,
-					referralCodeId: referralCode.id,
-				},
-			);
+		const redemptionCount = await referralCodeRepo.getRedemptionCount(
+			{
+				db,
+				referralCodeId: referralCode.id,
+			},
+		);
 
 			if (redemptionCount >= reward_program.max_redemptions!) {
 				logger.info(
