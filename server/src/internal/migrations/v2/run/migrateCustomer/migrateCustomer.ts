@@ -1,5 +1,7 @@
 import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations/types/index.js";
+import { recordMigrationCustomerEvent } from "../events/index.js";
 import { evaluateMigrateCustomerStripe } from "./evaluateMigrateCustomerStripe.js";
 import { executeMigrateCustomerPlan } from "./executeMigrateCustomerPlan.js";
 import {
@@ -22,11 +24,13 @@ export const migrateCustomer = async ({
 	ctx,
 	customerId,
 	migration,
+	migrationRunId,
 	preview = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	migration: Migration;
+	migrationRunId: string;
 	preview?: boolean;
 }) => {
 	const migrationCtx = createMigrateCustomerRunContext({
@@ -35,15 +39,31 @@ export const migrateCustomer = async ({
 		migration,
 		preview,
 	});
+	let context: MigrateCustomerContext | undefined;
 
 	try {
-		const context = await setupMigrateCustomerContext({
+		context = await setupMigrateCustomerContext({
 			ctx: migrationCtx,
 			migration,
 			customerId,
 		});
 
-		const { plan: autumnPlan, billingContexts } = await processOperations({
+		await recordMigrationCustomerEvent({
+			ctx,
+			migration,
+			migrationRunId,
+			dryRun: preview,
+			eventType: "customer_started",
+			internalCustomerId: context.fullCustomer.internal_id,
+			customerId: context.fullCustomer.id,
+			details: { beforeCustomer: context.fullCustomer },
+		});
+
+		const {
+			plan: autumnPlan,
+			billingContexts,
+			matchedCustomerProducts,
+		} = await processOperations({
 			ctx: migrationCtx,
 			context,
 			plan: {
@@ -74,6 +94,22 @@ export const migrateCustomer = async ({
 			},
 		});
 
+		await recordMigrationCustomerEvent({
+			ctx,
+			migration,
+			migrationRunId,
+			dryRun: preview,
+			eventType:
+				matchedCustomerProducts === 0
+					? "customer_skipped"
+					: "customer_succeeded",
+			internalCustomerId: context.fullCustomer.internal_id,
+			customerId: context.fullCustomer.id,
+			details: {
+				matchedCustomerProducts,
+			},
+		});
+
 		return;
 	} catch (error) {
 		logMigrateCustomerResult({
@@ -83,6 +119,22 @@ export const migrateCustomer = async ({
 				error,
 			},
 		});
+
+		await recordMigrationCustomerEvent({
+			ctx,
+			migration,
+			migrationRunId,
+			dryRun: preview,
+			eventType: "customer_failed",
+			internalCustomerId: context?.fullCustomer.internal_id ?? customerId,
+			customerId: context?.fullCustomer.id,
+			details: {
+				error: {
+					message: error instanceof Error ? error.message : String(error),
+				},
+			},
+		});
+
 		throw error;
 	}
 };
