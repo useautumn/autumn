@@ -73,14 +73,14 @@ class ListCustomersPlan(BaseModel):
         return m
 
 
-SubscriptionStatus = Literal[
+ListCustomersSubscriptionStatus = Literal[
     "active",
     "scheduled",
 ]
 r"""Filter by customer product status. Defaults to active and scheduled"""
 
 
-Processor = Literal[
+ListCustomersProcessor = Literal[
     "stripe",
     "revenuecat",
     "vercel",
@@ -94,11 +94,11 @@ class ListCustomersParamsTypedDict(TypedDict):
     r"""Number of items to return. Default 10, max 1000."""
     plans: NotRequired[List[ListCustomersPlanTypedDict]]
     r"""Filter by plan ID and version. Returns customers with active subscriptions to this plan."""
-    subscription_status: NotRequired[SubscriptionStatus]
+    subscription_status: NotRequired[ListCustomersSubscriptionStatus]
     r"""Filter by customer product status. Defaults to active and scheduled"""
     search: NotRequired[str]
     r"""Search customers by id, name, or email"""
-    processors: NotRequired[List[Processor]]
+    processors: NotRequired[List[ListCustomersProcessor]]
     r"""Filter by customer processor type (stripe, revenuecat, vercel)"""
 
 
@@ -112,13 +112,13 @@ class ListCustomersParams(BaseModel):
     plans: Optional[List[ListCustomersPlan]] = None
     r"""Filter by plan ID and version. Returns customers with active subscriptions to this plan."""
 
-    subscription_status: Optional[SubscriptionStatus] = None
+    subscription_status: Optional[ListCustomersSubscriptionStatus] = None
     r"""Filter by customer product status. Defaults to active and scheduled"""
 
     search: Optional[str] = None
     r"""Search customers by id, name, or email"""
 
-    processors: Optional[List[Processor]] = None
+    processors: Optional[List[ListCustomersProcessor]] = None
     r"""Filter by customer processor type (stripe, revenuecat, vercel)"""
 
     @model_serializer(mode="wrap")

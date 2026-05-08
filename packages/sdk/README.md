@@ -271,7 +271,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778176810685,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779386410685,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778251788467,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779461388467,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -542,6 +542,30 @@ const response = await client.entities.get({ customerId: "cus_123", entityId: "s
 @param entityId - The ID of the entity.
 
 @returns The entity object including its current subscriptions, purchases, and balances.
+* [list](docs/sdks/entities/README.md#list) - Lists entities across the organization with pagination and optional filters.
+
+Use this to page through entities globally, including filtering by plans inherited from parent customers or attached directly to entities.
+
+@example
+```typescript
+// List entities on a plan
+const response = await client.entities.list({ plans: [{"id":"pro_plan"}], limit: 10, offset: 0 });
+```
+
+@example
+```typescript
+// Search entities by ID or name
+const response = await client.entities.list({ search: "workspace" });
+```
+
+@param offset - Number of items to skip (optional)
+@param limit - Number of items to return. Default 10, max 1000. (optional)
+@param plans - Filter by plan ID and version. Returns entities with active subscriptions to this plan, including plans inherited from the parent customer. (optional)
+@param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
+@param search - Search entities by id or name. (optional)
+@param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+
+@returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
 * [update](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
 
 Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
@@ -758,7 +782,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778176810685,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779386410685,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778251788467,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779461388467,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -1069,6 +1093,30 @@ const response = await client.entities.get({ customerId: "cus_123", entityId: "s
 @param entityId - The ID of the entity.
 
 @returns The entity object including its current subscriptions, purchases, and balances.
+- [`entitiesList`](docs/sdks/entities/README.md#list) - Lists entities across the organization with pagination and optional filters.
+
+Use this to page through entities globally, including filtering by plans inherited from parent customers or attached directly to entities.
+
+@example
+```typescript
+// List entities on a plan
+const response = await client.entities.list({ plans: [{"id":"pro_plan"}], limit: 10, offset: 0 });
+```
+
+@example
+```typescript
+// Search entities by ID or name
+const response = await client.entities.list({ search: "workspace" });
+```
+
+@param offset - Number of items to skip (optional)
+@param limit - Number of items to return. Default 10, max 1000. (optional)
+@param plans - Filter by plan ID and version. Returns entities with active subscriptions to this plan, including plans inherited from the parent customer. (optional)
+@param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
+@param search - Search entities by id or name. (optional)
+@param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+
+@returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
 - [`entitiesUpdate`](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
 
 Use this to change entity billing controls or other mutable entity fields after the entity has already been created.
