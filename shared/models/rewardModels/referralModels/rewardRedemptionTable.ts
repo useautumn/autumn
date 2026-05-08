@@ -24,6 +24,7 @@ export const rewardRedemptions = pgTable(
 		redeemer_applied: boolean().default(false),
 		referral_code_id: text("referral_code_id"),
 		reward_internal_id: text("reward_internal_id"),
+		promo_code: text("promo_code"),
 	},
 	(table) => [
 		foreignKey({
