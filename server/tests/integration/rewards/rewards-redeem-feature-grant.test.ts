@@ -201,3 +201,56 @@ test(`${chalk.yellowBright("feature-grant-5: multiple promo codes on one reward"
 	expect(check2.allowed).toBe(true);
 	expect(check2.balance).toBe(25);
 });
+
+test(`${chalk.yellowBright("feature-grant-6: add customer coupon requires promo code on selected reward")}`, async () => {
+	const customerId = "feature-grant-6";
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: false }),
+			s.featureGrant({
+				id: "feature-grant-6-messages",
+				entitlements: [{ feature_id: TestFeature.Messages, allowance: 10 }],
+				promoCodes: [{ code: "FG6_MESSAGES" }],
+			}),
+			s.featureGrant({
+				id: "feature-grant-6-words",
+				entitlements: [{ feature_id: TestFeature.Words, allowance: 100 }],
+				promoCodes: [{ code: "FG6_WORDS" }],
+			}),
+		],
+		actions: [],
+	});
+
+	try {
+		await autumnV1.post(
+			`/customers/${customerId}/coupons/feature-grant-6-messages`,
+			{ promo_code: "FG6_WORDS" },
+		);
+		throw new Error(
+			"Should have failed — promo code belongs to another reward",
+		);
+	} catch (error) {
+		expect(error).toBeInstanceOf(AutumnError);
+		expect((error as AutumnError).code).toBe(ErrCode.RewardNotFound);
+	}
+
+	const wordsAfterMismatch = await autumnV1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Words,
+	});
+	expect(wordsAfterMismatch.balance ?? 0).toBe(0);
+
+	await autumnV1.post(
+		`/customers/${customerId}/coupons/feature-grant-6-messages`,
+		{ promo_code: "FG6_MESSAGES" },
+	);
+
+	const messagesAfterMatch = await autumnV1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+	});
+	expect(messagesAfterMatch.allowed).toBe(true);
+	expect(messagesAfterMatch.balance).toBe(10);
+});
