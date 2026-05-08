@@ -3,9 +3,9 @@ import * as Sentry from "@sentry/bun";
 import chalk from "chalk";
 import type { Logger } from "pino";
 import { isTransientDbError } from "@/db/dbUtils.js";
-import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
+import { isTransientRedisError } from "@/external/redis/utils/isTransientRedisError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { runActionHandlerTask } from "@/internal/analytics/runActionHandlerTask.js";
 import { autoTopup } from "@/internal/balances/autoTopUp/autoTopup.js";
@@ -57,9 +57,7 @@ export const shouldRetrySqsJobError = ({
 		case JobName.RefreshEntityAggregate:
 			return isTransientDbError({ error });
 		case JobName.Track:
-			return (
-				isTransientDbError({ error }) || isTransientRedisError({ error })
-			);
+			return isTransientDbError({ error }) || isTransientRedisError({ error });
 		default:
 			return false;
 	}
@@ -90,7 +88,9 @@ export const processMessage = async ({
 		},
 	});
 
-	workerLogger.info(`${chalk.yellowBright(`Processing message: ${job.name}`)}`);
+	workerLogger.debug(
+		`${chalk.yellowBright(`Processing message: ${job.name}`)}`,
+	);
 
 	let workerCtx: AutumnContext | undefined;
 
