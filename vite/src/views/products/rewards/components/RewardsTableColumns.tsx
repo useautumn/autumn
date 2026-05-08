@@ -42,9 +42,11 @@ export const createRewardsTableColumns = (): ColumnDef<Reward, unknown>[] => {
 			accessorKey: "type",
 			cell: ({ row }: { row: Row<Reward> }) => {
 				const typeLabels: Record<RewardType, string> = {
-					[RewardType.AmountDiscount]: "Amount Discount",
+					[RewardType.FixedDiscount]: "Fixed Discount",
 					[RewardType.PercentageDiscount]: "Percentage Discount",
 					[RewardType.FreeProduct]: "Free Product",
+					[RewardType.InvoiceCredits]: "Invoice Credits",
+					[RewardType.FeatureGrant]: "Feature Grant",
 				};
 				return (
 					<div className="text-t2">
@@ -90,6 +92,18 @@ const RewardValueCell = ({ reward }: { reward: Reward }) => {
 			(p: ProductV2) => p.id === reward.free_product_id,
 		);
 		return <div className="text-t2">{product?.name || "—"}</div>;
+	}
+
+	if (reward.type === RewardType.FeatureGrant) {
+		const grantCount = reward.entitlements?.length ?? 0;
+
+		return (
+			<div className="text-t2">
+				{grantCount > 0
+					? `${grantCount} feature grant${grantCount === 1 ? "" : "s"}`
+					: "—"}
+			</div>
+		);
 	}
 
 	return (
