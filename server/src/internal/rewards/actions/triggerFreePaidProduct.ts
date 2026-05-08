@@ -4,37 +4,29 @@ import {
 	ErrCode,
 	type FullProduct,
 	type FullRewardProgram,
+	RecaseError,
 	type ReferralCode,
 	type Reward,
-	RewardReceivedBy,
 	type RewardRedemption,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { handleAddProduct } from "@/internal/customers/attach/attachFunctions/addProductFlow/handleAddProduct.js";
 import { rewardProgramToAttachParams } from "@/internal/customers/attach/attachUtils/attachParams/convertToParams.js";
 import { getCustomerSub } from "@/internal/customers/attach/attachUtils/convertAttachParams.js";
 import { getDefaultAttachConfig } from "@/internal/customers/attach/attachUtils/getAttachConfig.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { isStripeConnected } from "@/internal/orgs/orgUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
-import type { ExtendedRequest } from "@/utils/models/Request.js";
-import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { redemptionRepo } from "@/internal/rewards/repos/index.js";
-import { ReferralResponseCodes } from "../referralUtils.js";
-
-export const receivedByReferrer = (received_by: RewardReceivedBy) => {
-	return (
-		received_by === RewardReceivedBy.Referrer ||
-		received_by === RewardReceivedBy.All
-	);
-};
-
-export const receivedByRedeemer = (received_by: RewardReceivedBy) => {
-	return received_by === RewardReceivedBy.All;
-};
+import {
+	ReferralResponseCodes,
+	receivedByRedeemer,
+	receivedByReferrer,
+} from "@/internal/rewards/rewardUtils.js";
+import type { ExtendedRequest } from "@/utils/models/Request.js";
 
 export const triggerFreePaidProduct = async ({
 	ctx,
@@ -83,7 +75,6 @@ export const triggerFreePaidProduct = async ({
 		});
 	}
 
-	// Add to referrer / redeemer
 	const stripeCli = createStripeCli({ org, env });
 
 	const applied = [false, false]; // [referrerApplied, redeemerApplied]
@@ -108,14 +99,16 @@ export const triggerFreePaidProduct = async ({
 		const { sub } = await getCustomerSub({ attachParams });
 
 		if (sub) {
-			console.log("Detected sub", !!sub);
+			logger.info(
+				`Detected existing subscription for ${i === 0 ? "referrer" : "redeemer"}`,
+			);
 			const curDiscounts = (sub.discounts as Stripe.Discount[]) || [];
 
 			// If coupon already applied, don't add it again
 			if (
 				!curDiscounts.some((d: any) => d.coupon?.id === rewardProgram.reward.id)
 			) {
-				console.log("Detected no discount, adding it");
+				logger.info(`No existing discount, adding coupon`);
 				try {
 					await stripeCli.subscriptions.update(sub.id, {
 						discounts: [
@@ -128,7 +121,7 @@ export const triggerFreePaidProduct = async ({
 						],
 					});
 				} catch (error) {
-					console.log("Error adding discount", error);
+					logger.error(`Error adding discount: ${error}`);
 				}
 				applied[i] = true;
 			}
