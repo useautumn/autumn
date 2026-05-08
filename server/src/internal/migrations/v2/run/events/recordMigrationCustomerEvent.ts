@@ -6,6 +6,13 @@ import type {
 } from "./migrationCustomerEventTypes.js";
 import { sendMigrationCustomerEventsToTinybird } from "./sendMigrationCustomerEvents.js";
 
+type RecordMigrationCustomerEventParams = MigrationCustomerEventInput & {
+	ctx: AutumnContext;
+	migration: Migration;
+	migrationRunId: string;
+	dryRun: boolean;
+};
+
 /** Enriches and records one migration lifecycle event. */
 export const recordMigrationCustomerEvent = async ({
 	ctx,
@@ -16,12 +23,7 @@ export const recordMigrationCustomerEvent = async ({
 	internalCustomerId,
 	customerId,
 	details,
-}: {
-	ctx: AutumnContext;
-	migration: Migration;
-	migrationRunId: string;
-	dryRun: boolean;
-} & MigrationCustomerEventInput): Promise<void> => {
+}: RecordMigrationCustomerEventParams): Promise<void> => {
 	const event: MigrationCustomerEvent = {
 		eventType,
 		internalCustomerId,
