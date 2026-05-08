@@ -120,24 +120,28 @@ export function generateItemChanges({
 
 	const changes: ItemEdit[] = [];
 
+	const getItemKey = (item: ProductItem): string =>
+		`${item.feature_id}:${item.usage_model ?? ""}`;
+
 	const originalFeatureMap = new Map(
 		originalItems
 			.filter((item) => item.feature_id)
-			.map((item) => [item.feature_id, item]),
+			.map((item) => [getItemKey(item), item]),
 	);
 	const updatedFeatureMap = new Map(
 		updatedItems
 			.filter((item) => item.feature_id)
-			.map((item) => [item.feature_id, item]),
+			.map((item) => [getItemKey(item), item]),
 	);
 
-	for (const [featureId, original] of originalFeatureMap) {
-		const updated = updatedFeatureMap.get(featureId);
+	for (const [itemKey, original] of originalFeatureMap) {
+		const updated = updatedFeatureMap.get(itemKey);
+		const featureId = original.feature_id;
 
 		if (!updated) {
 			const oldFormatted = formatItemValue(original);
 			changes.push({
-				id: `item-removed-${featureId}`,
+				id: `item-removed-${itemKey}`,
 				type: "item",
 				label: getFeatureName(original),
 				icon: "item",
@@ -160,7 +164,7 @@ export function generateItemChanges({
 				updatedItem: updated,
 			});
 			changes.push({
-				id: `item-modified-${featureId}`,
+				id: `item-modified-${itemKey}`,
 				type: "item",
 				label: getFeatureName(original),
 				icon: "item",
@@ -175,8 +179,9 @@ export function generateItemChanges({
 		}
 	}
 
-	for (const [featureId, updated] of updatedFeatureMap) {
-		if (!originalFeatureMap.has(featureId)) {
+	for (const [itemKey, updated] of updatedFeatureMap) {
+		if (!originalFeatureMap.has(itemKey)) {
+			const featureId = updated.feature_id;
 			const prepaidQuantity =
 				featureId && prepaidOptions ? prepaidOptions[featureId] : undefined;
 
