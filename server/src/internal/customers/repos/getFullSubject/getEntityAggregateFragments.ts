@@ -50,7 +50,9 @@ export const getEntityAggregateFragments = ({
 	const featureFilter =
 		internalFeatureIds && internalFeatureIds.length > 0
 			? sql`AND ce.internal_feature_id = ANY(ARRAY[${sql.join(
-					internalFeatureIds.map((internalFeatureId) => sql`${internalFeatureId}`),
+					internalFeatureIds.map(
+						(internalFeatureId) => sql`${internalFeatureId}`,
+					),
 					sql`, `,
 				)}])`
 			: sql``;
@@ -237,13 +239,17 @@ export const getEntityAggregateFragments = ({
 
 	const productRefsUnion = sql`
 		UNION ALL
-		SELECT ecp.internal_customer_id, ecp.internal_product_id
+		SELECT
+			ecp.internal_customer_id AS subject_key,
+			ecp.internal_customer_id,
+			ecp.internal_product_id
 		FROM entity_distinct_cus_products ecp
 	`;
 
 	const entitlementRefsUnion = sql`
 		UNION
 		SELECT DISTINCT
+			ce.internal_customer_id AS subject_key,
 			ce.internal_customer_id,
 			ce.entitlement_id
 		FROM entity_level_cus_ents ce
@@ -251,7 +257,10 @@ export const getEntityAggregateFragments = ({
 
 	const priceRefsUnion = sql`
 		UNION ALL
-		SELECT ecpr.price_id, ecp.internal_customer_id
+		SELECT
+			ecp.internal_customer_id AS subject_key,
+			ecpr.price_id,
+			ecp.internal_customer_id
 		FROM entity_cus_prices ecpr
 		JOIN entity_distinct_cus_products ecp
 			ON ecp.id = ecpr.customer_product_id
@@ -259,7 +268,10 @@ export const getEntityAggregateFragments = ({
 
 	const freeTrialRefsUnion = sql`
 		UNION ALL
-		SELECT ecp.free_trial_id, ecp.internal_customer_id
+		SELECT
+			ecp.internal_customer_id AS subject_key,
+			ecp.free_trial_id,
+			ecp.internal_customer_id
 		FROM entity_distinct_cus_products ecp
 		WHERE ecp.free_trial_id IS NOT NULL
 	`;
