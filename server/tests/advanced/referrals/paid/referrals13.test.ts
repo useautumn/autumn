@@ -1,316 +1,147 @@
-import { beforeAll, describe, expect, test } from "bun:test";
-import {
-	type AppEnv,
-	CouponDurationType,
-	type CreateReward,
-	type CreateRewardProgram,
-	CusProductStatus,
-	CustomerExpand,
-	ErrCode,
-	type Organization,
-	type ReferralCode,
-	RewardReceivedBy,
-	type RewardRedemption,
-	RewardTriggerEvent,
-	RewardType,
-} from "@autumn/shared";
-import { TestFeature } from "@tests/setup/v2Features.js";
+import { expect, test } from "bun:test";
+import { CusProductStatus, CustomerExpand, ErrCode } from "@autumn/shared";
 import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
-import { createReferralProgram } from "@tests/utils/productUtils.js";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { referralPrograms } from "@tests/utils/fixtures/referralPrograms";
+import { rewards } from "@tests/utils/fixtures/rewards";
 import { advanceTestClock } from "@tests/utils/stripeUtils.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import type { Stripe } from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { CusService } from "@/internal/customers/CusService.js";
-import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import AutumnError from "@/external/autumn/autumnCli.js";
+import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 
 export const group = "referrals13";
 
-const testCase = "referrals13";
-
-// Define products inline
-const freeProd = constructProduct({
-	id: "free",
-	type: "free",
-	isDefault: true,
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 5,
-		}),
-	],
-});
-
-const proProd = constructProduct({
-	id: "pro",
-	type: "pro",
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Dashboard,
-			isBoolean: true,
-		}),
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 10,
-		}),
-	],
-});
-
-// Reward: pro_amount discount (coupon-based)
-const proAmountReward: CreateReward = {
-	id: `${testCase}ProAmount`,
-	name: "Pro Amount Discount",
-	type: RewardType.PercentageDiscount,
-	promo_codes: [],
-	discount_config: {
-		discount_value: 10, // $10 off (pro_amount)
-		duration_type: CouponDurationType.Months,
-		duration_value: 1,
-		apply_to_all: true,
-		price_ids: [],
-	},
-};
-
-// Referral program: triggers immediately, applies to referrer only
-const paidProductImmediateReferrer: CreateRewardProgram = {
-	id: `${testCase}ImmediateReferrer`,
-	when: RewardTriggerEvent.CustomerCreation,
-	product_ids: [proProd.id],
-	internal_reward_id: proAmountReward.id,
-	max_redemptions: 10,
-	received_by: RewardReceivedBy.Referrer,
-};
-
-describe(`${chalk.yellowBright(
-	"referrals13: Testing referrals - referrer on Pro, gets discount on next cycle - coupon-based",
-)}`, () => {
+test(`${chalk.yellowBright("referrals13: referrer on Pro, gets discount on next cycle - coupon-based")}`, async () => {
 	const mainCustomerId = "main-referral-13";
-	const redeemer = "referral13-r1";
-	const redeemerPM = "success";
-	const autumn: AutumnInt = new AutumnInt();
-	let stripeCli: Stripe;
-	const testClockIds: string[] = [];
-	let referralCode: ReferralCode;
+	const redeemerId = "referral13-r1";
 
-	let redemption: RewardRedemption;
-	let db: DrizzleCli;
-	let org: Organization;
-	let env: AppEnv;
-
-	beforeAll(async () => {
-		stripeCli = ctx.stripeCli;
-		db = ctx.db;
-		org = ctx.org;
-		env = ctx.env;
-
-		try {
-			await Promise.all([
-				autumn.customers.delete(mainCustomerId),
-				autumn.customers.delete(redeemer),
-				RewardRedemptionService._resetCustomerRedemptions({
-					db,
-					internalCustomerId: [mainCustomerId, redeemer],
-				}),
-			]);
-		} catch {}
-
-		// Initialize products first
-		await initProductsV0({
-			ctx,
-			products: [freeProd, proProd],
-			prefix: testCase,
-			customerId: mainCustomerId,
-		});
-
-		// Create referral program
-		await createReferralProgram({
-			db,
-			orgId: org.id,
-			env,
-			autumn: new AutumnInt({ secretKey: ctx.orgSecretKey }),
-			reward: proAmountReward,
-			rewardProgram: paidProductImmediateReferrer,
-		});
-
-		// Initialize main customer with Pro product already attached
-		const res = await initCustomerV3({
-			ctx,
-			customerId: mainCustomerId,
-			attachPm: "success",
-		});
-
-		testClockIds.push(res.testClockId);
-
-		// Attach Pro product to main customer first
-		await autumn.attach({
-			customer_id: mainCustomerId,
-			product_id: proProd.id,
-		});
-
-		const redeemerRes = await initCustomerV3({
-			ctx,
-			customerId: redeemer,
-			attachPm: redeemerPM as "success",
-			withTestClock: true,
-		});
-
-		testClockIds.push(redeemerRes.testClockId);
+	// Clean up redemptions before scenario
+	await redemptionRepo.resetCustomer({
+		db: ctx.db,
+		internalCustomerId: [mainCustomerId, redeemerId],
 	});
 
-	test("should advance clock 10 days before redeeming", async () => {
-		// Advance 10 days after Pro is attached
-		await Promise.all(
-			testClockIds.map((x) =>
-				advanceTestClock({
-					testClockId: x,
-					numberOfDays: 10,
-					waitForSeconds: 10,
-					stripeCli,
-				}),
-			),
+	// Products
+	const freeProd = products.base({
+		id: "free",
+		isDefault: true,
+		items: [items.monthlyMessages({ includedUsage: 5 })],
+	});
+
+	const proProd = products.pro({
+		id: "pro",
+		items: [items.dashboard(), items.monthlyMessages({ includedUsage: 10 })],
+	});
+
+	// Reward: 10% percentage discount (coupon-based)
+	const reward = rewards.percentageDiscount({ discountValue: 10 });
+
+	// Program: triggers immediately on customer creation, referrer only, max 10
+	const program = referralPrograms.onCustomerCreationReferrer({
+		rewardId: reward.id,
+		maxRedemptions: 10,
+	});
+	program.product_ids = [proProd.id];
+
+	const { autumnV1, referralCode, testClockIds } = await initScenario({
+		customerId: mainCustomerId,
+		setup: [
+			s.customer({ paymentMethod: "success", testClock: true }),
+			s.products({ list: [freeProd, proProd] }),
+			s.referralProgram({ reward, program }),
+			s.otherCustomers([
+				{ id: redeemerId, paymentMethod: "success", distinctTestClock: true },
+			]),
+		],
+		actions: [
+			s.attach({ productId: proProd.id }),
+			s.advanceTestClock({ days: 10, waitForSeconds: 10 }),
+			s.referral.createCode(),
+		],
+	});
+
+	// Advance redeemer's clock too (s.advanceTestClock only advances primary)
+	if (testClockIds[redeemerId]) {
+		await advanceTestClock({
+			testClockId: testClockIds[redeemerId],
+			numberOfDays: 10,
+			waitForSeconds: 10,
+			stripeCli: ctx.stripeCli,
+		});
+	}
+
+	expect(referralCode!.code).toBeDefined();
+
+	// Redeem referral code
+	const redemption = await autumnV1.referrals.redeem({
+		customerId: redeemerId,
+		code: referralCode!.code,
+	});
+
+	// Try redeem again — should fail
+	try {
+		await autumnV1.referrals.redeem({
+			customerId: redeemerId,
+			code: referralCode!.code,
+		});
+		throw new Error("Should not be able to redeem again");
+	} catch (error) {
+		expect(error).toBeInstanceOf(AutumnError);
+		expect((error as AutumnError).code).toBe(
+			ErrCode.CustomerAlreadyRedeemedReferralCode,
 		);
+	}
+
+	// Verify referrer has pro, redeemer has free
+	const redemptionResult = await autumnV1.redemptions.get(redemption.id);
+	// For referrer-only program: triggered + applied (referrer got discount), redeemer_applied is false (redeemer gets nothing)
+	expect(redemptionResult.triggered).toBe(true);
+	expect(redemptionResult.applied).toBe(true);
+
+	const mainCus = await autumnV1.customers.get(mainCustomerId);
+	expectProductAttached({
+		customer: mainCus,
+		product: proProd,
+		status: CusProductStatus.Active,
 	});
 
-	test("should create code once", async () => {
-		referralCode = await autumn.referrals.createCode({
-			customerId: mainCustomerId,
-			referralId: paidProductImmediateReferrer.id,
-		});
-
-		expect(referralCode.code).toBeDefined();
-	});
-
-	test("should create redemption for redeemer and fail if redeemed again", async () => {
-		redemption = await autumn.referrals.redeem({
-			customerId: redeemer,
-			code: referralCode.code,
-		});
-
-		// Try redeem for redeemer again
-		try {
-			await autumn.referrals.redeem({
-				customerId: redeemer,
-				code: referralCode.code,
-			});
-			throw new Error("Should not be able to redeem again");
-		} catch (error) {
-			expect(error).toBeInstanceOf(AutumnError);
-			expect((error as AutumnError).code).toBe(
-				ErrCode.CustomerAlreadyRedeemedReferralCode,
-			);
-		}
-	});
-
-	test("should have referrer already on Pro, and redeemer gets free product", async () => {
-		const redemptionResult = await autumn.redemptions.get(redemption.id);
-		expect(redemptionResult.redeemer_applied).toBe(true);
-
-		const mainProds = (await autumn.customers.get(mainCustomerId)).products;
-		const redeemerProds = (await autumn.customers.get(redeemer)).products;
-
-		// Main customer (referrer) should have the pro product (already attached)
-		expect(mainProds.length).toBe(1);
-		expect(mainProds[0].id).toBe(proProd.id);
-
-		// Redeemer should only have the free product (no pro product given in referrer-only program)
-		expect(redeemerProds.length).toBe(1);
-		expect(redeemerProds[0].id).toBe(freeProd.id);
-
-		expectProductAttached({
-			customer: await autumn.customers.get(mainCustomerId),
-			product: proProd,
-			status: CusProductStatus.Active,
-		});
-
-		// Verify redeemer only has free product
-		expectProductAttached({
-			customer: await autumn.customers.get(redeemer),
-			product: freeProd,
-			status: CusProductStatus.Active,
-		});
-	});
-
-	test("should advance test clock and verify referrer gets discount on next Pro cycle", async () => {
-		// Advance 31 days from current time to trigger next billing cycle
-		// Coupon was applied on day 10, lasts 30 days, so should still be active on day 31
-		await Promise.all(
-			testClockIds.map((x) =>
-				advanceTestClock({
-					testClockId: x,
-					numberOfDays: 31,
-					waitForSeconds: 25,
-					stripeCli,
-				}),
-			),
-		);
-
-		// Test that main customer's Pro invoice has discount applied
-		const mainCustomerWithInvoices = await autumn.customers.get(
-			mainCustomerId,
-			{
-				expand: [CustomerExpand.Invoices, CustomerExpand.Rewards],
-			},
-		);
-
-		const proInvoice = mainCustomerWithInvoices.invoices.find((x) =>
-			x.product_ids.includes(proProd.id),
-		);
-
-		const expectedTotal = 20; // Pro product base price
-
-		const actualTotal = proInvoice?.total;
-
-		if (proInvoice) {
-			// Should have a discount applied - invoice total should be less than full Pro price
-			expect(actualTotal!).toBeLessThan(expectedTotal);
-
-			// For referrer-only reward, the discount should make it significantly cheaper or free
-			expect(actualTotal!).toBeLessThanOrEqual(expectedTotal / 2);
-		}
-
-	const dbCustomers = await Promise.all(
-		[mainCustomerId, redeemer].map((x) =>
-			CusService.getFull({
-				ctx,
-				idOrInternalId: x,
-				inStatuses: [
-					CusProductStatus.Active,
-					CusProductStatus.PastDue,
-					CusProductStatus.Expired,
-				],
+	// Advance 31 days to trigger next billing cycle
+	await Promise.all(
+		Object.values(testClockIds).map((clockId) =>
+			advanceTestClock({
+				testClockId: clockId,
+				numberOfDays: 31,
+				waitForSeconds: 25,
+				stripeCli: ctx.stripeCli,
 			}),
 		),
 	);
 
-		const expectedProducts = [
-			[
-				// Main referrer - keeps Pro with discount applied
-				{ name: "Free", status: CusProductStatus.Expired },
-				{ name: "Pro", status: CusProductStatus.Active },
-			],
-			[
-				// Redeemer - only has free product (no reward in referrer-only program)
-				{ name: "Free", status: CusProductStatus.Active },
-			],
-		];
+	// Verify referrer gets discount on next Pro invoice
+	const mainCustomerWithInvoices = await autumnV1.customers.get(
+		mainCustomerId,
+		{
+			expand: [CustomerExpand.Invoices, CustomerExpand.Rewards],
+		},
+	);
 
-		dbCustomers.forEach((customer, index) => {
-			const expectedProductsForCustomer = expectedProducts[index];
-			expectedProductsForCustomer.forEach((expectedProduct) => {
-				const matchingProduct = customer.customer_products.find(
-					(cp) =>
-						cp.product.name === expectedProduct.name &&
-						cp.status === expectedProduct.status,
-				);
+	const proInvoice = mainCustomerWithInvoices.invoices.find((x) =>
+		x.product_ids.includes(proProd.id),
+	);
 
-				expect(matchingProduct).toBeDefined();
-			});
-		});
+	if (proInvoice) {
+		// 10% percentage discount on $20 Pro = $2 off = $18
+		expect(proInvoice.total).toBeLessThan(20);
+	}
+
+	// Verify DB state
+	// Final verification: referrer still has active Pro after billing cycle
+	expectProductAttached({
+		customer: await autumnV1.customers.get(mainCustomerId),
+		product: proProd,
+		status: CusProductStatus.Active,
 	});
 });

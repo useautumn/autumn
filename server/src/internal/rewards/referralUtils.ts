@@ -12,7 +12,7 @@ import { getOrCreateStripeCustomer } from "@/external/stripe/customers";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import RecaseError from "@/utils/errorUtils.js";
 import { CusService } from "../customers/CusService.js";
-import { RewardRedemptionService } from "./RewardRedemptionService.js";
+import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 import {
 	receivedByRedeemer,
 	receivedByReferrer,
@@ -128,7 +128,7 @@ export const triggerRedemption = async ({
 		}
 	}
 
-	const updatedRedemption = await RewardRedemptionService.update({
+	const updatedRedemption = await redemptionRepo.update({
 		db,
 		id: redemption.id,
 		updates: {

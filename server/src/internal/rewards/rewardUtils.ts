@@ -1,19 +1,21 @@
 import {
 	type CreateReward,
+	type CreateRewardProgram,
 	DiscountConfigSchema,
 	ErrCode,
 	isFixedPrice,
 	type Price,
 	type Product,
+	RecaseError,
 	type Reward,
 	RewardCategory,
+	type RewardProgram,
 	RewardType,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { generateId, getUnique, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "../products/ProductService.js";
 import { initProductInStripe } from "../products/productUtils.js";
@@ -331,4 +333,26 @@ const getAmountAfterStripeDiscounts = ({
 		}
 	}
 	return amountAfterDiscount;
+};
+
+/** Build a RewardProgram object from creation input */
+export const constructRewardProgram = ({
+	rewardProgramData,
+	orgId,
+	env,
+}: {
+	rewardProgramData: CreateRewardProgram;
+	orgId: string;
+	env: string;
+}) => {
+	const rewardProgram: RewardProgram = {
+		...rewardProgramData,
+		internal_id: generateId("rs"),
+		unlimited_redemptions: false,
+		created_at: Date.now(),
+		org_id: orgId,
+		env,
+	};
+
+	return rewardProgram;
 };
