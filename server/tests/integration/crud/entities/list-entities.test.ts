@@ -138,10 +138,12 @@ test.concurrent(`${chalk.yellowBright("list entities: filters inherited and enti
 	>({
 		search: entityPrefix,
 		plans: [{ id: inheritedProduct.id }],
-		limit: 10,
+		limit: 3,
 		keepInternalFields: true,
 	});
+	expect(inheritedPlanPage.total).toBe(3);
 	expect(inheritedPlanPage.total_filtered_count).toBe(3);
+	expect(inheritedPlanPage.has_more).toBe(false);
 	expect(inheritedPlanPage.list.map((entity) => entity.id).sort()).toEqual([
 		alphaEntityId,
 		betaEntityId,
