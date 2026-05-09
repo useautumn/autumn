@@ -22,7 +22,14 @@ export const handlePatchMigration = createRoute({
 		const ctx = c.get("ctx");
 		const { id, updates } = c.req.valid("json");
 
-		const updated = await migrationRepo.update({ ctx, id, updates });
+		const updated = await migrationRepo.update({
+			ctx,
+			id,
+			updates: {
+				...updates,
+				...(updates.operations !== undefined ? { prepared_state: null } : {}),
+			},
+		});
 
 		if (!updated)
 			throw new RecaseError({

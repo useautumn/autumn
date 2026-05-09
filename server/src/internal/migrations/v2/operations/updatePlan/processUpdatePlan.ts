@@ -13,6 +13,7 @@ import {
 	filterCustomerProductsByPlanFilter,
 	mergeAutumnBillingPlans,
 } from "../utils/index.js";
+import { stripPreparedCatalogRows } from "./applyPrepareResults/index.js";
 import { setupUpdatePlanProductContext } from "./setup/index.js";
 
 const assertNoChargeArtifacts = ({
@@ -47,6 +48,7 @@ export const processUpdatePlan = async ({
 	ctx,
 	context,
 	op,
+	opIndex,
 	plan,
 	projectedFullCustomer,
 }: Parameters<OperationProcessor<UpdatePlanOp>>[0]) => {
@@ -64,6 +66,7 @@ export const processUpdatePlan = async ({
 			ctx,
 			context,
 			op,
+			opIndex,
 			projectedFullCustomer,
 			customerProduct,
 		});
@@ -99,10 +102,14 @@ export const processUpdatePlan = async ({
 			plan: computedPlan,
 			customerProductId: customerProduct.id,
 		});
+		const executablePlan = stripPreparedCatalogRows({
+			plan: computedPlan,
+			preparedIds: productContext.preparedIds,
+		});
 
 		nextPlan = mergeAutumnBillingPlans({
 			base: nextPlan,
-			incoming: computedPlan,
+			incoming: executablePlan,
 		});
 		billingContexts.push(productContext.billingContext);
 	}

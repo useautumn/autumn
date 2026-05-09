@@ -19,7 +19,7 @@ export const handleRunMigration = createRoute({
 	body: RunMigrationBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { id, dry_run } = c.req.valid("json");
+		const { id, dry_run: dryRun } = c.req.valid("json");
 
 		const migration = await migrationRepo.find({ ctx, id });
 
@@ -37,14 +37,14 @@ export const handleRunMigration = createRoute({
 				orgId: ctx.org.id,
 				env: ctx.env,
 				migrationId: id,
-				dryRun: dry_run,
+				dryRun,
 			},
 			isDev ? { region: "eu-west-1" } : undefined,
 		);
 
 		return c.json({
 			migration_id: id,
-			dry_run,
+			dry_run: dryRun,
 			run_id: handle.id,
 		});
 	},

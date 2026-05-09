@@ -17,6 +17,7 @@ import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setup
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext.js";
 import { setupMigrationOperationBillingContext } from "@/internal/migrations/v2/run/migrateCustomer/setup/index.js";
 import type { MigrateCustomerContext } from "../../types/index.js";
+import { applyPrepareResultsToUpdatePlan } from "../applyPrepareResults/index.js";
 import { itemAlreadyExists } from "./itemAlreadyExists.js";
 import type { UpdatePlanProductContext } from "./types.js";
 
@@ -24,30 +25,42 @@ export const setupUpdatePlanProductContext = async ({
 	ctx,
 	context,
 	op,
+	opIndex,
 	projectedFullCustomer,
 	customerProduct,
 }: {
 	ctx: AutumnContext;
 	context: MigrateCustomerContext;
 	op: UpdatePlanOp;
+	opIndex: number;
 	projectedFullCustomer: FullCustomer;
 	customerProduct: FullCusProduct;
 }): Promise<UpdatePlanProductContext | undefined> => {
-	const addItems = op.customize?.add_items?.filter(
+	const {
+		op: preparedOp,
+		preparedIds,
+		reusePricesAndEntitlements,
+	} = applyPrepareResultsToUpdatePlan({
+		context,
+		op,
+		opIndex,
+	});
+
+	const addItems = preparedOp.customize?.add_items?.filter(
 		(item) =>
 			!itemAlreadyExists({
 				ctx,
 				customerProduct,
 				item,
-				removeItems: op.customize?.remove_items,
+				removeItems: preparedOp.customize?.remove_items,
 			}),
 	);
 	const customize = {
-		...op.customize,
+		...preparedOp.customize,
 		...(addItems ? { add_items: addItems } : {}),
 	};
 	if (
-		op.version === undefined &&
+		preparedOp.version === undefined &&
 		customize.price === undefined &&
 		customize.add_items?.length === 0 &&
 		customize.remove_items === undefined
@@ -72,8 +85,8 @@ export const setupUpdatePlanProductContext = async ({
 		entity_id: customerProduct.entity_id ?? undefined,
 		customer_product_id: customerProduct.id,
 		plan_id: customerProduct.product.id,
-		version: op.version,
-		...(op.customize ? { customize } : {}),
+		version: preparedOp.version,
+		...(preparedOp.customize ? { customize } : {}),
 		proration_behavior: "none",
 		no_billing_changes:
 			context.migration.no_billing_changes === true ? true : undefined,
@@ -89,6 +102,7 @@ export const setupUpdatePlanProductContext = async ({
 		ctx,
 		fullCustomer: productFullCustomer,
 		params,
+		reusePricesAndEntitlements,
 	});
 
 	const operationBillingContext = await setupMigrationOperationBillingContext({
@@ -152,5 +166,6 @@ export const setupUpdatePlanProductContext = async ({
 		customerProduct: targetCustomerProduct,
 		params,
 		billingContext,
+		preparedIds,
 	};
 };

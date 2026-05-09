@@ -6,9 +6,15 @@
  *   - multiple update_plan operations run in order on the same customer.
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV2 } from "@autumn/shared";
-import { ResetInterval } from "@autumn/shared";
+import {
+	customerPrices,
+	customerProducts,
+	customers,
+	prices,
+	ResetInterval,
+} from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectNoExpiredCustomerProducts } from "@tests/integration/billing/utils/expectNoExpiredCustomerProducts";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
@@ -20,7 +26,48 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { and, eq } from "drizzle-orm";
 import { runUpdatePlanMigration } from "../utils/runUpdatePlanMigration";
+
+const getCustomerProductPriceAmounts = async ({
+	ctx,
+	customerId,
+	productId,
+	entityId,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	customerId: string;
+	productId: string;
+	entityId: string;
+}) =>
+	(
+		await ctx.db
+			.select({ config: prices.config })
+			.from(customerProducts)
+			.innerJoin(
+				customers,
+				eq(customerProducts.internal_customer_id, customers.internal_id),
+			)
+			.innerJoin(
+				customerPrices,
+				eq(customerPrices.customer_product_id, customerProducts.id),
+			)
+			.innerJoin(prices, eq(customerPrices.price_id, prices.id))
+			.where(
+				and(
+					eq(customers.org_id, ctx.org.id),
+					eq(customers.env, ctx.env),
+					eq(customers.id, customerId),
+					eq(customerProducts.product_id, productId),
+					eq(customerProducts.entity_id, entityId),
+				),
+			)
+	)
+		.map((row) =>
+			row.config && "amount" in row.config ? row.config.amount : undefined,
+		)
+		.filter((amount): amount is number => typeof amount === "number")
+		.sort((a, b) => a - b);
 
 test.concurrent(`${chalk.yellowBright("migrations update_plan: plan filter patches multiple entity products")}`, async () => {
 	const customerId = "migration-update-multi-entity";
@@ -180,6 +227,91 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: two operations ru
 		usage: 0,
 		planId: premium.id,
 	});
+	await expectCustomerInvoiceCorrect({
+		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+		count: 2,
+	});
+	await expectNoExpiredCustomerProducts({
+		ctx,
+		customerId,
+		productId: pro.id,
+		entityId: entities[0].id,
+	});
+	await expectNoExpiredCustomerProducts({
+		ctx,
+		customerId,
+		productId: premium.id,
+		entityId: entities[1].id,
+	});
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
+});
+
+test.concurrent(`${chalk.yellowBright("migrations update_plan: multiple plan price updates run in one customer migration")}`, async () => {
+	const customerId = "migration-update-multi-price";
+	const pro = products.pro({ items: [] });
+	const premium = products.premium({ items: [] });
+
+	const { autumnV1, autumnV2_2, ctx, entities } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+			s.entities({ count: 2, featureId: TestFeature.Users }),
+		],
+		actions: [
+			s.billing.attach({ productId: pro.id, entityIndex: 0 }),
+			s.billing.attach({ productId: premium.id, entityIndex: 1 }),
+		],
+	});
+
+	await runUpdatePlanMigration({
+		ctx,
+		migrationClient: autumnV2_2,
+		migrationId: `${customerId}-mig`,
+		customerId,
+		runOnServer: false,
+		filter: {
+			customer: {
+				plan: { $or: [{ plan_id: pro.id }, { plan_id: premium.id }] },
+			},
+		},
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: pro.id },
+					customize: {
+						price: itemsV2.monthlyPrice({ amount: 50 }),
+					},
+				},
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: premium.id },
+					customize: {
+						price: itemsV2.monthlyPrice({ amount: 100 }),
+					},
+				},
+			],
+		},
+	});
+
+	expect(
+		await getCustomerProductPriceAmounts({
+			ctx,
+			customerId,
+			productId: pro.id,
+			entityId: entities[0].id,
+		}),
+	).toEqual([50]);
+	expect(
+		await getCustomerProductPriceAmounts({
+			ctx,
+			customerId,
+			productId: premium.id,
+			entityId: entities[1].id,
+		}),
+	).toEqual([100]);
+
 	await expectCustomerInvoiceCorrect({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		count: 2,

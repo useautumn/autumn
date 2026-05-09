@@ -75,7 +75,9 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: add boolean and m
 			],
 		},
 		runOnServer: true,
-		waitFor: expectMigrationApplied,
+		waitFor: async () => {
+			await expectMigrationApplied();
+		},
 		timeoutMs: 60_000,
 	});
 

@@ -26,6 +26,7 @@ export type ProcessOperationResult = {
 export type OperationProcessor<Op> = (args: {
 	ctx: AutumnContext;
 	op: Op;
+	opIndex: number;
 	context: MigrateCustomerContext;
 	plan: AutumnBillingPlan;
 	projectedFullCustomer: FullCustomer;
