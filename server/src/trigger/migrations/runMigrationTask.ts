@@ -1,5 +1,5 @@
 import { AppEnv } from "@autumn/shared";
-import { task } from "@trigger.dev/sdk/v3";
+import { idempotencyKeys, task } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigration } from "@/internal/migrations/v2/run/runMigration.js";
@@ -14,9 +14,21 @@ const PayloadSchema = z.object({
 
 export type RunMigrationPayload = z.infer<typeof PayloadSchema>;
 
-/** trigger.dev task for long-running migrations (deploys kill api workers). */
+export const getRunMigrationIdempotencyKey = ({
+	orgId,
+	env,
+}: {
+	orgId: string;
+	env: AppEnv;
+}) => ["run-migration", orgId, env];
+
+export const runMigrationTaskQueue = {
+	concurrencyLimit: 1,
+};
+
 export const runMigrationTask = task({
 	id: "run-migration",
+	queue: runMigrationTaskQueue,
 	maxDuration: 3600,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
 		const { orgId, env, migrationId, dryRun } = PayloadSchema.parse(rawPayload);
@@ -31,27 +43,34 @@ export const runMigrationTask = task({
 			data: { migrationId, dryRun },
 		});
 
-		const migration = await migrationRepo.find({ ctx, id: migrationId });
+		try {
+			const migration = await migrationRepo.find({ ctx, id: migrationId });
 
-		const result = await runMigration({
-			ctx,
-			migration,
-			dry_run: dryRun,
-			migrationRunId: triggerCtx.run.id,
-		});
+			await runMigration({
+				ctx,
+				migration,
+				dryRun,
+				migrationRunId: triggerCtx.run.id,
+			});
 
-		logger.info("run-migration: done", {
-			data: {
-				migration_id: result.migration_id,
-				dry_run: result.dry_run,
-				scopes: result.scopes.map((s) => ({
-					kind: s.kind,
-					count: s.count,
-					succeeded: s.summary.succeeded,
-					failed: s.summary.failed,
-				})),
-			},
-		});
-		return result;
+			logger.info("run-migration: done", {
+				data: {
+					migrationId,
+					dryRun,
+				},
+			});
+		} finally {
+			try {
+				await idempotencyKeys.reset(
+					"run-migration",
+					getRunMigrationIdempotencyKey({ orgId, env }),
+					{ scope: "global" },
+				);
+			} catch (error) {
+				logger.error("run-migration: failed to reset idempotency key", {
+					data: { migrationId, error },
+				});
+			}
+		}
 	},
 });

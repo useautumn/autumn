@@ -1,19 +1,37 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
+import { idempotencyKeys } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
-import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
+import {
+	getRunMigrationIdempotencyKey,
+	runMigrationTask,
+} from "@/trigger/migrations/runMigrationTask.js";
 
 const RunMigrationBody = z.object({
 	id: z.string(),
 	dry_run: z.boolean().default(false),
 });
 
-/**
- * POST /migrations.run — kick off a migration on trigger.dev. Returns the
- * trigger run handle so the dashboard can poll status. In dev we route
- * to EU so dev runs don't touch the production US region.
- */
+const getRunMigrationTriggerOptions = ({
+	orgId,
+	isDev,
+	idempotencyKey,
+}: {
+	orgId: string;
+	isDev: boolean;
+	idempotencyKey: string;
+}) => ({
+	...(isDev ? { region: "eu-west-1" } : {}),
+	concurrencyKey: orgId,
+	idempotencyKey,
+	idempotencyKeyTTL: "6h",
+});
+
+const isCachedRunHandle = (
+	handle: Awaited<ReturnType<typeof runMigrationTask.trigger>>,
+) => (handle as { isCached?: boolean }).isCached === true;
+
 export const handleRunMigration = createRoute({
 	scopes: [Scopes.Migrations.Write],
 	body: RunMigrationBody,
@@ -31,6 +49,10 @@ export const handleRunMigration = createRoute({
 			});
 
 		const isDev = process.env.NODE_ENV === "development";
+		const idempotencyKey = await idempotencyKeys.create(
+			getRunMigrationIdempotencyKey({ orgId: ctx.org.id, env: ctx.env }),
+			{ scope: "global" },
+		);
 
 		const handle = await runMigrationTask.trigger(
 			{
@@ -39,8 +61,21 @@ export const handleRunMigration = createRoute({
 				migrationId: id,
 				dryRun,
 			},
-			isDev ? { region: "eu-west-1" } : undefined,
+			getRunMigrationTriggerOptions({
+				orgId: ctx.org.id,
+				isDev,
+				idempotencyKey,
+			}),
 		);
+
+		if (isCachedRunHandle(handle)) {
+			throw new RecaseError({
+				message:
+					"A migration is already running. Please try again when it completes.",
+				code: ErrCode.MigrationAlreadyInProgress,
+				statusCode: 409,
+			});
+		}
 
 		return c.json({
 			migration_id: id,
