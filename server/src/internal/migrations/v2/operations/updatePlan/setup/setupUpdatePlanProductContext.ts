@@ -44,6 +44,7 @@ export const setupUpdatePlanProductContext = async ({
 		context,
 		op,
 		opIndex,
+		internalProductId: customerProduct.internal_product_id,
 	});
 
 	const addItems = preparedOp.customize?.add_items?.filter(

@@ -6,6 +6,7 @@ export const PreparedArtifactRefSchema = z.object({
 	kind: z.enum(["base_price", "add_item"]),
 	item_index: z.number().optional(),
 	hash: z.string(),
+	internal_product_id: z.string(),
 	price_id: z.string().optional(),
 	entitlement_id: z.string().optional(),
 });
