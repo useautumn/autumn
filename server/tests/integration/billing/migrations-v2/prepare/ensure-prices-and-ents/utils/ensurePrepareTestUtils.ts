@@ -24,9 +24,14 @@ type PreparedArtifactSelector = {
 	opIndex: number;
 	kind: "base_price" | "add_item";
 	itemIndex?: number;
+	internalProductId?: string;
 };
 
-type PreparedArtifactField = "hash" | "price_id" | "entitlement_id";
+type PreparedArtifactField =
+	| "hash"
+	| "price_id"
+	| "entitlement_id"
+	| "internal_product_id";
 
 const toResult = ({
 	prepared,
@@ -49,6 +54,7 @@ export const expectPreparedArtifact = ({
 	opIndex,
 	kind,
 	itemIndex,
+	internalProductId,
 }: {
 	result: PreparedResultLike;
 } & PreparedArtifactSelector): PreparedArtifactRef => {
@@ -57,7 +63,9 @@ export const expectPreparedArtifact = ({
 		(candidate) =>
 			candidate.op_index === opIndex &&
 			candidate.kind === kind &&
-			candidate.item_index === itemIndex,
+			candidate.item_index === itemIndex &&
+			(internalProductId === undefined ||
+				candidate.internal_product_id === internalProductId),
 	);
 	expect(artifact).toBeDefined();
 	return artifact!;

@@ -13,15 +13,27 @@ export const getPreparedCustomerRows = async ({
 	ctx,
 	customerIds,
 	productId,
+	productIds,
 }: {
 	ctx: AutumnContext;
 	customerIds: string[];
-	productId: string;
-}) =>
-	ctx.db
+	productId?: string;
+	productIds?: string[];
+}) => {
+	const productIdsToMatch = productIds ?? (productId ? [productId] : []);
+	if (productIdsToMatch.length === 0) {
+		throw new Error(
+			"getPreparedCustomerRows: productId or productIds required",
+		);
+	}
+
+	return ctx.db
 		.select({
 			customerId: customers.id,
 			customerProductId: customerProducts.id,
+			customerProductInternalProductId: customerProducts.internal_product_id,
+			customerProductProductId: customerProducts.product_id,
+			customerProductEntityId: customerProducts.entity_id,
 			priceId: customerPrices.price_id,
 			priceInternalProductId: prices.internal_product_id,
 			entitlementId: customerEntitlements.entitlement_id,
@@ -50,6 +62,7 @@ export const getPreparedCustomerRows = async ({
 				eq(customers.org_id, ctx.org.id),
 				eq(customers.env, ctx.env),
 				inArray(customers.id, customerIds),
-				eq(customerProducts.product_id, productId),
+				inArray(customerProducts.product_id, productIdsToMatch),
 			),
 		);
+};

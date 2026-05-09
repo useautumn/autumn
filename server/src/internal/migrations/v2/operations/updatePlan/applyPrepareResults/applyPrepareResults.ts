@@ -67,18 +67,21 @@ const findArtifact = ({
 	kind,
 	itemIndex,
 	hash,
+	internalProductId,
 }: {
 	artifacts: PreparedArtifactRef[];
 	opIndex: number;
 	kind: PreparedArtifactRef["kind"];
 	itemIndex?: number;
 	hash: string;
+	internalProductId: string;
 }) => {
 	const artifact = artifacts.find(
 		(candidate) =>
 			candidate.op_index === opIndex &&
 			candidate.kind === kind &&
 			candidate.item_index === itemIndex &&
+			candidate.internal_product_id === internalProductId &&
 			candidate.hash === hash,
 	);
 
@@ -89,7 +92,7 @@ const findArtifact = ({
 			field: "prepared_state",
 			message:
 				"Migration update_plan prepared_state is missing an artifact for the current operation input.",
-			details: { opIndex, kind, itemIndex, hash },
+			details: { opIndex, kind, itemIndex, internalProductId, hash },
 		});
 	}
 
@@ -139,10 +142,12 @@ export const applyPrepareResultsToUpdatePlan = ({
 	context,
 	op,
 	opIndex,
+	internalProductId,
 }: {
 	context: MigrateCustomerContext;
 	op: UpdatePlanOp;
 	opIndex: number;
+	internalProductId: string;
 }): {
 	op: UpdatePlanOp;
 	preparedIds: PreparedUpdatePlanArtifactIds;
@@ -190,6 +195,7 @@ export const applyPrepareResultsToUpdatePlan = ({
 			artifacts,
 			opIndex,
 			kind: "base_price",
+			internalProductId,
 			hash: hashJson({ value: customize.price }),
 		});
 		addPreparedId({ ids: preparedIds, artifact, reusePricesAndEntitlements });
@@ -206,6 +212,7 @@ export const applyPrepareResultsToUpdatePlan = ({
 				opIndex,
 				kind: "add_item",
 				itemIndex,
+				internalProductId,
 				hash: hashJson({ value: item }),
 			});
 			addPreparedId({

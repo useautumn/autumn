@@ -2,8 +2,8 @@
  * TDD coverage for ensure_prices_and_entitlements preparation.
  *
  * Contract under test:
- *   - prepared catalog rows are content-addressed by the exact update_plan input
- *     and operation position.
+ *   - prepared catalog rows are content-addressed by the exact update_plan input,
+ *     operation position, and matched product version.
  *   - unchanged add_items keep their prepared row IDs across migration edits.
  *   - changed add_items/base prices receive new prepared row IDs.
  */
@@ -12,7 +12,8 @@ import { expect, test } from "bun:test";
 import type { Price } from "@autumn/shared";
 import { prepare } from "@/internal/migrations/v2/prepare/prepare.js";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
-import { initScenario } from "@tests/utils/testInitUtils/initScenario";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import {
 	buildUpdatePlanOperations,
@@ -34,12 +35,14 @@ import {
 
 test.concurrent(`${chalk.yellowBright("migrations prepare: unchanged add_items keep row IDs while edited add_items change")}`, async () => {
 	const id = "prep-ensure-stable-add-items";
+	const pro = products.pro({ items: [] });
 	const { autumnV2_2, ctx } = await initScenario({
-		setup: [],
+		setup: [s.products({ list: [pro] })],
 		actions: [],
 	});
 
 	const firstOps = buildUpdatePlanOperations({
+		planId: pro.id,
 		customize: {
 			add_items: [itemsV2.dashboard(), itemsV2.prepaidWords({ amount: 2 })],
 		},
@@ -49,9 +52,10 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: unchanged add_items k
 		id,
 		operations: firstOps,
 	});
-	const first = await prepareMigration({ ctx, migration });
+	const first = await prepareMigration({ ctx, migration, dryRun: true });
 
 	const secondOps = buildUpdatePlanOperations({
+		planId: pro.id,
 		customize: {
 			add_items: [itemsV2.dashboard(), itemsV2.prepaidWords({ amount: 3 })],
 		},
@@ -62,7 +66,11 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: unchanged add_items k
 		operations: secondOps,
 	});
 	expect(updatedMigration.prepared_state).toBeNull();
-	const second = await prepareMigration({ ctx, migration: updatedMigration });
+	const second = await prepareMigration({
+		ctx,
+		migration: updatedMigration,
+		dryRun: true,
+	});
 
 	expectPreparedArtifactFieldsStable({
 		before: first,
@@ -81,12 +89,14 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: unchanged add_items k
 
 test.concurrent(`${chalk.yellowBright("migrations prepare: base price create update and remove rewrite prepared_state")}`, async () => {
 	const id = "prep-ensure-base-price";
+	const pro = products.pro({ items: [] });
 	const { autumnV2_2, ctx } = await initScenario({
-		setup: [],
+		setup: [s.products({ list: [pro] })],
 		actions: [],
 	});
 
 	const createOps = buildUpdatePlanOperations({
+		planId: pro.id,
 		customize: { price: itemsV2.monthlyPrice({ amount: 20 }) },
 	});
 	const migration = await createMigration({
@@ -94,16 +104,19 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: base price create upd
 		id,
 		operations: createOps,
 	});
-	const created = await prepareMigration({ ctx, migration });
+	const created = await prepareMigration({ ctx, migration, dryRun: true });
 	const createdBasePrice = expectPreparedArtifact({
 		result: created,
 		opIndex: 0,
 		kind: "base_price",
 	});
 	expect(created.result.prices).toHaveLength(1);
-	expect((created.result.prices[0] as Price).internal_product_id).toBeNull();
+	expect((created.result.prices[0] as Price).internal_product_id).toBe(
+		createdBasePrice.internal_product_id,
+	);
 
 	const updateOps = buildUpdatePlanOperations({
+		planId: pro.id,
 		customize: { price: itemsV2.monthlyPrice({ amount: 25 }) },
 	});
 	const updatedMigration = await updateMigrationOperations({
@@ -111,7 +124,11 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: base price create upd
 		id,
 		operations: updateOps,
 	});
-	const updated = await prepareMigration({ ctx, migration: updatedMigration });
+	const updated = await prepareMigration({
+		ctx,
+		migration: updatedMigration,
+		dryRun: true,
+	});
 	expectPreparedArtifactFieldsChanged({
 		before: created,
 		after: updated,
@@ -120,7 +137,10 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: base price create upd
 	});
 	expect(createdBasePrice.price_id).toBeDefined();
 
-	const removeOps = buildUpdatePlanOperations({ customize: { price: null } });
+	const removeOps = buildUpdatePlanOperations({
+		planId: pro.id,
+		customize: { price: null },
+	});
 	const removedMigration = await updateMigrationOperations({
 		migrationClient: autumnV2_2,
 		id,
@@ -136,8 +156,9 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: base price create upd
 
 test.concurrent(`${chalk.yellowBright("migrations prepare: nested item field changes produce new artifacts")}`, async () => {
 	const id = "prep-ensure-nested-item-hash";
+	const pro = products.pro({ items: [] });
 	const { autumnV2_2, ctx } = await initScenario({
-		setup: [],
+		setup: [s.products({ list: [pro] })],
 		actions: [],
 	});
 
@@ -145,6 +166,7 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: nested item field cha
 		migrationClient: autumnV2_2,
 		id,
 		operations: buildUpdatePlanOperations({
+			planId: pro.id,
 			customize: {
 				add_items: [prepaidWordsWithMaxPurchase({ maxPurchase: 100 })],
 			},
@@ -156,6 +178,7 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: nested item field cha
 		migrationClient: autumnV2_2,
 		id,
 		operations: buildUpdatePlanOperations({
+			planId: pro.id,
 			customize: {
 				add_items: [prepaidWordsWithMaxPurchase({ maxPurchase: 101 })],
 			},
@@ -177,6 +200,7 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: nested item field cha
 		migrationClient: autumnV2_2,
 		id,
 		operations: buildUpdatePlanOperations({
+			planId: pro.id,
 			customize: { add_items: [rolloverCredits({ max: 250 })] },
 		}),
 	});
@@ -190,6 +214,7 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: nested item field cha
 		migrationClient: autumnV2_2,
 		id,
 		operations: buildUpdatePlanOperations({
+			planId: pro.id,
 			customize: { add_items: [rolloverCredits({ max: 251 })] },
 		}),
 	});
@@ -208,8 +233,10 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: nested item field cha
 
 test.concurrent(`${chalk.yellowBright("migrations prepare: same item on different op indexes gets distinct rows")}`, async () => {
 	const id = "prep-ensure-op-index-isolation";
+	const pro = products.pro({ items: [] });
+	const premium = products.premium({ items: [] });
 	const { autumnV2_2, ctx } = await initScenario({
-		setup: [],
+		setup: [s.products({ list: [pro, premium] })],
 		actions: [],
 	});
 
@@ -217,13 +244,15 @@ test.concurrent(`${chalk.yellowBright("migrations prepare: same item on differen
 		migrationClient: autumnV2_2,
 		id,
 		operations: buildUpdatePlanOperations({
+			planId: pro.id,
 			customize: { add_items: [itemsV2.prepaidWords({ amount: 6 })] },
+			secondPlanId: premium.id,
 			secondCustomize: {
 				add_items: [itemsV2.prepaidWords({ amount: 6 })],
 			},
 		}),
 	});
-	const prepared = await prepareMigration({ ctx, migration });
+	const prepared = await prepareMigration({ ctx, migration, dryRun: true });
 
 	const first = expectPreparedArtifact({
 		result: prepared,
