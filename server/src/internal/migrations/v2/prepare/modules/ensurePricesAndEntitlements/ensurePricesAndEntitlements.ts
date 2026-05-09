@@ -1,32 +1,97 @@
-import { type Entitlement, entitlements } from "@autumn/shared";
-import { inArray } from "drizzle-orm";
+import { type Entitlement, findFeatureById, type Price } from "@autumn/shared";
+import type { UpdatePlanOp } from "@autumn/shared/api/migrations/operations/customer/updatePlan/index.js";
+import { basePriceToProductItem } from "@autumn/shared/api/products/components/basePrice/basePriceToProductItem.js";
+import { planItemV1ToPriceAndEnt } from "@autumn/shared/api/products/items/mappers/planItemV1ToPriceAndEnt.js";
+import { itemToPriceAndEnt } from "@autumn/shared/utils/productV2Utils/productItemUtils/mappers/itemToPriceAndEnt.js";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
-import { ProductService } from "@/internal/products/ProductService.js";
+import { PriceService } from "@/internal/products/prices/PriceService.js";
+import { hashJson } from "@/utils/hash/hashJson.js";
 import type { PrepareModule } from "../../types/prepareModule.js";
 import type {
 	EnsurePricesAndEntitlementsResult,
-	EntitlementItemRef,
+	PreparedArtifactRef,
 } from "./types.js";
 
 export type EnsurePricesAndEntitlementsInput = {
-	target_plan_id: string;
-	feature_id: string;
+	updatePlanOps: {
+		opIndex: number;
+		op: UpdatePlanOp;
+	}[];
 };
 
-/**
- * Deterministic ID per (scope, product version, feature). Migration
- * scopes pass `scopeId = mig_<internal_id>` to preserve the original
- * `ent_mig_<id>_<...>` format; scripts pass their own prefix.
- */
-export const entitlementIdFor = ({
+const artifactHash = ({ value }: { value: unknown }) => hashJson({ value });
+
+const preparedRowId = ({
+	prefix,
+	value,
+}: {
+	prefix: "ent" | "pr";
+	value: unknown;
+}) => `${prefix}_${hashJson({ value })}`;
+
+export const basePriceIdFor = ({
 	scopeId,
-	productInternalId,
-	internalFeatureId,
+	opIndex,
+	hash,
 }: {
 	scopeId: string;
-	productInternalId: string;
+	opIndex: number;
+	hash: string;
+}): string =>
+	preparedRowId({
+		prefix: "pr",
+		value: { scopeId, opIndex, kind: "base_price", hash },
+	});
+
+export const priceIdFor = ({
+	scopeId,
+	opIndex,
+	itemIndex,
+	internalFeatureId,
+	hash,
+}: {
+	scopeId: string;
+	opIndex: number;
+	itemIndex: number;
 	internalFeatureId: string;
-}): string => `ent_${scopeId}_${productInternalId}_${internalFeatureId}`;
+	hash: string;
+}): string =>
+	preparedRowId({
+		prefix: "pr",
+		value: {
+			scopeId,
+			opIndex,
+			itemIndex,
+			internalFeatureId,
+			kind: "add_item",
+			hash,
+		},
+	});
+
+export const entitlementIdFor = ({
+	scopeId,
+	opIndex,
+	itemIndex,
+	internalFeatureId,
+	hash,
+}: {
+	scopeId: string;
+	opIndex: number;
+	itemIndex: number;
+	internalFeatureId: string;
+	hash: string;
+}): string =>
+	preparedRowId({
+		prefix: "ent",
+		value: {
+			scopeId,
+			opIndex,
+			itemIndex,
+			internalFeatureId,
+			kind: "add_item",
+			hash,
+		},
+	});
 
 export const ensurePricesAndEntitlements: PrepareModule<
 	EnsurePricesAndEntitlementsInput,
@@ -34,75 +99,119 @@ export const ensurePricesAndEntitlements: PrepareModule<
 > = {
 	kind: "ensure_prices_and_entitlements",
 
-	async plan({ ctx, scope_id, input }) {
-		const feature = ctx.features.find((f) => f.id === input.feature_id);
-		if (!feature)
-			throw new Error(
-				`ensurePricesAndEntitlements: unknown feature_id "${input.feature_id}"`,
-			);
+	async plan({ ctx, scopeId, input }) {
+		const entitlementsById = new Map<string, Entitlement>();
+		const pricesById = new Map<string, Price>();
+		const artifacts: PreparedArtifactRef[] = [];
 
-		// All versions of the target plan in the org's catalog.
-		const matchingProducts = await ProductService.listFull({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			inIds: [input.target_plan_id],
-			returnAll: true,
-			excludeEnts: true,
-		});
+		for (const { opIndex, op } of input.updatePlanOps) {
+			const customize = op.customize;
+			if (!customize) continue;
 
-		const desired: EntitlementItemRef[] = matchingProducts.map((product) => ({
-			entitlement_id: entitlementIdFor({
-				scopeId: scope_id,
-				productInternalId: product.internal_id,
-				internalFeatureId: feature.internal_id,
-			}),
-			product_internal_id: product.internal_id,
-			product_id: product.id,
-			feature_id: feature.id,
-			internal_feature_id: feature.internal_id,
-		}));
+			if (customize.price) {
+				const hash = artifactHash({ value: customize.price });
+				const priceId = basePriceIdFor({ scopeId, opIndex, hash });
+				const item = basePriceToProductItem({
+					ctx,
+					basePrice: customize.price,
+				});
+				const { newPrice, updatedPrice } = itemToPriceAndEnt({
+					item,
+					orgId: ctx.org.id,
+					isCustom: true,
+					features: ctx.features,
+				});
+				const price = newPrice ?? updatedPrice;
 
-		return { entitlements: desired };
+				if (price) {
+					pricesById.set(priceId, {
+						...price,
+						id: priceId,
+						internal_product_id: null,
+					});
+					artifacts.push({
+						op_index: opIndex,
+						kind: "base_price",
+						hash,
+						price_id: priceId,
+					});
+				}
+			}
+
+			for (const [itemIndex, item] of (customize.add_items ?? []).entries()) {
+				const feature = findFeatureById({
+					features: ctx.features,
+					featureId: item.feature_id,
+					errorOnNotFound: true,
+				});
+				const hash = artifactHash({ value: item });
+				const entitlementId = entitlementIdFor({
+					scopeId,
+					opIndex,
+					itemIndex,
+					internalFeatureId: feature.internal_id,
+					hash,
+				});
+				const priceId = priceIdFor({
+					scopeId,
+					opIndex,
+					itemIndex,
+					internalFeatureId: feature.internal_id,
+					hash,
+				});
+
+				const { newEnt, newPrice } = planItemV1ToPriceAndEnt({
+					ctx,
+					item,
+					orgId: ctx.org.id,
+					isCustom: true,
+				});
+
+				if (newEnt) {
+					entitlementsById.set(entitlementId, {
+						...newEnt,
+						id: entitlementId,
+						internal_product_id: null,
+					});
+				}
+				if (newPrice) {
+					pricesById.set(priceId, {
+						...newPrice,
+						id: priceId,
+						entitlement_id: newEnt ? entitlementId : newPrice.entitlement_id,
+						internal_product_id: null,
+					});
+				}
+
+				artifacts.push({
+					op_index: opIndex,
+					kind: "add_item",
+					item_index: itemIndex,
+					hash,
+					...(newPrice ? { price_id: priceId } : {}),
+					...(newEnt ? { entitlement_id: entitlementId } : {}),
+				});
+			}
+		}
+
+		return {
+			entitlements: Array.from(entitlementsById.values()),
+			prices: Array.from(pricesById.values()),
+			artifacts,
+		};
 	},
 
 	async apply({ ctx, planned }) {
-		const desired = planned.entitlements;
-		const ids = desired.map((d) => d.entitlement_id);
-
-		// Deterministic IDs let us skip rows already present in DB.
-		const existing = ids.length
-			? await ctx.db
-					.select({ id: entitlements.id })
-					.from(entitlements)
-					.where(inArray(entitlements.id, ids))
-			: [];
-		const existingIds = new Set(existing.map((r) => r.id));
-
-		const toInsert: Entitlement[] = desired
-			.filter((d) => !existingIds.has(d.entitlement_id))
-			.map((d) => ({
-				id: d.entitlement_id,
-				created_at: Date.now(),
-				internal_feature_id: d.internal_feature_id,
-				internal_product_id: d.product_internal_id,
-				is_custom: false,
-				allowance_type: null,
-				allowance: null,
-				interval: null,
-				interval_count: 1,
-				carry_from_previous: false,
-				entity_feature_id: null,
-				org_id: ctx.org.id,
-				feature_id: d.feature_id,
-				usage_limit: null,
-				rollover: null,
-			}));
-
-		if (toInsert.length > 0) {
-			await EntitlementService.insert({ db: ctx.db, data: toInsert });
+		if (planned.entitlements.length > 0) {
+			await EntitlementService.upsert({
+				db: ctx.db,
+				data: planned.entitlements,
+			});
+		}
+		if (planned.prices.length > 0) {
+			await PriceService.upsert({ db: ctx.db, data: planned.prices });
 		}
 
-		return { entitlements: desired };
+		return planned;
 	},
 };

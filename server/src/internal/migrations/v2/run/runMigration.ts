@@ -5,8 +5,9 @@ import {
 	recordMigrationFailedEvent,
 	recordMigrationTerminalEvent,
 } from "./events/index.js";
-import { runPreparation, runScopeIteration } from "./orchestrators/index.js";
-import { getRunScopes } from "./types/index.js";
+import { prepare } from "../prepare/index.js";
+import { runScopeIteration } from "./orchestrators/runScopeIteration.js";
+import { getRunScopes } from "./types/getRunScopes.js";
 import type {
 	RunMigrationResponse,
 	RunMigrationScopeResult,
@@ -16,13 +17,13 @@ import type {
 export const runMigration = async ({
 	ctx,
 	migration,
-	dry_run,
 	migrationRunId,
+	dry_run,
 }: {
 	ctx: AutumnContext;
 	migration: Migration;
-	dry_run: boolean;
 	migrationRunId: string;
+	dry_run: boolean;
 }): Promise<RunMigrationResponse> => {
 	const scopeResults: RunMigrationScopeResult[] = [];
 
@@ -30,8 +31,8 @@ export const runMigration = async ({
 		return await executeMigrationRun({
 			ctx,
 			migration,
-			dry_run,
 			migrationRunId,
+			dry_run,
 			scopeResults,
 		});
 	} catch (error) {
@@ -50,14 +51,14 @@ export const runMigration = async ({
 const executeMigrationRun = async ({
 	ctx,
 	migration,
-	dry_run,
 	migrationRunId,
+	dry_run,
 	scopeResults,
 }: {
 	ctx: AutumnContext;
 	migration: Migration;
-	dry_run: boolean;
 	migrationRunId: string;
+	dry_run: boolean;
 	scopeResults: RunMigrationScopeResult[];
 }): Promise<RunMigrationResponse> => {
 	await recordMigrationCustomerEvent({
@@ -71,12 +72,12 @@ const executeMigrationRun = async ({
 		},
 	});
 
-	const { response: prepareResponse, prepared_state } = await runPreparation({
+	const { response: prepareResponse, preparedState } = await prepare({
 		ctx,
 		migration,
-		dry_run,
+		dryRun: dry_run,
 	});
-	const preparedMigration = { ...migration, prepared_state };
+	const preparedMigration = { ...migration, prepared_state: preparedState };
 
 	for (const kind of getRunScopes({ migration: preparedMigration })) {
 		const scopeResult = await runScopeIteration({

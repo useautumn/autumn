@@ -30,11 +30,14 @@ export const processOperations = async ({
 		billingContexts: [],
 	};
 
-	for (const op of context.migration.operations?.customer ?? []) {
+	for (const [opIndex, op] of (
+		context.migration.operations?.customer ?? []
+	).entries()) {
 		const result = await processUpdatePlan({
 			ctx,
 			context,
 			op,
+			opIndex,
 			plan: state.plan,
 			projectedFullCustomer: state.projectedFullCustomer,
 		});

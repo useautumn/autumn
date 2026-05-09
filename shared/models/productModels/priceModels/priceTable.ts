@@ -24,7 +24,7 @@ export const prices = pgTable(
 	{
 		id: text().primaryKey().notNull(),
 		org_id: text("org_id").notNull(),
-		internal_product_id: text("internal_product_id").notNull(),
+		internal_product_id: text("internal_product_id"),
 		config: jsonb().$type<FixedPriceConfig | UsagePriceConfig>(),
 		created_at: numeric({ mode: "number" }).notNull(),
 		billing_type: text("billing_type"),
