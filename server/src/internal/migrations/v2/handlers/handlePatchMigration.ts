@@ -11,6 +11,7 @@ const PatchMigrationBody = z.object({
 		id: z.string().min(1).max(200).optional(),
 		filter: MigrationFilterSchema.nullable().optional(),
 		operations: OperationsSchema.nullable().optional(),
+		retry_failed: z.boolean().optional(),
 	}),
 });
 

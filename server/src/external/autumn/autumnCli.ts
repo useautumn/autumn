@@ -951,6 +951,7 @@ export class AutumnInt {
 				id?: string;
 				filter?: MigrationFilter | null;
 				operations?: Operations | null;
+				retry_failed?: boolean;
 			};
 		}): Promise<Migration> => {
 			const data = await this.post(`/migrations.update`, params);
@@ -960,12 +961,6 @@ export class AutumnInt {
 			const data = await this.post(`/migrations.delete`, params);
 			return data as Migration;
 		},
-		/**
-		 * Idempotent setup helper for tests / scripts: best-effort deletes
-		 * the migration if it exists, then creates a fresh one with the
-		 * given filter + operations. Avoids the (org_id, env, id) unique
-		 * constraint when reseeding fixtures.
-		 */
 		deleteAndCreate: async (params: {
 			id: string;
 			filter?: MigrationFilter | null;

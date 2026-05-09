@@ -25,6 +25,7 @@ export const insertMigration = async ({
 		env: ctx.env,
 		filter: insert.filter ?? null,
 		operations: insert.operations ?? null,
+		retry_failed: false,
 		created_at: Date.now(),
 		updated_at: null,
 	};
