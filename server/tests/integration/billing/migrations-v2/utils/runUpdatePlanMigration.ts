@@ -108,7 +108,6 @@ export const runUpdatePlanMigration = async ({
 		ctx,
 		customerId,
 		migration: preparedMigration,
-		migrationRunId: `${migrationId}-local-run`,
 	});
 
 	return preparedMigration;

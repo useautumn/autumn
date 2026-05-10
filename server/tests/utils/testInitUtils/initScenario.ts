@@ -172,6 +172,11 @@ type ResetFeatureAction = {
 	timeout?: number;
 };
 
+type ParallelAction = {
+	type: "parallel";
+	actions: ScenarioAction[];
+};
+
 type ScenarioAction =
 	| AttachAction
 	| CancelAction
@@ -186,7 +191,8 @@ type ScenarioAction =
 	| CreateReferralCodeAction
 	| RedeemReferralCodeAction
 	| CreateAndRedeemReferralCodeAction
-	| ResetFeatureAction;
+	| ResetFeatureAction
+	| ParallelAction;
 
 type CleanupConfig = {
 	customerIdsToDelete: string[];
@@ -272,7 +278,7 @@ const customer = ({
 	name?: string | null;
 	email?: string | null;
 	stripeCustomerOverrides?: Partial<Stripe.CustomerCreateParams>;
-}): ConfigFn => {
+} = {}): ConfigFn => {
 	return (config) => ({
 		...config,
 		testClock,
@@ -735,6 +741,24 @@ const billingMultiAttach = ({
 /** Top-level alias for billing multi-attach. */
 const multiAttach = billingMultiAttach;
 
+/** Run independent scenario actions concurrently. */
+const parallel = (...actions: ConfigFn[]): ConfigFn => {
+	return (config) => {
+		const parallelConfig = actions.reduce((c, fn) => fn(c), {
+			...config,
+			actions: [],
+		} as ScenarioConfig);
+
+		return {
+			...config,
+			actions: [
+				...config.actions,
+				{ type: "parallel" as const, actions: parallelConfig.actions },
+			],
+		};
+	};
+};
+
 // ═══════════════════════════════════════════════════════════════════
 // REFERRAL ACTIONS
 // ═══════════════════════════════════════════════════════════════════
@@ -824,6 +848,7 @@ export const s = {
 		multiAttach: billingMultiAttach,
 	},
 	multiAttach,
+	parallel,
 	referral: {
 		createCode: createReferralCode,
 		redeem: redeemReferralCode,
@@ -871,6 +896,26 @@ const defaultConfig: ScenarioConfig = {
 type OtherCustomerResult = {
 	id: string;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
+};
+
+type InitScenarioImplementationResult = {
+	customerId: string | undefined;
+	autumnV0: AutumnInt;
+	autumnV1: AutumnInt;
+	autumnV1Beta: AutumnInt;
+	/** @deprecated Use autumnV2_2 instead */
+	autumnV2: AutumnInt;
+	/** @deprecated Use autumnV2_2 instead */
+	autumnV2_1: AutumnInt;
+	autumnV2_2: AutumnInt;
+	testClockId: string | undefined;
+	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"] | null;
+	ctx: TestContext;
+	entities: GeneratedEntity[];
+	advancedTo: number;
+	otherCustomers: Map<string, OtherCustomerResult>;
+	referralCode: ReferralCode | null;
+	redemption: RewardRedemption | null;
 };
 
 // customerId provided -> customerId: string in return.
@@ -935,7 +980,7 @@ export async function initScenario({
 	setup: ConfigFn[];
 	actions: ConfigFn[];
 	ctx?: TestContext;
-}) {
+}): Promise<InitScenarioImplementationResult> {
 	// Use override or default ctx; may be rebound below if s.platform.create.
 	let ctx = ctxOverride ?? defaultCtx;
 	const config = [...setup, ...actions].reduce((c, fn) => fn(c), defaultConfig);
@@ -1177,8 +1222,10 @@ export async function initScenario({
 	let referralCode: ReferralCode | null = null;
 	let redemption: RewardRedemption | null = null;
 
-	for (const action of config.actions) {
-		if (action.type === "attach") {
+	const runAction = async (action: ScenarioAction): Promise<void> => {
+		if (action.type === "parallel") {
+			await Promise.all(action.actions.map((child) => runAction(child)));
+		} else if (action.type === "attach") {
 			// Override or fall back to primary customerId.
 			const targetCustomerId = action.customerId ?? customerId;
 			if (!targetCustomerId) {
@@ -1511,6 +1558,10 @@ export async function initScenario({
 			const waitTime = action.timeout ?? 2000;
 			await new Promise((resolve) => setTimeout(resolve, waitTime));
 		}
+	};
+
+	for (const action of config.actions) {
+		await runAction(action);
 	}
 
 	return {
