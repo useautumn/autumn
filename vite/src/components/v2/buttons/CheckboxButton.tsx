@@ -9,7 +9,7 @@ export const CheckboxButton = React.forwardRef<
 >(({ className, onCheckedChange, checked, ...props }, ref) => {
 	const handleClick = () => {
 		const newChecked = !checked;
-		onCheckedChange?.(newChecked, undefined as any);
+		(onCheckedChange as ((checked: boolean) => void) | undefined)?.(newChecked);
 	};
 
 	return (

@@ -23,7 +23,7 @@ function Checkbox({
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === "Enter" && !disabled) {
 			e.preventDefault();
-			onCheckedChange?.(!checked, undefined as any);
+			(onCheckedChange as ((checked: boolean) => void) | undefined)?.(!checked);
 		}
 	};
 
