@@ -1,16 +1,24 @@
 import type { Migration } from "@autumn/shared";
-import { ArrowsClockwiseIcon, PlayIcon } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon, CodeIcon, PlayIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { format } from "date-fns";
+import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
+import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { MigrationEditorField } from "./MigrationEditorField";
+import { Separator } from "@/components/v2/separator";
+import { FilterForm } from "./filters/FilterForm";
+import { MigrationRawEditor } from "./MigrationRawEditor";
+import { OperationsForm } from "./operations/OperationsForm";
 import { useMigrationEditorForm } from "./useMigrationEditorForm";
+
+type EditorMode = "form" | "raw";
 
 export function MigrationEditor({ migration }: { migration: Migration }) {
 	const { form, handleRun, isUpdating, isRunning } = useMigrationEditorForm({
 		migration,
 	});
+	const [mode, setMode] = useState<EditorMode>("form");
 
 	const canSubmit = useStore(form.store, (s) => s.canSubmit);
 
@@ -31,6 +39,14 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 					</div>
 				</div>
 				<div className="flex items-center gap-2">
+					<GroupedTabButton
+						value={mode}
+						onValueChange={(v) => setMode(v as EditorMode)}
+						options={[
+							{ value: "form", label: "Form" },
+							{ value: "raw", label: "JSON", icon: <CodeIcon size={14} /> },
+						]}
+					/>
 					<Button
 						variant="secondary"
 						size="default"
@@ -52,21 +68,68 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 				</div>
 			</div>
 
-			<MigrationEditorField
-				form={form}
-				fieldName="filter"
-				title="Filter"
-				description="Select which customers this migration applies to."
-				height="240px"
-			/>
-
-			<MigrationEditorField
-				form={form}
-				fieldName="operations"
-				title="Operations"
-				description="Define the mutations applied to each matched customer."
-				height="360px"
-			/>
+			{mode === "form" ? (
+				<MigrationFormMode form={form} />
+			) : (
+				<MigrationRawEditor form={form} />
+			)}
 		</div>
 	);
 }
+
+function MigrationFormMode({
+	form,
+}: {
+	form: MigrationEditorFormInstance["form"];
+}) {
+	const filter = useStore(form.store, (s) => s.values.filter);
+	const operations = useStore(form.store, (s) => s.values.operations);
+
+	return (
+		<div className="flex flex-col gap-4">
+			<FormSection
+				title="Filter"
+				description="Select which customers this migration applies to."
+			>
+				<FilterForm
+					value={filter}
+					onChange={(updated) => form.setFieldValue("filter", updated)}
+				/>
+			</FormSection>
+
+			<Separator />
+
+			<FormSection
+				title="Operations"
+				description="Define the mutations applied to each matched customer."
+			>
+				<OperationsForm
+					value={operations}
+					onChange={(updated) => form.setFieldValue("operations", updated)}
+				/>
+			</FormSection>
+		</div>
+	);
+}
+
+function FormSection({
+	title,
+	description,
+	children,
+}: {
+	title: string;
+	description: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<div className="flex flex-col gap-3">
+			<div>
+				<h2 className="text-sm font-medium text-t1">{title}</h2>
+				<p className="text-xs text-t3">{description}</p>
+			</div>
+			{children}
+		</div>
+	);
+}
+
+type MigrationEditorFormInstance = ReturnType<typeof useMigrationEditorForm>;
