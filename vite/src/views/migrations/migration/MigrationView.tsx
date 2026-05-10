@@ -22,14 +22,15 @@ export function MigrationView() {
 	}
 
 	return (
-		<div className="flex flex-col h-fit relative w-full pb-8 max-w-5xl mx-auto">
-			<V2Breadcrumb
-				items={[
-					{ name: "Migrations", href: "/migrations" },
-					{ name: migration.id },
-				]}
-			/>
-			<div className="px-4 sm:px-10 pt-6 flex flex-col gap-6">
+		<div className="flex flex-col h-fit relative w-full pb-8 max-w-5xl mx-auto pt-4 sm:pt-8">
+			<div className="px-4 sm:px-10 flex flex-col gap-6">
+				<V2Breadcrumb
+					items={[
+						{ name: "Migrations", href: "/migrations" },
+						{ name: migration.id },
+					]}
+					className="pt-0 pl-0"
+				/>
 				<MigrationEditor migration={migration} />
 			</div>
 		</div>

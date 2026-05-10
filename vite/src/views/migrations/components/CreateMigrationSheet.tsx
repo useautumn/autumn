@@ -1,5 +1,5 @@
 import type { AxiosError } from "axios";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
@@ -25,7 +25,10 @@ function CreateMigrationSheet({
 	const navigate = useNavigate();
 
 	const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
-	const setOpen = controlledOnOpenChange || setInternalOpen;
+	const handleOpenChange = (nextOpen: boolean) => {
+		if (nextOpen) setId("");
+		(controlledOnOpenChange || setInternalOpen)(nextOpen);
+	};
 
 	const { createMigration, isCreating } = useMigrationsQuery();
 
@@ -38,7 +41,7 @@ function CreateMigrationSheet({
 		try {
 			const created = await createMigration({ id: id.trim() });
 			toast.success("Migration created");
-			setOpen(false);
+			handleOpenChange(false);
 			navigateTo(`/migrations/${created.id}`, navigate);
 		} catch (error: unknown) {
 			toast.error(
@@ -47,14 +50,10 @@ function CreateMigrationSheet({
 		}
 	};
 
-	const handleCancel = () => setOpen(false);
-
-	useEffect(() => {
-		if (open) setId("");
-	}, [open]);
+	const handleCancel = () => handleOpenChange(false);
 
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
+		<Sheet open={open} onOpenChange={handleOpenChange}>
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Create a migration"
