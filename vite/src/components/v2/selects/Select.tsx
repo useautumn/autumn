@@ -72,12 +72,8 @@ function SelectTrigger({
 function SelectContent({
 	className,
 	children,
-	position = "item-aligned",
 	...props
-}: SelectPrimitive.Popup.Props & {
-	position?: string;
-	side?: string;
-}) {
+}: SelectPrimitive.Popup.Props) {
 	return (
 		<SelectPrimitive.Portal>
 			<SelectPrimitive.Positioner className="isolate z-[200]">
