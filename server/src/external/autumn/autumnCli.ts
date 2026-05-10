@@ -35,6 +35,7 @@ import {
 	type LegacyVersion,
 	type Migration,
 	type MigrationFilter,
+	type MigrationRun,
 	type Operations,
 	type OrgConfig,
 	type ProductItem,
@@ -49,6 +50,7 @@ import {
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
 import { timeout } from "@tests/utils/genUtils";
+import type { TinybirdMigrationItemEvent } from "@/external/tinybird/migrations/migrationItemEventsDataSource.js";
 import type { PrepareResponse } from "@/internal/migrations/v2/prepare/types";
 
 export default class AutumnError extends Error {
@@ -993,6 +995,19 @@ export class AutumnInt {
 				dry_run: boolean;
 				run_id: string;
 			};
+		},
+		listRuns: async (params: {
+			migrationId: string;
+		}): Promise<{ list: MigrationRun[] }> => {
+			const data = await this.post(`/migrations.runs.list`, params);
+			return data as { list: MigrationRun[] };
+		},
+		listItemEvents: async (params: {
+			migrationId: string;
+			migrationRunId?: string;
+		}): Promise<{ list: TinybirdMigrationItemEvent[] }> => {
+			const data = await this.post(`/migrations.item_events.list`, params);
+			return data as { list: TinybirdMigrationItemEvent[] };
 		},
 	};
 

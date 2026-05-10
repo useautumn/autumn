@@ -36,6 +36,7 @@ export const runScopeIteration = async ({
 			await withMigrationItemTracking({
 				ctx,
 				migration,
+				migrationRunId,
 				item,
 				dryRun,
 				run: () =>
@@ -43,7 +44,6 @@ export const runScopeIteration = async ({
 						ctx,
 						customerId: item.internal_id,
 						migration,
-						migrationRunId,
 						preview: dryRun,
 					}),
 			});
