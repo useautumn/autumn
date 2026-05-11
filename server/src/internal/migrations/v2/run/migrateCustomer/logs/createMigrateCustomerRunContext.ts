@@ -1,10 +1,13 @@
-import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	addAppContextToLogs,
 	addExtrasToLogs,
 } from "@/utils/logging/addContextToLogs.js";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
+import {
+	isPersistedMigration,
+	type MigrationRuntime,
+} from "../../../types/migrationDefinition.js";
 
 export const createMigrateCustomerRunContext = ({
 	ctx,
@@ -14,7 +17,7 @@ export const createMigrateCustomerRunContext = ({
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-	migration: Migration;
+	migration: MigrationRuntime;
 	preview: boolean;
 }): AutumnContext => {
 	const migrationCtx: AutumnContext = {
@@ -51,7 +54,9 @@ export const createMigrateCustomerRunContext = ({
 		extras: {
 			migrationCustomer: {
 				migrationId: migration.id,
-				migrationInternalId: migration.internal_id,
+				migrationInternalId: isPersistedMigration(migration)
+					? migration.internal_id
+					: undefined,
 				preview,
 			},
 		},
