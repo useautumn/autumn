@@ -62,6 +62,7 @@ export const useMigrationsQuery = () => {
 			}>("/migrations.run", body);
 			return data;
 		},
+		onSuccess: invalidate,
 	});
 
 	return {
