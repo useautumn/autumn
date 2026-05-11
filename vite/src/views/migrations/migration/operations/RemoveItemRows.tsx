@@ -1,54 +1,33 @@
-import { BILLING_METHOD_OPTIONS, INTERVAL_OPTIONS } from "../shared/constants";
-import { OperationRow } from "./OperationRow";
+import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { cn } from "@/lib/utils";
+import { RemoveButton } from "../shared/RemoveButton";
 
 export function RemoveItemRows({
 	item,
-	featureSuggestions,
 	onChange,
 	onRemove,
 }: {
 	item: Record<string, unknown>;
-	featureSuggestions: { value: string; label: string }[];
 	onChange: (item: Record<string, unknown>) => void;
 	onRemove: () => void;
 }) {
+	const { features } = useFeaturesQuery();
+	const featureId = (item.feature_id as string) || null;
+
 	return (
-		<>
-			<OperationRow
-				connector="Remove"
-				fieldLabel="Feature"
-				value={String(item.feature_id ?? "")}
-				config={{
-					label: "Feature",
-					valueType: "select",
-					suggestions: featureSuggestions,
-					placeholder: "Select feature...",
-				}}
-				onChange={(v) => onChange({ ...item, feature_id: v || undefined })}
-				onRemove={onRemove}
+		<div className="flex items-center gap-2.5 py-1 group/row">
+			<span className="text-xs text-t4 w-12 shrink-0 select-none">Remove</span>
+			<FeatureSearchDropdown
+				features={features}
+				value={featureId}
+				onSelect={(v) => onChange({ ...item, feature_id: v })}
+				placeholder="Select feature to remove..."
+				triggerClassName={cn(
+					featureId && "!border-destructive/50 hover:!border-destructive/60",
+				)}
 			/>
-			<OperationRow
-				connector=""
-				fieldLabel="Method"
-				value={String(item.billing_method ?? "")}
-				config={{
-					label: "Method",
-					valueType: "enum",
-					enumOptions: BILLING_METHOD_OPTIONS,
-				}}
-				onChange={(v) => onChange({ ...item, billing_method: v || undefined })}
-			/>
-			<OperationRow
-				connector=""
-				fieldLabel="Interval"
-				value={String(item.interval ?? "")}
-				config={{
-					label: "Interval",
-					valueType: "enum",
-					enumOptions: INTERVAL_OPTIONS,
-				}}
-				onChange={(v) => onChange({ ...item, interval: v || undefined })}
-			/>
-		</>
+			<RemoveButton onClick={onRemove} />
+		</div>
 	);
 }

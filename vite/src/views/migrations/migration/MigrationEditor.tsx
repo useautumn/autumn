@@ -1,25 +1,37 @@
-import type { Migration } from "@autumn/shared";
+import type { Migration, MigrationFilter, Operations } from "@autumn/shared";
 import {
-	ArrowsClockwiseIcon,
+	ArrowRightIcon,
+	CaretRightIcon,
 	CodeIcon,
+	EyeIcon,
 	PlayIcon,
+	SlidersIcon,
 	WarningIcon,
 } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
-import { format } from "date-fns";
 import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
-import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { Separator } from "@/components/v2/separator";
+import { useTheme } from "@/contexts/ThemeProvider";
+import { AUTUMN_DARK, AUTUMN_LIGHT } from "@/lib/monacoThemes";
+import { cn } from "@/lib/utils";
+import { CustomerPreview, useCustomerCount } from "./filters/CustomerPreview";
 import { FilterForm } from "./filters/FilterForm";
-import { MigrationRawEditor } from "./MigrationRawEditor";
+import { RawField } from "./MigrationRawEditor";
 import { OperationsForm } from "./operations/OperationsForm";
+import { MigrationRunsView } from "./runs/MigrationRunsView";
 import { useMigrationEditorForm } from "./useMigrationEditorForm";
 
-type EditorMode = "form" | "raw";
+type EditorMode = "form" | "json";
+type Step = 1 | 2 | 3;
 
 const CONFIRM_TIMEOUT_MS = 3000;
+
+const STEPS = [
+	{ step: 1 as const, label: "Filter" },
+	{ step: 2 as const, label: "Operations" },
+	{ step: 3 as const, label: "Results" },
+];
 
 function useConfirmAction(action: () => void) {
 	const [isConfirming, setIsConfirming] = useState(false);
@@ -28,7 +40,10 @@ function useConfirmAction(action: () => void) {
 	const trigger = useCallback(() => {
 		if (!isConfirming) {
 			setIsConfirming(true);
-			timerRef.current = setTimeout(() => setIsConfirming(false), CONFIRM_TIMEOUT_MS);
+			timerRef.current = setTimeout(
+				() => setIsConfirming(false),
+				CONFIRM_TIMEOUT_MS,
+			);
 			return;
 		}
 		clearTimeout(timerRef.current);
@@ -46,67 +61,36 @@ function useConfirmAction(action: () => void) {
 
 export function MigrationEditor({
 	migration,
-	onSwitchToRuns,
 }: {
 	migration: Migration;
-	onSwitchToRuns?: () => void;
 }) {
+	const [step, setStep] = useState<Step>(1);
+
 	const { form, handleDryRun, handleRealRun, isUpdating, isRunning } =
-		useMigrationEditorForm({ migration, onRunTriggered: onSwitchToRuns });
+		useMigrationEditorForm({
+			migration,
+			onRunTriggered: () => setStep(3),
+		});
 
 	const [mode, setMode] = useState<EditorMode>("form");
-	const confirm = useConfirmAction(handleRealRun);
 	const canSubmit = useStore(form.store, (s) => s.canSubmit);
+	const filter = useStore(form.store, (s) => s.values.filter);
+	const customerCount = useCustomerCount(filter.customer ?? {});
+	const hasCustomers = customerCount !== null && customerCount > 0;
+	const confirm = useConfirmAction(handleRealRun);
+
+	const toggleMode = useCallback(
+		() => setMode((m) => (m === "form" ? "json" : "form")),
+		[],
+	);
 
 	return (
 		<div className="flex flex-col gap-6">
 			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-3">
-					<ArrowsClockwiseIcon
-						size={20}
-						weight="fill"
-						className="text-subtle"
-					/>
-					<div className="flex flex-col">
-						<h1 className="text-md font-medium text-t1">{migration.id}</h1>
-						<span className="text-xs text-t3">
-							Created {format(new Date(migration.created_at), "PP")}
-						</span>
-					</div>
-				</div>
-				<div className="flex items-center gap-2">
-					<GroupedTabButton
-						value={mode}
-						onValueChange={(v) => setMode(v as EditorMode)}
-						options={[
-							{ value: "form", label: "Form" },
-							{ value: "raw", label: "JSON", icon: <CodeIcon size={14} /> },
-						]}
-					/>
-					<Button
-						variant="secondary"
-						size="default"
-						onClick={handleDryRun}
-						isLoading={isRunning}
-					>
-						<PlayIcon size={14} weight="fill" />
-						Dry Run
-					</Button>
-					<Button
-						variant={confirm.isConfirming ? "destructive" : "primary"}
-						size="default"
-						onClick={confirm.trigger}
-						onBlur={confirm.cancel}
-						isLoading={isRunning}
-					>
-						{confirm.isConfirming ? (
-							<WarningIcon size={14} weight="fill" />
-						) : (
-							<PlayIcon size={14} weight="fill" />
-						)}
-						{confirm.isConfirming ? "Confirm Run" : "Run"}
-					</Button>
+				<StepIndicator step={step} onStepChange={setStep} />
+				<div className={cn("flex items-center gap-2", step === 3 && "invisible")}>
 					<ShortcutButton
+						variant="secondary"
 						size="default"
 						onClick={() => form.handleSubmit()}
 						metaShortcut="s"
@@ -115,71 +99,227 @@ export function MigrationEditor({
 					>
 						Save
 					</ShortcutButton>
+					{step === 1 && (
+						<Button
+							variant="primary"
+							size="default"
+							onClick={() => setStep(2)}
+							disabled={!hasCustomers}
+						>
+							{hasCustomers ? `Next (${customerCount})` : "Next"}
+							<ArrowRightIcon size={14} />
+						</Button>
+					)}
+					{step === 2 && (
+						<>
+							<Button
+								variant="secondary"
+								size="default"
+								onClick={handleDryRun}
+								isLoading={isRunning}
+							>
+								<EyeIcon size={14} />
+								Dry Run
+							</Button>
+							<Button
+								variant={confirm.isConfirming ? "destructive" : "primary"}
+								size="default"
+								onClick={confirm.trigger}
+								onBlur={confirm.cancel}
+								isLoading={isRunning}
+							>
+								{confirm.isConfirming ? (
+									<WarningIcon size={14} weight="fill" />
+								) : (
+									<PlayIcon size={14} weight="fill" />
+								)}
+								{confirm.isConfirming ? "Confirm Run" : "Run"}
+							</Button>
+						</>
+					)}
 				</div>
 			</div>
 
-			{mode === "form" ? (
-				<MigrationFormMode form={form} />
-			) : (
-				<MigrationRawEditor form={form} />
+			{step === 1 && (
+				<FilterStep
+					form={form}
+					mode={mode}
+					onToggleMode={toggleMode}
+				/>
+			)}
+			{step === 2 && (
+				<OperationsStep
+					form={form}
+					mode={mode}
+					onToggleMode={toggleMode}
+				/>
+			)}
+			{step === 3 && (
+				<MigrationRunsView migrationId={migration.id} />
 			)}
 		</div>
 	);
 }
 
-function MigrationFormMode({
-	form,
+function StepIndicator({
+	step,
+	onStepChange,
 }: {
-	form: MigrationEditorFormInstance["form"];
+	step: Step;
+	onStepChange: (step: Step) => void;
 }) {
+	return (
+		<div className="flex items-center gap-2">
+			{STEPS.map((s, i) => (
+				<div key={s.step} className="flex items-center gap-2">
+					{i > 0 && <CaretRightIcon size={12} className="text-t4" />}
+					<button
+						type="button"
+						onClick={() => onStepChange(s.step)}
+						className={cn(
+							"flex items-center gap-2 text-sm cursor-pointer",
+							step === s.step
+								? "text-t1 font-medium"
+								: "text-t3 hover:text-t2",
+						)}
+					>
+						<span
+							className={cn(
+								"w-5 h-5 rounded-md flex items-center justify-center text-xs font-semibold",
+								step === s.step
+									? "bg-violet-600 text-white"
+									: "bg-muted text-t3",
+							)}
+						>
+							{s.step}
+						</span>
+						{s.label}
+					</button>
+				</div>
+			))}
+		</div>
+	);
+}
+
+function FilterStep({
+	form,
+	mode,
+	onToggleMode,
+}: {
+	form: FormInstance;
+	mode: EditorMode;
+	onToggleMode: () => void;
+}) {
+	const { isDark } = useTheme();
+	const theme = isDark ? AUTUMN_DARK : AUTUMN_LIGHT;
 	const filter = useStore(form.store, (s) => s.values.filter);
-	const operations = useStore(form.store, (s) => s.values.operations);
 
 	return (
 		<div className="flex flex-col gap-4">
 			<FormSection
 				title="Filter"
 				description="Select which customers this migration applies to."
+				mode={mode}
+				onToggleMode={onToggleMode}
 			>
-				<FilterForm
-					value={filter}
-					onChange={(updated) => form.setFieldValue("filter", updated)}
-				/>
+				{mode === "form" ? (
+					<FilterForm
+						value={filter}
+						onChange={(v) => form.setFieldValue("filter", v)}
+					/>
+				) : (
+					<RawField
+						value={filter}
+						onChange={(v) =>
+							form.setFieldValue("filter", v as MigrationFilter)
+						}
+						height="240px"
+						theme={theme}
+					/>
+				)}
 			</FormSection>
 
-			<Separator />
+			<CustomerPreview filter={filter.customer ?? {}} />
+		</div>
+	);
+}
 
-			<FormSection
-				title="Operations"
-				description="Define the mutations applied to each matched customer."
-			>
+function OperationsStep({
+	form,
+	mode,
+	onToggleMode,
+}: {
+	form: FormInstance;
+	mode: EditorMode;
+	onToggleMode: () => void;
+}) {
+	const { isDark } = useTheme();
+	const theme = isDark ? AUTUMN_DARK : AUTUMN_LIGHT;
+	const operations = useStore(form.store, (s) => s.values.operations);
+
+	return (
+		<FormSection
+			title="Operations"
+			description="Define the mutations applied to each matched customer."
+			mode={mode}
+			onToggleMode={onToggleMode}
+		>
+			{mode === "form" ? (
 				<OperationsForm
 					value={operations}
-					onChange={(updated) => form.setFieldValue("operations", updated)}
+					onChange={(v) => form.setFieldValue("operations", v)}
 				/>
-			</FormSection>
-		</div>
+			) : (
+				<RawField
+					value={operations}
+					onChange={(v) =>
+						form.setFieldValue("operations", v as Operations)
+					}
+					height="360px"
+					theme={theme}
+				/>
+			)}
+		</FormSection>
 	);
 }
 
 function FormSection({
 	title,
 	description,
+	mode,
+	onToggleMode,
 	children,
 }: {
 	title: string;
 	description: string;
+	mode: EditorMode;
+	onToggleMode: () => void;
 	children: React.ReactNode;
 }) {
 	return (
 		<div className="flex flex-col gap-3">
-			<div>
-				<h2 className="text-sm font-medium text-t1">{title}</h2>
-				<p className="text-xs text-t3">{description}</p>
+			<div className="flex items-center justify-between">
+				<div>
+					<h2 className="text-sm font-medium text-t1">{title}</h2>
+					<p className="text-xs text-t3">{description}</p>
+				</div>
+				<Button variant="secondary" size="sm" onClick={onToggleMode}>
+					{mode === "form" ? (
+						<>
+							<CodeIcon size={14} />
+							Edit in JSON
+						</>
+					) : (
+						<>
+							<SlidersIcon size={14} />
+							Edit in Builder
+						</>
+					)}
+				</Button>
 			</div>
 			{children}
 		</div>
 	);
 }
 
-type MigrationEditorFormInstance = ReturnType<typeof useMigrationEditorForm>;
+type FormInstance = ReturnType<typeof useMigrationEditorForm>["form"];

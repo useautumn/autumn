@@ -5,6 +5,19 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+interface PrepareModuleResult {
+	key: string;
+	kind: string;
+	result: unknown;
+}
+
+interface PrepareResponse {
+	migration_id: string;
+	dry_run: boolean;
+	modules: PrepareModuleResult[];
+	warnings: string[];
+}
+
 export const useMigrationsQuery = () => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
@@ -53,6 +66,28 @@ export const useMigrationsQuery = () => {
 		onSuccess: invalidate,
 	});
 
+	const deleteMutation = useMutation({
+		mutationFn: async (body: { id: string }) => {
+			const { data } = await axiosInstance.post<Migration>(
+				"/migrations.delete",
+				body,
+			);
+			return data;
+		},
+		onSuccess: invalidate,
+	});
+
+	const prepareMutation = useMutation({
+		mutationFn: async (body: { id: string; dry_run: boolean }) => {
+			const { data } = await axiosInstance.post<PrepareResponse>(
+				"/migrations.prepare",
+				body,
+			);
+			return data;
+		},
+		onSuccess: invalidate,
+	});
+
 	const runMutation = useMutation({
 		mutationFn: async (body: { id: string; dry_run?: boolean }) => {
 			const { data } = await axiosInstance.post<{
@@ -74,6 +109,10 @@ export const useMigrationsQuery = () => {
 		isCreating: createMutation.isPending,
 		updateMigration: updateMutation.mutateAsync,
 		isUpdating: updateMutation.isPending,
+		deleteMigration: deleteMutation.mutateAsync,
+		isDeleting: deleteMutation.isPending,
+		prepareMigration: prepareMutation.mutateAsync,
+		isPreparing: prepareMutation.isPending,
 		runMigration: runMutation.mutateAsync,
 		isRunning: runMutation.isPending,
 	};

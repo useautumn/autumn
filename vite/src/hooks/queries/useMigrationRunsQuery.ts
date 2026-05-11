@@ -85,9 +85,7 @@ export const useMigrationRunsQuery = ({
 	return {
 		runs: (runsQuery.data?.list ?? []) as MigrationRun[],
 		isLoadingRuns: runsQuery.isLoading,
-		refetchRuns: runsQuery.refetch,
 		itemEvents: (eventsQuery.data?.list ?? []) as MigrationItemEvent[],
 		isLoadingEvents: eventsQuery.isLoading,
-		refetchEvents: eventsQuery.refetch,
 	};
 };

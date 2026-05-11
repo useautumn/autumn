@@ -981,6 +981,7 @@ type InitScenarioImplementationResult = {
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	testClockId: string | undefined;
+	testClockIds: Record<string, string>;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"] | null;
 	ctx: TestContext;
 	entities: GeneratedEntity[];

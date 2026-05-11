@@ -17,6 +17,8 @@ import {
 import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 
+const MAX_VISIBLE_CHIPS = 3;
+
 export type ValuePickerOption = {
 	value: string;
 	label: string;
@@ -48,34 +50,46 @@ export function ValuePicker({
 					size="sm"
 					className={cn(
 						"!gap-1",
-						selectedValues.length > 0 && "!h-auto min-h-6 flex-wrap",
+						selectedValues.length > 0 &&
+							"!h-auto min-h-6 flex-wrap max-h-20 overflow-y-auto",
 					)}
 				>
 					{selectedValues.length === 0 ? (
 						<span className="text-t3">{placeholder}</span>
 					) : (
-						selectedValues.map((val) => {
-							const opt = getOption(val);
-							return (
-								<span
-									key={val}
-									className="flex items-center gap-1 bg-muted hover:bg-muted/70 text-t1 rounded px-2 py-0.5 text-xs transition-colors"
-								>
-									{opt?.icon && <span className="shrink-0">{opt.icon}</span>}
-									<span className="truncate max-w-24">{opt?.label ?? val}</span>
+						<>
+							{selectedValues.slice(0, MAX_VISIBLE_CHIPS).map((val) => {
+								const opt = getOption(val);
+								return (
 									<span
-										className="cursor-pointer text-t3 hover:text-destructive ml-0.5"
-										onClick={(e) => {
-											e.stopPropagation();
-											onRemove(val);
-										}}
-										onPointerDown={(e) => e.stopPropagation()}
+										key={val}
+										className="flex items-center gap-1 bg-muted hover:bg-muted/70 text-t1 rounded px-2 py-0.5 text-xs transition-colors"
 									>
-										<XIcon size={10} />
+										{opt?.icon && (
+											<span className="shrink-0">{opt.icon}</span>
+										)}
+										<span className="truncate max-w-24">
+											{opt?.label ?? val}
+										</span>
+										<span
+											className="cursor-pointer text-t3 hover:text-destructive ml-0.5"
+											onClick={(e) => {
+												e.stopPropagation();
+												onRemove(val);
+											}}
+											onPointerDown={(e) => e.stopPropagation()}
+										>
+											<XIcon size={10} />
+										</span>
 									</span>
+								);
+							})}
+							{selectedValues.length > MAX_VISIBLE_CHIPS && (
+								<span className="text-xs text-t3 px-1">
+									+{selectedValues.length - MAX_VISIBLE_CHIPS}
 								</span>
-							);
-						})
+							)}
+						</>
 					)}
 				</Button>
 			</PopoverTrigger>

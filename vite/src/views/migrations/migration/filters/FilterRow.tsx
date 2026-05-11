@@ -109,7 +109,7 @@ function ConnectorBadge({
 }) {
 	if (!onClick) {
 		return (
-			<span className="text-xs text-t3 w-12 shrink-0 select-none">{label}</span>
+			<span className="text-xs text-t4 w-12 shrink-0 select-none">{label}</span>
 		);
 	}
 
@@ -118,7 +118,7 @@ function ConnectorBadge({
 			variant="skeleton"
 			size="sm"
 			onClick={onClick}
-			className="w-12 shrink-0 !gap-1 !justify-start"
+			className="w-12 shrink-0 !gap-1 !justify-start text-t4 hover:text-t2"
 			title={`Click to change to ${label === "And" ? "Or" : "And"}`}
 		>
 			{label}
@@ -150,6 +150,13 @@ function FilterValueControl({
 	}
 
 	if (suggestions && suggestions.length > 0) {
+		const inferOperator = (values: string[]): FilterOperator => {
+			if (values.length > 1 && rule.operator === "is") return "in";
+			if (values.length > 1 && rule.operator === "is_not") return "not_in";
+			if (values.length <= 1 && rule.operator === "in") return "is";
+			if (values.length <= 1 && rule.operator === "not_in") return "is_not";
+			return rule.operator;
+		};
 		return (
 			<ValuePicker
 				suggestions={suggestions}
@@ -159,14 +166,12 @@ function FilterValueControl({
 					const next = isSelected
 						? rule.values.filter((v) => v !== toggled)
 						: [...rule.values, toggled];
-					onChange({ ...rule, values: next });
+					onChange({ ...rule, operator: inferOperator(next), values: next });
 				}}
-				onRemove={(removed) =>
-					onChange({
-						...rule,
-						values: rule.values.filter((v) => v !== removed),
-					})
-				}
+				onRemove={(removed) => {
+					const next = rule.values.filter((v) => v !== removed);
+					onChange({ ...rule, operator: inferOperator(next), values: next });
+				}}
 			/>
 		);
 	}

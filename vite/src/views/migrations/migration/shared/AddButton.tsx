@@ -13,10 +13,13 @@ export function AddButton({
 }) {
 	return (
 		<Button
-			variant={fullWidth ? "dotted" : "skeleton"}
+			variant="skeleton"
 			size="sm"
 			onClick={onClick}
-			className={cn(fullWidth && "w-full")}
+			className={cn(
+				"text-t4 hover:text-t2",
+				fullWidth && "w-full",
+			)}
 		>
 			<PlusIcon size={10} />
 			{label}

@@ -38,7 +38,7 @@ export const buildCustomerSelect = ({
 		: sql``;
 	const limitClause = limit !== undefined ? sql`LIMIT ${limit}` : sql``;
 	return sql`
-		SELECT c.internal_id, c.id
+		SELECT c.internal_id, c.id, c.name, c.email
 		FROM customers c
 		WHERE (${where}) ${cursor}
 		ORDER BY c.internal_id DESC

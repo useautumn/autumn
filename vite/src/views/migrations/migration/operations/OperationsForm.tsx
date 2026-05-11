@@ -39,7 +39,6 @@ export function OperationsForm({
 			<AddButton
 				label="Add Operation"
 				onClick={() => updateOperations([...operations, DEFAULT_OPERATION])}
-				fullWidth
 			/>
 		</div>
 	);
