@@ -45,6 +45,7 @@ export async function updateSubscription({
 		params,
 		contextOverride,
 	});
+	billingContext.dryRunStripe = preview;
 
 	logUpdateSubscriptionContext({ ctx, billingContext });
 
@@ -96,12 +97,12 @@ export async function updateSubscription({
 	) {
 		const autumnCheckoutResult =
 			await createAutumnCheckout<UpdateSubscriptionBillingContext>({
-			ctx,
-			action: CheckoutAction.UpdateSubscription,
-			params,
-			billingContext,
-			billingPlan,
-		});
+				ctx,
+				action: CheckoutAction.UpdateSubscription,
+				params,
+				billingContext,
+				billingPlan,
+			});
 
 		return autumnCheckoutResult;
 	}

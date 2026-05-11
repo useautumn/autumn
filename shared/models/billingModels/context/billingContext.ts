@@ -85,6 +85,7 @@ export interface BillingContext {
 	userMetadata?: Record<string, string>;
 
 	skipBillingChanges?: boolean;
+	dryRunStripe?: boolean;
 
 	checkoutMode?: CheckoutMode;
 
