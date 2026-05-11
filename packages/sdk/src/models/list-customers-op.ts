@@ -26,21 +26,23 @@ export type ListCustomersPlan = {
 /**
  * Filter by customer product status. Defaults to active and scheduled
  */
-export const SubscriptionStatus = {
+export const ListCustomersSubscriptionStatus = {
   Active: "active",
   Scheduled: "scheduled",
 } as const;
 /**
  * Filter by customer product status. Defaults to active and scheduled
  */
-export type SubscriptionStatus = ClosedEnum<typeof SubscriptionStatus>;
+export type ListCustomersSubscriptionStatus = ClosedEnum<
+  typeof ListCustomersSubscriptionStatus
+>;
 
-export const Processor = {
+export const ListCustomersProcessor = {
   Stripe: "stripe",
   Revenuecat: "revenuecat",
   Vercel: "vercel",
 } as const;
-export type Processor = ClosedEnum<typeof Processor>;
+export type ListCustomersProcessor = ClosedEnum<typeof ListCustomersProcessor>;
 
 export type ListCustomersParams = {
   /**
@@ -58,7 +60,7 @@ export type ListCustomersParams = {
   /**
    * Filter by customer product status. Defaults to active and scheduled
    */
-  subscriptionStatus?: SubscriptionStatus | undefined;
+  subscriptionStatus?: ListCustomersSubscriptionStatus | undefined;
   /**
    * Search customers by id, name, or email
    */
@@ -66,7 +68,7 @@ export type ListCustomersParams = {
   /**
    * Filter by customer processor type (stripe, revenuecat, vercel)
    */
-  processors?: Array<Processor> | undefined;
+  processors?: Array<ListCustomersProcessor> | undefined;
 };
 
 /**
@@ -639,14 +641,14 @@ export function listCustomersPlanToJSON(
 }
 
 /** @internal */
-export const SubscriptionStatus$outboundSchema: z.ZodMiniEnum<
-  typeof SubscriptionStatus
-> = z.enum(SubscriptionStatus);
+export const ListCustomersSubscriptionStatus$outboundSchema: z.ZodMiniEnum<
+  typeof ListCustomersSubscriptionStatus
+> = z.enum(ListCustomersSubscriptionStatus);
 
 /** @internal */
-export const Processor$outboundSchema: z.ZodMiniEnum<typeof Processor> = z.enum(
-  Processor,
-);
+export const ListCustomersProcessor$outboundSchema: z.ZodMiniEnum<
+  typeof ListCustomersProcessor
+> = z.enum(ListCustomersProcessor);
 
 /** @internal */
 export type ListCustomersParams$Outbound = {
@@ -667,9 +669,11 @@ export const ListCustomersParams$outboundSchema: z.ZodMiniType<
     offset: z._default(z.int(), 0),
     limit: z._default(z.int(), 10),
     plans: z.optional(z.array(z.lazy(() => ListCustomersPlan$outboundSchema))),
-    subscriptionStatus: z.optional(SubscriptionStatus$outboundSchema),
+    subscriptionStatus: z.optional(
+      ListCustomersSubscriptionStatus$outboundSchema,
+    ),
     search: z.optional(z.string()),
-    processors: z.optional(z.array(Processor$outboundSchema)),
+    processors: z.optional(z.array(ListCustomersProcessor$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {

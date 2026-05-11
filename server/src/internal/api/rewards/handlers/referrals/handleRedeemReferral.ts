@@ -10,11 +10,13 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { CusService } from "@/internal/customers/CusService.js";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
-import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
-import { triggerFreeProduct } from "@/internal/rewards/referralUtils/triggerFreeProduct.js";
-import { triggerRedemption } from "@/internal/rewards/referralUtils.js";
+import { triggerDiscount } from "@/internal/rewards/actions/triggerDiscount.js";
+import { triggerFreeProduct } from "@/internal/rewards/actions/triggerFreeProduct.js";
+import {
+	redemptionRepo,
+	referralCodeRepo,
+	rewardRepo,
+} from "@/internal/rewards/repos/index.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 import { generateId, notNullish } from "@/utils/genUtils.js";
 import { createRoute } from "../../../../../honoMiddlewares/routeHandler";
@@ -35,7 +37,7 @@ export const handleRedeemReferral = createRoute({
 				env,
 				idOrInternalId: customerId,
 			}),
-			RewardProgramService.getReferralCode({
+			referralCodeRepo.get({
 				db,
 				orgId: org.id,
 				env,
@@ -47,7 +49,7 @@ export const handleRedeemReferral = createRoute({
 		if (!customer) throw new CustomerNotFoundError({ customerId });
 
 		// 2. Check that code has not reached max redemptions
-		const redemptionCount = await RewardProgramService.getCodeRedemptionCount({
+		const redemptionCount = await referralCodeRepo.getRedemptionCount({
 			db,
 			referralCodeId: referralCode.id,
 		});
@@ -64,7 +66,7 @@ export const handleRedeemReferral = createRoute({
 		}
 
 		// 3. Check that customer has not already redeemed a code in this referral program
-		const existingRedemptions = await RewardRedemptionService.getByCustomer({
+		const existingRedemptions = await redemptionRepo.getByCustomer({
 			db,
 			internalCustomerId: customer.internal_id,
 			internalRewardProgramId: referralCode.internal_reward_program_id,
@@ -108,6 +110,8 @@ export const handleRedeemReferral = createRoute({
 			referral_code_id: referralCode.id,
 			internal_customer_id: customer.internal_id, // redeemed by customer
 			internal_reward_program_id: referralCode.internal_reward_program_id,
+			reward_internal_id: null,
+			promo_code: null,
 			created_at: Date.now(),
 			triggered:
 				referralCode.reward_program.when ===
@@ -117,7 +121,7 @@ export const handleRedeemReferral = createRoute({
 			redeemer_applied: false,
 		};
 
-		redemption = await RewardRedemptionService.insert({
+		redemption = await redemptionRepo.insert({
 			db,
 			rewardRedemption: redemption,
 		});
@@ -128,7 +132,7 @@ export const handleRedeemReferral = createRoute({
 			referralCode.reward_program.when === RewardTriggerEvent.CustomerCreation;
 
 		if (redeemRewardNow) {
-			const reward = await RewardService.get({
+			const reward = await rewardRepo.get({
 				db,
 				orgId: org.id,
 				env,
@@ -153,7 +157,7 @@ export const handleRedeemReferral = createRoute({
 					redemption,
 				});
 			} else {
-				await triggerRedemption({
+				await triggerDiscount({
 					ctx,
 					referralCode,
 					reward,

@@ -1,52 +1,38 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { expect, test } from "bun:test";
 import {
-	type AppEnv,
 	CouponDurationType,
 	type CreateReward,
 	LegacyVersion,
-	type Organization,
 	RewardType,
 } from "@autumn/shared";
-import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAttachCorrect } from "@tests/utils/expectUtils/expectAttach.js";
-import { createProducts, createReward } from "@tests/utils/productUtils.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
-import {
-	addPrefixToProducts,
-	getBasePrice,
-} from "@tests/utils/testProductUtils/testProductUtils.js";
+import { expectProductAttached } from "@tests/utils/expectUtils/expectProductAttached.js";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { createReward } from "@tests/utils/productUtils.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import { getBasePrice } from "@tests/utils/testProductUtils/testProductUtils.js";
 import chalk from "chalk";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import {
-	constructArrearItem,
-	constructFeatureItem,
-} from "@/utils/scriptUtils/constructItem.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { expectProductAttached } from "../../utils/expectUtils/expectProductAttached.js";
 
-const pro = constructProduct({
-	type: "pro",
-	items: [constructArrearItem({ featureId: TestFeature.Words })],
+const testCase = "coupon3";
+
+const pro = products.pro({
+	id: "pro",
+	items: [items.consumableWords()],
 });
 
-const oneOff = constructProduct({
-	type: "one_off",
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Words,
-			includedUsage: 500,
-		}),
-	],
+const oneOff = products.oneOff({
+	id: "one-off",
+	items: [items.monthlyWords({ includedUsage: 500 })],
 });
 
-// Create reward input
-const rewardId = "attach_coupon";
-const promoCode = "attach_coupon_code";
+// Reward: FixedDiscount $5, OneOff duration
+const rewardId = "attachcoupon";
+const promoCode = "attachcouponcode";
 const reward: CreateReward = {
 	id: rewardId,
-	name: "attach_coupon",
+	name: "attachcoupon",
 	promo_codes: [{ code: promoCode }],
 	type: RewardType.FixedDiscount,
 	discount_config: {
@@ -59,109 +45,92 @@ const reward: CreateReward = {
 	},
 };
 
-const testCase = "coupon3";
-describe(chalk.yellow(`${testCase} - Testing attach coupon`), () => {
+test(chalk.yellow(`${testCase} - Testing attach coupon`), async () => {
 	const customerId = testCase;
 
-	const autumn: AutumnInt = new AutumnInt({ version: LegacyVersion.v1_4 });
-	let org: Organization;
-	let env: AppEnv;
-	let db: DrizzleCli;
+	// Init scenario: products + customer with PM
+	const { ctx: testCtx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro, oneOff] }),
+		],
+		actions: [],
+	});
+
+	// Create autumn client with LegacyVersion.v1_4 (matches original test)
+	const autumn = new AutumnInt({
+		version: LegacyVersion.v1_4,
+		secretKey: testCtx.orgSecretKey,
+	});
+
+	// Create reward manually (s.reward calls createReward internally but we need to
+	// match the exact original behavior with the test-case-prefixed product ID)
+	await createReward({
+		orgId: testCtx.org.id,
+		env: testCtx.env,
+		db: testCtx.db,
+		autumn,
+		reward,
+		productId: pro.id,
+	});
 
 	const couponAmount = reward.discount_config!.discount_value;
 
-	beforeAll(async () => {
-		org = ctx.org;
-		env = ctx.env;
-		db = ctx.db;
-
-		await initCustomerV3({
-			ctx,
-			customerId,
-			attachPm: "success",
-		});
-
-		addPrefixToProducts({
-			products: [pro, oneOff],
-			prefix: testCase,
-		});
-
-		await createProducts({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			db: ctx.db,
-			autumn,
-			products: [pro, oneOff],
-		});
-
-		await createReward({
-			orgId: org.id,
-			env,
-			db,
-			autumn,
-			reward,
-			productId: pro.id,
-		});
+	// Attach pro with reward ID
+	await autumn.attach({
+		customer_id: customerId,
+		product_id: pro.id,
+		reward: rewardId,
 	});
 
-	// CYCLE 0
-	test("should attach pro with reward ID", async () => {
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: pro.id,
-			reward: rewardId,
-		});
-
-		const customer = await autumn.customers.get(customerId);
-		expectAttachCorrect({
-			customer,
-			product: pro,
-		});
-
-		const invoice = customer.invoices![0];
-		const basePrice = getBasePrice({ product: pro });
-		expect(invoice.total).toBe(basePrice - couponAmount);
+	const customer = await autumn.customers.get(customerId);
+	expectAttachCorrect({
+		customer,
+		product: pro,
 	});
 
-	test("should attach one off with reward ID", async () => {
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: oneOff.id,
-			reward: rewardId,
-		});
+	const invoice = customer.invoices![0];
+	const basePrice = getBasePrice({ product: pro });
+	expect(invoice.total).toBe(basePrice - couponAmount);
 
-		const customer = await autumn.customers.get(customerId);
-		expectProductAttached({
-			customer,
-			product: oneOff,
-		});
-
-		const invoice = customer.invoices![0];
-		const basePrice = getBasePrice({ product: oneOff });
-		expect(invoice.total).toBe(basePrice - couponAmount);
-		expect(invoice.product_ids).toContain(oneOff.id);
+	// Attach one-off with reward ID
+	await autumn.attach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		reward: rewardId,
 	});
 
-	test("should attach one off with promo code", async () => {
-		await autumn.attach({
-			customer_id: customerId,
-			product_id: oneOff.id,
-			reward: promoCode,
-		});
-
-		const customer = await autumn.customers.get(customerId);
-		expectProductAttached({
-			customer,
-			product: oneOff,
-			quantity: 2,
-		});
-
-		expect(customer.invoices!.length).toBe(3);
-		const basePrice = getBasePrice({ product: oneOff });
-		for (let i = 0; i < 2; i++) {
-			const invoice = customer.invoices![i];
-			expect(invoice.total).toBe(basePrice - couponAmount);
-			expect(invoice.product_ids).toContain(oneOff.id);
-		}
+	const customerAfterOneOff = await autumn.customers.get(customerId);
+	expectProductAttached({
+		customer: customerAfterOneOff,
+		product: oneOff,
 	});
+
+	const oneOffInvoice = customerAfterOneOff.invoices![0];
+	const oneOffBasePrice = getBasePrice({ product: oneOff });
+	expect(oneOffInvoice.total).toBe(oneOffBasePrice - couponAmount);
+	expect(oneOffInvoice.product_ids).toContain(oneOff.id);
+
+	// Attach one-off again with promo code
+	await autumn.attach({
+		customer_id: customerId,
+		product_id: oneOff.id,
+		reward: promoCode,
+	});
+
+	const customerAfterPromo = await autumn.customers.get(customerId);
+	expectProductAttached({
+		customer: customerAfterPromo,
+		product: oneOff,
+		quantity: 2,
+	});
+
+	expect(customerAfterPromo.invoices!.length).toBe(3);
+	const promoBasePrice = getBasePrice({ product: oneOff });
+	for (let i = 0; i < 2; i++) {
+		const inv = customerAfterPromo.invoices![i];
+		expect(inv.total).toBe(promoBasePrice - couponAmount);
+		expect(inv.product_ids).toContain(oneOff.id);
+	}
 });

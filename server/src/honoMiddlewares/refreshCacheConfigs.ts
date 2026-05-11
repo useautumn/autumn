@@ -116,6 +116,11 @@ export const REFRESH_CACHE_ROUTE_CONFIGS: RefreshCacheRouteConfig[] = [
 
 	route({
 		method: "POST",
+		url: "/rewards.redeem",
+	}),
+
+	route({
+		method: "POST",
 		url: "/balances.delete",
 	}),
 

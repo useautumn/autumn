@@ -1,12 +1,10 @@
 /* eslint-disable react-refresh/only-export-components */
-import { Slot } from "@radix-ui/react-slot";
+import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import { cn } from "@/lib/utils";
 
-// Remove ring styles
-// focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive
 const buttonVariants = cva(
 	`inline-flex items-center justify-center gap-2 whitespace-nowrap text-sm disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none cursor-pointer
   rounded-lg group/btn transition-colors  w-fit transform-gpu
@@ -14,7 +12,6 @@ const buttonVariants = cva(
 	{
 		variants: {
 			variant: {
-				// Custom
 				primary: `
 				!text-primary-foreground
 				bg-primary
@@ -76,6 +73,7 @@ export interface ButtonProps
 	transition?: boolean;
 	disableActive?: boolean;
 	hide?: boolean;
+	render?: React.ReactElement;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
@@ -90,11 +88,12 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 			disableActive = true,
 			hide = false,
 			children,
+			render: renderProp,
 			...props
 		},
 		ref,
 	) => {
-		const Comp = asChild ? Slot : "button";
+		const effectiveRender = asChild && React.isValidElement(children) ? children : renderProp;
 
 		const getDisableActiveStyles = () => {
 			if (!disableActive) return "";
@@ -126,9 +125,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 		if (hide) return null;
 
 		return (
-			<Comp
+			<ButtonPrimitive
 				ref={ref}
 				data-slot="button"
+				render={effectiveRender}
 				className={cn(
 					buttonVariants({ variant, size, className }),
 					getDisableActiveStyles(),
@@ -136,19 +136,23 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 				disabled={isLoading || props.disabled}
 				{...props}
 			>
-				{isLoading ? (
-					<SmallSpinner
-						size={14}
-						className={variant === "primary" ? "relative z-10" : undefined}
-					/>
-				) : variant === "primary" ? (
-					<span className="relative z-10 inline-flex items-center gap-2 transition-none">
-						{children}
-					</span>
-				) : (
-					children
+				{effectiveRender ? undefined : (
+					<>
+						{isLoading ? (
+							<SmallSpinner
+								size={14}
+								className={variant === "primary" ? "relative z-10" : undefined}
+							/>
+						) : variant === "primary" ? (
+							<span className="relative z-10 inline-flex items-center gap-2 transition-none">
+								{children}
+							</span>
+						) : (
+							children
+						)}
+					</>
 				)}
-			</Comp>
+			</ButtonPrimitive>
 		);
 	},
 );

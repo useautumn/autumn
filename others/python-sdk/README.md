@@ -254,6 +254,9 @@ Use entities when usage and access must be scoped to sub-resources (for example 
 * [get](docs/sdks/entities/README.md#get) - Fetches an entity by its ID.
 
 Use this to read one entity's current state. Pass customerId when you want to scope the lookup to a specific customer.
+* [list](docs/sdks/entities/README.md#list) - Lists entities across the organization with pagination and optional filters.
+
+Use this to page through entities globally, including filtering by plans inherited from parent customers or attached directly to entities.
 * [update](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
 
 Use this to change entity billing controls or other mutable entity fields after the entity has already been created.

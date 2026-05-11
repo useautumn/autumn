@@ -21,10 +21,9 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
-import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
-import { triggerFreeProduct } from "@/internal/rewards/referralUtils/triggerFreeProduct.js";
-import { triggerRedemption } from "@/internal/rewards/referralUtils.js";
+import { redemptionRepo, referralCodeRepo } from "@/internal/rewards/repos/index.js";
+import { triggerFreeProduct } from "@/internal/rewards/actions/triggerFreeProduct.js";
+import { triggerDiscount } from "@/internal/rewards/actions/triggerDiscount.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 
 export type GrantCheckoutRewardPayload = {
@@ -64,13 +63,10 @@ export const grantCheckoutReward = async ({
 
 	const stripeCli = createStripeCli({ org, env });
 
-	const redemptions = await RewardRedemptionService.getByCustomer({
+	const redemptions = await redemptionRepo.getByCustomer({
 		db,
 		internalCustomerId: customer.internal_id,
-		withRewardProgram: true,
 		triggered: false,
-		withReferralCode: true,
-		triggerWhen: RewardTriggerEvent.Checkout,
 	});
 
 	for (const redemption of redemptions) {
@@ -219,7 +215,7 @@ const isMaxRedemptionsReached = async ({
 	rewardProgram: RewardProgram;
 	logger: AutumnContext["logger"];
 }): Promise<boolean> => {
-	const redemptionCount = await RewardProgramService.getCodeRedemptionCount({
+	const redemptionCount = await referralCodeRepo.getRedemptionCount({
 		db,
 		referralCodeId: referralCode.id,
 	});
@@ -260,7 +256,7 @@ const applyReward = async ({
 			redemption,
 		});
 	} else {
-		await triggerRedemption({
+		await triggerDiscount({
 			ctx,
 			referralCode: { ...referralCode, reward_program: rewardProgram },
 			reward,

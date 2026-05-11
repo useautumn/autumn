@@ -15,6 +15,7 @@ const route = ({ method, url }: RoutePattern): RoutePattern => ({
 const REPLICA_ROUTE_PATTERNS: RoutePattern[] = [
 	route({ method: "POST", url: "/v1/customers/list" }),
 	route({ method: "POST", url: "/v1/customers.list" }),
+	route({ method: "POST", url: "/v1/entities.list" }),
 ];
 
 export const shouldUseReplicaDb = (c: Context<HonoEnv>) => {

@@ -22,6 +22,7 @@
  */
 
 import { test } from "bun:test";
+import { ms } from "@autumn/shared";
 import { expectSubscriptionMatchCorrect } from "@tests/integration/billing/utils/sync/expectSubscriptionMatch";
 import { expectSyncParamsCorrect } from "@tests/integration/billing/utils/sync/expectSyncParams";
 import { products } from "@tests/utils/fixtures/products";
@@ -31,11 +32,64 @@ import chalk from "chalk";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
 import {
 	createStripeFixedPriceUnderProduct,
+	createFutureStripeSubscriptionSchedule,
 	createStripeSubscriptionSchedule,
 	fetchFullProduct,
 	getBaseStripePriceId,
 	getProductStripeProductId,
 } from "../utils/syncProductHelpers";
+
+test.concurrent(`${chalk.yellowBright("to-sync-params: schedule-only future Pro")}`, async () => {
+	const customerId = "to-sync-params-sched-only";
+	const pro = products.pro({ id: "pro", items: [] });
+
+	await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	const proFull = await fetchFullProduct({ ctx, productId: pro.id });
+	const proPriceId = getBaseStripePriceId({ fullProduct: proFull });
+	const schedule = await createFutureStripeSubscriptionSchedule({
+		ctx,
+		customerId,
+		startDateMs: Date.now() + ms.days(1),
+		phases: [{ items: [{ price: proPriceId }] }],
+	});
+
+	const { match, params } = await subscriptionToSyncParams({
+		ctx,
+		customerId,
+		schedule,
+	});
+
+	expectSyncParamsCorrect({
+		params,
+		customer_id: customerId,
+		stripe_schedule_id: schedule.id,
+		phases: [
+			{
+				starts_at: schedule.phases[0].start_date * 1000,
+				plans: [{ plan_id: pro.id, customize: null }],
+			},
+		],
+	});
+
+	expectSubscriptionMatchCorrect({
+		match,
+		phaseMatches: [
+			{
+				is_current: false,
+				plans: [{ plan_id: pro.id, base_kind: "matched" }],
+				noUnmatchedItems: true,
+			},
+		],
+	});
+});
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // CASE A: Pro, 3 phases, base price doubles each phase ($20 → $40 → $80)

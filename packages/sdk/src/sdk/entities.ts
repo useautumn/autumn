@@ -5,6 +5,7 @@
 import { entitiesCreate } from "../funcs/entities-create.js";
 import { entitiesDelete } from "../funcs/entities-delete.js";
 import { entitiesGet } from "../funcs/entities-get.js";
+import { entitiesList } from "../funcs/entities-list.js";
 import { entitiesUpdate } from "../funcs/entities-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
@@ -75,6 +76,43 @@ export class Entities extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.GetEntityResponse> {
     return unwrapAsync(entitiesGet(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Lists entities across the organization with pagination and optional filters.
+   *
+   * Use this to page through entities globally, including filtering by plans inherited from parent customers or attached directly to entities.
+   *
+   * @example
+   * ```typescript
+   * // List entities on a plan
+   * const response = await client.entities.list({ plans: [{"id":"pro_plan"}], limit: 10, offset: 0 });
+   * ```
+   *
+   * @example
+   * ```typescript
+   * // Search entities by ID or name
+   * const response = await client.entities.list({ search: "workspace" });
+   * ```
+   *
+   * @param offset - Number of items to skip (optional)
+   * @param limit - Number of items to return. Default 10, max 1000. (optional)
+   * @param plans - Filter by plan ID and version. Returns entities with active subscriptions to this plan, including plans inherited from the parent customer. (optional)
+   * @param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
+   * @param search - Search entities by id or name. (optional)
+   * @param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+   *
+   * @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
+   */
+  async list(
+    request?: models.ListEntitiesParams | undefined,
+    options?: RequestOptions,
+  ): Promise<models.ListEntitiesResponse> {
+    return unwrapAsync(entitiesList(
       this,
       request,
       options,

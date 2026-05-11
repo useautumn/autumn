@@ -118,10 +118,30 @@ const fixedDiscount = ({
 	},
 });
 
+/**
+ * Free product reward — grants a free product to referrer/redeemer
+ * @param id - Reward ID (default: "free-product")
+ * @param freeProductId - The product ID to grant
+ */
+const freeProduct = ({
+	id = "free-product",
+	freeProductId,
+}: {
+	id?: string;
+	freeProductId: string;
+}): CreateReward => ({
+	id,
+	name: "Free Product",
+	type: RewardType.FreeProduct,
+	promo_codes: [],
+	free_product_id: freeProductId,
+});
+
 export const rewards = {
 	monthOff,
 	halfOff,
 	tenOff,
 	percentageDiscount,
 	fixedDiscount,
+	freeProduct,
 } as const;

@@ -52,8 +52,12 @@ export const computeSyncPlan = ({
 			...future.insertCustomerProducts,
 		],
 		updateCustomerProducts:
-			immediate.updateCustomerProducts.length > 0
-				? immediate.updateCustomerProducts
+			immediate.updateCustomerProducts.length > 0 ||
+			future.updateCustomerProducts.length > 0
+				? [
+						...immediate.updateCustomerProducts,
+						...future.updateCustomerProducts,
+					]
 				: undefined,
 		customPrices: [...immediate.customPrices, ...future.customPrices],
 		customEntitlements: [
