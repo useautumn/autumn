@@ -1,13 +1,8 @@
 import { Check, Copy } from "lucide-react";
 import type React from "react";
 import { forwardRef, useState } from "react";
+import { PreviewCard } from "@base-ui/react/preview-card";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "../ui/tooltip";
 
 export const AdminHover = forwardRef<
 	HTMLElement,
@@ -15,54 +10,53 @@ export const AdminHover = forwardRef<
 		children: React.ReactNode;
 		texts: (string | { key: string; value: string } | undefined | null)[];
 		hide?: boolean;
+		asChild?: boolean;
 		side?: "top" | "bottom" | "left" | "right";
 	}
->(
-	(
-		{ children, texts, hide = false, side = "bottom" },
-		ref,
-	) => {
-		const { isAdmin, skipHover } = useAdmin();
+>(({ children, texts, hide = false, side = "bottom" }, _ref) => {
+	const { isAdmin, skipHover } = useAdmin();
 
-		if (!isAdmin || hide || skipHover) return <>{children}</>;
+	if (!isAdmin || hide || skipHover) return <>{children}</>;
 
-		return (
-			<TooltipProvider>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<span ref={ref} className="contents">
-							{children}
-						</span>
-					</TooltipTrigger>
-					{isAdmin && (
-						<TooltipContent
-							className="bg-white/50 backdrop-blur-sm shadow-sm border px-2 pr-6 py-2 max-w-none z-[9999]"
-							align="start"
-							side={side}
-						>
-							<div className="text-xs text-gray-500 flex flex-col gap-2">
-								{texts.map((text) => {
-									if (!text) return null;
-									if (typeof text === "object") {
-										return (
-											<div key={text.key}>
-												<p className="text-xs text-gray-500 font-medium">
-													{text.key}
-												</p>
-												<CopyText text={text.value} />
-											</div>
-										);
-									}
-									return <CopyText key={text} text={text} />;
-								})}
-							</div>
-						</TooltipContent>
-					)}
-				</Tooltip>
-			</TooltipProvider>
-		);
-	},
-);
+	return (
+		<PreviewCard.Root>
+			<PreviewCard.Trigger
+				render={<div className="inline-flex" />}
+				delay={0}
+			>
+				{children}
+			</PreviewCard.Trigger>
+			<PreviewCard.Portal>
+				<PreviewCard.Positioner
+					side={side}
+					sideOffset={4}
+					align="start"
+					positionMethod="fixed"
+					className="isolate z-[9999]"
+				>
+					<PreviewCard.Popup className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm shadow-sm border rounded-md px-2 pr-6 py-2 max-w-none origin-(--transform-origin) transition-[opacity,scale] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95">
+						<div className="text-xs text-gray-500 dark:text-gray-400 flex flex-col gap-2 whitespace-nowrap">
+							{texts.map((text) => {
+								if (!text) return null;
+								if (typeof text === "object") {
+									return (
+										<div key={text.key}>
+											<p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+												{text.key}
+											</p>
+											<CopyText text={text.value} />
+										</div>
+									);
+								}
+								return <CopyText key={text} text={text} />;
+							})}
+						</div>
+					</PreviewCard.Popup>
+				</PreviewCard.Positioner>
+			</PreviewCard.Portal>
+		</PreviewCard.Root>
+	);
+});
 
 const CopyText = ({ text }: { text: string }) => {
 	const [isHover, setIsHover] = useState(false);
@@ -73,7 +67,7 @@ const CopyText = ({ text }: { text: string }) => {
 			<p
 				onMouseEnter={() => setIsHover(true)}
 				onMouseLeave={() => setIsHover(false)}
-				className="flex flex-col items-start gap-1 font-mono hover:underline"
+				className="flex flex-col items-start gap-1 font-mono hover:underline cursor-pointer"
 				onClick={(e) => {
 					e.stopPropagation();
 					e.preventDefault();
