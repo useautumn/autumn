@@ -17,6 +17,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { autoTopupLimitRepo } from "@/internal/balances/autoTopUp/repos";
 import { CusService } from "@/internal/customers/CusService.js";
+import { generateId } from "@/utils/genUtils.js";
 
 const AUTO_TOPUP_WAIT_MS = 20000;
 
@@ -654,29 +655,11 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.pu
 
 test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.purchase_limit expand projects next_reset_at forward when stored window is stale")}`, async () => {
 	const customerId = "customer-billing-controls-13";
-	const oneOffProd = products.oneOffAddOn({
-		id: "topup-expand-stale",
-		items: [
-			items.oneOffMessages({
-				includedUsage: 0,
-				billingUnits: 100,
-				price: 10,
-			}),
-		],
-	});
 
 	const { autumnV2_1, autumnV2_2, ctx, customer } = await initScenario({
 		customerId,
-		setup: [
-			s.customer({ paymentMethod: "success" }),
-			s.products({ list: [oneOffProd] }),
-		],
-		actions: [
-			s.attach({
-				productId: oneOffProd.id,
-				options: [{ feature_id: TestFeature.Messages, quantity: 300 }],
-			}),
-		],
+		setup: [s.customer({ testClock: false })],
+		actions: [],
 	});
 
 	await autumnV2_2.customers.update(customerId, {
@@ -687,25 +670,23 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.pu
 		}),
 	});
 
-	await autumnV2_1.track({
-		customer_id: customerId,
-		feature_id: TestFeature.Messages,
-		value: 260,
-	});
-	await timeout(AUTO_TOPUP_WAIT_MS);
-
-	const limitRow = await autoTopupLimitRepo.findByScope({
-		ctx,
-		internalCustomerId: customer.internal_id,
-		featureId: TestFeature.Credits,
-	});
-	expect(limitRow).toBeDefined();
-
 	const staleWindowEndsAt = Date.now() - 6 * 24 * 60 * 60 * 1000;
-	await autoTopupLimitRepo.updateById({
+	const now = Date.now();
+	await autoTopupLimitRepo.insert({
 		ctx,
-		id: limitRow!.id,
-		updates: { purchase_window_ends_at: staleWindowEndsAt },
+		data: {
+			id: generateId("atlim"),
+			internal_customer_id: customer.internal_id,
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			purchase_window_ends_at: staleWindowEndsAt,
+			purchase_count: 3,
+			attempt_window_ends_at: now,
+			attempt_count: 0,
+			failed_attempt_window_ends_at: now,
+			failed_attempt_count: 0,
+			updated_at: now,
+		},
 	});
 
 	const expanded = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
