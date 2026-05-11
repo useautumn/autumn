@@ -1,0 +1,9 @@
+vite/src/views/customers2/customer/components/ShowCustomerObjectSheet.tsx
+  ai_agent 34
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "8ced4fc3834f1917051c293268d848928d88c411",
+  "prompts": {}
+}
