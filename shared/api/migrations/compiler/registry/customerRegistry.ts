@@ -128,6 +128,7 @@ export const customerRegistry: RootScope = {
 		{ column: "c.env", source: { kind: "context", key: "env" } },
 	],
 	fields: {
+		customer_id: { kind: "leaf", sql: "c.id" },
 		plan: { kind: "nav", scope: planScope },
 	},
 };

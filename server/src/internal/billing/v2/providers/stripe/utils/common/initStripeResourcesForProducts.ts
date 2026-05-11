@@ -1,6 +1,7 @@
 import {
 	type AutumnBillingPlan,
 	type BillingContext,
+	type FullProduct,
 	cusProductToProduct,
 	isPrepaidPrice,
 	nullish,
@@ -13,6 +14,52 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 
+export const initStripeResourcesForProducts = async ({
+	ctx,
+	products,
+	internalEntityId,
+}: {
+	ctx: AutumnContext;
+	products: FullProduct[];
+	internalEntityId?: string;
+}) => {
+	const { db, org, env, logger } = ctx;
+
+	const batchProductUpdates = [];
+	for (const product of products) {
+		if (product.processor?.id != null) continue;
+
+		batchProductUpdates.push(
+			checkStripeProductExists({
+				db,
+				org,
+				env,
+				product,
+				logger,
+			}),
+		);
+	}
+	await Promise.all(batchProductUpdates);
+
+	const batchPriceUpdates = [];
+
+	for (const product of products) {
+		for (const price of product.prices) {
+			batchPriceUpdates.push(
+				createStripePriceIFNotExist({
+					ctx,
+					price,
+					entitlements: product.entitlements,
+					product,
+					internalEntityId,
+					useCheckout: false,
+				}),
+			);
+		}
+	}
+	await Promise.all(batchPriceUpdates);
+};
+
 export const initStripeResourcesForBillingPlan = async ({
 	ctx,
 	autumnBillingPlan,
@@ -22,8 +69,6 @@ export const initStripeResourcesForBillingPlan = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 	billingContext: BillingContext;
 }) => {
-	const { db, org, env, logger } = ctx;
-
 	const { fullCustomer } = billingContext;
 	const { insertCustomerProducts } = autumnBillingPlan;
 
@@ -68,39 +113,11 @@ export const initStripeResourcesForBillingPlan = async ({
 
 	const allProducts = [...newProducts, ...patchProducts, ...existingProducts];
 
-	const batchProductUpdates = [];
-	for (const product of allProducts) {
-		if (product.processor?.id != null) continue;
-
-		batchProductUpdates.push(
-			checkStripeProductExists({
-				db,
-				org,
-				env,
-				product,
-				logger,
-			}),
-		);
-	}
-	await Promise.all(batchProductUpdates);
-
-	const batchPriceUpdates = [];
-
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
-	for (const product of allProducts) {
-		for (const price of product.prices) {
-			batchPriceUpdates.push(
-				createStripePriceIFNotExist({
-					ctx,
-					price,
-					entitlements: product.entitlements,
-					product,
-					internalEntityId,
-					useCheckout: false,
-				}),
-			);
-		}
-	}
-	await Promise.all(batchPriceUpdates);
+	await initStripeResourcesForProducts({
+		ctx,
+		products: allProducts,
+		internalEntityId,
+	});
 };

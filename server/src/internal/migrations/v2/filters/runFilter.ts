@@ -1,6 +1,7 @@
-import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import type { MigrationRunControls } from "../cloudAdapter/types.js";
 import type { RunScopeItem, RunScopeKind } from "../run/types/runScope.js";
+import type { MigrationRuntime } from "../types/migrationDefinition.js";
 import {
 	countCustomers,
 	filterCustomers,
@@ -15,10 +16,12 @@ export const runFilter = async ({
 	ctx,
 	migration,
 	kind,
+	controls,
 }: {
 	ctx: AutumnContext;
-	migration: Migration;
+	migration: MigrationRuntime;
 	kind: RunScopeKind;
+	controls?: MigrationRunControls;
 }): Promise<{
 	kind: RunScopeKind;
 	count: number;
@@ -29,7 +32,10 @@ export const runFilter = async ({
 			`runFilter: scope kind "${kind}" not supported yet (phase 2+)`,
 		);
 
-	const filter = migration.filter?.customer ?? {};
+	const filter = narrowCustomerFilter({
+		filter: migration.filter?.customer ?? {},
+		controls,
+	});
 	const count = await countCustomers({ ctx, filter });
 
 	const iterate = async function* () {
@@ -45,4 +51,23 @@ export const runFilter = async ({
 	};
 
 	return { kind, count, iterate };
+};
+
+const narrowCustomerFilter = ({
+	filter,
+	controls,
+}: {
+	filter: NonNullable<MigrationRuntime["filter"]>["customer"];
+	controls?: MigrationRunControls;
+}) => {
+	const only = controls?.only;
+	if (!only) return filter ?? {};
+	if (filter?.customer_id !== undefined)
+		throw new Error(
+			"runMigration: controls.only cannot be combined with filter.customer.customer_id",
+		);
+	return {
+		...(filter ?? {}),
+		customer_id: { $in: only },
+	};
 };

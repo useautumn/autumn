@@ -7,7 +7,7 @@ import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
  *
  * JS-side mirror of `compilePlanFilter` for callers that already have
  * the cusproduct in memory (migration runner, scripts). Today supports
- * `plan_id` only — `price`, `paid`, `recurring`, `item`, `$or` throw to
+ * `plan_id` and `$or` — `price`, `paid`, `recurring`, and `item` throw to
  * make the gap explicit.
  */
 export const planFilterMatchesCustomerProduct = ({
@@ -17,6 +17,16 @@ export const planFilterMatchesCustomerProduct = ({
 	filter: PlanFilter;
 	cusProduct: FullCusProduct;
 }): boolean => {
+	if (filter.$or !== undefined) {
+		if (
+			!filter.$or.some((subFilter) =>
+				planFilterMatchesCustomerProduct({ filter: subFilter, cusProduct }),
+			)
+		) {
+			return false;
+		}
+	}
+
 	if (filter.plan_id !== undefined) {
 		if (
 			!stringMatcherMatches({
@@ -27,7 +37,7 @@ export const planFilterMatchesCustomerProduct = ({
 			return false;
 	}
 
-	const unsupported = ["price", "paid", "recurring", "item", "$or"] as const;
+	const unsupported = ["price", "paid", "recurring", "item"] as const;
 	for (const key of unsupported) {
 		if ((filter as Record<string, unknown>)[key] !== undefined)
 			throw new Error(
