@@ -5,28 +5,39 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { migrationRunRepo } from "../../repos/index.js";
 
-type TriggerHandle = {
-	id: string;
-};
-
-export const withMigrationRunClaim = async <THandle extends TriggerHandle>({
+/** Two-phase claim for a migration run.
+ *
+ *  1. Insert with `status='queued'` — locks the partial unique index
+ *     `(org_id, env) WHERE status IN ('queued','running')` so nothing
+ *     else can claim while the work is happening.
+ *  2. Run `claimed` (e.g. `prepare`, or trigger.dev dispatch).
+ *  3. On success, flip to `status='running'` with `started_at=now`.
+ *     On failure, flip to `failed` so the constraint releases.
+ *  4. `claimed` may return `{ triggerRunId }` to persist a handle. */
+export const withMigrationRunClaim = async ({
 	ctx,
 	migration,
 	dryRun,
-	trigger,
+	lazyRun = false,
+	claimed,
 }: {
 	ctx: AutumnContext;
 	migration: Migration;
 	dryRun: boolean;
-	trigger: (migrationRunId: string) => Promise<THandle>;
-}): Promise<{ migrationRunId: string; handle: THandle }> => {
+	lazyRun?: boolean;
+	claimed: (
+		migrationRunId: string,
+	) => Promise<{ triggerRunId?: string } | undefined>;
+}): Promise<{ migrationRunId: string }> => {
 	const migrationRun = await migrationRunRepo.insert({
 		ctx,
 		insert: {
 			migration_internal_id: migration.internal_id,
 			dry_run: dryRun,
+			lazy_run: lazyRun,
 		},
 	});
 
@@ -39,9 +50,16 @@ export const withMigrationRunClaim = async <THandle extends TriggerHandle>({
 		});
 	}
 
-	let handle: THandle;
+	// Lazy-mode runs need to land on `ctx.org.pendingMigrations` for every
+	// authed request, so bust the cached api-key payload here. Non-lazy runs
+	// have no effect on the hot path until the trigger task starts mutating.
+	if (lazyRun) {
+		await clearOrgCache({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
+	}
+
+	let result: { triggerRunId?: string } | undefined;
 	try {
-		handle = await trigger(migrationRun.internal_id);
+		result = await claimed(migrationRun.internal_id);
 	} catch (error) {
 		await migrationRunRepo.update({
 			ctx,
@@ -55,23 +73,32 @@ export const withMigrationRunClaim = async <THandle extends TriggerHandle>({
 		throw error;
 	}
 
-	try {
-		await migrationRunRepo.update({
-			ctx,
-			internalId: migrationRun.internal_id,
-			updates: {
-				trigger_run_id: handle.id,
-			},
-		});
-	} catch (error) {
-		ctx.logger.error("run-migration: failed to persist trigger run id", {
-			data: {
-				migrationRunId: migrationRun.internal_id,
-				triggerRunId: handle.id,
-				error: error instanceof Error ? error.message : String(error),
-			},
-		});
+	await migrationRunRepo.update({
+		ctx,
+		internalId: migrationRun.internal_id,
+		updates: {
+			status: MigrationRunStatus.Running,
+			started_at: Date.now(),
+		},
+	});
+
+	if (result?.triggerRunId) {
+		try {
+			await migrationRunRepo.update({
+				ctx,
+				internalId: migrationRun.internal_id,
+				updates: { trigger_run_id: result.triggerRunId },
+			});
+		} catch (error) {
+			ctx.logger.error("run-migration: failed to persist trigger run id", {
+				data: {
+					migrationRunId: migrationRun.internal_id,
+					triggerRunId: result.triggerRunId,
+					error: error instanceof Error ? error.message : String(error),
+				},
+			});
+		}
 	}
 
-	return { migrationRunId: migrationRun.internal_id, handle };
+	return { migrationRunId: migrationRun.internal_id };
 };

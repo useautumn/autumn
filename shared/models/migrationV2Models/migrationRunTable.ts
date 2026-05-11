@@ -34,6 +34,7 @@ export const migrationRuns = pgTable(
 		env: text().notNull(),
 		status: text().$type<MigrationRunStatus>().notNull(),
 		dry_run: boolean().notNull(),
+		lazy_run: boolean().notNull().default(false),
 		trigger_run_id: text(),
 		error_message: text(),
 		created_at: numeric({ mode: "number" }).notNull(),
