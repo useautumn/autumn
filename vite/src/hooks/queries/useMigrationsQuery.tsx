@@ -89,7 +89,13 @@ export const useMigrationsQuery = () => {
 	});
 
 	const runMutation = useMutation({
-		mutationFn: async (body: { id: string; dry_run?: boolean }) => {
+		mutationFn: async (body: {
+			id: string;
+			dry_run?: boolean;
+			limit?: number;
+			only?: string[];
+			concurrency?: number;
+		}) => {
 			const { data } = await axiosInstance.post<{
 				migration_id: string;
 				dry_run: boolean;

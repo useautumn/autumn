@@ -6,12 +6,19 @@ import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigration } from "@/internal/migrations/v2/run/runMigration.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
+const ControlsSchema = z.object({
+	limit: z.number().int().min(1).optional(),
+	only: z.array(z.string()).optional(),
+	concurrency: z.number().int().min(1).optional(),
+}).optional();
+
 const PayloadSchema = z.object({
 	orgId: z.string(),
 	env: z.enum(AppEnv),
 	migrationId: z.string(),
 	migrationRunId: z.string(),
 	dryRun: z.boolean().default(false),
+	controls: ControlsSchema,
 });
 
 export type RunMigrationPayload = z.infer<typeof PayloadSchema>;
@@ -25,7 +32,7 @@ export const runMigrationTask = task({
 	queue: runMigrationTaskQueue,
 	maxDuration: 3600,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
-		const { orgId, env, migrationId, migrationRunId, dryRun } =
+		const { orgId, env, migrationId, migrationRunId, dryRun, controls } =
 			PayloadSchema.parse(rawPayload);
 
 		const { ctx, logger } = await createTriggerContext({
@@ -49,6 +56,7 @@ export const runMigrationTask = task({
 					migration,
 					dryRun,
 					migrationRunId,
+					controls: controls ?? undefined,
 				});
 			},
 		});

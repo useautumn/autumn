@@ -8,6 +8,9 @@ import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
 const RunMigrationBody = z.object({
 	id: z.string(),
 	dry_run: z.boolean().default(false),
+	limit: z.number().int().min(1).optional(),
+	only: z.array(z.string()).optional(),
+	concurrency: z.number().int().min(1).optional(),
 });
 
 const getRunMigrationTriggerOptions = ({
@@ -26,7 +29,7 @@ export const handleRunMigration = createRoute({
 	body: RunMigrationBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { id, dry_run: dryRun } = c.req.valid("json");
+		const { id, dry_run: dryRun, limit, only, concurrency } = c.req.valid("json");
 
 		const migration = await migrationRepo.find({ ctx, id });
 
@@ -50,6 +53,7 @@ export const handleRunMigration = createRoute({
 						migrationId: id,
 						migrationRunId,
 						dryRun,
+						controls: { limit, only, concurrency },
 					},
 					getRunMigrationTriggerOptions({
 						orgId: ctx.org.id,
