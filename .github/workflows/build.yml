@@ -16,6 +16,9 @@ on:
 
 env:
   AWS_REGION: us-west-2
+  # Branches allowed to deploy to staging via workflow_dispatch with tag=deploy-staging.
+  # Add short-lived PR branches here when you need staging without merging to dev.
+  STAGING_DEPLOY_BRANCH_ALLOWLIST: axiom-ingest-cuts
 
 jobs:
   checks:
@@ -65,18 +68,43 @@ jobs:
       
       - name: Extract metadata for Docker
         id: meta
+        env:
+          REQUESTED_STAGING_DEPLOY: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag == 'deploy-staging' }}
         run: |
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
           COMMIT_SHA=${GITHUB_SHA::8}
+          DEPLOY_STAGING_OVERRIDE="false"
           
           # Sanitize branch name for Docker tag (replace / with -)
           SAFE_BRANCH=$(echo $BRANCH_NAME | sed 's/\//-/g')
+
+          if [ "$REQUESTED_STAGING_DEPLOY" = "true" ] && [ "$BRANCH_NAME" != "dev" ]; then
+            for ALLOWED_BRANCH in $STAGING_DEPLOY_BRANCH_ALLOWLIST; do
+              if [ "$BRANCH_NAME" = "$ALLOWED_BRANCH" ]; then
+                DEPLOY_STAGING_OVERRIDE="true"
+                break
+              fi
+            done
+
+            if [ "$DEPLOY_STAGING_OVERRIDE" != "true" ]; then
+              echo "::error::Branch '$BRANCH_NAME' is not allowed to deploy to staging. Add it to STAGING_DEPLOY_BRANCH_ALLOWLIST in .github/workflows/build.yml."
+              exit 1
+            fi
+          fi
+
+          if [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then
+            # deployStaging expects the staging ECR image tag to be dev-<sha>.
+            IMAGE_BRANCH="dev"
+          else
+            IMAGE_BRANCH="$SAFE_BRANCH"
+          fi
           
-          echo "branch=$SAFE_BRANCH" >> $GITHUB_OUTPUT
+          echo "branch=$IMAGE_BRANCH" >> $GITHUB_OUTPUT
           echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
+          echo "deploy_staging_override=$DEPLOY_STAGING_OVERRIDE" >> $GITHUB_OUTPUT
           
           # Select ECR repository based on branch
-          if [ "$BRANCH_NAME" = "dev" ]; then
+          if [ "$BRANCH_NAME" = "dev" ] || [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then
             echo "ecr_repo=autumn-staging" >> $GITHUB_OUTPUT
           else
             echo "ecr_repo=autumn" >> $GITHUB_OUTPUT
@@ -152,7 +180,7 @@ jobs:
           fi
 
       - name: Auto-deploy staging
-        if: github.ref == 'refs/heads/dev'
+        if: github.ref == 'refs/heads/dev' || steps.meta.outputs.deploy_staging_override == 'true'
         env:
           DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
           DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}

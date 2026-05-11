@@ -2,6 +2,7 @@ import {
 	CreateEntityParamsV1Schema,
 	DeleteEntityParamsV0Schema,
 	GetEntityParamsV0Schema,
+	ListEntitiesParamsSchema,
 	UpdateEntityParamsSchema,
 } from "@autumn/shared";
 import { createJSDocDescription, example } from "../../utils/jsDocs/index.js";
@@ -51,6 +52,33 @@ export const getEntityJsDoc = createJSDocDescription({
 	methodName: "entities.get",
 	returns:
 		"The entity object including its current subscriptions, purchases, and balances.",
+});
+
+export const listEntityJsDoc = createJSDocDescription({
+	description:
+		"Lists entities across the organization with pagination and optional filters.",
+	whenToUse:
+		"Use this to page through entities globally, including filtering by plans inherited from parent customers or attached directly to entities.",
+	body: ListEntitiesParamsSchema,
+	examples: [
+		example({
+			description: "List entities on a plan",
+			values: {
+				plans: [{ id: "pro_plan" }],
+				limit: 10,
+				offset: 0,
+			},
+		}),
+		example({
+			description: "Search entities by ID or name",
+			values: {
+				search: "workspace",
+			},
+		}),
+	],
+	methodName: "entities.list",
+	returns:
+		"A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.",
 });
 
 export const deleteEntityJsDoc = createJSDocDescription({

@@ -82,6 +82,38 @@ const StripeItemRow = ({ item }: { item: Stripe.SubscriptionItem }) => {
 	);
 };
 
+const ScheduleItemRow = ({
+	item,
+}: {
+	item: Stripe.SubscriptionSchedule.Phase.Item;
+}) => {
+	const rawPrice = item.price as string | Stripe.Price | undefined;
+	const price = typeof rawPrice === "object" ? rawPrice : null;
+	const productName =
+		getStripeProductName({ product: price?.product }) ??
+		(typeof rawPrice === "string" ? rawPrice : "Item");
+	const priceLabel = formatItemPrice({ price });
+	const quantity = item.quantity ?? 1;
+	const showQuantity = quantity > 1 && price?.billing_scheme !== "tiered";
+
+	return (
+		<div className="flex items-center justify-between text-xs gap-3">
+			<span className="text-t2 truncate min-w-0">{productName}</span>
+			<div className="shrink-0 ml-2 text-t3 text-right">
+				{priceLabel}
+				{showQuantity && <span className="text-t4"> × {quantity}</span>}
+			</div>
+		</div>
+	);
+};
+
+const proposalKey = (proposal: SyncProposalV2): string =>
+	proposal.stripe_subscription_id ??
+	proposal.stripe_schedule_id ??
+	proposal.stripe_subscription?.id ??
+	proposal.stripe_schedule?.id ??
+	"";
+
 const ProposalCard = ({
 	proposal,
 	onSelect,
@@ -92,8 +124,12 @@ const ProposalCard = ({
 	productNamesById: Record<string, string>;
 }) => {
 	const sub = proposal.stripe_subscription;
+	const schedule = proposal.stripe_schedule;
 	const isLinked = proposal.already_linked_product_id !== null;
 	const matchedPlans = proposal.phases[0]?.plans ?? [];
+	const objectId = proposalKey(proposal);
+	const objectLabel = objectId || (schedule ? "Stripe schedule" : "Stripe object");
+	const schedulePhaseItems = schedule?.phases[0]?.items ?? [];
 
 	return (
 		<button
@@ -112,7 +148,7 @@ const ProposalCard = ({
 			)}
 
 			<span className="block text-xs font-mono text-t3 truncate">
-				{proposal.stripe_subscription_id}
+				{objectLabel}
 			</span>
 
 			{sub && sub.items.data.length > 0 && (
@@ -123,6 +159,17 @@ const ProposalCard = ({
 					<div className="space-y-1">
 						{sub.items.data.map((item) => (
 							<StripeItemRow key={item.id} item={item} />
+						))}
+					</div>
+				</div>
+			)}
+
+			{!sub && schedulePhaseItems.length > 0 && (
+				<div className="space-y-1.5">
+					<span className="text-xs text-t3 font-medium">Schedule items</span>
+					<div className="space-y-1">
+						{schedulePhaseItems.map((item, index) => (
+							<ScheduleItemRow key={`${objectId}-${index}`} item={item} />
 						))}
 					</div>
 				</div>
@@ -163,7 +210,7 @@ export function SubscriptionListView({
 	proposals: SyncProposalV2[];
 	isLoading: boolean;
 	error: unknown;
-	onSelect: (stripeSubscriptionId: string) => void;
+	onSelect: (proposalIndex: number) => void;
 }) {
 	const { products } = useProductsQuery();
 	const productNamesById = Object.fromEntries(
@@ -188,14 +235,11 @@ export function SubscriptionListView({
 				</div>
 			)}
 			{!isLoading &&
-				proposals.map((proposal) => (
+				proposals.map((proposal, index) => (
 					<ProposalCard
-						key={proposal.stripe_subscription_id}
+						key={proposalKey(proposal) || `proposal-${index}`}
 						proposal={proposal}
-						onSelect={() =>
-							proposal.stripe_subscription_id &&
-							onSelect(proposal.stripe_subscription_id)
-						}
+						onSelect={() => onSelect(index)}
 						productNamesById={productNamesById}
 					/>
 				))}

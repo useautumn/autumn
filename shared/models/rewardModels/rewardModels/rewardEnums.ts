@@ -19,4 +19,5 @@ export enum RewardType {
 	FixedDiscount = "fixed_discount",
 	FreeProduct = "free_product",
 	InvoiceCredits = "invoice_credits",
+	FeatureGrant = "feature_grant",
 }

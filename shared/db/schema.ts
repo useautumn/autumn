@@ -65,6 +65,7 @@ import { rewardRedemptions } from "../models/rewardModels/referralModels/rewardR
 // Reward Tables
 import { rewards } from "../models/rewardModels/rewardModels/rewardTable.js";
 // Reward Relations
+import { rewardRelations } from "../models/rewardModels/rewardModels/rewardRelations.js";
 import { rewardProgramRelations } from "../models/rewardModels/rewardProgramModels/rewardProgramRelations.js";
 import { rewardPrograms } from "../models/rewardModels/rewardProgramModels/rewardProgramTable.js";
 import {
@@ -145,12 +146,13 @@ export {
 	prices,
 	productRelations,
 	products,
+	rewardRelations,
+	rewardProgramRelations,
 	referralCodeRelations,
 	referralCodes,
 	replaceableRelations,
 	replaceables,
 	revenuecatMappings as revcatMappings,
-	rewardProgramRelations,
 	rewardPrograms,
 	rewardRedemptionRelations,
 	rewardRedemptions,

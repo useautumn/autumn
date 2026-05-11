@@ -53,21 +53,22 @@ export const FreeTrialSection = () => {
 						placeholder="eg. 7"
 					/>
 					{/* <FormLabel disabled={!product.free_trial}>Duration</FormLabel> */}
-					<Select
-						disabled={!product.free_trial}
-						value={product.free_trial?.duration || ""}
-						onValueChange={(value) => {
-							setProduct({
-								...product,
-								free_trial: product.free_trial
-									? {
-											...product.free_trial,
-											duration: value as FreeTrialDuration,
-										}
-									: null,
-							});
-						}}
-					>
+				<Select
+					disabled={!product.free_trial}
+					value={product.free_trial?.duration || ""}
+					onValueChange={(value) => {
+						setProduct({
+							...product,
+							free_trial: product.free_trial
+								? {
+										...product.free_trial,
+										duration: value as FreeTrialDuration,
+									}
+								: null,
+						});
+					}}
+					items={Object.fromEntries(Object.values(FreeTrialDuration).map((duration) => [duration, `${duration}s`]))}
+				>
 						<SelectTrigger className="w-full max-w-32">
 							<SelectValue placeholder="days" />{" "}
 						</SelectTrigger>

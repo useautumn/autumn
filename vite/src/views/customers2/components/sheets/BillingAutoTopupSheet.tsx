@@ -365,10 +365,14 @@ export function BillingAutoTopupSheet() {
 						<div className="flex flex-col gap-3">
 							<div>
 								<FormLabel>Interval</FormLabel>
-								<Select
-									value={purchaseLimitInterval}
-									onValueChange={setPurchaseLimitInterval}
-								>
+							<Select
+								value={purchaseLimitInterval}
+								onValueChange={setPurchaseLimitInterval}
+								items={Object.fromEntries(Object.entries(INTERVAL_LABELS).map(([value, label]) => {
+									const count = Number.parseInt(purchaseLimitIntervalCount, 10);
+									return [value, count > 1 ? `Every ${count} ${label.toLowerCase()}s` : label];
+								}))}
+							>
 									<SelectTrigger className="w-full">
 										<SelectValue placeholder="Select interval" />
 									</SelectTrigger>

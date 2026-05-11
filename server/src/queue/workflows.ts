@@ -44,6 +44,8 @@ export type BatchResetCusEntsPayload = {
 	resets: {
 		internalCustomerId: string;
 		customerId: string;
+		internalEntityId?: string;
+		entityId?: string;
 		cusEntIds: string[];
 	}[];
 };

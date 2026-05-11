@@ -18,6 +18,7 @@ export interface SyncProductContext {
 	featureQuantities: FeatureOptions[];
 	/** Existing active cusProduct in the same product group, if `expire_previous` was set. */
 	currentCustomerProduct?: FullCusProduct;
+	accessStartsAt?: number;
 }
 
 export interface SyncPhaseContext {

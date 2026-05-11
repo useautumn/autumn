@@ -101,15 +101,16 @@ export function ProrationConfig() {
 			<div className="space-y-4 w-xs max-w-full">
 				<div className="space-y-2 w-full">
 					<FormLabel>{increaseText}</FormLabel>
-					<Select
-						value={onIncreaseValue}
-						onValueChange={(value) => {
-							setItem({
-								...item,
-								config: { ...item.config, on_increase: value as OnIncrease },
-							});
-						}}
-					>
+				<Select
+					value={onIncreaseValue}
+					onValueChange={(value) => {
+						setItem({
+							...item,
+							config: { ...item.config, on_increase: value as OnIncrease },
+						});
+					}}
+					items={Object.fromEntries(onIncreaseOptions.map((option) => [option, getOnIncreaseText(option)]))}
+				>
 						<SelectTrigger
 							className="w-full [&>span]:truncate"
 							onClick={(e) => e.stopPropagation()}
@@ -128,15 +129,16 @@ export function ProrationConfig() {
 
 				<div className="space-y-2 w-full">
 					<FormLabel>{decreaseText}</FormLabel>
-					<Select
-						value={onDecreaseValue}
-						onValueChange={(value) => {
-							setItem({
-								...item,
-								config: { ...item.config, on_decrease: value as OnDecrease },
-							});
-						}}
-					>
+				<Select
+					value={onDecreaseValue}
+					onValueChange={(value) => {
+						setItem({
+							...item,
+							config: { ...item.config, on_decrease: value as OnDecrease },
+						});
+					}}
+					items={Object.fromEntries([OnDecrease.Prorate, OnDecrease.None].map((option) => [option, getOnDecreaseText({ option, usageModel: item.usage_model ?? UsageModel.Prepaid })]))}
+				>
 						<SelectTrigger
 							className="w-full [&>span]:truncate"
 							onClick={(e) => e.stopPropagation()}

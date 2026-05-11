@@ -128,10 +128,11 @@ export const CopyProductDialog = ({
 					{!targetEnv && (
 						<div>
 							<FormLabel>Copy to environment</FormLabel>
-							<Select
-								value={toEnv}
-								onValueChange={(value) => setToEnv(value as AppEnv)}
-							>
+						<Select
+							value={toEnv}
+							onValueChange={(value) => setToEnv(value as AppEnv)}
+							items={{ [AppEnv.Live]: "Production", [AppEnv.Sandbox]: "Sandbox" }}
+						>
 								<SelectTrigger className="w-5/12">
 									<SelectValue placeholder="Select environment" />
 								</SelectTrigger>

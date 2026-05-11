@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/v2/buttons/Button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { type AdminOrg, createAdminOrgColumns } from "./AdminOrgColumns";
+import { OrgRedisConfigDialog } from "./components/OrgRedisConfigDialog";
 import { RequestBlockDialog } from "./components/RequestBlockDialog";
 import { useAdminTable } from "./hooks/useAdminTable";
 
@@ -15,6 +16,7 @@ export const AdminOrgTable = () => {
 	const [before, setBefore] = useState<string | undefined>(undefined);
 	const [page, setPage] = useState(1);
 	const [selectedOrg, setSelectedOrg] = useState<AdminOrg | null>(null);
+	const [redisOrg, setRedisOrg] = useState<AdminOrg | null>(null);
 
 	const params = new URLSearchParams();
 	if (search) params.append("search", search);
@@ -65,6 +67,7 @@ export const AdminOrgTable = () => {
 		() =>
 			createAdminOrgColumns({
 				onManageRequestBlocks: (org) => setSelectedOrg(org),
+				onManageRedis: (org) => setRedisOrg(org),
 			}),
 		[],
 	);
@@ -87,6 +90,19 @@ export const AdminOrgTable = () => {
 				}}
 				orgId={selectedOrg?.id}
 				orgName={selectedOrg?.name}
+				onSaved={async () => {
+					await refetch();
+				}}
+			/>
+			<OrgRedisConfigDialog
+				open={Boolean(redisOrg)}
+				onOpenChange={(open) => {
+					if (!open) {
+						setRedisOrg(null);
+					}
+				}}
+				orgId={redisOrg?.id}
+				orgName={redisOrg?.name}
 				onSaved={async () => {
 					await refetch();
 				}}

@@ -9,12 +9,25 @@ export enum AllowanceType {
 	None = "none",
 }
 
+export enum EntitlementDuration {
+	Day = "day",
+	Week = "week",
+	Month = "month",
+	Year = "year",
+}
+
+export const EntitlementExpirySchema = z.object({
+	duration: z.nativeEnum(EntitlementDuration),
+	length: z.number(),
+});
+
 export const EntitlementSchema = z.object({
 	// Required fields - no .optional()
 	id: z.string(),
 	created_at: z.number(),
 	internal_feature_id: z.string(),
 	internal_product_id: z.string().nullable(),
+	internal_reward_id: z.string().nullish(),
 	is_custom: z.boolean().default(false),
 
 	allowance_type: z.nativeEnum(AllowanceType).optional().nullable(),
@@ -29,6 +42,8 @@ export const EntitlementSchema = z.object({
 	org_id: z.string().optional(),
 	feature_id: z.string().optional(),
 	usage_limit: z.number().nullable().optional().default(null),
+	expiry_duration: z.nativeEnum(EntitlementDuration).nullish(),
+	expiry_length: z.number().nullish(),
 
 	rollover: RolloverConfigSchema.nullish(),
 });
@@ -50,6 +65,7 @@ export const CreateEntitlementSchema = z.object({
 export type CreateEntitlement = z.infer<typeof CreateEntitlementSchema>;
 
 export type Entitlement = z.infer<typeof EntitlementSchema>;
+export type EntitlementExpiry = z.infer<typeof EntitlementExpirySchema>;
 
 export const EntitlementWithFeatureSchema = EntitlementSchema.extend({
 	feature: FeatureSchema,

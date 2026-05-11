@@ -241,10 +241,11 @@ export const EditPlanHeader = () => {
 						)}
 
 						{numVersions && numVersions > 1 && (
-							<Select
-								value={currentVersion.toString()}
-								onValueChange={handleVersionChange}
-							>
+						<Select
+							value={currentVersion.toString()}
+							onValueChange={handleVersionChange}
+							items={Object.fromEntries(versionOptions.map((version) => [version.toString(), `Version ${version}`]))}
+						>
 								<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
 									<SelectValue placeholder="Version" />
 								</SelectTrigger>
