@@ -1,0 +1,22 @@
+server/tests/integration/crud/customers/customer-billing-controls.test.ts
+  s_4e0c649b2b8b96::t_9315c21360e219 654-731,738,740
+  s_4e0c649b2b8b96::t_6731c1308cde7f 18
+  s_4e0c649b2b8b96::t_6f9b77c21eb4b8 3,7
+  s_4e0c649b2b8b96::t_117928d6b40418 732-737,739
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "bcf95b6b79494142f56d17d64d16fc1c2feec74c",
+  "prompts": {},
+  "sessions": {
+    "s_4e0c649b2b8b96": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e987286bffeAYDMVrLQd3Hv3o",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
