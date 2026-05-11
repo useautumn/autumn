@@ -7,6 +7,7 @@ import { handleListMigrationRuns } from "./handlers/handleListMigrationRuns.js";
 import { handleListMigrations } from "./handlers/handleListMigrations.js";
 import { handlePatchMigration } from "./handlers/handlePatchMigration.js";
 import { handlePrepareMigration } from "./handlers/handlePrepareMigration.js";
+import { handlePreviewMigrationFilter } from "./handlers/handlePreviewMigrationFilter.js";
 import { handleRunMigration } from "./handlers/handleRunMigration.js";
 
 /**
@@ -21,6 +22,10 @@ migrationRpcRouter.post("/migrations.list", ...handleListMigrations);
 migrationRpcRouter.post("/migrations.update", ...handlePatchMigration);
 migrationRpcRouter.post("/migrations.delete", ...handleDeleteMigration);
 migrationRpcRouter.post("/migrations.prepare", ...handlePrepareMigration);
+migrationRpcRouter.post(
+	"/migrations.filter.preview",
+	...handlePreviewMigrationFilter,
+);
 migrationRpcRouter.post("/migrations.run", ...handleRunMigration);
 migrationRpcRouter.post("/migrations.runs.list", ...handleListMigrationRuns);
 migrationRpcRouter.post(

@@ -1,18 +1,22 @@
 import type { PlanFilter, StringMatcher } from "@autumn/shared";
 
 export type FilterField =
+	| "customer_id"
 	| "plan_id"
 	| "paid"
 	| "recurring"
 	| "price"
 	| "item_feature_id"
 	| "item_unlimited"
-	| "item_price";
+	| "item_price"
+	| "item_billing_method"
+	| "item_mode";
 
 export type FilterOperator =
 	| "is"
 	| "is_not"
 	| "in"
+	| "not_in"
 	| "regex"
 	| "starts_with"
 	| "exists"
@@ -32,6 +36,7 @@ export const FILTER_FIELD_OPTIONS: {
 	value: FilterField;
 	label: string;
 }[] = [
+	{ value: "customer_id", label: "Customer ID" },
 	{ value: "plan_id", label: "Plan ID" },
 	{ value: "paid", label: "Paid" },
 	{ value: "recurring", label: "Recurring" },
@@ -39,6 +44,8 @@ export const FILTER_FIELD_OPTIONS: {
 	{ value: "item_feature_id", label: "Item Feature" },
 	{ value: "item_unlimited", label: "Item Unlimited" },
 	{ value: "item_price", label: "Item Price" },
+	{ value: "item_billing_method", label: "Item Billing Method" },
+	{ value: "item_mode", label: "Item Match Mode" },
 ];
 
 type OperatorOption = { value: FilterOperator; label: string };
@@ -51,6 +58,7 @@ const STRING_OPERATORS: OperatorOption[] = [
 	{ value: "is", label: "is" },
 	{ value: "is_not", label: "is not" },
 	{ value: "in", label: "in" },
+	{ value: "not_in", label: "not in" },
 	{ value: "regex", label: "regex" },
 	{ value: "starts_with", label: "starts with" },
 ];
@@ -59,6 +67,7 @@ const STRING_MATCH_OPERATORS: OperatorOption[] = [
 	{ value: "is", label: "is" },
 	{ value: "is_not", label: "is not" },
 	{ value: "in", label: "in" },
+	{ value: "not_in", label: "not in" },
 ];
 
 const BOOLEAN_ONLY: FieldConfig = {
@@ -75,6 +84,7 @@ const NULLABLE_ONLY: FieldConfig = {
 };
 
 export const FIELD_CONFIGS: Record<FilterField, FieldConfig> = {
+	customer_id: { operators: STRING_MATCH_OPERATORS, valueType: "string" },
 	plan_id: { operators: STRING_OPERATORS, valueType: "string" },
 	paid: BOOLEAN_ONLY,
 	recurring: BOOLEAN_ONLY,
@@ -82,6 +92,14 @@ export const FIELD_CONFIGS: Record<FilterField, FieldConfig> = {
 	item_feature_id: { operators: STRING_MATCH_OPERATORS, valueType: "string" },
 	item_unlimited: BOOLEAN_ONLY,
 	item_price: NULLABLE_ONLY,
+	item_billing_method: {
+		operators: STRING_MATCH_OPERATORS,
+		valueType: "string",
+	},
+	item_mode: {
+		operators: [{ value: "is", label: "is" }],
+		valueType: "string",
+	},
 };
 
 function stringMatcherToRule(
@@ -106,6 +124,8 @@ function stringMatcherToRule(
 		};
 	if (matcher.$in !== undefined)
 		return { field, operator: "in", values: matcher.$in };
+	if (matcher.$nin !== undefined)
+		return { field, operator: "not_in", values: matcher.$nin };
 	if (matcher.$regex !== undefined)
 		return { field, operator: "regex", values: [matcher.$regex] };
 	if (matcher.$startsWith !== undefined)
@@ -118,7 +138,8 @@ function stringMatcherToRule(
 }
 
 function ruleToStringMatcher(rule: FilterRule): StringMatcher {
-	if (rule.values.length > 1) return { $in: rule.values };
+	if (rule.operator === "in" || (rule.operator === "is" && rule.values.length > 1))
+		return { $in: rule.values };
 
 	const val = rule.values[0];
 	switch (rule.operator) {
@@ -128,10 +149,14 @@ function ruleToStringMatcher(rule: FilterRule): StringMatcher {
 			return { $ne: val ?? "" };
 		case "in":
 			return { $in: rule.values };
+		case "not_in":
+			return { $nin: rule.values };
 		case "regex":
 			return { $regex: val ?? "" };
 		case "starts_with":
 			return { $startsWith: val ?? "" };
+		default:
+			return val ?? "";
 	}
 }
 
@@ -142,21 +167,19 @@ function booleanRule(field: FilterField, value: boolean): FilterRule {
 function nullableToRule(field: FilterField, value: unknown): FilterRule | null {
 	if (value === undefined) return null;
 	if (value === null) return { field, operator: "not_exists", values: [] };
-	return {
-		field,
-		operator:
-			typeof value === "object" && "$ne" in (value as object)
-				? "exists"
-				: "exists",
-		values: [],
-	};
+	return { field, operator: "exists", values: [] };
 }
 
-function resolveArrayFilterInner(item: Record<string, unknown>): unknown {
+type ArrayFilterMode = "$some" | "$every" | "$none";
+
+function detectArrayFilterMode(
+	item: Record<string, unknown>,
+): { mode: ArrayFilterMode; inner: Record<string, unknown> } {
 	for (const key of ["$some", "$every", "$none"] as const) {
-		if (key in item) return item[key];
+		if (key in item && item[key] && typeof item[key] === "object")
+			return { mode: key, inner: item[key] as Record<string, unknown> };
 	}
-	return item;
+	return { mode: "$some", inner: item };
 }
 
 export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
@@ -179,24 +202,45 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 			typeof filter.item === "object" && filter.item !== null
 				? filter.item
 				: {};
-		const inner = resolveArrayFilterInner(item as Record<string, unknown>);
+		const { mode, inner } = detectArrayFilterMode(
+			item as Record<string, unknown>,
+		);
 
-		if (inner && typeof inner === "object") {
-			const typedInner = inner as Record<string, unknown>;
+		if (mode !== "$some") {
+			mainRules.push({
+				field: "item_mode",
+				operator: "is",
+				values: [mode.slice(1)],
+			});
+		}
 
-			const featureRule = stringMatcherToRule(
-				"item_feature_id",
-				typedInner.feature_id as StringMatcher | undefined,
+		const featureRule = stringMatcherToRule(
+			"item_feature_id",
+			inner.feature_id as StringMatcher | undefined,
+		);
+		if (featureRule) mainRules.push(featureRule);
+
+		if (inner.unlimited !== undefined)
+			mainRules.push(
+				booleanRule("item_unlimited", Boolean(inner.unlimited)),
 			);
-			if (featureRule) mainRules.push(featureRule);
 
-			if (typedInner.unlimited !== undefined)
-				mainRules.push(
-					booleanRule("item_unlimited", Boolean(typedInner.unlimited)),
+		const itemPriceRule = nullableToRule("item_price", inner.price);
+		if (itemPriceRule) mainRules.push(itemPriceRule);
+
+		if (
+			inner.price &&
+			typeof inner.price === "object" &&
+			inner.price !== null
+		) {
+			const priceObj = inner.price as Record<string, unknown>;
+			if (priceObj.billing_method !== undefined) {
+				const bmRule = stringMatcherToRule(
+					"item_billing_method",
+					priceObj.billing_method as StringMatcher | undefined,
 				);
-
-			const itemPriceRule = nullableToRule("item_price", typedInner.price);
-			if (itemPriceRule) mainRules.push(itemPriceRule);
+				if (bmRule) mainRules.push(bmRule);
+			}
 		}
 	}
 
@@ -219,6 +263,7 @@ export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
 	const filter: PlanFilter = {};
 	let hasItemFields = false;
 	const itemInner: Record<string, unknown> = {};
+	let itemMode: ArrayFilterMode = "$some";
 
 	for (const rule of main.rules) {
 		switch (rule.field) {
@@ -246,14 +291,55 @@ export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
 				hasItemFields = true;
 				itemInner.price = rule.operator === "exists" ? { $ne: null } : null;
 				break;
+			case "item_billing_method": {
+				hasItemFields = true;
+				const existingPrice =
+					itemInner.price && typeof itemInner.price === "object"
+						? (itemInner.price as Record<string, unknown>)
+						: {};
+				itemInner.price = {
+					...existingPrice,
+					billing_method: ruleToStringMatcher(rule),
+				};
+				break;
+			}
+			case "item_mode":
+				itemMode = `$${rule.values[0] ?? "some"}` as ArrayFilterMode;
+				break;
 		}
 	}
 
-	if (hasItemFields) filter.item = itemInner as PlanFilter["item"];
+	if (hasItemFields) {
+		filter.item =
+			itemMode === "$some"
+				? (itemInner as PlanFilter["item"])
+				: ({ [itemMode]: itemInner } as PlanFilter["item"]);
+	}
 
 	if (groups.length > 1) {
 		filter.$or = groups.slice(1).map((group) => groupsToPlanFilter([group]));
 	}
 
 	return filter;
+}
+
+export function customerIdToStrings(
+	matcher: StringMatcher | undefined,
+): string[] {
+	if (matcher === undefined || matcher === null) return [];
+	if (typeof matcher === "string") return matcher ? [matcher] : [];
+	if (matcher.$eq) return [matcher.$eq];
+	if (matcher.$ne) return [matcher.$ne];
+	if (matcher.$in) return matcher.$in;
+	if (matcher.$nin) return matcher.$nin;
+	return [];
+}
+
+export function stringsToCustomerId(
+	ids: string[],
+): StringMatcher | undefined {
+	const filtered = ids.map((s) => s.trim()).filter(Boolean);
+	if (filtered.length === 0) return undefined;
+	if (filtered.length === 1) return filtered[0];
+	return { $in: filtered };
 }

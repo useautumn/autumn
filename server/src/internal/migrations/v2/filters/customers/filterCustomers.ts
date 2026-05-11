@@ -6,7 +6,12 @@ import {
 	buildCustomerSelect,
 } from "./buildCustomerSelect.js";
 
-export type CustomerRow = { internal_id: string; id: string | null };
+export type CustomerRow = {
+	internal_id: string;
+	id: string | null;
+	name: string | null;
+	email: string | null;
+};
 
 /**
  * Pure inner: takes a CustomerFilter directly. Used by `runFilter` shim

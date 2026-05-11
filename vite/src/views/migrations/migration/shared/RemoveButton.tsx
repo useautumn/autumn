@@ -10,7 +10,7 @@ export function RemoveButton({ className, ...props }: ButtonProps) {
 			aria-label="Remove"
 			{...props}
 			className={cn(
-				"opacity-0 group-hover/row:opacity-100 text-t3 hover:text-destructive motion-reduce:opacity-100",
+				"opacity-0 group-hover/row:opacity-100 text-t3 hover:text-destructive! motion-reduce:opacity-100",
 				className,
 			)}
 		>

@@ -1,25 +1,44 @@
-import type { BillingInterval, UpdatePlanOp } from "@autumn/shared";
+import type {
+	BillingInterval,
+	Feature,
+	FrontendProduct,
+	ProductItem,
+	UpdatePlanOp,
+} from "@autumn/shared";
+import { productV2ToBasePrice } from "@autumn/shared";
+import { CurrencyCircleDollarIcon, GitBranchIcon, PlusIcon } from "@phosphor-icons/react";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/v2/selects/Select";
+import { useState } from "react";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
+import { RemoveButton } from "../shared/RemoveButton";
 import { FilterGroup } from "../filters/FilterGroup";
 import {
 	groupsToPlanFilter,
 	planFilterToGroups,
 } from "../filters/filterRowTypes";
-import { AddButton } from "../shared/AddButton";
-import { INTERVAL_OPTIONS } from "../shared/constants";
-import { AddItemRows } from "./AddItemRows";
-import { OperationRow } from "./OperationRow";
+import { ItemSummaryRow } from "./ItemSummaryRow";
+import {
+	MigrationOperationSheet,
+	type OperationSheetMode,
+} from "./MigrationOperationSheet";
 import { RemoveItemRows } from "./RemoveItemRows";
+import { migrationItemToProductItem, productItemToMigrationItem } from "../shared/migrationItemUtils";
 
-function useOperationContext({
-	planFilter,
-}: {
-	planFilter: UpdatePlanOp["plan_filter"];
-}) {
+function useVersionOptions(planFilter: UpdatePlanOp["plan_filter"]) {
 	const { products } = useProductsQuery();
-	const { features } = useFeaturesQuery();
 
 	const targetPlanId =
 		typeof planFilter.plan_id === "string" && planFilter.plan_id
@@ -30,42 +49,12 @@ function useOperationContext({
 		? products.filter((p) => p.id === targetPlanId)
 		: [];
 
-	const versionOptions = matchingProducts
+	return matchingProducts
 		.map((p) => ({
 			value: String(p.version),
 			label: `v${p.version}`,
 		}))
 		.sort((a, b) => Number(a.value) - Number(b.value));
-
-	const planItemFeatureIds = new Set(
-		matchingProducts.flatMap((p) =>
-			p.items
-				.map((item) => item.feature_id)
-				.filter((id): id is string => Boolean(id)),
-		),
-	);
-
-	const allFeatureSuggestions = features.map((f) => {
-		const iconConfig = getFeatureIconConfig(f.type, f.config?.usage_type);
-		return {
-			value: f.id,
-			label: f.name || f.id,
-			icon: <span className={iconConfig.color}>{iconConfig.icon}</span>,
-		};
-	});
-
-	const planFeatureSuggestions = allFeatureSuggestions.filter((f) =>
-		planItemFeatureIds.has(f.value),
-	);
-
-	return {
-		versionOptions,
-		allFeatureSuggestions,
-		planFeatureSuggestions:
-			planFeatureSuggestions.length > 0
-				? planFeatureSuggestions
-				: allFeatureSuggestions,
-	};
 }
 
 export function UpdatePlanOpForm({
@@ -75,8 +64,12 @@ export function UpdatePlanOpForm({
 	value: UpdatePlanOp;
 	onChange: (value: UpdatePlanOp) => void;
 }) {
-	const { versionOptions, allFeatureSuggestions, planFeatureSuggestions } =
-		useOperationContext({ planFilter: value.plan_filter });
+	const versionOptions = useVersionOptions(value.plan_filter);
+	const { features } = useFeaturesQuery();
+
+	const [sheetOpen, setSheetOpen] = useState(false);
+	const [sheetMode, setSheetMode] = useState<OperationSheetMode>("add-feature");
+	const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
 
 	const update = (patch: Partial<UpdatePlanOp>) =>
 		onChange({ ...value, ...patch });
@@ -84,6 +77,72 @@ export function UpdatePlanOpForm({
 	const targetGroups = planFilterToGroups(value.plan_filter);
 	const targetGroup = targetGroups[0] ?? { rules: [] };
 	const customize = value.customize;
+	const addItems = customize?.add_items ?? [];
+
+	const openSheet = (mode: OperationSheetMode, itemIndex?: number) => {
+		setSheetMode(mode);
+		setEditingItemIndex(itemIndex ?? null);
+		setSheetOpen(true);
+	};
+
+	const editItem: ProductItem | undefined =
+		editingItemIndex !== null
+			? migrationItemToProductItem(addItems[editingItemIndex], features)
+			: undefined;
+
+	const initialProduct = buildInitialProduct(value, features);
+
+	const handleSheetSave = (product: FrontendProduct) => {
+		if (sheetMode === "edit-price") {
+			const basePrice = productV2ToBasePrice({ product });
+			if (basePrice) {
+				const amount =
+					basePrice.tiers?.[0]?.amount ??
+					(basePrice as Record<string, unknown>).price as number ??
+					0;
+				update({
+					customize: {
+						...customize,
+						price: {
+							amount,
+							interval: (basePrice.interval as BillingInterval) ?? "month",
+						},
+					},
+				});
+			} else if (product.planType === "free") {
+				update({
+					customize: {
+						...customize,
+						price: undefined,
+					},
+				});
+			}
+		} else {
+			const newItems = (product.items ?? [])
+				.filter((pi) => pi.feature_id)
+				.map(productItemToMigrationItem);
+
+			if (newItems.length === 0) return;
+
+			const items = [...addItems];
+			if (editingItemIndex !== null) {
+				items[editingItemIndex] = newItems[0];
+			} else {
+				items.push(...newItems);
+			}
+			update({ customize: { ...customize, add_items: items } });
+		}
+	};
+
+	const handleRemoveItem = (index: number) => {
+		const items = addItems.filter((_, i) => i !== index);
+		update({
+			customize: {
+				...customize,
+				add_items: items.length > 0 ? items : undefined,
+			},
+		});
+	};
 
 	return (
 		<div className="flex flex-col">
@@ -97,128 +156,67 @@ export function UpdatePlanOpForm({
 			/>
 
 			{value.version !== undefined && (
-				<OperationRow
-					connector="Set"
-					fieldLabel="Version"
-					value={String(value.version ?? "")}
-					config={
-						versionOptions.length > 0
-							? {
-									label: "Version",
-									valueType: "enum",
-									enumOptions: versionOptions,
-									placeholder: "Select version...",
-								}
-							: {
-									label: "Version",
-									valueType: "number",
-									placeholder: "Latest",
-								}
-					}
-					onChange={(v) => update({ version: v ? Number(v) : undefined })}
-					onRemove={() => update({ version: undefined })}
-				/>
+				<div className="flex items-center gap-2.5 py-1 group/row">
+					<span className="text-xs text-t4 w-12 shrink-0 select-none">Set</span>
+					<Select
+						value={String(value.version)}
+						onValueChange={(v) => update({ version: Number(v) })}
+						items={Object.fromEntries(versionOptions.map((o) => [o.value, o.label]))}
+					>
+						<SelectTrigger className="h-8 rounded-xl flex-1">
+							<GitBranchIcon size={16} weight="duotone" className="text-violet-500 shrink-0" />
+							<span className="flex-1 text-left text-sm">Version <SelectValue /></span>
+						</SelectTrigger>
+						<SelectContent>
+							{versionOptions.map((o) => (
+								<SelectItem key={o.value} value={o.value}>
+									{o.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<RemoveButton onClick={() => update({ version: undefined })} />
+				</div>
 			)}
 
 			{customize?.price !== undefined && (
-				<>
-					<OperationRow
-						connector="Set"
-						fieldLabel="Price"
-						value={String(customize.price?.amount ?? "")}
-						config={{
-							label: "Amount",
-							valueType: "number",
-							placeholder: "0",
-						}}
-						onChange={(v) =>
-							update({
-								customize: {
-									...customize,
-									price: {
-										...(customize.price ?? {
-											amount: 0,
-											interval: "month" as BillingInterval,
-										}),
-										amount: v ? Number(v) : 0,
-									},
-								},
-							})
-						}
-						onRemove={() =>
-							update({
-								customize: {
-									...customize,
-									price: undefined,
-								},
-							})
-						}
-					/>
-					<OperationRow
-						connector=""
-						fieldLabel="Interval"
-						value={customize.price?.interval ?? ""}
-						config={{
-							label: "Interval",
-							valueType: "enum",
-							enumOptions: INTERVAL_OPTIONS,
-						}}
-						onChange={(v) =>
-							update({
-								customize: {
-									...customize,
-									price: {
-										...(customize.price ?? {
-											amount: 0,
-											interval: "month" as BillingInterval,
-										}),
-										interval: v as BillingInterval,
-									},
-								},
-							})
-						}
-					/>
-				</>
+				<div className="flex items-center gap-2.5 py-1 group/row">
+					<span className="text-xs text-t4 w-12 shrink-0 select-none">Set</span>
+					<button
+						type="button"
+						onClick={() => openSheet("edit-price")}
+						className="flex items-center gap-2 h-8 px-3 rounded-xl input-base input-state-open-tiny cursor-pointer flex-1 min-w-0"
+					>
+						<CurrencyCircleDollarIcon size={16} weight="duotone" className="text-yellow-500 shrink-0" />
+						<span className="text-body">
+							${customize.price?.amount ?? 0} per {customize.price?.interval ?? "month"}
+						</span>
+					</button>
+					<RemoveButton onClick={() => update({ customize: { ...customize, price: undefined } })} />
+				</div>
 			)}
 
-			{(customize?.add_items ?? []).map((item, index) => (
-				<AddItemRows
-					key={`add-${index}`}
-					label="Add"
-					item={item}
-					featureSuggestions={allFeatureSuggestions}
-					onChange={(updated) => {
-						const items = [...(customize?.add_items ?? [])];
-						items[index] = updated;
-						update({
-							customize: { ...customize, add_items: items },
-						});
-					}}
-					onRemove={() => {
-						const items = (customize?.add_items ?? []).filter(
-							(_, i) => i !== index,
-						);
-						update({
-							customize: {
-								...customize,
-								add_items: items.length > 0 ? items : undefined,
-							},
-						});
-					}}
-				/>
+			{addItems.map((item, index) => (
+				<div key={`add-${index}`} className="flex items-center gap-2.5 py-1 group/row">
+					<span className="text-xs text-t4 w-12 shrink-0 select-none">
+						{index === 0 ? "Add" : ""}
+					</span>
+					<ItemSummaryRow
+						item={item}
+						onClick={() => openSheet("edit-feature", index)}
+					/>
+					<RemoveButton onClick={() => handleRemoveItem(index)} />
+				</div>
 			))}
 
 			{(customize?.remove_items ?? []).map((item, index) => (
 				<RemoveItemRows
 					key={`remove-${index}`}
 					item={item}
-					featureSuggestions={planFeatureSuggestions}
 					onChange={(updated) => {
 						const items = [...(customize?.remove_items ?? [])];
 						items[index] = updated;
-						update({
-							customize: { ...customize, remove_items: items },
-						});
+						update({ customize: { ...customize, remove_items: items } });
 					}}
 					onRemove={() => {
 						const items = (customize?.remove_items ?? []).filter(
@@ -234,66 +232,77 @@ export function UpdatePlanOpForm({
 				/>
 			))}
 
-			<div className="flex items-center gap-2 py-1 pl-[3.625rem] flex-wrap">
-				{value.version === undefined && (
-					<AddButton label="Version" onClick={() => update({ version: 1 })} />
-				)}
-				{!customize && (
-					<AddButton
-						label="Customize"
-						onClick={() =>
-							update({
-								customize: {} as UpdatePlanOp["customize"],
-							})
-						}
-					/>
-				)}
-				{customize && customize.price === undefined && (
-					<AddButton
-						label="Base Price"
-						onClick={() =>
-							update({
-								customize: {
-									...customize,
-									price: {
-										amount: 0,
-										interval: "month" as BillingInterval,
+			<div className="py-1 pl-[3.625rem]">
+				<DropdownMenu>
+					<DropdownMenuTrigger className="flex items-center gap-2 text-xs text-t4 hover:text-t2 cursor-pointer outline-none">
+						<PlusIcon size={10} />
+						Add
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="start">
+						{value.version === undefined && (
+							<DropdownMenuItem closeOnClick onClick={() => update({ version: 1 })}>
+								Version
+							</DropdownMenuItem>
+						)}
+						{(!customize || customize.price === undefined) && (
+							<DropdownMenuItem closeOnClick onClick={() => openSheet("edit-price")}>
+								Base Price
+							</DropdownMenuItem>
+						)}
+						<DropdownMenuItem closeOnClick onClick={() => openSheet("add-feature")}>
+							Add Item
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							closeOnClick
+							onClick={() =>
+								update({
+									customize: {
+										...customize,
+										remove_items: [
+											...(customize?.remove_items ?? []),
+											{} as Record<string, unknown>,
+										],
 									},
-								},
-							})
-						}
-					/>
-				)}
-				{customize && (
-					<AddButton
-						label="Add Item"
-						onClick={() =>
-							update({
-								customize: {
-									...customize,
-									add_items: [...(customize.add_items ?? []), {}],
-								},
-							})
-						}
-					/>
-				)}
-				{customize && (
-					<AddButton
-						label="Remove Item"
-						onClick={() =>
-							update({
-								customize: {
-									...customize,
-									remove_items: [
-										...(customize.remove_items ?? []),
-										{} as Record<string, unknown>,
-									],
-								},
-							})
-						}
-					/>
-				)}
+								})
+							}
+						>
+							Remove Item
+						</DropdownMenuItem>
+					</DropdownMenuContent>
+				</DropdownMenu>
 			</div>
+
+			<MigrationOperationSheet
+				open={sheetOpen}
+				onOpenChange={setSheetOpen}
+				mode={sheetMode}
+				initialProduct={initialProduct}
+				editItem={editItem}
+				onSave={handleSheetSave}
+			/>
 		</div>
 	);
 }
+
+function buildInitialProduct(
+	value: UpdatePlanOp,
+	features: Feature[],
+): Partial<FrontendProduct> {
+	const items: ProductItem[] = [];
+
+	if (value.customize?.price) {
+		items.push({
+			tiers: [{ to: "inf", amount: value.customize.price.amount ?? 0 }],
+			interval: value.customize.price.interval ?? "month",
+			billing_units: 1,
+		} as ProductItem);
+	}
+
+	return {
+		version: value.version ?? 1,
+		planType: value.customize?.price ? "paid" : "free",
+		basePriceType: "recurring",
+		items,
+	};
+}
+

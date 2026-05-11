@@ -1,15 +1,7 @@
-import type { MigrationFilter, Operations } from "@autumn/shared";
 import Editor, { type Monaco } from "@monaco-editor/react";
-import { useStore } from "@tanstack/react-form";
 import JSON5 from "json5";
-import { useState } from "react";
-import { useTheme } from "@/contexts/ThemeProvider";
-import {
-	AUTUMN_DARK,
-	AUTUMN_LIGHT,
-	registerAutumnThemes,
-} from "@/lib/monacoThemes";
-import type { MigrationEditorFormInstance } from "./useMigrationEditorForm";
+import { useRef, useState } from "react";
+import { registerAutumnThemes } from "@/lib/monacoThemes";
 
 function configureMonaco(monaco: Monaco) {
 	monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
@@ -42,10 +34,10 @@ const EDITOR_OPTIONS = {
 };
 
 function stringify(value: unknown): string {
-	return JSON5.stringify(value, { space: 2, quote: '"' }) ?? "{}";
+	return JSON.stringify(value, null, 2) ?? "{}";
 }
 
-function RawField({
+export function RawField({
 	label,
 	description,
 	value,
@@ -53,8 +45,8 @@ function RawField({
 	height,
 	theme,
 }: {
-	label: string;
-	description: string;
+	label?: string;
+	description?: string;
 	value: unknown;
 	onChange: (parsed: unknown) => void;
 	height: string;
@@ -62,11 +54,20 @@ function RawField({
 }) {
 	const [text, setText] = useState(() => stringify(value));
 	const [error, setError] = useState<string | null>(null);
+	const lastExternalRef = useRef(value);
+
+	const serialized = stringify(value);
+	if (lastExternalRef.current !== value && serialized !== text) {
+		lastExternalRef.current = value;
+		setText(serialized);
+		setError(null);
+	}
 
 	const handleChange = (newText: string) => {
 		setText(newText);
 		try {
 			const parsed = JSON5.parse(newText);
+			lastExternalRef.current = parsed;
 			setError(null);
 			onChange(parsed);
 		} catch (err) {
@@ -76,12 +77,16 @@ function RawField({
 
 	return (
 		<div className="flex flex-col gap-1">
-			<span className="text-xs font-medium text-t2">{label}</span>
-			<p className="text-xs text-t3 mb-2">{description}</p>
+			{label && (
+				<span className="text-xs font-medium text-t2">{label}</span>
+			)}
+			{description && (
+				<p className="text-xs text-t3 mb-2">{description}</p>
+			)}
 			<div className="rounded-md border border-border overflow-hidden">
 				<Editor
 					height={height}
-					language="typescript"
+					language="json"
 					value={text}
 					onChange={(v) => handleChange(v ?? "")}
 					beforeMount={configureMonaco}
@@ -90,43 +95,6 @@ function RawField({
 				/>
 			</div>
 			{error && <div className="mt-1 text-xs text-red-500">{error}</div>}
-		</div>
-	);
-}
-
-export function MigrationRawEditor({
-	form,
-}: {
-	form: MigrationEditorFormInstance["form"];
-}) {
-	const { isDark } = useTheme();
-	const theme = isDark ? AUTUMN_DARK : AUTUMN_LIGHT;
-
-	const filter = useStore(form.store, (s) => s.values.filter);
-	const operations = useStore(form.store, (s) => s.values.operations);
-
-	return (
-		<div className="flex flex-col gap-6">
-			<RawField
-				label="Filter"
-				description="Select which customers this migration applies to."
-				value={filter}
-				onChange={(parsed) =>
-					form.setFieldValue("filter", parsed as MigrationFilter)
-				}
-				height="240px"
-				theme={theme}
-			/>
-			<RawField
-				label="Operations"
-				description="Define the mutations applied to each matched customer."
-				value={operations}
-				onChange={(parsed) =>
-					form.setFieldValue("operations", parsed as Operations)
-				}
-				height="360px"
-				theme={theme}
-			/>
 		</div>
 	);
 }
