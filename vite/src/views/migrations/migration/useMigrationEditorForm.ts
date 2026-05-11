@@ -7,8 +7,10 @@ import { getBackendErr } from "@/utils/genUtils";
 
 export function useMigrationEditorForm({
 	migration,
+	onRunTriggered,
 }: {
 	migration: Migration;
+	onRunTriggered?: () => void;
 }) {
 	const { updateMigration, isUpdating, runMigration, isRunning } =
 		useMigrationsQuery();
@@ -26,10 +28,7 @@ export function useMigrationEditorForm({
 			try {
 				await updateMigration({
 					id: migration.id,
-					updates: {
-						filter: value.filter,
-						operations: value.operations,
-					},
+					updates: { filter: value.filter, operations: value.operations },
 				});
 				toast.success("Migration saved");
 			} catch (error) {
@@ -40,10 +39,12 @@ export function useMigrationEditorForm({
 		},
 	});
 
-	const handleRun = async () => {
+	const triggerRun = async (dryRun: boolean) => {
 		try {
-			const result = await runMigration({ id: migration.id, dry_run: true });
-			toast.success(`Migration triggered (run ${result.run_id})`);
+			const label = dryRun ? "Dry run" : "Migration run";
+			const result = await runMigration({ id: migration.id, dry_run: dryRun });
+			toast.success(`${label} triggered (${result.run_id})`);
+			onRunTriggered?.();
 		} catch (error) {
 			toast.error(
 				getBackendErr(error as AxiosError, "Failed to run migration"),
@@ -51,7 +52,10 @@ export function useMigrationEditorForm({
 		}
 	};
 
-	return { form, handleRun, isUpdating, isRunning };
+	const handleDryRun = () => triggerRun(true);
+	const handleRealRun = () => triggerRun(false);
+
+	return { form, handleDryRun, handleRealRun, isUpdating, isRunning };
 }
 
 export type MigrationEditorFormInstance = ReturnType<

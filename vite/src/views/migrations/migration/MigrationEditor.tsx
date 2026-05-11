@@ -1,8 +1,13 @@
 import type { Migration } from "@autumn/shared";
-import { ArrowsClockwiseIcon, CodeIcon, PlayIcon } from "@phosphor-icons/react";
+import {
+	ArrowsClockwiseIcon,
+	CodeIcon,
+	PlayIcon,
+	WarningIcon,
+} from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
@@ -14,12 +19,43 @@ import { useMigrationEditorForm } from "./useMigrationEditorForm";
 
 type EditorMode = "form" | "raw";
 
-export function MigrationEditor({ migration }: { migration: Migration }) {
-	const { form, handleRun, isUpdating, isRunning } = useMigrationEditorForm({
-		migration,
-	});
-	const [mode, setMode] = useState<EditorMode>("form");
+const CONFIRM_TIMEOUT_MS = 3000;
 
+function useConfirmAction(action: () => void) {
+	const [isConfirming, setIsConfirming] = useState(false);
+	const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+	const trigger = useCallback(() => {
+		if (!isConfirming) {
+			setIsConfirming(true);
+			timerRef.current = setTimeout(() => setIsConfirming(false), CONFIRM_TIMEOUT_MS);
+			return;
+		}
+		clearTimeout(timerRef.current);
+		setIsConfirming(false);
+		action();
+	}, [isConfirming, action]);
+
+	const cancel = useCallback(() => {
+		clearTimeout(timerRef.current);
+		setIsConfirming(false);
+	}, []);
+
+	return { isConfirming, trigger, cancel };
+}
+
+export function MigrationEditor({
+	migration,
+	onSwitchToRuns,
+}: {
+	migration: Migration;
+	onSwitchToRuns?: () => void;
+}) {
+	const { form, handleDryRun, handleRealRun, isUpdating, isRunning } =
+		useMigrationEditorForm({ migration, onRunTriggered: onSwitchToRuns });
+
+	const [mode, setMode] = useState<EditorMode>("form");
+	const confirm = useConfirmAction(handleRealRun);
 	const canSubmit = useStore(form.store, (s) => s.canSubmit);
 
 	return (
@@ -50,11 +86,25 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 					<Button
 						variant="secondary"
 						size="default"
-						onClick={handleRun}
+						onClick={handleDryRun}
 						isLoading={isRunning}
 					>
 						<PlayIcon size={14} weight="fill" />
 						Dry Run
+					</Button>
+					<Button
+						variant={confirm.isConfirming ? "destructive" : "primary"}
+						size="default"
+						onClick={confirm.trigger}
+						onBlur={confirm.cancel}
+						isLoading={isRunning}
+					>
+						{confirm.isConfirming ? (
+							<WarningIcon size={14} weight="fill" />
+						) : (
+							<PlayIcon size={14} weight="fill" />
+						)}
+						{confirm.isConfirming ? "Confirm Run" : "Run"}
 					</Button>
 					<ShortcutButton
 						size="default"
