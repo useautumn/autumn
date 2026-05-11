@@ -1,0 +1,94 @@
+vite/src/views/customers2/customer/workbench/hooks/useWorkbenchEscape.ts
+  s_cdefd3625da8b2::t_534b4b4c7955b7 1-30
+vite/src/views/customers2/customer/workbench/WorkbenchLogRow.tsx
+  s_cdefd3625da8b2::t_9d015b5f965a4b 1-50
+vite/src/views/main-sidebar/SidebarBottom.tsx
+  s_cdefd3625da8b2::t_3c56a4e2ccae61 19
+  s_cdefd3625da8b2::t_43776c7bdaa18d 5
+vite/src/views/customers2/customer/workbench/workbenchUtils.ts
+  s_cdefd3625da8b2::t_57514acc32769c 1-99
+  s_cdefd3625da8b2::t_49f0401f9fe19c 100-125
+vite/src/views/customers2/customer/CustomerView2.tsx
+  s_cdefd3625da8b2::t_845557c98b8770 40
+  s_cdefd3625da8b2::t_d57ecd93ac5fc4 232
+vite/src/views/customers2/customer/workbench/WorkbenchButton.tsx
+  s_cdefd3625da8b2::t_d09b1edc44a0a4 1-4,6,8-13,15-23,51-52
+  s_cdefd3625da8b2::t_40d568b387329d 5,7,14,24-25,30,32-50
+  s_cdefd3625da8b2::t_1f491ff02f13f5 26-29,31
+vite/src/views/customers2/customer/workbench/WorkbenchJsonViewer.tsx
+  s_cdefd3625da8b2::t_18f14e722df77d 93
+  s_cdefd3625da8b2::t_812bbda186c258 1-7,15-69,85-92,94-105,107-116,118,120-145
+  s_cdefd3625da8b2::t_804309c6a62192 70,72,74,76-84
+  s_cdefd3625da8b2::t_1f331d6b818843 71,73,75
+  s_cdefd3625da8b2::t_704859a5a68b0d 106
+  s_cdefd3625da8b2::t_f8fb0911d33d74 117,119
+  s_cdefd3625da8b2::t_9d5f3ad870f4e6 8-14
+vite/src/views/customers2/customer/workbench/WorkbenchLogDetail.tsx
+  s_cdefd3625da8b2::t_cd744170a5224c 28
+  s_cdefd3625da8b2::t_07a6d49a525c07 169-170,173-174
+  s_cdefd3625da8b2::t_e00b83bd8a30b2 10-15
+  s_cdefd3625da8b2::t_72a49b4fab97f4 42-43,45-82
+  s_cdefd3625da8b2::t_3dbbd6e61ff31f 3-7,9
+  s_cdefd3625da8b2::t_0d579093bcaa4a 171-172
+  s_cdefd3625da8b2::t_3233b204b81879 1-2,16-27,29-31,33-38,40-41,83-87,90-91,93-100,114,118,120-123,126-127,131-132,134,137-138,142-143,147-149,153-155,159-161,165-168
+  s_cdefd3625da8b2::t_ac7dd441bea0f6 32,39,44,88-89,92,101-113,115-117,119,124-125,128-130,133,135-136,139-141,144-146,150-152,156-158,162-164
+  s_cdefd3625da8b2::t_039a1b47053db3 8
+vite/src/views/customers2/customer/workbench/Workbench.tsx
+  s_cdefd3625da8b2::t_322d999caf584c 77
+  s_cdefd3625da8b2::t_935e3c6531796e 22,26,36,47,51,54,75,83,106,112-113,116
+  s_cdefd3625da8b2::t_3bcccb5d5ac12e 141,149
+  s_cdefd3625da8b2::t_88b4f1a6c3c6af 114
+  s_cdefd3625da8b2::t_7560bed658f673 6,12,38,49-50,52-53,55-60,67-72,74,76,78-80,82,84-85,87-89
+  s_cdefd3625da8b2::t_ef9fef1fa4b460 14,17-18,28-30,65,92-93,99,104,109
+  s_cdefd3625da8b2::t_137744235ff90a 107-108,110-111
+  s_cdefd3625da8b2::t_067b7c316bb58f 1-5,7-11,13,15-16,19-21,23-25,27,31-35,37,39-44,48,86,90-91
+  s_cdefd3625da8b2::t_d4f7159624cb14 45-46,61-64,66,73,81,94-98,100-103,105,117-140,142-148,150-153
+vite/src/views/customers2/customer/workbench/hooks/useWorkbenchResize.ts
+  s_cdefd3625da8b2::t_eaf59439cb6af9 1-52
+vite/src/components/ui/resizable.tsx
+  s_cdefd3625da8b2::t_da43a5277cc353 1-50
+bun.lock
+  ai_agent 528,542,4876-4877,5584
+vite/src/views/customers2/customer/workbench/WorkbenchEmptyState.tsx
+  ai_agent 1-12
+vite/src/views/customers2/customer/workbench/WorkbenchFilters.tsx
+  s_cdefd3625da8b2::t_5fef01abe34f9b 1-2,4-7,10,13-19,25-26,28-34,40-42,56-58
+  s_cdefd3625da8b2::t_17a33954b2dcec 27
+  s_cdefd3625da8b2::t_91d99d93508f4d 8-9,11-12,20-24,43,45-48,50,52-55
+  s_cdefd3625da8b2::t_fb42a3c6db7dd1 35-39
+  s_cdefd3625da8b2::t_213974d85b157f 3,44,49,51
+vite/src/views/customers2/customer/workbench/WorkbenchLogList.tsx
+  s_cdefd3625da8b2::t_69f1608bc2679d 1,3-4,7-18,33-74,83
+  s_cdefd3625da8b2::t_23cd93872af052 32,76-81
+  s_cdefd3625da8b2::t_13780aaff50eea 2,6,19-31,75,82,84-86
+  s_cdefd3625da8b2::t_e00b83bd8a30b2 5
+vite/package.json
+  s_cdefd3625da8b2::t_da43a5277cc353 67,81
+vite/src/views/customers2/customer/workbench/WorkbenchFilterSelect.tsx
+  s_cdefd3625da8b2::t_5d31081fe0006d 1-43
+vite/src/hooks/stores/useWorkbenchStore.ts
+  s_cdefd3625da8b2::t_44fdd7d77f08eb 13-15,25,32,47,54,61
+  s_cdefd3625da8b2::t_57514acc32769c 4-10
+  s_cdefd3625da8b2::t_2b2d1c9b65df3d 52-53
+  s_cdefd3625da8b2::t_2b308788c91dea 1-3,11-12,16-24,26-31,33-46,48-51,55-60,62-64
+vite/src/hooks/queries/useCusRequestLogsQuery.tsx
+  s_cdefd3625da8b2::t_2ec113e4d3cd9e 1-22,24-41,68-93
+  s_cdefd3625da8b2::t_57514acc32769c 42-65,67
+  s_cdefd3625da8b2::t_49e60a4ac89121 23,66
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "1316a737bc075155a40a4910152cb1cfb9abc4dc",
+  "prompts": {},
+  "sessions": {
+    "s_cdefd3625da8b2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e806008dffefZUoi2WZdawLov",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
