@@ -12,5 +12,6 @@ export const planRegistry: RootScope = {
 	],
 	fields: {
 		plan_id: { kind: "leaf", sql: "p.id" },
+		addon: { kind: "leaf", sql: "p.is_add_on" },
 	},
 };

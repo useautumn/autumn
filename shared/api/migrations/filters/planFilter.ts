@@ -23,6 +23,7 @@ import { PlanItemFilterSchema } from "./planItemFilter.js";
  *  - `paid: true`     → has at least one customer_price (base or item)
  *  - `recurring: true`→ has at least one customer_price whose price's
  *                       interval is not 'one_off'
+ *  - `addon: false`   → product.is_add_on is false
  *
  * Note: `recurring: true` is a strict subset of `paid: true`. Every
  * recurring plan is paid (a recurring price is still a price), but a
@@ -43,6 +44,8 @@ export type PlanFilter = {
 		| null
 		| { $eq?: null; $ne?: null }
 		| z.infer<typeof PlanPriceFilterInner>;
+	addon?: z.infer<typeof BooleanMatcherSchema>;
+	/** `recurring: true` already implies a paid plan. */
 	paid?: z.infer<typeof BooleanMatcherSchema>;
 	recurring?: z.infer<typeof BooleanMatcherSchema>;
 	item?:
@@ -59,6 +62,7 @@ export const PlanFilterSchema: z.ZodType<PlanFilter> = z.lazy(() =>
 	z.object({
 		plan_id: StringMatcherSchema.optional(),
 		price: nullableObjectFilter(PlanPriceFilterInner).optional(),
+		addon: BooleanMatcherSchema.optional(),
 		paid: BooleanMatcherSchema.optional(),
 		recurring: BooleanMatcherSchema.optional(),
 		item: arrayFilter(PlanItemFilterSchema).optional(),

@@ -4,6 +4,7 @@ import { iterateOverFilterResults } from "../iterateOverFilterResults.js";
 import {
 	buildCustomerCount,
 	buildCustomerSelect,
+	type CustomerCheckpointExclusion,
 } from "./buildCustomerSelect.js";
 
 export type CustomerRow = { internal_id: string; id: string | null };
@@ -15,16 +16,19 @@ export type CustomerRow = { internal_id: string; id: string | null };
 export const filterCustomers = ({
 	ctx,
 	filter,
+	checkpoint,
 	batchSize,
 }: {
 	ctx: AutumnContext;
 	filter: CustomerFilter;
+	checkpoint?: CustomerCheckpointExclusion;
 	batchSize?: number;
 }): AsyncGenerator<CustomerRow[]> => {
 	const args = {
 		orgId: ctx.org.id,
 		env: ctx.env,
 		filter,
+		checkpoint,
 		ctx: { features: ctx.features },
 	};
 	return iterateOverFilterResults<CustomerRow>({
@@ -39,15 +43,18 @@ export const filterCustomers = ({
 export const countCustomers = async ({
 	ctx,
 	filter,
+	checkpoint,
 }: {
 	ctx: AutumnContext;
 	filter: CustomerFilter;
+	checkpoint?: CustomerCheckpointExclusion;
 }): Promise<number> => {
 	const [{ count }] = (await ctx.db.execute(
 		buildCustomerCount({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			filter,
+			checkpoint,
 			ctx: { features: ctx.features },
 		}),
 	)) as Array<{ count: bigint | number }>;
