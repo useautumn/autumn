@@ -142,7 +142,7 @@ function SelectItem({
 					<CheckIcon className="size-4" />
 				</SelectPrimitive.ItemIndicator>
 			</span>
-			<SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
+			<SelectPrimitive.ItemText className="flex items-center gap-2">{children}</SelectPrimitive.ItemText>
 		</SelectPrimitive.Item>
 	);
 }
