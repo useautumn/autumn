@@ -1,0 +1,22 @@
+server/src/internal/customers/cusUtils/cusResponseUtils/getCusAutoTopupPurchaseLimits.ts
+  s_4e0c649b2b8b96::t_45dc7581e42222 64-70,78-79
+  s_4e0c649b2b8b96::t_9fbf300136e61a 8,21-22
+server/src/internal/balances/autoTopUp/helpers/limits/autoTopupLimitWindowUtils.ts
+  s_4e0c649b2b8b96::t_ac5855223cafcb 36,42,50-57,59
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "ef1edcc3faf5f8957f0f9b236eaf0e2b5b657726",
+  "prompts": {},
+  "sessions": {
+    "s_4e0c649b2b8b96": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e987286bffeAYDMVrLQd3Hv3o",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
