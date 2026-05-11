@@ -4,6 +4,8 @@ import {
 	CaretRightIcon,
 	CodeIcon,
 	EyeIcon,
+	FunnelSimpleIcon,
+	GearIcon,
 	PlayIcon,
 	SlidersIcon,
 	WarningIcon,
@@ -19,7 +21,7 @@ import { CustomerPreview, useCustomerCount } from "./filters/CustomerPreview";
 import { FilterForm } from "./filters/FilterForm";
 import { RawField } from "./MigrationRawEditor";
 import { OperationsForm } from "./operations/OperationsForm";
-import { MigrationRunsView } from "./runs/MigrationRunsView";
+import { MigrationLiveView } from "./live/MigrationLiveView";
 import { useMigrationEditorForm } from "./useMigrationEditorForm";
 
 type EditorMode = "form" | "json";
@@ -30,7 +32,7 @@ const CONFIRM_TIMEOUT_MS = 3000;
 const STEPS = [
 	{ step: 1 as const, label: "Filter" },
 	{ step: 2 as const, label: "Operations" },
-	{ step: 3 as const, label: "Results" },
+	{ step: 3 as const, label: "Live" },
 ];
 
 function useConfirmAction(action: () => void) {
@@ -155,7 +157,10 @@ export function MigrationEditor({
 				/>
 			)}
 			{step === 3 && (
-				<MigrationRunsView migrationId={migration.id} />
+				<MigrationLiveView
+					migrationId={migration.id}
+					filter={filter}
+				/>
 			)}
 		</div>
 	);
@@ -217,8 +222,8 @@ function FilterStep({
 	return (
 		<div className="flex flex-col gap-4">
 			<FormSection
+				icon={<FunnelSimpleIcon size={16} weight="fill" className="text-subtle" />}
 				title="Filter"
-				description="Select which customers this migration applies to."
 				mode={mode}
 				onToggleMode={onToggleMode}
 			>
@@ -259,8 +264,8 @@ function OperationsStep({
 
 	return (
 		<FormSection
+			icon={<GearIcon size={16} weight="fill" className="text-subtle" />}
 			title="Operations"
-			description="Define the mutations applied to each matched customer."
 			mode={mode}
 			onToggleMode={onToggleMode}
 		>
@@ -284,14 +289,14 @@ function OperationsStep({
 }
 
 function FormSection({
+	icon,
 	title,
-	description,
 	mode,
 	onToggleMode,
 	children,
 }: {
+	icon: React.ReactNode;
 	title: string;
-	description: string;
 	mode: EditorMode;
 	onToggleMode: () => void;
 	children: React.ReactNode;
@@ -299,9 +304,9 @@ function FormSection({
 	return (
 		<div className="flex flex-col gap-3">
 			<div className="flex items-center justify-between">
-				<div>
-					<h2 className="text-sm font-medium text-t1">{title}</h2>
-					<p className="text-xs text-t3">{description}</p>
+				<div className="text-t2 text-md flex gap-2 items-center">
+					{icon}
+					{title}
 				</div>
 				<Button variant="secondary" size="sm" onClick={onToggleMode}>
 					{mode === "form" ? (

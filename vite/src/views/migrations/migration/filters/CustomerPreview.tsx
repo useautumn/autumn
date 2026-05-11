@@ -86,15 +86,17 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 	return (
 		<div className="flex flex-col gap-3">
 			<Separator />
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-2">
-					<UsersIcon size={14} className="text-t3" />
-					<span className="text-sm font-medium text-t1">Customers</span>
-				</div>
-				<span className="text-xs text-t3">
-					{count !== null ? `${count} ${count === 1 ? "match" : "matches"}` : ""}
-				</span>
-			</div>
+			<Table.Toolbar>
+				<Table.Heading>
+					<UsersIcon size={16} weight="fill" className="text-subtle" />
+					Filtered Customers
+				</Table.Heading>
+				<Table.Actions>
+					<span className="text-xs text-t3">
+						{count !== null ? `${count} ${count === 1 ? "match" : "matches"}` : ""}
+					</span>
+				</Table.Actions>
+			</Table.Toolbar>
 			<div className="flex items-center gap-2">
 				<div className="relative flex items-center flex-1 min-w-0">
 					<ListMagnifyingGlassIcon

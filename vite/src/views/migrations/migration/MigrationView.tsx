@@ -38,19 +38,14 @@ export function MigrationView() {
 
 	return (
 		<div className="flex flex-col h-fit relative w-full pb-8 max-w-5xl mx-auto pt-4 sm:pt-8">
-			<div className="px-4 sm:px-10 flex flex-col gap-6">
+			<div className="px-4 sm:px-10 flex flex-col gap-2">
 				<Breadcrumb className="text-t3 flex">
 					<BreadcrumbList className="text-t3 text-xs w-full">
-						<BreadcrumbItem
-							onClick={goToMigrations}
-							className="cursor-pointer"
-						>
+						<BreadcrumbItem onClick={goToMigrations} className="cursor-pointer">
 							Migrations
 						</BreadcrumbItem>
 						<BreadcrumbSeparator />
-						<BreadcrumbItem className="text-t2">
-							{migration.id}
-						</BreadcrumbItem>
+						<BreadcrumbItem className="text-t2">{migration.id}</BreadcrumbItem>
 					</BreadcrumbList>
 				</Breadcrumb>
 				<MigrationEditor migration={migration} />
