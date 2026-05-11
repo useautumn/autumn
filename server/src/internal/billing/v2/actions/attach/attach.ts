@@ -43,6 +43,7 @@ export async function attach({
 		params,
 		contextOverride,
 	});
+	billingContext.dryRunStripe = preview;
 
 	logAttachContext({ ctx, billingContext });
 

@@ -28,6 +28,7 @@ export const previewCreateScheduleWithContext = async ({
 		ctx,
 		params,
 	});
+	billingContext.dryRunStripe = true;
 
 	await handleCreateScheduleErrors({
 		db: ctx.db,

@@ -35,6 +35,7 @@ export async function multiAttach({
 		ctx,
 		params,
 	});
+	billingContext.dryRunStripe = preview;
 
 	// 2. Errors
 	await handleMultiAttachErrors({
