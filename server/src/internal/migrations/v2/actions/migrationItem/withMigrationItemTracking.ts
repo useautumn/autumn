@@ -31,7 +31,7 @@ const itemToPreview = (item: RunScopeItem): MigrationItemPreview => ({
 
 const recordMigrationItemEvent = async ({
 	ctx,
-	migration,
+	migrationInternalId,
 	migrationRunId,
 	dryRun,
 	item,
@@ -40,7 +40,7 @@ const recordMigrationItemEvent = async ({
 	response,
 }: {
 	ctx: AutumnContext;
-	migration: Migration;
+	migrationInternalId: string;
 	migrationRunId: string;
 	dryRun: boolean;
 	item: RunScopeItem;
@@ -54,7 +54,7 @@ const recordMigrationItemEvent = async ({
 			timestamp: new Date().toISOString(),
 			org_id: ctx.org.id,
 			env: ctx.env,
-			migration_internal_id: migration.internal_id,
+			migration_internal_id: migrationInternalId,
 			migration_run_id: migrationRunId,
 			dry_run: dryRun,
 			item_kind: item.kind,
@@ -95,22 +95,26 @@ const markItemRunFinished = async ({
 const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 	ctx,
 	migration,
+	migrationInternalId,
 	migrationRunId,
 	dryRun,
 	item,
+	trackItemRun,
 	run,
 }: {
 	ctx: AutumnContext;
-	migration: Migration;
+	migration?: Migration;
+	migrationInternalId: string;
 	migrationRunId: string;
 	dryRun: boolean;
 	item: RunScopeItem;
+	trackItemRun: boolean;
 	run: () => Promise<T>;
 }): Promise<T> => {
 	try {
 		const result = await run();
 
-		if (!dryRun) {
+		if (trackItemRun && migration && !dryRun) {
 			await markItemRunFinished({
 				ctx,
 				migration,
@@ -121,7 +125,7 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 
 		await recordMigrationItemEvent({
 			ctx,
-			migration,
+			migrationInternalId,
 			migrationRunId,
 			dryRun,
 			item,
@@ -132,7 +136,7 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 
 		return result;
 	} catch (error) {
-		if (!dryRun) {
+		if (trackItemRun && migration && !dryRun) {
 			await migrationItemRunRepo.markFailed({
 				ctx,
 				migrationInternalId: migration.internal_id,
@@ -143,7 +147,7 @@ const runTrackedItem = async <T extends MigrationItemTrackingResult>({
 
 		await recordMigrationItemEvent({
 			ctx,
-			migration,
+			migrationInternalId,
 			migrationRunId,
 			dryRun,
 			item,
@@ -176,9 +180,11 @@ export const withMigrationItemTracking = async <
 		return runTrackedItem({
 			ctx,
 			migration,
+			migrationInternalId: migration.internal_id,
 			migrationRunId,
 			dryRun,
 			item,
+			trackItemRun: true,
 			run,
 		});
 	}
@@ -205,9 +211,39 @@ export const withMigrationItemTracking = async <
 	return runTrackedItem({
 		ctx,
 		migration,
+		migrationInternalId: migration.internal_id,
 		migrationRunId,
 		dryRun,
 		item,
+		trackItemRun: true,
+		run,
+	});
+};
+
+export const withMigrationItemEvents = async <
+	T extends MigrationItemTrackingResult,
+>({
+	ctx,
+	migrationInternalId,
+	migrationRunId,
+	item,
+	dryRun,
+	run,
+}: {
+	ctx: AutumnContext;
+	migrationInternalId: string;
+	migrationRunId: string;
+	item: RunScopeItem;
+	dryRun: boolean;
+	run: () => Promise<T>;
+}): Promise<T> => {
+	return runTrackedItem({
+		ctx,
+		migrationInternalId,
+		migrationRunId,
+		dryRun,
+		item,
+		trackItemRun: false,
 		run,
 	});
 };

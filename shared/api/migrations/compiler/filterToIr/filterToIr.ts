@@ -47,6 +47,10 @@ function parseCustomerFilter({
 }): IRNode {
 	const children: IRNode[] = [];
 
+	if (filter.customer_id !== undefined)
+		children.push(
+			parseLeaf({ field: "customer_id", rawValue: filter.customer_id, ctx }),
+		);
 	if (filter.plan !== undefined)
 		children.push(parsePlanNav({ raw: filter.plan, ctx }));
 

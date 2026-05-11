@@ -1,27 +1,34 @@
-import type { Migration } from "@autumn/shared";
+import { hashJson } from "@/utils/hash/hashJson.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { migrationRepo } from "../repos/index.js";
+import type { MigrationRuntime } from "../types/migrationDefinition.js";
+import { isPersistedMigration } from "../types/migrationDefinition.js";
 import { getImplicitPrepareModules } from "./getImplicitPrepareModules.js";
 import { runPrepareModules } from "./runPrepareModules.js";
 import type { PreparedState, PrepareResponse } from "./types/index.js";
 
-/** Stable scopeId for a Migration. Preserves the historical entitlement ID format. */
-const scopeIdFor = (migration: Migration): string =>
-	`mig_${migration.internal_id}`;
+const scopeIdFor = ({
+	ctx,
+	migration,
+}: {
+	ctx: AutumnContext;
+	migration: MigrationRuntime;
+}): string => {
+	if (isPersistedMigration(migration)) return `mig_${migration.internal_id}`;
 
-/**
- * Migration-fed shim around `runPrepareModules`. Walks implicit prep
- * modules from `migration.operations`, runs the pure orchestrator, then
- * persists the new `preparedState` back to the migrations row (skipped
- * on dry-run).
- */
+	return `migdef_${hashJson({
+		value: { orgId: ctx.org.id, env: ctx.env, id: migration.id },
+	})}`;
+};
+
+/** Runs implicit prep modules and persists state only for stored migrations. */
 export const prepare = async ({
 	ctx,
 	migration,
 	dryRun,
 }: {
 	ctx: AutumnContext;
-	migration: Migration;
+	migration: MigrationRuntime;
 	dryRun: boolean;
 }): Promise<{ response: PrepareResponse; preparedState: PreparedState }> => {
 	const modules = getImplicitPrepareModules({
@@ -30,12 +37,12 @@ export const prepare = async ({
 
 	const { results, preparedState } = await runPrepareModules({
 		ctx,
-		scopeId: scopeIdFor(migration),
+		scopeId: scopeIdFor({ ctx, migration }),
 		modules,
 		dryRun,
 	});
 
-	if (!dryRun) {
+	if (!dryRun && isPersistedMigration(migration)) {
 		await migrationRepo.update({
 			ctx,
 			id: migration.id,

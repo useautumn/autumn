@@ -1,6 +1,7 @@
-import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildPreviewMigrateCustomer } from "@/internal/migrations/v2/preview/index.js";
+import type { MigrationHooks } from "../../hooks/index.js";
+import type { MigrationRuntime } from "../../types/migrationDefinition.js";
 import { evaluateMigrateCustomerStripe } from "./evaluateMigrateCustomerStripe.js";
 import { executeMigrateCustomerPlan } from "./executeMigrateCustomerPlan.js";
 import {
@@ -22,25 +23,19 @@ export type MigrateCustomerResult = {
 	response: Record<string, unknown> | null;
 };
 
-/**
- * Top-level per-customer migration runner.
- *
- *   1. Customer-level setup once (FullCustomer + migration facts).
- *   2. Fold ordered operations onto one AutumnBillingPlan.
- *   3. Evaluate/execute the plan.
- *
- * `preview: true` short-circuits after evaluate — no DB or Stripe writes.
- */
+/** Top-level per-customer migration runner. Preview evaluates without writes. */
 export const migrateCustomer = async ({
 	ctx,
 	customerId,
 	migration,
 	preview = false,
+	hooks,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-	migration: Migration;
+	migration: MigrationRuntime;
 	preview?: boolean;
+	hooks?: MigrationHooks;
 }): Promise<MigrateCustomerResult> => {
 	const migrationCtx = createMigrateCustomerRunContext({
 		ctx,
@@ -55,56 +50,69 @@ export const migrateCustomer = async ({
 		customerId,
 	});
 
-	const {
-		plan: autumnPlan,
-		billingContexts,
-		matchedCustomerProducts,
-	} = await processOperations({
+	const baseArgs = {
 		ctx: migrationCtx,
+		customerId,
 		context,
-		plan: {
-			customerId: context.fullCustomer.id ?? context.fullCustomer.internal_id,
-			insertCustomerProducts: [],
-		},
-	});
+		preview,
+	};
 
-	const billingPlan = await evaluateMigrateCustomerStripe({
-		ctx: migrationCtx,
-		context,
-		billingContexts,
-		autumnBillingPlan: autumnPlan,
-	});
-
-	if (!preview) {
-		await executeMigrateCustomerPlan({
+	const run = async (): Promise<MigrateCustomerResult> => {
+		const {
+			plan: autumnPlan,
+			billingContexts,
+			matchedCustomerProducts,
+		} = await processOperations({
 			ctx: migrationCtx,
 			context,
-			billingPlan,
+			plan: {
+				customerId: context.fullCustomer.id ?? context.fullCustomer.internal_id,
+				insertCustomerProducts: [],
+			},
 		});
-	}
 
-	const response = {
-		preview: await buildPreviewMigrateCustomer({
+		const billingPlan = await evaluateMigrateCustomerStripe({
 			ctx: migrationCtx,
-			originalFullCustomer: context.fullCustomer,
-			autumnBillingPlan: billingPlan.autumn,
-		}),
+			context,
+			billingContexts,
+			autumnBillingPlan: autumnPlan,
+		});
+
+		if (!preview) {
+			await executeMigrateCustomerPlan({
+				ctx: migrationCtx,
+				context,
+				billingPlan,
+			});
+		}
+
+		const response = {
+			preview: await buildPreviewMigrateCustomer({
+				ctx: migrationCtx,
+				originalFullCustomer: context.fullCustomer,
+				autumnBillingPlan: billingPlan.autumn,
+			}),
+		};
+
+		logMigrateCustomerResult({
+			ctx: migrationCtx,
+			result: {
+				status: "success",
+			},
+		});
+
+		return {
+			itemPreview: {
+				id: context.fullCustomer.id ?? null,
+				name: context.fullCustomer.name ?? null,
+				email: context.fullCustomer.email ?? null,
+			},
+			status: matchedCustomerProducts === 0 ? "skipped" : "succeeded",
+			response,
+		};
 	};
 
-	logMigrateCustomerResult({
-		ctx: migrationCtx,
-		result: {
-			status: "success",
-		},
-	});
-
-	return {
-		itemPreview: {
-			id: context.fullCustomer.id ?? null,
-			name: context.fullCustomer.name ?? null,
-			email: context.fullCustomer.email ?? null,
-		},
-		status: matchedCustomerProducts === 0 ? "skipped" : "succeeded",
-		response,
-	};
+	return hooks?.aroundMigrateCustomer
+		? hooks.aroundMigrateCustomer({ ...baseArgs, run })
+		: run();
 };
