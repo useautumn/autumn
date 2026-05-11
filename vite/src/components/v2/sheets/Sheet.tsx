@@ -77,13 +77,20 @@ function SheetOverlay({
 		<SheetPrimitive.Backdrop
 			data-slot="sheet-overlay"
 			className={cn(
-				"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 fixed inset-0 z-[150] bg-white/70 dark:bg-black/70",
+				"fixed inset-0 z-[150] bg-white/70 dark:bg-black/70 transition-opacity duration-300 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0",
 				className,
 			)}
 			{...props}
 		/>
 	);
 }
+
+const SIDE_STYLES = {
+	right: "top-0 bottom-0 right-0 w-full md:min-w-xs md:max-w-md md:border-l border-border/40 translate-x-0 data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full",
+	left: "top-0 bottom-0 left-0 w-3/4 border-r border-border/40 sm:max-w-sm translate-x-0 data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full",
+	top: "left-0 right-0 top-0 h-auto border-b border-border/40 translate-y-0 data-[starting-style]:-translate-y-full data-[ending-style]:-translate-y-full",
+	bottom: "left-0 right-0 bottom-0 h-auto border-t border-border/40 translate-y-0 data-[starting-style]:translate-y-full data-[ending-style]:translate-y-full",
+} as const;
 
 function SheetContent({
 	className,
@@ -103,15 +110,8 @@ function SheetContent({
 			<SheetPrimitive.Popup
 				data-slot="sheet-content"
 				className={cn(
-					"bg-card data-open:animate-in data-closed:animate-out fixed z-[150] flex flex-col gap-0 shadow-sm transition ease-in-out data-closed:duration-300 data-open:duration-300",
-					side === "right" &&
-						`data-closed:slide-out-to-right data-open:slide-in-from-right top-0 bottom-0 right-0 w-full md:min-w-xs md:max-w-md md:border-l border-border/40`,
-					side === "left" &&
-						`data-closed:slide-out-to-left data-open:slide-in-from-left top-0 bottom-0 left-0 w-3/4 border-r border-border/40 sm:max-w-sm`,
-					side === "top" &&
-						"data-closed:slide-out-to-top data-open:slide-in-from-top left-0 right-0 top-0 h-auto border-b border-border/40",
-					side === "bottom" &&
-						"data-closed:slide-out-to-bottom data-open:slide-in-from-bottom left-0 right-0 bottom-0 h-auto border-t border-border/40",
+					"bg-card fixed z-[150] flex flex-col gap-0 shadow-sm transition-transform duration-300 ease-in-out",
+					SIDE_STYLES[side],
 					className,
 				)}
 				{...props}
