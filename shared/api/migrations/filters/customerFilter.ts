@@ -1,5 +1,6 @@
 import { z } from "zod/v4";
 import { arrayFilter } from "./arrayFilter.js";
+import { StringMatcherSchema } from "./matcher.js";
 import { PlanFilterSchema } from "./planFilter.js";
 
 /**
@@ -10,6 +11,7 @@ import { PlanFilterSchema } from "./planFilter.js";
  * Use `{ $every: ... }` or `{ $none: ... }` for stricter checks.
  */
 export const CustomerFilterSchema = z.object({
+	customer_id: StringMatcherSchema.optional(),
 	plan: arrayFilter(PlanFilterSchema).optional(),
 });
 

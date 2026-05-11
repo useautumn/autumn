@@ -2,7 +2,7 @@ import type { Migration } from "@autumn/shared";
 import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { runPrepare } from "@/internal/migrations/v2/prepare/runPrepare.js";
+import { prepare } from "@/internal/migrations/v2/prepare/prepare.js";
 import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/index.js";
 
 type MigrationClient = {
@@ -23,7 +23,7 @@ type MigrationClient = {
 const timeout = (ms: number) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
-const waitForMigrationResult = async ({
+export const waitForMigrationResult = async ({
 	waitFor,
 	timeoutMs,
 	pollIntervalMs,
@@ -59,7 +59,7 @@ export const runUpdatePlanMigration = async ({
 	customerId,
 	filter,
 	operations,
-	runOnServer = false,
+	runOnServer = true,
 	waitFor,
 	timeoutMs = 30_000,
 	pollIntervalMs = 1_000,
@@ -96,19 +96,18 @@ export const runUpdatePlanMigration = async ({
 		return migration;
 	}
 
-	const { prepared_state } = await runPrepare({
+	const { preparedState } = await prepare({
 		ctx,
 		migration,
-		dry_run: false,
+		dryRun: false,
 	});
 
-	const preparedMigration = { ...migration, prepared_state };
+	const preparedMigration = { ...migration, prepared_state: preparedState };
 
 	await migrateCustomer({
 		ctx,
 		customerId,
 		migration: preparedMigration,
-		migrationRunId: `${migrationId}-local-run`,
 	});
 
 	return preparedMigration;

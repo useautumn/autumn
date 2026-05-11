@@ -1,7 +1,7 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { runPrepare } from "@/internal/migrations/v2/prepare/index.js";
+import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 
 const PrepareMigrationBody = z.object({
@@ -15,7 +15,7 @@ export const handlePrepareMigration = createRoute({
 	body: PrepareMigrationBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { id, dry_run } = c.req.valid("json");
+		const { id, dry_run: dryRun } = c.req.valid("json");
 
 		const migration = await migrationRepo.find({ ctx, id });
 
@@ -26,7 +26,7 @@ export const handlePrepareMigration = createRoute({
 				statusCode: 400,
 			});
 
-		const { response } = await runPrepare({ ctx, migration, dry_run });
+		const { response } = await prepare({ ctx, migration, dryRun });
 		return c.json(response);
 	},
 });

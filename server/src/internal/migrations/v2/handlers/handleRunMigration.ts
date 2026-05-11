@@ -1,6 +1,7 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
 
@@ -9,17 +10,23 @@ const RunMigrationBody = z.object({
 	dry_run: z.boolean().default(false),
 });
 
-/**
- * POST /migrations.run — kick off a migration on trigger.dev. Returns the
- * trigger run handle so the dashboard can poll status. In dev we route
- * to EU so dev runs don't touch the production US region.
- */
+const getRunMigrationTriggerOptions = ({
+	orgId,
+	isDev,
+}: {
+	orgId: string;
+	isDev: boolean;
+}) => ({
+	...(isDev ? { region: "eu-west-1" } : {}),
+	concurrencyKey: orgId,
+});
+
 export const handleRunMigration = createRoute({
 	scopes: [Scopes.Migrations.Write],
 	body: RunMigrationBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { id, dry_run } = c.req.valid("json");
+		const { id, dry_run: dryRun } = c.req.valid("json");
 
 		const migration = await migrationRepo.find({ ctx, id });
 
@@ -31,21 +38,30 @@ export const handleRunMigration = createRoute({
 			});
 
 		const isDev = process.env.NODE_ENV === "development";
-
-		const handle = await runMigrationTask.trigger(
-			{
-				orgId: ctx.org.id,
-				env: ctx.env,
-				migrationId: id,
-				dryRun: dry_run,
-			},
-			isDev ? { region: "eu-west-1" } : undefined,
-		);
+		const { migrationRunId } = await withMigrationRunClaim({
+			ctx,
+			migration,
+			dryRun,
+			trigger: (migrationRunId) =>
+				runMigrationTask.trigger(
+					{
+						orgId: ctx.org.id,
+						env: ctx.env,
+						migrationId: id,
+						migrationRunId,
+						dryRun,
+					},
+					getRunMigrationTriggerOptions({
+						orgId: ctx.org.id,
+						isDev,
+					}),
+				),
+		});
 
 		return c.json({
 			migration_id: id,
-			dry_run,
-			run_id: handle.id,
+			dry_run: dryRun,
+			run_id: migrationRunId,
 		});
 	},
 });

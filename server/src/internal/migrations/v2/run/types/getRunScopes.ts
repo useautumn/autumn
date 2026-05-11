@@ -1,11 +1,11 @@
-import type { Migration } from "@autumn/shared";
+import type { MigrationRuntime } from "../../types/migrationDefinition.js";
 import type { RunScopeKind } from "./runScope.js";
 
 /** Returns active run scopes from top-level migration operations. */
 export const getRunScopes = ({
 	migration,
 }: {
-	migration: Migration;
+	migration: MigrationRuntime;
 }): RunScopeKind[] => {
 	const scopes: RunScopeKind[] = [];
 	if (migration.operations?.customer) scopes.push("customer");

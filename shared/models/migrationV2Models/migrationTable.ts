@@ -46,6 +46,7 @@ export const migrations = pgTable(
 		// `true` → force DB-only path; throw if any Stripe-relevant mutation slips in.
 		// `false` → force Stripe path even when inference would say DB-only.
 		no_billing_changes: boolean(),
+		retry_failed: boolean().notNull().default(false),
 
 		created_at: numeric({ mode: "number" }).notNull(),
 		updated_at: numeric({ mode: "number" }),

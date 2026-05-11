@@ -5,7 +5,7 @@ import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
  * are module-specific. The orchestrator wraps the returned `Result` in
  * the loose `{ key, kind, result }` envelope.
  *
- * `scope_id` is the namespace under which deterministic catalog rows
+ * `scopeId` is the namespace under which deterministic catalog rows
  * are created — `mig_<internal_id>` for migrations, or any other prefix
  * for ad-hoc script invocations.
  */
@@ -15,14 +15,14 @@ export type PrepareModule<Input, Result> = {
 	/** Pure planning. No writes. */
 	plan: (args: {
 		ctx: AutumnContext;
-		scope_id: string;
+		scopeId: string;
 		input: Input;
 	}) => Promise<Result>;
 
 	/** Persist the desired set. Idempotent (deterministic IDs). */
 	apply: (args: {
 		ctx: AutumnContext;
-		scope_id: string;
+		scopeId: string;
 		input: Input;
 		planned: Result;
 	}) => Promise<Result>;

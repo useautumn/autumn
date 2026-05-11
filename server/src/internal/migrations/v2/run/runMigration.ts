@@ -1,106 +1,72 @@
-import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import {
-	recordMigrationCustomerEvent,
-	recordMigrationFailedEvent,
-	recordMigrationTerminalEvent,
-} from "./events/index.js";
-import { runPreparation, runScopeIteration } from "./orchestrators/index.js";
-import { getRunScopes } from "./types/index.js";
+import { generateId } from "../../../../utils/genUtils.js";
 import type {
-	RunMigrationResponse,
-	RunMigrationScopeResult,
-} from "./types/runMigrationResponse.js";
+	MigrationBatchFn,
+	MigrationRunControls,
+} from "../cloudAdapter/types.js";
+import {
+	composeMigrationHooks,
+	type MigrationHooks as RunMigrationHooks,
+	type MigrationPlugin as RunMigrationPlugin,
+} from "../hooks/index.js";
+import { prepare } from "../prepare/index.js";
+import {
+	type MigrationRuntime,
+	withMigrationEventId,
+} from "../types/migrationDefinition.js";
+import { runScopeIteration } from "./orchestrators/runScopeIteration.js";
+import { getRunScopes } from "./types/getRunScopes.js";
 
-/** Top-level migration run: prepare → per-scope filter+iterate → per-item ops. */
+/** Top-level migration run: prepare -> per-scope filter+iterate -> per-item ops. */
 export const runMigration = async ({
 	ctx,
 	migration,
-	dry_run,
 	migrationRunId,
+	dryRun,
+	batch,
+	controls,
+	hooks,
+	plugins,
 }: {
 	ctx: AutumnContext;
-	migration: Migration;
-	dry_run: boolean;
-	migrationRunId: string;
-}): Promise<RunMigrationResponse> => {
-	const scopeResults: RunMigrationScopeResult[] = [];
-
-	try {
-		return await executeMigrationRun({
-			ctx,
-			migration,
-			dry_run,
-			migrationRunId,
-			scopeResults,
-		});
-	} catch (error) {
-		await recordMigrationFailedEvent({
-			ctx,
-			migration,
-			migrationRunId,
-			dryRun: dry_run,
-			error,
-			scopeResults,
-		});
-		throw error;
-	}
-};
-
-const executeMigrationRun = async ({
-	ctx,
-	migration,
-	dry_run,
-	migrationRunId,
-	scopeResults,
-}: {
-	ctx: AutumnContext;
-	migration: Migration;
-	dry_run: boolean;
-	migrationRunId: string;
-	scopeResults: RunMigrationScopeResult[];
-}): Promise<RunMigrationResponse> => {
-	await recordMigrationCustomerEvent({
-		ctx,
+	migration: MigrationRuntime;
+	migrationRunId?: string;
+	dryRun: boolean;
+	batch?: MigrationBatchFn;
+	controls?: MigrationRunControls;
+	hooks?: RunMigrationHooks;
+	plugins?: RunMigrationPlugin[];
+}): Promise<void> => {
+	const eventMigrationRunId = migrationRunId ?? generateId("mrun");
+	const migrationHooks = composeMigrationHooks({ hooks, plugins });
+	const migrationWithEventId = withMigrationEventId({
+		orgId: ctx.org.id,
+		env: ctx.env,
 		migration,
-		migrationRunId,
-		dryRun: dry_run,
-		eventType: "migration_started",
-		details: {
-			migrationInternalId: migration.internal_id,
-		},
 	});
 
-	const { response: prepareResponse, prepared_state } = await runPreparation({
+	const { preparedState } = await prepare({
 		ctx,
-		migration,
-		dry_run,
+		migration: migrationWithEventId,
+		dryRun,
 	});
-	const preparedMigration = { ...migration, prepared_state };
+	const preparedMigration = {
+		...migrationWithEventId,
+		prepared_state: preparedState,
+	};
 
 	for (const kind of getRunScopes({ migration: preparedMigration })) {
-		const scopeResult = await runScopeIteration({
+		await runScopeIteration({
 			ctx,
 			migration: preparedMigration,
-			migrationRunId,
-			dryRun: dry_run,
+			migrationRunId: eventMigrationRunId,
+			dryRun,
 			kind,
+			batch,
+			controls,
+			hooks: migrationHooks,
 		});
-		scopeResults.push(scopeResult);
 	}
-
-	await recordMigrationTerminalEvent({
-		ctx,
-		migration,
-		migrationRunId,
-		dryRun: dry_run,
-		scopeResults,
-	});
-
-	return {
-		migration_id: migration.id,
-		dry_run,
-		prepare_warnings: prepareResponse.warnings,
-		scopes: scopeResults,
-	};
 };
+
+export type { RunMigrationHooks, RunMigrationPlugin };

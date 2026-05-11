@@ -1,19 +1,17 @@
+import { EntitlementSchema, PriceSchema } from "@autumn/shared";
 import { z } from "zod/v4";
 
-/**
- * Per-item shape produced by the `ensure_prices_and_entitlements`
- * prepare module. Identifies one shared entitlement row keyed by
- * deterministic id per (migration, product version, feature).
- */
-export const EntitlementItemRefSchema = z.object({
-	entitlement_id: z.string(),
-	product_internal_id: z.string(),
-	product_id: z.string(),
-	feature_id: z.string(),
-	internal_feature_id: z.string(),
+export const PreparedArtifactRefSchema = z.object({
+	op_index: z.number(),
+	kind: z.enum(["base_price", "add_item"]),
+	item_index: z.number().optional(),
+	hash: z.string(),
+	internal_product_id: z.string(),
+	price_id: z.string().optional(),
+	entitlement_id: z.string().optional(),
 });
 
-export type EntitlementItemRef = z.infer<typeof EntitlementItemRefSchema>;
+export type PreparedArtifactRef = z.infer<typeof PreparedArtifactRefSchema>;
 
 /**
  * Strict typed payload for this module. Stored under the module key in
@@ -21,7 +19,9 @@ export type EntitlementItemRef = z.infer<typeof EntitlementItemRefSchema>;
  * response envelope.
  */
 export const EnsurePricesAndEntitlementsResultSchema = z.object({
-	entitlements: z.array(EntitlementItemRefSchema),
+	entitlements: z.array(EntitlementSchema),
+	prices: z.array(PriceSchema),
+	artifacts: z.array(PreparedArtifactRefSchema),
 });
 
 export type EnsurePricesAndEntitlementsResult = z.infer<

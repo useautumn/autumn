@@ -7,15 +7,18 @@ import type {
 	SharedContext,
 } from "@autumn/shared";
 import { planItemV1ToPriceAndEnt } from "@shared/api/products/items/mappers/planItemV1ToPriceAndEnt";
+import type { ReusePricesAndEntitlements } from "./types";
 
 export const handleCustomizeAddItems = ({
 	ctx,
 	customize,
 	fullProduct,
+	reusePricesAndEntitlements,
 }: {
 	ctx: SharedContext;
 	customize: CustomizePlanV1;
 	fullProduct: FullProduct;
+	reusePricesAndEntitlements?: ReusePricesAndEntitlements;
 }): {
 	prices: Price[];
 	entitlements: Entitlement[];
@@ -24,6 +27,19 @@ export const handleCustomizeAddItems = ({
 	const entitlements: Entitlement[] = [];
 
 	for (const item of customize.add_items ?? []) {
+		const overridePrice = item.price_id
+			? reusePricesAndEntitlements?.pricesById.get(item.price_id)
+			: undefined;
+		const overrideEntitlement = item.entitlement_id
+			? reusePricesAndEntitlements?.entitlementsById.get(item.entitlement_id)
+			: undefined;
+
+		if (overridePrice || overrideEntitlement) {
+			if (overridePrice) prices.push(overridePrice);
+			if (overrideEntitlement) entitlements.push(overrideEntitlement);
+			continue;
+		}
+
 		const { newPrice, newEnt } = planItemV1ToPriceAndEnt({
 			ctx,
 			item,

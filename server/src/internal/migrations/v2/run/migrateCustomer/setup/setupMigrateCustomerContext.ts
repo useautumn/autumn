@@ -1,22 +1,17 @@
-import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
 import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations/types/index.js";
 import { createMigrationStripeCache } from "@/internal/migrations/v2/stripeCache/index.js";
+import type { MigrationRuntime } from "../../../types/migrationDefinition.js";
 
-/**
- * Customer-level setup. Runs ONCE per customer:
- *   1. Fetch FullCustomer through the standard billing setup path.
- *   2. Create a lazy Stripe cache for operation-level setup.
- *   3. Return immutable migration/customer facts.
- */
+/** Loads customer state and creates the lazy Stripe cache for migration ops. */
 export const setupMigrateCustomerContext = async ({
 	ctx,
 	migration,
 	customerId,
 }: {
 	ctx: AutumnContext;
-	migration: Migration;
+	migration: MigrationRuntime;
 	customerId: string;
 }): Promise<MigrateCustomerContext> => {
 	const fullCustomer = await setupFullCustomerContext({

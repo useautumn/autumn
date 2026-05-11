@@ -1,7 +1,7 @@
-import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations/types/index.js";
-import { recordMigrationCustomerEvent } from "../events/index.js";
+import { buildPreviewMigrateCustomer } from "@/internal/migrations/v2/preview/index.js";
+import type { MigrationHooks } from "../../hooks/index.js";
+import type { MigrationRuntime } from "../../types/migrationDefinition.js";
 import { evaluateMigrateCustomerStripe } from "./evaluateMigrateCustomerStripe.js";
 import { executeMigrateCustomerPlan } from "./executeMigrateCustomerPlan.js";
 import {
@@ -11,54 +11,53 @@ import {
 import { processOperations } from "./processOperations.js";
 import { setupMigrateCustomerContext } from "./setup/setupMigrateCustomerContext.js";
 
-/**
- * Top-level per-customer migration runner.
- *
- *   1. Customer-level setup once (FullCustomer + migration facts).
- *   2. Fold ordered operations onto one AutumnBillingPlan.
- *   3. Evaluate/execute the plan.
- *
- * `preview: true` short-circuits after evaluate — no DB or Stripe writes.
- */
+export type MigrateCustomerItemPreview = {
+	id: string | null;
+	name: string | null;
+	email: string | null;
+};
+
+export type MigrateCustomerResult = {
+	itemPreview: MigrateCustomerItemPreview | null;
+	status: "succeeded" | "skipped";
+	response: Record<string, unknown> | null;
+};
+
+/** Top-level per-customer migration runner. Preview evaluates without writes. */
 export const migrateCustomer = async ({
 	ctx,
 	customerId,
 	migration,
-	migrationRunId,
 	preview = false,
+	hooks,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-	migration: Migration;
-	migrationRunId: string;
+	migration: MigrationRuntime;
 	preview?: boolean;
-}) => {
+	hooks?: MigrationHooks;
+}): Promise<MigrateCustomerResult> => {
 	const migrationCtx = createMigrateCustomerRunContext({
 		ctx,
 		customerId,
 		migration,
 		preview,
 	});
-	let context: MigrateCustomerContext | undefined;
 
-	try {
-		context = await setupMigrateCustomerContext({
-			ctx: migrationCtx,
-			migration,
-			customerId,
-		});
+	const context = await setupMigrateCustomerContext({
+		ctx: migrationCtx,
+		migration,
+		customerId,
+	});
 
-		await recordMigrationCustomerEvent({
-			ctx,
-			migration,
-			migrationRunId,
-			dryRun: preview,
-			eventType: "customer_started",
-			internalCustomerId: context.fullCustomer.internal_id,
-			customerId: context.fullCustomer.id,
-			details: { beforeCustomer: context.fullCustomer },
-		});
+	const baseArgs = {
+		ctx: migrationCtx,
+		customerId,
+		context,
+		preview,
+	};
 
+	const run = async (): Promise<MigrateCustomerResult> => {
 		const {
 			plan: autumnPlan,
 			billingContexts,
@@ -87,6 +86,14 @@ export const migrateCustomer = async ({
 			});
 		}
 
+		const response = {
+			preview: await buildPreviewMigrateCustomer({
+				ctx: migrationCtx,
+				originalFullCustomer: context.fullCustomer,
+				autumnBillingPlan: billingPlan.autumn,
+			}),
+		};
+
 		logMigrateCustomerResult({
 			ctx: migrationCtx,
 			result: {
@@ -94,47 +101,18 @@ export const migrateCustomer = async ({
 			},
 		});
 
-		await recordMigrationCustomerEvent({
-			ctx,
-			migration,
-			migrationRunId,
-			dryRun: preview,
-			eventType:
-				matchedCustomerProducts === 0
-					? "customer_skipped"
-					: "customer_succeeded",
-			internalCustomerId: context.fullCustomer.internal_id,
-			customerId: context.fullCustomer.id,
-			details: {
-				matchedCustomerProducts,
+		return {
+			itemPreview: {
+				id: context.fullCustomer.id ?? null,
+				name: context.fullCustomer.name ?? null,
+				email: context.fullCustomer.email ?? null,
 			},
-		});
+			status: matchedCustomerProducts === 0 ? "skipped" : "succeeded",
+			response,
+		};
+	};
 
-		return;
-	} catch (error) {
-		logMigrateCustomerResult({
-			ctx: migrationCtx,
-			result: {
-				status: "error",
-				error,
-			},
-		});
-
-		await recordMigrationCustomerEvent({
-			ctx,
-			migration,
-			migrationRunId,
-			dryRun: preview,
-			eventType: "customer_failed",
-			internalCustomerId: context?.fullCustomer.internal_id ?? customerId,
-			customerId: context?.fullCustomer.id,
-			details: {
-				error: {
-					message: error instanceof Error ? error.message : String(error),
-				},
-			},
-		});
-
-		throw error;
-	}
+	return hooks?.aroundMigrateCustomer
+		? hooks.aroundMigrateCustomer({ ...baseArgs, run })
+		: run();
 };
