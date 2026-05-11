@@ -11,6 +11,7 @@ const PatchMigrationBody = z.object({
 		id: z.string().min(1).max(200).optional(),
 		filter: MigrationFilterSchema.nullable().optional(),
 		operations: OperationsSchema.nullable().optional(),
+		retry_failed: z.boolean().optional(),
 	}),
 });
 
@@ -22,7 +23,14 @@ export const handlePatchMigration = createRoute({
 		const ctx = c.get("ctx");
 		const { id, updates } = c.req.valid("json");
 
-		const updated = await migrationRepo.update({ ctx, id, updates });
+		const updated = await migrationRepo.update({
+			ctx,
+			id,
+			updates: {
+				...updates,
+				...(updates.operations !== undefined ? { prepared_state: null } : {}),
+			},
+		});
 
 		if (!updated)
 			throw new RecaseError({

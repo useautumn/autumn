@@ -8,7 +8,10 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { setupPatchContext } from "@/internal/billing/v2/setup/patch";
+import {
+	type ReusePricesAndEntitlements,
+	setupPatchContext,
+} from "@/internal/billing/v2/setup/patch";
 import { ProductService } from "@/internal/products/ProductService";
 import { setupCustomFullProduct } from "../../../setup/setupCustomFullProduct";
 import { findTargetCustomerProduct } from "./findTargetCustomerProduct";
@@ -18,11 +21,13 @@ export const setupUpdateSubscriptionProductContext = async ({
 	fullCustomer,
 	params,
 	contextOverride = {},
+	reusePricesAndEntitlements,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	params: UpdateSubscriptionV1Params;
 	contextOverride?: UpdateSubscriptionBillingContextOverride;
+	reusePricesAndEntitlements?: ReusePricesAndEntitlements;
 }) => {
 	const { productContext } = contextOverride;
 
@@ -63,6 +68,7 @@ export const setupUpdateSubscriptionProductContext = async ({
 		params,
 		customerProduct: targetCustomerProduct,
 		fullProduct,
+		reusePricesAndEntitlements,
 	});
 
 	const {

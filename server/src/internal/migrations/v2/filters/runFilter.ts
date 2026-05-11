@@ -1,6 +1,12 @@
-import type { Migration } from "@autumn/shared";
+import { MigrationItemRunStatus } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
+import type { MigrationRunControls } from "../cloudAdapter/types.js";
 import type { RunScopeItem, RunScopeKind } from "../run/types/runScope.js";
+import type {
+	MigrationRuntime,
+	MigrationRuntimeWithEventId,
+} from "../types/migrationDefinition.js";
+import type { CustomerCheckpointExclusion } from "./customers/buildCustomerSelect.js";
 import {
 	countCustomers,
 	filterCustomers,
@@ -14,11 +20,17 @@ import {
 export const runFilter = async ({
 	ctx,
 	migration,
+	migrationRunId,
+	dryRun,
 	kind,
+	controls,
 }: {
 	ctx: AutumnContext;
-	migration: Migration;
+	migration: MigrationRuntimeWithEventId;
+	migrationRunId: string;
+	dryRun: boolean;
 	kind: RunScopeKind;
+	controls?: MigrationRunControls;
 }): Promise<{
 	kind: RunScopeKind;
 	count: number;
@@ -29,11 +41,20 @@ export const runFilter = async ({
 			`runFilter: scope kind "${kind}" not supported yet (phase 2+)`,
 		);
 
-	const filter = migration.filter?.customer ?? {};
-	const count = await countCustomers({ ctx, filter });
+	const filter = narrowCustomerFilter({
+		filter: migration.filter?.customer ?? {},
+		controls,
+	});
+	const checkpoint = getCustomerCheckpointExclusion({
+		migration,
+		migrationRunId,
+		dryRun,
+		controls,
+	});
+	const count = await countCustomers({ ctx, filter, checkpoint });
 
 	const iterate = async function* () {
-		for await (const batch of filterCustomers({ ctx, filter })) {
+		for await (const batch of filterCustomers({ ctx, filter, checkpoint })) {
 			yield batch.map(
 				(row): RunScopeItem => ({
 					kind: "customer",
@@ -45,4 +66,54 @@ export const runFilter = async ({
 	};
 
 	return { kind, count, iterate };
+};
+
+const getCustomerCheckpointExclusion = ({
+	migration,
+	migrationRunId,
+	dryRun,
+	controls,
+}: {
+	migration: MigrationRuntimeWithEventId;
+	migrationRunId: string;
+	dryRun: boolean;
+	controls?: MigrationRunControls;
+}): CustomerCheckpointExclusion | undefined => {
+	const enabled =
+		controls?.checkpoint !== false &&
+		(!dryRun || controls?.checkpointDryRun === true);
+	if (!enabled) return undefined;
+
+	const excludedStatuses = [
+		MigrationItemRunStatus.Running,
+		MigrationItemRunStatus.Succeeded,
+		MigrationItemRunStatus.Skipped,
+		...(migration.retry_failed ? [] : [MigrationItemRunStatus.Failed]),
+	];
+
+	return {
+		migrationInternalId: migration.event_internal_id,
+		migrationRunId,
+		dryRun,
+		excludedStatuses,
+	};
+};
+
+const narrowCustomerFilter = ({
+	filter,
+	controls,
+}: {
+	filter: NonNullable<MigrationRuntime["filter"]>["customer"];
+	controls?: MigrationRunControls;
+}) => {
+	const only = controls?.only;
+	if (!only) return filter ?? {};
+	if (filter?.customer_id !== undefined)
+		throw new Error(
+			"runMigration: controls.only cannot be combined with filter.customer.customer_id",
+		);
+	return {
+		...(filter ?? {}),
+		customer_id: { $in: only },
+	};
 };

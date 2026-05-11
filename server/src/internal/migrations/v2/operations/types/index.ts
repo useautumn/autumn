@@ -1,2 +1,2 @@
 export * from "./migrateCustomerContext.js";
-export * from "./operationProcessor.js";
+export * from "./processOperationTypes.js";

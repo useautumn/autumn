@@ -39,6 +39,8 @@ import { migrationErrors } from "../models/migrationModels/migrationErrorTable.j
 // Migration Tables
 import { migrationJobs } from "../models/migrationModels/migrationJobTable.js";
 // Migrations V2
+import { migrationItemRuns } from "../models/migrationV2Models/migrationItemRunTable.js";
+import { migrationRuns } from "../models/migrationV2Models/migrationRunTable.js";
 import { migrations } from "../models/migrationV2Models/migrationTable.js";
 /* RELATIONS */
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
@@ -127,7 +129,9 @@ export {
 	metadata,
 	migrationErrorRelations,
 	migrationErrors,
+	migrationItemRuns,
 	migrationJobs,
+	migrationRuns,
 	migrations,
 	oauthAccessToken,
 	oauthClient,

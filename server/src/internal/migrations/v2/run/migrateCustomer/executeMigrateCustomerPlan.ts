@@ -1,38 +1,48 @@
-import type { BillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan.js";
+import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult.js";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations/types/index.js";
+import { appendMigrationBillingLog } from "@/internal/migrations/v2/operations/utils/index.js";
+import type { MigrateCustomerBillingPlan } from "./evaluateMigrateCustomerStripe.js";
 
-export type MigrateCustomerExecuteMode = "no_changes" | "stripe";
-
-/**
- * Routes execution based on resolved billing mode.
- *  - `no_changes`: DB-only via `executeAutumnBillingPlan` (no Stripe)
- *  - `stripe`: full path via `executeBillingPlan` (Stripe + DB)
- *
- * Mode resolution lives in `evaluateMigrateCustomerStripe`; this fn
- * just dispatches.
- */
 export const executeMigrateCustomerPlan = async ({
 	ctx,
-	migrationContext,
+	context,
 	billingPlan,
-	mode,
 }: {
 	ctx: AutumnContext;
-	migrationContext: MigrateCustomerContext;
-	billingPlan: BillingPlan;
-	mode: MigrateCustomerExecuteMode;
+	context: MigrateCustomerContext;
+	billingPlan: MigrateCustomerBillingPlan;
 }): Promise<void> => {
-	void migrationContext;
-	if (mode === "no_changes") {
-		await executeAutumnBillingPlan({
+	for (const stripeBillingPlan of billingPlan.stripeBillingPlans) {
+		const stripeResult = await executeStripeBillingPlan({
 			ctx,
-			autumnBillingPlan: billingPlan.autumn,
+			billingContext: stripeBillingPlan.billingContext,
+			billingPlan: {
+				autumn: billingPlan.autumn,
+				stripe: stripeBillingPlan.stripeBillingPlan,
+			},
 		});
-		return;
+		appendMigrationBillingLog({
+			ctx,
+			key: "stripeBillingResult",
+			log: (logCtx) =>
+				logStripeBillingResult({ ctx: logCtx, result: stripeResult }),
+		});
 	}
-	throw new Error(
-		"executeMigrateCustomerPlan: stripe mode needs a per-subscription BillingContext",
-	);
+
+	await executeAutumnBillingPlan({
+		ctx,
+		autumnBillingPlan: billingPlan.autumn,
+	});
+
+	const customerId =
+		context.fullCustomer.id ?? context.fullCustomer.internal_id;
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId,
+		source: "executeMigrateCustomerPlan",
+	});
 };

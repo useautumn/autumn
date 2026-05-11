@@ -1,37 +1,46 @@
+import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
+import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter";
 import { z } from "zod/v4";
 import { CreatePlanItemParamsV1Schema } from "../../../../products/items/crud/createPlanItemParamsV1.js";
 import { PlanFilterSchema } from "../../../filters/planFilter.js";
-import { PlanItemFilterSchema } from "../../../filters/planItemFilter.js";
+
+export const MigrationUpdatePlanCustomizeSchema = z
+	.object({
+		price: BasePriceParamsSchema.nullable().optional(),
+		add_items: z.array(CreatePlanItemParamsV1Schema).optional(),
+		remove_items: z.array(PlanItemFilterSchema).optional(),
+	})
+	.refine(
+		(data) =>
+			data.price !== undefined ||
+			data.add_items !== undefined ||
+			data.remove_items !== undefined,
+		{
+			message:
+				"update_plan.customize requires at least one of price, add_items, or remove_items",
+		},
+	);
 
 /**
- * Patch a customer's matching plan instances in place. Mirrors the patch
- * fields of CustomizePlanV1.
- *
- * - `upsert_items` is idempotent: existing items matched on `feature_id`
- *   are kept (or updated); missing ones are inserted. Uses the
- *   `CreatePlanItemParamsV1` shape.
- * - `delete_items` uses `PlanItemFilter` to match items and remove them.
- *
- * Slots reserved for phase 2+: `cancel_at`, `price`, `free_trial`,
- * `update_items`, `replace_items`.
+ * Ordered customer operation: update every customer product matched by
+ * `plan_filter` using update-subscription plan-update semantics.
  */
 export const UpdatePlanOpSchema = z
 	.object({
-		target: PlanFilterSchema,
-		upsert_items: z.array(CreatePlanItemParamsV1Schema).optional(),
-		delete_items: z.array(PlanItemFilterSchema).optional(),
+		type: z.literal("update_plan"),
+		plan_filter: PlanFilterSchema,
+		version: z.number().int().positive().optional(),
+		customize: MigrationUpdatePlanCustomizeSchema.optional(),
 	})
-	.check((ctx) => {
-		const hasUpserts = (ctx.value.upsert_items?.length ?? 0) > 0;
-		const hasDeletes = (ctx.value.delete_items?.length ?? 0) > 0;
-		if (!hasUpserts && !hasDeletes) {
-			ctx.issues.push({
-				code: "custom",
-				message:
-					"update_plans op requires non-empty upsert_items or delete_items",
-				input: ctx.value,
-			});
-		}
-	});
+	.refine(
+		(data) => data.version !== undefined || data.customize !== undefined,
+		{
+			message: "update_plan requires at least one of version or customize",
+		},
+	);
+
+export type MigrationUpdatePlanCustomize = z.infer<
+	typeof MigrationUpdatePlanCustomizeSchema
+>;
 
 export type UpdatePlanOp = z.infer<typeof UpdatePlanOpSchema>;

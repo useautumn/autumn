@@ -1,90 +1,118 @@
-import type { Migration } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { buildPreviewMigrateCustomer } from "@/internal/migrations/v2/preview/index.js";
+import type { MigrationHooks } from "../../hooks/index.js";
+import type { MigrationRuntime } from "../../types/migrationDefinition.js";
 import { evaluateMigrateCustomerStripe } from "./evaluateMigrateCustomerStripe.js";
 import { executeMigrateCustomerPlan } from "./executeMigrateCustomerPlan.js";
+import {
+	createMigrateCustomerRunContext,
+	logMigrateCustomerResult,
+} from "./logs/index.js";
 import { processOperations } from "./processOperations.js";
 import { setupMigrateCustomerContext } from "./setup/setupMigrateCustomerContext.js";
 
-/**
- * Top-level per-customer migration runner.
- *
- *   1. Customer-level setup once (FullCustomer + bucket ops by Stripe sub).
- *   2. For each bucket, run a familiar one-sub-per-action pipeline:
- *      setup → process → evaluate → execute.
- *   3. Aggregate per-bucket results.
- *
- * `preview: true` short-circuits each bucket after evaluate — no DB or
- * Stripe writes. Bucket plans are returned for inspection.
- */
+export type MigrateCustomerItemPreview = {
+	id: string | null;
+	name: string | null;
+	email: string | null;
+};
+
+export type MigrateCustomerResult = {
+	itemPreview: MigrateCustomerItemPreview | null;
+	status: "succeeded" | "skipped";
+	response: Record<string, unknown> | null;
+};
+
+/** Top-level per-customer migration runner. Preview evaluates without writes. */
 export const migrateCustomer = async ({
 	ctx,
 	customerId,
 	migration,
 	preview = false,
+	hooks,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
-	migration: Migration;
+	migration: MigrationRuntime;
 	preview?: boolean;
-}) => {
-	const migrateCustomerContext = await setupMigrateCustomerContext({
+	hooks?: MigrationHooks;
+}): Promise<MigrateCustomerResult> => {
+	const migrationCtx = createMigrateCustomerRunContext({
 		ctx,
+		customerId,
+		migration,
+		preview,
+	});
+
+	const context = await setupMigrateCustomerContext({
+		ctx: migrationCtx,
 		migration,
 		customerId,
 	});
 
-	const bucketResults = [];
+	const baseArgs = {
+		ctx: migrationCtx,
+		customerId,
+		context,
+		preview,
+	};
 
-	for (const bucket of migrateCustomerContext.buckets) {
-		const { plan: autumnPlan } = await processOperations({
-			ctx,
-			migrationContext: migrateCustomerContext,
-			bucket,
+	const run = async (): Promise<MigrateCustomerResult> => {
+		const {
+			plan: autumnPlan,
+			billingContexts,
+			matchedCustomerProducts,
+		} = await processOperations({
+			ctx: migrationCtx,
+			context,
 			plan: {
-				customerId: migrateCustomerContext.fullCustomer.internal_id,
+				customerId: context.fullCustomer.id ?? context.fullCustomer.internal_id,
 				insertCustomerProducts: [],
 			},
 		});
 
 		const billingPlan = await evaluateMigrateCustomerStripe({
-			ctx,
-			migrationContext: migrateCustomerContext,
+			ctx: migrationCtx,
+			context,
+			billingContexts,
 			autumnBillingPlan: autumnPlan,
 		});
 
-		const mode =
-			Object.keys(billingPlan.stripe).length === 0 ? "no_changes" : "stripe";
-
-		if (preview) {
-			bucketResults.push({
-				stripe_subscription_id: bucket.stripeSubscriptionId,
-				billing_plan: billingPlan,
-				matched_cusproducts: bucket.matches.length,
-				applied: false,
-				mode,
+		if (!preview) {
+			await executeMigrateCustomerPlan({
+				ctx: migrationCtx,
+				context,
+				billingPlan,
 			});
-			continue;
 		}
 
-		await executeMigrateCustomerPlan({
-			ctx,
-			migrationContext: migrateCustomerContext,
-			billingPlan,
-			mode,
+		const response = {
+			preview: await buildPreviewMigrateCustomer({
+				ctx: migrationCtx,
+				originalFullCustomer: context.fullCustomer,
+				autumnBillingPlan: billingPlan.autumn,
+			}),
+		};
+
+		logMigrateCustomerResult({
+			ctx: migrationCtx,
+			result: {
+				status: "success",
+			},
 		});
 
-		bucketResults.push({
-			stripe_subscription_id: bucket.stripeSubscriptionId,
-			billing_plan: billingPlan,
-			matched_cusproducts: bucket.matches.length,
-			applied: true,
-			mode,
-		});
-	}
-
-	return {
-		customer_id: customerId,
-		internal_customer_id: migrateCustomerContext.fullCustomer.internal_id,
-		buckets: bucketResults,
+		return {
+			itemPreview: {
+				id: context.fullCustomer.id ?? null,
+				name: context.fullCustomer.name ?? null,
+				email: context.fullCustomer.email ?? null,
+			},
+			status: matchedCustomerProducts === 0 ? "skipped" : "succeeded",
+			response,
+		};
 	};
+
+	return hooks?.aroundMigrateCustomer
+		? hooks.aroundMigrateCustomer({ ...baseArgs, run })
+		: run();
 };

@@ -25,6 +25,19 @@ const BASE_PRICE_EXISTS = [
 ].join(" ");
 
 describe("compileFilter — customer / basic plan-level filters", () => {
+	test("customer.customer_id $in", () => {
+		const result = compileFilter({
+			filter: { customer_id: { $in: ["cus_a", "cus_b"] } },
+			ctx: { features: ctx.features },
+			ambient,
+		});
+
+		expect(normalize(result.sql)).toBe(
+			normalize(`${ROOT_AMBIENT} AND c.id IN (?, ?)`),
+		);
+		expect(result.params).toEqual(["org_test", "live", "cus_a", "cus_b"]);
+	});
+
 	test("plan.plan_id eq", () => {
 		const result = compileFilter({
 			filter: { plan: { plan_id: "pro" } },
@@ -48,6 +61,32 @@ describe("compileFilter — customer / basic plan-level filters", () => {
 			"live",
 			...PLAN_AMBIENT_PARAMS,
 			"pro",
+		]);
+	});
+
+	test("plan.addon false", () => {
+		const result = compileFilter({
+			filter: { plan: { addon: false } },
+			ctx: { features: ctx.features },
+			ambient,
+		});
+
+		expect(normalize(result.sql)).toBe(
+			normalize(`
+				${ROOT_AMBIENT} AND EXISTS (
+					SELECT 1
+					FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
+					WHERE cp.internal_customer_id = c.internal_id
+						AND ${PLAN_AMBIENT}
+						AND p.is_add_on = ?
+				)
+			`),
+		);
+		expect(result.params).toEqual([
+			"org_test",
+			"live",
+			...PLAN_AMBIENT_PARAMS,
+			false,
 		]);
 	});
 

@@ -41,6 +41,7 @@ export const useMigrationsQuery = () => {
 				id?: string;
 				filter?: MigrationFilter | null;
 				operations?: Operations | null;
+				retry_failed?: boolean;
 			};
 		}) => {
 			const { data } = await axiosInstance.post<Migration>(
