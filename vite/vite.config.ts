@@ -43,20 +43,6 @@ export default defineConfig({
 				"../packages/atmn/src/prompts/skills/index.ts",
 			),
 
-			// Hide Radix UI imports with cleaner aliases
-			"@radix/accordion": "@radix-ui/react-accordion",
-			"@radix/checkbox": "@radix-ui/react-checkbox",
-			"@radix/context-menu": "@radix-ui/react-context-menu",
-			"@radix/dialog": "@radix-ui/react-dialog",
-			"@radix/dropdown-menu": "@radix-ui/react-dropdown-menu",
-			"@radix/popover": "@radix-ui/react-popover",
-			"@radix/scroll-area": "@radix-ui/react-scroll-area",
-			"@radix/select": "@radix-ui/react-select",
-			"@radix/separator": "@radix-ui/react-separator",
-			"@radix/slot": "@radix-ui/react-slot",
-			"@radix/switch": "@radix-ui/react-switch",
-			"@radix/tabs": "@radix-ui/react-tabs",
-			"@radix/tooltip": "@radix-ui/react-tooltip",
 		},
 	},
 

@@ -484,7 +484,7 @@ function LineItemGroupRow({
 	const paidAmount = firstItem.amount_after_discounts ?? firstItem.amount;
 
 	return (
-		<AdminHover asChild texts={getLineItemHoverTexts(firstItem)}>
+		<AdminHover texts={getLineItemHoverTexts(firstItem)}>
 			<div className="flex flex-col py-1">
 				<div className="flex items-start justify-between gap-2">
 					<div className="flex flex-col min-w-0 flex-1 gap-0.5">
@@ -563,7 +563,7 @@ function TierRow({
 	const isRefund = item.direction === "refund";
 
 	return (
-		<AdminHover asChild texts={hoverTexts}>
+		<AdminHover texts={hoverTexts}>
 			<div className="flex items-center justify-between text-xs text-t3">
 				<span>{item.description}</span>
 				<span

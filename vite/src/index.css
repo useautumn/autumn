@@ -368,13 +368,13 @@ html {
 		height: 0;
 	}
 	to {
-		height: var(--radix-accordion-content-height);
+		height: var(--accordion-panel-height);
 	}
 }
 
 @keyframes accordion-up {
 	from {
-		height: var(--radix-accordion-content-height);
+		height: var(--accordion-panel-height);
 	}
 	to {
 		height: 0;
@@ -412,6 +412,7 @@ input[type="number"]::-webkit-inner-spin-button {
 	* {
 		@apply border-border outline-ring/50;
 	}
+
 	body {
 		@apply bg-background text-foreground;
 		letter-spacing: -0.033px;

@@ -79,7 +79,7 @@ export function UpdateSubscriptionFooter() {
 					{invoiceDisabledReason && (
 						<TooltipContent
 							side="top"
-							className="max-w-(--radix-tooltip-trigger-width)"
+							className="max-w-(--anchor-width)"
 						>
 							{invoiceDisabledReason}
 						</TooltipContent>

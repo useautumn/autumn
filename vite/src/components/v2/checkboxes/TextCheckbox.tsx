@@ -1,11 +1,10 @@
-import type * as CheckboxPrimitive from "@radix-ui/react-checkbox";
 import type * as React from "react";
 import { useId } from "react";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "./Checkbox";
 
 interface TextCheckboxProps
-	extends React.ComponentProps<typeof CheckboxPrimitive.Root> {
+	extends React.ComponentProps<typeof Checkbox> {
 	children: React.ReactNode;
 }
 
