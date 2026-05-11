@@ -1,0 +1,32 @@
+server/package.json
+  s_cdefd3625da8b2::t_538950a0b9559e 55
+server/src/internal/workbench/workbenchRouter.ts
+  s_cdefd3625da8b2::t_a224a7780156ad 1-7
+server/src/external/axiom/aplUtils.ts
+  s_cdefd3625da8b2::t_5e5a1dfe885d02 5-11,63-65
+  s_cdefd3625da8b2::t_f6c73f27c549a3 1-4,12-62,66-74
+server/src/routers/internalRouter.ts
+  s_cdefd3625da8b2::t_e993b084be6693 49
+  s_cdefd3625da8b2::t_8010b520c17cc7 23
+server/src/internal/workbench/handlers/handleListRequestLogs.ts
+  s_cdefd3625da8b2::t_8acfc61ec1c6b2 98
+  s_cdefd3625da8b2::t_5e5a1dfe885d02 9-12
+  s_cdefd3625da8b2::t_b963f779c1ae2b 36-69,110-111,115-122,128-129
+  s_cdefd3625da8b2::t_cc348f414c5215 113,123-127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "b4f72f0bc0f98e3c09aa2f5b3a21219e68513e51",
+  "prompts": {},
+  "sessions": {
+    "s_cdefd3625da8b2": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e806008dffefZUoi2WZdawLov",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
