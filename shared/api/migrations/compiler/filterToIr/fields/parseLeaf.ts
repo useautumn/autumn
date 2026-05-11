@@ -1,5 +1,5 @@
-import type { IRLeaf, IRNode, LeafOp } from "../ir/irTypes.js";
-import type { ResolutionContext } from "./resolutionContext.js";
+import type { IRLeaf, IRNode, LeafOp } from "../../ir/irTypes.js";
+import type { ResolutionContext } from "../resolutionContext.js";
 import { translateValue } from "./translateValue.js";
 
 /**

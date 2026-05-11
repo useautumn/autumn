@@ -1,4 +1,8 @@
 import type { FullProduct } from "../../../../models/productModels/productModels.js";
+import {
+	isFreeProduct,
+	isOneOffProduct,
+} from "../../../../utils/productUtils/classifyProduct/classifyProductUtils.js";
 import { stringMatcherMatches } from "../../../migrations/filters/match/index.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 
@@ -30,7 +34,21 @@ export const planFilterMatchesProduct = ({
 		}
 	}
 
-	const unsupported = ["price", "paid", "recurring", "item"] as const;
+	const paid = !isFreeProduct({ prices: product.prices });
+	if (filter.paid !== undefined && paid !== filter.paid) {
+		return false;
+	}
+
+	if (filter.addon !== undefined && product.is_add_on !== filter.addon) {
+		return false;
+	}
+
+	const recurring = !isOneOffProduct({ prices: product.prices });
+	if (filter.recurring !== undefined && recurring !== filter.recurring) {
+		return false;
+	}
+
+	const unsupported = ["price", "item"] as const;
 	for (const key of unsupported) {
 		if ((filter as Record<string, unknown>)[key] !== undefined) {
 			throw new Error(

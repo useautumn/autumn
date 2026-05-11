@@ -5,6 +5,8 @@ export type MigrationRunControls = {
 	concurrency?: number;
 	limit?: number | null;
 	only?: string[] | null;
+	checkpoint?: boolean;
+	checkpointDryRun?: boolean;
 };
 
 export type MigrationBatchResult<Row extends Record<string, unknown>> = {
@@ -39,6 +41,7 @@ export type MigrationBatchFn = <
 	}) => Row | null | undefined;
 	concurrency?: number;
 	limit?: number | null;
+	only?: string[] | null;
 	itemKey?: (item: RunScopeItem) => string;
 	checkpoint?: boolean;
 	checkpointDryRun?: boolean;

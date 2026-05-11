@@ -21,10 +21,13 @@ const PriceFilterInner = z.object({
 	billing_method: BillingMethodSchema.optional(),
 });
 
+const RolloverFilterInner = z.object({});
+
 export const PlanItemFilterSchema = z.object({
 	feature_id: StringMatcherSchema.optional(),
 	unlimited: BooleanMatcherSchema.optional(),
 	price: nullableObjectFilter(PriceFilterInner).optional(),
+	rollover: nullableObjectFilter(RolloverFilterInner).optional(),
 });
 
 export type PlanItemFilter = z.infer<typeof PlanItemFilterSchema>;

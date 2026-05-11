@@ -1,4 +1,9 @@
 import type { FullCusProduct } from "../../../../models/cusProductModels/cusProductModels.js";
+import {
+	isCustomerProductAddOn,
+	isCustomerProductPaid,
+	isCustomerProductPaidRecurring,
+} from "../../../../utils/cusProductUtils/classifyCustomerProduct/classifyCustomerProduct.js";
 import { stringMatcherMatches } from "../../../migrations/filters/match/index.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 
@@ -7,7 +12,7 @@ import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
  *
  * JS-side mirror of `compilePlanFilter` for callers that already have
  * the cusproduct in memory (migration runner, scripts). Today supports
- * `plan_id` and `$or` — `price`, `paid`, `recurring`, and `item` throw to
+ * `plan_id`, `addon`, `paid`, `recurring`, and `$or`; `price` and `item` throw to
  * make the gap explicit.
  */
 export const planFilterMatchesCustomerProduct = ({
@@ -37,7 +42,28 @@ export const planFilterMatchesCustomerProduct = ({
 			return false;
 	}
 
-	const unsupported = ["price", "paid", "recurring", "item"] as const;
+	if (
+		filter.addon !== undefined &&
+		isCustomerProductAddOn(cusProduct) !== filter.addon
+	) {
+		return false;
+	}
+
+	if (
+		filter.paid !== undefined &&
+		isCustomerProductPaid(cusProduct) !== filter.paid
+	) {
+		return false;
+	}
+
+	if (
+		filter.recurring !== undefined &&
+		isCustomerProductPaidRecurring(cusProduct) !== filter.recurring
+	) {
+		return false;
+	}
+
+	const unsupported = ["price", "item"] as const;
 	for (const key of unsupported) {
 		if ((filter as Record<string, unknown>)[key] !== undefined)
 			throw new Error(
