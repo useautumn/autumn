@@ -99,7 +99,7 @@ export function AttachFooter() {
 											</Button>
 										</PopoverTrigger>
 										{!invoiceDisabledReason && (
-											<PopoverContent className="w-(--radix-popover-trigger-width) p-0">
+											<PopoverContent className="w-(--anchor-width) p-0">
 												<div className="flex flex-col">
 													<button
 														type="button"
@@ -144,7 +144,7 @@ export function AttachFooter() {
 							{invoiceDisabledReason && (
 								<TooltipContent
 									side="top"
-									className="max-w-(--radix-tooltip-trigger-width)"
+									className="max-w-(--anchor-width)"
 								>
 									{invoiceDisabledReason}
 								</TooltipContent>

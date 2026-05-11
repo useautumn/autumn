@@ -1,6 +1,6 @@
 import { Check, Copy } from "lucide-react";
 import type React from "react";
-import { cloneElement, forwardRef, isValidElement, useState } from "react";
+import { forwardRef, useState } from "react";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import {
 	Tooltip,
@@ -15,28 +15,25 @@ export const AdminHover = forwardRef<
 		children: React.ReactNode;
 		texts: (string | { key: string; value: string } | undefined | null)[];
 		hide?: boolean;
-		asChild?: boolean;
 		side?: "top" | "bottom" | "left" | "right";
 	}
 >(
 	(
-		{ children, texts, hide = false, asChild = false, side = "bottom" },
+		{ children, texts, hide = false, side = "bottom" },
 		ref,
 	) => {
 		const { isAdmin, skipHover } = useAdmin();
 
 		if (!isAdmin || hide || skipHover) return <>{children}</>;
 
-		// Try to forward the ref to the child if possible
-		let triggerChild = children;
-		if (isValidElement(children)) {
-			triggerChild = cloneElement(children as React.ReactElement, { ref });
-		}
-
 		return (
 			<TooltipProvider>
 				<Tooltip>
-					<TooltipTrigger asChild={asChild}>{triggerChild}</TooltipTrigger>
+					<TooltipTrigger asChild>
+						<span ref={ref} className="contents">
+							{children}
+						</span>
+					</TooltipTrigger>
 					{isAdmin && (
 						<TooltipContent
 							className="bg-white/50 backdrop-blur-sm shadow-sm border px-2 pr-6 py-2 max-w-none z-[9999]"

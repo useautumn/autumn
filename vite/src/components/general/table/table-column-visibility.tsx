@@ -29,11 +29,9 @@ function ColumnCheckboxItem<T>({ column }: { column: Column<T> }) {
 	return (
 		<DropdownMenuItem
 			key={column.id}
-			onClick={(e) => {
-				e.preventDefault();
+			onClick={() => {
 				column.toggleVisibility(!isVisible);
 			}}
-			onSelect={(e) => e.preventDefault()}
 			className="flex items-center gap-2 cursor-pointer text-sm"
 		>
 			<Checkbox checked={isVisible} className="border-border" />

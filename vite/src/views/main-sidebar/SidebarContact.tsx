@@ -22,16 +22,14 @@ export function SidebarContact() {
 
 	return (
 		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<div>
-					<NavButton
-						env={env}
-						value="chat"
-						icon={<QuestionIcon size={16} weight="duotone" />}
-						title="Need help?"
-						onClick={() => {}}
-					/>
-				</div>
+			<DropdownMenuTrigger render={<div />} nativeButton={false}>
+				<NavButton
+					env={env}
+					value="chat"
+					icon={<QuestionIcon size={16} weight="duotone" />}
+					title="Need help?"
+					onClick={() => {}}
+				/>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent side="top" align="start">
 				<span className="text-xs text-t3 p-2">

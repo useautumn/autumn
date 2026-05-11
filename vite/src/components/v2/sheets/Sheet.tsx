@@ -110,7 +110,7 @@ function SheetContent({
 			<SheetPrimitive.Popup
 				data-slot="sheet-content"
 				className={cn(
-					"bg-card fixed z-[150] flex flex-col gap-0 shadow-sm transition-transform duration-300 ease-in-out",
+					"bg-card fixed z-[150] flex flex-col gap-0 shadow-sm overflow-hidden transition-transform duration-300 ease-in-out",
 					SIDE_STYLES[side],
 					className,
 				)}

@@ -129,7 +129,7 @@ export function EditPlanFeatureSheet({
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
 			{/* Scrollable content area */}
-			<div className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+			<div className="flex-1 overflow-y-auto overscroll-none [scrollbar-gutter:stable]">
 				{!isOnboarding && (
 					<SheetHeader
 						title={`Configure ${feature?.name}`}

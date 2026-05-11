@@ -316,7 +316,7 @@ export function SubscriptionItemRow({
 		<ConditionalTooltip
 			enabled={!!prepaid.showTooltip}
 			content={prepaidTooltipContent}
-			contentClassName="max-w-(--radix-tooltip-trigger-width)"
+			contentClassName="max-w-(--anchor-width)"
 		>
 			{rowContent}
 		</ConditionalTooltip>
