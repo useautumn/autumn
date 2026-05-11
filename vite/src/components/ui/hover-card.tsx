@@ -52,6 +52,7 @@ function HoverCardContent({
 				align={align}
 				side={side}
 				sideOffset={sideOffset}
+				positionMethod="fixed"
 				className="isolate z-50"
 			>
 				<PreviewCardPrimitive.Popup

@@ -1,8 +1,8 @@
 "use client";
 
 import { Select as SelectPrimitive } from "@base-ui/react/select";
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
-import * as React from "react";
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -11,18 +11,22 @@ function Select({
 	onOpenChange,
 	value,
 	defaultValue,
+	items,
 	...props
 }: Omit<SelectPrimitive.Root.Props<string>, "onValueChange" | "onOpenChange"> & {
 	onValueChange?: (value: string) => void;
 	onOpenChange?: (open: boolean) => void;
 	value?: string;
 	defaultValue?: string;
+	items?: Record<string, string> | ReadonlyArray<{ label: string; value: string }>;
 }) {
+	const Root = SelectPrimitive.Root<string>;
 	return (
-		<SelectPrimitive.Root<string>
+		<Root
 			data-slot="select"
 			value={value}
 			defaultValue={defaultValue}
+			items={items}
 			onValueChange={onValueChange ? (val) => onValueChange(val as string) : undefined}
 			onOpenChange={onOpenChange ? (open) => onOpenChange(open) : undefined}
 			{...props}
@@ -72,15 +76,29 @@ function SelectTrigger({
 function SelectContent({
 	className,
 	children,
+	align = "start",
+	sideOffset = 4,
+	side = "bottom",
 	...props
-}: SelectPrimitive.Popup.Props) {
+}: SelectPrimitive.Popup.Props & {
+	align?: "start" | "center" | "end";
+	sideOffset?: number;
+	side?: "top" | "bottom" | "left" | "right";
+}) {
 	return (
 		<SelectPrimitive.Portal>
-			<SelectPrimitive.Positioner className="isolate z-[200]">
+			<SelectPrimitive.Positioner
+				align={align}
+				sideOffset={sideOffset}
+				side={side}
+				alignItemWithTrigger={false}
+				positionMethod="fixed"
+				className="isolate z-[200]"
+			>
 				<SelectPrimitive.Popup
 					data-slot="select-content"
 					className={cn(
-						"bg-interactive-secondary text-popover-foreground relative max-h-[var(--available-height)] min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md p-1",
+						"bg-interactive-secondary text-popover-foreground relative max-h-[var(--available-height)] min-w-[var(--anchor-width)] overflow-x-hidden overflow-y-auto rounded-md border shadow-md p-1",
 						className,
 					)}
 					{...props}
@@ -136,7 +154,10 @@ function SelectSeparator({
 	return (
 		<div
 			data-slot="select-separator"
-			className={cn("bg-border pointer-events-none -mx-1 my-1 h-px", className)}
+			className={cn(
+				"bg-border pointer-events-none -mx-1 my-1 h-px",
+				className,
+			)}
 			{...props}
 		/>
 	);

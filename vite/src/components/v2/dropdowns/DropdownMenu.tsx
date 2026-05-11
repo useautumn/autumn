@@ -143,7 +143,8 @@ const DropdownMenuSubContent = React.forwardRef<
 		<MenuPrimitive.Portal>
 			<MenuPrimitive.Positioner
 				sideOffset={sideOffset}
-				className="isolate z-[101]"
+				positionMethod="fixed"
+				className="isolate z-[200]"
 			>
 				<MenuPrimitive.Popup
 					ref={ref}
@@ -178,7 +179,8 @@ const DropdownMenuContent = React.forwardRef<
 				sideOffset={sideOffset}
 				side={side}
 				align={align}
-				className="isolate z-[101] outline-none"
+				positionMethod="fixed"
+				className="isolate z-[200] outline-none"
 			>
 				<MenuPrimitive.Popup
 					ref={ref}
@@ -235,6 +237,7 @@ const DropdownMenuItem = React.forwardRef<
 		<MenuPrimitive.Item
 			ref={ref}
 			data-slot="dropdown-menu-item"
+			closeOnClick={false}
 			className={cn(
 				dropdownMenuItemVariants({ variant, inset }),
 				shimmer && "shimmer",

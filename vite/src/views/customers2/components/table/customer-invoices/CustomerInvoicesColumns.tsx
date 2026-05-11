@@ -72,7 +72,7 @@ export const getCustomerInvoicesColumns = ({
 		cell: ({ row }: { row: Row<CustomerInvoice> }) => {
 			return (
 				<div className="min-w-0 max-w-full" title={row.original.productNames}>
-					<AdminHover asChild texts={getInvoiceHoverTexts({ invoice: row.original })}>
+					<AdminHover texts={getInvoiceHoverTexts({ invoice: row.original })}>
 						<span className="block max-w-full truncate">
 							{row.original.productNames}
 						</span>

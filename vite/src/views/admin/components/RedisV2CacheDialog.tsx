@@ -136,10 +136,11 @@ export function RedisV2CacheDialog({
 							<div className="text-xs font-medium uppercase tracking-wide text-t3">
 								Active Instance
 							</div>
-							<Select
-								value={selected}
-								onValueChange={(value) => setSelected(value as InstanceName)}
-							>
+						<Select
+							value={selected}
+							onValueChange={(value) => setSelected(value as InstanceName)}
+							items={Object.fromEntries(INSTANCE_OPTIONS.map((option) => [option.value, option.label]))}
+						>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>

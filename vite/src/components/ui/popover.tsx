@@ -60,6 +60,7 @@ function PopoverContent({
 				align={align}
 				side={side}
 				sideOffset={sideOffset}
+				positionMethod="fixed"
 				className="isolate z-[200]"
 			>
 				<PopoverPrimitive.Popup

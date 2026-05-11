@@ -323,20 +323,21 @@ export function FeatureGrantRewardConfig({
 													placeholder="30"
 													className="w-20"
 												/>
-												<Select
-													value={ent.expiry.duration}
-													onValueChange={(value) =>
-														updateEntitlement({
-															index,
-															updates: {
-																expiry: {
-																	duration: value as EntitlementDuration,
-																	length: ent.expiry?.length ?? 1,
-																},
+											<Select
+												value={ent.expiry.duration}
+												onValueChange={(value) =>
+													updateEntitlement({
+														index,
+														updates: {
+															expiry: {
+																duration: value as EntitlementDuration,
+																length: ent.expiry?.length ?? 1,
 															},
-														})
-													}
-												>
+														},
+													})
+												}
+												items={{ [EntitlementDuration.Day]: "Day(s)", [EntitlementDuration.Week]: "Week(s)", [EntitlementDuration.Month]: "Month(s)", [EntitlementDuration.Year]: "Year(s)" }}
+											>
 													<SelectTrigger className="flex-1">
 														<SelectValue />
 													</SelectTrigger>

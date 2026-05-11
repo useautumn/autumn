@@ -13,14 +13,14 @@ function DropdownMenu({
 	return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
 
-function DropdownMenuTrigger({
-	asChild,
-	children,
-	...props
-}: MenuPrimitive.Trigger.Props & { asChild?: boolean }) {
+const DropdownMenuTrigger = React.forwardRef<
+	HTMLButtonElement,
+	MenuPrimitive.Trigger.Props & { asChild?: boolean }
+>(({ asChild, children, ...props }, ref) => {
 	if (asChild && React.isValidElement(children)) {
 		return (
 			<MenuPrimitive.Trigger
+				ref={ref}
 				data-slot="dropdown-menu-trigger"
 				render={children}
 				{...props}
@@ -28,11 +28,12 @@ function DropdownMenuTrigger({
 		);
 	}
 	return (
-		<MenuPrimitive.Trigger data-slot="dropdown-menu-trigger" {...props}>
+		<MenuPrimitive.Trigger ref={ref} data-slot="dropdown-menu-trigger" {...props}>
 			{children}
 		</MenuPrimitive.Trigger>
 	);
-}
+});
+DropdownMenuTrigger.displayName = "DropdownMenuTrigger";
 
 function DropdownMenuGroup({
 	...props
@@ -97,6 +98,7 @@ const DropdownMenuSubContent = React.forwardRef<
 	<MenuPrimitive.Portal>
 		<MenuPrimitive.Positioner
 			sideOffset={sideOffset}
+			positionMethod="fixed"
 			className="isolate z-[200]"
 		>
 			<MenuPrimitive.Popup
@@ -127,6 +129,7 @@ const DropdownMenuContent = React.forwardRef<
 			sideOffset={sideOffset}
 			side={side}
 			align={align}
+			positionMethod="fixed"
 			className="isolate z-[200] outline-none"
 		>
 			<MenuPrimitive.Popup
@@ -158,6 +161,7 @@ const DropdownMenuItem = React.forwardRef<
 			<MenuPrimitive.Item
 				ref={ref}
 				data-slot="dropdown-menu-item"
+				closeOnClick={false}
 				render={children}
 				className={cn(
 					"relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
@@ -174,6 +178,7 @@ const DropdownMenuItem = React.forwardRef<
 		<MenuPrimitive.Item
 			ref={ref}
 			data-slot="dropdown-menu-item"
+			closeOnClick={false}
 			className={cn(
 				"relative flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors focus:bg-accent focus:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50 [&>svg]:size-4 [&>svg]:shrink-0",
 				shimmer && "shimmer",
