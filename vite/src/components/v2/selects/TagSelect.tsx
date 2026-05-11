@@ -97,7 +97,9 @@ export function TagSelect({
 					)}
 				</div>
 			</SelectTrigger>
-			<SelectContent>{renderContent?.(setOpen)}</SelectContent>
+			<SelectContent className="w-[var(--anchor-width)] max-w-[var(--anchor-width)]">
+				{renderContent?.(setOpen)}
+			</SelectContent>
 		</Select>
 	);
 }

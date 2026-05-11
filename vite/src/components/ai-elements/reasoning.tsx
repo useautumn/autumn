@@ -1,6 +1,6 @@
 "use client";
 
-import { useControllableState } from "@radix-ui/react-use-controllable-state";
+import { useControllableState } from "@/hooks/useControllableState";
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
