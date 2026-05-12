@@ -27,6 +27,7 @@ export const previewCreateScheduleWithContext = async ({
 	const billingContext = await setupCreateScheduleBillingContext({
 		ctx,
 		params,
+		preview: true,
 	});
 
 	await handleCreateScheduleErrors({

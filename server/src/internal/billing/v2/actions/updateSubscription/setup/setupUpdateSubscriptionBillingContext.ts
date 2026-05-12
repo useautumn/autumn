@@ -41,10 +41,12 @@ export const setupUpdateSubscriptionBillingContext = async ({
 	ctx,
 	params,
 	contextOverride = {},
+	preview = false,
 }: {
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
 	contextOverride?: UpdateSubscriptionBillingContextOverride;
+	preview?: boolean;
 }): Promise<UpdateSubscriptionBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -105,6 +107,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		skipBillingFetching,
 		product: fullProduct,
 		skipSubscriptionFetching: isUpdatingFreeCustomerProduct,
+		createStripeCustomerIfMissing: !preview,
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
