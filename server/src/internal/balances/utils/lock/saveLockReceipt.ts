@@ -10,6 +10,7 @@ export const saveLockReceipt = async ({
 	featureId,
 	entityId,
 	items,
+	overrideLockValue,
 	redisInstance,
 }: {
 	lock: {
@@ -24,6 +25,7 @@ export const saveLockReceipt = async ({
 	featureId: string;
 	entityId?: string;
 	items: MutationLogItem[];
+	overrideLockValue?: number;
 	redisInstance?: Redis;
 }) => {
 	const targetRedis = redisInstance ?? redis;
@@ -53,6 +55,7 @@ export const saveLockReceipt = async ({
 					entity_id: entityId ?? null,
 					expires_at: lock.expires_at ?? null,
 					created_at: lock.created_at,
+					overrideLockValue: overrideLockValue ?? null,
 					items,
 				}),
 			) as Promise<"OK" | null>,
