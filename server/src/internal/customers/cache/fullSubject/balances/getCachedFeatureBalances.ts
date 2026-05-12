@@ -17,11 +17,11 @@ export type FeatureBalanceResult = {
 
 export type FeatureBalanceOutcome =
 	| { kind: "ok"; value: FeatureBalanceResult }
-	| { kind: "missing" };
+	| { kind: "missing"; reason: string };
 
 export type FeatureBalancesBatchOutcome =
 	| { kind: "ok"; value: FeatureBalanceResult[] }
-	| { kind: "missing" };
+	| { kind: "missing"; reason: string };
 
 const readFeatureBalancesFromMaster = async ({
 	ctx,
@@ -82,12 +82,16 @@ export const getCachedFeatureBalance = async ({
 		redisInstance: redisV2,
 	});
 
-	if (!results) return { kind: "missing" };
+	if (!results) return { kind: "missing", reason: "single_pipeline_null" };
 
 	const balances: SubjectBalance[] = [];
 	for (let i = 0; i < customerEntitlementIds.length; i++) {
 		const entryJson = results[i];
-		if (!entryJson) return { kind: "missing" };
+		if (!entryJson)
+			return {
+				kind: "missing",
+				reason: `single_field_null:${featureId}:${customerEntitlementIds[i]}`,
+			};
 		try {
 			const parsedBalance = JSON.parse(entryJson) as SubjectBalance;
 			balances.push(
@@ -98,7 +102,10 @@ export const getCachedFeatureBalance = async ({
 				}),
 			);
 		} catch {
-			return { kind: "missing" };
+			return {
+				kind: "missing",
+				reason: `single_parse_failed:${featureId}:${customerEntitlementIds[i]}`,
+			};
 		}
 	}
 
@@ -145,7 +152,7 @@ export const getCachedFeatureBalancesBatch = async ({
 		redisInstance: redisV2,
 	});
 
-	if (!results) return { kind: "missing" };
+	if (!results) return { kind: "missing", reason: "batch_pipeline_null" };
 
 	const featureBalances: FeatureBalanceResult[] = [];
 
@@ -153,7 +160,11 @@ export const getCachedFeatureBalancesBatch = async ({
 		const customerEntitlementIds =
 			customerEntitlementIdsByFeatureId[featureIds[i]] ?? [];
 		const allValues = results[i]?.[1] as (string | null)[] | null;
-		if (!allValues) return { kind: "missing" };
+		if (!allValues)
+			return {
+				kind: "missing",
+				reason: `batch_hash_missing:${featureIds[i]}`,
+			};
 
 		let aggregated: AggregatedFeatureBalance | undefined;
 		let ceValues: (string | null)[];
@@ -176,11 +187,19 @@ export const getCachedFeatureBalancesBatch = async ({
 		}
 
 		if (ceValues.length !== customerEntitlementIds.length)
-			return { kind: "missing" };
+			return {
+				kind: "missing",
+				reason: `batch_length_mismatch:${featureIds[i]}:got=${ceValues.length}:expected=${customerEntitlementIds.length}`,
+			};
 
 		const balances: SubjectBalance[] = [];
-		for (const entryJson of ceValues) {
-			if (!entryJson) return { kind: "missing" };
+		for (let j = 0; j < ceValues.length; j++) {
+			const entryJson = ceValues[j];
+			if (!entryJson)
+				return {
+					kind: "missing",
+					reason: `batch_field_null:${featureIds[i]}:${customerEntitlementIds[j]}`,
+				};
 			try {
 				const parsedBalance = JSON.parse(entryJson) as SubjectBalance;
 				balances.push(
@@ -191,7 +210,10 @@ export const getCachedFeatureBalancesBatch = async ({
 					}),
 				);
 			} catch {
-				return { kind: "missing" };
+				return {
+					kind: "missing",
+					reason: `batch_parse_failed:${featureIds[i]}:${customerEntitlementIds[j]}`,
+				};
 			}
 		}
 

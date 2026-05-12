@@ -40,7 +40,12 @@
 			"url": "https://mcp.plain.com/mcp",
 			"oauth": {}
 		},
-		"autumn-internal": {
+		"slack": {
+			"type": "remote",
+			"url": "https://mcp.slack.com/mcp",
+			"oauth": {}
+		},
+		"autumn_prod_internal": {
 			"type": "local",
 			"command": [
 				"sh",
@@ -48,7 +53,20 @@
 				"cd \"/Users/johnyeocx/Autumn/autumn-cloud\" && exec infisical run --env=prod --recursive -- bun run \"/Users/johnyeocx/Autumn/autumn-cloud/ai/src/mcp/index.ts\""
 			],
 			"env": {
-				"AUTUMN_CLOUD_ROOT": "/Users/johnyeocx/Autumn/autumn-cloud"
+				"AUTUMN_CLOUD_ROOT": "/Users/johnyeocx/Autumn/autumn-cloud",
+				"AUTUMN_MCP_ENV": "prod"
+			}
+		},
+		"autumn_dev_internal": {
+			"type": "local",
+			"command": [
+				"sh",
+				"-c",
+				"cd \"/Users/johnyeocx/Autumn/autumn-cloud\" && exec infisical run --env=dev --recursive -- bun run \"/Users/johnyeocx/Autumn/autumn-cloud/ai/src/mcp/index.ts\""
+			],
+			"env": {
+				"AUTUMN_CLOUD_ROOT": "/Users/johnyeocx/Autumn/autumn-cloud",
+				"AUTUMN_MCP_ENV": "dev"
 			}
 		}
 	},

@@ -39,10 +39,12 @@ export const setupAttachBillingContext = async ({
 	ctx,
 	params,
 	contextOverride = {},
+	preview = false,
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV1;
 	contextOverride?: BillingContextOverride;
+	preview?: boolean;
 }): Promise<AttachBillingContext> => {
 	const { fullCustomer: fullCustomerOverride } = contextOverride;
 
@@ -139,6 +141,7 @@ export const setupAttachBillingContext = async ({
 		params,
 		newBillingSubscription: shouldForceNewSubscription,
 		skipBillingFetching,
+		createStripeCustomerIfMissing: !preview,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
