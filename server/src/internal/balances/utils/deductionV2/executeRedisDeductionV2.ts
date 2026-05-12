@@ -129,7 +129,7 @@ export const executeRedisDeductionV2 = async ({
 		});
 
 		if (unlimitedFeatureIds.length > 0) {
-			if (preparedLock) {
+			if (preparedLock?.enabled) {
 				await saveLockReceiptV2({
 					lock: preparedLock,
 					customerId,
