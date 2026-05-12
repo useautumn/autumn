@@ -6,6 +6,7 @@ import type {
 import {
 	ErrCode,
 	RecaseError,
+	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
@@ -52,7 +53,11 @@ export const handleProrationBehaviorErrors = ({
 	// Block any operations that would result in a charge
 	const chargeResult = billingPlanWillCharge({ billingPlan });
 
-	if (chargeResult.willCharge) {
+	if (
+		chargeResult.willCharge &&
+		"intent" in billingContext &&
+		billingContext.intent !== UpdateSubscriptionIntent.ManualTopUp
+	) {
 		throw new RecaseError({
 			message: `Cannot set proration_behavior to 'none' when ${getChargeReasonMessage(chargeResult.reason)}`,
 			code: ErrCode.InvalidRequest,
