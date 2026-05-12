@@ -9,6 +9,7 @@ import { productV2ToBasePrice } from "@autumn/shared";
 import {
 	CurrencyCircleDollarIcon,
 	GitBranchIcon,
+	PackageIcon,
 	PlusIcon,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
@@ -90,7 +91,11 @@ export function UpdatePlanOpForm({
 				seen.add(p.id);
 				return true;
 			})
-			.map((p) => ({ value: p.id, label: p.name || p.id }));
+			.map((p) => ({
+				value: p.id,
+				label: p.name || p.id,
+				icon: <PackageIcon size={14} weight="duotone" className="text-t3" />,
+			}));
 	}, [products]);
 
 	const selectedPlanIds = extractPlanIds(value.plan_filter.plan_id);
@@ -132,8 +137,8 @@ export function UpdatePlanOpForm({
 			const basePrice = productV2ToBasePrice({ product });
 			if (basePrice) {
 				const amount =
-					basePrice.tiers?.[0]?.amount ??
 					((basePrice as Record<string, unknown>).price as number) ??
+					basePrice.tiers?.[0]?.amount ??
 					0;
 				update({
 					customize: {
@@ -391,8 +396,10 @@ function buildInitialProduct(
 	const items: ProductItem[] = [];
 
 	if (value.customize?.price) {
+		const amount = value.customize.price.amount ?? 0;
 		items.push({
-			tiers: [{ to: "inf", amount: value.customize.price.amount ?? 0 }],
+			price: amount,
+			tiers: [{ to: "inf", amount }],
 			interval: value.customize.price.interval ?? "month",
 			billing_units: 1,
 		} as ProductItem);

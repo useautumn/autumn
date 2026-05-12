@@ -178,9 +178,9 @@ async function startDev() {
 				names.push("trigger");
 				colors.push("cyan");
 				cmds.push(
-					isWindows
-						? `"bunx trigger.dev@latest dev"`
-						: `"bunx trigger.dev@latest dev"`,
+				isWindows
+					? `"bunx trigger.dev@latest dev"`
+					: `"bunx trigger.dev@latest dev"`,
 				);
 			}
 

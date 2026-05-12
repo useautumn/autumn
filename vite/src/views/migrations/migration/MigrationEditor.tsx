@@ -1,16 +1,19 @@
 import type { Migration } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
-import { useState } from "react";
+import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { FilterStep } from "./FilterStep";
 import { MigrationLiveView } from "./live/MigrationLiveView";
 import { OperationsStep } from "./OperationsStep";
-import { StepIndicator } from "./StepIndicator";
+import { type StepId, STEPS, StepIndicator } from "./StepIndicator";
 import { useMigrationEditorForm } from "./useMigrationEditorForm";
 
-type Step = 1 | 2 | 3;
+const STEP_IDS = STEPS.map((s) => s.id);
 
 export function MigrationEditor({ migration }: { migration: Migration }) {
-	const [step, setStep] = useState<Step>(1);
+	const [step, setStep] = useQueryState<StepId>(
+		"step",
+		parseAsStringLiteral(STEP_IDS).withDefault("filter"),
+	);
 	const { form } = useMigrationEditorForm({ migration });
 	const filter = useStore(form.store, (s) => s.values.filter);
 	const operations = useStore(form.store, (s) => s.values.operations);
@@ -19,22 +22,26 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 		<div className="flex flex-col gap-6">
 			<StepIndicator step={step} onStepChange={setStep} />
 
-			{step === 1 && (
-				<FilterStep form={form} filter={filter} onNext={() => setStep(2)} />
+			{step === "filter" && (
+				<FilterStep
+					form={form}
+					filter={filter}
+					onNext={() => setStep("operations")}
+				/>
 			)}
-			{step === 2 && (
+			{step === "operations" && (
 				<OperationsStep
 					form={form}
 					operations={operations}
-					onPrevious={() => setStep(1)}
-					onNext={() => setStep(3)}
+					onPrevious={() => setStep("filter")}
+					onNext={() => setStep("live")}
 				/>
 			)}
-			{step === 3 && (
+			{step === "live" && (
 				<MigrationLiveView
 					migrationId={migration.id}
 					filter={filter}
-					onPrevious={() => setStep(2)}
+					onPrevious={() => setStep("operations")}
 				/>
 			)}
 		</div>

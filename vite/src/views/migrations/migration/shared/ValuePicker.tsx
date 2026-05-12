@@ -60,10 +60,10 @@ export function ValuePicker({
 									return (
 										<span
 											key={val}
-											className="flex items-center gap-1 bg-accent border border-border text-t1 rounded px-2 py-0.5 text-sm shrink-0 max-w-48"
+											className="flex items-center gap-0.5 bg-accent border border-border text-t1 rounded px-1 h-4.5 text-[10px] shrink-0 max-w-48"
 										>
 											{opt?.icon && (
-												<span className="shrink-0">{opt.icon}</span>
+												<span className="shrink-0 [&_svg]:size-3">{opt.icon}</span>
 											)}
 											<span className="truncate">{opt?.label ?? val}</span>
 											<span
