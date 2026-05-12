@@ -35,12 +35,20 @@ const findPairedEntitlement = ({
 }: {
 	price: Price;
 	entitlements: Entitlement[];
+<<<<<<< Updated upstream
 }) =>
 	price.entitlement_id
 		? entitlements.find(
 				(entitlement) => entitlement.id === price.entitlement_id,
 			)
 		: undefined;
+=======
+}): Entitlement | undefined =>
+	priceToEnt({
+		price,
+		entitlements: entitlements as EntitlementWithFeature[],
+	});
+>>>>>>> Stashed changes
 
 /**
  * Classify how much of the Stripe resource set on `candidatePrice` can be
