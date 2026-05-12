@@ -3,6 +3,7 @@ import {
 	type BillingContext,
 	cusProductToProduct,
 	isFixedPrice,
+	isFreeProduct,
 	isPrepaidPrice,
 	nullish,
 	type Price,
@@ -90,14 +91,7 @@ export const initStripeResourcesForBillingPlan = async ({
 	const batchProductUpdates = [];
 	for (const product of allProducts) {
 		if (product.processor?.id != null) continue;
-		if (
-			!product.prices.some(
-				(price) =>
-					isFixedPrice(price) && shouldInitializeStripePrice({ price }),
-			)
-		) {
-			continue;
-		}
+		if (isFreeProduct({ prices: product.prices })) continue;
 
 		batchProductUpdates.push(
 			checkStripeProductExists({
