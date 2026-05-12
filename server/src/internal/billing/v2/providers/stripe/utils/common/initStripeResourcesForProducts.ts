@@ -2,16 +2,13 @@ import {
 	type AutumnBillingPlan,
 	type BillingContext,
 	cusProductToProduct,
-	type FullCusProduct,
-	type FullProduct,
-	findCustomerProductById,
 	isFixedPrice,
 	isPrepaidPrice,
 	nullish,
 	type Price,
 } from "@autumn/shared";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
-import { applyPreviewStripeResourcesToProduct } from "@/external/stripe/previewStripeResourceIds";
+import { applyPreviewStripeResourcesToBillingPlan } from "@/external/stripe/previewStripeResourceIds";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	applyCustomerProductPatch,
@@ -25,11 +22,6 @@ const shouldInitializeStripePrice = ({ price }: { price: Price }) => {
 	return (price.config.amount ?? 0) > 0;
 };
 
-const productNeedsPlanStripeProduct = ({ product }: { product: FullProduct }) =>
-	product.prices.some(
-		(price) => isFixedPrice(price) && shouldInitializeStripePrice({ price }),
-	);
-
 export const initStripeResourcesForBillingPlan = async ({
 	ctx,
 	autumnBillingPlan,
@@ -40,6 +32,14 @@ export const initStripeResourcesForBillingPlan = async ({
 	billingContext: BillingContext;
 }) => {
 	const { db, org, env, logger } = ctx;
+
+	if (billingContext.dryRunStripe) {
+		applyPreviewStripeResourcesToBillingPlan({
+			autumnBillingPlan,
+			billingContext,
+		});
+		return;
+	}
 
 	const { fullCustomer } = billingContext;
 	const { insertCustomerProducts } = autumnBillingPlan;
@@ -87,65 +87,17 @@ export const initStripeResourcesForBillingPlan = async ({
 	const allProducts = [...newProducts, ...patchProducts, ...existingProducts];
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
-	if (billingContext.dryRunStripe) {
-		const applyPreviewStripeResourcesToCustomerProduct = ({
-			customerProduct,
-		}: {
-			customerProduct: FullCusProduct;
-		}) => {
-			const product = cusProductToProduct({ cusProduct: customerProduct });
-			applyPreviewStripeResourcesToProduct({ product, internalEntityId });
-			customerProduct.product.processor = product.processor ?? null;
-		};
-
-		for (const customerProduct of insertCustomerProducts) {
-			applyPreviewStripeResourcesToCustomerProduct({
-				customerProduct,
-			});
-		}
-
-		for (const patchCustomerProduct of patchCustomerProducts) {
-			const matchingCustomerProduct =
-				findCustomerProductById({
-					fullCustomer,
-					customerProductId: patchCustomerProduct.customerProduct.id,
-				}) ?? patchCustomerProduct.customerProduct;
-			const patchedCustomerProduct = applyCustomerProductPatch({
-				customerProduct: matchingCustomerProduct,
-				patch: patchCustomerProduct,
-			});
-
-			applyPreviewStripeResourcesToCustomerProduct({
-				customerProduct: patchedCustomerProduct,
-			});
-
-			if (matchingCustomerProduct === patchCustomerProduct.customerProduct) {
-				continue;
-			}
-
-			applyPreviewStripeResourcesToCustomerProduct({
-				customerProduct: applyCustomerProductPatch({
-					customerProduct: patchCustomerProduct.customerProduct,
-					patch: patchCustomerProduct,
-				}),
-			});
-		}
-
-		for (const customerProduct of fullCustomer.customer_products) {
-			if (patchedCustomerProductIds.has(customerProduct.id)) continue;
-
-			applyPreviewStripeResourcesToCustomerProduct({
-				customerProduct,
-			});
-		}
-
-		return;
-	}
-
 	const batchProductUpdates = [];
 	for (const product of allProducts) {
 		if (product.processor?.id != null) continue;
-		if (!productNeedsPlanStripeProduct({ product })) continue;
+		if (
+			!product.prices.some(
+				(price) =>
+					isFixedPrice(price) && shouldInitializeStripePrice({ price }),
+			)
+		) {
+			continue;
+		}
 
 		batchProductUpdates.push(
 			checkStripeProductExists({

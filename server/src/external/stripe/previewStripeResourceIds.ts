@@ -1,12 +1,22 @@
 import {
+	type AutumnBillingPlan,
+	type BillingContext,
+	cusProductToProduct,
+	type FullCusProduct,
 	type FullProduct,
+	findCustomerProductById,
 	InternalError,
 	isPrepaidPrice,
+	isUsagePrice,
 	type Price,
 	ProcessorType,
 	type Product,
 	type UsagePriceConfig,
 } from "@autumn/shared";
+import {
+	applyCustomerProductPatch,
+	getPatchCustomerProducts,
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { hashJson } from "@/utils/hash/hashJson";
 
 export const PREVIEW_STRIPE_PRICE_ID_PREFIX = "price_PREVIEW_";
@@ -109,7 +119,7 @@ export const applyPreviewStripeResourcesToProduct = ({
 			fieldName: "stripe_price_id",
 		});
 
-		if ("feature_id" in config && config.feature_id) {
+		if (isUsagePrice({ price })) {
 			config.stripe_product_id ??= previewStripeProductIdForPrice({
 				price,
 				product,
@@ -124,6 +134,81 @@ export const applyPreviewStripeResourcesToProduct = ({
 				fieldName: "stripe_prepaid_price_v2_id",
 			});
 		}
+	}
+};
+
+const applyPreviewStripeResourcesToCustomerProduct = ({
+	customerProduct,
+	internalEntityId,
+}: {
+	customerProduct: FullCusProduct;
+	internalEntityId?: string;
+}) => {
+	const product = cusProductToProduct({ cusProduct: customerProduct });
+	applyPreviewStripeResourcesToProduct({ product, internalEntityId });
+	customerProduct.product.processor = product.processor ?? null;
+};
+
+/** Stamp preview Stripe IDs onto every customer product touched by a dry-run billing plan. */
+export const applyPreviewStripeResourcesToBillingPlan = ({
+	autumnBillingPlan,
+	billingContext,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+	billingContext: BillingContext;
+}) => {
+	const { fullCustomer } = billingContext;
+	const internalEntityId = fullCustomer.entity?.internal_id;
+	const patchCustomerProducts = getPatchCustomerProducts({ autumnBillingPlan });
+	const patchedCustomerProductIds = new Set(
+		patchCustomerProducts.map(
+			(patchCustomerProduct) => patchCustomerProduct.customerProduct.id,
+		),
+	);
+
+	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
+		applyPreviewStripeResourcesToCustomerProduct({
+			customerProduct,
+			internalEntityId,
+		});
+	}
+
+	for (const patchCustomerProduct of patchCustomerProducts) {
+		const matchingCustomerProduct =
+			findCustomerProductById({
+				fullCustomer,
+				customerProductId: patchCustomerProduct.customerProduct.id,
+			}) ?? patchCustomerProduct.customerProduct;
+		const patchedCustomerProduct = applyCustomerProductPatch({
+			customerProduct: matchingCustomerProduct,
+			patch: patchCustomerProduct,
+		});
+
+		applyPreviewStripeResourcesToCustomerProduct({
+			customerProduct: patchedCustomerProduct,
+			internalEntityId,
+		});
+
+		if (matchingCustomerProduct === patchCustomerProduct.customerProduct) {
+			continue;
+		}
+
+		applyPreviewStripeResourcesToCustomerProduct({
+			customerProduct: applyCustomerProductPatch({
+				customerProduct: patchCustomerProduct.customerProduct,
+				patch: patchCustomerProduct,
+			}),
+			internalEntityId,
+		});
+	}
+
+	for (const customerProduct of fullCustomer.customer_products) {
+		if (patchedCustomerProductIds.has(customerProduct.id)) continue;
+
+		applyPreviewStripeResourcesToCustomerProduct({
+			customerProduct,
+			internalEntityId,
+		});
 	}
 };
 
