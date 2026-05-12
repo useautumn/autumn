@@ -43,9 +43,9 @@ export async function updateSubscription({
 	const billingContext = await setupUpdateSubscriptionBillingContext({
 		ctx,
 		params,
+		preview,
 		contextOverride,
 	});
-	billingContext.dryRunStripe = preview;
 
 	logUpdateSubscriptionContext({ ctx, billingContext });
 

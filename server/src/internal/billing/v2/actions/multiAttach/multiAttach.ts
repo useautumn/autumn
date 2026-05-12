@@ -34,8 +34,8 @@ export async function multiAttach({
 	const billingContext = await setupMultiAttachBillingContext({
 		ctx,
 		params,
+		preview,
 	});
-	billingContext.dryRunStripe = preview;
 
 	// 2. Errors
 	await handleMultiAttachErrors({
