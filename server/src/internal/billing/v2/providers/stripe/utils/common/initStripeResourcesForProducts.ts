@@ -1,7 +1,9 @@
 import {
 	type AutumnBillingPlan,
 	type BillingContext,
+	copyStripeResourcesToMatchingPrice,
 	cusProductToProduct,
+	type FullProduct,
 	isFixedPrice,
 	isFreeProduct,
 	isPrepaidPrice,
@@ -15,12 +17,43 @@ import {
 	applyCustomerProductPatch,
 	getPatchCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { PriceService } from "@/internal/products/prices/PriceService";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 
 const shouldInitializeStripePrice = ({ price }: { price: Price }) => {
 	if (!isFixedPrice(price)) return true;
 
 	return (price.config.amount ?? 0) > 0;
+};
+
+const applyStripeReuseWithinProduct = async ({
+	db,
+	product,
+}: {
+	db: AutumnContext["db"];
+	product: FullProduct;
+}) => {
+	for (const targetPrice of product.prices) {
+		const candidatePrices = product.prices.filter(
+			(price) => price.id !== targetPrice.id,
+		);
+		if (candidatePrices.length === 0) continue;
+
+		const { copiedFields } = copyStripeResourcesToMatchingPrice({
+			targetPrice,
+			candidatePrices,
+			targetEntitlements: product.entitlements,
+			candidateEntitlements: product.entitlements,
+		});
+
+		if (copiedFields.length === 0) continue;
+
+		await PriceService.update({
+			db,
+			id: targetPrice.id,
+			update: { config: targetPrice.config },
+		});
+	}
 };
 
 export const initStripeResourcesForBillingPlan = async ({
@@ -87,6 +120,12 @@ export const initStripeResourcesForBillingPlan = async ({
 
 	const allProducts = [...newProducts, ...patchProducts, ...existingProducts];
 	const internalEntityId = fullCustomer.entity?.internal_id;
+
+	await Promise.all(
+		allProducts.map((product) =>
+			applyStripeReuseWithinProduct({ db, product }),
+		),
+	);
 
 	const batchProductUpdates = [];
 	for (const product of allProducts) {
