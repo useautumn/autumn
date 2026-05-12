@@ -371,7 +371,7 @@ test.concurrent(
 				],
 				cancel_action: "cancel_end_of_cycle",
 			}),
-		).rejects.toThrow(/Update too complex to perform/i);
+		).rejects.toThrow(/Updating a one off prepaid feature quantity/i);
 	},
 );
 
@@ -427,7 +427,7 @@ test.concurrent(
 					{ feature_id: TestFeature.Words, quantity: 100 },
 				],
 			}),
-		).rejects.toThrow(/Update too complex to perform/i);
+		).rejects.toThrow(/Updating a one off prepaid feature quantity/i);
 	},
 );
 
@@ -535,7 +535,7 @@ test.concurrent(
 				items: [raisedBasePrice, dashboard, oneOffItem],
 				options: [{ feature_id: TestFeature.Messages, quantity: 1300 }],
 			}),
-		).rejects.toThrow(/Update too complex to perform/i);
+		).rejects.toThrow(/Updating a one off prepaid feature quantity/i);
 	},
 );
 
