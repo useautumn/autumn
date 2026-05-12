@@ -1,0 +1,52 @@
+vite/tests/components/forms/update-subscription-v2/hooks/build-update-subscription-options.test.ts
+  s_ab2bfbcfb3993e::t_a1f3aacb131a33 222
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 1,193-221
+server/src/internal/billing/v2/actions/updateSubscription/errors/handleOneOffErrors.ts
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 7,11,14-15,19,23-84,98-103,174-176
+vite/src/views/customers2/components/table/customer-products/CustomerProductsColumns.tsx
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 2,87,99-158
+server/src/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionIntent.ts
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 4,7,24-25,33-49,51
+server/src/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors.ts
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 13,58-60
+server/src/internal/billing/v2/utils/billingPlan/toUpdateSubscriptionPreview/billingPlanToUpdateSubscriptionPreviewIntent.ts
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 14
+vite/src/components/forms/update-subscription-v2/context/UpdateSubscriptionFormProvider.tsx
+  s_5a025c17cf4e8f::t_7e664587f97aa4 239-244,249
+vite/src/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionRequestBody.ts
+  s_ab2bfbcfb3993e::t_bca6e9b4995792 13
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 1-5,15,71-72,74-75,80
+  s_ab2bfbcfb3993e::t_244b48e6e8bf78 73
+shared/utils/productV2Utils/compareProductUtils/generatePrepaidChanges.ts
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 24
+shared/models/billingModels/context/updateSubscriptionBillingContext.ts
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 17-18
+shared/utils/cusProductUtils/classifyCustomerProduct/classifyCustomerProduct.ts
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 7-11,288-303
+vite/src/views/customers2/components/table/customer-products/CustomerProductsTable.tsx
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 122-125,137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "ae4b690fd807e72f1fe95c610c38de6a01b97881",
+  "prompts": {},
+  "sessions": {
+    "s_5a025c17cf4e8f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e824cfb9ffeNFd5sOncVoypoh",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_ab2bfbcfb3993e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "34dbb0bc-cc0c-467c-a0ec-9e23de0f4988",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
