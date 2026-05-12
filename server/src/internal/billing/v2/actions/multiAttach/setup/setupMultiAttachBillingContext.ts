@@ -11,11 +11,14 @@ import { setupImmediateMultiProductBillingContext } from "../../common/immediate
 export const setupMultiAttachBillingContext = async ({
 	ctx,
 	params,
+	preview = false,
 }: {
 	ctx: AutumnContext;
 	params: MultiAttachParamsV0;
+	preview?: boolean;
 }): Promise<MultiAttachBillingContext> =>
 	setupImmediateMultiProductBillingContext({
 		ctx,
 		params,
+		preview,
 	});
