@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
 	AllowanceType,
 	AppEnv,
@@ -18,50 +18,6 @@ import {
 	TierInfinite,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-
-const insertCalls: {
-	features: unknown[][];
-	prices: unknown[][];
-	ents: unknown[][];
-} = {
-	features: [],
-	prices: [],
-	ents: [],
-};
-
-mock.module("@server/internal/features/FeatureService", () => ({
-	FeatureService: {
-		insert: async ({ data }: { data: unknown[] }) => {
-			insertCalls.features.push(data);
-		},
-	},
-}));
-
-mock.module(
-	"@server/internal/products/entitlements/EntitlementService",
-	() => ({
-		EntitlementService: {
-			insert: async ({ data }: { data: unknown[] }) => {
-				insertCalls.ents.push(data);
-			},
-			upsert: async () => {},
-			deleteInIds: async () => {},
-			update: async () => {},
-		},
-	}),
-);
-
-mock.module("@server/internal/products/prices/PriceService", () => ({
-	PriceService: {
-		insert: async ({ data }: { data: unknown[] }) => {
-			insertCalls.prices.push(data);
-		},
-		upsert: async () => {},
-		deleteInIds: async () => {},
-		getCustomInEntIds: async () => [],
-	},
-}));
-
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems";
 
@@ -198,12 +154,6 @@ const noopLogger = {
 } as never;
 
 describe("handleNewProductItems versioning carries forward Stripe IDs", () => {
-	beforeEach(() => {
-		insertCalls.features = [];
-		insertCalls.prices = [];
-		insertCalls.ents = [];
-	});
-
 	test("copies every Stripe resource field onto the new version when config matches", async () => {
 		const result = await handleNewProductItems({
 			db: {} as DrizzleCli,
