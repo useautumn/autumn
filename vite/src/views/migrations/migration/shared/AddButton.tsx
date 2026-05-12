@@ -1,28 +1,26 @@
 import { PlusIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
+
+export const DASHED_BUTTON_CLASS =
+	"flex items-center justify-center gap-2 w-full h-6 px-2 rounded-lg bg-transparent border border-dashed border-border/80 text-t3 text-tiny cursor-pointer outline-none hover:border-border hover:text-t2 active:border-border focus-visible:bg-muted/50 transition-colors";
 
 export function AddButton({
 	label,
 	onClick,
-	fullWidth = false,
+	className,
 }: {
 	label: string;
 	onClick: () => void;
-	fullWidth?: boolean;
+	className?: string;
 }) {
 	return (
-		<Button
-			variant="skeleton"
-			size="sm"
+		<button
+			type="button"
 			onClick={onClick}
-			className={cn(
-				"text-t4 hover:text-t2",
-				fullWidth && "w-full",
-			)}
+			className={cn(DASHED_BUTTON_CLASS, className)}
 		>
 			<PlusIcon size={10} />
 			{label}
-		</Button>
+		</button>
 	);
 }

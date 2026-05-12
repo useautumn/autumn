@@ -1,6 +1,10 @@
-import type { CustomerOperation, Operations } from "@autumn/shared";
+import type {
+	CustomerOperation,
+	Operations,
+	UpdatePlanOp,
+} from "@autumn/shared";
 import { AddButton } from "../shared/AddButton";
-import { CustomerOperationCard } from "./CustomerOperationCard";
+import { UpdatePlanOpForm } from "./UpdatePlanOpForm";
 
 const DEFAULT_OPERATION: CustomerOperation = {
 	type: "update_plan",
@@ -17,31 +21,38 @@ export function OperationsForm({
 }) {
 	const operations = value.customer ?? [];
 
-	const updateOperations = (customerOperations: CustomerOperation[]) =>
-		onChange({ ...value, customer: customerOperations });
+	const updateOperations = (next: CustomerOperation[]) =>
+		onChange({ ...value, customer: next });
+
+	const updateAt = (index: number, updated: CustomerOperation) => {
+		const next = [...operations];
+		next[index] = updated;
+		updateOperations(next);
+	};
+
+	const removeAt = (index: number) =>
+		updateOperations(operations.filter((_, i) => i !== index));
 
 	return (
 		<div className="flex flex-col">
 			{operations.map((operation, index) => (
 				<div key={`op-${index}`} className="flex flex-col">
 					{index > 0 && <div className="border-t my-3" />}
-					<CustomerOperationCard
-						value={operation}
-						onChange={(updated) => {
-							const next = [...operations];
-							next[index] = updated;
-							updateOperations(next);
-						}}
-						onRemove={() =>
-							updateOperations(operations.filter((_, i) => i !== index))
-						}
-					/>
+					{operation.type === "update_plan" && (
+						<UpdatePlanOpForm
+							value={operation as UpdatePlanOp}
+							onChange={(updated) => updateAt(index, updated)}
+							onRemove={() => removeAt(index)}
+						/>
+					)}
 				</div>
 			))}
-			<AddButton
-				label="Add Operation"
-				onClick={() => updateOperations([...operations, DEFAULT_OPERATION])}
-			/>
+			<div className={operations.length > 0 ? "border-t mt-3 pt-3" : ""}>
+				<AddButton
+					label="Add Operation"
+					onClick={() => updateOperations([...operations, DEFAULT_OPERATION])}
+				/>
+			</div>
 		</div>
 	);
 }

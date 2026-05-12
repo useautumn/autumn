@@ -1,4 +1,9 @@
-import type { Feature, ProductItem, ProductItemInterval, UsageModel } from "@autumn/shared";
+import type {
+	Feature,
+	ProductItem,
+	ProductItemInterval,
+	UsageModel,
+} from "@autumn/shared";
 import { getDefaultItem } from "@/views/products/plan/utils/getDefaultItem";
 
 export function migrationItemToProductItem(
@@ -17,8 +22,7 @@ export function migrationItemToProductItem(
 	const price = migItem.price as Record<string, unknown> | undefined;
 	if (price) {
 		base.tiers = [{ to: "inf", amount: Number(price.amount ?? 0) }];
-		if (price.interval)
-			base.interval = price.interval as ProductItemInterval;
+		if (price.interval) base.interval = price.interval as ProductItemInterval;
 		if (price.billing_method)
 			base.usage_model = price.billing_method as UsageModel;
 		base.billing_units = 1;

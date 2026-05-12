@@ -15,7 +15,9 @@ const EXECUTION_STATUSES = [
 
 export type ExecutionStatus = (typeof EXECUTION_STATUSES)[number]["value"];
 
-export function hasActiveExecutionFilters(statuses: ExecutionStatus[]): boolean {
+export function hasActiveExecutionFilters(
+	statuses: ExecutionStatus[],
+): boolean {
 	return statuses.length > 0;
 }
 

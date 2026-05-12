@@ -1,4 +1,3 @@
-import { useCallback } from "react";
 import { useNavigate, useParams } from "react-router";
 import {
 	Breadcrumb,
@@ -21,10 +20,7 @@ export function MigrationView() {
 
 	const migration = migrations.find((m) => m.id === migration_id);
 
-	const goToMigrations = useCallback(
-		() => navigateTo("/migrations", navigate, env),
-		[navigate, env],
-	);
+	const goToMigrations = () => navigateTo("/migrations", navigate, env);
 
 	if (isLoading) return <LoadingScreen />;
 

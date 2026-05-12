@@ -138,7 +138,10 @@ function stringMatcherToRule(
 }
 
 function ruleToStringMatcher(rule: FilterRule): StringMatcher {
-	if (rule.operator === "in" || (rule.operator === "is" && rule.values.length > 1))
+	if (
+		rule.operator === "in" ||
+		(rule.operator === "is" && rule.values.length > 1)
+	)
 		return { $in: rule.values };
 
 	const val = rule.values[0];
@@ -172,9 +175,10 @@ function nullableToRule(field: FilterField, value: unknown): FilterRule | null {
 
 type ArrayFilterMode = "$some" | "$every" | "$none";
 
-function detectArrayFilterMode(
-	item: Record<string, unknown>,
-): { mode: ArrayFilterMode; inner: Record<string, unknown> } {
+function detectArrayFilterMode(item: Record<string, unknown>): {
+	mode: ArrayFilterMode;
+	inner: Record<string, unknown>;
+} {
 	for (const key of ["$some", "$every", "$none"] as const) {
 		if (key in item && item[key] && typeof item[key] === "object")
 			return { mode: key, inner: item[key] as Record<string, unknown> };
@@ -221,9 +225,7 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 		if (featureRule) mainRules.push(featureRule);
 
 		if (inner.unlimited !== undefined)
-			mainRules.push(
-				booleanRule("item_unlimited", Boolean(inner.unlimited)),
-			);
+			mainRules.push(booleanRule("item_unlimited", Boolean(inner.unlimited)));
 
 		const itemPriceRule = nullableToRule("item_price", inner.price);
 		if (itemPriceRule) mainRules.push(itemPriceRule);
@@ -335,9 +337,7 @@ export function customerIdToStrings(
 	return [];
 }
 
-export function stringsToCustomerId(
-	ids: string[],
-): StringMatcher | undefined {
+export function stringsToCustomerId(ids: string[]): StringMatcher | undefined {
 	const filtered = ids.map((s) => s.trim()).filter(Boolean);
 	if (filtered.length === 0) return undefined;
 	if (filtered.length === 1) return filtered[0];

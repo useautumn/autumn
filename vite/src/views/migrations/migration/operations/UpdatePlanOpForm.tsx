@@ -27,6 +27,8 @@ import {
 } from "@/components/v2/selects/Select";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
+import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
 import {
 	migrationItemToProductItem,
 	productItemToMigrationItem,
@@ -178,7 +180,7 @@ export function UpdatePlanOpForm({
 	};
 
 	return (
-		<div className="flex flex-col gap-1.5">
+		<div className="flex flex-col gap-2">
 			<div className="flex items-center justify-between group/row">
 				<div className="flex items-center gap-2">
 					<span className="text-sm font-medium text-t1">
@@ -186,7 +188,8 @@ export function UpdatePlanOpForm({
 					</span>
 					{selectedPlanIds.length > 0 && (
 						<span className="text-xs text-t3">
-							{selectedPlanIds.length} {selectedPlanIds.length === 1 ? "plan" : "plans"}
+							{selectedPlanIds.length}{" "}
+							{selectedPlanIds.length === 1 ? "plan" : "plans"}
 						</span>
 					)}
 				</div>
@@ -225,6 +228,9 @@ export function UpdatePlanOpForm({
 							<span className="flex-1 text-left text-sm">
 								<SelectValue />
 							</span>
+							<InfoTooltip className="text-blue-500 [&_svg]:text-blue-500">
+								Won't apply to customers with custom plans.
+							</InfoTooltip>
 						</SelectTrigger>
 						<SelectContent>
 							{versionOptions.map((o) => (
@@ -300,55 +306,52 @@ export function UpdatePlanOpForm({
 				/>
 			))}
 
-			<div className="flex items-center gap-2">
-				<span className="w-14 shrink-0" />
-				<DropdownMenu>
-					<DropdownMenuTrigger className="flex items-center gap-2 text-xs text-t4 hover:text-t2 cursor-pointer outline-none">
-						<PlusIcon size={10} />
-						Add
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="start">
-						{value.version === undefined && (
-							<DropdownMenuItem
-								closeOnClick
-								onClick={() => update({ version: 1 })}
-							>
-								Version
-							</DropdownMenuItem>
-						)}
-						{(!customize || customize.price === undefined) && (
-							<DropdownMenuItem
-								closeOnClick
-								onClick={() => openSheet("edit-price")}
-							>
-								Base Price
-							</DropdownMenuItem>
-						)}
+			<DropdownMenu>
+				<DropdownMenuTrigger className={DASHED_BUTTON_CLASS}>
+					<PlusIcon size={10} />
+					Add
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="start" className="w-(--anchor-width)">
+					{value.version === undefined && (
 						<DropdownMenuItem
 							closeOnClick
-							onClick={() => openSheet("add-feature")}
+							onClick={() => update({ version: 1 })}
 						>
-							Add Item
+							Version
 						</DropdownMenuItem>
+					)}
+					{(!customize || customize.price === undefined) && (
 						<DropdownMenuItem
 							closeOnClick
-							onClick={() =>
-								update({
-									customize: {
-										...customize,
-										remove_items: [
-											...(customize?.remove_items ?? []),
-											{} as Record<string, unknown>,
-										],
-									},
-								})
-							}
+							onClick={() => openSheet("edit-price")}
 						>
-							Remove Item
+							Base Price
 						</DropdownMenuItem>
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</div>
+					)}
+					<DropdownMenuItem
+						closeOnClick
+						onClick={() => openSheet("add-feature")}
+					>
+						Add Item
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						closeOnClick
+						onClick={() =>
+							update({
+								customize: {
+									...customize,
+									remove_items: [
+										...(customize?.remove_items ?? []),
+										{} as Record<string, unknown>,
+									],
+								},
+							})
+						}
+					>
+						Remove Item
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
 
 			<MigrationOperationSheet
 				open={sheetOpen}

@@ -1,14 +1,20 @@
 import { XIcon } from "@phosphor-icons/react";
-import { Button, type ButtonProps } from "@/components/v2/buttons/Button";
+import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 
-export function RemoveButton({ className, ...props }: ButtonProps) {
+export function RemoveButton({
+	onClick,
+	className,
+}: {
+	onClick: () => void;
+	className?: string;
+}) {
 	return (
 		<Button
 			variant="skeleton"
 			size="icon"
 			aria-label="Remove"
-			{...props}
+			onClick={onClick}
 			className={cn(
 				"opacity-0 group-hover/row:opacity-100 text-t3 hover:text-destructive! motion-reduce:opacity-100",
 				className,

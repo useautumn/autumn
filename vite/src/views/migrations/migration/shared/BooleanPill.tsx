@@ -1,5 +1,4 @@
 import { CheckCircleIcon, XCircleIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/v2/buttons/Button";
 
 export function BooleanPill({
 	value,
@@ -9,13 +8,17 @@ export function BooleanPill({
 	onChange: (value: boolean) => void;
 }) {
 	return (
-		<Button variant="secondary" size="sm" onClick={() => onChange(!value)}>
+		<button
+			type="button"
+			onClick={() => onChange(!value)}
+			className="flex items-center gap-2 h-8 px-3 rounded-xl input-base input-state-open-tiny cursor-pointer w-full text-sm"
+		>
 			{value ? (
 				<CheckCircleIcon size={14} weight="fill" className="text-green-500" />
 			) : (
 				<XCircleIcon size={14} weight="fill" className="text-t3" />
 			)}
 			{value ? "True" : "False"}
-		</Button>
+		</button>
 	);
 }

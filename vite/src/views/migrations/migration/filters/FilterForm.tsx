@@ -1,13 +1,17 @@
-import type { MigrationFilter, PlanFilter, StringMatcher } from "@autumn/shared";
-import { ArrowsClockwiseIcon, PlusIcon } from "@phosphor-icons/react";
+import type {
+	MigrationFilter,
+	PlanFilter,
+	StringMatcher,
+} from "@autumn/shared";
 import { useMemo, useRef } from "react";
 import { Button } from "@/components/v2/buttons/Button";
+import { AddButton } from "../shared/AddButton";
 import { FilterGroup } from "./FilterGroup";
 import {
+	customerIdToStrings,
 	type FilterGroupData,
 	type FilterOperator,
 	type FilterRule,
-	customerIdToStrings,
 	groupsToPlanFilter,
 	planFilterToGroups,
 	stringsToCustomerId,
@@ -43,9 +47,7 @@ function buildGroups(value: MigrationFilter): FilterGroupData[] {
 	return [{ rules: [rule, ...(first?.rules ?? [])] }, ...rest];
 }
 
-function ruleToCustomerIdMatcher(
-	rule: FilterRule,
-): StringMatcher | undefined {
+function ruleToCustomerIdMatcher(rule: FilterRule): StringMatcher | undefined {
 	if (rule.values.length === 0) return undefined;
 	switch (rule.operator) {
 		case "is":
@@ -133,67 +135,37 @@ export function FilterForm({
 			{ rules: [{ field: "plan_id", operator: "is", values: [] }] },
 		]);
 
-	const splitGroupAt = (groupIndex: number, ruleIndex: number) => {
-		const group = groups[groupIndex];
-		const before = { rules: group.rules.slice(0, ruleIndex) };
-		const after = { rules: group.rules.slice(ruleIndex) };
-		if (before.rules.length === 0 || after.rules.length === 0) return;
-		const next = [...groups];
-		next.splice(groupIndex, 1, before, after);
-		setGroups(next);
-	};
-
-	const mergeGroups = (index: number) => {
-		if (index <= 0 || index >= groups.length) return;
-		const merged = {
-			rules: [...groups[index - 1].rules, ...groups[index].rules],
-		};
-		const next = [...groups];
-		next.splice(index - 1, 2, merged);
-		setGroups(next);
-	};
-
 	const clearAll = () =>
 		setGroups([{ rules: [{ field: "plan_id", operator: "is", values: [] }] }]);
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex flex-col">
 			{groups.map((group, index) => (
-				<div key={`group-${index}`} className="flex flex-col gap-2">
-					{index > 0 && (
-						<Button
-							variant="skeleton"
-							size="sm"
-							onClick={() => mergeGroups(index)}
-							className="w-12 shrink-0 !gap-1 !justify-start text-t4 hover:text-t2"
-							title="Click to merge into And"
-						>
-							Or
-							<ArrowsClockwiseIcon size={10} className="opacity-40" />
-						</Button>
-					)}
+				<div key={`group-${index}`} className="flex flex-col">
+					{index > 0 && <div className="border-t my-3" />}
 					<FilterGroup
 						group={group}
+						groupIndex={index}
 						onChange={(updated) => updateGroup(index, updated)}
 						onDelete={() => deleteGroup(index)}
-						onSplitAt={(ruleIndex) => splitGroupAt(index, ruleIndex)}
 						showDelete={groups.length > 1}
 					/>
 				</div>
 			))}
-			<div className="flex items-center justify-between pt-1">
-				<Button variant="skeleton" size="sm" onClick={addGroup} className="text-t4 hover:text-t2">
-					<PlusIcon size={10} />
-					Add filter group
-				</Button>
+			<div className="flex items-center gap-2 border-t mt-3 pt-3">
+				<AddButton
+					label="Add or clause"
+					onClick={addGroup}
+					className="flex-1"
+				/>
 				{groups.some((g) => g.rules.length > 0) && (
 					<Button
 						variant="skeleton"
 						size="sm"
 						onClick={clearAll}
-						className="text-t3 hover:text-destructive"
+						className="text-t3 hover:text-destructive shrink-0"
 					>
-						Clear all filters
+						Clear all
 					</Button>
 				)}
 			</div>

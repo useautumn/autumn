@@ -2,8 +2,8 @@ import { getProductItemDisplay } from "@autumn/shared";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";
-import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { PlanFeatureIcon } from "@/views/products/plan/components/plan-card/PlanFeatureIcon";
+import { CustomDotIcon } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { migrationItemToProductItem } from "../shared/migrationItemUtils";
 
 export function ItemSummaryRow({
