@@ -1,0 +1,19 @@
+server/src/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan.ts
+  s_ab2bfbcfb3993e::t_fd029ac4ddabc1 14,36-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "396205a6b7cf2184023382072b00029533be7fd8",
+  "prompts": {},
+  "sessions": {
+    "s_ab2bfbcfb3993e": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "34dbb0bc-cc0c-467c-a0ec-9e23de0f4988",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
