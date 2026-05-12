@@ -7,7 +7,10 @@ import {
 	findCustomerProductById,
 	InternalError,
 	isPrepaidPrice,
+	isPreviewStripeId,
 	isUsagePrice,
+	PREVIEW_STRIPE_PRICE_ID_PREFIX,
+	PREVIEW_STRIPE_PRODUCT_ID_PREFIX,
 	type Price,
 	ProcessorType,
 	type Product,
@@ -19,15 +22,8 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { hashJson } from "@/utils/hash/hashJson";
 
-export const PREVIEW_STRIPE_PRICE_ID_PREFIX = "price_PREVIEW_";
-export const PREVIEW_STRIPE_PRODUCT_ID_PREFIX = "prod_PREVIEW_";
-
 const previewHash = ({ value }: { value: unknown }) =>
 	hashJson({ value }).slice(0, 24);
-
-export const isPreviewStripeId = ({ stripeId }: { stripeId?: string | null }) =>
-	stripeId?.startsWith(PREVIEW_STRIPE_PRICE_ID_PREFIX) === true ||
-	stripeId?.startsWith(PREVIEW_STRIPE_PRODUCT_ID_PREFIX) === true;
 
 export const assertNotPreviewStripeId = ({
 	stripeId,
