@@ -86,7 +86,7 @@ export function BillingAutoTopupSheet() {
 		existingItem?.quantity?.toString() ?? "",
 	);
 	const [hasPurchaseLimit, setHasPurchaseLimit] = useState(
-		!!existingItem?.purchase_limit,
+		!!existingItem?.purchase_limit?.limit && !!existingItem?.purchase_limit?.interval,
 	);
 	const [purchaseLimitInterval, setPurchaseLimitInterval] = useState(
 		existingItem?.purchase_limit?.interval ?? "",
