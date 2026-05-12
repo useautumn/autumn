@@ -1,6 +1,5 @@
 import type { AppEnv, Feature } from "@autumn/shared";
 import type { Redis } from "ioredis";
-import { logger } from "@/external/logtail/logtailUtils.js";
 import { batchDeleteCachedFullCustomers } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/batchDeleteCachedFullCustomers.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
@@ -78,11 +77,7 @@ const batchInvalidateCachedFullSubjectsOnRedis = async ({
 				featureIds = orgFeatures.map((feature) => feature.id);
 			}
 
-			const featureIdSet = Array.from(new Set(featureIds));
-			logger.warn(
-				`[batchInvalidateCachedFullSubjects] UNLINK customer=${customerId} features=${featureIdSet.join(",")}`,
-			);
-			for (const featureId of featureIdSet) {
+			for (const featureId of new Set(featureIds)) {
 				writePipeline.unlink(
 					buildSharedFullSubjectBalanceKey({
 						orgId,
