@@ -132,6 +132,41 @@ describe("getPriceStripeReuseLevel", () => {
 		expect(level).toBe("none");
 	});
 
+	test("returns full when both usage prices share configs and lack paired entitlements", () => {
+		const orphan = usagePrice({ id: "pr_orphan", entitlement_id: null });
+		const orphanNew = usagePrice({ id: "pr_orphan_new", entitlement_id: null });
+
+		const level = getPriceStripeReuseLevel({
+			newPrice: orphanNew,
+			candidatePrice: orphan,
+			newEntitlements: [],
+			candidateEntitlements: [],
+		});
+
+		expect(level).toBe("full");
+	});
+
+	test("returns stripeProductOnly when both usage prices lack entitlements but configs differ", () => {
+		const cheaper = usagePrice({
+			id: "pr_orphan_cheaper",
+			entitlement_id: null,
+			config: {
+				...usageConfig,
+				usage_tiers: [{ amount: 0.05, to: TierInfinite }],
+			},
+		});
+		const original = usagePrice({ id: "pr_orphan", entitlement_id: null });
+
+		const level = getPriceStripeReuseLevel({
+			newPrice: cheaper,
+			candidatePrice: original,
+			newEntitlements: [],
+			candidateEntitlements: [],
+		});
+
+		expect(level).toBe("stripeProductOnly");
+	});
+
 	test("returns full for matching fixed prices regardless of paired entitlements", () => {
 		const fixed: Price = {
 			id: "pr_base",
