@@ -1,5 +1,4 @@
 import type { Redis } from "ioredis";
-import { logger } from "@/external/logtail/logtailUtils.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildSharedFullSubjectBalanceKey } from "../../builders/buildSharedFullSubjectBalanceKey.js";
 import { AGGREGATED_BALANCE_FIELD } from "../../config/fullSubjectCacheConfig.js";
@@ -36,10 +35,6 @@ export const invalidateCustomerEntitlementBalance = async ({
 		customerId,
 		featureId,
 	});
-
-	logger.warn(
-		`[invalidateCustomerEntitlementBalance] HDEL customer=${customerId} feature=${featureId} cusEnt=${customerEntitlementId}`,
-	);
 
 	await tryRedisWrite(
 		() =>
