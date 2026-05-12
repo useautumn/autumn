@@ -125,6 +125,7 @@ export const executePostgresDeductionV2 = async ({
 						featureId: feature.id,
 						entityId,
 						items: [],
+						overrideLockValue: toDeduct,
 						redisInstance: ctx.redisV2,
 					});
 				}

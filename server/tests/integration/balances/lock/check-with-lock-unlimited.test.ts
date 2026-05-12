@@ -17,6 +17,7 @@
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV5 } from "@autumn/shared";
+import { expectCustomerEventsCorrect } from "@tests/integration/balances/utils/events/expectCustomerEventsCorrect.js";
 import { deleteLock } from "@tests/integration/balances/utils/lockUtils/deleteLock.js";
 import { expectLockReceiptDeleted } from "@tests/integration/balances/utils/lockUtils/expectLockReceiptDeleted.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -24,6 +25,7 @@ import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { timeout } from "@/utils/genUtils";
 
 const makeUnlimitedProd = () =>
 	products.base({
@@ -65,6 +67,10 @@ test.concurrent(`${chalk.yellowBright("lock-unlimited: check with lock on unlimi
 	expect(finalizeResponse.success).toBe(true);
 
 	await expectLockReceiptDeleted({ ctx, lockId: lockKey });
+	await expectCustomerEventsCorrect({
+		customerId,
+		events: [{ value: 10 }],
+	});
 
 	const customer = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
 	expect(customer).toBeDefined();
@@ -103,7 +109,13 @@ test.concurrent(`${chalk.yellowBright("lock-unlimited: check with lock on unlimi
 
 	expect(finalizeResponse.success).toBe(true);
 
+	await timeout(4000);
+
 	await expectLockReceiptDeleted({ ctx, lockId: lockKey });
+	await expectCustomerEventsCorrect({
+		customerId,
+		events: [{ value: -5 }, { value: 5 }],
+	});
 });
 
 // ── Contract assertion 3: check with lock=0 on unlimited, finalize confirm → success ──
@@ -140,4 +152,8 @@ test.concurrent(`${chalk.yellowBright("lock-unlimited: lock=0 on unlimited featu
 	expect(finalizeResponse.success).toBe(true);
 
 	await expectLockReceiptDeleted({ ctx, lockId: lockKey });
+	await expectCustomerEventsCorrect({
+		customerId,
+		events: [{ value: 0 }],
+	});
 });
