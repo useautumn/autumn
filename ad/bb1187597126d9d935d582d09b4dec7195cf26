@@ -1,0 +1,27 @@
+server/src/internal/billing/v2/common/errors/handleBillingBehaviorErrors.ts
+  s_5a025c17cf4e8f::t_a9d92d328ac428 57-61
+  s_5a025c17cf4e8f::t_f467064000b4df 5
+shared/utils/productV2Utils/compareProductUtils/generatePrepaidChanges.ts
+  s_5a025c17cf4e8f::t_e0cfc9e9013a79 24
+server/src/internal/billing/v2/compute/finalize/finalizeLineItems.ts
+  s_5a025c17cf4e8f::t_892e74adfbf84f 7
+  s_5a025c17cf4e8f::t_ed40a669195c96 36-39,43
+vite/src/components/forms/update-subscription-v2/hooks/useHasSubscriptionChanges.ts
+  s_5a025c17cf4e8f::t_e151b83c57188b 41-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "adbb1187597126d9d935d582d09b4dec7195cf26",
+  "prompts": {},
+  "sessions": {
+    "s_5a025c17cf4e8f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e824cfb9ffeNFd5sOncVoypoh",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
