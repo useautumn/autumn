@@ -21,7 +21,7 @@ export function generatePrepaidChanges({
 			const oldQuantity = originalOptions[featureId] ?? 0;
 			const newQuantity = updatedOptions[featureId] ?? 0;
 
-			if (oldQuantity === newQuantity) return null;
+			if (oldQuantity === newQuantity && item.interval !== null) return null;
 
 			const oldDisplayQuantity = getPrepaidDisplayQuantity({
 				quantity: oldQuantity,

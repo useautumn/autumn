@@ -1,8 +1,10 @@
 import { hasCustomItems } from "@api/billing/common/customizePlan/customizePlanV1";
 import {
 	type CheckoutMode,
+	customerProductHasOneOffPrepaidForFeature,
 	customerProductHasPrepaidPrice,
 	type FullCusProduct,
+	isCustomerProductOneOff,
 	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -19,6 +21,8 @@ export const setupUpdateSubscriptionIntent = ({
 	checkoutMode: CheckoutMode;
 	customerProduct: FullCusProduct;
 }): UpdateSubscriptionIntent => {
+	const featureQuantitiesParams = params.feature_quantities ?? [];
+
 	const itemsChanged = hasCustomItems(params.customize);
 	const versionChanged = params.version !== undefined;
 	const freeTrialChanged = params.customize?.free_trial !== undefined;
@@ -26,11 +30,25 @@ export const setupUpdateSubscriptionIntent = ({
 	if (itemsChanged || versionChanged || freeTrialChanged)
 		return UpdateSubscriptionIntent.UpdatePlan;
 
-	// Version change = plan update (takes priority)
-	const featureQuantitiesChanges =
-		params.feature_quantities?.length && params.feature_quantities.length > 0;
+	// ManualTopUp wins over UpdateQuantity (and CancelAction/None): once we know
+	// this isn't a plan restructure, any feature_quantities entry targeting a
+	// one-off prepaid price on a recurring host routes here. handleManualTopUpErrors
+	// then rejects extra fields with "Update too complex to perform."
+	if (
+		!isCustomerProductOneOff(customerProduct) &&
+		featureQuantitiesParams.length > 0
+	) {
+		const targetsOneOffPrepaid = featureQuantitiesParams.some((fq) =>
+			customerProductHasOneOffPrepaidForFeature({
+				customerProduct,
+				featureId: fq.feature_id,
+			}),
+		);
 
-	if (featureQuantitiesChanges) {
+		if (targetsOneOffPrepaid) return UpdateSubscriptionIntent.ManualTopUp;
+	}
+
+	if (featureQuantitiesParams.length > 0) {
 		return UpdateSubscriptionIntent.UpdateQuantity;
 	}
 
