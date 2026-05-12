@@ -9,16 +9,16 @@ import {
 	PlayIcon,
 	UsersIcon,
 	WarningIcon,
+	XIcon,
 } from "@phosphor-icons/react";
 import type { ColumnDef, PaginationState, Row } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 import { debounce } from "lodash";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Table } from "@/components/general/table";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
-import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
@@ -46,22 +46,24 @@ import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
-import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
+import { ActiveRunDot, ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import {
 	type ExecutionStatus,
 	ExecutionStatusSubMenu,
 	hasActiveExecutionFilters,
 } from "./ExecutionStatusSubMenu";
-
-type RunFilter = "dry" | "live";
+import { useMigrationSheetStore } from "./useMigrationSheetStore";
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 250];
 
+type CustomerRow = CustomerWithProducts & {
+	_event?: MigrationItemEvent;
+	_isActive?: boolean;
+};
+
 function useConfirmAction(action: () => void) {
 	const [isConfirming, setIsConfirming] = useState(false);
-	const timerRef = {
-		current: undefined as ReturnType<typeof setTimeout> | undefined,
-	};
+	const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
 	const trigger = useCallback(() => {
 		if (!isConfirming) {
@@ -82,6 +84,51 @@ function useConfirmAction(action: () => void) {
 	return { isConfirming, trigger, cancel };
 }
 
+function buildEventsByCustomer(itemEvents: MigrationItemEvent[]) {
+	const map = new Map<string, MigrationItemEvent>();
+	for (const event of itemEvents) {
+		if (event.item_kind !== "customer") continue;
+		const existing = map.get(event.item_id);
+		if (!existing || event.timestamp > existing.timestamp)
+			map.set(event.item_id, event);
+	}
+	return map;
+}
+
+const statusColumn: ColumnDef<CustomerRow, unknown> = {
+	id: "migration_status",
+	header: "Status",
+	size: 140,
+	cell: ({ row }: { row: Row<CustomerRow> }) => {
+		const event = row.original._event;
+		if (event)
+			return (
+				<ItemEventStatusBadge
+					status={event.status}
+					dryRun={event.dry_run}
+					response={event.response}
+				/>
+			);
+		if (row.original._isActive)
+			return (
+				<div className="flex items-center gap-2">
+					<ActiveRunDot />
+					<span className="text-xs text-t2">Queued</span>
+				</div>
+			);
+		return <Badge variant="muted">Not Run</Badge>;
+	},
+};
+
+const baseColumns = createCustomerListColumns().filter(
+	(col) => col.id !== "actions",
+) as ColumnDef<CustomerRow, unknown>[];
+
+const columns: ColumnDef<CustomerRow, unknown>[] = [
+	...baseColumns,
+	statusColumn,
+];
+
 export function MigrationLiveView({
 	migrationId,
 	filter,
@@ -93,7 +140,6 @@ export function MigrationLiveView({
 }) {
 	const { runMigration, isRunning } = useMigrationsQuery();
 	const { queryStates: customerFilters } = useCustomerFilters();
-	const [runFilter, setRunFilter] = useState<RunFilter>("dry");
 	const [executionStatuses, setExecutionStatuses] = useState<ExecutionStatus[]>(
 		[],
 	);
@@ -103,6 +149,7 @@ export function MigrationLiveView({
 		pageIndex: 0,
 		pageSize: 50,
 	});
+	const [dismissedError, setDismissedError] = useState<string | null>(null);
 
 	const debouncedSetSearch = useMemo(
 		() => debounce((q: string) => setDebouncedSearch(q), 350),
@@ -119,19 +166,27 @@ export function MigrationLiveView({
 		[debouncedSetSearch],
 	);
 
-	const customerFilter = filter.customer ?? {};
 	const {
 		customers,
 		count,
 		isLoading: isLoadingCustomers,
 	} = useMigrationFilterPreview({
-		filter: customerFilter,
+		filter: filter.customer ?? {},
 		search: debouncedSearch,
 		page: pagination.pageIndex,
 		pageSize: pagination.pageSize,
 	});
 
-	const { itemEvents } = useMigrationRunsQuery({ migrationId });
+	const {
+		itemEvents,
+		isActive,
+		runs,
+		invalidate: invalidateRuns,
+	} = useMigrationRunsQuery({ migrationId });
+
+	const setSelectedCustomer = useMigrationSheetStore(
+		(s) => s.setSelectedCustomer,
+	);
 
 	const triggerRun = async (opts: {
 		dryRun: boolean;
@@ -145,8 +200,10 @@ export function MigrationLiveView({
 				limit: opts.limit,
 				only: opts.only,
 			});
-			const label = opts.dryRun ? "Dry run" : "Migration run";
-			toast.success(`${label} triggered (${result.run_id})`);
+			toast.success(
+				`${opts.dryRun ? "Dry run" : "Migration run"} triggered (${result.run_id})`,
+			);
+			invalidateRuns();
 		} catch (error) {
 			toast.error(
 				getBackendErr(error as AxiosError, "Failed to run migration"),
@@ -156,74 +213,20 @@ export function MigrationLiveView({
 
 	const confirm = useConfirmAction(() => triggerRun({ dryRun: false }));
 
-	const isDryMode = runFilter === "dry";
-
-	const eventsByCustomer = useMemo(() => {
-		const map = new Map<string, MigrationItemEvent>();
-		for (const event of itemEvents) {
-			if (event.item_kind !== "customer") continue;
-			if (isDryMode && !event.dry_run) continue;
-			if (!isDryMode && event.dry_run) continue;
-			const existing = map.get(event.item_id);
-			if (!existing || event.timestamp > existing.timestamp) {
-				map.set(event.item_id, event);
-			}
-		}
-		return map;
-	}, [itemEvents, isDryMode]);
-
-	const [confirmCustomerId, setConfirmCustomerId] = useState<string | null>(
-		null,
+	const eventsByCustomer = useMemo(
+		() => buildEventsByCustomer(itemEvents),
+		[itemEvents],
 	);
 
-	const runColumnForCustomer = (customerId: string) => {
-		if (isDryMode) {
-			triggerRun({ dryRun: true, only: [customerId] });
-		} else {
-			if (confirmCustomerId === customerId) {
-				setConfirmCustomerId(null);
-				triggerRun({ dryRun: false, only: [customerId] });
-			} else {
-				setConfirmCustomerId(customerId);
-				setTimeout(() => setConfirmCustomerId(null), 3000);
-			}
-		}
-	};
-
-	const statusColumn: ColumnDef<CustomerWithProducts, unknown> = {
-		id: "migration_status",
-		header: "Status",
-		size: 120,
-		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
-			const customerId = row.original.id ?? row.original.internal_id;
-			const event = eventsByCustomer.get(customerId);
-			if (!event) return <Badge variant="muted">Not Run</Badge>;
-			return <ItemEventStatusBadge status={event.status} />;
-		},
-	};
-
-	const runActionColumn: ColumnDef<CustomerWithProducts, unknown> = {
-		id: "run_action",
-		header: "",
-		size: 80,
-		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
-			const customerId = row.original.id ?? row.original.internal_id;
-			const isConfirming = !isDryMode && confirmCustomerId === customerId;
-			return (
-				<div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
-					<Button
-						variant={isConfirming ? "destructive" : "secondary"}
-						size="sm"
-						onClick={() => runColumnForCustomer(customerId)}
-						isLoading={isRunning}
-					>
-						<PlayIcon size={10} weight="fill" />
-						{isConfirming ? "Confirm" : "Run"}
-					</Button>
-				</div>
-			);
-		},
-	};
+	const enrichedCustomers = useMemo(
+		(): CustomerRow[] =>
+			customers.map((c) => ({
+				...c,
+				_event: eventsByCustomer.get(c.internal_id),
+				_isActive: isActive,
+			})),
+		[customers, eventsByCustomer, isActive],
+	);
 
 	const filteredCustomers = useMemo(() => {
 		const hasExecution = executionStatuses.length > 0;
@@ -232,59 +235,49 @@ export function MigrationLiveView({
 		const hasProcessor = customerFilters.processor.length > 0;
 		const hasNone = customerFilters.none;
 		if (!hasExecution && !hasStatus && !hasVersion && !hasProcessor && !hasNone)
-			return customers;
-		return customers.filter((c) => {
+			return enrichedCustomers;
+		return enrichedCustomers.filter((c) => {
 			if (hasExecution) {
-				const id = c.id ?? c.internal_id;
-				const event = eventsByCustomer.get(id);
-				if (!event && !executionStatuses.includes("not_run")) return false;
-				if (
-					event &&
-					!executionStatuses.includes(event.status as ExecutionStatus)
-				)
+				const status = c._event?.status;
+				if (!status && !executionStatuses.includes("not_run")) return false;
+				if (status && !executionStatuses.includes(status as ExecutionStatus))
 					return false;
 			}
 			const cusProducts = c.customer_products ?? [];
 			if (hasNone && cusProducts.length === 0) return true;
 			if (hasStatus) {
-				const match = cusProducts.some((cp) =>
-					customerFilters.status.includes(cp.status),
-				);
-				if (!match) return false;
+				if (
+					!cusProducts.some((cp) => customerFilters.status.includes(cp.status))
+				)
+					return false;
 			}
 			if (hasVersion) {
-				const match = cusProducts.some((cp) => {
-					const key = `${cp.product?.id}:${cp.product?.version ?? 1}`;
-					return customerFilters.version.includes(key);
-				});
-				if (!match) return false;
+				if (
+					!cusProducts.some((cp) =>
+						customerFilters.version.includes(
+							`${cp.product?.id}:${cp.product?.version ?? 1}`,
+						),
+					)
+				)
+					return false;
 			}
 			if (hasProcessor) {
 				const processors = c.processors ?? {};
-				const match = customerFilters.processor.some(
-					(p) => processors[p as keyof typeof processors] != null,
-				);
-				if (!match) return false;
+				if (
+					!customerFilters.processor.some(
+						(p) => processors[p as keyof typeof processors] != null,
+					)
+				)
+					return false;
 			}
 			return true;
 		});
-	}, [customers, eventsByCustomer, executionStatuses, customerFilters]);
-
-	const columns = useMemo(
-		(): ColumnDef<CustomerWithProducts, unknown>[] => [
-			...(createCustomerListColumns().filter(
-				(col) => col.id !== "actions",
-			) as ColumnDef<CustomerWithProducts, unknown>[]),
-			statusColumn,
-			runActionColumn,
-		],
-		[eventsByCustomer, isDryMode, isRunning, confirmCustomerId],
-	);
+	}, [enrichedCustomers, executionStatuses, customerFilters]);
 
 	const pageCount =
 		count !== null ? Math.max(Math.ceil(count / pagination.pageSize), 1) : 1;
 
-	const table = useProductTable<CustomerWithProducts>({
+	const table = useProductTable<CustomerRow>({
 		data: filteredCustomers,
 		columns,
 		options: {
@@ -299,8 +292,30 @@ export function MigrationLiveView({
 	const canPrev = pagination.pageIndex > 0;
 	const canNext = count !== null && currentPage < pageCount;
 
+	const latestRun = runs[0];
+	const latestFailedRun =
+		latestRun?.status === "failed" && latestRun.error_message
+			? latestRun
+			: undefined;
+
 	return (
 		<div className="flex flex-col gap-4">
+			{latestFailedRun && latestFailedRun.internal_id !== dismissedError && (
+				<div className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-500">
+					<WarningIcon size={14} weight="fill" className="shrink-0" />
+					<span className="flex-1 min-w-0">
+						Run failed: {latestFailedRun.error_message}
+					</span>
+					<button
+						type="button"
+						onClick={() => setDismissedError(latestFailedRun.internal_id)}
+						className="shrink-0 opacity-70 hover:opacity-100"
+					>
+						<XIcon size={14} />
+					</button>
+				</div>
+			)}
+
 			<div className="flex items-center justify-between">
 				<div className="flex items-center gap-2">
 					<UsersIcon size={16} weight="fill" className="text-subtle" />
@@ -362,14 +377,6 @@ export function MigrationLiveView({
 			</div>
 
 			<div className="flex items-center gap-2">
-				<GroupedTabButton
-					value={runFilter}
-					onValueChange={(v) => setRunFilter(v as RunFilter)}
-					options={[
-						{ value: "dry", label: "Dry Run" },
-						{ value: "live", label: "Live" },
-					]}
-				/>
 				<CustomerListFilterButton
 					extraMenuItems={
 						<ExecutionStatusSubMenu
@@ -446,6 +453,7 @@ export function MigrationLiveView({
 					numberOfColumns: columns.length,
 					enableSorting: false,
 					isLoading: isLoadingCustomers,
+					onRowClick: setSelectedCustomer,
 					rowClassName: "h-10",
 					emptyStateText: "No customers match this filter",
 				}}

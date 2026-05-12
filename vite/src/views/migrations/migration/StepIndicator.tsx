@@ -1,43 +1,43 @@
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
-type Step = 1 | 2 | 3;
+export type StepId = "filter" | "operations" | "live";
 
-const STEPS = [
-	{ step: 1 as const, label: "Filter" },
-	{ step: 2 as const, label: "Operations" },
-	{ step: 3 as const, label: "Live" },
+export const STEPS: { id: StepId; label: string }[] = [
+	{ id: "filter", label: "Filter" },
+	{ id: "operations", label: "Operations" },
+	{ id: "live", label: "Live" },
 ];
 
 export function StepIndicator({
 	step,
 	onStepChange,
 }: {
-	step: Step;
-	onStepChange: (step: Step) => void;
+	step: StepId;
+	onStepChange: (step: StepId) => void;
 }) {
 	return (
 		<div className="flex items-center gap-2">
 			{STEPS.map((s, i) => (
-				<div key={s.step} className="flex items-center gap-2">
+				<div key={s.id} className="flex items-center gap-2">
 					{i > 0 && <CaretRightIcon size={12} className="text-t4" />}
 					<button
 						type="button"
-						onClick={() => onStepChange(s.step)}
+						onClick={() => onStepChange(s.id)}
 						className={cn(
 							"flex items-center gap-2 text-sm cursor-pointer",
-							step === s.step ? "text-t1 font-medium" : "text-t3 hover:text-t2",
+							step === s.id ? "text-t1 font-medium" : "text-t3 hover:text-t2",
 						)}
 					>
 						<span
 							className={cn(
 								"w-5 h-5 rounded-md flex items-center justify-center text-xs font-semibold",
-								step === s.step
+								step === s.id
 									? "bg-violet-600 text-white"
 									: "bg-muted text-t3",
 							)}
 						>
-							{s.step}
+							{i + 1}
 						</span>
 						{s.label}
 					</button>

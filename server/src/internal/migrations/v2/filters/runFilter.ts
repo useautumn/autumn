@@ -62,10 +62,6 @@ const narrowCustomerFilter = ({
 }) => {
 	const only = controls?.only;
 	if (!only) return filter ?? {};
-	if (filter?.customer_id !== undefined)
-		throw new Error(
-			"runMigration: controls.only cannot be combined with filter.customer.customer_id",
-		);
 	return {
 		...(filter ?? {}),
 		customer_id: { $in: only },

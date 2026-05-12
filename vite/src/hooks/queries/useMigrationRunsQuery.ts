@@ -3,12 +3,14 @@ import type {
 	MigrationRun,
 	MigrationRunStatus,
 } from "@autumn/shared";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const ACTIVE_STATUSES: MigrationRunStatus[] = ["queued", "running"];
-const POLL_INTERVAL_MS = 4000;
+const ACTIVE_POLL_MS = 4000;
+const IDLE_POLL_MS = 30000;
 
 export type MigrationItemEventStatus = "succeeded" | "skipped" | "failed";
 
@@ -46,6 +48,7 @@ export const useMigrationRunsQuery = ({
 	enabled?: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();
 	const runsQueryKey = buildKey(["migration-runs", migrationId]);
 	const eventsQueryKey = buildKey([
@@ -64,12 +67,16 @@ export const useMigrationRunsQuery = ({
 			return data;
 		},
 		enabled,
+		refetchOnWindowFocus: true,
+		staleTime: 0,
 		refetchInterval: (query) => {
 			const runs = query.state.data?.list;
 			if (!runs) return false;
-			return hasActiveRun(runs) ? POLL_INTERVAL_MS : false;
+			return hasActiveRun(runs) ? ACTIVE_POLL_MS : IDLE_POLL_MS;
 		},
 	});
+
+	const isActive = hasActiveRun(runsQuery.data?.list ?? []);
 
 	const eventsQuery = useQuery<{ list: MigrationItemEvent[] }>({
 		queryKey: eventsQueryKey,
@@ -79,13 +86,23 @@ export const useMigrationRunsQuery = ({
 			}>("/migrations.item_events.list", { migrationId, migrationRunId });
 			return data;
 		},
-		enabled: enabled && !!migrationRunId,
+		enabled,
+		refetchOnWindowFocus: true,
+		staleTime: 0,
+		refetchInterval: isActive ? ACTIVE_POLL_MS : IDLE_POLL_MS,
 	});
+
+	const invalidate = useCallback(() => {
+		queryClient.invalidateQueries({ queryKey: runsQueryKey });
+		queryClient.invalidateQueries({ queryKey: eventsQueryKey });
+	}, [queryClient, runsQueryKey, eventsQueryKey]);
 
 	return {
 		runs: (runsQuery.data?.list ?? []) as MigrationRun[],
 		isLoadingRuns: runsQuery.isLoading,
+		isActive,
 		itemEvents: (eventsQuery.data?.list ?? []) as MigrationItemEvent[],
 		isLoadingEvents: eventsQuery.isLoading,
+		invalidate,
 	};
 };
