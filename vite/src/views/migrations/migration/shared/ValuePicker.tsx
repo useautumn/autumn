@@ -14,7 +14,6 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 
 const MAX_VISIBLE_CHIPS = 3;
@@ -31,103 +30,104 @@ export function ValuePicker({
 	onToggle,
 	onRemove,
 	placeholder = "Select...",
+	className: triggerClassName,
 }: {
 	suggestions: ValuePickerOption[];
 	selectedValues: string[];
 	onToggle: (value: string) => void;
 	onRemove: (value: string) => void;
 	placeholder?: string;
+	className?: string;
 }) {
 	const [open, setOpen] = useState(false);
 
 	const getOption = (val: string) => suggestions.find((s) => s.value === val);
 
 	return (
-		<Popover open={open} onOpenChange={setOpen}>
-			<PopoverTrigger asChild>
-				<Button
-					variant="secondary"
-					size="sm"
-					className={cn(
-						"!gap-1",
-						selectedValues.length > 0 &&
-							"!h-auto min-h-6 flex-wrap max-h-20 overflow-y-auto",
-					)}
-				>
-					{selectedValues.length === 0 ? (
-						<span className="text-t3">{placeholder}</span>
-					) : (
-						<>
-							{selectedValues.slice(0, MAX_VISIBLE_CHIPS).map((val) => {
-								const opt = getOption(val);
-								return (
-									<span
-										key={val}
-										className="flex items-center gap-1 bg-muted hover:bg-muted/70 text-t1 rounded px-2 py-0.5 text-xs transition-colors"
-									>
-										{opt?.icon && (
-											<span className="shrink-0">{opt.icon}</span>
-										)}
-										<span className="truncate max-w-24">
-											{opt?.label ?? val}
-										</span>
+		<div className={cn("min-w-0", triggerClassName)}>
+			<Popover open={open} onOpenChange={setOpen}>
+				<PopoverTrigger asChild>
+					<button
+						type="button"
+						className="flex items-center gap-1.5 h-8 px-3 rounded-xl input-base input-state-open-tiny cursor-pointer min-w-0 w-full text-sm overflow-hidden"
+					>
+						{selectedValues.length === 0 ? (
+							<span className="text-t3">{placeholder}</span>
+						) : (
+							<>
+								{selectedValues.slice(0, MAX_VISIBLE_CHIPS).map((val) => {
+									const opt = getOption(val);
+									return (
 										<span
-											className="cursor-pointer text-t3 hover:text-destructive ml-0.5"
-											onClick={(e) => {
-												e.stopPropagation();
-												onRemove(val);
-											}}
-											onPointerDown={(e) => e.stopPropagation()}
+											key={val}
+											className="flex items-center gap-1 bg-accent border border-border text-t1 rounded px-2 py-0.5 text-sm shrink-0 max-w-48"
 										>
-											<XIcon size={10} />
+											{opt?.icon && (
+												<span className="shrink-0">{opt.icon}</span>
+											)}
+											<span className="truncate">{opt?.label ?? val}</span>
+											<span
+												className="cursor-pointer text-t3 hover:text-destructive ml-0.5"
+												onClick={(e) => {
+													e.stopPropagation();
+													onRemove(val);
+												}}
+												onPointerDown={(e) => e.stopPropagation()}
+											>
+												<XIcon size={10} />
+											</span>
 										</span>
+									);
+								})}
+								{selectedValues.length > MAX_VISIBLE_CHIPS && (
+									<span className="text-sm text-t3 px-1 shrink-0">
+										+{selectedValues.length - MAX_VISIBLE_CHIPS}
 									</span>
-								);
-							})}
-							{selectedValues.length > MAX_VISIBLE_CHIPS && (
-								<span className="text-xs text-t3 px-1">
-									+{selectedValues.length - MAX_VISIBLE_CHIPS}
-								</span>
-							)}
-						</>
-					)}
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent
-				align="start"
-				className="w-52 p-0 z-200 rounded-md overflow-hidden"
-				style={{
-					transformOrigin: "var(--radix-popover-content-transform-origin)",
-				}}
-			>
-				<Command className="bg-interactive-secondary">
-					<CommandInput placeholder="Search..." className="text-xs" />
-					<CommandList>
-						<CommandEmpty className="text-t3 text-xs p-2">
-							No results
-						</CommandEmpty>
-						<CommandGroup>
-							{suggestions.map((suggestion) => {
-								const isSelected = selectedValues.includes(suggestion.value);
-								return (
-									<CommandItem
-										key={suggestion.value}
-										value={suggestion.value}
-										onSelect={() => onToggle(suggestion.value)}
-										className="text-xs"
-									>
-										{suggestion.icon && (
-											<span className="shrink-0">{suggestion.icon}</span>
-										)}
-										<span className="flex-1 truncate">{suggestion.label}</span>
-										{isSelected && <CheckIcon size={14} className="shrink-0" />}
-									</CommandItem>
-								);
-							})}
-						</CommandGroup>
-					</CommandList>
-				</Command>
-			</PopoverContent>
-		</Popover>
+								)}
+							</>
+						)}
+					</button>
+				</PopoverTrigger>
+				<PopoverContent
+					align="start"
+					className="w-52 p-0 z-200 rounded-md overflow-hidden"
+					style={{
+						transformOrigin: "var(--radix-popover-content-transform-origin)",
+					}}
+				>
+					<Command className="bg-interactive-secondary">
+						<CommandInput placeholder="Search..." className="text-sm" />
+						<CommandList>
+							<CommandEmpty className="text-t3 text-sm p-2">
+								No results
+							</CommandEmpty>
+							<CommandGroup>
+								{suggestions.map((suggestion) => {
+									const isSelected = selectedValues.includes(suggestion.value);
+									return (
+										<CommandItem
+											key={suggestion.value}
+											value={suggestion.value}
+											onSelect={() => onToggle(suggestion.value)}
+											className="text-sm"
+										>
+											{suggestion.icon && (
+												<span className="shrink-0">{suggestion.icon}</span>
+											)}
+											<span className="flex-1 truncate">
+												{suggestion.label}
+											</span>
+											{isSelected && (
+												<CheckIcon size={14} className="shrink-0" />
+											)}
+										</CommandItem>
+									);
+								})}
+							</CommandGroup>
+						</CommandList>
+					</Command>
+				</PopoverContent>
+			</Popover>
+		</div>
 	);
 }

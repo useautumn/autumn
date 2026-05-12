@@ -1,19 +1,21 @@
 import type { Migration, MigrationFilter, Operations } from "@autumn/shared";
+import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
+import { debounce } from "lodash";
+import { useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { useAppForm } from "@/hooks/form/form";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
 import { getBackendErr } from "@/utils/genUtils";
 
+const AUTO_SAVE_DEBOUNCE_MS = 1000;
+
 export function useMigrationEditorForm({
 	migration,
-	onRunTriggered,
 }: {
 	migration: Migration;
-	onRunTriggered?: () => void;
 }) {
-	const { updateMigration, isUpdating, runMigration, isRunning } =
-		useMigrationsQuery();
+	const { updateMigration } = useMigrationsQuery();
 
 	const form = useAppForm({
 		defaultValues: {
@@ -21,7 +23,7 @@ export function useMigrationEditorForm({
 				customer: { plan: { plan_id: "" } },
 			}) as MigrationFilter,
 			operations: (migration.operations ?? {
-				customer: [],
+				customer: [{ type: "update_plan", plan_filter: {}, version: 1 }],
 			}) as Operations,
 		},
 		onSubmit: async ({ value }) => {
@@ -30,7 +32,6 @@ export function useMigrationEditorForm({
 					id: migration.id,
 					updates: { filter: value.filter, operations: value.operations },
 				});
-				toast.success("Migration saved");
 			} catch (error) {
 				toast.error(
 					getBackendErr(error as AxiosError, "Failed to save migration"),
@@ -39,23 +40,37 @@ export function useMigrationEditorForm({
 		},
 	});
 
-	const triggerRun = async (dryRun: boolean) => {
-		try {
-			const label = dryRun ? "Dry run" : "Migration run";
-			const result = await runMigration({ id: migration.id, dry_run: dryRun });
-			toast.success(`${label} triggered (${result.run_id})`);
-			onRunTriggered?.();
-		} catch (error) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to run migration"),
-			);
+	const values = useStore(form.store, (s) => s.values);
+	const serialized = JSON.stringify(values);
+	const isInitialMount = useRef(true);
+
+	const debouncedSave = useMemo(
+		() =>
+			debounce(async () => {
+				try {
+					const { filter, operations } = form.store.state.values;
+					await updateMigration({
+						id: migration.id,
+						updates: { filter, operations },
+					});
+				} catch (error) {
+					toast.error(getBackendErr(error as AxiosError, "Failed to save"));
+				}
+			}, AUTO_SAVE_DEBOUNCE_MS),
+		[migration.id, updateMigration, form.store],
+	);
+
+	useEffect(() => {
+		if (isInitialMount.current) {
+			isInitialMount.current = false;
+			return;
 		}
-	};
+		debouncedSave();
+	}, [serialized, debouncedSave]);
 
-	const handleDryRun = () => triggerRun(true);
-	const handleRealRun = () => triggerRun(false);
+	useEffect(() => () => debouncedSave.cancel(), [debouncedSave]);
 
-	return { form, handleDryRun, handleRealRun, isUpdating, isRunning };
+	return { form };
 }
 
 export type MigrationEditorFormInstance = ReturnType<

@@ -1,21 +1,16 @@
 import type { FrontendProduct, ProductItem } from "@autumn/shared";
 import { useCallback, useRef, useState } from "react";
-import {
-	ProductProvider,
-} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { Button } from "@/components/v2/buttons/Button";
+import { ProductProvider } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { disabledItemDraftController } from "@/hooks/inline-editor/useItemDraftController";
 import { getItemId } from "@/utils/product/productItemUtils";
-import { EditPlanFeatureSheet } from "@/views/products/plan/components/edit-plan-feature/EditPlanFeatureSheet";
 import { EditPlanPriceSheet } from "@/views/products/plan/components/EditPlanPriceSheet";
+import { EditPlanFeatureSheet } from "@/views/products/plan/components/edit-plan-feature/EditPlanFeatureSheet";
 import { SelectFeatureSheet } from "@/views/products/plan/components/SelectFeatureSheet";
 import { ProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
-export type OperationSheetMode =
-	| "add-feature"
-	| "edit-feature"
-	| "edit-price";
+export type OperationSheetMode = "add-feature" | "edit-feature" | "edit-price";
 
 const EMPTY_PRODUCT: FrontendProduct = {
 	id: "__migration_temp__",
@@ -105,7 +100,9 @@ function MigrationOperationSheetContent({
 	const [product, setProductState] = useState<FrontendProduct>(buildInit);
 	const latestProduct = useRef<FrontendProduct>(product);
 
-	const wrappedSetProduct = (p: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct)) => {
+	const wrappedSetProduct = (
+		p: FrontendProduct | ((prev: FrontendProduct) => FrontendProduct),
+	) => {
 		if (typeof p === "function") {
 			setProductState((prev) => {
 				const next = p(prev);
@@ -130,6 +127,14 @@ function MigrationOperationSheetContent({
 		({ type, itemId: id }: { type: string | null; itemId?: string | null }) => {
 			if (type) setSheetType(type);
 			setItemId(id ?? null);
+
+			if (type === "edit-feature" && id) {
+				const items = latestProduct.current.items ?? [];
+				const match = items.find(
+					(item, i) => getItemId({ item, itemIndex: i }) === id,
+				);
+				if (match) setInitialItem(structuredClone(match));
+			}
 		},
 		[],
 	);
@@ -143,21 +148,21 @@ function MigrationOperationSheetContent({
 		return null;
 	};
 
-	const currentItem = product.items?.find((item, i) =>
-		getItemId({ item, itemIndex: i }) === itemId,
-	) ?? null;
+	const currentItem =
+		product.items?.find(
+			(item, i) => getItemId({ item, itemIndex: i }) === itemId,
+		) ?? null;
 
 	const setCurrentItem = (updatedItem: ProductItem) => {
 		if (!product.items || !itemId) return;
-		const index = product.items.findIndex((item, i) =>
-			getItemId({ item, itemIndex: i }) === itemId,
+		const index = product.items.findIndex(
+			(item, i) => getItemId({ item, itemIndex: i }) === itemId,
 		);
 		if (index === -1) return;
 		const updatedItems = [...product.items];
 		updatedItems[index] = updatedItem;
 		wrappedSetProduct((prev) => ({ ...prev, items: updatedItems }));
 	};
-
 
 	return (
 		<ProductProvider
