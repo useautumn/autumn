@@ -48,7 +48,7 @@ export class EventService {
 		env: string;
 		limit?: number;
 	}) {
-		if (process.env.NODE_ENV !== "development") return [];
+		if (process.env.NODE_ENV === "production") return [];
 		const results = await db
 			.select({
 				id: events.id,
