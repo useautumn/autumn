@@ -110,8 +110,8 @@ function SelectContent({
 					onEscapeKeyDown?.(e);
 				}}
 				className={cn(
-					// z-[200] to appear above sheets (z-[150])
-					"bg-interactive-secondary text-popover-foreground relative z-[200] max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
+				// z-[160] to appear above sheets (z-[150])
+				"bg-interactive-secondary text-popover-foreground relative z-[160] max-h-(--radix-select-content-available-height) min-w-[8rem] overflow-x-hidden overflow-y-auto rounded-md border shadow-md",
 
 					position === "popper" &&
 						"data-[side=bottom]:translate-y-1 data-[side=left]:-translate-x-1 data-[side=right]:translate-x-1 data-[side=top]:-translate-y-1",
