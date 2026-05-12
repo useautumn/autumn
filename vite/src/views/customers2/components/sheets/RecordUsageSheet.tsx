@@ -1,4 +1,5 @@
 import type { Entity, FullCustomer } from "@autumn/shared";
+import { LATEST_VERSION } from "@autumn/shared";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -26,7 +27,7 @@ export function RecordUsageSheet() {
 	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(
 		customer as FullCustomer | undefined,
 	);
-	const axiosInstance = useAxiosInstance();
+	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const queryClient = useQueryClient();
 
 	const fullCustomer = customer as FullCustomer | null;

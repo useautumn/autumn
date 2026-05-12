@@ -5,7 +5,6 @@ import {
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 } from "@/components/v2/dialogs/Dialog";
 import { InvitePopover } from "../org-dropdown/manage-org/InvitePopover";
 import { OrgInvitesList } from "../org-dropdown/manage-org/OrgInvitesList";
@@ -29,7 +28,6 @@ export const ManageOrg = ({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild></DialogTrigger>
 			<DialogContent className="gap-0 p-0 rounded-xs w-[90%] max-w-[750px] h-[550px] flex flex-col justify-between">
 				<div className="flex flex-col gap-6 overflow-hidden h-full">
 					<DialogHeader className="px-6 pt-6">

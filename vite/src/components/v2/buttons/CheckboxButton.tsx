@@ -1,15 +1,15 @@
-import type * as CheckboxPrimitive from "@radix-ui/react-checkbox";
+import type { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
 import * as React from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 export const CheckboxButton = React.forwardRef<
-	React.ElementRef<typeof CheckboxPrimitive.Root>,
-	React.ComponentPropsWithoutRef<typeof CheckboxPrimitive.Root>
+	HTMLButtonElement,
+	CheckboxPrimitive.Root.Props
 >(({ className, onCheckedChange, checked, ...props }, ref) => {
 	const handleClick = () => {
 		const newChecked = !checked;
-		onCheckedChange?.(newChecked);
+		(onCheckedChange as ((checked: boolean) => void) | undefined)?.(newChecked);
 	};
 
 	return (
@@ -35,7 +35,7 @@ export const CheckboxButton = React.forwardRef<
 				ref={ref}
 				tabIndex={-1}
 				onClick={(e) => e.preventDefault()}
-				className="data-[state=checked]:bg-primary data-[state=checked]:border-primary data-[state=checked]:shadow-none size-3.5 shadow-[0_2px_4px_0_#00000005,inset_0_2px_1px_0_#FFFFFF] rounded-md border border-border bg-interactive-secondary dark:shadow-none pointer-events-none"
+				className="data-checked:bg-primary data-checked:border-primary data-checked:shadow-none size-3.5 shadow-[0_2px_4px_0_#00000005,inset_0_2px_1px_0_#FFFFFF] rounded-md border border-border bg-interactive-secondary dark:shadow-none pointer-events-none"
 				iconClassName="size-2"
 				{...props}
 			/>

@@ -31,7 +31,13 @@ function AreaRadioGroupItem({
 	const isDisabled = disabled || !!disabledReason;
 
 	const content = (
-		<div className={cn("flex items-start space-x-[6px]", className)}>
+		<label
+			className={cn(
+				"flex items-start space-x-[6px] cursor-pointer",
+				isDisabled && "cursor-not-allowed",
+				className,
+			)}
+		>
 			<RadioGroupItem
 				value={value}
 				id={id}
@@ -40,21 +46,20 @@ function AreaRadioGroupItem({
 			/>
 			<div className="flex-1 space-y-1">
 				<div className="flex items-center gap-2">
-					<label
-						htmlFor={id}
+					<span
 						className={cn(
-							"text-checkbox-label cursor-pointer",
-							isDisabled && "cursor-not-allowed opacity-50",
+							"text-checkbox-label",
+							isDisabled && "opacity-50",
 						)}
 					>
 						{label}
-					</label>
+					</span>
 				</div>
 				{description && (
 					<p className="text-body-sec-paragraph">{description}</p>
 				)}
 			</div>
-		</div>
+		</label>
 	);
 
 	if (disabledReason) {

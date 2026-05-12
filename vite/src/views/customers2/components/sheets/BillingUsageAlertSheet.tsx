@@ -270,7 +270,7 @@ export function BillingUsageAlertSheet() {
 
 						<div>
 							<FormLabel>Threshold type</FormLabel>
-							<Select value={thresholdType} onValueChange={setThresholdType}>
+							<Select value={thresholdType} onValueChange={setThresholdType} items={{ usage: "Usage (absolute value)", usage_percentage: "Percentage used of allowance", remaining: "Remaining (absolute value)", remaining_percentage: "Percentage remaining of allowance" }}>
 								<SelectTrigger className="w-full">
 									<SelectValue />
 								</SelectTrigger>
