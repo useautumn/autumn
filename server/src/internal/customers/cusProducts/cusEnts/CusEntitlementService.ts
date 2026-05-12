@@ -6,6 +6,7 @@ import {
 	type Customer,
 	type CustomerEntitlement,
 	customerEntitlements,
+	customerPrices,
 	customerProducts,
 	customers,
 	ErrCode,
@@ -14,10 +15,11 @@ import {
 	type FullCustomerEntitlement,
 	features,
 	type InsertCustomerEntitlement,
+	prices,
 	products,
 	type ResetCusEnt,
 } from "@autumn/shared";
-import { and, eq, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, lt, notExists, or, sql } from "drizzle-orm";
 import { unionAll } from "drizzle-orm/pg-core";
 import { StatusCodes } from "http-status-codes";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
@@ -181,6 +183,25 @@ export class CusEntService {
 				),
 			);
 
+		// Exclude price-backed cusEnts: their reset is owned by the Stripe
+		// invoice.created handler, not this cron. Must stay in sync with
+		// `cusEntToCusPrice` (shared/utils/cusEntUtils/.../cusEntToCusPrice.ts)
+		// and the in-memory `getResettableCustomerEntitlements` filter.
+		// Only applies to branches with `customer_product_id` set (i.e. 2 + 3).
+		const notPriceBacked = () =>
+			notExists(
+				db
+					.select({ one: sql`1` })
+					.from(customerPrices)
+					.innerJoin(prices, eq(prices.id, customerPrices.price_id))
+					.where(
+						and(
+							sql`${customerPrices.customer_product_id} COLLATE "C" = ${customerEntitlements.customer_product_id}`,
+							eq(prices.entitlement_id, customerEntitlements.entitlement_id),
+						),
+					),
+			);
+
 		while (hasMore) {
 			// Branch 1: cusEnts with no customer_product. Left-join to
 			// customer_products on a false predicate so the row shape matches
@@ -232,6 +253,7 @@ export class CusEntService {
 					and(
 						eq(customerProducts.status, CusProductStatus.Active),
 						commonResetPredicates(),
+						notPriceBacked(),
 					),
 				);
 
@@ -265,6 +287,7 @@ export class CusEntService {
 						eq(customerProducts.status, CusProductStatus.PastDue),
 						sql`(${products.config}->>'ignore_past_due')::boolean = true`,
 						commonResetPredicates(),
+						notPriceBacked(),
 					),
 				);
 
