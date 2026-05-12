@@ -14,6 +14,8 @@ export enum UpdateSubscriptionIntent {
 	UpdateQuantity = "update_quantity",
 	UpdatePlan = "update_plan",
 	CancelAction = "cancel_action",
+	/** Add credits to a one-off prepaid item hosted on a paid-recurring cusProduct. */
+	ManualTopUp = "manual_top_up",
 	None = "none",
 }
 

@@ -1,3 +1,4 @@
+import { ProductItemInterval } from "@autumn/shared";
 import { describe, expect, test } from "bun:test";
 import { buildUpdateSubscriptionOptions } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionRequestBody";
 
@@ -188,5 +189,35 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 		});
 
 		expect(result).toEqual([{ feature_id: "int_messages", quantity: 3000 }]);
+	});
+
+	test("should include one-off items even when quantity has not changed", () => {
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [
+				{ feature_id: "credits", included_usage: 0, interval: null },
+			],
+			prepaidOptions: { credits: 1000 },
+			initialPrepaidOptions: { credits: 1000 },
+			initialBackendQuantities: { credits: 1000 },
+		});
+
+		expect(result).toEqual([{ feature_id: "credits", quantity: 1000 }]);
+	});
+
+	test("should still skip recurring items when quantity has not changed", () => {
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [
+				{
+					feature_id: "messages",
+					included_usage: 0,
+					interval: ProductItemInterval.Month,
+				},
+			],
+			prepaidOptions: { messages: 1000 },
+			initialPrepaidOptions: { messages: 1000 },
+			initialBackendQuantities: { messages: 1000 },
+		});
+
+		expect(result).toEqual([]);
 	});
 });
