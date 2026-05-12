@@ -6,6 +6,12 @@ import {
 } from "./utils/testInitUtils/createTestContext";
 
 const loadInfisicalSecrets = async () => {
+	// `bun test:integration` wraps the run in `infisical run --env=dev`, which
+	// already injects every secret into the parent process. Workers inherit
+	// those, so re-running the infisical CLI per worker is redundant churn
+	// (and a flake source). Skip when env is clearly already populated.
+	if (process.env.STRIPE_TEST_KEY || process.env.TESTS_ORG) return;
+
 	try {
 		const secrets = execSync(
 			"infisical secrets --env=dev --output=dotenv --recursive --silent",
@@ -33,10 +39,9 @@ const loadInfisicalSecrets = async () => {
  * export is a Proxy that reads the stash lazily, sidestepping import-order
  * races and top-level-await TDZ.
  *
- * `createTestContext` is wrapped in try/catch so pure-unit lanes (no
- * TESTS_ORG) still preload cleanly — unit tests don't read the default ctx.
- * argv-based unit/integration branching isn't reliable (bun only passes the
- * first path).
+ * Unit-only lanes (no TESTS_ORG) skip init entirely — unit tests don't read
+ * the default ctx. Integration lanes let any init error throw so the worker
+ * dies loudly instead of every test reporting the opaque Proxy error.
  */
 
 declare global {
@@ -48,14 +53,11 @@ console.log("--- Setup integration tests ---");
 await loadInfisicalSecrets();
 loadLocalEnv({ force: true });
 
-try {
+// Unit-only lanes don't set TESTS_ORG; silently skip there. Anything else
+// must succeed — a swallowed init failure here resurfaces as the opaque
+// "Default TestContext is not initialized" Proxy error from every test
+// scheduled on this worker.
+if (process.env.TESTS_ORG) {
 	globalThis.__autumnTestContext = await createTestContext();
 	console.log("--- Setup integration tests complete ---");
-} catch (err) {
-	console.warn(
-		"[preload] Skipping master-org TestContext initialization. " +
-			"Integration tests that read the default ctx will fail with a clear " +
-			"error. Reason:",
-		err instanceof Error ? err.message : err,
-	);
 }
