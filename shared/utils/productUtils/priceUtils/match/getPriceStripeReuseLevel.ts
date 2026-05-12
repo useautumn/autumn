@@ -77,6 +77,8 @@ export const getPriceStripeReuseLevel = ({
 			entitlements: candidateEntitlements,
 		});
 
+		// Both null = same (null) entity scope; both have ents = compare them.
+		if (!newEnt && !candidateEnt) return "full";
 		if (!newEnt || !candidateEnt) return "none";
 		if (entsAreSame(candidateEnt, newEnt)) return "full";
 	}
@@ -98,6 +100,7 @@ export const getPriceStripeReuseLevel = ({
 		entitlements: candidateEntitlements,
 	});
 
+	if (!newEnt && !candidateEnt) return "stripeProductOnly";
 	if (!newEnt || !candidateEnt) return "none";
 	if (newEnt.entity_feature_id !== candidateEnt.entity_feature_id) {
 		return "none";
