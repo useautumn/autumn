@@ -17,6 +17,7 @@ export interface TinybirdEvent {
 	internal_entity_id: string | null;
 	customer_id: string;
 	properties: string | null;
+	mutations: string | null;
 }
 
 /** Convert EventInsert to Tinybird schema */
@@ -46,5 +47,6 @@ export const mapToTinybirdEvent = (event: EventInsert): TinybirdEvent => {
 		internal_entity_id: event.internal_entity_id ?? null,
 		customer_id: event.customer_id,
 		properties: event.properties ? JSON.stringify(event.properties) : null,
+		mutations: event.mutations ? JSON.stringify(event.mutations) : null,
 	};
 };
