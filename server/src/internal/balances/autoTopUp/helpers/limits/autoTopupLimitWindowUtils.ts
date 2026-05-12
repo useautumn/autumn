@@ -48,7 +48,7 @@ export const normalizeWindowCounter = ({
 	}
 
 	const interval = intervalToEntInterval({ interval: windowConfig.interval });
-	const intervalCount = windowConfig.interval_count ?? 1;
+	const intervalCount = windowConfig.interval_count || 1;
 
 	let projected = from ?? now;
 	do {
