@@ -42,6 +42,7 @@ export async function attach({
 		ctx,
 		params,
 		contextOverride,
+		preview,
 	});
 
 	logAttachContext({ ctx, billingContext });

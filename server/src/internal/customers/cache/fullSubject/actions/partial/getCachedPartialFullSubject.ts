@@ -10,6 +10,7 @@ import { applyLiveAggregatedBalances } from "../../balances/applyLiveAggregatedB
 import { getCachedFeatureBalancesBatch } from "../../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
+import { buildSharedFullSubjectBalanceKey } from "../../builders/buildSharedFullSubjectBalanceKey.js";
 import { filterNormalizedFullSubjectByFeatureIds } from "../../filterFullSubjectByFeatureIds.js";
 import {
 	type CachedFullSubject,
@@ -233,6 +234,28 @@ export const getCachedPartialFullSubject = async ({
 			source: "partial-incomplete",
 		});
 
+	if (featureBalancesOutcome.kind === "missing") {
+		const probeFeatureId =
+			meteredFeatureIdsToFetch[0] ?? cached.meteredFeatures[0];
+		if (probeFeatureId) {
+			const balanceKey = buildSharedFullSubjectBalanceKey({
+				orgId: org.id,
+				env,
+				customerId,
+				featureId: probeFeatureId,
+			});
+			const [hlenRaw, ttlRaw] = await Promise.all([
+				redisV2.hlen(balanceKey).catch(() => -99),
+				redisV2.ttl(balanceKey).catch(() => -99),
+			]);
+			const expectedIds =
+				cached.customerEntitlementIdsByFeatureId[probeFeatureId] ?? [];
+			ctx.logger.warn(
+				`[incomplete-debug] ${subjectLabel} feature=${probeFeatureId} reason=${featureBalancesOutcome.reason} hlen=${hlenRaw} ttl=${ttlRaw} expected=${expectedIds.join(",")}`,
+			);
+		}
+	}
+
 	const balancesPresent = await tryOrInvalidate({
 		ctx,
 		operation: () =>
@@ -240,7 +263,7 @@ export const getCachedPartialFullSubject = async ({
 				? undefined
 				: featureBalancesOutcome.value,
 		invalidate: invalidateIncomplete,
-		warnMessage: `[getCachedPartialFullSubject] Incomplete cache for ${subjectLabel}, source: ${source}`,
+		warnMessage: `[getCachedPartialFullSubject] Incomplete cache for ${subjectLabel}, source: ${source}, reason: ${featureBalancesOutcome.kind === "missing" ? featureBalancesOutcome.reason : "n/a"}`,
 	});
 	if (balancesPresent === undefined) {
 		return {

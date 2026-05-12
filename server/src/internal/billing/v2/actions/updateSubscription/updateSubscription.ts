@@ -44,6 +44,7 @@ export async function updateSubscription({
 		ctx,
 		params,
 		contextOverride,
+		preview,
 	});
 
 	logUpdateSubscriptionContext({ ctx, billingContext });
