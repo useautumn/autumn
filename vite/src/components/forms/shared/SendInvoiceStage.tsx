@@ -363,8 +363,7 @@ export function SendInvoiceStageWithPreview({
 	scheduledStartDate?: number | null;
 }) {
 	const previewData = previewQuery.data;
-	const effectiveScheduledStartDate =
-		scheduledStartDate ?? previewData?.next_cycle?.starts_at ?? null;
+	const effectiveScheduledStartDate = scheduledStartDate ?? null;
 
 	const totals = useMemo(
 		() => buildAttachPreviewTotals({ previewData, startDate: null }),
