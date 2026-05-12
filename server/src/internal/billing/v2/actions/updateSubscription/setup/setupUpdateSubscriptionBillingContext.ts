@@ -207,6 +207,8 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		actionSource: "updateSubscription",
 
 		skipBillingChanges,
+		skipSubscriptionScheduleUpdates:
+			contextOverride.skipSubscriptionScheduleUpdates,
 
 		checkoutMode,
 

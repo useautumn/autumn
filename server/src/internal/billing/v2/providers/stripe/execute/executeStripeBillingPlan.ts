@@ -53,6 +53,8 @@ export const executeStripeBillingPlan = async ({
 
 	const resumeAfterSubscriptionAction =
 		resumeAfter === StripeBillingStage.SubscriptionAction;
+	const skipSubscriptionScheduleUpdates =
+		billingContext.skipSubscriptionScheduleUpdates === true;
 
 	if (stripeInvoiceAction && !resumeAfterInvoiceAction) {
 		invoiceResult = await executeStripeInvoiceAction({
@@ -77,7 +79,9 @@ export const executeStripeBillingPlan = async ({
 
 	// For schedule release, we need to release first before updating subscription with cancel_at
 	// Otherwise Stripe rejects the cancel_at update while schedule still manages subscription
-	const isReleaseAction = stripeSubscriptionScheduleAction?.type === "release";
+	const isReleaseAction =
+		!skipSubscriptionScheduleUpdates &&
+		stripeSubscriptionScheduleAction?.type === "release";
 
 	if (isReleaseAction && !resumeAfterSubscriptionAction) {
 		await executeStripeSubscriptionScheduleAction({
@@ -99,7 +103,12 @@ export const executeStripeBillingPlan = async ({
 			subscriptionResult.stripeSubscription ?? stripeSubscription;
 	}
 
-	if (stripeSubscriptionScheduleAction && !isReleaseAction) {
+	const shouldExecuteScheduleAction =
+		stripeSubscriptionScheduleAction &&
+		!isReleaseAction &&
+		!skipSubscriptionScheduleUpdates;
+
+	if (shouldExecuteScheduleAction) {
 		const stripeSubscriptionSchedule =
 			await executeStripeSubscriptionScheduleAction({
 				ctx,
