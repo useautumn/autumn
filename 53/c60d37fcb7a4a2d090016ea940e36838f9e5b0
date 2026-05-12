@@ -1,0 +1,19 @@
+server/src/internal/balances/autoTopUp/helpers/limits/autoTopupLimitWindowUtils.ts
+  s_2a3263361dd10b::t_115abd0a6e9cdf 51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "53c60d37fcb7a4a2d090016ea940e36838f9e5b0",
+  "prompts": {},
+  "sessions": {
+    "s_2a3263361dd10b": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f6627a0d-7fd9-415a-ab1d-2ec43d583c22",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
