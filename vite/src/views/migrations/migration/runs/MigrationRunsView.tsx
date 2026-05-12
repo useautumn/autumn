@@ -4,18 +4,14 @@ import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { Separator } from "@/components/v2/separator";
 import {
-	useMigrationRunsQuery,
 	type MigrationItemEvent,
+	useMigrationRunsQuery,
 } from "@/hooks/queries/useMigrationRunsQuery";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { createMigrationItemEventColumns } from "./MigrationItemEventColumns";
 import { createMigrationRunColumns } from "./MigrationRunColumns";
 
-export function MigrationRunsView({
-	migrationId,
-}: {
-	migrationId: string;
-}) {
+export function MigrationRunsView({ migrationId }: { migrationId: string }) {
 	const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 	const { runs, isLoadingRuns, itemEvents, isLoadingEvents } =
 		useMigrationRunsQuery({
@@ -26,7 +22,10 @@ export function MigrationRunsView({
 	const runColumns = useMemo(() => createMigrationRunColumns(), []);
 	const eventColumns = useMemo(() => createMigrationItemEventColumns(), []);
 	const runsTable = useProductTable({ data: runs, columns: runColumns });
-	const eventsTable = useProductTable({ data: itemEvents, columns: eventColumns });
+	const eventsTable = useProductTable({
+		data: itemEvents,
+		columns: eventColumns,
+	});
 
 	const handleRunRowClick = (row: MigrationRun) => {
 		setSelectedRunId((prev) =>

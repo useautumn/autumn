@@ -1,9 +1,10 @@
-import { CubeIcon, PlusIcon, UserIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/v2/buttons/Button";
+import { CubeIcon, UserIcon } from "@phosphor-icons/react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
+import { AddButton } from "../shared/AddButton";
 import { buildFeatureSuggestions } from "../shared/featureSuggestions";
+import { RemoveButton } from "../shared/RemoveButton";
 import type { ValuePickerOption } from "../shared/ValuePicker";
 import { FilterRow } from "./FilterRow";
 import {
@@ -83,14 +84,14 @@ export function FilterGroup({
 	group,
 	onChange,
 	onDelete,
-	onSplitAt,
 	showDelete,
+	groupIndex,
 }: {
 	group: FilterGroupData;
 	onChange: (group: FilterGroupData) => void;
 	onDelete: () => void;
-	onSplitAt?: (index: number) => void;
 	showDelete: boolean;
+	groupIndex: number;
 }) {
 	const updateRule = (index: number, rule: FilterRule) => {
 		const newRules = [...group.rules];
@@ -111,35 +112,31 @@ export function FilterGroup({
 	};
 
 	return (
-		<div className="flex flex-col">
+		<div className="flex flex-col gap-2">
+			<div className="flex items-center justify-between group/row">
+				<div className="flex items-center gap-2">
+					<span className="text-sm font-medium text-t1">
+						{groupIndex === 0 ? "Where" : "Or"}
+					</span>
+					{group.rules.length > 0 && (
+						<span className="text-xs text-t3">
+							{group.rules.length}{" "}
+							{group.rules.length === 1 ? "condition" : "conditions"}
+						</span>
+					)}
+				</div>
+				{showDelete && <RemoveButton onClick={onDelete} />}
+			</div>
 			{group.rules.map((rule, index) => (
 				<FilterRowWithSuggestions
 					key={`rule-${index}`}
 					rule={rule}
-					connector={index === 0 ? "Where" : "And"}
-					onConnectorClick={
-						index > 0 && onSplitAt ? () => onSplitAt(index) : undefined
-					}
+					connector={index > 0 ? "And" : undefined}
 					onChange={(updated) => updateRule(index, updated)}
 					onRemove={() => removeRule(index)}
 				/>
 			))}
-			<div className="flex items-center justify-between pt-1 pl-[3.625rem]">
-				<Button variant="skeleton" size="sm" onClick={addRule} className="text-t4 hover:text-t2">
-					<PlusIcon size={10} />
-					Add filter
-				</Button>
-				{showDelete && (
-					<Button
-						variant="skeleton"
-						size="sm"
-						onClick={onDelete}
-						className="text-t4 hover:text-destructive"
-					>
-						Remove group
-					</Button>
-				)}
-			</div>
+			<AddButton label="Add condition" onClick={addRule} className="mt-1" />
 		</div>
 	);
 }
@@ -147,13 +144,11 @@ export function FilterGroup({
 function FilterRowWithSuggestions({
 	rule,
 	connector,
-	onConnectorClick,
 	onChange,
 	onRemove,
 }: {
 	rule: FilterRule;
-	connector: "Where" | "And" | "Or";
-	onConnectorClick?: () => void;
+	connector?: "And";
 	onChange: (rule: FilterRule) => void;
 	onRemove: () => void;
 }) {
@@ -162,7 +157,6 @@ function FilterRowWithSuggestions({
 		<FilterRow
 			rule={rule}
 			connector={connector}
-			onConnectorClick={onConnectorClick}
 			onChange={onChange}
 			onRemove={onRemove}
 			suggestions={suggestions}

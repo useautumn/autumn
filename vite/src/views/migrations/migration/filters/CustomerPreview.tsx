@@ -8,7 +8,6 @@ import {
 import type { PaginationState } from "@tanstack/react-table";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
 import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Input } from "@/components/v2/inputs/Input";
@@ -21,6 +20,7 @@ import {
 } from "@/components/v2/selects/Select";
 import { Separator } from "@/components/v2/separator";
 import { useMigrationFilterPreview } from "@/hooks/queries/useMigrationFilterPreview";
+import { cn } from "@/lib/utils";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 
@@ -62,7 +62,8 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 		pageSize: pagination.pageSize,
 	});
 
-	const pageCount = count !== null ? Math.max(Math.ceil(count / pagination.pageSize), 1) : 1;
+	const pageCount =
+		count !== null ? Math.max(Math.ceil(count / pagination.pageSize), 1) : 1;
 	const columns = useMemo(
 		() => createCustomerListColumns().filter((col) => col.id !== "actions"),
 		[],
@@ -93,7 +94,9 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 				</Table.Heading>
 				<Table.Actions>
 					<span className="text-xs text-t3">
-						{count !== null ? `${count} ${count === 1 ? "match" : "matches"}` : ""}
+						{count !== null
+							? `${count} ${count === 1 ? "match" : "matches"}`
+							: ""}
 					</span>
 				</Table.Actions>
 			</Table.Toolbar>
@@ -115,7 +118,9 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 						variant="secondary"
 						size="default"
 						icon={<CaretLeftIcon size={12} weight="bold" />}
-						onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))}
+						onClick={() =>
+							setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))
+						}
 						disabled={!canPrev}
 						className={cn(!canPrev && "pointer-events-none opacity-50")}
 					/>
@@ -126,14 +131,20 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 						variant="secondary"
 						size="default"
 						icon={<CaretRightIcon size={12} weight="bold" />}
-						onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))}
+						onClick={() =>
+							setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))
+						}
 						disabled={!canNext}
 						className={cn(!canNext && "pointer-events-none opacity-50")}
 					/>
 					<Select
 						value={pagination.pageSize.toString()}
-						onValueChange={(v) => setPagination({ pageIndex: 0, pageSize: Number(v) })}
-						items={Object.fromEntries(PAGE_SIZE_OPTIONS.map((s) => [s.toString(), s.toString()]))}
+						onValueChange={(v) =>
+							setPagination({ pageIndex: 0, pageSize: Number(v) })
+						}
+						items={Object.fromEntries(
+							PAGE_SIZE_OPTIONS.map((s) => [s.toString(), s.toString()]),
+						)}
 					>
 						<SelectTrigger className="h-7 w-fit px-2 text-xs">
 							<SelectValue />

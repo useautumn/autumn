@@ -6,8 +6,8 @@ import {
 	UserIcon,
 } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
+import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { ItemEventStatusBadge } from "./RunStatusBadge";
 
 const ITEM_KIND_ICONS: Record<string, React.ReactNode> = {
