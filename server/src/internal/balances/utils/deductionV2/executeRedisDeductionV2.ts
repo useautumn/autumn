@@ -13,6 +13,7 @@ import {
 } from "@/internal/balances/track/v3/trackIdempotencyKey.js";
 import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
+import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
@@ -128,6 +129,16 @@ export const executeRedisDeductionV2 = async ({
 		});
 
 		if (unlimitedFeatureIds.length > 0) {
+			if (preparedLock) {
+				await saveLockReceiptV2({
+					lock: preparedLock,
+					customerId,
+					featureId: feature.id,
+					entityId,
+					items: [],
+					redisInstance: redisInstance ?? ctx.redisV2,
+				});
+			}
 			continue;
 		}
 
