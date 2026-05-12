@@ -9,7 +9,6 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 } from "@/components/v2/dialogs/Dialog";
 import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -64,7 +63,6 @@ export const CreateNewOrg = ({
 				if (!open) setDialogType(null);
 			}}
 		>
-			<DialogTrigger asChild></DialogTrigger>
 			<DialogContent className="gap-0 p-0 rounded-xs min-w-[400px]">
 				<div className="p-6 flex flex-col gap-4">
 					<DialogHeader>

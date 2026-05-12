@@ -51,6 +51,11 @@ export function DiscountRewardConfig({
 							onValueChange={(value) =>
 								setReward({ ...reward, discountType: value as any })
 							}
+							items={{
+								percentage: "Percentage",
+								fixed: "Fixed",
+								...(reward.discountType === "invoice_credits" && { invoice_credits: "Invoice Credits" }),
+							}}
 						>
 							<SelectTrigger className="w-full">
 								<SelectValue placeholder="Select discount type" />
@@ -134,6 +139,11 @@ export function DiscountRewardConfig({
 								onValueChange={(value) =>
 									setConfig("duration_type", value as CouponDurationType)
 								}
+								items={{
+									[CouponDurationType.OneOff]: "One-off",
+									[CouponDurationType.Months]: "Months",
+									[CouponDurationType.Forever]: "Forever",
+								}}
 							>
 								<SelectTrigger className="flex-1">
 									<SelectValue placeholder="Select duration" />

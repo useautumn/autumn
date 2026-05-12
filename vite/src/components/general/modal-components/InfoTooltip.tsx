@@ -1,5 +1,4 @@
 import { InfoIcon } from "@phosphor-icons/react";
-import type { TooltipContentProps } from "@radix-ui/react-tooltip";
 import {
 	Tooltip,
 	TooltipContent,
@@ -13,7 +12,10 @@ export const InfoTooltip = ({
 }: {
 	children: React.ReactNode;
 	className?: string;
-} & TooltipContentProps) => {
+	side?: "top" | "bottom" | "left" | "right";
+	align?: "start" | "center" | "end";
+	sideOffset?: number;
+}) => {
 	return (
 		<Tooltip>
 			<TooltipTrigger

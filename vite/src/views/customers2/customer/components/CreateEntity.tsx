@@ -131,12 +131,13 @@ export const CreateEntity = ({
 					</div>
 					<div>
 						<div className="text-form-label block mb-1">Feature ID</div>
-						<Select
-							value={entity.feature_id}
-							onValueChange={(value) =>
-								setEntity({ ...entity, feature_id: value })
-							}
-						>
+					<Select
+						value={entity.feature_id}
+						onValueChange={(value) =>
+							setEntity({ ...entity, feature_id: value })
+						}
+						items={Object.fromEntries(continuousFeatures.map((feature: Feature) => [feature.id, feature.name]))}
+					>
 							<SelectTrigger>
 								<SelectValue placeholder="Select feature" />
 							</SelectTrigger>

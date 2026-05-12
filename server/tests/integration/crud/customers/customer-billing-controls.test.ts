@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
 import {
+	addInterval,
 	type ApiCustomerV5,
 	type CustomerBillingControls,
 	CustomerExpand,
+	EntInterval,
 	PurchaseLimitInterval,
 } from "@autumn/shared";
 import { makeAutoTopupConfig } from "@tests/integration/balances/auto-topup/utils/makeAutoTopupConfig";
@@ -13,7 +15,9 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { autoTopupLimitRepo } from "@/internal/balances/autoTopUp/repos";
 import { CusService } from "@/internal/customers/CusService.js";
+import { generateId } from "@/utils/genUtils.js";
 
 const AUTO_TOPUP_WAIT_MS = 20000;
 
@@ -647,4 +651,71 @@ test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.pu
 		count: 1,
 	});
 	expect(typeof phaseCPurchaseLimit?.next_reset_at).toBe("number");
+});
+
+test.concurrent(`${chalk.yellowBright("customer billing controls: auto_topups.purchase_limit expand projects next_reset_at forward when stored window is stale")}`, async () => {
+	const customerId = "customer-billing-controls-13";
+
+	const { autumnV2_1, autumnV2_2, ctx, customer } = await initScenario({
+		customerId,
+		setup: [s.customer({ testClock: false })],
+		actions: [],
+	});
+
+	await autumnV2_2.customers.update(customerId, {
+		billing_controls: makeAutoTopupConfig({
+			threshold: 50,
+			quantity: 100,
+			purchaseLimit: { interval: PurchaseLimitInterval.Month, limit: 4 },
+		}),
+	});
+
+	const staleWindowEndsAt = Date.now() - 6 * 24 * 60 * 60 * 1000;
+	const now = Date.now();
+	await autoTopupLimitRepo.insert({
+		ctx,
+		data: {
+			id: generateId("atlim"),
+			internal_customer_id: customer.internal_id,
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			purchase_window_ends_at: staleWindowEndsAt,
+			purchase_count: 3,
+			attempt_window_ends_at: now,
+			attempt_count: 0,
+			failed_attempt_window_ends_at: now,
+			failed_attempt_count: 0,
+			updated_at: now,
+		},
+	});
+
+	const expanded = await autumnV2_1.customers.get<ApiCustomerV5>(customerId, {
+		expand: [CustomerExpand.AutoTopupsPurchaseLimit],
+		skip_cache: "true",
+	});
+	const purchaseLimit = expanded.billing_controls?.auto_topups?.[0]
+		?.purchase_limit as
+		| {
+				interval: PurchaseLimitInterval | null;
+				interval_count: number | null;
+				limit: number | null;
+				count: number;
+				next_reset_at: number;
+		  }
+		| undefined;
+
+	expect(purchaseLimit).toMatchObject({
+		interval: PurchaseLimitInterval.Month,
+		interval_count: 1,
+		limit: 4,
+		count: 0,
+	});
+	expect(purchaseLimit?.next_reset_at).toBe(
+		addInterval({
+			from: staleWindowEndsAt,
+			interval: EntInterval.Month,
+			intervalCount: 1,
+		}),
+	);
+	expect(purchaseLimit?.next_reset_at).toBeGreaterThan(Date.now());
 });

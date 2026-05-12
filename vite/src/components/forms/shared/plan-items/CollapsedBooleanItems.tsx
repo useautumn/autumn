@@ -18,19 +18,17 @@ export function CollapsedBooleanItems({
 	items,
 	renderItem,
 }: CollapsedBooleanItemsProps) {
-	const [value, setValue] = useState("");
+	const [value, setValue] = useState<string[]>([]);
 
 	if (items.length === 0) return null;
 
-	const isExpanded = value === "boolean-flags";
+	const isExpanded = value.includes("boolean-flags");
 	const label = isExpanded
 		? "Hide"
 		: `${items.length} more`;
 
 	return (
 		<Accordion
-			type="single"
-			collapsible
 			value={value}
 			onValueChange={setValue}
 			className="w-full"
