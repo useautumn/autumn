@@ -21,20 +21,22 @@ export function OperationsForm({
 		onChange({ ...value, customer: customerOperations });
 
 	return (
-		<div className="flex flex-col gap-1">
+		<div className="flex flex-col">
 			{operations.map((operation, index) => (
-				<CustomerOperationCard
-					key={`op-${index}`}
-					value={operation}
-					onChange={(updated) => {
-						const next = [...operations];
-						next[index] = updated;
-						updateOperations(next);
-					}}
-					onRemove={() =>
-						updateOperations(operations.filter((_, i) => i !== index))
-					}
-				/>
+				<div key={`op-${index}`} className="flex flex-col">
+					{index > 0 && <div className="border-t my-3" />}
+					<CustomerOperationCard
+						value={operation}
+						onChange={(updated) => {
+							const next = [...operations];
+							next[index] = updated;
+							updateOperations(next);
+						}}
+						onRemove={() =>
+							updateOperations(operations.filter((_, i) => i !== index))
+						}
+					/>
+				</div>
 			))}
 			<AddButton
 				label="Add Operation"

@@ -178,11 +178,22 @@ export function UpdatePlanOpForm({
 	};
 
 	return (
-		<div className="flex flex-col">
-			<div className="flex items-center gap-2.5 py-1 group/row">
-				<span className="text-xs text-t4 w-20 shrink-0 select-none">
-					Update Plans
-				</span>
+		<div className="flex flex-col gap-1.5">
+			<div className="flex items-center justify-between group/row">
+				<div className="flex items-center gap-2">
+					<span className="text-sm font-medium text-t1">
+						{selectedPlanIds.length > 1 ? "Update Plans" : "Update Plan"}
+					</span>
+					{selectedPlanIds.length > 0 && (
+						<span className="text-xs text-t3">
+							{selectedPlanIds.length} {selectedPlanIds.length === 1 ? "plan" : "plans"}
+						</span>
+					)}
+				</div>
+				<RemoveButton onClick={onRemove} />
+			</div>
+
+			<div className="flex items-center gap-2 group/row">
 				<ValuePicker
 					suggestions={planSuggestions}
 					selectedValues={selectedPlanIds}
@@ -191,12 +202,13 @@ export function UpdatePlanOpForm({
 					placeholder="Select plans..."
 					className="flex-1"
 				/>
-				<RemoveButton onClick={onRemove} />
 			</div>
 
 			{value.version !== undefined && (
-				<div className="flex items-center gap-2.5 py-1 group/row">
-					<span className="text-xs text-t4 w-20 shrink-0 select-none">Set</span>
+				<div className="flex items-center gap-2 group/row">
+					<span className="text-xs text-t4 w-14 shrink-0 select-none">
+						Version
+					</span>
 					<Select
 						value={String(value.version)}
 						onValueChange={(v) => update({ version: Number(v) })}
@@ -211,7 +223,7 @@ export function UpdatePlanOpForm({
 								className="text-violet-500 shrink-0"
 							/>
 							<span className="flex-1 text-left text-sm">
-								Version <SelectValue />
+								<SelectValue />
 							</span>
 						</SelectTrigger>
 						<SelectContent>
@@ -227,8 +239,10 @@ export function UpdatePlanOpForm({
 			)}
 
 			{customize?.price !== undefined && (
-				<div className="flex items-center gap-2.5 py-1 group/row">
-					<span className="text-xs text-t4 w-20 shrink-0 select-none">Set</span>
+				<div className="flex items-center gap-2 group/row">
+					<span className="text-xs text-t4 w-14 shrink-0 select-none">
+						Price
+					</span>
 					<button
 						type="button"
 						onClick={() => openSheet("edit-price")}
@@ -253,13 +267,8 @@ export function UpdatePlanOpForm({
 			)}
 
 			{addItems.map((item, index) => (
-				<div
-					key={`add-${index}`}
-					className="flex items-center gap-2.5 py-1 group/row"
-				>
-					<span className="text-xs text-t4 w-20 shrink-0 select-none">
-						{index === 0 ? "Add" : ""}
-					</span>
+				<div key={`add-${index}`} className="flex items-center gap-2 group/row">
+					<span className="text-xs text-t4 w-14 shrink-0 select-none">Add</span>
 					<ItemSummaryRow
 						item={item}
 						onClick={() => openSheet("edit-feature", index)}
@@ -291,7 +300,8 @@ export function UpdatePlanOpForm({
 				/>
 			))}
 
-			<div className="py-1 pl-[5.625rem]">
+			<div className="flex items-center gap-2">
+				<span className="w-14 shrink-0" />
 				<DropdownMenu>
 					<DropdownMenuTrigger className="flex items-center gap-2 text-xs text-t4 hover:text-t2 cursor-pointer outline-none">
 						<PlusIcon size={10} />

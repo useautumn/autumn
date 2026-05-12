@@ -16,8 +16,8 @@ export function RemoveItemRows({
 	const featureId = (item.feature_id as string) || null;
 
 	return (
-		<div className="flex items-center gap-2.5 py-1 group/row">
-			<span className="text-xs text-t4 w-20 shrink-0 select-none">Remove</span>
+		<div className="flex items-center gap-2 group/row">
+			<span className="text-xs text-t4 w-14 shrink-0 select-none">Remove</span>
 			<FeatureSearchDropdown
 				features={features}
 				value={featureId}
