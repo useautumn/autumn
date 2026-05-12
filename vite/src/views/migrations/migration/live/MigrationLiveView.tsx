@@ -1,5 +1,7 @@
 import type { CustomerWithProducts, MigrationFilter } from "@autumn/shared";
 import {
+	ArrowLeftIcon,
+	CaretDownIcon,
 	CaretLeftIcon,
 	CaretRightIcon,
 	EyeIcon,
@@ -18,6 +20,12 @@ import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { Input } from "@/components/v2/inputs/Input";
 import {
 	Select,
@@ -26,25 +34,23 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
-import { Separator } from "@/components/v2/separator";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
-import {
-	useMigrationRunsQuery,
-	type MigrationItemEvent,
-} from "@/hooks/queries/useMigrationRunsQuery";
 import { useMigrationFilterPreview } from "@/hooks/queries/useMigrationFilterPreview";
+import {
+	type MigrationItemEvent,
+	useMigrationRunsQuery,
+} from "@/hooks/queries/useMigrationRunsQuery";
+import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
 import { cn } from "@/lib/utils";
 import { getBackendErr } from "@/utils/genUtils";
+import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
-import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
-import { MigrationRunsView } from "../runs/MigrationRunsView";
 import {
+	type ExecutionStatus,
 	ExecutionStatusSubMenu,
 	hasActiveExecutionFilters,
-	type ExecutionStatus,
 } from "./ExecutionStatusSubMenu";
 
 type RunFilter = "dry" | "live";
@@ -53,7 +59,9 @@ const PAGE_SIZE_OPTIONS = [10, 50, 100, 250];
 
 function useConfirmAction(action: () => void) {
 	const [isConfirming, setIsConfirming] = useState(false);
-	const timerRef = { current: undefined as ReturnType<typeof setTimeout> | undefined };
+	const timerRef = {
+		current: undefined as ReturnType<typeof setTimeout> | undefined,
+	};
 
 	const trigger = useCallback(() => {
 		if (!isConfirming) {
@@ -77,14 +85,18 @@ function useConfirmAction(action: () => void) {
 export function MigrationLiveView({
 	migrationId,
 	filter,
+	onPrevious,
 }: {
 	migrationId: string;
 	filter: MigrationFilter;
+	onPrevious?: () => void;
 }) {
 	const { runMigration, isRunning } = useMigrationsQuery();
 	const { queryStates: customerFilters } = useCustomerFilters();
 	const [runFilter, setRunFilter] = useState<RunFilter>("dry");
-	const [executionStatuses, setExecutionStatuses] = useState<ExecutionStatus[]>([]);
+	const [executionStatuses, setExecutionStatuses] = useState<ExecutionStatus[]>(
+		[],
+	);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
 	const [pagination, setPagination] = useState<PaginationState>({
@@ -108,15 +120,18 @@ export function MigrationLiveView({
 	);
 
 	const customerFilter = filter.customer ?? {};
-	const { customers, count, isLoading: isLoadingCustomers } =
-		useMigrationFilterPreview({
-			filter: customerFilter,
-			search: debouncedSearch,
-			page: pagination.pageIndex,
-			pageSize: pagination.pageSize,
-		});
+	const {
+		customers,
+		count,
+		isLoading: isLoadingCustomers,
+	} = useMigrationFilterPreview({
+		filter: customerFilter,
+		search: debouncedSearch,
+		page: pagination.pageIndex,
+		pageSize: pagination.pageSize,
+	});
 
-	const { runs, itemEvents } = useMigrationRunsQuery({ migrationId });
+	const { itemEvents } = useMigrationRunsQuery({ migrationId });
 
 	const triggerRun = async (opts: {
 		dryRun: boolean;
@@ -133,7 +148,9 @@ export function MigrationLiveView({
 			const label = opts.dryRun ? "Dry run" : "Migration run";
 			toast.success(`${label} triggered (${result.run_id})`);
 		} catch (error) {
-			toast.error(getBackendErr(error as AxiosError, "Failed to run migration"));
+			toast.error(
+				getBackendErr(error as AxiosError, "Failed to run migration"),
+			);
 		}
 	};
 
@@ -155,7 +172,9 @@ export function MigrationLiveView({
 		return map;
 	}, [itemEvents, isDryMode]);
 
-	const [confirmCustomerId, setConfirmCustomerId] = useState<string | null>(null);
+	const [confirmCustomerId, setConfirmCustomerId] = useState<string | null>(
+		null,
+	);
 
 	const runColumnForCustomer = (customerId: string) => {
 		if (isDryMode) {
@@ -219,7 +238,10 @@ export function MigrationLiveView({
 				const id = c.id ?? c.internal_id;
 				const event = eventsByCustomer.get(id);
 				if (!event && !executionStatuses.includes("not_run")) return false;
-				if (event && !executionStatuses.includes(event.status as ExecutionStatus))
+				if (
+					event &&
+					!executionStatuses.includes(event.status as ExecutionStatus)
+				)
 					return false;
 			}
 			const cusProducts = c.customer_products ?? [];
@@ -250,16 +272,17 @@ export function MigrationLiveView({
 
 	const columns = useMemo(
 		(): ColumnDef<CustomerWithProducts, unknown>[] => [
-			...(createCustomerListColumns().filter((col) => col.id !== "actions") as ColumnDef<CustomerWithProducts, unknown>[]),
+			...(createCustomerListColumns().filter(
+				(col) => col.id !== "actions",
+			) as ColumnDef<CustomerWithProducts, unknown>[]),
 			statusColumn,
 			runActionColumn,
 		],
 		[eventsByCustomer, isDryMode, isRunning, confirmCustomerId],
 	);
 
-	const pageCount = count !== null
-		? Math.max(Math.ceil(count / pagination.pageSize), 1)
-		: 1;
+	const pageCount =
+		count !== null ? Math.max(Math.ceil(count / pagination.pageSize), 1) : 1;
 
 	const table = useProductTable<CustomerWithProducts>({
 		data: filteredCustomers,
@@ -289,38 +312,52 @@ export function MigrationLiveView({
 					)}
 				</div>
 				<div className="flex items-center gap-2">
-					<Button
-						variant="secondary"
-						size="default"
-						onClick={() => triggerRun({ dryRun: true })}
-						isLoading={isRunning}
-					>
-						<EyeIcon size={14} />
-						Dry Run All
-					</Button>
-					<Button
-						variant="secondary"
-						size="default"
-						onClick={() => triggerRun({ dryRun: false, limit: 10 })}
-						isLoading={isRunning}
-					>
-						<PlayIcon size={14} weight="fill" />
-						Sample (10)
-					</Button>
-					<Button
-						variant={confirm.isConfirming ? "destructive" : "primary"}
-						size="default"
-						onClick={confirm.trigger}
-						onBlur={confirm.cancel}
-						isLoading={isRunning}
-					>
-						{confirm.isConfirming ? (
-							<WarningIcon size={14} weight="fill" />
-						) : (
-							<PlayIcon size={14} weight="fill" />
-						)}
-						{confirm.isConfirming ? "Confirm Run All" : "Run All"}
-					</Button>
+					{onPrevious && (
+						<Button variant="secondary" size="default" onClick={onPrevious}>
+							<ArrowLeftIcon size={14} />
+							Previous
+						</Button>
+					)}
+					<div className="flex items-center">
+						<Button
+							variant={confirm.isConfirming ? "destructive" : "primary"}
+							size="default"
+							className="rounded-r-none"
+							onClick={confirm.trigger}
+							onBlur={confirm.cancel}
+							isLoading={isRunning}
+						>
+							{confirm.isConfirming ? (
+								<WarningIcon size={14} weight="fill" />
+							) : (
+								<PlayIcon size={14} weight="fill" />
+							)}
+							{confirm.isConfirming ? "Confirm Run All" : "Run All"}
+						</Button>
+						<DropdownMenu>
+							<DropdownMenuTrigger asChild>
+								<Button
+									variant="primary"
+									size="default"
+									className="rounded-l-none border-l border-l-white/20 px-2"
+								>
+									<CaretDownIcon size={12} />
+								</Button>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent align="end" sideOffset={4}>
+								<DropdownMenuItem onClick={() => triggerRun({ dryRun: true })}>
+									<EyeIcon size={14} />
+									Dry Run All
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									onClick={() => triggerRun({ dryRun: false, limit: 10 })}
+								>
+									<PlayIcon size={14} weight="fill" />
+									Sample (10)
+								</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
+					</div>
 				</div>
 			</div>
 
@@ -361,7 +398,9 @@ export function MigrationLiveView({
 						variant="secondary"
 						size="default"
 						icon={<CaretLeftIcon size={12} weight="bold" />}
-						onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))}
+						onClick={() =>
+							setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))
+						}
 						disabled={!canPrev}
 						className={cn(!canPrev && "pointer-events-none opacity-50")}
 					/>
@@ -372,14 +411,20 @@ export function MigrationLiveView({
 						variant="secondary"
 						size="default"
 						icon={<CaretRightIcon size={12} weight="bold" />}
-						onClick={() => setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))}
+						onClick={() =>
+							setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))
+						}
 						disabled={!canNext}
 						className={cn(!canNext && "pointer-events-none opacity-50")}
 					/>
 					<Select
 						value={pagination.pageSize.toString()}
-						onValueChange={(v) => setPagination({ pageIndex: 0, pageSize: Number(v) })}
-						items={Object.fromEntries(PAGE_SIZE_OPTIONS.map((s) => [s.toString(), s.toString()]))}
+						onValueChange={(v) =>
+							setPagination({ pageIndex: 0, pageSize: Number(v) })
+						}
+						items={Object.fromEntries(
+							PAGE_SIZE_OPTIONS.map((s) => [s.toString(), s.toString()]),
+						)}
 					>
 						<SelectTrigger className="h-7 w-fit px-2 text-xs">
 							<SelectValue />
@@ -412,23 +457,6 @@ export function MigrationLiveView({
 					</Table.Content>
 				</Table.Container>
 			</Table.Provider>
-
-			<Separator />
-
-			<details className="group">
-				<summary className="flex items-center gap-2 cursor-pointer text-sm font-medium text-t2 select-none">
-					<span className={cn("transition-transform", "group-open:rotate-90")}>
-						&#9654;
-					</span>
-					Run History
-					<span className="text-xs text-t3 font-normal">
-						({runs.length} {runs.length === 1 ? "run" : "runs"})
-					</span>
-				</summary>
-				<div className="pt-4">
-					<MigrationRunsView migrationId={migrationId} />
-				</div>
-			</details>
 		</div>
 	);
 }

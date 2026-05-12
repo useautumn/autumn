@@ -4,7 +4,8 @@ import { CustomerOperationCard } from "./CustomerOperationCard";
 
 const DEFAULT_OPERATION: CustomerOperation = {
 	type: "update_plan",
-	plan_filter: { plan_id: "" },
+	plan_filter: {},
+	version: 1,
 };
 
 export function OperationsForm({
@@ -25,7 +26,6 @@ export function OperationsForm({
 				<CustomerOperationCard
 					key={`op-${index}`}
 					value={operation}
-					index={index}
 					onChange={(updated) => {
 						const next = [...operations];
 						next[index] = updated;

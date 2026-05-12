@@ -6,7 +6,18 @@ import type {
 	UpdatePlanOp,
 } from "@autumn/shared";
 import { productV2ToBasePrice } from "@autumn/shared";
-import { CurrencyCircleDollarIcon, GitBranchIcon, PlusIcon } from "@phosphor-icons/react";
+import {
+	CurrencyCircleDollarIcon,
+	GitBranchIcon,
+	PlusIcon,
+} from "@phosphor-icons/react";
+import { useMemo, useState } from "react";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/v2/dropdowns/DropdownMenu";
 import {
 	Select,
 	SelectContent,
@@ -14,28 +25,20 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
-import { useState } from "react";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { RemoveButton } from "../shared/RemoveButton";
-import { FilterGroup } from "../filters/FilterGroup";
 import {
-	groupsToPlanFilter,
-	planFilterToGroups,
-} from "../filters/filterRowTypes";
+	migrationItemToProductItem,
+	productItemToMigrationItem,
+} from "../shared/migrationItemUtils";
+import { RemoveButton } from "../shared/RemoveButton";
+import { ValuePicker } from "../shared/ValuePicker";
 import { ItemSummaryRow } from "./ItemSummaryRow";
 import {
 	MigrationOperationSheet,
 	type OperationSheetMode,
 } from "./MigrationOperationSheet";
 import { RemoveItemRows } from "./RemoveItemRows";
-import { migrationItemToProductItem, productItemToMigrationItem } from "../shared/migrationItemUtils";
 
 function useVersionOptions(planFilter: UpdatePlanOp["plan_filter"]) {
 	const { products } = useProductsQuery();
@@ -60,10 +63,13 @@ function useVersionOptions(planFilter: UpdatePlanOp["plan_filter"]) {
 export function UpdatePlanOpForm({
 	value,
 	onChange,
+	onRemove,
 }: {
 	value: UpdatePlanOp;
 	onChange: (value: UpdatePlanOp) => void;
+	onRemove: () => void;
 }) {
+	const { products } = useProductsQuery();
 	const versionOptions = useVersionOptions(value.plan_filter);
 	const { features } = useFeaturesQuery();
 
@@ -74,8 +80,35 @@ export function UpdatePlanOpForm({
 	const update = (patch: Partial<UpdatePlanOp>) =>
 		onChange({ ...value, ...patch });
 
-	const targetGroups = planFilterToGroups(value.plan_filter);
-	const targetGroup = targetGroups[0] ?? { rules: [] };
+	const planSuggestions = useMemo(() => {
+		const seen = new Set<string>();
+		return products
+			.filter((p) => {
+				if (!p.id || seen.has(p.id)) return false;
+				seen.add(p.id);
+				return true;
+			})
+			.map((p) => ({ value: p.id, label: p.name || p.id }));
+	}, [products]);
+
+	const selectedPlanIds = extractPlanIds(value.plan_filter.plan_id);
+
+	const handlePlanToggle = (planId: string) => {
+		const next = selectedPlanIds.includes(planId)
+			? selectedPlanIds.filter((id) => id !== planId)
+			: [...selectedPlanIds, planId];
+		update({
+			plan_filter: { ...value.plan_filter, plan_id: toPlanIdMatcher(next) },
+		});
+	};
+
+	const handlePlanRemove = (planId: string) => {
+		const next = selectedPlanIds.filter((id) => id !== planId);
+		update({
+			plan_filter: { ...value.plan_filter, plan_id: toPlanIdMatcher(next) },
+		});
+	};
+
 	const customize = value.customize;
 	const addItems = customize?.add_items ?? [];
 
@@ -98,7 +131,7 @@ export function UpdatePlanOpForm({
 			if (basePrice) {
 				const amount =
 					basePrice.tiers?.[0]?.amount ??
-					(basePrice as Record<string, unknown>).price as number ??
+					((basePrice as Record<string, unknown>).price as number) ??
 					0;
 				update({
 					customize: {
@@ -146,26 +179,40 @@ export function UpdatePlanOpForm({
 
 	return (
 		<div className="flex flex-col">
-			<FilterGroup
-				group={targetGroup}
-				onChange={(updated) =>
-					update({ plan_filter: groupsToPlanFilter([updated]) })
-				}
-				onDelete={() => update({ plan_filter: {} })}
-				showDelete={false}
-			/>
+			<div className="flex items-center gap-2.5 py-1 group/row">
+				<span className="text-xs text-t4 w-20 shrink-0 select-none">
+					Update Plans
+				</span>
+				<ValuePicker
+					suggestions={planSuggestions}
+					selectedValues={selectedPlanIds}
+					onToggle={handlePlanToggle}
+					onRemove={handlePlanRemove}
+					placeholder="Select plans..."
+					className="flex-1"
+				/>
+				<RemoveButton onClick={onRemove} />
+			</div>
 
 			{value.version !== undefined && (
 				<div className="flex items-center gap-2.5 py-1 group/row">
-					<span className="text-xs text-t4 w-12 shrink-0 select-none">Set</span>
+					<span className="text-xs text-t4 w-20 shrink-0 select-none">Set</span>
 					<Select
 						value={String(value.version)}
 						onValueChange={(v) => update({ version: Number(v) })}
-						items={Object.fromEntries(versionOptions.map((o) => [o.value, o.label]))}
+						items={Object.fromEntries(
+							versionOptions.map((o) => [o.value, o.label]),
+						)}
 					>
 						<SelectTrigger className="h-8 rounded-xl flex-1">
-							<GitBranchIcon size={16} weight="duotone" className="text-violet-500 shrink-0" />
-							<span className="flex-1 text-left text-sm">Version <SelectValue /></span>
+							<GitBranchIcon
+								size={16}
+								weight="duotone"
+								className="text-violet-500 shrink-0"
+							/>
+							<span className="flex-1 text-left text-sm">
+								Version <SelectValue />
+							</span>
 						</SelectTrigger>
 						<SelectContent>
 							{versionOptions.map((o) => (
@@ -181,24 +228,36 @@ export function UpdatePlanOpForm({
 
 			{customize?.price !== undefined && (
 				<div className="flex items-center gap-2.5 py-1 group/row">
-					<span className="text-xs text-t4 w-12 shrink-0 select-none">Set</span>
+					<span className="text-xs text-t4 w-20 shrink-0 select-none">Set</span>
 					<button
 						type="button"
 						onClick={() => openSheet("edit-price")}
 						className="flex items-center gap-2 h-8 px-3 rounded-xl input-base input-state-open-tiny cursor-pointer flex-1 min-w-0"
 					>
-						<CurrencyCircleDollarIcon size={16} weight="duotone" className="text-yellow-500 shrink-0" />
+						<CurrencyCircleDollarIcon
+							size={16}
+							weight="duotone"
+							className="text-yellow-500 shrink-0"
+						/>
 						<span className="text-body">
-							${customize.price?.amount ?? 0} per {customize.price?.interval ?? "month"}
+							${customize.price?.amount ?? 0} per{" "}
+							{customize.price?.interval ?? "month"}
 						</span>
 					</button>
-					<RemoveButton onClick={() => update({ customize: { ...customize, price: undefined } })} />
+					<RemoveButton
+						onClick={() =>
+							update({ customize: { ...customize, price: undefined } })
+						}
+					/>
 				</div>
 			)}
 
 			{addItems.map((item, index) => (
-				<div key={`add-${index}`} className="flex items-center gap-2.5 py-1 group/row">
-					<span className="text-xs text-t4 w-12 shrink-0 select-none">
+				<div
+					key={`add-${index}`}
+					className="flex items-center gap-2.5 py-1 group/row"
+				>
+					<span className="text-xs text-t4 w-20 shrink-0 select-none">
 						{index === 0 ? "Add" : ""}
 					</span>
 					<ItemSummaryRow
@@ -232,7 +291,7 @@ export function UpdatePlanOpForm({
 				/>
 			))}
 
-			<div className="py-1 pl-[3.625rem]">
+			<div className="py-1 pl-[5.625rem]">
 				<DropdownMenu>
 					<DropdownMenuTrigger className="flex items-center gap-2 text-xs text-t4 hover:text-t2 cursor-pointer outline-none">
 						<PlusIcon size={10} />
@@ -240,16 +299,25 @@ export function UpdatePlanOpForm({
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="start">
 						{value.version === undefined && (
-							<DropdownMenuItem closeOnClick onClick={() => update({ version: 1 })}>
+							<DropdownMenuItem
+								closeOnClick
+								onClick={() => update({ version: 1 })}
+							>
 								Version
 							</DropdownMenuItem>
 						)}
 						{(!customize || customize.price === undefined) && (
-							<DropdownMenuItem closeOnClick onClick={() => openSheet("edit-price")}>
+							<DropdownMenuItem
+								closeOnClick
+								onClick={() => openSheet("edit-price")}
+							>
 								Base Price
 							</DropdownMenuItem>
 						)}
-						<DropdownMenuItem closeOnClick onClick={() => openSheet("add-feature")}>
+						<DropdownMenuItem
+							closeOnClick
+							onClick={() => openSheet("add-feature")}
+						>
 							Add Item
 						</DropdownMenuItem>
 						<DropdownMenuItem
@@ -284,6 +352,25 @@ export function UpdatePlanOpForm({
 	);
 }
 
+function extractPlanIds(
+	planId: UpdatePlanOp["plan_filter"]["plan_id"],
+): string[] {
+	if (!planId) return [];
+	if (typeof planId === "string") return planId ? [planId] : [];
+	if (planId.$in)
+		return planId.$in.filter((v): v is string => typeof v === "string");
+	if (planId.$eq) return typeof planId.$eq === "string" ? [planId.$eq] : [];
+	return [];
+}
+
+function toPlanIdMatcher(
+	ids: string[],
+): UpdatePlanOp["plan_filter"]["plan_id"] {
+	if (ids.length === 0) return undefined;
+	if (ids.length === 1) return ids[0];
+	return { $in: ids };
+}
+
 function buildInitialProduct(
 	value: UpdatePlanOp,
 	features: Feature[],
@@ -305,4 +392,3 @@ function buildInitialProduct(
 		items,
 	};
 }
-
