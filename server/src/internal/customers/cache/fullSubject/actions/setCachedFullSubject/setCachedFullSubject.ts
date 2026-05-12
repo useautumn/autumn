@@ -9,6 +9,7 @@ import {
 } from "../../config/fullSubjectCacheConfig.js";
 import { normalizedToCachedFullSubject } from "../../fullSubjectCacheModel.js";
 import type { SetCachedFullSubjectResult } from "./fullSubjectWriteTypes.js";
+import { logSetCachedFullSubject } from "./logSetCachedFullSubject.js";
 import { buildSharedBalanceWrites } from "./setSharedFullSubjectBalances.js";
 
 export type { SetCachedFullSubjectResult } from "./fullSubjectWriteTypes.js";
@@ -81,6 +82,15 @@ export const setCachedFullSubject = async ({
 	logger.info(
 		`[setCachedFullSubject] ${subjectLabel}: ${result ?? "FAILED"}, balances=${cached.meteredFeatures.length}`,
 	);
+
+	logSetCachedFullSubject({
+		ctx,
+		subjectLabel,
+		result: result ?? "FAILED",
+		cached,
+		balanceWrites,
+		normalized,
+	});
 
 	return result ?? "FAILED";
 };
