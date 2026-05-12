@@ -118,8 +118,19 @@ export const executePostgresDeduction = async ({
 				options,
 			});
 
-			if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0)
+			if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0) {
+				if (unlimitedFeatureIds.length > 0 && preparedLock?.enabled) {
+					await saveLockReceipt({
+						lock: preparedLock,
+						customerId: fullCustomer.id || customerId,
+						featureId: feature.id,
+						entityId,
+						items: [],
+						overrideLockValue: toDeduct,
+					});
+				}
 				continue;
+			}
 
 			// Call the stored function to deduct from entitlements with credit costs
 			const result = await db.execute(
