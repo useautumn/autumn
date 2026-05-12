@@ -136,6 +136,7 @@ export const executeRedisDeductionV2 = async ({
 					featureId: feature.id,
 					entityId,
 					items: [],
+					overrideLockValue: toDeduct,
 					redisInstance: redisInstance ?? ctx.redisV2,
 				});
 			}
