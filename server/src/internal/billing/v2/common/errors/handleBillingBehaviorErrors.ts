@@ -2,6 +2,7 @@ import type {
 	AttachParamsV1,
 	BillingContext,
 	BillingPlan,
+	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import {
 	ErrCode,
@@ -53,11 +54,11 @@ export const handleProrationBehaviorErrors = ({
 	// Block any operations that would result in a charge
 	const chargeResult = billingPlanWillCharge({ billingPlan });
 
-	if (
-		chargeResult.willCharge &&
-		"intent" in billingContext &&
-		billingContext.intent !== UpdateSubscriptionIntent.ManualTopUp
-	) {
+	const isManualTopUp =
+		(billingContext as Partial<UpdateSubscriptionBillingContext>).intent ===
+		UpdateSubscriptionIntent.ManualTopUp;
+
+	if (chargeResult.willCharge && !isManualTopUp) {
 		throw new RecaseError({
 			message: `Cannot set proration_behavior to 'none' when ${getChargeReasonMessage(chargeResult.reason)}`,
 			code: ErrCode.InvalidRequest,
