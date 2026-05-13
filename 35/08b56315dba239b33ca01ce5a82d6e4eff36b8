@@ -1,0 +1,24 @@
+shared/models/cusProductModels/cusProductTable.ts
+  s_b1a331f4eba7de::t_83913ed2eb6826 1
+  s_b1a331f4eba7de::t_d1bc6d8e7f8892 114-116
+shared/models/cusModels/cusTable.ts
+  s_b1a331f4eba7de::t_1e36a22b4b9088 92-97
+shared/models/cusModels/entityModels/entityTable.ts
+  s_b1a331f4eba7de::t_147b1cdf0a36d7 73-78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "3508b56315dba239b33ca01ce5a82d6e4eff36b8",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
