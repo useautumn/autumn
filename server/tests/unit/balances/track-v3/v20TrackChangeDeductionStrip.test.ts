@@ -10,6 +10,8 @@ const buildDeductions = (): TrackDeduction[] => [
 	{
 		balance_id: "cus_ent_messages",
 		feature_id: "messages",
+		plan_id: null,
+		reset: null,
 		value: 4,
 	},
 ];
