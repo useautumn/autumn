@@ -45,8 +45,8 @@ export const handleRunMigration = createRoute({
 			ctx,
 			migration,
 			dryRun,
-			trigger: (migrationRunId) =>
-				runMigrationTask.trigger(
+			claimed: async (migrationRunId) => {
+				const handle = await runMigrationTask.trigger(
 					{
 						orgId: ctx.org.id,
 						env: ctx.env,
@@ -59,7 +59,9 @@ export const handleRunMigration = createRoute({
 						orgId: ctx.org.id,
 						isDev,
 					}),
-				),
+				);
+				return { triggerRunId: handle.id };
+			},
 		});
 
 		return c.json({

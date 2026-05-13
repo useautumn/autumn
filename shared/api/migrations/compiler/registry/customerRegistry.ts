@@ -7,6 +7,7 @@ import type { NavScope, RootScope } from "./registryTypes.js";
  * Supported paths:
  *   plan.plan_id
  *   plan.item.feature_id, plan.item.price (existence only: null / $ne null)
+ *   plan.item.rollover (existence only: null / $ne null)
  *
  * Aliases:
  *   c   customers
@@ -46,6 +47,7 @@ const itemScope: NavScope = {
 	fields: {
 		feature_id: { kind: "leaf", sql: "e.internal_feature_id" },
 		price: { kind: "leaf", sql: "cpr.id" },
+		rollover: { kind: "leaf", sql: "e.rollover" },
 	},
 };
 
@@ -69,6 +71,7 @@ const itemPaidScope: NavScope = {
 		// Emitting `cpr.id IS NOT NULL` is redundant but harmless; Postgres
 		// elides it.
 		price: { kind: "leaf", sql: "cpr.id" },
+		rollover: { kind: "leaf", sql: "e.rollover" },
 	},
 };
 
@@ -83,6 +86,7 @@ const planScope: NavScope = {
 	],
 	fields: {
 		plan_id: { kind: "leaf", sql: "p.id" },
+		addon: { kind: "leaf", sql: "p.is_add_on" },
 		// Base price existence: a leaf whose SQL is a scalar subquery that
 		// evaluates to NULL when the customer has no base customer_price on
 		// this cusproduct, non-NULL otherwise. The `exists` op (compiled

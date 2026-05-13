@@ -40,6 +40,7 @@ import { migrationErrors } from "../models/migrationModels/migrationErrorTable.j
 import { migrationJobs } from "../models/migrationModels/migrationJobTable.js";
 // Migrations V2
 import { migrationItemRuns } from "../models/migrationV2Models/migrationItemRunTable.js";
+import { migrationRunsRelations } from "../models/migrationV2Models/migrationRunRelations.js";
 import { migrationRuns } from "../models/migrationV2Models/migrationRunTable.js";
 import { migrations } from "../models/migrationV2Models/migrationTable.js";
 /* RELATIONS */
@@ -133,6 +134,7 @@ export {
 	migrationItemRuns,
 	migrationJobs,
 	migrationRuns,
+	migrationRunsRelations,
 	migrations,
 	oauthAccessToken,
 	oauthClient,

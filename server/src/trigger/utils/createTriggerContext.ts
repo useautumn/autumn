@@ -17,10 +17,12 @@ export const createTriggerContext = async ({
 	orgId,
 	env,
 	triggerCtx,
+	customerId,
 }: {
 	orgId: string;
 	env: AppEnv;
 	triggerCtx: TriggerRunContext;
+	customerId?: string;
 }): Promise<{ ctx: AutumnContext; logger: Logger }> => {
 	const logger = addTriggerToLogs({
 		logger: createDualLogger(),
@@ -33,7 +35,7 @@ export const createTriggerContext = async ({
 
 	const ctx = await createWorkerContext({
 		db,
-		payload: { orgId, env, requestId: triggerCtx.run.id },
+		payload: { orgId, env, customerId, requestId: triggerCtx.run.id },
 		logger,
 	});
 
@@ -41,6 +43,8 @@ export const createTriggerContext = async ({
 		throw new Error(
 			`createTriggerContext: failed to build context for org=${orgId} env=${env}`,
 		);
+
+	ctx.insideTriggerTask = true;
 
 	return { ctx, logger };
 };

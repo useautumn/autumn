@@ -9,6 +9,7 @@ import { redis } from "@/external/redis/initRedis.js";
 import { buildPathIndex } from "@/internal/customers/cache/pathIndex/buildPathIndex.js";
 import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
 import {
+	buildFullCustomerCacheGuardKey,
 	buildFullCustomerCacheKey,
 	FULL_CUSTOMER_CACHE_TTL_SECONDS,
 } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
@@ -216,8 +217,12 @@ const seedCache = async ({
 	cacheKey: string;
 }) => {
 	const pathIndexEntries = buildPathIndex({ fullCustomer: fixture });
+	const guardKey = buildFullCustomerCacheGuardKey({ orgId: ORG_ID, env: ENV, customerId: CUSTOMER_ID });
+	const pathIndexKey = buildPathIndexKey({ orgId: ORG_ID, env: ENV, customerId: CUSTOMER_ID });
 	await redis.setFullCustomerCache(
+		guardKey,
 		cacheKey,
+		pathIndexKey,
 		ORG_ID,
 		ENV,
 		CUSTOMER_ID,
@@ -484,7 +489,9 @@ describe(
 			const { e2eTimings, serverTimings } = await runSlowlogBatch({
 				fn: async () => {
 					await redis.setFullCustomerCache(
+						buildFullCustomerCacheGuardKey({ orgId: ORG_ID, env: ENV, customerId: CUSTOMER_ID }),
 						CUSTOMER_CACHE_KEY,
+						buildPathIndexKey({ orgId: ORG_ID, env: ENV, customerId: CUSTOMER_ID }),
 						ORG_ID,
 						ENV,
 						CUSTOMER_ID,
@@ -515,7 +522,9 @@ describe(
 			const { e2eTimings, serverTimings } = await runSlowlogBatch({
 				fn: async () => {
 					await redis.setFullCustomerCache(
+						buildFullCustomerCacheGuardKey({ orgId: ORG_ID, env: ENV, customerId: CUSTOMER_ID }),
 						ENTITY_CACHE_KEY_PREFIX,
+						buildPathIndexKey({ orgId: ORG_ID, env: ENV, customerId: CUSTOMER_ID }),
 						ORG_ID,
 						ENV,
 						CUSTOMER_ID,

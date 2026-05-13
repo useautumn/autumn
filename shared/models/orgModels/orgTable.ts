@@ -1,4 +1,5 @@
 import type { ProcessorConfigs } from "@models/genModels/processorSchemas.js";
+import type { PendingMigration } from "@models/migrationV2Models/pendingMigrationModel.js";
 import { sql } from "drizzle-orm";
 import {
 	boolean,
@@ -120,6 +121,7 @@ export const organizations = pgTable(
 
 export type Organization = typeof organizations.$inferSelect & {
 	master: Organization | null;
+	pendingMigrations?: PendingMigration[];
 };
 
 // Multi tenancy flow <-> stripe connect...

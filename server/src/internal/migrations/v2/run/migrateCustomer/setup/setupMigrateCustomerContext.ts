@@ -22,6 +22,10 @@ export const setupMigrateCustomerContext = async ({
 	return {
 		migration,
 		fullCustomer,
-		stripeCache: createMigrationStripeCache({ ctx, fullCustomer }),
+		stripeCache: createMigrationStripeCache({
+			ctx,
+			fullCustomer,
+			allowStripeCustomerCreation: migration.no_billing_changes !== true,
+		}),
 	};
 };

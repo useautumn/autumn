@@ -350,6 +350,86 @@ test(`${chalk.yellowBright("migrations idempotency: retry_failed and dry_run are
 	});
 });
 
+test(`${chalk.yellowBright("migrations idempotency: item run checkpoints are dry-run scoped")}`, async () => {
+	const customerId = "migration-idem-dry-run-scope";
+	const plan = products.pro({ items: [] });
+	const { ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [plan] }),
+		],
+		actions: [s.billing.attach({ productId: plan.id })],
+	});
+	const internalCustomerId = await getInternalCustomerId({ customerId, ctx });
+	const migrationInternalId = "script_test_dry_run_scope";
+
+	await migrationItemRunRepo.claim({
+		ctx,
+		migrationInternalId,
+		migrationRunId: "dry-run-v1",
+		dryRun: true,
+		itemKind: MigrationItemKind.Customer,
+		itemId: internalCustomerId,
+		claimBehavior: "claim_new",
+	});
+	await migrationItemRunRepo.markSucceeded({
+		ctx,
+		migrationInternalId,
+		migrationRunId: "dry-run-v1",
+		dryRun: true,
+		itemKind: MigrationItemKind.Customer,
+		itemId: internalCustomerId,
+	});
+
+	expect(
+		await migrationItemRunRepo.getCustomer({
+			ctx,
+			migrationInternalId,
+			migrationRunId: "dry-run-v1",
+			dryRun: true,
+			internalCustomerId,
+		}),
+	).toMatchObject({ status: MigrationItemRunStatus.Succeeded });
+	expect(
+		await migrationItemRunRepo.getCustomer({
+			ctx,
+			migrationInternalId,
+			migrationRunId: "dry-run-v2",
+			dryRun: true,
+			internalCustomerId,
+		}),
+	).toBeNull();
+
+	const manualReplayMigrationInternalId = "script_test_manual_replay";
+	await migrationItemRunRepo.markSucceeded({
+		ctx,
+		migrationInternalId: manualReplayMigrationInternalId,
+		itemKind: MigrationItemKind.Customer,
+		itemId: internalCustomerId,
+	});
+	expect(
+		await migrationItemRunRepo.getCustomer({
+			ctx,
+			migrationInternalId: manualReplayMigrationInternalId,
+			internalCustomerId,
+		}),
+	).toMatchObject({
+		dry_run: false,
+		status: MigrationItemRunStatus.Succeeded,
+	});
+
+	await expect(
+		migrationItemRunRepo.claim({
+			ctx,
+			migrationInternalId,
+			itemKind: MigrationItemKind.Customer,
+			itemId: internalCustomerId,
+			claimBehavior: "claim_new",
+		}),
+	).resolves.toMatchObject({ claimed: true });
+});
+
 test(`${chalk.yellowBright("migrations idempotency: run API rejects concurrent migration runs per org")}`, async () => {
 	const firstCustomerId = "migration-idem-serial-first";
 	const secondCustomerId = "migration-idem-serial-second";

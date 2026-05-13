@@ -8,7 +8,7 @@ import { fetchInfisicalSecretsFromEnv } from "./server/src/external/infisical/fe
 
 export default defineConfig({
 	project: "proj_cwiutfmpdzfcshxevkok",
-	runtime: "node",
+	runtime: "bun",
 	logLevel: "log",
 	maxDuration: 3600,
 	retries: {

@@ -1,4 +1,4 @@
-import { type Migration, migrations } from "@autumn/shared";
+import { type Migration, migrationItemRuns, migrations } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 
@@ -20,5 +20,10 @@ export const deleteMigration = async ({
 			),
 		)
 		.returning();
+	if (row) {
+		await ctx.db
+			.delete(migrationItemRuns)
+			.where(eq(migrationItemRuns.migration_internal_id, row.internal_id));
+	}
 	return row ?? null;
 };
