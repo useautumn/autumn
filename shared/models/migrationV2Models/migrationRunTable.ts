@@ -53,9 +53,11 @@ export const migrationRuns = pgTable(
 			foreignColumns: [organizations.id],
 			name: "migration_runs_org_id_fkey",
 		}).onDelete("cascade"),
-		// Allows historical runs while enforcing one queued/running migration per org/env.
-		uniqueIndex("migration_runs_active_org_env_unique")
-			.on(table.org_id, table.env)
+		// One queued/running run per migration definition. Different migrations
+		// can be active concurrently — correctness lives at the per-customer
+		// `migration_item_runs_live_unique` claim.
+		uniqueIndex("migration_runs_active_per_migration_unique")
+			.on(table.migration_internal_id)
 			.where(sql`${table.status} IN ('queued', 'running')`),
 	],
 );

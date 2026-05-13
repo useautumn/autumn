@@ -8,11 +8,10 @@
   4. Sets TTL on the cache key
   5. Replaces the path index Hash (DEL + HSET + EXPIRE)
 
-  All keys are constructed internally from orgId/env/customerId using the
-  prepended key builder functions.
-
   KEYS:
-    [1] cacheKey - used for cluster slot routing only
+    [1] guardKey
+    [2] cacheKey
+    [3] pathIdxKey
 
   ARGV:
     [1] orgId
@@ -39,9 +38,9 @@ local serializedData = ARGV[6]
 local overwrite = ARGV[7] == "true"
 local pathIndexJson = ARGV[8]
 
-local guardKey = build_guard_key(org_id, env, customer_id)
-local cacheKey = build_full_customer_cache_key(org_id, env, customer_id)
-local pathIdxKey = build_path_index_key(org_id, env, customer_id)
+local guardKey = KEYS[1]
+local cacheKey = KEYS[2]
+local pathIdxKey = KEYS[3]
 
 -- Check if guard exists (deletion happened recently)
 -- Skip check if either value is nil/null/falsey

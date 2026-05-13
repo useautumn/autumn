@@ -39,7 +39,7 @@ export const insertMigrationRun = async ({
 			finished_at: null,
 		})
 		.onConflictDoNothing({
-			target: [migrationRuns.org_id, migrationRuns.env],
+			target: [migrationRuns.migration_internal_id],
 			where: sql`${migrationRuns.status} IN ('queued', 'running')`,
 		})
 		.returning();

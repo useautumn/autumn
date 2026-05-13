@@ -94,6 +94,9 @@ declare module "ioredis" {
 		): Promise<string>;
 		deleteFullCustomerCache(
 			cacheKey: string,
+			testGuardKey: string,
+			guardKey: string,
+			pathIndexKey: string,
 			orgId: string,
 			env: string,
 			customerId: string,
@@ -102,7 +105,9 @@ declare module "ioredis" {
 			skipGuard: string,
 		): Promise<"SKIPPED" | "DELETED" | "NOT_FOUND">;
 		setFullCustomerCache(
+			guardKey: string,
 			cacheKey: string,
+			pathIndexKey: string,
 			orgId: string,
 			env: string,
 			customerId: string,
