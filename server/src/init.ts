@@ -53,8 +53,6 @@ let shuttingDown = false;
 const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	logger.info(getRedactedDatabaseUrls(), "DB URLs");
 
-	console.log("DB URLs:", getRedactedDatabaseUrls());
-
 	const app = createHonoApp();
 
 	initPgHealthMonitor({ client: clientCritical });

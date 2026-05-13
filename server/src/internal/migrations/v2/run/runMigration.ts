@@ -15,6 +15,7 @@ import {
 	withMigrationEventId,
 } from "../types/migrationDefinition.js";
 import { runScopeIteration } from "./orchestrators/runScopeIteration.js";
+import { preProcessMigrationOperations } from "./preProcessMigrationOperations.js";
 import { getRunScopes } from "./types/getRunScopes.js";
 
 /** Top-level migration run: prepare -> per-scope filter+iterate -> per-item ops. */
@@ -45,13 +46,26 @@ export const runMigration = async ({
 		migration,
 	});
 
+	// Inject default guards into operations (e.g. `custom: false` on
+	// version-bumping update_plan ops) so admin-customized customer_products
+	// are never touched. Has to run before `prepare` so the prepared state
+	// reflects the guarded filter.
+	const guardedMigration = migrationWithEventId.operations
+		? {
+				...migrationWithEventId,
+				operations: preProcessMigrationOperations({
+					operations: migrationWithEventId.operations,
+				}),
+			}
+		: migrationWithEventId;
+
 	const { preparedState } = await prepare({
 		ctx,
-		migration: migrationWithEventId,
+		migration: guardedMigration,
 		dryRun,
 	});
 	const preparedMigration = {
-		...migrationWithEventId,
+		...guardedMigration,
 		prepared_state: preparedState,
 	};
 

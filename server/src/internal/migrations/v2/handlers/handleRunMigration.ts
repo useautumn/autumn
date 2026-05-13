@@ -8,6 +8,11 @@ import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
 const RunMigrationBody = z.object({
 	id: z.string(),
 	dry_run: z.boolean().default(false),
+	/** When true, claim a lazy run alongside the background sweeper. Customers
+	 *  hit on the request path get migrated lazily via `runMigrationCustomerTask`
+	 *  before the sweeper reaches them. Background and lazy run on the same
+	 *  migration_run row — the claim is shared. */
+	lazy_run: z.boolean().default(false),
 });
 
 const getRunMigrationTriggerOptions = ({
@@ -26,7 +31,7 @@ export const handleRunMigration = createRoute({
 	body: RunMigrationBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { id, dry_run: dryRun } = c.req.valid("json");
+		const { id, dry_run: dryRun, lazy_run: lazyRun } = c.req.valid("json");
 
 		const migration = await migrationRepo.find({ ctx, id });
 
@@ -42,8 +47,9 @@ export const handleRunMigration = createRoute({
 			ctx,
 			migration,
 			dryRun,
-			trigger: (migrationRunId) =>
-				runMigrationTask.trigger(
+			lazyRun,
+			claimed: async (migrationRunId) => {
+				const handle = await runMigrationTask.trigger(
 					{
 						orgId: ctx.org.id,
 						env: ctx.env,
@@ -55,12 +61,15 @@ export const handleRunMigration = createRoute({
 						orgId: ctx.org.id,
 						isDev,
 					}),
-				),
+				);
+				return { triggerRunId: handle.id };
+			},
 		});
 
 		return c.json({
 			migration_id: id,
 			dry_run: dryRun,
+			lazy_run: lazyRun,
 			run_id: migrationRunId,
 		});
 	},

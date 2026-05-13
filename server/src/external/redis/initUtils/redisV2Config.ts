@@ -1,6 +1,7 @@
 import type { RedisV2InstanceName } from "@/internal/misc/redisV2Cache/redisV2CacheSchemas.js";
 
-export const REDIS_V2_COMMAND_TIMEOUT_MS = 1_000;
+export const REDIS_V2_COMMAND_TIMEOUT_MS =
+	process.env.NODE_ENV === "production" ? 1_000 : 10_000;
 
 export const getRedisV2ConnectionConfig = ({
 	cacheV2Url,

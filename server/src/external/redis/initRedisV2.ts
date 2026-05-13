@@ -14,7 +14,7 @@ import {
 } from "./initUtils/redisV2Config.js";
 
 const redisV2Config = getRedisV2ConnectionConfig({
-	cacheV2Url: process.env.CACHE_V2_UPSTASH_URL,
+	cacheV2Url: process.env.CACHE_V2_DRAGONFLY_URL,
 	primaryCacheUrl: process.env.CACHE_URL,
 	currentRegion,
 });

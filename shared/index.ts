@@ -120,12 +120,15 @@ export * from "./models/genModels/processorSchemas";
 export * from "./models/migrationModels/migrationErrorTable";
 export * from "./models/migrationModels/migrationJobTable";
 export * from "./models/migrationModels/migrationModels";
+export * from "./models/migrationV2Models/migrationItemRunSchema";
 export * from "./models/migrationV2Models/migrationItemRunTable";
 export * from "./models/migrationV2Models/migrationRunTable";
 export * from "./models/migrationV2Models/migrationTable";
+export * from "./models/migrationV2Models/pendingMigrationModel";
 export * from "./models/orgModels/frontendOrg";
 // 1. Org Models
 export * from "./models/orgModels/frontendOrg";
+export * from "./models/orgModels/fullOrgModel";
 export * from "./models/orgModels/orgConfig";
 export * from "./models/orgModels/orgConfig";
 export * from "./models/orgModels/orgTable";
