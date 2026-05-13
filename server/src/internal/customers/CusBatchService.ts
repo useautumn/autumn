@@ -19,6 +19,10 @@ import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEn
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
+import {
+	type FlattenedCustomerRow,
+	reassembleFlattenedCustomer,
+} from "./reassembleFlattenedCustomer/index.js";
 
 export class CusBatchService {
 	static async getByInternalIds({
@@ -154,11 +158,6 @@ export class CusBatchService {
 		ctx: RequestContext;
 		query: ListCustomersV2_3Params;
 	}): Promise<{ list: ApiCustomerV5[]; next_cursor: string | null }> {
-		const expand = ctx.expand || [];
-		const includeInvoices = expand.includes(CustomerExpand.Invoices);
-		const withEntities = expand.includes(CustomerExpand.Entities);
-		const withTrialsUsed = expand.includes(CustomerExpand.TrialsUsed);
-
 		const { limit, plans, subscription_status, search, processors } = query;
 
 		const cursor: StandardCursorFields | null = StandardCursor.decode(
@@ -176,9 +175,6 @@ export class CusBatchService {
 			inStatuses: subscription_status
 				? [subscription_status as unknown as CusProductStatus]
 				: RELEVANT_STATUSES,
-			includeInvoices,
-			withEntities,
-			withTrialsUsed,
 			withSubs: true,
 			limit,
 			cursor: cursor ?? undefined,
@@ -189,21 +185,28 @@ export class CusBatchService {
 		});
 
 		const results = await ctx.db.execute(sqlQuery);
+		const flat = (results[0] ?? {
+			customers: [],
+			customer_products: [],
+			customer_entitlements: [],
+			extra_customer_entitlements: [],
+			customer_prices: [],
+			entitlements: [],
+			rollovers: [],
+			replaceables: [],
+			free_trials: [],
+			subscriptions: [],
+		}) as unknown as FlattenedCustomerRow;
 
-		const hasMore = results.length > limit;
-		const pageRows = hasMore ? results.slice(0, limit) : results;
-		const peekRow = hasMore ? results[limit] : undefined;
+		const allCustomers = reassembleFlattenedCustomer(flat);
+		const hasMore = allCustomers.length > limit;
+		const fullCustomers = hasMore ? allCustomers.slice(0, limit) : allCustomers;
+		const peekCustomer = hasMore ? allCustomers[limit] : undefined;
 
 		const finals: ApiCustomerV5[] = [];
-		const fullCustomers: FullCustomer[] = [];
 
-		for (const result of pageRows) {
+		for (const fullCus of fullCustomers) {
 			try {
-				const normalizedCustomer =
-					CusBatchService.normalizeCustomerData(result);
-				const fullCus = normalizedCustomer as FullCustomer;
-				fullCustomers.push(fullCus);
-
 				const { apiCustomer: baseCustomer, legacyData } =
 					await getApiCustomerBase({
 						ctx,
@@ -224,7 +227,7 @@ export class CusBatchService {
 
 				finals.push(versionedCustomer);
 			} catch (error) {
-				ctx.logger.error(`Failed to process customer ${result.id}: ${error}`);
+				ctx.logger.error(`Failed to process customer ${fullCus.id}: ${error}`);
 			}
 		}
 
@@ -240,10 +243,10 @@ export class CusBatchService {
 		});
 
 		const nextCursor =
-			hasMore && peekRow
+			hasMore && peekCustomer && peekCustomer.id
 				? StandardCursor.encode({
-						id: (peekRow as { id: string }).id,
-						t: Number((peekRow as { created_at: number | string }).created_at),
+						id: peekCustomer.id,
+						t: peekCustomer.created_at,
 					})
 				: null;
 
