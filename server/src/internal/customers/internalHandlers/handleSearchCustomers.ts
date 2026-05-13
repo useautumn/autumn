@@ -1,40 +1,64 @@
+import { Scopes, StandardCursor } from "@autumn/shared";
 import { z } from "zod/v4";
-import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
-import { CusSearchService } from "../CusSearchService";
+import { CusBatchService } from "../CusBatchService";
 
-/**
- * POST /customers/all/search
- * Used by:
- * - vite/src/hooks/common/useShowDeployButton.tsx
- * - vite/src/views/command-bar/CommandBar.tsx
- * - vite/src/views/customers/hooks/useCusSearchQuery.tsx
- */
 export const handleSearchCustomers = createRoute({
 	scopes: [Scopes.Customers.Read],
 	body: z.object({
 		search: z.string().optional(),
-		page_size: z.number().optional().default(50),
-		page: z.number().optional().default(1),
-		last_item: z.any().optional(),
-		filters: z.any().optional(),
+		limit: z.number().int().min(1).max(1000).optional().default(50),
+		cursor: z.string().optional().default(""),
+		filters: z
+			.object({
+				status: z.array(z.string()).optional(),
+				version: z.array(z.string()).optional(),
+				none: z.boolean().optional(),
+				processor: z.array(z.string()).optional(),
+			})
+			.optional(),
 	}),
 	handler: async (c) => {
-		const { db, org, env } = c.get("ctx");
-		const { search, page_size, page, last_item, filters } = c.req.valid("json");
+		const ctx = c.get("ctx");
+		const { search, limit, cursor, filters } = c.req.valid("json");
 
-		const { data: customers, count } = await CusSearchService.search({
-			db,
-			orgId: org.id,
-			orgSlug: org.slug,
-			env,
-			search: search ?? "",
-			filters,
-			lastItem: last_item,
-			pageNumber: page,
-			pageSize: page_size,
-		});
+		const decoded = StandardCursor.decode(cursor);
 
-		return c.json({ customers, totalCount: Number(count) });
+		const { fullCustomers, next_cursor } =
+			await CusBatchService.getDashboardCursorPage({
+				ctx,
+				search: search ?? "",
+				filters,
+				cursor: decoded ? { t: decoded.t, id: decoded.id } : null,
+				limit,
+			});
+
+		const customers = fullCustomers.map((c) => ({
+			internal_id: c.internal_id,
+			id: c.id,
+			name: c.name,
+			email: c.email,
+			created_at: c.created_at,
+			customer_products: c.customer_products.map((cp: any) => ({
+				id: cp.id,
+				internal_product_id: cp.internal_product_id,
+				product_id: cp.product_id,
+				canceled_at: cp.canceled_at,
+				status: cp.status,
+				trial_ends_at: cp.trial_ends_at,
+				created_at: cp.created_at,
+				product: cp.product
+					? {
+							internal_id: cp.product.internal_id,
+							id: cp.product.id,
+							name: cp.product.name,
+							version: cp.product.version,
+							is_add_on: cp.product.is_add_on,
+						}
+					: null,
+			})),
+		}));
+
+		return c.json({ customers, next_cursor });
 	},
 });

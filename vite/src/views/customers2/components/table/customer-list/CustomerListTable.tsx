@@ -48,19 +48,17 @@ export function CustomerListTable({
 			(v) => typeof v === "number" && v > 1,
 		);
 	}, [products]);
-	const { queryStates } = useCustomerFilters();
+	const { queryStates, currentCursor } = useCustomerFilters();
 	const buildKey = useQueryKeyFactory();
 
-	// Subscribe to full_customers query to get reactive updates
-	// Query key must match useFullCusSearchQuery for proper cache sharing
 	const {
 		data: fullCustomersData,
 		isLoading: isFullCustomersLoading,
 		isFetching: isFullCustomersFetching,
-	} = useQuery<{ fullCustomers: FullCustomer[] }>({
+	} = useQuery<{ fullCustomers: FullCustomer[]; next_cursor: string | null }>({
 		queryKey: buildKey([
 			FULL_CUSTOMERS_QUERY_KEY,
-			queryStates.page,
+			currentCursor,
 			queryStates.pageSize,
 			queryStates.status,
 			queryStates.version,
@@ -68,9 +66,8 @@ export function CustomerListTable({
 			queryStates.processor,
 			queryStates.q,
 		]),
-		// Placeholder queryFn - actual fetching is done by useFullCusSearchQuery
-		queryFn: () => Promise.resolve({ fullCustomers: [] }),
-		// Don't fetch - just subscribe to existing data from useFullCusSearchQuery
+		queryFn: () =>
+			Promise.resolve({ fullCustomers: [], next_cursor: null }),
 		enabled: false,
 	});
 

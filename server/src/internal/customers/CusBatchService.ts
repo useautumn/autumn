@@ -17,6 +17,7 @@ import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
 import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/triggerBatchResetCustomerEntitlements.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
+import { CusSearchService } from "./CusSearchService.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
 import {
@@ -251,6 +252,89 @@ export class CusBatchService {
 				: null;
 
 		return { list: finals, next_cursor: nextCursor };
+	}
+
+	static async getDashboardCursorPage({
+		ctx,
+		search,
+		filters,
+		cursor,
+		limit,
+	}: {
+		ctx: RequestContext;
+		search: string;
+		filters?: {
+			status?: string[];
+			version?: string[];
+			none?: boolean;
+			processor?: string[];
+		};
+		cursor: { t: number; id: string } | null;
+		limit: number;
+	}): Promise<{
+		fullCustomers: FullCustomer[];
+		next_cursor: string | null;
+	}> {
+		const { db } = ctx;
+		const cusProductLimit = getOrgCusProductLimit({
+			orgId: ctx.org.id,
+			orgSlug: ctx.org.slug,
+		});
+
+		const { internalIds, peek } =
+			await CusSearchService.resolveInternalIdsByCursor({
+				db,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				search,
+				filters,
+				cursor,
+				limit,
+			});
+
+		if (internalIds.length === 0) {
+			return { fullCustomers: [], next_cursor: null };
+		}
+
+		const query = getCursorPaginatedFullCusQuery({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			inStatuses: RELEVANT_STATUSES,
+			withSubs: true,
+			limit: internalIds.length,
+			internalCustomerIds: internalIds,
+			cusProductLimit,
+		});
+		const rows = (await db.execute(query)) as unknown as Record<
+			string,
+			unknown
+		>[];
+		const flat = (rows[0] ?? {
+			customers: [],
+			customer_products: [],
+			customer_entitlements: [],
+			extra_customer_entitlements: [],
+			customer_prices: [],
+			entitlements: [],
+			rollovers: [],
+			replaceables: [],
+			free_trials: [],
+			subscriptions: [],
+		}) as unknown as FlattenedCustomerRow;
+
+		const fullCustomers = reassembleFlattenedCustomer(flat);
+
+		triggerBatchResetCustomerEntitlements({ ctx, fullCustomers }).catch((err) => {
+			ctx.logger.error(
+				"[CusBatchService.getDashboardCursorPage] batch reset failed:",
+				err,
+			);
+			Sentry.captureException(err);
+		});
+
+		const next_cursor = peek ? StandardCursor.encode(peek) : null;
+
+		return { fullCustomers, next_cursor };
 	}
 
 	/**

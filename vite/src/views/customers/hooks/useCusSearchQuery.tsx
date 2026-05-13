@@ -6,13 +6,36 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useCustomerFilters } from "./useCustomerFilters";
 
 export const useCusSearchQuery = () => {
-	const { queryStates, isInitialized } = useCustomerFilters();
+	const {
+		queryStates,
+		isInitialized,
+		currentCursor,
+	} = useCustomerFilters();
 	const trimmedSearch = queryStates.q.trim();
 
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
+
 	const fetcher = async () => {
 		const { data } = await axiosInstance.post(`/customers/all/search`, {
+			search: trimmedSearch,
+			cursor: currentCursor,
+			limit: queryStates.pageSize,
+			filters: {
+				status: queryStates.status,
+				version: queryStates.version,
+				none: queryStates.none,
+				processor: queryStates.processor,
+			},
+		});
+		return {
+			customers: data.customers as CustomerWithProducts[],
+			next_cursor: (data.next_cursor ?? null) as string | null,
+		};
+	};
+
+	const countFetcher = async () => {
+		const { data } = await axiosInstance.post(`/customers/all/count`, {
 			search: trimmedSearch,
 			filters: {
 				status: queryStates.status,
@@ -20,10 +43,8 @@ export const useCusSearchQuery = () => {
 				none: queryStates.none,
 				processor: queryStates.processor,
 			},
-			page: queryStates.page,
-			page_size: queryStates.pageSize,
 		});
-		return { customers: data.customers, totalCount: data.totalCount };
+		return data.totalCount as number;
 	};
 
 	const {
@@ -35,13 +56,10 @@ export const useCusSearchQuery = () => {
 		isFetching,
 		isPending,
 		isPlaceholderData,
-	} = useQuery<{
-		customers: CustomerWithProducts[];
-		totalCount: number;
-	}>({
+	} = useQuery({
 		queryKey: buildKey([
 			"customers",
-			queryStates.page,
+			currentCursor,
 			queryStates.pageSize,
 			queryStates.status,
 			queryStates.version,
@@ -54,14 +72,29 @@ export const useCusSearchQuery = () => {
 		placeholderData: keepPreviousData,
 	});
 
+	const { data: totalCount, isLoading: isCountLoading } = useQuery({
+		queryKey: buildKey([
+			"customers-count",
+			queryStates.status,
+			queryStates.version,
+			queryStates.none,
+			queryStates.processor,
+			trimmedSearch,
+		]),
+		queryFn: countFetcher,
+		enabled: isInitialized,
+		placeholderData: keepPreviousData,
+	});
+
 	const isFetchingUncached = Boolean(
 		isPending || (isFetching && isPlaceholderData),
 	);
 
 	return {
 		customers: data?.customers || [],
-		totalCount: data?.totalCount || 0,
-		isLoading,
+		nextCursor: data?.next_cursor ?? null,
+		totalCount: totalCount ?? 0,
+		isLoading: isLoading || isCountLoading,
 		error,
 		refetch,
 		isRefetching,
@@ -72,7 +105,6 @@ export const useCusSearchQuery = () => {
 export const useCusSearchQueryV2 = ({
 	search,
 	filters = {},
-	page,
 	page_size,
 }: {
 	search: string;
@@ -87,18 +119,22 @@ export const useCusSearchQueryV2 = ({
 	const trimmedSearch = search.trim();
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
+
 	const fetcher = async () => {
 		const { data } = await axiosInstance.post(`/customers/all/search`, {
 			search: trimmedSearch,
+			cursor: "",
+			limit: page_size || 30,
 			filters: {
-				status: filters.status,
-				version: filters.version,
-				none: filters.none,
+				status: filters.status ? [filters.status] : undefined,
+				version: filters.version ? [filters.version] : undefined,
+				none: filters.none === "true" ? true : undefined,
 			},
-			page: page || 1,
-			page_size: page_size || 30,
 		});
-		return { customers: data.customers, totalCount: data.totalCount };
+		return {
+			customers: data.customers as CustomerWithProducts[],
+			next_cursor: (data.next_cursor ?? null) as string | null,
+		};
 	};
 
 	const {
@@ -110,13 +146,9 @@ export const useCusSearchQueryV2 = ({
 		isFetching,
 		isPending,
 		isPlaceholderData,
-	} = useQuery<{
-		customers: CustomerWithProducts[];
-		totalCount: number;
-	}>({
+	} = useQuery({
 		queryKey: buildKey([
 			"customers",
-			page,
 			page_size,
 			filters?.status,
 			filters?.version,
@@ -133,7 +165,8 @@ export const useCusSearchQueryV2 = ({
 
 	return {
 		customers: data?.customers || [],
-		totalCount: data?.totalCount || 0,
+		nextCursor: data?.next_cursor ?? null,
+		totalCount: 0,
 		isLoading,
 		error,
 		refetch,
