@@ -1,5 +1,5 @@
 import type { BillingContext, BillingPlan } from "@autumn/shared";
-import { ErrCode, RecaseError } from "@autumn/shared";
+import { AppEnv, ErrCode, RecaseError } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { CreateAutumnCheckoutResult } from "@/internal/billing/v2/common/createAutumnCheckout";
 import { hashJson } from "@/utils/hash/hashJson";
@@ -52,6 +52,18 @@ export const checkCheckoutSessionLock = async <T extends BillingContext>({
 
 		ctx.logger.info(
 			`Expiring old checkout session ${existingLock.checkoutSessionId} for customer ${customerId} (params changed)`,
+		);
+		await checkoutSessionLock.expireAndClear({
+			ctx,
+			customerId,
+			checkoutSessionId: existingLock.checkoutSessionId,
+		});
+		return null;
+	}
+
+	if (ctx.env === AppEnv.Sandbox) {
+		ctx.logger.info(
+			`Sandbox: clearing checkout session lock for customer ${customerId} (session ${existingLock.checkoutSessionId}) to allow non-checkout billing action`,
 		);
 		await checkoutSessionLock.expireAndClear({
 			ctx,
