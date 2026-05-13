@@ -40,21 +40,9 @@
 			"url": "https://mcp.plain.com/mcp",
 			"oauth": {}
 		},
-		"aws_investigate": {
-			"type": "local",
-			"command": [
-				"sh",
-				"-c",
-				"cd \"/Users/charlielamb/code/atmn/cloud\" && exec infisical run --silent --env=prod --path=/aws/agent-read-only -- bun run \"/Users/charlielamb/code/atmn/cloud/ai/src/aws-mcp/index.ts\""
-			],
-			"env": {
-				"AUTUMN_CLOUD_ROOT": "/Users/charlielamb/code/atmn/cloud",
-				"AWS_AGENT_INFISICAL_PATH": "/aws/agent-read-only"
-			}
-		},
-		"mobbin": {
+		"slack": {
 			"type": "remote",
-			"url": "https://api.mobbin.com/mcp",
+			"url": "https://mcp.slack.com/mcp",
 			"oauth": {}
 		},
 		"autumn_prod_internal": {
@@ -62,10 +50,10 @@
 			"command": [
 				"sh",
 				"-c",
-				"cd \"/Users/charlielamb/code/atmn/cloud\" && exec infisical run --env=prod --recursive -- bun run \"/Users/charlielamb/code/atmn/cloud/ai/src/mcp/index.ts\""
+				"cd \"/Users/johnyeocx/Autumn/autumn-cloud\" && exec infisical run --env=prod --recursive -- bun run \"/Users/johnyeocx/Autumn/autumn-cloud/ai/src/mcp/index.ts\""
 			],
 			"env": {
-				"AUTUMN_CLOUD_ROOT": "/Users/charlielamb/code/atmn/cloud",
+				"AUTUMN_CLOUD_ROOT": "/Users/johnyeocx/Autumn/autumn-cloud",
 				"AUTUMN_MCP_ENV": "prod"
 			}
 		},
@@ -74,10 +62,10 @@
 			"command": [
 				"sh",
 				"-c",
-				"cd \"/Users/charlielamb/code/atmn/cloud\" && exec infisical run --env=dev --recursive -- bun run \"/Users/charlielamb/code/atmn/cloud/ai/src/mcp/index.ts\""
+				"cd \"/Users/johnyeocx/Autumn/autumn-cloud\" && exec infisical run --env=dev --recursive -- bun run \"/Users/johnyeocx/Autumn/autumn-cloud/ai/src/mcp/index.ts\""
 			],
 			"env": {
-				"AUTUMN_CLOUD_ROOT": "/Users/charlielamb/code/atmn/cloud",
+				"AUTUMN_CLOUD_ROOT": "/Users/johnyeocx/Autumn/autumn-cloud",
 				"AUTUMN_MCP_ENV": "dev"
 			}
 		}

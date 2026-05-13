@@ -364,6 +364,7 @@ export type UpdatePlanParams = {
    * Miscellaneous plan-level configuration flags.
    */
   config?: UpdatePlanConfigRequest | undefined;
+  createInStripe?: boolean | undefined;
   version?: number | undefined;
   archived?: boolean | undefined;
   /**
@@ -1231,6 +1232,7 @@ export type UpdatePlanParams$Outbound = {
   items?: Array<UpdatePlanPlanItem$Outbound> | undefined;
   free_trial?: UpdatePlanFreeTrialParams$Outbound | null | undefined;
   config?: UpdatePlanConfigRequest$Outbound | undefined;
+  create_in_stripe: boolean;
   version?: number | undefined;
   archived: boolean;
   new_plan_id?: string | undefined;
@@ -1256,6 +1258,7 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
       z.nullable(z.lazy(() => UpdatePlanFreeTrialParams$outboundSchema)),
     ),
     config: z.optional(z.lazy(() => UpdatePlanConfigRequest$outboundSchema)),
+    createInStripe: z._default(z.boolean(), true),
     version: z.optional(z.number()),
     archived: z._default(z.boolean(), false),
     newPlanId: z.optional(z.string()),
@@ -1266,6 +1269,7 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
       addOn: "add_on",
       autoEnable: "auto_enable",
       freeTrial: "free_trial",
+      createInStripe: "create_in_stripe",
       newPlanId: "new_plan_id",
     });
   }),

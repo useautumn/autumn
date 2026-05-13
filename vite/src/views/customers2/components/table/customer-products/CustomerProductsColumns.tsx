@@ -1,5 +1,5 @@
 import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
-import { FlaskIcon } from "@phosphor-icons/react";
+import { FlaskIcon, PencilIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
@@ -84,6 +84,7 @@ export const CustomerProductsColumns = [
 		}) => {
 			const meta = table.options.meta as {
 				onCancelClick?: (product: FullCusProduct) => void;
+				onUpdateClick?: (product: FullCusProduct) => void;
 				onUncancelClick?: (product: FullCusProduct) => void;
 				onTransferClick?: (product: FullCusProduct) => void;
 				onTestSheetClick?: (product: FullCusProduct) => void;
@@ -95,54 +96,65 @@ export const CustomerProductsColumns = [
 			const isCanceling = row.original.canceled;
 
 			return (
-			<div className="flex justify-end">
-				<TableDropdownMenuCell>
-					{meta.onTestSheetClick && (
-						<DropdownMenuItem
-							className="flex items-center gap-2 text-xs"
-							onClick={(e) => {
-								e.stopPropagation();
-								meta.onTestSheetClick?.(row.original);
-							}}
-						>
-							<FlaskIcon size={16} /> Test Sheet
-						</DropdownMenuItem>
-					)}
-					{meta.hasEntities && meta.onTransferClick && (
-						<DropdownMenuItem
-							className="flex items-center gap-2 text-xs"
-							onClick={(e) => {
-								e.stopPropagation();
-								meta.onTransferClick?.(row.original);
-							}}
-						>
-							<ArrowRightLeft size={16} /> Transfer
-						</DropdownMenuItem>
-					)}
-					{isCanceling ? (
-						<DropdownMenuItem
-							className="flex items-center gap-2 text-xs"
-							onClick={(e) => {
-								e.stopPropagation();
-								meta.onUncancelClick?.(row.original);
-							}}
-						>
-							<RotateCcw size={16} /> Uncancel
-						</DropdownMenuItem>
-					) : (
-						<DropdownMenuItem
-							className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
-							onClick={(e) => {
-								e.stopPropagation();
-								meta.onCancelClick?.(row.original);
-							}}
-						>
-							<Delete size={16} /> Cancel
-						</DropdownMenuItem>
-					)}
-			</TableDropdownMenuCell>
-			</div>
-		);
-	},
+				<div className="flex justify-end">
+					<TableDropdownMenuCell>
+						{meta.onTestSheetClick && (
+							<DropdownMenuItem
+								className="flex items-center gap-2 text-xs"
+								onClick={(e) => {
+									e.stopPropagation();
+									meta.onTestSheetClick?.(row.original);
+								}}
+							>
+								<FlaskIcon size={16} /> Test Sheet
+							</DropdownMenuItem>
+						)}
+						{meta.hasEntities && meta.onTransferClick && (
+							<DropdownMenuItem
+								className="flex items-center gap-2 text-xs"
+								onClick={(e) => {
+									e.stopPropagation();
+									meta.onTransferClick?.(row.original);
+								}}
+							>
+								<ArrowRightLeft size={16} /> Transfer
+							</DropdownMenuItem>
+						)}
+						{meta.onUpdateClick && (
+							<DropdownMenuItem
+								className="flex items-center gap-2 text-xs"
+								onClick={(e) => {
+									e.stopPropagation();
+									meta.onUpdateClick?.(row.original);
+								}}
+							>
+								<PencilIcon size={16} /> Update
+							</DropdownMenuItem>
+						)}
+						{isCanceling ? (
+							<DropdownMenuItem
+								className="flex items-center gap-2 text-xs"
+								onClick={(e) => {
+									e.stopPropagation();
+									meta.onUncancelClick?.(row.original);
+								}}
+							>
+								<RotateCcw size={16} /> Uncancel
+							</DropdownMenuItem>
+						) : (
+							<DropdownMenuItem
+								className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
+								onClick={(e) => {
+									e.stopPropagation();
+									meta.onCancelClick?.(row.original);
+								}}
+							>
+								<Delete size={16} /> Cancel
+							</DropdownMenuItem>
+						)}
+					</TableDropdownMenuCell>
+				</div>
+			);
+		},
 	},
 ];

@@ -1,5 +1,6 @@
 import { createPagePaginatedResponseSchema } from "@api/common/pagePaginationSchemas";
 import { z } from "zod/v4";
+import { TrackDeductionSchema } from "../../balances/track/trackResponseV3";
 
 export const EVENTS_LIST_EXAMPLE = {
 	list: [
@@ -10,6 +11,18 @@ export const EVENTS_LIST_EXAMPLE = {
 			customer_id: "0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx",
 			value: 30,
 			properties: {},
+			deductions: [
+				{
+					balance_id: "cus_ent_3DdSDtFBlvDbjyUuJeUIbQlyN12",
+					feature_id: "credits",
+					plan_id: "pro",
+					reset: {
+						interval: "month",
+						resets_at: 1765958215459,
+					},
+					value: 30,
+				},
+			],
 		},
 		{
 			id: "evt_36xmHxxjAkqxufDf9yHAPNfRrLM",
@@ -18,6 +31,7 @@ export const EVENTS_LIST_EXAMPLE = {
 			customer_id: "0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx",
 			value: 49,
 			properties: {},
+			deductions: null,
 		},
 	],
 	total: 2,
@@ -39,6 +53,12 @@ export const ApiEventsListItemSchema = z.object({
 	properties: z
 		.record(z.string(), z.unknown())
 		.describe("Event properties (JSON)"),
+	deductions: z
+		.array(TrackDeductionSchema)
+		.nullable()
+		.describe(
+			"Per-balance breakdown of what this event deducted. Null for events ingested before deductions were tracked; an empty array means the event was accepted but no balance moved.",
+		),
 });
 
 export const ApiEventsListResponseSchema = createPagePaginatedResponseSchema(

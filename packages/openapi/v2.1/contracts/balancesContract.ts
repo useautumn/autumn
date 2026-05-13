@@ -112,6 +112,18 @@ export const balancesTrackContract = oc
 					customer_id: "cus_123",
 					value: 1,
 					balance: API_BALANCE_V1_EXAMPLE,
+					deductions: [
+						{
+							balance_id: "cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2",
+							feature_id: "messages",
+							plan_id: "pro",
+							reset: {
+								interval: "month",
+								resets_at: 1781288736881,
+							},
+							value: 1,
+						},
+					],
 				},
 			],
 		}),

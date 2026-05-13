@@ -37,6 +37,7 @@ import { CustomerPageDetails } from "./CustomerPageDetails";
 import { CustomerSheets } from "./CustomerSheets";
 import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
 import { SHEET_ANIMATION } from "./customerAnimations";
+import { Workbench } from "./workbench/Workbench";
 
 export default function CustomerView2() {
 	const {
@@ -228,6 +229,7 @@ export default function CustomerView2() {
 				</motion.div>
 
 				<CustomerSheets />
+				<Workbench />
 			</div>
 		</CustomerContext.Provider>
 	);

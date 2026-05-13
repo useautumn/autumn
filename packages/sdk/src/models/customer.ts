@@ -554,6 +554,7 @@ export const CustomerRewardsType = {
   FixedDiscount: "fixed_discount",
   FreeProduct: "free_product",
   InvoiceCredits: "invoice_credits",
+  FeatureGrant: "feature_grant",
 } as const;
 /**
  * The type of reward

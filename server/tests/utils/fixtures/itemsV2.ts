@@ -122,6 +122,63 @@ const allocatedUsers = ({
 	},
 });
 
+const allocatedWorkflows = ({
+	amount = 10,
+	included = 0,
+}: {
+	amount?: number;
+	included?: number;
+} = {}) => ({
+	feature_id: TestFeature.Workflows,
+	included,
+	price: {
+		amount,
+		interval: BillingInterval.Month,
+		billing_method: BillingMethod.UsageBased,
+		billing_units: 1,
+	},
+	proration: {
+		on_increase: OnIncrease.BillImmediately,
+		on_decrease: OnDecrease.None,
+	},
+});
+
+const prepaidUsers = ({
+	amount = 10,
+	billingUnits = 1,
+	included = 0,
+}: {
+	amount?: number;
+	billingUnits?: number;
+	included?: number;
+} = {}) => ({
+	feature_id: TestFeature.Users,
+	included,
+	price: {
+		amount,
+		interval: BillingInterval.Month,
+		billing_method: BillingMethod.Prepaid,
+		billing_units: billingUnits,
+	},
+});
+
+const consumableWords = ({
+	amount = 0.05,
+	included = 0,
+}: {
+	amount?: number;
+	included?: number;
+} = {}) => ({
+	feature_id: TestFeature.Words,
+	included,
+	price: {
+		amount,
+		interval: BillingInterval.Month,
+		billing_method: BillingMethod.UsageBased,
+		billing_units: 1,
+	},
+});
+
 /**
  * Tiered prepaid messages - tier `to` values INCLUDE the included amount.
  * Default: included=100, tiers=[{to:600, amount:10}, {to:"inf", amount:5}]
@@ -184,9 +241,12 @@ export const itemsV2 = {
 	monthlyWords,
 	dashboard,
 	prepaidMessages,
+	prepaidUsers,
 	prepaidWords,
 	consumableMessages,
+	consumableWords,
 	allocatedUsers,
+	allocatedWorkflows,
 	tieredPrepaidMessages,
 	volumePrepaidMessages,
 } as const;

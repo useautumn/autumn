@@ -14,14 +14,11 @@
     [3] pathIdxKey
 
   ARGV:
-    [1] orgId
-    [2] env
-    [3] customerId
-    [4] fetchTimeMs - timestamp when data was fetched from Postgres
-    [5] cacheTtl - TTL in seconds for the cache key
-    [6] serializedData - JSON string of the FullCustomer data
-    [7] overwrite - "true" to overwrite existing cache, "false" to skip if exists
-    [8] pathIndexJson - JSON object mapping field names to values for HSET (e.g. {"ent:id1":"{...}", ...})
+    [1] fetchTimeMs - timestamp when data was fetched from Postgres
+    [2] cacheTtl - TTL in seconds for the cache key
+    [3] serializedData - JSON string of the FullCustomer data
+    [4] overwrite - "true" to overwrite existing cache, "false" to skip if exists
+    [5] pathIndexJson - JSON object mapping field names to values for HSET (e.g. {"ent:id1":"{...}", ...})
 
   Returns:
     "STALE_WRITE" = guard exists with newer timestamp, write blocked
@@ -29,18 +26,15 @@
     "OK" = cache set successfully
 ]]
 
-local org_id = ARGV[1]
-local env = ARGV[2]
-local customer_id = ARGV[3]
-local fetchTimeMs = tonumber(ARGV[4])
-local cacheTtl = tonumber(ARGV[5])
-local serializedData = ARGV[6]
-local overwrite = ARGV[7] == "true"
-local pathIndexJson = ARGV[8]
-
 local guardKey = KEYS[1]
 local cacheKey = KEYS[2]
 local pathIdxKey = KEYS[3]
+
+local fetchTimeMs = tonumber(ARGV[1])
+local cacheTtl = tonumber(ARGV[2])
+local serializedData = ARGV[3]
+local overwrite = ARGV[4] == "true"
+local pathIndexJson = ARGV[5]
 
 -- Check if guard exists (deletion happened recently)
 -- Skip check if either value is nil/null/falsey

@@ -496,6 +496,46 @@ await autumn.track({
   </Expandable>
 </DynamicResponseField>
 
+<DynamicResponseField name="deductions" type="object[]">
+  Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling.
+  <Expandable title="properties">
+    <DynamicResponseField name="balance_id" type="string">
+      ID of the underlying balance row that was deducted from (customer_entitlement or rollover).
+    </DynamicResponseField>
+
+    <DynamicResponseField name="feature_id" type="string">
+      The feature this balance belongs to.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="plan_id" type="string | null">
+      ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple).
+    </DynamicResponseField>
+
+    <DynamicResponseField name="reset" type="object | null">
+      Reset configuration for the balance this deduction came from, or null if the balance doesn't reset.
+      <Expandable title="properties">
+        <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+          The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="interval_count" type="number">
+          Number of intervals between resets (eg. 2 for bi-monthly).
+        </DynamicResponseField>
+
+        <DynamicResponseField name="resets_at" type="number | null">
+          Timestamp when the balance will next reset.
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="value" type="number">
+      Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value).
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
 
 <ResponseExample>
 ```json 200
@@ -528,7 +568,19 @@ await autumn.track({
         "expires_at": null
       }
     ]
-  }
+  },
+  "deductions": [
+    {
+      "balance_id": "cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2",
+      "feature_id": "messages",
+      "plan_id": "pro",
+      "reset": {
+        "interval": "month",
+        "resets_at": 1781288736881
+      },
+      "value": 1
+    }
+  ]
 }
 ```
 </ResponseExample>

@@ -1,5 +1,6 @@
 import {
 	type AppEnv,
+	copyStripeResourcesToMatchingPrice,
 	type Entitlement,
 	type Feature,
 	isFeatureItem,
@@ -10,6 +11,7 @@ import {
 	type ProductItem,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
+import type { Logger } from "@server/external/logtail/logtailUtils.js";
 import { FeatureService } from "@server/internal/features/FeatureService.js";
 import { EntitlementService } from "@server/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@server/internal/products/prices/PriceService.js";
@@ -76,7 +78,7 @@ const updateDbPricesAndEnts = async ({
 			ids: deletedEntIds,
 		});
 	} else {
-		const updateOrDelete: any = [];
+		const updateOrDelete: Promise<unknown>[] = [];
 		for (const ent of deletedEnts) {
 			const hasCustomPrice = customPrices.some(
 				(price) => price.entitlement_id === ent.id,
@@ -106,8 +108,7 @@ const updateDbPricesAndEnts = async ({
 	}
 };
 
-const handleCustomProductItems = async ({
-	db,
+const handleCustomProductItems = ({
 	newPrices,
 	newEnts,
 	updatedPrices,
@@ -116,7 +117,6 @@ const handleCustomProductItems = async ({
 	sameEnts,
 	features,
 }: {
-	db: DrizzleCli;
 	newPrices: Price[];
 	newEnts: Entitlement[];
 	updatedPrices: Price[];
@@ -124,17 +124,36 @@ const handleCustomProductItems = async ({
 	samePrices: Price[];
 	sameEnts: Entitlement[];
 	features: Feature[];
+}) => ({
+	prices: [...newPrices, ...updatedPrices, ...samePrices],
+	entitlements: [...newEnts, ...updatedEnts, ...sameEnts].map((ent) => ({
+		...ent,
+		feature: features.find((f) => f.id === ent.feature_id),
+	})),
+	customPrices: [...newPrices, ...updatedPrices],
+	customEnts: [...newEnts, ...updatedEnts],
+	features,
+});
+
+const carryForwardStripeResources = ({
+	targetPrices,
+	targetEntitlements,
+	candidatePrices,
+	candidateEntitlements,
+}: {
+	targetPrices: Price[];
+	targetEntitlements: Entitlement[];
+	candidatePrices: Price[];
+	candidateEntitlements: Entitlement[];
 }) => {
-	return {
-		prices: [...newPrices, ...updatedPrices, ...samePrices],
-		entitlements: [...newEnts, ...updatedEnts, ...sameEnts].map((ent) => ({
-			...ent,
-			feature: features.find((f) => f.id === ent.feature_id),
-		})),
-		customPrices: [...newPrices, ...updatedPrices],
-		customEnts: [...newEnts, ...updatedEnts],
-		features,
-	};
+	for (const targetPrice of targetPrices) {
+		copyStripeResourcesToMatchingPrice({
+			targetPrice,
+			candidatePrices,
+			targetEntitlements,
+			candidateEntitlements,
+		});
+	}
 };
 
 export const handleNewProductItems = async ({
@@ -155,7 +174,7 @@ export const handleNewProductItems = async ({
 	newItems: ProductItem[];
 	features: Feature[];
 	product: Product;
-	logger: any;
+	logger: Logger;
 	isCustom: boolean;
 	newVersion?: boolean;
 	saveToDb?: boolean;
@@ -249,6 +268,13 @@ export const handleNewProductItems = async ({
 		}
 	}
 
+	carryForwardStripeResources({
+		targetPrices: [...newPrices, ...updatedPrices],
+		targetEntitlements: [...newEnts, ...updatedEnts, ...sameEnts],
+		candidatePrices: curPrices,
+		candidateEntitlements: curEnts,
+	});
+
 	const printLogs = false;
 	if (printLogs) {
 		logPrices({ prices: newPrices, prefix: "New prices" });
@@ -272,7 +298,6 @@ export const handleNewProductItems = async ({
 
 	if ((isCustom || newVersion) && saveToDb) {
 		return handleCustomProductItems({
-			db,
 			newPrices,
 			newEnts,
 			updatedPrices,

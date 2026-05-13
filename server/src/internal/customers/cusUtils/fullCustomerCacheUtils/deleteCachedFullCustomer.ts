@@ -4,8 +4,8 @@ import {
 	redis,
 } from "@/external/redis/initRedis.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
+import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import { buildPathIndexKey } from "../../cache/pathIndex/pathIndexConfig.js";
 import {
 	buildFullCustomerCacheGuardKey,
 	buildFullCustomerCacheKey,
@@ -35,21 +35,6 @@ export const deleteCachedFullCustomer = async ({
 	if (!customerId) return;
 
 	const cacheKey = buildFullCustomerCacheKey({
-		orgId: org.id,
-		env,
-		customerId,
-	});
-	const testGuardKey = buildTestFullCustomerCacheGuardKey({
-		orgId: org.id,
-		env,
-		customerId,
-	});
-	const guardKey = buildFullCustomerCacheGuardKey({
-		orgId: org.id,
-		env,
-		customerId,
-	});
-	const pathIndexKey = buildPathIndexKey({
 		orgId: org.id,
 		env,
 		customerId,
@@ -85,14 +70,27 @@ export const deleteCachedFullCustomer = async ({
 				return;
 			}
 
+			const testGuardKey = buildTestFullCustomerCacheGuardKey({
+				orgId: org.id,
+				env,
+				customerId,
+			});
+			const guardKey = buildFullCustomerCacheGuardKey({
+				orgId: org.id,
+				env,
+				customerId,
+			});
+			const pathIndexKey = buildPathIndexKey({
+				orgId: org.id,
+				env,
+				customerId,
+			});
+
 			const result = await regionalRedis.deleteFullCustomerCache(
 				cacheKey,
 				testGuardKey,
 				guardKey,
 				pathIndexKey,
-				org.id,
-				env,
-				customerId,
 				guardTimestamp,
 				FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS.toString(),
 				skipGuard.toString(),

@@ -240,7 +240,7 @@ export const getCachedPartialFullSubject = async ({
 				? undefined
 				: featureBalancesOutcome.value,
 		invalidate: invalidateIncomplete,
-		warnMessage: `[getCachedPartialFullSubject] Incomplete cache for ${subjectLabel}, source: ${source}`,
+		warnMessage: `[getCachedPartialFullSubject] Incomplete cache for ${subjectLabel}, source: ${source}, reason: ${featureBalancesOutcome.kind === "missing" ? featureBalancesOutcome.reason : "n/a"}`,
 	});
 	if (balancesPresent === undefined) {
 		return {

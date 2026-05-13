@@ -23,6 +23,7 @@ import {
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import { createStripeCli } from "@server/external/connect/createStripeCli.js";
 import { createStripePriceIFNotExist } from "@server/external/stripe/createStripePrice/createStripePrice.js";
+import { assertNoPreviewStripeIdsOnProduct } from "@server/external/stripe/previewStripeResourceIds.js";
 import { getBillingType } from "@server/internal/products/prices/priceUtils.js";
 import RecaseError from "@server/utils/errorUtils.js";
 import { generateId, notNullish } from "@server/utils/genUtils.js";
@@ -244,6 +245,7 @@ export const checkStripeProductExists = async ({
 	logger: any;
 }) => {
 	let createNew = false;
+	assertNoPreviewStripeIdsOnProduct({ product });
 	const stripeCli = createStripeCli({
 		org,
 		env,
