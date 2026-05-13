@@ -6,12 +6,12 @@ import {
 	CoinVerticalIcon,
 	CubeIcon,
 	DatabaseIcon,
+	IdentificationCardIcon,
 	LegoIcon,
 	OptionIcon,
 	TerminalWindowIcon,
 	TriangleIcon,
 	UserCircleIcon,
-	IdentificationCardIcon,
 	WebhooksLogoIcon,
 } from "@phosphor-icons/react";
 import { PanelLeft } from "lucide-react";
@@ -194,27 +194,36 @@ export const MainSidebar = ({
 								},
 							]}
 						/>
-						<CollapsibleNavGroup
-							value="customers"
-							icon={<UserCircleIcon size={16} weight="fill" />}
-							title="Customers"
-							env={env}
-							isOpen={customerGroupOpen}
-							onToggle={() => setCustomerGroupOpen((prev) => !prev)}
-							subTabs={[
-								{
-									title: "All Customers",
-									value: "customers",
-									icon: <IdentificationCardIcon size={16} weight="fill" />,
-								},
-								{
-									title: "Migrations",
-									value: "migrations",
-									path: "/migrations",
-									icon: <ArrowsClockwiseIcon size={16} weight="fill" />,
-								},
-							]}
-						/>
+						{isAdmin ? (
+							<CollapsibleNavGroup
+								value="customers"
+								icon={<UserCircleIcon size={16} weight="fill" />}
+								title="Customers"
+								env={env}
+								isOpen={customerGroupOpen}
+								onToggle={() => setCustomerGroupOpen((prev) => !prev)}
+								subTabs={[
+									{
+										title: "All Customers",
+										value: "customers",
+										icon: <IdentificationCardIcon size={16} weight="fill" />,
+									},
+									{
+										title: "Migrations",
+										value: "migrations",
+										path: "/migrations",
+										icon: <ArrowsClockwiseIcon size={16} weight="fill" />,
+									},
+								]}
+							/>
+						) : (
+							<NavButton
+								value="customers"
+								icon={<UserCircleIcon size={16} weight="fill" />}
+								title="Customers"
+								env={env}
+							/>
+						)}
 						<NavButton
 							value="analytics"
 							icon={<ChartBarIcon size={16} weight="fill" />}

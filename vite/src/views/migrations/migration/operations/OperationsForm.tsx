@@ -41,135 +41,35 @@ export function OperationsForm({
 }) {
 	const [autoOpenPicker, setAutoOpenPicker] = useState(false);
 	const operations = value.customer ?? [];
-	const updatePlanOps = operations.filter((op) => op.type === "update_plan");
-	const addPlanOps = operations.filter((op) => op.type === "add_plan");
+	const addPlanOps = operations.filter(
+		(op): op is AddPlanOp => op.type === "add_plan",
+	);
 	const hasAddPlans = addPlanOps.length > 0;
 	const isEmpty = operations.length === 0;
 
 	const setOperations = (next: CustomerOperation[]) =>
 		onChange({ ...value, customer: next });
 
-	const updateUpdatePlanAt = (index: number, updated: CustomerOperation) => {
-		const next = [...updatePlanOps];
+	const updateAt = (index: number, updated: CustomerOperation) => {
+		const next = [...operations];
 		next[index] = updated;
-		setOperations([...next, ...addPlanOps]);
+		setOperations(next);
 	};
 
-	const removeUpdatePlanAt = (index: number) =>
-		setOperations([
-			...updatePlanOps.filter((_, i) => i !== index),
-			...addPlanOps,
-		]);
+	const removeAt = (index: number) =>
+		setOperations(operations.filter((_, i) => i !== index));
 
-	const handleAddPlansUpdate = (newAddPlanOps: AddPlanOp[]) =>
-		setOperations([...updatePlanOps, ...newAddPlanOps]);
+	const handleAddPlansUpdate = (newAddPlanOps: AddPlanOp[]) => {
+		const nonAdd = operations.filter((op) => op.type !== "add_plan");
+		setOperations([...nonAdd, ...newAddPlanOps]);
+	};
 
-	const removeAllAddPlans = () => setOperations([...updatePlanOps]);
+	const removeAllAddPlans = () =>
+		setOperations(operations.filter((op) => op.type !== "add_plan"));
 
 	return (
 		<div className="flex flex-col">
-			{isEmpty ? (
-				<div className="flex gap-3">
-					<ActionCard
-						icon={
-							<PencilSimpleIcon
-								size={20}
-								weight="duotone"
-								className="text-t3 shrink-0"
-							/>
-						}
-						heading="Update Plan"
-						subheading="Modify existing customer plans"
-						onClick={() => {
-							setOperations([DEFAULT_UPDATE_PLAN]);
-							setAutoOpenPicker(true);
-						}}
-						className="flex-1"
-					/>
-					<ActionCard
-						icon={
-							<PackageIcon
-								size={20}
-								weight="duotone"
-								className="text-t3 shrink-0"
-							/>
-						}
-						heading="Add Plan"
-						subheading="Assign a new plan to customers"
-						onClick={() => {
-							setOperations([{ type: "add_plan", plan_id: "" }]);
-							setAutoOpenPicker(true);
-						}}
-						className="flex-1"
-					/>
-				</div>
-			) : (
-				<>
-					{updatePlanOps.map((operation, index) => (
-						<div key={`update-${index}`} className="flex flex-col">
-							{index > 0 && <div className="border-t my-3" />}
-							<UpdatePlanOpForm
-								value={operation as UpdatePlanOp}
-								onChange={(updated) => updateUpdatePlanAt(index, updated)}
-								onRemove={() => removeUpdatePlanAt(index)}
-								defaultOpenPicker={index === 0 && autoOpenPicker}
-							/>
-						</div>
-					))}
-
-					{hasAddPlans && (
-						<>
-							{updatePlanOps.length > 0 && <div className="border-t my-3" />}
-							<AddPlansSection
-								operations={addPlanOps}
-								onUpdate={handleAddPlansUpdate}
-								onRemoveAll={removeAllAddPlans}
-								defaultOpenPicker={autoOpenPicker}
-							/>
-						</>
-					)}
-
-					<div className="border-t mt-3 pt-3 flex gap-3">
-						<ActionCard
-							icon={
-								<PencilSimpleIcon
-									size={20}
-									weight="duotone"
-									className="text-t3 shrink-0"
-								/>
-							}
-							heading="Update Plan"
-							subheading="Modify existing customer plans"
-							onClick={() =>
-								setOperations([...operations, DEFAULT_UPDATE_PLAN])
-							}
-							className="flex-1"
-						/>
-						{!hasAddPlans && (
-							<ActionCard
-								icon={
-									<PackageIcon
-										size={20}
-										weight="duotone"
-										className="text-t3 shrink-0"
-									/>
-								}
-								heading="Add Plan"
-								subheading="Assign a new plan to customers"
-								onClick={() =>
-									setOperations([
-										...operations,
-										{ type: "add_plan", plan_id: "" },
-									])
-								}
-								className="flex-1"
-							/>
-						)}
-					</div>
-				</>
-			)}
-
-			<div className="border-t mt-3 pt-3 flex flex-col gap-2">
+			<div className="flex flex-col gap-2 border-b pb-3 mb-3">
 				<span className="text-sm font-medium text-t1">Billing Scope</span>
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
@@ -214,6 +114,118 @@ export function OperationsForm({
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>
+
+			{isEmpty ? (
+				<div className="flex flex-col gap-2">
+					<span className="text-sm font-medium text-t1">Add Operation</span>
+					<div className="flex gap-3">
+						<ActionCard
+							icon={
+								<PencilSimpleIcon
+									size={20}
+									weight="duotone"
+									className="text-t3 shrink-0"
+								/>
+							}
+							heading="Update Plan"
+							subheading="Modify existing customer plans"
+							onClick={() => {
+								setOperations([DEFAULT_UPDATE_PLAN]);
+								setAutoOpenPicker(true);
+							}}
+							className="flex-1"
+						/>
+						<ActionCard
+							icon={
+								<PackageIcon
+									size={20}
+									weight="duotone"
+									className="text-t3 shrink-0"
+								/>
+							}
+							heading="Add Plan"
+							subheading="Assign a new plan to customers"
+							onClick={() => {
+								setOperations([{ type: "add_plan", plan_id: "" }]);
+								setAutoOpenPicker(true);
+							}}
+							className="flex-1"
+						/>
+					</div>
+				</div>
+			) : (
+				<>
+					{operations.map((operation, index) => {
+						if (operation.type === "add_plan") return null;
+						return (
+							<div key={`op-${index}`} className="flex flex-col">
+								{index > 0 && <div className="border-t my-3" />}
+								<UpdatePlanOpForm
+									value={operation as UpdatePlanOp}
+									onChange={(updated) => updateAt(index, updated)}
+									onRemove={() => removeAt(index)}
+									defaultOpenPicker={index === 0 && autoOpenPicker}
+								/>
+							</div>
+						);
+					})}
+
+					{hasAddPlans && (
+						<>
+							{operations.some((op) => op.type === "update_plan") && (
+								<div className="border-t my-3" />
+							)}
+							<AddPlansSection
+								operations={addPlanOps}
+								onUpdate={handleAddPlansUpdate}
+								onRemoveAll={removeAllAddPlans}
+								defaultOpenPicker={autoOpenPicker}
+							/>
+						</>
+					)}
+
+					<div className="border-t mt-3 pt-3 flex flex-col gap-2">
+						<span className="text-sm font-medium text-t1">Add Operation</span>
+						<div className="flex gap-3">
+							<ActionCard
+								icon={
+									<PencilSimpleIcon
+										size={20}
+										weight="duotone"
+										className="text-t3 shrink-0"
+									/>
+								}
+								heading="Update Plan"
+								subheading="Modify existing customer plans"
+								onClick={() =>
+									setOperations([...operations, DEFAULT_UPDATE_PLAN])
+								}
+								className="flex-1"
+							/>
+							{!hasAddPlans && (
+								<ActionCard
+									icon={
+										<PackageIcon
+											size={20}
+											weight="duotone"
+											className="text-t3 shrink-0"
+										/>
+									}
+									heading="Add Plan"
+									subheading="Assign a new plan to customers"
+									onClick={() =>
+										setOperations([
+											...operations,
+											{ type: "add_plan", plan_id: "" },
+										])
+									}
+									className="flex-1"
+								/>
+							)}
+						</div>
+					</div>
+				</>
+			)}
 		</div>
 	);
 }

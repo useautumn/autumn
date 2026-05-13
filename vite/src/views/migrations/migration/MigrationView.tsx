@@ -29,6 +29,7 @@ export function MigrationView() {
 	const setSelectedCustomer = useMigrationSheetStore(
 		(s) => s.setSelectedCustomer,
 	);
+	const liveFormState = useMigrationSheetStore((s) => s.liveFormState);
 	const closeSheet = useCallback(
 		() => setSelectedCustomer(null),
 		[setSelectedCustomer],
@@ -114,8 +115,8 @@ export function MigrationView() {
 							<MigrationCustomerSheet
 								migrationId={migration.id}
 								customer={selectedCustomer}
-								operations={migration.operations ?? {}}
-								noBillingChanges={migration.no_billing_changes ?? false}
+								operations={liveFormState.operations}
+								noBillingChanges={liveFormState.noBillingChanges}
 							/>
 						</SheetContainer>
 					</motion.div>

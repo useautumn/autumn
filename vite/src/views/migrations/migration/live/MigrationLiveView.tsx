@@ -16,10 +16,8 @@ import {
 	XIcon,
 } from "@phosphor-icons/react";
 import type { ColumnDef, PaginationState, Row } from "@tanstack/react-table";
-import type { AxiosError } from "axios";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
 import { Table } from "@/components/general/table";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
@@ -51,28 +49,32 @@ import {
 	type MigrationItemEvent,
 	useMigrationRunsQuery,
 } from "@/hooks/queries/useMigrationRunsQuery";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
 import { cn } from "@/lib/utils";
-import { getBackendErr } from "@/utils/genUtils";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
 import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
+import { ActiveDot } from "./ActiveDot";
 import {
 	type ExecutionStatus,
 	ExecutionStatusSubMenu,
 	hasActiveExecutionFilters,
 } from "./ExecutionStatusSubMenu";
+import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
 import { useMigrationSheetStore } from "./useMigrationSheetStore";
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 250];
 
+type ActiveRunStatus = "queued" | "running" | null;
+
 type CustomerRow = CustomerWithProducts & {
 	_event?: MigrationItemEvent;
-	_isActive?: boolean;
+	_activeStatus?: ActiveRunStatus;
+	_activeRunId?: string;
 };
 
 function buildEventsByCustomer(itemEvents: MigrationItemEvent[]) {
@@ -92,6 +94,22 @@ const statusColumn: ColumnDef<CustomerRow, unknown> = {
 	size: 140,
 	cell: ({ row }: { row: Row<CustomerRow> }) => {
 		const event = row.original._event;
+		const activeStatus = row.original._activeStatus;
+		const activeRunId = row.original._activeRunId;
+		const processedInCurrentRun =
+			event && activeRunId && event.migration_run_id === activeRunId;
+
+		if (activeStatus && !processedInCurrentRun) {
+			const color = activeStatus === "running" ? "green" : "orange";
+			const label = activeStatus === "running" ? "Running" : "Queued";
+			return (
+				<Badge variant="muted" className="gap-1.5">
+					<ActiveDot color={color} />
+					{label}
+				</Badge>
+			);
+		}
+
 		if (event)
 			return (
 				<ItemEventStatusBadge
@@ -100,6 +118,7 @@ const statusColumn: ColumnDef<CustomerRow, unknown> = {
 					response={event.response}
 				/>
 			);
+
 		return <Badge variant="muted">Not Run</Badge>;
 	},
 };
@@ -130,7 +149,6 @@ export function MigrationLiveView({
 	onStepChange: (step: StepId) => void;
 	onPrevious?: () => void;
 }) {
-	const { runMigration, isRunning } = useMigrationsQuery();
 	const { queryStates: customerFilters } = useCustomerFilters();
 	const [executionStatuses, setExecutionStatuses] = useState<ExecutionStatus[]>(
 		[],
@@ -172,51 +190,44 @@ export function MigrationLiveView({
 
 	const {
 		itemEvents,
-		isActive,
 		runs,
 		invalidate: invalidateRuns,
 	} = useMigrationRunsQuery({ migrationId });
 
+	const {
+		subscriptions: realtimeSubscriptions,
+		hasActive: hasRealtimeActive,
+		handleComplete: handleRealtimeComplete,
+		triggerRun,
+		isRunning,
+	} = useRealtimeSubscriptions({ migrationId, invalidateRuns });
+
 	const setSelectedCustomer = useMigrationSheetStore(
 		(s) => s.setSelectedCustomer,
 	);
-
-	const triggerRun = async (opts: {
-		dryRun: boolean;
-		limit?: number;
-		only?: string[];
-	}) => {
-		try {
-			const result = await runMigration({
-				id: migrationId,
-				dry_run: opts.dryRun,
-				limit: opts.limit,
-				only: opts.only,
-			});
-			toast.success(
-				`${opts.dryRun ? "Dry run" : "Migration run"} triggered (${result.run_id})`,
-			);
-			invalidateRuns();
-		} catch (error) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to run migration"),
-			);
-		}
-	};
 
 	const eventsByCustomer = useMemo(
 		() => buildEventsByCustomer(itemEvents),
 		[itemEvents],
 	);
 
+	const activeRun = runs.find(
+		(r) => r.status === "queued" || r.status === "running",
+	);
+	const activeRunStatus: ActiveRunStatus = hasRealtimeActive
+		? "running"
+		: ((activeRun?.status as ActiveRunStatus) ?? null);
+	const activeRunId = activeRun?.internal_id ?? null;
+
 	const enrichedCustomers = useMemo(
 		(): CustomerRow[] =>
 			customers.map((c) => ({
 				...c,
 				_event: eventsByCustomer.get(c.internal_id),
-				_isActive: isActive,
+				_activeStatus: activeRunStatus,
+				_activeRunId: activeRunId ?? undefined,
 			})),
-		[customers, eventsByCustomer, isActive],
+		[customers, eventsByCustomer, activeRunStatus, activeRunId],
 	);
 
 	const filteredCustomers = useMemo(() => {
@@ -291,6 +302,13 @@ export function MigrationLiveView({
 
 	return (
 		<div className="flex flex-col gap-4">
+			{realtimeSubscriptions.map((sub) => (
+				<RealtimeRunWatcher
+					key={sub.triggerRunId}
+					subscription={sub}
+					onComplete={handleRealtimeComplete}
+				/>
+			))}
 			{latestFailedRun && latestFailedRun.internal_id !== dismissedError && (
 				<div className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-500">
 					<WarningIcon size={14} weight="fill" className="shrink-0" />

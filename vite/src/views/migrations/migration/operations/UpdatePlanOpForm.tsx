@@ -302,7 +302,7 @@ export function UpdatePlanOpForm({
 			<DropdownMenu>
 				<DropdownMenuTrigger className={DASHED_BUTTON_CLASS}>
 					<PlusIcon size={10} />
-					Add Update Item
+					Add modification
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-(--anchor-width)">
 					{value.version === undefined && (
