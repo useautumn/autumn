@@ -6,13 +6,17 @@ import {
 	CustomerExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
+	type ListCustomersV2_3Params,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
+	StandardCursor,
+	type StandardCursorFields,
 } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
 import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/triggerBatchResetCustomerEntitlements.js";
+import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
 
@@ -141,6 +145,109 @@ export class CusBatchService {
 		});
 
 		return finals;
+	}
+
+	static async getCursorPage({
+		ctx,
+		query,
+	}: {
+		ctx: RequestContext;
+		query: ListCustomersV2_3Params;
+	}): Promise<{ list: ApiCustomerV5[]; next_cursor: string | null }> {
+		const expand = ctx.expand || [];
+		const includeInvoices = expand.includes(CustomerExpand.Invoices);
+		const withEntities = expand.includes(CustomerExpand.Entities);
+		const withTrialsUsed = expand.includes(CustomerExpand.TrialsUsed);
+
+		const { limit, plans, subscription_status, search, processors } = query;
+
+		const cursor: StandardCursorFields | null = StandardCursor.decode(
+			query.cursor,
+		);
+
+		const cusProductLimit = getOrgCusProductLimit({
+			orgId: ctx.org.id,
+			orgSlug: ctx.org.slug,
+		});
+
+		const sqlQuery = getCursorPaginatedFullCusQuery({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			inStatuses: subscription_status
+				? [subscription_status as unknown as CusProductStatus]
+				: RELEVANT_STATUSES,
+			includeInvoices,
+			withEntities,
+			withTrialsUsed,
+			withSubs: true,
+			limit,
+			cursor: cursor ?? undefined,
+			search,
+			plans,
+			processors,
+			cusProductLimit,
+		});
+
+		const results = await ctx.db.execute(sqlQuery);
+
+		const hasMore = results.length > limit;
+		const pageRows = hasMore ? results.slice(0, limit) : results;
+		const peekRow = hasMore ? results[limit] : undefined;
+
+		const finals: ApiCustomerV5[] = [];
+		const fullCustomers: FullCustomer[] = [];
+
+		for (const result of pageRows) {
+			try {
+				const normalizedCustomer =
+					CusBatchService.normalizeCustomerData(result);
+				const fullCus = normalizedCustomer as FullCustomer;
+				fullCustomers.push(fullCus);
+
+				const { apiCustomer: baseCustomer, legacyData } =
+					await getApiCustomerBase({
+						ctx,
+						fullCus,
+						withAutumnId: false,
+					});
+
+				const versionedCustomer = applyResponseVersionChanges<
+					ApiCustomerV5,
+					CustomerLegacyData
+				>({
+					input: baseCustomer,
+					legacyData,
+					targetVersion: ctx.apiVersion,
+					resource: AffectedResource.Customer,
+					ctx,
+				});
+
+				finals.push(versionedCustomer);
+			} catch (error) {
+				ctx.logger.error(`Failed to process customer ${result.id}: ${error}`);
+			}
+		}
+
+		triggerBatchResetCustomerEntitlements({
+			ctx,
+			fullCustomers,
+		}).catch((err) => {
+			ctx.logger.error(
+				"[CusBatchService.getCursorPage] batch reset failed:",
+				err,
+			);
+			Sentry.captureException(err);
+		});
+
+		const nextCursor =
+			hasMore && peekRow
+				? StandardCursor.encode({
+						id: (peekRow as { id: string }).id,
+						t: Number((peekRow as { created_at: number | string }).created_at),
+					})
+				: null;
+
+		return { list: finals, next_cursor: nextCursor };
 	}
 
 	/**
