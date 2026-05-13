@@ -105,10 +105,12 @@ export const createProduct = async ({
 		free_trial: newFreeTrial,
 	};
 
-	await initProductInStripe({
-		ctx,
-		product: newFullProduct,
-	});
+	if (data.create_in_stripe !== false) {
+		await initProductInStripe({
+			ctx,
+			product: newFullProduct,
+		});
+	}
 
 	await addTaskToQueue({
 		jobName: JobName.DetectBaseVariant,

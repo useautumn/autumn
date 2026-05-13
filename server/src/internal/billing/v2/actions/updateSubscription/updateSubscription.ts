@@ -43,6 +43,7 @@ export async function updateSubscription({
 	const billingContext = await setupUpdateSubscriptionBillingContext({
 		ctx,
 		params,
+		preview,
 		contextOverride,
 	});
 
@@ -96,12 +97,12 @@ export async function updateSubscription({
 	) {
 		const autumnCheckoutResult =
 			await createAutumnCheckout<UpdateSubscriptionBillingContext>({
-			ctx,
-			action: CheckoutAction.UpdateSubscription,
-			params,
-			billingContext,
-			billingPlan,
-		});
+				ctx,
+				action: CheckoutAction.UpdateSubscription,
+				params,
+				billingContext,
+				billingPlan,
+			});
 
 		return autumnCheckoutResult;
 	}

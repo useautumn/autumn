@@ -1,4 +1,4 @@
-import type { EventInsert, TrackParams } from "@autumn/shared";
+import type { EventInsert, TrackDeduction, TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { generateId } from "../../../utils/genUtils.js";
 
@@ -35,6 +35,7 @@ export const initEvent = (params: {
 	internalEntityId?: string;
 	customerId: string;
 	entityId?: string;
+	deductions?: TrackDeduction[];
 }) => {
 	const {
 		ctx,
@@ -43,6 +44,7 @@ export const initEvent = (params: {
 		internalEntityId,
 		customerId,
 		entityId,
+		deductions,
 	} = params;
 
 	const { org, env } = ctx;
@@ -69,6 +71,7 @@ export const initEvent = (params: {
 		properties: eventInfo.properties ?? {},
 		idempotency_key: eventInfo.idempotency_key ?? null,
 		set_usage: false,
+		deductions: deductions && deductions.length > 0 ? deductions : null,
 	} satisfies EventInsert;
 
 	return newEvent;
