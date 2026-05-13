@@ -93,7 +93,7 @@ function SelectContent({
 				side={side}
 				alignItemWithTrigger={false}
 				positionMethod="fixed"
-				className="isolate z-[160]"
+				className="isolate z-[200]"
 			>
 				<SelectPrimitive.Popup
 					data-slot="select-content"
