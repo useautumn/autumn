@@ -7,6 +7,10 @@ import {
 	FullCusProductSchema,
 } from "../cusProductModels/cusProductModels.js";
 import type { Event } from "../eventModels/eventTable.js";
+import {
+	type MigrationItemRunData,
+	MigrationItemRunSchema,
+} from "../migrationV2Models/migrationItemRunSchema.js";
 import type {
 	Schedule,
 	SchedulePhase,
@@ -56,6 +60,10 @@ export const FullCustomerSchema = CustomerSchema.extend({
 		.optional(),
 	invoices: z.array(InvoiceSchema).optional(),
 	schedule: FullCustomerScheduleSchema.optional(),
+	// `.default([])` makes the FullCustomer cache (which uses this schema for
+	// hole-filling via `normalizeFromSchema`) tolerant of entries written
+	// before this field existed. Empty array also matches the SQL default.
+	migration_item_runs: z.array(MigrationItemRunSchema).optional(),
 });
 
 export type FullCustomerSchedule = Schedule & { phases: SchedulePhase[] };
@@ -74,6 +82,7 @@ export type FullCustomer = Customer & {
 	events?: Event[];
 	extra_customer_entitlements: FullCustomerEntitlement[];
 	schedule?: FullCustomerSchedule;
+	migration_item_runs?: MigrationItemRunData[];
 };
 
 export const CustomerWithProductsSchema = CustomerSchema.extend({

@@ -120,6 +120,7 @@ export * from "./models/genModels/processorSchemas";
 export * from "./models/migrationModels/migrationErrorTable";
 export * from "./models/migrationModels/migrationJobTable";
 export * from "./models/migrationModels/migrationModels";
+export * from "./models/migrationV2Models/migrationItemRunSchema";
 export * from "./models/migrationV2Models/migrationItemRunTable";
 export * from "./models/migrationV2Models/migrationRunTable";
 export * from "./models/migrationV2Models/migrationTable";

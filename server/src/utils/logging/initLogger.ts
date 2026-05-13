@@ -78,7 +78,11 @@ const levelNames: Record<number | string, string> = {
 };
 
 /** Bun-friendly pino sink that prints `<ts> <LEVEL> <msg> <extras>`. */
-const createDevLogStream = () =>
+const createDevLogStream = ({
+	trailingNewline = true,
+}: {
+	trailingNewline?: boolean;
+} = {}) =>
 	new Writable({
 		write(chunk, _encoding, callback) {
 			try {
@@ -108,7 +112,7 @@ const createDevLogStream = () =>
 					message += ` ${JSON.stringify(additionalFields, null, 2)}`;
 				}
 
-				const formattedLog = `${colors.gray}${timestamp}${colors.reset} ${levelColor}${colors.bright}${levelName}${colors.reset} ${message}\n`;
+				const formattedLog = `${colors.gray}${timestamp}${colors.reset} ${levelColor}${colors.bright}${levelName}${colors.reset} ${message}${trailingNewline ? "\n" : ""}`;
 
 				process.stdout.write(formattedLog);
 				callback();
@@ -145,7 +149,9 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 	if (mode === "dual") {
 		streams.push({
 			level: isDevOrTest ? "debug" : "info",
-			stream: isDevOrTest ? createDevLogStream() : process.stdout,
+			stream: isDevOrTest
+				? createDevLogStream({ trailingNewline: false })
+				: process.stdout,
 		});
 		if (process.env.AXIOM_TOKEN) {
 			streams.push({
@@ -208,7 +214,7 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 				};
 			},
 			formatters: {
-				level: (label: any) => {
+				level: (label: string) => {
 					return {
 						level: label.toUpperCase(),
 					};

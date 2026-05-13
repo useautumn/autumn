@@ -6,11 +6,11 @@
   2. Optionally sets the stale-write guard key (to prevent in-flight requests from writing stale data)
   3. Deletes the cache key and path index key
 
-  All keys are constructed internally from orgId/env/customerId using the
-  prepended key builder functions.
-
   KEYS:
-    [1] cacheKey - used for cluster slot routing only
+    [1] cacheKey
+    [2] testGuardKey
+    [3] guardKey
+    [4] pathIdxKey
 
   ARGV:
     [1] orgId
@@ -33,10 +33,10 @@ local guardTimestamp = ARGV[4]
 local guardTtl = tonumber(ARGV[5])
 local skipGuard = ARGV[6] == "true"
 
-local testGuardKey = build_test_guard_key(org_id, env, customer_id)
-local guardKey = build_guard_key(org_id, env, customer_id)
-local cacheKey = build_full_customer_cache_key(org_id, env, customer_id)
-local pathIdxKey = build_path_index_key(org_id, env, customer_id)
+local cacheKey = KEYS[1]
+local testGuardKey = KEYS[2]
+local guardKey = KEYS[3]
+local pathIdxKey = KEYS[4]
 
 -- Check test guard first (used in race condition tests)
 if redis.call("EXISTS", testGuardKey) == 1 then

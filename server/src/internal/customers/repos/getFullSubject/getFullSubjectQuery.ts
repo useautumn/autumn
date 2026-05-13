@@ -184,6 +184,27 @@ export const getFullSubjectQuery = ({
 			LIMIT 10
 		)`;
 
+	const migrationItemRunsCte = sql`,
+
+		customer_migration_item_runs AS (
+			SELECT mir.*
+			FROM migration_item_runs mir
+			WHERE mir.item_kind = 'customer'
+				AND mir.dry_run = false
+				AND mir.item_id IN (SELECT internal_id FROM subject_customer_records)
+				AND mir.migration_internal_id IN (
+					SELECT mr.migration_internal_id
+					FROM migration_runs mr
+					WHERE mr.org_id = ${orgId}
+						AND mr.env = ${env}
+						AND mr.status IN ('queued', 'running')
+						AND mr.dry_run = false
+						AND mr.lazy_run = true
+				)
+			ORDER BY mir.updated_at DESC NULLS LAST, mir.created_at DESC
+			LIMIT 10
+		)`;
+
 	const subscriptionsSelect = sql`,
 
 			COALESCE(
@@ -207,6 +228,20 @@ export const getFullSubjectQuery = ({
 				),
 				'[]'::json
 			) AS invoices`;
+
+	const migrationItemRunsSelect = sql`,
+
+			COALESCE(
+				(
+					SELECT json_agg(
+						row_to_json(mir)
+						ORDER BY mir.updated_at DESC NULLS LAST, mir.created_at DESC
+					)
+					FROM customer_migration_item_runs mir
+					WHERE mir.item_id = scr.internal_id
+				),
+				'[]'::json
+			) AS migration_item_runs`;
 
 	const entitySelect = entityId
 		? sql`,
@@ -283,6 +318,7 @@ export const getFullSubjectQuery = ({
 
 		${subscriptionsCte}
 		${invoicesCte}
+		${migrationItemRunsCte}
 		${entityFragments.ctes}
 		,
 
@@ -467,6 +503,7 @@ export const getFullSubjectQuery = ({
 
 			${subscriptionsSelect}
 			${invoicesSelect}
+			${migrationItemRunsSelect}
 			${entitySelect}
 			${entityFragments.selectColumns}
 

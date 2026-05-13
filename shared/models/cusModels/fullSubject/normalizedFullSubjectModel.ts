@@ -18,6 +18,7 @@ import {
 	FeatureOptionsSchema,
 } from "../../cusProductModels/cusProductModels.js";
 import type { DbCustomerProduct } from "../../cusProductModels/cusProductTable.js";
+import type { MigrationItemRunData } from "../../migrationV2Models/migrationItemRunSchema.js";
 import type { EntitlementWithFeature } from "../../productModels/entModels/entModels.js";
 import type { DbFreeTrial } from "../../productModels/freeTrialModels/freeTrialTable.js";
 import type { DbPrice } from "../../productModels/priceModels/priceTable.js";
@@ -178,4 +179,9 @@ export type NormalizedFullSubject = {
 	invoices: Invoice[];
 
 	entity_aggregations?: EntityAggregations;
+
+	/** Latest 10 `migration_item_runs` for this customer, scoped to the
+	 *  org's active lazy/background migrations. Empty when no migrations
+	 *  are active for the org. */
+	migration_item_runs?: MigrationItemRunData[];
 };
