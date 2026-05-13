@@ -83,7 +83,6 @@ next-env.d.ts
 *.rdb
 
 
-shared/drizzle
 
 
 run.sh

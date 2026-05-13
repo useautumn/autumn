@@ -1,0 +1,120 @@
+name: Run Database Migrations
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - dev
+    paths:
+      - "shared/drizzle/**"
+      - "shared/db/**"
+      - "shared/drizzle.config.ts"
+      - ".github/workflows/migrations.yml"
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run migrations against"
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+jobs:
+  determine-environment:
+    name: Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+    steps:
+      - name: Determine environment from branch or input
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          else
+            BRANCH_NAME=${GITHUB_REF#refs/heads/}
+            case "$BRANCH_NAME" in
+              main)
+                echo "environment=prod" >> $GITHUB_OUTPUT
+                ;;
+              staging)
+                echo "environment=staging" >> $GITHUB_OUTPUT
+                ;;
+              dev)
+                echo "environment=dev" >> $GITHUB_OUTPUT
+                ;;
+            esac
+          fi
+
+  migrate-dev:
+    name: Migrate Dev Database
+    needs: determine-environment
+    if: needs.determine-environment.outputs.environment == 'dev'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_DEV }}
+        run: bun db:migrate
+
+  migrate-staging:
+    name: Migrate Staging Database
+    needs: determine-environment
+    if: needs.determine-environment.outputs.environment == 'staging'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_STAGING }}
+        run: bun db:migrate
+
+  migrate-prod:
+    name: Migrate Production Database
+    needs: determine-environment
+    if: needs.determine-environment.outputs.environment == 'prod'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_PROD }}
+        run: bun db:migrate
