@@ -31,6 +31,7 @@ export function ValuePicker({
 	onRemove,
 	placeholder = "Select...",
 	className: triggerClassName,
+	defaultOpen = false,
 }: {
 	suggestions: ValuePickerOption[];
 	selectedValues: string[];
@@ -38,8 +39,9 @@ export function ValuePicker({
 	onRemove: (value: string) => void;
 	placeholder?: string;
 	className?: string;
+	defaultOpen?: boolean;
 }) {
-	const [open, setOpen] = useState(false);
+	const [open, setOpen] = useState(defaultOpen);
 
 	const getOption = (val: string) => suggestions.find((s) => s.value === val);
 

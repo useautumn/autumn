@@ -74,12 +74,14 @@ export function FilterGroup({
 	onDelete,
 	showDelete,
 	groupIndex,
+	autoOpenField = false,
 }: {
 	group: FilterGroupData;
 	onChange: (group: FilterGroupData) => void;
 	onDelete: () => void;
 	showDelete: boolean;
 	groupIndex: number;
+	autoOpenField?: boolean;
 }) {
 	const updateRule = (index: number, rule: FilterRule) => {
 		const newRules = [...group.rules];
@@ -122,10 +124,11 @@ export function FilterGroup({
 					connector={index > 0 ? "And" : undefined}
 					onChange={(updated) => updateRule(index, updated)}
 					onRemove={() => removeRule(index)}
+					defaultOpenField={index === 0 && autoOpenField}
 				/>
 			))}
 			<AddButton
-				label={group.rules.length === 0 ? "Add condition" : "And"}
+				label={group.rules.length === 0 ? "Add condition" : "Add and condition"}
 				onClick={addRule}
 				className="mt-1"
 			/>
@@ -138,11 +141,13 @@ function FilterRowWithSuggestions({
 	connector,
 	onChange,
 	onRemove,
+	defaultOpenField = false,
 }: {
 	rule: FilterRule;
 	connector?: "And";
 	onChange: (rule: FilterRule) => void;
 	onRemove: () => void;
+	defaultOpenField?: boolean;
 }) {
 	const suggestions = useSuggestionsForField(rule.field);
 	return (
@@ -152,6 +157,7 @@ function FilterRowWithSuggestions({
 			onChange={onChange}
 			onRemove={onRemove}
 			suggestions={suggestions}
+			defaultOpenField={defaultOpenField}
 		/>
 	);
 }

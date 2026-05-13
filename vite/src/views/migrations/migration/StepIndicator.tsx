@@ -1,6 +1,10 @@
 import type { Icon } from "@phosphor-icons/react";
-import { FunnelSimpleIcon, GearIcon, UsersIcon } from "@phosphor-icons/react";
-import { ChevronRight } from "lucide-react";
+import {
+	CaretRightIcon,
+	FunnelSimpleIcon,
+	GearIcon,
+	UsersIcon,
+} from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +33,7 @@ export function StepIndicator({
 					const StepIcon = s.icon;
 					return (
 						<div key={s.id} className="flex items-center gap-2">
-							{i > 0 && <ChevronRight className="size-3.5 text-t4" />}
+							{i > 0 && <CaretRightIcon size={14} className="text-t4" />}
 							<button
 								type="button"
 								onClick={() => onStepChange(s.id)}

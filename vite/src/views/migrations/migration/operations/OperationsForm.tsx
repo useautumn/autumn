@@ -4,12 +4,12 @@ import type {
 	Operations,
 	UpdatePlanOp,
 } from "@autumn/shared";
+import { useState } from "react";
 import {
 	CaretDownIcon,
 	CheckIcon,
 	PackageIcon,
 	PencilSimpleIcon,
-	PlusIcon,
 } from "@phosphor-icons/react";
 
 import {
@@ -18,8 +18,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
-import { cn } from "@/lib/utils";
-import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
+import { ActionCard } from "../shared/ActionCard";
 import { AutumnMark, StripeMark } from "../shared/BillingScopeMarks";
 import { AddPlansSection } from "./AddPlanOpForm";
 import { UpdatePlanOpForm } from "./UpdatePlanOpForm";
@@ -40,10 +39,12 @@ export function OperationsForm({
 	noBillingChanges: boolean;
 	onNoBillingChangesChange: (value: boolean) => void;
 }) {
+	const [autoOpenPicker, setAutoOpenPicker] = useState(false);
 	const operations = value.customer ?? [];
 	const updatePlanOps = operations.filter((op) => op.type === "update_plan");
 	const addPlanOps = operations.filter((op) => op.type === "add_plan");
 	const hasAddPlans = addPlanOps.length > 0;
+	const isEmpty = operations.length === 0;
 
 	const setOperations = (next: CustomerOperation[]) =>
 		onChange({ ...value, customer: next });
@@ -67,67 +68,106 @@ export function OperationsForm({
 
 	return (
 		<div className="flex flex-col">
-			{updatePlanOps.map((operation, index) => (
-				<div key={`update-${index}`} className="flex flex-col">
-					{index > 0 && <div className="border-t my-3" />}
-					<UpdatePlanOpForm
-						value={operation as UpdatePlanOp}
-						onChange={(updated) => updateUpdatePlanAt(index, updated)}
-						onRemove={() => removeUpdatePlanAt(index)}
+			{isEmpty ? (
+				<div className="flex gap-3">
+					<ActionCard
+						icon={
+							<PencilSimpleIcon
+								size={20}
+								weight="duotone"
+								className="text-t3 shrink-0"
+							/>
+						}
+						heading="Update Plan"
+						subheading="Modify existing customer plans"
+						onClick={() => {
+							setOperations([DEFAULT_UPDATE_PLAN]);
+							setAutoOpenPicker(true);
+						}}
+						className="flex-1"
+					/>
+					<ActionCard
+						icon={
+							<PackageIcon
+								size={20}
+								weight="duotone"
+								className="text-t3 shrink-0"
+							/>
+						}
+						heading="Add Plan"
+						subheading="Assign a new plan to customers"
+						onClick={() => {
+							setOperations([{ type: "add_plan", plan_id: "" }]);
+							setAutoOpenPicker(true);
+						}}
+						className="flex-1"
 					/>
 				</div>
-			))}
-
-			{hasAddPlans && (
+			) : (
 				<>
-					{updatePlanOps.length > 0 && <div className="border-t my-3" />}
-					<AddPlansSection
-						operations={addPlanOps}
-						onUpdate={handleAddPlansUpdate}
-						onRemoveAll={removeAllAddPlans}
-					/>
-				</>
-			)}
+					{updatePlanOps.map((operation, index) => (
+						<div key={`update-${index}`} className="flex flex-col">
+							{index > 0 && <div className="border-t my-3" />}
+							<UpdatePlanOpForm
+								value={operation as UpdatePlanOp}
+								onChange={(updated) => updateUpdatePlanAt(index, updated)}
+								onRemove={() => removeUpdatePlanAt(index)}
+								defaultOpenPicker={index === 0 && autoOpenPicker}
+							/>
+						</div>
+					))}
 
-			<div className={cn(operations.length > 0 && "border-t mt-3 pt-3")}>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<button type="button" className={DASHED_BUTTON_CLASS}>
-							<PlusIcon size={10} />
-							Add Operation
-						</button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent
-						align="start"
-						sideOffset={4}
-						className="w-(--anchor-width)"
-					>
-						<DropdownMenuItem
-							closeOnClick
+					{hasAddPlans && (
+						<>
+							{updatePlanOps.length > 0 && <div className="border-t my-3" />}
+							<AddPlansSection
+								operations={addPlanOps}
+								onUpdate={handleAddPlansUpdate}
+								onRemoveAll={removeAllAddPlans}
+								defaultOpenPicker={autoOpenPicker}
+							/>
+						</>
+					)}
+
+					<div className="border-t mt-3 pt-3 flex gap-3">
+						<ActionCard
+							icon={
+								<PencilSimpleIcon
+									size={20}
+									weight="duotone"
+									className="text-t3 shrink-0"
+								/>
+							}
+							heading="Update Plan"
+							subheading="Modify existing customer plans"
 							onClick={() =>
 								setOperations([...operations, DEFAULT_UPDATE_PLAN])
 							}
-						>
-							<PencilSimpleIcon size={14} weight="duotone" />
-							Update Plan
-						</DropdownMenuItem>
+							className="flex-1"
+						/>
 						{!hasAddPlans && (
-							<DropdownMenuItem
-								closeOnClick
+							<ActionCard
+								icon={
+									<PackageIcon
+										size={20}
+										weight="duotone"
+										className="text-t3 shrink-0"
+									/>
+								}
+								heading="Add Plan"
+								subheading="Assign a new plan to customers"
 								onClick={() =>
 									setOperations([
 										...operations,
 										{ type: "add_plan", plan_id: "" },
 									])
 								}
-							>
-								<PackageIcon size={14} weight="duotone" />
-								Add Plan
-							</DropdownMenuItem>
+								className="flex-1"
+							/>
 						)}
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</div>
+					</div>
+				</>
+			)}
 
 			<div className="border-t mt-3 pt-3 flex flex-col gap-2">
 				<span className="text-sm font-medium text-t1">Billing Scope</span>
