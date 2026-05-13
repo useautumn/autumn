@@ -7,7 +7,7 @@ export const handleGetFullCustomers = createRoute({
 	scopes: [Scopes.Customers.Read],
 	body: z.object({
 		search: z.string().optional(),
-		limit: z.number().int().min(1).max(200).optional().default(50),
+		limit: z.number().int().min(1).max(1000).optional().default(50),
 		cursor: z.string().optional().default(""),
 		filters: z
 			.object({
