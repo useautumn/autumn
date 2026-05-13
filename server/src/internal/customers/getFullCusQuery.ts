@@ -655,7 +655,7 @@ export const getPaginatedFullCusQuery = ({
     customer_products_aggregated AS (
       SELECT 
         cpwp.internal_customer_id,
-        json_agg(row_to_json(cpwp) ORDER BY cpwp.created_at DESC) AS customer_products
+        json_agg(row_to_json(cpwp) ORDER BY cpwp.created_at DESC, cpwp.id ASC) AS customer_products
       FROM customer_products_with_prices cpwp
       GROUP BY cpwp.internal_customer_id
     )
