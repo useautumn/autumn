@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
 
-import type {
-	ApiCustomerV3,
-	ApiEventsListResponse,
-	TrackDeduction,
-	TrackResponseV3,
+import {
+	type ApiCustomerV3,
+	type ApiEventsListResponse,
+	ResetInterval,
+	type TrackDeduction,
+	type TrackResponseV3,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -385,7 +386,16 @@ test.concurrent(
 		expect(trackedEvent?.deductions).toBeDefined();
 		expect(trackedEvent?.deductions).not.toBeNull();
 		expect(trackedEvent?.deductions).toHaveLength(1);
-		expect(trackedEvent?.deductions?.[0].feature_id).toBe(TestFeature.Messages);
-		expect(trackedEvent?.deductions?.[0].value).toBe(12);
+		const deduction = trackedEvent?.deductions?.[0];
+		expect(deduction?.feature_id).toBe(TestFeature.Messages);
+		expect(deduction?.value).toBe(12);
+		// plan_id traces back to the customer entitlement's product. The test
+		// framework namespaces product IDs per-customer (e.g. `free_<customerId>`),
+		// so we assert the prefix rather than a bare "free" string.
+		expect(deduction?.plan_id).toBe(`free_${customerId}`);
+		// `reset` carries the entitlement interval. items.free() ships month-based
+		// entitlements, so the round-tripped reset should reflect that.
+		expect(deduction?.reset).not.toBeNull();
+		expect(deduction?.reset?.interval).toBe(ResetInterval.Month);
 	},
 );
