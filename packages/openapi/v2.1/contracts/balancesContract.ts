@@ -119,7 +119,6 @@ export const balancesTrackContract = oc
 							plan_id: "pro",
 							reset: {
 								interval: "month",
-								interval_count: undefined,
 								resets_at: 1781288736881,
 							},
 							value: 1,
