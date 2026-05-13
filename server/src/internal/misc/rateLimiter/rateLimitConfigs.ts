@@ -1,4 +1,4 @@
-import { ApiVersion } from "@autumn/shared";
+import { ApiVersion, ApiVersionClass } from "@autumn/shared";
 import type { Context } from "hono";
 import { matchRoute } from "../../../honoMiddlewares/middlewareUtils";
 import type { HonoEnv } from "../../../honoUtils/HonoEnv";
@@ -128,9 +128,10 @@ export type RateLimitConfig = {
 	name: string;
 	limit: number;
 	/**
-	 * Per-version overrides. When the request's apiVersion has an entry,
-	 * that limit applies and the bucket key is scoped by version so
-	 * traffic on different versions doesn't share a counter.
+	 * Per-version overrides resolved by GTE bounds — each key is the floor
+	 * of its range, and a request maps to the smallest defined key ≥ its
+	 * own version. Buckets are scoped by resolved key so two ranges never
+	 * share a counter. Base `limit` only applies when no key matches.
 	 */
 	versionedLimit?: Partial<Record<ApiVersion, number>>;
 	windowMs: number;
@@ -144,11 +145,29 @@ export const resolveRateLimit = ({
 }: {
 	config: RateLimitConfig;
 	apiVersion?: ApiVersion;
-}): { limit: number; versioned: boolean } => {
-	if (apiVersion && config.versionedLimit?.[apiVersion] !== undefined) {
-		return { limit: config.versionedLimit[apiVersion] as number, versioned: true };
+}): { limit: number; matchedKey?: ApiVersion } => {
+	if (!config.versionedLimit || !apiVersion) {
+		return { limit: config.limit };
 	}
-	return { limit: config.limit, versioned: false };
+
+	const exact = config.versionedLimit[apiVersion];
+	if (exact !== undefined) return { limit: exact, matchedKey: apiVersion };
+
+	const defined = Object.keys(config.versionedLimit)
+		.map((v) => new ApiVersionClass(v as ApiVersion))
+		.sort((a, b) => (a.lt(b) ? -1 : 1));
+
+	const requested = new ApiVersionClass(apiVersion);
+	for (const v of defined) {
+		if (requested.lte(v)) {
+			const value = config.versionedLimit[v.value as ApiVersion];
+			if (value !== undefined) {
+				return { limit: value, matchedKey: v.value as ApiVersion };
+			}
+		}
+	}
+
+	return { limit: config.limit };
 };
 
 export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
@@ -192,6 +211,7 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		limit: 5,
 		versionedLimit: {
 			[ApiVersion.V2_3]: 50,
+			[ApiVersion.V2_2]: 5,
 		},
 		windowMs: 1000,
 		notInRedis: false,

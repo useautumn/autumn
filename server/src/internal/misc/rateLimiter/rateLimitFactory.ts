@@ -118,8 +118,8 @@ export const getRateLimitKey = ({
 	const apiVersion = ctx.apiVersion?.value as ApiVersion | undefined;
 
 	const config = RATE_LIMIT_CONFIGS[rateLimitType];
-	const { versioned } = resolveRateLimit({ config, apiVersion });
-	const versionSuffix = versioned && apiVersion ? `:v${apiVersion}` : "";
+	const { matchedKey } = resolveRateLimit({ config, apiVersion });
+	const versionSuffix = matchedKey ? `:v${matchedKey}` : "";
 	const baseKey = `${config.name}:${orgId}:${env}${versionSuffix}`;
 
 	switch (config.scope) {
