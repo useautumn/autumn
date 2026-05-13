@@ -1,0 +1,23 @@
+server/tests/integration/crud/customers/cross-version-list-customers.test.ts
+  s_b1a331f4eba7de::t_2befce0b8e71f0 1,24,28-46,78
+server/tests/integration/others/rate-limits/rate-limit-list-customers.test.ts
+  s_b1a331f4eba7de::t_2ae6d228183b3a 6-9,13-17,19-30,36,41-42,44-64
+server/tests/unit/rate-limits/rate-limit-factory.test.ts
+  s_b1a331f4eba7de::t_23b3438e0fc843 30,41,45
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "13068c1e8cad6fd3ab59cf022ff736066e1f39b4",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
