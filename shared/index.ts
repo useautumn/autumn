@@ -18,6 +18,7 @@ export * from "./api/billing/openBillingPortal/openBillingPortalResponse";
 export * from "./api/billing/updateSubscription/previewUpdateSubscriptionResponse";
 // Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas";
+export * from "./api/common/paginationConfigs";
 export * from "./api/customers/components/customerExpand/customerExpand";
 // API MODELS
 export * from "./api/models";
