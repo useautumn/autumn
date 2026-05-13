@@ -1,0 +1,25 @@
+server/src/internal/customers/cursorPaginatedFullCusQuery.ts
+  s_b1a331f4eba7de::t_8408463c421ec0 14,28,37-42,58-73,76-81,85-86,90,92-98,100,103-106,110-123,125-130,132,134-136,139-189
+server/src/internal/customers/CusBatchService.ts
+  s_b1a331f4eba7de::t_46e3c1165fb104 246
+  s_b1a331f4eba7de::t_66432dfadb7983 22-25
+  s_b1a331f4eba7de::t_ee61dddc7a636b 188-199,201-204,208,230,248-249
+server/src/internal/customers/getFullCusQuery.ts
+  s_b1a331f4eba7de::t_d0da5ca2445b0a 658
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "17ee257c0de55e91cbdba3f506a160bf9ccf11a3",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
