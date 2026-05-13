@@ -124,7 +124,11 @@ export function FilterGroup({
 					onRemove={() => removeRule(index)}
 				/>
 			))}
-			<AddButton label="Add condition" onClick={addRule} className="mt-1" />
+			<AddButton
+				label={group.rules.length === 0 ? "Add condition" : "And"}
+				onClick={addRule}
+				className="mt-1"
+			/>
 		</div>
 	);
 }

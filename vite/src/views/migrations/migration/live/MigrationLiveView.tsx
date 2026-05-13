@@ -1,4 +1,8 @@
-import type { CustomerWithProducts, MigrationFilter } from "@autumn/shared";
+import type {
+	CustomerWithProducts,
+	MigrationFilter,
+	Operations,
+} from "@autumn/shared";
 import {
 	ArrowLeftIcon,
 	CaretDownIcon,
@@ -7,18 +11,27 @@ import {
 	EyeIcon,
 	ListMagnifyingGlassIcon,
 	PlayIcon,
+	UsersIcon,
 	WarningIcon,
 	XIcon,
 } from "@phosphor-icons/react";
 import type { ColumnDef, PaginationState, Row } from "@tanstack/react-table";
 import type { AxiosError } from "axios";
 import { debounce } from "lodash";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Table } from "@/components/general/table";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/v2/dialogs/Dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -47,6 +60,7 @@ import { CustomerListFilterButton } from "@/views/customers2/components/table/cu
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
+import { RunSummaryRows } from "../shared/RunSummaryRows";
 import {
 	type ExecutionStatus,
 	ExecutionStatusSubMenu,
@@ -60,29 +74,6 @@ type CustomerRow = CustomerWithProducts & {
 	_event?: MigrationItemEvent;
 	_isActive?: boolean;
 };
-
-function useConfirmAction(action: () => void) {
-	const [isConfirming, setIsConfirming] = useState(false);
-	const timerRef = useRef<ReturnType<typeof setTimeout>>();
-
-	const trigger = useCallback(() => {
-		if (!isConfirming) {
-			setIsConfirming(true);
-			timerRef.current = setTimeout(() => setIsConfirming(false), 3000);
-			return;
-		}
-		clearTimeout(timerRef.current);
-		setIsConfirming(false);
-		action();
-	}, [isConfirming, action]);
-
-	const cancel = useCallback(() => {
-		clearTimeout(timerRef.current);
-		setIsConfirming(false);
-	}, []);
-
-	return { isConfirming, trigger, cancel };
-}
 
 function buildEventsByCustomer(itemEvents: MigrationItemEvent[]) {
 	const map = new Map<string, MigrationItemEvent>();
@@ -125,12 +116,16 @@ const columns: ColumnDef<CustomerRow, unknown>[] = [
 export function MigrationLiveView({
 	migrationId,
 	filter,
+	operations,
+	noBillingChanges,
 	step,
 	onStepChange,
 	onPrevious,
 }: {
 	migrationId: string;
 	filter: MigrationFilter;
+	operations: Operations;
+	noBillingChanges: boolean;
 	step: StepId;
 	onStepChange: (step: StepId) => void;
 	onPrevious?: () => void;
@@ -147,6 +142,7 @@ export function MigrationLiveView({
 		pageSize: 50,
 	});
 	const [dismissedError, setDismissedError] = useState<string | null>(null);
+	const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
 
 	const debouncedSetSearch = useMemo(
 		() => debounce((q: string) => setDebouncedSearch(q), 350),
@@ -207,8 +203,6 @@ export function MigrationLiveView({
 			);
 		}
 	};
-
-	const confirm = useConfirmAction(() => triggerRun({ dryRun: false }));
 
 	const eventsByCustomer = useMemo(
 		() => buildEventsByCustomer(itemEvents),
@@ -327,19 +321,14 @@ export function MigrationLiveView({
 				)}
 				<div className="flex items-center">
 					<Button
-						variant={confirm.isConfirming ? "destructive" : "primary"}
+						variant="primary"
 						size="default"
 						className="rounded-r-none"
-						onClick={confirm.trigger}
-						onBlur={confirm.cancel}
+						onClick={() => setIsRunDialogOpen(true)}
 						isLoading={isRunning}
 					>
-						{confirm.isConfirming ? (
-							<WarningIcon size={14} weight="fill" />
-						) : (
-							<PlayIcon size={14} weight="fill" />
-						)}
-						{confirm.isConfirming ? "Confirm Run All" : "Run All"}
+						<PlayIcon size={14} weight="fill" />
+						Run All
 					</Button>
 					<DropdownMenu>
 						<DropdownMenuTrigger asChild>
@@ -365,6 +354,51 @@ export function MigrationLiveView({
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</div>
+
+				<Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
+					<DialogContent showCloseButton={false}>
+						<DialogHeader>
+							<DialogTitle>Run Migration</DialogTitle>
+							<DialogDescription>
+								This will apply the migration to the following scope.
+							</DialogDescription>
+						</DialogHeader>
+						<RunSummaryRows
+							customerIcon={
+								<UsersIcon
+									size={14}
+									weight="duotone"
+									className="text-blue-500"
+								/>
+							}
+							customerLabel={
+								count !== null
+									? `${count} ${count === 1 ? "customer" : "customers"}`
+									: "All matched customers"
+							}
+							operations={operations}
+							noBillingChanges={noBillingChanges}
+						/>
+						<DialogFooter>
+							<Button
+								variant="secondary"
+								onClick={() => setIsRunDialogOpen(false)}
+							>
+								Cancel
+							</Button>
+							<Button
+								variant="primary"
+								onClick={() => {
+									setIsRunDialogOpen(false);
+									triggerRun({ dryRun: false });
+								}}
+							>
+								<PlayIcon size={14} weight="fill" />
+								Run
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
 			</StepIndicator>
 
 			<div className="flex items-center gap-2">

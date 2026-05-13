@@ -1,18 +1,27 @@
-import type { CustomerWithProducts } from "@autumn/shared";
+import type { CustomerWithProducts, Operations } from "@autumn/shared";
 import {
 	CalendarBlankIcon,
 	EyeIcon,
 	PlayIcon,
-	WarningIcon,
+	UserIcon,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/v2/dialogs/Dialog";
 import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { ActiveRunDot, ItemEventStatusBadge } from "../runs/RunStatusBadge";
+import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { EventResultDetail } from "./EventResultDetail";
 
 function formatEventTimestamp(timestamp: string): string {
@@ -56,6 +65,8 @@ export function CustomerRunSheet({
 	isActive,
 	isRunning,
 	onTriggerRun,
+	operations,
+	noBillingChanges,
 }: {
 	customer: CustomerWithProducts;
 	latestEvent: MigrationItemEvent | undefined;
@@ -63,9 +74,11 @@ export function CustomerRunSheet({
 	isActive: boolean;
 	isRunning: boolean;
 	onTriggerRun: (opts: { dryRun: boolean; only?: string[] }) => void;
+	operations: Operations;
+	noBillingChanges: boolean;
 }) {
 	const customerId = customer.id ?? customer.internal_id;
-	const [isConfirming, setIsConfirming] = useState(false);
+	const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
 	const lastActionRef = useRef<"dry" | "live" | null>(null);
 
 	const prevRunningRef = useRef(isRunning);
@@ -84,12 +97,7 @@ export function CustomerRunSheet({
 	};
 
 	const handleLiveRun = () => {
-		if (!isConfirming) {
-			setIsConfirming(true);
-			setTimeout(() => setIsConfirming(false), 3000);
-			return;
-		}
-		setIsConfirming(false);
+		setIsRunDialogOpen(false);
 		lastActionRef.current = "live";
 		onTriggerRun({ dryRun: false, only: [customerId] });
 	};
@@ -186,23 +194,50 @@ export function CustomerRunSheet({
 					Dry Run
 				</Button>
 				<Button
-					variant={isConfirming ? "destructive" : "primary"}
+					variant="primary"
 					className="flex-1"
-					onClick={handleLiveRun}
-					isLoading={isRunning && lastActionRef.current === "live"}
-					disabled={
-						hasSuccessfulLiveRun ||
-						(isRunning && lastActionRef.current !== "live")
-					}
+					onClick={() => setIsRunDialogOpen(true)}
+					disabled={hasSuccessfulLiveRun || isRunning}
 				>
-					{isConfirming ? (
-						<WarningIcon size={14} weight="fill" />
-					) : (
-						<PlayIcon size={14} weight="fill" />
-					)}
-					{isConfirming ? "Confirm" : "Run"}
+					<PlayIcon size={14} weight="fill" />
+					Run
 				</Button>
 			</div>
+
+			<Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
+				<DialogContent showCloseButton={false}>
+					<DialogHeader>
+						<DialogTitle>Run Migration</DialogTitle>
+						<DialogDescription>
+							This will apply the migration to the following scope.
+						</DialogDescription>
+					</DialogHeader>
+					<RunSummaryRows
+						customerIcon={
+							<UserIcon size={14} weight="duotone" className="text-blue-500" />
+						}
+						customerLabel={customer.name || customer.id || "1 customer"}
+						operations={operations}
+						noBillingChanges={noBillingChanges}
+					/>
+					<DialogFooter>
+						<Button
+							variant="secondary"
+							onClick={() => setIsRunDialogOpen(false)}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="primary"
+							onClick={handleLiveRun}
+							isLoading={isRunning && lastActionRef.current === "live"}
+						>
+							<PlayIcon size={14} weight="fill" />
+							Run
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 }

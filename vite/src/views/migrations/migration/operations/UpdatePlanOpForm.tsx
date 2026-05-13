@@ -11,7 +11,6 @@ import {
 	PlusIcon,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
-import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -222,9 +221,6 @@ export function UpdatePlanOpForm({
 							<span className="flex-1 text-left text-sm">
 								<SelectValue />
 							</span>
-							<InfoTooltip className="text-blue-500 [&_svg]:text-blue-500">
-								Won't apply to customers with custom plans.
-							</InfoTooltip>
 						</SelectTrigger>
 						<SelectContent>
 							{versionOptions.map((o) => (

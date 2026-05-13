@@ -138,6 +138,8 @@ export function FilterForm({
 	const clearAll = () =>
 		setGroups([{ rules: [{ field: "plan_id", operator: "is", values: [] }] }]);
 
+	const hasConditions = groups.some((g) => g.rules.length > 0);
+
 	return (
 		<div className="flex flex-col">
 			{groups.map((group, index) => (
@@ -152,9 +154,9 @@ export function FilterForm({
 					/>
 				</div>
 			))}
-			<div className="flex items-center gap-2 border-t mt-3 pt-3">
-				<AddButton label="Or" onClick={addGroup} className="flex-1" />
-				{groups.some((g) => g.rules.length > 0) && (
+			{hasConditions && (
+				<div className="flex items-center gap-2 border-t mt-3 pt-3">
+					<AddButton label="Or" onClick={addGroup} className="flex-1" />
 					<Button
 						variant="skeleton"
 						size="sm"
@@ -163,8 +165,8 @@ export function FilterForm({
 					>
 						Clear all
 					</Button>
-				)}
-			</div>
+				</div>
+			)}
 		</div>
 	);
 }

@@ -1,4 +1,4 @@
-import type { CustomerWithProducts } from "@autumn/shared";
+import type { CustomerWithProducts, Operations } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useMemo } from "react";
 import { toast } from "sonner";
@@ -10,9 +10,13 @@ import { CustomerRunSheet } from "./CustomerRunSheet";
 export function MigrationCustomerSheet({
 	migrationId,
 	customer,
+	operations,
+	noBillingChanges,
 }: {
 	migrationId: string;
 	customer: CustomerWithProducts;
+	operations: Operations;
+	noBillingChanges: boolean;
 }) {
 	const { runMigration, isRunning } = useMigrationsQuery();
 	const {
@@ -67,6 +71,8 @@ export function MigrationCustomerSheet({
 			isActive={isActive}
 			isRunning={isRunning}
 			onTriggerRun={triggerRun}
+			operations={operations}
+			noBillingChanges={noBillingChanges}
 		/>
 	);
 }

@@ -69,7 +69,7 @@ export function ValuePicker({
 											)}
 											<span className="truncate">{opt?.label ?? val}</span>
 											<span
-												className="cursor-pointer text-t3 hover:text-destructive ml-0.5 transition-colors"
+												className="cursor-pointer text-t3 hover:text-destructive ml-0.5"
 												onClick={(e) => {
 													e.stopPropagation();
 													onRemove(val);
@@ -92,7 +92,7 @@ export function ValuePicker({
 				</PopoverTrigger>
 				<PopoverContent
 					align="start"
-					className="w-52 p-0 z-200 rounded-md overflow-hidden"
+					className="w-(--anchor-width) p-0 z-200 rounded-md overflow-hidden"
 					style={{
 						transformOrigin: "var(--radix-popover-content-transform-origin)",
 					}}
