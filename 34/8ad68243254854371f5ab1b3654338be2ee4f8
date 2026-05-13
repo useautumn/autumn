@@ -1,0 +1,26 @@
+shared/api/versionUtils/convertVersionUtils.ts
+  s_b1a331f4eba7de::t_ed94083780c8b7 141,150-152
+shared/api/versionUtils/ApiVersion.ts
+  s_b1a331f4eba7de::t_5302bda72109e8 7,22
+shared/api/versionUtils/versionChangeUtils/versionChangeRegistry.ts
+  s_b1a331f4eba7de::t_904814bf6e312e 48-49
+  s_b1a331f4eba7de::t_3546de858a0dfb 106-108
+shared/api/versionUtils/versionRegistry.ts
+  s_b1a331f4eba7de::t_1b24c0f8beea32 17-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "348ad68243254854371f5ab1b3654338be2ee4f8",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
