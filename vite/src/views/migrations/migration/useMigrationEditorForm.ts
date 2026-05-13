@@ -42,12 +42,8 @@ export function useMigrationEditorForm({
 
 	const form = useAppForm({
 		defaultValues: {
-			filter: (migration.filter ?? {
-				customer: { plan: { plan_id: "" } },
-			}) as MigrationFilter,
-			operations: (migration.operations ?? {
-				customer: [{ type: "update_plan", plan_filter: {} }],
-			}) as Operations,
+			filter: (migration.filter ?? {}) as MigrationFilter,
+			operations: (migration.operations ?? {}) as Operations,
 			noBillingChanges: migration.no_billing_changes ?? false,
 		},
 		onSubmit: async ({ value }) => {

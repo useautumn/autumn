@@ -32,12 +32,14 @@ export function FilterRow({
 	onChange,
 	onRemove,
 	suggestions,
+	defaultOpenField = false,
 }: {
 	rule: FilterRule;
 	connector?: "And";
 	onChange: (rule: FilterRule) => void;
 	onRemove: () => void;
 	suggestions?: { value: string; label: string }[];
+	defaultOpenField?: boolean;
 }) {
 	const config = FIELD_CONFIGS[rule.field];
 	const fieldLabel =
@@ -84,6 +86,7 @@ export function FilterRow({
 					});
 				}}
 				items={FILTER_FIELD_OPTIONS}
+				defaultOpen={defaultOpenField}
 			>
 				<SelectTrigger className="h-8 text-sm min-w-28 px-3 shrink-0">
 					<SelectValue />
@@ -106,7 +109,7 @@ export function FilterRow({
 						}
 						items={config.operators}
 					>
-						<SelectTrigger className="h-8 text-sm min-w-16 px-3">
+						<SelectTrigger className="h-8 text-sm min-w-16 w-full px-3">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
@@ -161,7 +164,7 @@ function FilterValueInput({
 	onToggle: (value: string) => void;
 	onChipRemove: (value: string) => void;
 }) {
-	if (config.valueType === "none") return <div className="flex-1" />;
+	if (config.valueType === "none") return null;
 
 	if (config.valueType === "boolean")
 		return (

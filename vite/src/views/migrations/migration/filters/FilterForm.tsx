@@ -3,8 +3,10 @@ import type {
 	PlanFilter,
 	StringMatcher,
 } from "@autumn/shared";
-import { useMemo, useRef } from "react";
+import { FunnelSimpleIcon } from "@phosphor-icons/react";
+import { useMemo, useRef, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
+import { ActionCard } from "../shared/ActionCard";
 import { AddButton } from "../shared/AddButton";
 import { FilterGroup } from "./FilterGroup";
 import {
@@ -89,6 +91,17 @@ function groupsToMigrationFilter(
 	};
 }
 
+const EMPTY_GROUP: FilterGroupData = {
+	rules: [{ field: "plan_id", operator: "is", values: [] }],
+};
+
+function isEmptyFilter(groups: FilterGroupData[]): boolean {
+	if (groups.length !== 1) return false;
+	const rules = groups[0].rules;
+	if (rules.length === 0) return true;
+	return rules.length === 1 && rules[0].values.length === 0;
+}
+
 export function FilterForm({
 	value,
 	onChange,
@@ -96,6 +109,7 @@ export function FilterForm({
 	value: MigrationFilter;
 	onChange: (value: MigrationFilter) => void;
 }) {
+	const [autoOpenField, setAutoOpenField] = useState(false);
 	const externalKey = useMemo(() => JSON.stringify(value), [value]);
 	const lastSyncedKey = useRef(externalKey);
 	const groupsRef = useRef<FilterGroupData[]>(buildGroups(value));
@@ -113,6 +127,7 @@ export function FilterForm({
 	};
 
 	const groups = groupsRef.current;
+	const isEmpty = isEmptyFilter(groups) && !autoOpenField;
 
 	const updateGroup = (index: number, group: FilterGroupData) => {
 		const next = [...groups];
@@ -122,23 +137,40 @@ export function FilterForm({
 
 	const deleteGroup = (index: number) => {
 		const next = groups.filter((_, i) => i !== index);
-		setGroups(
-			next.length > 0
-				? next
-				: [{ rules: [{ field: "plan_id", operator: "is", values: [] }] }],
-		);
+		if (next.length === 0) {
+			setAutoOpenField(false);
+			setGroups([EMPTY_GROUP]);
+		} else {
+			setGroups(next);
+		}
 	};
 
-	const addGroup = () =>
-		setGroups([
-			...groups,
-			{ rules: [{ field: "plan_id", operator: "is", values: [] }] },
-		]);
+	const addGroup = () => setGroups([...groups, EMPTY_GROUP]);
 
-	const clearAll = () =>
-		setGroups([{ rules: [{ field: "plan_id", operator: "is", values: [] }] }]);
+	const clearAll = () => {
+		setAutoOpenField(false);
+		setGroups([EMPTY_GROUP]);
+	};
 
 	const hasConditions = groups.some((g) => g.rules.length > 0);
+
+	if (isEmpty) {
+		return (
+			<ActionCard
+				icon={
+					<FunnelSimpleIcon
+						size={20}
+						weight="duotone"
+						className="text-t3 shrink-0"
+					/>
+				}
+				heading="Add Filter"
+				subheading="Define which customers this migration applies to"
+				onClick={() => setAutoOpenField(true)}
+				className="w-full"
+			/>
+		);
+	}
 
 	return (
 		<div className="flex flex-col">
@@ -151,12 +183,13 @@ export function FilterForm({
 						onChange={(updated) => updateGroup(index, updated)}
 						onDelete={() => deleteGroup(index)}
 						showDelete={groups.length > 1}
+						autoOpenField={index === 0 && autoOpenField}
 					/>
 				</div>
 			))}
 			{hasConditions && (
 				<div className="flex items-center gap-2 border-t mt-3 pt-3">
-					<AddButton label="Or" onClick={addGroup} className="flex-1" />
+					<AddButton label="Add or condition" onClick={addGroup} className="flex-1" />
 					<Button
 						variant="skeleton"
 						size="sm"

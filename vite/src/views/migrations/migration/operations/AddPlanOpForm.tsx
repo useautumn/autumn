@@ -9,10 +9,12 @@ export function AddPlansSection({
 	operations,
 	onUpdate,
 	onRemoveAll,
+	defaultOpenPicker = false,
 }: {
 	operations: CustomerOperation[];
 	onUpdate: (addPlanOps: AddPlanOp[]) => void;
 	onRemoveAll: () => void;
+	defaultOpenPicker?: boolean;
 }) {
 	const { products } = useProductsQuery();
 	const planSuggestions = useMemo(
@@ -62,6 +64,7 @@ export function AddPlansSection({
 				onRemove={handleRemove}
 				placeholder="Select plans..."
 				className="flex-1"
+				defaultOpen={defaultOpenPicker}
 			/>
 		</div>
 	);

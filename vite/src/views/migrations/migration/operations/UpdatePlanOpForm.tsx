@@ -65,10 +65,12 @@ export function UpdatePlanOpForm({
 	value,
 	onChange,
 	onRemove,
+	defaultOpenPicker = false,
 }: {
 	value: UpdatePlanOp;
 	onChange: (value: UpdatePlanOp) => void;
 	onRemove: () => void;
+	defaultOpenPicker?: boolean;
 }) {
 	const { products } = useProductsQuery();
 	const versionOptions = useVersionOptions(value.plan_filter);
@@ -197,6 +199,7 @@ export function UpdatePlanOpForm({
 					onRemove={handlePlanRemove}
 					placeholder="Select plans..."
 					className="flex-1"
+					defaultOpen={defaultOpenPicker}
 				/>
 			</div>
 
@@ -299,7 +302,7 @@ export function UpdatePlanOpForm({
 			<DropdownMenu>
 				<DropdownMenuTrigger className={DASHED_BUTTON_CLASS}>
 					<PlusIcon size={10} />
-					Add
+					Add Update Item
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="start" className="w-(--anchor-width)">
 					{value.version === undefined && (
