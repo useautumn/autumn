@@ -38,6 +38,14 @@ export function useHasSubscriptionChanges({
 
 		if (formValues.discounts?.length > 0) return true;
 
+		const hasOneOffPrepaidWithQty = prepaidItems.some(
+			(item) =>
+				item.interval == null &&
+				item.feature_id &&
+				(formValues.prepaidOptions[item.feature_id] ?? 0) > 0,
+		);
+		if (hasOneOffPrepaidWithQty) return true;
+
 		const trialChanges = generateTrialChanges({
 			customerProduct,
 			removeTrial: formValues.removeTrial,

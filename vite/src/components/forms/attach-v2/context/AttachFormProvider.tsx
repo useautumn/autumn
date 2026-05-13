@@ -16,7 +16,6 @@ import {
 	isFreeProductV2,
 	isOneOffProductV2,
 	productV2ToFrontendProduct,
-	UsageModel,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import {
@@ -276,8 +275,7 @@ export function AttachFormProvider({
 		[fullCustomer?.customer_products],
 	);
 
-	const disableProration =
-		isFreeToPaidTransition && !hasActiveSubscription;
+	const disableProration = isFreeToPaidTransition && !hasActiveSubscription;
 
 	const { prepaidItems } = usePrepaidItems({ product: effectiveProduct });
 
@@ -324,19 +322,16 @@ export function AttachFormProvider({
 			resetGrantFree();
 		}
 
-		// Initialize prepaid options for the selected product
+		// Initialize prepaid options for the selected product.
+		// Values start as undefined (not 0) so that unset quantities are omitted
+		// from the request — the backend carries over existing prepaid balances
+		// when no option is provided for a feature.
 		if (product) {
-			const newInitialPrepaidOptions: Record<string, number> = {};
-			for (const item of product.items) {
-				if (item.usage_model === UsageModel.Prepaid && item.feature_id) {
-					newInitialPrepaidOptions[item.feature_id] = 0;
-				}
-			}
 			const currentPrepaidOptions = form.store.state.values.prepaidOptions;
 			const resolvedPrepaidOptions =
 				isProductChange || Object.keys(currentPrepaidOptions).length === 0
-					? newInitialPrepaidOptions
-					: { ...newInitialPrepaidOptions, ...currentPrepaidOptions };
+					? {}
+					: { ...currentPrepaidOptions };
 			form.setFieldValue("prepaidOptions", resolvedPrepaidOptions);
 			setInitialPrepaidOptions(
 				resolvedPrepaidOptions as Record<string, number>,

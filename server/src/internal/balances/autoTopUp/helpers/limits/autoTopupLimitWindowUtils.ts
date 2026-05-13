@@ -28,30 +28,18 @@ const intervalToEntInterval = ({
 	}
 };
 
-const getWindowEndsAt = ({
-	now,
-	windowConfig,
-}: {
-	now: number;
-	windowConfig: AutoTopupPurchaseLimit | AutoTopupWindowLimitConfig;
-}) => {
-	return addInterval({
-		from: now,
-		interval: intervalToEntInterval({ interval: windowConfig.interval }),
-		intervalCount: windowConfig.interval_count ?? 1,
-	});
-};
-
 export const normalizeWindowCounter = ({
 	now,
 	windowEndsAt,
 	count,
 	windowConfig,
+	from,
 }: {
 	now: number;
 	windowEndsAt: number;
 	count: number;
 	windowConfig?: AutoTopupPurchaseLimit | AutoTopupWindowLimitConfig;
+	from?: number;
 }) => {
 	if (!windowConfig) return undefined;
 
@@ -59,8 +47,16 @@ export const normalizeWindowCounter = ({
 		return { windowEndsAt, count };
 	}
 
+	const interval = intervalToEntInterval({ interval: windowConfig.interval });
+	const intervalCount = windowConfig.interval_count || 1;
+
+	let projected = from ?? now;
+	do {
+		projected = addInterval({ from: projected, interval, intervalCount });
+	} while (projected <= now);
+
 	return {
-		windowEndsAt: getWindowEndsAt({ now, windowConfig }),
+		windowEndsAt: projected,
 		count: 0,
 	};
 };

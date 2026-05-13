@@ -11,7 +11,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import { isFreeProduct } from "@/internal/products/productUtils.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
+import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import {
 	constructReward,
 	getRewardCat,
@@ -63,7 +63,10 @@ export const handleCreateCoupon = createRoute({
 			});
 		}
 
-		if (getRewardCat(newReward) === RewardCategory.FreeProduct) {
+		if (
+			getRewardCat(newReward) === RewardCategory.FreeProduct &&
+			newReward.free_product_id
+		) {
 			const fullProduct = await ProductService.getFull({
 				db,
 				idOrInternalId: newReward.free_product_id!,
@@ -90,7 +93,7 @@ export const handleCreateCoupon = createRoute({
 			}
 		}
 
-		const insertedCoupon = await RewardService.insert({
+		const insertedCoupon = await rewardRepo.insert({
 			db,
 			data: newReward,
 		});

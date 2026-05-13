@@ -80,7 +80,7 @@ export const InlineCitationCardTrigger = ({
 	</HoverCardTrigger>
 );
 
-export type InlineCitationCardBodyProps = ComponentProps<"div">;
+export type InlineCitationCardBodyProps = ComponentProps<typeof HoverCardContent>;
 
 export const InlineCitationCardBody = ({
 	className,

@@ -61,7 +61,7 @@ export function PriceSectionTitle({
 						</IconCheckbox>
 					</div>
 				)}
-				<Select value={tierBehavior} onValueChange={onTierBehaviorChange}>
+				<Select value={tierBehavior} onValueChange={onTierBehaviorChange} items={{ [TierBehavior.Graduated]: "Graduated", [TierBehavior.VolumeBased]: "Volume-based" }}>
 					<SelectTrigger className="w-32 h-6 text-xs!" size="sm">
 						<SelectValue>
 							{tierBehavior === TierBehavior.VolumeBased ? (

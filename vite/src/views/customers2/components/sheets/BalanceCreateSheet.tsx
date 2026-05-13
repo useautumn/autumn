@@ -225,11 +225,12 @@ export function BalanceCreateSheet() {
 								<div>
 									<FormLabel>Interval</FormLabel>
 									<div className="flex items-center gap-2">
-										<Select
-											value={oneOff ? undefined : resetInterval}
-											onValueChange={setResetInterval}
-											disabled={oneOff}
-										>
+									<Select
+										value={oneOff ? undefined : resetInterval}
+										onValueChange={setResetInterval}
+										disabled={oneOff}
+										items={RESET_INTERVAL_LABELS}
+									>
 											<SelectTrigger className="w-full">
 												<SelectValue placeholder="None" />
 											</SelectTrigger>

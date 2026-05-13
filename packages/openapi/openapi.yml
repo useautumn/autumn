@@ -810,6 +810,7 @@ components:
                           - fixed_discount
                           - free_product
                           - invoice_credits
+                          - feature_grant
                         type: string
                         description: The type of reward
                       discount_value:
@@ -2596,6 +2597,7 @@ paths:
                                     - fixed_discount
                                     - free_product
                                     - invoice_credits
+                                    - feature_grant
                                   type: string
                                   description: The type of reward
                                 discount_value:
@@ -4641,6 +4643,9 @@ paths:
                         schedule even when the customer's product is in a
                         past_due state.
                   description: Miscellaneous plan-level configuration flags.
+                create_in_stripe:
+                  type: boolean
+                  default: true
               required:
                 - plan_id
                 - name
@@ -6436,6 +6441,9 @@ paths:
                         schedule even when the customer's product is in a
                         past_due state.
                   description: Miscellaneous plan-level configuration flags.
+                create_in_stripe:
+                  type: boolean
+                  default: true
                 version:
                   type: number
                 archived:
@@ -8608,7 +8616,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778251788467,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779461388467,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778677273403,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779886873403,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -16010,6 +16018,74 @@ paths:
                     description: Map of feature_id to updated balance for the tracked feature and
                       any related features (e.g. linked credit systems). Value
                       is null when the customer has no balance for that feature.
+                  deductions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        balance_id:
+                          type: string
+                          description: ID of the underlying balance row that was deducted from
+                            (customer_entitlement or rollover).
+                        feature_id:
+                          type: string
+                          description: The feature this balance belongs to.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: ID of the plan/product this balance belongs to. Null when the
+                            balance can't be attributed to a single plan (e.g.
+                            it spans multiple).
+                        reset:
+                          anyOf:
+                            - type: object
+                              properties:
+                                interval:
+                                  anyOf:
+                                    - enum:
+                                        - one_off
+                                        - minute
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                    - const: multiple
+                                  description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
+                                    combined from different intervals.
+                                interval_count:
+                                  type: number
+                                  description: Number of intervals between resets (eg. 2 for bi-monthly).
+                                resets_at:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
+                                  description: Timestamp when the balance will next reset.
+                              required:
+                                - interval
+                                - resets_at
+                            - type: "null"
+                          description: Reset configuration for the balance this deduction came from, or
+                            null if the balance doesn't reset.
+                        value:
+                          type: number
+                          description: Amount deducted from this balance. Positive when usage was
+                            consumed, negative when credit was restored (e.g. a
+                            refund via negative track value).
+                      required:
+                        - balance_id
+                        - feature_id
+                        - plan_id
+                        - reset
+                        - value
+                    description: Per-balance breakdown of what this event deducted. A single event
+                      can consume from multiple balance rows when credit systems
+                      or rollovers are involved; this surfaces each one so
+                      callers can build per-feature usage views without polling.
                 required:
                   - customer_id
                   - value
@@ -16039,6 +16115,14 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
+                    deductions:
+                      - balance_id: cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2
+                        feature_id: messages
+                        plan_id: pro
+                        reset:
+                          interval: month
+                          resets_at: 1781288736881
+                        value: 1
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so the event was accepted for replay and will be tracked
@@ -16078,6 +16162,74 @@ paths:
                     description: Map of feature_id to updated balance for the tracked feature and
                       any related features (e.g. linked credit systems). Value
                       is null when the customer has no balance for that feature.
+                  deductions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        balance_id:
+                          type: string
+                          description: ID of the underlying balance row that was deducted from
+                            (customer_entitlement or rollover).
+                        feature_id:
+                          type: string
+                          description: The feature this balance belongs to.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: ID of the plan/product this balance belongs to. Null when the
+                            balance can't be attributed to a single plan (e.g.
+                            it spans multiple).
+                        reset:
+                          anyOf:
+                            - type: object
+                              properties:
+                                interval:
+                                  anyOf:
+                                    - enum:
+                                        - one_off
+                                        - minute
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                    - const: multiple
+                                  description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
+                                    combined from different intervals.
+                                interval_count:
+                                  type: number
+                                  description: Number of intervals between resets (eg. 2 for bi-monthly).
+                                resets_at:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
+                                  description: Timestamp when the balance will next reset.
+                              required:
+                                - interval
+                                - resets_at
+                            - type: "null"
+                          description: Reset configuration for the balance this deduction came from, or
+                            null if the balance doesn't reset.
+                        value:
+                          type: number
+                          description: Amount deducted from this balance. Positive when usage was
+                            consumed, negative when credit was restored (e.g. a
+                            refund via negative track value).
+                      required:
+                        - balance_id
+                        - feature_id
+                        - plan_id
+                        - reset
+                        - value
+                    description: Per-balance breakdown of what this event deducted. A single event
+                      can consume from multiple balance rows when credit systems
+                      or rollovers are involved; this surfaces each one so
+                      callers can build per-feature usage views without polling.
                 required:
                   - customer_id
                   - value
@@ -16107,6 +16259,14 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
+                    deductions:
+                      - balance_id: cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2
+                        feature_id: messages
+                        plan_id: pro
+                        reset:
+                          interval: month
+                          resets_at: 1781288736881
+                        value: 1
       x-speakeasy-name-override: track
       parameters:
         - *a1
@@ -16204,6 +16364,77 @@ paths:
                             type: string
                           additionalProperties: {}
                           description: Event properties (JSON)
+                        deductions:
+                          anyOf:
+                            - type: array
+                              items:
+                                type: object
+                                properties:
+                                  balance_id:
+                                    type: string
+                                    description: ID of the underlying balance row that was deducted from
+                                      (customer_entitlement or rollover).
+                                  feature_id:
+                                    type: string
+                                    description: The feature this balance belongs to.
+                                  plan_id:
+                                    anyOf:
+                                      - type: string
+                                      - type: "null"
+                                    description: ID of the plan/product this balance belongs to. Null when the
+                                      balance can't be attributed to a single
+                                      plan (e.g. it spans multiple).
+                                  reset:
+                                    anyOf:
+                                      - type: object
+                                        properties:
+                                          interval:
+                                            anyOf:
+                                              - enum:
+                                                  - one_off
+                                                  - minute
+                                                  - hour
+                                                  - day
+                                                  - week
+                                                  - month
+                                                  - quarter
+                                                  - semi_annual
+                                                  - year
+                                                type: string
+                                              - const: multiple
+                                            description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
+                                              combined from different intervals.
+                                          interval_count:
+                                            type: number
+                                            description: Number of intervals between resets (eg. 2 for bi-monthly).
+                                          resets_at:
+                                            anyOf:
+                                              - type: number
+                                              - type: "null"
+                                            description: Timestamp when the balance will next reset.
+                                        required:
+                                          - interval
+                                          - resets_at
+                                      - type: "null"
+                                    description: Reset configuration for the balance this deduction came from, or
+                                      null if the balance doesn't reset.
+                                  value:
+                                    type: number
+                                    description: Amount deducted from this balance. Positive when usage was
+                                      consumed, negative when credit was
+                                      restored (e.g. a refund via negative track
+                                      value).
+                                required:
+                                  - balance_id
+                                  - feature_id
+                                  - plan_id
+                                  - reset
+                                  - value
+                            - type: "null"
+                          description: Per-balance breakdown of what this event deducted. Null for events
+                            ingested before deductions were tracked; an empty
+                            array means the event was accepted but no balance
+                            moved.
                       required:
                         - id
                         - timestamp
@@ -16211,6 +16442,7 @@ paths:
                         - customer_id
                         - value
                         - properties
+                        - deductions
                     description: Array of items for current page
                   has_more:
                     type: boolean
@@ -16238,12 +16470,21 @@ paths:
                         customer_id: 0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx
                         value: 30
                         properties: {}
+                        deductions:
+                          - balance_id: cus_ent_3DdSDtFBlvDbjyUuJeUIbQlyN12
+                            feature_id: credits
+                            plan_id: pro
+                            reset:
+                              interval: month
+                              resets_at: 1765958215459
+                            value: 30
                       - id: evt_36xmHxxjAkqxufDf9yHAPNfRrLM
                         timestamp: 1765956512057
                         feature_id: credits
                         customer_id: 0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx
                         value: 49
                         properties: {}
+                        deductions: null
                     total: 2
                     has_more: false
                     offset: 0

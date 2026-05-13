@@ -16,7 +16,8 @@ SCHEMA >
     `entity_id` Nullable(String) `json:$.entity_id`,
     `internal_entity_id` Nullable(String) `json:$.internal_entity_id`,
     `customer_id` String `json:$.customer_id`,
-    `properties` JSON `json:$.properties`
+    `properties` JSON `json:$.properties`,
+    `deductions` JSON `json:$.deductions`
 
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"

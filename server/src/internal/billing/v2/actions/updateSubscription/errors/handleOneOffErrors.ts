@@ -4,16 +4,83 @@ import type {
 } from "@autumn/shared";
 import {
 	cusProductToProduct,
+	ErrCode,
 	isCustomerProductOneOff,
 	isCustomerProductPaidRecurring,
 	isOneOffPrice,
+	isPrepaidPrice,
 	productsAreSame,
 	RecaseError,
+	roundUsageToNearestBillingUnit,
+	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { cusProductToPrices } from "@shared/utils/cusProductUtils/convertCusProduct";
+import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
+
+/** Block non-ManualTopUp paths from mutating an existing one-off prepaid item's
+ * quantity. First-time set-balance (no existing options entry) and carry-through
+ * (quantity unchanged) are both allowed; only true quantity changes are rejected. */
+const blockOneOffQuantityChangeOutsideManualTopUp = ({
+	billingContext,
+	params,
+}: {
+	billingContext: UpdateSubscriptionBillingContext;
+	params: UpdateSubscriptionV1Params;
+}) => {
+	const { customerProduct } = billingContext;
+	const featureQuantities = params.feature_quantities ?? [];
+	if (featureQuantities.length === 0) return;
+
+	for (const fq of featureQuantities) {
+		const oneOffPrepaidPrice = customerProduct.customer_prices
+			.map((cp) => cp.price)
+			.find((price) => {
+				if (!isOneOffPrice(price) || !isPrepaidPrice(price)) return false;
+				const config = price.config as { feature_id?: string };
+				return config.feature_id === fq.feature_id;
+			});
+
+		if (!oneOffPrepaidPrice) continue;
+
+		const currentOption = customerProduct.options.find(
+			(o) => o.feature_id === fq.feature_id,
+		);
+		if (!currentOption) continue;
+
+		const matchingCusEnt = customerProduct.customer_entitlements.find(
+			(ce) => ce.entitlement.feature.id === fq.feature_id,
+		);
+		const allowance = matchingCusEnt?.entitlement.allowance ?? 0;
+		const billingUnits =
+			(oneOffPrepaidPrice.config as { billing_units?: number }).billing_units ??
+			1;
+
+		const requestedUnits = fq.quantity ?? 0;
+		const unitsExcludingAllowance = Math.max(
+			0,
+			new Decimal(requestedUnits).sub(allowance).toNumber(),
+		);
+		const roundedUnits = roundUsageToNearestBillingUnit({
+			usage: unitsExcludingAllowance,
+			billingUnits,
+		});
+		const requestedPacks = new Decimal(roundedUnits)
+			.div(billingUnits)
+			.toNumber();
+
+		const currentPacks = currentOption.quantity ?? 0;
+		if (!new Decimal(requestedPacks).eq(currentPacks)) {
+			throw new RecaseError({
+				message: COMPLEX_UPDATE_ERROR,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+	}
+};
 
 export const handleOneOffErrors = ({
 	ctx,
@@ -27,6 +94,12 @@ export const handleOneOffErrors = ({
 	params: UpdateSubscriptionV1Params;
 }) => {
 	const { customerProduct } = billingContext;
+
+	// ManualTopUp is a legit one-off mutation; its own strict-shape gate
+	// (handleManualTopUpErrors) owns rejecting non-conforming requests.
+	if (billingContext.intent === UpdateSubscriptionIntent.ManualTopUp) return;
+
+	blockOneOffQuantityChangeOutsideManualTopUp({ billingContext, params });
 
 	// Only apply these checks to one-off products
 	if (!isCustomerProductOneOff(customerProduct)) return;
@@ -98,3 +171,6 @@ export const checkTrialRemovalWithOneOffItems = ({
 		});
 	}
 };
+
+export const COMPLEX_UPDATE_ERROR =
+	"Updating a one off prepaid feature quantity while performing other subscription updates is currently unsupported. Please perform your plan update first, followed by the quantity update.";

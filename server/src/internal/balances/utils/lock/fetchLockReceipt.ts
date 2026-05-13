@@ -14,6 +14,7 @@ export type LockReceipt = {
 	entity_id?: string | null;
 	expires_at?: number | null;
 	region?: string | null;
+	overrideLockValue?: number | null;
 	items: MutationLogItem[];
 };
 
@@ -62,6 +63,26 @@ const fetchAndClaimLockReceiptV2FromCandidates = async ({
 	return { found: false as const };
 };
 
+const isRedisWrongTypeError = (error: unknown) =>
+	error instanceof Error &&
+	/WRONGTYPE|wrong Redis type|wrong kind of value/i.test(error.message);
+
+const fetchLegacyLockReceiptJson = async ({
+	lockReceiptKey,
+}: {
+	lockReceiptKey: string;
+}) =>
+	tryRedisRead(async () => {
+		try {
+			return (await redis.call("JSON.GET", lockReceiptKey, "$")) as
+				| string
+				| null;
+		} catch (error) {
+			if (isRedisWrongTypeError(error)) return null;
+			throw error;
+		}
+	}, redis);
+
 export const fetchLockReceipt = async ({
 	ctx,
 	lockId,
@@ -81,11 +102,7 @@ export const fetchLockReceipt = async ({
 	// During org Redis migrations, V2 checks both shared and dedicated Redis.
 	// V1 half stays a plain JSON.GET — V1 finalize still claims via Lua afterwards.
 	const [rawReceiptV1, v2Result] = await Promise.all([
-		tryRedisRead(
-			() =>
-				redis.call("JSON.GET", lockReceiptKey, "$") as Promise<string | null>,
-			redis,
-		),
+		fetchLegacyLockReceiptJson({ lockReceiptKey }),
 		fetchAndClaimLockReceiptV2FromCandidates({
 			ctx,
 			lockId,

@@ -1,0 +1,236 @@
+import {
+	type AutumnBillingPlan,
+	type BillingContext,
+	cusProductToProduct,
+	type FullCusProduct,
+	type FullProduct,
+	findCustomerProductById,
+	InternalError,
+	isPrepaidPrice,
+	isPreviewStripeId,
+	isUsagePrice,
+	PREVIEW_STRIPE_PRICE_ID_PREFIX,
+	PREVIEW_STRIPE_PRODUCT_ID_PREFIX,
+	type Price,
+	ProcessorType,
+	type Product,
+	type UsagePriceConfig,
+} from "@autumn/shared";
+import {
+	applyCustomerProductPatch,
+	getPatchCustomerProducts,
+} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { hashJson } from "@/utils/hash/hashJson";
+
+const previewHash = ({ value }: { value: unknown }) =>
+	hashJson({ value }).slice(0, 24);
+
+export const assertNotPreviewStripeId = ({
+	stripeId,
+	fieldName,
+}: {
+	stripeId?: string | null;
+	fieldName: string;
+}) => {
+	if (!isPreviewStripeId({ stripeId })) return;
+
+	throw new InternalError({
+		message: `Refusing to persist preview Stripe id in ${fieldName}`,
+	});
+};
+
+export const previewStripeProductIdForProduct = ({
+	product,
+}: {
+	product: Product;
+}) =>
+	`${PREVIEW_STRIPE_PRODUCT_ID_PREFIX}${previewHash({
+		value: {
+			env: product.env,
+			internalProductId: product.internal_id,
+			productId: product.id,
+		},
+	})}`;
+
+const previewStripeProductIdForPrice = ({
+	price,
+	product,
+	internalEntityId,
+}: {
+	price: Price;
+	product: Product;
+	internalEntityId?: string;
+}) => {
+	const config = price.config as Partial<UsagePriceConfig>;
+	return `${PREVIEW_STRIPE_PRODUCT_ID_PREFIX}${previewHash({
+		value: {
+			env: product.env,
+			featureId: config.feature_id,
+			internalEntityId,
+			internalFeatureId: config.internal_feature_id,
+			internalProductId: product.internal_id,
+			productId: product.id,
+		},
+	})}`;
+};
+
+const previewStripePriceIdForPrice = ({
+	price,
+	product,
+	fieldName,
+}: {
+	price: Price;
+	product: Product;
+	fieldName: string;
+}) =>
+	`${PREVIEW_STRIPE_PRICE_ID_PREFIX}${previewHash({
+		value: {
+			config: price.config,
+			fieldName,
+			internalProductId: product.internal_id,
+		},
+	})}`;
+
+export const applyPreviewStripeResourcesToProduct = ({
+	product,
+	internalEntityId,
+}: {
+	product: FullProduct;
+	internalEntityId?: string;
+}) => {
+	const productProcessorId =
+		product.processor?.id ?? previewStripeProductIdForProduct({ product });
+
+	product.processor = {
+		id: productProcessorId,
+		type: ProcessorType.Stripe,
+	};
+
+	for (const price of product.prices) {
+		const config = price.config as Partial<UsagePriceConfig>;
+
+		config.stripe_price_id ??= previewStripePriceIdForPrice({
+			price,
+			product,
+			fieldName: "stripe_price_id",
+		});
+
+		if (isUsagePrice({ price })) {
+			config.stripe_product_id ??= previewStripeProductIdForPrice({
+				price,
+				product,
+				internalEntityId,
+			});
+		}
+
+		if (isPrepaidPrice(price)) {
+			config.stripe_prepaid_price_v2_id ??= previewStripePriceIdForPrice({
+				price,
+				product,
+				fieldName: "stripe_prepaid_price_v2_id",
+			});
+		}
+	}
+};
+
+const applyPreviewStripeResourcesToCustomerProduct = ({
+	customerProduct,
+	internalEntityId,
+}: {
+	customerProduct: FullCusProduct;
+	internalEntityId?: string;
+}) => {
+	const product = cusProductToProduct({ cusProduct: customerProduct });
+	applyPreviewStripeResourcesToProduct({ product, internalEntityId });
+	customerProduct.product.processor = product.processor ?? null;
+};
+
+/** Stamp preview Stripe IDs onto every customer product touched by a dry-run billing plan. */
+export const applyPreviewStripeResourcesToBillingPlan = ({
+	autumnBillingPlan,
+	billingContext,
+}: {
+	autumnBillingPlan: AutumnBillingPlan;
+	billingContext: BillingContext;
+}) => {
+	const { fullCustomer } = billingContext;
+	const internalEntityId = fullCustomer.entity?.internal_id;
+	const patchCustomerProducts = getPatchCustomerProducts({ autumnBillingPlan });
+	const patchedCustomerProductIds = new Set(
+		patchCustomerProducts.map(
+			(patchCustomerProduct) => patchCustomerProduct.customerProduct.id,
+		),
+	);
+
+	for (const customerProduct of autumnBillingPlan.insertCustomerProducts) {
+		applyPreviewStripeResourcesToCustomerProduct({
+			customerProduct,
+			internalEntityId,
+		});
+	}
+
+	for (const patchCustomerProduct of patchCustomerProducts) {
+		const matchingCustomerProduct =
+			findCustomerProductById({
+				fullCustomer,
+				customerProductId: patchCustomerProduct.customerProduct.id,
+			}) ?? patchCustomerProduct.customerProduct;
+		const patchedCustomerProduct = applyCustomerProductPatch({
+			customerProduct: matchingCustomerProduct,
+			patch: patchCustomerProduct,
+		});
+
+		applyPreviewStripeResourcesToCustomerProduct({
+			customerProduct: patchedCustomerProduct,
+			internalEntityId,
+		});
+
+		if (matchingCustomerProduct === patchCustomerProduct.customerProduct) {
+			continue;
+		}
+
+		applyPreviewStripeResourcesToCustomerProduct({
+			customerProduct: applyCustomerProductPatch({
+				customerProduct: patchCustomerProduct.customerProduct,
+				patch: patchCustomerProduct,
+			}),
+			internalEntityId,
+		});
+	}
+
+	for (const customerProduct of fullCustomer.customer_products) {
+		if (patchedCustomerProductIds.has(customerProduct.id)) continue;
+
+		applyPreviewStripeResourcesToCustomerProduct({
+			customerProduct,
+			internalEntityId,
+		});
+	}
+};
+
+export const assertNoPreviewStripeIdsOnProduct = ({
+	product,
+}: {
+	product: FullProduct;
+}) => {
+	assertNotPreviewStripeId({
+		stripeId: product.processor?.id,
+		fieldName: "product.processor.id",
+	});
+
+	for (const price of product.prices) {
+		const config = price.config as Partial<UsagePriceConfig>;
+		for (const fieldName of [
+			"stripe_price_id",
+			"stripe_product_id",
+			"stripe_empty_price_id",
+			"stripe_placeholder_price_id",
+			"stripe_prepaid_price_v2_id",
+		] as const) {
+			assertNotPreviewStripeId({
+				stripeId: config[fieldName],
+				fieldName: `price.config.${fieldName}`,
+			});
+		}
+	}
+};

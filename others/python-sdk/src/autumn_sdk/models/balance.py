@@ -67,7 +67,7 @@ class BalanceDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -140,7 +140,7 @@ class BalanceFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -165,16 +165,20 @@ BalanceIntervalEnum = Union[
 ]
 
 
-IntervalTypedDict = TypeAliasType("IntervalTypedDict", Union[BalanceIntervalEnum, str])
+BalanceIntervalUnionTypedDict = TypeAliasType(
+    "BalanceIntervalUnionTypedDict", Union[BalanceIntervalEnum, str]
+)
 r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
 
-Interval = TypeAliasType("Interval", Union[BalanceIntervalEnum, str])
+BalanceIntervalUnion = TypeAliasType(
+    "BalanceIntervalUnion", Union[BalanceIntervalEnum, str]
+)
 r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
 
 class BalanceResetTypedDict(TypedDict):
-    interval: IntervalTypedDict
+    interval: BalanceIntervalUnionTypedDict
     r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
     resets_at: Nullable[float]
     r"""Timestamp when the balance will next reset."""
@@ -183,7 +187,7 @@ class BalanceResetTypedDict(TypedDict):
 
 
 class BalanceReset(BaseModel):
-    interval: Interval
+    interval: BalanceIntervalUnion
     r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
     resets_at: Nullable[float]
@@ -201,7 +205,7 @@ class BalanceReset(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -281,7 +285,7 @@ class BalancePrice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -361,7 +365,7 @@ class Breakdown(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -461,7 +465,7 @@ class Balance(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

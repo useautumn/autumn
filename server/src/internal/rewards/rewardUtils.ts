@@ -1,19 +1,22 @@
 import {
 	type CreateReward,
+	type CreateRewardProgram,
 	DiscountConfigSchema,
 	ErrCode,
 	isFixedPrice,
 	type Price,
 	type Product,
+	RecaseError,
 	type Reward,
 	RewardCategory,
+	type RewardProgram,
+	RewardReceivedBy,
 	RewardType,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { generateId, getUnique, nullish } from "@/utils/genUtils.js";
 import { ProductService } from "../products/ProductService.js";
 import { initProductInStripe } from "../products/productUtils.js";
@@ -43,13 +46,47 @@ export const constructReward = ({
 		});
 	}
 
+	if (reward.type === RewardType.FeatureGrant) {
+		if (!reward.entitlements?.length) {
+			throw new RecaseError({
+				message: "Feature grant reward requires at least one entitlement",
+				code: ErrCode.InvalidReward,
+			});
+		}
+		for (const ent of reward.entitlements) {
+			if (!ent.internal_feature_id) {
+				throw new RecaseError({
+					message: "Each entitlement must have a feature",
+					code: ErrCode.InvalidReward,
+				});
+			}
+			if (!ent.allowance || ent.allowance <= 0) {
+				throw new RecaseError({
+					message: "Each entitlement must have a positive allowance",
+					code: ErrCode.InvalidReward,
+				});
+			}
+		}
+	}
+
 	if (getRewardCat(reward as Reward) === RewardCategory.Discount) {
 		DiscountConfigSchema.parse(reward.discount_config);
 	}
 
-	const promoCodes = reward.promo_codes.filter((promoCode) => {
-		return promoCode.code.length > 0;
-	});
+	const promoCodes = reward.promo_codes
+		.filter((promoCode) => {
+			return promoCode.code.length > 0;
+		})
+		.map(({ max_redemptions, global_max_redemption, ...promoCode }) => {
+			const globalMaxRedemption = global_max_redemption ?? max_redemptions;
+
+			return {
+				...promoCode,
+				...(globalMaxRedemption !== undefined
+					? { global_max_redemption: globalMaxRedemption }
+					: {}),
+			};
+		});
 
 	// Validate promo codes - Stripe only allows alphanumeric characters (a-z, A-Z, 0-9)
 	for (const promoCode of promoCodes) {
@@ -73,11 +110,20 @@ export const constructReward = ({
 		configData = {
 			free_product_id: reward.free_product_id,
 			discount_config: null,
+			entitlements: null,
+		};
+	} else if (reward.type === RewardType.FeatureGrant) {
+		configData = {
+			entitlements: reward.entitlements,
+			discount_config: null,
+			free_product_id: null,
+			free_product_config: null,
 		};
 	} else if (reward.type === RewardType.PercentageDiscount) {
 		configData = {
 			discount_config: reward.discount_config,
 			free_product_id: null,
+			entitlements: null,
 		};
 	}
 
@@ -95,7 +141,10 @@ export const constructReward = ({
 };
 
 export const getRewardCat = (reward: Reward) => {
-	if (reward.type === RewardType.FreeProduct) {
+	if (
+		reward.type === RewardType.FreeProduct ||
+		reward.type === RewardType.FeatureGrant
+	) {
 		return RewardCategory.FreeProduct;
 	}
 	return RewardCategory.Discount;
@@ -331,4 +380,63 @@ const getAmountAfterStripeDiscounts = ({
 		}
 	}
 	return amountAfterDiscount;
+};
+
+/** Build a RewardProgram object from creation input */
+export const constructRewardProgram = ({
+	rewardProgramData,
+	orgId,
+	env,
+}: {
+	rewardProgramData: CreateRewardProgram;
+	orgId: string;
+	env: string;
+}) => {
+	const rewardProgram: RewardProgram = {
+		...rewardProgramData,
+		internal_id: generateId("rs"),
+		unlimited_redemptions: false,
+		created_at: Date.now(),
+		org_id: orgId,
+		env,
+	};
+
+	return rewardProgram;
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// Referral helpers (moved from referralUtils.ts)
+// ═══════════════════════════════════════════════════════════════════
+
+export const ReferralResponseCodes = {
+	OwnsProduct: "has_product_already",
+	Success: "success",
+	Unknown: "unknown",
+	NotConfigured: "not_configured",
+	InternalError: "internal_error",
+};
+
+/** Generate a random 6-character alphanumeric referral code */
+export const generateReferralCode = () => {
+	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+	const codeLength = 6;
+
+	let code = "";
+	for (let i = 0; i < codeLength; i++) {
+		code += chars.charAt(Math.floor(Math.random() * chars.length));
+	}
+	return code;
+};
+
+/** Whether the referrer receives the reward */
+export const receivedByReferrer = (receivedBy: RewardReceivedBy) => {
+	return (
+		receivedBy === RewardReceivedBy.Referrer ||
+		receivedBy === RewardReceivedBy.All
+	);
+};
+
+/** Whether the redeemer receives the reward */
+export const receivedByRedeemer = (receivedBy: RewardReceivedBy) => {
+	return receivedBy === RewardReceivedBy.All;
 };

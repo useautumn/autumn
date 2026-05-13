@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import type { RolloverConfig } from "../../../index";
 import { features } from "../../featureModels/featureTable";
+import { rewards } from "../../rewardModels/rewardModels/rewardTable";
 import { products } from "../productTable";
 
 export const entitlements = pgTable(
@@ -20,6 +21,7 @@ export const entitlements = pgTable(
 		created_at: numeric({ mode: "number" }).notNull(),
 		internal_feature_id: text().notNull(),
 		internal_product_id: text(),
+		internal_reward_id: text("internal_reward_id"),
 		is_custom: boolean().default(false),
 
 		allowance_type: text(),
@@ -34,6 +36,8 @@ export const entitlements = pgTable(
 		org_id: text("org_id"),
 		feature_id: text("feature_id"),
 		usage_limit: numeric({ mode: "number" }),
+		expiry_duration: text("expiry_duration"),
+		expiry_length: numeric({ mode: "number" }),
 
 		rollover: jsonb().$type<RolloverConfig>(),
 	},
@@ -50,8 +54,20 @@ export const entitlements = pgTable(
 		})
 			.onUpdate("cascade")
 			.onDelete("cascade"),
+		foreignKey({
+			columns: [table.internal_reward_id],
+			foreignColumns: [rewards.internal_id],
+			name: "entitlements_internal_reward_id_fkey",
+		})
+			.onUpdate("cascade")
+			.onDelete("cascade"),
 		unique("entitlements_id_key").on(table.id),
 		index("idx_entitlements_internal_product_id").on(table.internal_product_id),
+		index("idx_entitlements_internal_reward_id").on(table.internal_reward_id),
+		index("idx_entitlements_reward_feature").on(
+			table.internal_reward_id,
+			table.internal_feature_id,
+		),
 	],
 );
 

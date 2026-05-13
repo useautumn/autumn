@@ -6,9 +6,11 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
-import { constructRewardProgram } from "@/internal/rewards/rewardTriggerUtils.js";
+import {
+	rewardProgramRepo,
+	rewardRepo,
+} from "@/internal/rewards/repos/index.js";
+import { constructRewardProgram } from "@/internal/rewards/rewardUtils.js";
 import { nullish } from "@/utils/genUtils.js";
 
 export const handleCreateRewardProgram = createRoute({
@@ -35,7 +37,7 @@ export const handleCreateRewardProgram = createRoute({
 			});
 		}
 
-		const existingProgram = await RewardProgramService.get({
+		const existingProgram = await rewardProgramRepo.get({
 			db,
 			idOrInternalId: body.id,
 			orgId: org.id,
@@ -50,7 +52,7 @@ export const handleCreateRewardProgram = createRoute({
 			});
 		}
 
-		const reward = await RewardService.get({
+		const reward = await rewardRepo.get({
 			db,
 			idOrInternalId: body.internal_reward_id,
 			orgId: org.id,
@@ -86,7 +88,7 @@ export const handleCreateRewardProgram = createRoute({
 			});
 		}
 
-		const createdRewardProgram = await RewardProgramService.create({
+		const createdRewardProgram = await rewardProgramRepo.insert({
 			db,
 			data: rewardProgram,
 		});
