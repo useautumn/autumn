@@ -25,6 +25,35 @@ import { generateId } from "../../../src/utils/genUtils.js";
 
 const DEFAULT_ENV = AppEnv.Sandbox;
 
+// Retry transient DB/network failures during worker preload. Many workers
+// open pools simultaneously, occasionally tripping connection limits or
+// cold-start blips against PlanetScale.
+const withRetry = async <T>(
+	fn: () => Promise<T>,
+	{ label }: { label: string },
+): Promise<T> => {
+	const delays = [100, 300, 700];
+	let lastErr: unknown;
+	for (let attempt = 0; attempt <= delays.length; attempt++) {
+		try {
+			return await fn();
+		} catch (err) {
+			lastErr = err;
+			const message = err instanceof Error ? err.message : String(err);
+			const transient =
+				/ECONNRESET|ETIMEDOUT|ENETUNREACH|ECONNREFUSED|EAI_AGAIN|socket hang up|Connection terminated|pool|timeout/i.test(
+					message,
+				);
+			if (!transient || attempt === delays.length) throw err;
+			console.warn(
+				`[createTestContext] transient failure on "${label}" (attempt ${attempt + 1}): ${message}`,
+			);
+			await new Promise((r) => setTimeout(r, delays[attempt]));
+		}
+	}
+	throw lastErr;
+};
+
 export interface TestContext extends AutumnContext {
 	org: Organization;
 	env: AppEnv;
@@ -46,14 +75,20 @@ export const createTestContext = async () => {
 		);
 	}
 
-	const org = await OrgService.getBySlug({ db, slug: orgSlug });
+	const org = await withRetry(
+		() => OrgService.getBySlug({ db, slug: orgSlug }),
+		{ label: "OrgService.getBySlug" },
+	);
 	if (!org) {
 		throw new Error(`Org with slug "${orgSlug}" not found`);
 	}
 
 	const env = DEFAULT_ENV;
 	const stripeCli = createStripeCli({ org, env });
-	const features = await FeatureService.list({ db, orgId: org.id, env });
+	const features = await withRetry(
+		() => FeatureService.list({ db, orgId: org.id, env }),
+		{ label: "FeatureService.list" },
+	);
 
 	// Org secret key, set by test runner.
 	const orgSecretKey = process.env.UNIT_TEST_AUTUMN_SECRET_KEY || "";

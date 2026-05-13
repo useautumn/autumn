@@ -117,8 +117,20 @@ export const executePostgresDeductionV2 = async ({
 				options: resolvedOptions,
 			});
 
-			if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0)
+			if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0) {
+				if (unlimitedFeatureIds.length > 0 && preparedLock?.enabled) {
+					await saveLockReceiptV2({
+						lock: preparedLock,
+						customerId: fullSubject.customerId || customerId,
+						featureId: feature.id,
+						entityId,
+						items: [],
+						overrideLockValue: toDeduct,
+						redisInstance: ctx.redisV2,
+					});
+				}
 				continue;
+			}
 
 			const result = await db.execute(
 				sql`SELECT * FROM deduct_from_cus_ents(

@@ -5,6 +5,8 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
+import * as openEnums from "../types/enums.js";
+import { OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -58,6 +60,62 @@ export type TrackParams = {
   lock?: TrackLock | undefined;
 };
 
+export const TrackIntervalEnum2 = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type TrackIntervalEnum2 = OpenEnum<typeof TrackIntervalEnum2>;
+
+/**
+ * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+ */
+export type TrackIntervalUnion2 = TrackIntervalEnum2 | string;
+
+export type TrackReset2 = {
+  /**
+   * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+   */
+  interval: TrackIntervalEnum2 | string;
+  /**
+   * Number of intervals between resets (eg. 2 for bi-monthly).
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Timestamp when the balance will next reset.
+   */
+  resetsAt: number | null;
+};
+
+export type Deduction2 = {
+  /**
+   * ID of the underlying balance row that was deducted from (customer_entitlement or rollover).
+   */
+  balanceId: string;
+  /**
+   * The feature this balance belongs to.
+   */
+  featureId: string;
+  /**
+   * ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple).
+   */
+  planId: string | null;
+  /**
+   * Reset configuration for the balance this deduction came from, or null if the balance doesn't reset.
+   */
+  reset: TrackReset2 | null;
+  /**
+   * Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value).
+   */
+  value: number;
+};
+
 /**
  * Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored.
  */
@@ -86,6 +144,66 @@ export type TrackResponseBody2 = {
    * Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature.
    */
   balances?: { [k: string]: Balance | null } | undefined;
+  /**
+   * Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling.
+   */
+  deductions?: Array<Deduction2> | undefined;
+};
+
+export const TrackIntervalEnum1 = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type TrackIntervalEnum1 = OpenEnum<typeof TrackIntervalEnum1>;
+
+/**
+ * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+ */
+export type TrackIntervalUnion1 = TrackIntervalEnum1 | string;
+
+export type TrackReset1 = {
+  /**
+   * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+   */
+  interval: TrackIntervalEnum1 | string;
+  /**
+   * Number of intervals between resets (eg. 2 for bi-monthly).
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Timestamp when the balance will next reset.
+   */
+  resetsAt: number | null;
+};
+
+export type Deduction1 = {
+  /**
+   * ID of the underlying balance row that was deducted from (customer_entitlement or rollover).
+   */
+  balanceId: string;
+  /**
+   * The feature this balance belongs to.
+   */
+  featureId: string;
+  /**
+   * ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple).
+   */
+  planId: string | null;
+  /**
+   * Reset configuration for the balance this deduction came from, or null if the balance doesn't reset.
+   */
+  reset: TrackReset1 | null;
+  /**
+   * Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value).
+   */
+  value: number;
 };
 
 /**
@@ -116,6 +234,10 @@ export type TrackResponseBody1 = {
    * Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature.
    */
   balances?: { [k: string]: Balance | null } | undefined;
+  /**
+   * Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling.
+   */
+  deductions?: Array<Deduction1> | undefined;
 };
 
 export type TrackResponse = TrackResponseBody1 | TrackResponseBody2;
@@ -189,6 +311,83 @@ export function trackParamsToJSON(trackParams: TrackParams): string {
 }
 
 /** @internal */
+export const TrackIntervalEnum2$inboundSchema: z.ZodMiniType<
+  TrackIntervalEnum2,
+  unknown
+> = openEnums.inboundSchema(TrackIntervalEnum2);
+
+/** @internal */
+export const TrackIntervalUnion2$inboundSchema: z.ZodMiniType<
+  TrackIntervalUnion2,
+  unknown
+> = smartUnion([TrackIntervalEnum2$inboundSchema, types.string()]);
+
+export function trackIntervalUnion2FromJSON(
+  jsonString: string,
+): SafeParseResult<TrackIntervalUnion2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => TrackIntervalUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackIntervalUnion2' from JSON`,
+  );
+}
+
+/** @internal */
+export const TrackReset2$inboundSchema: z.ZodMiniType<TrackReset2, unknown> = z
+  .pipe(
+    z.object({
+      interval: smartUnion([TrackIntervalEnum2$inboundSchema, types.string()]),
+      interval_count: types.optional(types.number()),
+      resets_at: types.nullable(types.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "interval_count": "intervalCount",
+        "resets_at": "resetsAt",
+      });
+    }),
+  );
+
+export function trackReset2FromJSON(
+  jsonString: string,
+): SafeParseResult<TrackReset2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => TrackReset2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackReset2' from JSON`,
+  );
+}
+
+/** @internal */
+export const Deduction2$inboundSchema: z.ZodMiniType<Deduction2, unknown> = z
+  .pipe(
+    z.object({
+      balance_id: types.string(),
+      feature_id: types.string(),
+      plan_id: types.nullable(types.string()),
+      reset: types.nullable(z.lazy(() => TrackReset2$inboundSchema)),
+      value: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "balance_id": "balanceId",
+        "feature_id": "featureId",
+        "plan_id": "planId",
+      });
+    }),
+  );
+
+export function deduction2FromJSON(
+  jsonString: string,
+): SafeParseResult<Deduction2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Deduction2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Deduction2' from JSON`,
+  );
+}
+
+/** @internal */
 export const TrackResponseBody2$inboundSchema: z.ZodMiniType<
   TrackResponseBody2,
   unknown
@@ -202,6 +401,7 @@ export const TrackResponseBody2$inboundSchema: z.ZodMiniType<
     balances: types.optional(
       z.record(z.string(), types.nullable(Balance$inboundSchema)),
     ),
+    deductions: types.optional(z.array(z.lazy(() => Deduction2$inboundSchema))),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -223,6 +423,83 @@ export function trackResponseBody2FromJSON(
 }
 
 /** @internal */
+export const TrackIntervalEnum1$inboundSchema: z.ZodMiniType<
+  TrackIntervalEnum1,
+  unknown
+> = openEnums.inboundSchema(TrackIntervalEnum1);
+
+/** @internal */
+export const TrackIntervalUnion1$inboundSchema: z.ZodMiniType<
+  TrackIntervalUnion1,
+  unknown
+> = smartUnion([TrackIntervalEnum1$inboundSchema, types.string()]);
+
+export function trackIntervalUnion1FromJSON(
+  jsonString: string,
+): SafeParseResult<TrackIntervalUnion1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => TrackIntervalUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackIntervalUnion1' from JSON`,
+  );
+}
+
+/** @internal */
+export const TrackReset1$inboundSchema: z.ZodMiniType<TrackReset1, unknown> = z
+  .pipe(
+    z.object({
+      interval: smartUnion([TrackIntervalEnum1$inboundSchema, types.string()]),
+      interval_count: types.optional(types.number()),
+      resets_at: types.nullable(types.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "interval_count": "intervalCount",
+        "resets_at": "resetsAt",
+      });
+    }),
+  );
+
+export function trackReset1FromJSON(
+  jsonString: string,
+): SafeParseResult<TrackReset1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => TrackReset1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackReset1' from JSON`,
+  );
+}
+
+/** @internal */
+export const Deduction1$inboundSchema: z.ZodMiniType<Deduction1, unknown> = z
+  .pipe(
+    z.object({
+      balance_id: types.string(),
+      feature_id: types.string(),
+      plan_id: types.nullable(types.string()),
+      reset: types.nullable(z.lazy(() => TrackReset1$inboundSchema)),
+      value: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "balance_id": "balanceId",
+        "feature_id": "featureId",
+        "plan_id": "planId",
+      });
+    }),
+  );
+
+export function deduction1FromJSON(
+  jsonString: string,
+): SafeParseResult<Deduction1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Deduction1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Deduction1' from JSON`,
+  );
+}
+
+/** @internal */
 export const TrackResponseBody1$inboundSchema: z.ZodMiniType<
   TrackResponseBody1,
   unknown
@@ -236,6 +513,7 @@ export const TrackResponseBody1$inboundSchema: z.ZodMiniType<
     balances: types.optional(
       z.record(z.string(), types.nullable(Balance$inboundSchema)),
     ),
+    deductions: types.optional(z.array(z.lazy(() => Deduction1$inboundSchema))),
   }),
   z.transform((v) => {
     return remap$(v, {

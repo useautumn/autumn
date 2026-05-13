@@ -119,6 +119,10 @@ export function CustomerProductsTable() {
 		setSheet({ type: "subscription-uncancel", itemId: product.id });
 	};
 
+	const handleUpdateClick = (product: FullCusProduct) => {
+		setSheet({ type: "subscription-update", itemId: product.id });
+	};
+
 	const handleRowClick = (cusProduct: FullCusProduct) => {
 		setSheet({
 			type: "subscription-detail",
@@ -130,6 +134,7 @@ export function CustomerProductsTable() {
 		onCancelClick: handleCancelClick,
 		onUncancelClick: handleUncancelClick,
 		onTransferClick: handleTransferClick,
+		onUpdateClick: handleUpdateClick,
 		hasEntities,
 		nowMs: testClockFrozenTimeMs,
 	};

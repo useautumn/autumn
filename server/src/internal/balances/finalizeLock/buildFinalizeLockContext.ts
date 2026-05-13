@@ -52,7 +52,11 @@ export const buildFinalizeLockContext = async ({
 		source: "runFinalizeLock",
 	});
 
-	const lockValue = calculateLockValue({ items: receipt.items });
+	const calculatedLockValue = calculateLockValue({ items: receipt.items });
+	const lockValue =
+		receipt.items.length === 0
+			? (receipt.overrideLockValue ?? calculatedLockValue)
+			: calculatedLockValue;
 	const finalValue =
 		params.action === "release" ? 0 : (params.override_value ?? lockValue);
 

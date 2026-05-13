@@ -99,6 +99,10 @@ export const CreateProductV2ParamsSchema = z
 		config: ProductConfigParamsSchema.optional().meta({
 			description: "Miscellaneous product-level configuration flags.",
 		}),
+
+		create_in_stripe: z.boolean().optional().meta({
+			internal: true,
+		}),
 	})
 	.meta({
 		examples: [CREATE_PRODUCT_EXAMPLE],

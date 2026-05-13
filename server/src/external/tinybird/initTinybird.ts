@@ -34,6 +34,7 @@ const TinybirdEventSchema = z.object({
 	internal_entity_id: z.string().nullable(),
 	customer_id: z.string(),
 	properties: z.string().nullable(),
+	deductions: z.string().nullable(),
 });
 
 /** Pre-built pipe callers */

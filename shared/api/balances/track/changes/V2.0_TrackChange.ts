@@ -49,8 +49,18 @@ export const V2_0_TrackChange = defineVersionChange({
 			}
 		}
 
+		const {
+			customer_id,
+			entity_id,
+			event_name,
+			value,
+		}: z.infer<typeof TrackResponseV3Schema> = input;
+
 		return {
-			...input,
+			customer_id,
+			entity_id,
+			event_name,
+			value,
 			balance: transformedBalance,
 			balances: transformedBalances,
 		};

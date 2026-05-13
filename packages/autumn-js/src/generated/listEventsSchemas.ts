@@ -26,23 +26,6 @@ export const eventsListParamsSchema = z.object({
 	customRange: z.union([listEventsCustomRangeSchema, z.undefined()]).optional(),
 });
 
-export const listEventsListSchema = z.object({
-	id: z.string(),
-	timestamp: z.number(),
-	featureId: z.string(),
-	customerId: z.string(),
-	value: z.number(),
-	properties: z.record(z.string(), z.any()),
-});
-
-export const listEventsResponseSchema = z.object({
-	list: z.array(listEventsListSchema),
-	hasMore: z.boolean(),
-	offset: z.number(),
-	limit: z.number(),
-	total: z.number(),
-});
-
 export const listEventsFeatureIdOutboundSchema = z.union([
 	z.string(),
 	z.array(z.string()),
@@ -64,4 +47,45 @@ export const eventsListParamsOutboundSchema = z.object({
 	custom_range: z
 		.union([listEventsCustomRangeOutboundSchema, z.undefined()])
 		.optional(),
+});
+
+const openEnumSchema = z.any();
+
+export const listEventsIntervalEnumSchema = openEnumSchema;
+
+export const listEventsIntervalUnionSchema = z.union([
+	listEventsIntervalEnumSchema,
+	z.string(),
+]);
+
+export const listEventsResetSchema = z.object({
+	interval: z.union([listEventsIntervalEnumSchema, z.string()]),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	resetsAt: z.number().nullable(),
+});
+
+export const deductionsSchema = z.object({
+	balanceId: z.string(),
+	featureId: z.string(),
+	planId: z.string().nullable(),
+	reset: listEventsResetSchema.nullable(),
+	value: z.number(),
+});
+
+export const listEventsListSchema = z.object({
+	id: z.string(),
+	timestamp: z.number(),
+	featureId: z.string(),
+	customerId: z.string(),
+	value: z.number(),
+	properties: z.record(z.string(), z.any()),
+	deductions: z.array(deductionsSchema).nullable(),
+});
+
+export const listEventsResponseSchema = z.object({
+	list: z.array(listEventsListSchema),
+	hasMore: z.boolean(),
+	offset: z.number(),
+	limit: z.number(),
+	total: z.number(),
 });

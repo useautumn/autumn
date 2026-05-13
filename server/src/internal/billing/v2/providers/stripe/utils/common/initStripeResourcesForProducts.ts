@@ -1,17 +1,23 @@
 import {
 	type AutumnBillingPlan,
 	type BillingContext,
-	type FullProduct,
+	copyStripeResourcesToMatchingPrice,
 	cusProductToProduct,
+	type FullProduct,
+	isFixedPrice,
+	isFreeProduct,
 	isPrepaidPrice,
 	nullish,
+	type Price,
 } from "@autumn/shared";
 import { createStripePriceIFNotExist } from "@/external/stripe/createStripePrice/createStripePrice";
+import { applyPreviewStripeResourcesToBillingPlan } from "@/external/stripe/previewStripeResourceIds";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import {
 	applyCustomerProductPatch,
 	getPatchCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { PriceService } from "@/internal/products/prices/PriceService";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 
 export const initStripeResourcesForProducts = async ({
@@ -60,6 +66,42 @@ export const initStripeResourcesForProducts = async ({
 	await Promise.all(batchPriceUpdates);
 };
 
+const shouldInitializeStripePrice = ({ price }: { price: Price }) => {
+	if (!isFixedPrice(price)) return true;
+
+	return (price.config.amount ?? 0) > 0;
+};
+
+const applyStripeReuseWithinProduct = async ({
+	db,
+	product,
+}: {
+	db: AutumnContext["db"];
+	product: FullProduct;
+}) => {
+	for (const targetPrice of product.prices) {
+		const candidatePrices = product.prices.filter(
+			(price) => price.id !== targetPrice.id,
+		);
+		if (candidatePrices.length === 0) continue;
+
+		const { copiedFields } = copyStripeResourcesToMatchingPrice({
+			targetPrice,
+			candidatePrices,
+			targetEntitlements: product.entitlements,
+			candidateEntitlements: product.entitlements,
+		});
+
+		if (copiedFields.length === 0) continue;
+
+		await PriceService.update({
+			db,
+			id: targetPrice.id,
+			update: { config: targetPrice.config },
+		});
+	}
+};
+
 export const initStripeResourcesForBillingPlan = async ({
 	ctx,
 	autumnBillingPlan,
@@ -69,24 +111,34 @@ export const initStripeResourcesForBillingPlan = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 	billingContext: BillingContext;
 }) => {
+	const { db, org, env, logger } = ctx;
+
+	if (billingContext.dryRunStripe) {
+		applyPreviewStripeResourcesToBillingPlan({
+			autumnBillingPlan,
+			billingContext,
+		});
+		return;
+	}
+
 	const { fullCustomer } = billingContext;
 	const { insertCustomerProducts } = autumnBillingPlan;
+	const patchCustomerProducts = getPatchCustomerProducts({ autumnBillingPlan });
 
-	const newProducts = insertCustomerProducts.flatMap((cp) =>
-		cusProductToProduct({ cusProduct: cp }),
+	const newProducts = insertCustomerProducts.flatMap((customerProduct) =>
+		cusProductToProduct({ cusProduct: customerProduct }),
 	);
 
-	const patchProducts = getPatchCustomerProducts({ autumnBillingPlan }).map(
-		(patchCustomerProduct) =>
-			cusProductToProduct({
-				cusProduct: applyCustomerProductPatch({
-					customerProduct: patchCustomerProduct.customerProduct,
-					patch: patchCustomerProduct,
-				}),
+	const patchProducts = patchCustomerProducts.map((patchCustomerProduct) =>
+		cusProductToProduct({
+			cusProduct: applyCustomerProductPatch({
+				customerProduct: patchCustomerProduct.customerProduct,
+				patch: patchCustomerProduct,
 			}),
+		}),
 	);
 	const patchedCustomerProductIds = new Set(
-		getPatchCustomerProducts({ autumnBillingPlan }).map(
+		patchCustomerProducts.map(
 			(patchCustomerProduct) => patchCustomerProduct.customerProduct.id,
 		),
 	);
@@ -102,9 +154,10 @@ export const initStripeResourcesForBillingPlan = async ({
 			...product,
 			prices: product.prices.filter(
 				(price) =>
-					nullish(price.config.stripe_price_id) ||
-					(isPrepaidPrice(price) &&
-						nullish(price.config.stripe_prepaid_price_v2_id)),
+					shouldInitializeStripePrice({ price }) &&
+					(nullish(price.config.stripe_price_id) ||
+						(isPrepaidPrice(price) &&
+							nullish(price.config.stripe_prepaid_price_v2_id))),
 			),
 		}))
 		.filter(
@@ -112,12 +165,48 @@ export const initStripeResourcesForBillingPlan = async ({
 		);
 
 	const allProducts = [...newProducts, ...patchProducts, ...existingProducts];
-
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
-	await initStripeResourcesForProducts({
-		ctx,
-		products: allProducts,
-		internalEntityId,
-	});
+	await Promise.all(
+		allProducts.map((product) =>
+			applyStripeReuseWithinProduct({ db, product }),
+		),
+	);
+
+	const batchProductUpdates = [];
+	for (const product of allProducts) {
+		if (product.processor?.id != null) continue;
+		if (isFreeProduct({ prices: product.prices })) continue;
+
+		batchProductUpdates.push(
+			checkStripeProductExists({
+				db,
+				org,
+				env,
+				product,
+				logger,
+			}),
+		);
+	}
+	await Promise.all(batchProductUpdates);
+
+	const batchPriceUpdates = [];
+
+	for (const product of allProducts) {
+		for (const price of product.prices) {
+			if (!shouldInitializeStripePrice({ price })) continue;
+
+			batchPriceUpdates.push(
+				createStripePriceIFNotExist({
+					ctx,
+					price,
+					entitlements: product.entitlements,
+					product,
+					internalEntityId,
+					useCheckout: false,
+				}),
+			);
+		}
+	}
+	await Promise.all(batchPriceUpdates);
 };

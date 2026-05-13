@@ -92,6 +92,16 @@ async function main() {
 		env: ENV,
 		customerId: CUSTOMER_ID,
 	});
+	const guardKey = buildFullCustomerCacheGuardKey({
+		orgId: ORG_ID,
+		env: ENV,
+		customerId: CUSTOMER_ID,
+	});
+	const pathIndexKey = buildPathIndexKey({
+		orgId: ORG_ID,
+		env: ENV,
+		customerId: CUSTOMER_ID,
+	});
 
 	const pathIndexEntries = buildPathIndex({ fullCustomer });
 	const pathIndexJson = JSON.stringify(pathIndexEntries);
@@ -99,15 +109,10 @@ async function main() {
 		`  Path index: ${Object.keys(pathIndexEntries).length} entries, ${(pathIndexJson.length / 1024).toFixed(2)} KB`,
 	);
 
-	const guardKey = buildFullCustomerCacheGuardKey({ orgId: ORG_ID, env: ENV, customerId: CUSTOMER_ID });
-	const pathIndexKey = buildPathIndexKey({ orgId: ORG_ID, env: ENV, customerId: CUSTOMER_ID });
 	const result = await redis.setFullCustomerCache(
 		guardKey,
 		cacheKey,
 		pathIndexKey,
-		ORG_ID,
-		ENV,
-		CUSTOMER_ID,
 		String(Date.now()),
 		String(FULL_CUSTOMER_CACHE_TTL_SECONDS),
 		serialized,
