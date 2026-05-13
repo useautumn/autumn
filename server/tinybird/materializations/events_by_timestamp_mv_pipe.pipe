@@ -15,7 +15,7 @@ SQL >
         properties,
         idempotency_key,
         coalesce(entity_id, '') as entity_id,
-        deductions
+        toString(deductions) as deductions
     FROM events
     ORDER BY timestamp DESC, id DESC
     

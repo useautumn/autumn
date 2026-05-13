@@ -18,7 +18,6 @@ export const EVENTS_LIST_EXAMPLE = {
 					plan_id: "pro",
 					reset: {
 						interval: "month",
-						interval_count: undefined,
 						resets_at: 1765958215459,
 					},
 					value: 30,
