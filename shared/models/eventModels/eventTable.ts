@@ -11,7 +11,7 @@ import {
 	timestamp,
 	unique,
 } from "drizzle-orm/pg-core";
-import type { TrackMutation } from "../../api/balances/track/trackResponseV3.js";
+import type { TrackDeduction } from "../../api/balances/track/trackResponseV3.js";
 import { customers } from "../cusModels/cusTable.js";
 
 export const events = pgTable(
@@ -35,7 +35,7 @@ export const events = pgTable(
 		// Optional stuff...
 		customer_id: text("customer_id").notNull(),
 		properties: jsonb().$type<Record<string, any>>(),
-		mutations: jsonb().$type<TrackMutation[]>(),
+		deductions: jsonb().$type<TrackDeduction[]>(),
 	},
 	(table) => [
 		foreignKey({

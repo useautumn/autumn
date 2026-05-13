@@ -1,6 +1,6 @@
 import type {
 	FullSubject,
-	TrackMutation,
+	TrackDeduction,
 	TrackParams,
 	TrackResponseV3,
 } from "@autumn/shared";
@@ -14,7 +14,7 @@ import {
 import {
 	deductionToTrackResponseV2,
 	executeRedisDeductionV2,
-	projectMutationLogsToTrackMutationsV2,
+	projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -55,12 +55,12 @@ const queueEvent = ({
 	ctx,
 	body,
 	fullSubject,
-	mutations,
+	deductions,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	fullSubject: FullSubject;
-	mutations: TrackMutation[];
+	deductions: TrackDeduction[];
 }): void => {
 	if (body.skip_event) return;
 
@@ -74,7 +74,7 @@ const queueEvent = ({
 			internalEntityId: fullSubject.internalEntityId,
 			customerId: body.customer_id,
 			entityId: body.entity_id,
-			mutations,
+			deductions,
 		}),
 	);
 };
@@ -134,12 +134,12 @@ export const runRedisTrackV3 = async ({
 		modifiedCusEntIdsByFeatureId,
 	});
 
-	const mutations = projectMutationLogsToTrackMutationsV2({
+	const deductions = projectMutationLogsToTrackDeductionsV2({
 		fullSubject: updatedFullSubject,
 		mutationLogs,
 	});
 
-	queueEvent({ ctx, body, fullSubject, mutations });
+	queueEvent({ ctx, body, fullSubject, deductions });
 
 	const { balance, balances } = await deductionToTrackResponseV2({
 		ctx,
@@ -155,6 +155,6 @@ export const runRedisTrackV3 = async ({
 		value: body.value ?? 1,
 		balance,
 		balances,
-		mutations,
+		deductions,
 	};
 };

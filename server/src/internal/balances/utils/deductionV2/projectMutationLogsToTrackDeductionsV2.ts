@@ -1,17 +1,17 @@
 import {
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
-	type TrackMutation,
+	type TrackDeduction,
 } from "@autumn/shared";
 import type { MutationLogItem } from "../types/mutationLogItem.js";
 
-export const projectMutationLogsToTrackMutationsV2 = ({
+export const projectMutationLogsToTrackDeductionsV2 = ({
 	fullSubject,
 	mutationLogs,
 }: {
 	fullSubject: FullSubject;
 	mutationLogs: MutationLogItem[];
-}): TrackMutation[] => {
+}): TrackDeduction[] => {
 	if (mutationLogs.length === 0) return [];
 
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
@@ -32,7 +32,7 @@ export const projectMutationLogsToTrackMutationsV2 = ({
 	// cus_ent_* and rollover_* share the same `balance_id` namespace in the
 	// public shape, but their internal types are scoped separately — qualify
 	// with the type when aggregating so the namespaces can't collide.
-	const aggregated = new Map<string, TrackMutation>();
+	const aggregated = new Map<string, TrackDeduction>();
 
 	for (const log of mutationLogs) {
 		if (log.balance_delta === 0) continue;

@@ -19,7 +19,7 @@ SQL >
         properties,
         idempotency_key,
         entity_id,
-        mutations
+        deductions
     FROM events_by_timestamp_mv
     WHERE
         org_id = {{ String(org_id, '') }}

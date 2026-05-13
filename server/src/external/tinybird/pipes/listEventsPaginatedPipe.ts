@@ -13,7 +13,7 @@ export const listEventsPaginatedPipeResponseSchema = z.object({
 	properties: z.string().nullable(),
 	idempotency_key: z.string().nullable(),
 	entity_id: z.string().nullable(),
-	mutations: z.string().nullable(),
+	deductions: z.string().nullable(),
 });
 
 export type ListEventsPaginatedPipeRow = z.infer<
