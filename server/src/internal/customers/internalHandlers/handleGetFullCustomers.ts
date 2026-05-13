@@ -1,49 +1,38 @@
-import { Scopes } from "@autumn/shared";
-import type { Customer } from "@autumn/shared";
+import { Scopes, StandardCursor } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusBatchService } from "../CusBatchService";
-import { CusSearchService } from "../CusSearchService";
 
-/**
- * POST /customers/all/full_customers
- * Used by:
- * - vite/src/views/onboarding4/hooks/useOnboardingProgress.tsx
- * - vite/src/views/customers/hooks/useFullCusSearchQuery.tsx
- */
 export const handleGetFullCustomers = createRoute({
 	scopes: [Scopes.Customers.Read],
 	body: z.object({
 		search: z.string().optional(),
-		page_size: z.number().optional().default(50),
-		page: z.number().optional().default(1),
-		last_item: z.any().optional(),
-		filters: z.any().optional(),
+		limit: z.number().int().min(1).max(200).optional().default(50),
+		cursor: z.string().optional().default(""),
+		filters: z
+			.object({
+				status: z.array(z.string()).optional(),
+				version: z.array(z.string()).optional(),
+				none: z.boolean().optional(),
+				processor: z.array(z.string()).optional(),
+			})
+			.optional(),
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { search, page_size, page, last_item, filters } = c.req.valid("json");
+		const { search, limit, cursor, filters } = c.req.valid("json");
 
-		const { org, env, db } = ctx;
+		const decoded = StandardCursor.decode(cursor);
 
-		const { data: customers } = await CusSearchService.search({
-			db,
-			orgId: org.id,
-			env,
-			search: search || "",
-			filters,
-			lastItem: last_item,
-			pageNumber: page,
-			pageSize: page_size,
-		});
+		const { fullCustomers, next_cursor } =
+			await CusBatchService.getDashboardCursorPage({
+				ctx,
+				search: search ?? "",
+				filters,
+				cursor: decoded ? { t: decoded.t, id: decoded.id } : null,
+				limit,
+			});
 
-		const fullCustomers = await CusBatchService.getByInternalIds({
-			ctx,
-			internalCustomerIds: customers.map(
-				(customer: Customer) => customer.internal_id,
-			),
-		});
-
-		return c.json({ fullCustomers });
+		return c.json({ fullCustomers, next_cursor });
 	},
 });
