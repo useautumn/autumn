@@ -8,5 +8,5 @@ export { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 export { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 export { prepareDeductionOptionsV2 } from "./prepareDeductionOptionsV2.js";
 export { prepareFeatureDeductionV2 } from "./prepareFeatureDeductionV2.js";
-export { projectMutationLogsToTrackMutationsV2 } from "./projectMutationLogsToTrackMutationsV2.js";
+export { projectMutationLogsToTrackDeductionsV2 } from "./projectMutationLogsToTrackDeductionsV2.js";
 export { rollbackDeductionV2 } from "./rollbackDeductionV2.js";

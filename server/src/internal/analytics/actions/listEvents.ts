@@ -1,4 +1,4 @@
-import type { ApiEventsListItem, TrackMutation } from "@autumn/shared";
+import type { ApiEventsListItem, TrackDeduction } from "@autumn/shared";
 import { epochToDateTime } from "@autumn/shared/api/common/epochUtils";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -84,11 +84,11 @@ export const listEvents = async ({
 			}
 		}
 
-		let mutations: TrackMutation[] | null = null;
-		if (row.mutations) {
+		let deductions: TrackDeduction[] | null = null;
+		if (row.deductions) {
 			try {
-				const parsed = JSON.parse(row.mutations);
-				if (Array.isArray(parsed)) mutations = parsed as TrackMutation[];
+				const parsed = JSON.parse(row.deductions);
+				if (Array.isArray(parsed)) deductions = parsed as TrackDeduction[];
 			} catch {
 				// Invalid JSON — leave null so the caller can distinguish missing
 				// vs explicit empty.
@@ -102,7 +102,7 @@ export const listEvents = async ({
 			customer_id: row.customer_id,
 			value: row.value ?? 0,
 			properties,
-			mutations,
+			deductions,
 		};
 	});
 

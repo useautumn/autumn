@@ -6,7 +6,7 @@ import {
 	type FullSubject,
 	SubjectType,
 } from "@autumn/shared";
-import { projectMutationLogsToTrackMutationsV2 } from "@/internal/balances/utils/deductionV2/projectMutationLogsToTrackMutationsV2.js";
+import { projectMutationLogsToTrackDeductionsV2 } from "@/internal/balances/utils/deductionV2/projectMutationLogsToTrackDeductionsV2.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
 
 const buildFeature = (id: string): Feature =>
@@ -122,12 +122,12 @@ const buildLog = (overrides: Partial<MutationLogItem>): MutationLogItem => ({
 	...overrides,
 });
 
-describe("projectMutationLogsToTrackMutationsV2", () => {
+describe("projectMutationLogsToTrackDeductionsV2", () => {
 	test("returns an empty array when there are no logs", () => {
 		const fullSubject = buildFullSubject({ customerEntitlements: [] });
 
 		expect(
-			projectMutationLogsToTrackMutationsV2({ fullSubject, mutationLogs: [] }),
+			projectMutationLogsToTrackDeductionsV2({ fullSubject, mutationLogs: [] }),
 		).toEqual([]);
 	});
 
@@ -139,7 +139,7 @@ describe("projectMutationLogsToTrackMutationsV2", () => {
 			],
 		});
 
-		const result = projectMutationLogsToTrackMutationsV2({
+		const result = projectMutationLogsToTrackDeductionsV2({
 			fullSubject,
 			mutationLogs: [
 				buildLog({
@@ -167,7 +167,7 @@ describe("projectMutationLogsToTrackMutationsV2", () => {
 			],
 		});
 
-		const result = projectMutationLogsToTrackMutationsV2({
+		const result = projectMutationLogsToTrackDeductionsV2({
 			fullSubject,
 			mutationLogs: [
 				buildLog({
@@ -190,7 +190,7 @@ describe("projectMutationLogsToTrackMutationsV2", () => {
 			],
 		});
 
-		const result = projectMutationLogsToTrackMutationsV2({
+		const result = projectMutationLogsToTrackDeductionsV2({
 			fullSubject,
 			mutationLogs: [
 				buildLog({
@@ -223,7 +223,7 @@ describe("projectMutationLogsToTrackMutationsV2", () => {
 			],
 		});
 
-		const result = projectMutationLogsToTrackMutationsV2({
+		const result = projectMutationLogsToTrackDeductionsV2({
 			fullSubject,
 			mutationLogs: [
 				buildLog({
@@ -264,7 +264,7 @@ describe("projectMutationLogsToTrackMutationsV2", () => {
 			],
 		});
 
-		const result = projectMutationLogsToTrackMutationsV2({
+		const result = projectMutationLogsToTrackDeductionsV2({
 			fullSubject,
 			mutationLogs: [
 				buildLog({
@@ -292,7 +292,7 @@ describe("projectMutationLogsToTrackMutationsV2", () => {
 			],
 		});
 
-		const result = projectMutationLogsToTrackMutationsV2({
+		const result = projectMutationLogsToTrackDeductionsV2({
 			fullSubject,
 			mutationLogs: [
 				buildLog({
@@ -315,7 +315,7 @@ describe("projectMutationLogsToTrackMutationsV2", () => {
 			],
 		});
 
-		const result = projectMutationLogsToTrackMutationsV2({
+		const result = projectMutationLogsToTrackDeductionsV2({
 			fullSubject,
 			mutationLogs: [
 				buildLog({
@@ -337,7 +337,7 @@ describe("projectMutationLogsToTrackMutationsV2", () => {
 			],
 		});
 
-		const result = projectMutationLogsToTrackMutationsV2({
+		const result = projectMutationLogsToTrackDeductionsV2({
 			fullSubject,
 			mutationLogs: [
 				buildLog({
