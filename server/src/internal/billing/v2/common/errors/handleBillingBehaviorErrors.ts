@@ -2,12 +2,10 @@ import type {
 	AttachParamsV1,
 	BillingContext,
 	BillingPlan,
-	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import {
 	ErrCode,
 	RecaseError,
-	UpdateSubscriptionIntent,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { getTrialStateTransition } from "@/internal/billing/v2/utils/billingContext/getTrialStateTransition";
@@ -31,8 +29,7 @@ export const handleProrationBehaviorErrors = ({
 	billingPlan: BillingPlan;
 	params: UpdateSubscriptionV1Params | AttachParamsV1;
 }) => {
-	// Only validate when proration_behavior is 'none' (defer charges)
-	if (params.proration_behavior !== "none") return;
+	if (billingContext.requestedProrationBehavior !== "none") return;
 
 	// When anchor reset + none is used, charges are expected (full new plan price)
 	if (billingContext.requestedBillingCycleAnchor === "now") return;
@@ -51,14 +48,9 @@ export const handleProrationBehaviorErrors = ({
 		});
 	}
 
-	// Block any operations that would result in a charge
 	const chargeResult = billingPlanWillCharge({ billingPlan });
 
-	const isManualTopUp =
-		(billingContext as Partial<UpdateSubscriptionBillingContext>).intent ===
-		UpdateSubscriptionIntent.ManualTopUp;
-
-	if (chargeResult.willCharge && !isManualTopUp) {
+	if (chargeResult.willCharge) {
 		throw new RecaseError({
 			message: `Cannot set proration_behavior to 'none' when ${getChargeReasonMessage(chargeResult.reason)}`,
 			code: ErrCode.InvalidRequest,

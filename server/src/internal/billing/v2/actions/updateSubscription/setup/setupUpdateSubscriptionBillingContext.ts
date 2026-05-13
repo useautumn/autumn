@@ -16,6 +16,7 @@ import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillin
 import { setupCancelAction } from "@/internal/billing/v2/setup/setupCancelMode";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
+import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
@@ -191,7 +192,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
-		requestedProrationBehavior: params.proration_behavior,
+		requestedProrationBehavior: setupIgnoreProrationBehavior({ intent })
+			? undefined
+			: params.proration_behavior,
 
 		invoiceMode,
 		featureQuantities,

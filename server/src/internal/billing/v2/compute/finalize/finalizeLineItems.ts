@@ -4,8 +4,6 @@ import {
 	type CustomLineItem,
 	filterUnchangedPricesFromLineItems,
 	type LineItem,
-	type UpdateSubscriptionBillingContext,
-	UpdateSubscriptionIntent,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildSharedSubscriptionTrialLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildSharedSubscriptionTrialLineItems";
@@ -33,14 +31,9 @@ export const finalizeLineItems = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	customLineItems?: CustomLineItem[];
 }): LineItem[] => {
-	const isManualTopUp =
-		(billingContext as Partial<UpdateSubscriptionBillingContext>).intent ===
-		UpdateSubscriptionIntent.ManualTopUp;
-
 	if (
 		billingContext.requestedProrationBehavior === "none" &&
-		!billingContext.anchorResetRefund?.noPartialRefund &&
-		!isManualTopUp
+		!billingContext.anchorResetRefund?.noPartialRefund
 	) {
 		return [];
 	}
