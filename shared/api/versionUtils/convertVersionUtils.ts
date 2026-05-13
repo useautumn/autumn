@@ -138,6 +138,7 @@ export function createdAtToVersion({
 }: {
 	createdAt?: number;
 }): ApiVersionClass {
+	const v2_3 = new Date("2026-05-13T00:00:00Z").getTime();
 	const v2_2 = new Date("2026-03-18T00:00:00Z").getTime();
 
 	const v1_2 = new Date("2025-05-05").getTime();
@@ -146,7 +147,9 @@ export function createdAtToVersion({
 
 	let version: ApiVersion;
 
-	if (!createdAt || createdAt >= v2_2) {
+	if (!createdAt || createdAt >= v2_3) {
+		version = ApiVersion.V2_3;
+	} else if (createdAt >= v2_2) {
 		version = ApiVersion.V2_2;
 	} else if (createdAt >= v1_2) {
 		version = ApiVersion.V1_2;
@@ -159,7 +162,6 @@ export function createdAtToVersion({
 	}
 
 	return new ApiVersionClass(version);
-	// return new ApiVersionClass(ApiVersion.V2_0);
 }
 
 // Convert org creation date
