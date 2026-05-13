@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/v2/buttons/Button";
 import { OperationsForm } from "./operations/OperationsForm";
 import { type StepId, StepIndicator } from "./StepIndicator";
+import { hasValidOperations } from "./shared/operationUtils";
 import type { useMigrationEditorForm } from "./useMigrationEditorForm";
 
 type FormInstance = ReturnType<typeof useMigrationEditorForm>["form"];
@@ -23,6 +24,7 @@ function hasVersionOperation(operations: Operations): boolean {
 export function OperationsStep({
 	form,
 	operations,
+	noBillingChanges,
 	step,
 	onStepChange,
 	onPrevious,
@@ -31,12 +33,15 @@ export function OperationsStep({
 }: {
 	form: FormInstance;
 	operations: Operations;
+	noBillingChanges: boolean;
 	step: StepId;
 	onStepChange: (step: StepId) => void;
 	onPrevious: () => void;
 	onNext: () => void;
 	saveError: string | null;
 }) {
+	const canProceed = hasValidOperations(operations) && !saveError;
+
 	return (
 		<div className="flex flex-col gap-4">
 			<StepIndicator step={step} onStepChange={onStepChange}>
@@ -44,7 +49,12 @@ export function OperationsStep({
 					<ArrowLeftIcon size={14} />
 					Previous
 				</Button>
-				<Button variant="primary" size="default" onClick={onNext}>
+				<Button
+					variant="primary"
+					size="default"
+					onClick={onNext}
+					disabled={!canProceed}
+				>
 					Next
 					<ArrowRightIcon size={14} />
 				</Button>
@@ -52,6 +62,10 @@ export function OperationsStep({
 			<OperationsForm
 				value={operations}
 				onChange={(v) => form.setFieldValue("operations", v)}
+				noBillingChanges={noBillingChanges}
+				onNoBillingChangesChange={(v) =>
+					form.setFieldValue("noBillingChanges", v)
+				}
 			/>
 			{saveError && (
 				<div className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-500">

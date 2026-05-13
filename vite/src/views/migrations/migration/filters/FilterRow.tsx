@@ -5,6 +5,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
+import { cn } from "@/lib/utils";
 import { BooleanPill } from "../shared/BooleanPill";
 import { RemoveButton } from "../shared/RemoveButton";
 import { ValuePicker } from "../shared/ValuePicker";
@@ -97,26 +98,33 @@ export function FilterRow({
 			</Select>
 
 			{config.operators.length > 1 ? (
-				<Select
-					value={rule.operator}
-					onValueChange={(v) =>
-						onChange({ ...rule, operator: v as FilterOperator })
-					}
-					items={config.operators}
-				>
-					<SelectTrigger className="h-8 text-sm min-w-16 px-3 shrink-0">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{config.operators.map((op) => (
-							<SelectItem key={op.value} value={op.value}>
-								{op.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
+				<div className={config.valueType === "none" ? "flex-1" : "shrink-0"}>
+					<Select
+						value={rule.operator}
+						onValueChange={(v) =>
+							onChange({ ...rule, operator: v as FilterOperator })
+						}
+						items={config.operators}
+					>
+						<SelectTrigger className="h-8 text-sm min-w-16 px-3">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{config.operators.map((op) => (
+								<SelectItem key={op.value} value={op.value}>
+									{op.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
 			) : (
-				<span className="text-sm text-t3 shrink-0 px-1">
+				<span
+					className={cn(
+						"text-sm text-t3 px-1",
+						config.valueType === "none" ? "flex-1" : "shrink-0",
+					)}
+				>
 					{config.operators[0].label}
 				</span>
 			)}
@@ -153,7 +161,7 @@ function FilterValueInput({
 	onToggle: (value: string) => void;
 	onChipRemove: (value: string) => void;
 }) {
-	if (config.valueType === "none") return null;
+	if (config.valueType === "none") return <div className="flex-1" />;
 
 	if (config.valueType === "boolean")
 		return (

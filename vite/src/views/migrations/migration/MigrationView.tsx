@@ -114,6 +114,8 @@ export function MigrationView() {
 							<MigrationCustomerSheet
 								migrationId={migration.id}
 								customer={selectedCustomer}
+								operations={migration.operations ?? {}}
+								noBillingChanges={migration.no_billing_changes ?? false}
 							/>
 						</SheetContainer>
 					</motion.div>

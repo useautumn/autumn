@@ -4,7 +4,14 @@ import type {
 	Operations,
 	UpdatePlanOp,
 } from "@autumn/shared";
-import { PackageIcon, PencilSimpleIcon, PlusIcon } from "@phosphor-icons/react";
+import {
+	CaretDownIcon,
+	CheckIcon,
+	PackageIcon,
+	PencilSimpleIcon,
+	PlusIcon,
+} from "@phosphor-icons/react";
+
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -13,6 +20,7 @@ import {
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { cn } from "@/lib/utils";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
+import { AutumnMark, StripeMark } from "../shared/BillingScopeMarks";
 import { AddPlansSection } from "./AddPlanOpForm";
 import { UpdatePlanOpForm } from "./UpdatePlanOpForm";
 
@@ -24,9 +32,13 @@ const DEFAULT_UPDATE_PLAN: CustomerOperation = {
 export function OperationsForm({
 	value,
 	onChange,
+	noBillingChanges,
+	onNoBillingChangesChange,
 }: {
 	value: Operations;
 	onChange: (value: Operations) => void;
+	noBillingChanges: boolean;
+	onNoBillingChangesChange: (value: boolean) => void;
 }) {
 	const operations = value.customer ?? [];
 	const updatePlanOps = operations.filter((op) => op.type === "update_plan");
@@ -113,6 +125,52 @@ export function OperationsForm({
 								Add Plan
 							</DropdownMenuItem>
 						)}
+					</DropdownMenuContent>
+				</DropdownMenu>
+			</div>
+
+			<div className="border-t mt-3 pt-3 flex flex-col gap-2">
+				<span className="text-sm font-medium text-t1">Billing Scope</span>
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<button
+							type="button"
+							className="flex items-center gap-2 h-8 px-3 rounded-xl text-sm cursor-pointer input-base text-t1 whitespace-nowrap overflow-hidden"
+						>
+							{noBillingChanges ? (
+								<AutumnMark size={14} />
+							) : (
+								<StripeMark size={14} />
+							)}
+							<span className="flex-1 text-left truncate">
+								{noBillingChanges
+									? "Billing changes apply to Autumn only"
+									: "Billing changes apply to Autumn and Stripe"}
+							</span>
+							<CaretDownIcon size={12} className="text-t3 shrink-0" />
+						</button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="start" className="w-(--anchor-width)">
+						<DropdownMenuItem
+							closeOnClick
+							onClick={() => onNoBillingChangesChange(true)}
+						>
+							<AutumnMark size={14} />
+							<span className="flex-1">
+								Billing changes apply to Autumn only
+							</span>
+							{noBillingChanges && <CheckIcon size={14} className="text-t3" />}
+						</DropdownMenuItem>
+						<DropdownMenuItem
+							closeOnClick
+							onClick={() => onNoBillingChangesChange(false)}
+						>
+							<StripeMark size={14} />
+							<span className="flex-1">
+								Billing changes apply to Autumn and Stripe
+							</span>
+							{!noBillingChanges && <CheckIcon size={14} className="text-t3" />}
+						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
 			</div>

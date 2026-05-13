@@ -38,7 +38,7 @@ export function useMigrationEditorForm({
 }) {
 	const { updateMigration } = useMigrationsQuery();
 	const [saveError, setSaveError] = useState<string | null>(null);
-	const hasBeenValid = useRef(false);
+	const showErrors = useRef(false);
 
 	const form = useAppForm({
 		defaultValues: {
@@ -48,14 +48,18 @@ export function useMigrationEditorForm({
 			operations: (migration.operations ?? {
 				customer: [{ type: "update_plan", plan_filter: {} }],
 			}) as Operations,
+			noBillingChanges: migration.no_billing_changes ?? false,
 		},
 		onSubmit: async ({ value }) => {
 			try {
 				await updateMigration({
 					id: migration.id,
-					updates: { filter: value.filter, operations: value.operations },
+					updates: {
+						filter: value.filter,
+						operations: value.operations,
+						no_billing_changes: value.noBillingChanges,
+					},
 				});
-				hasBeenValid.current = true;
 				setSaveError(null);
 			} catch (error) {
 				toast.error(
@@ -73,15 +77,19 @@ export function useMigrationEditorForm({
 		() =>
 			debounce(async () => {
 				try {
-					const { filter, operations } = form.store.state.values;
+					const { filter, operations, noBillingChanges } =
+						form.store.state.values;
 					await updateMigration({
 						id: migration.id,
-						updates: { filter, operations },
+						updates: {
+							filter,
+							operations,
+							no_billing_changes: noBillingChanges,
+						},
 					});
-					hasBeenValid.current = true;
 					setSaveError(null);
 				} catch (error) {
-					if (hasBeenValid.current) {
+					if (showErrors.current) {
 						const raw = getBackendErr(error as AxiosError, "");
 						setSaveError(humanizeValidationError(raw));
 					}
@@ -100,7 +108,11 @@ export function useMigrationEditorForm({
 
 	useEffect(() => () => debouncedSave.cancel(), [debouncedSave]);
 
-	return { form, saveError };
+	const enableErrorDisplay = () => {
+		showErrors.current = true;
+	};
+
+	return { form, saveError, enableErrorDisplay };
 }
 
 export type MigrationEditorFormInstance = ReturnType<

@@ -2,6 +2,8 @@ import type { Migration } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { FilterStep } from "./FilterStep";
+import { useCustomerCount } from "./filters/CustomerPreview";
+import { useGuardedStepNavigation } from "./hooks/useGuardedStepNavigation";
 import { MigrationLiveView } from "./live/MigrationLiveView";
 import { OperationsStep } from "./OperationsStep";
 import { STEPS, type StepId } from "./StepIndicator";
@@ -14,9 +16,26 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 		"step",
 		parseAsStringLiteral(STEP_IDS).withDefault("filter"),
 	);
-	const { form, saveError } = useMigrationEditorForm({ migration });
+	const { form, saveError, enableErrorDisplay } = useMigrationEditorForm({
+		migration,
+	});
 	const filter = useStore(form.store, (s) => s.values.filter);
 	const operations = useStore(form.store, (s) => s.values.operations);
+	const noBillingChanges = useStore(
+		form.store,
+		(s) => s.values.noBillingChanges,
+	);
+	const customerCount = useCustomerCount(filter.customer ?? {});
+	const hasCustomers = customerCount !== null && customerCount > 0;
+
+	const guardedSetStep = useGuardedStepNavigation({
+		step,
+		hasCustomers,
+		operations,
+		saveError,
+		enableErrorDisplay,
+		setStep,
+	});
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -25,18 +44,19 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 					form={form}
 					filter={filter}
 					step={step}
-					onStepChange={setStep}
-					onNext={() => setStep("operations")}
+					onStepChange={guardedSetStep}
+					onNext={() => guardedSetStep("operations")}
 				/>
 			)}
 			{step === "operations" && (
 				<OperationsStep
 					form={form}
 					operations={operations}
+					noBillingChanges={noBillingChanges}
 					step={step}
-					onStepChange={setStep}
+					onStepChange={guardedSetStep}
 					onPrevious={() => setStep("filter")}
-					onNext={() => setStep("live")}
+					onNext={() => guardedSetStep("live")}
 					saveError={saveError}
 				/>
 			)}
@@ -44,8 +64,10 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 				<MigrationLiveView
 					migrationId={migration.id}
 					filter={filter}
+					operations={operations}
+					noBillingChanges={noBillingChanges}
 					step={step}
-					onStepChange={setStep}
+					onStepChange={guardedSetStep}
 					onPrevious={() => setStep("operations")}
 				/>
 			)}

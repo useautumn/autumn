@@ -33,7 +33,7 @@ export function ItemSummaryRow({
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"flex items-center gap-2 h-8 px-3 w-full select-none rounded-xl cursor-pointer",
+				"flex items-center gap-2 h-8 px-3 w-full select-none rounded-xl cursor-pointer text-left",
 				"input-base input-state-open-tiny",
 			)}
 		>

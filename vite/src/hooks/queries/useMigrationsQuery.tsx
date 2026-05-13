@@ -55,6 +55,7 @@ export const useMigrationsQuery = () => {
 				filter?: MigrationFilter | null;
 				operations?: Operations | null;
 				retry_failed?: boolean;
+				no_billing_changes?: boolean;
 			};
 		}) => {
 			const { data } = await axiosInstance.post<Migration>(
