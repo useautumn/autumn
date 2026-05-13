@@ -1,0 +1,25 @@
+server/src/internal/misc/rateLimiter/rateLimitConfigs.ts
+  s_b1a331f4eba7de::t_853c22c4f1eb0f 214
+  s_b1a331f4eba7de::t_5b65d088f0e93f 131-134,148-150,152-170
+  s_b1a331f4eba7de::t_3b00aed839afed 1
+server/src/internal/misc/rateLimiter/rateLimitFactory.ts
+  s_b1a331f4eba7de::t_3306f5e9338867 121-122
+server/src/internal/customers/handlers/handleListCustomersV2.ts
+  s_b1a331f4eba7de::t_c316e4e6b08088 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "34392a0f4a4e1aaa5084b557307fd87a3874bb56",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
