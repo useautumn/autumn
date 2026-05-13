@@ -49,6 +49,7 @@ export const copyStripeResourcesToMatchingPrice = ({
 	candidateEntitlements,
 }: {
 	targetPrice: Price;
+	// Stripe IDs are copied FROM the best-matching candidate TO targetPrice.
 	candidatePrices: Price[];
 	targetEntitlements: Entitlement[];
 	candidateEntitlements: Entitlement[];
