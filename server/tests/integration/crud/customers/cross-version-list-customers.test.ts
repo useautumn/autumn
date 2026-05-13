@@ -1,4 +1,4 @@
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import {
 	type ApiCustomer,
 	ApiCustomerSchema,
@@ -21,8 +21,28 @@ test.concurrent(`${chalk.yellowBright("cross-version-list-customers: list custom
 		actions: [],
 	});
 
+	const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 	const autumnV2_1 = new AutumnInt({ version: ApiVersion.V2_1 });
 	const autumnV2_0 = new AutumnInt({ version: ApiVersion.V2_0 });
+
+	// V2.3 cursor envelope: { list, next_cursor }, no offset/limit/total echoed.
+	const customersV2_3 = (await autumnV2_3.customers.listV2({
+		cursor: "",
+		limit: 10,
+		keepInternalFields: true,
+	})) as {
+		list: ApiCustomerV5[];
+		next_cursor: string | null;
+	};
+	expect(Array.isArray(customersV2_3.list)).toBe(true);
+	expect("next_cursor" in customersV2_3).toBe(true);
+	expect(
+		customersV2_3.next_cursor === null ||
+			typeof customersV2_3.next_cursor === "string",
+	).toBe(true);
+	for (const customer of customersV2_3.list) {
+		ApiCustomerV5Schema.parse(customer);
+	}
 
 	// V2.1 - should return ApiCustomerV5 schema (V1 balances with granted/remaining)
 	const customersV2_1 = (await autumnV2_1.customers.listV2({
@@ -55,6 +75,6 @@ test.concurrent(`${chalk.yellowBright("cross-version-list-customers: list custom
 	}
 
 	console.log(
-		"Listed customersV2_1, customersV2_0, and customersV1_2 successfully",
+		"Listed customersV2_3, customersV2_1, customersV2_0, and customersV1_2 successfully",
 	);
 });
