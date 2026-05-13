@@ -25,6 +25,7 @@ import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCyc
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
+import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
 import { getAttachAccessStartsAt } from "./getAttachAccessStartsAt";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
@@ -250,8 +251,8 @@ export const setupAttachBillingContext = async ({
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
-		requestedProrationBehavior: isOneOffProduct({
-			prices: attachProduct.prices,
+		requestedProrationBehavior: setupIgnoreProrationBehavior({
+			isOneOffAttach: isOneOffProduct({ prices: attachProduct.prices }),
 		})
 			? undefined
 			: params.proration_behavior,
