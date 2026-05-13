@@ -38,7 +38,7 @@
 		"@tanstack/react-query": "catalog:",
 		"@tanstack/react-table": "^8.21.3",
 		"@tanstack/react-virtual": "^3.13.18",
-		"@trigger.dev/react-hooks": "^4.4.6",
+		"@trigger.dev/react-hooks": "4.4.5",
 		"ag-charts-community": "^12.0.2",
 		"ag-charts-react": "^12.0.2",
 		"ag-grid-community": "^34.0.2",
