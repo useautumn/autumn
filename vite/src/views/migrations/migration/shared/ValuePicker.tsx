@@ -63,11 +63,13 @@ export function ValuePicker({
 											className="flex items-center gap-0.5 bg-accent border border-border text-t1 rounded px-1 h-4.5 text-[10px] shrink-0 max-w-48"
 										>
 											{opt?.icon && (
-												<span className="shrink-0 [&_svg]:size-3">{opt.icon}</span>
+												<span className="shrink-0 [&_svg]:size-3">
+													{opt.icon}
+												</span>
 											)}
 											<span className="truncate">{opt?.label ?? val}</span>
 											<span
-												className="cursor-pointer text-t3 hover:text-destructive ml-0.5"
+												className="cursor-pointer text-t3 hover:text-destructive ml-0.5 transition-colors"
 												onClick={(e) => {
 													e.stopPropagation();
 													onRemove(val);

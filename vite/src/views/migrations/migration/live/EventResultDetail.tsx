@@ -1,6 +1,9 @@
-import { Badge } from "@/components/v2/badges/Badge";
+import type { Feature } from "@autumn/shared";
+import { PackageIcon } from "@phosphor-icons/react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
+import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 
 type ItemChange = { action?: string; feature_id?: string };
 type PlanChange = {
@@ -36,119 +39,206 @@ function parseList<T>(raw: (string | T)[] | undefined): T[] {
 		.filter((c): c is T => c !== null);
 }
 
-const ACTION_STYLES: Record<string, string> = {
-	updated: "bg-blue-500/10 text-blue-500",
-	created: "bg-green-500/10 text-green-500",
-	removed: "bg-red-500/10 text-red-500",
-	deleted: "bg-red-500/10 text-red-500",
+const DOT_COLORS: Record<string, string> = {
+	updated: "bg-amber-500",
+	created: "bg-green-500",
+	removed: "bg-red-500",
+	deleted: "bg-red-500",
 };
 
 const ACTION_LABELS: Record<string, string> = {
-	updated: "Update",
-	created: "Add",
-	removed: "Remove",
-	deleted: "Remove",
+	updated: "Changed",
+	created: "New",
+	removed: "Removed",
+	deleted: "Removed",
 };
 
-function ActionBadge({ action }: { action: string }) {
+function StatusDot({ action }: { action: string }) {
 	return (
-		<Badge
-			variant="muted"
-			className={cn("text-[10px] shrink-0", ACTION_STYLES[action])}
-		>
-			{ACTION_LABELS[action] ?? action}
-		</Badge>
+		<span
+			className={cn(
+				"size-2 rounded-full shrink-0",
+				DOT_COLORS[action] ?? "bg-t3",
+			)}
+			title={ACTION_LABELS[action] ?? action}
+		/>
 	);
 }
 
-function PlanChangeRow({ change }: { change: PlanChange }) {
-	const action = change.action ?? "unknown";
-	const items = change.item_changes ?? [];
+function FeatureIcon({
+	featureId,
+	features,
+}: {
+	featureId: string | undefined;
+	features: Feature[];
+}) {
+	const feature = features.find((f) => f.id === featureId);
+	const config = feature
+		? getFeatureIconConfig(feature.type, feature.config?.usage_type, 14)
+		: getFeatureIconConfig(null, null, 14);
 
+	return <span className={cn("shrink-0", config.color)}>{config.icon}</span>;
+}
+
+const ROW_TINTS: Record<string, string> = {
+	created: "border-green-500/20 bg-green-500/5",
+	updated: "border-amber-500/20 bg-amber-500/5",
+	removed: "border-red-500/20 bg-red-500/5",
+	deleted: "border-red-500/20 bg-red-500/5",
+};
+
+function ChangeRow({
+	action,
+	children,
+	className,
+}: {
+	action?: string;
+	children: React.ReactNode;
+	className?: string;
+}) {
 	return (
-		<div className="space-y-1">
-			<div className="flex items-center gap-1.5">
-				<ActionBadge action={action} />
-				<span className="text-xs text-t2 truncate font-mono">
-					{change.plan_id ?? "Unknown plan"}
-				</span>
-			</div>
-			{items.length > 0 ? (
-				<div className="pl-2 border-l-2 border-border ml-1 space-y-0.5">
-					{items.map((item, i) => (
-						<div
-							key={item.feature_id ?? i}
-							className="flex items-center gap-1.5 text-[11px]"
-						>
-							<ActionBadge action={item.action ?? "unknown"} />
-							<span className="text-t3">{item.feature_id}</span>
-						</div>
-					))}
-				</div>
-			) : action === "updated" ? (
-				<span className="text-[11px] text-t3 pl-1">
-					Plan configuration updated (price, version, or settings)
-				</span>
-			) : null}
+		<div
+			className={cn(
+				"flex items-center gap-2 h-8 px-3 rounded-xl border",
+				action ? (ROW_TINTS[action] ?? "input-base") : "input-base",
+				className,
+			)}
+		>
+			{children}
 		</div>
 	);
 }
 
+function PlanChangeRows({
+	change,
+	features,
+}: {
+	change: PlanChange;
+	features: Feature[];
+}) {
+	const action = change.action ?? "unknown";
+	const items = change.item_changes ?? [];
+
+	return (
+		<>
+			<ChangeRow action={action}>
+				<StatusDot action={action} />
+				<span className="text-xs text-t3 w-14 shrink-0">
+					{ACTION_LABELS[action] ?? action}
+				</span>
+				<PackageIcon size={14} weight="duotone" className="text-t3 shrink-0" />
+				<span className="text-body flex-1 min-w-0 truncate">
+					{change.plan_id ?? "Unknown plan"}
+				</span>
+			</ChangeRow>
+			{items.map((item, i) => (
+				<ChangeRow
+					key={item.feature_id ?? i}
+					action={item.action ?? "unknown"}
+					className="ml-4"
+				>
+					<StatusDot action={item.action ?? "unknown"} />
+					<span className="text-xs text-t3 w-14 shrink-0">
+						{ACTION_LABELS[item.action ?? "unknown"] ?? item.action}
+					</span>
+					<FeatureIcon featureId={item.feature_id} features={features} />
+					<span className="text-body flex-1 min-w-0 truncate">
+						{features.find((f) => f.id === item.feature_id)?.name ??
+							item.feature_id}
+					</span>
+				</ChangeRow>
+			))}
+			{items.length === 0 && action === "updated" && (
+				<div className="ml-4 px-3 py-1">
+					<span className="text-body-secondary">
+						Price, version, or settings changed
+					</span>
+				</div>
+			)}
+		</>
+	);
+}
+
+function BalanceChangeRow({
+	change,
+	features,
+}: {
+	change: BalanceChange;
+	features: Feature[];
+}) {
+	const feature = features.find((f) => f.id === change.feature_id);
+
+	return (
+		<ChangeRow action="updated">
+			<StatusDot action="updated" />
+			<span className="text-xs text-t3 w-14 shrink-0">Updated</span>
+			<FeatureIcon featureId={change.feature_id} features={features} />
+			<span className="text-body flex-1 min-w-0 truncate">
+				{feature?.name ?? change.feature_id}
+			</span>
+			<span className="text-body-secondary shrink-0 tabular-nums">
+				{change.before ? (
+					<>
+						{change.before.granted ?? 0}
+						<span className="text-t3/50 mx-1">→</span>
+						<span className="text-t1 font-semibold">{change.granted ?? 0}</span>
+					</>
+				) : (
+					<span className="text-t1 font-semibold">{change.granted ?? 0}</span>
+				)}
+			</span>
+		</ChangeRow>
+	);
+}
+
+function FlagChangeRow({
+	change,
+	features,
+}: {
+	change: FlagChange;
+	features: Feature[];
+}) {
+	const feature = features.find((f) => f.id === change.feature_id);
+
+	const action = change.action ?? "unknown";
+	return (
+		<ChangeRow action={action}>
+			<StatusDot action={action} />
+			<span className="text-xs text-t3 w-14 shrink-0">
+				{ACTION_LABELS[action] ?? action}
+			</span>
+			<FeatureIcon featureId={change.feature_id} features={features} />
+			<span className="text-body flex-1 min-w-0 truncate">
+				{feature?.name ?? change.feature_id}
+			</span>
+		</ChangeRow>
+	);
+}
+
 function PreviewSummary({ preview }: { preview: MigrationPreview }) {
+	const { features } = useFeaturesQuery();
 	const planChanges = parseList<PlanChange>(preview.plan_changes);
 	const balanceChanges = parseList<BalanceChange>(preview.balance_changes);
 	const flagChanges = parseList<FlagChange>(preview.flag_changes);
 
 	if (planChanges.length + balanceChanges.length + flagChanges.length === 0)
-		return (
-			<div className="rounded-lg bg-muted px-3 py-2 text-sm text-t3">
-				No changes apply to this customer
-			</div>
-		);
+		return <span className="text-sm text-t3">No changes</span>;
 
 	return (
-		<div className="rounded-lg bg-muted px-3 py-2.5 space-y-3">
-			{planChanges.length > 0 && (
-				<div className="space-y-2">
-					<span className="text-[11px] font-medium text-t3">Plans</span>
-					{planChanges.map((c, i) => (
-						<PlanChangeRow key={c.plan_id ?? i} change={c} />
-					))}
-				</div>
-			)}
-			{balanceChanges.length > 0 && (
-				<div className="space-y-1">
-					<span className="text-[11px] font-medium text-t3">Balances</span>
-					{balanceChanges.map((c, i) => (
-						<div
-							key={c.feature_id ?? i}
-							className="flex items-center justify-between gap-2 text-[11px]"
-						>
-							<span className="text-t2 font-mono">{c.feature_id}</span>
-							<span className="text-t3">
-								{c.before
-									? `${c.before.granted ?? 0} → ${c.granted ?? 0}`
-									: (c.granted ?? 0)}{" "}
-								granted
-							</span>
-						</div>
-					))}
-				</div>
-			)}
-			{flagChanges.length > 0 && (
-				<div className="space-y-1">
-					<span className="text-[11px] font-medium text-t3">Features</span>
-					{flagChanges.map((c, i) => (
-						<div
-							key={c.feature_id ?? i}
-							className="flex items-center gap-1.5 text-[11px]"
-						>
-							<ActionBadge action={c.action ?? "unknown"} />
-							<span className="text-t2 font-mono">{c.feature_id}</span>
-						</div>
-					))}
-				</div>
-			)}
+		<div className="flex flex-col gap-1.5">
+			{planChanges.map((c, i) => (
+				<PlanChangeRows key={c.plan_id ?? i} change={c} features={features} />
+			))}
+			{balanceChanges.map((c, i) => (
+				<BalanceChangeRow
+					key={c.feature_id ?? i}
+					change={c}
+					features={features}
+				/>
+			))}
+			{flagChanges.map((c, i) => (
+				<FlagChangeRow key={c.feature_id ?? i} change={c} features={features} />
+			))}
 		</div>
 	);
 }
@@ -161,8 +251,9 @@ export function EventResultDetail({ event }: { event: MigrationItemEvent }) {
 		const error = response.error as { message?: string } | undefined;
 		if (!error?.message) return null;
 		return (
-			<div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-500 break-words">
-				{error.message}
+			<div className="flex items-center gap-2 h-8 px-3 rounded-xl border border-red-500/20 bg-red-500/5 text-sm text-red-500">
+				<span className="size-2 rounded-full bg-red-500 shrink-0" />
+				<span className="truncate">{error.message}</span>
 			</div>
 		);
 	}
@@ -174,12 +265,7 @@ export function EventResultDetail({ event }: { event: MigrationItemEvent }) {
 		const skipped = response.skipped as { reason?: string } | undefined;
 		const guard = response.guard as { reason?: string } | undefined;
 		const reason = skipped?.reason ?? guard?.reason;
-		if (reason)
-			return (
-				<div className="rounded-lg bg-muted px-3 py-2 text-sm text-t2">
-					{reason}
-				</div>
-			);
+		if (reason) return <span className="text-sm text-t3">{reason}</span>;
 	}
 
 	return null;

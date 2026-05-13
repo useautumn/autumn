@@ -36,20 +36,20 @@ export const FILTER_FIELD_OPTIONS: {
 	value: FilterField;
 	label: string;
 }[] = [
-	{ value: "customer_id", label: "Customer ID" },
-	{ value: "plan_id", label: "Plan ID" },
+	{ value: "customer_id", label: "Customer" },
+	{ value: "plan_id", label: "Plan" },
 	{ value: "paid", label: "Paid" },
 	{ value: "recurring", label: "Recurring" },
 	{ value: "price", label: "Base Price" },
-	{ value: "item_feature_id", label: "Item Feature" },
-	{ value: "item_unlimited", label: "Item Unlimited" },
+	{ value: "item_feature_id", label: "Feature" },
+	{ value: "item_unlimited", label: "Unlimited" },
 	{ value: "item_price", label: "Item Price" },
-	{ value: "item_billing_method", label: "Item Billing Method" },
-	{ value: "item_mode", label: "Item Match Mode" },
+	{ value: "item_billing_method", label: "Billing Method" },
+	{ value: "item_mode", label: "Match Mode" },
 ];
 
 type OperatorOption = { value: FilterOperator; label: string };
-type FieldConfig = {
+export type FieldConfig = {
 	operators: OperatorOption[];
 	valueType: "string" | "boolean" | "none";
 };

@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate, useParams } from "react-router";
 import {
 	Breadcrumb,
@@ -10,7 +12,6 @@ import {
 import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
 import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
-import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
 import { SHEET_ANIMATION } from "@/views/customers2/customer/customerAnimations";
 import ErrorScreen from "@/views/general/ErrorScreen";
@@ -22,7 +23,6 @@ import { MigrationEditor } from "./MigrationEditor";
 export function MigrationView() {
 	const { migration_id } = useParams<{ migration_id: string }>();
 	const { migrations, isLoading } = useMigrationsQuery();
-	const env = useEnv();
 	const navigate = useNavigate();
 
 	const selectedCustomer = useMigrationSheetStore((s) => s.selectedCustomer);
@@ -34,20 +34,12 @@ export function MigrationView() {
 		[setSelectedCustomer],
 	);
 
-	useEffect(() => {
-		const handleEscape = (e: KeyboardEvent) => {
-			if (e.key === "Escape") closeSheet();
-		};
-		window.addEventListener("keydown", handleEscape);
-		return () => {
-			window.removeEventListener("keydown", handleEscape);
-			closeSheet();
-		};
-	}, [closeSheet]);
+	useHotkeys("escape", closeSheet);
+	useEffect(() => () => closeSheet(), [closeSheet]);
 
 	const migration = migrations.find((m) => m.id === migration_id);
 
-	const goToMigrations = () => navigateTo("/migrations", navigate, env);
+	const goToMigrations = () => navigateTo("/migrations", navigate);
 
 	if (isLoading) return <LoadingScreen />;
 
@@ -90,6 +82,22 @@ export function MigrationView() {
 					</div>
 				</div>
 			</motion.div>
+
+			{createPortal(
+				<AnimatePresence>
+					{selectedCustomer && (
+						<motion.div
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0 }}
+							className="fixed inset-0 bg-white/60 dark:bg-black/60"
+							style={{ zIndex: 40 }}
+							onMouseDown={closeSheet}
+						/>
+					)}
+				</AnimatePresence>,
+				document.body,
+			)}
 
 			<AnimatePresence mode="wait">
 				{selectedCustomer && (

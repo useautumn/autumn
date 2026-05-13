@@ -1,15 +1,12 @@
 import type { CustomerWithProducts } from "@autumn/shared";
 import {
 	CalendarBlankIcon,
-	EnvelopeSimpleIcon,
 	EyeIcon,
-	HashIcon,
 	PlayIcon,
-	UserIcon,
 	WarningIcon,
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { InfoRow } from "@/components/v2/InfoRow";
@@ -31,11 +28,16 @@ function StatusValue({
 }) {
 	if (latestEvent)
 		return (
-			<ItemEventStatusBadge
-				status={latestEvent.status}
-				dryRun={latestEvent.dry_run}
-				response={latestEvent.response}
-			/>
+			<div className="flex items-center gap-1.5">
+				{latestEvent.dry_run && (
+					<span className="text-[10px] font-medium text-t3">Dry Run:</span>
+				)}
+				<ItemEventStatusBadge
+					status={latestEvent.status}
+					dryRun={latestEvent.dry_run}
+					response={latestEvent.response}
+				/>
+			</div>
 		);
 	if (isActive)
 		return (
@@ -64,12 +66,22 @@ export function CustomerRunSheet({
 }) {
 	const customerId = customer.id ?? customer.internal_id;
 	const [isConfirming, setIsConfirming] = useState(false);
+	const lastActionRef = useRef<"dry" | "live" | null>(null);
+
+	const prevRunningRef = useRef(isRunning);
+	useEffect(() => {
+		if (prevRunningRef.current && !isRunning) lastActionRef.current = null;
+		prevRunningRef.current = isRunning;
+	}, [isRunning]);
 
 	const hasSuccessfulLiveRun = allEvents.some(
 		(e) => e.status === "succeeded" && !e.dry_run,
 	);
 
-	const handleDryRun = () => onTriggerRun({ dryRun: true, only: [customerId] });
+	const handleDryRun = () => {
+		lastActionRef.current = "dry";
+		onTriggerRun({ dryRun: true, only: [customerId] });
+	};
 
 	const handleLiveRun = () => {
 		if (!isConfirming) {
@@ -78,11 +90,17 @@ export function CustomerRunSheet({
 			return;
 		}
 		setIsConfirming(false);
+		lastActionRef.current = "live";
 		onTriggerRun({ dryRun: false, only: [customerId] });
 	};
 
-	const sortedEvents = [...allEvents].sort(
-		(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+	const sortedEvents = useMemo(
+		() =>
+			[...allEvents].sort(
+				(a, b) =>
+					new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+			),
+		[allEvents],
 	);
 
 	return (
@@ -99,28 +117,6 @@ export function CustomerRunSheet({
 
 			<SheetSection>
 				<div className="space-y-3">
-					{customer.id && (
-						<InfoRow
-							icon={<HashIcon size={16} />}
-							label="ID"
-							value={customer.id}
-							mono
-						/>
-					)}
-					{customer.name && (
-						<InfoRow
-							icon={<UserIcon size={16} weight="duotone" />}
-							label="Name"
-							value={customer.name}
-						/>
-					)}
-					{customer.email && (
-						<InfoRow
-							icon={<EnvelopeSimpleIcon size={16} weight="duotone" />}
-							label="Email"
-							value={customer.email}
-						/>
-					)}
 					<InfoRow
 						icon={<EyeIcon size={16} weight="duotone" />}
 						label="Status"
@@ -139,7 +135,16 @@ export function CustomerRunSheet({
 			</SheetSection>
 
 			{latestEvent && (
-				<SheetSection title="Result">
+				<SheetSection
+					title={
+						<div className="flex items-center justify-between w-full">
+							<span>Preview</span>
+							<span className="text-xs text-t3 font-normal">
+								{formatEventTimestamp(latestEvent.timestamp)}
+							</span>
+						</div>
+					}
+				>
 					<EventResultDetail event={latestEvent} />
 				</SheetSection>
 			)}
@@ -171,8 +176,11 @@ export function CustomerRunSheet({
 					variant="secondary"
 					className="flex-1"
 					onClick={handleDryRun}
-					isLoading={isRunning}
-					disabled={hasSuccessfulLiveRun}
+					isLoading={isRunning && lastActionRef.current === "dry"}
+					disabled={
+						hasSuccessfulLiveRun ||
+						(isRunning && lastActionRef.current !== "dry")
+					}
 				>
 					<EyeIcon size={14} />
 					Dry Run
@@ -181,8 +189,11 @@ export function CustomerRunSheet({
 					variant={isConfirming ? "destructive" : "primary"}
 					className="flex-1"
 					onClick={handleLiveRun}
-					isLoading={isRunning}
-					disabled={hasSuccessfulLiveRun}
+					isLoading={isRunning && lastActionRef.current === "live"}
+					disabled={
+						hasSuccessfulLiveRun ||
+						(isRunning && lastActionRef.current !== "live")
+					}
 				>
 					{isConfirming ? (
 						<WarningIcon size={14} weight="fill" />

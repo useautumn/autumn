@@ -11,6 +11,7 @@ import { ValuePicker } from "../shared/ValuePicker";
 import {
 	FIELD_CONFIGS,
 	FILTER_FIELD_OPTIONS,
+	type FieldConfig,
 	type FilterField,
 	type FilterOperator,
 	type FilterRule,
@@ -81,6 +82,7 @@ export function FilterRow({
 						values: [],
 					});
 				}}
+				items={FILTER_FIELD_OPTIONS}
 			>
 				<SelectTrigger className="h-8 text-sm min-w-28 px-3 shrink-0">
 					<SelectValue />
@@ -100,6 +102,7 @@ export function FilterRow({
 					onValueChange={(v) =>
 						onChange({ ...rule, operator: v as FilterOperator })
 					}
+					items={config.operators}
 				>
 					<SelectTrigger className="h-8 text-sm min-w-16 px-3 shrink-0">
 						<SelectValue />
@@ -118,32 +121,68 @@ export function FilterRow({
 				</span>
 			)}
 
-			{config.valueType === "none" ? null : config.valueType === "boolean" ? (
-				<div className="flex-1">
-					<BooleanPill
-						value={rule.values[0] === "true"}
-						onChange={(val) => onChange({ ...rule, values: [String(val)] })}
-					/>
-				</div>
-			) : suggestions && suggestions.length > 0 ? (
-				<ValuePicker
-					className="flex-1"
-					suggestions={suggestions}
-					selectedValues={rule.values}
-					placeholder={`Select ${fieldLabel.toLowerCase()}...`}
-					onToggle={handleToggle}
-					onRemove={handleChipRemove}
-				/>
-			) : (
-				<input
-					className="h-8 text-sm rounded-xl px-3 input-base flex-1 min-w-0 text-t1 placeholder:text-t3"
-					placeholder="Value"
-					value={rule.values[0] ?? ""}
-					onChange={(e) => onChange({ ...rule, values: [e.target.value] })}
-				/>
-			)}
+			<FilterValueInput
+				config={config}
+				rule={rule}
+				fieldLabel={fieldLabel}
+				suggestions={suggestions}
+				onChange={onChange}
+				onToggle={handleToggle}
+				onChipRemove={handleChipRemove}
+			/>
 
 			<RemoveButton onClick={onRemove} />
 		</div>
+	);
+}
+
+function FilterValueInput({
+	config,
+	rule,
+	fieldLabel,
+	suggestions,
+	onChange,
+	onToggle,
+	onChipRemove,
+}: {
+	config: FieldConfig;
+	rule: FilterRule;
+	fieldLabel: string;
+	suggestions?: { value: string; label: string }[];
+	onChange: (rule: FilterRule) => void;
+	onToggle: (value: string) => void;
+	onChipRemove: (value: string) => void;
+}) {
+	if (config.valueType === "none") return null;
+
+	if (config.valueType === "boolean")
+		return (
+			<div className="flex-1">
+				<BooleanPill
+					value={rule.values[0] === "true"}
+					onChange={(val) => onChange({ ...rule, values: [String(val)] })}
+				/>
+			</div>
+		);
+
+	if (suggestions && suggestions.length > 0)
+		return (
+			<ValuePicker
+				className="flex-1"
+				suggestions={suggestions}
+				selectedValues={rule.values}
+				placeholder={`Select ${fieldLabel.toLowerCase()}...`}
+				onToggle={onToggle}
+				onRemove={onChipRemove}
+			/>
+		);
+
+	return (
+		<input
+			className="h-8 text-sm rounded-xl px-3 input-base flex-1 min-w-0 text-t1 placeholder:text-t3"
+			placeholder="Value"
+			value={rule.values[0] ?? ""}
+			onChange={(e) => onChange({ ...rule, values: [e.target.value] })}
+		/>
 	);
 }

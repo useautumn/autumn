@@ -29,16 +29,9 @@ export function ItemSummaryRow({
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
 
 	return (
-		<div
-			role="button"
-			tabIndex={0}
+		<button
+			type="button"
 			onClick={onClick}
-			onKeyDown={(e) => {
-				if (e.key === "Enter" || e.key === " ") {
-					e.preventDefault();
-					onClick();
-				}
-			}}
 			className={cn(
 				"flex items-center gap-2 h-8 px-3 w-full select-none rounded-xl cursor-pointer",
 				"input-base input-state-open-tiny",
@@ -55,6 +48,6 @@ export function ItemSummaryRow({
 				</span>
 				<span className="text-body-secondary"> {display.secondary_text}</span>
 			</p>
-		</div>
+		</button>
 	);
 }

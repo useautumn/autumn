@@ -1,44 +1,72 @@
 import type { Operations } from "@autumn/shared";
-import { ArrowLeftIcon, ArrowRightIcon, GearIcon } from "@phosphor-icons/react";
+import {
+	ArrowLeftIcon,
+	ArrowRightIcon,
+	InfoIcon,
+	WarningCircleIcon,
+} from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import { OperationsForm } from "./operations/OperationsForm";
+import { type StepId, StepIndicator } from "./StepIndicator";
 import type { useMigrationEditorForm } from "./useMigrationEditorForm";
 
 type FormInstance = ReturnType<typeof useMigrationEditorForm>["form"];
 
+function hasVersionOperation(operations: Operations): boolean {
+	return (
+		operations.customer?.some(
+			(op) => op.type === "update_plan" && op.version !== undefined,
+		) ?? false
+	);
+}
+
 export function OperationsStep({
 	form,
 	operations,
+	step,
+	onStepChange,
 	onPrevious,
 	onNext,
+	saveError,
 }: {
 	form: FormInstance;
 	operations: Operations;
+	step: StepId;
+	onStepChange: (step: StepId) => void;
 	onPrevious: () => void;
 	onNext: () => void;
+	saveError: string | null;
 }) {
 	return (
-		<div className="flex flex-col gap-3">
-			<div className="flex items-center justify-between">
-				<div className="text-t2 text-md flex gap-2 items-center">
-					<GearIcon size={16} weight="fill" className="text-subtle" />
-					Operations
-				</div>
-				<div className="flex items-center gap-2">
-					<Button variant="secondary" size="default" onClick={onPrevious}>
-						<ArrowLeftIcon size={14} />
-						Previous
-					</Button>
-					<Button variant="primary" size="default" onClick={onNext}>
-						Next
-						<ArrowRightIcon size={14} />
-					</Button>
-				</div>
-			</div>
+		<div className="flex flex-col gap-4">
+			<StepIndicator step={step} onStepChange={onStepChange}>
+				<Button variant="secondary" size="default" onClick={onPrevious}>
+					<ArrowLeftIcon size={14} />
+					Previous
+				</Button>
+				<Button variant="primary" size="default" onClick={onNext}>
+					Next
+					<ArrowRightIcon size={14} />
+				</Button>
+			</StepIndicator>
 			<OperationsForm
 				value={operations}
 				onChange={(v) => form.setFieldValue("operations", v)}
 			/>
+			{saveError && (
+				<div className="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-500">
+					<WarningCircleIcon size={14} weight="fill" className="shrink-0" />
+					<span>{saveError}</span>
+				</div>
+			)}
+			{hasVersionOperation(operations) && (
+				<div className="flex items-center gap-2 rounded-lg bg-blue-500/10 border border-blue-500/20 px-3 py-2 text-sm text-blue-500">
+					<InfoIcon size={14} weight="fill" className="shrink-0" />
+					<span>
+						Version updates won't apply to customers with custom plans.
+					</span>
+				</div>
+			)}
 		</div>
 	);
 }

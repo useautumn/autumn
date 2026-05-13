@@ -1,6 +1,5 @@
 import type {
 	BillingInterval,
-	Feature,
 	FrontendProduct,
 	ProductItem,
 	UpdatePlanOp,
@@ -9,10 +8,10 @@ import { productV2ToBasePrice } from "@autumn/shared";
 import {
 	CurrencyCircleDollarIcon,
 	GitBranchIcon,
-	PackageIcon,
 	PlusIcon,
 } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
+import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -28,12 +27,12 @@ import {
 } from "@/components/v2/selects/Select";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
 import {
 	migrationItemToProductItem,
 	productItemToMigrationItem,
 } from "../shared/migrationItemUtils";
+import { buildPlanSuggestions } from "../shared/planSuggestions";
 import { RemoveButton } from "../shared/RemoveButton";
 import { ValuePicker } from "../shared/ValuePicker";
 import { ItemSummaryRow } from "./ItemSummaryRow";
@@ -83,20 +82,10 @@ export function UpdatePlanOpForm({
 	const update = (patch: Partial<UpdatePlanOp>) =>
 		onChange({ ...value, ...patch });
 
-	const planSuggestions = useMemo(() => {
-		const seen = new Set<string>();
-		return products
-			.filter((p) => {
-				if (!p.id || seen.has(p.id)) return false;
-				seen.add(p.id);
-				return true;
-			})
-			.map((p) => ({
-				value: p.id,
-				label: p.name || p.id,
-				icon: <PackageIcon size={14} weight="duotone" className="text-t3" />,
-			}));
-	}, [products]);
+	const planSuggestions = useMemo(
+		() => buildPlanSuggestions(products),
+		[products],
+	);
 
 	const selectedPlanIds = extractPlanIds(value.plan_filter.plan_id);
 
@@ -130,7 +119,7 @@ export function UpdatePlanOpForm({
 			? migrationItemToProductItem(addItems[editingItemIndex], features)
 			: undefined;
 
-	const initialProduct = buildInitialProduct(value, features);
+	const initialProduct = buildInitialProduct(value);
 
 	const handleSheetSave = (product: FrontendProduct) => {
 		if (sheetMode === "edit-price") {
@@ -389,10 +378,7 @@ function toPlanIdMatcher(
 	return { $in: ids };
 }
 
-function buildInitialProduct(
-	value: UpdatePlanOp,
-	features: Feature[],
-): Partial<FrontendProduct> {
+function buildInitialProduct(value: UpdatePlanOp): Partial<FrontendProduct> {
 	const items: ProductItem[] = [];
 
 	if (value.customize?.price) {
