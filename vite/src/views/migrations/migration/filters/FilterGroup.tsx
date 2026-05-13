@@ -1,9 +1,10 @@
-import { CubeIcon, UserIcon } from "@phosphor-icons/react";
+import { UserIcon } from "@phosphor-icons/react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 import { AddButton } from "../shared/AddButton";
 import { buildFeatureSuggestions } from "../shared/featureSuggestions";
+import { buildPlanSuggestions } from "../shared/planSuggestions";
 import { RemoveButton } from "../shared/RemoveButton";
 import type { ValuePickerOption } from "../shared/ValuePicker";
 import { FilterRow } from "./FilterRow";
@@ -39,27 +40,14 @@ function useSuggestionsForField(
 
 	if (field === "customer_id") {
 		return customers
-			.filter((c) => c.id)
+			.filter((c): c is typeof c & { id: string } => Boolean(c.id))
 			.map((c) => ({
-				value: c.id!,
-				label: c.name ?? c.email ?? c.id!,
+				value: c.id,
+				label: c.name ?? c.email ?? c.id,
 				icon: <UserIcon size={14} className="text-t3" />,
 			}));
 	}
-	if (field === "plan_id") {
-		const seen = new Set<string>();
-		return products
-			.filter((p) => {
-				if (seen.has(p.id)) return false;
-				seen.add(p.id);
-				return true;
-			})
-			.map((p) => ({
-				value: p.id,
-				label: p.name || p.id,
-				icon: <CubeIcon size={14} weight="duotone" className="text-t3" />,
-			}));
-	}
+	if (field === "plan_id") return buildPlanSuggestions(products);
 	if (field === "item_feature_id") {
 		return buildFeatureSuggestions(features);
 	}

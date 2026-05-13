@@ -7,7 +7,6 @@ import {
 	EyeIcon,
 	ListMagnifyingGlassIcon,
 	PlayIcon,
-	UsersIcon,
 	WarningIcon,
 	XIcon,
 } from "@phosphor-icons/react";
@@ -46,7 +45,8 @@ import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
-import { ActiveRunDot, ItemEventStatusBadge } from "../runs/RunStatusBadge";
+import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
+import { type StepId, StepIndicator } from "../StepIndicator";
 import {
 	type ExecutionStatus,
 	ExecutionStatusSubMenu,
@@ -109,13 +109,6 @@ const statusColumn: ColumnDef<CustomerRow, unknown> = {
 					response={event.response}
 				/>
 			);
-		if (row.original._isActive)
-			return (
-				<div className="flex items-center gap-2">
-					<ActiveRunDot />
-					<span className="text-xs text-t2">Queued</span>
-				</div>
-			);
 		return <Badge variant="muted">Not Run</Badge>;
 	},
 };
@@ -132,10 +125,14 @@ const columns: ColumnDef<CustomerRow, unknown>[] = [
 export function MigrationLiveView({
 	migrationId,
 	filter,
+	step,
+	onStepChange,
 	onPrevious,
 }: {
 	migrationId: string;
 	filter: MigrationFilter;
+	step: StepId;
+	onStepChange: (step: StepId) => void;
 	onPrevious?: () => void;
 }) {
 	const { runMigration, isRunning } = useMigrationsQuery();
@@ -316,65 +313,59 @@ export function MigrationLiveView({
 				</div>
 			)}
 
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-2">
-					<UsersIcon size={16} weight="fill" className="text-subtle" />
-					<span className="text-md font-medium text-t1">Execution</span>
-					{count !== null && (
-						<span className="text-xs text-t3">
-							{count} {count === 1 ? "customer" : "customers"}
-						</span>
-					)}
-				</div>
-				<div className="flex items-center gap-2">
-					{onPrevious && (
-						<Button variant="secondary" size="default" onClick={onPrevious}>
-							<ArrowLeftIcon size={14} />
-							Previous
-						</Button>
-					)}
-					<div className="flex items-center">
-						<Button
-							variant={confirm.isConfirming ? "destructive" : "primary"}
-							size="default"
-							className="rounded-r-none"
-							onClick={confirm.trigger}
-							onBlur={confirm.cancel}
-							isLoading={isRunning}
-						>
-							{confirm.isConfirming ? (
-								<WarningIcon size={14} weight="fill" />
-							) : (
+			<StepIndicator step={step} onStepChange={onStepChange}>
+				{count !== null && (
+					<span className="text-xs text-t3">
+						{count} {count === 1 ? "customer" : "customers"}
+					</span>
+				)}
+				{onPrevious && (
+					<Button variant="secondary" size="default" onClick={onPrevious}>
+						<ArrowLeftIcon size={14} />
+						Previous
+					</Button>
+				)}
+				<div className="flex items-center">
+					<Button
+						variant={confirm.isConfirming ? "destructive" : "primary"}
+						size="default"
+						className="rounded-r-none"
+						onClick={confirm.trigger}
+						onBlur={confirm.cancel}
+						isLoading={isRunning}
+					>
+						{confirm.isConfirming ? (
+							<WarningIcon size={14} weight="fill" />
+						) : (
+							<PlayIcon size={14} weight="fill" />
+						)}
+						{confirm.isConfirming ? "Confirm Run All" : "Run All"}
+					</Button>
+					<DropdownMenu>
+						<DropdownMenuTrigger asChild>
+							<Button
+								variant="primary"
+								size="default"
+								className="rounded-l-none border-l border-l-white/20 px-2"
+							>
+								<CaretDownIcon size={12} />
+							</Button>
+						</DropdownMenuTrigger>
+						<DropdownMenuContent align="end" sideOffset={4}>
+							<DropdownMenuItem onClick={() => triggerRun({ dryRun: true })}>
+								<EyeIcon size={14} />
+								Dry Run All
+							</DropdownMenuItem>
+							<DropdownMenuItem
+								onClick={() => triggerRun({ dryRun: false, limit: 10 })}
+							>
 								<PlayIcon size={14} weight="fill" />
-							)}
-							{confirm.isConfirming ? "Confirm Run All" : "Run All"}
-						</Button>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button
-									variant="primary"
-									size="default"
-									className="rounded-l-none border-l border-l-white/20 px-2"
-								>
-									<CaretDownIcon size={12} />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent align="end" sideOffset={4}>
-								<DropdownMenuItem onClick={() => triggerRun({ dryRun: true })}>
-									<EyeIcon size={14} />
-									Dry Run All
-								</DropdownMenuItem>
-								<DropdownMenuItem
-									onClick={() => triggerRun({ dryRun: false, limit: 10 })}
-								>
-									<PlayIcon size={14} weight="fill" />
-									Sample (10)
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</div>
+								Sample (10)
+							</DropdownMenuItem>
+						</DropdownMenuContent>
+					</DropdownMenu>
 				</div>
-			</div>
+			</StepIndicator>
 
 			<div className="flex items-center gap-2">
 				<CustomerListFilterButton

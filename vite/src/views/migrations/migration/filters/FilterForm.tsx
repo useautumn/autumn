@@ -153,11 +153,7 @@ export function FilterForm({
 				</div>
 			))}
 			<div className="flex items-center gap-2 border-t mt-3 pt-3">
-				<AddButton
-					label="Add or clause"
-					onClick={addGroup}
-					className="flex-1"
-				/>
+				<AddButton label="Or" onClick={addGroup} className="flex-1" />
 				{groups.some((g) => g.rules.length > 0) && (
 					<Button
 						variant="skeleton"

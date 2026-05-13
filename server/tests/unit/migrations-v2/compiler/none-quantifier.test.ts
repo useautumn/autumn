@@ -19,6 +19,13 @@ describe("$none quantifier", () => {
 		expect(sql).toContain("NOT EXISTS");
 	});
 
+	test("string shorthand '$none' is equivalent to { $none: {} }", () => {
+		const full = compile({ plan: { $none: {} } });
+		const shorthand = compile({ plan: "$none" });
+		expect(shorthand.sql).toBe(full.sql);
+		expect(shorthand.params).toEqual(full.params);
+	});
+
 	test("$none with plan_id filter selects customers without that plan", () => {
 		const { sql, params } = compile({
 			plan: { $none: { plan_id: "pro" } },
