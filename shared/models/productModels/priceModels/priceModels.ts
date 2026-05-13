@@ -17,7 +17,7 @@ const ProrationConfigSchema = z.object({
 
 export const PriceSchema = z.object({
 	id: z.string(),
-	internal_product_id: z.string(),
+	internal_product_id: z.string().nullable(),
 
 	org_id: z.string().optional(),
 	created_at: z.number().optional(),

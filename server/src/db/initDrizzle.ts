@@ -98,7 +98,7 @@ export const { db: dbCritical, client: clientCritical } = initDrizzle({
 
 // -- General pool: used by all other endpoints --
 export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
-	// connectTimeout: 5,
+	connectTimeout: isProd ? 5 : 30,
 });
 
 // -- Replica pool: used as fallback when primary is degraded --

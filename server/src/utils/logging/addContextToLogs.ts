@@ -4,6 +4,7 @@ import type {
 	LogRedisData,
 	LogRequestContext,
 	LogStripeEventContext,
+	LogTriggerContext,
 	LogWorkflowContext,
 } from "./loggerTypes.js";
 
@@ -45,6 +46,16 @@ export const addWorkflowToLogs = ({
 	workflowContext: LogWorkflowContext;
 }): Logger => {
 	return logger.child({ context: { workflow: workflowContext } });
+};
+
+export const addTriggerToLogs = ({
+	logger,
+	triggerContext,
+}: {
+	logger: Logger;
+	triggerContext: LogTriggerContext;
+}): Logger => {
+	return logger.child({ context: { trigger: triggerContext } });
 };
 
 export const addRedisToLogs = ({

@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 /**
  * Recursively sort object keys, strip undefined values, and produce a stable string.
  * Array element order is preserved; object key order is not.
@@ -23,7 +25,7 @@ const deterministicStringify = (value: unknown): string => {
 
 /** Produce a SHA-256 hex digest from any JSON-serialisable value, key-order independent. */
 export const hashJson = ({ value }: { value: unknown }): string => {
-	const hasher = new Bun.CryptoHasher("sha256");
-	hasher.update(deterministicStringify(value));
-	return hasher.digest("hex");
+	return createHash("sha256")
+		.update(deterministicStringify(value))
+		.digest("hex");
 };
