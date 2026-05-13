@@ -3,15 +3,18 @@ import {
 	type AutumnBillingPlan,
 	type BillingContext,
 	BillingInterval,
+	BillWhen,
 	type FullCusProduct,
 	type FullCustomerPrice,
 	type Price,
 	PriceType,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 const mockState = {
 	priceIds: [] as string[],
+	productCalls: 0,
 };
 
 mock.module("@/external/stripe/createStripePrice/createStripePrice", () => ({
@@ -21,12 +24,21 @@ mock.module("@/external/stripe/createStripePrice/createStripePrice", () => ({
 }));
 
 mock.module("@/internal/products/productUtils", () => ({
-	checkStripeProductExists: async () => undefined,
+	checkStripeProductExists: async () => {
+		mockState.productCalls++;
+	},
 }));
 
 import { initStripeResourcesForBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/initStripeResourcesForProducts";
+import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 
-const fixedPrice = ({ id }: { id: string }): Price => ({
+const fixedPrice = ({
+	id,
+	amount = 10,
+}: {
+	id: string;
+	amount?: number;
+}): Price => ({
 	id,
 	internal_product_id: "prod_internal",
 	org_id: "org_1",
@@ -37,12 +49,36 @@ const fixedPrice = ({ id }: { id: string }): Price => ({
 	proration_config: null,
 	config: {
 		type: PriceType.Fixed,
-		amount: 10,
+		amount,
 		interval: BillingInterval.Month,
 		stripe_price_id: null,
 		stripe_product_id: null,
 		feature_id: null,
 		internal_feature_id: null,
+	},
+});
+
+const prepaidPrice = ({ id }: { id: string }): Price => ({
+	id,
+	internal_product_id: "prod_internal",
+	org_id: "org_1",
+	created_at: 1,
+	tier_behavior: null,
+	is_custom: false,
+	entitlement_id: "ent_1",
+	proration_config: null,
+	config: {
+		type: PriceType.Usage,
+		bill_when: BillWhen.StartOfPeriod,
+		billing_units: 1,
+		internal_feature_id: "feature_internal",
+		feature_id: "messages",
+		usage_tiers: [{ amount: 10, to: -1 }],
+		interval: BillingInterval.Month,
+		interval_count: 1,
+		stripe_price_id: null,
+		stripe_product_id: null,
+		stripe_prepaid_price_v2_id: null,
 	},
 });
 
@@ -109,6 +145,174 @@ const customerProduct = ({
 describe("initStripeResourcesForBillingPlan", () => {
 	beforeEach(() => {
 		mockState.priceIds = [];
+		mockState.productCalls = 0;
+	});
+
+	test("uses preview Stripe IDs without initializing Stripe resources during dry run", async () => {
+		const basePrice = fixedPrice({ id: "price_base" });
+		const messagesPrice = prepaidPrice({ id: "price_messages" });
+		const baseCustomerPrice = customerPrice({
+			id: "cus_price_base",
+			price: basePrice,
+		});
+		const messagesCustomerPrice = customerPrice({
+			id: "cus_price_messages",
+			price: messagesPrice,
+		});
+		const newCustomerProduct = customerProduct({
+			customerPrices: [baseCustomerPrice, messagesCustomerPrice],
+		});
+
+		await initStripeResourcesForBillingPlan({
+			ctx: {
+				db: {},
+				org: { id: "org_1" },
+				env: "sandbox",
+				logger: { debug: () => undefined },
+			} as unknown as AutumnContext,
+			billingContext: {
+				dryRunStripe: true,
+				fullCustomer: {
+					internal_id: "cus_internal",
+					customer_products: [],
+				},
+			} as unknown as BillingContext,
+			autumnBillingPlan: {
+				customerId: "cus_1",
+				insertCustomerProducts: [newCustomerProduct],
+			} as AutumnBillingPlan,
+		});
+
+		const messagesConfig = messagesPrice.config as UsagePriceConfig;
+
+		expect(mockState.productCalls).toBe(0);
+		expect(mockState.priceIds).toEqual([]);
+		expect(newCustomerProduct.product.processor?.id).toStartWith(
+			"prod_PREVIEW_",
+		);
+		expect(basePrice.config.stripe_price_id).toStartWith("price_PREVIEW_");
+		expect(messagesConfig.stripe_price_id).toStartWith("price_PREVIEW_");
+		expect(messagesConfig.stripe_product_id).toStartWith("prod_PREVIEW_");
+		expect(messagesConfig.stripe_prepaid_price_v2_id).toStartWith(
+			"price_PREVIEW_",
+		);
+	});
+
+	test("uses preview Stripe IDs for patched customer products during dry run", async () => {
+		const keptPrice = fixedPrice({ id: "price_kept" });
+		const insertedPrice = prepaidPrice({ id: "price_inserted" });
+		const originalCustomerProduct = customerProduct({
+			customerPrices: [
+				customerPrice({
+					id: "cus_price_kept",
+					price: keptPrice,
+				}),
+			],
+		});
+		const insertedCustomerPrice = customerPrice({
+			id: "cus_price_inserted",
+			price: insertedPrice,
+		});
+
+		await initStripeResourcesForBillingPlan({
+			ctx: {
+				db: {},
+				org: { id: "org_1" },
+				env: "sandbox",
+				logger: { debug: () => undefined },
+			} as unknown as AutumnContext,
+			billingContext: {
+				dryRunStripe: true,
+				fullCustomer: {
+					internal_id: "cus_internal",
+					customer_products: [originalCustomerProduct],
+				},
+			} as unknown as BillingContext,
+			autumnBillingPlan: {
+				customerId: "cus_1",
+				insertCustomerProducts: [],
+				patchCustomerProducts: [
+					{
+						customerProduct: originalCustomerProduct,
+						insertCustomerPrices: [insertedCustomerPrice],
+						insertCustomerEntitlements: [],
+						deleteCustomerPrices: [],
+						deleteCustomerEntitlements: [],
+					},
+				],
+			} as AutumnBillingPlan,
+		});
+
+		const insertedConfig = insertedPrice.config as UsagePriceConfig;
+
+		expect(mockState.productCalls).toBe(0);
+		expect(mockState.priceIds).toEqual([]);
+		expect(originalCustomerProduct.product.processor?.id).toStartWith(
+			"prod_PREVIEW_",
+		);
+		expect(keptPrice.config.stripe_price_id).toStartWith("price_PREVIEW_");
+		expect(insertedConfig.stripe_price_id).toStartWith("price_PREVIEW_");
+		expect(insertedConfig.stripe_product_id).toStartWith("prod_PREVIEW_");
+		expect(insertedConfig.stripe_prepaid_price_v2_id).toStartWith(
+			"price_PREVIEW_",
+		);
+	});
+
+	test("does not initialize Stripe resources for zero fixed prices", async () => {
+		const zeroPrice = fixedPrice({ id: "price_free", amount: 0 });
+		const freeCustomerProduct = customerProduct({
+			customerPrices: [
+				customerPrice({
+					id: "cus_price_free",
+					price: zeroPrice,
+				}),
+			],
+		});
+
+		await initStripeResourcesForBillingPlan({
+			ctx: {
+				db: {},
+				org: { id: "org_1" },
+				env: "sandbox",
+				logger: { debug: () => undefined },
+			} as unknown as AutumnContext,
+			billingContext: {
+				fullCustomer: {
+					internal_id: "cus_internal",
+					customer_products: [],
+				},
+			} as unknown as BillingContext,
+			autumnBillingPlan: {
+				customerId: "cus_1",
+				insertCustomerProducts: [freeCustomerProduct],
+			} as AutumnBillingPlan,
+		});
+
+		expect(mockState.productCalls).toBe(0);
+		expect(mockState.priceIds).toEqual([]);
+		expect(zeroPrice.config.stripe_price_id).toBeNull();
+	});
+
+	test("omits zero fixed prices from Stripe item specs", () => {
+		const zeroPrice = fixedPrice({ id: "price_free", amount: 0 });
+		const freeCustomerProduct = customerProduct({
+			customerPrices: [
+				customerPrice({
+					id: "cus_price_free",
+					price: zeroPrice,
+				}),
+			],
+		});
+
+		const stripeItemSpecs = customerProductToStripeItemSpecs({
+			ctx: {} as AutumnContext,
+			customerProduct: freeCustomerProduct,
+		});
+
+		expect(stripeItemSpecs).toEqual({
+			oneOffItems: [],
+			recurringItems: [],
+		});
 	});
 
 	test("does not initialize Stripe resources for prices removed by a patch", async () => {
@@ -138,7 +342,7 @@ describe("initStripeResourcesForBillingPlan", () => {
 					internal_id: "cus_internal",
 					customer_products: [originalCustomerProduct],
 				},
-			} as BillingContext,
+			} as unknown as BillingContext,
 			autumnBillingPlan: {
 				customerId: "cus_1",
 				insertCustomerProducts: [],

@@ -34,6 +34,7 @@ export async function multiAttach({
 	const billingContext = await setupMultiAttachBillingContext({
 		ctx,
 		params,
+		preview,
 	});
 
 	// 2. Errors
