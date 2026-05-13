@@ -1,0 +1,20 @@
+server/tests/integration/crud/customers/list-customers-v22-vs-v23-parity.test.ts
+  s_b1a331f4eba7de::t_0660410e05b81e 1-98,100-154
+  s_b1a331f4eba7de::t_b53fc9a5778a96 99
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "ebcd110a429be3659085f5864c31d4a58803d063",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
