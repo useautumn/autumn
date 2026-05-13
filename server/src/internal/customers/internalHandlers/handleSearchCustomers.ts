@@ -1,4 +1,4 @@
-import { Scopes, StandardCursor } from "@autumn/shared";
+import { type FullCusProduct, Scopes, StandardCursor } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusBatchService } from "../CusBatchService";
@@ -39,7 +39,7 @@ export const handleSearchCustomers = createRoute({
 			name: c.name,
 			email: c.email,
 			created_at: c.created_at,
-			customer_products: c.customer_products.map((cp: any) => ({
+			customer_products: c.customer_products.map((cp: FullCusProduct) => ({
 				id: cp.id,
 				internal_product_id: cp.internal_product_id,
 				product_id: cp.product_id,
