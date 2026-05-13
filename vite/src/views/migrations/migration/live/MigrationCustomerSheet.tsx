@@ -1,0 +1,81 @@
+import type { CustomerWithProducts, Operations } from "@autumn/shared";
+import { useMemo } from "react";
+import { useMigrationRunsQuery } from "@/hooks/queries/useMigrationRunsQuery";
+import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
+import { CustomerRunSheet } from "./CustomerRunSheet";
+import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
+
+export function MigrationCustomerSheet({
+	migrationId,
+	customer,
+	operations,
+	noBillingChanges,
+}: {
+	migrationId: string;
+	customer: CustomerWithProducts;
+	operations: Operations;
+	noBillingChanges: boolean;
+}) {
+	const {
+		itemEvents,
+		isActive,
+		activeRunDryRun,
+		invalidate: invalidateRuns,
+	} = useMigrationRunsQuery({ migrationId });
+
+	const {
+		subscriptions: realtimeSubscriptions,
+		hasActive: hasRealtimeActive,
+		handleComplete: handleRealtimeComplete,
+		triggerRun,
+		isRunning,
+	} = useRealtimeSubscriptions({ migrationId, invalidateRuns });
+
+	const customerEvents = useMemo(
+		() =>
+			itemEvents.filter(
+				(e) => e.item_kind === "customer" && e.item_id === customer.internal_id,
+			),
+		[itemEvents, customer.internal_id],
+	);
+
+	const latestDryEvent = useMemo(() => {
+		const dryEvents = customerEvents.filter((e) => e.dry_run);
+		if (dryEvents.length === 0) return undefined;
+		return dryEvents.reduce((latest, event) =>
+			event.timestamp > latest.timestamp ? event : latest,
+		);
+	}, [customerEvents]);
+
+	const latestLiveEvent = useMemo(() => {
+		const liveEvents = customerEvents.filter((e) => !e.dry_run);
+		if (liveEvents.length === 0) return undefined;
+		return liveEvents.reduce((latest, event) =>
+			event.timestamp > latest.timestamp ? event : latest,
+		);
+	}, [customerEvents]);
+
+	return (
+		<>
+			{realtimeSubscriptions.map((sub) => (
+				<RealtimeRunWatcher
+					key={sub.triggerRunId}
+					subscription={sub}
+					onComplete={handleRealtimeComplete}
+				/>
+			))}
+			<CustomerRunSheet
+				customer={customer}
+				latestDryEvent={latestDryEvent}
+				latestLiveEvent={latestLiveEvent}
+				allEvents={customerEvents}
+				isActive={isActive || hasRealtimeActive}
+				activeRunDryRun={activeRunDryRun}
+				isRunning={isRunning}
+				onTriggerRun={triggerRun}
+				operations={operations}
+				noBillingChanges={noBillingChanges}
+			/>
+		</>
+	);
+}

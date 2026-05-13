@@ -49,6 +49,30 @@ function getEnvVariable(filePath: string, key: string): string | null {
 	return null;
 }
 
+function getPackageDependencyVersion({
+	projectRoot,
+	packageName,
+}: {
+	projectRoot: string;
+	packageName: string;
+}): string {
+	const packageJson = JSON.parse(
+		readFileSync(join(projectRoot, "package.json"), "utf-8"),
+	) as {
+		dependencies?: Record<string, string>;
+		devDependencies?: Record<string, string>;
+	};
+	const version =
+		packageJson.dependencies?.[packageName] ??
+		packageJson.devDependencies?.[packageName];
+
+	if (!version) {
+		throw new Error(`Missing ${packageName} in package.json`);
+	}
+
+	return version;
+}
+
 function killPorts({ ports }: { ports: number[] }) {
 	if (process.platform === "win32") {
 		return;
@@ -136,6 +160,11 @@ async function startDev() {
 
 		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
+		const triggerDevVersion = getPackageDependencyVersion({
+			projectRoot,
+			packageName: "trigger.dev",
+		});
+		const bunInstallBin = dirname(process.execPath);
 
 		let shellArgs: string[];
 		if (serverOnly) {
@@ -174,6 +203,14 @@ async function startDev() {
 						? `"cd server && bun ${workersScript}"`
 						: `"cd server && bun ${workersScript}"`,
 				);
+
+				names.push("trigger");
+				colors.push("cyan");
+				cmds.push(
+				isWindows
+					? `"bunx trigger.dev@${triggerDevVersion} dev"`
+					: `"bunx trigger.dev@${triggerDevVersion} dev"`,
+				);
 			}
 
 			names.push("vite", "checkout");
@@ -196,12 +233,13 @@ async function startDev() {
 
 		const concurrentlyProc = Bun.spawn(shellArgs, {
 			cwd: projectRoot,
-		env: {
-			...process.env,
-			VITE_PORT: VITE_PORT.toString(),
-			SERVER_PORT: SERVER_PORT.toString(),
-			CHECKOUT_PORT: CHECKOUT_PORT.toString(),
-			VITE_APP_ENV: viteAppEnv,
+			env: {
+				...process.env,
+				VITE_PORT: VITE_PORT.toString(),
+				SERVER_PORT: SERVER_PORT.toString(),
+				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
+				VITE_APP_ENV: viteAppEnv,
+				BUN_INSTALL_BIN: process.env.BUN_INSTALL_BIN ?? bunInstallBin,
 				...(worktreeNum > 1 && {
 					CLIENT_URL: `http://localhost:${VITE_PORT}`,
 					BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,

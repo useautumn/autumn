@@ -34,6 +34,10 @@ import {
 	type FinalizeLockParamsV0,
 	type LegacyVersion,
 	type ListEntitiesParams,
+	type Migration,
+	type MigrationFilter,
+	type MigrationRun,
+	type Operations,
 	type OrgConfig,
 	type ProductItem,
 	type RestoreParamsV1,
@@ -47,6 +51,8 @@ import {
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
 import { timeout } from "@tests/utils/genUtils";
+import type { TinybirdMigrationItemEvent } from "@/external/tinybird/migrations/migrationItemEventsDataSource.js";
+import type { PrepareResponse } from "@/internal/migrations/v2/prepare/types";
 
 export default class AutumnError extends Error {
 	message: string;
@@ -959,6 +965,92 @@ export class AutumnInt {
 	}) => {
 		const data = await this.post(`/migrations`, params);
 		return data;
+	};
+
+	migrationsV2 = {
+		create: async (params: {
+			id: string;
+			filter?: MigrationFilter | null;
+			operations?: Operations | null;
+		}): Promise<Migration> => {
+			const data = await this.post(`/migrations.create`, params);
+			return data as Migration;
+		},
+		list: async (): Promise<{ list: Migration[] }> => {
+			const data = await this.post(`/migrations.list`, {});
+			return data as { list: Migration[] };
+		},
+		update: async (params: {
+			id: string;
+			updates: {
+				id?: string;
+				filter?: MigrationFilter | null;
+				operations?: Operations | null;
+				retry_failed?: boolean;
+			};
+		}): Promise<Migration> => {
+			const data = await this.post(`/migrations.update`, params);
+			return data as Migration;
+		},
+		delete: async (params: { id: string }): Promise<Migration> => {
+			const data = await this.post(`/migrations.delete`, params);
+			return data as Migration;
+		},
+		deleteAndCreate: async (params: {
+			id: string;
+			filter?: MigrationFilter | null;
+			operations?: Operations | null;
+		}): Promise<Migration> => {
+			try {
+				await this.post(`/migrations.delete`, { id: params.id });
+			} catch {}
+			const data = await this.post(`/migrations.create`, params);
+			return data as Migration;
+		},
+		prepare: async (params: {
+			id: string;
+			dry_run: boolean;
+		}): Promise<PrepareResponse> => {
+			const data = await this.post(`/migrations.prepare`, params);
+			return data as PrepareResponse;
+		},
+		run: async (params: {
+			id: string;
+			dry_run?: boolean;
+		}): Promise<{
+			migration_id: string;
+			dry_run: boolean;
+			run_id: string;
+		}> => {
+			const data = await this.post(`/migrations.run`, params);
+			return data as {
+				migration_id: string;
+				dry_run: boolean;
+				run_id: string;
+			};
+		},
+		lazyRun: async (params: {
+			id: string;
+		}): Promise<{
+			migration_id: string;
+			run_id: string;
+		}> => {
+			const data = await this.post(`/migrations.lazy_run`, params);
+			return data as { migration_id: string; run_id: string };
+		},
+		listRuns: async (params: {
+			migrationId: string;
+		}): Promise<{ list: MigrationRun[] }> => {
+			const data = await this.post(`/migrations.runs.list`, params);
+			return data as { list: MigrationRun[] };
+		},
+		listItemEvents: async (params: {
+			migrationId: string;
+			migrationRunId?: string;
+		}): Promise<{ list: TinybirdMigrationItemEvent[] }> => {
+			const data = await this.post(`/migrations.item_events.list`, params);
+			return data as { list: TinybirdMigrationItemEvent[] };
+		},
 	};
 
 	balances = {

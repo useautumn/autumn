@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { useHotkeys } from "react-hotkeys-hook";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 
 type Theme = "light" | "dark" | "system";
@@ -49,6 +50,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 		mediaQuery.addEventListener("change", handleChange);
 		return () => mediaQuery.removeEventListener("change", handleChange);
 	}, [theme]);
+
+	useHotkeys("t", () => setTheme(isDark ? "light" : "dark"), {
+		enabled: import.meta.env.DEV,
+		enableOnFormTags: false,
+	});
 
 	return (
 		<ThemeContext.Provider value={{ theme, setTheme, isDark }}>

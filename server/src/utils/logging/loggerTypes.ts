@@ -52,6 +52,13 @@ export type LogWorkflowContext = {
 	name: string; // workflow / job name
 };
 
+/** trigger.dev run context — goes under context.trigger */
+export type LogTriggerContext = {
+	run_id: string;
+	task_id: string;
+	attempt_number?: number;
+};
+
 /** Redis slow-command context - goes under context.redis.data (map field) */
 export type LogRedisData = {
 	operation: string;
