@@ -1,0 +1,23 @@
+packages/openapi/utils/openapiTransform/index.ts
+  s_b1a331f4eba7de::t_abbfef46de7203 1
+packages/openapi/utils/openapiTransform/applyPaginationExtensions.ts
+  s_b1a331f4eba7de::t_10366186aabc33 1-53
+server/src/external/autumn/autumnCli.ts
+  s_b1a331f4eba7de::t_57a39cdcd38e68 416,420
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "e3e9390d71d18eb7d1a05cf8633ff12c81e0e15a",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
