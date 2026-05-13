@@ -1,3 +1,4 @@
+import { ApiVersion } from "@autumn/shared";
 import type { Context } from "hono";
 import { matchRoute } from "../../../honoMiddlewares/middlewareUtils";
 import type { HonoEnv } from "../../../honoUtils/HonoEnv";
@@ -126,9 +127,28 @@ export enum RateLimitScope {
 export type RateLimitConfig = {
 	name: string;
 	limit: number;
+	/**
+	 * Per-version overrides. When the request's apiVersion has an entry,
+	 * that limit applies and the bucket key is scoped by version so
+	 * traffic on different versions doesn't share a counter.
+	 */
+	versionedLimit?: Partial<Record<ApiVersion, number>>;
 	windowMs: number;
 	notInRedis: boolean;
 	scope: RateLimitScope;
+};
+
+export const resolveRateLimit = ({
+	config,
+	apiVersion,
+}: {
+	config: RateLimitConfig;
+	apiVersion?: ApiVersion;
+}): { limit: number; versioned: boolean } => {
+	if (apiVersion && config.versionedLimit?.[apiVersion] !== undefined) {
+		return { limit: config.versionedLimit[apiVersion] as number, versioned: true };
+	}
+	return { limit: config.limit, versioned: false };
 };
 
 export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
@@ -170,6 +190,9 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	[RateLimitType.ListCustomers]: {
 		name: "list_customers",
 		limit: 5,
+		versionedLimit: {
+			[ApiVersion.V2_3]: 50,
+		},
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Org,

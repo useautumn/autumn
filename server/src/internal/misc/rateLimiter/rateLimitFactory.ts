@@ -1,3 +1,4 @@
+import { ApiVersion } from "@autumn/shared";
 import { RedisStore } from "@hono-rate-limiter/redis";
 import type { Context } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
@@ -9,6 +10,7 @@ import {
 	type RateLimitConfig,
 	RateLimitScope,
 	type RateLimitType,
+	resolveRateLimit,
 } from "./rateLimitConfigs";
 
 // Helper to get rate limit key from context
@@ -35,16 +37,20 @@ const warnRateLimitBypass = () => {
 	);
 };
 
-export const rateLimitFactory = ({
-	limit,
-	windowMs,
-	notInRedis,
-}: Pick<RateLimitConfig, "limit" | "windowMs" | "notInRedis">): ReturnType<
-	typeof rateLimiter
-> => {
+export const rateLimitFactory = (
+	config: RateLimitConfig,
+): ReturnType<typeof rateLimiter> => {
+	const { windowMs, notInRedis } = config;
+
+	const dynamicLimit = (c: Context): number => {
+		const ctx = (c as Context<HonoEnv>).get("ctx");
+		const apiVersion = ctx?.apiVersion?.value as ApiVersion | undefined;
+		return resolveRateLimit({ config, apiVersion }).limit;
+	};
+
 	const options = {
 		windowMs,
-		limit,
+		limit: dynamicLimit,
 		standardHeaders: "draft-6" as const,
 		keyGenerator: getRateLimitKeyFromContext,
 	};
@@ -109,9 +115,12 @@ export const getRateLimitKey = ({
 	const ctx = c.get("ctx");
 	const orgId = ctx.org?.id;
 	const env = ctx.env;
+	const apiVersion = ctx.apiVersion?.value as ApiVersion | undefined;
 
 	const config = RATE_LIMIT_CONFIGS[rateLimitType];
-	const baseKey = `${config.name}:${orgId}:${env}`;
+	const { versioned } = resolveRateLimit({ config, apiVersion });
+	const versionSuffix = versioned && apiVersion ? `:v${apiVersion}` : "";
+	const baseKey = `${config.name}:${orgId}:${env}${versionSuffix}`;
 
 	switch (config.scope) {
 		case RateLimitScope.Org:
