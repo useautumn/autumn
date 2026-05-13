@@ -184,6 +184,9 @@ const buildEntitlement = ({
 	org_id: ctx.org.id,
 	feature_id: feature.id,
 	usage_limit: null,
+	expiry_duration: null,
+	expiry_length: null,
+	internal_reward_id: null,
 	rollover: null,
 });
 

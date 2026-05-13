@@ -86,7 +86,7 @@ export function BillingAutoTopupSheet() {
 		existingItem?.quantity?.toString() ?? "",
 	);
 	const [hasPurchaseLimit, setHasPurchaseLimit] = useState(
-		!!existingItem?.purchase_limit,
+		!!existingItem?.purchase_limit?.limit && !!existingItem?.purchase_limit?.interval,
 	);
 	const [purchaseLimitInterval, setPurchaseLimitInterval] = useState(
 		existingItem?.purchase_limit?.interval ?? "",
@@ -365,10 +365,14 @@ export function BillingAutoTopupSheet() {
 						<div className="flex flex-col gap-3">
 							<div>
 								<FormLabel>Interval</FormLabel>
-								<Select
-									value={purchaseLimitInterval}
-									onValueChange={setPurchaseLimitInterval}
-								>
+							<Select
+								value={purchaseLimitInterval}
+								onValueChange={setPurchaseLimitInterval}
+								items={Object.fromEntries(Object.entries(INTERVAL_LABELS).map(([value, label]) => {
+									const count = Number.parseInt(purchaseLimitIntervalCount, 10);
+									return [value, count > 1 ? `Every ${count} ${label.toLowerCase()}s` : label];
+								}))}
+							>
 									<SelectTrigger className="w-full">
 										<SelectValue placeholder="Select interval" />
 									</SelectTrigger>

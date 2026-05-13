@@ -105,18 +105,18 @@ const AutoTopupRow = ({
 			<div className="ml-auto flex items-center gap-1.5 shrink-0">
 				<Pill>Threshold: {autoTopup.threshold.toLocaleString()}</Pill>
 				<Pill>Qty: {autoTopup.quantity.toLocaleString()}</Pill>
-				{purchaseLimit && (
-					<Pill className="hidden lg:inline">
-						{hasExpandedLimit
-							? `${purchaseLimit.count}/${purchaseLimit.limit} per ${purchaseLimit.interval}`
-							: `Limit: ${purchaseLimit.limit} per ${purchaseLimit.interval}`}
-					</Pill>
-				)}
-				{hasExpandedLimit && purchaseLimit.next_reset_at && (
-					<Pill className="hidden xl:inline">
-						Resets {format(new Date(purchaseLimit.next_reset_at), "MMM d")}
-					</Pill>
-				)}
+			{purchaseLimit && purchaseLimit.limit != null && purchaseLimit.interval != null && (
+				<Pill className="hidden lg:inline">
+					{hasExpandedLimit
+						? `${purchaseLimit.count}/${purchaseLimit.limit} per ${purchaseLimit.interval}`
+						: `Limit: ${purchaseLimit.limit} per ${purchaseLimit.interval}`}
+				</Pill>
+			)}
+			{hasExpandedLimit && purchaseLimit.next_reset_at && (
+				<Pill className="hidden xl:inline">
+					Resets {format(new Date(purchaseLimit.next_reset_at), "MMM d")}
+				</Pill>
+			)}
 			</div>
 		</button>
 	);

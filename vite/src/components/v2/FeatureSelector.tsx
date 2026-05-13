@@ -55,7 +55,7 @@ export function FeatureSelector({
 					<CaretDownIcon className="size-3 opacity-50" />
 				</button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" className="z-[200]">
+			<DropdownMenuContent align="start" className="z-[160]">
 				<div className="max-h-60 overflow-y-auto">
 					{features.length === 0 ? (
 						<div className="py-4 text-center text-sm text-t4">

@@ -1,7 +1,6 @@
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { Scopes } from "@autumn/shared";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService";
-import { RewardService } from "@/internal/rewards/RewardService";
+import { rewardRepo, rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 
 /**
  * GET /products/rewards
@@ -13,8 +12,8 @@ export const handleGetRewards = createRoute({
 		const { db, org, env } = c.get("ctx");
 
 		const [rewards, rewardPrograms] = await Promise.all([
-			RewardService.list({ db, orgId: org.id, env }),
-			RewardProgramService.list({ db, orgId: org.id, env }),
+			rewardRepo.list({ db, orgId: org.id, env }),
+			rewardProgramRepo.list({ db, orgId: org.id, env }),
 		]);
 
 		return c.json({ rewards, rewardPrograms });

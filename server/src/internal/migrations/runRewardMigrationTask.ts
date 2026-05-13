@@ -20,7 +20,7 @@ import { OrgService } from "../orgs/OrgService.js";
 import { ProductService } from "../products/ProductService.js";
 import { PriceService } from "../products/prices/PriceService.js";
 import { tiersAreSame } from "../products/prices/priceInitUtils.js";
-import { RewardService } from "../rewards/RewardService.js";
+import { rewardRepo } from "@/internal/rewards/repos/index.js";
 
 // Helper function to check if tier structures match
 const tiersMatch = (oldTiers: any[], newTiers: any[]): boolean => {
@@ -150,7 +150,7 @@ export async function runRewardMigrationTask({
 			orgId,
 		});
 
-		const rewards = await RewardService.list({
+		const rewards = await rewardRepo.list({
 			db,
 			orgId,
 			env,
@@ -216,7 +216,7 @@ export async function runRewardMigrationTask({
 					);
 
 					// Update the reward in the database
-					const updatedReward = await RewardService.update({
+					const updatedReward = await rewardRepo.update({
 						db,
 						internalId: reward.internal_id!,
 						env,

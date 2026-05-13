@@ -472,6 +472,24 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/entities.list"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.2.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.entities.list(request={})
+
+                # Handle response
+                print(res)
   - target: $["paths"]["/v1/entities.update"]["post"]
     update:
       x-codeSamples:

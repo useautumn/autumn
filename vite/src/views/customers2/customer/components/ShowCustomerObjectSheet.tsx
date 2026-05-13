@@ -31,6 +31,7 @@ const EXPAND_PARAMS = [
 	"entities",
 	"referrals",
 	"payment_method",
+	"billing_controls.auto_topups.purchase_limit",
 ].join(",");
 
 export function ShowCustomerObjectSheet({
