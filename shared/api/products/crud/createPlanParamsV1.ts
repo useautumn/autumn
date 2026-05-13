@@ -46,6 +46,10 @@ export const CreatePlanParamsV1Schema = z.object({
 	config: ProductConfigParamsSchema.optional().meta({
 		description: "Miscellaneous plan-level configuration flags.",
 	}),
+
+	create_in_stripe: z.boolean().default(true).meta({
+		internal: true,
+	}),
 });
 
 export const CreatePlanParamsV2Schema = z
