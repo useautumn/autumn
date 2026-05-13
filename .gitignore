@@ -146,5 +146,4 @@ AGENTS.md
 
 server/.turbo
 .context
-.opencode/opencode.json
-.opencode/opencode.json
+.opencode/
