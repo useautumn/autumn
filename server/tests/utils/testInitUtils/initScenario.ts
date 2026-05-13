@@ -242,6 +242,7 @@ type ScenarioConfig = {
 	stripeCustomerOverrides?: Partial<Stripe.CustomerCreateParams>;
 	products: ProductV2[];
 	productPrefix?: string;
+	productCreateInStripe?: boolean;
 	entityConfig?: EntityConfig;
 	customerIds?: string[];
 	cleanup: CleanupConfig;
@@ -326,16 +327,19 @@ const products = ({
 	list,
 	prefix,
 	customerIdsToDelete,
+	createInStripe,
 }: {
 	list: ProductV2[];
 	prefix?: string;
 	customerIdsToDelete?: string[];
+	createInStripe?: boolean;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
 		products: list,
 		productPrefix: prefix,
 		customerIds: customerIdsToDelete,
+		productCreateInStripe: createInStripe,
 	});
 };
 
@@ -1104,6 +1108,7 @@ export async function initScenario({
 			products: config.products,
 			prefix: productPrefix,
 			customerIds: allCustomerIds,
+			createInStripe: config.productCreateInStripe,
 		});
 	}
 

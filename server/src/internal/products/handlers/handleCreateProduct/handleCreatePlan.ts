@@ -131,10 +131,12 @@ export const handleCreatePlan = createRoute({
 			free_trial: newFreeTrial,
 		};
 
-		await initProductInStripe({
-			ctx,
-			product: newFullProduct,
-		});
+		if (v1_2Body.create_in_stripe !== false) {
+			await initProductInStripe({
+				ctx,
+				product: newFullProduct,
+			});
+		}
 
 		await addTaskToQueue({
 			jobName: JobName.DetectBaseVariant,
