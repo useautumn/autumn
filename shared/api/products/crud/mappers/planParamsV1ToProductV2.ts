@@ -44,6 +44,11 @@ export function planParamsV1ToProductV2({
 			? params.config
 			: undefined;
 
+	const createInStripe =
+		"create_in_stripe" in params && params.create_in_stripe !== undefined
+			? params.create_in_stripe
+			: undefined;
+
 	return {
 		id: params.id, // fallback just for placeholders...
 		name: params.name,
@@ -63,5 +68,6 @@ export function planParamsV1ToProductV2({
 			: params.free_trial,
 		...(archived !== undefined && { archived }),
 		...(config !== undefined && { config }),
+		...(createInStripe !== undefined && { create_in_stripe: createInStripe }),
 	};
 }
