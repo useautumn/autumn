@@ -198,7 +198,8 @@ export function resolveSecurity(
         applyBearer(state, spec);
         break;
       default:
-        throw SecurityError.unrecognizedType((spec satisfies never, type));
+        spec satisfies never;
+        throw SecurityError.unrecognizedType(type);
     }
   });
 
@@ -240,9 +241,8 @@ function applyBearer(
 
 export function resolveGlobalSecurity(
   security: Partial<models.Security> | null | undefined,
-  allowedFields?: number[],
 ): SecurityState | null {
-  let inputs: SecurityInput[][] = [
+  return resolveSecurity(
     [
       {
         fieldName: "Authorization",
@@ -250,18 +250,7 @@ export function resolveGlobalSecurity(
         value: security?.secretKey ?? env().AUTUMN_SECRET_KEY,
       },
     ],
-  ];
-
-  if (allowedFields) {
-    inputs = allowedFields.map((i) => {
-      if (i < 0 || i >= inputs.length) {
-        throw new RangeError(`invalid allowedFields index ${i}`);
-      }
-      return inputs[i]!;
-    });
-  }
-
-  return resolveSecurity(...inputs);
+  );
 }
 
 export async function extractSecurity<

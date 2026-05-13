@@ -128,12 +128,12 @@ export const registerRedisCommands = ({
 	});
 
 	redisInstance.defineCommand("deleteFullCustomerCache", {
-		numberOfKeys: 1,
+		numberOfKeys: 4,
 		lua: DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 
 	redisInstance.defineCommand("setFullCustomerCache", {
-		numberOfKeys: 1,
+		numberOfKeys: 3,
 		lua: SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	});
 

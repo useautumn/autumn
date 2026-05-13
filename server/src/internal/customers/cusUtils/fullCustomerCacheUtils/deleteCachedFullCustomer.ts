@@ -4,11 +4,14 @@ import {
 	redis,
 } from "@/external/redis/initRedis.js";
 import { invalidateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
+import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import {
+	buildFullCustomerCacheGuardKey,
 	buildFullCustomerCacheKey,
 	FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS,
 } from "./fullCustomerCacheConfig.js";
+import { buildTestFullCustomerCacheGuardKey } from "./testFullCustomerCacheGuard.js";
 
 /**
  * Delete FullCustomer from Redis cache across ALL regions.
@@ -67,11 +70,27 @@ export const deleteCachedFullCustomer = async ({
 				return;
 			}
 
-			const result = await regionalRedis.deleteFullCustomerCache(
-				cacheKey,
-				org.id,
+			const testGuardKey = buildTestFullCustomerCacheGuardKey({
+				orgId: org.id,
 				env,
 				customerId,
+			});
+			const guardKey = buildFullCustomerCacheGuardKey({
+				orgId: org.id,
+				env,
+				customerId,
+			});
+			const pathIndexKey = buildPathIndexKey({
+				orgId: org.id,
+				env,
+				customerId,
+			});
+
+			const result = await regionalRedis.deleteFullCustomerCache(
+				cacheKey,
+				testGuardKey,
+				guardKey,
+				pathIndexKey,
 				guardTimestamp,
 				FULL_CUSTOMER_CACHE_GUARD_TTL_SECONDS.toString(),
 				skipGuard.toString(),
