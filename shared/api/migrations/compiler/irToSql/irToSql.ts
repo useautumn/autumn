@@ -1,4 +1,4 @@
-import type { IRLeaf, IRNode } from "../ir/irTypes.js";
+import type { IRLeaf, IRNode, Quantifier } from "../ir/irTypes.js";
 import type {
 	AmbientPredicate,
 	FieldDef,
@@ -112,6 +112,7 @@ function compileNode({
 	return existsForScope({
 		scope: def.scope,
 		child: node.child,
+		quantifier: node.quantifier,
 		params,
 		ambient,
 	});
@@ -120,11 +121,13 @@ function compileNode({
 function existsForScope({
 	scope,
 	child,
+	quantifier,
 	params,
 	ambient,
 }: {
 	scope: NavScope;
 	child: IRNode;
+	quantifier: Quantifier;
 	params: unknown[];
 	ambient: AmbientContext;
 }): string {
@@ -139,10 +142,12 @@ function existsForScope({
 		params,
 		ambient,
 	});
-	const conditions = [scope.correlation, ...ambientPreds, childSql].join(
-		" AND ",
+	const conditions = [scope.correlation, ...ambientPreds, childSql].filter(
+		(s) => s.length > 0 && s !== "TRUE",
 	);
-	return `EXISTS (SELECT 1 FROM ${scope.from} WHERE ${conditions})`;
+	const whereClause = conditions.length > 0 ? conditions.join(" AND ") : "TRUE";
+	const keyword = quantifier === "none" ? "NOT EXISTS" : "EXISTS";
+	return `${keyword} (SELECT 1 FROM ${scope.from} WHERE ${whereClause})`;
 }
 
 function compileLeaf({
