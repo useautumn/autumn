@@ -52,27 +52,29 @@ export const PlanToolbar = () => {
 					/>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end">
-					<DropdownMenuItem
-						className="flex items-center text-xs"
-						onClick={(e) => {
-							e.stopPropagation();
-							e.preventDefault();
-							setCopyOpen(true);
-						}}
-					>
-						<div className="flex items-center justify-between w-full gap-2">
-							Copy
-							<Copy size={12} className="text-t3" />
-						</div>
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						className="flex items-center text-xs"
-						onClick={(e) => {
-							e.stopPropagation();
-							e.preventDefault();
-							setDeleteOpen(true);
-						}}
-					>
+				<DropdownMenuItem
+					className="flex items-center text-xs"
+					onClick={(e) => {
+						e.stopPropagation();
+						e.preventDefault();
+						setDropdownOpen(false);
+						setCopyOpen(true);
+					}}
+				>
+					<div className="flex items-center justify-between w-full gap-2">
+						Copy
+						<Copy size={12} className="text-t3" />
+					</div>
+				</DropdownMenuItem>
+				<DropdownMenuItem
+					className="flex items-center text-xs"
+					onClick={(e) => {
+						e.stopPropagation();
+						e.preventDefault();
+						setDropdownOpen(false);
+						setDeleteOpen(true);
+					}}
+				>
 						<div className="flex items-center justify-between w-full gap-2">
 							Delete Plan
 							<Trash2 size={12} className="text-t3" />
