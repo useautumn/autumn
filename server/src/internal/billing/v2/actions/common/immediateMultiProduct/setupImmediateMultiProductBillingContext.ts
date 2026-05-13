@@ -181,6 +181,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		params,
 		skipSubscriptionFetching: fullProducts.every(isOneOffProduct),
 		newBillingSubscription: params.new_billing_subscription || undefined,
+		createStripeCustomerIfMissing: !preview,
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });

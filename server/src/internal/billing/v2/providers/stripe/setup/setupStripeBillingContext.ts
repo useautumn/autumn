@@ -26,6 +26,7 @@ export const setupStripeBillingContext = async ({
 	newBillingSubscription,
 	skipBillingFetching,
 	skipSubscriptionFetching,
+	createStripeCustomerIfMissing = true,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
@@ -36,6 +37,7 @@ export const setupStripeBillingContext = async ({
 	newBillingSubscription?: boolean;
 	skipBillingFetching?: boolean;
 	skipSubscriptionFetching?: boolean;
+	createStripeCustomerIfMissing?: boolean;
 }) => {
 	const { stripeBillingContext } = contextOverride;
 
@@ -66,6 +68,7 @@ export const setupStripeBillingContext = async ({
 			return fetchStripeCustomerForBilling({
 				ctx,
 				fullCus: fullCustomer,
+				createIfMissing: createStripeCustomerIfMissing,
 			});
 		},
 		async stripeSubscription() {

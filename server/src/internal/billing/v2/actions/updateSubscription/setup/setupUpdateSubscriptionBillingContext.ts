@@ -108,6 +108,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		skipBillingFetching,
 		product: fullProduct,
 		skipSubscriptionFetching: isUpdatingFreeCustomerProduct,
+		createStripeCustomerIfMissing: !preview,
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();

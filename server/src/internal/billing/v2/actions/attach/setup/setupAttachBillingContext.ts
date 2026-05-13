@@ -142,6 +142,7 @@ export const setupAttachBillingContext = async ({
 		params,
 		newBillingSubscription: shouldForceNewSubscription,
 		skipBillingFetching,
+		createStripeCustomerIfMissing: !preview,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
