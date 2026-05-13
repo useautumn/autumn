@@ -98,7 +98,7 @@ export const handleVersionProductV2 = async ({
 		newItems: newProductV2.items,
 		features,
 		product: newProduct,
-		logger: console,
+		logger: ctx.logger,
 		isCustom: false,
 		newVersion: true,
 	});
