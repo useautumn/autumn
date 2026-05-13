@@ -105,7 +105,6 @@ export function RoleSelect({
 					<SelectItem
 						key={role}
 						value={role}
-						textValue={ROLE_META[role].label}
 						className="items-start"
 					>
 						<div className="flex flex-col items-start py-0.5 gap-0.5 w-full">

@@ -12,11 +12,7 @@
 		"strict": false
 	},
 	"contextual": {
-		"options": [
-			"copy",
-			"cursor",
-			"view"
-		]
+		"options": ["copy", "cursor", "view"]
 	},
 	"banner": {
 		"content": "You're viewing the docs for Autumn's v2 API. You can find the previous API version [here](https://docs-v1.useautumn.com).",
@@ -176,11 +172,7 @@
 			{
 				"tab": "CLI",
 				"icon": "square-terminal",
-				"pages": [
-					"cli/getting-started",
-					"cli/config",
-					"cli/commands"
-				]
+				"pages": ["cli/getting-started", "cli/config", "cli/commands"]
 			},
 			{
 				"tab": "API Reference",
@@ -232,6 +224,7 @@
 						"group": "Entities",
 						"pages": [
 							"api-reference/entities/getEntity",
+							"api-reference/entities/listEntities",
 							"api-reference/entities/createEntity",
 							"api-reference/entities/updateEntity",
 							"api-reference/entities/deleteEntity"
@@ -276,9 +269,7 @@
 							},
 							{
 								"group": "Billing",
-								"pages": [
-									"api-reference/webhooks/billingAutoTopupSucceeded"
-								]
+								"pages": ["api-reference/webhooks/billingAutoTopupSucceeded"]
 							},
 							{
 								"group": "Vercel",
@@ -307,9 +298,7 @@
 			{
 				"tab": "Changelog",
 				"icon": "list-ol",
-				"pages": [
-					"changelog/changelog"
-				]
+				"pages": ["changelog/changelog"]
 			}
 		]
 	},
@@ -322,11 +311,7 @@
 			"display": "interactive"
 		},
 		"examples": {
-			"languages": [
-				"typescript",
-				"python",
-				"bash"
-			]
+			"languages": ["typescript", "python", "bash"]
 		}
 	},
 	"background": {

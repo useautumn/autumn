@@ -106,14 +106,15 @@ const MappingRow = memo(function MappingRow({
 					an existing mapping to change assignments.
 				</div>
 			) : (
-				<Select
-					value=""
-					onValueChange={(value) => {
-						if (value) {
-							onAddProduct(mapping.autumnProductId, value);
-						}
-					}}
-				>
+			<Select
+				value=""
+				onValueChange={(value) => {
+					if (value) {
+						onAddProduct(mapping.autumnProductId, value);
+					}
+				}}
+				items={Object.fromEntries(availableProducts.map((product) => [product.id, product.name]))}
+			>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder="Add product..." />
 					</SelectTrigger>

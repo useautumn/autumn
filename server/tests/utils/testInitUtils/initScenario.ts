@@ -3,12 +3,15 @@ import {
 	ApiVersion,
 	type CreateReward,
 	type CreateRewardProgram,
+	type EntitlementDuration,
 	type OrgConfig,
 	type PlanTiming,
 	type ProductItem,
 	type ProductV2,
 	type ReferralCode,
+	type RewardEntitlement,
 	type RewardRedemption,
+	RewardType,
 } from "@autumn/shared";
 import { resetAndGetCusEnt } from "@tests/balances/track/rollovers/rolloverTestUtils.js";
 import { addHours, addMonths } from "date-fns";
@@ -16,6 +19,8 @@ import type Stripe from "stripe";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { removeAllPaymentMethods } from "@/external/stripe/customers/paymentMethods/operations/removeAllPaymentMethods.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { rewardRepo } from "@/internal/rewards/repos/index.js";
+import { generateId } from "@/utils/genUtils.js";
 import { attachPaymentMethod as attachPaymentMethodFn } from "@/utils/scriptUtils/initCustomer.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
@@ -53,6 +58,8 @@ type OtherCustomerConfig = {
 	id: string;
 	paymentMethod?: "success" | "fail" | "authenticate" | "alipay";
 	data?: CustomerData;
+	/** Create a separate Stripe test clock for this customer instead of sharing the primary customer's clock */
+	distinctTestClock?: boolean;
 };
 
 type ReferralProgramConfig = {
@@ -63,6 +70,19 @@ type ReferralProgramConfig = {
 type RewardConfig = {
 	reward: CreateReward;
 	productId: string;
+};
+
+type FeatureGrantEntitlement = {
+	feature_id: string;
+	allowance: number;
+	expiry?: { duration: EntitlementDuration; length: number };
+};
+
+type FeatureGrantConfig = {
+	id?: string;
+	name?: string;
+	entitlements: FeatureGrantEntitlement[];
+	promoCodes: { code: string; max_redemptions?: number }[];
 };
 
 // Discriminated union for all action types
@@ -172,6 +192,12 @@ type ResetFeatureAction = {
 	timeout?: number;
 };
 
+type RedeemRewardAction = {
+	type: "redeemReward";
+	code: string;
+	customerId?: string;
+};
+
 type ScenarioAction =
 	| AttachAction
 	| CancelAction
@@ -186,7 +212,8 @@ type ScenarioAction =
 	| CreateReferralCodeAction
 	| RedeemReferralCodeAction
 	| CreateAndRedeemReferralCodeAction
-	| ResetFeatureAction;
+	| ResetFeatureAction
+	| RedeemRewardAction;
 
 type CleanupConfig = {
 	customerIdsToDelete: string[];
@@ -215,6 +242,7 @@ type ScenarioConfig = {
 	stripeCustomerOverrides?: Partial<Stripe.CustomerCreateParams>;
 	products: ProductV2[];
 	productPrefix?: string;
+	productCreateInStripe?: boolean;
 	entityConfig?: EntityConfig;
 	customerIds?: string[];
 	cleanup: CleanupConfig;
@@ -223,6 +251,7 @@ type ScenarioConfig = {
 	referralProgram?: ReferralProgramConfig;
 	rewards: RewardConfig[];
 	platformConfig?: PlatformCreateConfig;
+	featureGrants: FeatureGrantConfig[];
 };
 
 type ConfigFn = (config: ScenarioConfig) => ScenarioConfig;
@@ -298,16 +327,19 @@ const products = ({
 	list,
 	prefix,
 	customerIdsToDelete,
+	createInStripe,
 }: {
 	list: ProductV2[];
 	prefix?: string;
 	customerIdsToDelete?: string[];
+	createInStripe?: boolean;
 }): ConfigFn => {
 	return (config) => ({
 		...config,
 		products: list,
 		productPrefix: prefix,
 		customerIds: customerIdsToDelete,
+		productCreateInStripe: createInStripe,
 	});
 };
 
@@ -331,8 +363,13 @@ const entities = ({
 };
 
 /**
- * Additional customers (e.g. referrer/redeemer). Share the primary's test clock.
+ * Define additional customers for this test scenario.
+ * Useful for referral tests where you need a referrer and redeemer.
+ * By default, other customers share the primary customer's test clock.
+ * Use `distinctTestClock: true` to give a customer its own clock (avoids Stripe's 3-customer-per-clock limit).
+ * All test clock IDs are returned in the `testClockIds` dict keyed by customer ID.
  * @example s.otherCustomers([{ id: "redeemer", paymentMethod: "success" }])
+ * @example s.otherCustomers([{ id: "redeemer", paymentMethod: "success", distinctTestClock: true }])
  */
 const otherCustomers = (customers: OtherCustomerConfig[]): ConfigFn => {
 	return (config) => ({ ...config, otherCustomers: customers });
@@ -735,6 +772,43 @@ const billingMultiAttach = ({
 /** Top-level alias for billing multi-attach. */
 const multiAttach = billingMultiAttach;
 
+/**
+ * Define a feature grant reward for this test scenario.
+ * Inserts a reward of type `feature_grant` with entitlements and promo codes.
+ * Feature IDs are external (e.g., TestFeature.Messages) and resolved to internal IDs during setup.
+ * @param config - Feature grant configuration
+ * @example s.featureGrant({ entitlements: [{ feature_id: TestFeature.Messages, allowance: 10 }], promoCodes: [{ code: "MSG10" }] })
+ */
+const featureGrant = (config: FeatureGrantConfig): ConfigFn => {
+	return (scenarioConfig) => ({
+		...scenarioConfig,
+		featureGrants: [...scenarioConfig.featureGrants, config],
+	});
+};
+
+/**
+ * Redeem a reward promo code for a customer.
+ * @param code - The promo code to redeem
+ * @param customerId - Optional: use this customer instead of primary
+ * @example s.rewards.redeem({ code: "MSG10" })
+ * @example s.rewards.redeem({ code: "MSG10", customerId: "other-customer" })
+ */
+const redeemReward = ({
+	code,
+	customerId,
+}: {
+	code: string;
+	customerId?: string;
+}): ConfigFn => {
+	return (config) => ({
+		...config,
+		actions: [
+			...config.actions,
+			{ type: "redeemReward" as const, code, customerId },
+		],
+	});
+};
+
 // ═══════════════════════════════════════════════════════════════════
 // REFERRAL ACTIONS
 // ═══════════════════════════════════════════════════════════════════
@@ -824,6 +898,7 @@ export const s = {
 		multiAttach: billingMultiAttach,
 	},
 	multiAttach,
+	featureGrant,
 	referral: {
 		createCode: createReferralCode,
 		redeem: redeemReferralCode,
@@ -831,6 +906,9 @@ export const s = {
 	},
 	platform: {
 		create: platformCreate,
+	},
+	rewards: {
+		redeem: redeemReward,
 	},
 } as const;
 
@@ -852,6 +930,7 @@ const defaultConfig: ScenarioConfig = {
 	otherCustomers: [],
 	referralProgram: undefined,
 	rewards: [],
+	featureGrants: [],
 };
 
 /**
@@ -890,6 +969,7 @@ export async function initScenario(params: {
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	testClockId: string | undefined;
+	testClockIds: Record<string, string>;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
 	ctx: TestContext;
 	entities: GeneratedEntity[];
@@ -916,6 +996,7 @@ export async function initScenario(params: {
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
 	testClockId: undefined;
+	testClockIds: Record<string, string>;
 	customer: null;
 	ctx: TestContext;
 	entities: GeneratedEntity[];
@@ -1027,6 +1108,7 @@ export async function initScenario({
 			products: config.products,
 			prefix: productPrefix,
 			customerIds: allCustomerIds,
+			createInStripe: config.productCreateInStripe,
 		});
 	}
 
@@ -1034,7 +1116,11 @@ export async function initScenario({
 	if (config.referralProgram) {
 		const { reward, program } = config.referralProgram;
 
+		// Suffix reward ID and free_product_id (if set)
 		reward.id = `${reward.id}_${productPrefix}`;
+		if (reward.free_product_id) {
+			reward.free_product_id = `${reward.free_product_id}_${productPrefix}`;
+		}
 
 		program.id = `${program.id}_${productPrefix}`;
 		program.internal_reward_id = reward.id;
@@ -1072,6 +1158,46 @@ export async function initScenario({
 		});
 	}
 
+	// 1.7. Insert feature grant rewards (if configured)
+	for (const fg of config.featureGrants) {
+		const rewardId = fg.id ?? `feature-grant-${Date.now()}`;
+
+		// Resolve external feature_ids to internal_feature_ids
+		const resolvedEntitlements: RewardEntitlement[] = fg.entitlements.map(
+			(ent) => {
+				const feature = ctx.features.find((f) => f.id === ent.feature_id);
+				if (!feature) {
+					throw new Error(
+						`Feature "${ent.feature_id}" not found in ctx.features for feature grant reward`,
+					);
+				}
+				return {
+					internal_feature_id: feature.internal_id!,
+					allowance: ent.allowance,
+					expiry: ent.expiry,
+				};
+			},
+		);
+
+		await rewardRepo.insert({
+			db: ctx.db,
+			data: {
+				internal_id: generateId("rew"),
+				id: rewardId,
+				org_id: ctx.org.id,
+				env: ctx.env,
+				type: RewardType.FeatureGrant,
+				name: fg.name ?? rewardId,
+				entitlements: resolvedEntitlements,
+				promo_codes: fg.promoCodes.map((pc) => ({
+					code: pc.code,
+					max_redemptions: pc.max_redemptions,
+				})),
+				created_at: Date.now(),
+			},
+		});
+	}
+
 	// 2. Initialize customer (only if customerId is provided)
 	let testClockId: string | undefined;
 	let customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"] | null =
@@ -1097,16 +1223,23 @@ export async function initScenario({
 		customer = result.customer;
 	}
 
-	// 2.5. Other customers — share the primary's test clock.
+	// 2.5. Initialize other customers (share test clock with primary customer unless distinctTestClock is set)
 	const otherCustomersMap = new Map<string, OtherCustomerResult>();
+	const testClockIds: Record<string, string> = {};
+	if (testClockId && customerId) {
+		testClockIds[customerId] = testClockId;
+	}
 	for (const otherCusConfig of config.otherCustomers) {
+		const useDistinctClock = otherCusConfig.distinctTestClock === true;
 		const otherResult = await initCustomerV3({
 			ctx,
 			customerId: otherCusConfig.id,
 			customerData: otherCusConfig.data,
 			attachPm: otherCusConfig.paymentMethod,
-			withTestClock: false,
-			...(testClockId ? { existingTestClockId: testClockId } : {}),
+			withTestClock: useDistinctClock,
+			...(!useDistinctClock && testClockId
+				? { existingTestClockId: testClockId }
+				: {}),
 			withDefault: false,
 			defaultGroup: productPrefix,
 			skipWebhooks: config.skipWebhooks,
@@ -1115,6 +1248,9 @@ export async function initScenario({
 			id: otherCusConfig.id,
 			customer: otherResult.customer,
 		});
+		if (otherResult.testClockId) {
+			testClockIds[otherCusConfig.id] = otherResult.testClockId;
+		}
 	}
 
 	// 3. Create autumn clients
@@ -1508,6 +1644,17 @@ export async function initScenario({
 			// Wait for cache to clear.
 			const waitTime = action.timeout ?? 2000;
 			await new Promise((resolve) => setTimeout(resolve, waitTime));
+		} else if (action.type === "redeemReward") {
+			const targetCustomerId = action.customerId ?? customerId;
+			if (!targetCustomerId) {
+				throw new Error(
+					"Cannot redeem reward: customerId is required when using s.rewards.redeem()",
+				);
+			}
+			await autumnV1.rewards.redeem({
+				code: action.code,
+				customerId: targetCustomerId,
+			});
 		}
 	}
 
@@ -1520,6 +1667,7 @@ export async function initScenario({
 		autumnV2_1,
 		autumnV2_2,
 		testClockId,
+		testClockIds,
 		customer,
 		ctx,
 		entities: generatedEntities,

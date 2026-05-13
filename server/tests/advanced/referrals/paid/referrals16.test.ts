@@ -22,7 +22,7 @@
 // import type { DrizzleCli } from "@/db/initDrizzle.js";
 // import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
 // import { CusService } from "@/internal/customers/CusService.js";
-// import { RewardRedemptionService } from "@/internal/rewards/RewardRedemptionService.js";
+// import { redemptionRepo } from "@/internal/rewards/repos/index.js";
 // import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 // import { products, referralPrograms, rewards } from "../../../global.js";
 
@@ -54,7 +54,7 @@
 //       await Promise.all([
 //         autumn.customers.delete(mainCustomerId, { deleteInStripe: true }),
 //         autumn.customers.delete(redeemer, { deleteInStripe: true }),
-//         RewardRedemptionService._resetCustomerRedemptions({
+//         redemptionRepo.resetCustomer({
 //           db,
 //           internalCustomerId: [mainCustomerId, redeemer],
 //         }),

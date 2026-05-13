@@ -23,7 +23,7 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
-import { RewardProgramService } from "@/internal/rewards/RewardProgramService.js";
+import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { validateDefaultFlag } from "../../../product/actions/validateDefaultFlag.js";
@@ -83,7 +83,7 @@ export const handleUpdatePlanV1 = createRoute({
 				version: version ? version : undefined,
 				allowNotFound: upsert === true,
 			}),
-			RewardProgramService.getByProductId({
+			rewardProgramRepo.getByProductId({
 				db,
 				productIds: [productId],
 				orgId: org.id,

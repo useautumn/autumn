@@ -333,7 +333,7 @@ export const ConfigureVercel = () => {
 															}}
 														>
 															<div className="flex items-center justify-between w-full">
-																<span className="truncate">{option.label}</span>
+																<span className="truncate max-w-full">{option.label}</span>
 															</div>
 														</div>
 													);

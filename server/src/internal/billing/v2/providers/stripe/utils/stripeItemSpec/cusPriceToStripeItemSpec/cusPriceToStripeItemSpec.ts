@@ -1,6 +1,7 @@
 import {
 	type BillingContext,
 	cusPriceToCusEntWithCusProduct,
+	type FixedPriceConfig,
 	type FullCusProduct,
 	type FullCustomerPrice,
 	isAllocatedPrice,
@@ -38,6 +39,9 @@ export const cusPriceToStripeItemSpec = ({
 
 	// 1. Fixed / one-off price (no entitlement needed)
 	if (isFixedPrice(price)) {
+		const config = price.config as FixedPriceConfig;
+		if ((config.amount ?? 0) <= 0) return null;
+
 		spec = fixedPriceToStripeItemSpec({ cusPrice, cusProduct });
 	} else {
 		// Resolve cusEntWithCusProduct for usage-based prices

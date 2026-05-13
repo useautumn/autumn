@@ -43,19 +43,17 @@ export function CustomerListFilterButton() {
 
 	return (
 		<DropdownMenu open={open} onOpenChange={setOpen}>
-			<DropdownMenuTrigger asChild>
-				<div className="relative">
-					<IconButton
-						variant="secondary"
-						className={cn("gap-2", open && "btn-secondary-active")}
-						icon={<FunnelSimpleIcon size={14} className="text-t3" />}
-					>
-						Filter
-					</IconButton>
-					{hasActiveFilters && (
-						<span className="absolute top-0 right-0 h-2.5 w-2.5 translate-x-1/3 -translate-y-1/3 rounded-full bg-primary" />
-					)}
-				</div>
+			<DropdownMenuTrigger render={<div className="relative" />} nativeButton={false}>
+				<IconButton
+					variant="secondary"
+					className={cn("gap-2", open && "btn-secondary-active")}
+					icon={<FunnelSimpleIcon size={14} className="text-t3" />}
+				>
+					Filter
+				</IconButton>
+				{hasActiveFilters && (
+					<span className="absolute top-0 right-0 h-2.5 w-2.5 translate-x-1/3 -translate-y-1/3 rounded-full bg-primary" />
+				)}
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				className="w-56 font-regular gap-0 p-0"

@@ -62,14 +62,15 @@ export function PlanSectionTitle({
 			<span className="flex items-center gap-2">
 				{trialAction}
 				{showVersionSelector && (
-					<Select
-						value={
-							selectedVersion !== undefined
-								? String(selectedVersion)
-								: undefined
-						}
-						onValueChange={(value) => onVersionChange?.(Number(value))}
-					>
+				<Select
+					value={
+						selectedVersion !== undefined
+							? String(selectedVersion)
+							: undefined
+					}
+					onValueChange={(value) => onVersionChange?.(Number(value))}
+					items={Object.fromEntries(versionOptions.map((option) => [option.value, option.label]))}
+				>
 						<SelectTrigger className="w-fit h-7 text-xs whitespace-nowrap">
 							<SelectValue />
 						</SelectTrigger>
