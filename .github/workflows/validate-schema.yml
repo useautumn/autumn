@@ -4,34 +4,57 @@ on:
   pull_request:
     branches:
       - main
-    paths:
-      - "shared/**"
-      - "server/**"
   push:
     branches:
       - main
-    paths:
-      - "shared/**"
-      - "server/**"
 
 jobs:
-  validate-schema:
-    name: Validate Schema
+  changes:
+    name: Detect schema-relevant changes
     runs-on: ubuntu-latest
-
+    outputs:
+      schema: ${{ steps.filter.outputs.schema }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Filter paths
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            schema:
+              - 'shared/**'
+              - 'server/**'
+              - 'scripts/migrations/**'
+              - '.github/workflows/validate-schema.yml'
+
+  validate-schema:
+    name: Validate Schema
+    needs: changes
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Skip (no schema-relevant changes)
+        if: needs.changes.outputs.schema != 'true'
+        run: echo "No schema-relevant changes detected; skipping validation."
+
+      - name: Checkout code
+        if: needs.changes.outputs.schema == 'true'
+        uses: actions/checkout@v4
+
       - name: Set up Bun
+        if: needs.changes.outputs.schema == 'true'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.10
 
       - name: Install dependencies
+        if: needs.changes.outputs.schema == 'true'
         run: bun install
 
       - name: Validate schema
+        if: needs.changes.outputs.schema == 'true'
         env:
           DATABASE_URL: ${{ secrets.DATABASE_READ_ONLY_URL }}
           DB_MAX_CONNECTIONS: 1
