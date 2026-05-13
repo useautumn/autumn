@@ -1,10 +1,12 @@
 import type { Migration } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
+import { useEffect } from "react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 import { FilterStep } from "./FilterStep";
 import { useCustomerCount } from "./filters/CustomerPreview";
 import { useGuardedStepNavigation } from "./hooks/useGuardedStepNavigation";
 import { MigrationLiveView } from "./live/MigrationLiveView";
+import { useMigrationSheetStore } from "./live/useMigrationSheetStore";
 import { OperationsStep } from "./OperationsStep";
 import { STEPS, type StepId } from "./StepIndicator";
 import { useMigrationEditorForm } from "./useMigrationEditorForm";
@@ -27,6 +29,11 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 	);
 	const customerCount = useCustomerCount(filter.customer ?? {});
 	const hasCustomers = customerCount !== null && customerCount > 0;
+
+	const setLiveFormState = useMigrationSheetStore((s) => s.setLiveFormState);
+	useEffect(() => {
+		setLiveFormState({ operations, noBillingChanges });
+	}, [operations, noBillingChanges, setLiveFormState]);
 
 	const guardedSetStep = useGuardedStepNavigation({
 		step,

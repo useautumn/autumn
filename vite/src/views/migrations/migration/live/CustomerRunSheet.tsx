@@ -2,6 +2,7 @@ import type { CustomerWithProducts, Operations } from "@autumn/shared";
 import {
 	CalendarBlankIcon,
 	EyeIcon,
+	LightningIcon,
 	PlayIcon,
 	UserIcon,
 } from "@phosphor-icons/react";
@@ -29,30 +30,37 @@ function formatEventTimestamp(timestamp: string): string {
 }
 
 function StatusValue({
-	latestEvent,
+	latestDryEvent,
+	latestLiveEvent,
 	isActive,
+	activeRunDryRun,
 }: {
-	latestEvent: MigrationItemEvent | undefined;
+	latestDryEvent: MigrationItemEvent | undefined;
+	latestLiveEvent: MigrationItemEvent | undefined;
 	isActive: boolean;
+	activeRunDryRun: boolean | null;
 }) {
-	if (latestEvent)
-		return (
-			<div className="flex items-center gap-1.5">
-				{latestEvent.dry_run && (
-					<span className="text-[10px] font-medium text-t3">Dry Run:</span>
-				)}
-				<ItemEventStatusBadge
-					status={latestEvent.status}
-					dryRun={latestEvent.dry_run}
-					response={latestEvent.response}
-				/>
-			</div>
-		);
 	if (isActive)
 		return (
 			<div className="flex items-center gap-2">
 				<ActiveRunDot />
-				<span className="text-xs text-t2">Queued</span>
+				<span className="text-xs text-t2">
+					{activeRunDryRun ? "Dry run in progress" : "Running"}
+				</span>
+			</div>
+		);
+	const event = latestLiveEvent ?? latestDryEvent;
+	if (event)
+		return (
+			<div className="flex items-center gap-1.5">
+				{event.dry_run && (
+					<span className="text-[10px] font-medium text-t3">Dry Run:</span>
+				)}
+				<ItemEventStatusBadge
+					status={event.status}
+					dryRun={event.dry_run}
+					response={event.response}
+				/>
 			</div>
 		);
 	return <Badge variant="muted">Not Run</Badge>;
@@ -60,18 +68,22 @@ function StatusValue({
 
 export function CustomerRunSheet({
 	customer,
-	latestEvent,
+	latestDryEvent,
+	latestLiveEvent,
 	allEvents,
 	isActive,
+	activeRunDryRun,
 	isRunning,
 	onTriggerRun,
 	operations,
 	noBillingChanges,
 }: {
 	customer: CustomerWithProducts;
-	latestEvent: MigrationItemEvent | undefined;
+	latestDryEvent: MigrationItemEvent | undefined;
+	latestLiveEvent: MigrationItemEvent | undefined;
 	allEvents: MigrationItemEvent[];
 	isActive: boolean;
+	activeRunDryRun: boolean | null;
 	isRunning: boolean;
 	onTriggerRun: (opts: { dryRun: boolean; only?: string[] }) => void;
 	operations: Operations;
@@ -111,6 +123,9 @@ export function CustomerRunSheet({
 		[allEvents],
 	);
 
+	const lastRunTimestamp =
+		latestLiveEvent?.timestamp ?? latestDryEvent?.timestamp;
+
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
 			<SheetHeader
@@ -129,31 +144,57 @@ export function CustomerRunSheet({
 						icon={<EyeIcon size={16} weight="duotone" />}
 						label="Status"
 						value={
-							<StatusValue latestEvent={latestEvent} isActive={isActive} />
+							<StatusValue
+								latestDryEvent={latestDryEvent}
+								latestLiveEvent={latestLiveEvent}
+								isActive={isActive}
+								activeRunDryRun={activeRunDryRun}
+							/>
 						}
 					/>
-					{latestEvent && (
+					{lastRunTimestamp && (
 						<InfoRow
 							icon={<CalendarBlankIcon size={16} weight="duotone" />}
 							label="Last Run"
-							value={formatEventTimestamp(latestEvent.timestamp)}
+							value={formatEventTimestamp(lastRunTimestamp)}
 						/>
 					)}
 				</div>
 			</SheetSection>
 
-			{latestEvent && (
+			{latestLiveEvent && (
 				<SheetSection
 					title={
 						<div className="flex items-center justify-between w-full">
-							<span>Preview</span>
+							<span className="flex items-center gap-1.5">
+								<LightningIcon size={14} weight="fill" className="text-t3" />
+								Live Run
+							</span>
 							<span className="text-xs text-t3 font-normal">
-								{formatEventTimestamp(latestEvent.timestamp)}
+								{formatEventTimestamp(latestLiveEvent.timestamp)}
 							</span>
 						</div>
 					}
 				>
-					<EventResultDetail event={latestEvent} />
+					<EventResultDetail event={latestLiveEvent} />
+				</SheetSection>
+			)}
+
+			{latestDryEvent && (
+				<SheetSection
+					title={
+						<div className="flex items-center justify-between w-full">
+							<span className="flex items-center gap-1.5">
+								<EyeIcon size={14} weight="duotone" className="text-t3" />
+								Preview
+							</span>
+							<span className="text-xs text-t3 font-normal">
+								{formatEventTimestamp(latestDryEvent.timestamp)}
+							</span>
+						</div>
+					}
+				>
+					<EventResultDetail event={latestDryEvent} />
 				</SheetSection>
 			)}
 

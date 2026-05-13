@@ -31,7 +31,7 @@ export const withMigrationRunClaim = async ({
 	claimed: (
 		migrationRunId: string,
 	) => Promise<{ triggerRunId?: string } | undefined>;
-}): Promise<{ migrationRunId: string }> => {
+}): Promise<{ migrationRunId: string; triggerRunId?: string }> => {
 	const migrationRun = await migrationRunRepo.insert({
 		ctx,
 		insert: {
@@ -100,5 +100,8 @@ export const withMigrationRunClaim = async ({
 		}
 	}
 
-	return { migrationRunId: migrationRun.internal_id };
+	return {
+		migrationRunId: migrationRun.internal_id,
+		triggerRunId: result?.triggerRunId,
+	};
 };

@@ -101,6 +101,8 @@ export const useMigrationsQuery = () => {
 				migration_id: string;
 				dry_run: boolean;
 				run_id: string;
+				trigger_run_id?: string;
+				public_access_token?: string;
 			}>("/migrations.run", body);
 			return data;
 		},

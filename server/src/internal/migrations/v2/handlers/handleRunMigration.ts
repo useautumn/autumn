@@ -1,4 +1,5 @@
 import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
+import { auth } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migrationRun/index.js";
@@ -29,7 +30,13 @@ export const handleRunMigration = createRoute({
 	body: RunMigrationBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { id, dry_run: dryRun, limit, only, concurrency } = c.req.valid("json");
+		const {
+			id,
+			dry_run: dryRun,
+			limit,
+			only,
+			concurrency,
+		} = c.req.valid("json");
 
 		const migration = await migrationRepo.find({ ctx, id });
 
@@ -41,7 +48,7 @@ export const handleRunMigration = createRoute({
 			});
 
 		const isDev = process.env.NODE_ENV === "development";
-		const { migrationRunId } = await withMigrationRunClaim({
+		const { migrationRunId, triggerRunId } = await withMigrationRunClaim({
 			ctx,
 			migration,
 			dryRun,
@@ -64,10 +71,24 @@ export const handleRunMigration = createRoute({
 			},
 		});
 
+		let publicAccessToken: string | undefined;
+		if (triggerRunId) {
+			try {
+				publicAccessToken = await auth.createPublicToken({
+					scopes: { read: { runs: [triggerRunId] } },
+					expirationTime: "1hr",
+				});
+			} catch {
+				ctx.logger.warn("run-migration: failed to create public access token");
+			}
+		}
+
 		return c.json({
 			migration_id: id,
 			dry_run: dryRun,
 			run_id: migrationRunId,
+			trigger_run_id: triggerRunId,
+			public_access_token: publicAccessToken,
 		});
 	},
 });

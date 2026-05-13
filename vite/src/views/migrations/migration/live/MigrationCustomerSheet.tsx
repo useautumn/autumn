@@ -1,11 +1,9 @@
 import type { CustomerWithProducts, Operations } from "@autumn/shared";
-import type { AxiosError } from "axios";
 import { useMemo } from "react";
-import { toast } from "sonner";
 import { useMigrationRunsQuery } from "@/hooks/queries/useMigrationRunsQuery";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
-import { getBackendErr } from "@/utils/genUtils";
+import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
 import { CustomerRunSheet } from "./CustomerRunSheet";
+import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
 
 export function MigrationCustomerSheet({
 	migrationId,
@@ -18,12 +16,20 @@ export function MigrationCustomerSheet({
 	operations: Operations;
 	noBillingChanges: boolean;
 }) {
-	const { runMigration, isRunning } = useMigrationsQuery();
 	const {
 		itemEvents,
 		isActive,
+		activeRunDryRun,
 		invalidate: invalidateRuns,
 	} = useMigrationRunsQuery({ migrationId });
+
+	const {
+		subscriptions: realtimeSubscriptions,
+		hasActive: hasRealtimeActive,
+		handleComplete: handleRealtimeComplete,
+		triggerRun,
+		isRunning,
+	} = useRealtimeSubscriptions({ migrationId, invalidateRuns });
 
 	const customerEvents = useMemo(
 		() =>
@@ -33,46 +39,43 @@ export function MigrationCustomerSheet({
 		[itemEvents, customer.internal_id],
 	);
 
-	const latestEvent = useMemo(() => {
-		if (customerEvents.length === 0) return undefined;
-		return customerEvents.reduce((latest, event) =>
+	const latestDryEvent = useMemo(() => {
+		const dryEvents = customerEvents.filter((e) => e.dry_run);
+		if (dryEvents.length === 0) return undefined;
+		return dryEvents.reduce((latest, event) =>
 			event.timestamp > latest.timestamp ? event : latest,
 		);
 	}, [customerEvents]);
 
-	const triggerRun = async ({
-		dryRun,
-		only,
-	}: {
-		dryRun: boolean;
-		only?: string[];
-	}) => {
-		try {
-			const result = await runMigration({
-				id: migrationId,
-				dry_run: dryRun,
-				only,
-			});
-			const label = dryRun ? "Dry run" : "Migration run";
-			toast.success(`${label} triggered (${result.run_id})`);
-			invalidateRuns();
-		} catch (error) {
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to run migration"),
-			);
-		}
-	};
+	const latestLiveEvent = useMemo(() => {
+		const liveEvents = customerEvents.filter((e) => !e.dry_run);
+		if (liveEvents.length === 0) return undefined;
+		return liveEvents.reduce((latest, event) =>
+			event.timestamp > latest.timestamp ? event : latest,
+		);
+	}, [customerEvents]);
 
 	return (
-		<CustomerRunSheet
-			customer={customer}
-			latestEvent={latestEvent}
-			allEvents={customerEvents}
-			isActive={isActive}
-			isRunning={isRunning}
-			onTriggerRun={triggerRun}
-			operations={operations}
-			noBillingChanges={noBillingChanges}
-		/>
+		<>
+			{realtimeSubscriptions.map((sub) => (
+				<RealtimeRunWatcher
+					key={sub.triggerRunId}
+					subscription={sub}
+					onComplete={handleRealtimeComplete}
+				/>
+			))}
+			<CustomerRunSheet
+				customer={customer}
+				latestDryEvent={latestDryEvent}
+				latestLiveEvent={latestLiveEvent}
+				allEvents={customerEvents}
+				isActive={isActive || hasRealtimeActive}
+				activeRunDryRun={activeRunDryRun}
+				isRunning={isRunning}
+				onTriggerRun={triggerRun}
+				operations={operations}
+				noBillingChanges={noBillingChanges}
+			/>
+		</>
 	);
 }

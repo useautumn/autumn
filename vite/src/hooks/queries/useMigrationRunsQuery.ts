@@ -9,8 +9,7 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const ACTIVE_STATUSES: MigrationRunStatus[] = ["queued", "running"];
-const ACTIVE_POLL_MS = 4000;
-const IDLE_POLL_MS = 30000;
+const POLL_MS = 30000;
 
 export type MigrationItemEventStatus = "succeeded" | "skipped" | "failed";
 
@@ -34,8 +33,8 @@ export interface MigrationItemEvent {
 	response: Record<string, unknown> | null;
 }
 
-function hasActiveRun(runs: MigrationRun[]): boolean {
-	return runs.some((r) => ACTIVE_STATUSES.includes(r.status));
+function findActiveRun(runs: MigrationRun[]): MigrationRun | undefined {
+	return runs.find((r) => ACTIVE_STATUSES.includes(r.status));
 }
 
 export const useMigrationRunsQuery = ({
@@ -69,14 +68,11 @@ export const useMigrationRunsQuery = ({
 		enabled,
 		refetchOnWindowFocus: true,
 		staleTime: 0,
-		refetchInterval: (query) => {
-			const runs = query.state.data?.list;
-			if (!runs) return false;
-			return hasActiveRun(runs) ? ACTIVE_POLL_MS : IDLE_POLL_MS;
-		},
+		refetchInterval: POLL_MS,
 	});
 
-	const isActive = hasActiveRun(runsQuery.data?.list ?? []);
+	const activeRun = findActiveRun(runsQuery.data?.list ?? []);
+	const isActive = !!activeRun;
 
 	const eventsQuery = useQuery<{ list: MigrationItemEvent[] }>({
 		queryKey: eventsQueryKey,
@@ -89,7 +85,7 @@ export const useMigrationRunsQuery = ({
 		enabled,
 		refetchOnWindowFocus: true,
 		staleTime: 0,
-		refetchInterval: isActive ? ACTIVE_POLL_MS : IDLE_POLL_MS,
+		refetchInterval: POLL_MS,
 	});
 
 	const invalidate = useCallback(() => {
@@ -101,6 +97,7 @@ export const useMigrationRunsQuery = ({
 		runs: (runsQuery.data?.list ?? []) as MigrationRun[],
 		isLoadingRuns: runsQuery.isLoading,
 		isActive,
+		activeRunDryRun: activeRun?.dry_run ?? null,
 		itemEvents: (eventsQuery.data?.list ?? []) as MigrationItemEvent[],
 		isLoadingEvents: eventsQuery.isLoading,
 		invalidate,
