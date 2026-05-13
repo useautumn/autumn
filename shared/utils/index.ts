@@ -52,6 +52,7 @@ export * from "./productUtils/priceUtils/index";
 // Price match utils
 export * from "./productUtils/priceUtils/match/copyStripeResourcesToMatchingPrice";
 export * from "./productUtils/priceUtils/match/getPriceStripeReuseLevel";
+export * from "./productUtils/priceUtils/match/priceStripeObjectsMatch";
 export * from "./productV2Utils/mapToProductV2";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils";
 export * from "./productV2Utils/productItemUtils/getItemType";
