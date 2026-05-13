@@ -59,9 +59,11 @@ const getScheduleCacheKey = ({
 export const createMigrationStripeCache = ({
 	ctx,
 	fullCustomer,
+	allowStripeCustomerCreation = true,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
+	allowStripeCustomerCreation?: boolean;
 }): MigrationStripeCache => {
 	let stripeCustomerPromise: Promise<StripeCustomerContext> | undefined;
 	const subscriptionPromises = new Map<
@@ -82,6 +84,7 @@ export const createMigrationStripeCache = ({
 			stripeCustomerPromise = fetchStripeCustomerForBilling({
 				ctx,
 				fullCus: fullCustomer,
+				createIfMissing: allowStripeCustomerCreation,
 			}).then(({ stripeCus, paymentMethod, testClockFrozenTime }) => ({
 				stripeCustomer: stripeCus as StripeCustomerWithDiscount | undefined,
 				paymentMethod,

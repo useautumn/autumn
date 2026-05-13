@@ -1,4 +1,4 @@
-import type { ResolutionContext } from "./resolutionContext.js";
+import type { ResolutionContext } from "../resolutionContext.js";
 
 /**
  * Translate a public ID (or array of public IDs) to internal IDs for the

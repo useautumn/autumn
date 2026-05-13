@@ -24,8 +24,9 @@ export const runCloudScopeIteration = async ({
 		source: scopeItems({ iterate }),
 		concurrency: controls?.concurrency,
 		limit: controls?.limit,
+		only: null,
 		itemKey,
-		checkpoint: true,
+		checkpoint: false,
 		onError: "continue",
 		fn: async ({ item, ctx: itemCtx }) => {
 			if (item.kind !== "customer")

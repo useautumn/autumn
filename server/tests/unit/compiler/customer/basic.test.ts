@@ -64,6 +64,32 @@ describe("compileFilter — customer / basic plan-level filters", () => {
 		]);
 	});
 
+	test("plan.addon false", () => {
+		const result = compileFilter({
+			filter: { plan: { addon: false } },
+			ctx: { features: ctx.features },
+			ambient,
+		});
+
+		expect(normalize(result.sql)).toBe(
+			normalize(`
+				${ROOT_AMBIENT} AND EXISTS (
+					SELECT 1
+					FROM customer_products cp JOIN products p ON p.internal_id = cp.internal_product_id
+					WHERE cp.internal_customer_id = c.internal_id
+						AND ${PLAN_AMBIENT}
+						AND p.is_add_on = ?
+				)
+			`),
+		);
+		expect(result.params).toEqual([
+			"org_test",
+			"live",
+			...PLAN_AMBIENT_PARAMS,
+			false,
+		]);
+	});
+
 	test("paid plan — plan.price: { $ne: null }", () => {
 		const result = compileFilter({
 			filter: { plan: { price: { $ne: null } } },

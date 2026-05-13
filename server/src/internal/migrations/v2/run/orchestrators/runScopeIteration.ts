@@ -1,8 +1,5 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	withMigrationItemEvents,
-	withMigrationItemTracking,
-} from "../../actions/migrationItem/index.js";
+import { withMigrationItemTracking } from "../../actions/migrationItem/index.js";
 import { runCloudScopeIteration } from "../../cloudAdapter/runCloudScopeIteration.js";
 import type {
 	MigrationBatchFn,
@@ -41,12 +38,17 @@ export const runScopeIteration = async ({
 	const { count, iterate } = await runFilter({
 		ctx,
 		migration,
+		migrationRunId,
+		dryRun,
 		kind,
 		controls,
 	});
 	ctx.logger.info(`run-migration: iterating scope`, {
 		data: { kind, count, dryRun },
 	});
+	const checkpointReadEnabled =
+		controls?.checkpoint !== false &&
+		(!dryRun || controls?.checkpointDryRun === true);
 
 	const perItem = async ({
 		item,
@@ -69,23 +71,16 @@ export const runScopeIteration = async ({
 				hooks,
 			});
 
-		if (!isPersistedMigration(migration)) {
-			return withMigrationItemEvents({
-				ctx: itemCtx,
-				migrationInternalId: migration.event_internal_id,
-				migrationRunId,
-				item,
-				dryRun,
-				run,
-			});
-		}
-
 		return withMigrationItemTracking({
 			ctx: itemCtx,
-			migration,
+			migrationInternalId: isPersistedMigration(migration)
+				? migration.internal_id
+				: migration.event_internal_id,
 			migrationRunId,
 			item,
 			dryRun,
+			claimItemRun: checkpointReadEnabled,
+			retryFailed: migration.retry_failed === true,
 			run,
 		});
 	};

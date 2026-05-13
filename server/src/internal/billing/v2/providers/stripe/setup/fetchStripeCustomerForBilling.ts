@@ -1,6 +1,9 @@
 import type { FullCustomer } from "@autumn/shared";
 import { createStripeCli } from "@server/external/connect/createStripeCli";
-import { getOrCreateStripeCustomer } from "@server/external/stripe/customers";
+import {
+	getExpandedStripeCustomer,
+	getOrCreateStripeCustomer,
+} from "@server/external/stripe/customers";
 import { listCusPaymentMethods } from "@server/external/stripe/stripeCusUtils";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type Stripe from "stripe";
@@ -8,17 +11,24 @@ import type Stripe from "stripe";
 export const fetchStripeCustomerForBilling = async ({
 	ctx,
 	fullCus,
+	createIfMissing = true,
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
+	createIfMissing?: boolean;
 }) => {
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
 
-	const stripeCus = await getOrCreateStripeCustomer({
-		ctx,
-		customer: fullCus,
-	});
+	const stripeCus = createIfMissing
+		? await getOrCreateStripeCustomer({
+				ctx,
+				customer: fullCus,
+			})
+		: await getExpandedStripeCustomer({
+				ctx,
+				stripeCustomerId: fullCus.processor?.id,
+			});
 
 	if (!stripeCus) {
 		return {
