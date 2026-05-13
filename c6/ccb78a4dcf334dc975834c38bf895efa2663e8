@@ -1,0 +1,29 @@
+shared/api/common/index.ts
+  s_b1a331f4eba7de::t_5ae1eb186a7ac2 2,5
+shared/api/common/paginationConfigs.ts
+  s_b1a331f4eba7de::t_62ae1468b728e7 1-33
+  s_b1a331f4eba7de::t_08b44c857eec6d 34
+server/src/internal/misc/edgeConfig/orgLimitsSchemas.ts
+  s_b1a331f4eba7de::t_39376c9c9d1e42 1,4-16,24
+server/src/internal/misc/edgeConfig/orgLimitsStore.ts
+  s_b1a331f4eba7de::t_0890509c3bbdd9 1
+  s_b1a331f4eba7de::t_ba84bc0f5328ee 50-65
+shared/index.ts
+  s_b1a331f4eba7de::t_31c825013a00c0 21
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "c6ccb78a4dcf334dc975834c38bf895efa2663e8",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
