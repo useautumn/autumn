@@ -38,12 +38,13 @@ export type IROr = {
 	children: readonly IRNode[];
 };
 
+export type Quantifier = "some" | "none";
+
 export type IRNav = {
 	kind: "nav";
 	/** Single segment naming the nav, e.g. "plan" or "item". */
 	name: string;
-	/** Phase 1: only "some" is supported. */
-	quantifier: "some";
+	quantifier: Quantifier;
 	child: IRNode;
 };
 

@@ -1,18 +1,21 @@
 import type { AutumnBillingPlan } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { applyAutumnBillingPlanToFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer.js";
+import {
+	executionPriority,
+	getProcessor,
+} from "@/internal/migrations/v2/operations/operationRegistry.js";
 import type {
 	MigrateCustomerContext,
 	ProcessOperationResult,
 } from "@/internal/migrations/v2/operations/types/index.js";
-import { processUpdatePlan } from "@/internal/migrations/v2/operations/updatePlan/index.js";
 
 /**
  * Fold ordered customer operations onto one AutumnBillingPlan.
  *
- * Each op matches against the projected customer state produced by all
- * previous ops, so later operations can target customer products created or
- * patched earlier in the same migration.
+ * Operations are sorted by execution order (add_plan → update_plan),
+ * preserving original array order within the same type. Each op sees
+ * the projected customer state from all previous ops.
  */
 export const processOperations = async ({
 	ctx,
@@ -30,14 +33,18 @@ export const processOperations = async ({
 		billingContexts: [],
 	};
 
-	for (const [opIndex, op] of (
-		context.migration.operations?.customer ?? []
-	).entries()) {
-		const result = await processUpdatePlan({
+	const operations = context.migration.operations?.customer ?? [];
+	const sorted = operations
+		.map((op, originalIndex) => ({ op, originalIndex }))
+		.sort((a, b) => executionPriority(a.op) - executionPriority(b.op));
+
+	for (const { op, originalIndex } of sorted) {
+		const processor = getProcessor(op);
+		const result = await processor({
 			ctx,
 			context,
 			op,
-			opIndex,
+			opIndex: originalIndex,
 			plan: state.plan,
 			projectedFullCustomer: state.projectedFullCustomer,
 		});
