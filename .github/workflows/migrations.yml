@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.env.outputs.environment }}
+      secret_name: ${{ steps.env.outputs.secret_name }}
     steps:
       - name: Determine environment from branch or input
         id: env
@@ -47,39 +48,30 @@ jobs:
               exit 1
             fi
 
-            echo "environment=$SELECTED_ENV" >> $GITHUB_OUTPUT
+            ENV="$SELECTED_ENV"
           else
             BRANCH_NAME=${GITHUB_REF#refs/heads/}
             case "$BRANCH_NAME" in
-              main)
-                echo "environment=prod" >> $GITHUB_OUTPUT
-                ;;
-              staging)
-                echo "environment=staging" >> $GITHUB_OUTPUT
-                ;;
-              dev)
-                echo "environment=dev" >> $GITHUB_OUTPUT
-                ;;
+              main) ENV="prod" ;;
+              staging) ENV="staging" ;;
+              dev) ENV="dev" ;;
             esac
           fi
 
-  migrate:
-    name: Migrate ${{ matrix.env }} Database
-    needs: determine-environment
-    if: needs.determine-environment.outputs.environment == matrix.env
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - env: dev
-            secret: DATABASE_URL_DEV
-          - env: staging
-            secret: DATABASE_URL_STAGING
-          - env: prod
-            secret: DATABASE_URL_PROD
-            environment: prod
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
 
-    environment: ${{ matrix.environment }}
+          case "$ENV" in
+            dev) echo "secret_name=DATABASE_URL_DEV" >> $GITHUB_OUTPUT ;;
+            staging) echo "secret_name=DATABASE_URL_STAGING" >> $GITHUB_OUTPUT ;;
+            prod) echo "secret_name=DATABASE_URL_PROD" >> $GITHUB_OUTPUT ;;
+          esac
+
+  migrate:
+    name: Migrate ${{ needs.determine-environment.outputs.environment }} Database
+    needs: determine-environment
+    if: needs.determine-environment.outputs.environment != ''
+    runs-on: ubuntu-latest
+    environment: ${{ needs.determine-environment.outputs.environment == 'prod' && 'prod' || '' }}
 
     steps:
       - name: Checkout code
@@ -95,5 +87,5 @@ jobs:
 
       - name: Run migrations
         env:
-          DATABASE_URL: ${{ secrets[matrix.secret] }}
+          DATABASE_URL: ${{ secrets[needs.determine-environment.outputs.secret_name] }}
         run: bun db:migrate
