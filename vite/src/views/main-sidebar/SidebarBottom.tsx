@@ -2,6 +2,7 @@
 
 import { BooksIcon, DiscordLogoIcon } from "@phosphor-icons/react";
 import { useEnv } from "@/utils/envUtils";
+import { WorkbenchButton } from "@/views/customers2/customer/workbench/WorkbenchButton";
 import { FeedbackDialog } from "./FeedbackDialog";
 import { NavButton } from "./NavButton";
 import { SidebarContact } from "./SidebarContact";
@@ -15,20 +16,7 @@ export default function SidebarBottom() {
 	return (
 		<div className="">
 			<div className="px-2 flex flex-col gap-1 mb-2">
-				{/* <NavButton
-          value="integrations/stripe"
-          icon={<Blocks size={14} />}
-          title="Connect to Stripe"
-          env={env}
-        /> */}
-				{/* {env === AppEnv.Sandbox && (
-					<NavButton
-						value="onboarding"
-						icon={<GraduationCap size={14} />}
-						title="Onboarding"
-						env={env}
-					/>
-				)} */}
+				<WorkbenchButton />
 				<NavButton
 					value="docs"
 					icon={<BooksIcon size={16} weight="duotone" />}

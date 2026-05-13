@@ -39,10 +39,12 @@ import { setupAttachTrialContext } from "./setupAttachTrialContext";
 export const setupAttachBillingContext = async ({
 	ctx,
 	params,
+	preview = false,
 	contextOverride = {},
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV1;
+	preview?: boolean;
 	contextOverride?: BillingContextOverride;
 }): Promise<AttachBillingContext> => {
 	const { fullCustomer: fullCustomerOverride } = contextOverride;
@@ -195,7 +197,8 @@ export const setupAttachBillingContext = async ({
 		});
 
 	const billingStartsAt =
-		params.starts_at ?? (planTiming === "end_of_cycle" ? endOfCycleMs : undefined);
+		params.starts_at ??
+		(planTiming === "end_of_cycle" ? endOfCycleMs : undefined);
 	const hasFutureStartDate = isFutureStartDate(
 		params.starts_at,
 		currentEpochMs,
@@ -278,6 +281,7 @@ export const setupAttachBillingContext = async ({
 		externalId: params.subscription_id,
 
 		skipBillingChanges,
+		dryRunStripe: preview,
 
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,

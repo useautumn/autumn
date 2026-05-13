@@ -99,13 +99,13 @@ const DropdownMenuSubContent = React.forwardRef<
 		<MenuPrimitive.Positioner
 			sideOffset={sideOffset}
 			positionMethod="fixed"
-			className="isolate z-[200]"
+			className="isolate z-[160]"
 		>
 			<MenuPrimitive.Popup
 				ref={ref}
 				data-slot="dropdown-menu-sub-content"
 				className={cn(
-					"z-[200] min-w-[8rem] overflow-hidden rounded-md border border-zinc-200 bg-white p-1 shadow-lg data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 text-zinc-800 font-regular",
+					"z-[160] min-w-[8rem] overflow-hidden rounded-md border border-zinc-200 bg-white p-1 shadow-lg data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50 text-zinc-800 font-regular",
 					className,
 				)}
 				{...props}
@@ -130,13 +130,13 @@ const DropdownMenuContent = React.forwardRef<
 			side={side}
 			align={align}
 			positionMethod="fixed"
-			className="isolate z-[200] outline-none"
+			className="isolate z-[160] outline-none"
 		>
 			<MenuPrimitive.Popup
 				ref={ref}
 				data-slot="dropdown-menu-content"
 				className={cn(
-					"z-[200] min-w-[8rem] overflow-hidden rounded-md border border-zinc-200 bg-white p-1 text-zinc-950 shadow-md dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50",
+					"z-[160] min-w-[8rem] overflow-hidden rounded-md border border-zinc-200 bg-white p-1 text-zinc-950 shadow-md dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-50",
 					"data-open:animate-in data-closed:animate-out data-closed:fade-out-0 data-open:fade-in-0 data-closed:zoom-out-95 data-open:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2",
 					className,
 				)}

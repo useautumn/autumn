@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { autoTopupLimitRepo } from "@/internal/balances/autoTopUp/repos";
+import { normalizeWindowCounter } from "@/internal/balances/autoTopUp/helpers/limits/autoTopupLimitWindowUtils.js";
 
 /**
  * When `expand=billing_controls.auto_topups.purchase_limit` is requested,
@@ -17,12 +18,12 @@ import { autoTopupLimitRepo } from "@/internal/balances/autoTopUp/repos";
  *   - Returns `undefined` when there are no configured auto_topups.
  *   - For each configured auto_topup with a matching DB row, the `purchase_limit`
  *     object is rebuilt with `count` + `next_reset_at` from the row. If the
+ *     stored window has elapsed, `count` is projected to 0 and `next_reset_at`
+ *     is advanced from the stored boundary by the configured interval. If the
  *     config had no `purchase_limit`, `interval` / `interval_count` / `limit`
  *     are returned as `null`.
  *   - For configured auto_topups WITHOUT a matching DB row (no top-up has
  *     ever fired), the entry is passed through unchanged from config.
- *
- * Per design: no live window normalization — raw DB values are surfaced as-is.
  */
 export const getCusAutoTopupPurchaseLimits = async ({
 	ctx,
@@ -60,6 +61,13 @@ export const getCusAutoTopupPurchaseLimits = async ({
 		}
 
 		const configuredLimit = config.purchase_limit;
+		const normalized = normalizeWindowCounter({
+			now: Date.now(),
+			windowEndsAt: row.purchase_window_ends_at,
+			count: row.purchase_count,
+			windowConfig: configuredLimit,
+			from: row.purchase_window_ends_at,
+		});
 
 		return {
 			...config,
@@ -67,8 +75,8 @@ export const getCusAutoTopupPurchaseLimits = async ({
 				interval: configuredLimit?.interval ?? null,
 				interval_count: configuredLimit?.interval_count ?? null,
 				limit: configuredLimit?.limit ?? null,
-				count: row.purchase_count,
-				next_reset_at: row.purchase_window_ends_at,
+				count: normalized?.count ?? row.purchase_count,
+				next_reset_at: normalized?.windowEndsAt ?? row.purchase_window_ends_at,
 			},
 		};
 	});

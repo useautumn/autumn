@@ -9,7 +9,7 @@
  * - Scheduled downgrade is preserved
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import {
@@ -23,6 +23,8 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { CusService } from "@/internal/customers/CusService";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 const waitForMigration = (ms = 20000) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
@@ -216,4 +218,86 @@ test.concurrent(`${chalk.yellowBright("migrate-states-2: scheduled downgrade pre
 		org: ctx.org,
 		env: ctx.env,
 	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 3: Half-cancelled state (canceled=true, ended_at=null) blocks migration
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Regression for the May 5 incident: 13 Micro customers got silently
+ * uncancelled when a v4 product migration ran against rows in the half-state
+ * (canceled=true but ended_at=null). The schedule rebuilder treated the row
+ * as "no future cancellation" and POSTed cancel_at:null to Stripe.
+ *
+ * Migration must hard-fail on the half-state instead of touching Stripe.
+ */
+test.concurrent(`${chalk.yellowBright("migrate-states-3: half-cancelled state hard-blocks migration")}`, async () => {
+	const customerId = "migrate-states-half-cancelled";
+
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.billing.attach({ productId: "pro", timeout: 10000 }),
+			s.updateSubscription({
+				productId: "pro",
+				cancelAction: "cancel_end_of_cycle",
+			}),
+		],
+	});
+
+	const fullCusBefore = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const proCusProduct = fullCusBefore.customer_products.find(
+		(cp) => cp.product_id === pro.id,
+	);
+	expect(proCusProduct).toBeDefined();
+	expect(proCusProduct!.subscription_ids?.length).toBeGreaterThan(0);
+
+	const subId = proCusProduct!.subscription_ids![0];
+	const subBefore = await ctx.stripeCli.subscriptions.retrieve(subId);
+	expect(subBefore.cancel_at).toBeTruthy();
+	const stripeCancelAtBefore = subBefore.cancel_at!;
+
+	// Inject the production half-state.
+	await CusProductService.update({
+		ctx,
+		cusProductId: proCusProduct!.id,
+		updates: { ended_at: null },
+	});
+
+	const monthlyPrice = items.monthlyPrice({ price: 20 });
+	const v2Items = [monthlyPrice, items.monthlyMessages({ includedUsage: 600 })];
+	await autumnV1.products.update(pro.id, { items: v2Items });
+
+	await autumnV1.migrate({
+		from_product_id: pro.id,
+		to_product_id: pro.id,
+		from_version: 1,
+		to_version: 2,
+	});
+	await waitForMigration();
+
+	const subAfter = await ctx.stripeCli.subscriptions.retrieve(subId);
+	expect(subAfter.cancel_at).toBe(stripeCancelAtBefore);
+
+	const fullCusAfter = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const v1Active = fullCusAfter.customer_products.find(
+		(cp) => cp.product.version === 1 && cp.status === "active",
+	);
+	expect(v1Active).toBeDefined();
 });

@@ -18,7 +18,7 @@ import { AttachFooterV3 } from "@/components/forms/attach-v2/components/AttachFo
 import {
 	buildAttachPreviewTotals,
 	getAttachPreviewLineItems,
-	getAttachScheduledStartDate,
+	isFutureStartDate,
 } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import {
 	GenerateCheckoutStageWithPreview,
@@ -369,10 +369,7 @@ function SendInvoiceContent() {
 	const { setSheet } = useSheetStore();
 	const itemId = useSheetStore((s) => s.itemId);
 	const startDate = useStore(form.store, (state) => state.values.startDate);
-	const scheduledStartDate = getAttachScheduledStartDate({
-		startDate,
-		previewData: previewQuery.data,
-	});
+	const scheduledStartDate = isFutureStartDate(startDate) ? startDate : null;
 
 	return (
 		<SendInvoiceStageWithPreview

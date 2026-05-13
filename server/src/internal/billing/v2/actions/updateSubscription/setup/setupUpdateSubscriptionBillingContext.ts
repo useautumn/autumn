@@ -41,10 +41,12 @@ const FIELDS_WITH_BILLING_CHANGES = [
 export const setupUpdateSubscriptionBillingContext = async ({
 	ctx,
 	params,
+	preview = false,
 	contextOverride = {},
 }: {
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
+	preview?: boolean;
 	contextOverride?: UpdateSubscriptionBillingContextOverride;
 }): Promise<UpdateSubscriptionBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
@@ -210,6 +212,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		actionSource: "updateSubscription",
 
 		skipBillingChanges,
+		dryRunStripe: preview,
 
 		checkoutMode,
 

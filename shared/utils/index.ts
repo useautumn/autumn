@@ -25,13 +25,12 @@ export * from "./cusProductUtils/index";
 // Cus utils
 export * from "./cusUtils/index";
 export * from "./expandUtils";
-
+export * from "./featureUtils";
 // Feature utils
 export * from "./featureUtils/apiFeatureToDbFeature";
 export * from "./featureUtils/convertFeatureUtils";
 export * from "./featureUtils/findFeatureUtils";
 export * from "./featureUtils/index";
-export * from "./featureUtils";
 
 // INTERVAL UTILS
 export * from "./intervalUtils/addBillingInterval";
@@ -48,17 +47,25 @@ export * from "./productUtils/entUtils/index";
 export * from "./productUtils/freeTrialUtils";
 export * from "./productUtils/index";
 export * from "./productUtils/isProductUpgrade";
-export * from "./productUtils/priceUtils/index";
 export * from "./productUtils/priceUtils";
+export * from "./productUtils/priceUtils/index";
+// Price match utils
+export * from "./productUtils/priceUtils/match/copyStripeResourcesToMatchingPrice";
+export * from "./productUtils/priceUtils/match/getPriceStripeReuseLevel";
+export * from "./productUtils/priceUtils/match/priceStripeObjectsMatch";
 export * from "./productV2Utils/mapToProductV2";
 export * from "./productV2Utils/productItemUtils/classifyItemUtils";
 export * from "./productV2Utils/productItemUtils/getItemType";
-export * from "./productV2Utils/productItemUtils/matchPlanItem";
-export * from "./productV2Utils/productItemUtils/sortPlanItems";
 // Item utils
 export * from "./productV2Utils/productItemUtils/mapToItem";
+export * from "./productV2Utils/productItemUtils/matchPlanItem";
 export * from "./productV2Utils/productItemUtils/productItemUtils";
+export * from "./productV2Utils/productItemUtils/sortPlanItems";
 export * from "./productV2Utils/productV2ToFrontendProduct";
 export * from "./productV2Utils/productV2ToV1";
 export * from "./productV3Utils/productItemUtils/productV3ItemUtils";
+
+// Stripe resource utils
+export * from "./stripeUtils/classifyStripeResource/isPreviewStripeId";
+
 export * from "./utils";
