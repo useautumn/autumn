@@ -11,6 +11,7 @@ import { getBillingType } from "@server/internal/products/prices/priceUtils";
 import Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripePrepaidPriceV2 } from "@/external/stripe/createStripePrice/createStripePrepaidPriceV2.js";
+import { assertNoPreviewStripeIdsOnProduct } from "@/external/stripe/previewStripeResourceIds.js";
 import { getStripePrice } from "@/external/stripe/prices/operations/getStripePrice.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { billingIntervalToStripe } from "../stripePriceUtils.js";
@@ -140,6 +141,7 @@ export const createStripePriceIFNotExist = async ({
 	// Fetch latest price data...
 
 	const { org, logger, db, env } = ctx;
+	assertNoPreviewStripeIdsOnProduct({ product });
 	const stripeCli = createStripeCli({ org, env });
 
 	const billingType = getBillingType(price.config!);

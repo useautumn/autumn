@@ -4,7 +4,11 @@ import type {
 	FullCusProduct,
 } from "@models/cusProductModels/cusProductModels.js";
 import type { Product } from "@models/productModels/productModels";
-import { isPrepaidPrice, orgDefaultAppliesToEntities } from "../../..";
+import {
+	isOneOffPrice,
+	isPrepaidPrice,
+	orgDefaultAppliesToEntities,
+} from "../../..";
 import type { SharedContext } from "../../../types/sharedContext";
 import {
 	isFreeProduct,
@@ -279,6 +283,24 @@ export const customerProductHasPrepaidPrice = (
 	if (!customerProduct) return false;
 	const prices = cusProductToPrices({ cusProduct: customerProduct });
 	return prices.some((price) => isPrepaidPrice(price));
+};
+
+/** A plan may host both a recurring price and a one-off prepaid price for the same
+ * feature — this predicate finds the one-off prepaid variant specifically. */
+export const customerProductHasOneOffPrepaidForFeature = ({
+	customerProduct,
+	featureId,
+}: {
+	customerProduct?: FullCusProduct;
+	featureId?: string;
+}): boolean => {
+	if (!customerProduct || !featureId) return false;
+	const prices = cusProductToPrices({ cusProduct: customerProduct });
+	return prices.some((price) => {
+		if (!isOneOffPrice(price) || !isPrepaidPrice(price)) return false;
+		const config = price.config as { feature_id?: string };
+		return config.feature_id === featureId;
+	});
 };
 
 // ============================================================================

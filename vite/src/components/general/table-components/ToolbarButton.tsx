@@ -15,6 +15,10 @@ export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonProps>(
 					props?.className,
 				)}
 				{...props}
+				onClick={(e) => {
+					e.stopPropagation();
+					props.onClick?.(e);
+				}}
 			>
 				<EllipsisVertical size={12} />
 			</Button>

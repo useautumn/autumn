@@ -1,4 +1,4 @@
-import { DropdownMenuGroup } from "@radix-ui/react-dropdown-menu";
+import { DropdownMenuGroup } from "@/components/v2/dropdowns/DropdownMenu";
 import { useQueryClient } from "@tanstack/react-query";
 import {
 	ChevronDown,
@@ -49,10 +49,10 @@ export const OrgDropdown = () => {
 	const { expanded, setExpanded } = useSidebarContext();
 	const { theme, setTheme } = useTheme();
 
-	let { data: orgs } = useListOrganizations();
+	const { data: orgsData } = useListOrganizations();
+	let orgs = Array.isArray(orgsData) ? orgsData : undefined;
 	const { data: activeOrganization } = authClient.useActiveOrganization();
 
-	// Exclude the active organization from the orgs list (this makes it easier for users to understand which org is active)
 	if (activeOrganization && orgs) {
 		orgs = orgs.filter((o) => o.id !== activeOrganization.id);
 	}

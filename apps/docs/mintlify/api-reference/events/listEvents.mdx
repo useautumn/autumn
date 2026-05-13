@@ -73,6 +73,46 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       Event properties (JSON)
     </DynamicResponseField>
 
+    <DynamicResponseField name="deductions" type="object[] | null">
+      Per-balance breakdown of what this event deducted. Null for events ingested before deductions were tracked; an empty array means the event was accepted but no balance moved.
+      <Expandable title="properties">
+        <DynamicResponseField name="balance_id" type="string">
+          ID of the underlying balance row that was deducted from (customer_entitlement or rollover).
+        </DynamicResponseField>
+
+        <DynamicResponseField name="feature_id" type="string">
+          The feature this balance belongs to.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="plan_id" type="string | null">
+          ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple).
+        </DynamicResponseField>
+
+        <DynamicResponseField name="reset" type="object | null">
+          Reset configuration for the balance this deduction came from, or null if the balance doesn't reset.
+          <Expandable title="properties">
+            <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+              The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="interval_count" type="number">
+              Number of intervals between resets (eg. 2 for bi-monthly).
+            </DynamicResponseField>
+
+            <DynamicResponseField name="resets_at" type="number | null">
+              Timestamp when the balance will next reset.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="value" type="number">
+          Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value).
+        </DynamicResponseField>
+
+      </Expandable>
+    </DynamicResponseField>
+
   </Expandable>
 </DynamicResponseField>
 
@@ -103,7 +143,19 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       "feature_id": "credits",
       "customer_id": "0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx",
       "value": 30,
-      "properties": {}
+      "properties": {},
+      "deductions": [
+        {
+          "balance_id": "cus_ent_3DdSDtFBlvDbjyUuJeUIbQlyN12",
+          "feature_id": "credits",
+          "plan_id": "pro",
+          "reset": {
+            "interval": "month",
+            "resets_at": 1765958215459
+          },
+          "value": 30
+        }
+      ]
     },
     {
       "id": "evt_36xmHxxjAkqxufDf9yHAPNfRrLM",
@@ -111,7 +163,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       "feature_id": "credits",
       "customer_id": "0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx",
       "value": 49,
-      "properties": {}
+      "properties": {},
+      "deductions": null
     }
   ],
   "total": 2,

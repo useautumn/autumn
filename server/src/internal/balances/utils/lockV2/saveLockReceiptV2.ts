@@ -16,6 +16,7 @@ export const saveLockReceiptV2 = async ({
 	featureId,
 	entityId,
 	items,
+	overrideLockValue,
 	redisInstance,
 }: {
 	lock: {
@@ -30,6 +31,7 @@ export const saveLockReceiptV2 = async ({
 	featureId: string;
 	entityId?: string;
 	items: MutationLogItem[];
+	overrideLockValue?: number;
 	redisInstance: Redis;
 }) => {
 	const payload = JSON.stringify({
@@ -42,6 +44,7 @@ export const saveLockReceiptV2 = async ({
 		entity_id: entityId ?? null,
 		expires_at: lock.expires_at ?? null,
 		created_at: lock.created_at,
+		overrideLockValue: overrideLockValue ?? null,
 		items,
 	});
 

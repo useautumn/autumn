@@ -70,9 +70,11 @@ const setupCreateScheduleCheckoutMode = ({
 export const setupCreateScheduleBillingContext = async ({
 	ctx,
 	params,
+	preview = false,
 }: {
 	ctx: AutumnContext;
 	params: CreateScheduleParamsV0;
+	preview?: boolean;
 }): Promise<CreateScheduleBillingContext> => {
 	const normalizedPhases = normalizeCreateSchedulePhases({
 		phases: params.phases,
@@ -99,6 +101,7 @@ export const setupCreateScheduleBillingContext = async ({
 	const billingContext = await setupImmediateMultiProductBillingContext({
 		ctx,
 		params: immediateParams,
+		preview,
 	});
 
 	validateCreateSchedulePhasePlans({

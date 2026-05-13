@@ -45,16 +45,14 @@ export const CollapsibleNavGroup = ({
 	if (!expanded) {
 		return (
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-				<DropdownMenuTrigger asChild>
-					<div>
-						<NavButton
-							value={value}
-							icon={icon}
-							title={title}
-							env={env}
-							isGroup
-						/>
-					</div>
+				<DropdownMenuTrigger render={<div />} nativeButton={false}>
+					<NavButton
+						value={value}
+						icon={icon}
+						title={title}
+						env={env}
+						isGroup
+					/>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent
 					side="right"

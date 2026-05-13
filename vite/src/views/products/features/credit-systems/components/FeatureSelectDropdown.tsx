@@ -50,24 +50,21 @@ export function FeatureSelectDropdown({
 				}
 			}}
 		>
-			<DropdownMenuTrigger asChild>
-				<button
-					type="button"
-					className={cn(
-						"flex items-center justify-between w-full rounded-lg border bg-transparent text-sm outline-none h-input input-base input-shadow-default input-state-open p-2",
-					)}
-				>
-					{selectedFeature ? (
-						<span className="truncate">{selectedFeature.name}</span>
-					) : (
-						<span className="text-t4">Select feature</span>
-					)}
-					<CaretDownIcon className="size-4 opacity-50 shrink-0" />
-				</button>
+			<DropdownMenuTrigger
+				className={cn(
+					"flex items-center justify-between w-full rounded-lg border bg-transparent text-sm outline-none h-input input-base input-shadow-default input-state-open p-2",
+				)}
+			>
+				{selectedFeature ? (
+					<span className="truncate">{selectedFeature.name}</span>
+				) : (
+					<span className="text-t4">Select feature</span>
+				)}
+				<CaretDownIcon className="size-4 opacity-50 shrink-0" />
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				align="start"
-				className="min-w-[var(--radix-dropdown-menu-trigger-width)] z-200"
+				className="min-w-[var(--anchor-width)] z-200"
 				onCloseAutoFocus={(e) => e.preventDefault()}
 			>
 				{showCreateForm ? (

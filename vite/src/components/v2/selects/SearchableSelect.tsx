@@ -116,10 +116,9 @@ export function SearchableSelect<T>({
 			<AnimatePresence>
 				{open && (
 					<PopoverContent
-						forceMount
 						align="start"
 						className={cn(
-							"w-(--radix-popover-trigger-width) p-0 z-200 rounded-md overflow-hidden",
+							"w-(--anchor-width) p-0 z-200 rounded-md overflow-hidden",
 							contentClassName,
 						)}
 						asChild

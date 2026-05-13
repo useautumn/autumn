@@ -16,6 +16,7 @@ import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillin
 import { setupCancelAction } from "@/internal/billing/v2/setup/setupCancelMode";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
+import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
@@ -40,10 +41,12 @@ const FIELDS_WITH_BILLING_CHANGES = [
 export const setupUpdateSubscriptionBillingContext = async ({
 	ctx,
 	params,
+	preview = false,
 	contextOverride = {},
 }: {
 	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
+	preview?: boolean;
 	contextOverride?: UpdateSubscriptionBillingContextOverride;
 }): Promise<UpdateSubscriptionBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
@@ -105,6 +108,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		skipBillingFetching,
 		product: fullProduct,
 		skipSubscriptionFetching: isUpdatingFreeCustomerProduct,
+		createStripeCustomerIfMissing: !preview,
 	});
 
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
@@ -191,7 +195,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
-		requestedProrationBehavior: params.proration_behavior,
+		requestedProrationBehavior: setupIgnoreProrationBehavior({ intent })
+			? undefined
+			: params.proration_behavior,
 
 		invoiceMode,
 		featureQuantities,
@@ -207,6 +213,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		actionSource: "updateSubscription",
 
 		skipBillingChanges,
+		dryRunStripe: preview,
 
 		checkoutMode,
 

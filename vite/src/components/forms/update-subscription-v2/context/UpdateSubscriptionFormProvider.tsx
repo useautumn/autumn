@@ -236,15 +236,17 @@ export function UpdateSubscriptionFormProvider({
 		for (const [featureId, quantity] of Object.entries(
 			normalizedPrepaidOptions,
 		)) {
-			if (
-				quantity !== undefined &&
-				quantity !== initialPrepaidOptions[featureId]
-			) {
+			if (quantity === undefined) continue;
+			const item = currentPrepaidItems.find(
+				(it) => it.feature_id === featureId,
+			);
+			const isOneOff = item?.interval == null;
+			if (quantity !== initialPrepaidOptions[featureId] || isOneOff) {
 				changed[featureId] = quantity;
 			}
 		}
 		return Object.keys(changed).length > 0 ? changed : undefined;
-	}, [normalizedPrepaidOptions, initialPrepaidOptions]);
+	}, [normalizedPrepaidOptions, initialPrepaidOptions, currentPrepaidItems]);
 
 	const baseProduct = useMemo((): FrontendProduct | undefined => {
 		if (!product) return undefined;

@@ -9,6 +9,7 @@ import { redis } from "@/external/redis/initRedis.js";
 import { buildPathIndex } from "@/internal/customers/cache/pathIndex/buildPathIndex.js";
 import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
 import {
+	buildFullCustomerCacheGuardKey,
 	buildFullCustomerCacheKey,
 	FULL_CUSTOMER_CACHE_TTL_SECONDS,
 } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
@@ -211,16 +212,19 @@ const fmtMs = (ms: number) => `${ms.toFixed(2)}ms`;
 const seedCache = async ({
 	fixture,
 	cacheKey,
+	guardKey,
+	pathIndexKey,
 }: {
 	fixture: FullCustomer;
 	cacheKey: string;
+	guardKey: string;
+	pathIndexKey: string;
 }) => {
 	const pathIndexEntries = buildPathIndex({ fullCustomer: fixture });
 	await redis.setFullCustomerCache(
+		guardKey,
 		cacheKey,
-		ORG_ID,
-		ENV,
-		CUSTOMER_ID,
+		pathIndexKey,
 		String(Date.now()),
 		String(FULL_CUSTOMER_CACHE_TTL_SECONDS),
 		JSON.stringify(fixture),
@@ -340,6 +344,11 @@ const CUSTOMER_CACHE_KEY = buildFullCustomerCacheKey({
 	env: ENV,
 	customerId: CUSTOMER_ID,
 });
+const CUSTOMER_GUARD_KEY = buildFullCustomerCacheGuardKey({
+	orgId: ORG_ID,
+	env: ENV,
+	customerId: CUSTOMER_ID,
+});
 const CUSTOMER_PATH_IDX_KEY = buildPathIndexKey({
 	orgId: ORG_ID,
 	env: ENV,
@@ -347,6 +356,7 @@ const CUSTOMER_PATH_IDX_KEY = buildPathIndexKey({
 });
 
 const ENTITY_CACHE_KEY_PREFIX = `{${ORG_ID}}:${ENV}:fullentity:1.0.0:${CUSTOMER_ID}:entity_0`;
+const ENTITY_GUARD_KEY_PREFIX = `{${ORG_ID}}:${ENV}:fullentity:guard:${CUSTOMER_ID}:entity_0`;
 const ENTITY_PATH_IDX_KEY_PREFIX = `{${ORG_ID}}:${ENV}:fullentity:pathidx:${CUSTOMER_ID}:entity_0`;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -484,10 +494,9 @@ describe(
 			const { e2eTimings, serverTimings } = await runSlowlogBatch({
 				fn: async () => {
 					await redis.setFullCustomerCache(
+						CUSTOMER_GUARD_KEY,
 						CUSTOMER_CACHE_KEY,
-						ORG_ID,
-						ENV,
-						CUSTOMER_ID,
+						CUSTOMER_PATH_IDX_KEY,
 						String(Date.now()),
 						String(FULL_CUSTOMER_CACHE_TTL_SECONDS),
 						serialized,
@@ -515,10 +524,9 @@ describe(
 			const { e2eTimings, serverTimings } = await runSlowlogBatch({
 				fn: async () => {
 					await redis.setFullCustomerCache(
+						ENTITY_GUARD_KEY_PREFIX,
 						ENTITY_CACHE_KEY_PREFIX,
-						ORG_ID,
-						ENV,
-						CUSTOMER_ID,
+						ENTITY_PATH_IDX_KEY_PREFIX,
 						String(Date.now()),
 						String(FULL_CUSTOMER_CACHE_TTL_SECONDS),
 						serialized,
@@ -547,6 +555,8 @@ describe(
 				await seedCache({
 					fixture: boundedFixture,
 					cacheKey: CUSTOMER_CACHE_KEY,
+					guardKey: CUSTOMER_GUARD_KEY,
+					pathIndexKey: CUSTOMER_PATH_IDX_KEY,
 				});
 
 				const { e2eTimings, serverTimings } = await runSlowlogBatch({
@@ -581,6 +591,8 @@ describe(
 				await seedCache({
 					fixture: entityFixture,
 					cacheKey: ENTITY_CACHE_KEY_PREFIX,
+					guardKey: ENTITY_GUARD_KEY_PREFIX,
+					pathIndexKey: ENTITY_PATH_IDX_KEY_PREFIX,
 				});
 
 				const { e2eTimings, serverTimings } = await runSlowlogBatch({
