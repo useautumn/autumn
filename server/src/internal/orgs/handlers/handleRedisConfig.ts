@@ -7,17 +7,50 @@ import { OrgService } from "../OrgService.js";
 import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
 
 const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);
+const redisConfigBody = z.object({
+	connectionString: z.string().min(1),
+	workerConnectionString: z.string().optional(),
+});
+
+const parseRedisUrl = ({
+	connectionString,
+	label,
+}: {
+	connectionString: string;
+	label: string;
+}) => {
+	try {
+		const redisUrl = new URL(connectionString);
+		if (!REDIS_PROTOCOLS.has(redisUrl.protocol)) {
+			throw new RecaseError({
+				message: `Invalid ${label}: expected redis:// or rediss://`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		return redisUrl;
+	} catch (error) {
+		if (error instanceof RecaseError) throw error;
+		throw new RecaseError({
+			message: `Invalid ${label}: could not parse URL`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+};
 
 export const handleUpsertRedisConfig = createRoute({
 	scopes: [Scopes.Organisation.Write],
-	body: z.object({
-		connectionString: z.string().min(1),
-	}),
+	body: redisConfigBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, logger } = ctx;
-		const { connectionString: rawConnectionString } = c.req.valid("json");
+		const {
+			connectionString: rawConnectionString,
+			workerConnectionString: rawWorkerConnectionString,
+		} = c.req.valid("json");
 		const connectionString = rawConnectionString.trim();
+		const workerConnectionString = rawWorkerConnectionString?.trim();
 
 		if (!connectionString) {
 			throw new RecaseError({
@@ -36,23 +69,16 @@ export const handleUpsertRedisConfig = createRoute({
 			});
 		}
 
-		let redisUrl: URL;
-		try {
-			redisUrl = new URL(connectionString);
-		} catch {
-			throw new RecaseError({
-				message: "Invalid connection string: could not parse URL",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-		if (!REDIS_PROTOCOLS.has(redisUrl.protocol)) {
-			throw new RecaseError({
-				message: "Invalid connection string: expected redis:// or rediss://",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
+		const redisUrl = parseRedisUrl({
+			connectionString,
+			label: "connection string",
+		});
+		const workerRedisUrl = workerConnectionString
+			? parseRedisUrl({
+					connectionString: workerConnectionString,
+					label: "worker connection string",
+				})
+			: undefined;
 
 		const now = Date.now();
 		const updatedOrg = await OrgService.update({
@@ -61,7 +87,11 @@ export const handleUpsertRedisConfig = createRoute({
 			updates: {
 				redis_config: {
 					connectionString: encryptData(connectionString),
+					workerConnectionString: workerConnectionString
+						? encryptData(workerConnectionString)
+						: undefined,
 					url: redisUrl.host,
+					workerUrl: workerRedisUrl?.host,
 					migrationPercent: 0,
 					previousMigrationPercent: 0,
 					migrationChangedAt: now,

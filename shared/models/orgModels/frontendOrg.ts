@@ -27,6 +27,7 @@ export const FrontendOrgSchema = z.object({
 	redis_config: z
 		.object({
 			host: z.string(),
+			workerHost: z.string().nullable().optional(),
 			migrationPercent: z.number(),
 		})
 		.nullable(),

@@ -18,6 +18,7 @@ export type AdminOrg = {
 	};
 	redis_config: {
 		url: string;
+		workerUrl?: string;
 		migrationPercent: number;
 	} | null;
 };

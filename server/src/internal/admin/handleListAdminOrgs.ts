@@ -1,4 +1,4 @@
-import { member, organizations, user, Scopes } from "@autumn/shared";
+import { member, organizations, Scopes, user } from "@autumn/shared";
 import { and, desc, eq, gt, gte, ilike, inArray, lt, or } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
@@ -107,6 +107,7 @@ export const handleListAdminOrgs = createRoute({
 					redis_config: rawRedisConfig
 						? {
 								url: rawRedisConfig.url,
+								workerUrl: rawRedisConfig.workerUrl,
 								migrationPercent: rawRedisConfig.migrationPercent,
 							}
 						: null,

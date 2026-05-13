@@ -163,6 +163,16 @@ export const ConfigureRedis = () => {
 									className="font-mono text-xs"
 								/>
 							</div>
+							{redisConfig.workerHost && (
+								<div className="flex flex-col gap-1">
+									<FormLabel>Worker Host</FormLabel>
+									<Input
+										value={redisConfig.workerHost}
+										readOnly
+										className="font-mono text-xs"
+									/>
+								</div>
+							)}
 							<div className="flex flex-col gap-1">
 								<FormLabel>Migration Percentage</FormLabel>
 								<div className="flex items-center gap-2">

@@ -30,6 +30,7 @@ type AdminOrgRedisConfigResponse = {
 	org_slug: string;
 	redis_config: {
 		host: string;
+		workerHost: string | null;
 		migrationPercent: number;
 		previousMigrationPercent: number;
 		migrationChangedAt: number;
@@ -52,6 +53,7 @@ export function OrgRedisConfigDialog({
 	const axiosInstance = useAxiosInstance();
 
 	const [connectionString, setConnectionString] = useState("");
+	const [workerConnectionString, setWorkerConnectionString] = useState("");
 	// `null` = "show the current server value". A string means the admin has
 	// typed something; that draft takes precedence until a successful update
 	// or a dialog reopen clears it. Deriving `migrationInput` during render
@@ -80,6 +82,11 @@ export function OrgRedisConfigDialog({
 	const cfg = data?.redis_config ?? null;
 	const migrationInput =
 		migrationInputDraft ?? (cfg ? String(cfg.migrationPercent) : "");
+	const endpointUpdateDisabled = !!cfg && cfg.migrationPercent > 0;
+	const canSubmitEndpoints = cfg
+		? !endpointUpdateDisabled &&
+			!!(connectionString.trim() || workerConnectionString.trim())
+		: !!connectionString.trim();
 
 	// Surface load failures as a toast — only when there's no data to fall
 	// back on. After a successful mutation triggers a refetch, transient GET
@@ -96,6 +103,7 @@ export function OrgRedisConfigDialog({
 	useEffect(() => {
 		if (open && orgId) {
 			setConnectionString("");
+			setWorkerConnectionString("");
 			setRemoveConfirm("");
 			setMigrationInputDraft(null);
 		}
@@ -121,17 +129,33 @@ export function OrgRedisConfigDialog({
 	};
 
 	const handleConnect = async () => {
-		if (!orgId || !connectionString.trim()) return;
+		const primaryConnectionString = connectionString.trim();
+		const workerRedisConnectionString = workerConnectionString.trim();
+		if (!orgId) return;
+		if (!cfg && !primaryConnectionString) return;
+		if (cfg && !primaryConnectionString && !workerRedisConnectionString) return;
+
 		setSaving(true);
 		try {
 			await axiosInstance.patch(`/admin/orgs/${orgId}/redis`, {
-				connectionString: connectionString.trim(),
+				...(primaryConnectionString
+					? { connectionString: primaryConnectionString }
+					: {}),
+				...(workerRedisConnectionString
+					? { workerConnectionString: workerRedisConnectionString }
+					: {}),
 			});
 			setConnectionString("");
-			toast.success("Redis connected");
+			setWorkerConnectionString("");
+			toast.success(cfg ? "Redis endpoints updated" : "Redis connected");
 			await refreshAfterMutation();
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to connect Redis"));
+			toast.error(
+				getBackendErr(
+					error,
+					cfg ? "Failed to update Redis endpoints" : "Failed to connect Redis",
+				),
+			);
 		} finally {
 			setSaving(false);
 		}
@@ -192,8 +216,51 @@ export function OrgRedisConfigDialog({
 				) : cfg ? (
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-1">
-							<FormLabel>Connected host</FormLabel>
+							<FormLabel>API/server host</FormLabel>
 							<Input value={cfg.host} readOnly className="font-mono text-xs" />
+						</div>
+
+						<div className="flex flex-col gap-1">
+							<FormLabel>Worker host</FormLabel>
+							<Input
+								value={cfg.workerHost ?? "Using API/server host"}
+								readOnly
+								className="font-mono text-xs"
+							/>
+						</div>
+
+						<div className="flex flex-col gap-2 border-t border-stroke pt-4">
+							<FormLabel>Update endpoints</FormLabel>
+							{endpointUpdateDisabled && (
+								<span className="text-t4 text-xs">
+									Set migration percentage to 0 before changing endpoints.
+								</span>
+							)}
+							<div className="flex flex-col gap-1">
+								<Input
+									value={connectionString}
+									onChange={(e) => setConnectionString(e.target.value)}
+									placeholder="Leave blank to keep current API/server URI"
+									disabled={endpointUpdateDisabled}
+									className="font-mono text-xs"
+								/>
+							</div>
+							<div className="flex flex-col gap-1">
+								<Input
+									value={workerConnectionString}
+									onChange={(e) => setWorkerConnectionString(e.target.value)}
+									placeholder="Optional worker URI; blank keeps current"
+									disabled={endpointUpdateDisabled}
+									className="font-mono text-xs"
+								/>
+							</div>
+							<Button
+								onClick={handleConnect}
+								disabled={saving || !canSubmitEndpoints}
+								size="sm"
+							>
+								{saving ? "Updating…" : "Update endpoints"}
+							</Button>
 						</div>
 
 						<div className="flex flex-col gap-1">
@@ -261,21 +328,33 @@ export function OrgRedisConfigDialog({
 					</div>
 				) : (
 					<div className="flex flex-col gap-3">
-						<FormLabel>Redis connection string</FormLabel>
-						<Input
-							value={connectionString}
-							onChange={(e) => setConnectionString(e.target.value)}
-							placeholder="rediss://default:password@host:port"
-							className="font-mono text-xs"
-						/>
+						<div className="flex flex-col gap-1">
+							<FormLabel>API/server Redis connection string</FormLabel>
+							<Input
+								value={connectionString}
+								onChange={(e) => setConnectionString(e.target.value)}
+								placeholder="rediss://default:password@private-host:6379"
+								className="font-mono text-xs"
+							/>
+						</div>
+						<div className="flex flex-col gap-1">
+							<FormLabel>Worker Redis connection string</FormLabel>
+							<Input
+								value={workerConnectionString}
+								onChange={(e) => setWorkerConnectionString(e.target.value)}
+								placeholder="Optional: rediss://default:password@public-host:6385"
+								className="font-mono text-xs"
+							/>
+						</div>
 						<span className="text-t4 text-[11px]">
 							Stored encrypted (AES-256-CBC). Frontend never sees the connection
-							string after save — only the host. Migration starts at 0% (no
-							traffic routed) until you bump it.
+							strings after save — only hosts. Workers use their own URI when
+							set; otherwise they use the API/server URI. Migration starts at 0%
+							until you bump it.
 						</span>
 						<Button
 							onClick={handleConnect}
-							disabled={saving || !connectionString.trim()}
+							disabled={saving || !canSubmitEndpoints}
 						>
 							{saving ? "Connecting…" : "Connect Redis"}
 						</Button>

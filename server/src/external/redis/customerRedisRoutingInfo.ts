@@ -1,4 +1,5 @@
 import type { OrgRedisConfig } from "@autumn/shared";
+import { getOrgRedisEndpoint } from "./orgRedisEndpoint.js";
 import type { OrgWithRedisConfig } from "./orgRedisPool.js";
 
 export type CustomerRedisRoutingInfo = {
@@ -33,10 +34,11 @@ export const getCustomerRedisRoutingInfoForOrg = ({
 
 	const bucket = getCustomerBucket(customerId);
 	const usesDedicatedRedis = bucket < org.redis_config.migrationPercent;
+	const redisEndpoint = getOrgRedisEndpoint({ redisConfig: org.redis_config });
 
 	return {
 		bucket,
-		redisUrl: usesDedicatedRedis ? org.redis_config.url : undefined,
+		redisUrl: usesDedicatedRedis ? redisEndpoint.url : undefined,
 		usesDedicatedRedis,
 	};
 };

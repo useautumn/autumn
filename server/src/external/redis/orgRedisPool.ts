@@ -6,6 +6,7 @@ import { OrgService } from "@/internal/orgs/OrgService.js";
 import { decryptData } from "@/utils/encryptUtils.js";
 import { createRedisConnection, currentRegion } from "./initRedis.js";
 import { REDIS_V2_COMMAND_TIMEOUT_MS } from "./initUtils/redisV2Config.js";
+import { getOrgRedisEndpoint } from "./orgRedisEndpoint.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
 export type OrgWithRedisConfig = {
@@ -48,19 +49,20 @@ const createOrgRedisConnection = ({
 export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 	if (!org.redis_config) return resolveRedisV2();
 
+	const endpoint = getOrgRedisEndpoint({ redisConfig: org.redis_config });
 	const existing = pool.get(org.id);
 	if (existing) {
-		if (existing.url === org.redis_config.url) return existing.instance;
+		if (existing.url === endpoint.url) return existing.instance;
 		existing.instance.disconnect();
 		pool.delete(org.id);
 	}
 
 	let connectionString: string;
 	try {
-		connectionString = decryptData(org.redis_config.connectionString);
+		connectionString = decryptData(endpoint.connectionString);
 	} catch (error) {
 		logger.error(
-			`[OrgRedis] Failed to decrypt redis_config for org ${org.id}, falling back to shared Redis V2`,
+			`[OrgRedis] Failed to decrypt ${endpoint.runtime} redis_config for org ${org.id}, falling back to shared Redis V2`,
 		);
 		if (error instanceof Error) {
 			logger.error(error);
@@ -72,7 +74,7 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 		connectionString,
 		orgId: org.id,
 	});
-	pool.set(org.id, { instance, url: org.redis_config.url });
+	pool.set(org.id, { instance, url: endpoint.url });
 	return instance;
 };
 

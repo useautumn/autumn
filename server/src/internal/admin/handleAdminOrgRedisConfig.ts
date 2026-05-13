@@ -9,6 +9,37 @@ import { encryptData } from "@/utils/encryptUtils.js";
 const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);
 
 const orgIdParam = z.object({ org_id: z.string().min(1) });
+const redisConfigBody = z.object({
+	connectionString: z.string().optional(),
+	workerConnectionString: z.string().optional(),
+});
+
+const parseRedisUrl = ({
+	connectionString,
+	label,
+}: {
+	connectionString: string;
+	label: string;
+}) => {
+	try {
+		const redisUrl = new URL(connectionString);
+		if (!REDIS_PROTOCOLS.has(redisUrl.protocol)) {
+			throw new RecaseError({
+				message: `Invalid ${label}: expected redis:// or rediss://`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		return redisUrl;
+	} catch (error) {
+		if (error instanceof RecaseError) throw error;
+		throw new RecaseError({
+			message: `Invalid ${label}: could not parse URL`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+};
 
 /**
  * GET /admin/orgs/:org_id/redis
@@ -28,6 +59,7 @@ export const handleGetAdminOrgRedisConfig = createRoute({
 			redis_config: org.redis_config
 				? {
 						host: org.redis_config.url,
+						workerHost: org.redis_config.workerUrl ?? null,
 						migrationPercent: org.redis_config.migrationPercent,
 						previousMigrationPercent: org.redis_config.previousMigrationPercent,
 						migrationChangedAt: org.redis_config.migrationChangedAt,
@@ -38,61 +70,86 @@ export const handleGetAdminOrgRedisConfig = createRoute({
 });
 
 /**
- * PATCH /admin/orgs/:org_id/redis  body: { connectionString }
- * Initial-create the redis_config for the target org. Encrypts connection
- * string, stores host separately, sets migrationPercent: 0.
+ * PATCH /admin/orgs/:org_id/redis
+ * Creates redis_config for the target org, or updates endpoints while the
+ * migration is still at 0%. Connection strings are encrypted; hosts are stored
+ * separately so the frontend can show non-secret routing state.
  */
 export const handleUpsertAdminOrgRedisConfig = createRoute({
 	scopes: [Scopes.Superuser],
 	params: orgIdParam,
-	body: z.object({ connectionString: z.string().min(1) }),
+	body: redisConfigBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, logger } = ctx;
 		const { org_id: orgId } = c.req.param();
-		const { connectionString: rawConnectionString } = c.req.valid("json");
-		const connectionString = rawConnectionString.trim();
+		const {
+			connectionString: rawConnectionString,
+			workerConnectionString: rawWorkerConnectionString,
+		} = c.req.valid("json");
+		const connectionString = rawConnectionString?.trim();
+		const workerConnectionString = rawWorkerConnectionString?.trim();
 
 		const org = await OrgService.get({ db, orgId });
 
-		if (org.redis_config) {
+		if (!org.redis_config && !connectionString) {
 			throw new RecaseError({
-				message:
-					"Redis config already exists for this org. Remove it before creating a new one.",
+				message: "Connection string is required",
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
 		}
 
-		let redisUrl: URL;
-		try {
-			redisUrl = new URL(connectionString);
-		} catch {
+		if (org.redis_config && org.redis_config.migrationPercent > 0) {
 			throw new RecaseError({
-				message: "Invalid connection string: could not parse URL",
+				message: `Cannot update Redis endpoints while migrationPercent is ${org.redis_config.migrationPercent}%. Set it to 0 first.`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
 		}
-		if (!REDIS_PROTOCOLS.has(redisUrl.protocol)) {
-			throw new RecaseError({
-				message: "Invalid connection string: expected redis:// or rediss://",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
+
+		const redisUrl = connectionString
+			? parseRedisUrl({
+					connectionString,
+					label: "connection string",
+				})
+			: undefined;
+		const workerRedisUrl = workerConnectionString
+			? parseRedisUrl({
+					connectionString: workerConnectionString,
+					label: "worker connection string",
+				})
+			: undefined;
 
 		const now = Date.now();
+		const nextConnectionString = connectionString
+			? encryptData(connectionString)
+			: org.redis_config?.connectionString;
+		const nextUrl = redisUrl?.host ?? org.redis_config?.url;
+
+		if (!nextConnectionString || !nextUrl) {
+			throw new RecaseError({
+				message: "Connection string is required",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
 		const updatedOrg = await OrgService.update({
 			db,
 			orgId: org.id,
 			updates: {
 				redis_config: {
-					connectionString: encryptData(connectionString),
-					url: redisUrl.host,
-					migrationPercent: 0,
-					previousMigrationPercent: 0,
-					migrationChangedAt: now,
+					connectionString: nextConnectionString,
+					workerConnectionString: workerConnectionString
+						? encryptData(workerConnectionString)
+						: org.redis_config?.workerConnectionString,
+					url: nextUrl,
+					workerUrl: workerRedisUrl?.host ?? org.redis_config?.workerUrl,
+					migrationPercent: org.redis_config?.migrationPercent ?? 0,
+					previousMigrationPercent:
+						org.redis_config?.previousMigrationPercent ?? 0,
+					migrationChangedAt: org.redis_config?.migrationChangedAt ?? now,
 				},
 			},
 		});
@@ -101,7 +158,7 @@ export const handleUpsertAdminOrgRedisConfig = createRoute({
 			getOrgRedis({ org: updatedOrg });
 			await clearOrgCache({ db, orgId: org.id, env: ctx.env, logger });
 			logger.info(
-				`[admin/handleUpsertAdminOrgRedisConfig] org=${org.id}: redis_config created, url=${redisUrl.host}, actor=${ctx.user?.email ?? ctx.userId ?? "unknown"}`,
+				`[admin/handleUpsertAdminOrgRedisConfig] org=${org.id}: redis_config upserted, url=${redisUrl?.host ?? org.redis_config?.url}, workerUrl=${workerRedisUrl?.host ?? org.redis_config?.workerUrl ?? "none"}, actor=${ctx.user?.email ?? ctx.userId ?? "unknown"}`,
 			);
 		}
 

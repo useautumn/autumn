@@ -1,6 +1,8 @@
 import "dotenv/config";
 import cluster from "node:cluster";
 
+process.env.AUTUMN_PROCESS_TYPE = "worker";
+
 import { initInfisical } from "./external/infisical/initInfisical.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import {
@@ -104,11 +106,8 @@ if (cluster.isPrimary) {
 	const { primeRedisMonitor } = await import(
 		"./external/redis/initUtils/redisAvailability.js"
 	);
-	const {
-		primeRedisV2Monitor,
-		startRedisV2Monitor,
-		stopRedisV2Monitor,
-	} = await import("./external/redis/initUtils/redisV2Availability.js");
+	const { primeRedisV2Monitor, startRedisV2Monitor, stopRedisV2Monitor } =
+		await import("./external/redis/initUtils/redisV2Availability.js");
 	const { startRedisMonitor, stopRedisMonitor } = await import(
 		"./external/redis/initRedis.js"
 	);

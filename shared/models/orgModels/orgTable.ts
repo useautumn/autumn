@@ -44,8 +44,12 @@ export type StripeConnectConfig = {
 export type OrgRedisConfig = {
 	/** AES-256-CBC encrypted full Redis connection string via encryptData() */
 	connectionString: string;
+	/** Optional worker-specific encrypted Redis connection string */
+	workerConnectionString?: string;
 	/** Plain domain/host only, used for pool URL-change detection */
 	url: string;
+	/** Optional worker-specific plain domain/host */
+	workerUrl?: string;
 	/** Percentage of customers routed to the dedicated Redis (0-100) */
 	migrationPercent: number;
 	/** The migrationPercent before the last change, used for staleness detection */
