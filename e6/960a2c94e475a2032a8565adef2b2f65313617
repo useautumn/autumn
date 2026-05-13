@@ -1,0 +1,29 @@
+server/src/honoMiddlewares/versionedValidator.ts
+  s_b1a331f4eba7de::t_8676dce4498513 10
+  s_b1a331f4eba7de::t_3d80dd98d35b7e 45,48,50-55,61-64
+  s_b1a331f4eba7de::t_c877ed06e7548b 122-127
+server/src/honoMiddlewares/routeHandler.ts
+  s_b1a331f4eba7de::t_7a56a7bc9b3717 59-74
+  s_b1a331f4eba7de::t_8bbec1e5e8a989 116-118,121-123,129,132-137
+  s_b1a331f4eba7de::t_42e9421bb522ae 18-21
+  s_b1a331f4eba7de::t_1297d0d7b0d54c 227-248,256
+  s_b1a331f4eba7de::t_54842debb537ec 263-284,290-291,314,317
+server/src/honoMiddlewares/versionResolver.ts
+  s_b1a331f4eba7de::t_7de9fc61c89263 1-70
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "e6960a2c94e475a2032a8565adef2b2f65313617",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
