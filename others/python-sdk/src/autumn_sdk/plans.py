@@ -35,6 +35,7 @@ class Plans(BaseSDK):
                 models.CreatePlanConfigRequest, models.CreatePlanConfigRequestTypedDict
             ]
         ] = None,
+        create_in_stripe: Optional[bool] = True,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -56,6 +57,7 @@ class Plans(BaseSDK):
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: Free trial configuration. Customers can try this plan before being charged.
         :param config: Miscellaneous plan-level configuration flags.
+        :param create_in_stripe:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -90,6 +92,7 @@ class Plans(BaseSDK):
             config=utils.get_pydantic_model(
                 config, Optional[models.CreatePlanConfigRequest]
             ),
+            create_in_stripe=create_in_stripe,
         )
 
         req = self._build_request(
@@ -132,7 +135,7 @@ class Plans(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            error_status_codes=["4XX", "5XX"],
             retry_config=retry_config,
         )
 
@@ -177,6 +180,7 @@ class Plans(BaseSDK):
                 models.CreatePlanConfigRequest, models.CreatePlanConfigRequestTypedDict
             ]
         ] = None,
+        create_in_stripe: Optional[bool] = True,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -198,6 +202,7 @@ class Plans(BaseSDK):
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: Free trial configuration. Customers can try this plan before being charged.
         :param config: Miscellaneous plan-level configuration flags.
+        :param create_in_stripe:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -232,6 +237,7 @@ class Plans(BaseSDK):
             config=utils.get_pydantic_model(
                 config, Optional[models.CreatePlanConfigRequest]
             ),
+            create_in_stripe=create_in_stripe,
         )
 
         req = self._build_request_async(
@@ -274,7 +280,7 @@ class Plans(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            error_status_codes=["4XX", "5XX"],
             retry_config=retry_config,
         )
 
@@ -371,7 +377,7 @@ class Plans(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            error_status_codes=["4XX", "5XX"],
             retry_config=retry_config,
         )
 
@@ -468,7 +474,7 @@ class Plans(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            error_status_codes=["4XX", "5XX"],
             retry_config=retry_config,
         )
 
@@ -564,7 +570,7 @@ class Plans(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            error_status_codes=["4XX", "5XX"],
             retry_config=retry_config,
         )
 
@@ -660,7 +666,7 @@ class Plans(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            error_status_codes=["4XX", "5XX"],
             retry_config=retry_config,
         )
 
@@ -708,6 +714,7 @@ class Plans(BaseSDK):
                 models.UpdatePlanConfigRequest, models.UpdatePlanConfigRequestTypedDict
             ]
         ] = None,
+        create_in_stripe: Optional[bool] = True,
         version: Optional[float] = None,
         archived: Optional[bool] = False,
         new_plan_id: Optional[str] = None,
@@ -732,6 +739,7 @@ class Plans(BaseSDK):
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: The free trial of the plan. Set to null to remove the free trial.
         :param config: Miscellaneous plan-level configuration flags.
+        :param create_in_stripe:
         :param version:
         :param archived:
         :param new_plan_id: The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.
@@ -769,6 +777,7 @@ class Plans(BaseSDK):
             config=utils.get_pydantic_model(
                 config, Optional[models.UpdatePlanConfigRequest]
             ),
+            create_in_stripe=create_in_stripe,
             version=version,
             archived=archived,
             new_plan_id=new_plan_id,
@@ -814,7 +823,7 @@ class Plans(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            error_status_codes=["4XX", "5XX"],
             retry_config=retry_config,
         )
 
@@ -862,6 +871,7 @@ class Plans(BaseSDK):
                 models.UpdatePlanConfigRequest, models.UpdatePlanConfigRequestTypedDict
             ]
         ] = None,
+        create_in_stripe: Optional[bool] = True,
         version: Optional[float] = None,
         archived: Optional[bool] = False,
         new_plan_id: Optional[str] = None,
@@ -886,6 +896,7 @@ class Plans(BaseSDK):
         :param items: Feature configurations for this plan. Each item defines included units, pricing, and reset behavior.
         :param free_trial: The free trial of the plan. Set to null to remove the free trial.
         :param config: Miscellaneous plan-level configuration flags.
+        :param create_in_stripe:
         :param version:
         :param archived:
         :param new_plan_id: The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.
@@ -923,6 +934,7 @@ class Plans(BaseSDK):
             config=utils.get_pydantic_model(
                 config, Optional[models.UpdatePlanConfigRequest]
             ),
+            create_in_stripe=create_in_stripe,
             version=version,
             archived=archived,
             new_plan_id=new_plan_id,
@@ -968,7 +980,7 @@ class Plans(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            error_status_codes=["4XX", "5XX"],
             retry_config=retry_config,
         )
 
@@ -1065,7 +1077,7 @@ class Plans(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            error_status_codes=["4XX", "5XX"],
             retry_config=retry_config,
         )
 
@@ -1162,7 +1174,7 @@ class Plans(BaseSDK):
                 security_source=self.sdk_configuration.security,
             ),
             request=req,
-            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            error_status_codes=["4XX", "5XX"],
             retry_config=retry_config,
         )
 

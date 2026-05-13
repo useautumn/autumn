@@ -113,19 +113,20 @@ export const AddCouponDialog = ({
 					</InfoBox>
 				)}
 				<div className="space-y-3">
-					<Select
-						value={couponSelected?.internal_id}
-						onValueChange={(value) => {
-							const coupon = rewards.find(
-								(c: Reward) => c.internal_id === value,
-							);
+				<Select
+					value={couponSelected?.internal_id}
+					onValueChange={(value) => {
+						const coupon = rewards.find(
+							(c: Reward) => c.internal_id === value,
+						);
 
-							if (!coupon) return;
+						if (!coupon) return;
 
-							setCouponSelected(coupon);
-							setPromoCodeSelected(null);
-						}}
-					>
+						setCouponSelected(coupon);
+						setPromoCodeSelected(null);
+					}}
+					items={Object.fromEntries(rewards.filter((c: Reward) => c.type !== RewardType.FreeProduct).map((c: Reward) => [c.internal_id, c.name]))}
+				>
 						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select Reward" />
 						</SelectTrigger>
@@ -151,10 +152,11 @@ export const AddCouponDialog = ({
 					</Select>
 
 					{couponSelected?.type === RewardType.FeatureGrant && (
-						<Select
-							value={promoCodeSelected || undefined}
-							onValueChange={setPromoCodeSelected}
-						>
+					<Select
+						value={promoCodeSelected || undefined}
+						onValueChange={setPromoCodeSelected}
+						items={Object.fromEntries(promoCodeOptions.map((promoCode) => [promoCode.code, promoCode.code]))}
+					>
 							<SelectTrigger className="w-full">
 								<SelectValue placeholder="Select Promo Code" />
 							</SelectTrigger>

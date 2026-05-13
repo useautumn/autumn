@@ -6,7 +6,6 @@ from autumn_sdk._hooks import (
     AfterErrorContext,
     AfterSuccessContext,
     BeforeRequestContext,
-    HookContext,
 )
 from autumn_sdk.utils import (
     RetryConfig,
@@ -67,7 +66,6 @@ class BaseSDK:
         url_override: Optional[str] = None,
         http_headers: Optional[Mapping[str, str]] = None,
         allow_empty_value: Optional[List[str]] = None,
-        allowed_fields: Optional[List[str]] = None,
     ) -> httpx.Request:
         client = self.sdk_configuration.async_client
         return self._build_request_with_client(
@@ -89,7 +87,6 @@ class BaseSDK:
             url_override,
             http_headers,
             allow_empty_value,
-            allowed_fields,
         )
 
     def _build_request(
@@ -113,7 +110,6 @@ class BaseSDK:
         url_override: Optional[str] = None,
         http_headers: Optional[Mapping[str, str]] = None,
         allow_empty_value: Optional[List[str]] = None,
-        allowed_fields: Optional[List[str]] = None,
     ) -> httpx.Request:
         client = self.sdk_configuration.client
         return self._build_request_with_client(
@@ -135,7 +131,6 @@ class BaseSDK:
             url_override,
             http_headers,
             allow_empty_value,
-            allowed_fields,
         )
 
     def _build_request_with_client(
@@ -160,7 +155,6 @@ class BaseSDK:
         url_override: Optional[str] = None,
         http_headers: Optional[Mapping[str, str]] = None,
         allow_empty_value: Optional[List[str]] = None,
-        allowed_fields: Optional[List[str]] = None,
     ) -> httpx.Request:
         query_params = {}
 
@@ -194,9 +188,7 @@ class BaseSDK:
                 security = security()
 
         if security is not None:
-            security_headers, security_query_params = utils.get_security(
-                security, allowed_fields
-            )
+            security_headers, security_query_params = utils.get_security(security)
             headers = {**headers, **security_headers}
             query_params = {**query_params, **security_query_params}
 
@@ -233,15 +225,15 @@ class BaseSDK:
             data=serialized_request_body.data,
             files=serialized_request_body.files,
             headers=headers,
-            timeout=timeout if timeout is not None else httpx.USE_CLIENT_DEFAULT,
+            timeout=timeout,
         )
 
     def do_request(
         self,
-        hook_ctx: HookContext,
-        request: httpx.Request,
-        is_error_status_code: Callable[[int], bool],
-        stream: bool = False,
+        hook_ctx,
+        request,
+        error_status_codes,
+        stream=False,
         retry_config: Optional[Tuple[RetryConfig, List[str]]] = None,
     ) -> httpx.Response:
         client = self.sdk_configuration.client
@@ -253,8 +245,6 @@ class BaseSDK:
             http_res = None
             try:
                 req = hooks.before_request(BeforeRequestContext(hook_ctx), request)
-                if "timeout" in request.extensions and "timeout" not in req.extensions:
-                    req.extensions["timeout"] = request.extensions["timeout"]
                 logger.debug(
                     "Request:\nMethod: %s\nURL: %s\nHeaders: %s\nBody: %s",
                     req.method,
@@ -285,6 +275,21 @@ class BaseSDK:
                 "<streaming response>" if stream else http_res.text,
             )
 
+            if utils.match_status_codes(error_status_codes, http_res.status_code):
+                result, err = hooks.after_error(
+                    AfterErrorContext(hook_ctx), http_res, None
+                )
+                if err is not None:
+                    logger.debug("Request Exception", exc_info=True)
+                    raise err
+                if result is not None:
+                    http_res = result
+                else:
+                    logger.debug("Raising unexpected SDK error")
+                    raise errors.AutumnDefaultError(
+                        "Unexpected error occurred", http_res
+                    )
+
             return http_res
 
         if retry_config is not None:
@@ -292,27 +297,17 @@ class BaseSDK:
         else:
             http_res = do()
 
-        if is_error_status_code(http_res.status_code):
-            result, err = hooks.after_error(AfterErrorContext(hook_ctx), http_res, None)
-            if err is not None:
-                logger.debug("Request Exception", exc_info=True)
-                raise err
-            if result is not None:
-                http_res = result
-            else:
-                logger.debug("Raising unexpected SDK error")
-                raise errors.AutumnDefaultError("Unexpected error occurred", http_res)
-        else:
+        if not utils.match_status_codes(error_status_codes, http_res.status_code):
             http_res = hooks.after_success(AfterSuccessContext(hook_ctx), http_res)
 
         return http_res
 
     async def do_request_async(
         self,
-        hook_ctx: HookContext,
-        request: httpx.Request,
-        is_error_status_code: Callable[[int], bool],
-        stream: bool = False,
+        hook_ctx,
+        request,
+        error_status_codes,
+        stream=False,
         retry_config: Optional[Tuple[RetryConfig, List[str]]] = None,
     ) -> httpx.Response:
         client = self.sdk_configuration.async_client
@@ -327,8 +322,6 @@ class BaseSDK:
                     hooks.before_request, BeforeRequestContext(hook_ctx), request
                 )
 
-                if "timeout" in request.extensions and "timeout" not in req.extensions:
-                    req.extensions["timeout"] = request.extensions["timeout"]
                 logger.debug(
                     "Request:\nMethod: %s\nURL: %s\nHeaders: %s\nBody: %s",
                     req.method,
@@ -362,6 +355,22 @@ class BaseSDK:
                 "<streaming response>" if stream else http_res.text,
             )
 
+            if utils.match_status_codes(error_status_codes, http_res.status_code):
+                result, err = await run_sync_in_thread(
+                    hooks.after_error, AfterErrorContext(hook_ctx), http_res, None
+                )
+
+                if err is not None:
+                    logger.debug("Request Exception", exc_info=True)
+                    raise err
+                if result is not None:
+                    http_res = result
+                else:
+                    logger.debug("Raising unexpected SDK error")
+                    raise errors.AutumnDefaultError(
+                        "Unexpected error occurred", http_res
+                    )
+
             return http_res
 
         if retry_config is not None:
@@ -371,20 +380,7 @@ class BaseSDK:
         else:
             http_res = await do()
 
-        if is_error_status_code(http_res.status_code):
-            result, err = await run_sync_in_thread(
-                hooks.after_error, AfterErrorContext(hook_ctx), http_res, None
-            )
-
-            if err is not None:
-                logger.debug("Request Exception", exc_info=True)
-                raise err
-            if result is not None:
-                http_res = result
-            else:
-                logger.debug("Raising unexpected SDK error")
-                raise errors.AutumnDefaultError("Unexpected error occurred", http_res)
-        else:
+        if not utils.match_status_codes(error_status_codes, http_res.status_code):
             http_res = await run_sync_in_thread(
                 hooks.after_success, AfterSuccessContext(hook_ctx), http_res
             )

@@ -9,6 +9,7 @@ import {
 import {
 	deductionToTrackResponseV2,
 	executePostgresDeductionV2,
+	projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { handlePostgresTrackError } from "../utils/handlePostgresTrackError.js";
@@ -45,7 +46,12 @@ export const runPostgresTrackV3 = async ({
 		});
 	}
 
-	const { fullSubject: updatedFullSubject, updates } = result;
+	const { fullSubject: updatedFullSubject, updates, mutationLogs } = result;
+
+	const deductions = projectMutationLogsToTrackDeductionsV2({
+		fullSubject: updatedFullSubject,
+		mutationLogs,
+	});
 
 	if (!body.skip_event && !body.idempotency_key) {
 		const eventInfo = buildEventInfo(body);
@@ -56,6 +62,7 @@ export const runPostgresTrackV3 = async ({
 			internalEntityId: updatedFullSubject.internalEntityId,
 			customerId: body.customer_id,
 			entityId: body.entity_id,
+			deductions,
 		});
 
 		globalEventBatchingManager.addEvent(event);
@@ -75,5 +82,6 @@ export const runPostgresTrackV3 = async ({
 		value: body.value ?? 1,
 		balance,
 		balances,
+		deductions,
 	};
 };

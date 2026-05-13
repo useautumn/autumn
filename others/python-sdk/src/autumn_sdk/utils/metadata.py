@@ -15,7 +15,6 @@ class SecurityMetadata:
     scheme_type: Optional[str] = None
     sub_type: Optional[str] = None
     field_name: Optional[str] = None
-    composite: bool = False
 
     def get_field_name(self, default: str) -> str:
         return self.field_name or default

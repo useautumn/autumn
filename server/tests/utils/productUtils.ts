@@ -15,6 +15,7 @@ export const createProduct = async ({
 	autumn,
 	product,
 	prefix,
+	createInStripe,
 }: {
 	db: DrizzleCli;
 	orgId: string;
@@ -22,6 +23,7 @@ export const createProduct = async ({
 	autumn: AutumnInt;
 	product: any;
 	prefix?: string;
+	createInStripe?: boolean;
 }) => {
 	try {
 		const products = await ProductService.listFull({
@@ -60,6 +62,10 @@ export const createProduct = async ({
 		clone.name = `${clone.name} ${prefix}`;
 	}
 
+	if (createInStripe === false) {
+		clone.create_in_stripe = false;
+	}
+
 	try {
 		await autumn.products.create(clone);
 	} catch (error: any) {
@@ -83,6 +89,7 @@ export const createProducts = async ({
 	products,
 	prefix,
 	customerId,
+	createInStripe,
 }: {
 	db: DrizzleCli;
 	orgId: string;
@@ -91,6 +98,7 @@ export const createProducts = async ({
 	products: any[];
 	prefix?: string;
 	customerId?: string;
+	createInStripe?: boolean;
 }) => {
 	if (customerId) {
 		try {
@@ -101,7 +109,7 @@ export const createProducts = async ({
 	const batchCreate = [];
 	for (const product of products) {
 		batchCreate.push(
-			createProduct({ db, orgId, env, autumn, product, prefix }),
+			createProduct({ db, orgId, env, autumn, product, prefix, createInStripe }),
 		);
 	}
 

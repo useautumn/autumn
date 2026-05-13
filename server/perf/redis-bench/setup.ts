@@ -15,7 +15,9 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts.js";
 import { customers } from "@tests/utils/fixtures/db/customers.js";
 import { entities as entityFixtures } from "@tests/utils/fixtures/db/entities.js";
 import { buildPathIndex } from "@/internal/customers/cache/pathIndex/buildPathIndex.js";
+import { buildPathIndexKey } from "@/internal/customers/cache/pathIndex/pathIndexConfig.js";
 import {
+	buildFullCustomerCacheGuardKey,
 	buildFullCustomerCacheKey,
 	FULL_CUSTOMER_CACHE_TTL_SECONDS,
 } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
@@ -90,6 +92,16 @@ async function main() {
 		env: ENV,
 		customerId: CUSTOMER_ID,
 	});
+	const guardKey = buildFullCustomerCacheGuardKey({
+		orgId: ORG_ID,
+		env: ENV,
+		customerId: CUSTOMER_ID,
+	});
+	const pathIndexKey = buildPathIndexKey({
+		orgId: ORG_ID,
+		env: ENV,
+		customerId: CUSTOMER_ID,
+	});
 
 	const pathIndexEntries = buildPathIndex({ fullCustomer });
 	const pathIndexJson = JSON.stringify(pathIndexEntries);
@@ -98,10 +110,9 @@ async function main() {
 	);
 
 	const result = await redis.setFullCustomerCache(
+		guardKey,
 		cacheKey,
-		ORG_ID,
-		ENV,
-		CUSTOMER_ID,
+		pathIndexKey,
 		String(Date.now()),
 		String(FULL_CUSTOMER_CACHE_TTL_SECONDS),
 		serialized,

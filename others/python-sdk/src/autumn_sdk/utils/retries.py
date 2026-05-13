@@ -144,7 +144,12 @@ def retry(func, retries: Retries):
 
                         if res.status_code == parsed_code:
                             raise TemporaryError(res)
-            except (httpx.NetworkError, httpx.TimeoutException) as exception:
+            except httpx.ConnectError as exception:
+                if retries.config.retry_connection_errors:
+                    raise
+
+                raise PermanentError(exception) from exception
+            except httpx.TimeoutException as exception:
                 if retries.config.retry_connection_errors:
                     raise
 
@@ -188,7 +193,12 @@ async def retry_async(func, retries: Retries):
 
                         if res.status_code == parsed_code:
                             raise TemporaryError(res)
-            except (httpx.NetworkError, httpx.TimeoutException) as exception:
+            except httpx.ConnectError as exception:
+                if retries.config.retry_connection_errors:
+                    raise
+
+                raise PermanentError(exception) from exception
+            except httpx.TimeoutException as exception:
                 if retries.config.retry_connection_errors:
                     raise
 

@@ -30,20 +30,25 @@ export const SelectBillingCycle = ({
 	return (
 		<div className="w-full">
 			<FormLabel disabled={disabled}>Billing Interval</FormLabel>
-			<Select
-				disabled={disabled}
-				value={item ? itemToBillingInterval({ item }) : BillingInterval.Month}
-				defaultValue={BillingInterval.Month}
-				onValueChange={(value) => {
-					if (!item) return;
-					setItem({
-						...item,
-						interval: billingToItemInterval({
-							billingInterval: value as BillingInterval,
-						}),
-					});
-				}}
-			>
+		<Select
+			disabled={disabled}
+			value={item ? itemToBillingInterval({ item }) : BillingInterval.Month}
+			defaultValue={BillingInterval.Month}
+			onValueChange={(value) => {
+				if (!item) return;
+				setItem({
+					...item,
+					interval: billingToItemInterval({
+						billingInterval: value as BillingInterval,
+					}),
+				});
+			}}
+			items={Object.fromEntries(
+				Object.values(BillingInterval)
+					.filter((interval) => !filterOneOff || interval !== BillingInterval.OneOff)
+					.map((interval) => [interval, formatIntervalText({ billingInterval: interval, intervalCount: item?.interval_count || 1, isBillingInterval: true })])
+			)}
+		>
 				<SelectTrigger className="w-full">
 					<SelectValue placeholder="Select interval" />
 				</SelectTrigger>

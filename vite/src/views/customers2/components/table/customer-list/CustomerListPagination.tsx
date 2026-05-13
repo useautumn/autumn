@@ -92,6 +92,7 @@ export function CustomerListPageSizeSelector() {
 					page: 1,
 				});
 			}}
+			items={Object.fromEntries(PAGE_SIZE_OPTIONS.map((size) => [size.toString(), size.toString()]))}
 		>
 			<SelectTrigger className="h-7 w-fit px-2 text-xs">
 				<SelectValue />

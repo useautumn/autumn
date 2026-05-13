@@ -1,5 +1,6 @@
 import { type FrontendProduct, sortPlanItems } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
@@ -28,6 +29,15 @@ export function InlinePlanEditor({
 	isOpen,
 }: InlinePlanEditorProps) {
 	const mainContent = document.querySelector("[data-main-content]");
+
+	useEffect(() => {
+		if (!(mainContent instanceof HTMLElement) || !isOpen) return;
+		const previousOverflow = mainContent.style.overflow;
+		mainContent.style.overflow = "hidden";
+		return () => {
+			mainContent.style.overflow = previousOverflow;
+		};
+	}, [mainContent, isOpen]);
 
 	if (!mainContent) {
 		console.error("[InlinePlanEditor] Could not find portal target");

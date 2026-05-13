@@ -1,6 +1,6 @@
 "use client";
 
-import * as AccordionPrimitive from "@radix-ui/react-accordion";
+import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import { ChevronDownIcon } from "lucide-react";
 import type * as React from "react";
 import { Separator } from "@/components/v2/separator";
@@ -22,13 +22,12 @@ function SheetAccordion({
 	collapsible = true,
 	...props
 }: SheetAccordionProps &
-	Omit<React.ComponentProps<typeof AccordionPrimitive.Root>, "type">) {
+	Omit<AccordionPrimitive.Root.Props, "type">) {
 	return (
 		<>
 			<AccordionPrimitive.Root
-				type={type as any}
-				defaultValue={defaultValue}
-				collapsible={collapsible}
+				multiple={type === "multiple"}
+				defaultValue={defaultValue as any}
 				className="w-full"
 				{...props}
 			>
@@ -61,7 +60,7 @@ function SheetAccordionItem({
 	return (
 		<AccordionPrimitive.Item value={value} className={cn("", className)}>
 			<AccordionPrimitive.Header className="flex">
-				<AccordionPrimitive.Trigger className="flex flex-1 items-start justify-between gap-4 px-4 py-3 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[data-state=open]>svg]:rotate-180 hover:bg-accent/50">
+				<AccordionPrimitive.Trigger className="flex flex-1 items-start justify-between gap-4 px-4 py-3 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 [&[aria-expanded=true]>svg]:rotate-180 hover:bg-accent/50">
 					<div className="flex flex-col gap-1">
 						<h3 className="text-sm font-medium">{title}</h3>
 						{description && (
@@ -71,9 +70,9 @@ function SheetAccordionItem({
 					<ChevronDownIcon className="text-muted-foreground pointer-events-none size-4 shrink-0 translate-y-0.5 transition-transform duration-200" />
 				</AccordionPrimitive.Trigger>
 			</AccordionPrimitive.Header>
-			<AccordionPrimitive.Content className="data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down overflow-hidden">
+			<AccordionPrimitive.Panel className="data-closed:animate-accordion-up data-open:animate-accordion-down overflow-hidden">
 				<div className="px-4 pb-4 pt-2">{children}</div>
-			</AccordionPrimitive.Content>
+			</AccordionPrimitive.Panel>
 		</AccordionPrimitive.Item>
 	);
 }

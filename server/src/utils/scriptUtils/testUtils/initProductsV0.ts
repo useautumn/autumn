@@ -11,6 +11,7 @@ export const initProductsV0 = async ({
 	skipPrefixIds = [],
 	customerId,
 	customerIds,
+	createInStripe,
 }: {
 	ctx: TestContext;
 	products: ProductV2[];
@@ -18,6 +19,7 @@ export const initProductsV0 = async ({
 	skipPrefixIds?: string[];
 	customerId?: string;
 	customerIds?: string[];
+	createInStripe?: boolean;
 }) => {
 	// 1. Add prefix to products (except those in skipPrefixIds)
 	if (prefix) {
@@ -55,5 +57,6 @@ export const initProductsV0 = async ({
 		env: ctx.env,
 		autumn: autumn,
 		products,
+		createInStripe,
 	});
 };

@@ -95,11 +95,12 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 		<div className={showBillingLabel ? "mt-3" : ""}>
 			<FormLabel>Interval</FormLabel>
 			<div className="flex items-center gap-2">
-				<Select
-					value={isSelectDisabled ? undefined : intervalValue}
-					onValueChange={handleIntervalChange}
-					disabled={isSelectDisabled}
-				>
+			<Select
+				value={isSelectDisabled ? undefined : intervalValue}
+				onValueChange={handleIntervalChange}
+				disabled={isSelectDisabled}
+				items={Object.fromEntries(availableIntervals.map((interval) => [interval, formatIntervalText({ billingInterval: interval, intervalCount: item.interval_count || undefined, isBillingInterval: true })]))}
+			>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder="None" />
 					</SelectTrigger>

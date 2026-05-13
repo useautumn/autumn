@@ -29,8 +29,7 @@ export const handleProrationBehaviorErrors = ({
 	billingPlan: BillingPlan;
 	params: UpdateSubscriptionV1Params | AttachParamsV1;
 }) => {
-	// Only validate when proration_behavior is 'none' (defer charges)
-	if (params.proration_behavior !== "none") return;
+	if (billingContext.requestedProrationBehavior !== "none") return;
 
 	// When anchor reset + none is used, charges are expected (full new plan price)
 	if (billingContext.requestedBillingCycleAnchor === "now") return;
@@ -49,7 +48,6 @@ export const handleProrationBehaviorErrors = ({
 		});
 	}
 
-	// Block any operations that would result in a charge
 	const chargeResult = billingPlanWillCharge({ billingPlan });
 
 	if (chargeResult.willCharge) {
