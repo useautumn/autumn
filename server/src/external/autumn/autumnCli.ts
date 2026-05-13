@@ -413,9 +413,11 @@ export class AutumnInt {
 		listV2: async (params?: {
 			limit?: number;
 			offset?: number;
+			cursor?: string;
 			search?: string;
 			plans?: Array<{ id: string; versions?: number[] }>;
 			subscription_status?: string[];
+			processors?: Array<"stripe" | "revenuecat" | "vercel">;
 			keepInternalFields?: boolean;
 		}) => {
 			const { keepInternalFields, ...listParams } = params || {};

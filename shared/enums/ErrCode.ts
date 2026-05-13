@@ -29,6 +29,7 @@ export const ErrCode = {
 	InvalidRequest: "invalid_request",
 	InvalidExpand: "invalid_expand",
 	InvalidOptions: "invalid_options",
+	InvalidCursor: "invalid_cursor",
 	RequestTemporarilyDisabled: "request_temporarily_disabled",
 
 	// Org
