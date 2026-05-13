@@ -22,3 +22,22 @@ SCHEMA >
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
 ENGINE_SORTING_KEY "org_id, env, customer_id, event_name, timestamp"
+
+FORWARD_QUERY >
+    SELECT
+        id,
+        org_id,
+        org_slug,
+        internal_customer_id,
+        env,
+        created_at,
+        timestamp,
+        event_name,
+        idempotency_key,
+        value,
+        set_usage,
+        entity_id,
+        internal_entity_id,
+        customer_id,
+        properties,
+        defaultValueOfTypeName('JSON(max_dynamic_paths = 16, max_dynamic_types = 2)') AS deductions
