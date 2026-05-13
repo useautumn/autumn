@@ -15,6 +15,11 @@ export const EVENTS_LIST_EXAMPLE = {
 				{
 					balance_id: "cus_ent_3DdSDtFBlvDbjyUuJeUIbQlyN12",
 					feature_id: "credits",
+					plan_id: "pro",
+					reset: {
+						interval: "month",
+						resets_at: 1765958215459,
+					},
 					value: 30,
 				},
 			],

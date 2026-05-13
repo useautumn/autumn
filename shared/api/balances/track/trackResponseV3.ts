@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ApiBalanceResetSchema } from "../../customers/cusFeatures/apiBalance.js";
 import { ApiBalanceV1Schema } from "../../customers/cusFeatures/apiBalanceV1.js";
 
 export const TrackDeductionSchema = z.object({
@@ -8,6 +9,14 @@ export const TrackDeductionSchema = z.object({
 	}),
 	feature_id: z.string().meta({
 		description: "The feature this balance belongs to.",
+	}),
+	plan_id: z.string().nullable().meta({
+		description:
+			"ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple).",
+	}),
+	reset: ApiBalanceResetSchema.nullable().meta({
+		description:
+			"Reset configuration for the balance this deduction came from, or null if the balance doesn't reset.",
 	}),
 	value: z.number().meta({
 		description:
