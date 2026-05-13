@@ -38,7 +38,7 @@ class GetCustomerGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -69,7 +69,7 @@ class GetCustomerParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -135,7 +135,7 @@ class GetCustomerPurchaseLimit2(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 m[k] = val
@@ -182,7 +182,7 @@ class GetCustomerPurchaseLimit1(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -247,7 +247,7 @@ class GetCustomerAutoTopup(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -283,7 +283,7 @@ class GetCustomerSpendLimit(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -341,7 +341,7 @@ class GetCustomerUsageAlert(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -372,7 +372,7 @@ class GetCustomerOverageAllowed(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -419,7 +419,7 @@ class GetCustomerBillingControls(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -527,7 +527,7 @@ class GetCustomerSubscription(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -580,7 +580,7 @@ class GetCustomerPurchase(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -650,7 +650,7 @@ class GetCustomerDisplay(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -723,7 +723,7 @@ class GetCustomerFeature(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -770,7 +770,7 @@ class GetCustomerFlags(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -808,7 +808,7 @@ class GetCustomerConfig(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -870,7 +870,7 @@ class GetCustomerRevenuecat(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 m[k] = val
@@ -909,7 +909,7 @@ class GetCustomerProcessors(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -981,7 +981,7 @@ class GetCustomerInvoice(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1051,7 +1051,7 @@ class GetCustomerEntity(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1090,7 +1090,7 @@ class GetCustomerTrialsUsed(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1113,6 +1113,7 @@ GetCustomerRewardsType = Union[
         "fixed_discount",
         "free_product",
         "invoice_credits",
+        "feature_grant",
     ],
     UnrecognizedStr,
 ]
@@ -1216,7 +1217,7 @@ class GetCustomerDiscount(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1265,7 +1266,7 @@ class GetCustomerCustomer(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -1447,7 +1448,7 @@ class GetCustomerResponse(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

@@ -1,207 +1,145 @@
-import { beforeAll, describe, expect, test } from "bun:test";
-import {
-	ApiVersion,
-	type CreateReward,
-	type CreateRewardProgram,
-	ErrCode,
-	type ReferralCode,
-	RewardReceivedBy,
-	type RewardRedemption,
-	RewardTriggerEvent,
-	RewardType,
-} from "@autumn/shared";
-import { TestFeature } from "@tests/setup/v2Features.js";
+import { expect, test } from "bun:test";
+import { ErrCode, type RewardRedemption } from "@autumn/shared";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { referralPrograms } from "@tests/utils/fixtures/referralPrograms";
+import { rewards } from "@tests/utils/fixtures/rewards";
 import { timeout } from "@tests/utils/genUtils.js";
-import { createReferralProgram } from "@tests/utils/productUtils.js";
-import ctx from "@tests/utils/testInitUtils/createTestContext.js";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import AutumnError, { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
-import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
-import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
-import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
+import AutumnError from "@/external/autumn/autumnCli.js";
 import { expectProductAttached } from "../../utils/expectUtils/expectProductAttached.js";
 
-const testCase = "referrals3";
+/**
+ * Referrals3: Free product referrals (checkout trigger, both parties)
+ *
+ * Setup:
+ * - Main customer (no PM) attached to proWithTrial
+ * - 3 redeemers with payment methods
+ * - Reward: free add-on product
+ * - Program: checkout trigger, both referrer + redeemer, max 2 redemptions
+ *
+ * Flow:
+ * 1. Create referral code
+ * 2. Redeemers redeem code, 1st can't redeem again
+ * 3. Redeemers attach pro → triggers reward (first 2 within max_redemptions)
+ *    Both referrer and redeemer should get the free add-on
+ */
 
-const proWithTrial = constructProduct({
-	id: "pro",
-	items: [constructFeatureItem({ featureId: TestFeature.Words })],
-	type: "pro",
-	trial: true,
-});
-
-const pro = constructProduct({
-	id: "proNoTrial",
-	items: [constructFeatureItem({ featureId: TestFeature.Words })],
-	type: "pro",
-});
-
-const freeAddOn = constructProduct({
-	id: "freeAddOn",
-	items: [
-		constructFeatureItem({
-			featureId: TestFeature.Messages,
-			includedUsage: 100,
-			interval: null,
-		}),
-	],
-	type: "free",
-	isAddOn: true,
-	isDefault: false,
-});
-
-// Reward: Free product reward
-const freeProductReward: CreateReward = {
-	id: `${testCase}FreeProduct`,
-	name: "Free Product",
-	type: RewardType.FreeProduct,
-	promo_codes: [],
-	free_product_id: freeAddOn.id,
-};
-
-// Referral program: triggers on checkout, applies to pro and proWithTrial
-const freeProductProgram: CreateRewardProgram = {
-	id: `${testCase}FreeProduct`,
-	when: RewardTriggerEvent.Checkout,
-	product_ids: [proWithTrial.id, pro.id],
-	internal_reward_id: freeProductReward.id,
-	max_redemptions: 2,
-	received_by: RewardReceivedBy.All,
-};
-
-describe(`${chalk.yellowBright(
-	"referrals3: Testing free product referrals",
-)}`, () => {
+test(`${chalk.yellowBright("referrals3: free product referrals on checkout")}`, async () => {
 	const mainCustomerId = "main-referral-3";
 	const redeemers = ["referral3-r1", "referral3-r2", "referral3-r3"];
-	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
-	let referralCode: ReferralCode;
+
+	// Products
+	const proWithTrial = products.proWithTrial({
+		id: "pro",
+		items: [items.monthlyWords({ includedUsage: 0 })],
+	});
+	const pro = products.pro({
+		id: "proNoTrial",
+		items: [items.monthlyWords({ includedUsage: 0 })],
+	});
+	const freeAddOn = products.base({
+		id: "freeAddOn",
+		isAddOn: true,
+		items: [items.lifetimeMessages({ includedUsage: 100 })],
+	});
+
+	// Reward & referral program
+	const reward = rewards.freeProduct({ freeProductId: freeAddOn.id });
+	const program = referralPrograms.onCheckoutBoth({
+		rewardId: reward.id,
+		productIds: [proWithTrial.id, pro.id],
+		maxRedemptions: 2,
+	});
+
+	// Setup
+	const { autumnV1, referralCode } = await initScenario({
+		customerId: mainCustomerId,
+		setup: [
+			s.customer({
+				data: { fingerprint: "main-referral-3" },
+			}),
+			s.products({ list: [proWithTrial, pro, freeAddOn] }),
+			s.referralProgram({ reward, program }),
+			s.otherCustomers([
+				{
+					id: redeemers[0],
+					paymentMethod: "success",
+					distinctTestClock: true,
+				},
+				{
+					id: redeemers[1],
+					paymentMethod: "success",
+					distinctTestClock: true,
+				},
+				{
+					id: redeemers[2],
+					paymentMethod: "success",
+					distinctTestClock: true,
+				},
+			]),
+		],
+		actions: [
+			s.attach({ productId: proWithTrial.id }),
+			s.referral.createCode(),
+		],
+	});
+
+	expect(referralCode!.code).toBeDefined();
+
+	// 1. Redeemers redeem code, 1st can't redeem again
 	const redemptions: RewardRedemption[] = [];
+	for (const redeemer of redeemers) {
+		const redemption = await autumnV1.referrals.redeem({
+			customerId: redeemer,
+			code: referralCode!.code,
+		});
+		redemptions.push(redemption);
+	}
 
-	beforeAll(async () => {
-		await initProductsV0({
-			ctx,
-			products: [proWithTrial, pro, freeAddOn],
-			prefix: testCase,
-			customerId: mainCustomerId,
+	try {
+		await autumnV1.referrals.redeem({
+			customerId: redeemers[0],
+			code: referralCode!.code,
+		});
+		throw new Error("Should not be able to redeem again");
+	} catch (error) {
+		expect(error).toBeInstanceOf(AutumnError);
+		expect((error as AutumnError).code).toBe(
+			ErrCode.CustomerAlreadyRedeemedReferralCode,
+		);
+	}
+
+	// 2. Redeemers attach pro → triggers reward (first 2 within max_redemptions)
+	for (let i = 0; i < redeemers.length; i++) {
+		await autumnV1.attach({
+			customer_id: redeemers[i],
+			product_id: pro.id,
 		});
 
-		// Create referral program - product IDs are already prefixed by initProductsV0
-		const referralProgram: CreateRewardProgram = {
-			...freeProductProgram,
-			product_ids: [proWithTrial.id, pro.id],
-		};
+		await timeout(15000);
 
-		// Update reward with prefixed free product ID
-		const reward: CreateReward = {
-			...freeProductReward,
-			free_product_id: freeAddOn.id,
-		};
+		const redemption = await autumnV1.redemptions.get(redemptions[i].id);
+		const count = i + 1;
 
-		await createReferralProgram({
-			db: ctx.db,
-			orgId: ctx.org.id,
-			env: ctx.env,
-			autumn,
-			reward,
-			rewardProgram: referralProgram,
-		});
+		if (count > program.max_redemptions!) {
+			expect(redemption.triggered).toBe(false);
+			expect(redemption.applied).toBe(false);
+		} else {
+			// Both referrer and redeemer should have the free add-on
+			const mainCustomer = await autumnV1.customers.get(mainCustomerId);
+			const redeemerCustomer = await autumnV1.customers.get(redeemers[i]);
 
-		await initCustomerV3({
-			ctx,
-			customerId: mainCustomerId,
-			customerData: { fingerprint: "main-referral-3" },
-		});
-
-		await autumn.attach({
-			customer_id: mainCustomerId,
-			product_id: proWithTrial.id,
-		});
-
-		const batchCreate = [];
-		for (const redeemer of redeemers) {
-			batchCreate.push(
-				initCustomerV3({
-					ctx,
-					customerId: redeemer,
-					attachPm: "success",
-				}),
-			);
-		}
-
-		await Promise.all(batchCreate);
-	});
-
-	test("should create code once", async () => {
-		referralCode = await autumn.referrals.createCode({
-			customerId: mainCustomerId,
-			referralId: freeProductProgram.id,
-		});
-
-		expect(referralCode.code).toBeDefined();
-	});
-
-	test("should create redemption for each redeemer and fail if redeemed again", async () => {
-		for (const redeemer of redeemers) {
-			const redemption: RewardRedemption = await autumn.referrals.redeem({
-				customerId: redeemer,
-				code: referralCode.code,
+			expectProductAttached({
+				customer: mainCustomer,
+				product: freeAddOn,
 			});
 
-			redemptions.push(redemption);
-		}
-
-		// Try redeem for redeemer1 again
-		try {
-			await autumn.referrals.redeem({
-				customerId: redeemers[0],
-				code: referralCode.code,
+			expectProductAttached({
+				customer: redeemerCustomer,
+				product: freeAddOn,
 			});
-			throw new Error("Should not be able to redeem again");
-		} catch (error) {
-			expect(error).toBeInstanceOf(AutumnError);
-			expect((error as AutumnError).code).toBe(
-				ErrCode.CustomerAlreadyRedeemedReferralCode,
-			);
 		}
-	});
-
-	test("should be triggered (and applied) when redeemers check out", async () => {
-		for (let i = 0; i < redeemers.length; i++) {
-			const redeemer = redeemers[i];
-
-			await autumn.attach({
-				customer_id: redeemer,
-				product_id: pro.id,
-			});
-
-			await timeout(3000);
-
-			// Get redemption object
-			const redemption = await autumn.redemptions.get(redemptions[i].id);
-
-			// Check if redemption is triggered
-			const count = i + 1;
-
-			if (count > freeProductProgram.max_redemptions!) {
-				expect(redemption.triggered).toBe(false);
-				expect(redemption.applied).toBe(false);
-			} else {
-				const mainCustomer = await autumn.customers.get(mainCustomerId);
-
-				const redeemerCustomer = await autumn.customers.get(redeemer);
-
-				expectProductAttached({
-					customer: mainCustomer,
-					product: freeAddOn,
-				});
-
-				expectProductAttached({
-					customer: redeemerCustomer,
-					product: freeAddOn,
-				});
-			}
-		}
-	});
+	}
 });

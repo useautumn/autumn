@@ -2,13 +2,17 @@ import {
 	type AttachBillingContext,
 	type BillingPlan,
 	type BillingResult,
+	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
 	type FullProduct,
 	featureUtils,
+	nullish,
+	RecaseError,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { TransitionRules } from "@shared/api/billing/common/transitionRules";
+import { StatusCodes } from "http-status-codes";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { billingActions } from "@/internal/billing/v2/actions";
 
@@ -34,6 +38,18 @@ export async function migrate({
 		noBillingChanges?: boolean;
 	};
 }) {
+	const willTouchStripe = options.noBillingChanges !== true;
+	const isHalfCancelled =
+		currentCustomerProduct.canceled === true &&
+		nullish(currentCustomerProduct.ended_at);
+	if (willTouchStripe && isHalfCancelled) {
+		throw new RecaseError({
+			message: `[migrate] Refusing to migrate cusProduct ${currentCustomerProduct.id} (${currentCustomerProduct.product_id}): canceled=true but ended_at is null. Set noBillingChanges:true or repair ended_at before retrying.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.CONFLICT,
+		});
+	}
+
 	// 1. Build update subscription params
 	const entity = fullCustomer.entities.find(
 		(e) => e.internal_id === currentCustomerProduct.internal_entity_id,

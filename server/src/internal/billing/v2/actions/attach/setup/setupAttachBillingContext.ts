@@ -25,6 +25,7 @@ import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCyc
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
+import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
 import { getAttachAccessStartsAt } from "./getAttachAccessStartsAt";
 import { setupAttachCheckoutMode } from "./setupAttachCheckoutMode";
 import { setupAttachEndOfCycleMs } from "./setupAttachEndOfCycleMs";
@@ -38,13 +39,13 @@ import { setupAttachTrialContext } from "./setupAttachTrialContext";
 export const setupAttachBillingContext = async ({
 	ctx,
 	params,
-	contextOverride = {},
 	preview = false,
+	contextOverride = {},
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV1;
-	contextOverride?: BillingContextOverride;
 	preview?: boolean;
+	contextOverride?: BillingContextOverride;
 }): Promise<AttachBillingContext> => {
 	const { fullCustomer: fullCustomerOverride } = contextOverride;
 
@@ -197,7 +198,8 @@ export const setupAttachBillingContext = async ({
 		});
 
 	const billingStartsAt =
-		params.starts_at ?? (planTiming === "end_of_cycle" ? endOfCycleMs : undefined);
+		params.starts_at ??
+		(planTiming === "end_of_cycle" ? endOfCycleMs : undefined);
 	const hasFutureStartDate = isFutureStartDate(
 		params.starts_at,
 		currentEpochMs,
@@ -253,8 +255,8 @@ export const setupAttachBillingContext = async ({
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
-		requestedProrationBehavior: isOneOffProduct({
-			prices: attachProduct.prices,
+		requestedProrationBehavior: setupIgnoreProrationBehavior({
+			isOneOffAttach: isOneOffProduct({ prices: attachProduct.prices }),
 		})
 			? undefined
 			: params.proration_behavior,
@@ -280,6 +282,7 @@ export const setupAttachBillingContext = async ({
 		externalId: params.subscription_id,
 
 		skipBillingChanges,
+		dryRunStripe: preview,
 
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,

@@ -41,8 +41,8 @@ export async function attach({
 	const billingContext = await setupAttachBillingContext({
 		ctx,
 		params,
-		contextOverride,
 		preview,
+		contextOverride,
 	});
 
 	logAttachContext({ ctx, billingContext });

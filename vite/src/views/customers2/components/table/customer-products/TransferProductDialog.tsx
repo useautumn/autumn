@@ -104,7 +104,14 @@ export const TransferProductDialog = ({
 							: "Transfer this plan to an entity."}
 					</p>
 
-					<Select value={selectedValue} onValueChange={setSelectedValue}>
+					<Select
+					value={selectedValue}
+					onValueChange={setSelectedValue}
+					items={{
+						...(isOnEntity ? { [CUSTOMER_LEVEL_VALUE]: "Move to Customer" } : {}),
+						...Object.fromEntries(filteredEntities.map((entity: Entity) => [entity.id, entity.name || entity.id || entity.internal_id])),
+					}}
+				>
 						<SelectTrigger>
 							<SelectValue placeholder="Select destination" />
 						</SelectTrigger>

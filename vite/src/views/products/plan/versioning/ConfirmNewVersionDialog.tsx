@@ -8,7 +8,6 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-	DialogTrigger,
 } from "@/components/v2/dialogs/Dialog";
 import { Input } from "@/components/v2/inputs/Input";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -58,7 +57,6 @@ export default function ConfirmNewVersionDialog({
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogTrigger asChild></DialogTrigger>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Create new version?</DialogTitle>

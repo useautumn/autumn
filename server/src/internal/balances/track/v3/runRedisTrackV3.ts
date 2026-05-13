@@ -1,4 +1,9 @@
-import type { FullSubject, TrackParams, TrackResponseV3 } from "@autumn/shared";
+import type {
+	FullSubject,
+	TrackDeduction,
+	TrackParams,
+	TrackResponseV3,
+} from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
@@ -9,6 +14,7 @@ import {
 import {
 	deductionToTrackResponseV2,
 	executeRedisDeductionV2,
+	projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -49,10 +55,12 @@ const queueEvent = ({
 	ctx,
 	body,
 	fullSubject,
+	deductions,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	fullSubject: FullSubject;
+	deductions: TrackDeduction[];
 }): void => {
 	if (body.skip_event) return;
 
@@ -66,6 +74,7 @@ const queueEvent = ({
 			internalEntityId: fullSubject.internalEntityId,
 			customerId: body.customer_id,
 			entityId: body.entity_id,
+			deductions,
 		}),
 	);
 };
@@ -114,6 +123,7 @@ export const runRedisTrackV3 = async ({
 		fullSubject: updatedFullSubject,
 		rolloverUpdates,
 		modifiedCusEntIdsByFeatureId,
+		mutationLogs,
 	} = result;
 
 	queueSyncItem({
@@ -124,7 +134,12 @@ export const runRedisTrackV3 = async ({
 		modifiedCusEntIdsByFeatureId,
 	});
 
-	queueEvent({ ctx, body, fullSubject });
+	const deductions = projectMutationLogsToTrackDeductionsV2({
+		fullSubject: updatedFullSubject,
+		mutationLogs,
+	});
+
+	queueEvent({ ctx, body, fullSubject, deductions });
 
 	const { balance, balances } = await deductionToTrackResponseV2({
 		ctx,
@@ -140,5 +155,6 @@ export const runRedisTrackV3 = async ({
 		value: body.value ?? 1,
 		balance,
 		balances,
+		deductions,
 	};
 };

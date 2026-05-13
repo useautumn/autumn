@@ -13,7 +13,7 @@ import { createStripeCoupon } from "@/external/stripe/stripeCouponUtils/stripeCo
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
-import { RewardService } from "@/internal/rewards/RewardService.js";
+import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { getRewardCat } from "@/internal/rewards/rewardUtils.js";
 
 const UpdateCouponParamsSchema = z.object({
@@ -40,7 +40,7 @@ export const handleUpdateCoupon = createRoute({
 			env,
 		});
 
-		const reward = await RewardService.get({
+		const reward = await rewardRepo.get({
 			db,
 			idOrInternalId: internalId,
 			orgId: org.id,
@@ -107,7 +107,7 @@ export const handleUpdateCoupon = createRoute({
 			});
 		}
 
-		const updatedCoupon = await RewardService.update({
+		const updatedCoupon = await rewardRepo.update({
 			db,
 			internalId: reward.internal_id,
 			env,

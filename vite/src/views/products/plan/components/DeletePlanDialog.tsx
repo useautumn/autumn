@@ -228,10 +228,11 @@ export const DeletePlanDialog = ({
 				{productInfo.numVersion > 1 &&
 					!product.archived &&
 					!productInfo.hasCusProductsLatest && (
-						<Select
-							value={deleteAllVersions ? "all" : "latest"}
-							onValueChange={(value) => setDeleteAllVersions(value === "all")}
-						>
+					<Select
+						value={deleteAllVersions ? "all" : "latest"}
+						onValueChange={(value) => setDeleteAllVersions(value === "all")}
+						items={{ latest: "Delete latest version", all: "Archive plan" }}
+					>
 							<SelectTrigger className="w-6/12">
 								<SelectValue placeholder="Select a version" />
 							</SelectTrigger>
