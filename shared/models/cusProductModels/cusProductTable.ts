@@ -1,4 +1,4 @@
-import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
+import { sql, type InferInsertModel, type InferSelectModel } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
@@ -111,6 +111,9 @@ export const customerProducts = pgTable(
 		index("idx_customer_products_stripe_checkout_session_id").on(
 			table.stripe_checkout_session_id,
 		),
+		index("idx_customer_products_revenuecat_processor")
+			.on(table.internal_customer_id)
+			.where(sql`(${table.processor} ->> 'type') = 'revenuecat'`),
 	],
 );
 
