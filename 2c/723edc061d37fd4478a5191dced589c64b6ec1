@@ -1,0 +1,37 @@
+server/src/internal/customers/reassembleFlattenedCustomer/buildLookupMaps.ts
+  s_b1a331f4eba7de::t_0fe06b728722c9 1-53
+server/src/internal/customers/reassembleFlattenedCustomer/index.ts
+  s_b1a331f4eba7de::t_03183481575096 1-2
+server/src/internal/customers/reassembleFlattenedCustomer/normalizeFields.ts
+  s_b1a331f4eba7de::t_70c117a3fab9a0 1-31
+server/src/internal/customers/reassembleFlattenedCustomer/hydrateCustomerProduct.ts
+  s_b1a331f4eba7de::t_da7175d444a1c7 1-33
+server/src/internal/customers/reassembleFlattenedCustomer/reassembleFlattenedCustomer.ts
+  s_b1a331f4eba7de::t_1d1d3e686a15a6 91
+  s_b1a331f4eba7de::t_27dfc06586f219 22,30
+  s_b1a331f4eba7de::t_47a67e6cbabc36 1-21,23-29,31-90,92-97
+server/src/internal/customers/reassembleFlattenedCustomer/hydrateCustomerEntitlement.ts
+  s_b1a331f4eba7de::t_5ad81250e37479 1,3-7,9-13,24,26-32
+  s_b1a331f4eba7de::t_2955b926d0d9bb 2,8,14-23,25
+server/src/internal/customers/reassembleFlattenedCustomer/types.ts
+  s_b1a331f4eba7de::t_0bc069d01eb3aa 1-41
+server/src/internal/customers/reassembleFlattenedCustomer/compareCusProducts.ts
+  s_b1a331f4eba7de::t_ec108aa237f8d3 2
+  s_b1a331f4eba7de::t_715df533de628e 1,3-8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "2c723edc061d37fd4478a5191dced589c64b6ec1",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
