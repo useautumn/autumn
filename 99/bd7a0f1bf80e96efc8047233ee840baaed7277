@@ -1,0 +1,29 @@
+server/src/internal/billing/v2/actions/attach/setup/setupAttachBillingContext.ts
+  s_5a025c17cf4e8f::t_f40ee790bb7054 28
+  s_5a025c17cf4e8f::t_f31969c4f5d8f1 254-255
+server/src/internal/billing/v2/setup/setupIgnoreProrationBehavior.ts
+  s_5a025c17cf4e8f::t_44e4083c6a1f42 1-16
+server/src/internal/billing/v2/common/errors/handleBillingBehaviorErrors.ts
+  s_5a025c17cf4e8f::t_2592fd7a9dc33c 32,53
+server/src/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext.ts
+  s_5a025c17cf4e8f::t_a2a574c7429c1d 195-197
+  s_5a025c17cf4e8f::t_5fb9afe20dda19 19
+server/src/internal/billing/v2/compute/finalize/finalizeLineItems.ts
+  s_5a025c17cf4e8f::t_7af7ca67eb6d1a 36
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.4",
+  "base_commit_sha": "99bd7a0f1bf80e96efc8047233ee840baaed7277",
+  "prompts": {},
+  "sessions": {
+    "s_5a025c17cf4e8f": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e824cfb9ffeNFd5sOncVoypoh",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
