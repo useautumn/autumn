@@ -1,0 +1,25 @@
+shared/enums/ErrCode.ts
+  s_b1a331f4eba7de::t_a7a5c29fedc0fa 32
+shared/api/common/cursorPaginationSchemas.ts
+  s_b1a331f4eba7de::t_cd24d06c6c0c8d 38-39,41-43,50-51,53-55,60-61,63-65
+  s_b1a331f4eba7de::t_3127213aa16d2d 1,6-37,44-49,56-59,66-82,88-91,97-125,128,130-138,140-147,151-152,154-155,161,165-167,171
+  s_b1a331f4eba7de::t_5b0b2bf109a3e1 83-87,92-96
+  s_b1a331f4eba7de::t_22014ce4fcac81 40,52,62
+  s_b1a331f4eba7de::t_fc90376b5f9870 3-4
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "29ffd0b9f732112068d05b15372d99048a192e81",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
