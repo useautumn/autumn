@@ -5,6 +5,8 @@
 import * as z from "zod/v4-mini";
 import { remap as remap$ } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
+import * as openEnums from "../types/enums.js";
+import { OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
 import { smartUnion } from "../types/smart-union.js";
@@ -60,6 +62,62 @@ export type EventsListParams = {
   customRange?: ListEventsCustomRange | undefined;
 };
 
+export const ListEventsIntervalEnum = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type ListEventsIntervalEnum = OpenEnum<typeof ListEventsIntervalEnum>;
+
+/**
+ * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+ */
+export type ListEventsIntervalUnion = ListEventsIntervalEnum | string;
+
+export type ListEventsReset = {
+  /**
+   * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
+   */
+  interval: ListEventsIntervalEnum | string;
+  /**
+   * Number of intervals between resets (eg. 2 for bi-monthly).
+   */
+  intervalCount?: number | undefined;
+  /**
+   * Timestamp when the balance will next reset.
+   */
+  resetsAt: number | null;
+};
+
+export type Deductions = {
+  /**
+   * ID of the underlying balance row that was deducted from (customer_entitlement or rollover).
+   */
+  balanceId: string;
+  /**
+   * The feature this balance belongs to.
+   */
+  featureId: string;
+  /**
+   * ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple).
+   */
+  planId: string | null;
+  /**
+   * Reset configuration for the balance this deduction came from, or null if the balance doesn't reset.
+   */
+  reset: ListEventsReset | null;
+  /**
+   * Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value).
+   */
+  value: number;
+};
+
 export type ListEventsList = {
   /**
    * Event ID (KSUID)
@@ -85,6 +143,10 @@ export type ListEventsList = {
    * Event properties (JSON)
    */
   properties: { [k: string]: any };
+  /**
+   * Per-balance breakdown of what this event deducted. Null for events ingested before deductions were tracked; an empty array means the event was accepted but no balance moved.
+   */
+  deductions: Array<Deductions> | null;
 };
 
 /**
@@ -195,6 +257,88 @@ export function eventsListParamsToJSON(
 }
 
 /** @internal */
+export const ListEventsIntervalEnum$inboundSchema: z.ZodMiniType<
+  ListEventsIntervalEnum,
+  unknown
+> = openEnums.inboundSchema(ListEventsIntervalEnum);
+
+/** @internal */
+export const ListEventsIntervalUnion$inboundSchema: z.ZodMiniType<
+  ListEventsIntervalUnion,
+  unknown
+> = smartUnion([ListEventsIntervalEnum$inboundSchema, types.string()]);
+
+export function listEventsIntervalUnionFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEventsIntervalUnion, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEventsIntervalUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEventsIntervalUnion' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListEventsReset$inboundSchema: z.ZodMiniType<
+  ListEventsReset,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: smartUnion([
+      ListEventsIntervalEnum$inboundSchema,
+      types.string(),
+    ]),
+    interval_count: types.optional(types.number()),
+    resets_at: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+      "resets_at": "resetsAt",
+    });
+  }),
+);
+
+export function listEventsResetFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEventsReset, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEventsReset$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEventsReset' from JSON`,
+  );
+}
+
+/** @internal */
+export const Deductions$inboundSchema: z.ZodMiniType<Deductions, unknown> = z
+  .pipe(
+    z.object({
+      balance_id: types.string(),
+      feature_id: types.string(),
+      plan_id: types.nullable(types.string()),
+      reset: types.nullable(z.lazy(() => ListEventsReset$inboundSchema)),
+      value: types.number(),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "balance_id": "balanceId",
+        "feature_id": "featureId",
+        "plan_id": "planId",
+      });
+    }),
+  );
+
+export function deductionsFromJSON(
+  jsonString: string,
+): SafeParseResult<Deductions, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => Deductions$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'Deductions' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListEventsList$inboundSchema: z.ZodMiniType<
   ListEventsList,
   unknown
@@ -206,6 +350,7 @@ export const ListEventsList$inboundSchema: z.ZodMiniType<
     customer_id: types.string(),
     value: types.number(),
     properties: z.record(z.string(), z.any()),
+    deductions: types.nullable(z.array(z.lazy(() => Deductions$inboundSchema))),
   }),
   z.transform((v) => {
     return remap$(v, {
