@@ -116,6 +116,12 @@ export const balancesTrackContract = oc
 						{
 							balance_id: "cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2",
 							feature_id: "messages",
+							plan_id: "pro",
+							reset: {
+								interval: "month",
+								interval_count: undefined,
+								resets_at: 1781288736881,
+							},
 							value: 1,
 						},
 					],

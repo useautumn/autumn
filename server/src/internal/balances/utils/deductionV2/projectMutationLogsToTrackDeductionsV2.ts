@@ -1,4 +1,7 @@
 import {
+	cusEntsToPlanId,
+	cusEntsToReset,
+	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
 	type TrackDeduction,
@@ -18,14 +21,16 @@ export const projectMutationLogsToTrackDeductionsV2 = ({
 		fullSubject,
 	});
 
-	const customerEntitlementIdToFeatureId = new Map<string, string>();
-	const rolloverIdToFeatureId = new Map<string, string>();
+	const customerEntitlementById = new Map<string, FullCusEntWithFullCusProduct>();
+	const rolloverIdToCustomerEntitlement = new Map<
+		string,
+		FullCusEntWithFullCusProduct
+	>();
 
 	for (const customerEntitlement of customerEntitlements) {
-		const featureId = customerEntitlement.entitlement.feature.id;
-		customerEntitlementIdToFeatureId.set(customerEntitlement.id, featureId);
+		customerEntitlementById.set(customerEntitlement.id, customerEntitlement);
 		for (const rollover of customerEntitlement.rollovers ?? []) {
-			rolloverIdToFeatureId.set(rollover.id, featureId);
+			rolloverIdToCustomerEntitlement.set(rollover.id, customerEntitlement);
 		}
 	}
 
@@ -38,7 +43,7 @@ export const projectMutationLogsToTrackDeductionsV2 = ({
 		if (log.balance_delta === 0) continue;
 
 		let balanceId: string;
-		let featureId: string | undefined;
+		let customerEntitlement: FullCusEntWithFullCusProduct | undefined;
 		let typeQualifier: string;
 
 		if (
@@ -46,17 +51,17 @@ export const projectMutationLogsToTrackDeductionsV2 = ({
 			log.customer_entitlement_id
 		) {
 			balanceId = log.customer_entitlement_id;
-			featureId = customerEntitlementIdToFeatureId.get(balanceId);
+			customerEntitlement = customerEntitlementById.get(balanceId);
 			typeQualifier = "ce";
 		} else if (log.target_type === "rollover" && log.rollover_id) {
 			balanceId = log.rollover_id;
-			featureId = rolloverIdToFeatureId.get(balanceId);
+			customerEntitlement = rolloverIdToCustomerEntitlement.get(balanceId);
 			typeQualifier = "ro";
 		} else {
 			continue;
 		}
 
-		if (!featureId) continue;
+		if (!customerEntitlement) continue;
 
 		const key = `${typeQualifier}::${balanceId}`;
 		const existing = aggregated.get(key);
@@ -71,7 +76,9 @@ export const projectMutationLogsToTrackDeductionsV2 = ({
 
 		aggregated.set(key, {
 			balance_id: balanceId,
-			feature_id: featureId,
+			feature_id: customerEntitlement.entitlement.feature.id,
+			plan_id: cusEntsToPlanId({ cusEnts: [customerEntitlement] }),
+			reset: cusEntsToReset({ cusEnts: [customerEntitlement] }),
 			value: valueDelta,
 		});
 	}

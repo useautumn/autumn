@@ -4,6 +4,7 @@ import {
 	type Feature,
 	type FullCustomerEntitlement,
 	type FullSubject,
+	ResetInterval,
 	SubjectType,
 } from "@autumn/shared";
 import { projectMutationLogsToTrackDeductionsV2 } from "@/internal/balances/utils/deductionV2/projectMutationLogsToTrackDeductionsV2.js";
@@ -122,6 +123,17 @@ const buildLog = (overrides: Partial<MutationLogItem>): MutationLogItem => ({
 	...overrides,
 });
 
+// Cus-ents built by `buildCustomerEntitlement` flow through
+// `fullSubjectToCustomerEntitlements` as `extra_customer_entitlements`, which
+// stamps `customer_product: null` — so `cusEntsToPlanId` always returns null
+// in this fixture. The entitlement interval is "month" with count 1, so
+// `cusEntsToReset` returns this shape consistently.
+const expectedReset = {
+	interval: ResetInterval.Month,
+	interval_count: undefined,
+	resets_at: null,
+};
+
 describe("projectMutationLogsToTrackDeductionsV2", () => {
 	test("returns an empty array when there are no logs", () => {
 		const fullSubject = buildFullSubject({ customerEntitlements: [] });
@@ -154,6 +166,8 @@ describe("projectMutationLogsToTrackDeductionsV2", () => {
 			{
 				balance_id: "cus_ent_messages",
 				feature_id: "messages",
+				plan_id: null,
+				reset: expectedReset,
 				value: 4,
 			},
 		]);
@@ -243,11 +257,15 @@ describe("projectMutationLogsToTrackDeductionsV2", () => {
 		expect(result).toContainEqual({
 			balance_id: "cus_ent_messages",
 			feature_id: "messages",
+			plan_id: null,
+			reset: expectedReset,
 			value: 1,
 		});
 		expect(result).toContainEqual({
 			balance_id: "cus_ent_ai_credits",
 			feature_id: "ai_credits",
+			plan_id: null,
+			reset: expectedReset,
 			value: 7,
 		});
 	});
@@ -279,6 +297,8 @@ describe("projectMutationLogsToTrackDeductionsV2", () => {
 			{
 				balance_id: "roll_1",
 				feature_id: "messages",
+				plan_id: null,
+				reset: expectedReset,
 				value: 2,
 			},
 		]);
@@ -359,6 +379,8 @@ describe("projectMutationLogsToTrackDeductionsV2", () => {
 			{
 				balance_id: "cus_ent_messages",
 				feature_id: "messages",
+				plan_id: null,
+				reset: expectedReset,
 				value: 5,
 			},
 		]);
