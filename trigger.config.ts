@@ -1,10 +1,33 @@
 import {
+	additionalFiles,
 	additionalPackages,
 	aptGet,
 	syncEnvVars,
 } from "@trigger.dev/build/extensions/core";
 import { defineConfig } from "@trigger.dev/sdk/v3";
 import { fetchInfisicalSecretsFromEnv } from "./server/src/external/infisical/fetchInfisicalSecrets.js";
+
+const workspacePackageJsonPaths = [
+	"server/package.json",
+	"shared/package.json",
+	"vite/package.json",
+	"scripts/package.json",
+	"apps/checkout/package.json",
+	"apps/docs/package.json",
+	"apps/website/package.json",
+	"apps/sdk-test/package.json",
+	"packages/atmn/package.json",
+	"packages/atmn-tests/package.json",
+	"packages/sdk/package.json",
+	"packages/autumn-js/package.json",
+	"packages/openapi/package.json",
+	"packages/ksuid/package.json",
+	"packages/stripe-sync/package.json",
+];
+
+const workspacePackageDirs = workspacePackageJsonPaths.map((path) =>
+	path.replace(/\/package\.json$/, ""),
+);
 
 export default defineConfig({
 	project: "proj_cwiutfmpdzfcshxevkok",
@@ -37,6 +60,31 @@ export default defineConfig({
 			"zod",
 		],
 		extensions: [
+			additionalFiles({
+				files: workspacePackageJsonPaths,
+			}),
+			{
+				name: "monorepo-workspace-manifests",
+				onBuildComplete: (context) => {
+					if (context.target !== "deploy") {
+						return;
+					}
+
+					context.addLayer({
+						id: "monorepo-workspace-manifests",
+						image: {
+							instructions: [
+								"WORKDIR /app",
+								`RUN mkdir -p ${workspacePackageDirs.join(" ")} && chown -R bun:bun ${workspacePackageDirs.join(" ")}`,
+								...workspacePackageJsonPaths.map(
+									(path) => `COPY --chown=bun:bun ${path} ./${path}`,
+								),
+								"RUN chown -R bun:bun /app",
+							],
+						},
+					});
+				},
+			},
 			// Server runtime imports `*.lua` as raw text via Bun's loader. esbuild
 			// (used by the trigger build) doesn't see bunfig — register a plugin
 			// that reads .lua files as text so the same imports work post-bundle.
