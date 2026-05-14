@@ -1,0 +1,24 @@
+server/src/external/vercel/handlers/resources/handleCreateResource.ts
+  s_305c551323ab85::t_ef360767b0bc65 150
+  s_305c551323ab85::t_b6227bb6255225 24
+server/src/external/vercel/misc/vercelMiddleware.ts
+  s_305c551323ab85::t_15c3cbc0c17efd 23-24
+  s_305c551323ab85::t_993d3e5d4126ff 21
+  s_305c551323ab85::t_7f82358e695832 22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "53b34e6140a76935a211b1f0446c1099e0c46b08",
+  "prompts": {},
+  "sessions": {
+    "s_305c551323ab85": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d8af1fb3ffepuyp3ZMfAEb6Co",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": null
+    }
+  }
+}
