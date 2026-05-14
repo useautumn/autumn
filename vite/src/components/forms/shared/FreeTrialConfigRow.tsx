@@ -1,4 +1,4 @@
-import type { FreeTrialDuration } from "@autumn/shared";
+import type { FreeTrialDuration, TrialOnEnd } from "@autumn/shared";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import { TRIAL_DURATION_OPTIONS } from "@/components/forms/update-subscription-v2/constants/trialConstants";
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
@@ -14,20 +14,18 @@ export function FreeTrialConfigRow({
 	checked,
 	trialCardRequired,
 	trialOnEnd,
-	hasActiveSubscription = false,
+	onTrialOnEndChange,
 	onToggle,
 }: {
 	form: UseAttachForm | UseUpdateSubscriptionForm;
 	expanded: boolean;
 	checked: boolean;
 	trialCardRequired: boolean;
-	trialOnEnd?: "bill" | "revert";
-	hasActiveSubscription?: boolean;
+	trialOnEnd?: TrialOnEnd;
+	onTrialOnEndChange?: (value: TrialOnEnd) => void;
 	onToggle: (enabled: boolean) => void;
 }) {
-	const isRevert = trialOnEnd === "revert";
-	const supportsRevert =
-		hasActiveSubscription && "trialOnEnd" in form.store.state.values;
+	const showRevert = !!onTrialOnEndChange;
 
 	return (
 		<ConfigRow
@@ -66,7 +64,7 @@ export function FreeTrialConfigRow({
 							/>
 						)}
 					</form.AppField>
-					{!supportsRevert && (
+					{!showRevert && (
 						<div className="mx-2">
 							<TextCheckbox
 								checked={trialCardRequired}
@@ -82,15 +80,12 @@ export function FreeTrialConfigRow({
 						</div>
 					)}
 				</div>
-				{supportsRevert && (
+				{showRevert && (
 					<TextCheckbox
-						checked={isRevert}
+						checked={trialOnEnd === "revert"}
 						onCheckedChange={(checked) => {
 							const revert = checked as boolean;
-							form.setFieldValue(
-								"trialOnEnd" as keyof typeof form.store.state.values,
-								(revert ? "revert" : "bill") as never,
-							);
+							onTrialOnEndChange(revert ? "revert" : "bill");
 							if (revert) {
 								form.setFieldValue("trialCardRequired", false);
 							}

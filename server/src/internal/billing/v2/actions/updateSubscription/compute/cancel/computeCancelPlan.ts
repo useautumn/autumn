@@ -106,6 +106,44 @@ const computeScheduledCancelPlan = ({
 };
 
 /**
+ * When cancelling a revert trial, unpause the previous plan by adding
+ * an update to restore its status to Active.
+ */
+const applyRevertTrialUnpause = ({
+	billingContext,
+	plan,
+}: {
+	billingContext: UpdateSubscriptionBillingContext;
+	plan: AutumnBillingPlan;
+}): AutumnBillingPlan => {
+	const { customerProduct, fullCustomer } = billingContext;
+	const isRevertTrial = customerProduct.on_trial_end === "revert";
+	const hasPreviousProduct = !!customerProduct.previous_customer_product_id;
+
+	if (!isRevertTrial || !hasPreviousProduct) return plan;
+
+	const previousCusProduct = fullCustomer.customer_products.find(
+		(cp) => cp.id === customerProduct.previous_customer_product_id,
+	);
+
+	const canRestore =
+		previousCusProduct?.status === CusProductStatus.Paused;
+
+	if (!canRestore) return plan;
+
+	return {
+		...plan,
+		updateCustomerProducts: [
+			...(plan.updateCustomerProducts ?? []),
+			{
+				customerProduct: previousCusProduct,
+				updates: { status: CusProductStatus.Active },
+			},
+		],
+	};
+};
+
+/**
  * Computes and applies the cancel plan for a subscription.
  *
  * Handles two cancel actions:
@@ -171,7 +209,7 @@ export const computeCancelPlan = ({
 	const cancelLineItems = computeCancelLineItems({ ctx, billingContext });
 
 	// Apply all computed values to the plan
-	return applyCancelPlan({
+	const cancelledPlan = applyCancelPlan({
 		plan,
 		cancelUpdates,
 		defaultCustomerProduct,
@@ -179,5 +217,11 @@ export const computeCancelPlan = ({
 		productsToDelete,
 		cancelLineItems,
 		existingCustomerProduct: billingContext.customerProduct,
+	});
+
+	// If this is a revert trial being cancelled, unpause the previous plan
+	return applyRevertTrialUnpause({
+		billingContext,
+		plan: cancelledPlan,
 	});
 };

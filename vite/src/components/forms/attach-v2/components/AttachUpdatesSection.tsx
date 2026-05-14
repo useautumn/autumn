@@ -1,5 +1,5 @@
 import { formatAmount } from "@autumn/shared";
-import { MinusCircleIcon, PlusCircleIcon } from "@phosphor-icons/react";
+import { MinusCircleIcon, PauseCircleIcon, PlusCircleIcon } from "@phosphor-icons/react";
 import { getPreviewCreditAmount } from "@/components/forms/shared/previewCreditUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
@@ -18,7 +18,8 @@ function AttachUpdatesSkeleton() {
 }
 
 export function AttachUpdatesSection() {
-	const { previewQuery, formValues, product } = useAttachFormContext();
+	const { previewQuery, formValues, product, hasActiveSubscription } =
+		useAttachFormContext();
 
 	const hasProductSelected = !!formValues.productId;
 	const { data: previewData, isPending } = previewQuery;
@@ -49,54 +50,60 @@ export function AttachUpdatesSection() {
 		return null;
 	}
 
-	const renderOutgoingPlans = () => {
-		return outgoing.map((change, index) => {
-			const isLast = index === outgoing.length - 1;
-			const needsComma = index > 0 && !isLast;
-			const needsAnd = isLast && index > 0;
-
-			return (
-				<span key={change.plan.id}>
-					{needsComma && ", "}
-					{needsAnd && " and "}
-					<MinusCircleIcon
-						weight="fill"
-						className="text-red-500 size-3.5 inline align-middle mr-1"
-					/>
-					<span className="text-foreground font-medium">
-						{change.plan.name}
-					</span>
-				</span>
-			);
-		});
-	};
-
-	const infoContent = (
-		<InfoBox variant="note">
-			<span>
-				Attaching{" "}
-				<PlusCircleIcon
-					weight="fill"
-					className="text-green-500 size-3.5 inline align-middle mr-1"
-				/>
-				<span className="text-foreground font-medium">{product.name}</span>
-				{outgoing.length > 0 && <> and removing {renderOutgoingPlans()}</>}
-				{hasCreditIndicator && (
-					<>
-						. This update includes{" "}
-						<span className="text-foreground font-medium">
-							{formattedCreditAmount}
-						</span>{" "}
-						in invoice credits.
-					</>
-				)}
-			</span>
-		</InfoBox>
-	);
+	const isPausing =
+		formValues.trialOnEnd === "revert" && hasActiveSubscription;
+	const outgoingVerb = isPausing ? "pausing" : "removing";
 
 	return (
 		<SheetSection withSeparator={false} className="pb-0">
-			{infoContent}
+			<InfoBox variant="note">
+				<span>
+					Attaching{" "}
+					<PlusCircleIcon
+						weight="fill"
+						className="text-green-500 size-3.5 inline align-middle mr-1"
+					/>
+					<span className="text-foreground font-medium">{product.name}</span>
+					{outgoing.length > 0 && (
+						<>
+							{" "}
+							and {outgoingVerb}{" "}
+							{outgoing.map((change, index) => {
+								const isLast = index === outgoing.length - 1;
+								return (
+									<span key={change.plan.id}>
+										{index > 0 && !isLast && ", "}
+										{isLast && index > 0 && " and "}
+										{isPausing ? (
+										<PauseCircleIcon
+											weight="fill"
+											className="text-orange-500 size-3.5 inline align-middle mr-1"
+										/>
+									) : (
+										<MinusCircleIcon
+											weight="fill"
+											className="text-red-500 size-3.5 inline align-middle mr-1"
+										/>
+									)}
+										<span className="text-foreground font-medium">
+											{change.plan.name}
+										</span>
+									</span>
+								);
+							})}
+						</>
+					)}
+					{hasCreditIndicator && (
+						<>
+							. This update includes{" "}
+							<span className="text-foreground font-medium">
+								{formattedCreditAmount}
+							</span>{" "}
+							in invoice credits.
+						</>
+					)}
+				</span>
+			</InfoBox>
 		</SheetSection>
 	);
 }

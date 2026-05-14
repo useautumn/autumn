@@ -13,7 +13,7 @@ export function CancelFooter() {
 	const { customerProduct } = formContext;
 
 	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
-	const isDefault = customerProduct.product.is_default;
+	const isDefault = customerProduct.product?.is_default ?? false;
 	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
 	const isFreeDefault = isDefault && isFreeOrOneOff;
 
