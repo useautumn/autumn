@@ -30,7 +30,7 @@ export const computeAttachTransitionUpdates = ({
 
 	if (!currentCustomerProduct) return undefined;
 
-	if (trialContext?.onEnd === "revert") {
+	if (trialContext?.onEnd === "revert" && planTiming === "immediate") {
 		return {
 			customerProduct: currentCustomerProduct,
 			updates: {
