@@ -41,6 +41,7 @@ export const handleGetCustomer = createRoute({
 				CusProductStatus.Active,
 				CusProductStatus.PastDue,
 				CusProductStatus.Scheduled,
+				CusProductStatus.Paused,
 				CusProductStatus.Expired,
 			],
 		});

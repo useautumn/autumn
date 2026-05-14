@@ -97,6 +97,10 @@ export const freeTrialsAreSame = ({
 			condition: ft1.card_required !== ft2.card_required,
 			message: `Card required different: ${ft1.card_required} !== ${ft2.card_required}`,
 		},
+		on_end: {
+			condition: (ft1.on_end ?? "bill") !== (ft2.on_end ?? "bill"),
+			message: `On end different: ${ft1.on_end ?? "bill"} !== ${ft2.on_end ?? "bill"}`,
+		},
 	};
 
 	const freeTrialsAreDiff = Object.values(diffs).some((d) => d.condition);
