@@ -138,10 +138,11 @@ export function CustomerActions() {
 						<CaretDownIcon className="size-3.5 text-t3" />
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end">
+				<DropdownMenuContent align="end" keepMounted>
 					<DropdownMenuItem
 						onClick={() => setIsModalOpen(true)}
 						className="flex gap-2"
+						shortcut="e"
 					>
 						<PencilSimpleIcon />
 						Edit customer
@@ -150,6 +151,7 @@ export function CustomerActions() {
 						<DropdownMenuItem
 							onClick={() => setCreateEntityOpen(true)}
 							className="flex gap-2"
+							shortcut="n"
 						>
 							<SubtractIcon />
 							Create entity
@@ -158,6 +160,7 @@ export function CustomerActions() {
 					<DropdownMenuItem
 						onClick={() => setAddCouponOpen(true)}
 						className="flex gap-2"
+						shortcut="c"
 					>
 						<TicketIcon />
 						Add coupon
@@ -165,25 +168,11 @@ export function CustomerActions() {
 					<DropdownMenuItem
 						onClick={() => setShowObjectOpen(true)}
 						className="flex gap-2"
+						shortcut="o"
 					>
 						<BracketsSquareIcon />
 						Show customer object
 					</DropdownMenuItem>
-					{/* Old sync sheet — superseded by sync-stripe-v2 below. Kept for reference.
-					{stripeCustomerId &&
-						customer?.processor?.type === ProcessorType.Stripe && (
-							<DropdownMenuItem
-								onClick={() => {
-									setSheet({ type: "sync-stripe" });
-									setActionsOpen(false);
-								}}
-								className="flex gap-2"
-							>
-								<ArrowsClockwiseIcon />
-								Sync from Stripe
-							</DropdownMenuItem>
-						)}
-					*/}
 					{stripeCustomerId &&
 						customer?.processor?.type === ProcessorType.Stripe && (
 							<DropdownMenuItem
@@ -192,6 +181,7 @@ export function CustomerActions() {
 									setActionsOpen(false);
 								}}
 								className="flex gap-2"
+								shortcut="y"
 							>
 								<ArrowsClockwiseIcon />
 								Sync from Stripe
@@ -236,6 +226,7 @@ export function CustomerActions() {
 								);
 							}}
 							className="flex gap-2"
+							shortcut="p"
 						>
 							<ArrowSquareOutIcon className="size-3.5" />
 							Open in Admin Panel
@@ -267,6 +258,7 @@ export function CustomerActions() {
 								);
 							}}
 							className="flex gap-2"
+							shortcut="r"
 						>
 							<ArrowSquareOutIcon className="size-3.5" />
 							Open in RevenueCat
@@ -277,6 +269,7 @@ export function CustomerActions() {
 						onClick={() => setDeleteOpen(true)}
 						variant="destructive"
 						className="flex gap-2 text-red-500 !hover:bg-red-500"
+						shortcut="d"
 					>
 						<TrashIcon />
 						Delete customer
