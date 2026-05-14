@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import { Button } from "@/components/v2/buttons/Button";
+import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { authClient, useSession } from "@/lib/auth-client";
 
@@ -22,12 +22,10 @@ export const UserDetails = () => {
 			const { error } = await authClient.updateUser({
 				name: name.trim(),
 			});
-
 			if (error) {
 				toast.error(error.message || "Failed to update profile");
 				return;
 			}
-
 			await refetch();
 			toast.success("Successfully updated profile");
 		} catch (error) {
@@ -39,10 +37,12 @@ export const UserDetails = () => {
 	};
 
 	return (
-		<div className="px-6 pt-1.5 w-full h-full flex flex-col gap-4">
-			<div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4">
+		<div className="w-full flex flex-col gap-4">
+			<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div className="flex flex-col">
-					<FieldLabel>Name</FieldLabel>
+					<FormLabel>
+						<span className="text-t2">Name</span>
+					</FormLabel>
 					<Input
 						value={name}
 						onChange={(e) => setName(e.target.value)}
@@ -50,21 +50,22 @@ export const UserDetails = () => {
 					/>
 				</div>
 				<div className="flex flex-col">
-					<FieldLabel>Email</FieldLabel>
+					<FormLabel>
+						<span className="text-t2">Email</span>
+					</FormLabel>
 					<Input value={user?.email || ""} disabled className="text-t3" />
 				</div>
-				<div>
-					<FieldLabel>&nbsp;</FieldLabel>
-					<Button
-						variant="secondary"
-						disabled={!canSave}
-						onClick={handleSave}
-						isLoading={saving}
-						className="min-w-16"
-					>
-						Save
-					</Button>
-				</div>
+			</div>
+			<div>
+				<Button
+					variant="primary"
+					disabled={!canSave}
+					onClick={handleSave}
+					isLoading={saving}
+					className="min-w-20"
+				>
+					Save
+				</Button>
 			</div>
 		</div>
 	);
