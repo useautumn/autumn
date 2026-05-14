@@ -1,0 +1,173 @@
+import type {
+	AppEnv,
+	CusProductStatus,
+	ListCustomersV2Params,
+	StandardCursorFields,
+} from "@autumn/shared";
+import { sql } from "drizzle-orm";
+import { getCustomerListFilterSql } from "../src/internal/customers/getFullCusQuery";
+
+export type OptimizedQueryArgs = {
+	orgId: string;
+	env: AppEnv;
+	inStatuses?: CusProductStatus[];
+	withSubs?: boolean;
+	limit: number;
+	cursor?: StandardCursorFields;
+	internalCustomerIds?: string[];
+	plans?: ListCustomersV2Params["plans"];
+	processors?: ListCustomersV2Params["processors"];
+	search?: string;
+	cusProductLimit: number;
+};
+
+/**
+ * Set-based replacement for the per-customer LATERAL nested loops.
+ * Key change: each child fetch is a single hash/merge join over the cr CTE
+ * instead of 1001 sequential scans (original Seq Scan-per-loop pattern).
+ */
+export const getOptimizedFullCusQuery = ({
+	orgId,
+	env,
+	inStatuses,
+	withSubs = true,
+	limit,
+	cursor,
+	internalCustomerIds,
+	plans,
+	processors,
+	search,
+	cusProductLimit,
+}: OptimizedQueryArgs) => {
+	const cpStatusFilter = inStatuses?.length
+		? sql`AND cp.status = ANY(ARRAY[${sql.join(
+				inStatuses.map((status) => sql`${status}`),
+				sql`, `,
+			)}])`
+		: sql``;
+
+	const customerListFilterSql = getCustomerListFilterSql({
+		internalCustomerIds,
+		inStatuses,
+		plans,
+		processors,
+		search,
+	});
+
+	const cursorPredicate = cursor
+		? sql`AND (c.created_at, c.id) < (${cursor.t}, ${cursor.id})`
+		: sql``;
+
+	const fetchLimit = limit + 1;
+
+	const subscriptionsSelect = withSubs
+		? sql`(
+				SELECT COALESCE(json_agg(row_to_json(s)), '[]'::json)
+				FROM (
+					SELECT DISTINCT s.*
+					FROM cps_ranked cps
+					CROSS JOIN LATERAL unnest(cps.subscription_ids) AS sub_id_t(sub_id)
+					JOIN subscriptions s ON s.stripe_id = sub_id_t.sub_id
+					WHERE cps.subscription_ids IS NOT NULL
+				) s
+			) AS subscriptions`
+		: sql`'[]'::json AS subscriptions`;
+
+	return sql`
+		WITH cr AS MATERIALIZED (
+			SELECT
+				c.internal_id,
+				c.id,
+				c.created_at,
+				row_to_json(c) AS row_json
+			FROM customers c
+			WHERE c.org_id = ${orgId}
+				AND c.env = ${env}
+				${customerListFilterSql}
+				${cursorPredicate}
+			ORDER BY c.created_at DESC, c.id DESC
+			LIMIT ${fetchLimit}
+		),
+		cp_ranked_ids AS MATERIALIZED (
+			SELECT
+				cp.id,
+				cp.internal_customer_id,
+				cp.internal_product_id,
+				ROW_NUMBER() OVER (
+					PARTITION BY cp.internal_customer_id
+					ORDER BY prod.is_add_on ASC, cp.created_at DESC
+				) AS rn
+			FROM cr
+			JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
+			JOIN products prod ON prod.internal_id = cp.internal_product_id
+			WHERE TRUE ${cpStatusFilter}
+		),
+		cps_ranked AS MATERIALIZED (
+			SELECT
+				cp.id,
+				cp.internal_customer_id,
+				cp.internal_product_id,
+				cp.free_trial_id,
+				cp.subscription_ids,
+				(row_to_json(cp)::jsonb || jsonb_build_object('product', row_to_json(prod)))::json AS row_json
+			FROM cp_ranked_ids r
+			JOIN customer_products cp ON cp.id = r.id
+			JOIN products prod ON prod.internal_id = r.internal_product_id
+			WHERE r.rn <= ${cusProductLimit}
+		),
+		ces_bound AS MATERIALIZED (
+			-- Single hash join instead of 1001 LATERAL scans.
+			SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json
+			FROM cps_ranked
+			JOIN customer_entitlements ce ON ce.customer_product_id = cps_ranked.id
+		),
+		ces_loose AS MATERIALIZED (
+			-- LATERAL with LIMIT 30 stays; existing partial index is well-suited.
+			SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json
+			FROM cr
+			JOIN LATERAL (
+				SELECT ce.*
+				FROM customer_entitlements ce
+				WHERE ce.internal_customer_id = cr.internal_id
+					AND ce.customer_product_id IS NULL
+					AND (ce.expires_at IS NULL OR ce.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
+				ORDER BY ce.id DESC
+				LIMIT 30
+			) ce ON true
+		),
+		ces_all AS MATERIALIZED (
+			SELECT id, entitlement_id FROM ces_bound
+			UNION ALL
+			SELECT id, entitlement_id FROM ces_loose
+		)
+		SELECT
+			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cr) AS customers,
+			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
+			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
+			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,
+			(SELECT COALESCE(json_agg(row_to_json(cpr)::jsonb || jsonb_build_object('price', row_to_json(p))), '[]'::json)
+				FROM cps_ranked
+				JOIN customer_prices cpr ON cpr.customer_product_id = cps_ranked.id
+				LEFT JOIN prices p ON p.id = cpr.price_id
+			) AS customer_prices,
+			(SELECT COALESCE(json_agg(row_to_json(e)::jsonb || jsonb_build_object('feature', row_to_json(f))), '[]'::json)
+				FROM (SELECT DISTINCT entitlement_id FROM ces_all) ce
+				JOIN entitlements e ON e.id = ce.entitlement_id
+				JOIN features f ON f.internal_id = e.internal_feature_id
+			) AS entitlements,
+			(SELECT COALESCE(json_agg(row_to_json(ro)), '[]'::json)
+				FROM ces_all
+				JOIN rollovers ro ON ro.cus_ent_id = ces_all.id
+				WHERE ro.expires_at IS NULL OR ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000
+			) AS rollovers,
+			(SELECT COALESCE(json_agg(row_to_json(r)), '[]'::json)
+				FROM ces_all
+				JOIN replaceables r ON r.cus_ent_id = ces_all.id
+			) AS replaceables,
+			(SELECT COALESCE(json_agg(row_to_json(ft)), '[]'::json)
+				FROM (SELECT DISTINCT free_trial_id FROM cps_ranked WHERE free_trial_id IS NOT NULL) cps
+				JOIN free_trials ft ON ft.id = cps.free_trial_id
+			) AS free_trials,
+			${subscriptionsSelect}
+	`;
+};
