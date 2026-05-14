@@ -65,9 +65,9 @@ export const handleCreateScheduleErrors = async ({
 				.filter(Boolean),
 		);
 
-		const subscriptionWillBeCanceled = productsOnSub.every((cp) =>
-			transitioningOutIds.has(cp.id),
-		);
+		const subscriptionWillBeCanceled =
+			productsOnSub.length > 0 &&
+			productsOnSub.every((cp) => transitioningOutIds.has(cp.id));
 
 		if (subscriptionWillBeCanceled) {
 			throw new RecaseError({
