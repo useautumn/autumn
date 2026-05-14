@@ -1,0 +1,21 @@
+server/src/internal/entities/handlers/handleListEntitiesV2.ts
+  s_a7d000bdbfcdac::t_127507f0b6cea2 212-223
+apps/sdk-test/sdk-entities.ts
+  s_a7d000bdbfcdac::t_f021758e2c114c 24-68
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "88a69117535c2586b6115268f3ea4b5152501fee",
+  "prompts": {},
+  "sessions": {
+    "s_a7d000bdbfcdac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1dcaf55e7ffeivmV1ymPikM08B",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
