@@ -1,0 +1,44 @@
+server/src/internal/customers/cursorPaginatedFullCusQuery.ts
+  s_a7d000bdbfcdac::t_ae54d5ba68c5d3 47-49,65-67
+  s_a7d000bdbfcdac::t_05efe1bd291248 8-12,25-27
+  s_a7d000bdbfcdac::t_d45a9de5f815db 31-35,78-86,90-187
+server/src/internal/customers/CusBatchService.ts
+  s_a7d000bdbfcdac::t_c1ac8356ec3128 328-338,371,388,390,408
+  s_b1a331f4eba7de::t_81ac909842eb94 127,129,163,170,172
+  s_b1a331f4eba7de::t_c4a92b20428909 219,221,236,268,276,278
+  s_b1a331f4eba7de::t_8872a1b2443fe7 164-169,171
+  s_b1a331f4eba7de::t_31fb865d75800f 269-275,277
+  s_a7d000bdbfcdac::t_d101038f60a481 339-352,360-367,369,376-380,382-385,410-427,430,443
+  s_b1a331f4eba7de::t_05191123261b72 389,394,409,429,431,433-439,441
+  s_a7d000bdbfcdac::t_98c395c20baf48 22-42
+server/src/internal/customers/getFullCusQuery.ts
+  s_a7d000bdbfcdac::t_4b86f81fa31f5c 924-927
+  s_a7d000bdbfcdac::t_452bae62621ffc 3,9-19
+  s_a7d000bdbfcdac::t_7944ba100f2a83 987-991
+  s_a7d000bdbfcdac::t_05a926c419e589 837-839,846-848,922-923,928-939,941-986,992
+  s_a7d000bdbfcdac::t_1993eb84661055 940
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "47e89c8cf072d5414c1903c42d80e9d4f93180e2",
+  "prompts": {},
+  "sessions": {
+    "s_a7d000bdbfcdac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1dcaf55e7ffeivmV1ymPikM08B",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
