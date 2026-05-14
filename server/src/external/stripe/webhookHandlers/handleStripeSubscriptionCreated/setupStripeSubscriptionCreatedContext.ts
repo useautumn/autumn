@@ -3,7 +3,6 @@ import type Stripe from "stripe";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { getFullStripeSub } from "../../stripeSubUtils.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
-import { shouldSkipSubscriptionSync } from "../common/subscriptionSync/shouldSkipSubscriptionSync.js";
 
 export type StripeSubscriptionCreatedContext = {
 	subscription: Stripe.Subscription;
@@ -16,7 +15,7 @@ export const setupStripeSubscriptionCreatedContext = async ({
 }: {
 	ctx: StripeWebhookContext;
 }): Promise<StripeSubscriptionCreatedContext | undefined> => {
-	const { db, org, env, fullCustomer, stripeCli, stripeEvent, logger } = ctx;
+	const { db, org, env, fullCustomer, stripeCli, stripeEvent } = ctx;
 	const stripeObject = stripeEvent.data.object as Stripe.Subscription;
 
 	// No auto-provisioning — only sync subs for customers already in Autumn.
@@ -26,14 +25,6 @@ export const setupStripeSubscriptionCreatedContext = async ({
 		getFullStripeSub({ stripeCli, stripeId: stripeObject.id }),
 		ProductService.listFull({ db, orgId: org.id, env }),
 	]);
-
-	const skip = shouldSkipSubscriptionSync({ subscription, fullCustomer });
-	if (skip.skip) {
-		logger.info(
-			`sub.created auto-sync: skipping stripe sub ${subscription.id} (${skip.reason})`,
-		);
-		return undefined;
-	}
 
 	return { subscription, fullCustomer, candidateProducts };
 };

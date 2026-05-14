@@ -22,7 +22,7 @@ export const resolveRedisV2 = (): Redis => {
 		lastLoggedInstance = activeInstance;
 	}
 
-	if (activeInstance === "upstash") return redisV2Primary;
+	if (activeInstance === "dragonfly") return redisV2Primary;
 
 	const alternate = getAlternateRedisV2Instance(activeInstance);
 	return alternate ?? redisV2Primary;
