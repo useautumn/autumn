@@ -349,3 +349,113 @@ test(
 		expect(freeDefault).toBeUndefined();
 	},
 );
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 4: Revert skips restore if previous plan was expired during trial
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer on pro → enterprise revert trial
+ * - During trial, the paused pro product's status is changed to Expired
+ *   (simulating a Stripe webhook cancelling the underlying subscription)
+ * - Trial expires via cron
+ *
+ * Expected:
+ * - Enterprise trial is Expired
+ * - Pro stays Expired (NOT reactivated — the Paused guard prevents it)
+ */
+test(
+	`${chalk.yellowBright("trial-revert-expiry 4: skips restore if previous plan expired during trial")}`,
+	async () => {
+		const customerId = "trial-revert-expiry-expired-prev";
+
+		const proMessages = items.monthlyMessages({ includedUsage: 500 });
+		const pro = products.pro({ id: "pro", items: [proMessages] });
+
+		const enterpriseMessages = items.monthlyMessages({ includedUsage: 2000 });
+		const enterprisePrice = items.monthlyPrice({ price: 50 });
+		const enterprise = products.base({
+			id: "enterprise",
+			items: [enterpriseMessages, enterprisePrice],
+		});
+
+		const { autumnV2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, enterprise] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: enterprise.id,
+			redirect_mode: "if_required",
+			customize: {
+				free_trial: {
+					duration_length: 14,
+					duration_type: FreeTrialDuration.Day,
+					card_required: false,
+					on_end: "revert",
+				},
+			},
+		};
+
+		await autumnV2.billing.attach<AttachParamsV1Input>(params);
+
+		// Find the paused pro product and simulate a Stripe webhook expiring it
+		const beforeCron = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ALL_STATUSES_WITH_PAUSED,
+		});
+
+		const pausedPro = beforeCron.customer_products.find(
+			(cp) => cp.product_id === pro.id,
+		);
+		const trialEnterprise = beforeCron.customer_products.find(
+			(cp) => cp.product_id === enterprise.id,
+		);
+
+		expect(pausedPro).toBeDefined();
+		expect(pausedPro!.status).toBe(CusProductStatus.Paused);
+		expect(trialEnterprise).toBeDefined();
+
+		// Simulate: Stripe webhook expired the paused plan during the trial
+		await db
+			.update(customerProducts)
+			.set({ status: CusProductStatus.Expired })
+			.where(eq(customerProducts.id, pausedPro!.id));
+
+		// Set trial_ends_at to past to trigger cron
+		const pastTrialEnd = Date.now() - 60_000;
+		await db
+			.update(customerProducts)
+			.set({ trial_ends_at: pastTrialEnd })
+			.where(eq(customerProducts.id, trialEnterprise!.id));
+
+		await runProductCron({ ctx: { db, logger } });
+
+		// Verify: trial expired, pro stays expired (NOT reactivated)
+		const afterCron = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ALL_STATUSES_WITH_PAUSED,
+		});
+
+		const expiredEnterprise = afterCron.customer_products.find(
+			(cp) => cp.product_id === enterprise.id,
+		);
+		const expiredPro = afterCron.customer_products.find(
+			(cp) => cp.product_id === pro.id,
+		);
+
+		expect(expiredEnterprise).toBeDefined();
+		expect(expiredEnterprise!.status).toBe(CusProductStatus.Expired);
+
+		expect(expiredPro).toBeDefined();
+		expect(expiredPro!.status).toBe(CusProductStatus.Expired);
+	},
+);
