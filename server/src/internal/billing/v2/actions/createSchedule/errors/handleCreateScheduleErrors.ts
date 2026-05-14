@@ -1,6 +1,7 @@
 import {
 	type CreateScheduleBillingContext,
 	ErrCode,
+	isFreeProduct,
 	ms,
 	RecaseError,
 } from "@autumn/shared";
@@ -46,4 +47,35 @@ export const handleCreateScheduleErrors = async ({
 		});
 	}
 
+	const allImmediateProductsFree = billingContext.fullProducts.every(
+		(product) => isFreeProduct({ prices: product.prices }),
+	);
+
+	if (allImmediateProductsFree && billingContext.stripeSubscription) {
+		const subId = billingContext.stripeSubscription.id;
+
+		const productsOnSub =
+			billingContext.fullCustomer.customer_products.filter((cp) =>
+				cp.subscription_ids?.includes(subId),
+			);
+
+		const transitioningOutIds = new Set(
+			billingContext.productContexts
+				.map((ctx) => ctx.currentCustomerProduct?.id)
+				.filter(Boolean),
+		);
+
+		const subscriptionWillBeCanceled = productsOnSub.every((cp) =>
+			transitioningOutIds.has(cp.id),
+		);
+
+		if (subscriptionWillBeCanceled) {
+			throw new RecaseError({
+				message:
+					"Cannot create a schedule with a free first phase while the customer has an active subscription. Please cancel the existing subscription first.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+	}
 };
