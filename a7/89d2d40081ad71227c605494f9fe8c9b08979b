@@ -1,0 +1,27 @@
+apps/sdk-test/sdk2.ts
+  s_b1a331f4eba7de::t_44f66ee0c19ebd 3,6-35,37-85
+  s_b1a331f4eba7de::t_259a7201f8bc3b 4
+  s_b1a331f4eba7de::t_ec971839f1315e 1-2,5,36
+apps/sdk-test/sdk.ts
+  s_b1a331f4eba7de::t_dad04eb64c577e 20-21,31-44,50-54,56,60,65,67-69,71
+  s_b1a331f4eba7de::t_0e444a4f72a506 8
+  s_b1a331f4eba7de::t_d705d01ca760ac 9-19,22-30,45-49,55,57-59,61-62,64,66,70,72
+apps/sdk-test/sdk3.ts
+  s_b1a331f4eba7de::t_680f02b551e2b0 1-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "a789d2d40081ad71227c605494f9fe8c9b08979b",
+  "prompts": {},
+  "sessions": {
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
