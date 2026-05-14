@@ -17,7 +17,8 @@ import chalk from "chalk";
 import { setupUpdateSubscriptionIntent } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionIntent";
 
 const customerProduct = {
-	prices: [],
+	customer_prices: [],
+	customer_entitlements: [],
 } as unknown as FullCusProduct;
 
 const baseParams: UpdateSubscriptionV1Params = {
