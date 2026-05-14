@@ -207,9 +207,9 @@ async function startDev() {
 				names.push("trigger");
 				colors.push("cyan");
 				cmds.push(
-				isWindows
-					? `"bunx trigger.dev@${triggerDevVersion} dev"`
-					: `"bunx trigger.dev@${triggerDevVersion} dev"`,
+					isWindows
+						? `"bunx trigger.dev@${triggerDevVersion} dev"`
+						: `"bunx trigger.dev@${triggerDevVersion} dev"`,
 				);
 			}
 
@@ -239,12 +239,15 @@ async function startDev() {
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
 				VITE_APP_ENV: viteAppEnv,
-				BUN_INSTALL_BIN: process.env.BUN_INSTALL_BIN ?? bunInstallBin,
+				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
 				...(worktreeNum > 1 && {
 					CLIENT_URL: `http://localhost:${VITE_PORT}`,
 					BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
 					VITE_BACKEND_URL: `http://localhost:${SERVER_PORT}`,
 					VITE_FRONTEND_URL: `http://localhost:${VITE_PORT}`,
+					EMULATE_GOOGLE_URL:
+						process.env.EMULATE_GOOGLE_URL ??
+						"https://google.emulate.localhost",
 				}),
 			},
 			stdout: "inherit",
