@@ -4,13 +4,21 @@ import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Check, ChevronRight } from "lucide-react";
 import * as React from "react";
-import { useHotkeys } from "react-hotkeys-hook";
-
 import SmallSpinner from "@/components/general/SmallSpinner";
+import {
+	type ShortcutEntry,
+	useMenuShortcuts,
+} from "@/hooks/useDropdownShortcut";
 import { cn } from "@/lib/utils";
 
-const DropdownMenuContext = React.createContext<{ isOpen: boolean }>({
+const DropdownMenuContext = React.createContext<{
+	isOpen: boolean;
+	shortcuts: React.RefObject<ShortcutEntry[]>;
+	close: () => void;
+}>({
 	isOpen: false,
+	shortcuts: { current: [] },
+	close: () => {},
 });
 
 const dropdownMenuItemVariants = cva(
@@ -41,8 +49,15 @@ type DropdownMenuItemVariantProps = VariantProps<
 
 function DropdownMenu(props: MenuPrimitive.Root.Props) {
 	const isOpen = props.open ?? false;
+	const { shortcuts, close } = useMenuShortcuts(isOpen, props.onOpenChange);
+
+	const ctx = React.useMemo(
+		() => ({ isOpen, shortcuts, close }),
+		[isOpen, shortcuts, close],
+	);
+
 	return (
-		<DropdownMenuContext.Provider value={{ isOpen }}>
+		<DropdownMenuContext.Provider value={ctx}>
 			<MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
 		</DropdownMenuContext.Provider>
 	);
@@ -157,6 +172,7 @@ type DropdownMenuContentProps = MenuPrimitive.Popup.Props & {
 	side?: "top" | "bottom" | "left" | "right";
 	align?: "start" | "center" | "end";
 	onCloseAutoFocus?: (e: any) => void;
+	keepMounted?: boolean;
 };
 
 const DropdownMenuContent = React.forwardRef<
@@ -169,10 +185,11 @@ const DropdownMenuContent = React.forwardRef<
 		side = "bottom",
 		align = "start",
 		onCloseAutoFocus: _onCloseAutoFocus,
+		keepMounted = false,
 		...rest
 	} = props;
 	return (
-		<MenuPrimitive.Portal>
+		<MenuPrimitive.Portal keepMounted={keepMounted}>
 			<MenuPrimitive.Positioner
 				sideOffset={sideOffset}
 				side={side}
@@ -221,19 +238,21 @@ const DropdownMenuItem = React.forwardRef<
 		onClick,
 		...rest
 	} = props;
-	const { isOpen } = React.useContext(DropdownMenuContext);
+	const { shortcuts } = React.useContext(DropdownMenuContext);
+	const onClickRef = React.useRef(onClick);
+	onClickRef.current = onClick;
 
-	useHotkeys(
-		shortcut ?? "",
-		(e) => {
-			e.preventDefault();
-			onClick?.(e as any);
-		},
-		{
-			enabled: !!shortcut && isOpen,
-			enableOnFormTags: false,
-		},
-	);
+	React.useEffect(() => {
+		if (!shortcut || props.disabled) return;
+		const entry: ShortcutEntry = {
+			key: shortcut,
+			handler: () => onClickRef.current?.({} as any),
+		};
+		shortcuts.current.push(entry);
+		return () => {
+			shortcuts.current = shortcuts.current.filter((e) => e !== entry);
+		};
+	}, [shortcut, props.disabled, shortcuts]);
 
 	if (asChild && React.isValidElement(children)) {
 		return (

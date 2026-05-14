@@ -1,26 +1,19 @@
-import type { Membership } from "@autumn/shared";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Separator } from "@/components/ui/separator";
+import { Separator } from "@/components/v2/separator";
 import { Button } from "@/components/v2/buttons/Button";
+import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
-import { authClient, useSession } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import OrgLogoUploader from "@/views/main-sidebar/org-dropdown/manage-org/OrgLogoUploader";
-import { useMemberships } from "../org-dropdown/hooks/useMemberships";
+import { useCurrentMembership } from "../org-dropdown/hooks/useCurrentMembership";
 import { DeleteOrgPopover } from "../org-dropdown/manage-org/DeleteOrgPopover";
 import { LeaveOrgPopover } from "../org-dropdown/manage-org/LeaveOrgPopover";
 
 export const OrgDetails = () => {
 	const { org, mutate } = useOrg();
-	const { memberships } = useMemberships();
-	const { data: session } = useSession();
-
-	const membership = memberships.find(
-		(m: Membership) => m.user.id === session?.session?.userId,
-	);
-	const isOwner = membership?.member.role === "owner";
+	const { isOwner } = useCurrentMembership();
 
 	const [inputs, setInputs] = useState({
 		name: org?.name,
@@ -43,14 +36,11 @@ export const OrgDetails = () => {
 				},
 				organizationId: org.id,
 			});
-
 			if (error) {
 				toast.error(error.message || "Failed to update organization");
 				return;
 			}
-
 			await mutate();
-
 			toast.success("Successfully updated organization");
 		} catch (error) {
 			console.error(error);
@@ -60,57 +50,41 @@ export const OrgDetails = () => {
 	};
 
 	return (
-		<div className="px-6 pt-1.5 w-full h-full flex flex-col gap-4">
-			<div className="flex flex-col gap-4">
-				<div className="w-full flex justify-between items-center">
-					<OrgLogoUploader />
-				</div>
-				<div className="w-full flex flex-col sm:flex-row gap-2 sm:gap-4">
-					<OrgDetailInput
-						label="Name"
+		<div className="w-full flex flex-col gap-4">
+			<OrgLogoUploader />
+			<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div className="flex flex-col">
+					<FormLabel>
+						<span className="text-t2">Name</span>
+					</FormLabel>
+					<Input
 						value={inputs.name}
-						setValue={(value) => setInputs({ ...inputs, name: value })}
+						onChange={(e) => setInputs({ ...inputs, name: e.target.value })}
 					/>
-					<OrgDetailInput
-						label="Slug"
-						value={inputs.slug}
-						setValue={(value) => setInputs({ ...inputs, slug: value })}
-					/>
-					<div>
-						<FieldLabel>&nbsp;</FieldLabel>
-						<Button
-							variant="secondary"
-							disabled={!canSave}
-							onClick={handleSave}
-							isLoading={saving}
-							className="min-w-16"
-						>
-							Save
-						</Button>
-					</div>
 				</div>
+				<div className="flex flex-col">
+					<FormLabel>
+						<span className="text-t2">Slug</span>
+					</FormLabel>
+					<Input
+						value={inputs.slug}
+						onChange={(e) => setInputs({ ...inputs, slug: e.target.value })}
+					/>
+				</div>
+			</div>
+			<div>
+				<Button
+					variant="primary"
+					disabled={!canSave}
+					onClick={handleSave}
+					isLoading={saving}
+					className="min-w-20"
+				>
+					Save
+				</Button>
 			</div>
 			<Separator className="my-2" />
 			{isOwner ? <DeleteOrgPopover /> : <LeaveOrgPopover />}
-		</div>
-	);
-};
-
-const OrgDetailInput = ({
-	label,
-	value,
-	setValue,
-}: {
-	label: string;
-	value: string;
-	setValue: (value: string) => void;
-}) => {
-	return (
-		<div className="flex flex-col">
-			<FieldLabel>{label}</FieldLabel>
-			<div className="flex items-center gap-2">
-				<Input value={value} onChange={(e) => setValue(e.target.value)} />
-			</div>
 		</div>
 	);
 };
