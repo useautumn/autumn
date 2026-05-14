@@ -70,7 +70,7 @@ export function buildUpdateSubscriptionOptions({
 
 			// One-off items resubmit even when oldQuant === newQuant
 			// (each submission is a fresh top-up purchase).
-			const isOneOff = item.interval == null;
+			const isOneOff = item.interval === null;
 			const quantityChanged = normalizedInputQuantity !== initialQuantity;
 
 			if (
