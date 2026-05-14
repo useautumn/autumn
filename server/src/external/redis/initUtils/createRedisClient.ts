@@ -22,7 +22,7 @@ const formatRedisEndpoint = ({ cacheUrl }: { cacheUrl: string }) => {
 export const createRedisClient = ({
 	cacheUrl,
 	region,
-	supportsUpstashShebang = true,
+	supportsUpstashShebang = false,
 	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
 }: {
 	cacheUrl: string;
