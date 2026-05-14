@@ -1,0 +1,24 @@
+server/src/internal/entities/handlers/handleListEntitiesV2.ts
+  s_a7d000bdbfcdac::t_c6e64c0eb693c0 209-212,214-218
+server/src/internal/customers/CusBatchService.ts
+  s_a7d000bdbfcdac::t_dd1f412ad81d24 290,292,294-295
+  s_a7d000bdbfcdac::t_f88c596c6ff09e 412,415,417,420-427
+server/experiments/sweepCursorNoSkip.ts
+  s_a7d000bdbfcdac::t_ff4282e9701beb 1-130
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "7086f0bb573d1b27a96d4a7e1a3c625b459c3236",
+  "prompts": {},
+  "sessions": {
+    "s_a7d000bdbfcdac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1dcaf55e7ffeivmV1ymPikM08B",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
