@@ -91,18 +91,15 @@ export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 			<CommandItem
 				ref={ref}
 				onSelect={onSelect}
-				className={cn(
-					"text-body h-8 flex justify-between items-center px-2 rounded-lg",
-					className,
-				)}
+				className={cn("flex justify-between items-center", className)}
 			>
 				<div className="flex items-center gap-2 min-w-0 flex-1">
 					{renderIcon(icon)}
-					<span className="text-body truncate shrink-0 max-w-[50%]">
-						{title}
-					</span>
+					<span className="text-sm truncate shrink-0 max-w-[50%]">{title}</span>
 					{subtext && (
-						<span className="text-tiny truncate text-t3">{subtext}</span>
+						<span className="text-xs truncate text-muted-foreground">
+							{subtext}
+						</span>
 					)}
 				</div>
 				{renderShortcuts()}
