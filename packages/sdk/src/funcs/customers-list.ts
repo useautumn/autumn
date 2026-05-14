@@ -4,6 +4,7 @@
 
 import * as z from "zod/v4-mini";
 import { AutumnCore } from "../core.js";
+import { dlv } from "../lib/dlv.js";
 import { encodeJSON, encodeSimple } from "../lib/encodings.js";
 import { matchStatusCode } from "../lib/http.js";
 import * as M from "../lib/matchers.js";
@@ -25,40 +26,22 @@ import { ResponseValidationError } from "../models/response-validation-error.js"
 import { SDKValidationError } from "../models/sdk-validation-error.js";
 import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
+import {
+  createPageIterator,
+  haltIterator,
+  PageIterator,
+  Paginator,
+} from "../types/operations.js";
 
 /**
- * Lists customers with pagination and optional filters.
+ * Lists customers with cursor pagination and optional filters. Pass `cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
  */
 export function customersList(
   client: AutumnCore,
-  request?: models.ListCustomersParams | undefined,
+  request: models.ListCustomersParams,
   options?: RequestOptions,
 ): APIPromise<
-  Result<
-    models.ListCustomersResponse,
-    | AutumnError
-    | ResponseValidationError
-    | ConnectionError
-    | RequestAbortedError
-    | RequestTimeoutError
-    | InvalidRequestError
-    | UnexpectedClientError
-    | SDKValidationError
-  >
-> {
-  return new APIPromise($do(
-    client,
-    request,
-    options,
-  ));
-}
-
-async function $do(
-  client: AutumnCore,
-  request?: models.ListCustomersParams | undefined,
-  options?: RequestOptions,
-): Promise<
-  [
+  PageIterator<
     Result<
       models.ListCustomersResponse,
       | AutumnError
@@ -70,22 +53,49 @@ async function $do(
       | UnexpectedClientError
       | SDKValidationError
     >,
+    { cursor: string }
+  >
+> {
+  return new APIPromise($do(
+    client,
+    request,
+    options,
+  ));
+}
+
+async function $do(
+  client: AutumnCore,
+  request: models.ListCustomersParams,
+  options?: RequestOptions,
+): Promise<
+  [
+    PageIterator<
+      Result<
+        models.ListCustomersResponse,
+        | AutumnError
+        | ResponseValidationError
+        | ConnectionError
+        | RequestAbortedError
+        | RequestTimeoutError
+        | InvalidRequestError
+        | UnexpectedClientError
+        | SDKValidationError
+      >,
+      { cursor: string }
+    >,
     APICall,
   ]
 > {
   const parsed = safeParse(
     request,
-    (value) =>
-      z.parse(z.optional(models.ListCustomersParams$outboundSchema), value),
+    (value) => z.parse(models.ListCustomersParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
-    return [parsed, { status: "invalid" }];
+    return [haltIterator(parsed), { status: "invalid" }];
   }
   const payload = parsed.value;
-  const body = payload === undefined
-    ? null
-    : encodeJSON("body", payload, { explode: true });
+  const body = encodeJSON("body", payload, { explode: true });
 
   const path = pathToFunc("/v1/customers.list")();
 
@@ -129,7 +139,7 @@ async function $do(
     timeoutMs: options?.timeoutMs || client._options.timeoutMs || -1,
   }, options);
   if (!requestRes.ok) {
-    return [requestRes, { status: "invalid" }];
+    return [haltIterator(requestRes), { status: "invalid" }];
   }
   const req = requestRes.value;
 
@@ -141,11 +151,15 @@ async function $do(
     retryCodes: context.retryCodes,
   });
   if (!doResult.ok) {
-    return [doResult, { status: "request-error", request: req }];
+    return [haltIterator(doResult), { status: "request-error", request: req }];
   }
   const response = doResult.value;
 
-  const [result] = await M.match<
+  const responseFields = {
+    HttpMeta: { Response: response, Request: req },
+  };
+
+  const [result, raw] = await M.match<
     models.ListCustomersResponse,
     | AutumnError
     | ResponseValidationError
@@ -156,13 +170,61 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.ListCustomersResponse$inboundSchema),
+    M.json(200, models.ListCustomersResponse$inboundSchema, { key: "Result" }),
     M.fail("4XX"),
     M.fail("5XX"),
-  )(response, req);
+  )(response, req, { extraFields: responseFields });
   if (!result.ok) {
-    return [result, { status: "complete", request: req, response }];
+    return [haltIterator(result), {
+      status: "complete",
+      request: req,
+      response,
+    }];
   }
 
-  return [result, { status: "complete", request: req, response }];
+  const nextFunc = (
+    responseData: unknown,
+  ): {
+    next: Paginator<
+      Result<
+        models.ListCustomersResponse,
+        | AutumnError
+        | ResponseValidationError
+        | ConnectionError
+        | RequestAbortedError
+        | RequestTimeoutError
+        | InvalidRequestError
+        | UnexpectedClientError
+        | SDKValidationError
+      >
+    >;
+    "~next"?: { cursor: string };
+  } => {
+    const nextCursor = dlv(responseData, "next_cursor");
+    if (typeof nextCursor !== "string") {
+      return { next: () => null };
+    }
+    if (nextCursor.trim() === "") {
+      return { next: () => null };
+    }
+
+    const nextVal = () =>
+      customersList(
+        client,
+        {
+          ...request,
+          cursor: nextCursor,
+        },
+        options,
+      );
+
+    return { next: nextVal, "~next": { cursor: nextCursor } };
+  };
+
+  const page = { ...result, ...nextFunc(raw) };
+  return [{ ...page, ...createPageIterator(page, (v) => !v.ok) }, {
+    status: "complete",
+    request: req,
+    response,
+  }];
 }

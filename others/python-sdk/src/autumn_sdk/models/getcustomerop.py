@@ -28,7 +28,7 @@ class GetCustomerGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.2.0"
+    ] = "2.3.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -1113,6 +1113,7 @@ GetCustomerRewardsType = Union[
         "fixed_discount",
         "free_product",
         "invoice_credits",
+        "feature_grant",
     ],
     UnrecognizedStr,
 ]

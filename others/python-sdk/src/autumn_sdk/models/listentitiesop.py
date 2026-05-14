@@ -14,7 +14,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import Dict, List, Literal, Optional, Union
+from typing import Awaitable, Callable, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -27,7 +27,7 @@ class ListEntitiesGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.2.0"
+    ] = "2.3.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -88,10 +88,10 @@ ListEntitiesProcessor = Literal[
 
 
 class ListEntitiesParamsTypedDict(TypedDict):
-    offset: NotRequired[int]
-    r"""Number of items to skip"""
+    cursor: NotRequired[str]
+    r"""Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages."""
     limit: NotRequired[int]
-    r"""Number of items to return. Default 10, max 1000."""
+    r"""Number of items to return. Default 50, hard ceiling 5000."""
     plans: NotRequired[List[ListEntitiesPlanTypedDict]]
     r"""Filter by plan ID and version. Returns entities with active subscriptions to this plan, including plans inherited from the parent customer."""
     subscription_status: NotRequired[ListEntitiesSubscriptionStatus]
@@ -103,11 +103,11 @@ class ListEntitiesParamsTypedDict(TypedDict):
 
 
 class ListEntitiesParams(BaseModel):
-    offset: Optional[int] = 0
-    r"""Number of items to skip"""
+    cursor: Optional[str] = ""
+    r"""Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages."""
 
-    limit: Optional[int] = 10
-    r"""Number of items to return. Default 10, max 1000."""
+    limit: Optional[int] = 50
+    r"""Number of items to return. Default 50, hard ceiling 5000."""
 
     plans: Optional[List[ListEntitiesPlan]] = None
     r"""Filter by plan ID and version. Returns entities with active subscriptions to this plan, including plans inherited from the parent customer."""
@@ -124,7 +124,7 @@ class ListEntitiesParams(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["offset", "limit", "plans", "subscription_status", "search", "processors"]
+            ["cursor", "limit", "plans", "subscription_status", "search", "processors"]
         )
         serialized = handler(self)
         m = {}
@@ -838,45 +838,47 @@ class ListEntitiesList(BaseModel):
         return m
 
 
-class ListEntitiesResponseTypedDict(TypedDict):
+class ListEntitiesResponseBodyTypedDict(TypedDict):
     r"""OK"""
 
     list: List[ListEntitiesListTypedDict]
-    r"""Array of items for current page"""
-    has_more: bool
-    r"""Whether more results exist after this page"""
-    offset: float
-    r"""Current offset position"""
-    limit: float
-    r"""Limit passed in the request"""
-    total: float
-    r"""Total number of items returned in the current page"""
-    total_count: float
-    r"""Total number of entities available in the current organization and environment"""
-    total_filtered_count: float
-    r"""Total number of entities matching the current filter before pagination is applied"""
+    r"""Items for current page."""
+    next_cursor: Nullable[str]
+    r"""Opaque cursor for the next page. Null when there are no more results."""
 
 
-class ListEntitiesResponse(BaseModel):
+class ListEntitiesResponseBody(BaseModel):
     r"""OK"""
 
     list: List[ListEntitiesList]
-    r"""Array of items for current page"""
+    r"""Items for current page."""
 
-    has_more: bool
-    r"""Whether more results exist after this page"""
+    next_cursor: Nullable[str]
+    r"""Opaque cursor for the next page. Null when there are no more results."""
 
-    offset: float
-    r"""Current offset position"""
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
 
-    limit: float
-    r"""Limit passed in the request"""
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
 
-    total: float
-    r"""Total number of items returned in the current page"""
+            if val != UNSET_SENTINEL:
+                m[k] = val
 
-    total_count: float
-    r"""Total number of entities available in the current organization and environment"""
+        return m
 
-    total_filtered_count: float
-    r"""Total number of entities matching the current filter before pagination is applied"""
+
+class ListEntitiesResponseTypedDict(TypedDict):
+    result: ListEntitiesResponseBodyTypedDict
+
+
+class ListEntitiesResponse(BaseModel):
+    next: Union[
+        Callable[[], Optional[ListEntitiesResponse]],
+        Callable[[], Awaitable[Optional[ListEntitiesResponse]]],
+    ]
+
+    result: ListEntitiesResponseBody

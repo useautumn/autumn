@@ -10,6 +10,7 @@ import { entitiesUpdate } from "../funcs/entities-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
 import { unwrapAsync } from "../types/fp.js";
+import { PageIterator, unwrapResultIterator } from "../types/operations.js";
 
 export class Entities extends ClientSDK {
   /**
@@ -109,10 +110,10 @@ export class Entities extends ClientSDK {
    * @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
    */
   async list(
-    request?: models.ListEntitiesParams | undefined,
+    request: models.ListEntitiesParams,
     options?: RequestOptions,
-  ): Promise<models.ListEntitiesResponse> {
-    return unwrapAsync(entitiesList(
+  ): Promise<PageIterator<models.ListEntitiesResponse, { cursor: string }>> {
+    return unwrapResultIterator(entitiesList(
       this,
       request,
       options,

@@ -34,7 +34,7 @@ import { Result } from "../types/fp.js";
  * @example
  * ```typescript
  * // Schedule a transition from a trial plan to a paid plan
- * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778251788467,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779461388467,"plans":[{"planId":"pro_plan"}]}] });
+ * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778751091730,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779960691730,"plans":[{"planId":"pro_plan"}]}] });
  * ```
  *
  * @param customerId - The ID of the customer to create the schedule for.

@@ -10,6 +10,7 @@ import { customersUpdate } from "../funcs/customers-update.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
 import { unwrapAsync } from "../types/fp.js";
+import { PageIterator, unwrapResultIterator } from "../types/operations.js";
 
 export class Customers extends ClientSDK {
   /**
@@ -79,13 +80,13 @@ export class Customers extends ClientSDK {
   }
 
   /**
-   * Lists customers with pagination and optional filters.
+   * Lists customers with cursor pagination and optional filters. Pass `cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
    */
   async list(
-    request?: models.ListCustomersParams | undefined,
+    request: models.ListCustomersParams,
     options?: RequestOptions,
-  ): Promise<models.ListCustomersResponse> {
-    return unwrapAsync(customersList(
+  ): Promise<PageIterator<models.ListCustomersResponse, { cursor: string }>> {
+    return unwrapResultIterator(customersList(
       this,
       request,
       options,
