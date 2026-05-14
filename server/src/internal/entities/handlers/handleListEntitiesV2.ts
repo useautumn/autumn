@@ -209,12 +209,18 @@ export const handleListEntitiesV2 = createRoute({
 
 			const nextCursor =
 				hasMore && peekRow
-					? StandardCursor.encode({
-							id: (peekRow as { id: string }).id,
-							t: Number(
-								(peekRow as { created_at: number | string }).created_at,
-							),
-						})
+					? (() => {
+							const entity = (
+								peekRow as {
+									entity?: { id?: string; created_at?: number | string };
+								}
+							).entity;
+							if (!entity?.id || entity.created_at == null) return null;
+							return StandardCursor.encode({
+								id: entity.id,
+								t: Number(entity.created_at),
+							});
+						})()
 					: null;
 
 			return c.json<CursorPaginatedResponse<ApiEntityV2>>({
