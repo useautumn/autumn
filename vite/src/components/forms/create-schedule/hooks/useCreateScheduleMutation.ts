@@ -68,6 +68,9 @@ export function useCreateScheduleMutation({
 
 			if (customerId) {
 				queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
+				queryClient.invalidateQueries({
+					queryKey: ["customer-schedule", customerId],
+				});
 			}
 		},
 		onError: (error) => {
