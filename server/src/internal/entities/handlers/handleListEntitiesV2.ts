@@ -203,24 +203,19 @@ export const handleListEntitiesV2 = createRoute({
 
 			const hasMore = rows.length > body.limit;
 			const pageRows = hasMore ? rows.slice(0, body.limit) : rows;
-			const peekRow = hasMore ? rows[body.limit] : undefined;
 
 			const entities = await buildApiEntitiesFromRows({ ctx, rows: pageRows });
 
+			const lastRow = pageRows[pageRows.length - 1] as
+				| { entity?: { id?: string; created_at?: number | string } }
+				| undefined;
+			const lastEntity = lastRow?.entity;
 			const nextCursor =
-				hasMore && peekRow
-					? (() => {
-							const entity = (
-								peekRow as {
-									entity?: { id?: string; created_at?: number | string };
-								}
-							).entity;
-							if (!entity?.id || entity.created_at == null) return null;
-							return StandardCursor.encode({
-								id: entity.id,
-								t: Number(entity.created_at),
-							});
-						})()
+				hasMore && lastEntity?.id && lastEntity.created_at != null
+					? StandardCursor.encode({
+							id: lastEntity.id,
+							t: Number(lastEntity.created_at),
+						})
 					: null;
 
 			return c.json<CursorPaginatedResponse<ApiEntityV2>>({
