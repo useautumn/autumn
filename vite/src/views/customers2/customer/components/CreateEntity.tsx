@@ -3,10 +3,11 @@ import { FeatureUsageType } from "@autumn/shared";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -111,6 +112,9 @@ export const CreateEntity = ({
 			<DialogContent className="w-[400px] bg-card">
 				<DialogHeader>
 					<DialogTitle>Create Entity</DialogTitle>
+					<DialogDescription>
+						Create a new entity for this customer to track usage separately.
+					</DialogDescription>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
 					<div className="flex gap-2">
@@ -138,9 +142,9 @@ export const CreateEntity = ({
 						}
 						items={Object.fromEntries(continuousFeatures.map((feature: Feature) => [feature.id, feature.name]))}
 					>
-							<SelectTrigger>
-								<SelectValue placeholder="Select feature" />
-							</SelectTrigger>
+						<SelectTrigger className="w-full">
+							<SelectValue placeholder="Select feature" />
+						</SelectTrigger>
 							<SelectContent>
 								{continuousFeatures.map((feature: Feature) => (
 									<SelectItem key={feature.id} value={feature.id}>
@@ -153,13 +157,15 @@ export const CreateEntity = ({
 				</div>
 
 				<DialogFooter>
-					<Button
+					<ShortcutButton
 						onClick={handleCreateClicked}
 						isLoading={isLoading}
 						variant="primary"
+						metaShortcut="enter"
+						className="w-full"
 					>
-						Create
-					</Button>
+						Create Entity
+					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
