@@ -149,3 +149,7 @@ server/.turbo
 .trigger
 .context
 .opencode/
+
+
+AGENTS.md
+CLAUDE.md
