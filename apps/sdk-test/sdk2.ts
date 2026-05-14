@@ -1,9 +1,5 @@
-import { Autumn } from "autumn-js";
-
-const autumn = new Autumn({
-  secretKey: process.env.UNIT_TEST_AUTUMN_SECRET_KEY,
-  serverURL: "http://localhost:8080",
-});
+const API_KEY = process.env.UNIT_TEST_AUTUMN_SECRET_KEY;
+const BASE_URL = "http://localhost:8080";
 
 const ESTIMATED_TOTAL = 1_000_000;
 const PAGE_SIZE = 1000;
@@ -20,8 +16,24 @@ const formatMs = (ms: number) => {
 const pad = (n: number | string, width: number) =>
   String(n).padStart(width, " ");
 
+const fetchPage = async ({ offset }: { offset: number }) => {
+  const res = await fetch(`${BASE_URL}/v1/customers.list`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      authorization: `Bearer ${API_KEY}`,
+      "x-api-version": "2.2.0",
+    },
+    body: JSON.stringify({ limit: PAGE_SIZE, offset }),
+  });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+  }
+  return (await res.json()) as { list: unknown[]; has_more?: boolean };
+};
+
 console.log(
-  `Starting benchmark — estimated ${ESTIMATED_TOTAL.toLocaleString()} customers across ~${EXPECTED_PAGES.toLocaleString()} pages (limit=${PAGE_SIZE})`,
+  `Starting benchmark (V2.2 limit+offset, local) — estimated ${ESTIMATED_TOTAL.toLocaleString()} customers across ~${EXPECTED_PAGES.toLocaleString()} pages (limit=${PAGE_SIZE})`,
 );
 console.log();
 
@@ -29,22 +41,19 @@ const startedAt = performance.now();
 let pageNum = 0;
 let customersSeen = 0;
 const requestSamples: number[] = [];
-
-const iterator = (await autumn.customers.list({ limit: PAGE_SIZE }))[
-  Symbol.asyncIterator
-]();
+let offset = 0;
 
 while (true) {
   const reqStart = performance.now();
-  const { value: page, done } = await iterator.next();
+  const page = await fetchPage({ offset });
   const reqEnd = performance.now();
-  if (done) break;
+
+  const rows = page.list ?? [];
+  if (rows.length === 0) break;
 
   const requestMs = reqEnd - reqStart;
   requestSamples.push(requestMs);
   pageNum++;
-
-  const rows = page.result?.list ?? [];
   customersSeen += rows.length;
 
   const elapsedMs = reqEnd - startedAt;
@@ -59,6 +68,10 @@ while (true) {
   console.log(
     `page ${pad(pageNum, 5)}/${EXPECTED_PAGES} | ${pad(rows.length, 4)} rows | ${pad(customersSeen, 9)} (${pad(customerPct, 6)}%) | req ${formatMs(requestMs).padStart(7)} | avg ${formatMs(avgReqMs).padStart(7)} | last10 ${formatMs(rollingAvgMs).padStart(7)} | elapsed ${formatMs(elapsedMs).padStart(8)} | ETA ${formatMs(etaMs)}`,
   );
+
+  if (page.has_more === false) break;
+  if (rows.length < PAGE_SIZE) break;
+  offset += rows.length;
 }
 
 const totalMs = performance.now() - startedAt;
