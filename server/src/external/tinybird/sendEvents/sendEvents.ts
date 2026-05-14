@@ -83,13 +83,15 @@ export const sendEventsToTinybird = async ({
 	const usEastWrite = tinybirdUsEastApi
 		? tinybirdUsEastApi
 				.ingestBatch("events", tinybirdEvents)
-				.then(() => {
+				.then((result) => {
 					logger?.info(
 						`Sent ${events.length} events to Tinybird (us-east)`,
 						{
 							data: {
 								region: "us-east",
 								eventCount: events.length,
+								successfulRows: result?.successful_rows,
+								quarantinedRows: result?.quarantined_rows,
 							},
 						},
 					);
