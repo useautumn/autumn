@@ -37,7 +37,7 @@ export default function V2Breadcrumb({
 							onClick={() => item.href && navigateTo(item.href, navigate, env)}
 							className="cursor-pointer"
 						>
-							<span className="truncate max-w-36">{item.name}</span>
+							<span>{item.name}</span>
 						</BreadcrumbItem>
 						{index < items.length - 1 && <BreadcrumbSeparator />}
 					</React.Fragment>

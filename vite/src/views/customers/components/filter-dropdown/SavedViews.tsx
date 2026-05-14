@@ -84,10 +84,10 @@ export const SavedViews = ({
 
 	return (
 		<>
-			<DropdownMenuLabel className="p-0 pt-1 px-3">
-				<span className="text-t3 text-xs">Saved views</span>
-			</DropdownMenuLabel>
 			<DropdownMenuGroup className="p-1">
+				<DropdownMenuLabel className="p-0 pt-1 px-3">
+					<span className="text-t3 text-xs">Saved views</span>
+				</DropdownMenuLabel>
 				{views.map((view: SavedView) => (
 					<div
 						key={view.id}

@@ -92,6 +92,10 @@
 		"migrate-functions:prod": "infisical run --env=prod --recursive -- bun scripts/migrations/migrate-functions.ts",
 		"validate-schema": "infisical run --env=prod --recursive -- bun scripts/migrations/validate-schema.ts",
 		"validate-shebangs": "infisical run --env=prod --recursive -- bun scripts/migrations/validate-fullsubject-shebangs.ts",
+		"tinybird:info": "cd server && infisical run --env=dev --recursive -- bunx tinybird info",
+		"tinybird:deploy:dev:check": "cd server && infisical run --env=dev --recursive -- bunx tinybird deploy --check",
+		"tinybird:deploy:dev": "cd server && infisical run --env=dev --recursive -- bunx tinybird deploy",
+		"trigger:deploy": "bunx trigger.dev deploy",
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",
 		"db:pull": "bun scripts/db/pull.ts",
@@ -128,6 +132,7 @@
 		"@aws-sdk/client-sqs": "^3.985.0",
 		"@better-auth/core": "catalog:",
 		"@better-auth/oauth-provider": "catalog:",
+		"@trigger.dev/sdk": "4.4.6",
 		"@wooorm/starry-night": "^3.8.0",
 		"ag-charts-react": "^12.3.0",
 		"better-auth": "catalog:",
@@ -139,12 +144,14 @@
 	"devDependencies": {
 		"@better-auth/cli": "^1.4.21",
 		"@biomejs/biome": "^2.2.7",
+		"@trigger.dev/build": "4.4.6",
 		"@types/node": "^24.9.1",
 		"concurrently": "^9.2.1",
 		"dotenv": "^16.6.1",
 		"husky": "^9.1.7",
 		"inquirer": "^12.10.0",
 		"knip": "^6.7.0",
+		"trigger.dev": "4.4.6",
 		"ts-to-zod": "^5.1.0",
 		"turbo": "^2.9.6"
 	}

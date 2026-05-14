@@ -5,22 +5,16 @@ import { createAggregateSimplePipe } from "./pipes/aggregateSimplePipe.js";
 import { createEstimatedMrrPipe } from "./pipes/estimatedMrrPipe.js";
 import { createListEventNamesPipe } from "./pipes/listEventNamesPipe.js";
 import { createListEventsPaginatedPipe } from "./pipes/listEventsPaginatedPipe.js";
+import { tinybirdConfig } from "./tinybirdUtils.js";
 import { z } from "./tinybirdZod.js";
 
-const TINYBIRD_API_URL = process.env.TINYBIRD_API_URL;
-const TINYBIRD_TOKEN = process.env.TINYBIRD_TOKEN;
-
 /** Tinybird REST API client singleton. Null if not configured. */
-const tinybirdClient: Tinybird | null =
-	TINYBIRD_API_URL && TINYBIRD_TOKEN
-		? new Tinybird({
-				baseUrl: TINYBIRD_API_URL,
-				token: TINYBIRD_TOKEN,
-			})
-		: null;
+const tinybirdClient: Tinybird | null = tinybirdConfig
+	? new Tinybird(tinybirdConfig)
+	: null;
 
-if (tinybirdClient) {
-	console.log(`[Tinybird] Configured with URL: ${TINYBIRD_API_URL}`);
+if (tinybirdConfig) {
+	console.log(`[Tinybird] Configured with URL: ${tinybirdConfig.baseUrl}`);
 }
 
 /** Zod schema for TinybirdEvent (matches events.datasource) */
@@ -80,11 +74,6 @@ export const getTinybirdIngest = () => {
 		throw new Error("Tinybird is not configured");
 	}
 	return tinybirdIngest;
-};
-
-/** Check if Tinybird is configured */
-export const isTinybirdConfigured = (): boolean => {
-	return tinybirdClient !== null;
 };
 
 // Re-export types
