@@ -350,9 +350,12 @@ export function AttachFormProvider({
 					"trialCardRequired",
 					Boolean(product.free_trial.card_required),
 				);
+				const productOnEnd = product.free_trial.on_end ?? "bill";
 				form.setFieldValue(
 					"trialOnEnd",
-					product.free_trial.on_end ?? "bill",
+					productOnEnd === "revert" && !hasActiveSubscription
+						? "bill"
+						: productOnEnd,
 				);
 			}
 		}
