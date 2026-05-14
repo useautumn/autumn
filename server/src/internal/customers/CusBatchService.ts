@@ -16,10 +16,30 @@ import * as Sentry from "@sentry/bun";
 import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
 import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
 import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/triggerBatchResetCustomerEntitlements.js";
-import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import { CusSearchService } from "./CusSearchService.js";
+import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
-import { getPaginatedFullCusQuery } from "./getFullCusQuery.js";
+import {
+	type DashboardProductVersionFilter,
+	type DashboardStatusFilter,
+	getPaginatedFullCusQuery,
+} from "./getFullCusQuery.js";
+
+const parseDashboardVersionFilter = (
+	raw: string[] | undefined,
+): DashboardProductVersionFilter[] => {
+	if (!raw?.length) return [];
+	return raw
+		.filter(Boolean)
+		.map((s) => {
+			const [productId, version] = s.split(":");
+			return { productId, version: parseInt(version, 10) };
+		})
+		.filter(
+			(v): v is DashboardProductVersionFilter =>
+				!!v.productId && !Number.isNaN(v.version),
+		);
+};
 import {
 	type FlattenedCustomerRow,
 	reassembleFlattenedCustomer,
@@ -80,7 +100,8 @@ export class CusBatchService {
 		const withEntities = expand.includes(CustomerExpand.Entities);
 		const withTrialsUsed = expand.includes(CustomerExpand.TrialsUsed);
 
-		const { limit, offset, plans, subscription_status, search, processors } = query;
+		const { limit, offset, plans, subscription_status, search, processors } =
+			query;
 
 		const cusProductLimit = getOrgCusProductLimit({
 			orgId: ctx.org.id,
@@ -103,7 +124,9 @@ export class CusBatchService {
 			processors,
 			cusProductLimit,
 		});
+		const tSqlStart = performance.now();
 		const results = await ctx.db.execute(sqlQuery);
+		const tSqlEnd = performance.now();
 		const finals = [];
 		const fullCustomers: FullCustomer[] = [];
 
@@ -114,7 +137,6 @@ export class CusBatchService {
 				const fullCus = normalizedCustomer as FullCustomer;
 				fullCustomers.push(fullCus);
 
-				// Since we already have fullCus from DB, call getApiCustomerBase directly
 				const { apiCustomer: baseCustomer, legacyData } =
 					await getApiCustomerBase({
 						ctx,
@@ -122,7 +144,6 @@ export class CusBatchService {
 						withAutumnId: false,
 					});
 
-				// Apply version changes
 				const versionedCustomer = applyResponseVersionChanges<
 					ApiCustomerV5,
 					CustomerLegacyData
@@ -139,6 +160,16 @@ export class CusBatchService {
 				ctx.logger.error(`Failed to process customer ${result.id}: ${error}`);
 			}
 		}
+		const tHydrateEnd = performance.now();
+		const timings = {
+			sqlMs: tSqlEnd - tSqlStart,
+			hydrateMs: tHydrateEnd - tSqlEnd,
+			totalMs: tHydrateEnd - tSqlStart,
+			rows: results.length,
+		};
+		ctx.logger.info(
+			`[CusBatchService.getPage] limit=${limit} offset=${offset} rows=${results.length} sql=${timings.sqlMs.toFixed(0)}ms hydrate=${timings.hydrateMs.toFixed(0)}ms total=${timings.totalMs.toFixed(0)}ms`,
+		);
 
 		// Fire-and-forget: queue SQS job for any stale entitlement resets
 		triggerBatchResetCustomerEntitlements({
@@ -185,7 +216,9 @@ export class CusBatchService {
 			cusProductLimit,
 		});
 
+		const tSqlStart = performance.now();
 		const results = await ctx.db.execute(sqlQuery);
+		const tSqlEnd = performance.now();
 		const flat = (results[0] ?? {
 			customers: [],
 			customer_products: [],
@@ -200,6 +233,7 @@ export class CusBatchService {
 		}) as unknown as FlattenedCustomerRow;
 
 		const allCustomers = reassembleFlattenedCustomer(flat);
+		const tReassembleEnd = performance.now();
 		const hasMore = allCustomers.length > limit;
 		const fullCustomers = hasMore ? allCustomers.slice(0, limit) : allCustomers;
 		const peekCustomer = hasMore ? allCustomers[limit] : undefined;
@@ -231,6 +265,17 @@ export class CusBatchService {
 				ctx.logger.error(`Failed to process customer ${fullCus.id}: ${error}`);
 			}
 		}
+		const tVersionEnd = performance.now();
+		const timings = {
+			sqlMs: tSqlEnd - tSqlStart,
+			reassembleMs: tReassembleEnd - tSqlEnd,
+			versionMs: tVersionEnd - tReassembleEnd,
+			totalMs: tVersionEnd - tSqlStart,
+			rows: fullCustomers.length,
+		};
+		ctx.logger.info(
+			`[CusBatchService.getCursorPage] limit=${limit} cursor=${cursor ? "yes" : "no"} rows=${fullCustomers.length} sql=${timings.sqlMs.toFixed(0)}ms reassemble=${timings.reassembleMs.toFixed(0)}ms version=${timings.versionMs.toFixed(0)}ms total=${timings.totalMs.toFixed(0)}ms`,
+		);
 
 		triggerBatchResetCustomerEntitlements({
 			ctx,
@@ -275,15 +320,36 @@ export class CusBatchService {
 		fullCustomers: FullCustomer[];
 		next_cursor: string | null;
 	}> {
-		const { db } = ctx;
 		const cusProductLimit = getOrgCusProductLimit({
 			orgId: ctx.org.id,
 			orgSlug: ctx.org.slug,
 		});
 
-		const { internalIds, peek } =
-			await CusSearchService.resolveInternalIdsByCursor({
-				db,
+		const statusFilters = (filters?.status ?? []).filter(
+			(s): s is DashboardStatusFilter =>
+				s === "active" ||
+				s === "past_due" ||
+				s === "canceled" ||
+				s === "free_trial" ||
+				s === "expired",
+		);
+
+		const productVersionFilters = parseDashboardVersionFilter(filters?.version);
+
+		// Status/none/version filter on a different table (customer_products) than
+		// the cursor (customers). Folding it into the main query forces a merge join
+		// that abandons idx_customers_cursor and degrades to seconds.
+		const requiresResolveStep =
+			statusFilters.length > 0 ||
+			productVersionFilters.length > 0 ||
+			!!filters?.none;
+
+		const tResolveStart = performance.now();
+		let internalIds: string[] | undefined;
+		let resolvedPeek: { t: number; id: string } | null = null;
+		if (requiresResolveStep) {
+			const resolved = await CusSearchService.resolveInternalIdsByCursor({
+				db: ctx.db,
 				orgId: ctx.org.id,
 				env: ctx.env,
 				search,
@@ -291,24 +357,41 @@ export class CusBatchService {
 				cursor,
 				limit,
 			});
-
-		if (internalIds.length === 0) {
-			return { fullCustomers: [], next_cursor: null };
+			internalIds = resolved.internalIds;
+			resolvedPeek = resolved.peek;
+			if (internalIds.length === 0) {
+				ctx.logger.info(
+					`[CusBatchService.getDashboardCursorPage] limit=${limit} cursor=${cursor ? "yes" : "no"} rows=0 resolve=${(performance.now() - tResolveStart).toFixed(0)}ms sql=0ms reassemble=0ms total=${(performance.now() - tResolveStart).toFixed(0)}ms`,
+				);
+				return { fullCustomers: [], next_cursor: null };
+			}
 		}
+		const tResolveEnd = performance.now();
 
-		const query = getCursorPaginatedFullCusQuery({
+		const sqlQuery = getCursorPaginatedFullCusQuery({
 			orgId: ctx.org.id,
 			env: ctx.env,
 			inStatuses: RELEVANT_STATUSES,
 			withSubs: true,
-			limit: internalIds.length,
+			limit: internalIds ? internalIds.length : limit,
+			cursor:
+				!requiresResolveStep && cursor
+					? { v: 0, t: cursor.t, id: cursor.id }
+					: undefined,
 			internalCustomerIds: internalIds,
+			search: requiresResolveStep ? undefined : search,
+			processors: requiresResolveStep
+				? undefined
+				: (filters?.processor as ListCustomersV2Params["processors"]),
 			cusProductLimit,
 		});
-		const rows = (await db.execute(query)) as unknown as Record<
+
+		const tSqlStart = performance.now();
+		const rows = (await ctx.db.execute(sqlQuery)) as unknown as Record<
 			string,
 			unknown
 		>[];
+		const tSqlEnd = performance.now();
 		const flat = (rows[0] ?? {
 			customers: [],
 			customer_products: [],
@@ -322,19 +405,42 @@ export class CusBatchService {
 			subscriptions: [],
 		}) as unknown as FlattenedCustomerRow;
 
-		const fullCustomers = reassembleFlattenedCustomer(flat);
+		const allCustomers = reassembleFlattenedCustomer(flat);
+		const tReassembleEnd = performance.now();
 
-		triggerBatchResetCustomerEntitlements({ ctx, fullCustomers }).catch((err) => {
-			ctx.logger.error(
-				"[CusBatchService.getDashboardCursorPage] batch reset failed:",
-				err,
-			);
-			Sentry.captureException(err);
-		});
+		let fullCustomers: FullCustomer[];
+		let nextCursor: string | null;
+		if (requiresResolveStep) {
+			fullCustomers = allCustomers;
+			nextCursor = resolvedPeek ? StandardCursor.encode(resolvedPeek) : null;
+		} else {
+			const hasMore = allCustomers.length > limit;
+			fullCustomers = hasMore ? allCustomers.slice(0, limit) : allCustomers;
+			const peekCustomer = hasMore ? allCustomers[limit] : undefined;
+			nextCursor =
+				hasMore && peekCustomer && peekCustomer.id
+					? StandardCursor.encode({
+							id: peekCustomer.id,
+							t: peekCustomer.created_at,
+						})
+					: null;
+		}
 
-		const next_cursor = peek ? StandardCursor.encode(peek) : null;
+		ctx.logger.info(
+			`[CusBatchService.getDashboardCursorPage] limit=${limit} cursor=${cursor ? "yes" : "no"} rows=${fullCustomers.length} resolve=${(tResolveEnd - tResolveStart).toFixed(0)}ms sql=${(tSqlEnd - tSqlStart).toFixed(0)}ms reassemble=${(tReassembleEnd - tSqlEnd).toFixed(0)}ms total=${(tReassembleEnd - tResolveStart).toFixed(0)}ms`,
+		);
 
-		return { fullCustomers, next_cursor };
+		triggerBatchResetCustomerEntitlements({ ctx, fullCustomers }).catch(
+			(err) => {
+				ctx.logger.error(
+					"[CusBatchService.getDashboardCursorPage] batch reset failed:",
+					err,
+				);
+				Sentry.captureException(err);
+			},
+		);
+
+		return { fullCustomers, next_cursor: nextCursor };
 	}
 
 	/**
