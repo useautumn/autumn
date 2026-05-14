@@ -5,6 +5,7 @@ import {
 	intervalToDuration,
 } from "date-fns";
 import type { FreeTrialDuration } from "../../models/productModels/freeTrialModels/freeTrialEnums.js";
+import type { TrialOnEnd } from "../../models/productModels/freeTrialModels/freeTrialModels.js";
 import { addDuration } from "../billingUtils/intervalUtils/addDuration.js";
 
 export const getTrialLengthInDays = ({
@@ -65,9 +66,9 @@ export const formatRemainingTrialTime = ({
 type FreeTrialLike = {
 	length: number;
 	unique_fingerprint: boolean;
-	duration: string;
+	duration: FreeTrialDuration;
 	card_required: boolean;
-	on_end?: string;
+	on_end?: TrialOnEnd;
 };
 
 export const freeTrialsAreSame = ({

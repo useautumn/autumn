@@ -191,11 +191,16 @@ export const computeCancelPlan = ({
 	const cancelUpdates = computeCancelUpdates({ billingContext, endOfCycleMs });
 
 	// Step 3: Create default product (if applicable)
-	const defaultCustomerProduct = computeDefaultCustomerProduct({
-		ctx,
-		billingContext,
-		endOfCycleMs,
-	});
+	// Skip when cancelling a revert trial — the previous plan will be restored instead.
+	const isRevertTrialCancel =
+		billingContext.customerProduct.on_trial_end === "revert";
+	const defaultCustomerProduct = isRevertTrialCancel
+		? undefined
+		: computeDefaultCustomerProduct({
+				ctx,
+				billingContext,
+				endOfCycleMs,
+			});
 
 	ctx.logger.debug(
 		`[computeCancelPlan] default customer product: ${defaultCustomerProduct?.product.name}`,
