@@ -21,7 +21,7 @@ export const handleCreateResource = createRoute({
 	body: z.object({
 		productId: z.string().min(1),
 		name: z.string().min(1),
-		metadata: z.record(z.any(), z.any()),
+		metadata: z.record(z.any(), z.any()).optional().default({}),
 		billingPlanId: z.string().min(1),
 		externalId: z.string().optional(),
 		protocolSettings: z
@@ -147,6 +147,7 @@ export const handleCreateResource = createRoute({
 				},
 			});
 		} catch (error) {
+			console.error(error);
 			return c.json(
 				{
 					error: {
