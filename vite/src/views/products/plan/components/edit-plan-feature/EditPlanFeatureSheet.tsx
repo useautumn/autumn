@@ -32,7 +32,7 @@ export function EditPlanFeatureSheet({
 }: {
 	isOnboarding?: boolean;
 }) {
-	const { item, setItem } = useProductItemContext();
+	const { item, setItem, isUpdate } = useProductItemContext();
 	const { features, refetch } = useFeaturesQuery();
 	const { product, setProduct } = useProduct();
 	const { setInitialItem } = useSheet();
@@ -124,7 +124,7 @@ export function EditPlanFeatureSheet({
 		item.tiers[0].amount === 0 &&
 		!item.included_usage;
 
-	const hasChanges = hasItemChanges || isZeroPriceItem;
+	const hasChanges = hasItemChanges || isZeroPriceItem || !isUpdate;
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">

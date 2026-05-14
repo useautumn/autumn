@@ -35,6 +35,9 @@ export const ErrCode = {
 	OrgNotFound: "org_not_found",
 	OrgHasCustomers: "org_has_customers",
 
+	// Migrations (v2)
+	MigrationNotFound: "migration_not_found",
+
 	// Feature
 	FeatureNotFound: "feature_not_found",
 	InvalidFeature: "invalid_feature",

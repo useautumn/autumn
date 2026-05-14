@@ -1,0 +1,10 @@
+{
+	"include": [
+		"tinybird/**/*.datasource",
+		"tinybird/**/*.pipe",
+		"src/external/tinybird/migrations/migrationItemEventsDataSource.ts"
+	],
+	"token": "${TINYBIRD_TOKEN}",
+	"baseUrl": "${TINYBIRD_API_URL}",
+	"devMode": "branch"
+}
