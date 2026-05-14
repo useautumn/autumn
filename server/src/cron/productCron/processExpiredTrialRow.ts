@@ -6,7 +6,7 @@ import {
 	type FullProduct,
 } from "@autumn/shared";
 import { customerProductToDefaultProduct } from "@utils/cusProductUtils/convertCusProduct/customerProductToDefaultProduct";
-import { eq, type InferSelectModel } from "drizzle-orm";
+import { and, eq, type InferSelectModel } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { CusService } from "@/internal/customers/CusService";
@@ -53,7 +53,12 @@ const tryProcessRevertExpiry = async ({
 		await txDb
 			.update(customerProductsTable)
 			.set({ status: CusProductStatus.Active, updated_at: now })
-			.where(eq(customerProductsTable.id, previousCusProductId));
+			.where(
+				and(
+					eq(customerProductsTable.id, previousCusProductId),
+					eq(customerProductsTable.status, CusProductStatus.Paused),
+				),
+			);
 	});
 
 	await deleteCachedFullCustomer({
