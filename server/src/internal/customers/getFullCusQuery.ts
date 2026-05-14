@@ -1,10 +1,22 @@
 import {
 	type AppEnv,
-	type CusProductStatus,
+	CusProductStatus,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
+
+export type DashboardStatusFilter =
+	| "active"
+	| "past_due"
+	| "canceled"
+	| "free_trial"
+	| "expired";
+
+export type DashboardProductVersionFilter = {
+	productId: string;
+	version: number;
+};
 
 const buildOptimizedCusProductsCTE = ({
 	inStatuses,
@@ -822,12 +834,18 @@ export const getCustomerListFilterSql = ({
 	plans,
 	processors,
 	search,
+	statusFilters,
+	noneFilter,
+	productVersionFilters,
 }: {
 	internalCustomerIds?: string[];
 	inStatuses?: CusProductStatus[];
 	plans?: ListCustomersV2Params["plans"];
 	processors?: ListCustomersV2Params["processors"];
 	search?: string;
+	statusFilters?: DashboardStatusFilter[];
+	noneFilter?: boolean;
+	productVersionFilters?: DashboardProductVersionFilter[];
 }) => {
 	const filters = [];
 
@@ -899,6 +917,79 @@ export const getCustomerListFilterSql = ({
 		if (processorConditions.length > 0) {
 			filters.push(sql`AND (${sql.join(processorConditions, sql` OR `)})`);
 		}
+	}
+
+	if (noneFilter) {
+		filters.push(sql`AND NOT EXISTS (
+			SELECT 1
+			FROM customer_products cp_none
+			WHERE cp_none.internal_customer_id = c.internal_id
+				AND cp_none.status IN (${CusProductStatus.Active}, ${CusProductStatus.PastDue}, ${CusProductStatus.Scheduled})
+		)`);
+	}
+
+	const hasStatus = statusFilters && statusFilters.length > 0;
+	const hasVersion =
+		productVersionFilters && productVersionFilters.length > 0;
+	if (hasStatus || hasVersion) {
+		const innerClauses: SQL[] = [];
+
+		// Mirrors CusSearchService.buildSearchPredicates productMode:
+		// when no non-active status is requested, also constrain to active/past_due.
+		const hasNonActiveStatus =
+			statusFilters?.some((s) => s !== "active") ?? false;
+		const shouldApplyActiveFilter =
+			!hasStatus || (statusFilters!.includes("active") && !hasNonActiveStatus);
+		if (shouldApplyActiveFilter) {
+			innerClauses.push(
+				sql`(cp_dash.status = ${CusProductStatus.Active} OR cp_dash.status = ${CusProductStatus.PastDue})`,
+			);
+		}
+
+		if (hasStatus) {
+			const statusClauses = statusFilters!.map((status) => {
+				switch (status) {
+					case "active":
+						return sql`(cp_dash.status = ${CusProductStatus.Active} AND cp_dash.canceled_at IS NULL)`;
+					case "past_due":
+						return sql`(cp_dash.status = ${CusProductStatus.PastDue} AND cp_dash.canceled_at IS NULL)`;
+					case "canceled":
+						return sql`(cp_dash.canceled_at IS NOT NULL AND (cp_dash.status = ${CusProductStatus.Active} OR cp_dash.status = ${CusProductStatus.PastDue}))`;
+					case "free_trial":
+						return sql`(cp_dash.trial_ends_at > ${Date.now()} AND cp_dash.free_trial_id IS NOT NULL AND cp_dash.canceled_at IS NULL AND (cp_dash.status = ${CusProductStatus.Active} OR cp_dash.status = ${CusProductStatus.PastDue}))`;
+					case "expired":
+						return sql`(cp_dash.status = ${CusProductStatus.Expired} AND cp_dash.canceled_at IS NULL AND NOT EXISTS (
+							SELECT 1 FROM customer_products cp_alias
+							WHERE cp_alias.internal_customer_id = cp_dash.internal_customer_id
+								AND cp_alias.product_id = cp_dash.product_id
+								AND (cp_alias.status = ${CusProductStatus.Active} OR cp_alias.status = ${CusProductStatus.PastDue})
+						))`;
+					default:
+						return sql`cp_dash.status = ${status}`;
+				}
+			});
+			innerClauses.push(sql`(${sql.join(statusClauses, sql` OR `)})`);
+		}
+
+		if (hasVersion) {
+			const versionClauses = productVersionFilters!.map(
+				(pv) =>
+					sql`(cp_dash.product_id = ${pv.productId} AND p_dash.version = ${pv.version})`,
+			);
+			innerClauses.push(sql`(${sql.join(versionClauses, sql` OR `)})`);
+		}
+
+		const joinProducts = hasVersion
+			? sql`JOIN products p_dash ON cp_dash.internal_product_id = p_dash.internal_id`
+			: sql``;
+
+		filters.push(sql`AND EXISTS (
+			SELECT 1
+			FROM customer_products cp_dash
+			${joinProducts}
+			WHERE cp_dash.internal_customer_id = c.internal_id
+				AND ${sql.join(innerClauses, sql` AND `)}
+		)`);
 	}
 
 	return sql.join(filters, sql` `);
