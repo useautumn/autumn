@@ -76,7 +76,8 @@ export function buildCustomizeBasePrice({ items }: { items: ProductItem[] }) {
 	const priceItem = items.find(
 		(item) => item.price != null && !item.feature_id,
 	);
-	if (!priceItem?.price || !priceItem.interval) return undefined;
+	if (!priceItem || priceItem.price === 0) return null;
+	if (!priceItem.interval) return undefined;
 	return {
 		amount: priceItem.price,
 		interval: priceItem.interval,
@@ -100,10 +101,10 @@ export function buildCustomize({
 	if (!items) return undefined;
 	const planItems = buildCustomizeItems({ items, features });
 	const basePrice = buildCustomizeBasePrice({ items });
-	if (!planItems && !basePrice) return undefined;
+	if (!planItems && basePrice === undefined) return undefined;
 	return {
 		...(planItems ? { items: planItems } : {}),
-		...(basePrice ? { price: basePrice } : {}),
+		...(basePrice !== undefined ? { price: basePrice } : {}),
 	};
 }
 
