@@ -13,7 +13,7 @@ const REDIS_COMMAND_TIMEOUT_MS =
 export const createRedisClient = ({
 	cacheUrl,
 	region,
-	supportsUpstashShebang = true,
+	supportsUpstashShebang = false,
 	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
 }: {
 	cacheUrl: string;
