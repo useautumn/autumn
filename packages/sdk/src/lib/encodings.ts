@@ -479,6 +479,23 @@ export const encodeSpaceDelimitedQuery = queryEncoder(encodeSpaceDelimited);
 export const encodePipeDelimitedQuery = queryEncoder(encodePipeDelimited);
 export const encodeDeepObjectQuery = queryEncoder(encodeDeepObject);
 
+function isBlobLike(val: unknown): val is Blob {
+  if (val instanceof Blob) {
+    return true;
+  }
+
+  if (typeof val !== "object" || val == null || !(Symbol.toStringTag in val)) {
+    return false;
+  }
+
+  const tag = val[Symbol.toStringTag];
+  if (tag !== "Blob" && tag !== "File") {
+    return false;
+  }
+
+  return "stream" in val && typeof val.stream === "function";
+}
+
 export function appendForm(
   fd: FormData,
   key: string,
@@ -487,10 +504,12 @@ export function appendForm(
 ): void {
   if (value == null) {
     return;
-  } else if (value instanceof Blob && fileName) {
-    fd.append(key, value, fileName);
-  } else if (value instanceof Blob) {
-    fd.append(key, value);
+  } else if (isBlobLike(value)) {
+    if (fileName) {
+      fd.append(key, value as Blob, fileName);
+    } else {
+      fd.append(key, value as Blob);
+    }
   } else if (Array.isArray(value)) {
     value.forEach((v) => {
       appendForm(fd, key, v);
@@ -498,4 +517,13 @@ export function appendForm(
   } else {
     fd.append(key, String(value));
   }
+}
+
+export async function normalizeBlob(
+  value: Pick<Blob, "arrayBuffer" | "type">,
+): Promise<Blob> {
+  if (value instanceof Blob) {
+    return value;
+  }
+  return new Blob([await value.arrayBuffer()], { type: value.type });
 }
