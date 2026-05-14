@@ -60,6 +60,11 @@ interface CreateScheduleFormContextValue {
 		phaseIndex: number;
 		planIndex: number;
 	}) => void;
+	handleCopyFromPreviousPhase: ({
+		phaseIndex,
+	}: {
+		phaseIndex: number;
+	}) => void;
 
 	editingPlan: EditingPlan | null;
 	editingPlanValue: SchedulePlan | null;
@@ -132,6 +137,7 @@ export function CreateScheduleFormProvider({
 		handleRemovePhase,
 		handleAddPlan,
 		handleRemovePlan,
+		handleCopyFromPreviousPhase,
 		handlePlanEditSave,
 	} = useSchedulePhaseHandlers({ form, nowMs, editingPlan, setEditingPlan });
 
@@ -219,6 +225,7 @@ export function CreateScheduleFormProvider({
 			handleRemovePhase,
 			handleAddPlan,
 			handleRemovePlan,
+			handleCopyFromPreviousPhase,
 			editingPlan,
 			editingPlanValue,
 			setEditingPlan,
@@ -247,6 +254,7 @@ export function CreateScheduleFormProvider({
 			handleRemovePhase,
 			handleAddPlan,
 			handleRemovePlan,
+			handleCopyFromPreviousPhase,
 			editingPlan,
 			editingPlanValue,
 			setEditingPlan,

@@ -1,12 +1,13 @@
 import {
 	CusProductSchema,
-	CustomerSchema,
 	CustomerPriceSchema,
+	CustomerSchema,
 	EntitlementWithFeatureSchema,
 	EntityAggregationsSchema,
 	EntitySchema,
 	FreeTrialSchema,
 	InvoiceSchema,
+	MigrationItemRunSchema,
 	type NormalizedFullSubject,
 	PriceSchema,
 	ProductSchema,
@@ -61,6 +62,11 @@ export const CachedFullSubjectSchema = z.object({
 	invoices: z.array(InvoiceSchema),
 
 	entity_aggregations: EntityAggregationsSchema.optional(),
+
+	// `.default([])` makes pre-existing cache entries (written before this
+	// field existed) hole-fill to an empty array via `normalizeFromSchema`.
+	// The empty-array vs empty-object Lua quirk is also handled there.
+	migration_item_runs: z.array(MigrationItemRunSchema).default([]),
 
 	_schemaVersion: z.number().optional(),
 	_cachedAt: z.number(),
@@ -117,6 +123,7 @@ export const normalizedToCachedFullSubject = ({
 		subscriptions: normalized.subscriptions,
 		invoices: normalized.invoices,
 		entity_aggregations: normalized.entity_aggregations,
+		migration_item_runs: normalized.migration_item_runs ?? [],
 		_schemaVersion: FULL_SUBJECT_CACHE_SCHEMA_VERSION,
 		_cachedAt: Date.now(),
 		meteredFeatures,
@@ -151,5 +158,6 @@ export const cachedFullSubjectToNormalized = ({
 		subscriptions: cached.subscriptions,
 		invoices: cached.invoices,
 		entity_aggregations: cached.entity_aggregations,
+		migration_item_runs: cached.migration_item_runs ?? [],
 	};
 };

@@ -33,6 +33,9 @@ export const getFullCustomerSchedule = async ({
 		.where(eq(schedulePhases.schedule_id, schedule.id))
 		.orderBy(asc(schedulePhases.starts_at));
 
+	// Treat a schedule with no future phases as non-existent.
+	if (!phases.some((phase) => phase.starts_at > Date.now())) return undefined;
+
 	return { ...schedule, phases };
 };
 
@@ -61,10 +64,14 @@ export const getAllCustomerSchedules = async ({
 		)
 		.orderBy(asc(schedulePhases.starts_at));
 
-	return allSchedules.map((schedule) => ({
-		...schedule,
-		phases: allPhases.filter((phase) => phase.schedule_id === schedule.id),
-	}));
+	return allSchedules
+		.map((schedule) => ({
+			...schedule,
+			phases: allPhases.filter((phase) => phase.schedule_id === schedule.id),
+		}))
+		.filter((schedule) =>
+			schedule.phases.some((phase) => phase.starts_at > Date.now()),
+		);
 };
 
 export const hydrateFullCustomerSchedule = async ({

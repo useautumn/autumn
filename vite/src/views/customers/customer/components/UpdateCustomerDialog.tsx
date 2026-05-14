@@ -2,10 +2,12 @@ import type { CreateCustomer, Customer } from "@autumn/shared";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
+	DialogHeader,
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
@@ -76,7 +78,12 @@ const UpdateCustomerDialog = ({
 
 	return (
 		<DialogContent className="w-md bg-card">
-			<DialogTitle>Update Customer</DialogTitle>
+			<DialogHeader>
+				<DialogTitle>Update Customer</DialogTitle>
+				<DialogDescription>
+					Edit customer details and billing configuration.
+				</DialogDescription>
+			</DialogHeader>
 
 			<CustomerConfig
 				customer={customer}
@@ -102,13 +109,15 @@ const UpdateCustomerDialog = ({
 			)}
 
 			<DialogFooter>
-				<Button
+				<ShortcutButton
 					variant="primary"
 					onClick={() => handleAddClicked()}
 					isLoading={loading}
+					metaShortcut="enter"
+					className="w-full"
 				>
-					Update
-				</Button>
+					Update Customer
+				</ShortcutButton>
 			</DialogFooter>
 		</DialogContent>
 	);

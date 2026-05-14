@@ -3,16 +3,16 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
-import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
@@ -54,7 +54,9 @@ export const SavedViews = ({
 				status: statusParam ? statusParam.split(",").filter(Boolean) : [],
 				version: versionParam ? versionParam.split(",").filter(Boolean) : [],
 				none: noneParam === "true",
-				processor: processorParam ? processorParam.split(",").filter(Boolean) : [],
+				processor: processorParam
+					? processorParam.split(",").filter(Boolean)
+					: [],
 			});
 
 			toast.success(`Applied filters from ${view.name} view`);

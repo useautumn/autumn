@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 
 /**
@@ -27,29 +28,46 @@ export function useDropdownShortcut({
 	);
 }
 
+export type ShortcutEntry = { key: string; handler: () => void };
+
 /**
- * Hook to trigger an action when a dropdown is open and a key is pressed
+ * Capture-phase keydown listener that fires registered shortcuts
+ * before Base UI's typeahead can intercept them.
  */
-function useMenuItemShortcut({
-	shortcut,
-	onTrigger,
-	isMenuOpen,
-	enabled = true,
-}: {
-	shortcut: string;
-	onTrigger: () => void;
-	isMenuOpen: boolean;
-	enabled?: boolean;
-}) {
-	useHotkeys(
-		shortcut,
-		(e) => {
-			e.preventDefault();
-			onTrigger();
-		},
-		{
-			enabled: enabled && isMenuOpen,
-			enableOnFormTags: false,
-		},
-	);
+export function useMenuShortcuts(
+	isOpen: boolean,
+	onOpenChange: ((open: boolean, details: any) => void) | undefined,
+) {
+	const shortcuts = useRef<ShortcutEntry[]>([]);
+
+	const close = useCallback(() => {
+		onOpenChange?.(false, {});
+	}, [onOpenChange]);
+
+	useEffect(() => {
+		if (!isOpen) return;
+		const handler = (e: KeyboardEvent) => {
+			const target = e.target as HTMLElement;
+			if (
+				target.tagName === "INPUT" ||
+				target.tagName === "TEXTAREA" ||
+				target.isContentEditable
+			) {
+				return;
+			}
+			const match = shortcuts.current.find(
+				(s) => s.key.toLowerCase() === e.key.toLowerCase(),
+			);
+			if (match) {
+				e.preventDefault();
+				e.stopPropagation();
+				match.handler();
+				close();
+			}
+		};
+		document.addEventListener("keydown", handler, true);
+		return () => document.removeEventListener("keydown", handler, true);
+	}, [isOpen, close]);
+
+	return { shortcuts, close };
 }

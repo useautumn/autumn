@@ -15,7 +15,7 @@ export type BillingPlanChargeResult =
 export const billingPlanWillCharge = ({
 	billingPlan,
 }: {
-	billingPlan: BillingPlan;
+	billingPlan: Pick<BillingPlan, "stripe">;
 }): BillingPlanChargeResult => {
 	const { subscriptionAction, invoiceAction } = billingPlan.stripe;
 
