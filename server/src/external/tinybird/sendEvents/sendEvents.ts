@@ -3,6 +3,7 @@ import type { EventInsert } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { tinybirdIngest } from "../initTinybird.js";
+import { tinybirdUsEastApi } from "../initTinybirdV2.js";
 import { isTinybirdConfigured } from "../tinybirdUtils.js";
 import { mapToTinybirdEvent } from "./mapEvent.js";
 
@@ -34,40 +35,70 @@ export const sendEventsToTinybird = async ({
 
 	const tinybirdEvents = events.map(mapToTinybirdEvent);
 
-	try {
-		const result = await tinybirdIngest.events(tinybirdEvents);
-		logger?.info(`Sent ${events.length} events to Tinybird`, {
-			data: {
-				eventCount: events.length,
-				successfulRows: result.successful_rows,
-				quarantinedRows: result.quarantined_rows,
-			},
-		});
-	} catch (error) {
-		// All retries exhausted - log error with unique ID and capture in Sentry
+	const reportFailure = (error: unknown, region: "primary" | "us-east") => {
 		const errorId = generateErrorId();
 		const errorMessage = error instanceof Error ? error.message : String(error);
 
-		logger?.error(`[${errorId}] Failed to send events to Tinybird`, {
-			data: {
-				errorId,
-				eventCount: events.length,
-				error: errorMessage,
-				events: events,
+		logger?.error(
+			`[${errorId}] Failed to send events to Tinybird (${region})`,
+			{
+				data: {
+					errorId,
+					region,
+					eventCount: events.length,
+					error: errorMessage,
+					events,
+				},
 			},
-		});
+		);
 
 		Sentry.captureException(error, {
 			tags: {
 				errorId,
 				service: "tinybird",
+				tinybird_region: region,
 			},
 			extra: {
 				data: {
 					eventCount: events.length,
-					events: events,
+					events,
 				},
 			},
 		});
-	}
+	};
+
+	const primaryWrite = tinybirdIngest
+		.events(tinybirdEvents)
+		.then((result) => {
+			logger?.info(`Sent ${events.length} events to Tinybird (primary)`, {
+				data: {
+					region: "primary",
+					eventCount: events.length,
+					successfulRows: result.successful_rows,
+					quarantinedRows: result.quarantined_rows,
+				},
+			});
+		})
+		.catch((error: unknown) => reportFailure(error, "primary"));
+
+	const usEastWrite = tinybirdUsEastApi
+		? tinybirdUsEastApi
+				.ingestBatch("events", tinybirdEvents)
+				.then((result) => {
+					logger?.info(
+						`Sent ${events.length} events to Tinybird (us-east)`,
+						{
+							data: {
+								region: "us-east",
+								eventCount: events.length,
+								successfulRows: result?.successful_rows,
+								quarantinedRows: result?.quarantined_rows,
+							},
+						},
+					);
+				})
+				.catch((error: unknown) => reportFailure(error, "us-east"))
+		: Promise.resolve();
+
+	await Promise.all([primaryWrite, usEastWrite]);
 };
