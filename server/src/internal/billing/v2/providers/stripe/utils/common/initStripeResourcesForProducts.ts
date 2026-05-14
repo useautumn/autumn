@@ -20,6 +20,52 @@ import {
 import { PriceService } from "@/internal/products/prices/PriceService";
 import { checkStripeProductExists } from "@/internal/products/productUtils";
 
+export const initStripeResourcesForProducts = async ({
+	ctx,
+	products,
+	internalEntityId,
+}: {
+	ctx: AutumnContext;
+	products: FullProduct[];
+	internalEntityId?: string;
+}) => {
+	const { db, org, env, logger } = ctx;
+
+	const batchProductUpdates = [];
+	for (const product of products) {
+		if (product.processor?.id != null) continue;
+
+		batchProductUpdates.push(
+			checkStripeProductExists({
+				db,
+				org,
+				env,
+				product,
+				logger,
+			}),
+		);
+	}
+	await Promise.all(batchProductUpdates);
+
+	const batchPriceUpdates = [];
+
+	for (const product of products) {
+		for (const price of product.prices) {
+			batchPriceUpdates.push(
+				createStripePriceIFNotExist({
+					ctx,
+					price,
+					entitlements: product.entitlements,
+					product,
+					internalEntityId,
+					useCheckout: false,
+				}),
+			);
+		}
+	}
+	await Promise.all(batchPriceUpdates);
+};
+
 const shouldInitializeStripePrice = ({ price }: { price: Price }) => {
 	if (!isFixedPrice(price)) return true;
 

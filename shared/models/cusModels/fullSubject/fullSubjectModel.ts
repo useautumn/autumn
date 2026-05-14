@@ -2,6 +2,7 @@ import { z } from "zod/v4";
 import { FullAggregatedFeatureBalanceSchema } from "../../cusProductModels/cusEntModels/aggregatedCusEnt.js";
 import { FullCustomerEntitlementSchema } from "../../cusProductModels/cusEntModels/cusEntModels.js";
 import { FullCusProductSchema } from "../../cusProductModels/cusProductModels.js";
+import { MigrationItemRunSchema } from "../../migrationV2Models/migrationItemRunSchema.js";
 import { SubscriptionSchema } from "../../subModels/subModels.js";
 import { CustomerSchema } from "../cusModels.js";
 import { EntitySchema } from "../entityModels/entityModels.js";
@@ -38,6 +39,8 @@ export const FullSubjectSchema = z.object({
 	aggregated_subject_flags: z
 		.record(z.string(), AggregatedSubjectFlagSchema)
 		.optional(),
+
+	migration_item_runs: z.array(MigrationItemRunSchema).optional(),
 });
 
 export type FullSubject = z.infer<typeof FullSubjectSchema>;

@@ -1,4 +1,5 @@
 import {
+	type DbPrice,
 	type FixedPriceConfig,
 	type Price,
 	type Product,
@@ -59,7 +60,7 @@ export class PriceService {
 	}: {
 		db: DrizzleCli;
 		id: string;
-		update: Partial<Price>;
+		update: Partial<DbPrice>;
 	}) {
 		await db.update(prices).set(update).where(eq(prices.id, id));
 	}

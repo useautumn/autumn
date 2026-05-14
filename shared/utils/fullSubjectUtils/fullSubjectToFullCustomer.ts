@@ -13,4 +13,5 @@ export const fullSubjectToFullCustomer = ({
 	extra_customer_entitlements: fullSubject.extra_customer_entitlements,
 	subscriptions: fullSubject.subscriptions,
 	invoices: fullSubject.invoices,
+	migration_item_runs: fullSubject.migration_item_runs,
 });

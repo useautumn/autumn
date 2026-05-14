@@ -7,7 +7,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import UpdateFeatureSheet from "../components/UpdateFeatureSheet";
 import UpdateCreditSystemSheet from "../credit-systems/components/UpdateCreditSystemSheet";
 import { DeleteFeatureDialog } from "../feature-row-toolbar/DeleteFeatureDialog";

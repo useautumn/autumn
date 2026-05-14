@@ -11,6 +11,7 @@ import { getDbHealth, PgHealth } from "@/db/pgHealthMonitor.js";
 import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRouting.js";
 import { redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
@@ -235,6 +236,7 @@ export const getCachedFullCustomer = async ({
 	// path to fail because the primary is down.
 	if (getDbHealth() !== PgHealth.Degraded) {
 		await resetCustomerEntitlements({ ctx, fullCus: fullCustomer });
+		await checkPendingMigrationsForCustomer({ ctx, fullCustomer });
 	}
 
 	// Round balance fields to handle floating-point precision from JSON.NUMINCRBY

@@ -397,5 +397,6 @@ export const normalizedToFullSubject = ({
 		...(aggregatedSubjectFlags
 			? { aggregated_subject_flags: aggregatedSubjectFlags }
 			: {}),
+		migration_item_runs: normalized.migration_item_runs ?? [],
 	} as FullSubject;
 };

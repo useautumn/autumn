@@ -2,10 +2,11 @@ import type { Reward } from "@autumn/shared";
 import { RewardType } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -105,6 +106,9 @@ export const AddCouponDialog = ({
 			<DialogContent className="w-[400px] bg-card">
 				<DialogHeader>
 					<DialogTitle>Add Reward</DialogTitle>
+					<DialogDescription>
+						Apply a reward or coupon to this customer.
+					</DialogDescription>
 				</DialogHeader>
 				{getExistingCoupon() && (
 					<InfoBox variant="warning">
@@ -177,7 +181,7 @@ export const AddCouponDialog = ({
 					)}
 				</div>
 				<DialogFooter>
-					<Button
+					<ShortcutButton
 						variant="primary"
 						onClick={handleAddClicked}
 						disabled={
@@ -186,9 +190,11 @@ export const AddCouponDialog = ({
 								!promoCodeSelected)
 						}
 						isLoading={loading}
+						metaShortcut="enter"
+						className="w-full"
 					>
 						Add Reward
-					</Button>
+					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
