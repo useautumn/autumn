@@ -195,20 +195,8 @@ export const AuthorizedApps = () => {
 	};
 
 	return (
-		<div className="flex flex-col px-6 py-4">
-			<div className="border border-border rounded-xl bg-card overflow-hidden">
-				<div className="px-4 py-3 border-b border-border bg-muted/30">
-					<div className="flex items-center gap-2">
-						<Shield className="w-4 h-4 text-t3" />
-						<h2 className="text-sm font-medium text-t1">
-							Authorized Applications
-						</h2>
-					</div>
-					<p className="text-xs text-t3 mt-1">
-						These applications have access to this organization
-					</p>
-				</div>
-
+		<div className="flex flex-col">
+			<div className="border border-border rounded-xl overflow-hidden">
 				<div className="divide-y divide-border">
 					{isLoading ? (
 						<div className="px-4 py-12 text-center text-sm text-t3">
