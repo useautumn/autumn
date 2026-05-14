@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { RELEVANT_STATUSES } from "../src/internal/customers/cusProducts/CusProductService";
 import { initDrizzle } from "../src/db/initDrizzle";
 import { loadLocalEnv } from "../src/utils/envUtils";
-import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery";
+import { getCursorPaginatedFullCusQuery } from "../src/internal/customers/cursorPaginatedFullCusQuery";
 
 loadLocalEnv();
 
@@ -158,7 +158,7 @@ const resolveRevenuecatDeepCursor = async ({
 }: {
 	db: DB;
 	deepOffset: number;
-}): Promise<{ createdAt: number; id: string }> => {
+}): Promise<{ v: 0; t: number; id: string }> => {
 	const result = await runQueryInTxn({
 		db,
 		query: sql`
@@ -182,13 +182,13 @@ const resolveRevenuecatDeepCursor = async ({
 			`Could not resolve revenuecat deep cursor at offset ${deepOffset}. Not enough revenuecat customers.`,
 		);
 	}
-	return { createdAt: row.created_at, id: row.id };
+	return { v: 0, t: row.created_at, id: row.id };
 };
 
 const buildCells = ({
 	deepCursor,
 }: {
-	deepCursor: { createdAt: number; id: string };
+	deepCursor: { v: 0; t: number; id: string };
 }): Cell[] => {
 	return [
 		{
@@ -227,7 +227,7 @@ const renderResults = ({
 }: {
 	totalCount: number;
 	deepOffset: number;
-	deepCursor: { createdAt: number; id: string };
+	deepCursor: { v: 0; t: number; id: string };
 	results: CellResult[];
 }): string => {
 	const date = new Date().toISOString().slice(0, 10);
@@ -244,7 +244,7 @@ const renderResults = ({
 		`- deep_offset (${DEEP_OFFSET_PCT}% within revcat subset): \`${deepOffset.toLocaleString()}\``,
 	);
 	lines.push(
-		`- deep_cursor (revcat-aware): \`{ t: ${deepCursor.createdAt}, id: ${deepCursor.id} }\``,
+		`- deep_cursor (revcat-aware): \`{ t: ${deepCursor.t}, id: ${deepCursor.id} }\``,
 	);
 	lines.push(`- limit: \`${BASE_LIMIT}\``);
 	lines.push(`- repeats per cell: ${REPEATS}`);
@@ -308,7 +308,7 @@ const main = async () => {
 		);
 		const deepCursor = await resolveRevenuecatDeepCursor({ db, deepOffset });
 		console.log(
-			chalk.gray(`  cursor = { t: ${deepCursor.createdAt}, id: ${deepCursor.id} }`),
+			chalk.gray(`  cursor = { t: ${deepCursor.t}, id: ${deepCursor.id} }`),
 		);
 		console.log();
 

@@ -25,6 +25,7 @@ interface CliArgs {
 	skip_entities?: boolean;
 	wipe?: boolean;
 	count?: number;
+	start_offset?: number;
 }
 
 const parseArgs = (): CliArgs => {
@@ -48,11 +49,14 @@ const parseArgs = (): CliArgs => {
 			case "count":
 				parsed.count = Number.parseInt(value, 10);
 				break;
+			case "start_offset":
+				parsed.start_offset = Number.parseInt(value, 10);
+				break;
 			default:
 				console.error(chalk.red(`Unknown flag: --${key}`));
 				console.log(
 					chalk.yellow(
-						"\nUsage: bun run scripts/seed/seedPaginationBenchmark.ts [--count=<n>] [--skip_entities] [--wipe] [--org_slug=<slug>]",
+						"\nUsage: bun run scripts/seed/seedPaginationBenchmark.ts [--count=<n>] [--start_offset=<n>] [--skip_entities] [--wipe] [--org_slug=<slug>]",
 					),
 				);
 				process.exit(1);
@@ -175,27 +179,30 @@ const seedCustomers = async ({
 	orgId,
 	env,
 	count,
+	startOffset = 0,
 }: {
 	db: ReturnType<typeof initDrizzle>["db"];
 	orgId: string;
 	env: AppEnv;
 	count: number;
+	startOffset?: number;
 }) => {
 	const now = Date.now();
 	const rangeMs = CONFIG.timeRangeDays * 24 * 60 * 60 * 1000;
 	const startMs = now - rangeMs;
 
+	const endIndex = startOffset + count;
 	console.log(
 		chalk.cyan(
-			`Seeding ${count.toLocaleString()} customers (${CONFIG.timeRangeDays}-day range, batch=${CONFIG.batchSize})...`,
+			`Seeding indices ${startOffset.toLocaleString()}..${(endIndex - 1).toLocaleString()} (${count.toLocaleString()} customers, ${CONFIG.timeRangeDays}-day range, batch=${CONFIG.batchSize})...`,
 		),
 	);
 
 	const startedAt = performance.now();
 	let inserted = 0;
 
-	for (let batchStart = 0; batchStart < count; batchStart += CONFIG.batchSize) {
-		const batchEnd = Math.min(batchStart + CONFIG.batchSize, count);
+	for (let batchStart = startOffset; batchStart < endIndex; batchStart += CONFIG.batchSize) {
+		const batchEnd = Math.min(batchStart + CONFIG.batchSize, endIndex);
 		const rows: CustomerRow[] = [];
 
 		for (let i = batchStart; i < batchEnd; i++) {
@@ -342,20 +349,39 @@ const main = async () => {
 			);
 
 		const existingCount = existing[0]?.count ?? 0;
+		let startOffset = args.start_offset ?? 0;
+		let seedCount = customerCount;
+
 		if (existingCount > 0 && !args.wipe) {
 			console.log(
 				chalk.yellow(
 					`⚠️  Found ${existingCount.toLocaleString()} existing bench customers. Re-run with --wipe to reset, or skip seeding.`,
 				),
 			);
-			if (existingCount >= customerCount) {
-				console.log(chalk.green("✅ Seed already satisfies target count — exiting."));
-				return;
+			if (args.start_offset === undefined) {
+				if (existingCount >= customerCount) {
+					console.log(
+						chalk.green("✅ Seed already satisfies target count — exiting."),
+					);
+					return;
+				}
+				startOffset = existingCount;
+				seedCount = customerCount - existingCount;
+				console.log(
+					chalk.yellow(
+						`Continuing seed: indices ${startOffset.toLocaleString()}..${(startOffset + seedCount - 1).toLocaleString()} (${seedCount.toLocaleString()} customers).`,
+					),
+				);
 			}
-			console.log(chalk.yellow(`Continuing seed to fill remaining ${(customerCount - existingCount).toLocaleString()} customers.`));
 		}
 
-		await seedCustomers({ db, orgId: org.id, env, count: customerCount });
+		await seedCustomers({
+			db,
+			orgId: org.id,
+			env,
+			count: seedCount,
+			startOffset,
+		});
 
 		if (!args.skip_entities) {
 			await seedEntities({
