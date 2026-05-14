@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 from .balance import Balance, BalanceTypedDict
-from autumn_sdk.types import BaseModel, Nullable, UNSET_SENTINEL
+from autumn_sdk.types import BaseModel, Nullable, UNSET_SENTINEL, UnrecognizedStr
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
 import pydantic
 from pydantic import model_serializer
 from pydantic.functional_validators import AfterValidator
-from typing import Any, Dict, Literal, Optional, Union
+from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -30,7 +30,7 @@ class TrackGlobals(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -69,7 +69,7 @@ class TrackLock(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
@@ -125,11 +125,128 @@ class TrackParams(BaseModel):
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
 
             if val != UNSET_SENTINEL:
                 if val is not None or k not in optional_fields:
                     m[k] = val
+
+        return m
+
+
+TrackIntervalEnum2 = Union[
+    Literal[
+        "one_off",
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+
+
+TrackIntervalUnion2TypedDict = TypeAliasType(
+    "TrackIntervalUnion2TypedDict", Union[TrackIntervalEnum2, str]
+)
+r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
+
+
+TrackIntervalUnion2 = TypeAliasType(
+    "TrackIntervalUnion2", Union[TrackIntervalEnum2, str]
+)
+r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
+
+
+class TrackReset2TypedDict(TypedDict):
+    interval: TrackIntervalUnion2TypedDict
+    r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
+    resets_at: Nullable[float]
+    r"""Timestamp when the balance will next reset."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals between resets (eg. 2 for bi-monthly)."""
+
+
+class TrackReset2(BaseModel):
+    interval: TrackIntervalUnion2
+    r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
+
+    resets_at: Nullable[float]
+    r"""Timestamp when the balance will next reset."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals between resets (eg. 2 for bi-monthly)."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        nullable_fields = set(["resets_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class Deduction2TypedDict(TypedDict):
+    balance_id: str
+    r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
+    feature_id: str
+    r"""The feature this balance belongs to."""
+    plan_id: Nullable[str]
+    r"""ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple)."""
+    reset: Nullable[TrackReset2TypedDict]
+    r"""Reset configuration for the balance this deduction came from, or null if the balance doesn't reset."""
+    value: float
+    r"""Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value)."""
+
+
+class Deduction2(BaseModel):
+    balance_id: str
+    r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
+
+    feature_id: str
+    r"""The feature this balance belongs to."""
+
+    plan_id: Nullable[str]
+    r"""ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple)."""
+
+    reset: Nullable[TrackReset2]
+    r"""Reset configuration for the balance this deduction came from, or null if the balance doesn't reset."""
+
+    value: float
+    r"""Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value)."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
 
         return m
 
@@ -149,6 +266,8 @@ class TrackResponseBody2TypedDict(TypedDict):
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
     balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
+    deductions: NotRequired[List[Deduction2TypedDict]]
+    r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
 
 
 class TrackResponseBody2(BaseModel):
@@ -172,16 +291,19 @@ class TrackResponseBody2(BaseModel):
     balances: Optional[Dict[str, Nullable[Balance]]] = None
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
+    deductions: Optional[List[Deduction2]] = None
+    r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["entity_id", "event_name", "balances"])
+        optional_fields = set(["entity_id", "event_name", "balances", "deductions"])
         nullable_fields = set(["balance"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
@@ -194,6 +316,123 @@ class TrackResponseBody2(BaseModel):
                     or is_nullable_and_explicitly_set
                 ):
                     m[k] = val
+
+        return m
+
+
+TrackIntervalEnum1 = Union[
+    Literal[
+        "one_off",
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+
+
+TrackIntervalUnion1TypedDict = TypeAliasType(
+    "TrackIntervalUnion1TypedDict", Union[TrackIntervalEnum1, str]
+)
+r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
+
+
+TrackIntervalUnion1 = TypeAliasType(
+    "TrackIntervalUnion1", Union[TrackIntervalEnum1, str]
+)
+r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
+
+
+class TrackReset1TypedDict(TypedDict):
+    interval: TrackIntervalUnion1TypedDict
+    r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
+    resets_at: Nullable[float]
+    r"""Timestamp when the balance will next reset."""
+    interval_count: NotRequired[float]
+    r"""Number of intervals between resets (eg. 2 for bi-monthly)."""
+
+
+class TrackReset1(BaseModel):
+    interval: TrackIntervalUnion1
+    r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
+
+    resets_at: Nullable[float]
+    r"""Timestamp when the balance will next reset."""
+
+    interval_count: Optional[float] = None
+    r"""Number of intervals between resets (eg. 2 for bi-monthly)."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["interval_count"])
+        nullable_fields = set(["resets_at"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
+class Deduction1TypedDict(TypedDict):
+    balance_id: str
+    r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
+    feature_id: str
+    r"""The feature this balance belongs to."""
+    plan_id: Nullable[str]
+    r"""ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple)."""
+    reset: Nullable[TrackReset1TypedDict]
+    r"""Reset configuration for the balance this deduction came from, or null if the balance doesn't reset."""
+    value: float
+    r"""Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value)."""
+
+
+class Deduction1(BaseModel):
+    balance_id: str
+    r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
+
+    feature_id: str
+    r"""The feature this balance belongs to."""
+
+    plan_id: Nullable[str]
+    r"""ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple)."""
+
+    reset: Nullable[TrackReset1]
+    r"""Reset configuration for the balance this deduction came from, or null if the balance doesn't reset."""
+
+    value: float
+    r"""Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value)."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k)
+
+            if val != UNSET_SENTINEL:
+                m[k] = val
 
         return m
 
@@ -213,6 +452,8 @@ class TrackResponseBody1TypedDict(TypedDict):
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
     balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
+    deductions: NotRequired[List[Deduction1TypedDict]]
+    r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
 
 
 class TrackResponseBody1(BaseModel):
@@ -236,16 +477,19 @@ class TrackResponseBody1(BaseModel):
     balances: Optional[Dict[str, Nullable[Balance]]] = None
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
+    deductions: Optional[List[Deduction1]] = None
+    r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["entity_id", "event_name", "balances"])
+        optional_fields = set(["entity_id", "event_name", "balances", "deductions"])
         nullable_fields = set(["balance"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
+            val = serialized.get(k)
             is_nullable_and_explicitly_set = (
                 k in nullable_fields
                 and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member

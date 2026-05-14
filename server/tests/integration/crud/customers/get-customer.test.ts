@@ -1,17 +1,17 @@
 import { expect, test } from "bun:test";
 import {
-	type ApiCustomer,
-	ApiCustomerSchema,
-	type AttachParamsV1Input,
-	CustomerExpand,
+    type ApiCustomer,
+    ApiCustomerSchema,
+    type AttachParamsV1Input,
+    CustomerExpand,
 } from "@autumn/shared";
 import {
-	type ApiCustomerV5,
-	ApiCustomerV5Schema,
+    type ApiCustomerV5,
+    ApiCustomerV5Schema,
 } from "@shared/api/customers/apiCustomerV5";
 import {
-	type ApiCustomerV3,
-	ApiCustomerV3Schema,
+    type ApiCustomerV3,
+    ApiCustomerV3Schema,
 } from "@shared/api/customers/previousVersions/apiCustomerV3";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect";
@@ -127,18 +127,18 @@ test.concurrent(`${chalk.yellowBright("get-customer: multi-entity customer retur
 	});
 
 	const refDir = `${import.meta.dir}/../../../references`;
-	await Bun.write(
-		`${refDir}/getCustomerV1Response.json`,
-		JSON.stringify(cusV1, null, 2),
-	);
-	await Bun.write(
-		`${refDir}/getCustomerV2_1Response.json`,
-		JSON.stringify(cusV2_1, null, 2),
-	);
-	await Bun.write(
-		`${refDir}/getCustomerV2_2Response.json`,
-		JSON.stringify(cusV2_2, null, 2),
-	);
+	// await Bun.write(
+	// 	`${refDir}/getCustomerV1Response.json`,
+	// 	JSON.stringify(cusV1, null, 2),
+	// );
+	// await Bun.write(
+	// 	`${refDir}/getCustomerV2_1Response.json`,
+	// 	JSON.stringify(cusV2_1, null, 2),
+	// );
+	// await Bun.write(
+	// 	`${refDir}/getCustomerV2_2Response.json`,
+	// 	JSON.stringify(cusV2_2, null, 2),
+	// );
 });
 
 test.concurrent(`${chalk.yellowBright("get-customer: expand empty array returns items")}`, async () => {

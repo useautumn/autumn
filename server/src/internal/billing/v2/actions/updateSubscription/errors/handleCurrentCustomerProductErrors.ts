@@ -12,7 +12,10 @@ export const handleCurrentCustomerProductErrors = ({
 }) => {
 	const { customerProduct } = billingContext;
 
-	if (isCustomerProductScheduled(customerProduct)) {
+	if (
+		isCustomerProductScheduled(customerProduct) &&
+		!billingContext.cancelAction
+	) {
 		throw new RecaseError({
 			message: `Cannot update subscription for '${customerProduct.product.name}' because it is scheduled and not yet active`,
 		});

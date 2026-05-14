@@ -10,6 +10,7 @@ import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/han
 import { handleStripeBillingPlanErrors } from "@/internal/billing/v2/providers/stripe/errors/handleStripeBillingPlanErrors";
 import { handleCurrentCustomerProductErrors } from "./handleCurrentCustomerProductErrors";
 import { handleCustomPlanErrors } from "./handleCustomPlanErrors";
+import { handleManualTopUpErrors } from "./handleManualTopUpErrors";
 import {
 	checkTrialRemovalWithOneOffItems,
 	handleOneOffErrors,
@@ -54,6 +55,10 @@ export const handleUpdateSubscriptionErrors = async ({
 	// 4. Custom plan errors
 	handleCustomPlanErrors({ ctx, billingContext, autumnBillingPlan, params });
 
+	// 4b. Manual top-up strict-shape gate (must run before one-off check so it
+	// owns the "Update too complex" message for ManualTopUp requests).
+	handleManualTopUpErrors({ billingContext, params });
+
 	// 5. One-off errors
 	handleOneOffErrors({ ctx, billingContext, autumnBillingPlan, params });
 
@@ -80,5 +85,5 @@ export const handleUpdateSubscriptionErrors = async ({
 	handleUpdateCheckoutErrors({ billingContext });
 
 	// 12. Stripe billing plan errors (validate Stripe resources)
-	handleStripeBillingPlanErrors({ billingContext });
+	handleStripeBillingPlanErrors({ billingContext, billingPlan });
 };

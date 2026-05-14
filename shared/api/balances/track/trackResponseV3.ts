@@ -1,5 +1,30 @@
 import { z } from "zod/v4";
+import { ApiBalanceResetSchema } from "../../customers/cusFeatures/apiBalance.js";
 import { ApiBalanceV1Schema } from "../../customers/cusFeatures/apiBalanceV1.js";
+
+export const TrackDeductionSchema = z.object({
+	balance_id: z.string().meta({
+		description:
+			"ID of the underlying balance row that was deducted from (customer_entitlement or rollover).",
+	}),
+	feature_id: z.string().meta({
+		description: "The feature this balance belongs to.",
+	}),
+	plan_id: z.string().nullable().meta({
+		description:
+			"ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple).",
+	}),
+	reset: ApiBalanceResetSchema.nullable().meta({
+		description:
+			"Reset configuration for the balance this deduction came from, or null if the balance doesn't reset.",
+	}),
+	value: z.number().meta({
+		description:
+			"Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value).",
+	}),
+});
+
+export type TrackDeduction = z.infer<typeof TrackDeductionSchema>;
 
 /**
  * Track response V3 - uses ApiBalanceV1 (V2.1 format)
@@ -32,6 +57,10 @@ export const TrackResponseV3Schema = z.object({
 			description:
 				"Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature.",
 		}),
+	deductions: z.array(TrackDeductionSchema).optional().meta({
+		description:
+			"Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling.",
+	}),
 });
 
 export type TrackResponseV3 = z.infer<typeof TrackResponseV3Schema>;

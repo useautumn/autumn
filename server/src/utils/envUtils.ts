@@ -1,17 +1,36 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { config } from "dotenv";
 
 let hasLoadedLocalEnv = false;
 const shouldLogLocalEnvLoading = false;
 
+/**
+ * Resolve the directory holding `.env`, robust to cwd:
+ *   - cwd already a `server/` dir
+ *   - cwd is `autumn/` (typical workspace root)
+ *   - cwd is the monorepo root (one level above `autumn/`) — happens with
+ *     `bun test autumn/...` invocations from VSCode tasks
+ */
+const resolveServerDir = (): string => {
+	const cwd = process.cwd();
+	const candidates = [
+		cwd,
+		join(cwd, "server"),
+		join(cwd, "autumn", "server"),
+	];
+	for (const dir of candidates) {
+		if (existsSync(join(dir, "package.json"))) return dir;
+	}
+	// Fall back to first guess so dotenv silently no-ops if missing.
+	return cwd.includes("server") ? cwd : join(cwd, "server");
+};
+
 export const loadLocalEnv = ({ force = false }: { force?: boolean } = {}) => {
 	if (hasLoadedLocalEnv && !force) return;
 	hasLoadedLocalEnv = true;
 
-	const processDir = process.cwd();
-	const serverDir = processDir.includes("server")
-		? processDir
-		: join(processDir, "server");
+	const serverDir = resolveServerDir();
 
 	// Determine which env file to load based on ENV_FILE environment variable
 	// Defaults to .env if not specified

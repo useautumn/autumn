@@ -20,6 +20,7 @@ export function FeatureSearchDropdown({
 	onOpenChange,
 	renderExtra,
 	footer,
+	triggerClassName,
 }: {
 	features: Feature[];
 	value: string | null;
@@ -29,6 +30,7 @@ export function FeatureSearchDropdown({
 	onOpenChange?: (open: boolean) => void;
 	renderExtra?: (feature: Feature) => React.ReactNode;
 	footer?: React.ReactNode;
+	triggerClassName?: string;
 }) {
 	const [internalOpen, setInternalOpen] = useState(false);
 	const [search, setSearch] = useState("");
@@ -58,6 +60,7 @@ export function FeatureSearchDropdown({
 					type="button"
 					className={cn(
 						"flex items-center justify-between w-full rounded-lg border bg-transparent text-sm outline-none h-input input-base input-shadow-default input-state-open p-2",
+						triggerClassName,
 					)}
 				>
 					{selectedFeature ? (
@@ -75,22 +78,22 @@ export function FeatureSearchDropdown({
 			</DropdownMenuTrigger>
 			<DropdownMenuContent
 				align="start"
-				className="w-(--anchor-width)"
+				className="w-(--anchor-width) p-0"
 			>
-				<div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
-					<MagnifyingGlassIcon className="size-4 text-t4" />
+				<div className="flex items-center gap-2 px-3 py-2 border-b border-border/40">
+					<MagnifyingGlassIcon className="size-3.5 text-t4" />
 					<input
 						type="text"
 						placeholder="Search features..."
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						onKeyDown={(e) => e.stopPropagation()}
-						className="flex-1 bg-transparent text-sm outline-none placeholder:text-t4"
+						className="flex-1 bg-transparent text-xs outline-none placeholder:text-t4"
 					/>
 				</div>
-				<div className="max-h-60 overflow-y-auto">
+				<div className="max-h-56 overflow-y-auto p-1">
 					{filteredFeatures.length === 0 ? (
-						<div className="py-4 text-center text-sm text-t4">
+						<div className="py-3 text-center text-xs text-t4">
 							No features found.
 						</div>
 					) : (
@@ -101,18 +104,20 @@ export function FeatureSearchDropdown({
 									onSelect(feature.id);
 									setIsOpen(false);
 								}}
-								className="py-2 px-2.5"
+								className="py-1.5 px-2"
 							>
-								<div className="flex items-center gap-2 w-full">
-									<div className="shrink-0">{getFeatureIcon({ feature })}</div>
-									<span className="truncate flex-1">{feature.name}</span>
-									{renderExtra?.(feature)}
-								</div>
+								<div className="shrink-0">{getFeatureIcon({ feature })}</div>
+								<span className="truncate flex-1">{feature.name}</span>
+								{renderExtra?.(feature)}
 							</DropdownMenuItem>
 						))
 					)}
 				</div>
-				{footer}
+				{footer && (
+					<div className="border-t border-border/40 p-1">
+						{footer}
+					</div>
+				)}
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

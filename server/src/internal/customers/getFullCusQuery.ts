@@ -378,6 +378,31 @@ export const getFullCusQuery = ({
 		sqlChunks.push(buildInvoicesCTE(!!entityId));
 	}
 
+	// Unconditional CTE for the customer's `migration_item_runs` scoped to
+	// the org's active lazy migrations. Empty in steady state — joins through
+	// `migration_runs` so callers don't have to thread the active list.
+	sqlChunks.push(sql`, `);
+	sqlChunks.push(sql`
+    customer_migration_item_runs AS (
+      SELECT mir.*
+      FROM migration_item_runs mir
+      WHERE mir.item_kind = 'customer'
+        AND mir.dry_run = false
+        AND mir.item_id = (SELECT internal_id FROM customer_record)
+        AND mir.migration_internal_id IN (
+          SELECT mr.migration_internal_id
+          FROM migration_runs mr
+          WHERE mr.org_id = ${orgId}
+            AND mr.env = ${env}
+            AND mr.status IN ('queued', 'running')
+            AND mr.dry_run = false
+            AND mr.lazy_run = true
+        )
+      ORDER BY mir.updated_at DESC NULLS LAST, mir.created_at DESC
+      LIMIT 10
+    )
+  `);
+
 	// Conditionally add events CTE
 	if (withEvents) {
 		sqlChunks.push(sql`, `);
@@ -467,6 +492,13 @@ export const getFullCusQuery = ({
 		selectFieldsChunks.push(sql`,
       (SELECT events FROM customer_events) AS events`);
 	}
+
+	selectFieldsChunks.push(sql`,
+    COALESCE(
+      (SELECT json_agg(row_to_json(mir) ORDER BY mir.updated_at DESC NULLS LAST, mir.created_at DESC)
+       FROM customer_migration_item_runs mir),
+      '[]'::json
+    ) AS migration_item_runs`);
 
 	sqlChunks.push(sql`
     SELECT ${sql.join(selectFieldsChunks, sql``)}

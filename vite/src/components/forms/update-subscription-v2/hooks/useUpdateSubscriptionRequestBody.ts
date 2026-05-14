@@ -1,4 +1,8 @@
-import type { ProductItem, UpdateSubscriptionV0Params } from "@autumn/shared";
+import type {
+	ProductItem,
+	ProductItemInterval,
+	UpdateSubscriptionV0Params,
+} from "@autumn/shared";
 import { useCallback } from "react";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
@@ -6,8 +10,9 @@ import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
 
 type PrepaidItemInput = {
 	feature_id?: string | null;
-	feature?: { internal_id?: string } | null;
+	feature?: { internal_id?: string | null } | null;
 	included_usage?: number | "inf" | null;
+	interval?: ProductItemInterval | null;
 };
 
 /** Pure function to build update subscription options from prepaid form values. Extracted for testability. */
@@ -63,12 +68,16 @@ export function buildUpdateSubscriptionOptions({
 					includedUsage: currentIncludedUsage,
 				}) !== (initialBackendQuantities[featureId] ?? 0);
 
+			// One-off items resubmit even when oldQuant === newQuant
+			// (each submission is a fresh top-up purchase).
+			const isOneOff = item.interval == null;
+			const quantityChanged = normalizedInputQuantity !== initialQuantity;
+
 			if (
 				normalizedInputQuantity !== undefined &&
 				normalizedInputQuantity !== null &&
 				featureId &&
-				(normalizedInputQuantity !== initialQuantity ||
-					purchasedQuantityChanged)
+				(quantityChanged || purchasedQuantityChanged || isOneOff)
 			) {
 				return {
 					feature_id: featureId,

@@ -9,6 +9,7 @@ import type {
 import { basePriceToProductItem } from "@shared/api/products/components/basePrice/basePriceToProductItem";
 import { customerProductToBasePrice } from "@shared/utils/cusProductUtils/convertCusProduct/customerProductToPrice";
 import { itemToPriceAndEnt } from "@shared/utils/productV2Utils/productItemUtils/mappers/itemToPriceAndEnt";
+import type { ReusePricesAndEntitlements } from "./types";
 
 const removeCurrentBasePrice = ({
 	targetCustomerProduct,
@@ -41,11 +42,13 @@ export const handleCustomizePrice = ({
 	customize,
 	targetCustomerProduct,
 	fullProduct,
+	reusePricesAndEntitlements,
 }: {
 	ctx: SharedContext;
 	customize: CustomizePlanV1;
 	targetCustomerProduct: FullCusProduct;
 	fullProduct: FullProduct;
+	reusePricesAndEntitlements?: ReusePricesAndEntitlements;
 }): {
 	customerPrices: FullCustomerPrice[];
 	prices: Price[];
@@ -60,18 +63,24 @@ export const handleCustomizePrice = ({
 		return { customerPrices, prices: [] };
 	}
 
-	const item = basePriceToProductItem({
-		ctx,
-		basePrice: customize.price,
-	});
-	const { newPrice, updatedPrice } = itemToPriceAndEnt({
-		item,
-		orgId: fullProduct.org_id,
-		internalProductId: fullProduct.internal_id,
-		isCustom: true,
-		features: ctx.features,
-	});
-	const price = newPrice ?? updatedPrice;
+	const overridePrice = customize.price.price_id
+		? reusePricesAndEntitlements?.pricesById.get(customize.price.price_id)
+		: undefined;
+	let price = overridePrice;
+	if (!price) {
+		const item = basePriceToProductItem({
+			ctx,
+			basePrice: customize.price,
+		});
+		const { newPrice, updatedPrice } = itemToPriceAndEnt({
+			item,
+			orgId: fullProduct.org_id,
+			internalProductId: fullProduct.internal_id,
+			isCustom: true,
+			features: ctx.features,
+		});
+		price = newPrice ?? updatedPrice ?? undefined;
+	}
 	const prices = price ? [price] : [];
 
 	fullProduct.prices.push(...prices);

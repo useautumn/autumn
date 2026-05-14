@@ -6,6 +6,15 @@ import { registerRedisCommands } from "./registerRedisCommands.js";
 const REDIS_COMMAND_TIMEOUT_MS =
 	process.env.NODE_ENV === "production" ? 10_000 : 60_000;
 
+const formatRedisEndpoint = ({ cacheUrl }: { cacheUrl: string }) => {
+	try {
+		const url = new URL(cacheUrl);
+		return `${url.protocol}//${url.host}`;
+	} catch {
+		return "<invalid redis url>";
+	}
+};
+
 /** Create a Redis connection for a specific region.
  *  `supportsUpstashShebang` defaults to true; set false for non-Upstash
  *  providers (ElastiCache, Dragonfly, self-hosted) that reject the
@@ -13,7 +22,7 @@ const REDIS_COMMAND_TIMEOUT_MS =
 export const createRedisClient = ({
 	cacheUrl,
 	region,
-	supportsUpstashShebang = true,
+	supportsUpstashShebang = false,
 	commandTimeout = REDIS_COMMAND_TIMEOUT_MS,
 }: {
 	cacheUrl: string;
@@ -21,6 +30,10 @@ export const createRedisClient = ({
 	supportsUpstashShebang?: boolean;
 	commandTimeout?: number;
 }): Redis => {
+	console.log(
+		`[Redis] ${region}: connecting to ${formatRedisEndpoint({ cacheUrl })}`,
+	);
+
 	const instance = new Redis(cacheUrl, {
 		tls:
 			process.env.CACHE_CERT && !cacheBackupUrl

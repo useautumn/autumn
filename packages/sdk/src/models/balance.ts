@@ -104,7 +104,7 @@ export type BalanceIntervalEnum = OpenEnum<typeof BalanceIntervalEnum>;
 /**
  * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
  */
-export type Interval = BalanceIntervalEnum | string;
+export type BalanceIntervalUnion = BalanceIntervalEnum | string;
 
 export type BalanceReset = {
   /**
@@ -365,16 +365,18 @@ export const BalanceIntervalEnum$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(BalanceIntervalEnum);
 
 /** @internal */
-export const Interval$inboundSchema: z.ZodMiniType<Interval, unknown> =
-  smartUnion([BalanceIntervalEnum$inboundSchema, types.string()]);
+export const BalanceIntervalUnion$inboundSchema: z.ZodMiniType<
+  BalanceIntervalUnion,
+  unknown
+> = smartUnion([BalanceIntervalEnum$inboundSchema, types.string()]);
 
-export function intervalFromJSON(
+export function balanceIntervalUnionFromJSON(
   jsonString: string,
-): SafeParseResult<Interval, SDKValidationError> {
+): SafeParseResult<BalanceIntervalUnion, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Interval$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Interval' from JSON`,
+    (x) => BalanceIntervalUnion$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'BalanceIntervalUnion' from JSON`,
   );
 }
 
