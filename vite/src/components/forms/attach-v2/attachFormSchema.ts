@@ -24,6 +24,7 @@ export const AttachFormSchema = z.object({
 	trialDuration: z.enum(FreeTrialDuration),
 	trialEnabled: z.boolean(),
 	trialCardRequired: z.boolean(),
+	trialOnEnd: z.enum(["bill", "revert"]),
 	planSchedule: z.custom<PlanTiming>().nullable(),
 	startDate: z.number().nullable(),
 	endDate: z.number().nullable(),

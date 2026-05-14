@@ -9,11 +9,13 @@ export const RELEVANT_STATUSES = [
 	CusProductStatus.Active,
 	CusProductStatus.PastDue,
 	CusProductStatus.Scheduled,
+	CusProductStatus.Paused,
 ];
 
 export const ALL_STATUSES = [
 	CusProductStatus.Scheduled,
 	CusProductStatus.Active,
 	CusProductStatus.PastDue,
+	CusProductStatus.Paused,
 	CusProductStatus.Expired,
 ];
