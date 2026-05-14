@@ -47,6 +47,8 @@ export const mapToTinybirdEvent = (event: EventInsert): TinybirdEvent => {
 		internal_entity_id: event.internal_entity_id ?? null,
 		customer_id: event.customer_id,
 		properties: event.properties ? JSON.stringify(event.properties) : null,
-		deductions: event.deductions ? JSON.stringify(event.deductions) : "[]",
+		deductions: event.deductions
+			? JSON.stringify({ list: event.deductions })
+			: "{}",
 	};
 };
