@@ -1,0 +1,45 @@
+packages/openapi/v2.3/openapi2.3.ts
+  s_b1a331f4eba7de::t_c4cbb04197a5e2 35-41
+  s_b1a331f4eba7de::t_16b52c99f3839e 80
+  s_b1a331f4eba7de::t_1f15e3f6ea3c2c 129
+  s_b1a331f4eba7de::t_a2713085258890 52
+  s_b1a331f4eba7de::t_0be6f8587b80eb 139-154
+packages/openapi/v2.3/contracts/index.ts
+  s_b1a331f4eba7de::t_6ca7d59cbf7ea2 58
+packages/openapi/utils/sdkGeneration/mergeCodeSamples.ts
+  s_a7d000bdbfcdac::t_35eb7a13be8e3d 40-42
+packages/openapi/v2.3/contracts/entitiesContract.ts
+  s_b1a331f4eba7de::t_bd61074018a3a6 2-9
+  s_a7d000bdbfcdac::t_e2992660227304 127
+  s_b1a331f4eba7de::t_d75c625a78e0d7 131-148
+packages/openapi/v2.3/contracts/customersContract.ts
+  s_b1a331f4eba7de::t_c195d9ded20bb1 85-86,97-108
+  s_b1a331f4eba7de::t_fd5ed4f945b465 1-13
+  s_a7d000bdbfcdac::t_ffc49cb9da8119 93
+packages/openapi/api.ts
+  s_b1a331f4eba7de::t_b17365766bdd4a 15-16,19,21-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "6fd35140a72b15d3fc27c03593150dbcdb157e4b",
+  "prompts": {},
+  "sessions": {
+    "s_a7d000bdbfcdac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1dcaf55e7ffeivmV1ymPikM08B",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
