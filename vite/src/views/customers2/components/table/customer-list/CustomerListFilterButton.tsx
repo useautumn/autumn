@@ -6,7 +6,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
-	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
@@ -87,19 +86,16 @@ export function CustomerListFilterButton({
 						setDropdownOpen={setOpen}
 					/>
 				)}
-				<div className="flex h-9 items-stretch justify-between">
-					<DropdownMenuItem
-						onClick={() => clearFilters()}
-						className="cursor-pointer justify-center gap-0 flex-1"
+				<div className="flex items-stretch">
+					<button
+						type="button"
+						onClick={clearFilters}
+						className="flex-1 flex items-center justify-center gap-1.5 rounded-bl-lg px-2 py-1.5 text-xs text-t3 hover:text-t2 hover:bg-accent cursor-default"
 					>
-						<X size={12} className="mr-2 text-t3" />
-						<p className="text-t3">Clear</p>
-					</DropdownMenuItem>
-					{!hideSavedViews && (
-						<div className="flex-1">
-							<SaveViewPopover onClose={closeFilterModal} />
-						</div>
-					)}
+						<X size={10} />
+						Clear
+					</button>
+					<SaveViewPopover onClose={closeFilterModal} />
 				</div>
 			</DropdownMenuContent>
 		</DropdownMenu>

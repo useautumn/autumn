@@ -6,7 +6,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import type { CustomerWithProducts } from "./CustomerListColumns";
 
@@ -26,9 +26,14 @@ export const CustomerListRowToolbar = ({
 				setOpen={setDeleteOpen}
 			/>
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-				<DropdownMenuTrigger asChild>
-					<ToolbarButton />
-				</DropdownMenuTrigger>
+				<div
+					onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+					onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+				>
+					<DropdownMenuTrigger asChild>
+						<ToolbarButton />
+					</DropdownMenuTrigger>
+				</div>
 				<DropdownMenuContent
 					className="text-t2"
 					align="end"
