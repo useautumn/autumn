@@ -29,7 +29,7 @@ import { MigrationView } from "./views/migrations/migration/MigrationView";
 import QuickstartView from "./views/onboarding4/QuickstartView";
 import ProductsView from "./views/products/ProductsView";
 import PlanEditorView from "./views/products/plan/PlanEditorView";
-import { OrgSettingsView } from "./views/settings/OrgSettingsView";
+import { SettingsView } from "./views/settings/SettingsView";
 import { TerminalView } from "./views/TerminalView";
 
 function SquircleProvider({ children }: { children: React.ReactNode }) {
@@ -80,7 +80,8 @@ export default function App() {
 
 				<Route element={<MainLayout />}>
 					<Route path="*" element={<DefaultView />} />
-					<Route path="/settings" element={<OrgSettingsView />} />
+					<Route path="/settings" element={<SettingsView />} />
+					<Route path="/sandbox/settings" element={<SettingsView />} />
 					<Route path="/admin" element={<AdminView />} />
 					<Route path="/sandbox/admin" element={<AdminView />} />
 					<Route path="/admin/oauth" element={<OAuthClientsView />} />
