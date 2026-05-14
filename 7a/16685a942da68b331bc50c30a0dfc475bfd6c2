@@ -1,0 +1,131 @@
+server/experiments/paginationBenchmarkDbStats.ts
+  s_4349c2e9188025::t_fbdc4cdf683737 315-320
+  s_4349c2e9188025::t_76c969ca129f27 2-314,321-678
+  s_4349c2e9188025::t_f14f5d827cc456 1
+server/experiments/list-customers-sql/06-prebuilt-json-page1.sql
+  s_b1a331f4eba7de::t_db9859707f0cbf 1-170
+server/experiments/diffV07VsV22.ts
+  s_b1a331f4eba7de::t_0e3712f87377bc 2,21-24,26,29-33,35,38,97-103,105-106,115,125-131,133-134,143,150-240,242-285,332-342,345,347-387,389-392,395-408,413
+  s_b1a331f4eba7de::t_7e6e75ca534730 146
+  s_b1a331f4eba7de::t_5f44679305ed78 1,3-20,25,27-28,34,36-37,39-96,104,107-114,116-124,132,135-142,144-145,147,241,286-331,343-344,346,388,393-394,409-412,414-426
+  s_b1a331f4eba7de::t_5ebeb7257f6281 148-149
+server/experiments/list-customers-sql/00-baseline-page1.sql
+  s_b1a331f4eba7de::t_219257d36d9fd0 1-173
+server/experiments/diffOptimizedVsCurrent.ts
+  s_a7d000bdbfcdac::t_5412bf04ee12ba 74-87
+  s_a7d000bdbfcdac::t_6f0200e235b358 1-2
+  s_a7d000bdbfcdac::t_6e1d9972f90d3a 25-27,32
+  s_a7d000bdbfcdac::t_d98054c68cd4fd 3-24,28-31,33-73,88-180
+scripts/seed/seedPaginationBenchmark.ts
+  s_b1a331f4eba7de::t_c640e123f390c5 28,52-54,59
+  s_b1a331f4eba7de::t_e8d0db5f1dfcbe 352-354,361-374,378-384
+  s_b1a331f4eba7de::t_3b0d08303f5670 182,188,194,197,204-205
+server/experiments/list-customers-sql/08-old-vs-new-deep.sql
+  s_b1a331f4eba7de::t_bf9ab1c21a29cf 1,4-5,11-14,17-24,27-184,186-188,191-328
+  s_b1a331f4eba7de::t_99b6ebb3272ba2 2-3,6-10,15-16,25-26,185,189-190
+server/experiments/list-customers-sql/01-inline-correlated-page1.sql
+  s_b1a331f4eba7de::t_40577de60a192d 84-85
+  s_b1a331f4eba7de::t_fa7fb1c41e1292 1-83,86-131
+server/experiments/checkRevcatIndex.ts
+  s_b1a331f4eba7de::t_45594528d32435 1-24
+server/experiments/list-customers-sql/04-lateral-leaves-page1.sql
+  s_b1a331f4eba7de::t_90cdc0b8dd24d3 1-150
+server/experiments/benchDashboardMerge.ts
+  s_a7d000bdbfcdac::t_e28dcf9ebd3a2c 1-115,121-131,137-142,146-153
+  s_a7d000bdbfcdac::t_4d9678a4ad0709 116-120,132-136,143-145
+server/experiments/list-customers-sql/README.md
+  s_b1a331f4eba7de::t_35bcba33583214 1-29
+server/experiments/list-customers-sql/02-flat-bulk-fetch-page1.sql
+  s_b1a331f4eba7de::t_45c41ad0233a88 1-127
+server/experiments/list-customers-sql/05-array-fence-page1.sql
+  s_b1a331f4eba7de::t_a97ab9f615ee35 1-163
+server/experiments/optimizedFullCusQuery.ts
+  s_a7d000bdbfcdac::t_921ebcdb6e994b 1-24,28-90,92-95,104-111,117,127-137,142-145,148,151-153,156-158,162-163,166-167,170-173
+  s_a7d000bdbfcdac::t_66d5414d07a0c9 25-27,96-103,118-122,124,126,138-141,146-147,149-150,154-155,159-161,164-165,168-169
+  s_a7d000bdbfcdac::t_3038c1e4a2adab 91,112-116
+  s_a7d000bdbfcdac::t_7af0ce6b5c5a6a 123
+  s_a7d000bdbfcdac::t_1cd738876a8d3a 125
+server/experiments/diffDashboardMerge.ts
+  s_a7d000bdbfcdac::t_4770a3f614e728 1-276,283-284,286-288,290-305
+  s_a7d000bdbfcdac::t_b04222eeaceba1 277-282,285,289
+server/experiments/list-customers-sql/03-lateral-plus-leaf-bulk-page1.sql
+  s_b1a331f4eba7de::t_14f145fd33eafd 1-121
+server/experiments/debugOptimizedQuery.ts
+  s_a7d000bdbfcdac::t_1b818c5d7b95e4 20
+  s_a7d000bdbfcdac::t_e65c1136f96463 1-19,21-47
+server/experiments/paginationBenchmark.ts
+  s_b1a331f4eba7de::t_98ca259c1f9493 185
+  s_b1a331f4eba7de::t_4f283f00a343be 9
+  s_b1a331f4eba7de::t_c1e936a9fa0000 161
+server/experiments/list-customers-sql/09-sql-reassembly-page1.sql
+  s_b1a331f4eba7de::t_f2932b657f385f 1-244
+server/experiments/inspectUnitTestOrg.ts
+  s_a7d000bdbfcdac::t_a0a6b7f296c615 1-90
+server/experiments/inspectIndexes.ts
+  s_a7d000bdbfcdac::t_3c6717d83e37ea 1-52
+server/experiments/v07ReassemblyBenchmark.ts
+  s_b1a331f4eba7de::t_8221523e9589c0 1-453,456-463
+  s_b1a331f4eba7de::t_d45fa61a56e7f8 454-455
+server/experiments/list-customers-sql/00-baseline-deep.sql
+  s_b1a331f4eba7de::t_9b5a0f2b186b5c 1-174
+server/experiments/sqlBenchUnitTestOrg.ts
+  s_a7d000bdbfcdac::t_399132a707929d 81,92,94,97-120
+  s_a7d000bdbfcdac::t_f0e08987dea7eb 8
+  s_a7d000bdbfcdac::t_262b2bf17f4a36 22
+  s_a7d000bdbfcdac::t_d00f5b35d20c43 201-204,216-218,220-221,224-228,230,232-237,239-240,243-268,280-293
+  s_a7d000bdbfcdac::t_1807dd23e72163 1-7,9-19,23-77,88-91,93,95-96,122-126,129-132,135-138,140-159,162-164,167-169,171-200,205,229,269-272,294-304
+  s_a7d000bdbfcdac::t_4c3e4e844049a3 20-21
+  s_a7d000bdbfcdac::t_a9fa3e456820f3 127,133
+  s_a7d000bdbfcdac::t_b7017e574c0889 161,166,170
+  s_a7d000bdbfcdac::t_6853c545fb6cfa 78-80,82-87,121
+  s_a7d000bdbfcdac::t_216189b8ed8c08 128,134,139
+  s_a7d000bdbfcdac::t_65c29d6b4640a7 206-215,219,222-223,238,241-242
+  s_a7d000bdbfcdac::t_904472c5e472bf 231,273-279
+  s_a7d000bdbfcdac::t_51b86ee9ecfc57 160,165
+server/experiments/list-customers-sql/07-json-and-merged-ces-page1.sql
+  s_b1a331f4eba7de::t_0b78dc119defe0 1-151
+server/experiments/versionPipelineBench.ts
+  s_a7d000bdbfcdac::t_dfdeecbbc1533a 514,523
+  s_b1a331f4eba7de::t_07154e3c61d1f2 1-513,515-522,524-546
+scripts/seed/seedCustomerProductShapes.ts
+  s_a7d000bdbfcdac::t_208b4ea7af9b43 41,43,62-64,67-69
+  s_a7d000bdbfcdac::t_b18df6a1a1b276 321
+  s_a7d000bdbfcdac::t_decc6f803df601 483-486,488-495
+  s_a7d000bdbfcdac::t_ec79434615e583 1-2,6-7,10,12-40,42,44-61,65-66,70-253,258-320,322-378,380-482,487,496-510
+  s_a7d000bdbfcdac::t_532a07e5b1cc4e 379
+  s_a7d000bdbfcdac::t_d8dc08f436f5ce 3-5,8-9
+  s_a7d000bdbfcdac::t_02d132704a2dbf 11
+  s_a7d000bdbfcdac::t_f2113559ce8dac 254-257
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "7a16685a942da68b331bc50c30a0dfc475bfd6c2",
+  "prompts": {},
+  "sessions": {
+    "s_4349c2e9188025": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1de20cfd0ffeFT7l4Zj1K77S5E",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_a7d000bdbfcdac": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1dcaf55e7ffeivmV1ymPikM08B",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_b1a331f4eba7de": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
