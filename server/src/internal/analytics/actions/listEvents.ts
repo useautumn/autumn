@@ -88,7 +88,11 @@ export const listEvents = async ({
 		if (row.deductions) {
 			try {
 				const parsed = JSON.parse(row.deductions);
-				if (Array.isArray(parsed)) deductions = parsed as TrackDeduction[];
+				if (Array.isArray(parsed)) {
+					deductions = parsed as TrackDeduction[];
+				} else if (parsed && Array.isArray(parsed.list)) {
+					deductions = parsed.list as TrackDeduction[];
+				}
 			} catch {
 				// Invalid JSON — leave null so the caller can distinguish missing
 				// vs explicit empty.
