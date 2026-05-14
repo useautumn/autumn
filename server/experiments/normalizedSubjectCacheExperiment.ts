@@ -264,6 +264,7 @@ const generateNormalized = (): NormalizedFullSubject => {
 						display: null,
 						archived: false,
 						event_names: [],
+						is_ai_credit_system: false,
 					},
 				},
 				rollovers: [] as any,

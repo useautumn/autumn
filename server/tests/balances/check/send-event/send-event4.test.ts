@@ -82,7 +82,7 @@ describe(`${chalk.yellowBright("send-event4: Testing check with track, unlimited
 			send_event: true,
 		});
 
-		const requiredBalance = getCreditCost({
+		const requiredBalance = await getCreditCost({
 			featureId: TestFeature.Action1,
 			creditSystem: ctx.features.find((f) => f.id === TestFeature.Credits)!,
 			amount: 1000,

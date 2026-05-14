@@ -21,6 +21,8 @@ const create = ({
 	intervalCount = 1,
 	entityFeatureId = null,
 	rollover = null,
+	modelMarkups = null,
+	isAiCreditSystem = false,
 }: {
 	id?: string;
 	featureId: string;
@@ -33,6 +35,11 @@ const create = ({
 	intervalCount?: number;
 	entityFeatureId?: string | null;
 	rollover?: RolloverConfig | null;
+	modelMarkups?: Record<
+		string,
+		{ markup: number; input_cost?: number; output_cost?: number }
+	> | null;
+	isAiCreditSystem?: boolean;
 }) => ({
 	id: id ?? `ent_${featureId}_${crypto.randomUUID().slice(0, 8)}`,
 	created_at: Date.now(),
@@ -54,6 +61,8 @@ const create = ({
 		name: featureName,
 		type: featureType,
 		config: featureConfig,
+		modelMarkups: modelMarkups ?? null,
+		isAiCreditSystem: isAiCreditSystem ?? false,
 	}),
 });
 

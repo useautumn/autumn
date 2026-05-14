@@ -1,4 +1,8 @@
-import { type Feature, FeatureUsageType } from "@autumn/shared";
+import {
+	type CreditSchemaItem,
+	type Feature,
+	FeatureUsageType,
+} from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -53,14 +57,23 @@ function UpdateFeatureSheet({
 
 		setLoading(true);
 		try {
+			const isAiCreditSystem = feature.is_ai_credit_system ?? false;
+
 			await FeatureService.updateFeature(axiosInstance, selectedFeature.id, {
 				...feature,
 				id: feature.id || undefined,
 				name: feature.name || undefined,
 				type: feature.type,
 				consumable: feature.config?.usage_type === FeatureUsageType.Single,
+				model_markups: feature.model_markups ?? undefined,
 				event_names: feature.event_names,
 				display: undefined,
+				credit_schema: isAiCreditSystem
+					? undefined
+					: feature.config?.schema?.map((item: CreditSchemaItem) => ({
+							metered_feature_id: item.metered_feature_id,
+							credit_cost: item.credit_amount,
+						})),
 			});
 
 			await refetch();

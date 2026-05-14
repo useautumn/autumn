@@ -10,10 +10,12 @@ import { handleListFeaturesV1 } from "./handlers/handleListFeatures/handleListFe
 import { handleUpdateFeatureV1 } from "./handlers/handleUpdateFeature/handleUpdateFeatureV1";
 import { handleUpdateFeatureV2 } from "./handlers/handleUpdateFeature/handleUpdateFeatureV2";
 import { handleGetFeatureDeletionInfo } from "./internalHandlers/handleGetFeatureDeletionInfo";
+import { handleGetModelPricing } from "./internalHandlers/handleGetModelPricing";
 
 export const featureRouter = new Hono<HonoEnv>();
 featureRouter.get("", ...handleListFeaturesV1);
 featureRouter.post("", ...handleCreateFeatureV1);
+featureRouter.get("/ai/model_pricing", ...handleGetModelPricing);
 featureRouter.get("/:feature_id", ...handleGetFeatureV1);
 featureRouter.post("/:feature_id", ...handleUpdateFeatureV1);
 featureRouter.delete("/:feature_id", ...handleDeleteFeatureV1);

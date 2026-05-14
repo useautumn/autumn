@@ -1,0 +1,141 @@
+---
+title: "Vercel AI SDK"
+description: "Automatically track AI token usage with the Vercel AI SDK"
+---
+
+The `@useautumn/ai-sdk` package integrates Autumn with the [Vercel AI SDK](https://sdk.vercel.ai), automatically tracking token usage for every `generateText` or `streamText` call. No manual `trackTokens` calls needed.
+
+## Setup
+
+#### 1. Install the package
+
+<CodeGroup>
+```bash npm
+npm install @useautumn/ai-sdk
+```
+
+```bash pnpm
+pnpm add @useautumn/ai-sdk
+```
+
+```bash yarn
+yarn add @useautumn/ai-sdk
+```
+
+```bash bun
+bun add @useautumn/ai-sdk
+```
+</CodeGroup>
+
+<Note>
+  Requires `autumn-js` and `ai` (v6+) as peer dependencies.
+</Note>
+
+#### 2. Wrap your model
+
+Use `withTokenTracking` to wrap any AI SDK language model. It intercepts generate and stream calls, reads the token usage from the response, and reports it to Autumn automatically.
+
+```typescript
+import { Autumn } from "autumn-js";
+import { anthropic } from "@ai-sdk/anthropic";
+import { withTokenTracking } from "@useautumn/ai-sdk";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+const model = withTokenTracking({
+  autumn,
+  model: anthropic("claude-sonnet-4-5-20250514"),
+  customerId: "user_123",
+});
+```
+
+#### 3. Use as normal
+
+The wrapped model works exactly like a regular AI SDK model. Token usage is tracked in the background after each call.
+
+```typescript
+import { generateText, streamText } from "ai";
+
+// Generate — usage tracked automatically
+const { text } = await generateText({
+  model,
+  prompt: "Explain quantum computing in one paragraph",
+});
+
+// Stream — usage tracked when the stream finishes
+const result = streamText({
+  model,
+  prompt: "Write a short poem about recursion",
+});
+
+for await (const chunk of result.textStream) {
+  process.stdout.write(chunk);
+}
+```
+
+## Model ID format
+
+The wrapped model constructs the `modelId` sent to Autumn using `provider/model` format, derived from the AI SDK model's `provider` and `modelId` fields. This must match a valid provider and model key from [Models.dev](https://models.dev).
+
+For example:
+- `@ai-sdk/anthropic` → `anthropic/claude-sonnet-4-5-20250514`
+- `@ai-sdk/openai` → `openai/gpt-4o`
+- `@ai-sdk/google` → `google/gemini-2.5-pro`
+
+If the AI SDK provider name doesn't match the Models.dev provider key, use the `providerId` option to override it:
+
+```typescript
+import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+
+const openrouter = createOpenRouter();
+
+const model = withTokenTracking({
+  autumn,
+  model: openrouter("anthropic/claude-opus-4-6"),
+  customerId: "user_123",
+  providerId: "openrouter",  // Override provider prefix
+});
+// Sends modelId as "openrouter/anthropic/claude-opus-4-6"
+```
+
+## Options
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `autumn` | `Autumn` | Yes | Your Autumn SDK client instance |
+| `model` | `LanguageModelV3` | Yes | The AI SDK language model to wrap |
+| `customerId` | `string` | Yes | The Autumn customer ID to attribute usage to |
+| `providerId` | `string` | No | Override the provider prefix in the model name sent to Autumn. Falls back to the model's `provider` field |
+| `featureId` | `string` | No | Target a specific AI credit system feature. Auto-detected if you only have one |
+| `entityId` | `string` | No | Entity ID for entity-scoped balance tracking |
+| `properties` | `Record<string, unknown>` | No | Additional properties to attach to each usage event |
+
+## Full example
+
+```typescript
+import { Autumn } from "autumn-js";
+import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
+import { withTokenTracking } from "@useautumn/ai-sdk";
+
+const autumn = new Autumn({ secretKey: process.env.AUTUMN_SECRET_KEY! });
+
+async function chat(customerId: string, message: string) {
+  const model = withTokenTracking({
+    autumn,
+    model: openai("gpt-4o"),
+    customerId,
+  });
+
+  const { text } = await generateText({
+    model,
+    prompt: message,
+  });
+
+  return text;
+}
+```
+
+<Tip>
+  Tracking failures are caught and logged to the console — they won't break your AI features. Check your server logs if usage isn't appearing in Autumn.
+</Tip>

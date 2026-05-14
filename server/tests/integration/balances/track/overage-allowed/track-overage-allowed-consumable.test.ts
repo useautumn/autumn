@@ -368,7 +368,7 @@ test.concurrent(`${chalk.yellowBright("track-consumable-overage-8: credit system
 		(feature) => feature.id === TestFeature.Credits,
 	)!;
 
-	const action1CreditCost = getCreditCost({
+	const action1CreditCost = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditsFeature,
 		amount: 1,

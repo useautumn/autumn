@@ -489,7 +489,7 @@ test.concurrent(`${chalk.yellowBright("track-per-entity-spend-limit5: credit-sys
 	const creditsFeature = ctx.features.find(
 		(feature) => feature.id === TestFeature.Credits,
 	)!;
-	const action1CreditCost = getCreditCost({
+	const action1CreditCost = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditsFeature,
 		amount: 1,

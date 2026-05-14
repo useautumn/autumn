@@ -52,6 +52,7 @@ describe("fullSubject aggregate balance", () => {
 				display: null,
 				archived: false,
 				event_names: [],
+				is_ai_credit_system: false,
 			},
 		};
 

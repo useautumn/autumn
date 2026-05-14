@@ -131,12 +131,12 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-2: cross-boundary lock=8 c
   });
 
   const creditFeature = features.find((f) => f.id === TestFeature.Credits)!;
-  const lockCreditCost = getCreditCost({
+  const lockCreditCost = await getCreditCost({
     featureId: TestFeature.Action1,
     creditSystem: creditFeature,
     amount: 3, // overflow during lock: 8 - 5 remaining = 3
   });
-  const extraCreditCost = getCreditCost({
+  const extraCreditCost = await getCreditCost({
     featureId: TestFeature.Action1,
     creditSystem: creditFeature,
     amount: 4, // confirm delta: 12 - 8 = 4 more units
@@ -289,7 +289,7 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-4: lock within action1, co
   // Lock deducted 10 from action1 (→90). Confirm delta=+105:
   // exhaust remaining 90 from action1 (→0), then 15 overflow → 15×0.2=3 credits.
   const creditFeature = features.find((f) => f.id === TestFeature.Credits)!;
-  const overflowCreditCost = getCreditCost({
+  const overflowCreditCost = await getCreditCost({
     featureId: TestFeature.Action1,
     creditSystem: creditFeature,
     amount: 15,
@@ -628,12 +628,12 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-9: cross-boundary lock=8 c
   // Lock deducted: 5 from action1 + 3 overflow (0.6 credits).
   // Confirm delta = 20 - 8 = 12 more units, action1 is already 0, all go to credits: 12×0.2=2.4.
   const creditFeature = features.find((f) => f.id === TestFeature.Credits)!;
-  const lockOverflowCost = getCreditCost({
+  const lockOverflowCost = await getCreditCost({
     featureId: TestFeature.Action1,
     creditSystem: creditFeature,
     amount: 3,
   });
-  const confirmExtraCost = getCreditCost({
+  const confirmExtraCost = await getCreditCost({
     featureId: TestFeature.Action1,
     creditSystem: creditFeature,
     amount: 12,
@@ -721,7 +721,7 @@ test.concurrent(`${chalk.yellowBright("lock-credit CS-10: confirm no override_va
 
   // Balances unchanged from what the lock left
   const creditFeature = features.find((f) => f.id === TestFeature.Credits)!;
-  const lockOverflowCost = getCreditCost({
+  const lockOverflowCost = await getCreditCost({
     featureId: TestFeature.Action1,
     creditSystem: creditFeature,
     amount: 3, // overflow during lock: 8 - 5 remaining = 3

@@ -11,6 +11,12 @@ export interface ApiFeatureParams {
 		metered_feature_id: string;
 		credit_cost: number;
 	}>;
+	model_markups?: Record<string, {
+		markup: number;
+		input_cost?: number;
+		output_cost?: number;
+	}>;
+	is_ai_credit_system?: boolean;
 }
 
 export function transformFeatureToApi(feature: Feature): ApiFeatureParams {
@@ -37,6 +43,21 @@ export function transformFeatureToApi(feature: Feature): ApiFeatureParams {
 			metered_feature_id: entry.meteredFeatureId,
 			credit_cost: entry.creditCost,
 		}));
+	}
+
+	if (feature.type === "ai_credit_system" && feature.modelMarkups) {
+		base.type = "credit_system";
+		base.is_ai_credit_system = true;
+		base.model_markups = Object.fromEntries(
+			Object.entries(feature.modelMarkups).map(([modelId, entry]) => [
+				modelId,
+				{
+					markup: entry.markup,
+					input_cost: entry.inputCost,
+					output_cost: entry.outputCost,
+				},
+			])
+		);
 	}
 
 	return base;

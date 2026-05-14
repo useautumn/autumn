@@ -68,6 +68,8 @@ export const PlanFeatureRow = ({
 
 	const feature = features.find((f) => f.id === item.feature_id);
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
+	const isAiCreditSystem = feature?.is_ai_credit_system ?? false;
+
 	const displayText = hasFeatureName
 		? display.primary_text
 		: "Name your feature";
@@ -209,7 +211,9 @@ export const PlanFeatureRow = ({
 						{displayText}
 					</span>
 
-					<span className="text-body-secondary"> {display.secondary_text}</span>
+					{!isAiCreditSystem && display.secondary_text && (
+						<span className="text-body-secondary"> {display.secondary_text}</span>
+					)}
 				</p>
 
 				<div

@@ -1,3 +1,4 @@
+import { ModelMarkupsSchema } from "@models/featureModels/featureConfig/creditConfig";
 import { z } from "zod/v4";
 import { AppEnv } from "../genModels/genEnums";
 import { FeatureType } from "./featureEnums";
@@ -22,6 +23,8 @@ export const FeatureSchema = z.object({
 		.nullish(),
 	archived: z.boolean(),
 	event_names: z.array(z.string()).default([]),
+	model_markups: ModelMarkupsSchema.nullish(),
+	is_ai_credit_system: z.boolean().default(false),
 });
 
 export const CreateFeatureSchema = FeatureSchema.pick({
@@ -31,6 +34,8 @@ export const CreateFeatureSchema = FeatureSchema.pick({
 	config: true,
 	display: true,
 	event_names: true,
+	model_markups: true,
+	is_ai_credit_system: true,
 });
 
 export const MinFeatureSchema = z.object({

@@ -44,9 +44,17 @@ export const DummyPlanFeatureRow = () => {
 		return "Chat Messages";
 	};
 
+	const isAiCreditSystem =
+		featureType === FeatureType.CreditSystem &&
+		(feature.is_ai_credit_system ?? false);
+
 	// Build display text based on feature type
 	const getDisplayText = () => {
 		const name = hasName ? featureName : getPlaceholderName();
+
+		if (isAiCreditSystem) {
+			return { primary: `$10.00 of ${name}`, secondary: "" };
+		}
 
 		if (featureType === FeatureType.CreditSystem) {
 			return { primary: `100 ${name}`, secondary: "" };

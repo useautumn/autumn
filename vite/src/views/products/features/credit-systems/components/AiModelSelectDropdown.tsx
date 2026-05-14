@@ -1,0 +1,53 @@
+import type { ModelsDevModel, ModelsDevProvider } from "@autumn/shared";
+import { useMemo } from "react";
+import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
+
+interface AiModelSelectDropdownProps {
+	value: string;
+	onValueChange: (modelKey: string) => void;
+	provider: ModelsDevProvider;
+	isLoading: boolean;
+}
+
+export function AiModelSelectDropdown({
+	value,
+	onValueChange,
+	provider,
+	isLoading,
+}: AiModelSelectDropdownProps) {
+	const models: ModelsDevModel[] = useMemo(
+		() => Object.values(provider.models),
+		[provider],
+	);
+
+	return (
+		<div onWheel={(e) => e.stopPropagation()}>
+			<SearchableSelect
+				contentClassName="w-full"
+				value={value || null}
+				onValueChange={onValueChange}
+				options={models}
+				getOptionValue={(model) => model.id}
+				getOptionLabel={(model) => model.name}
+				renderValue={(option) =>
+					option ? (
+						<span>{option.name}</span>
+					) : provider.models[value]?.name ? (
+						<span>{provider.models[value].name}</span>
+					) : value ? (
+						<span>{value}</span>
+					) : (
+						<span className="text-t3">
+							{isLoading ? "Loading models..." : "Select model"}
+						</span>
+					)
+				}
+				placeholder={isLoading ? "Loading models..." : "Select model"}
+				searchable
+				searchPlaceholder="Search models..."
+				emptyText="No models found"
+				disabled={isLoading}
+			/>
+		</div>
+	);
+}

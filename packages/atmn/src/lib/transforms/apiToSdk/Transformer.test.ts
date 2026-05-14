@@ -31,7 +31,9 @@ describe("Transformer", () => {
 			const result = transformApiFeature(apiFeature);
 
 			expect(result.type).toBe("metered");
-			expect(result.consumable).toBe(true);
+			if (result.type === "metered") {
+				expect(result.consumable).toBe(true);
+			}
 			expect(result.id).toBe("api_calls");
 		});
 
@@ -46,7 +48,9 @@ describe("Transformer", () => {
 			const result = transformApiFeature(apiFeature);
 
 			expect(result.type).toBe("metered");
-			expect(result.consumable).toBe(false);
+			if (result.type === "metered") {
+				expect(result.consumable).toBe(false);
+			}
 		});
 
 		test("credit_system", () => {
@@ -60,8 +64,30 @@ describe("Transformer", () => {
 			const result = transformApiFeature(apiFeature);
 
 			expect(result.type).toBe("credit_system");
-			expect(result.consumable).toBe(true);
-			expect(result.creditSchema).toHaveLength(1);
+			if (result.type === "credit_system") {
+				expect(result.consumable).toBe(true);
+				expect(result.creditSchema).toHaveLength(1);
+			}
+		});
+
+		test("ai_credit_system", () => {
+			const apiFeature = {
+				id: "ai_credits",
+				name: "AI Credits",
+				type: "credit_system",
+				is_ai_credit_system: true,
+				model_markups: {
+					"anthropic/claude-opus-4-5": { markup: 20 },
+				},
+			};
+
+			const result = transformApiFeature(apiFeature);
+
+			expect(result.type).toBe("ai_credit_system");
+			if (result.type === "ai_credit_system") {
+				expect(result.modelMarkups).toBeDefined();
+				expect(result.modelMarkups["anthropic/claude-opus-4-5"].markup).toBe(20);
+			}
 		});
 	});
 

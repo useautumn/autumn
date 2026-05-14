@@ -81,6 +81,7 @@ const buildNormalized = (): NormalizedFullSubject =>
 						created_at: 1,
 						archived: false,
 						event_names: [],
+						is_ai_credit_system: false,
 					},
 				},
 				rollovers: [],

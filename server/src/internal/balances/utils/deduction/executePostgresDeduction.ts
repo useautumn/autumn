@@ -111,7 +111,7 @@ export const executePostgresDeduction = async ({
 				customerEntitlements,
 				unlimitedFeatureIds,
 				lock: preparedLock,
-			} = prepareFeatureDeduction({
+			} = await prepareFeatureDeduction({
 				ctx,
 				fullCustomer,
 				deduction,
