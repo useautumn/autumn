@@ -10,6 +10,7 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -133,6 +134,7 @@ export const SelectGroupByDropdown = ({
 
 				<div className="max-h-[300px] overflow-y-auto pt-1">
 					<DropdownMenuItem
+						closeOnClick={false}
 						onClick={() => handleSelect({ property: null })}
 						className="flex items-center justify-between"
 					>
@@ -144,6 +146,7 @@ export const SelectGroupByDropdown = ({
 					<DropdownMenuSeparator />
 					{showCustomerIdOption && (
 						<DropdownMenuItem
+							closeOnClick={false}
 							onClick={() => handleSelect({ property: "customer_id" })}
 							className="flex items-center justify-between"
 						>
@@ -154,6 +157,7 @@ export const SelectGroupByDropdown = ({
 						</DropdownMenuItem>
 					)}
 					<DropdownMenuItem
+						closeOnClick={false}
 						onClick={() => handleSelect({ property: "entity_id" })}
 						className="flex items-center justify-between"
 					>
@@ -174,6 +178,7 @@ export const SelectGroupByDropdown = ({
 					{filteredOptions.map((property) => (
 						<DropdownMenuItem
 							key={property}
+							closeOnClick={false}
 							onClick={() => handleSelect({ property })}
 							className="flex items-center justify-between"
 						>
@@ -233,10 +238,12 @@ export const SelectGroupByDropdown = ({
 					{currentGroupBy && availableGroupValues.length > 0 && (
 						<>
 							<DropdownMenuSeparator />
+							<DropdownMenuGroup>
 							<DropdownMenuLabel className="text-xs text-t4 font-normal">
 								Filter by value
 							</DropdownMenuLabel>
 							<DropdownMenuItem
+								closeOnClick={false}
 								onClick={() => setGroupFilter(null)}
 								className="flex items-center justify-between"
 							>
@@ -255,6 +262,7 @@ export const SelectGroupByDropdown = ({
 								return (
 									<DropdownMenuItem
 										key={value}
+										closeOnClick={false}
 										onClick={() => setGroupFilter(value)}
 										className="flex items-center justify-between"
 									>
@@ -267,6 +275,7 @@ export const SelectGroupByDropdown = ({
 									</DropdownMenuItem>
 								);
 							})}
+							</DropdownMenuGroup>
 						</>
 					)}
 				</div>

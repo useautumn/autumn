@@ -1,4 +1,3 @@
-import { DropdownMenuGroup } from "@/components/v2/dropdowns/DropdownMenu";
 import { useQueryClient } from "@tanstack/react-query";
 import {
 	ChevronDown,
@@ -14,9 +13,11 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuPortal,
 	DropdownMenuSeparator,
@@ -24,8 +25,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { setLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import {
@@ -122,7 +122,7 @@ export const OrgDropdown = () => {
 				</AdminHover>
 				<DropdownMenuContent
 					align="start"
-					className="border-1 border-zinc-200 shadow-sm w-48"
+					className="w-48"
 				>
 					<AdminDropdownItems />
 					<DropdownMenuItem className="flex justify-between w-full items-center gap-2 text-t2">

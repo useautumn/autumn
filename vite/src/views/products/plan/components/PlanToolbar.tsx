@@ -6,7 +6,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { cn } from "@/lib/utils";
