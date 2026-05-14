@@ -1,7 +1,7 @@
 import type { EventInsert } from "@autumn/shared";
 
 /** Tinybird event schema (matches events.datasource) */
-export interface TinybirdEvent {
+export type TinybirdEvent = {
 	id: string;
 	org_id: string;
 	org_slug: string | null;
@@ -18,7 +18,7 @@ export interface TinybirdEvent {
 	customer_id: string;
 	properties: string | null;
 	deductions: string | null;
-}
+};
 
 /** Convert EventInsert to Tinybird schema */
 export const mapToTinybirdEvent = (event: EventInsert): TinybirdEvent => {

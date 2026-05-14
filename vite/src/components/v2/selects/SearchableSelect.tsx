@@ -34,6 +34,7 @@ export type SearchableSelectProps<T> = {
 	triggerClassName?: string;
 	contentClassName?: string;
 	defaultOpen?: boolean;
+	header?: ReactNode;
 	footer?: ReactNode;
 };
 
@@ -54,6 +55,7 @@ export function SearchableSelect<T>({
 	triggerClassName,
 	contentClassName,
 	defaultOpen = false,
+	header,
 	footer,
 }: SearchableSelectProps<T>) {
 	const [open, setOpen] = useState(false);
@@ -151,6 +153,7 @@ export function SearchableSelect<T>({
 								}
 							>
 								{searchable && <CommandInput placeholder={searchPlaceholder} />}
+								{header}
 								<CommandList>
 									<CommandEmpty className="text-t3">{emptyText}</CommandEmpty>
 									<CommandGroup>

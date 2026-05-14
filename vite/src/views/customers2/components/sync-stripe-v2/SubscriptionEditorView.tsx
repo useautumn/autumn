@@ -22,6 +22,7 @@ import {
 } from "@/components/forms/shared/utils/planCustomizationUtils";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/v2/buttons/Button";
+import { InlineAction } from "@/components/v2/buttons/InlineAction";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -521,14 +522,12 @@ export function SubscriptionEditorView({
 										}
 									/>
 								))}
-								<button
-									type="button"
-									onClick={() => handleAddPlan(phaseIndex)}
-									className="flex items-center gap-1 text-xs text-t4 hover:text-t2 transition-colors py-1"
-								>
-									<PlusIcon size={11} />
-									Add plan
-								</button>
+							<InlineAction
+								icon={<PlusIcon size={11} />}
+								onClick={() => handleAddPlan(phaseIndex)}
+							>
+								Add plan
+							</InlineAction>
 							</div>
 						</div>
 					);
