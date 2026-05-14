@@ -1,0 +1,45 @@
+scripts/dw.ts
+  s_96c52b8fa1a6bd::t_e0063fa45efdc4 374-403,421-423
+  s_96c52b8fa1a6bd::t_d297e54dc7b43e 214-218,220-221,223-224
+  s_96c52b8fa1a6bd::t_4318789c7e57de 201-211
+  s_96c52b8fa1a6bd::t_f9648026685bfd 312-314,322-326
+  s_96c52b8fa1a6bd::t_2339ddb9646c11 228-230,232
+  s_96c52b8fa1a6bd::t_fa2342ee3286ae 338,349-350
+  s_96c52b8fa1a6bd::t_fe7da71308e112 212-213,219,222,225,227,231,233-234
+  s_96c52b8fa1a6bd::t_32a90f0dad5d02 315-321
+  s_96c52b8fa1a6bd::t_a57218f8e28f52 238-239
+  s_96c52b8fa1a6bd::t_5cce51943c23ba 165-169,181,192
+  s_96c52b8fa1a6bd::t_6606a5046116c7 534,537-549,551-552,571-576
+  s_96c52b8fa1a6bd::t_d94c382d934a88 465-470
+  s_96c52b8fa1a6bd::t_d961a7be02d262 258-271,280,282-283,285,294-311
+  s_96c52b8fa1a6bd::t_e32de28905e237 404-420,424-435
+  s_96c52b8fa1a6bd::t_b6d5aa66964ddd 368
+  s_96c52b8fa1a6bd::t_f0371c574a953a 524
+server/src/db/initDrizzle.ts
+  s_96c52b8fa1a6bd::t_7de68703ffe901 69-77
+scripts/setup/start-emulate.sh
+  s_96c52b8fa1a6bd::t_517b1e87f268c6 4-6,9-10,12-17,32,34-60
+  s_96c52b8fa1a6bd::t_1f4c25a9d0be32 22,26-31,33
+server/src/utils/auth.ts
+  s_96c52b8fa1a6bd::t_02b05069e8800c 7,23
+emulate.config.yaml
+  s_96c52b8fa1a6bd::t_57dbffb72dad10 14-53
+shared/.gitignore
+  s_96c52b8fa1a6bd::t_2cff7ad10e0122 38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "6d7fc35073593f0955efbd945090b1f0f00d9f23",
+  "prompts": {},
+  "sessions": {
+    "s_96c52b8fa1a6bd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d9801899ffeYYuriL2TKq6C8N",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
