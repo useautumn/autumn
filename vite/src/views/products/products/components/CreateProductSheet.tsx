@@ -45,7 +45,7 @@ function CreateProductSheet({
 
 	const axiosInstance = useAxiosInstance();
 	const navigate = useNavigate();
-	const { invalidate } = useProductsQuery();
+	const { invalidate, products } = useProductsQuery();
 
 	const handleCreateClicked = async () => {
 		const productName = product.name?.trim() || "";
@@ -80,13 +80,18 @@ function CreateProductSheet({
 		setOpen(false);
 	};
 
-	// Reset product state when sheet opens/closes
+	const isFirstPlan = !products || products.length === 0;
+
 	useEffect(() => {
 		if (open) {
 			reset();
-			setProduct({ ...DEFAULT_PRODUCT, is_add_on: isAddOn });
+			setProduct({
+				...DEFAULT_PRODUCT,
+				is_add_on: isAddOn,
+				is_default: isFirstPlan && !isAddOn,
+			});
 		}
-	}, [open, reset, setProduct, isAddOn]);
+	}, [open, reset, setProduct, isAddOn, isFirstPlan]);
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>

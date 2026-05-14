@@ -46,15 +46,16 @@ export const FilterStatusSubMenu = () => {
 				{statuses.map((status: any) => {
 					const isActive = selectedStatuses.includes(status);
 					return (
-						<DropdownMenuItem
-							key={status}
-							onClick={(e) => {
-								e.preventDefault();
-								toggleStatus(status);
-							}}
-							onSelect={(e) => e.preventDefault()}
-							className="flex items-center gap-2 cursor-pointer text-sm"
-						>
+					<DropdownMenuItem
+						key={status}
+						closeOnClick={false}
+						onClick={(e) => {
+							e.preventDefault();
+							e.stopPropagation();
+							toggleStatus(status);
+						}}
+						className="flex items-center gap-2 cursor-pointer text-sm"
+					>
 							<Checkbox checked={isActive} className="border-border" />
 							{keyToTitle(status)}
 						</DropdownMenuItem>
