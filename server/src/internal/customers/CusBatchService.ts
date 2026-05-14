@@ -236,7 +236,6 @@ export class CusBatchService {
 		const tReassembleEnd = performance.now();
 		const hasMore = allCustomers.length > limit;
 		const fullCustomers = hasMore ? allCustomers.slice(0, limit) : allCustomers;
-		const peekCustomer = hasMore ? allCustomers[limit] : undefined;
 
 		const finals: ApiCustomerV5[] = [];
 
@@ -288,11 +287,12 @@ export class CusBatchService {
 			Sentry.captureException(err);
 		});
 
+		const lastCustomer = fullCustomers[fullCustomers.length - 1];
 		const nextCursor =
-			hasMore && peekCustomer && peekCustomer.id
+			hasMore && lastCustomer?.id
 				? StandardCursor.encode({
-						id: peekCustomer.id,
-						t: peekCustomer.created_at,
+						id: lastCustomer.id,
+						t: lastCustomer.created_at,
 					})
 				: null;
 
@@ -409,22 +409,22 @@ export class CusBatchService {
 		const tReassembleEnd = performance.now();
 
 		let fullCustomers: FullCustomer[];
-		let nextCursor: string | null;
+		let hasMore: boolean;
 		if (requiresResolveStep) {
 			fullCustomers = allCustomers;
-			nextCursor = resolvedPeek ? StandardCursor.encode(resolvedPeek) : null;
+			hasMore = resolvedPeek !== null;
 		} else {
-			const hasMore = allCustomers.length > limit;
+			hasMore = allCustomers.length > limit;
 			fullCustomers = hasMore ? allCustomers.slice(0, limit) : allCustomers;
-			const peekCustomer = hasMore ? allCustomers[limit] : undefined;
-			nextCursor =
-				hasMore && peekCustomer && peekCustomer.id
-					? StandardCursor.encode({
-							id: peekCustomer.id,
-							t: peekCustomer.created_at,
-						})
-					: null;
 		}
+		const lastCustomer = fullCustomers[fullCustomers.length - 1];
+		const nextCursor =
+			hasMore && lastCustomer?.id
+				? StandardCursor.encode({
+						id: lastCustomer.id,
+						t: lastCustomer.created_at,
+					})
+				: null;
 
 		ctx.logger.info(
 			`[CusBatchService.getDashboardCursorPage] limit=${limit} cursor=${cursor ? "yes" : "no"} rows=${fullCustomers.length} resolve=${(tResolveEnd - tResolveStart).toFixed(0)}ms sql=${(tSqlEnd - tSqlStart).toFixed(0)}ms reassemble=${(tReassembleEnd - tSqlEnd).toFixed(0)}ms total=${(tReassembleEnd - tResolveStart).toFixed(0)}ms`,
