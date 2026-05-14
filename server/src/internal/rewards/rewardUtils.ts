@@ -4,6 +4,7 @@ import {
 	DiscountConfigSchema,
 	ErrCode,
 	isFixedPrice,
+	notNullish,
 	type Price,
 	type Product,
 	RecaseError,
@@ -197,7 +198,7 @@ export const initRewardStripePrices = async ({
 	}
 
 	const internalProductIds = getUnique(
-		prices.map((p: Price) => p.internal_product_id),
+		prices.map((p: Price) => p.internal_product_id).filter(notNullish),
 	);
 	const products = await ProductService.listByInternalIds({
 		db: ctx.db,

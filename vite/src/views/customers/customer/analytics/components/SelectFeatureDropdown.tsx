@@ -181,13 +181,12 @@ export const SelectFeatureDropdown = () => {
 							{filteredOptions.map((option) => {
 								const featureLabel = formatFeatureLabel(option.linkedFeatures);
 								return (
-									<DropdownMenuCheckboxItem
-										key={option.eventName}
-										checked={option.selected}
-										onCheckedChange={() => handleToggleItem(option)}
-										onSelect={(e) => e.preventDefault()}
-										className="pl-2"
-									>
+								<DropdownMenuCheckboxItem
+									key={option.eventName}
+									checked={option.selected}
+									onCheckedChange={() => handleToggleItem(option)}
+									className="pl-2"
+								>
 										<div className="flex items-center gap-1.5 min-w-0">
 											<span className="text-xs truncate">
 												{option.eventName}

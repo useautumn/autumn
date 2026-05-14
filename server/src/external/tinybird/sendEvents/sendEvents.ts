@@ -2,8 +2,9 @@ import * as crypto from "node:crypto";
 import type { EventInsert } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
-import { isTinybirdConfigured, tinybirdIngest } from "../initTinybird.js";
+import { tinybirdIngest } from "../initTinybird.js";
 import { tinybirdUsEastApi } from "../initTinybirdV2.js";
+import { isTinybirdConfigured } from "../tinybirdUtils.js";
 import { mapToTinybirdEvent } from "./mapEvent.js";
 
 /** Generate a unique error ID for tracking */

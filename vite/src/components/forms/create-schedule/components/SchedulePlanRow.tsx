@@ -12,6 +12,7 @@ import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
+import { CopyFromPreviousPhaseButton } from "./CopyFromPreviousPhaseButton";
 
 export function getSchedulePlanPriceProduct({
 	product,
@@ -114,6 +115,9 @@ export function SchedulePlanRow({
 								)}
 						</>
 					)}
+					header={
+						<CopyFromPreviousPhaseButton phaseIndex={phaseIndex} />
+					}
 					placeholder="Select product..."
 					searchable
 					searchPlaceholder="Search products..."

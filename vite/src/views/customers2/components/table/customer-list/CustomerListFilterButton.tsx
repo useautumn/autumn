@@ -6,7 +6,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
-	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
@@ -19,11 +18,24 @@ import { SavedViews } from "@/views/customers/components/filter-dropdown/SavedVi
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 
-export function CustomerListFilterButton() {
+interface CustomerListFilterButtonProps {
+	extraMenuItems?: React.ReactNode;
+	hasActiveExtraFilters?: boolean;
+	onClearExtra?: () => void;
+	hideSavedViews?: boolean;
+}
+
+export function CustomerListFilterButton({
+	extraMenuItems,
+	hasActiveExtraFilters,
+	onClearExtra,
+	hideSavedViews,
+}: CustomerListFilterButtonProps = {}) {
 	const { queryStates, setFilters } = useCustomerFilters();
 	const [open, setOpen] = useState(false);
 
 	const hasActiveFilters =
+		hasActiveExtraFilters ||
 		queryStates.status.length > 0 ||
 		queryStates.version.length > 0 ||
 		queryStates.none ||
@@ -35,6 +47,7 @@ export function CustomerListFilterButton() {
 
 	const clearFilters = () => {
 		setFilters({ status: [], version: [], none: false, processor: [] });
+		onClearExtra?.();
 	};
 
 	const closeFilterModal = () => {
@@ -60,30 +73,29 @@ export function CustomerListFilterButton() {
 				align="start"
 			>
 				<DropdownMenuGroup className="p-1">
+					{extraMenuItems}
 					<FilterStatusSubMenu />
 					<ProductsSubMenu />
 					<ProcessorSubMenu />
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator className="m-0" />
-				{views.length > 0 && (
+				{!hideSavedViews && views.length > 0 && (
 					<SavedViews
 						views={views}
 						mutateViews={refetchSavedViews}
 						setDropdownOpen={setOpen}
 					/>
 				)}
-				<div className="flex h-9 items-stretch justify-between">
-					<DropdownMenuItem
-						onClick={() => clearFilters()}
-						className="cursor-pointer justify-center gap-0 flex-1"
+				<div className="flex items-stretch">
+					<button
+						type="button"
+						onClick={clearFilters}
+						className="flex-1 flex items-center justify-center gap-1.5 rounded-bl-lg px-2 py-1.5 text-xs text-t3 hover:text-t2 hover:bg-accent cursor-default"
 					>
-						<X size={12} className="mr-2 text-t3" />
-						<p className="text-t3">Clear</p>
-					</DropdownMenuItem>
-
-					<div className="flex-1">
-						<SaveViewPopover onClose={closeFilterModal} />
-					</div>
+						<X size={10} />
+						Clear
+					</button>
+					<SaveViewPopover onClose={closeFilterModal} />
 				</div>
 			</DropdownMenuContent>
 		</DropdownMenu>

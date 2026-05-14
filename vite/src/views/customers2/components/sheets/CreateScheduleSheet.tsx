@@ -67,9 +67,9 @@ function reconstructCustomItems({
 	const customerFeatureIds = new Set(
 		customerItems.map((item) => item.feature_id).filter(Boolean),
 	);
-	const customerHasBasePrice = customerItems.some(
-		(item) => !item.feature_id && item.price != null,
-	);
+	const customerHasBasePrice =
+		prices.length === 0 ||
+		customerItems.some((item) => !item.feature_id && item.price != null);
 	const missingProductItems =
 		product?.items?.filter((item) => {
 			if (!item.feature_id) return !customerHasBasePrice;

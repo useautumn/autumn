@@ -2,6 +2,13 @@ import { useLocation } from "react-router";
 
 export const useTab = () => {
 	const { pathname } = useLocation();
+	if (
+		pathname.startsWith("/settings") ||
+		pathname.startsWith("/sandbox/settings")
+	) {
+		return "settings";
+	}
+
 	if (pathname.startsWith("/admin") || pathname.startsWith("/sandbox/admin")) {
 		return "admin";
 	}
@@ -23,6 +30,11 @@ export const useTab = () => {
 		pathname.startsWith("/sandbox/products")
 	) {
 		return "products";
+	} else if (
+		pathname.startsWith("/migrations") ||
+		pathname.startsWith("/sandbox/migrations")
+	) {
+		return "migrations";
 	} else if (
 		pathname.startsWith("/customers") ||
 		pathname.startsWith("/sandbox/customers")

@@ -266,6 +266,7 @@ export const subjectQueryRowToNormalized = ({
 		subscriptions: row.subscriptions ?? [],
 		invoices: row.invoices ?? [],
 		entity_aggregations: entityAggregations,
+		migration_item_runs: row.migration_item_runs ?? [],
 	};
 };
 

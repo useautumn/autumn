@@ -5,6 +5,7 @@ import type { DbRollover } from "../../cusProductModels/cusEntModels/rolloverMod
 import type { DbCustomerPrice } from "../../cusProductModels/cusPriceModels/cusPriceTable.js";
 import type { DbCustomerProduct } from "../../cusProductModels/cusProductTable.js";
 import type { DbFeature } from "../../featureModels/featureTable.js";
+import type { MigrationItemRunData } from "../../migrationV2Models/migrationItemRunSchema.js";
 import type { DbEntitlement } from "../../productModels/entModels/entTable.js";
 import type { DbFreeTrial } from "../../productModels/freeTrialModels/freeTrialTable.js";
 import type { DbPrice } from "../../productModels/priceModels/priceTable.js";
@@ -38,4 +39,5 @@ export type SubjectQueryRow = {
 	subscriptions: Subscription[];
 	invoices?: Invoice[];
 	entity?: Entity;
+	migration_item_runs?: MigrationItemRunData[];
 };

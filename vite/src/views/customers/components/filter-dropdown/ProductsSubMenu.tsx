@@ -192,11 +192,11 @@ export const ProductsSubMenu = () => {
 										{versionCount === 1 ? (
 											// Single version - show just one button for the product
 											<DropdownMenuItem
+												closeOnClick={false}
 												onClick={(e) => {
 													e.preventDefault();
 													toggleVersion(product.id, "1");
 												}}
-												onSelect={(e) => e.preventDefault()}
 												className="flex items-center gap-2 cursor-pointer font-medium"
 											>
 												<Checkbox
@@ -232,11 +232,11 @@ export const ProductsSubMenu = () => {
 												</DropdownMenuSubTrigger>
 												<DropdownMenuSubContent>
 													<DropdownMenuItem
+														closeOnClick={false}
 														onClick={(e) => {
 															e.preventDefault();
 															toggleProduct(product);
 														}}
-														onSelect={(e) => e.preventDefault()}
 														className="flex items-center gap-2 cursor-pointer font-medium"
 													>
 														<Checkbox
@@ -257,11 +257,11 @@ export const ProductsSubMenu = () => {
 														return (
 															<DropdownMenuItem
 																key={versionKey}
+																closeOnClick={false}
 																onClick={(e) => {
 																	e.preventDefault();
 																	toggleVersion(product.id, version.toString());
 																}}
-																onSelect={(e) => e.preventDefault()}
 																className="flex items-center gap-2 cursor-pointer text-sm"
 															>
 																<Checkbox

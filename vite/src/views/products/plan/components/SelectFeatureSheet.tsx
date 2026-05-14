@@ -134,16 +134,14 @@ export function SelectFeatureSheet({
 							) : null
 						}
 						footer={
-							<div className="border-t pt-2 pb-1 px-2">
-								<Button
-									variant="muted"
-									className="w-full"
-									onClick={handleCreateNew}
-								>
-									<PlusIcon className="size-[14px] text-t2" weight="regular" />
-									Create new feature
-								</Button>
-							</div>
+							<Button
+								variant="muted"
+								className="w-full"
+								onClick={handleCreateNew}
+							>
+								<PlusIcon className="size-[14px] text-t2" weight="regular" />
+								Create new feature
+							</Button>
 						}
 					/>
 				</SheetSection>

@@ -51,9 +51,14 @@ export const ProductListRowToolbar = ({
 			/>
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-				<DropdownMenuTrigger asChild>
-					<ToolbarButton />
-				</DropdownMenuTrigger>
+				<div
+					onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+					onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+				>
+					<DropdownMenuTrigger asChild>
+						<ToolbarButton />
+					</DropdownMenuTrigger>
+				</div>
 				<DropdownMenuContent align="end">
 					<DropdownMenuSub>
 						<DropdownMenuSubTrigger className="flex gap-2">
