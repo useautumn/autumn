@@ -14,18 +14,15 @@ import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
 export function AttachPlanOptions() {
-	const {
-		form,
-		formValues,
-		numVersions,
-		product,
-		handleGrantFreeToggle,
-		hasActiveSubscription,
-	} = useAttachFormContext();
+	const { form, formValues, numVersions, product, handleGrantFreeToggle, hasActiveSubscription } =
+		useAttachFormContext();
 	const { trialEnabled, trialCardRequired, trialOnEnd, grantFree } = formValues;
 	const [versionOpen, setVersionOpen] = useState(false);
 
 	const showVersionSelector = numVersions > 1;
+	const handleTrialOnEndChange = hasActiveSubscription
+		? (value: "bill" | "revert") => form.setFieldValue("trialOnEnd", value)
+		: undefined;
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -92,7 +89,7 @@ export function AttachPlanOptions() {
 				checked={!!trialEnabled}
 				trialCardRequired={!!trialCardRequired}
 				trialOnEnd={trialOnEnd}
-				hasActiveSubscription={hasActiveSubscription}
+				onTrialOnEndChange={handleTrialOnEndChange}
 				onToggle={(enabled) => {
 					form.setFieldValue("trialEnabled", enabled);
 					if (enabled) {
