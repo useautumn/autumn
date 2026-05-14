@@ -72,7 +72,7 @@ const toPrice = ({
 }: {
 	item: ProductItem;
 	orgId: string;
-	internalProductId: string;
+	internalProductId?: string;
 	isCustom: boolean;
 	newVersion?: boolean;
 	curPrice?: Price;
@@ -91,13 +91,13 @@ const toPrice = ({
 		id: item.price_id || curPrice?.id || priceId(),
 		created_at: item.created_at || Date.now(),
 		org_id: orgId,
-		internal_product_id: internalProductId,
+		internal_product_id: internalProductId ?? null,
 		is_custom: isCustom,
 		config,
 		proration_config: null,
 	};
 
-	if (isCustom || newVersion) {
+	if ((isCustom || newVersion) && !item.price_id) {
 		price = {
 			...price,
 			id: priceId(),
@@ -158,7 +158,7 @@ export const toFeature = ({
 		rollover: item.config?.rollover,
 	};
 
-	if (isCustom || newVersion) {
+	if ((isCustom || newVersion) && !item.entitlement_id) {
 		ent = {
 			...ent,
 			id: entitlementId(),
@@ -182,7 +182,7 @@ const toFeatureAndPrice = ({
 	item: ProductItem;
 	orgId: string;
 	internalFeatureId: string;
-	internalProductId: string;
+	internalProductId?: string;
 	isCustom: boolean;
 	curPrice?: Price;
 	curEnt?: Entitlement;
@@ -199,7 +199,7 @@ const toFeatureAndPrice = ({
 		org_id: orgId,
 		created_at: item.created_at || Date.now(),
 		is_custom: isCustom,
-		internal_product_id: internalProductId,
+		internal_product_id: internalProductId ?? null,
 
 		internal_feature_id: internalFeatureId,
 		feature_id: item.feature_id!,
@@ -218,7 +218,7 @@ const toFeatureAndPrice = ({
 
 	// Will only create new ent id if
 	const newEnt = !curEnt || (isCustom && !entsAreSame(curEnt, ent));
-	if (newEnt || newVersion) {
+	if ((newEnt || newVersion) && !item.entitlement_id) {
 		ent = {
 			...ent,
 			id: entitlementId(),
@@ -284,7 +284,7 @@ const toFeatureAndPrice = ({
 		id: item.price_id || curPrice?.id || priceId(),
 		created_at: item.created_at || Date.now(),
 		org_id: orgId,
-		internal_product_id: internalProductId,
+		internal_product_id: internalProductId ?? null,
 		is_custom: isCustom,
 		config,
 		entitlement_id: ent.id,
@@ -317,7 +317,7 @@ const toFeatureAndPrice = ({
 		price.config = newConfig;
 	}
 
-	if (isCustom || newVersion) {
+	if ((isCustom || newVersion) && !item.price_id) {
 		price = {
 			...price,
 			id: priceId(),
@@ -341,7 +341,7 @@ export const itemToPriceAndEnt = ({
 }: {
 	item: ProductItem;
 	orgId: string;
-	internalProductId: string;
+	internalProductId?: string;
 	feature?: Feature;
 	curPrice?: Price;
 	curEnt?: Entitlement;

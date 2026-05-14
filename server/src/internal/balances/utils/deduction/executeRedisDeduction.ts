@@ -11,6 +11,7 @@ import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeatur
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { fireTrackWebhooks } from "../../trackWebhooks/fireTrackWebhooks.js";
+import { saveLockReceipt } from "../lock/saveLockReceipt.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -116,6 +117,17 @@ export const executeRedisDeduction = async ({
 		});
 
 		if (unlimitedFeatureIds.length > 0) {
+			if (preparedLock) {
+				await saveLockReceipt({
+					lock: preparedLock,
+					customerId,
+					featureId: feature.id,
+					entityId,
+					items: [],
+					overrideLockValue: toDeduct,
+					redisInstance,
+				});
+			}
 			continue;
 		}
 

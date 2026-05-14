@@ -24,6 +24,8 @@ import CustomerPlanEditor from "./views/customers2/customer-plan/CustomerPlanEdi
 import { DefaultView } from "./views/DefaultView";
 import DevScreen from "./views/developer/DevView";
 import { CloseScreen } from "./views/general/CloseScreen";
+import { MigrationsView } from "./views/migrations/MigrationsView";
+import { MigrationView } from "./views/migrations/migration/MigrationView";
 import QuickstartView from "./views/onboarding4/QuickstartView";
 import ProductsView from "./views/products/ProductsView";
 import PlanEditorView from "./views/products/plan/PlanEditorView";
@@ -105,6 +107,13 @@ export default function App() {
 					<Route
 						path="/sandbox/products"
 						element={<ProductsView env={AppEnv.Sandbox} />}
+					/>
+					<Route path="/migrations" element={<MigrationsView />} />
+					<Route path="/sandbox/migrations" element={<MigrationsView />} />
+					<Route path="/migrations/:migration_id" element={<MigrationView />} />
+					<Route
+						path="/sandbox/migrations/:migration_id"
+						element={<MigrationView />}
 					/>
 					<Route
 						path="/products/:product_id"

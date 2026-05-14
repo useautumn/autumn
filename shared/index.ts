@@ -20,6 +20,9 @@ export * from "./api/billing/updateSubscription/previewUpdateSubscriptionRespons
 export * from "./api/common/cursorPaginationSchemas";
 export * from "./api/common/paginationConfigs";
 export * from "./api/customers/components/customerExpand/customerExpand";
+// Migrations v2 (operations + entity schemas)
+export * from "./api/migrations/filters/index";
+export * from "./api/migrations/operations/index";
 // API MODELS
 export * from "./api/models";
 // API VERSIONING SYSTEM
@@ -118,9 +121,15 @@ export * from "./models/genModels/processorSchemas";
 export * from "./models/migrationModels/migrationErrorTable";
 export * from "./models/migrationModels/migrationJobTable";
 export * from "./models/migrationModels/migrationModels";
+export * from "./models/migrationV2Models/migrationItemRunSchema";
+export * from "./models/migrationV2Models/migrationItemRunTable";
+export * from "./models/migrationV2Models/migrationRunTable";
+export * from "./models/migrationV2Models/migrationTable";
+export * from "./models/migrationV2Models/pendingMigrationModel";
 export * from "./models/orgModels/frontendOrg";
 // 1. Org Models
 export * from "./models/orgModels/frontendOrg";
+export * from "./models/orgModels/fullOrgModel";
 export * from "./models/orgModels/orgConfig";
 export * from "./models/orgModels/orgConfig";
 export * from "./models/orgModels/orgTable";
@@ -189,6 +198,7 @@ export * from "./models/subModels/subTable";
 export * from "./types";
 // Agent Types (for pricing agent AI)
 export * from "./utils/agentTypes";
+export * from "./utils/authAccessControl";
 export * from "./utils/billingUtils/index";
 // Checkout Utils
 export * from "./utils/checkoutUtils/index";
@@ -200,6 +210,7 @@ export * from "./utils/cusEntUtils/balanceUtils/cusEntToUsageAllowed";
 export * from "./utils/cusEntUtils/index";
 // Utils
 export * from "./utils/displayUtils";
+export * from "./utils/fullSubjectUtils";
 export * from "./utils/index";
 export * from "./utils/intervalUtils";
 export * from "./utils/invoices/index";
@@ -225,6 +236,4 @@ export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils";
 export * from "./utils/rewardUtils/rewardFilterUtils";
 export * from "./utils/rewardUtils/rewardMigrationUtils";
-export * from "./utils/authAccessControl";
 export * from "./utils/scopeDefinitions";
-export * from "./utils/fullSubjectUtils";

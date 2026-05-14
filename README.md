@@ -25,48 +25,22 @@ All this without having to handle webhooks, upgrades/downgrades, cancellations o
 **Self Hosted**: If you'd like to self-host Autumn:
 
 1. Make sure you have `bun` installed
-2. Install the project dependencies
+2. Install the project dependencies:
 ```bash
 bun install
 ```
-3. Run our set up script:
+3. Run Autumn:
 ```bash
-bun setup
-```
-
-4. Generate the relevant tables in your postgres DB
-```bash
-bun db:generate && bun db:migrate
-```
-
-5. Run Autumn:
-
-For Windows
-```bash
-docker compose -f docker-compose.dev.yml up
-```
-
-For mac/linux:
- ```bash
-docker compose -f docker-compose.unix.yml up
+bun dev
 ```
 
 That's it! You should be able to see the Autumn dashboard on `http://localhost:3000`. 
 
+> ℹ️ Autumn depends on a bunch of services. If you'd like help with self-hosting or running a local instance, contact the team on [Discord](https://discord.gg/53emPtY9tA).
+
 > ⚠️ To log in, enter an email at the sign in page, and an OTP should appear in your console / terminal. Normally, we use Resend to email an OTP or Google OAuth -- these can be set up by providing your credentials in `server/.env`
 
-> ℹ️ Our set up script initializes the required env vars and (optionally) a Supabase instance. If you'd like to use your own Postgres instance, you can do so -- just paste the connection string in the `DATABASE_URL` env variable at `server/.env`
-
-## Troubleshooting
-
-If you encounter a `SyntaxError: Unexpected end of JSON input` error when running `bun setup` again after previously running it, you may need to clear your database tables first. This is a [known issue](https://github.com/drizzle-team/drizzle-orm/issues/4529) that can occur when running database migrations multiple times.
-
-To resolve this:
-
-1. Connect to your database
-2. Drop all existing tables
-3. Run the setup script again:
-
+> ℹ️ If you'd like to use your own Postgres instance, paste the connection string in the `DATABASE_URL` env variable at `server/.env`
 
 ## Why Autumn
 

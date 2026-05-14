@@ -36,7 +36,7 @@ export const entsAreSame = (ent1: Entitlement, ent2: Entitlement) => {
 			ent1.allowance_type !== AllowanceType.Unlimited &&
 			ent1.allowance != ent2.allowance,
 		carryFromPrevious: ent1.carry_from_previous != ent2.carry_from_previous,
-		entityFeatureId: ent1.entity_feature_id !== ent2.entity_feature_id,
+		entityFeatureId: ent1.entity_feature_id != ent2.entity_feature_id,
 		usageLimit: ent1.usage_limit != ent2.usage_limit,
 		rollover: !rolloversAreSame({
 			rollover1: ent1.rollover,

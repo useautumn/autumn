@@ -671,7 +671,7 @@ actions:
                             "interval": "month",
                         },
                     },
-                ])
+                ], create_in_stripe=True)
 
                 # Handle response
                 print(res)
@@ -746,7 +746,7 @@ actions:
                 res = autumn.plans.update(plan_id="pro_plan", group="", name="Pro Plan (Updated)", price={
                     "amount": 15,
                     "interval": "month",
-                }, archived=False)
+                }, create_in_stripe=True, archived=False)
 
                 # Handle response
                 print(res)

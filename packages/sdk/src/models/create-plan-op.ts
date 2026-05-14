@@ -367,6 +367,7 @@ export type CreatePlanParams = {
    * Miscellaneous plan-level configuration flags.
    */
   config?: CreatePlanConfigRequest | undefined;
+  createInStripe?: boolean | undefined;
 };
 
 /**
@@ -1228,6 +1229,7 @@ export type CreatePlanParams$Outbound = {
   items?: Array<CreatePlanPlanItem$Outbound> | undefined;
   free_trial?: FreeTrialRequest$Outbound | undefined;
   config?: CreatePlanConfigRequest$Outbound | undefined;
+  create_in_stripe: boolean;
 };
 
 /** @internal */
@@ -1246,6 +1248,7 @@ export const CreatePlanParams$outboundSchema: z.ZodMiniType<
     items: z.optional(z.array(z.lazy(() => CreatePlanPlanItem$outboundSchema))),
     freeTrial: z.optional(z.lazy(() => FreeTrialRequest$outboundSchema)),
     config: z.optional(z.lazy(() => CreatePlanConfigRequest$outboundSchema)),
+    createInStripe: z._default(z.boolean(), true),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1253,6 +1256,7 @@ export const CreatePlanParams$outboundSchema: z.ZodMiniType<
       addOn: "add_on",
       autoEnable: "auto_enable",
       freeTrial: "free_trial",
+      createInStripe: "create_in_stripe",
     });
   }),
 );

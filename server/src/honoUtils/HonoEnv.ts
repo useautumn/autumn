@@ -61,6 +61,13 @@ export type RequestContext = {
 	expand: string[];
 	skipCache: boolean;
 
+	/** True when the context is built by `createTriggerContext` — i.e. we're
+	 *  executing inside a Trigger.dev task. Read by `checkPendingMigrationsForCustomer`
+	 *  to short-circuit: a migration task loads `CusService.getFull` /
+	 *  `getFullSubject` for its target customer, and that load must NOT
+	 *  re-enqueue another migration task. */
+	insideTriggerTask?: boolean;
+
 	extraLogs: Record<string, unknown>;
 
 	fullCustomer?: FullCustomer;

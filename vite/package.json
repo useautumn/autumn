@@ -4,6 +4,7 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
+		"d": "vite --host",
 		"dev": "vite --host",
 		"build": "tsc && vite build",
 		"ts": "tsc --noEmit",
@@ -37,6 +38,7 @@
 		"@tanstack/react-query": "catalog:",
 		"@tanstack/react-table": "^8.21.3",
 		"@tanstack/react-virtual": "^3.13.18",
+		"@trigger.dev/react-hooks": "4.4.5",
 		"ag-charts-community": "^12.0.2",
 		"ag-charts-react": "^12.0.2",
 		"ag-grid-community": "^34.0.2",
@@ -53,6 +55,7 @@
 		"date-fns": "^3.6.0",
 		"decimal.js": "^10.5.0",
 		"input-otp": "^1.4.2",
+		"json5": "^2.2.3",
 		"lodash": "^4.17.21",
 		"lucide-react": "^0.562.0",
 		"motion": "^12.26.1",

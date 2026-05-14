@@ -106,9 +106,11 @@ const setupImmediateMultiProductTrialContext = async ({
 export const setupImmediateMultiProductBillingContext = async ({
 	ctx,
 	params,
+	preview = false,
 }: {
 	ctx: AutumnContext;
 	params: MultiAttachParamsV0;
+	preview?: boolean;
 }): Promise<MultiAttachBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -179,6 +181,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		params,
 		skipSubscriptionFetching: fullProducts.every(isOneOffProduct),
 		newBillingSubscription: params.new_billing_subscription || undefined,
+		createStripeCustomerIfMissing: !preview,
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
@@ -254,5 +257,6 @@ export const setupImmediateMultiProductBillingContext = async ({
 		successUrl:
 			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
 		checkoutSessionParams: params.checkout_session_params,
+		dryRunStripe: preview,
 	};
 };
