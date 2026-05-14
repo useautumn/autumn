@@ -16,6 +16,13 @@ export const FreeTrialParamsV1Schema = z
 			description:
 				"If true, payment method required to start trial. Customer is charged after trial ends.",
 		}),
+		on_end: z
+			.enum(["bill", "revert"])
+			.optional()
+			.meta({
+				description:
+					"Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan. Only valid with card_required: false.",
+			}),
 	})
 	.meta({
 		title: "FreeTrialParams",

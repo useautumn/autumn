@@ -10,10 +10,44 @@ import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 import { ProductService } from "@/internal/products/ProductService";
 import type { CronContext } from "../utils/CronContext";
 import {
+	type ExpiredTrialRow,
+	type OrgEnvExpiredTrials,
 	fetchExpiredTrialProducts,
 	groupByOrgEnv,
 } from "./fetchExpiredTrialProducts";
 import { processExpiredTrialRow } from "./processExpiredTrialRow";
+
+const partitionRevertRows = (rows: ExpiredTrialRow[]) => {
+	const revert: ExpiredTrialRow[] = [];
+	const standard: ExpiredTrialRow[] = [];
+	for (const row of rows) {
+		if (row.customerProduct.on_trial_end === "revert") {
+			revert.push(row);
+		} else {
+			standard.push(row);
+		}
+	}
+	return { revert, standard };
+};
+
+const processRevertRows = async ({
+	ctx,
+	rows,
+}: {
+	ctx: OrgEnvExpiredTrials["ctx"];
+	rows: ExpiredTrialRow[];
+}) => {
+	await Promise.all(
+		rows.map((row) =>
+			processExpiredTrialRow({
+				ctx,
+				customerProduct: row.customerProduct,
+				customer: row.customer,
+				defaultProducts: [],
+			}),
+		),
+	);
+};
 
 export const runProductCron = async ({
 	ctx: cronContext,
@@ -46,6 +80,15 @@ export const runProductCron = async ({
 			const resultsByOrgEnv = await groupByOrgEnv({ results, cronContext });
 
 			for (const { ctx, org, features, rows } of resultsByOrgEnv) {
+				const { revert: revertRows, standard: standardRows } =
+					partitionRevertRows(rows);
+
+				if (revertRows.length > 0) {
+					await processRevertRows({ ctx, rows: revertRows });
+				}
+
+				if (standardRows.length === 0) continue;
+
 				const defaultProducts = await ProductService.listDefault({
 					db: ctx.db,
 					orgId: ctx.org.id,
@@ -56,14 +99,14 @@ export const runProductCron = async ({
 				if (defaultProducts.length === 0) {
 					await customerProductRepo.batchUpdate({
 						ctx,
-						updates: rows.map((row) => ({
+						updates: standardRows.map((row) => ({
 							id: row.customerProduct.id,
 							updates: {
 								status: CusProductStatus.Expired,
 							},
 						})),
 					});
-					const customersToDelete = rows.map((row) => ({
+					const customersToDelete = standardRows.map((row) => ({
 						orgId: row.customer.org_id,
 						env: row.customer.env as AppEnv,
 						customerId: row.customer.id ?? "",
@@ -82,13 +125,13 @@ export const runProductCron = async ({
 								org,
 							}),
 					});
-					console.log(`Expired ${rows.length} customer products`);
+					console.log(`Expired ${standardRows.length} customer products`);
 					continue;
 				}
 
 				const processBatchSize = 250;
-				for (let i = 0; i < rows.length; i += processBatchSize) {
-					const batch = rows.slice(i, i + processBatchSize);
+				for (let i = 0; i < standardRows.length; i += processBatchSize) {
+					const batch = standardRows.slice(i, i + processBatchSize);
 					await Promise.all(
 						batch.map((row) =>
 							processExpiredTrialRow({
