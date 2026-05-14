@@ -13,6 +13,7 @@ import { generateId } from "@/utils/genUtils";
 import { handleCustomizeAddItems } from "./handleCustomizeAddItems";
 import { handleCustomizeDeleteItems } from "./handleCustomizeDeleteItems";
 import { handleCustomizePrice } from "./handleCustomizePrice";
+import type { ReusePricesAndEntitlements } from "./types";
 
 const applyProductDefinitionToCustomerProduct = ({
 	fullProduct,
@@ -52,8 +53,8 @@ const applyProductBasePriceToCustomerProduct = ({
 	const productBasePrice = fullProduct.prices.find(isFixedPrice);
 	if (!productBasePrice) return;
 
-	const currentBasePrice = customerProduct.customer_prices.find((customerPrice) =>
-		isFixedPrice(customerPrice.price),
+	const currentBasePrice = customerProduct.customer_prices.find(
+		(customerPrice) => isFixedPrice(customerPrice.price),
 	);
 
 	if (!currentBasePrice) {
@@ -77,11 +78,13 @@ export const setupPatchContext = ({
 	params,
 	customerProduct,
 	fullProduct,
+	reusePricesAndEntitlements,
 }: {
 	ctx: SharedContext;
 	params: UpdateSubscriptionV1Params;
 	customerProduct: FullCusProduct;
 	fullProduct: FullProduct;
+	reusePricesAndEntitlements?: ReusePricesAndEntitlements;
 }): PatchContext | undefined => {
 	if (!isCustomizePlanPatchStyle(params.customize)) return undefined;
 
@@ -131,6 +134,7 @@ export const setupPatchContext = ({
 		customize: params.customize,
 		targetCustomerProduct: finalCustomerProduct,
 		fullProduct: patchFullProduct,
+		reusePricesAndEntitlements,
 	});
 
 	const { prices: customItemPrices, entitlements: customEntitlements } =
@@ -138,6 +142,7 @@ export const setupPatchContext = ({
 			ctx,
 			customize: params.customize,
 			fullProduct: patchFullProduct,
+			reusePricesAndEntitlements,
 		});
 
 	const patchContext: PatchContext = {

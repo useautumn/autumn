@@ -1,4 +1,5 @@
 import { InfoIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { InlineAction } from "@/components/v2/buttons/InlineAction";
 import { CalendarIcon } from "lucide-react";
 import { DateInputUnix } from "@/components/general/DateInputUnix";
 import {
@@ -160,15 +161,13 @@ export function SchedulePhaseCard({
 							usedKeys={usedKeys}
 						/>
 					))}
-					<button
-						type="button"
-						className="flex items-center gap-1 text-xs text-t4 hover:text-t2 transition-colors py-1 disabled:opacity-40 disabled:pointer-events-none"
+					<InlineAction
+						icon={<PlusIcon size={11} />}
 						onClick={() => handleAddPlan({ phaseIndex })}
 						disabled={allPlansAdded || isLocked}
 					>
-						<PlusIcon size={11} />
 						Add plan
-					</button>
+					</InlineAction>
 				</div>
 			</div>
 		</div>

@@ -10,7 +10,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { RewardService } from "@/services/products/RewardService";

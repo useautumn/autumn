@@ -7,7 +7,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { cn } from "@/lib/utils";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { pushPage } from "@/utils/genUtils";
@@ -18,6 +18,7 @@ interface SubTab {
 	title: string;
 	value: string;
 	icon?: ReactNode;
+	path?: string;
 }
 
 interface CollapsibleNavGroupProps {
@@ -63,8 +64,8 @@ export const CollapsibleNavGroup = ({
 						<DropdownMenuItem key={index} asChild>
 							<Link
 								to={pushPage({
-									path: `/${value}`,
-									queryParams: {
+									path: subTab.path ?? `/${value}`,
+									queryParams: subTab.path ? {} : {
 										tab: subTab.value,
 									},
 									preserveParams: false,
@@ -112,8 +113,8 @@ export const CollapsibleNavGroup = ({
 					{subTabs.map((subTab, index) => (
 						<NavButton
 							key={index}
-							value={value}
-							subValue={subTab.value}
+							value={subTab.path ? subTab.path.replace("/", "") : value}
+							subValue={subTab.path ? undefined : subTab.value}
 							icon={subTab.icon}
 							title={keyToTitle(subTab.title)}
 							isSubNav

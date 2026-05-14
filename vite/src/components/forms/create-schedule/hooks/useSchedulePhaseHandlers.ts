@@ -78,6 +78,25 @@ export function useSchedulePhaseHandlers({
 		[form, isPhaseLocked],
 	);
 
+	const handleCopyFromPreviousPhase = useCallback(
+		({ phaseIndex }: { phaseIndex: number }) => {
+			if (phaseIndex < 1 || isPhaseLocked({ phaseIndex })) return;
+
+			const previousPlans =
+				form.store.state.values.phases[phaseIndex - 1]?.plans;
+			if (!previousPlans?.length) return;
+
+			const copiedPlans = previousPlans.map((plan) => ({
+				...plan,
+				prepaidOptions: { ...plan.prepaidOptions },
+				items: plan.items ? [...plan.items] : null,
+			}));
+
+			form.setFieldValue(`phases[${phaseIndex}].plans`, copiedPlans);
+		},
+		[form, isPhaseLocked],
+	);
+
 	const handlePlanEditSave = useCallback(
 		({ plan }: { plan: SchedulePlan }) => {
 			if (!editingPlan) return;
@@ -96,6 +115,7 @@ export function useSchedulePhaseHandlers({
 		handleRemovePhase,
 		handleAddPlan,
 		handleRemovePlan,
+		handleCopyFromPreviousPhase,
 		handlePlanEditSave,
 	};
 }

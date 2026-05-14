@@ -1,4 +1,3 @@
-import { DropdownMenuGroup } from "@/components/v2/dropdowns/DropdownMenu";
 import { useQueryClient } from "@tanstack/react-query";
 import {
 	ChevronDown,
@@ -14,9 +13,11 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuPortal,
 	DropdownMenuSeparator,
@@ -24,8 +25,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { setLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import {
@@ -39,15 +39,16 @@ import { useEnv } from "@/utils/envUtils";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
+import { navigateTo } from "@/utils/genUtils";
 import { AdminDropdownItems } from "./AdminDropdownItems";
 import { CreateNewOrg } from "./CreateNewOrg";
 import { LogOutItem } from "./LogOutItem";
-import { ManageOrg } from "./ManageOrg";
 
 export const OrgDropdown = () => {
 	const { org, isLoading, error } = useOrg();
 	const { expanded, setExpanded } = useSidebarContext();
 	const { theme, setTheme } = useTheme();
+	const navigate = useNavigate();
 
 	const { data: orgsData } = useListOrganizations();
 	let orgs = Array.isArray(orgsData) ? orgsData : undefined;
@@ -63,28 +64,21 @@ export const OrgDropdown = () => {
 
 	const { data: session } = useSession();
 
-	// To pre-fetch data
 	useMemberships();
 	const [dropdownOpen, setDropdownOpen] = useState(false);
-	const [manageOpen, setManageOpen] = useState(false);
 
 	if (isLoading)
 		return (
-			<>
-				<ManageOrg open={manageOpen} setOpen={setManageOpen} />
-				<div className="h-7 w-32 px-4 flex items-center gap-2">
-					<Skeleton className="min-w-5 h-5" />
-					<Skeleton className="w-32 h-5" />
-				</div>
-			</>
+			<div className="h-7 w-32 px-4 flex items-center gap-2">
+				<Skeleton className="min-w-5 h-5" />
+				<Skeleton className="w-32 h-5" />
+			</div>
 		);
 
-	if (!org || error)
-		return <ManageOrg open={manageOpen} setOpen={setManageOpen} />;
+	if (!org || error) return null;
 
 	return (
 		<div className={cn("flex px-3")}>
-			<ManageOrg open={manageOpen} setOpen={setManageOpen} />
 			<CreateNewOrg dialogType={dialogType} setDialogType={setDialogType} />
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
@@ -122,7 +116,7 @@ export const OrgDropdown = () => {
 				</AdminHover>
 				<DropdownMenuContent
 					align="start"
-					className="border-1 border-zinc-200 shadow-sm w-48"
+					className="w-48"
 				>
 					<AdminDropdownItems />
 					<DropdownMenuItem className="flex justify-between w-full items-center gap-2 text-t2">
@@ -136,9 +130,8 @@ export const OrgDropdown = () => {
 					<DropdownMenuSeparator />
 					<DropdownMenuGroup>
 						<DropdownMenuItem
-							onClick={(e) => {
-								e.preventDefault();
-								setManageOpen(true);
+							onClick={() => {
+								navigateTo("/settings", navigate);
 								setDropdownOpen(false);
 							}}
 						>

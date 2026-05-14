@@ -7,7 +7,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { DeleteApiKeyDialog } from "./DeleteApiKeyDialog";
 
 const APIKeyToolbarItems = ({

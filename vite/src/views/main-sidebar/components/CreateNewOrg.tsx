@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
+import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
@@ -63,45 +64,50 @@ export const CreateNewOrg = ({
 				if (!open) setDialogType(null);
 			}}
 		>
-			<DialogContent className="gap-0 p-0 rounded-xs min-w-[400px]">
-				<div className="p-6 flex flex-col gap-4">
-					<DialogHeader>
-						<DialogTitle>Create New Organization</DialogTitle>
-					</DialogHeader>
-					<div className="flex gap-4">
-						<div>
-							<FieldLabel>Name</FieldLabel>
-							<Input
-								value={name}
-								onChange={(e) => {
-									setName(e.target.value);
-									if (!slugChanged) {
-										setSlug(slugify(e.target.value));
-									}
-								}}
-							/>
-						</div>
-						<div>
-							<FieldLabel>Slug</FieldLabel>
-							<Input
-								value={slug}
-								onChange={(e) => {
-									if (!slugChanged) {
-										setSlug(slugify(e.target.value));
-									}
-								}}
-							/>
-						</div>
+			<DialogContent className="w-[400px] bg-card">
+				<DialogHeader>
+					<DialogTitle>Create Organization</DialogTitle>
+					<DialogDescription>
+						Set up a new organization workspace.
+					</DialogDescription>
+				</DialogHeader>
+				<div className="flex gap-2">
+					<div className="flex-1">
+						<FieldLabel>Name</FieldLabel>
+						<Input
+							placeholder="Acme Inc"
+							value={name}
+							onChange={(e) => {
+								setName(e.target.value);
+								if (!slugChanged) {
+									setSlug(slugify(e.target.value));
+								}
+							}}
+						/>
+					</div>
+					<div className="flex-1">
+						<FieldLabel>Slug</FieldLabel>
+						<Input
+							placeholder="acme-inc"
+							value={slug}
+							onChange={(e) => {
+								if (!slugChanged) {
+									setSlug(slugify(e.target.value));
+								}
+							}}
+						/>
 					</div>
 				</div>
-				<DialogFooter className="px-4 pb-4">
-					<Button
+				<DialogFooter>
+					<ShortcutButton
 						variant="primary"
 						onClick={handleCreate}
 						isLoading={isLoading}
+						metaShortcut="enter"
+						className="w-full"
 					>
-						Create
-					</Button>
+						Create Organization
+					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

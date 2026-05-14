@@ -17,6 +17,10 @@ export const StripeSubscriptionScheduleActionSchema = z.discriminatedUnion(
 			type: z.literal("release"),
 			stripeSubscriptionScheduleId: z.string(),
 		}),
+		z.object({
+			type: z.literal("cancel"),
+			stripeSubscriptionScheduleId: z.string(),
+		}),
 	],
 );
 
