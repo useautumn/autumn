@@ -21,7 +21,6 @@ type CreatePlanItemParams = Omit<
 
 import {
 	getCreateSchedulePhaseTimingError,
-	hasPersistedCreateSchedule,
 	type SchedulePhase,
 } from "../createScheduleFormSchema";
 
@@ -130,11 +129,9 @@ export function buildCreateScheduleRequestBody({
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
-	const hasPersistedSchedule = hasPersistedCreateSchedule({ phases });
 
 	const apiPhases = phases.map((phase, index) => {
-		const startsAt =
-			index === 0 && !hasPersistedSchedule ? now : phase.startsAt;
+		const startsAt = index === 0 ? now : phase.startsAt;
 		if (startsAt === null) return null;
 
 		const plans = phase.plans
