@@ -1,7 +1,9 @@
+import type {
+	BillingContext,
+	StripeSubscriptionScheduleAction,
+} from "@autumn/shared";
 import { formatSecondsToDate } from "@autumn/shared";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
-import type { BillingContext } from "@autumn/shared";
-import type { StripeSubscriptionScheduleAction } from "@autumn/shared";
 import type Stripe from "stripe";
 import { billingContextFormatPriceByStripePriceId } from "@/internal/billing/v2/utils/billingContextPriceLookup";
 
@@ -45,7 +47,10 @@ export const logSubscriptionScheduleAction = ({
 	billingContext: BillingContext;
 	subscriptionScheduleAction: StripeSubscriptionScheduleAction;
 }): void => {
-	if (subscriptionScheduleAction.type === "release") {
+	if (
+		subscriptionScheduleAction.type === "release" ||
+		subscriptionScheduleAction.type === "cancel"
+	) {
 		ctx.logger.debug(
 			`[logSubscriptionScheduleAction] Action type: ${subscriptionScheduleAction.type}`,
 		);

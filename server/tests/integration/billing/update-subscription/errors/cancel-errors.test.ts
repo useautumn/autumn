@@ -5,12 +5,14 @@
  */
 
 import { expect, test } from "bun:test";
-import { type ApiCustomerV3, ErrCode, FreeTrialDuration } from "@autumn/shared";
+import { type ApiCustomerV3, FreeTrialDuration } from "@autumn/shared";
 import {
+	expectCustomerProducts,
 	expectProductCanceling,
 	expectProductNotPresent,
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -18,20 +20,21 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 1: Cannot cancel a scheduled product
+// TEST 1: Cancel a scheduled product
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
  * Scenario:
  * - User is on Premium ($50/mo)
  * - User downgrades to Pro ($20/mo) → Premium is canceling, Pro is scheduled
- * - User tries to cancel Pro (the scheduled product)
+ * - User cancels Pro (the scheduled product)
  *
  * Expected Result:
- * - Should return an error - cannot cancel a scheduled product
+ * - Pro scheduled attachment is removed
+ * - Premium is uncanceled and remains active
  */
-test.concurrent(`${chalk.yellowBright("error: cannot cancel scheduled product")}`, async () => {
-	const customerId = "err-cancel-scheduled";
+test.concurrent(`${chalk.yellowBright("cancel: scheduled product removes pending schedule")}`, async () => {
+	const customerId = "cancel-scheduled-product";
 
 	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
 
@@ -46,7 +49,7 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel scheduled product")}
 		items: [messagesItem, premiumPriceItem],
 	});
 
-	const { autumnV1 } = await initScenario({
+	const { autumnV1, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -70,16 +73,24 @@ test.concurrent(`${chalk.yellowBright("error: cannot cancel scheduled product")}
 		productId: pro.id,
 	});
 
-	// Try to cancel the scheduled product - should fail
-	await expectAutumnError({
-		errCode: ErrCode.InvalidRequest,
-		func: async () => {
-			await autumnV1.subscriptions.update({
-				customer_id: customerId,
-				product_id: pro.id,
-				cancel_action: "cancel_immediately",
-			});
-		},
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		product_id: pro.id,
+		cancel_action: "cancel_immediately",
+	});
+
+	const customerAfterCancel =
+		await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer: customerAfterCancel,
+		active: [premium.id],
+		notPresent: [pro.id],
+	});
+	await expectSubToBeCorrect({
+		db: ctx.db,
+		customerId,
+		org: ctx.org,
+		env: ctx.env,
 	});
 });
 
