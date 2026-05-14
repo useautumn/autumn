@@ -565,3 +565,108 @@ test(
 		expect(restoredPro!.status).toBe(CusProductStatus.Active);
 	},
 );
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6: Cancel trial when previous plan was expired during trial
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer on pro → enterprise revert trial
+ * - During trial, the paused pro is expired (simulating Stripe subscription.deleted)
+ * - User cancels the enterprise trial immediately
+ *
+ * Expected:
+ * - Enterprise → Expired
+ * - Pro stays Expired (NOT reactivated — the Paused guard prevents it)
+ */
+test(
+	`${chalk.yellowBright("trial-revert-expiry 6: cancel trial does not restore expired previous plan")}`,
+	async () => {
+		const customerId = "trial-revert-cancel-expired-prev";
+
+		const proMessages = items.monthlyMessages({ includedUsage: 500 });
+		const pro = products.pro({ id: "pro", items: [proMessages] });
+
+		const enterpriseMessages = items.monthlyMessages({ includedUsage: 2000 });
+		const enterprisePrice = items.monthlyPrice({ price: 50 });
+		const enterprise = products.base({
+			id: "enterprise",
+			items: [enterpriseMessages, enterprisePrice],
+		});
+
+		const { autumnV2, autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, enterprise] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		// Attach enterprise with revert trial
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: enterprise.id,
+			redirect_mode: "if_required",
+			customize: {
+				free_trial: {
+					duration_length: 14,
+					duration_type: FreeTrialDuration.Day,
+					card_required: false,
+					on_end: "revert",
+				},
+			},
+		};
+
+		await autumnV2.billing.attach<AttachParamsV1Input>(params);
+
+		// Simulate: Stripe webhook expired the paused plan during the trial
+		const beforeCancel = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ALL_STATUSES_WITH_PAUSED,
+		});
+
+		const pausedPro = beforeCancel.customer_products.find(
+			(cp) => cp.product_id === pro.id,
+		);
+		expect(pausedPro).toBeDefined();
+		expect(pausedPro!.status).toBe(CusProductStatus.Paused);
+
+		await db
+			.update(customerProducts)
+			.set({ status: CusProductStatus.Expired })
+			.where(eq(customerProducts.id, pausedPro!.id));
+
+		// Cancel the trial immediately
+		await autumnV1.subscriptions.update(
+			{
+				customer_id: customerId,
+				product_id: enterprise.id,
+				cancel_action: "cancel_immediately" as const,
+			},
+			{ timeout: 2000 },
+		);
+
+		// Verify: enterprise expired, pro stays expired (NOT reactivated)
+		const afterCancel = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ALL_STATUSES_WITH_PAUSED,
+		});
+
+		const cancelledEnterprise = afterCancel.customer_products.find(
+			(cp) => cp.product_id === enterprise.id,
+		);
+		const expiredPro = afterCancel.customer_products.find(
+			(cp) => cp.product_id === pro.id,
+		);
+
+		expect(cancelledEnterprise).toBeDefined();
+		expect(cancelledEnterprise!.status).toBe(CusProductStatus.Expired);
+
+		expect(expiredPro).toBeDefined();
+		expect(expiredPro!.status).toBe(CusProductStatus.Expired);
+	},
+);
