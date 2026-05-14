@@ -1,7 +1,11 @@
 import {
 	type AutumnBillingPlan,
+	CusProductStatus,
 	cp,
 	type FullCusProduct,
+	findMainActiveCustomerProductByGroup,
+	isCustomerProductCanceling,
+	isFutureStartDate,
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -39,6 +43,68 @@ const computeScheduledAddOnsToDelete = ({
 	});
 };
 
+const shouldDeleteCustomerProductBeforeBillingStarts = ({
+	customerProduct,
+	currentEpochMs,
+}: {
+	customerProduct: FullCusProduct;
+	currentEpochMs: number;
+}): boolean => {
+	if (customerProduct.status === CusProductStatus.Scheduled) return true;
+
+	const hasStripeSchedule = (customerProduct.scheduled_ids?.length ?? 0) > 0;
+	const hasStripeSubscription =
+		(customerProduct.subscription_ids?.length ?? 0) > 0;
+
+	return (
+		hasStripeSchedule &&
+		!hasStripeSubscription &&
+		isFutureStartDate(customerProduct.starts_at, currentEpochMs)
+	);
+};
+
+const computeScheduledCancelPlan = ({
+	billingContext,
+	plan,
+}: {
+	billingContext: UpdateSubscriptionBillingContext;
+	plan: AutumnBillingPlan;
+}): AutumnBillingPlan => {
+	const { customerProduct, fullCustomer } = billingContext;
+
+	const activeCustomerProduct = findMainActiveCustomerProductByGroup({
+		fullCus: fullCustomer,
+		productGroup: customerProduct.product.group,
+		internalEntityId: customerProduct.internal_entity_id ?? undefined,
+	});
+
+	const scheduledCancelPlan: AutumnBillingPlan = {
+		...plan,
+		updateCustomerProduct: undefined,
+		deleteCustomerProduct: customerProduct,
+	};
+
+	if (
+		!activeCustomerProduct ||
+		activeCustomerProduct.id === customerProduct.id ||
+		!isCustomerProductCanceling(activeCustomerProduct)
+	) {
+		return scheduledCancelPlan;
+	}
+
+	return {
+		...scheduledCancelPlan,
+		updateCustomerProduct: {
+			customerProduct: activeCustomerProduct,
+			updates: {
+				canceled: false,
+				canceled_at: null,
+				ended_at: null,
+			},
+		},
+	};
+};
+
 /**
  * Computes and applies the cancel plan for a subscription.
  *
@@ -59,6 +125,18 @@ export const computeCancelPlan = ({
 
 	if (billingContext.cancelAction === "uncancel") {
 		return applyUncancelToPlan({
+			billingContext,
+			plan,
+		});
+	}
+
+	if (
+		shouldDeleteCustomerProductBeforeBillingStarts({
+			customerProduct: billingContext.customerProduct,
+			currentEpochMs: billingContext.currentEpochMs,
+		})
+	) {
+		return computeScheduledCancelPlan({
 			billingContext,
 			plan,
 		});
