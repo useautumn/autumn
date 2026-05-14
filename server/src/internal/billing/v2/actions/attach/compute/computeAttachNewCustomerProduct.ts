@@ -109,14 +109,14 @@ export const computeAttachNewCustomerProduct = ({
 		});
 	}
 
+	const isRevertTrial = trialContext?.onEnd === "revert";
+
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
 		initContext: {
 			fullCustomer,
 			fullProduct: attachProduct,
 			featureQuantities,
-			// existingUsages: isScheduled ? undefined : existingUsages,
-			// existingRollovers,
 			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
 			freeTrial: trialContext?.freeTrial ?? null,
@@ -129,7 +129,6 @@ export const computeAttachNewCustomerProduct = ({
 		},
 		initOptions: {
 			isCustom,
-			// subscriptionId: isScheduled ? undefined : stripeSubscription?.id,
 			subscriptionId: stripeSubscription?.id,
 			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
 			startsAt,
@@ -140,6 +139,10 @@ export const computeAttachNewCustomerProduct = ({
 			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor,
 				currentEpochMs,
+			}),
+			...(isRevertTrial && {
+				previousCustomerProductId: currentCustomerProduct?.id,
+				onTrialEnd: "revert" as const,
 			}),
 		},
 	});

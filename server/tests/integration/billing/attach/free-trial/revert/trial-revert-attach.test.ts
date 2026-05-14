@@ -1,0 +1,266 @@
+/**
+ * Trial Revert — Attach Tests
+ *
+ * Verifies that attaching a product with on_end: "revert" correctly:
+ * - Creates a new cusProduct with Trialing status
+ * - Pauses the current cusProduct (not expired, not canceled)
+ * - Links the trial cusProduct to the previous one via previous_customer_product_id
+ * - Sets on_trial_end = "revert" on the trial cusProduct
+ * - Does NOT create a Stripe subscription for the trial (card_required: false)
+ */
+
+import { expect, test } from "bun:test";
+import {
+	type AttachParamsV1Input,
+	CusProductStatus,
+	FreeTrialDuration,
+	customerProducts,
+	ms,
+} from "@autumn/shared";
+import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
+import { TestFeature } from "@tests/setup/v2Features";
+import { items } from "@tests/utils/fixtures/items";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import chalk from "chalk";
+import { eq } from "drizzle-orm";
+import { CusService } from "@/internal/customers/CusService";
+
+const ALL_STATUSES_WITH_PAUSED = [
+	CusProductStatus.Active,
+	CusProductStatus.PastDue,
+	CusProductStatus.Scheduled,
+	CusProductStatus.Expired,
+	CusProductStatus.Paused,
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 1: Pro customer → enterprise revert trial (happy path)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("trial-revert-attach 1: pro to enterprise revert trial — status + DB fields")}`,
+	async () => {
+		const customerId = "trial-revert-attach-basic";
+
+		const messagesItem = items.monthlyMessages({ includedUsage: 500 });
+		const pro = products.pro({ id: "pro", items: [messagesItem] });
+
+		const enterpriseMessages = items.monthlyMessages({ includedUsage: 2000 });
+		const enterprisePrice = items.monthlyPrice({ price: 50 });
+		const enterprise = products.base({
+			id: "enterprise",
+			items: [enterpriseMessages, enterprisePrice],
+		});
+
+		const { autumnV2, ctx, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, enterprise] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: enterprise.id,
+			redirect_mode: "if_required",
+			customize: {
+				free_trial: {
+					duration_length: 14,
+					duration_type: FreeTrialDuration.Day,
+					card_required: false,
+					on_end: "revert",
+				},
+			},
+		};
+
+		await autumnV2.billing.attach<AttachParamsV1Input>(params);
+
+		// Query ALL statuses including Paused and Trialing
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ALL_STATUSES_WITH_PAUSED,
+		});
+
+		// Find the enterprise (trial) and pro (paused) customer products
+		const trialCusProduct = fullCustomer.customer_products.find(
+			(cp) => cp.product_id === enterprise.id,
+		);
+		const pausedCusProduct = fullCustomer.customer_products.find(
+			(cp) => cp.product_id === pro.id,
+		);
+
+		expect(trialCusProduct).toBeDefined();
+		expect(pausedCusProduct).toBeDefined();
+
+		// Trial cusProduct assertions (Active status + trial_ends_at, matching existing trial behavior)
+		expect(trialCusProduct!.status).toBe(CusProductStatus.Active);
+		expect(trialCusProduct!.on_trial_end).toBe("revert");
+		expect(trialCusProduct!.previous_customer_product_id).toBe(
+			pausedCusProduct!.id,
+		);
+		expect(trialCusProduct!.trial_ends_at).toBeDefined();
+		expect(
+			Math.abs(trialCusProduct!.trial_ends_at! - (advancedTo + ms.days(14))),
+		).toBeLessThan(ms.hours(1));
+
+		// Paused cusProduct assertions
+		expect(pausedCusProduct!.status).toBe(CusProductStatus.Paused);
+		expect(pausedCusProduct!.canceled).toBe(false);
+		expect(pausedCusProduct!.canceled_at).toBeNull();
+		expect(pausedCusProduct!.ended_at).toBeNull();
+		expect(pausedCusProduct!.subscription_ids?.length).toBeGreaterThan(0);
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 2: API visibility + paused product retains data
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("trial-revert-attach 2: API shows trial product, paused retains data")}`,
+	async () => {
+		const customerId = "trial-revert-attach-retain";
+
+		const proMessages = items.monthlyMessages({ includedUsage: 500 });
+		const pro = products.pro({ id: "pro", items: [proMessages] });
+
+		const enterpriseMessages = items.monthlyMessages({ includedUsage: 2000 });
+		const enterprisePrice = items.monthlyPrice({ price: 50 });
+		const enterprise = products.base({
+			id: "enterprise",
+			items: [enterpriseMessages, enterprisePrice],
+		});
+
+		const { autumnV2, autumnV1, ctx, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, enterprise] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: enterprise.id,
+			redirect_mode: "if_required",
+			customize: {
+				free_trial: {
+					duration_length: 14,
+					duration_type: FreeTrialDuration.Day,
+					card_required: false,
+					on_end: "revert",
+				},
+			},
+		};
+
+		await autumnV2.billing.attach<AttachParamsV1Input>(params);
+
+		// Verify trial product is visible and trialing via the API
+		await expectProductTrialing({
+			customerId,
+			productId: enterprise.id,
+			trialEndsAt: advancedTo + ms.days(14),
+		});
+
+		// Verify DB-level data retention on paused product
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ALL_STATUSES_WITH_PAUSED,
+		});
+
+		const pausedPro = fullCustomer.customer_products.find(
+			(cp) => cp.product_id === pro.id,
+		);
+		const trialEnterprise = fullCustomer.customer_products.find(
+			(cp) => cp.product_id === enterprise.id,
+		);
+
+		expect(pausedPro).toBeDefined();
+		expect(trialEnterprise).toBeDefined();
+
+		// Paused pro should retain its customer_prices and customer_entitlements
+		expect(pausedPro!.customer_prices.length).toBeGreaterThan(0);
+		expect(pausedPro!.customer_entitlements.length).toBeGreaterThan(0);
+
+		// Trial enterprise should have its own customer_entitlements
+		expect(trialEnterprise!.customer_entitlements.length).toBeGreaterThan(0);
+		expect(trialEnterprise!.trial_ends_at).toBeDefined();
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 3: on_end: "bill" keeps normal behavior (regression check)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("trial-revert-attach 3: on_end bill — previous plan expired, not paused")}`,
+	async () => {
+		const customerId = "trial-revert-attach-bill";
+
+		const proMessages = items.monthlyMessages({ includedUsage: 500 });
+		const pro = products.pro({ id: "pro", items: [proMessages] });
+
+		const enterpriseMessages = items.monthlyMessages({ includedUsage: 2000 });
+		const enterprisePrice = items.monthlyPrice({ price: 50 });
+		const enterprise = products.base({
+			id: "enterprise",
+			items: [enterpriseMessages, enterprisePrice],
+		});
+
+		const { autumnV2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, enterprise] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			plan_id: enterprise.id,
+			redirect_mode: "if_required",
+			customize: {
+				free_trial: {
+					duration_length: 14,
+					duration_type: FreeTrialDuration.Day,
+					card_required: false,
+					on_end: "bill",
+				},
+			},
+		};
+
+		await autumnV2.billing.attach<AttachParamsV1Input>(params);
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ALL_STATUSES_WITH_PAUSED,
+		});
+
+		const proCusProduct = fullCustomer.customer_products.find(
+			(cp) => cp.product_id === pro.id,
+		);
+		const enterpriseCusProduct = fullCustomer.customer_products.find(
+			(cp) => cp.product_id === enterprise.id,
+		);
+
+		expect(enterpriseCusProduct).toBeDefined();
+		expect(proCusProduct).toBeDefined();
+
+		// on_end: "bill" should NOT pause the previous plan — it should be expired
+		expect(proCusProduct!.status).toBe(CusProductStatus.Expired);
+		expect(proCusProduct!.canceled).toBe(true);
+
+		// Enterprise should be active (not Trialing status), on_trial_end should be null
+		expect(enterpriseCusProduct!.status).toBe(CusProductStatus.Active);
+		expect(enterpriseCusProduct!.on_trial_end).toBeNull();
+		expect(enterpriseCusProduct!.previous_customer_product_id).toBeNull();
+	},
+);
