@@ -19,7 +19,9 @@ export const vercelSeederMiddleware = async (
 	const org =
 		!ctx.org && orgId ? await OrgService.get({ db: ctx.db, orgId }) : ctx.org;
 
-	org.config.automatic_tax = false;
+	if (org?.config) {
+		org.config.automatic_tax = false;
+	}
 	const env = ctx.env !== routeEnv ? (routeEnv as AppEnv) : ctx.env;
 
 	const features =
