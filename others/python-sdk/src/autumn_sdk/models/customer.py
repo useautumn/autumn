@@ -1050,6 +1050,7 @@ CustomerRewardsType = Union[
         "fixed_discount",
         "free_product",
         "invoice_credits",
+        "feature_grant",
     ],
     UnrecognizedStr,
 ]
