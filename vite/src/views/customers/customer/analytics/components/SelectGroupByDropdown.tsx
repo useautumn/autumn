@@ -258,7 +258,9 @@ export const SelectGroupByDropdown = ({
 									className="flex items-center justify-between"
 								>
 									<span className="text-xs">All values</span>
-									{!groupFilter && <Check className="ml-2 h-3 w-3 text-t3" />}
+									{groupFilter === null && (
+										<Check className="ml-2 h-3 w-3 text-t3" />
+									)}
 								</DropdownMenuItem>
 								{availableGroupValues.map((value: string) => {
 									const displayValue =
