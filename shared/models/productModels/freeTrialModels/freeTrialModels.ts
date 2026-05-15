@@ -28,7 +28,7 @@ export const CreateFreeTrialSchema = z.object({
 	unique_fingerprint: z.boolean().default(false),
 	duration: z.enum(FreeTrialDuration).default(FreeTrialDuration.Day),
 	card_required: z.boolean().default(true),
-	on_end: z.enum(TrialOnEnd).optional(),
+	on_end: z.enum(TrialOnEnd).nullish(),
 });
 
 export type FreeTrial = z.infer<typeof FreeTrialSchema>;
