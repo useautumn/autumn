@@ -10,6 +10,7 @@
 
 import { expect, test } from "bun:test";
 import {
+	ALL_STATUSES,
 	type AttachParamsV1Input,
 	CusProductStatus,
 	FreeTrialDuration,
@@ -27,13 +28,6 @@ import { db } from "@/db/initDrizzle";
 import { logger } from "@/external/logtail/logtailUtils";
 import { CusService } from "@/internal/customers/CusService";
 
-const ALL_STATUSES_WITH_PAUSED = [
-	CusProductStatus.Active,
-	CusProductStatus.PastDue,
-	CusProductStatus.Scheduled,
-	CusProductStatus.Expired,
-	CusProductStatus.Paused,
-];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Revert trial expires → previous plan unpaused
@@ -95,7 +89,7 @@ test(
 		const beforeCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const trialCusProduct = beforeCron.customer_products.find(
@@ -126,7 +120,7 @@ test(
 		const afterCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const expiredTrialCp = afterCron.customer_products.find(
@@ -199,7 +193,7 @@ test(
 		const beforeCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const trialCp = beforeCron.customer_products.find(
@@ -221,7 +215,7 @@ test(
 		const afterCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const expiredTrialCp = afterCron.customer_products.find(
@@ -306,7 +300,7 @@ test(
 		const beforeCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const trialCp = beforeCron.customer_products.find(
@@ -326,7 +320,7 @@ test(
 		const afterCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const restoredPro = afterCron.customer_products.find(
@@ -409,7 +403,7 @@ test(
 		const beforeCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const pausedPro = beforeCron.customer_products.find(
@@ -442,7 +436,7 @@ test(
 		const afterCron = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const expiredEnterprise = afterCron.customer_products.find(
@@ -518,7 +512,7 @@ test(
 		const beforeCancel = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const trialCp = beforeCancel.customer_products.find(
@@ -548,7 +542,7 @@ test(
 		const afterCancel = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const cancelledEnterprise = afterCancel.customer_products.find(
@@ -625,7 +619,7 @@ test(
 		const beforeCancel = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const pausedPro = beforeCancel.customer_products.find(
@@ -653,7 +647,7 @@ test(
 		const afterCancel = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const cancelledEnterprise = afterCancel.customer_products.find(

@@ -12,6 +12,7 @@
 
 import { expect, test } from "bun:test";
 import {
+	ALL_STATUSES,
 	type AttachParamsV1Input,
 	CusProductStatus,
 	FreeTrialDuration,
@@ -217,18 +218,10 @@ test.concurrent(
 
 		await autumnV2.billing.attach<AttachParamsV1Input>(downgradeParams);
 
-		const allStatuses = [
-			CusProductStatus.Active,
-			CusProductStatus.PastDue,
-			CusProductStatus.Scheduled,
-			CusProductStatus.Expired,
-			CusProductStatus.Paused,
-		];
-
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: allStatuses,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const enterpriseCp = fullCustomer.customer_products.find(
