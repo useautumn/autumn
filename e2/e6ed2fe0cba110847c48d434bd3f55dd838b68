@@ -1,0 +1,26 @@
+vite/src/views/migrations/migration/shared/ValuePicker.tsx
+  s_5deb4a18a6feb0::t_fd5156ebace1db 24,128,133
+  s_5deb4a18a6feb0::t_e02947ad52dd03 113
+vite/src/views/migrations/migration/shared/featureSuggestions.tsx
+  s_5deb4a18a6feb0::t_fd5156ebace1db 11
+vite/src/views/migrations/migration/filters/FilterGroup.tsx
+  s_5deb4a18a6feb0::t_fd5156ebace1db 49
+vite/src/views/migrations/migration/shared/planSuggestions.tsx
+  s_5deb4a18a6feb0::t_fd5156ebace1db 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "e2e6ed2fe0cba110847c48d434bd3f55dd838b68",
+  "prompts": {},
+  "sessions": {
+    "s_5deb4a18a6feb0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d3e23541ffe9Je7hpc51j5uvB",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
