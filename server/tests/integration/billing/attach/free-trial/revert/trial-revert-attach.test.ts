@@ -11,6 +11,7 @@
 
 import { expect, test } from "bun:test";
 import {
+	ALL_STATUSES,
 	type AttachParamsV1Input,
 	CusProductStatus,
 	FreeTrialDuration,
@@ -26,13 +27,6 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { CusService } from "@/internal/customers/CusService";
 
-const ALL_STATUSES_WITH_PAUSED = [
-	CusProductStatus.Active,
-	CusProductStatus.PastDue,
-	CusProductStatus.Scheduled,
-	CusProductStatus.Expired,
-	CusProductStatus.Paused,
-];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Pro customer → enterprise revert trial (happy path)
@@ -82,7 +76,7 @@ test.concurrent(
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		// Find the enterprise (trial) and pro (paused) customer products
@@ -171,7 +165,7 @@ test.concurrent(
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const pausedPro = fullCustomer.customer_products.find(
@@ -241,7 +235,7 @@ test.concurrent(
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
-			inStatuses: ALL_STATUSES_WITH_PAUSED,
+			inStatuses: ALL_STATUSES,
 		});
 
 		const proCusProduct = fullCustomer.customer_products.find(
