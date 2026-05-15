@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Dialog,
 	DialogContent,

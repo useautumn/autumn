@@ -61,7 +61,7 @@ const AnimatedCopyIcon = ({
 		<CheckIcon
 			className={cn(
 				size,
-				"absolute text-green-500 transition-all duration-100",
+				"absolute text-t1 transition-all duration-100",
 				copied ? "opacity-100 scale-100" : "opacity-0 scale-95",
 			)}
 		/>

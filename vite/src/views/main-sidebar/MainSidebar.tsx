@@ -16,7 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
@@ -151,7 +151,7 @@ export const MainSidebar = ({
 				<div className="flex flex-col gap-6 relative">
 					{!isMobileSheet && (
 						<Button
-							variant="outline"
+							variant="secondary"
 							size="sm"
 							onClick={() => {
 								setExpanded((prev) => !prev);
