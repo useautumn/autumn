@@ -111,13 +111,18 @@ export function transformGroupedData({
 		.filter((m) => m.name !== "period" && m.name !== groupByColumn)
 		.map((m) => m.name);
 
+	// For plan_id, an empty-string group value is meaningful ("no plan") and
+	// must be preserved as its own series. For property-based grouping, empty
+	// means the property is absent, which we drop.
+	const allowEmpty = groupBy === "plan_id";
+
 	// Collect all unique group values
 	const groupValues = new Set<string>();
 	for (const row of events.data) {
 		const groupValue = row[groupByColumn];
-		if (groupValue !== undefined && groupValue !== null && groupValue !== "") {
-			groupValues.add(String(groupValue));
-		}
+		if (groupValue === undefined || groupValue === null) continue;
+		if (groupValue === "" && !allowEmpty) continue;
+		groupValues.add(String(groupValue));
 	}
 
 	// Pivot data: group by period and create columns for each group value
@@ -128,7 +133,13 @@ export function transformGroupedData({
 
 	for (const row of events.data) {
 		const period = row.period;
-		const groupValue = String(row[groupByColumn] || "unknown");
+		const rawGroupValue = row[groupByColumn];
+		const groupValue =
+			rawGroupValue === undefined || rawGroupValue === null
+				? "unknown"
+				: allowEmpty
+					? String(rawGroupValue)
+					: String(rawGroupValue || "unknown");
 
 		if (!pivotedMap.has(period)) {
 			pivotedMap.set(period, { period });
@@ -223,7 +234,7 @@ export function generateChartConfig({
 		const featureName = getFeatureName({ key: featureKey, features });
 		let displayGroupValue: string;
 		if (groupValue === "AUTUMN_RESERVED") {
-			displayGroupValue = groupBy === "plan_id" ? "No plan" : "Other values";
+			displayGroupValue = "Other values";
 		} else if (groupBy === "plan_id" && groupValue === "") {
 			displayGroupValue = "No plan";
 		} else if (groupBy === "entity_id" && entityNames?.[groupValue]) {

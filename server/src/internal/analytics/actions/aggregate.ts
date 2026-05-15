@@ -260,9 +260,10 @@ const formatGroupableResults = ({
 
 	// Collect all unique group values across all bins (for backfilling zeros).
 	// Each bin may have a different set of top-N groups, so the union can exceed N.
+	// `""` is a meaningful bucket for plan_id (means "no plan"), so don't drop it.
 	const allGroupValues = new Set<string>();
 	for (const row of rows) {
-		if (row.group_value) {
+		if (row.group_value !== undefined && row.group_value !== null) {
 			allGroupValues.add(row.group_value);
 		}
 	}
@@ -285,7 +286,7 @@ const formatGroupableResults = ({
 
 	// Fill in actual data directly from the pipe output
 	for (const row of rows) {
-		if (!row.group_value) continue;
+		if (row.group_value === undefined || row.group_value === null) continue;
 
 		const groupMap = dataMap.get(row.period);
 		if (!groupMap) continue;
