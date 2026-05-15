@@ -1,7 +1,15 @@
 import { CusProductStatus, formatMsToDate } from "@autumn/shared";
-import { DotIcon, ExclamationMarkIcon, XIcon } from "@phosphor-icons/react";
+import { DotIcon } from "@phosphor-icons/react";
 import { formatDistance } from "date-fns";
-import { BanIcon, CalendarIcon, CheckIcon, ClockIcon } from "lucide-react";
+import {
+	AlertTriangleIcon,
+	BanIcon,
+	CalendarIcon,
+	CheckIcon,
+	ClockIcon,
+	PauseIcon,
+	XIcon,
+} from "lucide-react";
 import {
 	Tooltip,
 	TooltipContent,
@@ -10,66 +18,109 @@ import {
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 
-const StatusItem = ({
-	children,
-	text,
-	trial_ends_at,
-	canceled_at,
-	nowMs,
-	tooltip,
-	className,
-}: {
-	children: React.ReactNode;
-	text: string;
-	trial_ends_at?: number;
-	canceled_at?: number;
-	nowMs?: number;
-	tooltip?: boolean;
-	className?: string;
-}) => {
-	const getSubtext = () => {
-		if (trial_ends_at) {
-			return `${formatDistance(trial_ends_at, nowMs ?? Date.now())} left`;
-		}
-		if (canceled_at) {
-			return `${formatDistance(canceled_at, nowMs ?? Date.now())} ago`;
-		}
-		return null;
-	};
-
-	const subtext = getSubtext();
-
-	return (
-		<div className={cn("flex items-center", className)}>
-			{tooltip ? (
-				<TooltipProvider>
-					<Tooltip>
-						<TooltipTrigger>{children}</TooltipTrigger>
-						<TooltipContent>
-							<span className="text-sm">{text} </span>
-							{subtext && <span className="text-sm text-t3">({subtext})</span>}
-						</TooltipContent>
-					</Tooltip>
-				</TooltipProvider>
-			) : (
-				<>
-					<div className="flex items-center gap-1.5">
-						{children}
-						<span className="text-sm">{text}</span>
-					</div>
-					{subtext && (
-						<>
-							<DotIcon size={16} />
-							<span className="text-sm text-t3 pl-1 truncate">{subtext}</span>
-						</>
-					)}
-				</>
-			)}
-		</div>
-	);
+type StatusConfig = {
+	icon: React.ElementType;
+	label: string;
+	iconClassName: string;
 };
 
-export const CustomerProductsStatus = ({
+const STATUS_CONFIG: Record<string, StatusConfig> = {
+	active: {
+		icon: CheckIcon,
+		label: "Active",
+		iconClassName: "bg-green-500 dark:bg-green-600",
+	},
+	trialing: {
+		icon: ClockIcon,
+		label: "Trial",
+		iconClassName: "bg-blue-500 dark:bg-blue-600",
+	},
+	paused: {
+		icon: PauseIcon,
+		label: "Paused",
+		iconClassName: "bg-yellow-500 dark:bg-yellow-600 fill-white",
+	},
+	canceling: {
+		icon: BanIcon,
+		label: "Cancelling",
+		iconClassName: "bg-orange-500 dark:bg-orange-600",
+	},
+	past_due: {
+		icon: AlertTriangleIcon,
+		label: "Past Due",
+		iconClassName: "bg-red-500 dark:bg-red-600",
+	},
+	expired: {
+		icon: XIcon,
+		label: "Expired",
+		iconClassName: "bg-black dark:bg-black",
+	},
+	scheduled: {
+		icon: CalendarIcon,
+		label: "Scheduled",
+		iconClassName: "bg-purple-500 dark:bg-purple-600",
+	},
+};
+
+function resolveStatus({
+	status,
+	canceled,
+	trialing,
+}: {
+	status?: CusProductStatus;
+	canceled?: boolean;
+	trialing?: boolean;
+}): string {
+	if (status === CusProductStatus.Paused) return "paused";
+	if (status === CusProductStatus.Expired) return "expired";
+	if (status === CusProductStatus.Scheduled) return "scheduled";
+	if (canceled) return "canceling";
+	if (trialing || status === CusProductStatus.Trialing) return "trialing";
+	if (status === CusProductStatus.PastDue) return "past_due";
+	return "active";
+}
+
+function getSubtext({
+	resolvedStatus,
+	trial_ends_at,
+	canceled_at,
+	starts_at,
+	nowMs,
+}: {
+	resolvedStatus: string;
+	trial_ends_at?: number;
+	canceled_at?: number;
+	starts_at?: number;
+	nowMs: number;
+}): string | null {
+	if (resolvedStatus === "trialing" && trial_ends_at) {
+		return `${formatDistance(trial_ends_at, nowMs)} left`;
+	}
+	if (resolvedStatus === "canceling" && canceled_at) {
+		return `${formatDistance(canceled_at, nowMs)} ago`;
+	}
+	if (resolvedStatus === "scheduled" && starts_at) {
+		return `Starts ${formatMsToDate(starts_at)}`;
+	}
+	return null;
+}
+
+function StatusIcon({
+	icon: Icon,
+	className,
+}: {
+	icon: React.ElementType;
+	className: string;
+}) {
+	return (
+		<Icon
+			className={cn("text-white rounded-full p-0.5", className)}
+			size={12}
+		/>
+	);
+}
+
+export function CustomerProductsStatus({
 	tooltip,
 	status,
 	canceled,
@@ -87,101 +138,55 @@ export const CustomerProductsStatus = ({
 	trial_ends_at?: number;
 	starts_at?: number;
 	nowMs?: number;
-}) => {
+}) {
 	const effectiveNowMs = nowMs ?? Date.now();
+	const resolvedStatus = resolveStatus({ status, canceled, trialing });
+	const config = STATUS_CONFIG[resolvedStatus];
 
-	// Expired status takes priority over canceled
-	if (status === CusProductStatus.Expired) {
+	if (!config) return <div>Unknown</div>;
+
+	const subtext = getSubtext({
+		resolvedStatus,
+		trial_ends_at,
+		canceled_at,
+		starts_at,
+		nowMs: effectiveNowMs,
+	});
+
+	const iconElement = (
+		<StatusIcon icon={config.icon} className={config.iconClassName} />
+	);
+
+	if (tooltip) {
 		return (
-			<StatusItem text="Expired" tooltip={tooltip}>
-				<XIcon
-					className="text-white bg-black dark:bg-black rounded-full p-0.5"
-					size={12}
-				/>
-			</StatusItem>
+			<div className="flex items-center">
+				<TooltipProvider>
+					<Tooltip>
+						<TooltipTrigger>{iconElement}</TooltipTrigger>
+						<TooltipContent>
+							<span className="text-sm">{config.label} </span>
+							{subtext && (
+								<span className="text-sm text-t3">({subtext})</span>
+							)}
+						</TooltipContent>
+					</Tooltip>
+				</TooltipProvider>
+			</div>
 		);
 	}
 
-	if (status === CusProductStatus.Scheduled) {
-		return (
-			<StatusItem text="" tooltip={tooltip}>
-				<CalendarIcon
-					className="text-white bg-purple-500 dark:bg-purple-600 rounded-full p-0.5"
-					size={12}
-				/>
-				{starts_at && (
-					<span className="text-sm text-t3 pl-1 truncate">
-						Starts {formatMsToDate(starts_at)}
-					</span>
-				)}
-			</StatusItem>
-		);
-	}
-
-	// If product is canceled, show that status
-	if (canceled) {
-		return (
-			<StatusItem
-				text="Cancelling"
-				tooltip={tooltip}
-				canceled_at={canceled_at}
-				nowMs={effectiveNowMs}
-			>
-				<BanIcon
-					className="text-white bg-orange-500 dark:bg-orange-600 rounded-full p-0.5"
-					size={12}
-				/>
-			</StatusItem>
-		);
-	}
-
-	if (trialing) {
-		return (
-			<StatusItem
-				text="Trial"
-				trial_ends_at={trial_ends_at}
-				tooltip={tooltip}
-				nowMs={effectiveNowMs}
-			>
-				<ClockIcon
-					className="text-white bg-blue-500 dark:bg-blue-600 rounded-full p-0.5"
-					size={12}
-				/>
-			</StatusItem>
-		);
-	}
-
-	switch (status) {
-		case CusProductStatus.Active:
-			return (
-				<StatusItem text="Active" tooltip={tooltip}>
-					<CheckIcon
-						className="text-white bg-green-500 dark:bg-green-600 rounded-full p-0.5"
-						size={12}
-					/>
-				</StatusItem>
-			);
-		case CusProductStatus.PastDue:
-			return (
-				<StatusItem text="Past Due" tooltip={tooltip}>
-					<ExclamationMarkIcon
-						className="text-white bg-red-500 dark:bg-red-600 rounded-full p-0.5"
-						size={12}
-					/>
-				</StatusItem>
-			);
-
-		case CusProductStatus.Trialing:
-			return (
-				<StatusItem text="Trial" tooltip={tooltip}>
-					<ClockIcon
-						className="text-white bg-blue-500 dark:bg-blue-600 rounded-full m-0.5"
-						size={12}
-					/>
-				</StatusItem>
-			);
-
-		default:
-			return <div>Unknown</div>;
-	}
-};
+	return (
+		<div className="flex items-center">
+			<div className="flex items-center gap-1.5">
+				{iconElement}
+				<span className="text-sm">{config.label}</span>
+			</div>
+			{subtext && (
+				<>
+					<DotIcon size={16} />
+					<span className="text-sm text-t3 pl-1 truncate">{subtext}</span>
+				</>
+			)}
+		</div>
+	);
+}

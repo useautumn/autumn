@@ -7,6 +7,7 @@ import type {
 	ProductItemInterval,
 	ProductV2,
 	RedirectMode,
+	TrialOnEnd,
 } from "@autumn/shared";
 import { useMemo } from "react";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
@@ -29,6 +30,7 @@ export interface BuildAttachRequestBodyParams {
 	trialDuration: FreeTrialDuration;
 	trialEnabled: boolean;
 	trialCardRequired: boolean;
+	trialOnEnd: TrialOnEnd;
 	planSchedule: PlanTiming | null;
 	startDate: number | null;
 	endDate: number | null;
@@ -59,6 +61,7 @@ export function buildAttachRequestBody({
 	trialDuration,
 	trialEnabled,
 	trialCardRequired,
+	trialOnEnd,
 	planSchedule,
 	startDate,
 	endDate,
@@ -116,6 +119,7 @@ export function buildAttachRequestBody({
 		trialDuration,
 		trialEnabled,
 		trialCardRequired,
+		trialOnEnd,
 	});
 	if (freeTrial !== undefined) {
 		body.free_trial = freeTrial;
@@ -203,6 +207,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		trialDuration,
 		trialEnabled,
 		trialCardRequired,
+		trialOnEnd,
 		planSchedule,
 		startDate,
 		endDate,
@@ -234,6 +239,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				trialDuration,
 				trialEnabled,
 				trialCardRequired,
+				trialOnEnd,
 				planSchedule,
 				startDate,
 				endDate,
@@ -262,6 +268,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			trialDuration,
 			trialEnabled,
 			trialCardRequired,
+			trialOnEnd,
 			planSchedule,
 			startDate,
 			endDate,
