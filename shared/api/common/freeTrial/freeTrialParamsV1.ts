@@ -21,7 +21,7 @@ export const FreeTrialParamsV1Schema = z
 			.optional()
 			.meta({
 				description:
-					"Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan. Only valid with card_required: false.",
+					"Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.",
 			}),
 	})
 	.meta({
