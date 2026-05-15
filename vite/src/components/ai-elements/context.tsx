@@ -3,7 +3,7 @@
 import type { LanguageModelUsage } from "ai";
 import { type ComponentProps, createContext, useContext } from "react";
 import { getUsage } from "tokenlens";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	HoverCard,
 	HoverCardContent,
@@ -114,7 +114,7 @@ export const ContextTrigger = ({ children, ...props }: ContextTriggerProps) => {
 	return (
 		<HoverCardTrigger asChild>
 			{children ?? (
-				<Button type="button" variant="ghost" {...props}>
+				<Button type="button" variant="skeleton" {...props}>
 					<span className="font-medium text-muted-foreground">
 						{renderedPercent}
 					</span>
