@@ -19,7 +19,7 @@ export const ApiFreeTrialSchema = z.object({
 			"Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file.",
 	}),
 
-	on_end: z.enum(TrialOnEnd).optional().meta({
+	on_end: z.enum(TrialOnEnd).nullish().meta({
 		description:
 			"Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.",
 	}),

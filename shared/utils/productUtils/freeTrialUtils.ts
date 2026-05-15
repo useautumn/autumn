@@ -68,7 +68,7 @@ type FreeTrialLike = {
 	unique_fingerprint: boolean;
 	duration: FreeTrialDuration;
 	card_required: boolean;
-	on_end?: TrialOnEnd;
+	on_end?: TrialOnEnd | null;
 };
 
 export const freeTrialsAreSame = ({
