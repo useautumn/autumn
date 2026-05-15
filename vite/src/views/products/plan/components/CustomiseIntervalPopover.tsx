@@ -48,6 +48,7 @@ export const CustomiseIntervalPopover = ({
 				sideOffset={-1}
 				onOpenAutoFocus={(e) => e.preventDefault()}
 				onCloseAutoFocus={(e) => e.preventDefault()}
+				onKeyDown={(e) => e.stopPropagation()}
 			>
 				<div className="mb-2">
 					<FieldLabel>Interval Count</FieldLabel>
