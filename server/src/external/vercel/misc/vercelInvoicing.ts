@@ -1,25 +1,16 @@
 import {
-	ApiVersion,
 	AppEnv,
-	AttachBranch,
-	type AttachConfig,
 	type Customer,
 	type Feature,
 	type FeatureOptions,
-	type FullCustomer,
 	type FullProduct,
 	mapToProductV2,
 	type Organization,
 	type Price,
-	ProrationBehavior,
 	productV2ToBasePrice,
 } from "@autumn/shared";
 import { Vercel } from "@vercel/sdk";
-import type { Context } from "hono";
 import type Stripe from "stripe";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
-import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { buildInvoiceMemo } from "@/internal/invoices/invoiceMemoUtils.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 
@@ -233,97 +224,4 @@ export const parseVercelPrepaidQuantities = ({
 	}
 
 	return optionsList;
-};
-
-export const getVercelAttachBody = ({
-	stripeCli,
-	stripeCustomer,
-	now,
-	org,
-	customer,
-	product,
-	features,
-	integrationConfigurationId,
-	billingPlanId,
-	db,
-	env,
-	c,
-	customPaymentMethod,
-	optionsList = [],
-	resourceId,
-}: {
-	stripeCli: Stripe;
-	stripeCustomer: Stripe.Customer;
-	now: number;
-	org: Organization;
-	customer: FullCustomer;
-	product: FullProduct;
-	features: Feature[];
-	integrationConfigurationId: string;
-	billingPlanId: string;
-	db: DrizzleCli;
-	env: AppEnv;
-	c: Context<HonoEnv>;
-	customPaymentMethod: Stripe.PaymentMethod | null;
-	optionsList?: FeatureOptions[];
-	resourceId?: string;
-}): { attachParams: AttachParams; config: AttachConfig } => {
-	const attachParams: AttachParams = {
-		stripeCli,
-		stripeCus: stripeCustomer,
-		now: now ?? Date.now(),
-		paymentMethod: customPaymentMethod, // Pass Vercel custom payment method
-		org,
-		customer,
-		products: [product],
-		optionsList,
-		prices: product.prices,
-		entitlements: product.entitlements,
-		freeTrial: null,
-		replaceables: [],
-		rewards: [],
-
-		cusProducts: customer.customer_products,
-		entities: customer.entities || [],
-		features,
-
-		// Use charge_automatically (not send_invoice) for custom payment methods
-		// This enables the Payment Records API flow for external payment processing
-		invoiceOnly: false,
-
-		// Store Vercel metadata on the Stripe subscription for webhook handlers
-		metadata: {
-			vercel_installation_id: integrationConfigurationId,
-			vercel_billing_plan_id: billingPlanId,
-			vercel_product_id: product.id,
-			vercel_resource_id: resourceId || integrationConfigurationId,
-		},
-
-		req: c.get("ctx"),
-		// req: {
-		// 	db,
-		// 	org,
-		// 	env: env as AppEnv,
-		// 	logger: c.get("ctx").logger,
-		// 	features,
-		// },
-		apiVersion: ApiVersion.V1_2,
-	};
-
-	const config: AttachConfig = {
-		branch: AttachBranch.New,
-		onlyCheckout: false,
-		invoiceCheckout: false,
-		carryUsage: false,
-		proration: ProrationBehavior.None, // No proration for first subscription
-		disableTrial: true, // No trials on plan changes
-		invoiceOnly: false, // Must be false for charge_automatically
-		disableMerge: false,
-		sameIntervals: false,
-		carryTrial: false,
-		finalizeInvoice: true, // Finalize invoice immediately to trigger invoice.finalized webhook
-		requirePaymentMethod: true, // Require custom payment method
-	};
-
-	return { attachParams, config };
 };

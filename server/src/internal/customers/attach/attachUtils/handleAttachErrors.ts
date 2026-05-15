@@ -162,6 +162,10 @@ export const handleCustomPaymentMethodErrorsV2 = ({
 }: {
 	billingContext: BillingContext;
 }) => {
+	// Origin platforms (e.g. Vercel marketplace handlers calling attach internally)
+	// opt out of this guard via contextOverride.skipCustomPaymentMethodGuard.
+	if (billingContext.skipCustomPaymentMethodGuard) return;
+
 	const { paymentMethod } = billingContext;
 	if (
 		paymentMethod?.type === "custom" &&

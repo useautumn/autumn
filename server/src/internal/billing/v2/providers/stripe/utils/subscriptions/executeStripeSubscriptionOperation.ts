@@ -1,5 +1,5 @@
 import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
-import { InternalError, nullish } from "@autumn/shared";
+import { InternalError } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
@@ -30,12 +30,6 @@ export const executeStripeSubscriptionOperation = async ({
 		billingContext,
 		stripeSubscriptionAction: subscriptionAction,
 	});
-
-	// default_incomplete surfaces payment/3DS errors clearly.
-	const createPaymentBehavior =
-		nullish(paymentMethod) || paymentMethod?.type === "custom"
-			? "default_incomplete"
-			: "allow_incomplete";
 
 	// Pass resolved PM explicitly when customer has no default PM set.
 	const customerHasDefaultPm =
@@ -105,7 +99,6 @@ export const executeStripeSubscriptionOperation = async ({
 					...(updateWillCreateInvoice ? invoiceModeParams : {}),
 					...(autumnMeta && { metadata: autumnMeta }),
 					...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
-					payment_behavior: "error_if_incomplete",
 					expand: ["latest_invoice"],
 				},
 			);
@@ -119,8 +112,6 @@ export const executeStripeSubscriptionOperation = async ({
 				...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
 
 				billing_mode: { type: "flexible" },
-
-				payment_behavior: createPaymentBehavior,
 
 				expand: ["latest_invoice"],
 			});
