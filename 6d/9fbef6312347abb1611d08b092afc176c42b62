@@ -1,0 +1,45 @@
+vite/src/views/customers/customer/analytics/AnalyticsGraph.tsx
+  s_accf80f980b0c9::t_9e7c701ab409fb 184-189
+vite/src/views/customers/customer/analytics/components/SelectGroupByDropdown.tsx
+  s_accf80f980b0c9::t_57de4444960a18 266
+vite/src/views/customers/customer/analytics/components/AGGrid.ts
+  s_accf80f980b0c9::t_e774ad1cf1e1e2 38
+vite/src/views/customers/customer/analytics/utils/transformGroupedChartData.ts
+  s_accf80f980b0c9::t_d654c8839d3cf2 237
+  s_accf80f980b0c9::t_c69590eb949ddb 114-118,123-125,136-142
+server/src/internal/events/eventUtils.ts
+  s_accf80f980b0c9::t_ac6f799ffe7778 19-21,23-28
+  s_accf80f980b0c9::t_62d1de80006b98 48-49
+  s_accf80f980b0c9::t_783a852f837fde 83-84
+vite/src/views/customers/customer/analytics/components/RowClickDialog.tsx
+  s_accf80f980b0c9::t_8364671cd34e80 2
+vite/src/views/customers/customer/analytics/AnalyticsView.tsx
+  s_accf80f980b0c9::t_3dc3b1fc65c164 439
+  s_accf80f980b0c9::t_caf9d74a2da1c1 306,337,342,344,347,369,371,373-375,377,379,381-383,385-386,391-398
+  s_accf80f980b0c9::t_8308548541ce7e 440-441
+  s_accf80f980b0c9::t_72efdc5c9abc9a 361,363-365
+  s_accf80f980b0c9::t_b9068fd2eb4170 57-58
+  s_accf80f980b0c9::t_3ce7663ef11984 144-146,151-153
+  s_accf80f980b0c9::t_1335bd82cc3156 307-336,338-341,343,345-346,348-359,362,366-368,370,372,376,378,380,384,387-390
+server/src/internal/analytics/actions/aggregate.ts
+  s_accf80f980b0c9::t_9bf68b1acc9aa8 263,266
+  s_accf80f980b0c9::t_5242a98cf279bf 289
+vite/src/views/customers/customer/analytics/hooks/useAnalyticsData.tsx
+  s_accf80f980b0c9::t_4ad99bfada96ab 103-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "6d9fbef6312347abb1611d08b092afc176c42b62",
+  "prompts": {},
+  "sessions": {
+    "s_accf80f980b0c9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d4be0ef2ffexBJvzL8I8Ra4HG",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
