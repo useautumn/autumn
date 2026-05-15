@@ -109,7 +109,8 @@ export const computeAttachNewCustomerProduct = ({
 		});
 	}
 
-	const isRevertTrial = trialContext?.onEnd === "revert";
+	const isRevertTrial =
+		trialContext?.onEnd === "revert" && planTiming === "immediate";
 
 	const newFullCustomerProduct = initFullCustomerProduct({
 		ctx,
