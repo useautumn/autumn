@@ -30,6 +30,8 @@ const partitionByPreviousPlan = (rows: ExpiredTrialRow[]) => {
 	return { withPrevious, standard };
 };
 
+const BATCH_SIZE = 250;
+
 const processPreviousPlanRows = async ({
 	ctx,
 	rows,
@@ -37,16 +39,19 @@ const processPreviousPlanRows = async ({
 	ctx: OrgEnvExpiredTrials["ctx"];
 	rows: ExpiredTrialRow[];
 }) => {
-	await Promise.all(
-		rows.map((row) =>
-			processExpiredTrialRow({
-				ctx,
-				customerProduct: row.customerProduct,
-				customer: row.customer,
-				defaultProducts: [],
-			}),
-		),
-	);
+	for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+		const batch = rows.slice(i, i + BATCH_SIZE);
+		await Promise.all(
+			batch.map((row) =>
+				processExpiredTrialRow({
+					ctx,
+					customerProduct: row.customerProduct,
+					customer: row.customer,
+					defaultProducts: [],
+				}),
+			),
+		);
+	}
 };
 
 export const runProductCron = async ({
