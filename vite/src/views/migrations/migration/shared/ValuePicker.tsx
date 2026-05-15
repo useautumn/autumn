@@ -21,6 +21,7 @@ const MAX_VISIBLE_CHIPS = 3;
 export type ValuePickerOption = {
 	value: string;
 	label: string;
+	sublabel?: string;
 	icon?: ReactNode;
 };
 
@@ -108,10 +109,13 @@ export function ValuePicker({
 							<CommandGroup>
 								{suggestions.map((suggestion) => {
 									const isSelected = selectedValues.includes(suggestion.value);
+									const keywords = [suggestion.label];
+									if (suggestion.sublabel) keywords.push(suggestion.sublabel);
 									return (
 										<CommandItem
 											key={suggestion.value}
 											value={suggestion.value}
+											keywords={keywords}
 											onSelect={() => onToggle(suggestion.value)}
 											className="text-sm"
 										>
@@ -121,6 +125,11 @@ export function ValuePicker({
 											<span className="flex-1 truncate">
 												{suggestion.label}
 											</span>
+											{suggestion.sublabel && (
+												<span className="shrink-0 max-w-48 truncate text-t3 text-xs font-mono">
+													{suggestion.sublabel}
+												</span>
+											)}
 											{isSelected && (
 												<CheckIcon size={14} className="shrink-0" />
 											)}
