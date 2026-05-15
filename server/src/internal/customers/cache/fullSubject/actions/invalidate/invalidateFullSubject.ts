@@ -20,7 +20,13 @@ const invalidateCachedFullSubjectOnRedis = async ({
 	source?: string;
 	redisV2: Redis;
 }): Promise<void> => {
-	if (redisV2.status !== "ready") return;
+	if (redisV2.status !== "ready") {
+		const subjectLabel = entityId ? `${customerId}:${entityId}` : customerId;
+		ctx.logger.warn(
+			`[invalidateCachedFullSubject] redisV2 not_ready (status=${redisV2.status}), skipping subject: ${subjectLabel}, source: ${source}`,
+		);
+		return;
+	}
 
 	await invalidateSharedBalanceFields({
 		ctx,

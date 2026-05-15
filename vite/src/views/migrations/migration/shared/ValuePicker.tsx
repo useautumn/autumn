@@ -83,62 +83,64 @@ export function ValuePicker({
 											</span>
 										</span>
 									);
-								})}
-								{selectedValues.length > MAX_VISIBLE_CHIPS && (
-									<span className="text-sm text-t3 px-1 shrink-0">
-										+{selectedValues.length - MAX_VISIBLE_CHIPS}
-									</span>
-								)}
-							</>
-						)}
-					</button>
-				</PopoverTrigger>
-				<PopoverContent
-					align="start"
-					className="w-(--anchor-width) p-0 z-200 rounded-md overflow-hidden"
-					style={{
-						transformOrigin: "var(--radix-popover-content-transform-origin)",
-					}}
-				>
-					<Command className="bg-interactive-secondary">
-						<CommandInput placeholder="Search..." className="text-sm" />
-						<CommandList>
-							<CommandEmpty className="text-t3 text-sm p-2">
-								No results
-							</CommandEmpty>
-							<CommandGroup>
-								{suggestions.map((suggestion) => {
-									const isSelected = selectedValues.includes(suggestion.value);
-									return (
-										<CommandItem
-											key={suggestion.value}
-											value={suggestion.value}
-											keywords={[suggestion.label]}
-											onSelect={() => onToggle(suggestion.value)}
-											className="text-sm"
-										>
-											{suggestion.icon && (
-												<span className="shrink-0">{suggestion.icon}</span>
-											)}
-											<span className="flex-1 truncate">
-												{suggestion.label}
-											</span>
-											{(suggestion.secondaryLabel ?? (suggestion.value !== suggestion.label ? suggestion.value : null)) && (
-												<span className="text-t4 text-xs truncate shrink-0">
-													{suggestion.secondaryLabel ?? suggestion.value}
+									})}
+									{selectedValues.length > MAX_VISIBLE_CHIPS && (
+										<span className="text-sm text-t3 px-1 shrink-0">
+											+{selectedValues.length - MAX_VISIBLE_CHIPS}
+										</span>
+									)}
+								</>
+							)}
+						</button>
+					</PopoverTrigger>
+					<PopoverContent
+						align="start"
+						className="w-(--anchor-width) p-0 z-200 rounded-md overflow-hidden"
+						style={{
+							transformOrigin: "var(--radix-popover-content-transform-origin)",
+						}}
+					>
+						<Command className="bg-interactive-secondary">
+							<CommandInput placeholder="Search..." className="text-sm" />
+							<CommandList>
+								<CommandEmpty className="text-t3 text-sm p-2">
+									No results
+								</CommandEmpty>
+								<CommandGroup>
+									{suggestions.map((suggestion) => {
+										const isSelected = selectedValues.includes(suggestion.value);
+										const keywords = [suggestion.label];
+										if (suggestion.secondaryLabel) keywords.push(suggestion.secondaryLabel);
+										return (
+											<CommandItem
+												key={suggestion.value}
+												value={suggestion.value}
+												keywords={keywords}
+												onSelect={() => onToggle(suggestion.value)}
+												className="text-sm"
+											>
+												{suggestion.icon && (
+													<span className="shrink-0">{suggestion.icon}</span>
+												)}
+												<span className="flex-1 truncate">
+													{suggestion.label}
 												</span>
-											)}
-											{isSelected && (
-												<CheckIcon size={14} className="shrink-0" />
-											)}
-										</CommandItem>
-									);
-								})}
-							</CommandGroup>
-						</CommandList>
-					</Command>
-				</PopoverContent>
-			</Popover>
-		</div>
-	);
-}
+												{(suggestion.secondaryLabel ?? (suggestion.value !== suggestion.label ? suggestion.value : null)) && (
+													<span className="shrink-0 max-w-48 truncate text-t3 text-xs font-mono">
+														{suggestion.secondaryLabel ?? suggestion.value}
+													</span>
+												)}
+												{isSelected && (
+													<CheckIcon size={14} className="shrink-0" />
+												)}
+											</CommandItem>
+										);
+										})}
+									</CommandGroup>
+								</CommandList>
+							</Command>
+						</PopoverContent>
+					</Popover>
+				</div>
+			);
+		}

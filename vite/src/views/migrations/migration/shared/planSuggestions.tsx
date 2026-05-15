@@ -15,7 +15,7 @@ export function buildPlanSuggestions(
 		.map((p) => ({
 			value: p.id,
 			label: p.name || p.id,
-			secondaryLabel: p.id,
+			secondaryLabel: p.name ? p.id : undefined,
 			icon: <PackageIcon size={14} weight="duotone" className="text-t3" />,
 		}));
 }
