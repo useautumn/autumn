@@ -30,9 +30,15 @@ export const handleGetProducts = createRoute({
 		});
 
 		// `groupToDefaults` only cares about the latest version of each plan; if
-		// we're returning every version, compute defaults from the latest set.
+		// we're returning every version, derive the latest set from the already-
+		// fetched products to avoid a second round-trip.
 		const defaultProds = all_versions
-			? await ProductService.listFull({ db, orgId: org.id, env })
+			? Object.values(
+					products.reduce<Record<string, (typeof products)[0]>>((acc, p) => {
+						if (!acc[p.id] || p.version > acc[p.id].version) acc[p.id] = p;
+						return acc;
+					}, {}),
+				)
 			: products;
 		const groupToDefaults = getGroupToDefaults({ defaultProds });
 
