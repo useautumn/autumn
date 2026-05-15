@@ -56,7 +56,7 @@ export const PlanFeatureRow = ({
 		(queryStates.step !== OnboardingStep.Playground ||
 			playgroundMode !== "edit");
 
-	const item = product.items?.[index] || itemProp;
+	const item = readOnly ? itemProp : (product.items?.[index] || itemProp);
 
 	const display = getProductItemDisplay({
 		item,
