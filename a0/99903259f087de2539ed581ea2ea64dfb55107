@@ -1,0 +1,22 @@
+server/src/external/vercel/handlers/marketplace/handleMarketplaceInvoiceNotPaid.ts
+  s_f7786a2d18f57c::t_07f9b901e152a4 1
+  s_f7786a2d18f57c::t_a3daf0eb5af88a 53,68,130-146
+server/src/internal/customers/cusProducts/repos/getByStripeSubId.ts
+  s_f7786a2d18f57c::t_45ffa706446dcf 24,26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "a099903259f087de2539ed581ea2ea64dfb55107",
+  "prompts": {},
+  "sessions": {
+    "s_f7786a2d18f57c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c603288d-e0bc-4a93-abd6-d771d3935d08",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
