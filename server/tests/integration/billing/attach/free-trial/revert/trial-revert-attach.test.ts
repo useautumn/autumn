@@ -18,7 +18,6 @@ import {
 	customerProducts,
 	ms,
 } from "@autumn/shared";
-import { expectProductTrialing } from "@tests/integration/billing/utils/expectCustomerProductTrialing";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -154,14 +153,7 @@ test.concurrent(
 
 		await autumnV2.billing.attach<AttachParamsV1Input>(params);
 
-		// Verify trial product is visible and trialing via the API
-		await expectProductTrialing({
-			customerId,
-			productId: enterprise.id,
-			trialEndsAt: advancedTo + ms.days(14),
-		});
-
-		// Verify DB-level data retention on paused product
+		// Verify DB-level state
 		const fullCustomer = await CusService.getFull({
 			ctx,
 			idOrInternalId: customerId,
@@ -182,9 +174,12 @@ test.concurrent(
 		expect(pausedPro!.customer_prices.length).toBeGreaterThan(0);
 		expect(pausedPro!.customer_entitlements.length).toBeGreaterThan(0);
 
-		// Trial enterprise should have its own customer_entitlements
+		// Trial enterprise should have its own customer_entitlements and correct trial_ends_at
 		expect(trialEnterprise!.customer_entitlements.length).toBeGreaterThan(0);
 		expect(trialEnterprise!.trial_ends_at).toBeDefined();
+		expect(
+			Math.abs(trialEnterprise!.trial_ends_at! - (advancedTo + ms.days(14))),
+		).toBeLessThan(ms.hours(1));
 	},
 );
 

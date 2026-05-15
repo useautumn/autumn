@@ -15,7 +15,6 @@ export const UpdateSubscriptionFormSchema = z.object({
 	trialLength: z.number().positive().nullable(),
 	trialDuration: z.enum(FreeTrialDuration),
 	trialCardRequired: z.boolean(),
-	trialOnEnd: z.enum(["bill", "revert"]),
 	removeTrial: z.boolean(),
 	trialEnabled: z.boolean(),
 

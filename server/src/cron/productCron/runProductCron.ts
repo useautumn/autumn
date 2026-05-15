@@ -17,22 +17,22 @@ import {
 } from "./fetchExpiredTrialProducts";
 import { processExpiredTrialRow } from "./processExpiredTrialRow";
 
-const partitionByPreviousPlan = (rows: ExpiredTrialRow[]) => {
-	const withPrevious: ExpiredTrialRow[] = [];
+const partitionRevertRows = (rows: ExpiredTrialRow[]) => {
+	const revert: ExpiredTrialRow[] = [];
 	const standard: ExpiredTrialRow[] = [];
 	for (const row of rows) {
-		if (row.customerProduct.previous_customer_product_id) {
-			withPrevious.push(row);
+		if (row.customerProduct.on_trial_end === "revert") {
+			revert.push(row);
 		} else {
 			standard.push(row);
 		}
 	}
-	return { withPrevious, standard };
+	return { revert, standard };
 };
 
 const BATCH_SIZE = 250;
 
-const processPreviousPlanRows = async ({
+const processRevertRows = async ({
 	ctx,
 	rows,
 }: {
@@ -85,11 +85,11 @@ export const runProductCron = async ({
 			const resultsByOrgEnv = await groupByOrgEnv({ results, cronContext });
 
 			for (const { ctx, org, features, rows } of resultsByOrgEnv) {
-				const { withPrevious, standard: standardRows } =
-					partitionByPreviousPlan(rows);
+				const { revert: revertRows, standard: standardRows } =
+					partitionRevertRows(rows);
 
-				if (withPrevious.length > 0) {
-					await processPreviousPlanRows({ ctx, rows: withPrevious });
+				if (revertRows.length > 0) {
+					await processRevertRows({ ctx, rows: revertRows });
 				}
 
 				if (standardRows.length === 0) continue;

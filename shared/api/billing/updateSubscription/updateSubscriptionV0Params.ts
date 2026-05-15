@@ -45,7 +45,6 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 				CusProductStatus.Expired,
 			])
 			.optional(),
-		on_trial_end: z.enum(["bill", "revert"]).optional(),
 	});
 
 export const UpdateSubscriptionV0ParamsSchema =

@@ -64,7 +64,7 @@ export const fetchExpiredTrialProducts = async ({
 								eq(customerPrices.customer_product_id, customerProducts.id),
 							),
 					),
-					isNotNull(customerProducts.previous_customer_product_id),
+					eq(customerProducts.on_trial_end, "revert"),
 				),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 				isNotNull(customerProducts.trial_ends_at),

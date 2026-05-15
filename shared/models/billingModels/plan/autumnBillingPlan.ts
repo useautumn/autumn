@@ -55,7 +55,6 @@ export const CustomerProductUpdateSchema = z.object({
 		scheduled_ids: z.array(z.string()).optional(),
 		subscription_ids: z.array(z.string()).optional(),
 		updated_at: z.number().optional(),
-		on_trial_end: z.enum(["bill", "revert"]).nullish(),
 	}),
 });
 
