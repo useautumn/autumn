@@ -15,6 +15,7 @@ import {
 	isNotNull,
 	lt,
 	notExists,
+	or,
 	sql,
 } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle";
@@ -54,11 +55,16 @@ export const fetchExpiredTrialProducts = async ({
 		)
 		.where(
 			and(
-				notExists(
-					db
-						.select()
-						.from(customerPrices)
-						.where(eq(customerPrices.customer_product_id, customerProducts.id)),
+				or(
+					notExists(
+						db
+							.select()
+							.from(customerPrices)
+							.where(
+								eq(customerPrices.customer_product_id, customerProducts.id),
+							),
+					),
+					eq(customerProducts.on_trial_end, "revert"),
 				),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 				isNotNull(customerProducts.trial_ends_at),

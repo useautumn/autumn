@@ -1,5 +1,9 @@
 import { formatAmount } from "@autumn/shared";
-import { MinusCircleIcon, PlusCircleIcon } from "@phosphor-icons/react";
+import {
+	MinusCircleIcon,
+	PauseCircleIcon,
+	PlusCircleIcon,
+} from "@phosphor-icons/react";
 import { getPreviewCreditAmount } from "@/components/forms/shared/previewCreditUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
@@ -17,8 +21,46 @@ function AttachUpdatesSkeleton() {
 	);
 }
 
+function OutgoingIcon({ isPausing }: { isPausing: boolean }) {
+	const Icon = isPausing ? PauseCircleIcon : MinusCircleIcon;
+	const color = isPausing ? "text-orange-500" : "text-red-500";
+	return <Icon weight="fill" className={`${color} size-3.5 inline align-middle mr-1`} />;
+}
+
+function PlanName({ name }: { name: string }) {
+	return <span className="text-foreground font-medium">{name}</span>;
+}
+
+function OutgoingPlans({
+	outgoing,
+	isPausing,
+}: {
+	outgoing: { plan: { id: string; name: string } }[];
+	isPausing: boolean;
+}) {
+	const verb = isPausing ? "pausing" : "removing";
+
+	return (
+		<>
+			{" "}and {verb}{" "}
+			{outgoing.map((change, index) => {
+				const isLast = index === outgoing.length - 1;
+				return (
+					<span key={change.plan.id}>
+						{index > 0 && !isLast && ", "}
+						{isLast && index > 0 && " and "}
+						<OutgoingIcon isPausing={isPausing} />
+						<PlanName name={change.plan.name} />
+					</span>
+				);
+			})}
+		</>
+	);
+}
+
 export function AttachUpdatesSection() {
-	const { previewQuery, formValues, product } = useAttachFormContext();
+	const { previewQuery, formValues, product, hasActiveSubscription } =
+		useAttachFormContext();
 
 	const hasProductSelected = !!formValues.productId;
 	const { data: previewData, isPending } = previewQuery;
@@ -37,66 +79,34 @@ export function AttachUpdatesSection() {
 			})
 		: null;
 
-	if (!hasProductSelected) {
-		return null;
-	}
+	if (!hasProductSelected) return null;
+	if (isPending) return <AttachUpdatesSkeleton />;
+	if (!product) return null;
 
-	if (isPending) {
-		return <AttachUpdatesSkeleton />;
-	}
-
-	if (!product) {
-		return null;
-	}
-
-	const renderOutgoingPlans = () => {
-		return outgoing.map((change, index) => {
-			const isLast = index === outgoing.length - 1;
-			const needsComma = index > 0 && !isLast;
-			const needsAnd = isLast && index > 0;
-
-			return (
-				<span key={change.plan.id}>
-					{needsComma && ", "}
-					{needsAnd && " and "}
-					<MinusCircleIcon
-						weight="fill"
-						className="text-red-500 size-3.5 inline align-middle mr-1"
-					/>
-					<span className="text-foreground font-medium">
-						{change.plan.name}
-					</span>
-				</span>
-			);
-		});
-	};
-
-	const infoContent = (
-		<InfoBox variant="note">
-			<span>
-				Attaching{" "}
-				<PlusCircleIcon
-					weight="fill"
-					className="text-green-500 size-3.5 inline align-middle mr-1"
-				/>
-				<span className="text-foreground font-medium">{product.name}</span>
-				{outgoing.length > 0 && <> and removing {renderOutgoingPlans()}</>}
-				{hasCreditIndicator && (
-					<>
-						. This update includes{" "}
-						<span className="text-foreground font-medium">
-							{formattedCreditAmount}
-						</span>{" "}
-						in invoice credits.
-					</>
-				)}
-			</span>
-		</InfoBox>
-	);
+	const isPausing =
+		formValues.trialOnEnd === "revert" && hasActiveSubscription;
 
 	return (
 		<SheetSection withSeparator={false} className="pb-0">
-			{infoContent}
+			<InfoBox variant="note">
+				<span>
+					Attaching{" "}
+					<PlusCircleIcon
+						weight="fill"
+						className="text-green-500 size-3.5 inline align-middle mr-1"
+					/>
+					<PlanName name={product.name} />
+					{outgoing.length > 0 && (
+						<OutgoingPlans outgoing={outgoing} isPausing={isPausing} />
+					)}
+					{hasCreditIndicator && (
+						<>
+							. This update includes{" "}
+							<PlanName name={formattedCreditAmount!} /> in invoice credits.
+						</>
+					)}
+				</span>
+			</InfoBox>
 		</SheetSection>
 	);
 }
