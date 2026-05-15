@@ -1,0 +1,13 @@
+server/src/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction.ts
+  ai_agent 51-53
+server/src/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction.ts
+  ai_agent 84
+server/src/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation.ts
+  ai_agent 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "90ed555fdc53704c350e3848da40f97e4bb7994d",
+  "prompts": {}
+}
