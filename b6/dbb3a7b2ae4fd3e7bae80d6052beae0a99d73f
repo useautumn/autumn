@@ -1,0 +1,109 @@
+server/src/internal/customers/cache/fullSubject/actions/invalidate/invalidateFullSubject.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 23-29
+server/src/external/redis/orgRedisPool.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 7,73
+server/src/internal/migrations/v2/handlers/handleRunMigration.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 15-19,29,44,61-62,97
+server/src/utils/logging/initLogger.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 80-86,89,92,125-129,133-137,143-152,179-183
+server/src/internal/migrations/v2/run/preProcess/preProcessMigrationOperations.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-40
+server/src/internal/migrations/v2/filters/runFilter.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 56-80
+vite/src/views/migrations/migration/live/MigrationLiveView.tsx
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 14,49-50,167-168,226-232,236-253,363-373,410-450
+shared/api/migrations/compiler/registry/customerRegistry.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 90
+shared/models/billingModels/plan/autumnBillingPlan.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 58
+server/src/external/autumn/autumnCli.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1020,1024,1031
+server/src/internal/migrations/v2/run/preProcess/hasVersionBumpUpdatePlan.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-18
+server/src/external/aws/ecs/onAwsEcs.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-9
+server/src/external/tinybird/migrations/migrationItemEventsDataSource.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 12-21,123,131
+server/src/internal/migrations/v2/run/preProcess/index.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-4
+server/src/trigger/migrations/runMigrationCustomerTask.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 4,51-56
+server/tests/utils/setup/clearOrg.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-6,94-111
+shared/api/migrations/filters/planFilter.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 51-55,73
+server/src/internal/migrations/v2/run/preProcess/preProcessMigration.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-27
+server/tests/integration/billing/migrations-v2/update-plan-version/migration-oneoff-addon-version.test.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-459
+server/tests/integration/billing/migrations-v2/utils/runUpdatePlanMigration.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 7,100,103,107-110
+server/tests/integration/billing/migrations-v2/update-plan-operation/update-plan-op-custom.test.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-405
+server/src/internal/analytics/actions/listEvents.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 91-95
+server/src/internal/migrations/v2/run/orchestrators/runScopeIteration.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 65-73,101
+scripts/tinybird/index.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-137
+server/src/internal/migrations/v2/repos/migrationRun/insertMigrationRun.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 21,36
+server/src/external/tinybird/sendEvents/mapEvent.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 50-52
+vite/src/hooks/queries/useMigrationsQuery.tsx
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 112-123,139-140
+.vscode/tasks.json
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 7-8,14-15,21-22
+server/src/external/redis/initRedisV2.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 4,16-20,22,31
+server/src/trigger/migrations/runMigrationTask.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 4,34,46-58,60-68,77-95,101
+server/tests/integration/billing/migrations-v2/run-handler/run-handler-lazy-run-body.test.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-138
+vite/src/services/customers/CusService.tsx
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 115-127
+server/src/internal/migrations/v2/run/preProcess/preProcessMigrationFilter.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-61
+shared/api/migrations/compiler/filterToIr/scopes/parsePlanFilter.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 32-33
+shared/models/migrationV2Models/migrationRunTable.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 18,41-45
+server/src/internal/migrations/v2/migrationRouter.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 3,33
+shared/api/products/utils/match/planFilterMatchesCustomerProduct.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 15-16,66
+server/src/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct/initPatchCustomerProduct.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 102-111,117
+server/src/internal/migrations/v2/handlers/handleCancelMigrationRun.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-79
+server/src/internal/migrations/v2/run/orchestrators/iterateScope.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 16-21,31,36,41-69,73-75,79
+server/src/honoMiddlewares/requestLogging/logRequestResult.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 58,62,77
+server/src/internal/migrations/v2/actions/migrationRun/withMigrationRunClaim.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 25,32,43
+server/src/external/redis/getReachableDragonflyUrl.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 1-30
+server/src/internal/migrations/v2/run/runMigration.ts
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 18,49-55,58,62
+vite/src/views/customers2/customer/CustomerActions.tsx
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 7,58,93-109,254-262
+package.json
+  s_5deb4a18a6feb0::t_0f66c4c36115aa 96-100
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "b6dbb3a7b2ae4fd3e7bae80d6052beae0a99d73f",
+  "prompts": {},
+  "sessions": {
+    "s_5deb4a18a6feb0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d3e23541ffe9Je7hpc51j5uvB",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
