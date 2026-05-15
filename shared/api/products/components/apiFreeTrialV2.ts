@@ -14,7 +14,7 @@ export const ApiFreeTrialV2Schema = z.object({
 		description:
 			"Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.",
 	}),
-	on_end: z.enum(TrialOnEnd).optional().meta({
+	on_end: z.enum(TrialOnEnd).nullish().meta({
 		description:
 			"Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.",
 	}),

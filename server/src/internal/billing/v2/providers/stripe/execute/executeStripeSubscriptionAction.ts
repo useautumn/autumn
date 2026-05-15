@@ -35,7 +35,7 @@ export const executeStripeSubscriptionAction = async ({
 
 	if (!subscriptionAction) return {};
 
-	let { invoiceMode, stripeSubscription, currentEpochMs } = billingContext;
+	let { stripeSubscription, currentEpochMs } = billingContext;
 	const { logger } = ctx;
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
@@ -66,7 +66,19 @@ export const executeStripeSubscriptionAction = async ({
 		billingContext,
 	});
 
-	if (latestStripeInvoice && invoiceMode?.finalizeInvoice) {
+	// Honor either the new internal flag (set by attach via setupFinalizeFirstInvoice)
+	// or the public invoice_mode.finalize for the other actions (updateSubscription,
+	// multiAttach, createSchedule) that don't wire setupFinalizeFirstInvoice.
+	const shouldFinalize =
+		billingContext.shouldFinalizeFirstInvoice ??
+		billingContext.invoiceMode?.finalizeInvoice ??
+		false;
+
+	if (
+		latestStripeInvoice &&
+		shouldFinalize &&
+		latestStripeInvoice.status === "draft"
+	) {
 		logger.debug(`[execSubAction] Finalizing invoice`);
 		latestStripeInvoice = await finalizeStripeInvoice({
 			stripeCli,
@@ -82,6 +94,7 @@ export const executeStripeSubscriptionAction = async ({
 					invoiceId: latestStripeInvoice!.id,
 					hasPaymentMethod: Boolean(billingContext.paymentMethod),
 					invoiceMode: billingContext.invoiceMode ?? undefined,
+					enablePlanImmediately: billingContext.enablePlanImmediately,
 				})
 			: undefined;
 

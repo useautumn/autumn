@@ -81,6 +81,7 @@ export const buildStripeSubscriptionUpdateAction = ({
 				? subscriptionCancelAt
 				: undefined,
 		proration_behavior: "none",
+		payment_behavior: "error_if_incomplete",
 
 		...(stripeDiscounts?.length && {
 			discounts: stripeDiscountsToParams({ stripeDiscounts }),
