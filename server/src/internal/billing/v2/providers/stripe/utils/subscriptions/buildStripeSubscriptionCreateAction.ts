@@ -48,9 +48,10 @@ export const buildStripeSubscriptionCreateAction = ({
 
 		collection_method: "charge_automatically",
 
-		// default_incomplete surfaces payment/3DS errors clearly; consumed from
-		// the billing context which is computed by setupPaymentBehaviorIntent.
-		payment_behavior: billingContext.paymentBehaviorIntent,
+		payment_behavior: billingContext.paymentBehaviorIntent ??
+			(!paymentMethod || isCustomPaymentMethod
+				? "default_incomplete"
+				: "allow_incomplete"),
 
 		add_invoice_items: willCreateInvoiceEndOfCycle
 			? undefined
