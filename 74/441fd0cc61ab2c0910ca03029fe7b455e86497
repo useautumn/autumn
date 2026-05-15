@@ -1,0 +1,24 @@
+vite/src/views/migrations/migration/filters/FilterGroup.tsx
+  s_5deb4a18a6feb0::t_de5ce276a8b022 44-52
+vite/src/views/migrations/migration/shared/ValuePicker.tsx
+  s_5deb4a18a6feb0::t_c6ed6a4aa820cc 87-90,92-130,132-145
+  s_5deb4a18a6feb0::t_a82cbfe4133a4c 86,91
+vite/src/views/migrations/migration/shared/planSuggestions.tsx
+  s_5deb4a18a6feb0::t_ba0f92985cb634 18
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "74441fd0cc61ab2c0910ca03029fe7b455e86497",
+  "prompts": {},
+  "sessions": {
+    "s_5deb4a18a6feb0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d3e23541ffe9Je7hpc51j5uvB",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": null
+    }
+  }
+}
