@@ -35,4 +35,4 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Per-worktree drizzle artifacts (created by `bun dw`)
 drizzle-local/
-.dw-migrate-*.config.ts
+.dw-*.config.ts
