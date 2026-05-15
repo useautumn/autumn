@@ -1,9 +1,10 @@
-import type { AppEnv, Organization } from "@autumn/shared";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { isFirstSubscriptionInvoice } from "@/external/stripe/invoices/utils/classifyStripeInvoice.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { VercelResourceService } from "../../services/VercelResourceService.js";
 
@@ -38,7 +39,7 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		return;
 	}
 
-	// 3. Get subscription and payment method
+	// 3. Get subscription
 	const subscription = await stripeCli.subscriptions.retrieve(
 		invoice.lines.data.find(
 			(l) =>
@@ -47,9 +48,7 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 		)?.parent?.subscription_item_details?.subscription as string,
 	);
 
-	const customPaymentMethod = await stripeCli.paymentMethods.retrieve(
-		subscription.default_payment_method as string,
-	);
+	let customPaymentMethod: Stripe.PaymentMethod | null = null;
 
 	try {
 		const partialCustomer = await CusService.getByStripeId({
@@ -76,6 +75,16 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 			throw new Error("Customer not found");
 		}
 
+		// Resolve custom payment method (sub default PM may be null for
+		// default_incomplete subs — fall back to the customer's Vercel custom PM).
+		const pmId =
+			(subscription.default_payment_method as string | null) ??
+			customer.processors?.vercel?.custom_payment_method_id ??
+			null;
+		if (pmId) {
+			customPaymentMethod = await stripeCli.paymentMethods.retrieve(pmId);
+		}
+
 		const vercelBillingPlanId = subscription.metadata?.vercel_billing_plan_id;
 		if (!vercelBillingPlanId) {
 			logger.error("No vercel_billing_plan_id in subscription metadata");
@@ -96,6 +105,26 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 			});
 		}
 
+		// If this is the first invoice for the subscription and it failed, expire the
+		// optimistically-provisioned cus_product so the customer falls back to the default plan.
+		// Renewals are handled by Stripe dunning + customer.subscription.deleted webhook.
+		if (isFirstSubscriptionInvoice(invoice)) {
+			const existingCusProducts = await customerProductRepo.getByStripeSubId({
+				db,
+				stripeSubId: subscription.id,
+				orgId: org.id,
+				env,
+			});
+
+			if (existingCusProducts.length > 0) {
+				await customerProductActions.expireAndActivateDefault({
+					ctx,
+					customerProduct: existingCusProducts[0],
+					fullCustomer: customer,
+				});
+			}
+		}
+
 		const product = await ProductService.getFull({
 			db,
 			orgId: org.id,
@@ -114,6 +143,12 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 			error: error.message,
 		});
 		// Continue anyway - we still need to report payment
+	}
+
+	if (!customPaymentMethod) {
+		throw new Error(
+			"Cannot resolve custom payment method for failed-invoice payment record",
+		);
 	}
 
 	// 5. Report failed payment to Stripe via Payment Records API
@@ -144,16 +179,44 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 	});
 
 	// 6. Attach payment record to invoice
+	let invoiceLikelyPaid = false;
 	try {
 		await stripeCli.invoices.attachPayment(externalInvoiceId, {
 			payment_record: paymentRecord.id,
 		});
 	} catch (error: any) {
-		// Might already be attached from handleMarketplaceInvoicePaid
 		if (error.code === "resource_already_exists") {
+			// Already attached from handleMarketplaceInvoicePaid race
+		} else if (
+			typeof error?.message === "string" &&
+			error.message.includes(
+				"You cannot attach a payment to a draft, paid, or voided invoice",
+			)
+		) {
+			// Race: the paid webhook already transitioned the invoice. The
+			// subscription is no longer "failed-first-invoice" — re-check the
+			// invoice status and bail out without cancelling a possibly-paid sub.
+			invoiceLikelyPaid = true;
+			logger.info(
+				"Invoice transitioned to paid/voided before failed-payment attach",
+				{ data: { externalInvoiceId } },
+			);
 		} else {
 			throw error;
 		}
+	}
+
+	if (invoiceLikelyPaid) {
+		// Re-fetch authoritative invoice state before doing anything destructive.
+		const latest = await stripeCli.invoices.retrieve(externalInvoiceId);
+		if (latest.status === "paid") {
+			logger.info(
+				"Skipping subscription cancel — invoice is paid (paid-webhook won the race)",
+				{ data: { externalInvoiceId, subscriptionId: subscription.id } },
+			);
+			return;
+		}
+		// Otherwise (voided / open) fall through — cancellation is still correct.
 	}
 
 	await stripeCli.subscriptions.cancel(subscription.id);

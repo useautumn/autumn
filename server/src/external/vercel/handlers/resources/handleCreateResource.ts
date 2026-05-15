@@ -1,14 +1,15 @@
-import { AppEnv, type FullProduct, RecaseError, Scopes } from "@autumn/shared";
+import { AppEnv, CusProductStatus, RecaseError, Scopes } from "@autumn/shared";
 import { ErrCode } from "@shared/enums/ErrCode.js";
 import { DrizzleError } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
-import { createVercelSubscription } from "@/external/vercel/misc/vercelSubscriptions.js";
+import { provisionVercelCusProduct } from "@/external/vercel/misc/vercelProvisioning.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
 import {
 	type VercelResourceCreatedEvent,
@@ -64,13 +65,82 @@ export const handleCreateResource = createRoute({
 			});
 		}
 
-		// 2. Create resource in database (enforces 1-resource limit)
-		const resourceId = generateId("vre");
-
 		try {
-			const product = await db.transaction(async (tx) => {
+			// Idempotency: check if a resource already exists for this installation
+			const existingResource = await VercelResourceService.getByInstallation({
+				db,
+				installationId: integrationConfigurationId,
+				orgId,
+				env: env as AppEnv,
+			});
+
+			let resourceId: string;
+
+			const buildResourceResponse = (
+				product: Awaited<ReturnType<typeof ProductService.getFull>>,
+			) => ({
+				id: resourceId,
+				productId,
+				name,
+				metadata,
+				status: "ready",
+				billingPlan: {
+					...productToBillingPlan({
+						product,
+						orgCurrency: org?.default_currency ?? "usd",
+					}),
+					scope: "installation",
+				},
+				secrets: [],
+				notification: {
+					level: "info",
+					title: "Resource provisioning",
+					message: `Setting up ${name}...`,
+				},
+			});
+
+			if (existingResource) {
+				resourceId = existingResource.id;
+
+				const existingSub = stripeCustomer.subscriptions?.data.find(
+					(s) =>
+						s.metadata.vercel_resource_id === existingResource.id &&
+						s.status !== "incomplete_expired" &&
+						s.status !== "canceled",
+				);
+
+				if (existingSub) {
+					const existingCusProducts =
+						await customerProductRepo.getByStripeSubId({
+							db,
+							stripeSubId: existingSub.id,
+							orgId,
+							env: env as AppEnv,
+						});
+
+					if (existingCusProducts.length > 0) {
+						const product = await ProductService.getFull({
+							db,
+							orgId,
+							env: env as AppEnv,
+							idOrInternalId: billingPlanId,
+						});
+						if (!product) {
+							throw new RecaseError({
+								message: `Product not found for billing plan ${billingPlanId}`,
+								code: ErrCode.ProductNotFound,
+								statusCode: StatusCodes.NOT_FOUND,
+							});
+						}
+						return c.json(buildResourceResponse(product));
+					}
+				}
+				// Resource exists but no cus_product (or no sub) -> fall through to provision
+			} else {
+				// No resource -> create it
+				resourceId = generateId("vre");
 				await VercelResourceService.createOrBlockIfOthersExist({
-					db: tx as unknown as DrizzleCli,
+					db,
 					resource: {
 						id: resourceId,
 						org_id: orgId,
@@ -81,30 +151,77 @@ export const handleCreateResource = createRoute({
 						metadata: metadata ?? {},
 					},
 				});
+			}
 
-				let createdProduct: FullProduct;
+			// Customer-already-on-this-plan short-circuit. Installations auto-attach
+			// the org's default free plan, so picking that same plan in the Vercel UI
+			// would otherwise hit V2 attach's same-product guard. Skip Stripe sub
+			// creation + Autumn insertion entirely — only the resource link is needed.
+			const sameProductCusProduct = customer.customer_products.find(
+				(cp) =>
+					cp.product_id === billingPlanId &&
+					(cp.status === CusProductStatus.Active ||
+						cp.status === CusProductStatus.Trialing ||
+						cp.status === CusProductStatus.PastDue),
+			);
 
-				try {
-					// 3. Create subscription (installation-level billing)
-					const { product } = await createVercelSubscription({
-						ctx: { ...ctx, db: tx as unknown as DrizzleCli },
-						customer,
-						stripeCustomer,
-						stripeCli,
-						integrationConfigurationId,
-						billingPlanId,
-						c,
-						metadata,
-						resourceId,
+			if (sameProductCusProduct) {
+				const product = await ProductService.getFull({
+					db,
+					orgId,
+					env: env as AppEnv,
+					idOrInternalId: billingPlanId,
+				});
+				if (!product) {
+					throw new RecaseError({
+						message: `Product not found for billing plan ${billingPlanId}`,
+						code: ErrCode.ProductNotFound,
+						statusCode: StatusCodes.NOT_FOUND,
 					});
-
-					createdProduct = product;
-				} catch (error) {
-					tx.rollback();
-					throw error;
 				}
 
-				return createdProduct;
+				ctx.logger.info(
+					"[handleCreateResource] Customer already on plan, creating resource without provisioning",
+					{
+						data: {
+							billingPlanId,
+							cusProductId: sameProductCusProduct.id,
+							resourceId,
+							installationId: integrationConfigurationId,
+						},
+					},
+				);
+
+				await sendCustomSvixEvent({
+					appId:
+						org.processor_configs?.vercel?.svix?.[
+							env === AppEnv.Live ? "live_id" : "sandbox_id"
+						] ?? "",
+					org,
+					env: env as AppEnv,
+					eventType: VercelWebhooks.ResourceProvisioned,
+					data: {
+						resource: {
+							id: resourceId,
+							name,
+						},
+						installation_id: integrationConfigurationId,
+						access_token: customer.processors?.vercel?.access_token ?? "",
+					} satisfies VercelResourceCreatedEvent,
+				});
+
+				return c.json(buildResourceResponse(product));
+			}
+
+			const { product } = await provisionVercelCusProduct({
+				ctx,
+				customer,
+				stripeCustomer,
+				stripeCli,
+				integrationConfigurationId,
+				billingPlanId,
+				resourceId,
+				metadata,
 			});
 
 			await sendCustomSvixEvent({
@@ -125,27 +242,7 @@ export const handleCreateResource = createRoute({
 				} satisfies VercelResourceCreatedEvent,
 			});
 
-			// 4. Return resource response
-			return c.json({
-				id: resourceId,
-				productId,
-				name,
-				metadata,
-				status: "ready", // Will become "ready" after marketplace.invoice.paid confirms payment
-				billingPlan: {
-					...productToBillingPlan({
-						product,
-						orgCurrency: org?.default_currency ?? "usd",
-					}),
-					scope: "installation", // Always installation-level
-				},
-				secrets: [],
-				notification: {
-					level: "info",
-					title: "Resource provisioning",
-					message: `Setting up ${name}...`,
-				},
-			});
+			return c.json(buildResourceResponse(product));
 		} catch (error) {
 			console.error(error);
 			return c.json(
@@ -154,9 +251,7 @@ export const handleCreateResource = createRoute({
 						code: "conflict",
 						message:
 							error instanceof DrizzleError
-								? error.message.includes("Rollback")
-									? "An error occurred while creating the resource's subscription"
-									: error.message
+								? error.message
 								: error instanceof RecaseError
 									? error.message
 									: "An error occurred while creating the resource",
