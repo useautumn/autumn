@@ -26,12 +26,11 @@ SQL >
         0                                                               AS __commit_lsn,
         concat('backfill-', assumeNotNull(id))                        AS __idempotency_key
     FROM postgresql(
-        'us-west-3.pg.psdb.cloud:5432',
+        'aws-us-east-2-2.pg.psdb.cloud:5432',
         'postgres',
         'entitlements',
         {{tb_secret('PG_USERNAME')}},
-        {{tb_secret('PG_PASSWORD')}},
-        'public'
+        {{tb_secret('PG_PASSWORD')}}
     )
     WHERE created_at > {{Int64(start_epoch_ms, 0)}}
       AND created_at <= {{Int64(end_epoch_ms, 9999999999999)}}
