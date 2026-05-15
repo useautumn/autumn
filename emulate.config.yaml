@@ -11,3 +11,43 @@ google:
       family_name: Autumn
       email_verified: true
       locale: en
+    - uid: emulate-ayush-rodrigues
+      email: ayush@useautumn.com
+      name: Ayush Rodrigues
+      given_name: Ayush
+      family_name: Rodrigues
+      email_verified: true
+      locale: en
+      hd: useautumn.com
+    - uid: emulate-john-yeo
+      email: jy@useautumn.com
+      name: John Yeo
+      given_name: John
+      family_name: Yeo
+      email_verified: true
+      locale: en
+      hd: useautumn.com
+    - uid: emulate-tanvir-ahmed
+      email: tanvir@useautumn.com
+      name: Tanvir Ahmed
+      given_name: Tanvir
+      family_name: Ahmed
+      email_verified: true
+      locale: en
+      hd: useautumn.com
+    - uid: emulate-charlie-lamb
+      email: charlie@useautumn.com
+      name: Charlie Lamb
+      given_name: Charlie
+      family_name: Lamb
+      email_verified: true
+      locale: en
+      hd: useautumn.com
+    - uid: emulate-owen-greenhalgh
+      email: owen@useautumn.com
+      name: Owen Greenhalgh
+      given_name: Owen
+      family_name: Greenhalgh
+      email_verified: true
+      locale: en
+      hd: useautumn.com

@@ -4,6 +4,7 @@ import { ac, ALL_SCOPES, invitation, roles, schemas } from "@autumn/shared";
 
 // emulate.dev Google: rewrite outbound Google OAuth host so agent worktrees
 // can use any redirect URI without registering it in the real Google console.
+// Real Google's oauth2.googleapis.com/token maps to emulate's /oauth2/token path.
 if (
 	process.env.EMULATE_GOOGLE_URL &&
 	process.env.NODE_ENV !== "production"
@@ -19,7 +20,7 @@ if (
 					: (input as Request).url;
 		if (url.startsWith("https://oauth2.googleapis.com")) {
 			return originalFetch(
-				url.replace("https://oauth2.googleapis.com", emulate),
+				url.replace("https://oauth2.googleapis.com", `${emulate}/oauth2`),
 				init,
 			);
 		}
@@ -62,11 +63,25 @@ import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 import { getScopesForUserInOrg } from "./authUtils/customSessionScopes.js";
 
+// HTTPS agent worktrees go through portless (e.g. wtN-api.localhost). The
+// OAuth flow leaves and returns via a third-party host (emulate.dev), so the
+// state cookie must be SameSite=None+Secure to survive the round trip.
+const isHttpsBaseUrl = process.env.BETTER_AUTH_URL?.startsWith("https://");
+
 const options = {
 	baseURL: process.env.BETTER_AUTH_URL,
 	telemetry: {
 		enabled: false,
 	},
+	...(isHttpsBaseUrl && {
+		advanced: {
+			useSecureCookies: true,
+			defaultCookieAttributes: {
+				sameSite: "none" as const,
+				secure: true,
+			},
+		},
+	}),
 
 	database: drizzleAdapter(db, {
 		provider: "pg",
@@ -123,7 +138,10 @@ const options = {
 		// Worktree ports follow worktreeOffset = (N-1)*100; accept any localhost
 		// port the running stack might use as origin.
 		const origin = request?.headers.get("origin") ?? null;
-		if (origin && /^https?:\/\/localhost:\d+$/.test(origin)) {
+		if (
+			origin &&
+			/^https?:\/\/(?:[a-zA-Z0-9-]+\.)*localhost(?::\d+)?$/.test(origin)
+		) {
 			origins.push(origin);
 		}
 		if (process.env.CLIENT_URL) origins.push(process.env.CLIENT_URL);

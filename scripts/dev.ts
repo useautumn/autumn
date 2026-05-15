@@ -241,10 +241,17 @@ async function startDev() {
 				VITE_APP_ENV: viteAppEnv,
 				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
 				...(worktreeNum > 1 && {
-					CLIENT_URL: `http://localhost:${VITE_PORT}`,
-					BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
-					VITE_BACKEND_URL: `http://localhost:${SERVER_PORT}`,
-					VITE_FRONTEND_URL: `http://localhost:${VITE_PORT}`,
+					CLIENT_URL:
+						process.env.CLIENT_URL ?? `http://localhost:${VITE_PORT}`,
+					BETTER_AUTH_URL:
+						process.env.BETTER_AUTH_URL ??
+						`http://localhost:${SERVER_PORT}`,
+					VITE_BACKEND_URL:
+						process.env.VITE_BACKEND_URL ??
+						`http://localhost:${SERVER_PORT}`,
+					VITE_FRONTEND_URL:
+						process.env.VITE_FRONTEND_URL ??
+						`http://localhost:${VITE_PORT}`,
 					EMULATE_GOOGLE_URL:
 						process.env.EMULATE_GOOGLE_URL ??
 						"https://google.emulate.localhost",
