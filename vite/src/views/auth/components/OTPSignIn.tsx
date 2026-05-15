@@ -2,7 +2,7 @@ import { differenceInSeconds } from "date-fns";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	InputOTP,
 	InputOTPGroup,
@@ -126,10 +126,9 @@ export const OTPSignIn = ({
 
 			<div className="flex flex-col items-center justify-center gap-2">
 				<Button
-					variant="link"
-					className="text-sm hover:underline text-primary"
+					variant="skeleton"
+					className={cn("text-sm underline-offset-4 hover:underline text-primary", resending && "shimmer")}
 					onClick={handleResend}
-					shimmer={resending}
 					disabled={resending || resendCountdown > 0}
 				>
 					Didn't receive the code? Resend{" "}

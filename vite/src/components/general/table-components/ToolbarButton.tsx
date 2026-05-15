@@ -1,6 +1,6 @@
 import { EllipsisVertical } from "lucide-react";
 import { forwardRef } from "react";
-import { Button, type ButtonProps } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 
 export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -8,10 +8,10 @@ export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonProps>(
 		return (
 			<Button
 				ref={ref}
-				isIcon
-				variant="ghost"
+				variant="skeleton"
+				size="icon"
 				className={cn(
-					"rounded-lg !h-5 !w-5 transition-all duration-100 hover:bg-stone-50",
+					"rounded-lg !h-5 !w-5 p-0 transition-all duration-100 hover:bg-stone-50",
 					props?.className,
 				)}
 				{...props}
