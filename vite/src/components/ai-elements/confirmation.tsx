@@ -8,7 +8,7 @@ import {
 	useContext,
 } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 
 type ToolUIPartApproval =
