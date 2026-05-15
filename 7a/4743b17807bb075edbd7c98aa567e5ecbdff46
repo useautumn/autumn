@@ -1,0 +1,9 @@
+server/src/external/stripe/invoices/utils/classifyStripeInvoice.ts
+  ai_agent 3-5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "7a4743b17807bb075edbd7c98aa567e5ecbdff46",
+  "prompts": {}
+}
