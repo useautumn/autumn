@@ -8,7 +8,7 @@ import {
 	CardFooter,
 	CardHeader,
 	CardTitle,
-} from "@/components/ui/card";
+} from "@/components/v2/cards/Card";
 import { cn } from "@/lib/utils";
 
 export type NodeProps = ComponentProps<typeof Card> & {

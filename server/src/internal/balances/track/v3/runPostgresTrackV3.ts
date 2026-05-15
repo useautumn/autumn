@@ -6,6 +6,7 @@ import {
 	buildEventInfo,
 	initEvent,
 } from "@/internal/balances/events/initEvent.js";
+import { resolveInternalProductIdForEvent } from "../../events/resolveInternalProductIdForEvent.js";
 import {
 	deductionToTrackResponseV2,
 	executePostgresDeductionV2,
@@ -53,6 +54,11 @@ export const runPostgresTrackV3 = async ({
 		mutationLogs,
 	});
 
+	const internalProductId = resolveInternalProductIdForEvent({
+		fullSubject: updatedFullSubject,
+		mutationLogs,
+	});
+
 	if (!body.skip_event && !body.idempotency_key) {
 		const eventInfo = buildEventInfo(body);
 		const event = initEvent({
@@ -62,6 +68,7 @@ export const runPostgresTrackV3 = async ({
 			internalEntityId: updatedFullSubject.internalEntityId,
 			customerId: body.customer_id,
 			entityId: body.entity_id,
+			internalProductId,
 			deductions,
 		});
 

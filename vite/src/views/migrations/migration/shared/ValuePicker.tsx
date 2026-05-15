@@ -125,9 +125,12 @@ export function ValuePicker({
 											<span className="flex-1 truncate">
 												{suggestion.label}
 											</span>
-											{suggestion.sublabel && (
+											{(suggestion.sublabel ??
+												(suggestion.value !== suggestion.label
+													? suggestion.value
+													: null)) && (
 												<span className="shrink-0 max-w-48 truncate text-t3 text-xs font-mono">
-													{suggestion.sublabel}
+													{suggestion.sublabel ?? suggestion.value}
 												</span>
 											)}
 											{isSelected && (

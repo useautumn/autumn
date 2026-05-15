@@ -2,14 +2,14 @@ import { Check, Copy } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Button, type ButtonProps } from "../ui/button";
+import { Button, type ButtonProps } from "@/components/v2/buttons/Button";
 
 function CopyButton({
 	text,
 	className,
 	children,
 	copySize,
-	variant = "outline",
+	variant = "secondary",
 	icon,
 }: {
 	text: string;
@@ -45,7 +45,7 @@ function CopyButton({
 			{children && <span className="truncate block">{children}</span>}
 			<div className="flex items-center justify-center">
 				{copied ? (
-					<Check size={copySize || 13} />
+					<Check size={copySize || 13} className="text-t1" />
 				) : (
 					<Copy size={copySize || 13} />
 				)}

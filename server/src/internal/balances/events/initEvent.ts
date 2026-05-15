@@ -33,6 +33,7 @@ export const initEvent = (params: {
 	eventInfo: EventInfo;
 	internalCustomerId: string;
 	internalEntityId?: string;
+	internalProductId?: string | null;
 	customerId: string;
 	entityId?: string;
 	deductions?: TrackDeduction[];
@@ -42,6 +43,7 @@ export const initEvent = (params: {
 		eventInfo,
 		internalCustomerId,
 		internalEntityId,
+		internalProductId,
 		customerId,
 		entityId,
 		deductions,
@@ -62,6 +64,7 @@ export const initEvent = (params: {
 		internal_customer_id: internalCustomerId,
 		customer_id: customerId,
 		internal_entity_id: internalEntityId,
+		internal_product_id: internalProductId ?? null,
 		entity_id: entityId,
 
 		event_name: eventInfo.event_name,

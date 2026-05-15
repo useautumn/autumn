@@ -117,3 +117,10 @@ export const apiBalanceToBreakdownKey = ({
 
 	return `${interval}:${planId}:${usageModel}`;
 };
+
+export const cusEntToInternalProductId = ({
+	cusEnt,
+}: {
+	cusEnt: FullCusEntWithFullCusProduct;
+}): string | null =>
+	cusEnt.customer_product?.internal_product_id ?? null;

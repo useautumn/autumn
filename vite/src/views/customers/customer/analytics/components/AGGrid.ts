@@ -35,7 +35,7 @@ export const autumnTheme = themeQuartz.withParams({
 	iconSize: 13,
 	spacing: "5.25px",
 	// rowBorder: "var(--border)",
-	wrapperBorderRadius: "0",
+	wrapperBorderRadius: "0.5rem",
 	// wrapperBorder: "0",
 });
 
