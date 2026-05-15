@@ -55,16 +55,11 @@ export const logRequestResult = async ({
 		});
 
 		let finalResponseBody = responseBody;
-		if (
-			!isSuccess &&
-			finalResponseBody === undefined &&
-			c.req.path.includes("/v1")
-		) {
+		if (finalResponseBody === undefined && c.req.path.includes("/v1")) {
 			const contentType = c.res.headers.get("content-type");
 			if (contentType?.includes("application/json")) {
 				try {
-					const clonedResponse = c.res.clone();
-					finalResponseBody = await clonedResponse.json();
+					finalResponseBody = await c.res.clone().json();
 				} catch (_error) {
 					finalResponseBody = null;
 				}
@@ -79,7 +74,7 @@ export const logRequestResult = async ({
 			{
 				statusCode,
 				durationMs,
-				...(isSuccess ? {} : { res: finalResponseBody ?? null }),
+				res: finalResponseBody ?? null,
 			},
 		);
 
