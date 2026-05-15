@@ -42,7 +42,7 @@ export const useAnalyticsData = ({
 		useFeaturesQuery();
 
 	const formattedGroupBy = groupBy
-		? groupBy === "customer_id" || groupBy === "entity_id"
+		? groupBy === "customer_id" || groupBy === "entity_id" || groupBy === "plan_id"
 			? groupBy
 			: `properties.${groupBy}`
 		: undefined;
@@ -100,6 +100,11 @@ export const useAnalyticsData = ({
 		truncated: data?.truncated ?? false,
 		entityNames: (data?.entityNames as Record<string, string>) ?? undefined,
 		customerNames: (data?.customerNames as Record<string, string>) ?? undefined,
+		totals:
+			(data?.totals as
+				| Record<string, { count: number; sum: number }>
+				| undefined) ?? undefined,
+		eventNames: (data?.eventNames as string[] | undefined) ?? [],
 	};
 };
 

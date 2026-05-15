@@ -10,12 +10,13 @@ SQL >
         customer_id,
         event_name,
         coalesce(entity_id, '') as entity_id,
+        internal_product_id,
         toStartOfHour(timestamp) as hour,
         CAST(coalesce(properties, '{}') AS JSON) as properties,
         sum(toFloat64(coalesce(value, 1))) as total_value,
         count() as event_count
     FROM events
-    GROUP BY org_id, env, customer_id, event_name, entity_id, hour, properties
+    GROUP BY org_id, env, customer_id, event_name, entity_id, internal_product_id, hour, properties
 
 TYPE materialized
 DATASOURCE events_hourly_mv

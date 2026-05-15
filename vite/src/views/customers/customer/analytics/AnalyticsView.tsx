@@ -4,6 +4,7 @@ import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { Card, CardContent } from "@/components/v2/cards/Card";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEnv } from "@/utils/envUtils";
@@ -11,6 +12,7 @@ import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/AGGrid";
+import { ChartLegend, type ChartLegendEntry } from "./components/ChartLegend";
 import PaginationPanel from "./components/PaginationPanel";
 import { QueryTopbar } from "./components/QueryTopbar";
 import {
@@ -54,7 +56,60 @@ export const AnalyticsView = () => {
 		truncated,
 		entityNames,
 		customerNames,
+		totals,
+		eventNames: responseEventNames,
 	} = useAnalyticsData({ hasCleared });
+
+	// Build internal_product_id → display name from the products cache so the
+	// chart can label plan_id groups (backend ships raw internal ids).
+	// `/products/products` only returns the latest version per public id, so
+	// historical versions (e.g. a customer still on v1 after we ship v2) get
+	// merged in from `customer.customer_products`. When the same public id has
+	// multiple versions in scope, suffix with ` v{version}`.
+	const { products } = useProductsQuery({ allVersions: true });
+	const planNames = useMemo(() => {
+		type Entry = {
+			internal_id: string;
+			id: string;
+			name: string;
+			version: number;
+		};
+		const entries: Entry[] = [];
+		const seen = new Set<string>();
+		const push = (e: Partial<Entry> & { internal_id?: string | null }) => {
+			if (!e.internal_id || seen.has(e.internal_id)) return;
+			seen.add(e.internal_id);
+			entries.push({
+				internal_id: e.internal_id,
+				id: e.id ?? e.internal_id,
+				name: e.name ?? e.id ?? e.internal_id,
+				version: e.version ?? 1,
+			});
+		};
+
+		for (const p of products) push(p);
+		for (const cp of customer?.customer_products ?? []) {
+			push({
+				internal_id: cp.product?.internal_id,
+				id: cp.product?.id,
+				name: cp.product?.name,
+				version: cp.product?.version,
+			});
+		}
+
+		// Count public id occurrences so we only suffix when there's ambiguity.
+		const idCount = new Map<string, number>();
+		for (const e of entries) {
+			idCount.set(e.id, (idCount.get(e.id) ?? 0) + 1);
+		}
+
+		const map: Record<string, string> = {};
+		for (const e of entries) {
+			const showVersion = (idCount.get(e.id) ?? 0) >= 2;
+			map[e.internal_id] = showVersion ? `${e.name} v${e.version}` : e.name;
+		}
+		return map;
+	}, [products, customer]);
 
 	// Show toast when data is truncated due to too many unique group values
 	const hasShownTruncationToast = useRef(false);
@@ -83,16 +138,21 @@ export const AnalyticsView = () => {
 
 		// Handle special case for column-based operators (not a property)
 		const groupByColumn =
-			groupBy === "customer_id" || groupBy === "entity_id"
+			groupBy === "customer_id" ||
+			groupBy === "entity_id" ||
+			groupBy === "plan_id"
 				? groupBy
 				: `properties.${groupBy}`;
+		// plan_id treats empty-string as a meaningful "no plan" bucket; for
+		// property grouping, empty means the property is absent and we drop it.
+		const allowEmpty = groupBy === "plan_id";
 		const uniqueValues = new Set<string>();
 
 		for (const row of events.data) {
 			const value = row[groupByColumn];
-			if (value !== undefined && value !== null && value !== "") {
-				uniqueValues.add(String(value));
-			}
+			if (value === undefined || value === null) continue;
+			if (value === "" && !allowEmpty) continue;
+			uniqueValues.add(String(value));
 		}
 
 		return Array.from(uniqueValues).sort();
@@ -111,12 +171,16 @@ export const AnalyticsView = () => {
 			return { chartData: null, chartConfig: null };
 		}
 
-		// Apply frontend filter if a group filter is selected
+		// Apply frontend filter if a group filter is selected. Use an
+		// explicit null check because empty string is a meaningful filter
+		// value for plan_id ("no plan").
 		let filteredEvents = events;
-		if (groupBy && groupFilter) {
+		if (groupBy && groupFilter !== null) {
 			// Handle special case for column-based operators (not a property)
 			const groupByColumn =
-				groupBy === "customer_id" || groupBy === "entity_id"
+				groupBy === "customer_id" ||
+				groupBy === "entity_id" ||
+				groupBy === "plan_id"
 					? groupBy
 					: `properties.${groupBy}`;
 			const filteredData = events.data.filter(
@@ -138,16 +202,66 @@ export const AnalyticsView = () => {
 
 		// Generate chart config with different colors per group
 		const config = generateChartConfig({
-			events: transformed,
-			features,
-			groupBy,
-			originalColors: colors,
-			entityNames,
-			customerNames,
-		});
+				events: transformed,
+				features,
+				groupBy,
+				originalColors: colors,
+				entityNames,
+				customerNames,
+				planNames,
+			});
 
 		return { chartData: transformed, chartConfig: config };
-	}, [events, features, groupBy, groupFilter, entityNames, customerNames]);
+	}, [events, features, groupBy, groupFilter, entityNames, customerNames, planNames]);
+
+	// Build legend entries (sorted desc, zero-values filtered). The
+	// width-aware overflow logic lives in ChartLegend.
+	const legendEntries: ChartLegendEntry[] = useMemo(() => {
+		if (!chartData || chartData.data.length === 0) return [];
+		let entries: ChartLegendEntry[] = [];
+		if (groupBy && chartConfig) {
+			entries = chartConfig.map((s) => {
+				const sum = chartData.data.reduce(
+					(acc, row) =>
+						acc +
+						Number(
+							(row as Record<string, string | number>)[s.yKey] ?? 0,
+						),
+					0,
+				);
+				return {
+					key: s.yKey,
+					label: s.yName,
+					color: s.fill,
+					value: sum,
+					title: `${s.yName}: ${sum.toLocaleString()}`,
+				};
+			});
+		} else {
+			entries = responseEventNames.map((name) => {
+				const entry = totals?.[name] ?? { count: 0, sum: 0 };
+				const primary =
+					entry.sum !== entry.count ? entry.sum : entry.count;
+				const series = chartConfig?.find(
+					(c) => c.yKey === `${name}_count` || c.yKey === name,
+				);
+				return {
+					key: name,
+					label: name,
+					color: series?.fill,
+					value: primary,
+					title: `${name}: ${entry.count.toLocaleString()} events${
+						entry.sum !== entry.count
+							? ` · Σ ${entry.sum.toLocaleString()}`
+							: ""
+					}`,
+				};
+			});
+		}
+		return entries
+			.filter((e) => e.value > 0)
+			.sort((a, b) => b.value - a.value);
+	}, [chartData, chartConfig, groupBy, responseEventNames, totals]);
 
 	useEffect(() => {
 		if (
@@ -218,6 +332,7 @@ export const AnalyticsView = () => {
 				availableGroupValues,
 				entityNames,
 				customerNames,
+				planNames,
 			}}
 		>
 			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-4 sm:px-10 pt-4 sm:pt-8">
@@ -241,13 +356,19 @@ export const AnalyticsView = () => {
 
 					<div className="h-full overflow-hidden">
 						{chartData && chartData.data.length > 0 && (
-							<div className="h-full overflow-hidden bg-interactive-secondary border max-h-[350px]">
-								<EventsBarChart
-									data={
-										chartData as Parameters<typeof EventsBarChart>[0]["data"]
-									}
-									chartConfig={chartConfig}
+							<div className="h-full flex flex-col overflow-hidden bg-interactive-secondary border rounded-lg max-h-[350px]">
+								<ChartLegend
+									entries={legendEntries}
+									showLabels={!!groupBy || legendEntries.length <= 3}
 								/>
+								<div className="flex-1 min-h-0">
+									<EventsBarChart
+										data={
+											chartData as Parameters<typeof EventsBarChart>[0]["data"]
+										}
+										chartConfig={chartConfig}
+									/>
+								</div>
 							</div>
 						)}
 
@@ -288,11 +409,9 @@ export const AnalyticsView = () => {
 					)}
 
 					{rawEvents && !rawQueryLoading && (
-						<Card className="w-full h-[calc(100%-2.5rem)] border-none rounded-none shadow-none py-0">
-							<CardContent className="p-0 h-full bg-transparent overflow-hidden">
-								<EventsAGGrid data={rawEvents} />
-							</CardContent>
-						</Card>
+						<div className="w-full h-[calc(100%-2.5rem)]">
+							<EventsAGGrid data={rawEvents} />
+						</div>
 					)}
 				</div>
 			</div>
