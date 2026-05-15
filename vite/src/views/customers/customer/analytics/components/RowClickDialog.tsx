@@ -1,10 +1,5 @@
 import { CopyablePre } from "@/components/general/CopyablePre";
-import {
-	Dialog,
-	DialogContent,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+import { Dialog, DialogContent } from "@/components/v2/dialogs/Dialog";
 import type { IRow } from "./AGGrid";
 
 export function RowClickDialog({
@@ -18,12 +13,6 @@ export function RowClickDialog({
 }) {
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
-			<DialogHeader>
-				<DialogTitle className="text-xl font-bold tracking-tight">
-					Event Details
-				</DialogTitle>
-			</DialogHeader>
-
 			<DialogContent
 				className="sm:max-w-[600px] p-2"
 				aria-describedby="Event Details"

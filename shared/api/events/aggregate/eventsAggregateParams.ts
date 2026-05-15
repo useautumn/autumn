@@ -23,16 +23,17 @@ export const ExtEventsAggregateParamsSchema = z.object({
 			(val) =>
 				val.startsWith("properties.") ||
 				val === "$customer_id" ||
-				val === "$entity_id",
+				val === "$entity_id" ||
+				val === "$plan_id",
 			{
 				message:
-					'group_by must start with "properties." or be "$customer_id" or "$entity_id"',
+					'group_by must start with "properties." or be "$customer_id", "$entity_id", or "$plan_id"',
 			},
 		)
 		.optional()
 		.meta({
 			description:
-				'Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" to group by those columns',
+				'Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" / "$plan_id" to group by those columns',
 		}),
 	range: RangeEnum.optional().meta({
 		description:

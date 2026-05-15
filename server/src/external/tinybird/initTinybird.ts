@@ -32,6 +32,7 @@ const TinybirdEventSchema = z.object({
 	set_usage: z.number().nullable(),
 	entity_id: z.string().nullable(),
 	internal_entity_id: z.string().nullable(),
+	internal_product_id: z.string().nullable(),
 	customer_id: z.string(),
 	properties: z.string().nullable(),
 	deductions: z.string().nullable(),

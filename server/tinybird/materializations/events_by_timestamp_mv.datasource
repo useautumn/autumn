@@ -14,6 +14,7 @@ SCHEMA >
     `properties` Nullable(String),
     `idempotency_key` Nullable(String),
     `entity_id` String DEFAULT '',
+    `internal_product_id` Nullable(String),
     `deductions` Nullable(String)
 
 ENGINE "MergeTree"
