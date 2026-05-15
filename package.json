@@ -71,6 +71,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun scripts/dev.ts",
+		"dev:services": "bun scripts/devServices/index.ts",
 		"vite:build": "bun -F @autumn/vite build:bun",
 		"t": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/testScripts/testDispatcher.ts",
 		"cm": "cd server && bun cm",
