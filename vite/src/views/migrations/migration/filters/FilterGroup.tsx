@@ -41,12 +41,15 @@ function useSuggestionsForField(
 	if (field === "customer_id") {
 		return customers
 			.filter((c): c is typeof c & { id: string } => Boolean(c.id))
-			.map((c) => ({
-				value: c.id,
-				label: c.name ?? c.email ?? c.id,
-				secondaryLabel: c.id,
-				icon: <UserIcon size={14} className="text-t3" />,
-			}));
+			.map((c) => {
+				const label = c.name ?? c.email ?? c.id;
+				return {
+					value: c.id,
+					label,
+					secondaryLabel: label === c.id ? undefined : c.id,
+					icon: <UserIcon size={14} className="text-t3" />,
+				};
+			});
 	}
 	if (field === "plan_id") return buildPlanSuggestions(products);
 	if (field === "item_feature_id") {

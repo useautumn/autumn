@@ -109,11 +109,14 @@ export function ValuePicker({
 							<CommandGroup>
 								{suggestions.map((suggestion) => {
 									const isSelected = selectedValues.includes(suggestion.value);
+									const keywords = [suggestion.label];
+									if (suggestion.secondaryLabel)
+										keywords.push(suggestion.secondaryLabel);
 									return (
 										<CommandItem
 											key={suggestion.value}
 											value={suggestion.value}
-											keywords={[suggestion.label]}
+											keywords={keywords}
 											onSelect={() => onToggle(suggestion.value)}
 											className="text-sm"
 										>
@@ -123,8 +126,11 @@ export function ValuePicker({
 											<span className="flex-1 truncate">
 												{suggestion.label}
 											</span>
-											{(suggestion.secondaryLabel ?? (suggestion.value !== suggestion.label ? suggestion.value : null)) && (
-												<span className="text-t4 text-xs truncate shrink-0">
+											{(suggestion.secondaryLabel ??
+												(suggestion.value !== suggestion.label
+													? suggestion.value
+													: null)) && (
+												<span className="shrink-0 max-w-48 truncate text-t3 text-xs font-mono">
 													{suggestion.secondaryLabel ?? suggestion.value}
 												</span>
 											)}
