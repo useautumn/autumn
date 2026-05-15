@@ -4,6 +4,7 @@ import {
 	ArrowSquareOutIcon,
 	ArrowsClockwiseIcon,
 	BracketsSquareIcon,
+	BroomIcon,
 	CaretDownIcon,
 	PencilSimpleIcon,
 	SubtractIcon,
@@ -54,6 +55,7 @@ export function CustomerActions() {
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [portalLoading, setPortalLoading] = useState(false);
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
+	const [clearCacheLoading, setClearCacheLoading] = useState(false);
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
 	const { org } = useOrg();
@@ -87,6 +89,23 @@ export function CustomerActions() {
 		isOpen: actionsOpen,
 		setIsOpen: setActionsOpen,
 	});
+
+	const handleClearCache = async () => {
+		if (!customer) return;
+		setClearCacheLoading(true);
+		try {
+			await CusService.clearCache({
+				axios: axiosInstance,
+				customer_id: customer.id || customer.internal_id,
+			});
+			toast.success("Customer cache cleared");
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to clear cache"));
+		} finally {
+			setClearCacheLoading(false);
+			setActionsOpen(false);
+		}
+	};
 
 	const handleOpenBillingPortal = async () => {
 		if (!customer) return;
@@ -230,6 +249,17 @@ export function CustomerActions() {
 						>
 							<ArrowSquareOutIcon className="size-3.5" />
 							Open in Admin Panel
+						</DropdownMenuItem>
+					)}
+					{isAdmin && (
+						<DropdownMenuItem
+							onClick={handleClearCache}
+							className="flex gap-2"
+							disabled={clearCacheLoading}
+							shortcut="x"
+						>
+							<BroomIcon />
+							{clearCacheLoading ? "Clearing..." : "Clear cache"}
 						</DropdownMenuItem>
 					)}
 					{((customer?.processor?.id &&

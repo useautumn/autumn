@@ -53,6 +53,31 @@ export const runFilter = async ({
 	});
 	const count = await countCustomers({ ctx, filter, checkpoint });
 
+	ctx.logger.info("runFilter: customer scope resolved", {
+		data: {
+			migrationRunId,
+			matchedCount: count,
+			only: controls?.only,
+			retryFailed: migration.retry_failed === true,
+			effectiveFilter: filter,
+			checkpointExcludedStatuses: checkpoint?.excludedStatuses,
+		},
+	});
+	if (count === 0) {
+		ctx.logger.warn(
+			"runFilter: no customers matched — nothing to migrate. " +
+				"Common causes: customer is excluded by a previous item_run " +
+				"(set retry_failed=true to re-run failed items), or the customer " +
+				"does not match other filter clauses (plan, addon, etc.)",
+			{
+				data: {
+					migrationRunId,
+					only: controls?.only,
+				},
+			},
+		);
+	}
+
 	const iterate = async function* () {
 		for await (const batch of filterCustomers({ ctx, filter, checkpoint })) {
 			yield batch.map(

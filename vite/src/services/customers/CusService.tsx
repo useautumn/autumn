@@ -112,4 +112,17 @@ export class CusService {
 		);
 		return data;
 	}
+
+	static async clearCache({
+		axios,
+		customer_id,
+	}: {
+		axios: AxiosInstance;
+		customer_id: string;
+	}): Promise<{ success: boolean }> {
+		const { data } = await axios.post(`/customers/clear_cache`, {
+			customer_id,
+		});
+		return data;
+	}
 }
