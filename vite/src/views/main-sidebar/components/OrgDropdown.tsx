@@ -12,7 +12,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
 	DropdownMenu,
@@ -97,7 +97,7 @@ export const OrgDropdown = () => {
 								"bg-transparent! shimmer-hover p-0.5 gap-2 rounded-md justify-start items-center transition-all duration-200 cursor-pointer",
 								expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5",
 							)}
-							variant="ghost"
+							variant="skeleton"
 						>
 							<OrgLogo org={org} />
 							<div
