@@ -28,6 +28,7 @@ const conformProductToSchema = (
 					unique_fingerprint: product.free_trial.unique_fingerprint,
 					duration: product.free_trial.duration,
 					card_required: product.free_trial.card_required,
+					on_end: product.free_trial.on_end,
 				}
 			: null,
 	};

@@ -10,4 +10,5 @@ export enum CusProductStatus {
 	Expired = "expired",
 	Unknown = "unknown",
 	Trialing = "trialing",
+	Paused = "paused",
 }
