@@ -10,8 +10,9 @@ import { handleUpdateVercelBillingPlan } from "./handlers/handleUpdateBillingPla
 import { handleDeleteInstallation } from "./handlers/installations/handleDeleteInstallation.js";
 import { handleGetInstallation } from "./handlers/installations/handleGetInstallation.js";
 import { handleUpsertInstallation } from "./handlers/installations/handleUpsertInstallation.js";
+import { handleMarketplaceInvoiceCreated } from "./handlers/marketplace/handleMarketplaceInvoiceCreated.js";
+import { handleMarketplaceInvoiceNotPaid } from "./handlers/marketplace/handleMarketplaceInvoiceNotPaid.js";
 import { handleMarketplaceInvoicePaid } from "./handlers/marketplace/handleMarketplaceInvoicePaid.js";
-import { handleMarketplaceInvoiceNotPaid } from "./handlers/marketplace/handleMarketplaceInvoidNotPaid.js";
 import { handleCreateResource } from "./handlers/resources/handleCreateResource.js";
 import { handleDeleteResource } from "./handlers/resources/handleDeleteResource.js";
 import { handleGetResource } from "./handlers/resources/handleGetResource.js";
@@ -129,6 +130,13 @@ vercelWebhookRouter.post(
 
 		try {
 			switch (eventType) {
+				case "marketplace.invoice.created":
+					await handleMarketplaceInvoiceCreated({
+						ctx,
+						payload: body.payload,
+					});
+					return c.json({ received: true }, 200);
+
 				case "marketplace.invoice.paid":
 					await handleMarketplaceInvoicePaid({
 						ctx,
