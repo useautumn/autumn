@@ -66,6 +66,6 @@ export const handleFreeTrialParam = ({
 		customFreeTrial: dbFreeTrial,
 		appliesToBilling: newProductIsPaidRecurring,
 		cardRequired: dbFreeTrial.card_required,
-		onEnd: dbFreeTrial.on_end,
+		onEnd: dbFreeTrial.on_end ?? undefined,
 	};
 };
