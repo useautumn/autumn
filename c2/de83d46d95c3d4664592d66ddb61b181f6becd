@@ -1,0 +1,19 @@
+server/src/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionCreateAction.ts
+  s_f7786a2d18f57c::t_5235234bf8d245 51-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "c2de83d46d95c3d4664592d66ddb61b181f6becd",
+  "prompts": {},
+  "sessions": {
+    "s_f7786a2d18f57c": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "c603288d-e0bc-4a93-abd6-d771d3935d08",
+        "model": "claude-opus-4-6"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
