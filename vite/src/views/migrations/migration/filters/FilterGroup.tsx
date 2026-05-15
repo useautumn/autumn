@@ -44,6 +44,7 @@ function useSuggestionsForField(
 			.map((c) => ({
 				value: c.id,
 				label: c.name ?? c.email ?? c.id,
+				secondaryLabel: c.id,
 				icon: <UserIcon size={14} className="text-t3" />,
 			}));
 	}
