@@ -1,0 +1,32 @@
+vite/src/views/customers/customer/analytics/utils/transformGroupedChartData.ts
+  s_accf80f980b0c9::t_420edb4c37df29 97-99
+vite/src/views/customers2/components/sheets/RecordUsageSheet.tsx
+  s_accf80f980b0c9::t_b24b69ce9c6675 8
+  s_accf80f980b0c9::t_2b044ed59de33f 223,228,231
+vite/src/views/customers/customer/analytics/AnalyticsView.tsx
+  s_accf80f980b0c9::t_c26a6e17fd16ce 66
+  s_accf80f980b0c9::t_f93181682f927c 60-61,103
+  s_accf80f980b0c9::t_1a5234f1fadc2c 8
+  s_accf80f980b0c9::t_98eae08f09fe33 67,107-108
+  s_accf80f980b0c9::t_a8b730151f2d0b 173-175
+  s_accf80f980b0c9::t_10b82bb24acd1f 138-140
+  s_accf80f980b0c9::t_93d783b86eda7e 62-65,68-102,104-106,109
+vite/src/hooks/queries/useProductsQuery.tsx
+  s_accf80f980b0c9::t_f8f79ed6b0f4e4 11-13,15-17,23-25,38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "11b6c696a2981d5af63c457d8391d189a56b3d76",
+  "prompts": {},
+  "sessions": {
+    "s_accf80f980b0c9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d4be0ef2ffexBJvzL8I8Ra4HG",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
