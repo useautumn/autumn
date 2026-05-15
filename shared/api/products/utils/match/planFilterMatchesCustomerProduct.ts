@@ -12,8 +12,8 @@ import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
  *
  * JS-side mirror of `compilePlanFilter` for callers that already have
  * the cusproduct in memory (migration runner, scripts). Today supports
- * `plan_id`, `addon`, `paid`, `recurring`, and `$or`; `price` and `item` throw to
- * make the gap explicit.
+ * `plan_id`, `addon`, `paid`, `recurring`, `custom`, and `$or`; `price`
+ * and `item` throw to make the gap explicit.
  */
 export const planFilterMatchesCustomerProduct = ({
 	filter,
@@ -60,6 +60,10 @@ export const planFilterMatchesCustomerProduct = ({
 		filter.recurring !== undefined &&
 		isCustomerProductPaidRecurring(cusProduct) !== filter.recurring
 	) {
+		return false;
+	}
+
+	if (filter.custom !== undefined && cusProduct.is_custom !== filter.custom) {
 		return false;
 	}
 

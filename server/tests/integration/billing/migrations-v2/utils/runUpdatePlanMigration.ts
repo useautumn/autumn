@@ -4,6 +4,7 @@ import type { Operations } from "@autumn/shared/api/migrations/operations/operat
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { prepare } from "@/internal/migrations/v2/prepare/prepare.js";
 import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/index.js";
+import { preProcessMigration } from "@/internal/migrations/v2/run/preProcess/index.js";
 
 type MigrationClient = {
 	migrationsV2: {
@@ -96,13 +97,17 @@ export const runUpdatePlanMigration = async ({
 		return migration;
 	}
 
+	const guardedMigration = preProcessMigration(migration);
 	const { preparedState } = await prepare({
 		ctx,
-		migration,
+		migration: guardedMigration,
 		dryRun: false,
 	});
 
-	const preparedMigration = { ...migration, prepared_state: preparedState };
+	const preparedMigration = {
+		...guardedMigration,
+		prepared_state: preparedState,
+	};
 
 	await migrateCustomer({
 		ctx,
