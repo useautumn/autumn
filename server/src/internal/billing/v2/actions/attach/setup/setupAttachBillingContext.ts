@@ -19,8 +19,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
+import { setupFinalizeFirstInvoice } from "@/internal/billing/v2/setup/setupFinalizeFirstInvoice";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
+import { setupPaymentBehaviorIntent } from "@/internal/billing/v2/setup/setupPaymentBehaviorIntent";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
@@ -155,6 +157,14 @@ export const setupAttachBillingContext = async ({
 	});
 
 	const invoiceMode = setupInvoiceModeContext({ params });
+	const paymentBehaviorIntent = setupPaymentBehaviorIntent({
+		contextOverride,
+		paymentMethod,
+	});
+	const shouldFinalizeFirstInvoice = setupFinalizeFirstInvoice({
+		contextOverride,
+		invoiceMode,
+	});
 	const isCustom = hasCustomItems(params.customize);
 
 	// Timestamp context
@@ -262,6 +272,9 @@ export const setupAttachBillingContext = async ({
 			: params.proration_behavior,
 
 		invoiceMode,
+		paymentBehaviorIntent,
+		shouldFinalizeFirstInvoice,
+		skipCustomPaymentMethodGuard: contextOverride.skipCustomPaymentMethodGuard,
 		enablePlanImmediately: params.enable_plan_immediately ?? false,
 		accessStartsAt,
 
