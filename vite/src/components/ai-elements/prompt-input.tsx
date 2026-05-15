@@ -53,7 +53,7 @@ import {
 	InputGroupAddon,
 	InputGroupButton,
 	InputGroupTextarea,
-} from "@/components/ui/input-group";
+} from "@/components/v2/inputs/InputGroup";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,

@@ -4,7 +4,7 @@ import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/v2/cards/Card";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEnv } from "@/utils/envUtils";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
