@@ -6,6 +6,7 @@ import type {
 	FeatureOptions,
 	FreeTrial,
 	Price,
+	TrialOnEnd,
 } from "@autumn/shared";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
@@ -34,6 +35,7 @@ export interface TrialContext {
 	customFreeTrial?: FreeTrial;
 	appliesToBilling: boolean;
 	cardRequired: boolean;
+	onEnd?: TrialOnEnd;
 }
 
 export interface AnchorResetRefund {

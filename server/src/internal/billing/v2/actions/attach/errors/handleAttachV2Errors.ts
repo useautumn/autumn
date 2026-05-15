@@ -20,6 +20,7 @@ import { handleCustomLineItemsErrors } from "@/internal/billing/v2/common/errors
 import { handleExternalPSPErrors } from "@/internal/billing/v2/common/errors/handleExternalPSPErrors";
 import { handleSubscriptionIdErrors } from "@/internal/billing/v2/common/errors/handleSubscriptionIdErrors";
 import { handleCustomPaymentMethodErrorsV2 } from "@/internal/customers/attach/attachUtils/handleAttachErrors";
+import { handleRevertTrialErrors } from "./handleRevertTrialErrors";
 
 /** Validates attach v2 request before executing the billing plan. */
 export const handleAttachV2Errors = async ({
@@ -92,4 +93,7 @@ export const handleAttachV2Errors = async ({
 		billingContext,
 		billingPlan,
 	});
+
+	// 13. Revert trial errors (card_required + revert, missing existing plan)
+	handleRevertTrialErrors({ billingContext });
 };

@@ -1,4 +1,5 @@
 import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums.js";
+import { TrialOnEnd } from "@models/productModels/freeTrialModels/freeTrialModels.js";
 import { z } from "zod/v4";
 
 export const ApiFreeTrialV2Schema = z.object({
@@ -12,6 +13,10 @@ export const ApiFreeTrialV2Schema = z.object({
 	card_required: z.boolean().meta({
 		description:
 			"Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.",
+	}),
+	on_end: z.enum(TrialOnEnd).optional().meta({
+		description:
+			"Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.",
 	}),
 });
 

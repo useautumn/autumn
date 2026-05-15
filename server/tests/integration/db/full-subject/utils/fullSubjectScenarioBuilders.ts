@@ -279,6 +279,8 @@ const buildCustomerProduct = ({
 	api_semver: ApiVersion.V2_2,
 	external_id: null,
 	stripe_checkout_session_id: null,
+	previous_customer_product_id: null,
+	on_trial_end: null,
 });
 
 const buildCustomerPrice = ({
