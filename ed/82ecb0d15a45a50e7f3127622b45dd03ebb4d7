@@ -1,0 +1,23 @@
+server/src/external/vercel/misc/vercelProvisioning.ts
+  ai_agent 1-5,7,11-14,18,20-22,24,32,41-47,49,59,64-70,72-115,132-197,199-202,205-206,208-210,212,215-220,223-228
+server/src/external/vercel/vercelWebhookRouter.ts
+  ai_agent 13-14,133-139
+server/src/external/vercel/misc/vercelInvoiceUtils.ts
+  ai_agent 1-19
+server/src/external/vercel/handlers/handleUpdateBillingPlan.ts
+  ai_agent 6,86
+server/src/external/vercel/handlers/marketplace/handleMarketplaceInvoiceCreated.ts
+  ai_agent 2-5,7,9,24,28,33-38,42-43,45-51,53-61,63-73,75,77-95,97-104,106-110,116-121,127-138,141-146,148
+server/src/external/vercel/handlers/marketplace/handleMarketplaceInvoicePaid.ts
+  ai_agent 3-6,8-9,13,48,66-80,89,101,107-116,118-167,169-183,185-187,191,258-269
+server/src/external/vercel/handlers/handleListBillingPlans.ts
+  ai_agent 130-131
+server/src/external/vercel/handlers/resources/handleCreateResource.ts
+  ai_agent 1,8,11-12,69-141,143,154,156-166,168-180,183-224,245,254
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "ed82ecb0d15a45a50e7f3127622b45dd03ebb4d7",
+  "prompts": {}
+}
