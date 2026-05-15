@@ -121,7 +121,6 @@ export function useUpdateSubscriptionRequestBody({
 			removeTrial,
 			trialEnabled,
 			trialCardRequired,
-			trialOnEnd,
 			version,
 			items,
 			cancelAction,
@@ -178,22 +177,16 @@ export function useUpdateSubscriptionRequestBody({
 			trialCardRequired,
 		});
 
-		const initialOnTrialEnd =
-			(customerProduct.on_trial_end as "bill" | "revert" | null) ?? "bill";
-		const onTrialEndChanged =
-			trialOnEnd !== initialOnTrialEnd;
-
 		return {
 			...base,
 			options: options.length > 0 ? options : undefined,
-			free_trial: onTrialEndChanged ? undefined : freeTrial,
+			free_trial: freeTrial,
 			items: items && items.length > 0 ? items : undefined,
 			version: version !== initialVersion ? version : undefined,
 			billing_behavior: billingBehavior || undefined,
 			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
 			no_billing_changes: noBillingChanges || undefined,
 			discounts: validDiscounts,
-			...(onTrialEndChanged && { on_trial_end: trialOnEnd }),
 		};
 	}, [
 		form.store,

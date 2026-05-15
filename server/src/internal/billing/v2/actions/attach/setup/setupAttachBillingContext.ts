@@ -123,7 +123,7 @@ export const setupAttachBillingContext = async ({
 	const skipBillingFetching =
 		orgDisableStripeWrites({ ctx }) || params.no_billing_changes === true;
 
-	const skipBillingChanges =
+	const skipBillingChangesBase =
 		skipBillingFetching || params.processor_subscription_id !== undefined;
 
 	const {
@@ -172,6 +172,9 @@ export const setupAttachBillingContext = async ({
 			currentCustomerProduct,
 		},
 	});
+
+	const skipBillingChanges =
+		skipBillingChangesBase || trialContext?.onEnd === "revert";
 
 	let billingCycleAnchorMs = setupBillingCycleAnchor({
 		stripeSubscription,

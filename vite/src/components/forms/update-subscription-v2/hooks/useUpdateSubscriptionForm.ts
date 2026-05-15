@@ -46,7 +46,6 @@ export function useUpdateSubscriptionForm({
 			trialLength: remainingTrialDays,
 			trialDuration: FreeTrialDuration.Day,
 			trialCardRequired,
-			trialOnEnd: (customerProduct.on_trial_end as "bill" | "revert") ?? "bill",
 			removeTrial: false,
 			trialEnabled: isTrialing,
 			version: currentVersion,
