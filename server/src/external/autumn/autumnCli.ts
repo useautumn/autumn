@@ -1017,15 +1017,18 @@ export class AutumnInt {
 		run: async (params: {
 			id: string;
 			dry_run?: boolean;
+			lazy_run?: boolean;
 		}): Promise<{
 			migration_id: string;
 			dry_run: boolean;
+			lazy_run: boolean;
 			run_id: string;
 		}> => {
 			const data = await this.post(`/migrations.run`, params);
 			return data as {
 				migration_id: string;
 				dry_run: boolean;
+				lazy_run: boolean;
 				run_id: string;
 			};
 		},

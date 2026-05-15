@@ -29,6 +29,8 @@ export function parsePlanFilter({
 		children.push(
 			parseLeaf({ field: "recurring", rawValue: filter.recurring, ctx }),
 		);
+	if (filter.custom !== undefined)
+		children.push(parseLeaf({ field: "custom", rawValue: filter.custom, ctx }));
 	if (filter.item !== undefined)
 		children.push(parseItemNav({ raw: filter.item, ctx }));
 	if (filter.$or !== undefined) {
