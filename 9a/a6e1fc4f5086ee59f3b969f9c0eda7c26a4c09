@@ -1,0 +1,26 @@
+server/src/external/tinybird/sendEvents/mapEvent.ts
+  s_accf80f980b0c9::t_68451dbfd20fcc 52-54
+server/src/internal/analytics/actions/listEvents.ts
+  s_accf80f980b0c9::t_1a5cd94c66df9d 91-95
+server/src/external/tinybird/initTinybird.ts
+  s_accf80f980b0c9::t_5bd2014c2ecd45 35
+server/src/internal/products/internalHandlers/handleGetProducts.ts
+  s_accf80f980b0c9::t_9a9f4c3c3a15fa 9
+  s_accf80f980b0c9::t_5e5110d92c6b7a 3,8,10-11,20,23,25-30,32-37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "9aa6e1fc4f5086ee59f3b969f9c0eda7c26a4c09",
+  "prompts": {},
+  "sessions": {
+    "s_accf80f980b0c9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d4be0ef2ffexBJvzL8I8Ra4HG",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
