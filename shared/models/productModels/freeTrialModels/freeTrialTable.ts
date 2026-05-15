@@ -19,7 +19,7 @@ export const freeTrials = pgTable(
 		unique_fingerprint: boolean("unique_fingerprint"),
 		is_custom: boolean("is_custom").default(false),
 		card_required: boolean("card_required").default(false),
-		on_end: text("on_end").default("bill"),
+		on_end: text("on_end"),
 	},
 	(table) => [
 		foreignKey({
