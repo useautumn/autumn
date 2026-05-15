@@ -17,20 +17,20 @@ import {
 } from "./fetchExpiredTrialProducts";
 import { processExpiredTrialRow } from "./processExpiredTrialRow";
 
-const partitionRevertRows = (rows: ExpiredTrialRow[]) => {
-	const revert: ExpiredTrialRow[] = [];
+const partitionByPreviousPlan = (rows: ExpiredTrialRow[]) => {
+	const withPrevious: ExpiredTrialRow[] = [];
 	const standard: ExpiredTrialRow[] = [];
 	for (const row of rows) {
-		if (row.customerProduct.on_trial_end === "revert") {
-			revert.push(row);
+		if (row.customerProduct.previous_customer_product_id) {
+			withPrevious.push(row);
 		} else {
 			standard.push(row);
 		}
 	}
-	return { revert, standard };
+	return { withPrevious, standard };
 };
 
-const processRevertRows = async ({
+const processPreviousPlanRows = async ({
 	ctx,
 	rows,
 }: {
@@ -80,11 +80,11 @@ export const runProductCron = async ({
 			const resultsByOrgEnv = await groupByOrgEnv({ results, cronContext });
 
 			for (const { ctx, org, features, rows } of resultsByOrgEnv) {
-				const { revert: revertRows, standard: standardRows } =
-					partitionRevertRows(rows);
+				const { withPrevious, standard: standardRows } =
+					partitionByPreviousPlan(rows);
 
-				if (revertRows.length > 0) {
-					await processRevertRows({ ctx, rows: revertRows });
+				if (withPrevious.length > 0) {
+					await processPreviousPlanRows({ ctx, rows: withPrevious });
 				}
 
 				if (standardRows.length === 0) continue;

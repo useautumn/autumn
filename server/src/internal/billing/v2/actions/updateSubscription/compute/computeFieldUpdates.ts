@@ -25,5 +25,9 @@ export const computeFieldUpdates = ({
 		updates.status = params.status;
 	}
 
+	if (params.on_trial_end !== undefined) {
+		updates.on_trial_end = params.on_trial_end;
+	}
+
 	return updates;
 };

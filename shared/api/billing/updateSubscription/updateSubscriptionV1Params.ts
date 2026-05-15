@@ -62,6 +62,14 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 			.meta({
 				internal: true,
 			}),
+
+		on_trial_end: z
+			.enum(["bill", "revert"])
+			.optional()
+			.meta({
+				description:
+					"Update the trial end behavior. Use 'bill' to convert a revert trial to billing mode.",
+			}),
 	});
 
 const UPDATE_FIELDS = [
@@ -75,6 +83,7 @@ const UPDATE_FIELDS = [
 	"refund_last_payment",
 	"recalculate_balances",
 	"status",
+	"on_trial_end",
 	"redirect_mode",
 	"discounts",
 ] as const satisfies (keyof z.input<

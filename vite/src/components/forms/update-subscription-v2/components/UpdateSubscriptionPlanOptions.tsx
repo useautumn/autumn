@@ -17,7 +17,12 @@ export function UpdateSubscriptionPlanOptions() {
 	const { form, formValues, formContext, trialState } =
 		useUpdateSubscriptionFormContext();
 	const { numVersions, currentVersion } = formContext;
-	const { trialCardRequired } = formValues;
+	const { trialCardRequired, trialOnEnd } = formValues;
+	const isRevertTrial =
+		formContext.customerProduct.on_trial_end === "revert";
+	const handleTrialOnEndChange = isRevertTrial
+		? (value: "bill" | "revert") => form.setFieldValue("trialOnEnd", value)
+		: undefined;
 	const [versionOpen, setVersionOpen] = useState(false);
 
 	const showVersionSelector = numVersions > 1;
@@ -89,6 +94,8 @@ export function UpdateSubscriptionPlanOptions() {
 					expanded={trialExpanded}
 					checked={trialExpanded}
 					trialCardRequired={!!trialCardRequired}
+					trialOnEnd={trialOnEnd}
+					onTrialOnEndChange={handleTrialOnEndChange}
 					onToggle={(enabled) => {
 						if (enabled) {
 							trialState.handleToggleTrial();

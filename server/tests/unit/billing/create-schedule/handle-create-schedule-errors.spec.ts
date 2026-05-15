@@ -25,7 +25,6 @@ const buildContext = ({
 		},
 		stripeSubscriptionSchedule: existingSchedule,
 		productContexts: [],
-		fullProducts: [],
 		scheduledPhaseContexts: [],
 		fullProducts: [],
 		fullCustomer: {
