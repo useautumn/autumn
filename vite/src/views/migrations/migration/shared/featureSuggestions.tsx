@@ -8,6 +8,7 @@ export function buildFeatureSuggestions(
 	return features.map((f) => ({
 		value: f.id,
 		label: f.name || f.id,
+		secondaryLabel: f.id,
 		icon: getFeatureIcon({ feature: f }),
 	}));
 }

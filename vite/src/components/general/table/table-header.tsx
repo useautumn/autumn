@@ -1,6 +1,6 @@
 import { flexRender, type HeaderGroup } from "@tanstack/react-table";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	TableHeader as ShadcnTableHeader,
 	TableHead,
