@@ -46,6 +46,10 @@ export function useHasSubscriptionChanges({
 		);
 		if (hasOneOffPrepaidWithQty) return true;
 
+		const initialOnTrialEnd =
+			(customerProduct.on_trial_end as "bill" | "revert" | null) ?? "bill";
+		if (formValues.trialOnEnd !== initialOnTrialEnd) return true;
+
 		const trialChanges = generateTrialChanges({
 			customerProduct,
 			removeTrial: formValues.removeTrial,
@@ -100,6 +104,7 @@ export function useHasSubscriptionChanges({
 		formValues.trialDuration,
 		formValues.trialEnabled,
 		formValues.trialCardRequired,
+		formValues.trialOnEnd,
 		formValues.version,
 		formValues.items,
 		formValues.prepaidOptions,

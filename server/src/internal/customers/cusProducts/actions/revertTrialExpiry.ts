@@ -9,14 +9,14 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 
 /**
- * Handles the revert case inside a transaction: expire the trial cusProduct
- * and unpause the previous one atomically so we never leave a customer
- * without an active plan.
+ * Handles trial expiry for products that have a previous_customer_product_id.
  *
- * Returns true if the revert was handled, false if it should fall through
- * to the standard expiry path.
+ * - on_trial_end === "revert": expire trial, unpause previous (restore)
+ * - on_trial_end === "bill": expire previous only (trial stays active, billing starts)
+ *
+ * Returns true if handled, false to fall through to standard expiry.
  */
-export const tryProcessRevertExpiry = async ({
+export const tryProcessTrialWithPreviousPlan = async ({
 	ctx,
 	customerProduct,
 	customerId,
@@ -25,40 +25,44 @@ export const tryProcessRevertExpiry = async ({
 	customerProduct: InferSelectModel<typeof customerProducts>;
 	customerId: string;
 }): Promise<boolean> => {
-	if (customerProduct.on_trial_end !== "revert") return false;
-
 	const previousCusProductId = customerProduct.previous_customer_product_id;
-	if (!previousCusProductId) {
-		console.log(
-			`[tryProcessRevertExpiry] No previous_customer_product_id on ${customerProduct.id}, falling back to standard expiry`,
-		);
-		return false;
-	}
+	if (!previousCusProductId) return false;
 
+	const isRevert = customerProduct.on_trial_end === "revert";
 	const now = Date.now();
+
 	await ctx.db.transaction(async (tx) => {
 		const txDb = tx as unknown as DrizzleCli;
 
-		await txDb
-			.update(customerProductsTable)
-			.set({ status: CusProductStatus.Expired, updated_at: now })
-			.where(eq(customerProductsTable.id, customerProduct.id));
+		if (isRevert) {
+			// Revert: expire trial, unpause previous
+			await txDb
+				.update(customerProductsTable)
+				.set({ status: CusProductStatus.Expired, updated_at: now })
+				.where(eq(customerProductsTable.id, customerProduct.id));
 
-		await txDb
-			.update(customerProductsTable)
-			.set({ status: CusProductStatus.Active, updated_at: now })
-			.where(
-				and(
-					eq(customerProductsTable.id, previousCusProductId),
-					eq(customerProductsTable.status, CusProductStatus.Paused),
-				),
-			);
+			await txDb
+				.update(customerProductsTable)
+				.set({ status: CusProductStatus.Active, updated_at: now })
+				.where(
+					and(
+						eq(customerProductsTable.id, previousCusProductId),
+						eq(customerProductsTable.status, CusProductStatus.Paused),
+					),
+				);
+		} else {
+			// Bill: expire previous only, trial stays active (billing starts)
+			await txDb
+				.update(customerProductsTable)
+				.set({ status: CusProductStatus.Expired, updated_at: now })
+				.where(eq(customerProductsTable.id, previousCusProductId));
+		}
 	});
 
 	await deleteCachedFullCustomer({
 		ctx,
 		customerId,
-		source: "productCron:revert",
+		source: isRevert ? "productCron:revert" : "productCron:bill",
 	});
 
 	return true;
