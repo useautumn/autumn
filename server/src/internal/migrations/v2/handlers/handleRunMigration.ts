@@ -26,7 +26,7 @@ const getRunMigrationTriggerOptions = ({
 	orgId: string;
 	isDev: boolean;
 }) => ({
-	...(isDev ? { region: "eu-west-1" } : {}),
+	...(isDev ? { region: "eu-central-1" } : {}),
 	concurrencyKey: orgId,
 });
 
@@ -59,6 +59,7 @@ export const handleRunMigration = createRoute({
 			migration,
 			dryRun,
 			lazyRun,
+			onlyIds: only,
 			claimed: async (migrationRunId) => {
 				const handle = await runMigrationTask.trigger(
 					{
