@@ -1,0 +1,25 @@
+server/tinybird/materializations/events_hourly_mv.datasource
+  s_accf80f980b0c9::t_0f36def01cd9d4 14
+server/tinybird/materializations/events_by_timestamp_mv.datasource
+  s_accf80f980b0c9::t_c9a48686946414 17
+server/tinybird/materializations/events_by_timestamp_mv_pipe.pipe
+  s_accf80f980b0c9::t_7170585f48a3c4 18
+server/tinybird/materializations/events_hourly_no_properties_two_mv.datasource
+  s_accf80f980b0c9::t_5a033947a0c340 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "722d0f464a0283c51685c91c7a5534ea54cb7402",
+  "prompts": {},
+  "sessions": {
+    "s_accf80f980b0c9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d4be0ef2ffexBJvzL8I8Ra4HG",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
