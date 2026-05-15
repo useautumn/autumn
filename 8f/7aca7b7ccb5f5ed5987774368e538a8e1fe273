@@ -1,0 +1,41 @@
+server/src/internal/customers/cusProducts/repos/getByCustomerAndProduct.ts
+  s_c2845b3d0718c4::t_58bdeb42c6a8c0 1-66
+server/src/internal/customers/cusProducts/repos/index.ts
+  s_7157e32bdcea33::t_3930bf0cc96f73 5,11
+  s_c2845b3d0718c4::t_7b47d24276ba31 3,9
+server/src/internal/customers/cusProducts/repos/getByStripeSubId.ts
+  s_7157e32bdcea33::t_0114e57b2b0415 1,3-5,7-64
+  s_0307a30a8078e7::t_cb7799585c0368 2,6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "8f7aca7b7ccb5f5ed5987774368e538a8e1fe273",
+  "prompts": {},
+  "sessions": {
+    "s_0307a30a8078e7": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d3de4df5ffezEJNkzQd6WISP2",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_7157e32bdcea33": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d38bdf42ffeSX1N816BCHubjm",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_c2845b3d0718c4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d3794499ffe4zYI7aLKf1hoC6",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
