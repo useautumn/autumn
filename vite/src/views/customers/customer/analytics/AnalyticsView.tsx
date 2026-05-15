@@ -11,6 +11,7 @@ import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/AGGrid";
+import { ChartLegend, type ChartLegendEntry } from "./components/ChartLegend";
 import PaginationPanel from "./components/PaginationPanel";
 import { QueryTopbar } from "./components/QueryTopbar";
 import {
@@ -210,6 +211,55 @@ export const AnalyticsView = () => {
 		return { chartData: transformed, chartConfig: config };
 	}, [events, features, groupBy, groupFilter, entityNames, customerNames, planNames]);
 
+	// Build legend entries (sorted desc, zero-values filtered). The
+	// width-aware overflow logic lives in ChartLegend.
+	const legendEntries: ChartLegendEntry[] = useMemo(() => {
+		if (!chartData || chartData.data.length === 0) return [];
+		let entries: ChartLegendEntry[] = [];
+		if (groupBy && chartConfig) {
+			entries = chartConfig.map((s) => {
+				const sum = chartData.data.reduce(
+					(acc, row) =>
+						acc +
+						Number(
+							(row as Record<string, string | number>)[s.yKey] ?? 0,
+						),
+					0,
+				);
+				return {
+					key: s.yKey,
+					label: s.yName,
+					color: s.fill,
+					value: sum,
+					title: `${s.yName}: ${sum.toLocaleString()}`,
+				};
+			});
+		} else {
+			entries = responseEventNames.map((name) => {
+				const entry = totals?.[name] ?? { count: 0, sum: 0 };
+				const primary =
+					entry.sum !== entry.count ? entry.sum : entry.count;
+				const series = chartConfig?.find(
+					(c) => c.yKey === `${name}_count` || c.yKey === name,
+				);
+				return {
+					key: name,
+					label: name,
+					color: series?.fill,
+					value: primary,
+					title: `${name}: ${entry.count.toLocaleString()} events${
+						entry.sum !== entry.count
+							? ` · Σ ${entry.sum.toLocaleString()}`
+							: ""
+					}`,
+				};
+			});
+		}
+		return entries
+			.filter((e) => e.value > 0)
+			.sort((a, b) => b.value - a.value);
+	}, [chartData, chartConfig, groupBy, responseEventNames, totals]);
+
 	useEffect(() => {
 		if (
 			(
@@ -304,90 +354,10 @@ export const AnalyticsView = () => {
 					<div className="h-full overflow-hidden">
 						{chartData && chartData.data.length > 0 && (
 							<div className="h-full flex flex-col overflow-hidden bg-interactive-secondary border rounded-lg max-h-[350px]">
-								{(() => {
-									// Build legend entries:
-									// - Ungrouped: one entry per event name with its total.
-									// - Grouped: one entry per chart series (feature × group),
-									//   summed over chartData rows for accurate per-series totals.
-									type LegendEntry = {
-										key: string;
-										label: string;
-										color: string | undefined;
-										value: number;
-										title: string;
-									};
-									let legend: LegendEntry[] = [];
-									if (groupBy && chartConfig) {
-										legend = chartConfig.map((s) => {
-											const sum = chartData.data.reduce(
-												(acc, row) =>
-													acc +
-													Number(
-														(row as Record<string, string | number>)[s.yKey] ??
-															0,
-													),
-												0,
-											);
-											return {
-												key: s.yKey,
-												label: s.yName,
-												color: s.fill,
-												value: sum,
-												title: `${s.yName}: ${sum.toLocaleString()}`,
-											};
-										});
-									} else {
-										legend = responseEventNames.map((name) => {
-											const entry = totals?.[name] ?? { count: 0, sum: 0 };
-											const primary =
-												entry.sum !== entry.count ? entry.sum : entry.count;
-											const series = chartConfig?.find(
-												(c) =>
-													c.yKey === `${name}_count` || c.yKey === name,
-											);
-											return {
-												key: name,
-												label: name,
-												color: series?.fill,
-												value: primary,
-												title: `${name}: ${entry.count.toLocaleString()} events${
-													entry.sum !== entry.count
-														? ` · Σ ${entry.sum.toLocaleString()}`
-														: ""
-												}`,
-											};
-										});
-									}
-									legend = legend.filter((e) => e.value > 0);
-									if (legend.length === 0) return null;
-									// Always show labels when grouping — the label IS the point;
-									// for ungrouped, hide labels when there's too many to fit.
-									const showLabel = !!groupBy || legend.length <= 3;
-									return (
-										<div className="flex items-stretch h-7 gap-4 px-2 overflow-x-auto overflow-y-hidden border-b shrink-0 bg-card">
-											{legend.map((e) => (
-												<div
-													key={e.key}
-													className="flex items-center gap-1.5 min-w-0"
-													title={e.title}
-												>
-													<span
-														className="w-2 h-2 rounded-sm shrink-0"
-														style={{ background: e.color }}
-													/>
-													{showLabel && (
-														<span className="text-t4 text-tiny truncate min-w-0">
-															{e.label}
-														</span>
-													)}
-													<span className="text-t2 text-tiny tabular-nums shrink-0">
-														{e.value.toLocaleString()}
-													</span>
-												</div>
-											))}
-										</div>
-									);
-								})()}
+								<ChartLegend
+									entries={legendEntries}
+									showLabels={!!groupBy || legendEntries.length <= 3}
+								/>
 								<div className="flex-1 min-h-0">
 									<EventsBarChart
 										data={
