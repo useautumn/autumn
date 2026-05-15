@@ -5,7 +5,7 @@ import {
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import type { IconButtonProps } from "./IconButton";
 import { IconButton } from "./IconButton";

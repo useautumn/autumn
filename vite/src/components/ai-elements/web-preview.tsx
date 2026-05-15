@@ -9,13 +9,13 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/v2/inputs/Input";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 
 export type WebPreviewContextValue = {

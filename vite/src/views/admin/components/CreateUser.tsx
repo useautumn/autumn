@@ -9,8 +9,8 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+} from "@/components/v2/dialogs/Dialog";
+import { Input } from "@/components/v2/inputs/Input";
 import { authClient } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
 

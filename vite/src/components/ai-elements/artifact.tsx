@@ -8,7 +8,7 @@ import {
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 
 export type ArtifactProps = HTMLAttributes<HTMLDivElement>;

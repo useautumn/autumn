@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/v2/inputs/Input";
 import { authClient, useSession } from "@/lib/auth-client";
 import { emailRegex } from "../SignIn";
 

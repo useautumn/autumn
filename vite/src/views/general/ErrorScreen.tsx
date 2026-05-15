@@ -1,8 +1,7 @@
 import { AppEnv } from "@autumn/shared";
 import React from "react";
 import { Link, useNavigate } from "react-router";
-import { Button } from "@/components/v2/buttons/Button";
-import { authClient, useSession } from "@/lib/auth-client";
+import { authClient } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
 import { getRedirectUrl } from "@/utils/genUtils";
 
