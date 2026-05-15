@@ -171,9 +171,11 @@ export const AnalyticsView = () => {
 			return { chartData: null, chartConfig: null };
 		}
 
-		// Apply frontend filter if a group filter is selected
+		// Apply frontend filter if a group filter is selected. Use an
+		// explicit null check because empty string is a meaningful filter
+		// value for plan_id ("no plan").
 		let filteredEvents = events;
-		if (groupBy && groupFilter) {
+		if (groupBy && groupFilter !== null) {
 			// Handle special case for column-based operators (not a property)
 			const groupByColumn =
 				groupBy === "customer_id" ||
