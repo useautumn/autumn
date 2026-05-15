@@ -42,7 +42,7 @@ export const useAnalyticsData = ({
 		useFeaturesQuery();
 
 	const formattedGroupBy = groupBy
-		? groupBy === "customer_id" || groupBy === "entity_id"
+		? groupBy === "customer_id" || groupBy === "entity_id" || groupBy === "plan_id"
 			? groupBy
 			: `properties.${groupBy}`
 		: undefined;
