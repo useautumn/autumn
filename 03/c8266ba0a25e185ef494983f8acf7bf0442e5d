@@ -1,0 +1,27 @@
+server/src/internal/billing/v2/setup/setupFinalizeFirstInvoice.ts
+  ai_agent 1-19
+shared/models/billingModels/context/billingContext.ts
+  ai_agent 10,107-110
+server/src/internal/billing/v2/providers/stripe/execute/executeStripeSubscriptionAction.ts
+  ai_agent 38,69-81,97
+shared/models/billingModels/context/billingContextOverride.ts
+  ai_agent 1,40-51
+shared/models/billingModels/context/paymentBehaviorIntent.ts
+  ai_agent 1-4
+server/src/internal/billing/v2/actions/attach/setup/setupAttachBillingContext.ts
+  ai_agent 22,25,160-167,275-277
+server/src/internal/billing/v2/providers/stripe/utils/subscriptions/getRequiredActionFromSubscriptionInvoice.ts
+  ai_agent 27,33,35,37
+shared/models/billingModels/context/index.ts
+  ai_agent 4
+server/src/internal/billing/v2/setup/setupPaymentBehaviorIntent.ts
+  ai_agent 1-23
+server/src/internal/customers/attach/attachUtils/handleAttachErrors.ts
+  ai_agent 165-168
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "03c8266ba0a25e185ef494983f8acf7bf0442e5d",
+  "prompts": {}
+}
