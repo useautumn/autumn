@@ -10,7 +10,7 @@ import {
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
 import {
 	Tooltip,
@@ -76,7 +76,7 @@ export const MessageAction = ({
 	tooltip,
 	children,
 	label,
-	variant = "ghost",
+	variant = "skeleton",
 	size = "icon-sm",
 	...props
 }: MessageActionProps) => {
@@ -248,7 +248,7 @@ export const MessageBranchPrevious = ({
 			onClick={goToPrevious}
 			size="icon-sm"
 			type="button"
-			variant="ghost"
+			variant="skeleton"
 			{...props}
 		>
 			{children ?? <ChevronLeftIcon size={14} />}
@@ -272,7 +272,7 @@ export const MessageBranchNext = ({
 			onClick={goToNext}
 			size="icon-sm"
 			type="button"
-			variant="ghost"
+			variant="skeleton"
 			{...props}
 		>
 			{children ?? <ChevronRightIcon size={14} />}
@@ -362,7 +362,7 @@ export function MessageAttachment({
 								onRemove();
 							}}
 							type="button"
-							variant="ghost"
+							variant="skeleton"
 						>
 							<XIcon />
 							<span className="sr-only">Remove</span>
@@ -382,16 +382,16 @@ export function MessageAttachment({
 						</TooltipContent>
 					</Tooltip>
 					{onRemove && (
-						<Button
-							aria-label="Remove attachment"
-							className="size-6 shrink-0 rounded-full p-0 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 [&>svg]:size-3"
-							onClick={(e) => {
-								e.stopPropagation();
-								onRemove();
-							}}
-							type="button"
-							variant="ghost"
-						>
+					<Button
+						aria-label="Remove attachment"
+						className="size-6 shrink-0 rounded-full p-0 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 [&>svg]:size-3"
+						onClick={(e) => {
+							e.stopPropagation();
+							onRemove();
+						}}
+						type="button"
+						variant="skeleton"
+					>
 							<XIcon />
 							<span className="sr-only">Remove</span>
 						</Button>

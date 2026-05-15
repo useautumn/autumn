@@ -2,7 +2,7 @@
 
 import { BookmarkIcon, type LucideProps } from "lucide-react";
 import type { ComponentProps, HTMLAttributes } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { Separator } from "@/components/ui/separator";
 import {
 	Tooltip,
@@ -48,7 +48,7 @@ export type CheckpointTriggerProps = ComponentProps<typeof Button> & {
 export const CheckpointTrigger = ({
 	children,
 	className,
-	variant = "ghost",
+	variant = "skeleton",
 	size = "sm",
 	tooltip,
 	...props
