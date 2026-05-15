@@ -46,7 +46,7 @@ function useSuggestionsForField(
 				return {
 					value: c.id,
 					label,
-					secondaryLabel: label === c.id ? undefined : c.id,
+					sublabel: label === c.id ? undefined : c.id,
 					icon: <UserIcon size={14} className="text-t3" />,
 				};
 			});
