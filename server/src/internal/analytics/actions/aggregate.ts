@@ -367,7 +367,7 @@ export const aggregate = async ({
 	if (params.group_by) {
 		// Use aggregate_groupable pipe for grouped queries
 		// Determine group_column and property_key based on group_by value
-		let groupColumn: "property" | "customer_id" | "entity_id";
+		let groupColumn: "property" | "customer_id" | "entity_id" | "plan_id";
 		let propertyKey: string;
 
 		if (params.group_by === "customer_id") {
@@ -377,6 +377,9 @@ export const aggregate = async ({
 		} else if (params.group_by === "entity_id") {
 			// Special case: group by entity_id column directly
 			groupColumn = "entity_id";
+			propertyKey = "";
+		} else if (params.group_by === "plan_id") {
+			groupColumn = "plan_id";
 			propertyKey = "";
 		} else if (params.group_by.startsWith("properties.")) {
 			// Standard case: group by a property value
