@@ -14,7 +14,7 @@ export const FreeTrialSchema = z.object({
 	internal_product_id: z.string(),
 	is_custom: z.boolean(),
 	card_required: z.boolean(),
-	on_end: z.enum(TrialOnEnd).optional(),
+	on_end: z.enum(TrialOnEnd).nullish(),
 });
 
 export const CreateFreeTrialSchema = z.object({
