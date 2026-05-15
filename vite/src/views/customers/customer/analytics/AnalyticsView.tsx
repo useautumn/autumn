@@ -4,7 +4,6 @@ import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { Card, CardContent } from "@/components/ui/card";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEnv } from "@/utils/envUtils";
@@ -55,6 +54,8 @@ export const AnalyticsView = () => {
 		truncated,
 		entityNames,
 		customerNames,
+		totals,
+		eventNames: responseEventNames,
 	} = useAnalyticsData({ hasCleared });
 
 	// Build internal_product_id → display name from the products cache so the
@@ -140,13 +141,16 @@ export const AnalyticsView = () => {
 			groupBy === "plan_id"
 				? groupBy
 				: `properties.${groupBy}`;
+		// plan_id treats empty-string as a meaningful "no plan" bucket; for
+		// property grouping, empty means the property is absent and we drop it.
+		const allowEmpty = groupBy === "plan_id";
 		const uniqueValues = new Set<string>();
 
 		for (const row of events.data) {
 			const value = row[groupByColumn];
-			if (value !== undefined && value !== null && value !== "") {
-				uniqueValues.add(String(value));
-			}
+			if (value === undefined || value === null) continue;
+			if (value === "" && !allowEmpty) continue;
+			uniqueValues.add(String(value));
 		}
 
 		return Array.from(uniqueValues).sort();
@@ -299,13 +303,99 @@ export const AnalyticsView = () => {
 
 					<div className="h-full overflow-hidden">
 						{chartData && chartData.data.length > 0 && (
-							<div className="h-full overflow-hidden bg-interactive-secondary border max-h-[350px]">
-								<EventsBarChart
-									data={
-										chartData as Parameters<typeof EventsBarChart>[0]["data"]
+							<div className="h-full flex flex-col overflow-hidden bg-interactive-secondary border rounded-lg max-h-[350px]">
+								{(() => {
+									// Build legend entries:
+									// - Ungrouped: one entry per event name with its total.
+									// - Grouped: one entry per chart series (feature × group),
+									//   summed over chartData rows for accurate per-series totals.
+									type LegendEntry = {
+										key: string;
+										label: string;
+										color: string | undefined;
+										value: number;
+										title: string;
+									};
+									let legend: LegendEntry[] = [];
+									if (groupBy && chartConfig) {
+										legend = chartConfig.map((s) => {
+											const sum = chartData.data.reduce(
+												(acc, row) =>
+													acc +
+													Number(
+														(row as Record<string, string | number>)[s.yKey] ??
+															0,
+													),
+												0,
+											);
+											return {
+												key: s.yKey,
+												label: s.yName,
+												color: s.fill,
+												value: sum,
+												title: `${s.yName}: ${sum.toLocaleString()}`,
+											};
+										});
+									} else {
+										legend = responseEventNames.map((name) => {
+											const entry = totals?.[name] ?? { count: 0, sum: 0 };
+											const primary =
+												entry.sum !== entry.count ? entry.sum : entry.count;
+											const series = chartConfig?.find(
+												(c) =>
+													c.yKey === `${name}_count` || c.yKey === name,
+											);
+											return {
+												key: name,
+												label: name,
+												color: series?.fill,
+												value: primary,
+												title: `${name}: ${entry.count.toLocaleString()} events${
+													entry.sum !== entry.count
+														? ` · Σ ${entry.sum.toLocaleString()}`
+														: ""
+												}`,
+											};
+										});
 									}
-									chartConfig={chartConfig}
-								/>
+									legend = legend.filter((e) => e.value > 0);
+									if (legend.length === 0) return null;
+									// Always show labels when grouping — the label IS the point;
+									// for ungrouped, hide labels when there's too many to fit.
+									const showLabel = !!groupBy || legend.length <= 3;
+									return (
+										<div className="flex items-stretch h-7 gap-4 px-2 overflow-x-auto overflow-y-hidden border-b shrink-0 bg-card">
+											{legend.map((e) => (
+												<div
+													key={e.key}
+													className="flex items-center gap-1.5 min-w-0"
+													title={e.title}
+												>
+													<span
+														className="w-2 h-2 rounded-sm shrink-0"
+														style={{ background: e.color }}
+													/>
+													{showLabel && (
+														<span className="text-t4 text-tiny truncate min-w-0">
+															{e.label}
+														</span>
+													)}
+													<span className="text-t2 text-tiny tabular-nums shrink-0">
+														{e.value.toLocaleString()}
+													</span>
+												</div>
+											))}
+										</div>
+									);
+								})()}
+								<div className="flex-1 min-h-0">
+									<EventsBarChart
+										data={
+											chartData as Parameters<typeof EventsBarChart>[0]["data"]
+										}
+										chartConfig={chartConfig}
+									/>
+								</div>
 							</div>
 						)}
 
@@ -346,11 +436,9 @@ export const AnalyticsView = () => {
 					)}
 
 					{rawEvents && !rawQueryLoading && (
-						<Card className="w-full h-[calc(100%-2.5rem)] border-none rounded-none shadow-none py-0">
-							<CardContent className="p-0 h-full bg-transparent overflow-hidden">
-								<EventsAGGrid data={rawEvents} />
-							</CardContent>
-						</Card>
+						<div className="w-full h-[calc(100%-2.5rem)]">
+							<EventsAGGrid data={rawEvents} />
+						</div>
 					)}
 				</div>
 			</div>

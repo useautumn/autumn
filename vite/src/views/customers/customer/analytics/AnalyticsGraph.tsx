@@ -181,7 +181,12 @@ export function EventsAGGrid({ data }: { data: any }) {
 		},
 		{ field: "event_name", flex: 1, cellStyle: { fontWeight: "normal" } },
 		{ field: "value", flex: 0, cellStyle: { fontWeight: "normal" } },
-		{ field: "properties", flex: 1, cellStyle: { fontWeight: "normal" } },
+		{
+			field: "properties",
+			flex: 1,
+			resizable: false,
+			cellStyle: { fontWeight: "normal" },
+		},
 	]);
 
 	ModuleRegistry.registerModules([AllCommunityModule, ValidationModule]);

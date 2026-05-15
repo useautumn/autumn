@@ -263,9 +263,7 @@ export const SelectGroupByDropdown = ({
 								{availableGroupValues.map((value: string) => {
 									const displayValue =
 										value === "AUTUMN_RESERVED"
-											? currentGroupBy === "plan_id"
-												? "No plan"
-												: "Other values"
+											? "Other values"
 											: value === "" && currentGroupBy === "plan_id"
 												? "No plan"
 												: currentGroupBy === "entity_id"
