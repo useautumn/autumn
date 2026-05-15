@@ -109,6 +109,18 @@ export const useMigrationsQuery = () => {
 		onSuccess: invalidate,
 	});
 
+	const cancelRunMutation = useMutation({
+		mutationFn: async (body: { id: string }) => {
+			const { data } = await axiosInstance.post<{
+				migration_id: string;
+				run_id: string;
+				canceled: boolean;
+			}>("/migrations.cancel_run", body);
+			return data;
+		},
+		onSuccess: invalidate,
+	});
+
 	return {
 		migrations: (data?.list ?? []) as Migration[],
 		isLoading,
@@ -124,5 +136,7 @@ export const useMigrationsQuery = () => {
 		isPreparing: prepareMutation.isPending,
 		runMigration: runMutation.mutateAsync,
 		isRunning: runMutation.isPending,
+		cancelRun: cancelRunMutation.mutateAsync,
+		isCanceling: cancelRunMutation.isPending,
 	};
 };
