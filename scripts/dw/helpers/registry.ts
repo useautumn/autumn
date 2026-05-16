@@ -81,14 +81,10 @@ export function reconcile(registry: Registry): Registry {
 	}
 
 	for (const o of orphaned) {
-		if (o.branchName && BRANCH_NAME_RE.test(o.branchName)) {
-			deleteBranch(o.branchName);
-		}
-		if (o.branchName) {
-			const localDir = join(SHARED_DIR, "drizzle-local", o.branchName);
-			if (existsSync(localDir))
-				rmSync(localDir, { recursive: true, force: true });
-		}
+		if (!o.branchName || !BRANCH_NAME_RE.test(o.branchName)) continue;
+		deleteBranch(o.branchName);
+		const localDir = join(SHARED_DIR, "drizzle-local", o.branchName);
+		if (existsSync(localDir)) rmSync(localDir, { recursive: true, force: true });
 	}
 	return next;
 }
