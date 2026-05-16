@@ -1,0 +1,19 @@
+scripts/dw/commands/setup.ts
+  s_b076bb18344b08::t_ea3aa45cd21606 1,14,22-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "fe222b9945cce91dee3e0ee78b17ae9ed7a7ef37",
+  "prompts": {},
+  "sessions": {
+    "s_b076bb18344b08": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1cf0d4e81ffepbH1zKgH0t4jah",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
