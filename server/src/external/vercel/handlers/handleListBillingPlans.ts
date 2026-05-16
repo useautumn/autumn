@@ -122,14 +122,13 @@ export function productToBillingPlan({
 				? `${formatAmount({ amount: totalAmount, currency: orgCurrency ?? "usd" })}/${basePrice.interval}`
 				: undefined,
 		id: product.id,
-		// type: hasRecurringPrice ? "subscription" : "prepayment",
 		type: "subscription",
 		name: product.name,
 		scope: "installation",
 		description: "",
 		highlightedDetails,
-		paymentMethodRequired: false,
-		// paymentMethodRequired: totalAmount > 0,
+		paymentMethodRequired: totalAmount > 0,
+		...(totalAmount > 0 && { preauthorizationAmount: totalAmount }),
 		disabled: !!product.archived,
 	} satisfies VercelBillingPlan;
 	return bp;

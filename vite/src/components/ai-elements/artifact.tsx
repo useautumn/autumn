@@ -2,13 +2,13 @@
 
 import { type LucideIcon, XIcon } from "lucide-react";
 import type { ComponentProps, HTMLAttributes } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 
 export type ArtifactProps = HTMLAttributes<HTMLDivElement>;
@@ -44,7 +44,7 @@ export const ArtifactClose = ({
 	className,
 	children,
 	size = "sm",
-	variant = "ghost",
+	variant = "skeleton",
 	...props
 }: ArtifactCloseProps) => (
 	<Button
@@ -102,7 +102,7 @@ export const ArtifactAction = ({
 	children,
 	className,
 	size = "sm",
-	variant = "ghost",
+	variant = "skeleton",
 	...props
 }: ArtifactActionProps) => {
 	const button = (

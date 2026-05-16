@@ -11,6 +11,7 @@ import {
 	EyeIcon,
 	ListMagnifyingGlassIcon,
 	PlayIcon,
+	StopIcon,
 	UsersIcon,
 	WarningIcon,
 	XIcon,
@@ -45,6 +46,8 @@ import {
 	SelectValue,
 } from "@/components/v2/selects/Select";
 import { useMigrationFilterPreview } from "@/hooks/queries/useMigrationFilterPreview";
+import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { toast } from "sonner";
 import {
 	type MigrationItemEvent,
 	useMigrationRunsQuery,
@@ -161,6 +164,8 @@ export function MigrationLiveView({
 	});
 	const [dismissedError, setDismissedError] = useState<string | null>(null);
 	const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+	const { cancelRun, isCanceling } = useMigrationsQuery();
 
 	const debouncedSetSearch = useMemo(
 		() => debounce((q: string) => setDebouncedSearch(q), 350),
@@ -218,16 +223,34 @@ export function MigrationLiveView({
 		? "running"
 		: ((activeRun?.status as ActiveRunStatus) ?? null);
 	const activeRunId = activeRun?.internal_id ?? null;
+	const activeRunOnlyIds = useMemo(
+		() =>
+			activeRun?.only_ids && activeRun.only_ids.length > 0
+				? new Set(activeRun.only_ids)
+				: null,
+		[activeRun?.only_ids],
+	);
 
 	const enrichedCustomers = useMemo(
 		(): CustomerRow[] =>
-			customers.map((c) => ({
-				...c,
-				_event: eventsByCustomer.get(c.internal_id),
-				_activeStatus: activeRunStatus,
-				_activeRunId: activeRunId ?? undefined,
-			})),
-		[customers, eventsByCustomer, activeRunStatus, activeRunId],
+			customers.map((c) => {
+				const inScope =
+					activeRunOnlyIds === null ||
+					(c.id != null && activeRunOnlyIds.has(c.id));
+				return {
+					...c,
+					_event: eventsByCustomer.get(c.internal_id),
+					_activeStatus: inScope ? activeRunStatus : null,
+					_activeRunId: activeRunId ?? undefined,
+				};
+			}),
+		[
+			customers,
+			eventsByCustomer,
+			activeRunStatus,
+			activeRunId,
+			activeRunOnlyIds,
+		],
 	);
 
 	const filteredCustomers = useMemo(() => {
@@ -337,6 +360,17 @@ export function MigrationLiveView({
 						Previous
 					</Button>
 				)}
+				{activeRun && (
+					<Button
+						variant="secondary"
+						size="default"
+						onClick={() => setIsCancelDialogOpen(true)}
+						isLoading={isCanceling}
+					>
+						<StopIcon size={14} weight="fill" />
+						Cancel run
+					</Button>
+				)}
 				<div className="flex items-center">
 					<Button
 						variant="primary"
@@ -372,6 +406,48 @@ export function MigrationLiveView({
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</div>
+
+				<Dialog
+					open={isCancelDialogOpen}
+					onOpenChange={setIsCancelDialogOpen}
+				>
+					<DialogContent showCloseButton={false}>
+						<DialogHeader>
+							<DialogTitle>Cancel running migration?</DialogTitle>
+							<DialogDescription>
+								This stops the active run. Customers already processed in this
+								run will keep their migrated state — only pending customers are
+								affected.
+							</DialogDescription>
+						</DialogHeader>
+						<DialogFooter>
+							<Button
+								variant="secondary"
+								onClick={() => setIsCancelDialogOpen(false)}
+							>
+								Keep running
+							</Button>
+							<Button
+								variant="primary"
+								isLoading={isCanceling}
+								onClick={async () => {
+									try {
+										await cancelRun({ id: migrationId });
+										toast.success("Migration run canceled");
+										invalidateRuns();
+									} catch {
+										toast.error("Failed to cancel migration run");
+									} finally {
+										setIsCancelDialogOpen(false);
+									}
+								}}
+							>
+								<StopIcon size={14} weight="fill" />
+								Cancel run
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
 
 				<Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
 					<DialogContent showCloseButton={false}>

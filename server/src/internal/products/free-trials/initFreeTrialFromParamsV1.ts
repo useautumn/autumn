@@ -20,6 +20,7 @@ export const initFreeTrialFromParamsV1 = ({
 		duration: freeTrialParams.duration_type,
 		length: freeTrialParams.duration_length,
 		card_required: freeTrialParams.card_required,
+		on_end: freeTrialParams.on_end,
 		unique_fingerprint: true,
 	};
 };

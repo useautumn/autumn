@@ -74,6 +74,9 @@ export const CusProductSchema = z.object({
 	external_id: z.string().nullable(),
 
 	stripe_checkout_session_id: z.string().nullish(),
+
+	previous_customer_product_id: z.string().nullish(),
+	on_trial_end: z.enum(["bill", "revert"]).nullish(),
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({

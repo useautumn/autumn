@@ -175,6 +175,7 @@ export function AttachFormProvider({
 		trialDuration,
 		trialEnabled,
 		trialCardRequired,
+		trialOnEnd,
 		planSchedule,
 		startDate,
 		endDate,
@@ -318,6 +319,7 @@ export function AttachFormProvider({
 			form.setFieldValue("trialLength", null);
 			form.setFieldValue("trialDuration", FreeTrialDuration.Day);
 			form.setFieldValue("trialCardRequired", true);
+			form.setFieldValue("trialOnEnd", "bill");
 			form.setFieldValue("grantFree", false);
 			resetGrantFree();
 		}
@@ -347,6 +349,10 @@ export function AttachFormProvider({
 				form.setFieldValue(
 					"trialCardRequired",
 					Boolean(product.free_trial.card_required),
+				);
+				form.setFieldValue(
+					"trialOnEnd",
+					product.free_trial.on_end ?? "bill",
 				);
 			}
 		}
@@ -395,6 +401,7 @@ export function AttachFormProvider({
 		trialDuration,
 		trialEnabled,
 		trialCardRequired,
+		trialOnEnd,
 		planSchedule,
 		startDate,
 		endDate,

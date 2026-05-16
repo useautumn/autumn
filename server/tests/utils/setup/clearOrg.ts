@@ -1,4 +1,9 @@
-import { AppEnv } from "@autumn/shared";
+import {
+	AppEnv,
+	migrationItemRuns,
+	migrations,
+} from "@autumn/shared";
+import { and, eq, inArray } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
@@ -96,6 +101,25 @@ export const clearOrg = async ({
 
 	await clearOrgDbOnly({ db, orgId, env });
 	console.log("   ✅ Deleted customers, products, rewards, and features");
+
+	// migration_item_runs has no FK to migrations/org; clear by joining first.
+	// migrations cascades to migration_runs, so deleting it is enough.
+	const orgMigrations = await db
+		.select({ internalId: migrations.internal_id })
+		.from(migrations)
+		.where(and(eq(migrations.org_id, orgId), eq(migrations.env, env)));
+	if (orgMigrations.length > 0) {
+		await db.delete(migrationItemRuns).where(
+			inArray(
+				migrationItemRuns.migration_internal_id,
+				orgMigrations.map((m) => m.internalId),
+			),
+		);
+	}
+	await db
+		.delete(migrations)
+		.where(and(eq(migrations.org_id, orgId), eq(migrations.env, env)));
+	console.log("   ✅ Deleted migrations + migration item runs");
 
 	console.log(`✅ Cleared org ${orgSlug} (${env})`);
 

@@ -71,5 +71,6 @@ export const applyProductTrialConfig = async ({
 		trialEndsAt,
 		appliesToBilling: newProductIsPaidRecurring,
 		cardRequired: freeTrial.card_required,
+		onEnd: freeTrial.on_end ?? undefined,
 	};
 };

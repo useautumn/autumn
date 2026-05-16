@@ -87,10 +87,17 @@ describe("buildCustomizeBasePrice", () => {
 		expect(result!.interval).toBe("month");
 	});
 
-	test("returns undefined when no base price item exists", () => {
+	test("returns null when base price item was removed", () => {
 		const result = buildCustomizeBasePrice({ items: [featurePriceItem] });
 
-		expect(result).toBeUndefined();
+		expect(result).toBeNull();
+	});
+
+	test("returns null when price is zero (free)", () => {
+		const zeroPriceItem = { ...basePriceItem, price: 0 } as ProductItem;
+		const result = buildCustomizeBasePrice({ items: [zeroPriceItem] });
+
+		expect(result).toBeNull();
 	});
 
 	test("returns undefined when price item has no interval", () => {
@@ -118,7 +125,7 @@ describe("buildCustomizeBasePrice", () => {
 	test("ignores feature items that happen to have a price", () => {
 		const result = buildCustomizeBasePrice({ items: [featurePriceItem] });
 
-		expect(result).toBeUndefined();
+		expect(result).toBeNull();
 	});
 });
 
@@ -207,11 +214,12 @@ describe("buildCustomize", () => {
 		expect(result).toBeUndefined();
 	});
 
-	test("returns items when only free features are present", () => {
+	test("returns items and price:null when base price was removed", () => {
 		const result = buildCustomize({ items: [freeFeatureItem], features });
 
 		expect(result).toBeDefined();
 		expect(result!.items).toBeDefined();
+		expect(result!.price).toBeNull();
 	});
 
 	test("returns price when only base price is customized", () => {
@@ -223,12 +231,12 @@ describe("buildCustomize", () => {
 		expect(result).not.toHaveProperty("items");
 	});
 
-	test("returns items when only feature items are customized", () => {
+	test("returns items and price:null when items have no base price", () => {
 		const result = buildCustomize({ items: [featurePriceItem], features });
 
 		expect(result).toBeDefined();
 		expect(result!.items).toBeDefined();
-		expect(result).not.toHaveProperty("price");
+		expect(result!.price).toBeNull();
 	});
 
 	test("returns both price and items when fully customized", () => {

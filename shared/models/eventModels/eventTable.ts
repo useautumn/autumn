@@ -31,6 +31,7 @@ export const events = pgTable(
 		set_usage: boolean("set_usage").default(false),
 		entity_id: text("entity_id"),
 		internal_entity_id: text("internal_entity_id"),
+		internal_product_id: text("internal_product_id"),
 
 		// Optional stuff...
 		customer_id: text("customer_id").notNull(),

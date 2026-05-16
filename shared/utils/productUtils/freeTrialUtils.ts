@@ -5,10 +5,7 @@ import {
 	intervalToDuration,
 } from "date-fns";
 import type { FreeTrialDuration } from "../../models/productModels/freeTrialModels/freeTrialEnums.js";
-import type {
-	CreateFreeTrial,
-	FreeTrial,
-} from "../../models/productModels/freeTrialModels/freeTrialModels.js";
+import type { TrialOnEnd } from "../../models/productModels/freeTrialModels/freeTrialModels.js";
 import { addDuration } from "../billingUtils/intervalUtils/addDuration.js";
 
 export const getTrialLengthInDays = ({
@@ -66,12 +63,20 @@ export const formatRemainingTrialTime = ({
 	});
 };
 
+type FreeTrialLike = {
+	length: number;
+	unique_fingerprint: boolean;
+	duration: FreeTrialDuration;
+	card_required: boolean;
+	on_end?: TrialOnEnd | null;
+};
+
 export const freeTrialsAreSame = ({
 	ft1,
 	ft2,
 }: {
-	ft1?: FreeTrial | CreateFreeTrial | null;
-	ft2?: FreeTrial | CreateFreeTrial | null;
+	ft1?: FreeTrialLike | null;
+	ft2?: FreeTrialLike | null;
 }) => {
 	if (!ft1 && !ft2) return true;
 	if (!ft1 || !ft2) return false;
@@ -92,6 +97,10 @@ export const freeTrialsAreSame = ({
 		card_required: {
 			condition: ft1.card_required !== ft2.card_required,
 			message: `Card required different: ${ft1.card_required} !== ${ft2.card_required}`,
+		},
+		on_end: {
+			condition: (ft1.on_end ?? "bill") !== (ft2.on_end ?? "bill"),
+			message: `On end different: ${ft1.on_end ?? "bill"} !== ${ft2.on_end ?? "bill"}`,
 		},
 	};
 
