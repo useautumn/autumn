@@ -53,20 +53,39 @@ export const stripeLegacySeederMiddleware = async (
 	const rawBody = await c.req.text();
 	const signature = c.req.header("stripe-signature") || "";
 
+	const skipVerify =
+		process.env.STRIPE_WEBHOOK_SKIP_VERIFY === "true" &&
+		process.env.NODE_ENV !== "production";
+
 	let event: Stripe.Event;
-	try {
-		const webhookSecret = getStripeWebhookSecret(org, env);
-		event = await Stripe.webhooks.constructEventAsync(
-			rawBody,
-			signature,
-			webhookSecret,
-		);
-	} catch (err: unknown) {
-		const message = err instanceof Error ? err.message : String(err);
+	if (skipVerify) {
 		logger.warn(
-			`Stripe legacy webhook signature verification failed: ${message}`,
+			"[Stripe] SKIPPING webhook signature verification — non-prod only",
 		);
-		return c.json({ error: `Webhook Error: ${message}` }, 400);
+		try {
+			event = JSON.parse(rawBody) as Stripe.Event;
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			logger.warn(
+				`Stripe legacy webhook body parse error (skip-verify): ${message}`,
+			);
+			return c.json({ error: `Webhook Error: ${message}` }, 400);
+		}
+	} else {
+		try {
+			const webhookSecret = getStripeWebhookSecret(org, env);
+			event = await Stripe.webhooks.constructEventAsync(
+				rawBody,
+				signature,
+				webhookSecret,
+			);
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			logger.warn(
+				`Stripe legacy webhook signature verification failed: ${message}`,
+			);
+			return c.json({ error: `Webhook Error: ${message}` }, 400);
+		}
 	}
 
 	// Step 4: Set up context

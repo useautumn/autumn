@@ -18,7 +18,7 @@ const SERVER_PORT = process.env.SERVER_PORT
 const CHECKOUT_PORT = process.env.CHECKOUT_PORT
 	? Number.parseInt(process.env.CHECKOUT_PORT, 10)
 	: 3001 + portOffset;
-const skipWorkers = worktreeNum > 1;
+const skipWorkers = false;
 const isProductionMode = process.argv.includes("--production");
 
 const envFile = process.env.ENV_FILE ?? ".env";
@@ -147,7 +147,7 @@ async function startDev() {
 		}
 
 		if (worktreeNum > 1) {
-			console.log(`Starting worktree ${worktreeNum} (no workers)...\n`);
+			console.log(`Starting worktree ${worktreeNum}...\n`);
 		} else if (isProductionMode) {
 			console.log("Starting local servers with NODE_ENV=production...\n");
 		} else {
@@ -203,7 +203,9 @@ async function startDev() {
 						? `"cd server && bun ${workersScript}"`
 						: `"cd server && bun ${workersScript}"`,
 				);
+			}
 
+			if (worktreeNum === 1) {
 				names.push("trigger");
 				colors.push("cyan");
 				cmds.push(
@@ -223,6 +225,22 @@ async function startDev() {
 					? `"cd apps/checkout && set VITE_PORT=${CHECKOUT_PORT} && bun dev"`
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
+
+			// Stripe CLI webhook tunnel — agent worktrees only, silently skip if CLI absent.
+			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
+			if (worktreeNum > 1) {
+				const stripeAvailable =
+					Bun.spawnSync(["which", "stripe"]).exitCode === 0;
+				if (stripeAvailable) {
+					const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
+					names.push("stripe");
+					colors.push("cyan");
+					const stripeCmd = `stripe listen --forward-to ${forwardUrl} --skip-verify`;
+					cmds.push(
+						isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`,
+					);
+				}
+			}
 
 			shellArgs = [
 				isWindows ? "cmd" : "sh",
@@ -255,6 +273,7 @@ async function startDev() {
 					EMULATE_GOOGLE_URL:
 						process.env.EMULATE_GOOGLE_URL ??
 						"https://google.emulate.localhost",
+					STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 				}),
 			},
 			stdout: "inherit",

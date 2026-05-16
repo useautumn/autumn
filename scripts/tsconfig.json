@@ -14,10 +14,12 @@
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"forceConsistentCasingInFileNames": true,
+		"allowImportingTsExtensions": true,
 		"allowSyntheticDefaultImports": true,
 		"paths": {
 			"@server/*": ["../server/src/*"],
-			"@shared/*": ["../shared/*"]
+			"@shared/*": ["../shared/*"],
+			"@tests/*": ["../server/tests/*"]
 		}
 	},
 	"include": ["**/*.ts", "**/*.js"],
