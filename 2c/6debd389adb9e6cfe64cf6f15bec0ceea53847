@@ -1,0 +1,23 @@
+scripts/dw/helpers/migration.ts
+  s_b076bb18344b08::t_b9360ac8c22e56 22-27
+scripts/dw/helpers/registry.ts
+  s_b076bb18344b08::t_09b2c6a9cb6deb 2
+scripts/dw/commands/reset.ts
+  s_b076bb18344b08::t_ed5a3ca6e08ce4 20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "2c6debd389adb9e6cfe64cf6f15bec0ceea53847",
+  "prompts": {},
+  "sessions": {
+    "s_b076bb18344b08": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1cf0d4e81ffepbH1zKgH0t4jah",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
