@@ -1,4 +1,4 @@
-import { sh, log } from "./shell.ts";
+import { sh, log, fatal } from "./shell.ts";
 import { aliasesFor } from "./ports.ts";
 import type { WorktreeAliases } from "../types.ts";
 
@@ -14,9 +14,7 @@ export function registerPortlessAliases(worktreeNum: number): WorktreeAliases {
 	] as const) {
 		const res = sh("portless", ["alias", name, String(port), "--force"]);
 		if (res.code !== 0) {
-			console.error(
-				`[dw] portless alias ${name} -> ${port} failed: ${res.stderr}`,
-			);
+			fatal(`portless alias ${name} -> ${port} failed: ${res.stderr}`);
 		}
 	}
 	log(
