@@ -4,7 +4,7 @@ import { ArrowDownIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 import { useCallback } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 
 export type ConversationProps = ComponentProps<typeof StickToBottom>;
@@ -90,7 +90,7 @@ export const ConversationScrollButton = ({
 				onClick={handleScrollToBottom}
 				size="icon"
 				type="button"
-				variant="outline"
+				variant="secondary"
 				{...props}
 			>
 				<ArrowDownIcon className="size-4" />

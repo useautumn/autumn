@@ -18,12 +18,26 @@ export const computeAttachTransitionUpdates = ({
 	attachBillingContext: AttachBillingContext;
 	params?: AttachParamsV1;
 }): AutumnBillingPlan["updateCustomerProduct"] => {
-	const { currentCustomerProduct, planTiming, currentEpochMs, endOfCycleMs } =
-		attachBillingContext;
+	const {
+		currentCustomerProduct,
+		planTiming,
+		currentEpochMs,
+		endOfCycleMs,
+		trialContext,
+	} = attachBillingContext;
 	const shouldClearBillingCycleReset =
 		attachBillingContext.requestedBillingCycleAnchor !== undefined;
 
 	if (!currentCustomerProduct) return undefined;
+
+	if (trialContext?.onEnd === "revert" && planTiming === "immediate") {
+		return {
+			customerProduct: currentCustomerProduct,
+			updates: {
+				status: CusProductStatus.Paused,
+			},
+		};
+	}
 
 	if (planTiming === "immediate") {
 		return {

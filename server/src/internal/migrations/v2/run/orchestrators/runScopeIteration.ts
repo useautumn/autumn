@@ -62,6 +62,15 @@ export const runScopeIteration = async ({
 				`runMigration: per-item handler missing for kind "${item.kind}"`,
 			);
 
+		itemCtx.logger.info("run-migration: processing customer", {
+			data: {
+				migrationRunId,
+				customerId: item.id ?? item.internal_id,
+				internalId: item.internal_id,
+				dryRun,
+			},
+		});
+
 		const run = () =>
 			migrateCustomer({
 				ctx: itemCtx,
@@ -89,6 +98,7 @@ export const runScopeIteration = async ({
 		return iterateScope({
 			iterate,
 			perItem: (item) => perItem({ item, itemCtx: ctx }),
+			concurrency: controls?.concurrency,
 		});
 	}
 

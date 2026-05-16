@@ -11,6 +11,7 @@ SCHEMA >
     `customer_id` String,
     `event_name` String,
     `entity_id` String DEFAULT '',
+    `internal_product_id` Nullable(String),
     `hour` DateTime,
     `properties` JSON,
     `total_value` Float64,

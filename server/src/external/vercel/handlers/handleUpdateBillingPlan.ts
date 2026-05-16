@@ -3,7 +3,7 @@ import { ErrCode } from "@shared/enums/ErrCode.js";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
-import { createVercelSubscription } from "@/external/vercel/misc/vercelSubscriptions.js";
+import { provisionVercelCusProduct } from "@/external/vercel/misc/vercelProvisioning.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { VercelError, VercelNotification } from "../misc/vercelTypes.js";
 import { productToBillingPlan } from "./handleListBillingPlans.js";
@@ -83,14 +83,13 @@ export const handleUpdateVercelBillingPlan = createRoute({
 
 			if (!existingSubscription) {
 				// New subscription flow - create installation-level subscription
-				const { product } = await createVercelSubscription({
+				const { product } = await provisionVercelCusProduct({
 					ctx,
 					customer,
 					stripeCustomer,
 					stripeCli,
 					integrationConfigurationId,
 					billingPlanId,
-					c,
 				});
 
 				return c.json({

@@ -11,7 +11,7 @@ import {
 	useState,
 } from "react";
 import { type BundledLanguage, codeToHtml, type ShikiTransformer } from "shiki";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 
 type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {
@@ -169,7 +169,7 @@ export const CodeBlockCopyButton = ({
 			className={cn("shrink-0", className)}
 			onClick={copyToClipboard}
 			size="icon"
-			variant="ghost"
+			variant="skeleton"
 			{...props}
 		>
 			{children ?? <Icon size={14} />}

@@ -1,3 +1,4 @@
+import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
 import type { BillingVersion } from "@models/billingModels/context/billingContext";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
 import type { StripeDiscountWithCoupon } from "@models/billingModels/stripe/stripeDiscountWithCoupon";
@@ -36,6 +37,18 @@ export interface BillingContextOverride {
 	transitionConfig?: TransitionConfig;
 	billingVersion?: BillingVersion;
 	endOfCycleMsOverride?: number;
+
+	paymentBehaviorIntent?: PaymentBehaviorIntent;
+	shouldFinalizeFirstInvoice?: boolean;
+
+	/**
+	 * Skips the "billed outside of Stripe" guard that normally blocks attach
+	 * for customers managed by an external billing platform (Vercel marketplace).
+	 * Internal callers that ARE the origin platform (e.g. Vercel marketplace
+	 * webhook handlers) set this to opt out of the guard. Not exposed via any
+	 * public API schema.
+	 */
+	skipCustomPaymentMethodGuard?: boolean;
 }
 
 export interface UpdateSubscriptionBillingContextOverride

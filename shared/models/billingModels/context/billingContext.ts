@@ -6,7 +6,9 @@ import type {
 	FeatureOptions,
 	FreeTrial,
 	Price,
+	TrialOnEnd,
 } from "@autumn/shared";
+import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import type Stripe from "stripe";
@@ -34,6 +36,7 @@ export interface TrialContext {
 	customFreeTrial?: FreeTrial;
 	appliesToBilling: boolean;
 	cardRequired: boolean;
+	onEnd?: TrialOnEnd;
 }
 
 export interface AnchorResetRefund {
@@ -103,4 +106,8 @@ export interface BillingContext {
 	anchorResetRefund?: AnchorResetRefund;
 
 	refundLastPayment?: "prorated" | "full";
+
+	paymentBehaviorIntent?: PaymentBehaviorIntent;
+	shouldFinalizeFirstInvoice?: boolean;
+	skipCustomPaymentMethodGuard?: boolean;
 }

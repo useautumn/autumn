@@ -18,7 +18,7 @@ export const insertMigrationRun = async ({
 	ctx: RepoContext;
 	insert: Pick<
 		MigrationRunInsert,
-		"migration_internal_id" | "dry_run" | "lazy_run"
+		"migration_internal_id" | "dry_run" | "lazy_run" | "only_ids"
 	>;
 }): Promise<MigrationRun | null> => {
 	const now = Date.now();
@@ -33,6 +33,7 @@ export const insertMigrationRun = async ({
 			status: MigrationRunStatus.Queued,
 			dry_run: insert.dry_run,
 			lazy_run: insert.lazy_run ?? false,
+			only_ids: insert.only_ids ?? null,
 			created_at: now,
 			updated_at: null,
 			started_at: null,
