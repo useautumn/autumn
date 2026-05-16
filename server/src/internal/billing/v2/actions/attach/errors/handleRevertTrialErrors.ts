@@ -5,8 +5,8 @@ import { StatusCodes } from "http-status-codes";
  * Validates attach request when on_end is "revert".
  *
  * Throws if:
- * - No existing customer product to revert to
- * - No existing Stripe subscription on the current product
+ * - No existing customer product to revert to (including cross-entity)
+ * - No existing Stripe subscription on the found product
  */
 export const handleRevertTrialErrors = ({
 	billingContext,

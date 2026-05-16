@@ -4,6 +4,7 @@ import {
 	type AttachParamsV1,
 	type BillingContextOverride,
 	BillingVersion,
+	cp,
 	CusProductStatus,
 	cusProductToPrices,
 	hasCustomItems,
@@ -173,6 +174,17 @@ export const setupAttachBillingContext = async ({
 		},
 	});
 
+	// For cross-entity revert trials: if no currentCustomerProduct on the target
+	// entity, find an active subscription on any entity to pause/revert to.
+	const revertTargetProduct =
+		trialContext?.onEnd === "revert" && !currentCustomerProduct
+			? fullCustomer.customer_products.find(
+					(cusProduct) =>
+						cp(cusProduct).paidRecurring().main().hasActiveStatus()
+							.hasSubscription().valid,
+				)
+			: currentCustomerProduct;
+
 	const skipBillingChanges =
 		skipBillingChangesBase || trialContext?.onEnd === "revert";
 
@@ -241,7 +253,7 @@ export const setupAttachBillingContext = async ({
 		featureQuantities,
 		transitionConfig,
 
-		currentCustomerProduct,
+		currentCustomerProduct: revertTargetProduct ?? currentCustomerProduct,
 		scheduledCustomerProduct,
 
 		planTiming,
