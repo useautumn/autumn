@@ -1,14 +1,35 @@
 import "dotenv/config";
-
-import { ac, ALL_SCOPES, invitation, roles, schemas } from "@autumn/shared";
+import { ALL_SCOPES, ac, invitation, roles, schemas } from "@autumn/shared";
+import { oauthProvider } from "@better-auth/oauth-provider";
+import { type BetterAuthOptions, betterAuth, type User } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import {
+	admin,
+	customSession,
+	emailOTP,
+	jwt,
+	type Organization,
+	organization,
+} from "better-auth/plugins";
+import type { AccessControl } from "better-auth/plugins/access";
+import { eq } from "drizzle-orm";
+import { db } from "@/db/initDrizzle.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
+import { createLoopsContact } from "@/external/resend/loopsUtils.js";
+import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
+import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
+import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
+import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
+import { afterSessionCreated } from "./authUtils/afterSessionCreated.js";
+import { afterSessionDeleted } from "./authUtils/afterSessionDeleted.js";
+import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
+import { getScopesForUserInOrg } from "./authUtils/customSessionScopes.js";
+import { ADMIN_USER_IDs } from "./constants.js";
 
 // emulate.dev Google: rewrite outbound Google OAuth host so agent worktrees
 // can use any redirect URI without registering it in the real Google console.
 // Real Google's oauth2.googleapis.com/token maps to emulate's /oauth2/token path.
-if (
-	process.env.EMULATE_GOOGLE_URL &&
-	process.env.NODE_ENV !== "production"
-) {
+if (process.env.EMULATE_GOOGLE_URL && process.env.NODE_ENV !== "production") {
 	const emulate = process.env.EMULATE_GOOGLE_URL.replace(/\/$/, "");
 	const originalFetch = globalThis.fetch;
 	globalThis.fetch = ((input: any, init?: any) => {
@@ -25,43 +46,19 @@ if (
 			);
 		}
 		if (url.startsWith("https://www.googleapis.com/oauth2")) {
-			return originalFetch(url.replace("https://www.googleapis.com", emulate), init);
+			return originalFetch(
+				url.replace("https://www.googleapis.com", emulate),
+				init,
+			);
 		}
 		return originalFetch(input, init);
 	}) as typeof fetch;
 }
 
-const emulateGoogleUrl = process.env.EMULATE_GOOGLE_URL?.replace(/\/$/, "");
-
-import type { AccessControl } from "better-auth/plugins/access";
-import { oauthProvider } from "@better-auth/oauth-provider";
-import {
-	type BetterAuthOptions,
-	betterAuth,
-	type User,
-} from "better-auth";
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import {
-	admin,
-	customSession,
-	emailOTP,
-	jwt,
-	type Organization,
-	organization,
-} from "better-auth/plugins";
-import { eq } from "drizzle-orm";
-import { db } from "@/db/initDrizzle.js";
-import { logger } from "@/external/logtail/logtailUtils.js";
-import { createLoopsContact } from "@/external/resend/loopsUtils.js";
-import { sendInvitationEmail } from "@/internal/emails/sendInvitationEmail.js";
-import { sendOnboardingEmail } from "@/internal/emails/sendOnboardingEmail.js";
-import sendOTPEmail from "@/internal/emails/sendOTPEmail.js";
-import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
-import { afterSessionCreated } from "./authUtils/afterSessionCreated.js";
-import { afterSessionDeleted } from "./authUtils/afterSessionDeleted.js";
-import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
-import { ADMIN_USER_IDs } from "./constants.js";
-import { getScopesForUserInOrg } from "./authUtils/customSessionScopes.js";
+const emulateGoogleUrl =
+  process.env.NODE_ENV !== "production"
+    ? process.env.EMULATE_GOOGLE_URL?.replace(/\/$/, "")
+    : undefined;
 
 // HTTPS agent worktrees go through portless (e.g. wtN-api.localhost). The
 // OAuth flow leaves and returns via a third-party host (emulate.dev), so the
