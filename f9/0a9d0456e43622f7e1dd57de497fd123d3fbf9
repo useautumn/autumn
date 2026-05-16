@@ -1,0 +1,19 @@
+scripts/setupTestUtils/createTestOrg.ts
+  s_b076bb18344b08::t_0a99158da12f68 152
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "f90a9d0456e43622f7e1dd57de497fd123d3fbf9",
+  "prompts": {},
+  "sessions": {
+    "s_b076bb18344b08": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1cf0d4e81ffepbH1zKgH0t4jah",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
