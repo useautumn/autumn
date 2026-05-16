@@ -1,10 +1,15 @@
 #!/usr/bin/env node
 import chalk from "chalk";
 import inquirer from "inquirer";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
 	createTestOrg,
 	TEST_ORG_CONFIG,
+	TEST_ORG_PUBLISHABLE_KEY,
 } from "../setupTestUtils/createTestOrg.js";
+import { mergeEnvFile } from "../dw/helpers/env-files.js";
+import { PROJECT_ROOT } from "../dw/constants.js";
 
 // Worktree .env.local loading happens in scripts/preload-env.ts (auto-run by
 // Bun via bunfig.toml's `preload`). DATABASE_URL flips to the worktree branch
@@ -57,8 +62,33 @@ async function main() {
 	}
 
 	try {
+		const hadKey = Boolean(process.env.UNIT_TEST_AUTUMN_SECRET_KEY);
 		const { db } = await import("@server/db/initDrizzle.js");
 		const autumnSecretKey = await createTestOrg({ db });
+
+		if (!hadKey) {
+			const envPath = join(PROJECT_ROOT, "server", ".env.local");
+			const existing = existsSync(envPath) ? readFileSync(envPath, "utf-8") : null;
+			const merged = mergeEnvFile(existing, {
+				UNIT_TEST_AUTUMN_SECRET_KEY: autumnSecretKey,
+			});
+			writeFileSync(envPath, merged);
+			process.env.UNIT_TEST_AUTUMN_SECRET_KEY = autumnSecretKey;
+			console.log(
+				chalk.cyan(`[setup-test] persisted UNIT_TEST_AUTUMN_SECRET_KEY to server/.env.local`),
+			);
+		}
+
+		const envPath = join(PROJECT_ROOT, "server", ".env.local");
+		const existing = existsSync(envPath) ? readFileSync(envPath, "utf-8") : null;
+		const merged = mergeEnvFile(existing, {
+			UNIT_TEST_AUTUMN_PUBLIC_KEY: TEST_ORG_PUBLISHABLE_KEY,
+		});
+		writeFileSync(envPath, merged);
+		process.env.UNIT_TEST_AUTUMN_PUBLIC_KEY = TEST_ORG_PUBLISHABLE_KEY;
+		console.log(
+			chalk.cyan(`[setup-test] persisted UNIT_TEST_AUTUMN_PUBLIC_KEY to server/.env.local`),
+		);
 
 		console.log(chalk.greenBright("\n✅ setup-test complete"));
 		console.log(chalk.cyan("Org:"));
