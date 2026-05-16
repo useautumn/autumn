@@ -1,0 +1,216 @@
+server/tests/scenarios/checkout/invalid-checkout/invalidCheckoutUtils.ts
+  s_c605de1882b657::t_afc8489062848d 10-11
+scripts/dw/helpers/env-files.ts
+  s_de3f1595d1db45::t_fbbf44f16a687e 1-127
+scripts/dw/constants.ts
+  s_de3f1595d1db45::t_0064f94e3f779f 1-27
+scripts/dw/commands/reset.ts
+  s_de3f1595d1db45::t_32fa61d35a14b9 1-39
+scripts/setup/writeAgentEnv.ts
+  s_c605de1882b657::t_cd462947ee1d95 1-3
+scripts/dw/helpers/neon.ts
+  s_de3f1595d1db45::t_416a0ad6b62f9d 1-118
+scripts/dw/helpers/start.ts
+  s_de3f1595d1db45::t_4e301596936847 1-2
+  s_de3f1595d1db45::t_2fa53dae8abc78 3-79
+scripts/dw/helpers/compose.ts
+  s_de3f1595d1db45::t_71a22233340352 1,3-4,6
+  s_de3f1595d1db45::t_9577351ee9bc77 2,5,7-98
+server/tests/scenarios/checkout/confirm/confirm-free-product-scenario.test.ts
+  s_c605de1882b657::t_0ce52b99e56295 68
+scripts/dw/types.ts
+  s_de3f1595d1db45::t_a902341fe93594 1-24
+server/src/utils/auth.ts
+  s_96c52b8fa1a6bd::t_1ef3548e072365 141-144
+scripts/tsconfig.json
+  s_de3f1595d1db45::t_3f1edb3a08d03c 17
+  s_f22131691f1586::t_eca50a91136ca5 21-22
+scripts/setup/dw.compose.yml
+  s_0d5a5c2165494c::t_90b6b6fe39e474 1-23
+package.json
+  s_de3f1595d1db45::t_e78ff4082d6e0a 78-81
+server/src/external/stripe/webhookMiddlewares/stripeLegacySeederMiddleware.ts
+  s_fc42b85e909876::t_e270baa18684fa 56-59,61,63,65-88
+scripts/testScripts/testDispatcher.ts
+  s_187029d402fb5b::t_a012a634686703 26-27
+scripts/dw/helpers/setup.ts
+  s_de3f1595d1db45::t_6d5935edff1c3b 2-9,11-35,37-79
+  s_de3f1595d1db45::t_ed7762432af327 1
+  s_de3f1595d1db45::t_b279564df1f65b 10
+  s_de3f1595d1db45::t_66f900732467bb 36
+scripts/setup/start-emulate.sh
+  s_96c52b8fa1a6bd::t_969650c5159ed8 31-35
+  s_96c52b8fa1a6bd::t_4a6ffb8b1c0772 49
+server/tests/integration/billing/utils/checkout/autumnCheckoutUtils.ts
+  s_c605de1882b657::t_b34642124df5f3 10-11
+server/tests/unit/corsOrigins.test.ts
+  s_96c52b8fa1a6bd::t_dbb4a2f55d5e72 54-66,78-84
+server/src/external/stripe/webhookMiddlewares/stripeConnectSeederMiddleware.ts
+  s_fc42b85e909876::t_0e586066783ec9 54-57,59-61,63-82
+server/src/external/autumn/autumnCli.ts
+  s_a7dbfde71f5bb4::t_5a7f5a3a64f48b 111-112,115
+scripts/preload-env.ts
+  s_a7dbfde71f5bb4::t_e25251a734fbf9 28,34-37
+  s_187029d402fb5b::t_842fb84a7f8b04 2-5,9-27,29-33,38-39
+scripts/setup/elasticmq.conf
+  s_0d5a5c2165494c::t_979cb24a250960 1-28
+server/tests/utils/testInitUtils/initScenario.ts
+  s_c605de1882b657::t_3bf7b29eb05cf5 1101
+scripts/dw/helpers/ports.ts
+  s_de3f1595d1db45::t_22a481b6696625 2
+  s_de3f1595d1db45::t_c9ec78fe25cf54 1,3-41
+scripts/dw/helpers/portless.ts
+  s_de3f1595d1db45::t_082295adc198a6 1-32
+vite/vite.config.ts
+  s_96c52b8fa1a6bd::t_f9d1b3033f6fba 104
+  s_96c52b8fa1a6bd::t_56cd50c0b56bbd 5,8-24
+  s_96c52b8fa1a6bd::t_6701a6c4652fc4 96-99
+  s_96c52b8fa1a6bd::t_aa83be6973f2f2 43
+scripts/dw/helpers/git.ts
+  s_de3f1595d1db45::t_b012282c11b050 1
+  s_de3f1595d1db45::t_cd4c57ada3f879 2-26
+scripts/dw/helpers/migration.ts
+  s_de3f1595d1db45::t_cc610e877dfa44 1-4,6-10,13,20-21,23-24,30,51,55-57,69-78,80-101
+scripts/setupTestUtils/ensureDefaultStripeAccount.ts
+  s_125ae2b8db3249::t_28541fbf38f6e9 1-59
+scripts/dw/commands/logs.ts
+  s_de3f1595d1db45::t_c159140d4b3254 1-17
+server/tests/utils/setup/clearOrg.ts
+  s_96c52b8fa1a6bd::t_c70b9c0dd36855 39
+  s_f22131691f1586::t_6d58ff7f91e126 14-24,26-32,36,40,81-94,97-98
+  s_f22131691f1586::t_a6bedb57fffd16 3
+  s_96c52b8fa1a6bd::t_facf7e64b4cfa1 25
+scripts/dw/commands/default.ts
+  s_de3f1595d1db45::t_2856d3a85fa36d 1-62
+scripts/dev.ts
+  s_fc42b85e909876::t_38879f51447e4c 229-244
+  s_fc42b85e909876::t_f714b202a68d30 276
+  s_0d5a5c2165494c::t_f532beddef8070 21
+  s_0d5a5c2165494c::t_3d6ce472c17417 206,208
+  s_96c52b8fa1a6bd::t_bdb5fcce1dcf59 262-272
+  s_0d5a5c2165494c::t_6d20c3a67a1922 150
+scripts/dw/helpers/emulate.ts
+  s_de3f1595d1db45::t_c9693dc4163151 1-65
+scripts/dw/commands/teardown.ts
+  s_de3f1595d1db45::t_8ebe3b8f53978b 3-6,15-16,18-38,40-43,46-79
+  s_de3f1595d1db45::t_e668f348f7d742 1-2,7-14,17,39,44-45
+scripts/dw/commands/list.ts
+  s_de3f1595d1db45::t_aee909eef037d9 1-23
+server/src/utils/corsOrigins.ts
+  s_96c52b8fa1a6bd::t_3c932f3d24dfef 20,25
+scripts/dw/helpers/shell.ts
+  s_de3f1595d1db45::t_17b235d5f8da56 1-44
+scripts/dw/helpers/url.ts
+  s_de3f1595d1db45::t_3d0859c81967a8 1-22
+scripts/dw/helpers/tmux.ts
+  s_de3f1595d1db45::t_4f72c187c1ffd4 1-76
+scripts/dw/helpers/registry.ts
+  s_de3f1595d1db45::t_af6df105744bd3 1-4,7-113
+  s_de3f1595d1db45::t_9ea3b446944346 5-6
+scripts/dw/commands/attach.ts
+  s_de3f1595d1db45::t_854464760e5261 1-18
+scripts/setupTestUtils/createTestOrg.ts
+  s_125ae2b8db3249::t_962b42c6fdad2b 142
+  s_f22131691f1586::t_dc1e588bb24986 16-17
+  s_125ae2b8db3249::t_b7994b09ccb278 73
+  s_187029d402fb5b::t_c16645064cd614 3,15,28-42
+  s_c605de1882b657::t_bc6688010f6148 10-13
+  s_c605de1882b657::t_0816684fb8cbaa 77-100,105,109,112-117
+  s_187029d402fb5b::t_6fbc946aebfb0e 141
+  s_187029d402fb5b::t_1ed4681a173efd 191-209,211-264,267-271
+  s_187029d402fb5b::t_543d36bad2df4e 210
+  s_c605de1882b657::t_ab21ce8c634b6b 147-158,161-163,166,169,174,178,181-186
+  s_f22131691f1586::t_8dde368026dc86 74-75
+  s_187029d402fb5b::t_21577c7f0c9b84 72,76
+  s_f22131691f1586::t_3a4612118ccb23 143-144
+  s_125ae2b8db3249::t_807f8334620720 18
+server/tests/scenarios/checkout/confirm/confirm-paid-with-pm-scenario.test.ts
+  s_c605de1882b657::t_fbec6e62843b42 69
+server/src/external/autumn/autumnRpcCli.ts
+  s_a7dbfde71f5bb4::t_2a71a8498d8d4b 45-46,49
+scripts/setup/setup-test.ts
+  s_c605de1882b657::t_8e065a4e997be5 13-23,25-28,34,39,43-57,63-67,71
+  s_187029d402fb5b::t_022364f496cc25 9-11
+scripts/dw/index.ts
+  s_de3f1595d1db45::t_cfeb7f1cdcc9fe 1-38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "d1d44427cee13dbc4b3758d55c5ce49ea24deb33",
+  "prompts": {},
+  "sessions": {
+    "s_0d5a5c2165494c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d1c57626ffeXxAgd4jIJIwx06",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_125ae2b8db3249": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d1f5e28cffeGwRo7Fx2k8P4wt",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_187029d402fb5b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d205a87dffeVx3ODdt0rJGzc6",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_96c52b8fa1a6bd": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d9801899ffeYYuriL2TKq6C8N",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_a7dbfde71f5bb4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d1f0c989ffeL7TYzSQEOcLrMR",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_c605de1882b657": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d2178f67ffeag7jt16b0Rt1vQ",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_de3f1595d1db45": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d1bfd728ffeANPLsEtZS3YBVy",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_f22131691f1586": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d1e0e52cffe82sppO6URX9PJO",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_fc42b85e909876": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1d20f1449ffezQFCyXQHgiah3i",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
