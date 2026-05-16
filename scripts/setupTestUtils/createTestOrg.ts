@@ -149,6 +149,7 @@ export async function createTestOrg({
 	const insertedOrg = {
 		id: TEST_ORG_CONFIG.id,
 		slug: TEST_ORG_CONFIG.slug,
+		name: TEST_ORG_CONFIG.name,
 		createdAt: new Date(TEST_ORG_CONFIG.created_at),
 	};
 	await afterOrgCreated({
