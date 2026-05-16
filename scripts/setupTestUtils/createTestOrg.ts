@@ -15,7 +15,7 @@ import chalk from "chalk";
 import { and, eq, inArray } from "drizzle-orm";
 import { clearOrgDbOnly } from "@tests/utils/setup/clearOrg.js";
 import { setupOrg } from "@tests/utils/setup/setupOrg.js";
-import { ensureDefaultStripeAccount } from "./ensureDefaultStripeAccount.js";
+import { afterOrgCreated } from "@server/utils/authUtils/afterOrgCreated.js";
 
 const TEST_ORG_CONFIG = {
 	id: "org_2sWv2S8LJ9iaTjLI6UtNsfL88Kt",
@@ -24,6 +24,8 @@ const TEST_ORG_CONFIG = {
 	createdAt: new Date(1738583937426).toISOString(),
 	created_at: 1738583937426,
 };
+
+export const TEST_ORG_PUBLISHABLE_KEY = "am_pk_test_3DoBu1cmlgxWqEXYiKaBKOPHqsu";
 
 // Synthetic inviter pinned to the test org; satisfies invitation.inviter_id
 // NOT-NULL FK without needing a real human user in a fresh worktree branch.
@@ -69,8 +71,14 @@ export async function createTestOrg({
 			),
 		);
 
+		await afterOrgCreated({
+			org: { ...existingOrg, slug: TEST_ORG_CONFIG.slug } as any,
+			user: TEST_INVITER_USER as any,
+			createStripeAccount: !existingOrg.test_stripe_connect?.default_account_id,
+			pkey: TEST_ORG_PUBLISHABLE_KEY,
+		});
+
 		await seedTeamInvites({ db });
-		await ensureDefaultStripeAccount({ db, orgId: TEST_ORG_CONFIG.id });
 		await clearOrgDbOnly({ db, orgId: TEST_ORG_CONFIG.id, env: AppEnv.Sandbox });
 		await setupOrg({ orgId: TEST_ORG_CONFIG.id, env: AppEnv.Sandbox });
 
@@ -138,8 +146,19 @@ export async function createTestOrg({
 		),
 	);
 
+	const insertedOrg = {
+		id: TEST_ORG_CONFIG.id,
+		slug: TEST_ORG_CONFIG.slug,
+		createdAt: new Date(TEST_ORG_CONFIG.created_at),
+	};
+	await afterOrgCreated({
+		org: insertedOrg as any,
+		user: TEST_INVITER_USER as any,
+		createStripeAccount: true,
+		pkey: TEST_ORG_PUBLISHABLE_KEY,
+	});
+
 	await seedTeamInvites({ db });
-	await ensureDefaultStripeAccount({ db, orgId: TEST_ORG_CONFIG.id });
 	await clearOrgDbOnly({ db, orgId: TEST_ORG_CONFIG.id, env: AppEnv.Sandbox });
 	await setupOrg({ orgId: TEST_ORG_CONFIG.id, env: AppEnv.Sandbox });
 
