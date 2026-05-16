@@ -1,0 +1,19 @@
+server/src/utils/auth.ts
+  s_59c47ebabc6acb::t_5447b699918bf5 58-61
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "c043a551a7e07dad52149a71f2fca2a29a7c5761",
+  "prompts": {},
+  "sessions": {
+    "s_59c47ebabc6acb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1cf0910c4ffeI6ap68x1PScgRP",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
