@@ -44,14 +44,14 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 	return { env, args };
 }
 
-export function startDev(entry: RegistryEntry): never {
+export function startDev(entry: RegistryEntry, opts?: { allowTmux?: boolean }): never {
 	const { worktreeNum, branchName } = entry;
 	const { env, args } = buildDevEnvAndArgs(entry);
 
 	// Agent worktrees (N > 1) in a non-TTY invocation: wrap in detached tmux
 	// so the calling agent doesn't block. Canonical (N=1) stays inline always.
 	// Node/Bun sets isTTY to true when stdout is a TTY and undefined otherwise.
-	const useTmux = worktreeNum > 1 && !process.stdout.isTTY;
+	const useTmux = (opts?.allowTmux ?? true) && worktreeNum > 1 && !process.stdout.isTTY;
 	if (useTmux) {
 		log(
 			`starting dev in tmux (worktree=${worktreeNum}${branchName ? `, branch=${branchName}` : ""}, non-TTY)`,
