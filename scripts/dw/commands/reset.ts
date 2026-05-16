@@ -4,9 +4,9 @@ import { loadRegistry, saveRegistry } from "../helpers/registry.ts";
 import { deleteBranch } from "../helpers/neon.ts";
 import { tmuxSessionName, killTmuxSession } from "../helpers/tmux.ts";
 import { removeComposeStack } from "../helpers/compose.ts";
-import { removeEnvLocalFiles } from "../helpers/env-files.ts";
+import { removeEnvLocalFiles, writeEnvLocalFiles } from "../helpers/env-files.ts";
 import { setupAgentWorktree } from "../helpers/setup.ts";
-import { SHARED_DIR } from "../constants.ts";
+import { SHARED_DIR, BRANCH_NAME_RE } from "../constants.ts";
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import type { RegistryEntry } from "../types.ts";
@@ -20,7 +20,7 @@ export async function cmdReset(): Promise<void> {
 	}
 	killTmuxSession(tmuxSessionName(entry.worktreeNum));
 	if (entry.branchName) deleteBranch(entry.branchName);
-	if (entry.branchName) {
+	if (entry.branchName && BRANCH_NAME_RE.test(entry.branchName)) {
 		const localDir = join(SHARED_DIR, "drizzle-local", entry.branchName);
 		if (existsSync(localDir)) rmSync(localDir, { recursive: true, force: true });
 	}
@@ -35,5 +35,6 @@ export async function cmdReset(): Promise<void> {
 	registry[cwd] = cleared;
 	saveRegistry(registry);
 	log(`reset ${entry.branchName ?? entry.path}, re-provisioning…`);
-	await setupAgentWorktree(cleared, registry);
+	const provisioned = await setupAgentWorktree(cleared, registry);
+	writeEnvLocalFiles(provisioned);
 }
