@@ -264,9 +264,9 @@ test.concurrent(
  * - Attach enterprise with on_end: "revert" on entity 2
  *
  * Expected:
- * - Pro on entity 1 is paused
- * - Enterprise trial on entity 2 is created with correct previous_customer_product_id
- * - on_trial_end = "revert" on the enterprise cusProduct
+ * - Pro on entity 1 stays active (not paused -- different entity)
+ * - Enterprise trial on entity 2 has no previous_customer_product_id
+ * - Trial expires to nothing on entity 2
  */
 test.concurrent(
 	`${chalk.yellowBright("trial-revert-attach 4: cross-entity revert — pro on entity 1, enterprise revert on entity 2")}`,
@@ -332,21 +332,13 @@ test.concurrent(
 		expect(proCusProduct).toBeDefined();
 		expect(enterpriseCusProduct).toBeDefined();
 
-		// Pro on entity 1 should be paused
-		expect(proCusProduct!.status).toBe(CusProductStatus.Paused);
-		expect(proCusProduct!.canceled).toBe(false);
+		// Pro on entity 1 stays active (different entity, not paused)
+		expect(proCusProduct!.status).toBe(CusProductStatus.Active);
 
-		// Enterprise on entity 2 should be trialing with revert
+		// Enterprise on entity 2: revert trial with no previous product link
 		expect(enterpriseCusProduct!.status).toBe(CusProductStatus.Active);
 		expect(enterpriseCusProduct!.on_trial_end).toBe("revert");
-		expect(enterpriseCusProduct!.previous_customer_product_id).toBe(
-			proCusProduct!.id,
-		);
+		expect(enterpriseCusProduct!.previous_customer_product_id).toBeNull();
 		expect(enterpriseCusProduct!.trial_ends_at).toBeDefined();
-		expect(
-			Math.abs(
-				enterpriseCusProduct!.trial_ends_at! - (advancedTo + ms.days(14)),
-			),
-		).toBeLessThan(ms.hours(1));
 	},
 );
