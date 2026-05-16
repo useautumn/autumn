@@ -31,20 +31,23 @@ function SheetContent() {
 	const { formContext } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
 
-	const isDefault = customerProduct.product.is_default;
+	const product = customerProduct.product;
+	const isDefault = product?.is_default ?? false;
 	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
 	const { valid: isFreeOrOneOff } = cp(customerProduct).free().or.oneOff();
 	const isFreeDefault = isDefault && isFreeOrOneOff;
+
+	const productName = product?.name ?? "Plan";
 
 	return (
 		<LayoutGroup>
 			<div className="flex flex-col h-full overflow-y-auto">
 				<SheetHeader
 					title="Cancel Subscription"
-					description={`Cancel ${customerProduct.product.name} for this customer`}
+					description={`Cancel ${productName} for this customer`}
 					breadcrumbs={[
 						{
-							name: customerProduct.product.name,
+							name: productName,
 							sheet: "subscription-detail",
 						},
 					]}

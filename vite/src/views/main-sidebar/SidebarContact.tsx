@@ -10,7 +10,7 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useEnv } from "@/utils/envUtils";
 import { useOnboardingVisibility } from "@/views/onboarding4/hooks/useOnboardingProgress";
 import { NavButton } from "./NavButton";

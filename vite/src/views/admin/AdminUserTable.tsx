@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/v2/inputs/Input";
 import { Button } from "@/components/v2/buttons/Button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { type AdminUser, createAdminUserColumns } from "./AdminUserColumns";

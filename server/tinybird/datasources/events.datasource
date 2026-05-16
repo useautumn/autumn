@@ -15,6 +15,7 @@ SCHEMA >
     `set_usage` Nullable(UInt8) `json:$.set_usage`,
     `entity_id` Nullable(String) `json:$.entity_id`,
     `internal_entity_id` Nullable(String) `json:$.internal_entity_id`,
+    `internal_product_id` Nullable(String) `json:$.internal_product_id`,
     `customer_id` String `json:$.customer_id`,
     `properties` JSON `json:$.properties`,
     `deductions` JSON `json:$.deductions`

@@ -1,5 +1,6 @@
 import "dotenv/config";
 
+import type pino from "pino";
 import { initLogger } from "@/utils/logging/initLogger";
 
 const pinoLogger = initLogger();
@@ -72,34 +73,45 @@ const createLogMethod = (pinoMethod: any, logtailMethod?: any) => {
 	};
 };
 
-export const createLogger = () => {
-	// Helper function to create logger structure recursively
-	const createLoggerStructure = (basePinoLogger: any) => {
-		return {
-			debug: createLogMethod(basePinoLogger.debug.bind(basePinoLogger)),
-			info: createLogMethod(basePinoLogger.info.bind(basePinoLogger)),
-			warn: createLogMethod(basePinoLogger.warn.bind(basePinoLogger)),
-			error: createLogMethod(basePinoLogger.error.bind(basePinoLogger)),
-			child: ({
-				context,
-				onlyProd = false,
-			}: {
-				context: any;
-				onlyProd?: boolean;
-			}) => {
-				if (onlyProd && process.env.NODE_ENV !== "production") {
-					return createLoggerStructure(basePinoLogger);
-				}
+const createLoggerStructure = (basePinoLogger: pino.Logger): Logger => ({
+	debug: createLogMethod(basePinoLogger.debug.bind(basePinoLogger)),
+	info: createLogMethod(basePinoLogger.info.bind(basePinoLogger)),
+	warn: createLogMethod(basePinoLogger.warn.bind(basePinoLogger)),
+	error: createLogMethod(basePinoLogger.error.bind(basePinoLogger)),
+	child: ({
+		context,
+		onlyProd = false,
+	}: {
+		context: any;
+		onlyProd?: boolean;
+	}) => {
+		if (onlyProd && process.env.NODE_ENV !== "production") {
+			return createLoggerStructure(basePinoLogger);
+		}
 
-				const childPinoLogger = basePinoLogger.child(context);
-				return createLoggerStructure(childPinoLogger);
-			},
-		};
-	};
+		const childPinoLogger = basePinoLogger.child(context);
+		return createLoggerStructure(childPinoLogger);
+	},
+});
 
-	// Create the root logger using the helper function
-	return createLoggerStructure(pinoLogger);
+export const createLogger = () => createLoggerStructure(pinoLogger);
+
+/**
+ * Lazy dual-output logger (stdout JSON + axiom). Used only by long-running
+ * trigger.dev tasks so their lines surface in both the trigger run UI and
+ * our axiom store. Default `logger` / `createLogger` are unaffected.
+ */
+let dualPinoLogger: pino.Logger | null = null;
+export const createDualLogger = () => {
+	if (!dualPinoLogger) dualPinoLogger = initLogger({ mode: "dual" });
+	return createLoggerStructure(dualPinoLogger);
 };
 
 export const logger = createLogger();
-export type Logger = ReturnType<typeof createLogger>;
+export type Logger = {
+	debug: (...args: any[]) => void;
+	info: (...args: any[]) => void;
+	warn: (...args: any[]) => void;
+	error: (...args: any[]) => void;
+	child: (args: { context: any; onlyProd?: boolean }) => Logger;
+};

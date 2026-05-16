@@ -70,11 +70,11 @@ export const ProcessorSubMenu = () => {
 					return (
 						<DropdownMenuItem
 							key={value}
+							closeOnClick={false}
 							onClick={(e) => {
 								e.preventDefault();
 								toggleProcessor(value);
 							}}
-							onSelect={(e) => e.preventDefault()}
 							className="flex items-center gap-2 cursor-pointer text-sm"
 						>
 							<Checkbox checked={isActive} className="border-border" />

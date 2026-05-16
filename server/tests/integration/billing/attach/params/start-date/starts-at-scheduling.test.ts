@@ -101,6 +101,116 @@ test.concurrent(`${chalk.yellowBright("starts_at: future attach creates schedule
 	await expectCustomerInvoiceCorrect({ customerId, count: 0 });
 });
 
+test.concurrent(`${chalk.yellowBright("starts_at: scheduled subscription can be canceled by customer_product_id")}`, async () => {
+	const customerId = "attach-start-date-cancel-scheduled";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV1, autumnV2_2, ctx, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	const startDate = addDays(advancedTo, 1).getTime();
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		starts_at: startDate,
+	});
+
+	const scheduledCustomerProduct = await getCustomerProduct({
+		ctx,
+		customerId,
+		productId: pro.id,
+	});
+	const scheduleId = scheduledCustomerProduct.scheduled_ids?.[0];
+	if (!scheduleId)
+		throw new Error("Expected scheduled product to have schedule");
+
+	const preview = await autumnV1.subscriptions.previewUpdate({
+		customer_id: customerId,
+		customer_product_id: scheduledCustomerProduct.id,
+		cancel_action: "cancel_immediately",
+	});
+	expect(preview.total).toBe(0);
+
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		customer_product_id: scheduledCustomerProduct.id,
+		cancel_action: "cancel_immediately",
+	});
+
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	await expectCustomerProducts({
+		customer,
+		notPresent: [pro.id],
+	});
+
+	const stripeSchedule =
+		await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId);
+	expect(stripeSchedule.status).toBe("canceled");
+	await expectCustomerInvoiceCorrect({ customerId, count: 0 });
+});
+
+test.concurrent(`${chalk.yellowBright("starts_at: immediate-access future subscription cancels by deleting schedule")}`, async () => {
+	const customerId = "attach-start-date-cancel-immediate-access-v2";
+	const pro = products.pro({
+		id: "pro-immediate-access-cancel",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV1, autumnV2_2, ctx, advancedTo } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	const startDate = addDays(advancedTo, 1).getTime();
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		starts_at: startDate,
+		enable_plan_immediately: true,
+	});
+
+	const customerProduct = await getCustomerProduct({
+		ctx,
+		customerId,
+		productId: pro.id,
+	});
+	const scheduleId = customerProduct.scheduled_ids?.[0];
+	if (!scheduleId)
+		throw new Error("Expected immediate-access product to have schedule");
+	expect(customerProduct.status).toBe(CusProductStatus.Active);
+	expect(customerProduct.subscription_ids ?? []).toEqual([]);
+
+	await autumnV1.subscriptions.update({
+		customer_id: customerId,
+		customer_product_id: customerProduct.id,
+		cancel_action: "cancel_end_of_cycle",
+	});
+
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	await expectCustomerProducts({
+		customer,
+		notPresent: [pro.id],
+	});
+
+	const stripeSchedule =
+		await ctx.stripeCli.subscriptionSchedules.retrieve(scheduleId);
+	expect(stripeSchedule.status).toBe("canceled");
+	await expectCustomerInvoiceCorrect({ customerId, count: 0 });
+});
+
 test.concurrent(`${chalk.yellowBright("starts_at: future attach without payment method creates invoice schedule")}`, async () => {
 	const customerId = "attach-start-date-future-invoice";
 	const pro = products.pro({

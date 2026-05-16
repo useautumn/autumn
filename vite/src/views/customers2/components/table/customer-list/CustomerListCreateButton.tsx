@@ -4,9 +4,11 @@ import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
+	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
@@ -79,14 +81,6 @@ export function CustomerListCreateButton() {
 		{ enableOnFormTags: false },
 	);
 
-	useHotkeys(
-		"meta+enter",
-		(event) => {
-			event.preventDefault();
-			handleCreate();
-		},
-		{ enableOnFormTags: true },
-	);
 
 	return (
 		<Dialog
@@ -113,12 +107,16 @@ export function CustomerListCreateButton() {
 			<DialogContent className="w-[400px] bg-card">
 				<DialogHeader>
 					<DialogTitle>Create Customer</DialogTitle>
+					<DialogDescription>
+						Add a new customer to your workspace.
+					</DialogDescription>
 				</DialogHeader>
 				<div className="flex gap-2">
 					<div className="flex-1">
 						<FieldLabel>Name</FieldLabel>
 						<Input
 							ref={nameInputRef}
+							placeholder="John Doe"
 							value={fields.name}
 							onChange={(e) => setFields({ ...fields, name: e.target.value })}
 						/>
@@ -126,6 +124,7 @@ export function CustomerListCreateButton() {
 					<div className="flex-1">
 						<FieldLabel>ID</FieldLabel>
 						<Input
+							placeholder="cus_123"
 							value={fields.id}
 							onChange={(e) => setFields({ ...fields, id: e.target.value })}
 						/>
@@ -135,19 +134,21 @@ export function CustomerListCreateButton() {
 					<FieldLabel>Email</FieldLabel>
 					<Input
 						value={fields.email}
-						placeholder="optional"
+						placeholder="jane@example.com"
 						onChange={(e) => setFields({ ...fields, email: e.target.value })}
 					/>
 				</div>
 				<DialogFooter>
-					<Button
+					<ShortcutButton
 						onClick={handleCreate}
 						isLoading={isLoading}
 						variant="primary"
+						metaShortcut="enter"
 						disabled={!fields.id.trim() && !fields.email.trim()}
+						className="w-full"
 					>
-						Create
-					</Button>
+						Create Customer
+					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

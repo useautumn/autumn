@@ -1,0 +1,90 @@
+import type { AxiosError } from "axios";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
+import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/v2/dialogs/Dialog";
+import { Input } from "@/components/v2/inputs/Input";
+import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { getBackendErr, navigateTo } from "@/utils/genUtils";
+
+export function CreateMigrationDialog({
+	open: controlledOpen,
+	onOpenChange: controlledOnOpenChange,
+}: {
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
+} = {}) {
+	const [internalOpen, setInternalOpen] = useState(false);
+	const [id, setId] = useState("");
+	const navigate = useNavigate();
+
+	const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+	const handleOpenChange = (nextOpen: boolean) => {
+		if (nextOpen) setId("");
+		(controlledOnOpenChange || setInternalOpen)(nextOpen);
+	};
+
+	const { createMigration, isCreating } = useMigrationsQuery();
+
+	const handleCreateMigration = async () => {
+		if (!id.trim()) {
+			toast.error("Migration ID is required");
+			return;
+		}
+		try {
+			const created = await createMigration({ id: id.trim() });
+			toast.success("Migration created");
+			handleOpenChange(false);
+			navigateTo(`/migrations/${created.id}`, navigate);
+		} catch (error: unknown) {
+			toast.error(
+				getBackendErr(error as AxiosError, "Failed to create migration"),
+			);
+		}
+	};
+
+	return (
+		<Dialog open={open} onOpenChange={handleOpenChange}>
+			<DialogContent showCloseButton={false}>
+				<DialogHeader>
+					<DialogTitle>Create a migration</DialogTitle>
+					<DialogDescription>
+						Give your migration a unique ID. You can configure its filter and
+						operations after creation.
+					</DialogDescription>
+				</DialogHeader>
+
+				<div className="flex flex-col gap-1.5">
+					<label htmlFor="migration-id" className="text-sm font-medium">
+						Migration ID
+					</label>
+					<Input
+						id="migration-id"
+						placeholder="add-credits-to-free"
+						value={id}
+						onChange={(e) => setId(e.target.value)}
+					/>
+				</div>
+
+				<DialogFooter>
+					<ShortcutButton
+						className="w-full"
+						onClick={handleCreateMigration}
+						metaShortcut="enter"
+						isLoading={isCreating}
+					>
+						Create migration
+					</ShortcutButton>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	);
+}

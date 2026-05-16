@@ -1,0 +1,52 @@
+name: autumn-dev-services
+
+services:
+  postgres:
+    image: postgres:18.3-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: autumn
+    ports:
+      - "5432:5432"
+    volumes:
+      - autumn-dev-postgres-18:/var/lib/postgresql
+
+  redis-stack:
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - autumn-dev-redis-stack:/data
+
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    network_mode: host
+    command:
+      - --port=6380
+    ulimits:
+      memlock: -1
+    volumes:
+      - autumn-dev-dragonfly:/data
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+      NGROK_DOMAIN: ${NGROK_DOMAIN:-}
+    command:
+      - http
+      - host.docker.internal:8080
+      - --url
+      - ${NGROK_DOMAIN}
+      - --pooling-enabled
+      - --log=stdout
+    ports:
+      - "4040:4040"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  autumn-dev-postgres-18:
+  autumn-dev-redis-stack:
+  autumn-dev-dragonfly:

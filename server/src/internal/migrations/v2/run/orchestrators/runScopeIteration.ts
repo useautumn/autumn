@@ -1,0 +1,112 @@
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { withMigrationItemTracking } from "../../actions/migrationItem/index.js";
+import { runCloudScopeIteration } from "../../cloudAdapter/runCloudScopeIteration.js";
+import type {
+	MigrationBatchFn,
+	MigrationRunControls,
+} from "../../cloudAdapter/types.js";
+import { runFilter } from "../../filters/runFilter.js";
+import type { MigrationHooks } from "../../hooks/index.js";
+import {
+	isPersistedMigration,
+	type MigrationRuntimeWithEventId,
+} from "../../types/migrationDefinition.js";
+import { migrateCustomer } from "../migrateCustomer/index.js";
+import type { RunScopeItem, RunScopeKind } from "../types/runScope.js";
+import { iterateScope } from "./iterateScope.js";
+
+/** Runs one filtered migration scope iteration. */
+export const runScopeIteration = async ({
+	ctx,
+	migration,
+	migrationRunId,
+	dryRun,
+	kind,
+	batch,
+	controls,
+	hooks,
+}: {
+	ctx: AutumnContext;
+	migration: MigrationRuntimeWithEventId;
+	migrationRunId: string;
+	dryRun: boolean;
+	kind: RunScopeKind;
+	batch?: MigrationBatchFn;
+	controls?: MigrationRunControls;
+	hooks?: MigrationHooks;
+}) => {
+	const { count, iterate } = await runFilter({
+		ctx,
+		migration,
+		migrationRunId,
+		dryRun,
+		kind,
+		controls,
+	});
+	ctx.logger.info(`run-migration: iterating scope`, {
+		data: { kind, count, dryRun },
+	});
+	const checkpointReadEnabled =
+		controls?.checkpoint !== false &&
+		(!dryRun || controls?.checkpointDryRun === true);
+
+	const perItem = async ({
+		item,
+		itemCtx,
+	}: {
+		item: RunScopeItem;
+		itemCtx: AutumnContext;
+	}) => {
+		if (item.kind !== "customer")
+			throw new Error(
+				`runMigration: per-item handler missing for kind "${item.kind}"`,
+			);
+
+		itemCtx.logger.info("run-migration: processing customer", {
+			data: {
+				migrationRunId,
+				customerId: item.id ?? item.internal_id,
+				internalId: item.internal_id,
+				dryRun,
+			},
+		});
+
+		const run = () =>
+			migrateCustomer({
+				ctx: itemCtx,
+				customerId: item.id ?? item.internal_id,
+				migration,
+				preview: dryRun,
+				hooks,
+			});
+
+		return withMigrationItemTracking({
+			ctx: itemCtx,
+			migrationInternalId: isPersistedMigration(migration)
+				? migration.internal_id
+				: migration.event_internal_id,
+			migrationRunId,
+			item,
+			dryRun,
+			claimItemRun: checkpointReadEnabled,
+			retryFailed: migration.retry_failed === true,
+			run,
+		});
+	};
+
+	if (!batch) {
+		return iterateScope({
+			iterate,
+			perItem: (item) => perItem({ item, itemCtx: ctx }),
+			concurrency: controls?.concurrency,
+		});
+	}
+
+	return runCloudScopeIteration({
+		batch,
+		iterate,
+		kind,
+		controls,
+		perItem,
+	});
+};

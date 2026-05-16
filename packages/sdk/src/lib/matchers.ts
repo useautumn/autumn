@@ -251,8 +251,9 @@ export function match<T, E>(
         raw = body;
         break;
       default:
-        encoding satisfies never;
-        throw new Error(`Unsupported response type: ${encoding}`);
+        throw new Error(
+          `Unsupported response type: ${encoding satisfies never}`,
+        );
     }
 
     if (matcher.enc === "fail") {

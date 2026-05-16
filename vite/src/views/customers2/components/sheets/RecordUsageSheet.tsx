@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import {
@@ -219,14 +220,15 @@ export function RecordUsageSheet() {
 					>
 						Cancel
 					</Button>
-					<Button
+					<ShortcutButton
 						variant="primary"
 						className="w-full"
 						onClick={handleSubmit}
 						isLoading={isSubmitting}
+						metaShortcut="enter"
 					>
 						Record
-					</Button>
+					</ShortcutButton>
 				</SheetFooter>
 			</div>
 		</LayoutGroup>

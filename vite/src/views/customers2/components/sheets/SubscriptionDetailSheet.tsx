@@ -83,7 +83,7 @@ function SubscriptionDetailItems({
 
 		return (
 			<PlanFeatureRow
-				key={item.feature_id || item.price_id || index}
+				key={`${index}-${item.feature_id ?? ""}-${item.price_id ?? ""}-${item.entitlement_id ?? ""}`}
 				item={item}
 				index={index}
 				readOnly={true}

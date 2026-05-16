@@ -57,6 +57,7 @@ export const CustomerProductUpdateSchema = z.object({
 		subscription_ids: z.array(z.string()).optional(),
 		updated_at: z.number().optional(),
 		billing_version: z.enum(BillingVersion).optional(),
+		is_custom: z.boolean().optional(),
 	}),
 });
 

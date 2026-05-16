@@ -114,6 +114,7 @@ const formatCustomerProductStatus = (
 		[CusProductStatus.Expired]: "✗ expired",
 		[CusProductStatus.PastDue]: "⚠ past_due",
 		[CusProductStatus.Trialing]: "🔄 trialing",
+		[CusProductStatus.Paused]: "⏸ paused",
 		[CusProductStatus.Unknown]: "? unknown",
 	};
 	return statusLabels[status] ?? status;

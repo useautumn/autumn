@@ -1,18 +1,18 @@
 import { TrashIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import {
-	DropdownMenuGroup,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+	DropdownMenuGroup,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
@@ -54,7 +54,9 @@ export const SavedViews = ({
 				status: statusParam ? statusParam.split(",").filter(Boolean) : [],
 				version: versionParam ? versionParam.split(",").filter(Boolean) : [],
 				none: noneParam === "true",
-				processor: processorParam ? processorParam.split(",").filter(Boolean) : [],
+				processor: processorParam
+					? processorParam.split(",").filter(Boolean)
+					: [],
 			});
 
 			toast.success(`Applied filters from ${view.name} view`);
@@ -82,10 +84,10 @@ export const SavedViews = ({
 
 	return (
 		<>
-			<DropdownMenuLabel className="p-0 pt-1 px-3">
-				<span className="text-t3 text-xs">Saved views</span>
-			</DropdownMenuLabel>
 			<DropdownMenuGroup className="p-1">
+				<DropdownMenuLabel className="p-0 pt-1 px-3">
+					<span className="text-t3 text-xs">Saved views</span>
+				</DropdownMenuLabel>
 				{views.map((view: SavedView) => (
 					<div
 						key={view.id}

@@ -1,27 +1,29 @@
-import type { Invite, Membership, Role } from "@autumn/shared";
+import type { Invite, Role } from "@autumn/shared";
 import { isFuture } from "date-fns";
-import { Item, Row } from "@/components/general/TableGrid";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/v2/badges/Badge";
 import { ROLE_META } from "@/components/v2/selects/RoleSelect";
-import { useSession } from "@/lib/auth-client";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
+import {
+	SETTINGS_ROW_CLASS,
+	SettingsTable,
+} from "@/views/settings/SettingsTable";
+import { useCurrentMembership } from "../hooks/useCurrentMembership";
 import { useMemberships } from "../hooks/useMemberships";
 import { MemberRowToolbar } from "./MemberRowToolbar";
 
-export const OrgInvitesList = () => {
-	const {
-		memberships,
-		invites,
-		isLoading: isMembersLoading,
-	} = useMemberships();
-	const { data } = useSession();
+const COLUMNS = [
+	{ label: "Email", width: "35%" },
+	{ label: "Status", width: "20%" },
+	{ label: "Role", width: "20%" },
+	{ label: "Expires", width: "20%" },
+] as const;
 
-	if (isMembersLoading) return null;
-	const membership = memberships.find(
-		(membership: Membership) => membership.user.id === data?.session?.userId,
-	);
-	const isAdmin =
-		membership?.member.role === "admin" || membership?.member.role === "owner";
+export const OrgInvitesList = () => {
+	const { invites, isLoading } = useMemberships();
+	const { isAdmin } = useCurrentMembership();
+
+	if (isLoading) return null;
 
 	const pendingInvites = invites.filter((invite: Invite) => {
 		if (!invite.expiresAt) return false;
@@ -29,41 +31,34 @@ export const OrgInvitesList = () => {
 	});
 
 	if (pendingInvites.length === 0) {
-		return (
-			<div className="h-full flex items-center justify-center">
-				<p className="text-t3 text-sm">No pending invites</p>
-			</div>
-		);
+		return <p className="text-t3 text-sm py-4">No pending invites</p>;
 	}
 
 	return (
-		<div className="h-full overflow-y-auto">
-			<Row type="header" className="flex px-6">
-				<Item className="flex-6">Email</Item>
-				<Item className="flex-5">Status</Item>
-				<Item className="flex-3">Role</Item>
-				<Item className="flex-3">Expires At</Item>
-				<Item className="flex-1"></Item>
-			</Row>
+		<SettingsTable columns={COLUMNS}>
 			{pendingInvites.map((invite: Invite) => {
 				const roleLabel =
 					(invite.role && ROLE_META[invite.role as Role]?.label) ??
 					invite.role ??
 					"";
 				return (
-					<Row key={invite.id} className="flex px-6 text-sm text-t2">
-						<Item className="flex-6">{invite.email}</Item>
-						<Item className="flex-5">{invite.status}</Item>
-						<Item className="flex-3">
+					<TableRow key={invite.id} className={SETTINGS_ROW_CLASS}>
+						<TableCell className="pl-4 text-t1">{invite.email}</TableCell>
+						<TableCell className="text-t3">{invite.status}</TableCell>
+						<TableCell>
 							<Badge variant="muted">{roleLabel}</Badge>
-						</Item>
-						<Item className="flex-3">{formatDateStr(invite.expiresAt)}</Item>
-						<Item className="flex-1 flex justify-end">
-							{isAdmin && <MemberRowToolbar invite={invite} />}
-						</Item>
-					</Row>
+						</TableCell>
+						<TableCell className="text-t3 text-xs">
+							{formatDateStr(invite.expiresAt)}
+						</TableCell>
+						<TableCell className="pr-2">
+							<div className="flex justify-end">
+								{isAdmin && <MemberRowToolbar invite={invite} />}
+							</div>
+						</TableCell>
+					</TableRow>
 				);
 			})}
-		</div>
+		</SettingsTable>
 	);
 };

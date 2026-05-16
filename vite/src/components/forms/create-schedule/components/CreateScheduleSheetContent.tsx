@@ -2,6 +2,7 @@ import type { FullCustomer } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import { Button } from "@/components/v2/buttons/Button";
+import { InlineAction } from "@/components/v2/buttons/InlineAction";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import {
 	SheetFooter,
@@ -33,12 +34,10 @@ export function CreateScheduleSheetContent() {
 	const entities = (customer as FullCustomer | null)?.entities ?? [];
 
 	const canSubmit = useStore(form.store, (state) => state.canSubmit);
-	const isDisabled = !canSubmit || !!error;
-	const disabledReason = error
-		? error.message
-		: !canSubmit
-			? "Please fill in all required fields"
-			: null;
+	const isDisabled = !canSubmit;
+	const disabledReason = !canSubmit
+		? "Please fill in all required fields"
+		: null;
 
 	return (
 		<div className="flex flex-col h-full">
@@ -85,14 +84,13 @@ export function CreateScheduleSheetContent() {
 						))}
 					</div>
 
-					<button
-						type="button"
-						className="mt-3 flex items-center gap-1.5 text-xs text-t4 hover:text-t2 transition-colors py-1"
-						onClick={handleAddPhase}
-					>
-						<PlusIcon size={11} />
-						Add phase
-					</button>
+				<InlineAction
+					icon={<PlusIcon size={11} />}
+					onClick={handleAddPhase}
+					className="mt-3"
+				>
+					Add phase
+				</InlineAction>
 				</SheetSection>
 			</div>
 

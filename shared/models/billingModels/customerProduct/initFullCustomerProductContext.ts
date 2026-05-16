@@ -1,6 +1,9 @@
 import type { BillingVersion } from "@models/billingModels/context/billingContext";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
-import type { FreeTrial } from "@models/productModels/freeTrialModels/freeTrialModels";
+import type {
+	FreeTrial,
+	TrialOnEnd,
+} from "@models/productModels/freeTrialModels/freeTrialModels";
 import type { ApiVersion } from "../../../api/versionUtils/ApiVersion";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
 import type {
@@ -76,4 +79,7 @@ export interface InitFullCustomerProductOptions {
 
 	/** When true, preserve subscription_ids even for non-paid-recurring products (used by sync). */
 	keepSubscriptionIds?: boolean;
+
+	previousCustomerProductId?: string;
+	onTrialEnd?: TrialOnEnd;
 }

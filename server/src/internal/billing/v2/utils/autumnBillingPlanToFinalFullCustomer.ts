@@ -1,4 +1,8 @@
-import type { AutumnBillingPlan, BillingContext } from "@autumn/shared";
+import type {
+	AutumnBillingPlan,
+	BillingContext,
+	FullCustomer,
+} from "@autumn/shared";
 import {
 	applyCustomerProductPatch,
 	applyCustomerProductUpdate,
@@ -7,11 +11,11 @@ import {
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 
-export const autumnBillingPlanToFinalFullCustomer = ({
-	billingContext,
+export const applyAutumnBillingPlanToFullCustomer = ({
+	fullCustomer,
 	autumnBillingPlan,
 }: {
-	billingContext: BillingContext;
+	fullCustomer: FullCustomer;
 	autumnBillingPlan: AutumnBillingPlan;
 }) => {
 	const { insertCustomerProducts, updateCustomerEntitlements } =
@@ -24,7 +28,7 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 		autumnBillingPlan,
 	});
 
-	const finalFullCustomer = structuredClone(billingContext.fullCustomer);
+	const finalFullCustomer = structuredClone(fullCustomer);
 
 	// 1. Combine existing customer products with new ones
 	const combinedCustomerProducts = [
@@ -33,23 +37,23 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 	];
 
 	let customerProducts = combinedCustomerProducts.map((customerProduct) => {
-		const updateCustomerProduct = updateCustomerProducts.find(
-			(updateCustomerProduct) =>
-				updateCustomerProduct.customerProduct.id === customerProduct.id,
-		);
-		const patchCustomerProduct = patchCustomerProducts.find(
-			(patchCustomerProduct) =>
-				patchCustomerProduct.customerProduct.id === customerProduct.id,
-		);
-
 		let result = customerProduct;
-		if (updateCustomerProduct) {
+		for (const updateCustomerProduct of updateCustomerProducts) {
+			if (updateCustomerProduct.customerProduct.id !== customerProduct.id) {
+				continue;
+			}
+
 			result = applyCustomerProductUpdate({
 				customerProduct: result,
 				updates: updateCustomerProduct.updates,
 			});
 		}
-		if (patchCustomerProduct) {
+
+		for (const patchCustomerProduct of patchCustomerProducts) {
+			if (patchCustomerProduct.customerProduct.id !== customerProduct.id) {
+				continue;
+			}
+
 			result = applyCustomerProductPatch({
 				customerProduct: result,
 				patch: patchCustomerProduct,
@@ -122,3 +126,15 @@ export const autumnBillingPlanToFinalFullCustomer = ({
 		customer_products: customerProducts,
 	};
 };
+
+export const autumnBillingPlanToFinalFullCustomer = ({
+	billingContext,
+	autumnBillingPlan,
+}: {
+	billingContext: BillingContext;
+	autumnBillingPlan: AutumnBillingPlan;
+}) =>
+	applyAutumnBillingPlanToFullCustomer({
+		fullCustomer: billingContext.fullCustomer,
+		autumnBillingPlan,
+	});

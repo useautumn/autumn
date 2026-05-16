@@ -24,10 +24,12 @@ import CustomerPlanEditor from "./views/customers2/customer-plan/CustomerPlanEdi
 import { DefaultView } from "./views/DefaultView";
 import DevScreen from "./views/developer/DevView";
 import { CloseScreen } from "./views/general/CloseScreen";
+import { MigrationsView } from "./views/migrations/MigrationsView";
+import { MigrationView } from "./views/migrations/migration/MigrationView";
 import QuickstartView from "./views/onboarding4/QuickstartView";
 import ProductsView from "./views/products/ProductsView";
 import PlanEditorView from "./views/products/plan/PlanEditorView";
-import { OrgSettingsView } from "./views/settings/OrgSettingsView";
+import { SettingsView } from "./views/settings/SettingsView";
 import { TerminalView } from "./views/TerminalView";
 
 function SquircleProvider({ children }: { children: React.ReactNode }) {
@@ -78,7 +80,8 @@ export default function App() {
 
 				<Route element={<MainLayout />}>
 					<Route path="*" element={<DefaultView />} />
-					<Route path="/settings" element={<OrgSettingsView />} />
+					<Route path="/settings" element={<SettingsView />} />
+					<Route path="/sandbox/settings" element={<SettingsView />} />
 					<Route path="/admin" element={<AdminView />} />
 					<Route path="/sandbox/admin" element={<AdminView />} />
 					<Route path="/admin/oauth" element={<OAuthClientsView />} />
@@ -105,6 +108,13 @@ export default function App() {
 					<Route
 						path="/sandbox/products"
 						element={<ProductsView env={AppEnv.Sandbox} />}
+					/>
+					<Route path="/migrations" element={<MigrationsView />} />
+					<Route path="/sandbox/migrations" element={<MigrationsView />} />
+					<Route path="/migrations/:migration_id" element={<MigrationView />} />
+					<Route
+						path="/sandbox/migrations/:migration_id"
+						element={<MigrationView />}
 					/>
 					<Route
 						path="/products/:product_id"
