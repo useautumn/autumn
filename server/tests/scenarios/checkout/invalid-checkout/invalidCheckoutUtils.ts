@@ -7,7 +7,8 @@ import {
 import { deleteCheckoutCache } from "@/internal/checkouts/actions/cache";
 import { checkoutRepo } from "@/internal/checkouts/repos/checkoutRepo";
 
-const CHECKOUT_BASE_URL = "http://localhost:8080";
+const CHECKOUT_BASE_URL =
+	process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080";
 
 export const createAutumnCheckout = async ({
 	autumnV1,
