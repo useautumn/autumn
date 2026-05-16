@@ -3,7 +3,7 @@
 import { ChevronsUpDownIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 import { createContext, useContext } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Card,
 	CardAction,
@@ -12,7 +12,7 @@ import {
 	CardFooter,
 	CardHeader,
 	CardTitle,
-} from "@/components/ui/card";
+} from "@/components/v2/cards/Card";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -132,7 +132,7 @@ export const PlanTrigger = ({ className, ...props }: PlanTriggerProps) => (
 			className={cn("size-8", className)}
 			data-slot="plan-trigger"
 			size="icon"
-			variant="ghost"
+			variant="skeleton"
 			{...props}
 		>
 			<ChevronsUpDownIcon className="size-4" />

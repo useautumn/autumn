@@ -1,10 +1,12 @@
 import {
+	ArrowsClockwiseIcon,
 	BalloonIcon,
 	BasketIcon,
 	ChartBarIcon,
 	CoinVerticalIcon,
 	CubeIcon,
 	DatabaseIcon,
+	IdentificationCardIcon,
 	LegoIcon,
 	OptionIcon,
 	TerminalWindowIcon,
@@ -14,7 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
@@ -117,6 +119,10 @@ export const MainSidebar = ({
 		"sidebar.productGroupOpen",
 		true,
 	);
+	const [customerGroupOpen, setCustomerGroupOpen] = useLocalStorage<boolean>(
+		"sidebar.customerGroupOpen",
+		true,
+	);
 	const [devGroupOpen, setDevGroupOpen] = useLocalStorage<boolean>(
 		"sidebar.devGroupOpen",
 		true,
@@ -145,7 +151,7 @@ export const MainSidebar = ({
 				<div className="flex flex-col gap-6 relative">
 					{!isMobileSheet && (
 						<Button
-							variant="outline"
+							variant="secondary"
 							size="sm"
 							onClick={() => {
 								setExpanded((prev) => !prev);
@@ -188,12 +194,36 @@ export const MainSidebar = ({
 								},
 							]}
 						/>
-						<NavButton
-							value="customers"
-							icon={<UserCircleIcon size={16} weight="fill" />}
-							title="Customers"
-							env={env}
-						/>
+						{isAdmin ? (
+							<CollapsibleNavGroup
+								value="customers"
+								icon={<UserCircleIcon size={16} weight="fill" />}
+								title="Customers"
+								env={env}
+								isOpen={customerGroupOpen}
+								onToggle={() => setCustomerGroupOpen((prev) => !prev)}
+								subTabs={[
+									{
+										title: "All Customers",
+										value: "customers",
+										icon: <IdentificationCardIcon size={16} weight="fill" />,
+									},
+									{
+										title: "Migrations",
+										value: "migrations",
+										path: "/migrations",
+										icon: <ArrowsClockwiseIcon size={16} weight="fill" />,
+									},
+								]}
+							/>
+						) : (
+							<NavButton
+								value="customers"
+								icon={<UserCircleIcon size={16} weight="fill" />}
+								title="Customers"
+								env={env}
+							/>
+						)}
 						<NavButton
 							value="analytics"
 							icon={<ChartBarIcon size={16} weight="fill" />}

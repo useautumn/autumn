@@ -21,12 +21,11 @@ SQL >
         customer_id,
         coalesce(properties::String, '{}')::JSON(max_dynamic_types=2, max_dynamic_paths=16) as properties
     FROM postgresql(
-        'us-west-3.pg.psdb.cloud:5432',
+        'aws-us-east-2-2.pg.psdb.cloud:5432',
         'postgres',
         'events',
         {{tb_secret('PG_USERNAME')}},
-        {{tb_secret('PG_PASSWORD')}},
-        'public'
+        {{tb_secret('PG_PASSWORD')}}
     )
     WHERE timestamp > {{DateTime(start_date, '2025-01-01 00:00:00')}}
       AND timestamp <= {{DateTime(end_date, '2025-01-01 00:00:01')}}

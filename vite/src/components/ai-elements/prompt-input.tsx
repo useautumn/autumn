@@ -53,7 +53,7 @@ import {
 	InputGroupAddon,
 	InputGroupButton,
 	InputGroupTextarea,
-} from "@/components/ui/input-group";
+} from "@/components/v2/inputs/InputGroup";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
@@ -417,8 +417,8 @@ export const PromptInputActionAddAttachments = ({
 	return (
 		<DropdownMenuItem
 			{...props}
-			onSelect={(e) => {
-				e.preventDefault();
+			closeOnClick={false}
+			onClick={() => {
 				attachments.openFileDialog();
 			}}
 		>

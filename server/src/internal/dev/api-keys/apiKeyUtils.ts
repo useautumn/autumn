@@ -3,6 +3,7 @@ import { type ApiKey, AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { ApiKeyService } from "../ApiKeyService.js";
+import { apiKeyRepo } from "../repos/index.js";
 import {
 	getCachedSecretKeyVerification,
 	SECRET_KEY_CACHE_TTL_SECONDS,
@@ -148,19 +149,26 @@ export const verifyKey = async ({
 		: AppEnv.Live;
 
 	const cached = await getCachedSecretKeyVerification<
-		Awaited<ReturnType<typeof ApiKeyService.verifyAndFetch>>
+		Awaited<ReturnType<typeof apiKeyRepo.verify>>
 	>({
 		hashedKey,
 	});
 
 	if (cached) {
+		// Backfill `pendingMigrations` on payloads cached before the field
+		// existed — guarantees consumers can rely on the shape.
+		const pendingMigrations = cached.pendingMigrations ?? [];
 		return {
 			valid: true,
-			data: cached,
+			data: {
+				...cached,
+				pendingMigrations,
+				org: { ...cached.org, pendingMigrations },
+			},
 		};
 	}
 
-	const data = await ApiKeyService.verifyAndFetch({
+	const data = await apiKeyRepo.verify({
 		db,
 		hashedKey,
 		env,

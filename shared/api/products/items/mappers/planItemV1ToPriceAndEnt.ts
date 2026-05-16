@@ -14,7 +14,7 @@ export const planItemV1ToPriceAndEnt = ({
 	ctx: SharedContext;
 	item: CreatePlanItemParamsV1;
 	orgId: string;
-	internalProductId: string;
+	internalProductId?: string;
 	isCustom: boolean;
 }) => {
 	const planItemV0 = planItemV1ToV0({ ctx, item });

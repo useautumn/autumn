@@ -1,8 +1,105 @@
+import { format, setMonth, setYear } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type * as React from "react";
-import { DayPicker } from "react-day-picker";
-import { buttonVariants } from "@/components/ui/button";
+import {
+	type CaptionProps,
+	DayPicker,
+	useNavigation,
+	useDayPicker,
+} from "react-day-picker";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/v2/selects/Select";
 import { cn } from "@/lib/utils";
+
+const MONTHS = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+] as const;
+
+function CalendarCaption({ displayMonth, id }: CaptionProps) {
+	const { goToMonth, previousMonth, nextMonth } = useNavigation();
+	const { fromYear, toYear } = useDayPicker();
+
+	const monthValue = String(displayMonth.getMonth());
+	const yearValue = String(displayMonth.getFullYear());
+
+	const startYear = fromYear ?? displayMonth.getFullYear() - 5;
+	const endYear = toYear ?? displayMonth.getFullYear() + 5;
+	const years: number[] = [];
+	for (let y = startYear; y <= endYear; y++) years.push(y);
+
+	return (
+		<div className="flex items-center justify-between gap-1">
+			<button
+				type="button"
+				disabled={!previousMonth}
+				onClick={() => previousMonth && goToMonth(previousMonth)}
+				className="inline-flex items-center justify-center size-7 rounded-md text-t3 hover:bg-accent hover:text-t1 transition-colors p-0 disabled:opacity-30 disabled:pointer-events-none"
+			>
+				<ChevronLeft className="size-4" />
+			</button>
+
+			<div className="flex items-center gap-1.5">
+				<Select
+					value={monthValue}
+					onValueChange={(v) => goToMonth(setMonth(displayMonth, Number(v)))}
+					items={MONTHS.map((name, i) => ({ value: String(i), label: name }))}
+				>
+					<SelectTrigger className="h-7 border-none shadow-none px-2 text-sm font-medium text-t1 hover:bg-accent gap-1">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{MONTHS.map((name, i) => (
+							<SelectItem key={i} value={String(i)}>
+								{name}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+
+				<Select
+					value={yearValue}
+					onValueChange={(v) => goToMonth(setYear(displayMonth, Number(v)))}
+				>
+					<SelectTrigger className="h-7 border-none shadow-none px-2 text-sm font-medium text-t1 hover:bg-accent gap-1">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{years.map((y) => (
+							<SelectItem key={y} value={String(y)}>
+								{y}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			</div>
+
+			<button
+				type="button"
+				disabled={!nextMonth}
+				onClick={() => nextMonth && goToMonth(nextMonth)}
+				className="inline-flex items-center justify-center size-7 rounded-md text-t3 hover:bg-accent hover:text-t1 transition-colors p-0 disabled:opacity-30 disabled:pointer-events-none"
+			>
+				<ChevronRight className="size-4" />
+			</button>
+		</div>
+	);
+}
 
 function Calendar({
 	className,
@@ -23,26 +120,19 @@ function Calendar({
 				month: "flex flex-col gap-4",
 				caption: "flex justify-center pt-1 relative items-center w-full",
 				caption_label: cn(
-					"text-sm font-medium",
+					"text-sm font-medium text-t1",
 					hasDropdown && "hidden",
 				),
-				caption_dropdowns: "flex items-center gap-1",
-				dropdown:
-					"appearance-none bg-transparent text-sm font-medium cursor-pointer border rounded-md px-1.5 py-0.5 hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring",
-				dropdown_month: "[&>span]:hidden",
-				dropdown_year: "[&>span]:hidden",
+				caption_dropdowns: "flex items-center gap-2",
 				vhidden: "hidden",
 				nav: "flex items-center gap-1",
-				nav_button: cn(
-					buttonVariants({ variant: "outline" }),
-					"size-7 bg-transparent p-0 opacity-50 hover:opacity-100",
-				),
+				nav_button:
+					"inline-flex items-center justify-center size-7 rounded-md text-t3 hover:bg-accent hover:text-t1 transition-colors p-0",
 				nav_button_previous: "absolute left-1",
 				nav_button_next: "absolute right-1",
 				table: "w-full border-collapse space-x-1",
 				head_row: "flex",
-				head_cell:
-					"text-muted-foreground rounded-md w-8 font-normal text-[0.8rem]",
+				head_cell: "text-t3 rounded-md w-8 font-normal text-[0.8rem]",
 				row: "flex w-full mt-2",
 				cell: cn(
 					"relative p-0 text-center text-sm focus-within:relative focus-within:z-20 [&:has([aria-selected])]:bg-accent [&:has([aria-selected].day-range-end)]:rounded-r-md",
@@ -50,32 +140,38 @@ function Calendar({
 						? "[&:has(>.day-range-end)]:rounded-r-md [&:has(>.day-range-start)]:rounded-l-md first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md"
 						: "[&:has([aria-selected])]:rounded-md",
 				),
-				day: cn(
-					buttonVariants({ variant: "ghost" }),
-					"size-8 p-0 font-normal aria-selected:opacity-100",
-				),
+				day: "inline-flex items-center justify-center size-8 p-0 font-normal text-t2 rounded-md cursor-pointer hover:bg-accent hover:text-accent-foreground transition-colors aria-selected:opacity-100",
 				day_range_start:
 					"day-range-start aria-selected:bg-primary aria-selected:text-primary-foreground",
 				day_range_end:
 					"day-range-end aria-selected:bg-primary aria-selected:text-primary-foreground",
 				day_selected:
-					"bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-				day_today: "bg-accent text-accent-foreground",
-				day_outside:
-					"day-outside text-muted-foreground aria-selected:text-muted-foreground",
-				day_disabled: "text-muted-foreground opacity-50",
+					"bg-primary !text-primary-foreground hover:bg-primary hover:!text-primary-foreground focus:bg-primary focus:!text-primary-foreground",
+				day_today: "bg-accent text-accent-foreground font-medium",
+				day_outside: "day-outside text-t4 aria-selected:text-t4",
+				day_disabled: "text-t4 opacity-50",
 				day_range_middle:
 					"aria-selected:bg-accent aria-selected:text-accent-foreground",
 				day_hidden: "invisible",
 				...classNames,
 			}}
 			components={{
-				IconLeft: ({ className, ...props }) => (
-					<ChevronLeft className={cn("size-4", className)} {...props} />
-				),
-				IconRight: ({ className, ...props }) => (
-					<ChevronRight className={cn("size-4", className)} {...props} />
-				),
+				...(hasDropdown
+					? { Caption: CalendarCaption }
+					: {
+							IconLeft: ({ className, ...props }) => (
+								<ChevronLeft
+									className={cn("size-4", className)}
+									{...props}
+								/>
+							),
+							IconRight: ({ className, ...props }) => (
+								<ChevronRight
+									className={cn("size-4", className)}
+									{...props}
+								/>
+							),
+						}),
 			}}
 			{...props}
 		/>

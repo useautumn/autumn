@@ -24,7 +24,6 @@ export const handleExternalAggregateEvents = createRoute({
 	body: EventsAggregateParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org, env } = ctx;
 		const {
 			customer_id,
 			entity_id,
@@ -56,12 +55,13 @@ export const handleExternalAggregateEvents = createRoute({
 
 		const featureIds = Array.isArray(feature_id) ? feature_id : [feature_id];
 
-		// Map special $-prefixed group_by operators to their column names
 		let resolvedGroupBy = group_by;
 		if (group_by === "$customer_id") {
 			resolvedGroupBy = "customer_id";
 		} else if (group_by === "$entity_id") {
 			resolvedGroupBy = "entity_id";
+		} else if (group_by === "$plan_id") {
+			resolvedGroupBy = "plan_id";
 		}
 
 		const [eventsResult, total] = await Promise.all([

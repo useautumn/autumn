@@ -2,7 +2,7 @@
 
 import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
 import type { ComponentProps } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	Collapsible,
 	CollapsibleContent,
@@ -131,7 +131,7 @@ export const QueueItemAction = ({
 		)}
 		size="icon"
 		type="button"
-		variant="ghost"
+		variant="skeleton"
 		{...props}
 	/>
 );

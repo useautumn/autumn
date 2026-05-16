@@ -1,6 +1,7 @@
 import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import type { RedisV2InstanceName } from "@/internal/misc/redisV2Cache/redisV2CacheSchemas.js";
+import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
 import {
 	createRedisConnection,
 	currentRegion,
@@ -8,26 +9,26 @@ import {
 	waitForRedisReady,
 } from "./initRedis.js";
 import {
-	getRedisV2ConnectionConfig,
 	REDIS_V2_COMMAND_TIMEOUT_MS,
 	supportsUpstashShebangForRedisV2,
 } from "./initUtils/redisV2Config.js";
 
-const redisV2Config = getRedisV2ConnectionConfig({
-	cacheV2Url: process.env.CACHE_V2_UPSTASH_URL,
-	primaryCacheUrl: process.env.CACHE_URL,
-	currentRegion,
+const rawDragonflyUrl = process.env.CACHE_V2_DRAGONFLY_URL?.trim();
+const dragonflyUrl = rawDragonflyUrl
+	? getReachableDragonflyUrl(rawDragonflyUrl)
+	: undefined;
+
+export const redisV2: Redis = createRedisConnection({
+	cacheUrl: dragonflyUrl || "",
+	region: `${currentRegion}:v2`,
+	supportsUpstashShebang: false,
+	commandTimeout: REDIS_V2_COMMAND_TIMEOUT_MS,
 });
 
-export const hasRedisV2Config = Boolean(redisV2Config);
-
-export const redisV2: Redis = redisV2Config
-	? createRedisConnection(redisV2Config)
-	: redis;
-
 const alternateInstanceUrls: Partial<Record<RedisV2InstanceName, string>> = {
+	upstash: process.env.CACHE_V2_UPSTASH_URL?.trim() || undefined,
 	redis: process.env.CACHE_V2_REDIS_URL?.trim() || undefined,
-	dragonfly: process.env.CACHE_V2_DRAGONFLY_URL?.trim() || undefined,
+	dragonfly: dragonflyUrl,
 };
 
 const instancePool = new Map<RedisV2InstanceName, Redis>();

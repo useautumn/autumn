@@ -19,9 +19,14 @@ export type SkipSubscriptionSyncResult =
 export const shouldSkipSubscriptionSync = ({
 	subscription,
 	fullCustomer,
+	requireRecent = true,
 }: {
 	subscription: Stripe.Subscription;
 	fullCustomer: FullCustomer;
+	/** For sub.created, pass false: any prior Autumn management is enough to
+	 * skip. For sub.updated (default), only a recent stamp suppresses sync so
+	 * later genuine changes still get picked up. */
+	requireRecent?: boolean;
 }): SkipSubscriptionSyncResult => {
 	const alreadyLinked = fullCustomer.customer_products?.some(
 		(customerProduct) =>
@@ -33,6 +38,7 @@ export const shouldSkipSubscriptionSync = ({
 
 	const metadataDecision = isAutumnManagedSubscriptionMetadata({
 		metadata: subscription.metadata,
+		requireRecent,
 	});
 	if (metadataDecision.skip) {
 		return { skip: true, reason: metadataDecision.reason ?? "autumn metadata" };

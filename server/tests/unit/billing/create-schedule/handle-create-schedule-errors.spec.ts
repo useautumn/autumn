@@ -26,6 +26,7 @@ const buildContext = ({
 		stripeSubscriptionSchedule: existingSchedule,
 		productContexts: [],
 		scheduledPhaseContexts: [],
+		fullProducts: [],
 		fullCustomer: {
 			internal_id: "internal_cus_123",
 			customer_products: [],

@@ -8,14 +8,21 @@ const EMPTY_COUNTS: Record<string, ProductCounts> = {};
 
 /**
  * Fetch all products for the current org.
+ *
+ * Pass `allVersions: true` to include every version of each plan (the default
+ * route only returns the latest per public id).
  */
-export const useProductsQuery = () => {
+export const useProductsQuery = ({
+	allVersions = false,
+}: { allVersions?: boolean } = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();
 
 	const fetchProducts = async () => {
-		const { data } = await axiosInstance.get("/products/products");
+		const { data } = await axiosInstance.get("/products/products", {
+			params: allVersions ? { all_versions: true } : undefined,
+		});
 		return data;
 	};
 
@@ -28,7 +35,7 @@ export const useProductsQuery = () => {
 		products: ProductV2[];
 		groupToDefaults: Record<string, Record<string, FullProduct>>;
 	}>({
-		queryKey: buildKey(["products"]),
+		queryKey: buildKey(["products", allVersions ? "all" : "latest"]),
 		queryFn: fetchProducts,
 	});
 

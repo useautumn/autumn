@@ -54,7 +54,6 @@ export const SelectBillingCycle = ({
 				</SelectTrigger>
 				<SelectContent>
 					{Object.values(BillingInterval)
-						// .filter((interval) => interval !== BillingInterval.OneOff)
 						.filter((interval) => {
 							if (filterOneOff) {
 								return interval !== BillingInterval.OneOff;
