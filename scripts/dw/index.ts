@@ -28,9 +28,12 @@ async function main(): Promise<void> {
 		case "attach":
 			cmdAttach();
 			break;
+		case "identify":
+			cmdIdentify();
+			break;
 		default:
 			fatal(
-				`unknown subcommand: ${sub} (use: teardown | list | reset | logs | attach)`,
+				`unknown subcommand: ${sub} (use: setup | run | teardown | list | reset | logs | attach | identify)`,
 			);
 	}
 }
