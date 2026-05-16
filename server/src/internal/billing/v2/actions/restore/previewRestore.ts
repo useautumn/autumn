@@ -1,32 +1,41 @@
 import type {
 	AutumnBillingPlan,
 	RestoreParamsV1,
-	RestoreResponse,
-	RestoreSubscriptionResult,
+	StripeBillingPlan,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
-import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
 import { buildBillingVersionUpdates } from "./compute/buildBillingVersionUpdates";
 import { handleRestoreErrors } from "./errors/handleRestoreErrors";
 import { buildRestoreBillingContext } from "./setup/buildRestoreBillingContext";
 import { setupRestoreContext } from "./setup/setupRestoreContext";
 
-export const restore = async ({
+export type RestorePreviewEntry = {
+	stripe_subscription_id: string;
+	stripe_schedule_id: string | null;
+	stripe_billing_plan: StripeBillingPlan;
+};
+
+export type RestorePreviewResponse = {
+	customer_id: string;
+	previews: RestorePreviewEntry[];
+};
+
+/** Dry-run restore — evaluates the billing plan(s) without executing them. */
+export const previewRestore = async ({
 	ctx,
 	params,
 }: {
 	ctx: AutumnContext;
 	params: RestoreParamsV1;
-}): Promise<RestoreResponse> => {
+}): Promise<RestorePreviewResponse> => {
 	const { customer_id: customerId, subscription_ids: subscriptionIdsFilter } =
 		params;
 
 	const { fullCustomer, stripeCustomer, subscriptionIds } =
 		await setupRestoreContext({ ctx, customerId, subscriptionIdsFilter });
 
-	const restored: RestoreSubscriptionResult[] = [];
+	const previews: RestorePreviewEntry[] = [];
 
 	for (const stripeSubscriptionId of subscriptionIds) {
 		const billingContext = await buildRestoreBillingContext({
@@ -53,31 +62,12 @@ export const restore = async ({
 
 		handleRestoreErrors({ stripeBillingPlan, stripeSubscriptionId });
 
-		await executeStripeBillingPlan({
-			ctx,
-			billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
-			billingContext,
-		});
-
-		await executeAutumnBillingPlan({
-			ctx,
-			autumnBillingPlan,
-		});
-
-		restored.push({
+		previews.push({
 			stripe_subscription_id: stripeSubscriptionId,
 			stripe_schedule_id: billingContext.stripeSubscriptionSchedule?.id ?? null,
-			sub_action: stripeBillingPlan.subscriptionAction ? "update" : "noop",
-			schedule_action: stripeBillingPlan.subscriptionScheduleAction
-				? (stripeBillingPlan.subscriptionScheduleAction.type as
-						| "update"
-						| "create")
-				: "noop",
+			stripe_billing_plan: stripeBillingPlan,
 		});
 	}
 
-	return {
-		customer_id: customerId,
-		restored,
-	};
+	return { customer_id: customerId, previews };
 };
