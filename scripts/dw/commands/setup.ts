@@ -1,4 +1,4 @@
-import { fatal, log } from "../helpers/shell.ts";
+import { fatal, log, shInherit } from "../helpers/shell.ts";
 import { getCanonicalWorktree, getCurrentWorktree } from "../helpers/git.ts";
 import {
 	loadRegistry,
@@ -11,12 +11,19 @@ import { setupAgentWorktree, autoSetupTestOrg } from "../helpers/setup.ts";
 import { ensureComposeStack } from "../helpers/compose.ts";
 import { writeEnvLocalFiles } from "../helpers/env-files.ts";
 import { ensureEmulateRunning } from "../helpers/emulate.ts";
+import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 
 export async function cmdSetup(): Promise<RegistryEntry> {
 	if (process.env.NODE_ENV === "production") {
 		fatal("bun dw is disabled in production");
 	}
+
+	// Fresh Conductor/Superset worktrees have no node_modules; drizzle-kit needs tsx.
+	// Bun is fast no-op when lockfile matches installed tree.
+	log("ensuring deps installed (bun install)");
+	const installCode = shInherit("bun", ["install"], { cwd: PROJECT_ROOT });
+	if (installCode !== 0) fatal(`bun install failed (exit ${installCode})`);
 
 	const canonical = getCanonicalWorktree();
 	const cwd = getCurrentWorktree();
