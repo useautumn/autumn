@@ -1,13 +1,11 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { sh, fatal, log } from "./shell.ts";
 import { SHARED_DIR, PROJECT_ROOT } from "../constants.ts";
 
 export function listSqlFiles(dir: string): string[] {
-	const res = Bun.spawnSync(["ls", dir]);
-	const stdout = res.stdout ? new TextDecoder().decode(res.stdout).trim() : "";
-	if (!stdout) return [];
-	return stdout.split("\n").filter((f) => f.endsWith(".sql"));
+	if (!existsSync(dir)) return [];
+	return readdirSync(dir).filter((f) => f.endsWith(".sql"));
 }
 
 export function writeTempDrizzleConfig(outDir: string): string {
