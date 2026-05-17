@@ -1,0 +1,37 @@
+shared/db/auth-relations.ts
+  s_9f3ecd25311ee0::t_12f7878c5ad88f 11,25-32
+server/package.json
+  s_9f3ecd25311ee0::t_f204a62953a393 59
+shared/db/schema.ts
+  s_9f3ecd25311ee0::t_300ac90e99a856 146
+  s_9f3ecd25311ee0::t_c49aefdd375520 91
+bun.lock
+  ai_agent 343,495,581,596,931-932,1137-1138,1295-1296,1643-1668,2015-2018,2301,2775-2776,4969-4972,5075-5076,5629-5630,5941-5942,6175-6178,6823-6824,6869-6870,7571-7572,7721-7734,8469-8470,9651
+server/src/utils/auth.ts
+  s_9f3ecd25311ee0::t_6c149c5c5048fe 4
+  s_9f3ecd25311ee0::t_afe2d69688f84a 69-93
+  s_9f3ecd25311ee0::t_32947db26fe5c7 242-247
+package.json
+  s_9f3ecd25311ee0::t_1977d169ef0371 36
+  s_9f3ecd25311ee0::t_6b962b2a5b8b9e 50,63
+shared/db/auth-schema.ts
+  s_9f3ecd25311ee0::t_063fa5f73cf017 301
+  s_9f3ecd25311ee0::t_2613e926fee705 252-273
+  s_9f3ecd25311ee0::t_159e28ee4995c9 6
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "2c9bf37f7fadec46535ff24194522559f0508ecd",
+  "prompts": {},
+  "sessions": {
+    "s_9f3ecd25311ee0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1ce8b8db1ffe1VwvZyJZwJ567c",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
