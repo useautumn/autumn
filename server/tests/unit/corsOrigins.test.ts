@@ -51,6 +51,19 @@ describe("isAllowedOrigin", () => {
 			);
 		});
 
+		test("allows *.localhost subdomains (portless aliases)", () => {
+			process.env.NODE_ENV = "development";
+			expect(isAllowedOrigin("https://wt8.localhost")).toBe(
+				"https://wt8.localhost",
+			);
+			expect(isAllowedOrigin("https://wt17-api.localhost")).toBe(
+				"https://wt17-api.localhost",
+			);
+			expect(isAllowedOrigin("https://google.emulate.localhost")).toBe(
+				"https://google.emulate.localhost",
+			);
+		});
+
 		test("rejects external origins", () => {
 			process.env.NODE_ENV = "development";
 			expect(isAllowedOrigin("https://evil.com")).toBeUndefined();
@@ -61,6 +74,14 @@ describe("isAllowedOrigin", () => {
 			process.env.NODE_ENV = "development";
 			expect(isAllowedOrigin("http://localhost:3000/evil")).toBeUndefined();
 			expect(isAllowedOrigin("http://localhost:3000?x=1")).toBeUndefined();
+		});
+
+		test("rejects look-alike domains posing as localhost", () => {
+			process.env.NODE_ENV = "development";
+			expect(isAllowedOrigin("https://localhost.evil.com")).toBeUndefined();
+			expect(
+				isAllowedOrigin("https://wt8.localhost.evil.com"),
+			).toBeUndefined();
 		});
 	});
 });

@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
@@ -15,12 +16,33 @@ import { rewardRepo } from "@/internal/rewards/repos/index.js";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager.js";
 import { CacheType } from "@/utils/cacheUtils/CacheType.js";
 
+/**
+ * DB-only org cleanup — no HTTP calls, no connection lifecycle.
+ * Safe to call from setup scripts that already hold a db handle.
+ */
+export const clearOrgDbOnly = async ({
+	db,
+	orgId,
+	env,
+}: {
+	db: DrizzleCli;
+	orgId: string;
+	env: AppEnv;
+}) => {
+	await CusService.deleteByOrgId({ db, orgId, env });
+	await ProductService.deleteByOrgId({ db, orgId, env });
+	await rewardRepo.deleteByOrgId({ db, orgId, env });
+	await FeatureService.deleteByOrgId({ db, orgId, env });
+};
+
 export const clearOrg = async ({
 	orgSlug,
 	env,
+	skipStripeReset,
 }: {
 	orgSlug: string;
-	env?: AppEnv;
+	env: AppEnv;
+	skipStripeReset?: boolean;
 }) => {
 	if (env !== AppEnv.Sandbox) {
 		console.error("Cannot clear non-sandbox orgs");
@@ -61,35 +83,24 @@ export const clearOrg = async ({
 
 	const orgId = org.id;
 
-	// Reset default account using the new internal endpoint
-	// This will delete and recreate the Stripe account, which automatically removes all Stripe resources
-	console.log("   🔄 Resetting default account...");
-	try {
-		const data = await autumn.organization.resetDefaultAccount();
-		console.log(
-			"   ✅ Reset default account, new account:",
-			data?.new_account_id,
-		);
-	} catch (error: any) {
-		console.error("   ❌ Failed to reset default account:", error.message);
-		// Continue anyway as this is not critical
+	if (!skipStripeReset) {
+		// Reset default account using the new internal endpoint
+		// This will delete and recreate the Stripe account, which automatically removes all Stripe resources
+		console.log("   🔄 Resetting default account...");
+		try {
+			const data = await autumn.organization.resetDefaultAccount();
+			console.log(
+				"   ✅ Reset default account, new account:",
+				data?.new_account_id,
+			);
+		} catch (error: any) {
+			console.error("   ❌ Failed to reset default account:", error.message);
+			// Continue anyway as this is not critical
+		}
 	}
 
-	// Delete all customers from our database
-	await CusService.deleteByOrgId({ db, orgId, env });
-	console.log("   ✅ Deleted customers");
-
-	// Delete all products from our database
-	await ProductService.deleteByOrgId({ db, orgId, env });
-	console.log("   ✅ Deleted products");
-
-	// Delete all rewards from our database
-	await rewardRepo.deleteByOrgId({ db, orgId, env });
-	console.log("   ✅ Deleted rewards");
-
-	// Delete all features from our database
-	await FeatureService.deleteByOrgId({ db, orgId, env });
-	console.log("   ✅ Deleted features");
+	await clearOrgDbOnly({ db, orgId, env });
+	console.log("   ✅ Deleted customers, products, rewards, and features");
 
 	// migration_item_runs has no FK to migrations/org; clear by joining first.
 	// migrations cascades to migration_runs, so deleting it is enough.

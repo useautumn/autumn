@@ -51,19 +51,36 @@ export const stripeConnectSeederMiddleware = async (
 	const rawBody = await c.req.text();
 	const signature = c.req.header("stripe-signature") || "";
 
+	const skipVerify =
+		process.env.STRIPE_WEBHOOK_SKIP_VERIFY === "true" &&
+		process.env.NODE_ENV !== "production";
+
 	let event: Stripe.Event;
-	try {
-		event = await masterStripe.webhooks.constructEventAsync(
-			rawBody,
-			signature,
-			webhookSecret,
-		);
-	} catch (err: unknown) {
-		const message = err instanceof Error ? err.message : String(err);
-		if (process.env.NODE_ENV !== "development") {
-			logger.warn(`Webhook verification error: ${message}`);
+	if (skipVerify) {
+		// logger.warn(
+		// 	"[Stripe] SKIPPING webhook signature verification — non-prod only",
+		// );
+		try {
+			event = JSON.parse(rawBody) as Stripe.Event;
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			logger.warn(`Webhook body parse error (skip-verify): ${message}`);
+			return c.json({ error: message }, 400);
 		}
-		return c.json({ error: message }, 400);
+	} else {
+		try {
+			event = await masterStripe.webhooks.constructEventAsync(
+				rawBody,
+				signature,
+				webhookSecret,
+			);
+		} catch (err: unknown) {
+			const message = err instanceof Error ? err.message : String(err);
+			if (process.env.NODE_ENV !== "development") {
+				logger.warn(`Webhook verification error: ${message}`);
+			}
+			return c.json({ error: message }, 400);
+		}
 	}
 	// const event = (await c.req.json()) as Stripe.Event;
 
