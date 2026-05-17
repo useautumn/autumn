@@ -67,6 +67,31 @@ export const SignIn = () => {
 		}
 	}, [session, navigate, oauthRedirectUrl]);
 
+	// Passkey Conditional UI: browsers surface saved passkeys directly in the
+	// email field's autocomplete dropdown (no extra button needed). Requires
+	// the `webauthn` token in autoComplete and `autoFill: true` on signIn.
+	// Skipped during OAuth flows since the post-auth redirect would be lost.
+	useEffect(() => {
+		if (oauthRedirectUrl || session) return;
+		if (typeof window === "undefined") return;
+		// Some browsers (notably Firefox) don't support Conditional UI; signIn
+		// gracefully no-ops in that case. We still call it on supported browsers.
+		const controller = new AbortController();
+		(async () => {
+			try {
+				await authClient.signIn.passkey({
+					autoFill: true,
+					fetchOptions: { signal: controller.signal },
+				});
+			} catch {
+				// Aborts, cancels, and unsupported-browser errors are non-fatal.
+			}
+		})();
+		return () => {
+			controller.abort();
+		};
+	}, [oauthRedirectUrl, session]);
+
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
 		if (!email || !emailRegex.test(email)) {
@@ -181,7 +206,7 @@ export const SignIn = () => {
 						<div className="flex flex-col gap-2 w-full">
 							<Input
 								type="email"
-								placeholder="Email"
+								placeholder="Email or passkey"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								onKeyDown={(e) => {
@@ -191,7 +216,10 @@ export const SignIn = () => {
 								}}
 								required
 								className="text-base !w-full"
-								autoComplete="email"
+								// "webauthn" token activates Passkey Conditional UI on
+								// Chromium/Safari — saved passkeys appear in the input's
+								// autofill dropdown.
+								autoComplete="username webauthn"
 							/>
 
 							{/* Sign In Button */}
