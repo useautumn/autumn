@@ -3,6 +3,7 @@ import type { SetupPaymentParamsV1 } from "@api/billing/setupPayment/setupPaymen
 import type { InsertCustomerEntitlement } from "@autumn/shared";
 import {
 	type AppEnv,
+	BillingVersion,
 	CusProductStatus,
 	EntitlementSchema,
 	EntityBalanceSchema,
@@ -55,6 +56,7 @@ export const CustomerProductUpdateSchema = z.object({
 		scheduled_ids: z.array(z.string()).optional(),
 		subscription_ids: z.array(z.string()).optional(),
 		updated_at: z.number().optional(),
+		billing_version: z.enum(BillingVersion).optional(),
 		is_custom: z.boolean().optional(),
 	}),
 });

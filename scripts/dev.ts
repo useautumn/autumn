@@ -226,20 +226,33 @@ async function startDev() {
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
 
-			// Stripe CLI webhook tunnel — agent worktrees only, silently skip if CLI absent.
+			// Stripe CLI webhook tunnel — silently skip if CLI absent.
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
-			if (worktreeNum > 1) {
-				const stripeAvailable =
-					Bun.spawnSync(["which", "stripe"]).exitCode === 0;
-				if (stripeAvailable) {
-					const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
-					names.push("stripe");
-					colors.push("cyan");
-					const stripeCmd = `stripe listen --forward-to ${forwardUrl} --skip-verify`;
-					cmds.push(
-						isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`,
+			const stripeAvailable =
+				Bun.spawnSync(["which", "stripe"]).exitCode === 0;
+			if (stripeAvailable) {
+				const auth = Bun.spawnSync(
+					["stripe", "customers", "list", "--limit", "1"],
+					{ stdout: "pipe", stderr: "pipe" },
+				);
+				if (auth.exitCode !== 0) {
+					const stderr = new TextDecoder().decode(auth.stderr);
+					console.error(
+						"\nStripe CLI is installed but not authenticated (or key expired).",
 					);
+					console.error(`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`);
+					console.error("\nRun `stripe login` and try again.\n");
+					process.exit(1);
 				}
+				const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
+				names.push("stripe");
+				colors.push("cyan");
+				// --forward-connect-to forwards events from connected accounts;
+				// the /webhooks/connect/* endpoint expects Connect-mode events.
+				const stripeCmd = `stripe listen --forward-connect-to ${forwardUrl} --skip-verify`;
+				cmds.push(
+					isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`,
+				);
 			}
 
 			shellArgs = [
@@ -282,7 +295,7 @@ async function startDev() {
 				_proc: unknown,
 				exitCode: number | null,
 				_signalCode: number | null,
-				error: Error | null,
+				error?: unknown,
 			) {
 				if (error) {
 					console.error("Failed to start development servers:", error);
