@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentProps } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
@@ -29,7 +29,7 @@ export const Suggestion = ({
 	suggestion,
 	onClick,
 	className,
-	variant = "outline",
+	variant = "secondary",
 	size = "sm",
 	children,
 	...props

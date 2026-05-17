@@ -6,7 +6,7 @@ import {
 	MessageCircleIcon,
 } from "lucide-react";
 import { type ComponentProps, createContext, useContext } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { cn } from "@/lib/utils";
 
 const providers = {
@@ -236,7 +236,7 @@ export type OpenInTriggerProps = ComponentProps<typeof DropdownMenuTrigger>;
 export const OpenInTrigger = ({ children, ...props }: OpenInTriggerProps) => (
 	<DropdownMenuTrigger {...props} asChild>
 		{children ?? (
-			<Button type="button" variant="outline">
+			<Button type="button" variant="secondary">
 				Open in chat
 				<ChevronDownIcon className="size-4" />
 			</Button>

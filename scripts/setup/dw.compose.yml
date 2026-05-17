@@ -1,0 +1,23 @@
+# Per-worktree infra stack for `bun dw`.
+# Project name is set per-worktree via COMPOSE_PROJECT_NAME (e.g. autumn-wt-8).
+# Ports are substituted from env vars (DRAGONFLY_PORT, ELASTICMQ_PORT).
+
+services:
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly
+    container_name: ${COMPOSE_PROJECT_NAME}-dragonfly
+    ports:
+      - "${DRAGONFLY_PORT}:6379"
+    ulimits:
+      memlock: -1
+    restart: unless-stopped
+
+  elasticmq:
+    image: softwaremill/elasticmq-native:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-elasticmq
+    ports:
+      - "${ELASTICMQ_PORT}:9324"
+    volumes:
+      - ./elasticmq.conf:/opt/elasticmq.conf:ro
+    command: ["-Dconfig.file=/opt/elasticmq.conf"]
+    restart: unless-stopped

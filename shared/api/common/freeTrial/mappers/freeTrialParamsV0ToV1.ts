@@ -16,5 +16,6 @@ export const freeTrialParamsV0ToV1 = ({
 		duration_length: freeTrialParamsV0.length,
 		duration_type: freeTrialParamsV0.duration,
 		card_required: freeTrialParamsV0.card_required,
+		on_end: freeTrialParamsV0.on_end,
 	};
 };

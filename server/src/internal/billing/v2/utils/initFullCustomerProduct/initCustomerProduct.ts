@@ -36,6 +36,8 @@ export const initCustomerProduct = ({
 		externalId,
 		billingCycleAnchorResetsAt,
 		accessStartsAt,
+		previousCustomerProductId,
+		onTrialEnd,
 	} = initOptions ?? {};
 
 	const internalEntityId = fullCustomer.entity?.internal_id;
@@ -118,6 +120,9 @@ export const initCustomerProduct = ({
 		external_id: externalId ?? null,
 
 		stripe_checkout_session_id: null,
+
+		previous_customer_product_id: previousCustomerProductId ?? null,
+		on_trial_end: onTrialEnd ?? null,
 	};
 };
 

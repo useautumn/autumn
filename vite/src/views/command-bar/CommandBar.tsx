@@ -404,11 +404,17 @@ const CommandBar = () => {
 			: []),
 	];
 
+	const filteredNavigationItems = showResults
+		? navigationItems.filter((item) =>
+				item.title.toLowerCase().includes(search.toLowerCase()),
+			)
+		: navigationItems;
+
 	const renderMainPage = () => (
 		<>
-			{!showResults && (
+			{filteredNavigationItems.length > 0 && (
 				<CommandGroup className="p-1.5">
-					{navigationItems.map((item) => (
+					{filteredNavigationItems.map((item) => (
 						<CommandRow
 							key={item.title}
 							icon={item.icon}

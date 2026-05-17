@@ -1,10 +1,10 @@
 import { EllipsisVertical } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 
 export function TableDropdownMenuCell({
 	children,
@@ -17,7 +17,7 @@ export function TableDropdownMenuCell({
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button
-					variant="ghost"
+					variant="skeleton"
 					size="icon"
 					className="p-0 size-4"
 					onClick={(e) => e.stopPropagation()}

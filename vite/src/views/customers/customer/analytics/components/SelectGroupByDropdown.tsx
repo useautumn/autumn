@@ -10,6 +10,7 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -36,6 +37,7 @@ export const SelectGroupByDropdown = ({
 		availableGroupValues,
 		entityNames,
 		customerNames,
+		planNames,
 	} = useAnalyticsContext();
 
 	const currentGroupBy = searchParams.get("group_by") || "";
@@ -112,7 +114,7 @@ export const SelectGroupByDropdown = ({
 					className={cn(open && "btn-secondary-active")}
 				>
 					{currentGroupBy
-						? `Group: ${currentGroupBy === "customer_id" ? "Customer ID" : currentGroupBy === "entity_id" ? "Entity ID" : currentGroupBy}`
+						? `Group: ${currentGroupBy === "customer_id" ? "Customer ID" : currentGroupBy === "entity_id" ? "Entity ID" : currentGroupBy === "plan_id" ? "Plan" : currentGroupBy}`
 						: "Group By"}
 				</IconButton>
 			</DropdownMenuTrigger>
@@ -133,6 +135,7 @@ export const SelectGroupByDropdown = ({
 
 				<div className="max-h-[300px] overflow-y-auto pt-1">
 					<DropdownMenuItem
+						closeOnClick={false}
 						onClick={() => handleSelect({ property: null })}
 						className="flex items-center justify-between"
 					>
@@ -144,6 +147,7 @@ export const SelectGroupByDropdown = ({
 					<DropdownMenuSeparator />
 					{showCustomerIdOption && (
 						<DropdownMenuItem
+							closeOnClick={false}
 							onClick={() => handleSelect({ property: "customer_id" })}
 							className="flex items-center justify-between"
 						>
@@ -154,11 +158,21 @@ export const SelectGroupByDropdown = ({
 						</DropdownMenuItem>
 					)}
 					<DropdownMenuItem
+						closeOnClick={false}
 						onClick={() => handleSelect({ property: "entity_id" })}
 						className="flex items-center justify-between"
 					>
 						<span className="text-xs font-medium text-t2">Entity ID</span>
 						{currentGroupBy === "entity_id" && (
+							<Check className="ml-2 h-3 w-3 text-t3" />
+						)}
+					</DropdownMenuItem>
+					<DropdownMenuItem
+						onClick={() => handleSelect({ property: "plan_id" })}
+						className="flex items-center justify-between"
+					>
+						<span className="text-xs font-medium text-t2">Plan ID</span>
+						{currentGroupBy === "plan_id" && (
 							<Check className="ml-2 h-3 w-3 text-t3" />
 						)}
 					</DropdownMenuItem>
@@ -174,6 +188,7 @@ export const SelectGroupByDropdown = ({
 					{filteredOptions.map((property) => (
 						<DropdownMenuItem
 							key={property}
+							closeOnClick={false}
 							onClick={() => handleSelect({ property })}
 							className="flex items-center justify-between"
 						>
@@ -233,40 +248,50 @@ export const SelectGroupByDropdown = ({
 					{currentGroupBy && availableGroupValues.length > 0 && (
 						<>
 							<DropdownMenuSeparator />
-							<DropdownMenuLabel className="text-xs text-t4 font-normal">
-								Filter by value
-							</DropdownMenuLabel>
-							<DropdownMenuItem
-								onClick={() => setGroupFilter(null)}
-								className="flex items-center justify-between"
-							>
-								<span className="text-xs">All values</span>
-								{!groupFilter && <Check className="ml-2 h-3 w-3 text-t3" />}
-							</DropdownMenuItem>
-							{availableGroupValues.map((value: string) => {
-								const displayValue =
-									value === "AUTUMN_RESERVED"
-										? "Other values"
-										: currentGroupBy === "entity_id"
-											? (entityNames?.[value] ?? value)
-											: currentGroupBy === "customer_id"
-												? (customerNames?.[value] ?? value)
-												: value;
-								return (
-									<DropdownMenuItem
-										key={value}
-										onClick={() => setGroupFilter(value)}
-										className="flex items-center justify-between"
-									>
-										<span className="text-xs font-mono truncate max-w-[150px]">
-											{displayValue}
-										</span>
-										{groupFilter === value && (
-											<Check className="ml-2 h-3 w-3 text-t3 shrink-0" />
-										)}
-									</DropdownMenuItem>
-								);
-							})}
+							<DropdownMenuGroup>
+								<DropdownMenuLabel className="text-xs text-t4 font-normal">
+									Filter by value
+								</DropdownMenuLabel>
+								<DropdownMenuItem
+									closeOnClick={false}
+									onClick={() => setGroupFilter(null)}
+									className="flex items-center justify-between"
+								>
+									<span className="text-xs">All values</span>
+									{groupFilter === null && (
+										<Check className="ml-2 h-3 w-3 text-t3" />
+									)}
+								</DropdownMenuItem>
+								{availableGroupValues.map((value: string) => {
+									const displayValue =
+										value === "AUTUMN_RESERVED"
+											? "Other values"
+											: value === "" && currentGroupBy === "plan_id"
+												? "No plan"
+												: currentGroupBy === "entity_id"
+													? (entityNames?.[value] ?? value)
+													: currentGroupBy === "customer_id"
+														? (customerNames?.[value] ?? value)
+														: currentGroupBy === "plan_id"
+															? (planNames?.[value] ?? value)
+															: value;
+									return (
+										<DropdownMenuItem
+											key={value}
+											closeOnClick={false}
+											onClick={() => setGroupFilter(value)}
+											className="flex items-center justify-between"
+										>
+											<span className="text-xs font-mono truncate max-w-[150px]">
+												{displayValue}
+											</span>
+											{groupFilter === value && (
+												<Check className="ml-2 h-3 w-3 text-t3 shrink-0" />
+											)}
+										</DropdownMenuItem>
+									);
+								})}
+							</DropdownMenuGroup>
 						</>
 					)}
 				</div>

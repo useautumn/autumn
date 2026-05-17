@@ -29,6 +29,7 @@ function ColumnCheckboxItem<T>({ column }: { column: Column<T> }) {
 	return (
 		<DropdownMenuItem
 			key={column.id}
+			closeOnClick={false}
 			onClick={() => {
 				column.toggleVisibility(!isVisible);
 			}}

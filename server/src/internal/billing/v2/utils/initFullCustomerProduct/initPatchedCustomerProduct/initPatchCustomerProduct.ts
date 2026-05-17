@@ -99,11 +99,22 @@ export const initPatchCustomerProduct = ({
 		cusProduct: patchContext.finalCustomerProduct,
 	});
 
+	// Patch-style customization always carries custom items (setupPatchContext
+	// only runs when isCustomizePlanPatchStyle is true). Flip is_custom on the
+	// customer_product so version migrations skip it.
+	const customUpdates = billingContext.isCustom
+		? { is_custom: true }
+		: {};
+	if (billingContext.isCustom) {
+		patchContext.finalCustomerProduct.is_custom = true;
+	}
+
 	return {
 		finalCustomerProduct: patchContext.finalCustomerProduct,
 		customerProductUpdates: {
 			options: patchContext.finalCustomerProduct.options,
 			...trialUpdates,
+			...customUpdates,
 		},
 	};
 };

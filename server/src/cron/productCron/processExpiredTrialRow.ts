@@ -9,6 +9,7 @@ import type { InferSelectModel } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
+import { tryProcessRevertExpiry } from "@/internal/customers/cusProducts/actions/revertTrialExpiry";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 
@@ -23,6 +24,13 @@ export const processExpiredTrialRow = async ({
 	customer: InferSelectModel<typeof customers>;
 	defaultProducts: FullProduct[];
 }) => {
+	const reverted = await tryProcessRevertExpiry({
+		ctx,
+		customerProduct,
+		customerId: customer.id ?? "",
+	});
+	if (reverted) return;
+
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customer.internal_id,

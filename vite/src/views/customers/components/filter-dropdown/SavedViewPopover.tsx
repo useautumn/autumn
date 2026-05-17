@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/v2/buttons/Button";
 import { Input } from "@/components/v2/inputs/Input";
 import { cn } from "@/lib/utils";
+
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useSavedViewsQuery } from "../../hooks/useSavedViewsQuery";
@@ -63,17 +64,16 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 	return (
 		<Popover open={open} onOpenChange={setOpen}>
 			<PopoverTrigger asChild>
-				<Button
-					variant="skeleton"
-					size="sm"
+				<button
+					type="button"
 					className={cn(
-						"w-full !h-full text-t3 text-sm hover:bg-accent hover:text-t2 rounded-none gap-0",
+						"flex-1 flex items-center justify-center gap-1.5 rounded-br-lg px-2 py-1.5 text-xs text-t3 hover:text-t2 hover:bg-accent cursor-default",
 						open && "bg-accent text-t1",
 					)}
 				>
-					<Pin size={12} className="mr-2" />
+					<Pin size={10} />
 					Save
-				</Button>
+				</button>
 			</PopoverTrigger>
 			<PopoverContent
 				sideOffset={2}

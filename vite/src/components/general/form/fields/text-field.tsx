@@ -1,5 +1,5 @@
 import { FieldInfo } from "@/components/general/form/field-info";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/v2/inputs/Input";
 import { Label } from "@/components/ui/label";
 import { useFieldContext } from "@/hooks/form/form-context";
 import SmallSpinner from "../../SmallSpinner";
