@@ -56,7 +56,12 @@ export const CopyProductDialog = ({
 	const envLabel = effectiveEnv === AppEnv.Sandbox ? "Sandbox" : "Production";
 
 	const handleCopy = async () => {
-		// 1. If env is the same and id is same, throw error
+		// 1. If Name and Id is empty, throw error
+		if(!name || !id) {
+            toast.error("Name and id cannot be empty, id must contain only letters, numbers, underscores, hyphens");
+            return;
+        }
+		// 2. If env is the same and id is same, throw error
 		if (env === effectiveEnv && id === product.id) {
 			toast.error("Plan ID already exists");
 			return;
