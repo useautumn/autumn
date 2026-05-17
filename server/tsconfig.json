@@ -44,10 +44,7 @@
 			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"],
 
 			"@better-auth/core": ["../node_modules/@better-auth/core"],
-			"@better-auth/core/*": ["../node_modules/@better-auth/core/*"],
-
-			"hono": ["../node_modules/hono"],
-			"hono/*": ["../node_modules/hono/*"]
+			"@better-auth/core/*": ["../node_modules/@better-auth/core/*"]
 		}
 	},
 	"include": ["src", "tests", "scripts", "experiments", "perf"],

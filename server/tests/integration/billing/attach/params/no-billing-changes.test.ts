@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, AttachParamsV0Input } from "@autumn/shared";
+import type {
+	ApiCustomerV3,
+	AttachParamsV0Input,
+	AttachParamsV1Input,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoStripeSubscription } from "@tests/integration/billing/utils/expectNoStripeSubscription";
@@ -72,4 +76,71 @@ test.concurrent(`${chalk.yellowBright("no_billing_changes: attach with no_billin
 		org: ctx.org,
 		env: ctx.env,
 	});
+});
+
+/**
+ * Regression: attaching with no_billing_changes:true on a customer whose
+ * current paid product is linked to a Stripe subscription used to fail with
+ * "paid but no stripe subscription is linked to it", because skipBillingFetching
+ * short-circuited setupStripeBillingContext and the guard read the (undefined)
+ * runtime-fetched stripeSubscription. Fix decouples no_billing_changes from
+ * skipBillingFetching: writes are still suppressed, but the sub is read so its
+ * id carries over to the new cusProduct.
+ */
+test.concurrent(`${chalk.yellowBright("no_billing_changes: carries subscription_ids forward when current paid product is linked")}`, async () => {
+	const customerId = "no-billing-changes-paid-current";
+
+	const messagesItem = items.monthlyMessages({ includedUsage: 100 });
+	const pro = products.pro({
+		id: "pro-nbc-paid-current",
+		items: [messagesItem],
+	});
+	const premium = products.premium({
+		id: "premium-nbc-paid-current",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: true, paymentMethod: "success" }),
+			s.products({ list: [pro, premium] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	const beforeFullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const beforeProCusProduct = beforeFullCustomer.customer_products.find(
+		(cp) => cp.product.id === pro.id,
+	);
+	const expectedSubscriptionIds = beforeProCusProduct?.subscription_ids ?? [];
+	expect(expectedSubscriptionIds.length).toBeGreaterThan(0);
+
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: premium.id,
+		no_billing_changes: true,
+	});
+
+	const afterCustomer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer: afterCustomer,
+		active: [premium.id],
+		notPresent: [pro.id],
+	});
+
+	const afterFullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const afterPremiumCusProduct = afterFullCustomer.customer_products.find(
+		(cp) => cp.product.id === premium.id,
+	);
+
+	expect(afterPremiumCusProduct?.subscription_ids).toEqual(
+		expectedSubscriptionIds,
+	);
 });
