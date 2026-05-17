@@ -253,3 +253,92 @@ test.concurrent(
 		expect(enterpriseCusProduct!.previous_customer_product_id).toBeNull();
 	},
 );
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 4: Cross-entity revert — pro on entity 1, enterprise revert on entity 2
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Scenario:
+ * - Customer has pro ($20/mo) on entity 1 with a Stripe subscription
+ * - Attach enterprise with on_end: "revert" on entity 2
+ *
+ * Expected:
+ * - Pro on entity 1 stays active (not paused -- different entity)
+ * - Enterprise trial on entity 2 has no previous_customer_product_id
+ * - Trial expires to nothing on entity 2
+ */
+test.concurrent(
+	`${chalk.yellowBright("trial-revert-attach 4: cross-entity revert — pro on entity 1, enterprise revert on entity 2")}`,
+	async () => {
+		const customerId = "trial-revert-cross-entity";
+
+		const proMessages = items.monthlyMessages({ includedUsage: 500 });
+		const pro = products.pro({ id: "pro", items: [proMessages] });
+
+		const enterpriseMessages = items.monthlyMessages({ includedUsage: 2000 });
+		const enterprisePrice = items.monthlyPrice({ price: 50 });
+		const enterprise = products.base({
+			id: "enterprise",
+			items: [enterpriseMessages, enterprisePrice],
+		});
+
+		const { autumnV2, ctx, entities, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, enterprise] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: pro.id, entityIndex: 0 }),
+			],
+		});
+
+		// Attach enterprise with revert trial on entity 2
+		const params: AttachParamsV1Input = {
+			customer_id: customerId,
+			entity_id: entities[1].id,
+			plan_id: enterprise.id,
+			redirect_mode: "if_required",
+			customize: {
+				free_trial: {
+					duration_length: 14,
+					duration_type: FreeTrialDuration.Day,
+					card_required: false,
+					on_end: "revert",
+				},
+			},
+		};
+
+		await autumnV2.billing.attach<AttachParamsV1Input>(params);
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			inStatuses: ALL_STATUSES,
+			withEntities: true,
+		});
+
+		// Find pro on entity 1 and enterprise on entity 2
+		const proCusProduct = fullCustomer.customer_products.find(
+			(cp) => cp.product_id === pro.id && cp.entity_id === entities[0].id,
+		);
+		const enterpriseCusProduct = fullCustomer.customer_products.find(
+			(cp) =>
+				cp.product_id === enterprise.id && cp.entity_id === entities[1].id,
+		);
+
+		expect(proCusProduct).toBeDefined();
+		expect(enterpriseCusProduct).toBeDefined();
+
+		// Pro on entity 1 stays active (different entity, not paused)
+		expect(proCusProduct!.status).toBe(CusProductStatus.Active);
+
+		// Enterprise on entity 2: revert trial with no previous product link
+		expect(enterpriseCusProduct!.status).toBe(CusProductStatus.Active);
+		expect(enterpriseCusProduct!.on_trial_end).toBe("revert");
+		expect(enterpriseCusProduct!.previous_customer_product_id).toBeNull();
+		expect(enterpriseCusProduct!.trial_ends_at).toBeDefined();
+	},
+);
