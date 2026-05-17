@@ -57,10 +57,11 @@ export const CopyProductDialog = ({
 
 	const handleCopy = async () => {
 		// 1. If Name and Id is empty, throw error
-		if(!name || !id) {
-            toast.error("Name and id cannot be empty, id must contain only letters, numbers, underscores, hyphens");
-            return;
-        }
+		if (!name || !id) {
+			if (!name) toast.error("Name cannot be empty");
+			else toast.error("ID cannot be empty");
+			return;
+		}
 		// 2. If env is the same and id is same, throw error
 		if (env === effectiveEnv && id === product.id) {
 			toast.error("Plan ID already exists");
