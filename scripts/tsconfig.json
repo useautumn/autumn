@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"target": "ES2022",
 		"module": "ESNext",
-		"lib": ["ES2022"],
+		"lib": ["ES2022", "DOM", "DOM.Iterable"],
 		"moduleResolution": "bundler",
 		"resolveJsonModule": true,
 		"typeRoots": ["./node_modules/@types", "../node_modules/@types"],
@@ -17,9 +17,20 @@
 		"allowImportingTsExtensions": true,
 		"allowSyntheticDefaultImports": true,
 		"paths": {
+			"@/*": ["../server/src/*"],
 			"@server/*": ["../server/src/*"],
 			"@shared/*": ["../shared/*"],
-			"@tests/*": ["../server/tests/*"]
+			"@tests/*": ["../server/tests/*"],
+			"@api/*": ["../shared/api/*"],
+			"@models/*": ["../shared/models/*"],
+			"@utils/*": ["../shared/utils/*"],
+			"@lua/*": ["../server/src/_luaScripts/*"],
+			"@autumn/shared": ["../shared/index.ts"],
+			"@autumn/shared/*": ["../shared/*"],
+			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
+			"autumn-js/backend/hono": ["../packages/autumn-js/src/backend/adapters/hono.ts"],
+			"@useautumn/sdk": ["../packages/sdk/src/index.ts"],
+			"@useautumn/sdk/*": ["../packages/sdk/src/*"]
 		}
 	},
 	"include": ["**/*.ts", "**/*.js"],

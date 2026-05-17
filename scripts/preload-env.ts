@@ -25,15 +25,10 @@ for (const rel of [
 	const abs = join(__preloadRoot, rel);
 	if (!existsSync(abs)) continue;
 	const contents = readFileSync(abs, "utf-8");
-	let loadedCount = 0;
 	for (const line of contents.split(/\r?\n/)) {
 		const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
 		if (!m) continue;
 		// Worktree-local overrides win over infisical + server/.env.
 		process.env[m[1]] = m[2];
-		loadedCount++;
-	}
-	if (loadedCount > 0) {
-		console.log(`[preload] loaded ${rel} — AUTUMN_TEST_BASE_URL=${process.env.AUTUMN_TEST_BASE_URL || "(unset)"}`);
 	}
 }
