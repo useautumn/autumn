@@ -1,0 +1,17 @@
+vite/src/views/auth/SignIn.tsx
+  ai_agent 70-94,209,219-222
+vite/src/views/settings/sections/AccountSection.tsx
+  ai_agent 1-7,10,18-39
+vite/src/views/settings/sections/components/PasskeysManager.tsx
+  ai_agent 1-216
+vite/src/lib/auth-client.ts
+  ai_agent 3,18
+vite/package.json
+  ai_agent 27
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "7edd99678d8685e2a362660b6e0095d89705dd9c",
+  "prompts": {}
+}
