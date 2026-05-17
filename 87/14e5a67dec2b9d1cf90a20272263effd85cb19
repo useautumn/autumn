@@ -1,0 +1,9 @@
+vite/src/views/main-sidebar/components/OrgDropdown.tsx
+  ai_agent 122-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "8714e5a67dec2b9d1cf90a20272263effd85cb19",
+  "prompts": {}
+}
