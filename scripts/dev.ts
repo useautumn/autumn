@@ -18,7 +18,7 @@ const SERVER_PORT = process.env.SERVER_PORT
 const CHECKOUT_PORT = process.env.CHECKOUT_PORT
 	? Number.parseInt(process.env.CHECKOUT_PORT, 10)
 	: 3001 + portOffset;
-const skipWorkers = worktreeNum > 1;
+const skipWorkers = false;
 const isProductionMode = process.argv.includes("--production");
 
 const envFile = process.env.ENV_FILE ?? ".env";
@@ -147,7 +147,7 @@ async function startDev() {
 		}
 
 		if (worktreeNum > 1) {
-			console.log(`Starting worktree ${worktreeNum} (no workers)...\n`);
+			console.log(`Starting worktree ${worktreeNum}...\n`);
 		} else if (isProductionMode) {
 			console.log("Starting local servers with NODE_ENV=production...\n");
 		} else {
@@ -203,13 +203,15 @@ async function startDev() {
 						? `"cd server && bun ${workersScript}"`
 						: `"cd server && bun ${workersScript}"`,
 				);
+			}
 
+			if (worktreeNum === 1) {
 				names.push("trigger");
 				colors.push("cyan");
 				cmds.push(
-				isWindows
-					? `"bunx trigger.dev@${triggerDevVersion} dev"`
-					: `"bunx trigger.dev@${triggerDevVersion} dev"`,
+					isWindows
+						? `"bunx trigger.dev@${triggerDevVersion} dev"`
+						: `"bunx trigger.dev@${triggerDevVersion} dev"`,
 				);
 			}
 
@@ -223,6 +225,35 @@ async function startDev() {
 					? `"cd apps/checkout && set VITE_PORT=${CHECKOUT_PORT} && bun dev"`
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
+
+			// Stripe CLI webhook tunnel — silently skip if CLI absent.
+			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
+			const stripeAvailable =
+				Bun.spawnSync(["which", "stripe"]).exitCode === 0;
+			if (stripeAvailable) {
+				const auth = Bun.spawnSync(
+					["stripe", "customers", "list", "--limit", "1"],
+					{ stdout: "pipe", stderr: "pipe" },
+				);
+				if (auth.exitCode !== 0) {
+					const stderr = new TextDecoder().decode(auth.stderr);
+					console.error(
+						"\nStripe CLI is installed but not authenticated (or key expired).",
+					);
+					console.error(`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`);
+					console.error("\nRun `stripe login` and try again.\n");
+					process.exit(1);
+				}
+				const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
+				names.push("stripe");
+				colors.push("cyan");
+				// --forward-connect-to forwards events from connected accounts;
+				// the /webhooks/connect/* endpoint expects Connect-mode events.
+				const stripeCmd = `stripe listen --forward-connect-to ${forwardUrl} --skip-verify`;
+				cmds.push(
+					isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`,
+				);
+			}
 
 			shellArgs = [
 				isWindows ? "cmd" : "sh",
@@ -239,12 +270,23 @@ async function startDev() {
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
 				VITE_APP_ENV: viteAppEnv,
-				BUN_INSTALL_BIN: process.env.BUN_INSTALL_BIN ?? bunInstallBin,
+				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
 				...(worktreeNum > 1 && {
-					CLIENT_URL: `http://localhost:${VITE_PORT}`,
-					BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
-					VITE_BACKEND_URL: `http://localhost:${SERVER_PORT}`,
-					VITE_FRONTEND_URL: `http://localhost:${VITE_PORT}`,
+					CLIENT_URL:
+						process.env.CLIENT_URL ?? `http://localhost:${VITE_PORT}`,
+					BETTER_AUTH_URL:
+						process.env.BETTER_AUTH_URL ??
+						`http://localhost:${SERVER_PORT}`,
+					VITE_BACKEND_URL:
+						process.env.VITE_BACKEND_URL ??
+						`http://localhost:${SERVER_PORT}`,
+					VITE_FRONTEND_URL:
+						process.env.VITE_FRONTEND_URL ??
+						`http://localhost:${VITE_PORT}`,
+					EMULATE_GOOGLE_URL:
+						process.env.EMULATE_GOOGLE_URL ??
+						"https://google.emulate.localhost",
+					STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 				}),
 			},
 			stdout: "inherit",
@@ -253,7 +295,7 @@ async function startDev() {
 				_proc: unknown,
 				exitCode: number | null,
 				_signalCode: number | null,
-				error: Error | null,
+				error?: unknown,
 			) {
 				if (error) {
 					console.error("Failed to start development servers:", error);
