@@ -1,42 +1,7 @@
-server/src/internal/customers/cursorPaginatedFullCusQuery.ts
-  s_b1a331f4eba7de::t_f21389ca5c093d 8
-  s_b1a331f4eba7de::t_b2518d52bde710 63
-  s_b1a331f4eba7de::t_20c038cf880e82 1-6,19
-shared/api/entities/crud/listEntitiesParamsV2_3.ts
-  s_b1a331f4eba7de::t_f239a4c8f420d4 1-47
-shared/api/customers/crud/listCustomersParamsV2_3.ts
-  s_b1a331f4eba7de::t_d9aa10385d7a2c 1-47
-server/src/internal/entities/repos/cursorListEntitiesQuery.ts
-  s_b1a331f4eba7de::t_790e9afecafa47 1-145
-server/src/internal/entities/handlers/handleListEntitiesV2.ts
-  s_b1a331f4eba7de::t_012b5b807ec3e0 23
-  s_b1a331f4eba7de::t_73dba5bc4d1292 6,9-10,12,14-15,17,21,30,32,45-48,50-53,55-87,90-159,165-166,168-171,173-184,186-188,191-200,204-206,208,210-226,228
-  s_b1a331f4eba7de::t_db2ce29ff40659 54
-shared/api/entities/crud/index.ts
-  s_b1a331f4eba7de::t_ca6372157b8020 5
-server/src/internal/customers/CusBatchService.ts
-  s_b1a331f4eba7de::t_5801d64136b60c 9,12-13,19
-  s_b1a331f4eba7de::t_bbde0bbff78a69 150-252
-shared/api/customers/crud/index.ts
-  s_b1a331f4eba7de::t_7d54d27061660c 5
-server/src/internal/customers/handlers/handleListCustomersV2.ts
-  s_b1a331f4eba7de::t_ff22535915c957 15,17,22-28,70-71,75-76,78-81,83-94,96,98-101,103
-  s_b1a331f4eba7de::t_5f9b1c7ccebb33 6,12,18,29-54,56-69
-  s_b1a331f4eba7de::t_63ce9f9cd59244 5,7-8,11,55
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.4.8",
   "base_commit_sha": "c5b52ade6c0b423dc386277a8461f1efed6c5152",
-  "prompts": {},
-  "sessions": {
-    "s_b1a331f4eba7de": {
-      "agent_id": {
-        "tool": "opencode",
-        "id": "ses_1e32cf270ffeqS0jhcOhXor3n6",
-        "model": "claude-opus-4-7"
-      },
-      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
-    }
-  }
+  "prompts": {}
 }
