@@ -24,6 +24,7 @@
 		"@autumn/shared": "workspace:*",
 		"@base-ui/react": "^1.4.1",
 		"@better-auth/dash": "catalog:",
+		"@better-auth/passkey": "catalog:",
 		"@fortawesome/free-brands-svg-icons": "^6.7.2",
 		"@fortawesome/react-fontawesome": "^0.2.2",
 		"@monaco-editor/react": "^4.7.0",
