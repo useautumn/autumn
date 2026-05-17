@@ -41,13 +41,7 @@
 
 			// Explicitly set drizzle-orm path to avoid monorepo issues
 			"drizzle-orm": ["../node_modules/drizzle-orm"],
-			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"],
-
-			"@better-auth/core": ["../node_modules/@better-auth/core"],
-			"@better-auth/core/*": ["../node_modules/@better-auth/core/*"],
-
-			"hono": ["../node_modules/hono"],
-			"hono/*": ["../node_modules/hono/*"]
+			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"]
 		}
 	},
 	"include": ["src", "tests", "scripts", "experiments", "perf"],
