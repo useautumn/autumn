@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, writeFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { log, fatal } from "./shell.ts";
 import { getWorktreeList, getCurrentWorktree } from "./git.ts";
 import { deleteBranch } from "./neon.ts";
@@ -9,7 +8,6 @@ import {
 	MAX_WORKTREE,
 	BRANCH_NAME_RE,
 	INACTIVITY_MS,
-	SHARED_DIR,
 } from "../constants.ts";
 import type { Registry, RegistryEntry } from "../types.ts";
 
@@ -83,8 +81,6 @@ export function reconcile(registry: Registry): Registry {
 	for (const o of orphaned) {
 		if (!o.branchName || !BRANCH_NAME_RE.test(o.branchName)) continue;
 		deleteBranch(o.branchName);
-		const localDir = join(SHARED_DIR, "drizzle-local", o.branchName);
-		if (existsSync(localDir)) rmSync(localDir, { recursive: true, force: true });
 	}
 	return next;
 }

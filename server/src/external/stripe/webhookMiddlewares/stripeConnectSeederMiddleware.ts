@@ -57,9 +57,9 @@ export const stripeConnectSeederMiddleware = async (
 
 	let event: Stripe.Event;
 	if (skipVerify) {
-		logger.warn(
-			"[Stripe] SKIPPING webhook signature verification — non-prod only",
-		);
+		// logger.warn(
+		// 	"[Stripe] SKIPPING webhook signature verification — non-prod only",
+		// );
 		try {
 			event = JSON.parse(rawBody) as Stripe.Event;
 		} catch (err: unknown) {

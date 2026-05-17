@@ -19,7 +19,12 @@ export function generateAndApplyMigration(
 	branchName: string,
 	databaseUrl: string,
 ): void {
-	const outDir = join(SHARED_DIR, "drizzle-local", branchName);
+	// Use the worktree's own shared/drizzle/ as the migration dir (matches
+	// drizzle.config.ts out: "./drizzle"). Empty it first so the baseline
+	// generated for this fresh Neon branch isn't a diff against the canonical
+	// repo's migration history — subsequent `bun db:generate` runs then emit
+	// clean incrementals against this worktree's actual DB state.
+	const outDir = join(SHARED_DIR, "drizzle");
 	if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
 	mkdirSync(outDir, { recursive: true });
 

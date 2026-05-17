@@ -11,9 +11,6 @@ import { tmuxSessionName, killTmuxSession } from "../helpers/tmux.ts";
 import { removeComposeStack, removeAllAutumnComposeStacks } from "../helpers/compose.ts";
 import { removeEnvLocalFiles } from "../helpers/env-files.ts";
 import { stopEmulateAndPortless } from "../helpers/emulate.ts";
-import { SHARED_DIR } from "../constants.ts";
-import { existsSync, rmSync } from "node:fs";
-import { join } from "node:path";
 import type { Registry } from "../types.ts";
 
 export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
@@ -25,15 +22,6 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 			if (entry.branchName) deleteBranch(entry.branchName);
 			unregisterPortlessAliases(entry.worktreeNum);
 			killTmuxSession(tmuxSessionName(entry.worktreeNum));
-			if (entry.branchName) {
-				const localDir = join(
-					SHARED_DIR,
-					"drizzle-local",
-					entry.branchName,
-				);
-				if (existsSync(localDir))
-					rmSync(localDir, { recursive: true, force: true });
-			}
 		}
 		removeAllAutumnComposeStacks();
 		const next: Registry = {};
@@ -62,10 +50,6 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 	unregisterPortlessAliases(entry.worktreeNum);
 	killTmuxSession(tmuxSessionName(entry.worktreeNum));
 	removeComposeStack(entry.worktreeNum);
-	if (entry.branchName) {
-		const localDir = join(SHARED_DIR, "drizzle-local", entry.branchName);
-		if (existsSync(localDir)) rmSync(localDir, { recursive: true, force: true });
-	}
 	delete registry[cwd];
 	saveRegistry(registry);
 	removeEnvLocalFiles();
