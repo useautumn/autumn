@@ -11,6 +11,7 @@ import type {
 } from "@autumn/shared";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { startSpan, endSpan, traceAsync, flushBeforeReload } from "@/utils/perfTrace";
 import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
 
 export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
@@ -47,25 +48,35 @@ export const impersonateUser = async ({
 	userId: string;
 	organizationId?: string;
 }) => {
+	startSpan("impersonate.total");
 	try {
-		await authClient.admin.stopImpersonating();
-	} catch (error) {
-		console.error(error);
+		try {
+			await traceAsync("impersonate.stopImpersonating", () =>
+				authClient.admin.stopImpersonating(),
+			);
+		} catch (error) {
+			console.error(error);
+		}
+		const res = await traceAsync("impersonate.impersonateUser", () =>
+			authClient.admin.impersonateUser({ userId }),
+		);
+		if (res.error) {
+			toast.error("Something went wrong");
+			endSpan("impersonate.total");
+			return;
+		}
+		if (organizationId) {
+			await traceAsync("impersonate.setActiveOrg", () =>
+				authClient.organization.setActive({ organizationId }),
+			);
+		}
+		endSpan("impersonate.total");
+		flushBeforeReload("impersonate");
+		window.location.reload();
+	} catch (err) {
+		endSpan("impersonate.total");
+		throw err;
 	}
-	const res = await authClient.admin.impersonateUser({
-		userId,
-	});
-
-	if (res.error) {
-		toast.error("Something went wrong");
-		return;
-	}
-
-	if (organizationId) {
-		await authClient.organization.setActive({ organizationId });
-	}
-
-	window.location.reload();
 };
 
 export const getCusEntHoverTexts = ({
