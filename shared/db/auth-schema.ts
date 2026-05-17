@@ -3,6 +3,7 @@ import {
 	boolean,
 	foreignKey,
 	index,
+	integer,
 	jsonb,
 	pgTable,
 	text,
@@ -248,6 +249,28 @@ export const oauthConsent = pgTable("oauth_consent", {
 	updatedAt: timestamp("updated_at", { withTimezone: true }),
 }).enableRLS();
 
+export const passkey = pgTable(
+	"passkey",
+	{
+		id: text("id").primaryKey(),
+		name: text("name"),
+		publicKey: text("public_key").notNull(),
+		userId: text("user_id")
+			.notNull()
+			.references(() => user.id, { onDelete: "cascade" }),
+		credentialID: text("credential_id").notNull(),
+		counter: integer("counter").notNull(),
+		deviceType: text("device_type").notNull(),
+		backedUp: boolean("backed_up").notNull(),
+		transports: text("transports"),
+		createdAt: timestamp("created_at", { withTimezone: true }).$defaultFn(
+			() => /* @__PURE__ */ new Date(),
+		),
+		aaguid: text("aaguid"),
+	},
+	(table) => [index("passkey_userId_idx").on(table.userId)],
+).enableRLS();
+
 export const bannedUser = pgTable("banned_user", {
 	id: text("id").primaryKey(),
 	userId: text("user_id")
@@ -275,6 +298,7 @@ export const authSchema = {
 	oauthRefreshToken,
 	oauthAccessToken,
 	oauthConsent,
+	passkey,
 };
 
 export type User = typeof user.$inferSelect;

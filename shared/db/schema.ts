@@ -88,6 +88,7 @@ import {
 	oauthClient,
 	oauthConsent,
 	oauthRefreshToken,
+	passkey,
 	session,
 	user,
 	verification,
@@ -142,6 +143,7 @@ export {
 	oauthRefreshToken,
 	// Tables
 	organizations,
+	passkey,
 	// Relations
 	organizationsRelations,
 	priceRelations,
