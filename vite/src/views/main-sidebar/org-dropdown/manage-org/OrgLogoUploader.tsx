@@ -1,9 +1,10 @@
+import { ImageIcon } from "lucide-react";
 import axios from "axios";
 import type React from "react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
+import { FormLabel } from "@/components/v2/form/FormLabel";
 import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -11,47 +12,34 @@ import { getBackendErr } from "@/utils/genUtils";
 import { getOrgLogoUrl } from "@/utils/orgUtils";
 
 const MAX_SIZE_MB = 10;
-const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
-interface OrgLogoUploaderProps {
-	initialLogoUrl?: string;
-}
-
-const OrgLogoUploader: React.FC<OrgLogoUploaderProps> = ({
-	initialLogoUrl,
-}) => {
+const OrgLogoUploader: React.FC = () => {
 	const { org, mutate } = useOrg();
 	const [error, setError] = useState<string | null>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [uploading, setUploading] = useState(false);
 	const axiosInstance = useAxiosInstance();
 	const [logoVersion, setLogoVersion] = useState(0);
-
 	const [removing, setRemoving] = useState(false);
 
-	// Removal logic
 	const handleRemove = async () => {
 		setRemoving(true);
 		try {
 			const { error } = await authClient.organization.update({
-				data: {
-					logo: "",
-				},
+				data: { logo: "" },
 			});
-
 			if (error) {
 				toast.error(error.message || "Failed to remove logo");
 				return;
 			}
-
 			await mutate();
-			setRemoving(false);
-		} catch (error) {
+		} catch {
+			toast.error("Failed to remove logo");
+		} finally {
 			setRemoving(false);
 		}
 	};
 
-	// Upload logic
 	const handleUploadClick = () => {
 		inputRef.current?.click();
 	};
@@ -59,34 +47,29 @@ const OrgLogoUploader: React.FC<OrgLogoUploaderProps> = ({
 	const uploadToSupabase = async (file: File) => {
 		const { data } = await axiosInstance.get("/organization/upload_url");
 		const { signedUrl } = data;
-
 		await axios.put(signedUrl, file, {
-			headers: {
-				"Content-Type": file.type,
-			},
+			headers: { "Content-Type": file.type },
 		});
 	};
 
 	const handleUploading = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
-
 		if (!file) return;
-
+		setError(null);
+		if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+			setError(`File must be under ${MAX_SIZE_MB}MB`);
+			return;
+		}
 		setUploading(true);
 		try {
 			await uploadToSupabase(file);
-
 			const { error } = await authClient.organization.update({
-				data: {
-					logo: getOrgLogoUrl(org.id),
-				},
+				data: { logo: getOrgLogoUrl(org.id) },
 			});
-
 			if (error) {
 				toast.error(error.message || "Failed to update logo");
 				return;
 			}
-
 			await mutate();
 			setLogoVersion(logoVersion + 1);
 			toast.success("Successfully uploaded logo");
@@ -98,57 +81,53 @@ const OrgLogoUploader: React.FC<OrgLogoUploaderProps> = ({
 	};
 
 	return (
-		<div className="flex flex-col items-start">
-			<FieldLabel>Logo</FieldLabel>
-			<div className="flex items-center gap-4 rounded w-full max-w-xs">
+		<div className="flex flex-col gap-1">
+			<FormLabel>
+				<span className="text-t2">Logo</span>
+			</FormLabel>
+			<div className="flex items-center gap-3">
 				<input
 					ref={inputRef}
 					type="file"
 					accept="image/*"
-					style={{ display: "none" }}
+					className="hidden"
 					onChange={handleUploading}
 				/>
 				{org.logo ? (
 					<img
-						src={org.logo + "?v=" + logoVersion}
-						alt="Org Logo Preview"
-						className="w-16 h-16 rounded object-cover border"
+						src={`${org.logo}?v=${logoVersion}`}
+						alt="Organization logo"
+						className="w-10 h-10 rounded-md object-cover border border-border"
 					/>
 				) : (
-					<div className="w-16 h-16 rounded flex items-center justify-center text-stone-400 border">
-						<span className="text-2xl">+</span>
+					<div className="w-10 h-10 rounded-md flex items-center justify-center border border-border border-dashed text-t4">
+						<ImageIcon className="size-4" />
 					</div>
 				)}
-				<div className="flex flex-col gap-2">
-					<div className="flex gap-2 items-center">
+				<div className="flex items-center gap-2">
+					<Button
+						variant="secondary"
+						size="sm"
+						onClick={handleUploadClick}
+						isLoading={uploading}
+					>
+						Upload
+					</Button>
+					{org.logo && (
 						<Button
-							variant="outline"
+							variant="secondary"
 							size="sm"
-							type="button"
-							onClick={handleUploadClick}
-							className="shadow-none"
-							shimmer={uploading}
+							onClick={handleRemove}
+							isLoading={removing}
+							className="text-destructive"
 						>
-							{uploading ? "Uploading..." : "Upload"}
+							Remove
 						</Button>
-						{org.logo && (
-							<Button
-								variant="ghost"
-								className="text-red-500 hover:text-red-600"
-								size="sm"
-								onClick={handleRemove}
-								shimmer={removing}
-							>
-								Remove
-							</Button>
-						)}
-					</div>
-					<span className="text-xs text-gray-500">
-						Recommended size 1:1, up to 10MB.
-					</span>
-					{error && <span className="text-xs text-red-500">{error}</span>}
+					)}
 				</div>
+				<span className="text-xs text-t4">1:1, up to {MAX_SIZE_MB}MB</span>
 			</div>
+			{error && <span className="text-xs text-destructive">{error}</span>}
 		</div>
 	);
 };

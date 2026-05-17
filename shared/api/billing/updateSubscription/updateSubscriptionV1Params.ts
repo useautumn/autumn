@@ -62,6 +62,7 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 			.meta({
 				internal: true,
 			}),
+
 	});
 
 const UPDATE_FIELDS = [

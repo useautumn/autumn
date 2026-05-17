@@ -48,9 +48,10 @@ export const buildStripeSubscriptionCreateAction = ({
 
 		collection_method: "charge_automatically",
 
-		payment_behavior: isCustomPaymentMethod
-			? "default_incomplete"
-			: "error_if_incomplete",
+		payment_behavior: billingContext.paymentBehaviorIntent ??
+			(!paymentMethod || isCustomPaymentMethod
+				? "default_incomplete"
+				: "allow_incomplete"),
 
 		add_invoice_items: willCreateInvoiceEndOfCycle
 			? undefined

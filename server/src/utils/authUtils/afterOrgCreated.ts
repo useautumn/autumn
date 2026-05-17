@@ -37,10 +37,14 @@ export const afterOrgCreated = async ({
 	org,
 	user,
 	createStripeAccount = true,
+	pkey,
+	livePkey,
 }: {
 	org: Organization | BetterAuthOrganization;
 	user: User;
 	createStripeAccount?: boolean;
+	pkey?: string;
+	livePkey?: string;
 }) => {
 	logger.info(`Org created: ${org.id} (${org.slug})`);
 	const { id, slug, createdAt } = org;
@@ -88,8 +92,8 @@ export const afterOrgCreated = async ({
 					sandbox_app_id: sandboxApp?.id ?? "",
 					live_app_id: liveApp?.id ?? "",
 				},
-				test_pkey: generatePublishableKey(AppEnv.Sandbox),
-				live_pkey: generatePublishableKey(AppEnv.Live),
+				test_pkey: pkey ?? generatePublishableKey(AppEnv.Sandbox),
+				live_pkey: livePkey ?? generatePublishableKey(AppEnv.Live),
 			},
 		});
 

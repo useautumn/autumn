@@ -7,6 +7,7 @@ import type {
 import { tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
+import { resolveInternalProductIdForEvent } from "@/internal/balances/events/resolveInternalProductIdForEvent.js";
 import {
 	buildEventInfo,
 	initEvent,
@@ -56,11 +57,13 @@ const queueEvent = ({
 	body,
 	fullSubject,
 	deductions,
+	internalProductId,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	fullSubject: FullSubject;
 	deductions: TrackDeduction[];
+	internalProductId: string | null;
 }): void => {
 	if (body.skip_event) return;
 
@@ -75,6 +78,7 @@ const queueEvent = ({
 			customerId: body.customer_id,
 			entityId: body.entity_id,
 			deductions,
+			internalProductId,
 		}),
 	);
 };
@@ -139,7 +143,12 @@ export const runRedisTrackV3 = async ({
 		mutationLogs,
 	});
 
-	queueEvent({ ctx, body, fullSubject, deductions });
+	const internalProductId = resolveInternalProductIdForEvent({
+		fullSubject: updatedFullSubject,
+		mutationLogs,
+	});
+
+	queueEvent({ ctx, body, fullSubject, deductions, internalProductId });
 
 	const { balance, balances } = await deductionToTrackResponseV2({
 		ctx,

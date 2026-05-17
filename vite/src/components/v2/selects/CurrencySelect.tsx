@@ -1,21 +1,6 @@
-import { Check, ChevronsUpDown } from "lucide-react";
-import { useState } from "react";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/v2/buttons/Button";
 import { cn } from "@/lib/utils";
 import { stripeCurrencyCodes } from "@/utils/constants/stripeCurrencyCodes";
+import { SearchableSelect } from "./SearchableSelect";
 
 export const CurrencySelect = ({
 	defaultCurrency,
@@ -28,54 +13,19 @@ export const CurrencySelect = ({
 	className?: string;
 	disabled?: boolean;
 }) => {
-	const [open, setOpen] = useState(false);
-
 	return (
-		<Popover open={open} onOpenChange={setOpen}>
-			<PopoverTrigger asChild>
-				<Button
-					variant="secondary"
-					role="combobox"
-					aria-expanded={open}
-					className={cn("w-full justify-between", className)}
-					disabled={disabled}
-					disableActive
-				>
-					{defaultCurrency ? defaultCurrency : "Select currency..."}
-					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent className="p-0 w-[var(--anchor-width)]">
-				<Command className="p-0">
-					<CommandInput placeholder="Search currency..." />
-					<CommandEmpty>No currency found.</CommandEmpty>
-					<CommandList className="p-0">
-						<CommandGroup className="p-0">
-							{stripeCurrencyCodes.map((currency) => (
-								<CommandItem
-									key={currency.code}
-									value={currency.code}
-									onSelect={(value) => {
-										setDefaultCurrency(value.toUpperCase());
-										setOpen(false);
-									}}
-									className="p-2 flex items-center justify-between"
-								>
-									{currency.currency} - {currency.code}
-									<Check
-										className={cn(
-											"mr-2 h-4 w-4",
-											defaultCurrency === currency.code
-												? "opacity-100"
-												: "opacity-0",
-										)}
-									/>
-								</CommandItem>
-							))}
-						</CommandGroup>
-					</CommandList>
-				</Command>
-			</PopoverContent>
-		</Popover>
+		<SearchableSelect
+			value={defaultCurrency}
+			onValueChange={(value) => setDefaultCurrency(value.toUpperCase())}
+			options={stripeCurrencyCodes}
+			getOptionValue={(currency) => currency.code}
+			getOptionLabel={(currency) => `${currency.currency} - ${currency.code}`}
+			searchable
+			searchPlaceholder="Search currency..."
+			placeholder="Select currency..."
+			emptyText="No currency found."
+			disabled={disabled}
+			triggerClassName={cn("w-full", className)}
+		/>
 	);
 };

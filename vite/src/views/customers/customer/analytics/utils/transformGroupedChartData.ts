@@ -94,7 +94,9 @@ export function transformGroupedData({
 
 	// Handle special case for column-based operators (not a property)
 	const groupByColumn =
-		groupBy === "customer_id" || groupBy === "entity_id"
+		groupBy === "customer_id" ||
+		groupBy === "entity_id" ||
+		groupBy === "plan_id"
 			? groupBy
 			: `properties.${groupBy}`;
 
@@ -109,13 +111,18 @@ export function transformGroupedData({
 		.filter((m) => m.name !== "period" && m.name !== groupByColumn)
 		.map((m) => m.name);
 
+	// For plan_id, an empty-string group value is meaningful ("no plan") and
+	// must be preserved as its own series. For property-based grouping, empty
+	// means the property is absent, which we drop.
+	const allowEmpty = groupBy === "plan_id";
+
 	// Collect all unique group values
 	const groupValues = new Set<string>();
 	for (const row of events.data) {
 		const groupValue = row[groupByColumn];
-		if (groupValue !== undefined && groupValue !== null && groupValue !== "") {
-			groupValues.add(String(groupValue));
-		}
+		if (groupValue === undefined || groupValue === null) continue;
+		if (groupValue === "" && !allowEmpty) continue;
+		groupValues.add(String(groupValue));
 	}
 
 	// Pivot data: group by period and create columns for each group value
@@ -126,7 +133,13 @@ export function transformGroupedData({
 
 	for (const row of events.data) {
 		const period = row.period;
-		const groupValue = String(row[groupByColumn] || "unknown");
+		const rawGroupValue = row[groupByColumn];
+		const groupValue =
+			rawGroupValue === undefined || rawGroupValue === null
+				? "unknown"
+				: allowEmpty
+					? String(rawGroupValue)
+					: String(rawGroupValue || "unknown");
 
 		if (!pivotedMap.has(period)) {
 			pivotedMap.set(period, { period });
@@ -178,6 +191,7 @@ export function generateChartConfig({
 	originalColors,
 	entityNames,
 	customerNames,
+	planNames,
 }: {
 	events: EventsData;
 	features: Feature[];
@@ -185,6 +199,7 @@ export function generateChartConfig({
 	originalColors: string[];
 	entityNames?: Record<string, string>;
 	customerNames?: Record<string, string>;
+	planNames?: Record<string, string>;
 }): ChartSeriesConfig[] {
 	const colorsToUse = groupBy ? CHART_COLORS : originalColors;
 
@@ -220,10 +235,14 @@ export function generateChartConfig({
 		let displayGroupValue: string;
 		if (groupValue === "AUTUMN_RESERVED") {
 			displayGroupValue = "Other values";
+		} else if (groupBy === "plan_id" && groupValue === "") {
+			displayGroupValue = "No plan";
 		} else if (groupBy === "entity_id" && entityNames?.[groupValue]) {
 			displayGroupValue = entityNames[groupValue];
 		} else if (groupBy === "customer_id" && customerNames?.[groupValue]) {
 			displayGroupValue = customerNames[groupValue];
+		} else if (groupBy === "plan_id" && planNames?.[groupValue]) {
+			displayGroupValue = planNames[groupValue];
 		} else {
 			displayGroupValue = groupValue;
 		}

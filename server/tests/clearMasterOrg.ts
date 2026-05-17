@@ -125,15 +125,15 @@ export const clearMasterOrg = async () => {
 			);
 
 		// Flush v2 cache when distinct and non-regional.
-		const cacheV2Url = process.env.CACHE_V2_UPSTASH_URL?.trim();
+		const cacheV2Url = process.env.CACHE_V2_DRAGONFLY_URL?.trim();
 		if (redisV2 !== redis && cacheV2Url) {
-			if (!isRegionalRedisUrl(cacheV2Url)) {
+			if (cacheV2Url.toLowerCase().includes("localhost")) {
 				await redisV2.flushall();
-				console.log(chalk.green("✅ Cleared CACHE_V2_URL redis.\n"));
+				console.log(chalk.green("✅ Cleared CACHE_V2_DRAGONFLY_URL redis.\n"));
 			} else {
 				console.log(
 					chalk.yellow(
-						"\n⚠️  Skipping CACHE_V2_URL flush (regional Redis URL detected).\n",
+						"\n⚠️  Skipping CACHE_V2_DRAGONFLY_URL flush (not on localhost).\n",
 					),
 				);
 			}

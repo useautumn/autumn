@@ -108,8 +108,11 @@ export class AutumnInt {
 			this.headers["org-config"] = JSON.stringify(orgConfig);
 		}
 
+		const envBase = process.env.AUTUMN_TEST_BASE_URL;
+		const envBaseUrl = envBase ? `${envBase.replace(/\/$/, "")}/v1` : null;
 		this.baseUrl =
 			baseUrl ||
+			envBaseUrl ||
 			(liveUrl ? "https://api.useautumn.com/v1" : "http://localhost:8080/v1");
 
 		if (skipCacheDeletion) {
@@ -1019,15 +1022,18 @@ export class AutumnInt {
 		run: async (params: {
 			id: string;
 			dry_run?: boolean;
+			lazy_run?: boolean;
 		}): Promise<{
 			migration_id: string;
 			dry_run: boolean;
+			lazy_run: boolean;
 			run_id: string;
 		}> => {
 			const data = await this.post(`/migrations.run`, params);
 			return data as {
 				migration_id: string;
 				dry_run: boolean;
+				lazy_run: boolean;
 				run_id: string;
 			};
 		},

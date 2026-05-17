@@ -9,7 +9,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";

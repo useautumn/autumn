@@ -99,7 +99,8 @@ const getIsOutgoing = ({
 	return Boolean(
 		updates.canceled ||
 			updates.ended_at ||
-			updates.status === CusProductStatus.Expired,
+			updates.status === CusProductStatus.Expired ||
+			updates.status === CusProductStatus.Paused,
 	);
 };
 

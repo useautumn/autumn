@@ -4,6 +4,7 @@ import {
 	ArrowSquareOutIcon,
 	ArrowsClockwiseIcon,
 	BracketsSquareIcon,
+	BroomIcon,
 	CaretDownIcon,
 	PencilSimpleIcon,
 	SubtractIcon,
@@ -54,6 +55,7 @@ export function CustomerActions() {
 	const [actionsOpen, setActionsOpen] = useState(false);
 	const [portalLoading, setPortalLoading] = useState(false);
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
+	const [clearCacheLoading, setClearCacheLoading] = useState(false);
 	const { customer } = useCusQuery();
 	const { features } = useFeaturesQuery();
 	const { org } = useOrg();
@@ -87,6 +89,23 @@ export function CustomerActions() {
 		isOpen: actionsOpen,
 		setIsOpen: setActionsOpen,
 	});
+
+	const handleClearCache = async () => {
+		if (!customer) return;
+		setClearCacheLoading(true);
+		try {
+			await CusService.clearCache({
+				axios: axiosInstance,
+				customer_id: customer.id || customer.internal_id,
+			});
+			toast.success("Customer cache cleared");
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to clear cache"));
+		} finally {
+			setClearCacheLoading(false);
+			setActionsOpen(false);
+		}
+	};
 
 	const handleOpenBillingPortal = async () => {
 		if (!customer) return;
@@ -138,10 +157,11 @@ export function CustomerActions() {
 						<CaretDownIcon className="size-3.5 text-t3" />
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end">
+				<DropdownMenuContent align="end" keepMounted>
 					<DropdownMenuItem
 						onClick={() => setIsModalOpen(true)}
 						className="flex gap-2"
+						shortcut="e"
 					>
 						<PencilSimpleIcon />
 						Edit customer
@@ -150,6 +170,7 @@ export function CustomerActions() {
 						<DropdownMenuItem
 							onClick={() => setCreateEntityOpen(true)}
 							className="flex gap-2"
+							shortcut="n"
 						>
 							<SubtractIcon />
 							Create entity
@@ -158,6 +179,7 @@ export function CustomerActions() {
 					<DropdownMenuItem
 						onClick={() => setAddCouponOpen(true)}
 						className="flex gap-2"
+						shortcut="c"
 					>
 						<TicketIcon />
 						Add coupon
@@ -165,25 +187,11 @@ export function CustomerActions() {
 					<DropdownMenuItem
 						onClick={() => setShowObjectOpen(true)}
 						className="flex gap-2"
+						shortcut="o"
 					>
 						<BracketsSquareIcon />
 						Show customer object
 					</DropdownMenuItem>
-					{/* Old sync sheet — superseded by sync-stripe-v2 below. Kept for reference.
-					{stripeCustomerId &&
-						customer?.processor?.type === ProcessorType.Stripe && (
-							<DropdownMenuItem
-								onClick={() => {
-									setSheet({ type: "sync-stripe" });
-									setActionsOpen(false);
-								}}
-								className="flex gap-2"
-							>
-								<ArrowsClockwiseIcon />
-								Sync from Stripe
-							</DropdownMenuItem>
-						)}
-					*/}
 					{stripeCustomerId &&
 						customer?.processor?.type === ProcessorType.Stripe && (
 							<DropdownMenuItem
@@ -192,6 +200,7 @@ export function CustomerActions() {
 									setActionsOpen(false);
 								}}
 								className="flex gap-2"
+								shortcut="y"
 							>
 								<ArrowsClockwiseIcon />
 								Sync from Stripe
@@ -236,9 +245,21 @@ export function CustomerActions() {
 								);
 							}}
 							className="flex gap-2"
+							shortcut="p"
 						>
 							<ArrowSquareOutIcon className="size-3.5" />
 							Open in Admin Panel
+						</DropdownMenuItem>
+					)}
+					{isAdmin && (
+						<DropdownMenuItem
+							onClick={handleClearCache}
+							className="flex gap-2"
+							disabled={clearCacheLoading}
+							shortcut="x"
+						>
+							<BroomIcon />
+							{clearCacheLoading ? "Clearing..." : "Clear cache"}
 						</DropdownMenuItem>
 					)}
 					{((customer?.processor?.id &&
@@ -267,6 +288,7 @@ export function CustomerActions() {
 								);
 							}}
 							className="flex gap-2"
+							shortcut="r"
 						>
 							<ArrowSquareOutIcon className="size-3.5" />
 							Open in RevenueCat
@@ -277,6 +299,7 @@ export function CustomerActions() {
 						onClick={() => setDeleteOpen(true)}
 						variant="destructive"
 						className="flex gap-2 text-red-500 !hover:bg-red-500"
+						shortcut="d"
 					>
 						<TrashIcon />
 						Delete customer

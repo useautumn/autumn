@@ -5,6 +5,10 @@ export const RestoreParamsV1Schema = z.object({
 		description:
 			"Autumn customer whose Stripe state should be restored to match Autumn's customer_products.",
 	}),
+	subscription_ids: z.array(z.string()).optional().meta({
+		description:
+			"Optional whitelist of Stripe subscription IDs to restore. Defaults to every paid-recurring subscription on the customer.",
+	}),
 });
 
 export type RestoreParamsV1 = z.infer<typeof RestoreParamsV1Schema>;

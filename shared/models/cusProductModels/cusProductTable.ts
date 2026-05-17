@@ -66,6 +66,9 @@ export const customerProducts = pgTable(
 		// enable_plan_immediately, this links the row to the pending checkout session
 		// so the webhook can patch in subscription_ids on completion (or expire on abandonment).
 		stripe_checkout_session_id: text("stripe_checkout_session_id"),
+
+		previous_customer_product_id: text("previous_customer_product_id"),
+		on_trial_end: text("on_trial_end"),
 	},
 	(table) => [
 		foreignKey({

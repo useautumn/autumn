@@ -8,7 +8,7 @@ export function CancelModeSection() {
 	const { form, formValues, formContext } = useUpdateSubscriptionFormContext();
 	const { customerProduct } = formContext;
 
-	const isDefault = customerProduct.product.is_default;
+	const isDefault = customerProduct.product?.is_default ?? false;
 	const isScheduled = customerProduct.status === CusProductStatus.Scheduled;
 	const hasSubscription =
 		customerProduct.subscription_ids &&

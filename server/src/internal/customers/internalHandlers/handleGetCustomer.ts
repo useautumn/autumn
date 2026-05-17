@@ -1,5 +1,5 @@
 import {
-	CusProductStatus,
+	ALL_STATUSES,
 	CustomerExpand,
 	type FullCusProduct,
 	Scopes,
@@ -37,12 +37,7 @@ export const handleGetCustomer = createRoute({
 			idOrInternalId: customer_id,
 			withEntities: true,
 			expand,
-			inStatuses: [
-				CusProductStatus.Active,
-				CusProductStatus.PastDue,
-				CusProductStatus.Scheduled,
-				CusProductStatus.Expired,
-			],
+			inStatuses: ALL_STATUSES,
 		});
 
 		const [testClockFrozenTimeMs, autoTopupsWithLimits, rewards] =

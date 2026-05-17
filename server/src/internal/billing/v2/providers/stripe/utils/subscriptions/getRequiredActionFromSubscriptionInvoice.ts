@@ -24,14 +24,17 @@ export const getRequiredActionFromSubscriptionInvoice = async ({
 	invoiceId,
 	hasPaymentMethod,
 	invoiceMode,
+	enablePlanImmediately,
 }: {
 	stripeClient: Stripe;
 	invoiceId: string;
 	hasPaymentMethod: boolean;
 	invoiceMode?: InvoiceMode;
+	enablePlanImmediately?: boolean;
 }): Promise<BillingResponseRequiredAction | undefined> => {
-	// Should enable prooduct immediately, can pay later
+	// Should enable product immediately, can pay later
 	if (invoiceMode?.enableProductImmediately) return undefined;
+	if (enablePlanImmediately) return undefined;
 
 	// Fetch invoice with expanded payments to get payment intent status
 	const invoice = await getStripeInvoice({

@@ -8,7 +8,17 @@ import {
 	Tinybird,
 	t,
 } from "@tinybirdco/sdk";
-import { tinybirdConfig } from "../tinybirdUtils.js";
+
+const TINYBIRD_US_EAST_API_URL = process.env.TINYBIRD_US_EAST_API_URL;
+const TINYBIRD_US_EAST_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
+
+const migrationTinybirdConfig =
+	TINYBIRD_US_EAST_API_URL && TINYBIRD_US_EAST_TOKEN
+		? {
+				baseUrl: TINYBIRD_US_EAST_API_URL,
+				token: TINYBIRD_US_EAST_TOKEN,
+			}
+		: null;
 
 export type MigrationItemEventStatus = "succeeded" | "skipped" | "failed";
 
@@ -110,7 +120,7 @@ export const listMigrationItemEventsEndpoint = defineEndpoint(
 	},
 );
 
-export const migrationTinybird = tinybirdConfig
+export const migrationTinybird = migrationTinybirdConfig
 	? new Tinybird({
 			datasources: {
 				itemEvents: migrationItemEventsDatasource,
@@ -118,7 +128,7 @@ export const migrationTinybird = tinybirdConfig
 			pipes: {
 				listItemEvents: listMigrationItemEventsEndpoint,
 			},
-			...tinybirdConfig,
+			...migrationTinybirdConfig,
 			devMode: false,
 		})
 	: null;
