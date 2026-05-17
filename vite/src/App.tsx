@@ -8,6 +8,7 @@ import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
 import { useSession } from "./lib/auth-client";
 import { identifyUser } from "./utils/posthogTracking";
+import { restoreAndAlertIfPending } from "@/utils/perfTrace";
 import { AdminView } from "./views/admin/AdminView";
 import { EdgeConfigView } from "./views/admin/edge-config/EdgeConfigView";
 import { ImpersonateRedirect } from "./views/admin/ImpersonateRedirect";
@@ -64,6 +65,11 @@ export default function App() {
 			}
 		}
 	}, [data]);
+
+	useEffect(() => {
+		restoreAndAlertIfPending();
+	}, []);
+
 	return (
 		<BrowserRouter>
 			<Routes>

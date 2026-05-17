@@ -3,6 +3,12 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/v2/buttons/Button";
 import { authClient } from "@/lib/auth-client";
+import {
+	endSpan,
+	flushBeforeReload,
+	startSpan,
+	traceAsync,
+} from "@/utils/perfTrace";
 import { useAxiosInstance } from "../../services/useAxiosInstance";
 import { useAdmin } from "./hooks/useAdmin";
 
@@ -25,14 +31,17 @@ export function ImpersonateRedirect() {
 				return;
 			}
 
+			startSpan("impersonate.total");
+
 			try {
 				// Step 1: Get a user ID for this org from the API
 				setStatus("Finding org member...");
-				const { data } = await axiosInstance.get(
-					`/admin/org-member?org_id=${orgId}`,
+				const { data } = await traceAsync("impersonate.fetchOrgMember", () =>
+					axiosInstance.get(`/admin/org-member?org_id=${orgId}`),
 				);
 				console.log("Data:", data);
 				if (!data.userId) {
+					endSpan("impersonate.total");
 					setError("No member found for this org");
 					return;
 				}
@@ -40,32 +49,44 @@ export function ImpersonateRedirect() {
 				// Step 2: Stop any existing impersonation
 				setStatus("Stopping existing impersonation...");
 				try {
-					await authClient.admin.stopImpersonating();
+					await traceAsync("impersonate.stopImpersonating", () =>
+						authClient.admin.stopImpersonating(),
+					);
 				} catch {
 					// Ignore - might not be impersonating
 				}
 
 				// Step 3: Impersonate the user
 				setStatus("Impersonating user...");
-				const impersonateResult = await authClient.admin.impersonateUser({
-					userId: data.userId,
-				});
+				const impersonateResult = await traceAsync(
+					"impersonate.impersonateUser",
+					() =>
+						authClient.admin.impersonateUser({
+							userId: data.userId,
+						}),
+				);
 
 				if (impersonateResult.error) {
+					endSpan("impersonate.total");
 					setError(`Failed to impersonate: ${impersonateResult.error.message}`);
 					return;
 				}
 
 				// Step 4: Set the active organization
 				setStatus("Setting active organization...");
-				await authClient.organization.setActive({
-					organizationId: orgId,
-				});
+				await traceAsync("impersonate.setActiveOrg", () =>
+					authClient.organization.setActive({
+						organizationId: orgId,
+					}),
+				);
 
 				// Step 5: Navigate to the redirect path
 				setStatus("Redirecting...");
+				endSpan("impersonate.total");
+				flushBeforeReload("impersonate");
 				window.location.href = redirect;
 			} catch (err: unknown) {
+				endSpan("impersonate.total");
 				const errorMessage =
 					err instanceof Error ? err.message : "Unknown error";
 				setError(`Error: ${errorMessage}`);
