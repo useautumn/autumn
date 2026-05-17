@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { ALL_SCOPES, ac, invitation, roles, schemas } from "@autumn/shared";
 import { oauthProvider } from "@better-auth/oauth-provider";
+import { passkey } from "@better-auth/passkey";
 import { type BetterAuthOptions, betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
@@ -64,6 +65,31 @@ const emulateGoogleUrl =
 // OAuth flow leaves and returns via a third-party host (emulate.dev), so the
 // state cookie must be SameSite=None+Secure to survive the round trip.
 const isHttpsBaseUrl = process.env.BETTER_AUTH_URL?.startsWith("https://");
+
+/**
+ * Passkey (WebAuthn) is bound to the FRONTEND origin where the browser calls
+ * `navigator.credentials.{create,get}`. Derive rpID/origin from CLIENT_URL so
+ * Portless worktrees (e.g. https://wt44.localhost) and production both work
+ * without explicit env vars.
+ *
+ * - rpID: the hostname only (no scheme, no port). Browsers treat `*.localhost`
+ *   as a secure context, so passkeys work in dev over Portless TLS.
+ * - origin: full URL with scheme. Multiple origins may be supplied for envs
+ *   that need to accept both Portless and direct localhost.
+ */
+const passkeyFrontendUrl =
+	process.env.CLIENT_URL ?? "http://localhost:3000";
+const passkeyOrigins: string[] = [passkeyFrontendUrl];
+if (process.env.VITE_FRONTEND_URL && process.env.VITE_FRONTEND_URL !== passkeyFrontendUrl) {
+	passkeyOrigins.push(process.env.VITE_FRONTEND_URL);
+}
+const passkeyRpID = (() => {
+	try {
+		return new URL(passkeyFrontendUrl).hostname;
+	} catch {
+		return "localhost";
+	}
+})();
 
 const options = {
 	baseURL: process.env.BETTER_AUTH_URL,
@@ -211,6 +237,12 @@ const options = {
 					);
 				},
 			},
+		}),
+
+		passkey({
+			rpID: passkeyRpID,
+			rpName: "Autumn",
+			origin: passkeyOrigins.length === 1 ? passkeyOrigins[0]! : passkeyOrigins,
 		}),
 
 		organization({
