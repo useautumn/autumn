@@ -1,0 +1,109 @@
+shared/api/versionUtils/versionChangeUtils/VersionChange.ts
+  s_908ac486543512::t_52313da43b0edf 31
+shared/api/events/list/eventsListParamsV2_3.ts
+  s_908ac486543512::t_f1110ae1a34eba 4
+  s_e5368e46428350::t_b8d2d4f04922ca 1-3,5-55
+server/src/internal/analytics/actions/eventActions.ts
+  s_dd2f0a17e042f5::t_ccbdf2e6146be4 5,15
+server/src/internal/analytics/actions/listByCursor.ts
+  s_908ac486543512::t_a488d0bbe836cf 7-11
+  s_908ac486543512::t_157ace8165a391 1-5
+  s_908ac486543512::t_8de35ce85c6943 15
+  s_908ac486543512::t_631879718f970c 67,83
+  s_908ac486543512::t_ebff3e6bd98cc3 78
+  s_908ac486543512::t_527353e3e862f0 117
+  s_dd2f0a17e042f5::t_3b1faeb20ab950 6,12-14,16-66,68-77,79-82,84-116,118-145
+shared/api/models.ts
+  s_908ac486543512::t_f1110ae1a34eba 60-61
+  s_908ac486543512::t_f32cf886761826 75,77
+server/src/external/tinybird/initTinybird.ts
+  s_da90f017012427::t_8a046c994a0a82 94-95
+  s_da90f017012427::t_f8a4d8969cbc63 50
+  s_da90f017012427::t_a4c42722b55b95 7
+server/tests/temp/events-list-v22-vs-v23-parity.test.ts
+  s_908ac486543512::t_132b8ad8b2d99a 1-87,114,132,136
+  s_908ac486543512::t_157ace8165a391 88-113,115-131,133-135,137-247
+server/src/internal/events/handlers/handleExternalListEvents.ts
+  s_6065bb2417055d::t_7207854ac94e38 1-4,12,19-51,53-57,59-70,72-73
+  s_908ac486543512::t_6a14da29278225 7,18
+  s_908ac486543512::t_8eaad554ff65e2 6,8-11
+shared/api/common/epochUtils.ts
+  s_908ac486543512::t_ed9bbfa1ea3443 12-25
+  s_908ac486543512::t_768b77f8081953 26-34
+server/src/internal/analytics/actions/listEvents.ts
+  s_908ac486543512::t_946d82727ea816 107
+  s_908ac486543512::t_368893bdcb1307 2-5
+server/tinybird/pipes/list_events_cursor.pipe
+  s_c2ea6ab9c492f8::t_a444910014372e 1-61
+shared/api/events/list/eventsListResponseV2_3.ts
+  s_e5368e46428350::t_4adb8b4d584c34 2-4,7-10
+  s_908ac486543512::t_f1110ae1a34eba 1,5-6
+server/src/external/tinybird/pipes/listEventsCursorPipe.ts
+  s_766a4e6489bf9a::t_21b835c79df575 1-57
+server/src/external/tinybird/pipes/index.ts
+  s_da90f017012427::t_ef94ed0607fe27 36-41
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "33db249cc3f3395a38b29523f2f84d5f0c372508",
+  "prompts": {},
+  "sessions": {
+    "s_6065bb2417055d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c893af02ffe6GiYmXmRoCP4dQ",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_766a4e6489bf9a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8a1adcdffeyTrr2Dq3GadLH4",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_908ac486543512": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8e718f6ffem3nYswa9rcmYLs",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_c2ea6ab9c492f8": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8a1db2dffegCokliJ4zQmiZu",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_da90f017012427": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8a0d8c8ffedYMYbjvAPMtwPl",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_dd2f0a17e042f5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8a106efffeKuXYZcuQRNSnot",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_e5368e46428350": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8a1634affeg67eUfZWmnW2Xv",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
