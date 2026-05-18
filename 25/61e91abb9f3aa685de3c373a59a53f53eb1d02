@@ -1,0 +1,28 @@
+vite/src/views/settings/sections/components/PasskeysManager.tsx
+  s_e9396fabd73bc5::t_50dc0cb81ffc86 49,55
+  s_e9396fabd73bc5::t_787411d160950c 69-77
+  s_e9396fabd73bc5::t_98f4052482314d 103-108,110-112,124
+  s_e9396fabd73bc5::t_27773d25360a2f 196-197
+  s_e9396fabd73bc5::t_56bc43567644f4 235-267
+server/src/utils/auth.ts
+  s_e9396fabd73bc5::t_3d103cc6478e65 91-101
+shared/db/auth-schema.ts
+  s_e9396fabd73bc5::t_93efe6bf1e7d4b 271-274
+  s_e9396fabd73bc5::t_ac59578e85a851 261
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "2561e91abb9f3aa685de3c373a59a53f53eb1d02",
+  "prompts": {},
+  "sessions": {
+    "s_e9396fabd73bc5": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c3f6ba8bffeWJNVhCJeoYmIY9",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
