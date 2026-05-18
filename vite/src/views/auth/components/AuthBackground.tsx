@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { motion } from "motion/react";
 
 interface AuthBackgroundProps {
 	children: ReactNode;
@@ -12,33 +11,23 @@ interface AuthBackgroundProps {
 export function AuthBackground({ children }: AuthBackgroundProps) {
 	return (
 		<div className="h-screen bg-background flex">
-			{/* Image panel -- hidden on mobile */}
-			<motion.div
-				className="hidden lg:block relative w-1/2 overflow-hidden border-r border-border bg-[#0a0a0a]"
-				initial={{ opacity: 0 }}
-				animate={{ opacity: 1 }}
-				transition={{ duration: 0.6 }}
-			>
+			{/* Image panel */}
+			<div className="hidden lg:block relative w-1/2 overflow-hidden border-r border-border bg-[#0a0a0a]">
 				<img
 					src="/auth-hero.avif"
 					alt=""
 					aria-hidden="true"
 					className="absolute inset-0 w-full h-full object-cover"
 				/>
-				{/* Dark overlay for logo contrast */}
 				<div className="absolute inset-0 bg-black/50" aria-hidden="true" />
-				{/* Logo bottom-left */}
 				<div className="absolute inset-0 flex items-end p-8">
-					<motion.svg
+					<svg
 						width="114"
 						height="28"
 						viewBox="0 0 114 28"
 						fill="none"
 						xmlns="http://www.w3.org/2000/svg"
 						className="text-white/80"
-						initial={{ opacity: 0, y: 6 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.5, delay: 0.4 }}
 					>
 						<path
 							fillRule="evenodd"
@@ -72,9 +61,9 @@ export function AuthBackground({ children }: AuthBackgroundProps) {
 							d="M109.109 9.88131C110.529 9.88131 111.662 10.3411 112.506 11.2626C113.334 12.1993 113.748 13.5655 113.748 15.3584V22.1937H110.731V15.6493C110.731 14.5667 110.512 13.7427 110.072 13.1776C109.633 12.6278 108.999 12.3529 108.171 12.3529C107.242 12.3529 106.515 12.6686 105.991 13.2982C105.45 13.9286 105.18 14.8255 105.18 15.9888V22.1937H102.139V10.1723H105.181V11.445C104.861 11.7733 104.357 12.7056 104.354 12.711L104.643 12.8909C104.802 12.5872 104.952 12.3317 105.181 11.9898C105.552 11.3272 106.068 10.8105 106.727 10.4388C107.386 10.0672 108.18 9.88131 109.109 9.88131Z"
 							fill="currentColor"
 						/>
-					</motion.svg>
+					</svg>
 				</div>
-			</motion.div>
+			</div>
 
 			{/* Form panel */}
 			<div className="w-full lg:w-1/2 flex items-center justify-center p-6">
