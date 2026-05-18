@@ -4,7 +4,6 @@ import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
@@ -204,12 +203,14 @@ export const SelectFeatureDropdown = () => {
 					)}
 				</div>
 
-				<div className="border-t border-border p-2">
-					<div className="flex items-center justify-between gap-2">
-						<Button variant="secondary" size="sm" onClick={handleClear}>
-							Clear
-						</Button>
-					</div>
+				<div className="border-t border-border">
+					<button
+						type="button"
+						onClick={handleClear}
+						className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-t3 hover:text-t2 hover:bg-accent cursor-default"
+					>
+						Clear
+					</button>
 				</div>
 			</DropdownMenuContent>
 		</DropdownMenu>

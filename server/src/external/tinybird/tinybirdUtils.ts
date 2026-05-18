@@ -1,8 +1,8 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-const TINYBIRD_API_URL = process.env.TINYBIRD_API_URL;
-const TINYBIRD_TOKEN = process.env.TINYBIRD_TOKEN;
+const TINYBIRD_API_URL = process.env.TINYBIRD_US_EAST_API_URL;
+const TINYBIRD_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
 
 export type TinybirdConfig = {
 	baseUrl: string;

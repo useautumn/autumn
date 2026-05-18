@@ -28,6 +28,7 @@ export enum AffectedResource {
 	MultiAttach = "multi_attach",
 	ApiSubscriptionUpdate = "api_subscription_update",
 	EventsAggregate = "events_aggregate",
+	Event = "event",
 }
 
 /**

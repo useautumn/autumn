@@ -1,6 +1,6 @@
 import { CopyablePre } from "@/components/general/CopyablePre";
 import { Dialog, DialogContent } from "@/components/v2/dialogs/Dialog";
-import type { IRow } from "./AGGrid";
+import type { IRow } from "./analytics-types";
 
 export function RowClickDialog({
 	event,

@@ -574,6 +574,13 @@ PreviewMultiAttachDurationType = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
+PreviewMultiAttachOnEnd = Literal[
+    "bill",
+    "revert",
+]
+r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
 class PreviewMultiAttachFreeTrialParamsTypedDict(TypedDict):
     r"""Free trial configuration for a plan."""
 
@@ -583,6 +590,8 @@ class PreviewMultiAttachFreeTrialParamsTypedDict(TypedDict):
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    on_end: NotRequired[PreviewMultiAttachOnEnd]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
 class PreviewMultiAttachFreeTrialParams(BaseModel):
@@ -597,9 +606,12 @@ class PreviewMultiAttachFreeTrialParams(BaseModel):
     card_required: Optional[bool] = True
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
+    on_end: Optional[PreviewMultiAttachOnEnd] = None
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["duration_type", "card_required"])
+        optional_fields = set(["duration_type", "card_required", "on_end"])
         serialized = handler(self)
         m = {}
 
