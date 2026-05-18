@@ -207,6 +207,7 @@ export class CusEntService {
 		// Mirrors isWebhookOwned + isAlignedWithWebhookCycle logic.
 		// LEFT JOIN to ce_sub so that missing entitlement rows (e.g. fixed
 		// prices) still match — null ce_sub means "assume aligned."
+		// Interval normalization: month×3→quarter, month×6→semi_annual.
 		const notWebhookOwned = () =>
 			notExists(
 				db
@@ -229,9 +230,20 @@ export class CusEntService {
 							AND cp_sub.status = 'active'
 							AND cp_sub.subscription_ids IS NOT NULL
 							AND array_length(cp_sub.subscription_ids, 1) > 0
-							AND (p_sub.config->>'interval') = ${entitlements.interval}
-							AND COALESCE((p_sub.config->>'interval_count')::int, 1) = COALESCE(${entitlements.interval_count}::int, 1)
 							AND (p_sub.config->>'interval') != 'one_off'
+							AND (
+								CASE
+									WHEN (p_sub.config->>'interval') = 'month' AND COALESCE((p_sub.config->>'interval_count')::int, 1) = 3 THEN 'quarter'
+									WHEN (p_sub.config->>'interval') = 'month' AND COALESCE((p_sub.config->>'interval_count')::int, 1) = 6 THEN 'semi_annual'
+									ELSE (p_sub.config->>'interval')
+								END
+							) = ${entitlements.interval}
+							AND (
+								CASE
+									WHEN (p_sub.config->>'interval') = 'month' AND COALESCE((p_sub.config->>'interval_count')::int, 1) IN (3, 6) THEN 1
+									ELSE COALESCE((p_sub.config->>'interval_count')::int, 1)
+								END
+							) = COALESCE(${entitlements.interval_count}::int, 1)
 							AND (
 								ce_sub.next_reset_at IS NULL
 								OR EXTRACT(DAY FROM to_timestamp(${customerEntitlements.next_reset_at} / 1000.0))
@@ -264,7 +276,6 @@ export class CusEntService {
 					and(
 						isNull(customerEntitlements.customer_product_id),
 						commonResetPredicates(),
-						notWebhookOwned(),
 					),
 				);
 

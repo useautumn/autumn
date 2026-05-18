@@ -1,6 +1,7 @@
 import {
 	BillingInterval,
 	CusProductStatus,
+	EntInterval,
 	type FullCusProduct,
 	type FullCustomer,
 } from "@autumn/shared";
@@ -15,8 +16,8 @@ export interface WebhookOwnedInterval {
 /**
  * Computes the set of intervals that are "webhook-owned" for a customer —
  * i.e. intervals for which a Stripe subscription will trigger invoice.created
- * and handle the reset. Includes the reset day (derived from the price-backed
- * entitlement's next_reset_at) so callers can verify cycle alignment.
+ * and handle the reset. Intervals are normalized to EntInterval values
+ * (month×3 → quarter, month×6 → semi_annual) so they match entitlement rows.
  */
 export const getWebhookOwnedIntervals = ({
 	fullCus,
@@ -34,11 +35,14 @@ export const getWebhookOwnedIntervals = ({
 		if (!cusProduct.subscription_ids?.length) continue;
 
 		for (const cusPrice of cusProduct.customer_prices) {
-			const interval = cusPrice.price.config?.interval;
-			if (!interval || interval === BillingInterval.OneOff) continue;
+			const rawInterval = cusPrice.price.config?.interval;
+			if (!rawInterval || rawInterval === BillingInterval.OneOff) continue;
 
-			const intervalCount = cusPrice.price.config?.interval_count ?? 1;
-			const key = `${interval}:${intervalCount}`;
+			const rawCount = cusPrice.price.config?.interval_count ?? 1;
+			const normalized = normalizeBillingInterval(rawInterval, rawCount);
+			if (!normalized) continue;
+
+			const key = `${normalized.interval}:${normalized.intervalCount}`;
 			if (seen.has(key)) continue;
 
 			seen.add(key);
@@ -49,14 +53,41 @@ export const getWebhookOwnedIntervals = ({
 			});
 
 			result.push({
-				interval,
-				intervalCount,
+				...normalized,
 				resetDayOfMonth: periodEndMs ? getDate(periodEndMs) : null,
 			});
 		}
 	}
 
 	return result;
+};
+
+/**
+ * Maps BillingInterval + count to the EntInterval representation used on
+ * entitlement rows. Must stay in sync with stripeSubscriptionToEntInterval.
+ */
+const normalizeBillingInterval = (
+	interval: string,
+	intervalCount: number,
+): { interval: string; intervalCount: number } | null => {
+	switch (interval) {
+		case BillingInterval.Week:
+			return { interval: EntInterval.Week, intervalCount };
+		case BillingInterval.Month:
+			if (intervalCount === 3)
+				return { interval: EntInterval.Quarter, intervalCount: 1 };
+			if (intervalCount === 6)
+				return { interval: EntInterval.SemiAnnual, intervalCount: 1 };
+			return { interval: EntInterval.Month, intervalCount };
+		case BillingInterval.Quarter:
+			return { interval: EntInterval.Quarter, intervalCount };
+		case BillingInterval.SemiAnnual:
+			return { interval: EntInterval.SemiAnnual, intervalCount };
+		case BillingInterval.Year:
+			return { interval: EntInterval.Year, intervalCount };
+		default:
+			return null;
+	}
 };
 
 const findPriceBackedPeriodEnd = ({

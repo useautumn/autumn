@@ -208,7 +208,7 @@ test(`${chalk.yellowBright("invoice.created free reset: different-interval free 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 5: Same interval but misaligned cycles — lazy reset still fires
+// TEST 4: Same interval but misaligned cycles — lazy reset still fires
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**
@@ -263,7 +263,7 @@ test(`${chalk.yellowBright("invoice.created free reset: same interval but misali
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Paid entitlement behavior unchanged (regression)
+// TEST 5: Paid entitlement behavior unchanged (regression)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /**

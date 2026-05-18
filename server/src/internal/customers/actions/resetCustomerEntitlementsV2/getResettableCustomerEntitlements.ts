@@ -57,6 +57,7 @@ const isWebhookOwned = ({
 	webhookOwnedIntervals: WebhookOwnedInterval[];
 }): boolean => {
 	if (webhookOwnedIntervals.length === 0) return false;
+	if (!cusEnt.customer_product) return false;
 
 	const entInterval = cusEnt.entitlement.interval;
 	const entIntervalCount = cusEnt.entitlement.interval_count ?? 1;
