@@ -3,21 +3,21 @@ import { type ClickHouseClient, createClient } from "@clickhouse/client";
 // ClickHouse URL is different from API URL
 // API: https://api.europe-west2.gcp.tinybird.co
 // ClickHouse: https://europe-west2.gcp.clickhouse.tinybird.co
-const primaryClickhouseUrl = process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
-const primaryToken = process.env.TINYBIRD_US_EAST_TOKEN;
+const TINYBIRD_CLICKHOUSE_URL = process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
+const TINYBIRD_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
 
-if (primaryClickhouseUrl && primaryToken) {
+if (TINYBIRD_CLICKHOUSE_URL && TINYBIRD_TOKEN) {
 	console.log(
-		`[Tinybird ClickHouse] Configured with URL: ${primaryClickhouseUrl}`,
+		`[Tinybird ClickHouse] Configured with URL: ${TINYBIRD_CLICKHOUSE_URL}`,
 	);
 }
 
 /** ClickHouse client for raw SQL queries to Tinybird. Null if not configured. */
 export const clickhouseClient: ClickHouseClient | null =
-	primaryClickhouseUrl && primaryToken
+	TINYBIRD_CLICKHOUSE_URL && TINYBIRD_TOKEN
 		? createClient({
-				url: primaryClickhouseUrl,
-				password: primaryToken,
+				url: TINYBIRD_CLICKHOUSE_URL,
+				password: TINYBIRD_TOKEN,
 			})
 		: null;
 

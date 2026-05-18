@@ -3,8 +3,8 @@ import { StatusCodes } from "http-status-codes";
 
 // Primary points at us-east during the cutover; legacy us-west vars feed
 // the dual-write secondary in `initTinybirdV2.ts`.
-const primaryApiUrl = process.env.TINYBIRD_US_EAST_API_URL;
-const primaryToken = process.env.TINYBIRD_US_EAST_TOKEN;
+const TINYBIRD_API_URL = process.env.TINYBIRD_US_EAST_API_URL;
+const TINYBIRD_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
 
 export type TinybirdConfig = {
 	baseUrl: string;
@@ -12,10 +12,10 @@ export type TinybirdConfig = {
 };
 
 export const tinybirdConfig: TinybirdConfig | null =
-	primaryApiUrl && primaryToken
+	TINYBIRD_API_URL && TINYBIRD_TOKEN
 		? {
-				baseUrl: primaryApiUrl,
-				token: primaryToken,
+				baseUrl: TINYBIRD_API_URL,
+				token: TINYBIRD_TOKEN,
 			}
 		: null;
 
