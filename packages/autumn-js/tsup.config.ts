@@ -7,11 +7,7 @@ import { defineConfig, type Options } from "tsup";
 const pathAliases = {
 	"@": path.resolve("./src/libraries/react"),
 	"@sdk": path.resolve("./src/sdk"),
-	"@useautumn/sdk": path.resolve("../sdk/src"),
 };
-
-// Packages to bundle (not external) - workspace packages that should be inlined
-const noExternal = ["@useautumn/sdk"];
 
 const reactConfigs: Options[] = [
 	// New Backend (src/backend)
@@ -22,7 +18,6 @@ const reactConfigs: Options[] = [
 		clean: false,
 		outDir: "./dist/backend",
 		external: ["react", "react/jsx-runtime", "react-dom", "next", "hono"],
-		noExternal,
 		bundle: true,
 		skipNodeModulesBundle: true,
 		esbuildOptions(options) {
@@ -42,7 +37,6 @@ const reactConfigs: Options[] = [
 		clean: false,
 		outDir: "./dist/better-auth",
 		external: ["better-auth", "better-call"],
-		noExternal,
 		bundle: true,
 		skipNodeModulesBundle: true,
 		esbuildOptions(options) {
@@ -62,7 +56,7 @@ const reactConfigs: Options[] = [
 		clean: false,
 		outDir: "./dist/react",
 		external: ["react", "react/jsx-runtime", "react-dom"],
-		noExternal: [...noExternal, "@tanstack/react-query"],
+		noExternal: ["@tanstack/react-query"],
 		bundle: true,
 		skipNodeModulesBundle: false,
 		banner: {
@@ -86,7 +80,6 @@ export default defineConfig([
 		format: ["cjs", "esm"],
 		entry: ["./src/sdk/index.ts"],
 		skipNodeModulesBundle: true,
-		noExternal,
 		dts: true,
 		shims: true,
 		clean: false,
