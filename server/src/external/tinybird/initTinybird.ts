@@ -77,14 +77,6 @@ export const getTinybirdPipes = () => {
 	return tinybirdPipes;
 };
 
-/** Get Tinybird ingest endpoints, throws if not configured. */
-export const getTinybirdIngest = () => {
-	if (!tinybirdIngest) {
-		throw new Error("Tinybird is not configured");
-	}
-	return tinybirdIngest;
-};
-
 // Re-export types
 export type {
 	AggregateGroupablePipeParams,

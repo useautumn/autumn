@@ -12,9 +12,11 @@ const generateErrorId = (): string => {
 };
 
 /**
- * Send EventInsert[] to Tinybird using zod-bird client.
- * The zod-bird client has built-in retry logic (10 retries with exponential backoff).
- * Does not throw - logs and captures errors in Sentry instead.
+ * Send EventInsert[] to Tinybird primary and (if configured) the secondary
+ * dual-write safety-net client. Each path is fired independently so a missing
+ * or broken primary doesn't disable the secondary. Does not throw — failures
+ * are logged and captured in Sentry with `tinybird_region=primary|secondary`
+ * (the tag name is legacy from when the second client was region-specific).
  */
 export const sendEventsToTinybird = async ({
 	events,

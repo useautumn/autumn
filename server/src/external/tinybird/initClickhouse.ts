@@ -13,33 +13,44 @@ import { type ClickHouseClient, createClient } from "@clickhouse/client";
  *   API:        https://api.<region>.aws.tinybird.co
  *   ClickHouse: https://clickhouse.<region>.aws.tinybird.co
  */
-const TINYBIRD_CLICKHOUSE_URL = process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
-const TINYBIRD_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
+const TINYBIRD_PRIMARY_CLICKHOUSE_URL =
+	process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
+const TINYBIRD_PRIMARY_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
+
+const safeOrigin = (url: string): string | null => {
+	try {
+		return new URL(url).origin;
+	} catch {
+		return null;
+	}
+};
 
 const legacyClickhouseUrl = process.env.TINYBIRD_CLICKHOUSE_URL;
-if (
-	legacyClickhouseUrl &&
-	TINYBIRD_CLICKHOUSE_URL &&
-	legacyClickhouseUrl !== TINYBIRD_CLICKHOUSE_URL
-) {
+const legacyOrigin = legacyClickhouseUrl
+	? safeOrigin(legacyClickhouseUrl)
+	: null;
+const primaryOrigin = TINYBIRD_PRIMARY_CLICKHOUSE_URL
+	? safeOrigin(TINYBIRD_PRIMARY_CLICKHOUSE_URL)
+	: null;
+if (legacyOrigin && primaryOrigin && legacyOrigin !== primaryOrigin) {
 	console.warn(
 		`[Tinybird ClickHouse] Ignoring legacy TINYBIRD_CLICKHOUSE_URL (${legacyClickhouseUrl}) — ` +
-			`using TINYBIRD_US_EAST_CLICKHOUSE_URL (${TINYBIRD_CLICKHOUSE_URL}) instead.`,
+			`using TINYBIRD_US_EAST_CLICKHOUSE_URL (${TINYBIRD_PRIMARY_CLICKHOUSE_URL}) instead.`,
 	);
 }
 
-if (TINYBIRD_CLICKHOUSE_URL && TINYBIRD_TOKEN) {
+if (TINYBIRD_PRIMARY_CLICKHOUSE_URL && TINYBIRD_PRIMARY_TOKEN) {
 	console.log(
-		`[Tinybird ClickHouse] Configured with URL: ${TINYBIRD_CLICKHOUSE_URL}`,
+		`[Tinybird ClickHouse] Configured with URL: ${TINYBIRD_PRIMARY_CLICKHOUSE_URL}`,
 	);
 }
 
 /** ClickHouse client for raw SQL queries to Tinybird. Null if not configured. */
 export const clickhouseClient: ClickHouseClient | null =
-	TINYBIRD_CLICKHOUSE_URL && TINYBIRD_TOKEN
+	TINYBIRD_PRIMARY_CLICKHOUSE_URL && TINYBIRD_PRIMARY_TOKEN
 		? createClient({
-				url: TINYBIRD_CLICKHOUSE_URL,
-				password: TINYBIRD_TOKEN,
+				url: TINYBIRD_PRIMARY_CLICKHOUSE_URL,
+				password: TINYBIRD_PRIMARY_TOKEN,
 			})
 		: null;
 
