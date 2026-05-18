@@ -42,6 +42,7 @@ export function useRealtimeSubscriptions({
 				dry_run: dryRun,
 				limit,
 				only,
+				lazy_run: true,
 			});
 			if (result.trigger_run_id && result.public_access_token) {
 				setSubscriptions((prev) => [

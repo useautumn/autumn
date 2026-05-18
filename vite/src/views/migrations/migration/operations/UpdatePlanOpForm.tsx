@@ -42,18 +42,21 @@ import {
 import { RemoveItemRows } from "./RemoveItemRows";
 
 function useVersionOptions(planFilter: UpdatePlanOp["plan_filter"]) {
-	const { products } = useProductsQuery();
+	const { products } = useProductsQuery({ allVersions: true });
 
-	const targetPlanId =
-		typeof planFilter.plan_id === "string" && planFilter.plan_id
-			? planFilter.plan_id
-			: null;
+	const targetIds = extractPlanIds(planFilter.plan_id);
+	const idSet = new Set(targetIds);
 
-	const matchingProducts = targetPlanId
-		? products.filter((p) => p.id === targetPlanId)
-		: [];
+	const matchingProducts =
+		idSet.size > 0 ? products.filter((p) => idSet.has(p.id)) : [];
 
+	const seen = new Set<number>();
 	return matchingProducts
+		.filter((p) => {
+			if (seen.has(p.version)) return false;
+			seen.add(p.version);
+			return true;
+		})
 		.map((p) => ({
 			value: String(p.version),
 			label: `v${p.version}`,
