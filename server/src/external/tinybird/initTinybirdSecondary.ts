@@ -9,12 +9,12 @@ import { createTinybirdApi } from "@tinybirdco/sdk";
  * `sendEvents.ts`, and remove `TINYBIRD_API_URL` / `TINYBIRD_TOKEN` from
  * Infisical.
  */
-const TINYBIRD_SECONDARY_API_URL = process.env.TINYBIRD_API_URL;
-const TINYBIRD_SECONDARY_TOKEN = process.env.TINYBIRD_TOKEN;
+const secondaryApiUrl = process.env.TINYBIRD_API_URL;
+const secondaryToken = process.env.TINYBIRD_TOKEN;
 
 const secondaryConfig =
-	TINYBIRD_SECONDARY_API_URL && TINYBIRD_SECONDARY_TOKEN
-		? { baseUrl: TINYBIRD_SECONDARY_API_URL, token: TINYBIRD_SECONDARY_TOKEN }
+	secondaryApiUrl && secondaryToken
+		? { baseUrl: secondaryApiUrl, token: secondaryToken }
 		: null;
 
 const safeOrigin = (url: string): string | null => {
@@ -25,7 +25,6 @@ const safeOrigin = (url: string): string | null => {
 	}
 };
 
-/** Secondary Tinybird API client for dual-write safety net during region cutover. */
 export const tinybirdSecondaryApi = secondaryConfig
 	? createTinybirdApi(secondaryConfig)
 	: null;
