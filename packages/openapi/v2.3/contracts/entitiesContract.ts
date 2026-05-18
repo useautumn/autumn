@@ -128,7 +128,7 @@ export const listEntitiesContract = oc
 			title: "ListEntitiesParams",
 			examples: [
 				{
-					cursor: "",
+					start_cursor: "",
 					limit: 10,
 				},
 				{

@@ -147,7 +147,7 @@ test.concurrent(`${chalk.yellowBright("events-list-v22-vs-v23-parity: V2.3 curso
 
 	const page1 = (await autumnV23.events.list({
 		customer_id: customerId,
-		cursor: "",
+		start_cursor: "",
 		limit: 2,
 	} as unknown as {
 		customer_id: string;
@@ -159,7 +159,7 @@ test.concurrent(`${chalk.yellowBright("events-list-v22-vs-v23-parity: V2.3 curso
 
 	const page2 = (await autumnV23.events.list({
 		customer_id: customerId,
-		cursor: page1.next_cursor as string,
+		start_cursor: page1.next_cursor as string,
 		limit: 2,
 	} as unknown as {
 		customer_id: string;

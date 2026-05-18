@@ -38,7 +38,7 @@ export const handleExternalListEvents = createRoute({
 					entity_id: body.entity_id,
 					feature_ids: featureIds,
 					custom_range: body.custom_range,
-					cursor: body.cursor,
+					start_cursor: body.start_cursor,
 					limit: body.limit,
 					filter_by: body.filter_by,
 				},

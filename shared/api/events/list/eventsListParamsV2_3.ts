@@ -6,7 +6,7 @@ import {
 } from "../../common/cursorPaginationSchemas.js";
 
 export const ApiEventsListV2_3ParamsSchema = z.object({
-	cursor: CursorRequestFieldSchema,
+	start_cursor: CursorRequestFieldSchema,
 	limit: createCursorLimitSchema({
 		defaultLimit: PaginationDefaults.DefaultLimit,
 	}),

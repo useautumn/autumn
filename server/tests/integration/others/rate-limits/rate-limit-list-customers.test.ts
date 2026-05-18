@@ -50,7 +50,7 @@ test(`${chalk.yellowBright(`${testCase}: V2.3 higher cursor limit`)}`, async () 
 	const belowLimit = Math.max(1, V2_3_LIMIT - 2);
 	const belowResults = await Promise.allSettled(
 		Array.from({ length: belowLimit }, () =>
-			autumnV2_3.customers.listV2({ cursor: "", limit: 10 }),
+			autumnV2_3.customers.listV2({ start_cursor: "", limit: 10 }),
 		),
 	);
 	expect(countRateLimited(belowResults)).toBe(0);
@@ -58,7 +58,7 @@ test(`${chalk.yellowBright(`${testCase}: V2.3 higher cursor limit`)}`, async () 
 	const overLimit = V2_3_LIMIT + 5;
 	const overResults = await Promise.allSettled(
 		Array.from({ length: overLimit }, () =>
-			autumnV2_3.customers.listV2({ cursor: "", limit: 10 }),
+			autumnV2_3.customers.listV2({ start_cursor: "", limit: 10 }),
 		),
 	);
 	expect(countRateLimited(overResults)).toBeGreaterThan(0);

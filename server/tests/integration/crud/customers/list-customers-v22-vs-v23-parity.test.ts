@@ -68,7 +68,7 @@ const fetchV22 = async (autumn: AutumnInt, params: Record<string, unknown>) =>
 
 const fetchV23 = async (autumn: AutumnInt, params: Record<string, unknown>) =>
 	(await autumn.customers.listV2({
-		cursor: "",
+		start_cursor: "",
 		limit: LIMIT,
 		keepInternalFields: true,
 		...params,
@@ -128,7 +128,7 @@ test.concurrent(
 		const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 		const page1 = (await autumnV2_3.customers.listV2({
-			cursor: "",
+			start_cursor: "",
 			limit: 1,
 			keepInternalFields: true,
 		})) as { list: ApiCustomerV5[]; next_cursor: string | null };
@@ -140,7 +140,7 @@ test.concurrent(
 
 		if (page1.next_cursor) {
 			const page2 = (await autumnV2_3.customers.listV2({
-				cursor: page1.next_cursor,
+				start_cursor: page1.next_cursor,
 				limit: 1,
 				keepInternalFields: true,
 			})) as { list: ApiCustomerV5[]; next_cursor: string | null };
