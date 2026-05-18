@@ -187,6 +187,7 @@ export const attachFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
+	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const attachCustomizeOutboundSchema = z.object({
@@ -413,10 +414,13 @@ export const attachPlanItemFilterSchema = z.object({
 
 export const attachDurationTypeSchema = closedEnumSchema;
 
+export const attachOnEndSchema = closedEnumSchema;
+
 export const attachFreeTrialParamsSchema = z.object({
 	durationLength: z.number(),
 	durationType: z.union([attachDurationTypeSchema, z.undefined()]).optional(),
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
+	onEnd: z.union([attachOnEndSchema, z.undefined()]).optional(),
 });
 
 export const attachCustomizeSchema = z.object({

@@ -43,6 +43,7 @@ export const migrationRuns = pgTable(
 		 *  — typically customer IDs for customer ops, plan IDs for plan
 		 *  ops, etc. Null = unscoped run-all. */
 		only_ids: text("only_ids").array(),
+		target_limit: numeric({ mode: "number" }),
 		created_at: numeric({ mode: "number" }).notNull(),
 		updated_at: numeric({ mode: "number" }),
 		started_at: numeric({ mode: "number" }),

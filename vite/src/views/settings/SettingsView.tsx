@@ -5,6 +5,7 @@ import {
 	UsersIcon,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
+import { PageContainer } from "@/components/general/PageContainer";
 import { cn } from "@/lib/utils";
 import { AccountSection } from "./sections/AccountSection";
 import { OrganizationSection } from "./sections/OrganizationSection";
@@ -55,7 +56,7 @@ export const SettingsView = () => {
 	};
 
 	return (
-		<div className="flex h-full w-full max-w-5xl mx-auto pt-4 sm:pt-8 pb-8 px-4 sm:px-10 gap-10">
+		<PageContainer className="flex-row gap-10 h-full">
 			<nav className="hidden sm:flex flex-col w-44 shrink-0 pt-1">
 				<h1 className="text-sm font-semibold text-t1 mb-4">Settings</h1>
 				<div className="flex flex-col gap-0.5">
@@ -80,6 +81,6 @@ export const SettingsView = () => {
 			<div className="flex-1 min-w-0">
 				<ActiveSection />
 			</div>
-		</div>
+		</PageContainer>
 	);
 };
