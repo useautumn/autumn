@@ -105,15 +105,21 @@ export const listByCursor = async ({
 		if (row.deductions) {
 			try {
 				const parsed = JSON.parse(row.deductions);
-				if (Array.isArray(parsed)) {
-					deductions = parsed as TrackDeduction[];
-				} else if (parsed && Array.isArray(parsed.list)) {
-					deductions = parsed.list as TrackDeduction[];
+				// Tinybird's JSON column re-encodes nested-object array items
+				// as strings; second parse brings them back to TrackDeduction.
+				const rawList = Array.isArray(parsed)
+					? parsed
+					: parsed && Array.isArray(parsed.list)
+						? parsed.list
+						: null;
+				if (rawList) {
+					deductions = rawList.map((item: unknown) =>
+						typeof item === "string"
+							? (JSON.parse(item) as TrackDeduction)
+							: (item as TrackDeduction),
+					);
 				}
-			} catch {
-				// Invalid JSON — leave null so the caller can distinguish missing
-				// vs explicit empty.
-			}
+			} catch {}
 		}
 
 		lastRowMicros = tinybirdTimestampToEpochMicros(row.timestamp);
