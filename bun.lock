@@ -348,7 +348,7 @@
         "@hatchet-dev/typescript-sdk": "1.14.0",
         "@hono-rate-limiter/redis": "^0.1.4",
         "@hono/node-server": "^1.19.5",
-        "@hono/otel": "^1.1.1",
+        "@hono/otel": "1.1.1",
         "@hono/zod-validator": "^0.7.3",
         "@hyperbrowser/sdk": "^0.54.0",
         "@infisical/sdk": "^4.0.6",
@@ -508,10 +508,6 @@
         "@tanstack/react-table": "^8.21.3",
         "@tanstack/react-virtual": "^3.13.18",
         "@trigger.dev/react-hooks": "4.4.5",
-        "ag-charts-community": "^12.0.2",
-        "ag-charts-react": "^12.0.2",
-        "ag-grid-community": "^34.0.2",
-        "ag-grid-react": "^34.0.2",
         "ai": "^6.0.5",
         "atmn": "workspace:*",
         "autumn-js": "workspace:*",
@@ -1140,7 +1136,7 @@
 
     "@hono/node-server": ["@hono/node-server@1.19.14", "", { "peerDependencies": { "hono": "^4" } }, "sha512-GwtvgtXxnWsucXvbQXkRgqksiH2Qed37H9xHZocE5sA3N8O8O8/8FA3uclQXxXVzc9XBZuEOMK7+r02FmSpHtw=="],
 
-    "@hono/otel": ["@hono/otel@1.1.2", "", { "dependencies": { "@opentelemetry/api": "^1.9.0", "@opentelemetry/semantic-conventions": "^1.28.0" }, "peerDependencies": { "hono": ">=4.0.0" } }, "sha512-UaBMKPGaQTj4sjvpGqQ+57eolTwMI2znzxV/QBUF99XxhcmqtqaZX95flXpGgWb+lnlinlCy23Y1sZ8+TzzM9A=="],
+    "@hono/otel": ["@hono/otel@1.1.1", "", { "dependencies": { "@opentelemetry/api": "^1.9.0", "@opentelemetry/semantic-conventions": "^1.28.0" }, "peerDependencies": { "hono": ">=4.0.0" } }, "sha512-zmTMS0uMMzwjO8f4IG0eFoDlr5D7XwJgiCFSHEa5MMZJRHwuSrRI78SLjn5XdFedttSlSgDwHUsf91hly16MSQ=="],
 
     "@hono/zod-validator": ["@hono/zod-validator@0.7.6", "", { "peerDependencies": { "hono": ">=3.9.0", "zod": "^3.25.0 || ^4.0.0" } }, "sha512-Io1B6d011Gj1KknV4rXYz4le5+5EubcWEU/speUjuw9XMMIaP3n78yXLhjd2A3PXaXaUwEAluOiAyLqhBEJgsw=="],
 
@@ -2671,10 +2667,6 @@
     "ag-charts-react": ["ag-charts-react@12.3.1", "", { "dependencies": { "ag-charts-community": "12.3.1" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0" } }, "sha512-lwMzn+GWJccAHb9iJR4DR4DLkgrfbF/X7dIMzVHAufGhQmvgOVj6LsIVXc8/At0NycKq/PP59+6GVRu6wAXO0w=="],
 
     "ag-charts-types": ["ag-charts-types@12.3.1", "", {}, "sha512-5216xYoawnvMXDFI6kTpPku+mH0Csiwu/FE7lsAm8Z22HEN6ciSG/V7g+IrpLWncELqksgENebCTP75PZ3CsHA=="],
-
-    "ag-grid-community": ["ag-grid-community@34.3.1", "", { "dependencies": { "ag-charts-types": "12.3.1" } }, "sha512-PwlrPudsFOzGumphi2y9ihWeaUlIwKhOra/MXu2LjeV2U8DgLLcYS8CartE5Hszhn1poJHawwI9HWrxlKliwdw=="],
-
-    "ag-grid-react": ["ag-grid-react@34.3.1", "", { "dependencies": { "ag-grid-community": "34.3.1", "prop-types": "^15.8.1" }, "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-1UTlBT+xJkjNZAuf7RxK61mgxKGTPB+6XR99oIHq7cYC89kJmLbWqhHt/1XqRWF5cAgSKk8u+HtOQaN8tAZStw=="],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 

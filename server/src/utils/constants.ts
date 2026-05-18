@@ -15,6 +15,7 @@ export const ADMIN_USER_IDs = [
 	"NqNuL3MtS7MR2WYoqx2b28iY9vmfAs8h", // c
 	"y7xV3rybEkhoPfJe45dymZB1dXxvsolG", // o
 	"NqNuL3MtS7MR2WYoqx2b28iY9vmfAs8h", // charlie prod
+	"zviddNexn8HgLfo6jxxyK2KLcf8NrvtS", //jy
 
 	// Sandbox:
 	"user_2rypooIKyMQx81vMS8FFGx24UHU", // john
