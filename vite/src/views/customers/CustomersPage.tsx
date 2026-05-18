@@ -1,5 +1,6 @@
 "use client";
 
+import { PageContainer } from "@/components/general/PageContainer";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
@@ -43,14 +44,14 @@ function CustomersPageContent() {
 				customers,
 			}}
 		>
-			<div className="px-4 sm:px-10 flex flex-col relative w-full pb-8 max-w-5xl mx-auto pt-4 sm:pt-8 gap-8">
+			<PageContainer>
 				<OnboardingGuide />
 				<CustomerListTable
 					key={org?.id}
 					customers={customers}
 					isFetchingUncached={isFetchingUncached}
 				/>
-			</div>
+			</PageContainer>
 		</CustomersContext.Provider>
 	);
 }

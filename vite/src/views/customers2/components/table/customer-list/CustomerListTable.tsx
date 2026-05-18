@@ -1,5 +1,5 @@
 import { AppEnv, type FullCustomer } from "@autumn/shared";
-import { ArrowSquareOutIcon } from "@phosphor-icons/react";
+import { ArrowSquareOutIcon, UsersIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
@@ -36,7 +36,6 @@ export function CustomerListTable({
 	const { org } = useOrg();
 	const env = useEnv();
 
-	// Account for sandbox banner height (40px) in table container height
 	const tableContainerHeight =
 		env === AppEnv.Sandbox ? "calc(100vh - 174px)" : "calc(100vh - 134px)";
 
@@ -71,7 +70,6 @@ export function CustomerListTable({
 		enabled: false,
 	});
 
-	// Build map from full customers data for quick lookup
 	const fullCustomersMap = useMemo(() => {
 		const map = new Map<string, FullCustomer>();
 		if (fullCustomersData?.fullCustomers) {
@@ -83,13 +81,11 @@ export function CustomerListTable({
 		return map;
 	}, [fullCustomersData]);
 
-	// Determine if full data is still loading (includes refetches for search/pagination)
 	const isFullDataLoading =
 		isFullCustomersLoading ||
 		isFullCustomersFetching ||
 		fullCustomersMap.size === 0;
 
-	// Merge basic customer data with full customer data (for balance info)
 	const mergedCustomers = useMemo(() => {
 		return customers.map((customer) => {
 			const key = customer.id || customer.internal_id;
@@ -107,7 +103,6 @@ export function CustomerListTable({
 		? `customer-list:${org.id}`
 		: "customer-list";
 
-	// Create columns including dynamic usage columns from metered features
 	const { columns, defaultVisibleColumnIds, columnGroups } =
 		useCustomerListColumns({
 			features,
@@ -144,8 +139,6 @@ export function CustomerListTable({
 			preserveParams: false,
 		});
 
-	const enableSorting = false;
-
 	const hasRows = table.getRowModel().rows.length > 0;
 	const hasSearchQuery = Boolean(queryStates.q?.trim());
 	const hasFilters =
@@ -155,7 +148,6 @@ export function CustomerListTable({
 		queryStates.processor.length > 0;
 	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
 
-	// Only show empty state if org has NO customers (no filters/search active and no results)
 	if (!hasRows && !hasActiveFiltersOrSearch) {
 		return (
 			<EmptyState
@@ -187,7 +179,7 @@ export function CustomerListTable({
 			config={{
 				table,
 				numberOfColumns: columns.length,
-				enableSorting,
+				enableSorting: false,
 				isLoading: isFetchingUncached,
 				getRowHref,
 				emptyStateText: "No matching results found.",
@@ -205,20 +197,22 @@ export function CustomerListTable({
 			}}
 		>
 			<div>
-				<div className="flex flex-col lg:flex-row w-full lg:items-center gap-2 lg:gap-5 pb-4">
-					<div className="flex items-center gap-2 lg:flex-1">
-						<CustomerListSearchBar />
-						<CustomerListFilterButton />
-						<Table.ColumnVisibility />
-					</div>
-					<div className="flex items-center justify-between lg:contents">
-						<div className="flex items-center gap-2 lg:justify-center">
-							<CustomerListPagination />
-							<CustomerListPageSizeSelector />
-						</div>
-						<div className="flex items-center lg:flex-1 justify-end">
-							<CustomerListCreateButton />
-						</div>
+				<Table.Toolbar>
+					<Table.Heading>
+						<UsersIcon size={16} weight="fill" className="text-subtle" />
+						Customers
+					</Table.Heading>
+					<Table.Actions>
+						<CustomerListCreateButton />
+					</Table.Actions>
+				</Table.Toolbar>
+				<div className="flex items-center gap-2 pb-4">
+					<CustomerListFilterButton />
+					<Table.ColumnVisibility />
+					<CustomerListSearchBar />
+					<div className="flex items-center gap-2 shrink-0">
+						<CustomerListPagination />
+						<CustomerListPageSizeSelector />
 					</div>
 				</div>
 				{!hasRows && hasActiveFiltersOrSearch ? (
