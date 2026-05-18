@@ -1,0 +1,33 @@
+vite/src/views/command-bar/CommandBar.tsx
+  s_50f5ab7df0f2d1::t_e2c277caefcfe5 676-679
+  s_50f5ab7df0f2d1::t_31a006d20ec735 96
+  s_50f5ab7df0f2d1::t_cf3aeac0393022 654
+  s_50f5ab7df0f2d1::t_66bf1c6072c201 771-774
+  s_50f5ab7df0f2d1::t_bf4d377b07c4da 731
+vite/src/views/admin/adminUtils.ts
+  s_50f5ab7df0f2d1::t_17bc3da91027f0 14-20
+  s_50f5ab7df0f2d1::t_82b0187fc20380 53,57-64,66,69-72,74
+vite/src/utils/perfTrace.tsx
+  s_50f5ab7df0f2d1::t_7b2686c3607d7a 9-20
+vite/src/views/admin/hooks/useAdmin.tsx
+  s_50f5ab7df0f2d1::t_8e14ff9d1efa5a 23
+vite/src/views/admin/ImpersonateRedirect.tsx
+  s_50f5ab7df0f2d1::t_dd42f1c5803457 19
+  s_50f5ab7df0f2d1::t_ddbbbefb7e8b93 9,35,51-56,58-60,103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "38c9ecbd432c408b41257990a6c6ff0fe731f08c",
+  "prompts": {},
+  "sessions": {
+    "s_50f5ab7df0f2d1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8d55809ffemRh5wLBS0fjFSK",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
