@@ -27,7 +27,7 @@ class CheckGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -748,6 +748,15 @@ FreeTrialDuration2 = Union[
 r"""The duration type of the free trial"""
 
 
+CheckOnEnd2 = Union[
+    Literal[
+        "bill",
+        "revert",
+    ],
+    UnrecognizedStr,
+]
+
+
 class CheckFreeTrial2TypedDict(TypedDict):
     duration: FreeTrialDuration2
     r"""The duration type of the free trial"""
@@ -757,6 +766,8 @@ class CheckFreeTrial2TypedDict(TypedDict):
     r"""Whether the free trial is limited to one per customer fingerprint"""
     card_required: bool
     r"""Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file."""
+    on_end: NotRequired[Nullable[CheckOnEnd2]]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
     trial_available: NotRequired[Nullable[bool]]
     r"""Used in customer context. Whether the free trial is available for the customer if they were to attach the product."""
 
@@ -774,13 +785,16 @@ class CheckFreeTrial2(BaseModel):
     card_required: bool
     r"""Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file."""
 
+    on_end: OptionalNullable[CheckOnEnd2] = UNSET
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
     trial_available: OptionalNullable[bool] = True
     r"""Used in customer context. Whether the free trial is available for the customer if they were to attach the product."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["trial_available"])
-        nullable_fields = set(["trial_available"])
+        optional_fields = set(["on_end", "trial_available"])
+        nullable_fields = set(["on_end", "trial_available"])
         serialized = handler(self)
         m = {}
 
@@ -1676,6 +1690,15 @@ FreeTrialDuration1 = Union[
 r"""The duration type of the free trial"""
 
 
+CheckOnEnd1 = Union[
+    Literal[
+        "bill",
+        "revert",
+    ],
+    UnrecognizedStr,
+]
+
+
 class CheckFreeTrial1TypedDict(TypedDict):
     duration: FreeTrialDuration1
     r"""The duration type of the free trial"""
@@ -1685,6 +1708,8 @@ class CheckFreeTrial1TypedDict(TypedDict):
     r"""Whether the free trial is limited to one per customer fingerprint"""
     card_required: bool
     r"""Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file."""
+    on_end: NotRequired[Nullable[CheckOnEnd1]]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
     trial_available: NotRequired[Nullable[bool]]
     r"""Used in customer context. Whether the free trial is available for the customer if they were to attach the product."""
 
@@ -1702,13 +1727,16 @@ class CheckFreeTrial1(BaseModel):
     card_required: bool
     r"""Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file."""
 
+    on_end: OptionalNullable[CheckOnEnd1] = UNSET
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
     trial_available: OptionalNullable[bool] = True
     r"""Used in customer context. Whether the free trial is available for the customer if they were to attach the product."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["trial_available"])
-        nullable_fields = set(["trial_available"])
+        optional_fields = set(["on_end", "trial_available"])
+        nullable_fields = set(["on_end", "trial_available"])
         serialized = handler(self)
         m = {}
 

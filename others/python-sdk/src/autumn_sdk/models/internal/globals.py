@@ -19,7 +19,7 @@ class Globals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.2.0"
 
     fail_open: Annotated[
         Optional[bool],

@@ -24,14 +24,14 @@ export type ListCustomersPlan = {
 };
 
 /**
- * Filter by customer product status. Defaults to active and scheduled.
+ * Filter by customer product status. Defaults to active and scheduled
  */
 export const ListCustomersSubscriptionStatus = {
   Active: "active",
   Scheduled: "scheduled",
 } as const;
 /**
- * Filter by customer product status. Defaults to active and scheduled.
+ * Filter by customer product status. Defaults to active and scheduled
  */
 export type ListCustomersSubscriptionStatus = ClosedEnum<
   typeof ListCustomersSubscriptionStatus
@@ -46,11 +46,11 @@ export type ListCustomersProcessor = ClosedEnum<typeof ListCustomersProcessor>;
 
 export type ListCustomersParams = {
   /**
-   * Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+   * Number of items to skip
    */
-  cursor?: string | undefined;
+  offset?: number | undefined;
   /**
-   * Number of items to return. Default 50, hard ceiling 5000.
+   * Number of items to return. Default 10, max 1000.
    */
   limit?: number | undefined;
   /**
@@ -58,15 +58,15 @@ export type ListCustomersParams = {
    */
   plans?: Array<ListCustomersPlan> | undefined;
   /**
-   * Filter by customer product status. Defaults to active and scheduled.
+   * Filter by customer product status. Defaults to active and scheduled
    */
   subscriptionStatus?: ListCustomersSubscriptionStatus | undefined;
   /**
-   * Search customers by id, name, or email.
+   * Search customers by id, name, or email
    */
   search?: string | undefined;
   /**
-   * Filter by customer processor type (stripe, revenuecat, vercel).
+   * Filter by customer processor type (stripe, revenuecat, vercel)
    */
   processors?: Array<ListCustomersProcessor> | undefined;
 };
@@ -586,19 +586,35 @@ export type ListCustomersList = {
 /**
  * OK
  */
-export type ListCustomersResponseBody = {
+export type ListCustomersResponse = {
   /**
-   * Items for current page.
+   * Array of items for current page
    */
   list: Array<ListCustomersList>;
   /**
-   * Opaque cursor for the next page. Null when there are no more results.
+   * Whether more results exist after this page
    */
-  nextCursor: string | null;
-};
-
-export type ListCustomersResponse = {
-  result: ListCustomersResponseBody;
+  hasMore: boolean;
+  /**
+   * Current offset position
+   */
+  offset: number;
+  /**
+   * Limit passed in the request
+   */
+  limit: number;
+  /**
+   * Total number of items returned in the current page
+   */
+  total: number;
+  /**
+   * Total number of customers available in the current organization and environment
+   */
+  totalCount: number;
+  /**
+   * Total number of customers matching the current filter before pagination is applied
+   */
+  totalFilteredCount: number;
 };
 
 /** @internal */
@@ -636,7 +652,7 @@ export const ListCustomersProcessor$outboundSchema: z.ZodMiniEnum<
 
 /** @internal */
 export type ListCustomersParams$Outbound = {
-  cursor: string;
+  offset: number;
   limit: number;
   plans?: Array<ListCustomersPlan$Outbound> | undefined;
   subscription_status?: string | undefined;
@@ -650,8 +666,8 @@ export const ListCustomersParams$outboundSchema: z.ZodMiniType<
   ListCustomersParams
 > = z.pipe(
   z.object({
-    cursor: z._default(z.string(), ""),
-    limit: z._default(z.int(), 50),
+    offset: z._default(z.int(), 0),
+    limit: z._default(z.int(), 10),
     plans: z.optional(z.array(z.lazy(() => ListCustomersPlan$outboundSchema))),
     subscriptionStatus: z.optional(
       ListCustomersSubscriptionStatus$outboundSchema,
@@ -1292,42 +1308,24 @@ export function listCustomersListFromJSON(
 }
 
 /** @internal */
-export const ListCustomersResponseBody$inboundSchema: z.ZodMiniType<
-  ListCustomersResponseBody,
-  unknown
-> = z.pipe(
-  z.object({
-    list: z.array(z.lazy(() => ListCustomersList$inboundSchema)),
-    next_cursor: types.nullable(types.string()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "next_cursor": "nextCursor",
-    });
-  }),
-);
-
-export function listCustomersResponseBodyFromJSON(
-  jsonString: string,
-): SafeParseResult<ListCustomersResponseBody, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListCustomersResponseBody$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListCustomersResponseBody' from JSON`,
-  );
-}
-
-/** @internal */
 export const ListCustomersResponse$inboundSchema: z.ZodMiniType<
   ListCustomersResponse,
   unknown
 > = z.pipe(
   z.object({
-    Result: z.lazy(() => ListCustomersResponseBody$inboundSchema),
+    list: z.array(z.lazy(() => ListCustomersList$inboundSchema)),
+    has_more: types.boolean(),
+    offset: types.number(),
+    limit: types.number(),
+    total: types.number(),
+    total_count: types.number(),
+    total_filtered_count: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "Result": "result",
+      "has_more": "hasMore",
+      "total_count": "totalCount",
+      "total_filtered_count": "totalFilteredCount",
     });
   }),
 );

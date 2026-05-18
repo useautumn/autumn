@@ -9,12 +9,12 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
 ### Body Parameters
 
-<DynamicParamField body="cursor" type="string">
-  Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+<DynamicParamField body="offset" type="integer">
+  Number of items to skip
 </DynamicParamField>
 
 <DynamicParamField body="limit" type="integer">
-  Number of items to return. Default 50, hard ceiling 5000.
+  Number of items to return. Default 10, max 1000.
 </DynamicParamField>
 
 <DynamicParamField body="plans" type="object[]">
@@ -43,7 +43,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 ### Response
 
 <DynamicResponseField name="list" type="object[]">
-  Items for current page.
+  Array of items for current page
   <Expandable title="properties">
     <DynamicResponseField name="id" type="string | null">
       The unique identifier of the entity
@@ -305,6 +305,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
                 <DynamicResponseField name="card_required" type="boolean">
                   Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="on_end" type="'bill' | 'revert'">
+                  Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
                 </DynamicResponseField>
 
               </Expandable>
@@ -647,6 +651,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
                 <DynamicResponseField name="card_required" type="boolean">
                   Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="on_end" type="'bill' | 'revert'">
+                  Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
                 </DynamicResponseField>
 
               </Expandable>
@@ -1104,8 +1112,28 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicResponseField>
 
-<DynamicResponseField name="next_cursor" type="string | null">
-  Opaque cursor for the next page. Null when there are no more results.
+<DynamicResponseField name="has_more" type="boolean">
+  Whether more results exist after this page
+</DynamicResponseField>
+
+<DynamicResponseField name="offset" type="number">
+  Current offset position
+</DynamicResponseField>
+
+<DynamicResponseField name="limit" type="number">
+  Limit passed in the request
+</DynamicResponseField>
+
+<DynamicResponseField name="total" type="number">
+  Total number of items returned in the current page
+</DynamicResponseField>
+
+<DynamicResponseField name="total_count" type="number">
+  Total number of entities available in the current organization and environment
+</DynamicResponseField>
+
+<DynamicResponseField name="total_filtered_count" type="number">
+  Total number of entities matching the current filter before pagination is applied
 </DynamicResponseField>
 
 
@@ -1169,7 +1197,12 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       "invoices": []
     }
   ],
-  "next_cursor": null
+  "has_more": false,
+  "offset": 0,
+  "total": 1,
+  "limit": 10,
+  "total_count": 100,
+  "total_filtered_count": 42
 }
 ```
 </ResponseExample>
