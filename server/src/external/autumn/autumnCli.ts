@@ -1017,6 +1017,8 @@ export class AutumnInt {
 		run: async (params: {
 			id: string;
 			dry_run?: boolean;
+			only?: string[];
+			limit?: number;
 		}): Promise<{
 			migration_id: string;
 			dry_run: boolean;
