@@ -37,13 +37,14 @@ export function mergeCodeSamples({
 
 	// Apply Python code samples on top (if exists)
 	if (existsSync(pythonOverlayPath)) {
-		const tempPath = `${outputPath}.tmp`;
+		const ext = path.extname(outputPath);
+		// Speakeasy picks output format from the extension (.yml/.yaml → YAML, else JSON).
+		const tempPath = `${outputPath.slice(0, -ext.length)}.tmp${ext}`;
 		exec({
 			command: `bunx speakeasy overlay apply --schema "${outputPath}" --overlay "${pythonOverlayPath}" --out "${tempPath}"`,
 			cwd: speakeasySdkDir,
 		});
 
-		// Move temp file to final location
 		const tempContent = readFileSync(tempPath, "utf-8");
 		writeFileSync(outputPath, tempContent);
 		unlinkSync(tempPath);

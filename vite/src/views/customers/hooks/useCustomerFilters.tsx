@@ -8,6 +8,7 @@ import {
 import {
 	createContext,
 	type ReactNode,
+	useCallback,
 	useContext,
 	useEffect,
 	useMemo,
@@ -24,7 +25,6 @@ const FILTER_PARAM_KEYS = [
 	"version",
 	"none",
 	"processor",
-	"page",
 	"pageSize",
 ] as const;
 
@@ -66,10 +66,8 @@ function buildRestoredState({
 		version: filters?.version?.length ? filters.version : null,
 		none: filters?.none ? true : null,
 		processor: filters?.processor?.length ? filters.processor : null,
-		page: null,
 		pageSize:
 			filters?.pageSize && filters.pageSize !== 50 ? filters.pageSize : null,
-		lastItemId: null,
 	};
 }
 
@@ -79,20 +77,24 @@ const queryStatesConfig = {
 	version: parseAsArrayOf(parseAsString).withDefault([]),
 	none: parseAsBoolean.withDefault(false),
 	processor: parseAsArrayOf(parseAsString).withDefault([]),
-	page: parseAsInteger.withDefault(1),
 	pageSize: parseAsInteger.withDefault(50),
-	lastItemId: parseAsString.withDefault(""),
 };
 
 type QueryStates = ReturnType<typeof useQueryStates<typeof queryStatesConfig>>;
 
+type CursorStack = string[];
+
 interface CustomerFiltersContextValue {
 	queryStates: QueryStates[0];
 	setQueryStates: QueryStates[1];
-	setFilters: (
-		filters: Partial<Omit<QueryStates[0], "page" | "lastItemId">>,
-	) => void;
+	setFilters: (filters: Partial<QueryStates[0]>) => void;
 	isInitialized: boolean;
+	cursorStack: CursorStack;
+	currentCursor: string;
+	currentPage: number;
+	pushCursor: (next: string) => void;
+	popCursor: () => void;
+	resetCursor: () => void;
 }
 
 const CustomerFiltersContext =
@@ -108,6 +110,21 @@ export function CustomerFiltersProvider({
 	const [queryStates, setQueryStates] = useQueryStates(queryStatesConfig, {
 		history: "replace",
 	});
+
+	const [cursorStack, setCursorStack] = useState<CursorStack>([""]);
+	const currentCursor = cursorStack[cursorStack.length - 1] ?? "";
+	const currentPage = cursorStack.length;
+
+	const pushCursor = useCallback(
+		(next: string) => setCursorStack((s) => [...s, next]),
+		[],
+	);
+	const popCursor = useCallback(
+		() =>
+			setCursorStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
+		[],
+	);
+	const resetCursor = useCallback(() => setCursorStack([""]), []);
 
 	const settleKey = orgId ? `${orgId}:${env}` : null;
 	const [settledKey, setSettledKey] = useState<string | null>(null);
@@ -141,11 +158,11 @@ export function CustomerFiltersProvider({
 	}, [settleKey, settledKey, setQueryStates, orgId, env]);
 
 	const setFilters = useMemo(
-		() =>
-			(filters: Partial<Omit<typeof queryStates, "page" | "lastItemId">>) => {
-				setQueryStates({ ...filters, page: 1, lastItemId: "" });
-			},
-		[setQueryStates],
+		() => (filters: Partial<typeof queryStates>) => {
+			resetCursor();
+			setQueryStates(filters);
+		},
+		[setQueryStates, resetCursor],
 	);
 
 	useEffect(() => {
@@ -177,7 +194,18 @@ export function CustomerFiltersProvider({
 
 	return (
 		<CustomerFiltersContext.Provider
-			value={{ queryStates, setQueryStates, setFilters, isInitialized }}
+			value={{
+				queryStates,
+				setQueryStates,
+				setFilters,
+				isInitialized,
+				cursorStack,
+				currentCursor,
+				currentPage,
+				pushCursor,
+				popCursor,
+				resetCursor,
+			}}
 		>
 			{children}
 		</CustomerFiltersContext.Provider>
@@ -186,10 +214,11 @@ export function CustomerFiltersProvider({
 
 /**
  * Inside CustomerFiltersProvider (customers list page): returns the provider's
- * managed state with initialization gating and localStorage restore.
+ * managed state with initialization gating, localStorage restore, and cursor stack.
  *
  * Outside the provider (customer detail pages, layout, etc.): falls back to
- * reading URL query params directly via nuqs, always treated as initialized.
+ * reading URL query params directly via nuqs, always treated as initialized,
+ * with an inert cursor stack.
  */
 export function useCustomerFilters(): CustomerFiltersContextValue {
 	const context = useContext(CustomerFiltersContext);
@@ -198,14 +227,24 @@ export function useCustomerFilters(): CustomerFiltersContextValue {
 	});
 
 	const setFilters = useMemo(
-		() =>
-			(filters: Partial<Omit<typeof queryStates, "page" | "lastItemId">>) => {
-				setQueryStates({ ...filters, page: 1, lastItemId: "" });
-			},
+		() => (filters: Partial<typeof queryStates>) => {
+			setQueryStates(filters);
+		},
 		[setQueryStates],
 	);
 
 	if (context) return context;
 
-	return { queryStates, setQueryStates, setFilters, isInitialized: true };
+	return {
+		queryStates,
+		setQueryStates,
+		setFilters,
+		isInitialized: true,
+		cursorStack: [""],
+		currentCursor: "",
+		currentPage: 1,
+		pushCursor: () => {},
+		popCursor: () => {},
+		resetCursor: () => {},
+	};
 }

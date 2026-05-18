@@ -1,5 +1,8 @@
 import type { ApiEventsListItem, TrackDeduction } from "@autumn/shared";
-import { epochToDateTime } from "@autumn/shared/api/common/epochUtils";
+import {
+	epochToDateTime,
+	tinybirdTimestampToEpochMs,
+} from "@autumn/shared/api/common/epochUtils";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
@@ -101,7 +104,7 @@ export const listEvents = async ({
 
 		return {
 			id: row.id,
-			timestamp: new Date(row.timestamp).getTime(),
+			timestamp: tinybirdTimestampToEpochMs(row.timestamp),
 			feature_id: row.event_name,
 			customer_id: row.customer_id,
 			value: row.value ?? 0,

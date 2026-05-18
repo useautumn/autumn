@@ -1,4 +1,4 @@
-import { createPagePaginatedResponseSchema } from "@api/common/pagePaginationSchemas.js";
+import { createCursorPaginatedResponseSchema } from "@api/common/cursorPaginationSchemas.js";
 import {
 	API_CUSTOMER_V5_EXAMPLE,
 	ApiCustomerV5Schema,
@@ -10,7 +10,7 @@ import {
 	DeleteCustomerResponseSchema,
 } from "@api/customers/crud/deleteCustomerParams.js";
 import { GetCustomerParamsV1Schema } from "@api/customers/crud/getCustomerParams.js";
-import { ListCustomersV2ParamsSchema } from "@api/customers/crud/listCustomersParamsV2.js";
+import { ListCustomersV2_3ParamsSchema } from "@api/customers/crud/listCustomersParamsV2_3.js";
 import { UpdateCustomerParamsV1Schema } from "@api/customers/crud/updateCustomerParams.js";
 import { oc } from "@orpc/contract";
 import {
@@ -82,34 +82,30 @@ export const listCustomersContract = oc
 		path: "/v1/customers.list",
 		operationId: "listCustomers",
 		tags: ["customers"],
-		description: "Lists customers with pagination and optional filters.",
+		description:
+			"Lists customers with cursor pagination and optional filters. Pass `start_cursor: \"\"` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.",
 		spec: (spec) => ({
 			...spec,
 			"x-speakeasy-name-override": "list",
 		}),
 	})
 	.input(
-		ListCustomersV2ParamsSchema.optional().meta({
+		ListCustomersV2_3ParamsSchema.meta({
 			title: "ListCustomersParams",
 			examples: [
 				{
+					start_cursor: "",
 					limit: 10,
-					offset: 0,
 				},
 			],
 		}),
 	)
 	.output(
-		createPagePaginatedResponseSchema(BaseApiCustomerV5Schema, true).meta({
+		createCursorPaginatedResponseSchema(BaseApiCustomerV5Schema).meta({
 			examples: [
 				{
 					list: [API_CUSTOMER_V5_EXAMPLE],
-					has_more: false,
-					offset: 0,
-					total: 1,
-					limit: 10,
-					total_count: 100,
-					total_filtered_count: 42,
+					next_cursor: null,
 				},
 			],
 		}),

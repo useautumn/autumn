@@ -57,6 +57,8 @@ export * from "./billing/index.js";
 export * from "./common/customerData.js";
 export * from "./common/entityData.js";
 export * from "./common/index.js";
+// JSDocs
+export * from "./common/jsDocs.js";
 export * from "./common/pagePaginationSchemas.js";
 export * from "./entities/apiBaseEntity.js";
 // Errors
@@ -70,7 +72,9 @@ export * from "./events/components/binsizeEnum.js";
 export * from "./events/components/rangeEnum.js";
 export * from "./events/insights/query/insightsQueryBody.js";
 export * from "./events/list/eventsListParams.js";
+export * from "./events/list/eventsListParamsV2_3.js";
 export * from "./events/list/eventsListResponse.js";
+export * from "./events/list/eventsListResponseV2_3.js";
 // Features
 export * from "./features/apiFeatureV1.js";
 export * from "./features/crud/index.js";
@@ -82,5 +86,3 @@ export * from "./others/apiInvoice/apiInvoiceV1.js";
 export * from "./platform/platformModels.js";
 // Utils
 export * from "./utils/xCodeSamplesLegacy.js";
-// JSDocs
-export * from "./common/jsDocs.js";
