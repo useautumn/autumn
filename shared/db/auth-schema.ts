@@ -258,7 +258,7 @@ export const passkey = pgTable(
 		userId: text("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		credentialID: text("credential_id").notNull(),
+		credentialID: text("credential_id").notNull().unique(),
 		counter: integer("counter").notNull(),
 		deviceType: text("device_type").notNull(),
 		backedUp: boolean("backed_up").notNull(),
@@ -268,7 +268,10 @@ export const passkey = pgTable(
 		),
 		aaguid: text("aaguid"),
 	},
-	(table) => [index("passkey_userId_idx").on(table.userId)],
+	(table) => [
+		index("passkey_userId_idx").on(table.userId),
+		index("passkey_credentialId_idx").on(table.credentialID),
+	],
 ).enableRLS();
 
 export const bannedUser = pgTable("banned_user", {

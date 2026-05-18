@@ -46,11 +46,13 @@ export const PasskeysManager = () => {
 	const passkeysQuery = authClient.useListPasskeys();
 	const passkeys = (passkeysQuery.data as Passkey[] | undefined) ?? [];
 	const isLoading = passkeysQuery.isPending;
+	const isError = passkeysQuery.error;
 
 	const [addOpen, setAddOpen] = useState(false);
 	const [passkeyName, setPasskeyName] = useState("");
 	const [adding, setAdding] = useState(false);
 	const [deletingId, setDeletingId] = useState<string | null>(null);
+	const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
 	const handleAdd = async () => {
 		const trimmedName = passkeyName.trim();
@@ -64,6 +66,15 @@ export const PasskeysManager = () => {
 				name: trimmedName,
 			});
 			if (error) {
+				const msg = error.message || "";
+				if (
+					msg.toLowerCase().includes("cancel") ||
+					msg.toLowerCase().includes("aborted") ||
+					msg.toLowerCase().includes("not allowed")
+				) {
+					// Don't toast on cancel — user intentionally dismissed
+					return;
+				}
 				toast.error(error.message || "Failed to add passkey");
 				return;
 			}
@@ -89,9 +100,16 @@ export const PasskeysManager = () => {
 	};
 
 	const handleDelete = async (id: string) => {
-		setDeletingId(id);
+		setConfirmDeleteId(id);
+	};
+
+	const confirmDelete = async () => {
+		if (!confirmDeleteId) return;
+		setDeletingId(confirmDeleteId);
 		try {
-			const { error } = await authClient.passkey.deletePasskey({ id });
+			const { error } = await authClient.passkey.deletePasskey({
+				id: confirmDeleteId,
+			});
 			if (error) {
 				toast.error(error.message || "Failed to remove passkey");
 				return;
@@ -103,6 +121,7 @@ export const PasskeysManager = () => {
 			);
 		} finally {
 			setDeletingId(null);
+			setConfirmDeleteId(null);
 		}
 	};
 
@@ -174,6 +193,8 @@ export const PasskeysManager = () => {
 
 			{isLoading ? (
 				<p className="text-t3 text-sm py-4">Loading passkeys…</p>
+			) : isError ? (
+				<p className="text-t3 text-sm py-4">Failed to load passkeys.</p>
 			) : passkeys.length === 0 ? (
 				<p className="text-t3 text-sm py-4">
 					No passkeys yet. Add one to sign in without a code.
@@ -211,6 +232,39 @@ export const PasskeysManager = () => {
 					))}
 				</SettingsTable>
 			)}
+
+			<Dialog
+				open={!!confirmDeleteId}
+				onOpenChange={(open) => {
+					if (!open) setConfirmDeleteId(null);
+				}}
+			>
+				<DialogContent className="w-md bg-card">
+					<DialogHeader>
+						<DialogTitle>Remove passkey</DialogTitle>
+						<DialogDescription>
+							Are you sure you want to remove this passkey? This action
+							cannot be undone.
+						</DialogDescription>
+					</DialogHeader>
+					<DialogFooter>
+						<Button
+							variant="muted"
+							onClick={() => setConfirmDeleteId(null)}
+							disabled={!!deletingId}
+						>
+							Cancel
+						</Button>
+						<Button
+							variant="destructive"
+							onClick={confirmDelete}
+							isLoading={!!deletingId}
+						>
+							Remove
+						</Button>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
 		</div>
 	);
 };
