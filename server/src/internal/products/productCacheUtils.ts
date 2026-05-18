@@ -57,6 +57,17 @@ export const buildProductsCacheKey = ({
 	return `${prefix}:${hash}`;
 };
 
+/** Builds the cache key for all product versions (unfiltered, no joins) */
+export const buildAllVersionsProductsCacheKey = ({
+	orgId,
+	env,
+}: {
+	orgId: string;
+	env: AppEnv;
+}) => {
+	return `${buildProductsCacheKeyPrefix({ orgId, env })}:all_versions`;
+};
+
 /** All possible archived query param values that can be cached */
 const ARCHIVED_VARIANTS = [undefined, false, true] as const;
 
@@ -71,13 +82,16 @@ export const invalidateProductsCache = async ({
 	if (redis.status !== "ready") return;
 
 	// Build all possible cache keys (deterministic based on archived param variants)
-	const keysToDelete = ARCHIVED_VARIANTS.map((archived) =>
-		buildProductsCacheKey({
-			orgId,
-			env,
-			queryParams: archived !== undefined ? { archived } : undefined,
-		}),
-	);
+	const keysToDelete = [
+		...ARCHIVED_VARIANTS.map((archived) =>
+			buildProductsCacheKey({
+				orgId,
+				env,
+				queryParams: archived !== undefined ? { archived } : undefined,
+			}),
+		),
+		buildAllVersionsProductsCacheKey({ orgId, env }),
+	];
 
 	const regions = getConfiguredRegions();
 

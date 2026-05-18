@@ -14,8 +14,10 @@ import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getCustomerNames } from "@/internal/analytics/actions/getCustomerNames.js";
 import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { eventActions } from "../actions/eventActions.js";
+import { collapsePlanIdGroups } from "./utils/collapsePlanIdGroups.js";
 
 const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 	"24h": 1,
@@ -129,6 +131,39 @@ export const handleInternalAggregateEvents = createRoute({
 			return { start: aligned.getTime(), end: now.getTime() };
 		})();
 
+		let resolvedGroupBy = group_by;
+		if (group_by === "$customer_id") {
+			resolvedGroupBy = "customer_id";
+		} else if (group_by === "$entity_id") {
+			resolvedGroupBy = "entity_id";
+		} else if (group_by === "$plan_id") {
+			resolvedGroupBy = "plan_id";
+		}
+
+		const isPlanIdGrouping = resolvedGroupBy === "plan_id";
+		let internalIdToPublicId: Record<string, string> | undefined;
+		let planNames: Record<string, string> | undefined;
+		let effectiveMaxGroups: number | undefined;
+
+		if (isPlanIdGrouping) {
+			const allProductRows = await ProductService.listCachedAllVersions({
+				db,
+				orgId: org.id,
+				env,
+			});
+			effectiveMaxGroups = Math.max(
+				allProductRows.length + 1,
+				max_groups ?? 0,
+				10,
+			);
+			internalIdToPublicId = {};
+			planNames = {};
+			for (const p of allProductRows) {
+				internalIdToPublicId[p.internal_id] = p.id;
+				planNames[p.id] = p.name ?? p.id;
+			}
+		}
+
 		const [{ formatted: events, truncated }, totals] = await Promise.all([
 			eventActions.aggregate({
 				ctx,
@@ -140,10 +175,10 @@ export const handleInternalAggregateEvents = createRoute({
 					event_names,
 					bin_size: binSize,
 					aggregateAll,
-					group_by: group_by,
+					group_by: resolvedGroupBy,
 					customer,
 					timezone: timezone,
-					max_groups,
+					max_groups: isPlanIdGrouping ? effectiveMaxGroups : max_groups,
 				},
 			}),
 			eventActions.getCountAndSum({
@@ -161,9 +196,13 @@ export const handleInternalAggregateEvents = createRoute({
 			}),
 		]);
 
+		if (isPlanIdGrouping && events?.data && internalIdToPublicId) {
+			collapsePlanIdGroups({ events, internalIdToPublicId });
+		}
+
 		// When grouping by entity_id, resolve entity names from ClickHouse
 		let entityNames: Record<string, string> | undefined;
-		if (group_by === "entity_id" && events?.data) {
+		if (resolvedGroupBy === "entity_id" && events?.data) {
 			const entityIds = [
 				...new Set(
 					events.data
@@ -184,7 +223,7 @@ export const handleInternalAggregateEvents = createRoute({
 		}
 
 		let customerNames: Record<string, string> | undefined;
-		if (group_by === "customer_id" && events?.data) {
+		if (resolvedGroupBy === "customer_id" && events?.data) {
 			const customerIds = [
 				...new Set(
 					events.data
@@ -214,6 +253,7 @@ export const handleInternalAggregateEvents = createRoute({
 			truncated,
 			entityNames,
 			customerNames,
+			planNames,
 		});
 	},
 });
