@@ -14,7 +14,7 @@ function SortIcon({ sortDirection }: { sortDirection: string | false }) {
 		return (
 			<ChevronUpIcon
 				aria-hidden="true"
-				className="shrink-0 text-primary"
+				className="shrink-0 text-foreground"
 				size={16}
 			/>
 		);
@@ -23,7 +23,7 @@ function SortIcon({ sortDirection }: { sortDirection: string | false }) {
 	return (
 		<ChevronDownIcon
 			aria-hidden="true"
-			className={cn("shrink-0", sortDirection ? "text-primary" : "opacity-30")}
+			className={cn("shrink-0", sortDirection ? "text-foreground" : "opacity-30")}
 			size={16}
 		/>
 	);
