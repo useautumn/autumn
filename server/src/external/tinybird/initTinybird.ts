@@ -8,15 +8,13 @@ import { createListEventsPaginatedPipe } from "./pipes/listEventsPaginatedPipe.j
 import { tinybirdConfig } from "./tinybirdUtils.js";
 import { z } from "./tinybirdZod.js";
 
-/** Primary Tinybird client — reads (pipes) and primary writes (ingest). */
+/** Tinybird REST API client singleton. Null if not configured. */
 const tinybirdClient: Tinybird | null = tinybirdConfig
 	? new Tinybird(tinybirdConfig)
 	: null;
 
 if (tinybirdConfig) {
-	console.log(
-		`[Tinybird] primary configured with URL: ${tinybirdConfig.baseUrl}`,
-	);
+	console.log(`[Tinybird] Configured with URL: ${tinybirdConfig.baseUrl}`);
 }
 
 /** Zod schema for TinybirdEvent (matches events.datasource) */
@@ -69,6 +67,14 @@ export const getTinybirdPipes = () => {
 		throw new Error("Tinybird is not configured");
 	}
 	return tinybirdPipes;
+};
+
+/** Get Tinybird ingest endpoints, throws if not configured. */
+export const getTinybirdIngest = () => {
+	if (!tinybirdIngest) {
+		throw new Error("Tinybird is not configured");
+	}
+	return tinybirdIngest;
 };
 
 // Re-export types

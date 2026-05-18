@@ -1,8 +1,6 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-// Primary points at us-east during the cutover; legacy us-west vars feed
-// the dual-write secondary in `initTinybirdV2.ts`.
 const TINYBIRD_API_URL = process.env.TINYBIRD_US_EAST_API_URL;
 const TINYBIRD_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
 
