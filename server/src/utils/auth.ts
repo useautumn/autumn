@@ -80,9 +80,6 @@ const isHttpsBaseUrl = process.env.BETTER_AUTH_URL?.startsWith("https://");
 const passkeyFrontendUrl =
 	process.env.CLIENT_URL ?? "http://localhost:3000";
 const passkeyOrigins: string[] = [passkeyFrontendUrl];
-if (process.env.VITE_FRONTEND_URL && process.env.VITE_FRONTEND_URL !== passkeyFrontendUrl) {
-	passkeyOrigins.push(process.env.VITE_FRONTEND_URL);
-}
 const passkeyRpID = (() => {
 	try {
 		return new URL(passkeyFrontendUrl).hostname;
@@ -90,6 +87,17 @@ const passkeyRpID = (() => {
 		return "localhost";
 	}
 })();
+
+if (process.env.VITE_FRONTEND_URL && process.env.VITE_FRONTEND_URL !== passkeyFrontendUrl) {
+	try {
+		const viteOrigin = new URL(process.env.VITE_FRONTEND_URL);
+		if (viteOrigin.hostname === passkeyRpID) {
+			passkeyOrigins.push(process.env.VITE_FRONTEND_URL);
+		}
+	} catch {
+		// Invalid URL, ignore
+	}
+}
 
 const options = {
 	baseURL: process.env.BETTER_AUTH_URL,
