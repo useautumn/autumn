@@ -193,6 +193,7 @@ export const setupPaymentFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
+	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const setupPaymentCustomizeOutboundSchema = z.object({
@@ -419,12 +420,15 @@ export const setupPaymentPlanItemFilterSchema = z.object({
 
 export const setupPaymentDurationTypeSchema = closedEnumSchema;
 
+export const setupPaymentOnEndSchema = closedEnumSchema;
+
 export const setupPaymentFreeTrialParamsSchema = z.object({
 	durationLength: z.number(),
 	durationType: z
 		.union([setupPaymentDurationTypeSchema, z.undefined()])
 		.optional(),
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
+	onEnd: z.union([setupPaymentOnEndSchema, z.undefined()]).optional(),
 });
 
 export const setupPaymentCustomizeSchema = z.object({

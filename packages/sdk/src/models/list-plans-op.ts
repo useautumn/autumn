@@ -342,6 +342,12 @@ export const ListPlansDurationType = {
  */
 export type ListPlansDurationType = OpenEnum<typeof ListPlansDurationType>;
 
+export const ListPlansOnEnd = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+export type ListPlansOnEnd = OpenEnum<typeof ListPlansOnEnd>;
+
 /**
  * Free trial configuration. If set, new customers can try this plan before being charged.
  */
@@ -358,6 +364,10 @@ export type ListPlansFreeTrial = {
    * Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.
    */
   cardRequired: boolean;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: ListPlansOnEnd | null | undefined;
 };
 
 /**
@@ -873,6 +883,12 @@ export const ListPlansDurationType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(ListPlansDurationType);
 
 /** @internal */
+export const ListPlansOnEnd$inboundSchema: z.ZodMiniType<
+  ListPlansOnEnd,
+  unknown
+> = openEnums.inboundSchema(ListPlansOnEnd);
+
+/** @internal */
 export const ListPlansFreeTrial$inboundSchema: z.ZodMiniType<
   ListPlansFreeTrial,
   unknown
@@ -881,12 +897,14 @@ export const ListPlansFreeTrial$inboundSchema: z.ZodMiniType<
     duration_length: types.number(),
     duration_type: ListPlansDurationType$inboundSchema,
     card_required: types.boolean(),
+    on_end: z.optional(z.nullable(ListPlansOnEnd$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
       "duration_length": "durationLength",
       "duration_type": "durationType",
       "card_required": "cardRequired",
+      "on_end": "onEnd",
     });
   }),
 );

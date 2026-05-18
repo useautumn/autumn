@@ -359,6 +359,18 @@ export type MultiAttachDurationType = ClosedEnum<
 >;
 
 /**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export const MultiAttachOnEnd = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+/**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export type MultiAttachOnEnd = ClosedEnum<typeof MultiAttachOnEnd>;
+
+/**
  * Free trial configuration for a plan.
  */
 export type MultiAttachFreeTrialParams = {
@@ -374,6 +386,10 @@ export type MultiAttachFreeTrialParams = {
    * If true, payment method required to start trial. Customer is charged after trial ends.
    */
   cardRequired?: boolean | undefined;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: MultiAttachOnEnd | undefined;
 };
 
 /**
@@ -1051,10 +1067,16 @@ export const MultiAttachDurationType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(MultiAttachDurationType);
 
 /** @internal */
+export const MultiAttachOnEnd$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachOnEnd
+> = z.enum(MultiAttachOnEnd);
+
+/** @internal */
 export type MultiAttachFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
+  on_end?: string | undefined;
 };
 
 /** @internal */
@@ -1066,12 +1088,14 @@ export const MultiAttachFreeTrialParams$outboundSchema: z.ZodMiniType<
     durationLength: z.number(),
     durationType: z._default(MultiAttachDurationType$outboundSchema, "month"),
     cardRequired: z._default(z.boolean(), true),
+    onEnd: z.optional(MultiAttachOnEnd$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       durationLength: "duration_length",
       durationType: "duration_type",
       cardRequired: "card_required",
+      onEnd: "on_end",
     });
   }),
 );
