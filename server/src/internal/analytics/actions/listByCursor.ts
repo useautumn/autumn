@@ -113,11 +113,14 @@ export const listByCursor = async ({
 						? parsed.list
 						: null;
 				if (rawList) {
-					deductions = rawList.map((item: unknown) =>
-						typeof item === "string"
-							? (JSON.parse(item) as TrackDeduction)
-							: (item as TrackDeduction),
-					);
+					deductions = rawList.map((item: unknown) => {
+						if (typeof item !== "string") return item as TrackDeduction;
+						try {
+							return JSON.parse(item) as TrackDeduction;
+						} catch {
+							return item as unknown as TrackDeduction;
+						}
+					});
 				}
 			} catch {}
 		}
