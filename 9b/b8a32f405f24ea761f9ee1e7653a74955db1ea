@@ -1,0 +1,25 @@
+server/src/internal/analytics/actions/listByCursor.ts
+  s_908ac486543512::t_64ee6794ad88ab 90-92,119-121,134,136-137
+  s_908ac486543512::t_bfe285fe3989b5 79
+  s_908ac486543512::t_0ab1e95c072670 8,10
+shared/api/common/epochUtils.ts
+  s_908ac486543512::t_8e2e3e1f00bc41 29-58
+server/src/internal/customers/CusSearchService.ts
+  s_908ac486543512::t_65beddca8ca010 1075-1085
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "9bb8a32f405f24ea761f9ee1e7653a74955db1ea",
+  "prompts": {},
+  "sessions": {
+    "s_908ac486543512": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8e718f6ffem3nYswa9rcmYLs",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
