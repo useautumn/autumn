@@ -74,6 +74,7 @@
 		"dev:services": "bun scripts/devServices/index.ts",
 		"vite:build": "bun -F @autumn/vite build:bun",
 		"t": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/testScripts/testDispatcher.ts",
+		"t:ci": "infisical run --silent --recursive --env=dev --projectId=$INFISICAL_PROJECT_ID -- bun scripts/testScripts/testDispatcher.ts",
 		"cm": "cd server && bun cm",
 		"d": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dev.ts",
 		"d:prod": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dev.ts --production",
