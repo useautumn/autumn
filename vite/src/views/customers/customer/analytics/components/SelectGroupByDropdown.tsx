@@ -54,7 +54,13 @@ export const SelectGroupByDropdown = ({
 		});
 	};
 
-	const allPlansSelected = (planDeselected?.size ?? 0) === 0;
+	const activeDeselectedCount = availableGroupValues.reduce(
+		(acc: number, v: string) => acc + (planDeselected?.has(v) ? 1 : 0),
+		0,
+	);
+	const selectedPlanCount =
+		availableGroupValues.length - activeDeselectedCount;
+	const allPlansSelected = activeDeselectedCount === 0;
 	const handlePlanSelectAll = (e: React.MouseEvent) => {
 		e.preventDefault();
 		e.stopPropagation();
@@ -274,8 +280,7 @@ export const SelectGroupByDropdown = ({
 										<span className="text-xs">Filter plans</span>
 										{!allPlansSelected && (
 											<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
-												{availableGroupValues.length -
-													(planDeselected?.size ?? 0)}
+												{selectedPlanCount}
 											</span>
 										)}
 									</DropdownMenuSubTrigger>
@@ -304,10 +309,7 @@ export const SelectGroupByDropdown = ({
 															: (planNames?.[value] ?? value);
 												const isChecked = !planDeselected?.has(value);
 												const wouldDeselectLast =
-													isChecked &&
-													availableGroupValues.length -
-														(planDeselected?.size ?? 0) ===
-														1;
+													isChecked && selectedPlanCount === 1;
 												return (
 													<DropdownMenuItem
 														key={value}
