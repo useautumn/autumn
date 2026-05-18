@@ -12,15 +12,19 @@ import {
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { Input } from "@/components/v2/inputs/Input";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/v2/selects/Select";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
 type RefundMode = "full" | "partial";
-
-const REFUND_MODE_OPTIONS: RefundMode[] = ["full", "partial"];
 
 export function RefundInvoiceDialog({
 	open,
@@ -112,15 +116,19 @@ export function RefundInvoiceDialog({
 						<span className="text-sm font-medium text-foreground">
 							Refund type
 						</span>
-						<SearchableSelect<RefundMode>
-							value={mode}
-							onValueChange={(value) => setMode(value as RefundMode)}
-							options={REFUND_MODE_OPTIONS}
-							getOptionValue={(option) => option}
-							getOptionLabel={(option) =>
-								option === "full" ? "Full" : "Partial"
-							}
-						/>
+					<Select
+						value={mode}
+						onValueChange={(value) => setMode(value as RefundMode)}
+						items={{ full: "Full", partial: "Partial" }}
+					>
+						<SelectTrigger>
+							<SelectValue placeholder="Select refund type" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="full">Full</SelectItem>
+							<SelectItem value="partial">Partial</SelectItem>
+						</SelectContent>
+					</Select>
 					</div>
 
 					{mode === "partial" && (
