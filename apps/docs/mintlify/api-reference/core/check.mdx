@@ -758,10 +758,6 @@ const { allowed } = await autumn.check({
               Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file.
             </DynamicResponseField>
 
-            <DynamicResponseField name="on_end" type="'bill' | 'revert'">
-              Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-            </DynamicResponseField>
-
             <DynamicResponseField name="trial_available" type="boolean | null">
               Used in customer context. Whether the free trial is available for the customer if they were to attach the product.
             </DynamicResponseField>

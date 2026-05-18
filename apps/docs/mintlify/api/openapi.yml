@@ -1282,16 +1282,6 @@ components:
               type: boolean
               description: Whether a payment method is required to start the trial. If true,
                 customer will be charged after trial ends.
-            on_end:
-              anyOf:
-                - enum:
-                    - bill
-                    - revert
-                  type: string
-                - type: "null"
-              description: Behavior when the trial ends. 'bill' charges the customer
-                (default). 'revert' expires the trial and restores the
-                customer's previous plan.
           required:
             - duration_length
             - duration_type
@@ -4643,14 +4633,6 @@ paths:
                       default: true
                       description: If true, payment method required to start trial. Customer is
                         charged after trial ends.
-                    on_end:
-                      enum:
-                        - bill
-                        - revert
-                      type: string
-                      description: Behavior when the trial ends. 'bill' charges the customer
-                        (default). 'revert' expires the trial and restores the
-                        customer's previous plan.
                   required:
                     - duration_length
                   description: Free trial configuration. Customers can try this plan before being
@@ -5022,16 +5004,6 @@ paths:
                         type: boolean
                         description: Whether a payment method is required to start the trial. If true,
                           customer will be charged after trial ends.
-                      on_end:
-                        anyOf:
-                          - enum:
-                              - bill
-                              - revert
-                            type: string
-                          - type: "null"
-                        description: Behavior when the trial ends. 'bill' charges the customer
-                          (default). 'revert' expires the trial and restores the
-                          customer's previous plan.
                     required:
                       - duration_length
                       - duration_type
@@ -5567,16 +5539,6 @@ paths:
                         type: boolean
                         description: Whether a payment method is required to start the trial. If true,
                           customer will be charged after trial ends.
-                      on_end:
-                        anyOf:
-                          - enum:
-                              - bill
-                              - revert
-                            type: string
-                          - type: "null"
-                        description: Behavior when the trial ends. 'bill' charges the customer
-                          (default). 'revert' expires the trial and restores the
-                          customer's previous plan.
                     required:
                       - duration_length
                       - duration_type
@@ -6093,16 +6055,6 @@ paths:
                               type: boolean
                               description: Whether a payment method is required to start the trial. If true,
                                 customer will be charged after trial ends.
-                            on_end:
-                              anyOf:
-                                - enum:
-                                    - bill
-                                    - revert
-                                  type: string
-                                - type: "null"
-                              description: Behavior when the trial ends. 'bill' charges the customer
-                                (default). 'revert' expires the trial and
-                                restores the customer's previous plan.
                           required:
                             - duration_length
                             - duration_type
@@ -6515,14 +6467,6 @@ paths:
                           default: true
                           description: If true, payment method required to start trial. Customer is
                             charged after trial ends.
-                        on_end:
-                          enum:
-                            - bill
-                            - revert
-                          type: string
-                          description: Behavior when the trial ends. 'bill' charges the customer
-                            (default). 'revert' expires the trial and restores
-                            the customer's previous plan.
                       required:
                         - duration_length
                       title: FreeTrialParams
@@ -6879,16 +6823,6 @@ paths:
                         type: boolean
                         description: Whether a payment method is required to start the trial. If true,
                           customer will be charged after trial ends.
-                      on_end:
-                        anyOf:
-                          - enum:
-                              - bill
-                              - revert
-                            type: string
-                          - type: "null"
-                        description: Behavior when the trial ends. 'bill' charges the customer
-                          (default). 'revert' expires the trial and restores the
-                          customer's previous plan.
                     required:
                       - duration_length
                       - duration_type
@@ -8382,14 +8316,6 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
-                            on_end:
-                              enum:
-                                - bill
-                                - revert
-                              type: string
-                              description: Behavior when the trial ends. 'bill' charges the customer
-                                (default). 'revert' expires the trial and
-                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -9732,14 +9658,6 @@ paths:
                           default: true
                           description: If true, payment method required to start trial. Customer is
                             charged after trial ends.
-                        on_end:
-                          enum:
-                            - bill
-                            - revert
-                          type: string
-                          description: Behavior when the trial ends. 'bill' charges the customer
-                            (default). 'revert' expires the trial and restores
-                            the customer's previous plan.
                       required:
                         - duration_length
                       title: FreeTrialParams
@@ -10502,14 +10420,6 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
-                            on_end:
-                              enum:
-                                - bill
-                                - revert
-                              type: string
-                              description: Behavior when the trial ends. 'bill' charges the customer
-                                (default). 'revert' expires the trial and
-                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -11412,14 +11322,6 @@ paths:
                           default: true
                           description: If true, payment method required to start trial. Customer is
                             charged after trial ends.
-                        on_end:
-                          enum:
-                            - bill
-                            - revert
-                          type: string
-                          description: Behavior when the trial ends. 'bill' charges the customer
-                            (default). 'revert' expires the trial and restores
-                            the customer's previous plan.
                       required:
                         - duration_length
                       title: FreeTrialParams
@@ -12507,14 +12409,6 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
-                            on_end:
-                              enum:
-                                - bill
-                                - revert
-                              type: string
-                              description: Behavior when the trial ends. 'bill' charges the customer
-                                (default). 'revert' expires the trial and
-                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -13199,14 +13093,6 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
-                            on_end:
-                              enum:
-                                - bill
-                                - revert
-                              type: string
-                              description: Behavior when the trial ends. 'bill' charges the customer
-                                (default). 'revert' expires the trial and
-                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -14293,14 +14179,6 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
-                            on_end:
-                              enum:
-                                - bill
-                                - revert
-                              type: string
-                              description: Behavior when the trial ends. 'bill' charges the customer
-                                (default). 'revert' expires the trial and
-                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -15465,17 +15343,6 @@ paths:
                                         attach the product without going through
                                         a checkout flow or having a card on
                                         file.
-                                    on_end:
-                                      anyOf:
-                                        - enum:
-                                            - bill
-                                            - revert
-                                          type: string
-                                        - type: "null"
-                                      description: Behavior when the trial ends. 'bill' charges the customer
-                                        (default). 'revert' expires the trial
-                                        and restores the customer's previous
-                                        plan.
                                     trial_available:
                                       anyOf:
                                         - type: boolean
@@ -16014,17 +15881,6 @@ paths:
                                         attach the product without going through
                                         a checkout flow or having a card on
                                         file.
-                                    on_end:
-                                      anyOf:
-                                        - enum:
-                                            - bill
-                                            - revert
-                                          type: string
-                                        - type: "null"
-                                      description: Behavior when the trial ends. 'bill' charges the customer
-                                        (default). 'revert' expires the trial
-                                        and restores the customer's previous
-                                        plan.
                                     trial_available:
                                       anyOf:
                                         - type: boolean
@@ -16863,8 +16719,7 @@ paths:
                 group_by:
                   type: string
                   description: Property to group events by (e.g. "properties.region"), or
-                    "$customer_id" / "$entity_id" / "$plan_id" to group by those
-                    columns
+                    "$customer_id" / "$entity_id" to group by those columns
                 range:
                   enum:
                     - 24h

@@ -605,18 +605,6 @@ export type SetupPaymentDurationType = ClosedEnum<
 >;
 
 /**
- * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
- */
-export const SetupPaymentOnEnd = {
-  Bill: "bill",
-  Revert: "revert",
-} as const;
-/**
- * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
- */
-export type SetupPaymentOnEnd = ClosedEnum<typeof SetupPaymentOnEnd>;
-
-/**
  * Free trial configuration for a plan.
  */
 export type SetupPaymentFreeTrialParams = {
@@ -632,10 +620,6 @@ export type SetupPaymentFreeTrialParams = {
    * If true, payment method required to start trial. Customer is charged after trial ends.
    */
   cardRequired?: boolean | undefined;
-  /**
-   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-   */
-  onEnd?: SetupPaymentOnEnd | undefined;
 };
 
 /**
@@ -1509,16 +1493,10 @@ export const SetupPaymentDurationType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(SetupPaymentDurationType);
 
 /** @internal */
-export const SetupPaymentOnEnd$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentOnEnd
-> = z.enum(SetupPaymentOnEnd);
-
-/** @internal */
 export type SetupPaymentFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
-  on_end?: string | undefined;
 };
 
 /** @internal */
@@ -1530,14 +1508,12 @@ export const SetupPaymentFreeTrialParams$outboundSchema: z.ZodMiniType<
     durationLength: z.number(),
     durationType: z._default(SetupPaymentDurationType$outboundSchema, "month"),
     cardRequired: z._default(z.boolean(), true),
-    onEnd: z.optional(SetupPaymentOnEnd$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       durationLength: "duration_length",
       durationType: "duration_type",
       cardRequired: "card_required",
-      onEnd: "on_end",
     });
   }),
 );

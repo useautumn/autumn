@@ -72,7 +72,7 @@ export type EventsAggregateParams = {
    */
   featureId: string | Array<string>;
   /**
-   * Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" / "$plan_id" to group by those columns
+   * Property to group events by (e.g. "properties.region"), or "$customer_id" / "$entity_id" to group by those columns
    */
   groupBy?: string | undefined;
   /**
