@@ -307,6 +307,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
                   Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.
                 </DynamicResponseField>
 
+                <DynamicResponseField name="on_end" type="'bill' | 'revert'">
+                  Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+                </DynamicResponseField>
+
               </Expandable>
             </DynamicResponseField>
 
@@ -647,6 +651,10 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 
                 <DynamicResponseField name="card_required" type="boolean">
                   Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.
+                </DynamicResponseField>
+
+                <DynamicResponseField name="on_end" type="'bill' | 'revert'">
+                  Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
                 </DynamicResponseField>
 
               </Expandable>
