@@ -74,7 +74,7 @@ export function TagSelect({
 									e.stopPropagation();
 								}}
 							>
-								<span className="truncate max-w-[200px] text-tiny">
+								<span className="truncate max-w-[280px] text-tiny">
 									{getLabel(val)}
 								</span>
 								<button

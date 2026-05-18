@@ -1,16 +1,16 @@
 import {
-	type AppEnv,
-	atmnToStripeAmount,
-	CouponDurationType,
-	ErrCode,
-	type FixedPriceConfig,
-	type Organization,
-	type Price,
-	PriceType,
-	type Product,
-	type Reward,
-	RewardType,
-	type UsagePriceConfig,
+    type AppEnv,
+    atmnToStripeAmount,
+    CouponDurationType,
+    ErrCode,
+    type FixedPriceConfig,
+    type Organization,
+    type Price,
+    PriceType,
+    type Product,
+    type Reward,
+    RewardType,
+    type UsagePriceConfig,
 } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
@@ -143,6 +143,28 @@ export const createStripeCoupon = async ({
 		legacyVersion,
 	});
 
+
+	for (const promoCode of reward.promo_codes) {
+		const existing = await stripeCli.promotionCodes.list({
+			code: promoCode.code,
+			active: true,
+			limit: 1,
+		});
+		if (existing.data.length === 0) continue;
+		const existingPromo = existing.data[0];
+		const attachedCoupon = existingPromo.promotion?.coupon;
+		const attachedCouponId =
+			typeof attachedCoupon === "string"
+				? attachedCoupon
+				: (attachedCoupon?.id ?? null);
+		if (attachedCouponId !== reward.id) {
+			throw new RecaseError({
+				message: `Promo code ${promoCode.code} (${existingPromo.id}) already exists in Stripe`,
+				code: ErrCode.PromoCodeAlreadyExistsInStripe,
+			});
+		}
+	}
+
 	try {
 		await stripeCli.coupons.del(reward.id);
 	} catch (_) {}
@@ -164,18 +186,6 @@ export const createStripeCoupon = async ({
 			return config.stripe_product_id;
 		}
 	});
-
-	for (const promoCode of reward.promo_codes) {
-		try {
-			const stripePromoCode = await stripeCli.promotionCodes.retrieve(
-				promoCode.code,
-			);
-			throw new RecaseError({
-				message: `Promo code ${promoCode.code} (${stripePromoCode.id}) already exists in Stripe`,
-				code: ErrCode.PromoCodeAlreadyExistsInStripe,
-			});
-		} catch (_) {}
-	}
 
 	// Collect Autumn product IDs for metadata when coupon applies to specific products
 	const appliesToSpecificProducts =
