@@ -1,0 +1,19 @@
+.gitignore
+  s_908ac486543512::t_190d1e73e76163 156-157
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "53dc4a96ab948735c537cd2ea91f5b68e71c2d94",
+  "prompts": {},
+  "sessions": {
+    "s_908ac486543512": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8e718f6ffem3nYswa9rcmYLs",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
