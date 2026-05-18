@@ -55,7 +55,7 @@ import {
 	referralsRedeemCodeContract,
 } from "./referralsContract.js";
 
-export const v2_1ContractRouter = oc.router({
+export const v2_3ContractRouter = oc.router({
 	// Customers
 	getOrCreateCustomer: getOrCreateCustomerContract,
 	getCustomer: getCustomerContract,

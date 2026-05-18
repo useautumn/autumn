@@ -23,6 +23,7 @@ export const withMigrationRunClaim = async ({
 	dryRun,
 	lazyRun = false,
 	onlyIds,
+	targetLimit,
 	claimed,
 }: {
 	ctx: AutumnContext;
@@ -30,6 +31,7 @@ export const withMigrationRunClaim = async ({
 	dryRun: boolean;
 	lazyRun?: boolean;
 	onlyIds?: string[] | null;
+	targetLimit?: number;
 	claimed: (
 		migrationRunId: string,
 	) => Promise<{ triggerRunId?: string } | undefined>;
@@ -41,6 +43,7 @@ export const withMigrationRunClaim = async ({
 			dry_run: dryRun,
 			lazy_run: lazyRun,
 			only_ids: onlyIds && onlyIds.length > 0 ? onlyIds : null,
+			target_limit: targetLimit,
 		},
 	});
 

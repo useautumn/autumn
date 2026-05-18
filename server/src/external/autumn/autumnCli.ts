@@ -422,9 +422,11 @@ export class AutumnInt {
 		listV2: async (params?: {
 			limit?: number;
 			offset?: number;
+			start_cursor?: string;
 			search?: string;
 			plans?: Array<{ id: string; versions?: number[] }>;
 			subscription_status?: string[];
+			processors?: Array<"stripe" | "revenuecat" | "vercel">;
 			keepInternalFields?: boolean;
 		}) => {
 			const { keepInternalFields, ...listParams } = params || {};
@@ -1020,6 +1022,8 @@ export class AutumnInt {
 		run: async (params: {
 			id: string;
 			dry_run?: boolean;
+			only?: string[];
+			limit?: number;
 			lazy_run?: boolean;
 		}): Promise<{
 			migration_id: string;

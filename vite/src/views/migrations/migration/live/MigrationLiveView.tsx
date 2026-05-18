@@ -230,17 +230,25 @@ export function MigrationLiveView({
 				: null,
 		[activeRun?.only_ids],
 	);
+	const isActiveRunScoped =
+		!!activeRunOnlyIds || !!(activeRun?.target_limit as number | null);
 
 	const enrichedCustomers = useMemo(
 		(): CustomerRow[] =>
 			customers.map((c) => {
-				const inScope =
-					activeRunOnlyIds === null ||
-					(c.id != null && activeRunOnlyIds.has(c.id));
+				const event = eventsByCustomer.get(c.internal_id);
+				const hasEventInActiveRun =
+					event && activeRunId && event.migration_run_id === activeRunId;
+				const isTargeted = activeRunOnlyIds
+					? activeRunOnlyIds.has(c.id ?? "") ||
+						activeRunOnlyIds.has(c.internal_id)
+					: isActiveRunScoped
+						? !!hasEventInActiveRun
+						: true;
 				return {
 					...c,
-					_event: eventsByCustomer.get(c.internal_id),
-					_activeStatus: inScope ? activeRunStatus : null,
+					_event: event,
+					_activeStatus: isTargeted ? activeRunStatus : null,
 					_activeRunId: activeRunId ?? undefined,
 				};
 			}),
@@ -250,6 +258,7 @@ export function MigrationLiveView({
 			activeRunStatus,
 			activeRunId,
 			activeRunOnlyIds,
+			isActiveRunScoped,
 		],
 	);
 

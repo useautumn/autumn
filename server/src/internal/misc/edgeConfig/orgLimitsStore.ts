@@ -1,3 +1,4 @@
+import { PAGINATION_CONFIGS, type PaginationType } from "@autumn/shared";
 import { ADMIN_ORG_LIMITS_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
@@ -44,6 +45,22 @@ export const getOrgEntitiesLimit = ({
 	const orgConfig =
 		(orgId ? orgs[orgId] : undefined) ?? (orgSlug ? orgs[orgSlug] : undefined);
 	return orgConfig?.maxEntities ?? DEFAULT_ENTITIES_LIMIT;
+};
+
+export const getOrgPaginationMaxLimit = ({
+	orgId,
+	orgSlug,
+	type,
+}: {
+	orgId?: string;
+	orgSlug?: string;
+	type: PaginationType;
+}): number => {
+	const orgs = store.get().orgs;
+	const orgConfig =
+		(orgId ? orgs[orgId] : undefined) ?? (orgSlug ? orgs[orgSlug] : undefined);
+	const override = orgConfig?.pagination?.[type]?.maxLimit;
+	return override ?? PAGINATION_CONFIGS[type].maxLimit;
 };
 
 export const getOrgLimitsConfigFromSource = async () => {

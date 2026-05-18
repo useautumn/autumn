@@ -275,6 +275,7 @@ export const previewUpdateFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
+	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const previewUpdateCustomizeOutboundSchema = z.object({
@@ -493,12 +494,15 @@ export const previewUpdatePlanItemFilterSchema = z.object({
 
 export const previewUpdateDurationTypeSchema = closedEnumSchema;
 
+export const previewUpdateOnEndSchema = closedEnumSchema;
+
 export const previewUpdateFreeTrialParamsSchema = z.object({
 	durationLength: z.number(),
 	durationType: z
 		.union([previewUpdateDurationTypeSchema, z.undefined()])
 		.optional(),
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
+	onEnd: z.union([previewUpdateOnEndSchema, z.undefined()]).optional(),
 });
 
 export const previewUpdateCustomizeSchema = z.object({

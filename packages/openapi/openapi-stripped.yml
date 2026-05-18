@@ -1,6 +1,6 @@
 info:
   title: Autumn API
-  version: 2.2.0
+  version: 2.3.0
 servers:
   - url: https://api.useautumn.com
     description: Production server
@@ -1282,6 +1282,16 @@ components:
               type: boolean
               description: Whether a payment method is required to start the trial. If true,
                 customer will be charged after trial ends.
+            on_end:
+              anyOf:
+                - enum:
+                    - bill
+                    - revert
+                  type: string
+                - type: "null"
+              description: Behavior when the trial ends. 'bill' charges the customer
+                (default). 'revert' expires the trial and restores the
+                customer's previous plan.
           required:
             - duration_length
             - duration_type
@@ -1871,7 +1881,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.2.0
+            default: 2.3.0
           x-speakeasy-globals-hidden: true
   /v1/customers.get:
     post:
@@ -2703,28 +2713,30 @@ paths:
   /v1/customers.list:
     post:
       operationId: listCustomers
-      description: Lists customers with pagination and optional filters.
+      description: 'Lists customers with cursor pagination and optional filters. Pass
+        `cursor: ""` (or omit) for the first page; use `next_cursor` from a
+        prior response for subsequent pages.'
       tags:
         - customers
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
               type: object
               properties:
-                offset:
-                  type: integer
-                  minimum: 0
-                  maximum: 9007199254740991
-                  default: 0
-                  description: Number of items to skip
+                cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first
+                    page; use next_cursor from a prior response for subsequent
+                    pages.
                 limit:
                   type: integer
                   minimum: 1
-                  maximum: 1000
-                  default: 10
-                  description: Number of items to return. Default 10, max 1000.
+                  maximum: 5000
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 5000.
                 plans:
                   type: array
                   items:
@@ -2745,10 +2757,11 @@ paths:
                     - active
                     - scheduled
                   type: string
-                  description: Filter by customer product status. Defaults to active and scheduled
+                  description: Filter by customer product status. Defaults to active and
+                    scheduled.
                 search:
                   type: string
-                  description: Search customers by id, name, or email
+                  description: Search customers by id, name, or email.
                 processors:
                   type: array
                   items:
@@ -2757,12 +2770,12 @@ paths:
                       - revenuecat
                       - vercel
                     type: string
-                  description: Filter by customer processor type (stripe, revenuecat, vercel)
+                  description: Filter by customer processor type (stripe, revenuecat, vercel).
               title: ListCustomersParams
               examples:
                 - &a6
+                  cursor: ""
                   limit: 10
-                  offset: 0
             example: *a6
       responses:
         "200":
@@ -3338,35 +3351,16 @@ paths:
                               feature_id: advanced_workflows
                           config:
                             disable_pooled_balance: false
-                    description: Array of items for current page
-                  has_more:
-                    type: boolean
-                    description: Whether more results exist after this page
-                  offset:
-                    type: number
-                    description: Current offset position
-                  limit:
-                    type: number
-                    description: Limit passed in the request
-                  total:
-                    type: number
-                    description: Total number of items returned in the current page
-                  total_count:
-                    type: number
-                    description: Total number of customers available in the current organization and
-                      environment
-                  total_filtered_count:
-                    type: number
-                    description: Total number of customers matching the current filter before
-                      pagination is applied
+                    description: Items for current page.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Opaque cursor for the next page. Null when there are no more
+                      results.
                 required:
                   - list
-                  - has_more
-                  - offset
-                  - limit
-                  - total
-                  - total_count
-                  - total_filtered_count
+                  - next_cursor
                 examples:
                   - &a7
                     list:
@@ -3429,16 +3423,22 @@ paths:
                             feature_id: advanced_workflows
                         config:
                           disable_pooled_balance: false
-                    has_more: false
-                    offset: 0
-                    total: 1
-                    limit: 10
-                    total_count: 100
-                    total_filtered_count: 42
+                    next_cursor: null
               example: *a7
       x-speakeasy-name-override: list
       parameters:
         - *a5
+      x-speakeasy-pagination:
+        type: cursor
+        inputs:
+          - name: cursor
+            in: requestBody
+            type: cursor
+          - name: limit
+            in: requestBody
+            type: limit
+        outputs:
+          nextCursor: $.next_cursor
   /v1/customers.update:
     post:
       operationId: updateCustomer
@@ -4500,6 +4500,14 @@ paths:
                       default: true
                       description: If true, payment method required to start trial. Customer is
                         charged after trial ends.
+                    on_end:
+                      enum:
+                        - bill
+                        - revert
+                      type: string
+                      description: Behavior when the trial ends. 'bill' charges the customer
+                        (default). 'revert' expires the trial and restores the
+                        customer's previous plan.
                   required:
                     - duration_length
                   description: Free trial configuration. Customers can try this plan before being
@@ -4871,6 +4879,16 @@ paths:
                         type: boolean
                         description: Whether a payment method is required to start the trial. If true,
                           customer will be charged after trial ends.
+                      on_end:
+                        anyOf:
+                          - enum:
+                              - bill
+                              - revert
+                            type: string
+                          - type: "null"
+                        description: Behavior when the trial ends. 'bill' charges the customer
+                          (default). 'revert' expires the trial and restores the
+                          customer's previous plan.
                     required:
                       - duration_length
                       - duration_type
@@ -5354,6 +5372,16 @@ paths:
                         type: boolean
                         description: Whether a payment method is required to start the trial. If true,
                           customer will be charged after trial ends.
+                      on_end:
+                        anyOf:
+                          - enum:
+                              - bill
+                              - revert
+                            type: string
+                          - type: "null"
+                        description: Behavior when the trial ends. 'bill' charges the customer
+                          (default). 'revert' expires the trial and restores the
+                          customer's previous plan.
                     required:
                       - duration_length
                       - duration_type
@@ -5845,6 +5873,16 @@ paths:
                               type: boolean
                               description: Whether a payment method is required to start the trial. If true,
                                 customer will be charged after trial ends.
+                            on_end:
+                              anyOf:
+                                - enum:
+                                    - bill
+                                    - revert
+                                  type: string
+                                - type: "null"
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                             - duration_type
@@ -6232,6 +6270,14 @@ paths:
                           default: true
                           description: If true, payment method required to start trial. Customer is
                             charged after trial ends.
+                        on_end:
+                          enum:
+                            - bill
+                            - revert
+                          type: string
+                          description: Behavior when the trial ends. 'bill' charges the customer
+                            (default). 'revert' expires the trial and restores
+                            the customer's previous plan.
                       required:
                         - duration_length
                       title: FreeTrialParams
@@ -6588,6 +6634,16 @@ paths:
                         type: boolean
                         description: Whether a payment method is required to start the trial. If true,
                           customer will be charged after trial ends.
+                      on_end:
+                        anyOf:
+                          - enum:
+                              - bill
+                              - revert
+                            type: string
+                          - type: "null"
+                        description: Behavior when the trial ends. 'bill' charges the customer
+                          (default). 'revert' expires the trial and restores the
+                          customer's previous plan.
                     required:
                       - duration_length
                       - duration_type
@@ -7870,6 +7926,14 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
+                            on_end:
+                              enum:
+                                - bill
+                                - revert
+                              type: string
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -9118,6 +9182,14 @@ paths:
                           default: true
                           description: If true, payment method required to start trial. Customer is
                             charged after trial ends.
+                        on_end:
+                          enum:
+                            - bill
+                            - revert
+                          type: string
+                          description: Behavior when the trial ends. 'bill' charges the customer
+                            (default). 'revert' expires the trial and restores
+                            the customer's previous plan.
                       required:
                         - duration_length
                       title: FreeTrialParams
@@ -9824,6 +9896,14 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
+                            on_end:
+                              enum:
+                                - bill
+                                - revert
+                              type: string
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -10696,6 +10776,14 @@ paths:
                           default: true
                           description: If true, payment method required to start trial. Customer is
                             charged after trial ends.
+                        on_end:
+                          enum:
+                            - bill
+                            - revert
+                          type: string
+                          description: Behavior when the trial ends. 'bill' charges the customer
+                            (default). 'revert' expires the trial and restores
+                            the customer's previous plan.
                       required:
                         - duration_length
                       title: FreeTrialParams
@@ -11727,6 +11815,14 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
+                            on_end:
+                              enum:
+                                - bill
+                                - revert
+                              type: string
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -12369,6 +12465,14 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
+                            on_end:
+                              enum:
+                                - bill
+                                - revert
+                              type: string
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -13384,6 +13488,14 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
+                            on_end:
+                              enum:
+                                - bill
+                                - revert
+                              type: string
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -14395,6 +14507,17 @@ paths:
                                         attach the product without going through
                                         a checkout flow or having a card on
                                         file.
+                                    on_end:
+                                      anyOf:
+                                        - enum:
+                                            - bill
+                                            - revert
+                                          type: string
+                                        - type: "null"
+                                      description: Behavior when the trial ends. 'bill' charges the customer
+                                        (default). 'revert' expires the trial
+                                        and restores the customer's previous
+                                        plan.
                                     trial_available:
                                       anyOf:
                                         - type: boolean
@@ -14933,6 +15056,17 @@ paths:
                                         attach the product without going through
                                         a checkout flow or having a card on
                                         file.
+                                    on_end:
+                                      anyOf:
+                                        - enum:
+                                            - bill
+                                            - revert
+                                          type: string
+                                        - type: "null"
+                                      description: Behavior when the trial ends. 'bill' charges the customer
+                                        (default). 'revert' expires the trial
+                                        and restores the customer's previous
+                                        plan.
                                     trial_available:
                                       anyOf:
                                         - type: boolean
@@ -15681,7 +15815,8 @@ paths:
                 group_by:
                   type: string
                   description: Property to group events by (e.g. "properties.region"), or
-                    "$customer_id" / "$entity_id" to group by those columns
+                    "$customer_id" / "$entity_id" / "$plan_id" to group by those
+                    columns
                 range:
                   enum:
                     - 24h
@@ -16886,24 +17021,24 @@ paths:
       tags:
         - entities
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
               type: object
               properties:
-                offset:
-                  type: integer
-                  minimum: 0
-                  maximum: 9007199254740991
-                  default: 0
-                  description: Number of items to skip
+                cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first
+                    page; use next_cursor from a prior response for subsequent
+                    pages.
                 limit:
                   type: integer
                   minimum: 1
-                  maximum: 1000
-                  default: 10
-                  description: Number of items to return. Default 10, max 1000.
+                  maximum: 5000
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 5000.
                 plans:
                   type: array
                   items:
@@ -16943,8 +17078,8 @@ paths:
               title: ListEntitiesParams
               examples:
                 - &a65
+                  cursor: ""
                   limit: 10
-                  offset: 0
                 - plans:
                     - id: pro_plan
             example: *a65
@@ -17333,35 +17468,16 @@ paths:
                         - purchases
                         - balances
                         - flags
-                    description: Array of items for current page
-                  has_more:
-                    type: boolean
-                    description: Whether more results exist after this page
-                  offset:
-                    type: number
-                    description: Current offset position
-                  limit:
-                    type: number
-                    description: Limit passed in the request
-                  total:
-                    type: number
-                    description: Total number of items returned in the current page
-                  total_count:
-                    type: number
-                    description: Total number of entities available in the current organization and
-                      environment
-                  total_filtered_count:
-                    type: number
-                    description: Total number of entities matching the current filter before
-                      pagination is applied
+                    description: Items for current page.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Opaque cursor for the next page. Null when there are no more
+                      results.
                 required:
                   - list
-                  - has_more
-                  - offset
-                  - limit
-                  - total
-                  - total_count
-                  - total_filtered_count
+                  - next_cursor
                 examples:
                   - &a66
                     list:
@@ -17409,16 +17525,22 @@ paths:
                                 price: null
                                 expires_at: null
                         invoices: []
-                    has_more: false
-                    offset: 0
-                    total: 1
-                    limit: 10
-                    total_count: 100
-                    total_filtered_count: 42
+                    next_cursor: null
               example: *a66
       x-speakeasy-name-override: list
       parameters:
         - *a5
+      x-speakeasy-pagination:
+        type: cursor
+        inputs:
+          - name: cursor
+            in: requestBody
+            type: cursor
+          - name: limit
+            in: requestBody
+            type: limit
+        outputs:
+          nextCursor: $.next_cursor
   /v1/entities.update:
     post:
       operationId: updateEntity
@@ -18135,7 +18257,7 @@ x-speakeasy-globals:
       required: true
       schema:
         type: string
-        default: 2.2.0
+        default: 2.3.0
       x-speakeasy-globals-hidden: true
     - name: fail-open
       in: header

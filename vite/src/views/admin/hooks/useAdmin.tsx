@@ -20,6 +20,7 @@ export const useAdmin = () => {
 	return {
 		isAdmin,
 		isPending,
+		isCurrentlyImpersonating: notNullish(data?.session?.impersonatedBy),
 		skipHover: data?.user?.id === "user_2tMgAiPsQzX8JTHjZZh9m0VdvUv",
 	};
 };
