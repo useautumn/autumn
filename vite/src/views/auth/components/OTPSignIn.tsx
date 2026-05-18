@@ -35,31 +35,21 @@ export const OTPSignIn = ({
 
 	const handleSubmit = async (otp: string) => {
 		setVerifying(true);
-
 		try {
 			const { data, error } = await authClient.signIn.emailOtp({
 				email: email,
 				otp: otp,
 			});
-
 			if (error) {
 				toast.error(error.message || "Failed to verify code");
 				setVerifying(false);
 				return;
 			}
-
 			const user = data.user;
-
-			console.log("Data:", data);
-
-			// Ensure we're comparing UTC timestamps
-
 			const userCreatedAtUTC = new Date(user.createdAt);
 			const nowUTC = new Date();
 			const diffSeconds = differenceInSeconds(nowUTC, userCreatedAtUTC);
-
 			const createdRecently = diffSeconds < 20;
-
 			if (createdRecently) {
 				window.location.href = newPath;
 			} else {
@@ -68,40 +58,35 @@ export const OTPSignIn = ({
 		} catch {
 			toast.error("Failed to verify code");
 		}
-		console.log("OTP verified");
 		setVerifying(false);
 	};
 
 	const handleResend = async () => {
 		setResending(true);
 		try {
-			const { data, error } = await authClient.emailOtp.sendVerificationOtp({
+			const { error } = await authClient.emailOtp.sendVerificationOtp({
 				email: email,
 				type: "sign-in",
 			});
-
-			console.log(data);
-			console.log(error);
-
 			if (error) {
 				toast.error(error.message);
 				return;
 			}
-
 			setResendCountdown(30);
-		} catch (error) {
+		} catch {
 			toast.error("Failed to resend code");
 			return;
 		}
-
 		setResending(false);
 	};
 
 	return (
-		<div className="text-center flex flex-col items-center justify-center gap-6">
+		<div className="text-center flex flex-col items-center justify-center gap-5">
 			<p className="text-sm text-muted-foreground">
-				Check your email for the 6 digit code
+				We sent a 6-digit code to{" "}
+				<span className="font-medium text-foreground">{email}</span>
 			</p>
+
 			<div className={cn(verifying && "shimmer")}>
 				<InputOTP
 					maxLength={6}
@@ -127,7 +112,10 @@ export const OTPSignIn = ({
 			<div className="flex flex-col items-center justify-center gap-2">
 				<Button
 					variant="skeleton"
-					className={cn("text-sm underline-offset-4 hover:underline text-primary", resending && "shimmer")}
+					className={cn(
+						"text-sm underline-offset-4 hover:underline text-primary",
+						resending && "shimmer",
+					)}
 					onClick={handleResend}
 					disabled={resending || resendCountdown > 0}
 				>

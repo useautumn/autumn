@@ -60,6 +60,7 @@ export const handleRunMigration = createRoute({
 			dryRun,
 			lazyRun,
 			onlyIds: only,
+			targetLimit: limit,
 			claimed: async (migrationRunId) => {
 				const handle = await runMigrationTask.trigger(
 					{

@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleGetProducts } from "@/internal/products/internalHandlers/handleGetProducts.js";
+import { handleGetProductsByPriceIds } from "@/internal/products/internalHandlers/handleGetProductsByPriceIds.js";
 import { handleCopyEnvironment } from "./handlers/handleCopyEnvironment/handleCopyEnvironment.js";
 import { handleGetFeatures } from "./internalHandlers/handleGetFeatures.js";
 import { handleGetMigrations } from "./internalHandlers/handleGetMigrations.js";
@@ -22,6 +23,10 @@ import { handleGetStripeCoupons } from "./internalHandlers/handleGetStripeCoupon
 export const internalProductRouter = new Hono<HonoEnv>();
 
 internalProductRouter.get("/products", ...handleGetProducts);
+internalProductRouter.get(
+	"/products/by-price-ids",
+	...handleGetProductsByPriceIds,
+);
 internalProductRouter.get("/product_counts", ...handleGetProductCounts);
 internalProductRouter.get("/features", ...handleGetFeatures);
 internalProductRouter.get("/rewards", ...handleGetRewards);

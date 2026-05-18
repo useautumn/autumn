@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import chalk from "chalk";
 import { config } from "dotenv";
+import { TEST_ORG_PUBLISHABLE_KEY } from "./createTestOrg.js";
 
 // Get the directory of this script file
 const __filename = fileURLToPath(import.meta.url);
@@ -94,6 +95,7 @@ export function updateEnvFile({
 	// Update with new test variables
 	envVars.set("TESTS_ORG", testOrgSlug);
 	envVars.set("TESTS_ORG_ID", testOrgId);
+	envVars.set("UNIT_TEST_AUTUMN_PUBLIC_KEY", TEST_ORG_PUBLISHABLE_KEY);
 
 	// Only update the secret key if a new one was generated
 	if (autumnSecretKey) {
@@ -127,6 +129,7 @@ export function updateEnvFile({
 		// Skip test-related vars from existing content - we'll add them fresh
 		if (
 			trimmed.startsWith("TESTS_ORG") ||
+			trimmed.startsWith("UNIT_TEST_AUTUMN_PUBLIC_KEY") ||
 			trimmed.startsWith("UNIT_TEST_AUTUMN_SECRET_KEY") ||
 			trimmed.startsWith("STRIPE_TEST_KEY") ||
 			trimmed.startsWith("UPSTASH_REDIS_REST") ||
@@ -148,6 +151,7 @@ export function updateEnvFile({
 		"# Test Configuration",
 		`TESTS_ORG=${testOrgSlug}`,
 		`TESTS_ORG_ID=${testOrgId}`,
+		`UNIT_TEST_AUTUMN_PUBLIC_KEY=${TEST_ORG_PUBLISHABLE_KEY}`,
 	];
 
 	// Only add secret key if it was generated/updated

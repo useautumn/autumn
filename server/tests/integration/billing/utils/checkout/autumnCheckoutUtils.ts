@@ -7,7 +7,8 @@ import type {
 	PreviewCheckoutResponse,
 } from "@autumn/shared";
 
-const CHECKOUT_BASE_URL = "http://localhost:8080";
+const CHECKOUT_BASE_URL =
+	process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080";
 const CHECKOUT_TIMEOUT_MS = 15000;
 
 export const fetchAutumnCheckout = async ({

@@ -17,12 +17,12 @@ export const ALLOWED_ORIGINS = [
 	"https://localhost:8080",
 ];
 
-/** Allow any localhost origin in dev for multi-worktree support */
+/** Allow any *.localhost or localhost origin in dev for multi-worktree support */
 export const isAllowedOrigin = (origin: string): string | undefined => {
 	if (ALLOWED_ORIGINS.includes(origin)) return origin;
 	if (
 		process.env.NODE_ENV !== "production" &&
-		/^https?:\/\/localhost:\d+$/.test(origin)
+		/^https?:\/\/(?:[a-zA-Z0-9-]+\.)*localhost(?::\d+)?$/.test(origin)
 	) {
 		return origin;
 	}

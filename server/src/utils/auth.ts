@@ -1,13 +1,8 @@
 import "dotenv/config";
-
-import { ac, ALL_SCOPES, invitation, roles, schemas } from "@autumn/shared";
-import type { AccessControl } from "better-auth/plugins/access";
+import { ALL_SCOPES, ac, invitation, roles, schemas } from "@autumn/shared";
 import { oauthProvider } from "@better-auth/oauth-provider";
-import {
-	type BetterAuthOptions,
-	betterAuth,
-	type User,
-} from "better-auth";
+import { passkey } from "@better-auth/passkey";
+import { type BetterAuthOptions, betterAuth, type User } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import {
 	admin,
@@ -17,6 +12,7 @@ import {
 	type Organization,
 	organization,
 } from "better-auth/plugins";
+import type { AccessControl } from "better-auth/plugins/access";
 import { eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
@@ -28,14 +24,95 @@ import { afterOrgCreated } from "./authUtils/afterOrgCreated.js";
 import { afterSessionCreated } from "./authUtils/afterSessionCreated.js";
 import { afterSessionDeleted } from "./authUtils/afterSessionDeleted.js";
 import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
-import { ADMIN_USER_IDs } from "./constants.js";
 import { getScopesForUserInOrg } from "./authUtils/customSessionScopes.js";
+import { ADMIN_USER_IDs } from "./constants.js";
+
+// emulate.dev Google: rewrite outbound Google OAuth host so agent worktrees
+// can use any redirect URI without registering it in the real Google console.
+// Real Google's oauth2.googleapis.com/token maps to emulate's /oauth2/token path.
+if (process.env.EMULATE_GOOGLE_URL && process.env.NODE_ENV !== "production") {
+	const emulate = process.env.EMULATE_GOOGLE_URL.replace(/\/$/, "");
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = ((input: any, init?: any) => {
+		const url =
+			typeof input === "string"
+				? input
+				: input instanceof URL
+					? input.href
+					: (input as Request).url;
+		if (url.startsWith("https://oauth2.googleapis.com")) {
+			return originalFetch(
+				url.replace("https://oauth2.googleapis.com", `${emulate}/oauth2`),
+				init,
+			);
+		}
+		if (url.startsWith("https://www.googleapis.com/oauth2")) {
+			return originalFetch(
+				url.replace("https://www.googleapis.com", emulate),
+				init,
+			);
+		}
+		return originalFetch(input, init);
+	}) as typeof fetch;
+}
+
+const emulateGoogleUrl =
+  process.env.NODE_ENV !== "production"
+    ? process.env.EMULATE_GOOGLE_URL?.replace(/\/$/, "")
+    : undefined;
+
+// HTTPS agent worktrees go through portless (e.g. wtN-api.localhost). The
+// OAuth flow leaves and returns via a third-party host (emulate.dev), so the
+// state cookie must be SameSite=None+Secure to survive the round trip.
+const isHttpsBaseUrl = process.env.BETTER_AUTH_URL?.startsWith("https://");
+
+/**
+ * Passkey (WebAuthn) is bound to the FRONTEND origin where the browser calls
+ * `navigator.credentials.{create,get}`. Derive rpID/origin from CLIENT_URL so
+ * Portless worktrees (e.g. https://wt44.localhost) and production both work
+ * without explicit env vars.
+ *
+ * - rpID: the hostname only (no scheme, no port). Browsers treat `*.localhost`
+ *   as a secure context, so passkeys work in dev over Portless TLS.
+ * - origin: full URL with scheme. Multiple origins may be supplied for envs
+ *   that need to accept both Portless and direct localhost.
+ */
+const passkeyFrontendUrl =
+	process.env.CLIENT_URL ?? "http://localhost:3000";
+const passkeyOrigins: string[] = [passkeyFrontendUrl];
+const passkeyRpID = (() => {
+	try {
+		return new URL(passkeyFrontendUrl).hostname;
+	} catch {
+		return "localhost";
+	}
+})();
+
+if (process.env.VITE_FRONTEND_URL && process.env.VITE_FRONTEND_URL !== passkeyFrontendUrl) {
+	try {
+		const viteOrigin = new URL(process.env.VITE_FRONTEND_URL);
+		if (viteOrigin.hostname === passkeyRpID) {
+			passkeyOrigins.push(process.env.VITE_FRONTEND_URL);
+		}
+	} catch {
+		// Invalid URL, ignore
+	}
+}
 
 const options = {
 	baseURL: process.env.BETTER_AUTH_URL,
 	telemetry: {
 		enabled: false,
 	},
+	...(isHttpsBaseUrl && {
+		advanced: {
+			useSecureCookies: true,
+			defaultCookieAttributes: {
+				sameSite: "none" as const,
+				secure: true,
+			},
+		},
+	}),
 
 	database: drizzleAdapter(db, {
 		provider: "pg",
@@ -80,30 +157,28 @@ const options = {
 			},
 		},
 	},
-	trustedOrigins: (() => {
-		const origins = [
+	trustedOrigins: (request?: Request): string[] => {
+		const origins: string[] = [
 			"http://localhost:3000",
 			"https://app.useautumn.com",
 			"https://staging.useautumn.com",
 			"https://*.useautumn.com",
 		];
+		if (process.env.NODE_ENV === "production") return origins;
 
-		// Better Auth validates origins independently from app-level CORS.
-		// Allow local multi-port setups for any non-production runtime.
-		if (process.env.NODE_ENV !== "production") {
-			// Add ports 3000-3010 for multiple instances
-			for (let i = 0; i <= 10; i++) {
-				origins.push(`http://localhost:${3000 + i}`);
-			}
-
-			// Support multi-worktree dev with offset ports (e.g. localhost:3100)
-			if (process.env.CLIENT_URL) {
-				origins.push(process.env.CLIENT_URL);
-			}
+		// Worktree ports follow worktreeOffset = (N-1)*100; accept any localhost
+		// port the running stack might use as origin.
+		const origin = request?.headers.get("origin") ?? null;
+		if (
+			origin &&
+			/^https?:\/\/(?:[a-zA-Z0-9-]+\.)*localhost(?::\d+)?$/.test(origin)
+		) {
+			origins.push(origin);
 		}
-
+		if (process.env.CLIENT_URL) origins.push(process.env.CLIENT_URL);
+		if (process.env.BETTER_AUTH_URL) origins.push(process.env.BETTER_AUTH_URL);
 		return origins;
-	})(),
+	},
 	emailAndPassword: {
 		enabled: true,
 		disableSignUp: false,
@@ -119,6 +194,13 @@ const options = {
 			clientId: process.env.GOOGLE_CLIENT_ID!,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
 			redirectURI: `${process.env.BETTER_AUTH_URL}/api/auth/callback/google`,
+			...(emulateGoogleUrl
+				? {
+						// HS256-signed id_tokens from emulate fail real Google's RS256 JWKS check.
+						authorizationEndpoint: `${emulateGoogleUrl}/o/oauth2/v2/auth`,
+						verifyIdToken: async () => true,
+					}
+				: {}),
 		},
 	},
 	plugins: [
@@ -163,6 +245,12 @@ const options = {
 					);
 				},
 			},
+		}),
+
+		passkey({
+			rpID: passkeyRpID,
+			rpName: "Autumn",
+			origin: passkeyOrigins.length === 1 ? passkeyOrigins[0]! : passkeyOrigins,
 		}),
 
 		organization({

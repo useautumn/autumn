@@ -89,6 +89,12 @@ export const customers = pgTable(
 			table.env,
 			sql`${table.created_at} DESC`,
 		),
+		index("idx_customers_cursor").on(
+			table.org_id,
+			table.env,
+			sql`${table.created_at} DESC`,
+			sql`${table.id} DESC`,
+		),
 		index("idx_customers_processors_revenuecat").on(
 			sql`(${table.processors} ->> 'revenuecat')`,
 		),

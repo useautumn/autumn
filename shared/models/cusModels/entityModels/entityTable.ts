@@ -70,5 +70,11 @@ export const entities = pgTable(
 			table.env,
 			table.id,
 		),
+		index("idx_entities_cursor").on(
+			table.org_id,
+			table.env,
+			sql`${table.created_at} DESC`,
+			sql`${table.id} DESC`,
+		),
 	],
 );
