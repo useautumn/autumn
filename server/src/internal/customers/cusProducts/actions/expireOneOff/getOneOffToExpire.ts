@@ -15,7 +15,7 @@ export const getOneOffCustomerProductsToExpire = async ({
 	internalCustomerIds?: string[];
 }): Promise<OneOffCustomerProductResult[]> => {
 	const customerFilter = internalCustomerIds?.length
-		? `AND cp.internal_customer_id IN (${internalCustomerIds.map((id) => `'${id}'`).join(",")})`
+		? `AND cp.internal_customer_id = ANY(ARRAY[${internalCustomerIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(",")}]::text[])`
 		: "";
 
 	const result = await ctx.db.execute<OneOffCustomerProductResult>(`
