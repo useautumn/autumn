@@ -4,7 +4,6 @@ import * as Sentry from "@sentry/bun";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { tinybirdIngest } from "../initTinybird.js";
 import { tinybirdSecondaryApi } from "../initTinybirdSecondary.js";
-import { isTinybirdConfigured } from "../tinybirdUtils.js";
 import { mapToTinybirdEvent } from "./mapEvent.js";
 
 /** Generate a unique error ID for tracking */
@@ -28,8 +27,14 @@ export const sendEventsToTinybird = async ({
 		return;
 	}
 
-	if (!isTinybirdConfigured() || !tinybirdIngest) {
-		logger?.debug("Tinybird not configured, skipping event send");
+	// During the region cutover, primary (us-east via TINYBIRD_US_EAST_*) and
+	// secondary (us-west via legacy TINYBIRD_API_URL/TOKEN) are independent.
+	// If primary is misconfigured or down, the secondary safety net must
+	// still fire — that's the whole point of dual-write.
+	if (!tinybirdIngest && !tinybirdSecondaryApi) {
+		logger?.debug(
+			"Tinybird not configured (neither primary nor secondary), skipping event send",
+		);
 		return;
 	}
 
@@ -68,18 +73,20 @@ export const sendEventsToTinybird = async ({
 	};
 
 	const primaryWrite = tinybirdIngest
-		.events(tinybirdEvents)
-		.then((result) => {
-			logger?.info(`Sent ${events.length} events to Tinybird (primary)`, {
-				data: {
-					region: "primary",
-					eventCount: events.length,
-					successfulRows: result.successful_rows,
-					quarantinedRows: result.quarantined_rows,
-				},
-			});
-		})
-		.catch((error: unknown) => reportFailure(error, "primary"));
+		? tinybirdIngest
+				.events(tinybirdEvents)
+				.then((result) => {
+					logger?.info(`Sent ${events.length} events to Tinybird (primary)`, {
+						data: {
+							region: "primary",
+							eventCount: events.length,
+							successfulRows: result.successful_rows,
+							quarantinedRows: result.quarantined_rows,
+						},
+					});
+				})
+				.catch((error: unknown) => reportFailure(error, "primary"))
+		: Promise.resolve();
 
 	const secondaryWrite = tinybirdSecondaryApi
 		? tinybirdSecondaryApi
