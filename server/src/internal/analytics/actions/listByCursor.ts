@@ -5,8 +5,9 @@ import type {
 } from "@autumn/shared";
 import { StandardCursor } from "@autumn/shared";
 import {
+	epochMicrosToDateTime,
 	epochToDateTime,
-	epochToDateTimeMillis,
+	tinybirdTimestampToEpochMicros,
 	tinybirdTimestampToEpochMs,
 } from "@autumn/shared/api/common/epochUtils";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
@@ -75,7 +76,7 @@ export const listByCursor = async ({
 		limit: fetchLimit,
 		...(cursor
 			? {
-					cursor_timestamp: epochToDateTimeMillis(cursor.t),
+					cursor_timestamp: epochMicrosToDateTime(cursor.t),
 					cursor_id: cursor.id,
 				}
 			: {}),
@@ -85,6 +86,9 @@ export const listByCursor = async ({
 	const queryDuration = performance.now() - startTime;
 	const hasMore = result.data.length > params.limit;
 	const rows = hasMore ? result.data.slice(0, params.limit) : result.data;
+
+	let lastRowMicros: number | null = null;
+	let lastRowId: string | null = null;
 
 	// Transform to API format
 	const list: ApiEventsListItem[] = rows.map((row) => {
@@ -112,6 +116,9 @@ export const listByCursor = async ({
 			}
 		}
 
+		lastRowMicros = tinybirdTimestampToEpochMicros(row.timestamp);
+		lastRowId = row.id;
+
 		return {
 			id: row.id,
 			timestamp: tinybirdTimestampToEpochMs(row.timestamp),
@@ -123,12 +130,11 @@ export const listByCursor = async ({
 		};
 	});
 
-	const lastItem = list[list.length - 1];
 	const next_cursor =
-		hasMore && lastItem
+		hasMore && lastRowId !== null && lastRowMicros !== null
 			? StandardCursor.encode({
-					id: lastItem.id,
-					t: lastItem.timestamp,
+					id: lastRowId,
+					t: lastRowMicros,
 				})
 			: null;
 

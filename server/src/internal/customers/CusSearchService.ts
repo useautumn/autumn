@@ -1072,6 +1072,17 @@ const buildSearchPredicates = ({
 									isNull(customerProducts.canceled_at),
 									activeDrizzle,
 								);
+							case CusProductStatus.Expired:
+								return and(
+									eq(customerProducts.status, CusProductStatus.Expired),
+									isNull(customerProducts.canceled_at),
+									sql`NOT EXISTS (
+										SELECT 1 FROM customer_products cp_alias
+										WHERE cp_alias.internal_customer_id = ${customerProducts.internal_customer_id}
+										  AND cp_alias.product_id = ${customerProducts.product_id}
+										  AND (cp_alias.status = ${CusProductStatus.Active} OR cp_alias.status = ${CusProductStatus.PastDue})
+									)`,
+								);
 							default:
 								return eq(customerProducts.status, status);
 						}
