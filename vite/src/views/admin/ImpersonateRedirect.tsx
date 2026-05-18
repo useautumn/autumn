@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import {
 	endSpan,
 	flushBeforeReload,
+	resetBuffer,
 	startSpan,
 	traceAsync,
 } from "@/utils/perfTrace";
@@ -15,7 +16,7 @@ import { useAdmin } from "./hooks/useAdmin";
 export function ImpersonateRedirect() {
 	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
-	const { isAdmin, isPending } = useAdmin();
+	const { isAdmin, isPending, isCurrentlyImpersonating } = useAdmin();
 	const [status, setStatus] = useState("Impersonating...");
 	const [error, setError] = useState<string | null>(null);
 
@@ -31,6 +32,7 @@ export function ImpersonateRedirect() {
 				return;
 			}
 
+			resetBuffer();
 			startSpan("impersonate.total");
 
 			try {
@@ -46,14 +48,16 @@ export function ImpersonateRedirect() {
 					return;
 				}
 
-				// Step 2: Stop any existing impersonation
-				setStatus("Stopping existing impersonation...");
-				try {
-					await traceAsync("impersonate.stopImpersonating", () =>
+				// Step 2: Stop existing impersonation only if one is active. Fire and
+				// forget — the impersonateUser call below issues a fresh session
+				// cookie that overwrites the old one server-side.
+				if (isCurrentlyImpersonating) {
+					setStatus("Stopping existing impersonation...");
+					traceAsync("impersonate.stopImpersonating", () =>
 						authClient.admin.stopImpersonating(),
-					);
-				} catch {
-					// Ignore - might not be impersonating
+					).catch(() => {
+						// Ignore - server-side reset happens via impersonateUser below
+					});
 				}
 
 				// Step 3: Impersonate the user
@@ -96,7 +100,7 @@ export function ImpersonateRedirect() {
 		if (isAdmin) {
 			doImpersonate();
 		}
-	}, [orgId, redirect, navigate, isAdmin, isPending]);
+	}, [orgId, redirect, navigate, isAdmin, isPending, isCurrentlyImpersonating, axiosInstance]);
 
 	if (!isAdmin && isPending) {
 		navigate("/");

@@ -6,6 +6,18 @@ const starts = new Map<string, number>();
 
 const STORAGE_KEY = "autumn:perf:pending";
 
+/** Reset the in-memory buffer and any in-flight spans. Call at the start of
+ *  a fresh flow to discard accumulated noise from prior renders/keystrokes. */
+export function resetBuffer(): void {
+	if (buffer.length > 0 || starts.size > 0) {
+		console.log(
+			`[perfTrace] resetBuffer() — discarding ${buffer.length} measurements and ${starts.size} in-flight spans`,
+		);
+	}
+	buffer = [];
+	starts.clear();
+}
+
 /** Start measuring a span. Idempotent on duplicate-label (last-write-wins). */
 export function startSpan(label: string): void {
 	if (starts.has(label)) {
