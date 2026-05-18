@@ -1,0 +1,91 @@
+name: Run Database Migrations
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+      - dev
+    paths:
+      - "shared/drizzle/**"
+      - "shared/db/**"
+      - "shared/drizzle.config.ts"
+      - ".github/workflows/migrations.yml"
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to run migrations against"
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+jobs:
+  determine-environment:
+    name: Determine Environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      secret_name: ${{ steps.env.outputs.secret_name }}
+    steps:
+      - name: Determine environment from branch or input
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            SELECTED_ENV="${{ github.event.inputs.environment }}"
+            BRANCH_NAME="${{ github.ref_name }}"
+
+            if [ "$SELECTED_ENV" = "prod" ] && [ "$BRANCH_NAME" != "main" ]; then
+              echo "::error::Production migrations can only be triggered from the main branch"
+              exit 1
+            fi
+
+            if [ "$SELECTED_ENV" = "staging" ] && [ "$BRANCH_NAME" != "staging" ] && [ "$BRANCH_NAME" != "main" ]; then
+              echo "::error::Staging migrations can only be triggered from the staging or main branch"
+              exit 1
+            fi
+
+            ENV="$SELECTED_ENV"
+          else
+            BRANCH_NAME=${GITHUB_REF#refs/heads/}
+            case "$BRANCH_NAME" in
+              main) ENV="prod" ;;
+              staging) ENV="staging" ;;
+              dev) ENV="dev" ;;
+            esac
+          fi
+
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+
+          case "$ENV" in
+            dev) echo "secret_name=DATABASE_URL_DEV" >> $GITHUB_OUTPUT ;;
+            staging) echo "secret_name=DATABASE_URL_STAGING" >> $GITHUB_OUTPUT ;;
+            prod) echo "secret_name=DATABASE_URL_PROD" >> $GITHUB_OUTPUT ;;
+          esac
+
+  migrate:
+    name: Migrate ${{ needs.determine-environment.outputs.environment }} Database
+    needs: determine-environment
+    if: needs.determine-environment.outputs.environment != ''
+    runs-on: ubuntu-latest
+    environment: ${{ needs.determine-environment.outputs.environment == 'prod' && 'prod' || '' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: ${{ secrets[needs.determine-environment.outputs.secret_name] }}
+        run: bun db:migrate
