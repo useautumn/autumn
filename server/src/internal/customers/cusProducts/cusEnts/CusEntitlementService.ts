@@ -205,6 +205,8 @@ export class CusEntService {
 		// Exclude free cusEnts whose interval matches a subscription-backed
 		// price on the same customer AND resets on the same day-of-month.
 		// Mirrors isWebhookOwned + isAlignedWithWebhookCycle logic.
+		// LEFT JOIN to ce_sub so that missing entitlement rows (e.g. fixed
+		// prices) still match — null ce_sub means "assume aligned."
 		const notWebhookOwned = () =>
 			notExists(
 				db
@@ -218,7 +220,7 @@ export class CusEntService {
 						sql`prices p_sub`,
 						sql`p_sub.id = cpr_sub.price_id`,
 					)
-					.innerJoin(
+					.leftJoin(
 						sql`customer_entitlements ce_sub`,
 						sql`ce_sub.customer_product_id = cp_sub.id AND ce_sub.entitlement_id = p_sub.entitlement_id`,
 					)
