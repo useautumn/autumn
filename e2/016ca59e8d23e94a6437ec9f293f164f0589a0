@@ -1,0 +1,11 @@
+server/src/internal/analytics/actions/listByCursor.ts
+  ai_agent 116-123
+server/src/internal/analytics/actions/listEvents.ts
+  ai_agent 102-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "e2016ca59e8d23e94a6437ec9f293f164f0589a0",
+  "prompts": {}
+}
