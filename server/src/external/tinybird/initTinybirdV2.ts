@@ -3,20 +3,17 @@ import { createTinybirdApi } from "@tinybirdco/sdk";
 // Dual-write safety net during the us-east cutover. Reads the legacy
 // us-west env vars; delete with the dual-write logic in `sendEvents.ts`
 // once us-east is stable.
-const secondaryApiUrl = process.env.TINYBIRD_API_URL;
-const secondaryToken = process.env.TINYBIRD_TOKEN;
+const TINYBIRD_API_URL = process.env.TINYBIRD_API_URL;
+const TINYBIRD_TOKEN = process.env.TINYBIRD_TOKEN;
 
-const secondaryConfig =
-	secondaryApiUrl && secondaryToken
-		? { baseUrl: secondaryApiUrl, token: secondaryToken }
+/** Secondary Tinybird API client for dual-write during region cutover. */
+export const tinybirdSecondaryApi =
+	TINYBIRD_API_URL && TINYBIRD_TOKEN
+		? createTinybirdApi({ baseUrl: TINYBIRD_API_URL, token: TINYBIRD_TOKEN })
 		: null;
 
-export const tinybirdSecondaryApi = secondaryConfig
-	? createTinybirdApi(secondaryConfig)
-	: null;
-
-if (secondaryConfig) {
+if (tinybirdSecondaryApi) {
 	console.log(
-		`[Tinybird] secondary dual-write configured with URL: ${secondaryConfig.baseUrl}`,
+		`[Tinybird] secondary dual-write configured with URL: ${TINYBIRD_API_URL}`,
 	);
 }
