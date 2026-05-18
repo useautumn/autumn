@@ -1,6 +1,7 @@
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Mail } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -9,6 +10,7 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Input } from "@/components/v2/inputs/Input";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
+import { AuthBackground } from "./components/AuthBackground";
 import { OTPSignIn } from "./components/OTPSignIn";
 
 /**
@@ -16,19 +18,23 @@ import { OTPSignIn } from "./components/OTPSignIn";
  * These params are added by better-auth when redirecting unauthenticated users
  */
 function getOAuthRedirectUrl(searchParams: URLSearchParams): string | null {
-	// Check for OAuth-specific params that indicate this is an OAuth flow
 	const clientId = searchParams.get("client_id");
 	const responseType = searchParams.get("response_type");
 	const redirectUri = searchParams.get("redirect_uri");
-
 	if (clientId && responseType && redirectUri) {
-		// Reconstruct the OAuth authorize URL with all params
 		const backendUrl = import.meta.env.VITE_BACKEND_URL;
 		return `${backendUrl}/api/auth/oauth2/authorize?${searchParams.toString()}`;
 	}
 	return null;
 }
+
 export const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
+
+const STAGGER_BASE = 0.06;
+
+function staggerDelay(index: number): { delay: number } {
+	return { delay: 0.15 + index * STAGGER_BASE };
+}
 
 export const SignIn = () => {
 	const [email, setEmail] = useState("");
@@ -40,7 +46,6 @@ export const SignIn = () => {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 
-	// Check if this is an OAuth flow - if so, redirect back to authorize endpoint after login
 	const oauthRedirectUrl = useMemo(
 		() => getOAuthRedirectUrl(searchParams),
 		[searchParams],
@@ -49,19 +54,11 @@ export const SignIn = () => {
 	const defaultNewPath = "/sandbox/products?tab=products";
 	const defaultCallbackPath = "/sandbox/products?tab=products";
 
-	// Use OAuth redirect URL if present, otherwise use default paths
 	const newPath = oauthRedirectUrl || defaultNewPath;
 	const callbackPath = oauthRedirectUrl || defaultCallbackPath;
 
 	useEffect(() => {
-		// If this is an OAuth flow and user is already logged in, continue the OAuth flow
-		if (oauthRedirectUrl) {
-			// Don't auto-redirect to dashboard - let the OAuth flow continue
-			// The user will be redirected to consent page after they click sign-in
-			return;
-		}
-
-		// Regular sign-in flow - redirect to dashboard if already authenticated
+		if (oauthRedirectUrl) return;
 		if (session) {
 			navigate("/", { replace: true });
 		}
@@ -74,15 +71,15 @@ export const SignIn = () => {
 			return;
 		}
 		setSendOtpLoading(true);
-
 		try {
 			const { error } = await authClient.emailOtp.sendVerificationOtp({
 				email: email,
 				type: "sign-in",
 			});
-
 			if (error) {
-				toast.error(error.message || "Something went wrong. Please try again.");
+				toast.error(
+					error.message || "Something went wrong. Please try again.",
+				);
 			} else {
 				setOtpSent(true);
 			}
@@ -97,14 +94,10 @@ export const SignIn = () => {
 		setGoogleLoading(true);
 		try {
 			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
-
-			// For OAuth flow, we need to redirect back to continue the flow
-			// For regular sign-in, use the default dashboard paths
 			const googleCallbackUrl =
 				oauthRedirectUrl || `${frontendUrl}${defaultCallbackPath}`;
 			const googleNewUserUrl =
 				oauthRedirectUrl || `${frontendUrl}${defaultNewPath}`;
-
 			const { error } = await signIn.social({
 				provider: "google",
 				callbackURL: googleCallbackUrl,
@@ -116,99 +109,140 @@ export const SignIn = () => {
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to sign in with Google"));
 		} finally {
-			setTimeout(() => {
-				setGoogleLoading(false);
-			}, 1000);
+			setTimeout(() => setGoogleLoading(false), 1000);
 		}
 	};
 
+	const fadeUp = {
+		initial: { opacity: 0, y: 10 },
+		animate: { opacity: 1, y: 0 },
+	};
+
 	return (
-		<div className="w-screen h-screen bg-background flex items-center justify-center p-4">
+		<AuthBackground>
 			<CustomToaster />
-			<div className="w-full max-w-[350px] space-y-4">
-				{/* Logo */}
-				<div className="flex justify-center">
-					<svg width="48" height="48" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<mask id="icon-cutout">
-							<rect width="28" height="28" fill="white"/>
-							<path d="M10.7139 9.06887C9.77726 11.211 8.84052 13.3532 7.90386 15.4953C8.63795 16.4465 9.37205 17.3984 10.1061 18.3496C12.2827 15.537 14.4599 12.7244 16.637 9.91183L9.27077 22.9514C12.9161 20.7518 16.5615 18.5529 20.2069 16.3534V4.85034L10.7139 9.06887Z" fill="black"/>
-						</mask>
-						<rect width="28" height="28" fill="currentColor" mask="url(#icon-cutout)"/>
+			<div className="flex flex-col items-center gap-6">
+				{/* Wordmark logo + welcome text */}
+				<motion.div
+					className="flex flex-col items-center gap-3"
+					{...fadeUp}
+					transition={{ duration: 0.5, ...staggerDelay(0) }}
+				>
+					<svg
+						viewBox="0 0 114 28"
+						fill="currentColor"
+						xmlns="http://www.w3.org/2000/svg"
+						aria-label="Autumn"
+						className="h-7 w-auto text-foreground"
+					>
+						<path
+							fillRule="evenodd"
+							clipRule="evenodd"
+							d="M28 28H0V0H28V28ZM10.7139 9.06887C9.77726 11.211 8.84052 13.3532 7.90386 15.4953C8.63795 16.4465 9.37205 17.3984 10.1061 18.3496C12.2827 15.537 14.4599 12.7244 16.637 9.91183L9.27077 22.9514C12.9161 20.7518 16.5615 18.5529 20.2069 16.3534V4.85034L10.7139 9.06887Z"
+						/>
+						<path d="M51.9683 16.7168C51.9683 17.7995 52.1779 18.6235 52.5979 19.1885C53.0179 19.7383 53.6245 20.0133 54.4161 20.0133C55.3045 20.0133 55.9995 19.6976 56.5001 19.068C57.0176 18.4376 57.2756 17.5407 57.2756 16.3774V10.1724H60.1841V22.1939H57.2756V20.9211C57.5812 20.5928 58.0631 19.6599 58.0656 19.6552L57.7898 19.4752C57.6379 19.779 57.4945 20.0344 57.2756 20.3763C56.9201 21.039 56.428 21.5557 55.7975 21.9273C55.1671 22.299 54.4077 22.4849 53.5193 22.4849C52.1618 22.4848 51.0791 22.025 50.2713 21.1036C49.4797 20.1668 49.0834 18.8007 49.0834 17.0078V10.1724H51.9683V16.7168Z" />
+						<path d="M72.6539 16.7168C72.6539 17.7995 72.8633 18.6235 73.2833 19.1885C73.7033 19.7384 74.31 20.0133 75.1017 20.0133C75.99 20.0133 76.685 19.6976 77.1856 19.068C77.7032 18.4376 77.961 17.5406 77.961 16.3774V10.1724H80.8697V22.1939H77.961V20.9211C78.2661 20.5933 78.7469 19.663 78.751 19.6552L78.4753 19.4752C78.3234 19.779 78.1799 20.0344 77.961 20.3763C77.6055 21.039 77.1135 21.5557 76.4831 21.9273C75.8527 22.299 75.0932 22.4848 74.2049 22.4849C72.8473 22.4849 71.7646 22.025 70.9569 21.1036C70.1653 20.1668 69.769 18.8007 69.769 17.0078V10.1724H72.6539V16.7168Z" />
+						<path d="M65.8577 10.1727H69.0082V12.6205H65.8577V18.2188C65.8577 18.6549 65.8985 18.9783 65.9791 19.1887C66.0758 19.3991 66.2379 19.5442 66.4635 19.6248C66.6901 19.6893 67.0211 19.7215 67.4572 19.7215H68.8868V22.194H66.5365C65.761 22.194 65.1068 22.1049 64.5731 21.9276C64.0394 21.7342 63.6355 21.3786 63.3614 20.8611C63.0865 20.3443 62.949 19.5925 62.949 18.6066V12.6205H60.889V10.1727H62.949V7.02223H65.8577V10.1727Z" />
+						<path fillRule="evenodd" clipRule="evenodd" d="M49.0481 22.1939H46.0224L44.6436 18.2629H38.0372L36.6584 22.1939H33.6566L39.7555 5.51515H42.9483L49.0481 22.1939ZM41.1784 9.30709L38.8313 15.999H43.8497L41.5026 9.30709V8.33556H41.1784V9.30709Z" />
+						<path d="M88.5704 9.88131C89.9458 9.88133 91.042 10.3412 91.8608 11.2626C92.0585 11.4942 92.2315 11.7513 92.38 12.0339C92.8144 11.3687 93.3898 10.8452 94.1059 10.4634C94.8491 10.0757 95.6569 9.88215 96.5299 9.88214C98.0648 9.88214 99.2519 10.3506 100.093 11.2873C100.933 12.2088 101.353 13.5663 101.353 15.36V22.1937H98.4688V15.6502C98.4688 14.5675 98.2584 13.7522 97.8384 13.2023C97.4184 12.6373 96.788 12.3539 95.948 12.3539C95.108 12.3539 94.3969 12.6694 93.8632 13.299C93.3304 13.9294 93.0639 14.8263 93.0639 15.9896V22.1937H90.1409V15.6493C90.1409 14.5667 89.9288 13.7427 89.5037 13.1776C89.0777 12.6278 88.4634 12.3529 87.6616 12.3529C86.7614 12.3529 86.0571 12.6686 85.5506 13.2982C85.0262 13.9286 84.7649 14.8255 84.7649 15.9888V22.1937H81.8182V10.1723H84.7649V11.445C84.4553 11.7732 83.9678 12.7052 83.9648 12.711L84.2439 12.8909C84.3975 12.5872 84.5426 12.3318 84.7649 11.9898C85.1247 11.3272 85.6236 10.8105 86.2617 10.4388C86.9006 10.0672 87.6702 9.88131 88.5704 9.88131Z" />
+						<path d="M109.109 9.88131C110.529 9.88131 111.662 10.3411 112.506 11.2626C113.334 12.1993 113.748 13.5655 113.748 15.3584V22.1937H110.731V15.6493C110.731 14.5667 110.512 13.7427 110.072 13.1776C109.633 12.6278 108.999 12.3529 108.171 12.3529C107.242 12.3529 106.515 12.6686 105.991 13.2982C105.45 13.9286 105.18 14.8255 105.18 15.9888V22.1937H102.139V10.1723H105.181V11.445C104.861 11.7733 104.357 12.7056 104.354 12.711L104.643 12.8909C104.802 12.5872 104.952 12.3317 105.181 11.9898C105.552 11.3272 106.068 10.8105 106.727 10.4388C107.386 10.0672 108.18 9.88131 109.109 9.88131Z" />
 					</svg>
-				</div>
+					<p className="text-sm text-muted-foreground">
+						Welcome to Autumn, sign in to continue
+					</p>
+				</motion.div>
 
-				{/* Title */}
-				<div className="text-center">
-					<h1 className="text-lg font-semibold text-foreground">
-						Welcome to Autumn
-					</h1>
-				</div>
-
-				{otpSent && (
-					<OTPSignIn
-						email={email}
-						newPath={newPath}
-						callbackPath={callbackPath}
-					/>
-				)}
-
-				{!otpSent && (
-					<div className="space-y-6">
-						{/* Google Sign In Button */}
-						<IconButton
-							variant="primary"
-							onClick={handleGoogleSignIn}
-							isLoading={googleLoading}
-							icon={<FontAwesomeIcon icon={faGoogle} />}
-							className={"w-full gap-2"}
+				{/* Form content with AnimatePresence for OTP transition */}
+				<AnimatePresence mode="wait">
+					{otpSent ? (
+						<motion.div
+							key="otp"
+							initial={{ opacity: 0, y: 8 }}
+							animate={{ opacity: 1, y: 0 }}
+							exit={{ opacity: 0, y: -8 }}
+							transition={{ duration: 0.3 }}
+							className="w-full"
 						>
-							{" "}
-							Continue with Google
-						</IconButton>
+							<OTPSignIn
+								email={email}
+								newPath={newPath}
+								callbackPath={callbackPath}
+							/>
+						</motion.div>
+					) : (
+						<motion.div
+							key="form"
+							initial={{ opacity: 0 }}
+							animate={{ opacity: 1 }}
+							exit={{ opacity: 0, y: -8 }}
+							transition={{ duration: 0.3 }}
+							className="w-full space-y-5"
+						>
+							{/* Google Sign In */}
+							<motion.div
+								{...fadeUp}
+								transition={{ duration: 0.4, ...staggerDelay(2) }}
+							>
+								<IconButton
+									variant="primary"
+									onClick={handleGoogleSignIn}
+									isLoading={googleLoading}
+									icon={<FontAwesomeIcon icon={faGoogle} />}
+									className="w-full gap-2"
+								>
+									Continue with Google
+								</IconButton>
+							</motion.div>
 
-						{/* Divider */}
-						<div className="relative">
-							<div className="absolute inset-0 flex items-center">
-								<span className="w-full border-t border-border" />
-							</div>
-							<div className="relative flex justify-center text-xs uppercase">
+							{/* Divider */}
+							<motion.div
+								className="relative"
+								{...fadeUp}
+								transition={{ duration: 0.4, ...staggerDelay(3) }}
+							>
+								<div className="absolute inset-0 flex items-center">
+									<span className="w-full border-t border-border" />
+								</div>
+								<div className="relative flex justify-center text-xs uppercase">
 								<span className="bg-background px-2 text-muted-foreground">
 									Or
 								</span>
-							</div>
-						</div>
+								</div>
+							</motion.div>
 
-						<div className="flex flex-col gap-2 w-full">
-							<Input
-								type="email"
-								placeholder="Email"
-								value={email}
-								onChange={(e) => setEmail(e.target.value)}
-								onKeyDown={(e) => {
-									if (e.key === "Enter") {
-										handleEmailSignIn(e);
-									}
-								}}
-								required
-								className="text-base !w-full"
-								autoComplete="email"
-							/>
-
-							{/* Sign In Button */}
-							<IconButton
-								type="submit"
-								variant="secondary"
-								isLoading={sendOtpLoading}
-								onClick={handleEmailSignIn}
-								className={"gap-2 w-full"}
-								icon={<Mail size={14} className="text-t4" />}
+							{/* Email form */}
+							<motion.div
+								className="flex flex-col gap-2 w-full"
+								{...fadeUp}
+								transition={{ duration: 0.4, ...staggerDelay(4) }}
 							>
-								Continue with Email
-							</IconButton>
-						</div>
-					</div>
-				)}
+								<Input
+									type="email"
+									placeholder="Email"
+									value={email}
+									onChange={(e) => setEmail(e.target.value)}
+									onKeyDown={(e) => {
+										if (e.key === "Enter") handleEmailSignIn(e);
+									}}
+									required
+									className="text-base !w-full"
+									autoComplete="email"
+								/>
+								<IconButton
+									type="submit"
+									variant="secondary"
+									isLoading={sendOtpLoading}
+									onClick={handleEmailSignIn}
+									className="gap-2 w-full"
+									icon={<Mail size={14} className="text-t4" />}
+								>
+									Continue with Email
+								</IconButton>
+							</motion.div>
+						</motion.div>
+					)}
+				</AnimatePresence>
 			</div>
-		</div>
+		</AuthBackground>
 	);
 };
