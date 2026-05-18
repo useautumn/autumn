@@ -1,29 +1,10 @@
 import { type ClickHouseClient, createClient } from "@clickhouse/client";
 
+// ClickHouse URL is different from API URL
+// API: https://api.europe-west2.gcp.tinybird.co
+// ClickHouse: https://europe-west2.gcp.clickhouse.tinybird.co
 const primaryClickhouseUrl = process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
 const primaryToken = process.env.TINYBIRD_US_EAST_TOKEN;
-
-const safeOrigin = (url: string): string | null => {
-	try {
-		return new URL(url).origin;
-	} catch {
-		return null;
-	}
-};
-
-const legacyClickhouseUrl = process.env.TINYBIRD_CLICKHOUSE_URL;
-const legacyOrigin = legacyClickhouseUrl
-	? safeOrigin(legacyClickhouseUrl)
-	: null;
-const primaryOrigin = primaryClickhouseUrl
-	? safeOrigin(primaryClickhouseUrl)
-	: null;
-if (legacyOrigin && primaryOrigin && legacyOrigin !== primaryOrigin) {
-	console.warn(
-		`[Tinybird ClickHouse] Ignoring legacy TINYBIRD_CLICKHOUSE_URL (${legacyClickhouseUrl}) — ` +
-			`using TINYBIRD_US_EAST_CLICKHOUSE_URL (${primaryClickhouseUrl}) instead.`,
-	);
-}
 
 if (primaryClickhouseUrl && primaryToken) {
 	console.log(
