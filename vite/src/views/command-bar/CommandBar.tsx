@@ -93,7 +93,7 @@ const CommandBar = () => {
 	const buildKey = useQueryKeyFactory();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
-	const { isAdmin } = useAdmin();
+	const { isAdmin, isCurrentlyImpersonating } = useAdmin();
 	const { org } = useOrg();
 	const { theme, setTheme } = useTheme();
 
@@ -651,6 +651,7 @@ const CommandBar = () => {
 											await impersonateUser({
 												userId: fav.impersonation_user_id,
 												organizationId: fav.org_id,
+												isCurrentlyImpersonating,
 											});
 										} catch (error) {
 											console.error("Failed to impersonate user:", error);
@@ -672,7 +673,10 @@ const CommandBar = () => {
 								onSelect={async () => {
 									try {
 										closeDialog();
-										await impersonateUser({ userId: fav.user_id });
+										await impersonateUser({
+											userId: fav.user_id,
+											isCurrentlyImpersonating,
+										});
 									} catch (error) {
 										console.error("Failed to impersonate user:", error);
 									}
@@ -724,6 +728,7 @@ const CommandBar = () => {
 													await impersonateUser({
 														userId: firstNonAdminUser.id,
 														organizationId: org.id,
+														isCurrentlyImpersonating,
 													});
 													closeDialog();
 												} catch (error) {
@@ -763,7 +768,10 @@ const CommandBar = () => {
 											onSelect={async () => {
 												try {
 													closeDialog();
-													await impersonateUser({ userId: user.id });
+													await impersonateUser({
+														userId: user.id,
+														isCurrentlyImpersonating,
+													});
 												} catch (error) {
 													console.error("Failed to impersonate user:", error);
 												}

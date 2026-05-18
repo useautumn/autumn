@@ -11,7 +11,13 @@ import type {
 } from "@autumn/shared";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import { startSpan, endSpan, traceAsync, flushBeforeReload } from "@/utils/perfTrace";
+import {
+	endSpan,
+	flushBeforeReload,
+	resetBuffer,
+	startSpan,
+	traceAsync,
+} from "@/utils/perfTrace";
 import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
 
 export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
@@ -44,18 +50,28 @@ export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
 export const impersonateUser = async ({
 	userId,
 	organizationId,
+	isCurrentlyImpersonating = false,
 }: {
 	userId: string;
 	organizationId?: string;
+	/**
+	 * Pass true when the caller's session has `impersonatedBy` set. When false,
+	 * we skip the stopImpersonating round-trip entirely (saves ~270ms).
+	 * When true, stopImpersonating is fired without await — server-side the
+	 * impersonateUser endpoint creates a fresh session anyway, so we don't
+	 * need to wait for the stop to complete.
+	 */
+	isCurrentlyImpersonating?: boolean;
 }) => {
+	resetBuffer();
 	startSpan("impersonate.total");
 	try {
-		try {
-			await traceAsync("impersonate.stopImpersonating", () =>
+		if (isCurrentlyImpersonating) {
+			// Fire-and-forget — the new impersonateUser call below issues a fresh
+			// session cookie that overwrites the old one server-side.
+			traceAsync("impersonate.stopImpersonating", () =>
 				authClient.admin.stopImpersonating(),
-			);
-		} catch (error) {
-			console.error(error);
+			).catch((error) => console.error(error));
 		}
 		const res = await traceAsync("impersonate.impersonateUser", () =>
 			authClient.admin.impersonateUser({ userId }),
