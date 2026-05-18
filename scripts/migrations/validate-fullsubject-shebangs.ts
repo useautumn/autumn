@@ -46,8 +46,8 @@ const stubRedis = {
 
 const v2Config = getRedisV2ConnectionConfig({
 	cacheV2Url: process.env.CACHE_V2_UPSTASH_URL,
-	primaryCacheUrl: process.env.CACHE_URL,
 	currentRegion: "validate",
+	instanceName: "upstash",
 });
 
 if (!v2Config) {

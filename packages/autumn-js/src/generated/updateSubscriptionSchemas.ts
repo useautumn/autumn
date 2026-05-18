@@ -190,6 +190,7 @@ export const billingUpdateFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
+	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const billingUpdateCustomizeOutboundSchema = z.object({
@@ -403,12 +404,15 @@ export const billingUpdatePlanItemFilterSchema = z.object({
 
 export const billingUpdateDurationTypeSchema = closedEnumSchema;
 
+export const billingUpdateOnEndSchema = closedEnumSchema;
+
 export const billingUpdateFreeTrialParamsSchema = z.object({
 	durationLength: z.number(),
 	durationType: z
 		.union([billingUpdateDurationTypeSchema, z.undefined()])
 		.optional(),
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
+	onEnd: z.union([billingUpdateOnEndSchema, z.undefined()]).optional(),
 });
 
 export const billingUpdateCustomizeSchema = z.object({

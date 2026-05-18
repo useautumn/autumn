@@ -117,10 +117,13 @@ export const listPlansItemSchema = z.object({
 
 export const listPlansDurationTypeSchema = openEnumSchema;
 
+export const listPlansOnEndSchema = openEnumSchema;
+
 export const listPlansFreeTrialSchema = z.object({
 	durationLength: z.number(),
 	durationType: listPlansDurationTypeSchema,
 	cardRequired: z.boolean(),
+	onEnd: z.union([listPlansOnEndSchema, z.undefined()]).optional().nullable(),
 });
 
 export const listPlansEnvSchema = openEnumSchema;

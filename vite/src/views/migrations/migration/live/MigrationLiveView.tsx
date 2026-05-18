@@ -11,6 +11,7 @@ import {
 	EyeIcon,
 	ListMagnifyingGlassIcon,
 	PlayIcon,
+	StopIcon,
 	UsersIcon,
 	WarningIcon,
 	XIcon,
@@ -45,6 +46,8 @@ import {
 	SelectValue,
 } from "@/components/v2/selects/Select";
 import { useMigrationFilterPreview } from "@/hooks/queries/useMigrationFilterPreview";
+import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import { toast } from "sonner";
 import {
 	type MigrationItemEvent,
 	useMigrationRunsQuery,
@@ -161,6 +164,8 @@ export function MigrationLiveView({
 	});
 	const [dismissedError, setDismissedError] = useState<string | null>(null);
 	const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+	const { cancelRun, isCanceling } = useMigrationsQuery();
 
 	const debouncedSetSearch = useMemo(
 		() => debounce((q: string) => setDebouncedSearch(q), 350),
@@ -218,12 +223,15 @@ export function MigrationLiveView({
 		? "running"
 		: ((activeRun?.status as ActiveRunStatus) ?? null);
 	const activeRunId = activeRun?.internal_id ?? null;
-	const activeRunTargetSet = useMemo(() => {
-		const ids = activeRun?.target_customer_ids as string[] | null | undefined;
-		return ids && ids.length > 0 ? new Set(ids) : null;
-	}, [activeRun?.target_customer_ids]);
+	const activeRunOnlyIds = useMemo(
+		() =>
+			activeRun?.only_ids && activeRun.only_ids.length > 0
+				? new Set(activeRun.only_ids)
+				: null,
+		[activeRun?.only_ids],
+	);
 	const isActiveRunScoped =
-		!!activeRunTargetSet || !!(activeRun?.target_limit as number | null);
+		!!activeRunOnlyIds || !!(activeRun?.target_limit as number | null);
 
 	const enrichedCustomers = useMemo(
 		(): CustomerRow[] =>
@@ -231,9 +239,9 @@ export function MigrationLiveView({
 				const event = eventsByCustomer.get(c.internal_id);
 				const hasEventInActiveRun =
 					event && activeRunId && event.migration_run_id === activeRunId;
-				const isTargeted = activeRunTargetSet
-					? activeRunTargetSet.has(c.id ?? "") ||
-						activeRunTargetSet.has(c.internal_id)
+				const isTargeted = activeRunOnlyIds
+					? activeRunOnlyIds.has(c.id ?? "") ||
+						activeRunOnlyIds.has(c.internal_id)
 					: isActiveRunScoped
 						? !!hasEventInActiveRun
 						: true;
@@ -249,7 +257,7 @@ export function MigrationLiveView({
 			eventsByCustomer,
 			activeRunStatus,
 			activeRunId,
-			activeRunTargetSet,
+			activeRunOnlyIds,
 			isActiveRunScoped,
 		],
 	);
@@ -361,6 +369,17 @@ export function MigrationLiveView({
 						Previous
 					</Button>
 				)}
+				{activeRun && (
+					<Button
+						variant="secondary"
+						size="default"
+						onClick={() => setIsCancelDialogOpen(true)}
+						isLoading={isCanceling}
+					>
+						<StopIcon size={14} weight="fill" />
+						Cancel run
+					</Button>
+				)}
 				<div className="flex items-center">
 					<Button
 						variant="primary"
@@ -396,6 +415,48 @@ export function MigrationLiveView({
 						</DropdownMenuContent>
 					</DropdownMenu>
 				</div>
+
+				<Dialog
+					open={isCancelDialogOpen}
+					onOpenChange={setIsCancelDialogOpen}
+				>
+					<DialogContent showCloseButton={false}>
+						<DialogHeader>
+							<DialogTitle>Cancel running migration?</DialogTitle>
+							<DialogDescription>
+								This stops the active run. Customers already processed in this
+								run will keep their migrated state — only pending customers are
+								affected.
+							</DialogDescription>
+						</DialogHeader>
+						<DialogFooter>
+							<Button
+								variant="secondary"
+								onClick={() => setIsCancelDialogOpen(false)}
+							>
+								Keep running
+							</Button>
+							<Button
+								variant="primary"
+								isLoading={isCanceling}
+								onClick={async () => {
+									try {
+										await cancelRun({ id: migrationId });
+										toast.success("Migration run canceled");
+										invalidateRuns();
+									} catch {
+										toast.error("Failed to cancel migration run");
+									} finally {
+										setIsCancelDialogOpen(false);
+									}
+								}}
+							>
+								<StopIcon size={14} weight="fill" />
+								Cancel run
+							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
 
 				<Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
 					<DialogContent showCloseButton={false}>

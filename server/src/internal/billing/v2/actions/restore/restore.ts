@@ -5,8 +5,10 @@ import type {
 	RestoreSubscriptionResult,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
+import { buildBillingVersionUpdates } from "./compute/buildBillingVersionUpdates";
 import { handleRestoreErrors } from "./errors/handleRestoreErrors";
 import { buildRestoreBillingContext } from "./setup/buildRestoreBillingContext";
 import { setupRestoreContext } from "./setup/setupRestoreContext";
@@ -18,10 +20,11 @@ export const restore = async ({
 	ctx: AutumnContext;
 	params: RestoreParamsV1;
 }): Promise<RestoreResponse> => {
-	const { customer_id: customerId } = params;
+	const { customer_id: customerId, subscription_ids: subscriptionIdsFilter } =
+		params;
 
 	const { fullCustomer, stripeCustomer, subscriptionIds } =
-		await setupRestoreContext({ ctx, customerId });
+		await setupRestoreContext({ ctx, customerId, subscriptionIdsFilter });
 
 	const restored: RestoreSubscriptionResult[] = [];
 
@@ -36,6 +39,10 @@ export const restore = async ({
 		const autumnBillingPlan: AutumnBillingPlan = {
 			customerId,
 			insertCustomerProducts: [],
+			updateCustomerProducts: buildBillingVersionUpdates({
+				fullCustomer,
+				stripeSubscriptionId,
+			}),
 		};
 
 		const stripeBillingPlan = await evaluateStripeBillingPlan({
@@ -50,6 +57,11 @@ export const restore = async ({
 			ctx,
 			billingPlan: { autumn: autumnBillingPlan, stripe: stripeBillingPlan },
 			billingContext,
+		});
+
+		await executeAutumnBillingPlan({
+			ctx,
+			autumnBillingPlan,
 		});
 
 		restored.push({

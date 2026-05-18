@@ -87,6 +87,7 @@ const planScope: NavScope = {
 	fields: {
 		plan_id: { kind: "leaf", sql: "p.id" },
 		addon: { kind: "leaf", sql: "p.is_add_on" },
+		custom: { kind: "leaf", sql: "cp.is_custom" },
 		// Base price existence: a leaf whose SQL is a scalar subquery that
 		// evaluates to NULL when the customer has no base customer_price on
 		// this cusproduct, non-NULL otherwise. The `exists` op (compiled

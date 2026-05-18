@@ -22,7 +22,7 @@ export const withMigrationRunClaim = async ({
 	migration,
 	dryRun,
 	lazyRun = false,
-	targetCustomerIds,
+	onlyIds,
 	targetLimit,
 	claimed,
 }: {
@@ -30,7 +30,7 @@ export const withMigrationRunClaim = async ({
 	migration: Migration;
 	dryRun: boolean;
 	lazyRun?: boolean;
-	targetCustomerIds?: string[];
+	onlyIds?: string[] | null;
 	targetLimit?: number;
 	claimed: (
 		migrationRunId: string,
@@ -42,7 +42,7 @@ export const withMigrationRunClaim = async ({
 			migration_internal_id: migration.internal_id,
 			dry_run: dryRun,
 			lazy_run: lazyRun,
-			target_customer_ids: targetCustomerIds,
+			only_ids: onlyIds && onlyIds.length > 0 ? onlyIds : null,
 			target_limit: targetLimit,
 		},
 	});

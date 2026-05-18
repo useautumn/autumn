@@ -71,7 +71,7 @@ const listAccounts = async () => {
 
 	return accounts.data
 		.filter((account) => !email || account.email === email)
-		.sort((a, b) => b.created - a.created);
+		.sort((a, b) => (b.created ?? 0) - (a.created ?? 0));
 };
 
 try {
@@ -84,7 +84,9 @@ try {
 				accounts.map((account) => ({
 					id: account.id,
 					email: account.email,
-					created: new Date(account.created * 1000).toISOString(),
+					created: account.created
+						? new Date(account.created * 1000).toISOString()
+						: null,
 					charges_enabled: account.charges_enabled,
 					details_submitted: account.details_submitted,
 				})),

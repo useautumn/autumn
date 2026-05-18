@@ -1,6 +1,7 @@
 import { AppEnv } from "@autumn/shared";
 import { task } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
+import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { withMigrationItemTracking } from "@/internal/migrations/v2/actions/migrationItem/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
@@ -45,6 +46,14 @@ export const runMigrationCustomerTask = task({
 			env,
 			triggerCtx,
 			customerId: customerId ?? customerInternalId,
+		});
+
+		await warmupRegionalRedis().catch((error) => {
+			logger.warn("run-migration-customer: redis warmup failed (continuing)", {
+				data: {
+					error: error instanceof Error ? error.message : String(error),
+				},
+			});
 		});
 
 		logger.info("run-migration-customer: starting", {

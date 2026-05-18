@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import {
 	InputOTP,
 	InputOTPGroup,
@@ -83,9 +83,8 @@ export const Otp = () => {
 
 					<Button
 						onClick={handleCopyToClipboard}
-						variant="gradientPrimary"
+						variant="primary"
 						className="w-full"
-						isLoading={false}
 					>
 						Copy to Clipboard
 					</Button>

@@ -77,11 +77,19 @@ const levelNames: Record<number | string, string> = {
 	FATAL: "FATAL",
 };
 
-/** Bun-friendly pino sink that prints `<ts> <LEVEL> <msg> <extras>`. */
+/** Bun-friendly pino sink that prints `<ts> <LEVEL> <msg> <extras>`.
+ *
+ *  `useConsoleLog` routes the formatted line through `console.log` instead
+ *  of `process.stdout.write`. Trigger.dev's run UI instruments `console.*`
+ *  but not raw stdout, so dual-mode loggers (used inside trigger tasks)
+ *  flip this on to make their lines render inline in the timeline. Visually
+ *  identical in `bun d` since console.log just appends a newline. */
 const createDevLogStream = ({
 	trailingNewline = true,
+	useConsoleLog = false,
 }: {
 	trailingNewline?: boolean;
+	useConsoleLog?: boolean;
 } = {}) =>
 	new Writable({
 		write(chunk, _encoding, callback) {
@@ -114,13 +122,31 @@ const createDevLogStream = ({
 
 				const formattedLog = `${colors.gray}${timestamp}${colors.reset} ${levelColor}${colors.bright}${levelName}${colors.reset} ${message}${trailingNewline ? "\n" : ""}`;
 
-				process.stdout.write(formattedLog);
+				if (useConsoleLog) {
+					console.log(formattedLog);
+				} else {
+					process.stdout.write(formattedLog);
+				}
 				callback();
 			} catch (_error) {
 				// Fallback for malformed JSON
-				process.stdout.write(chunk);
+				if (useConsoleLog) {
+					console.log(chunk.toString());
+				} else {
+					process.stdout.write(chunk);
+				}
 				callback();
 			}
+		},
+	});
+
+/** Raw JSON sink routed through `console.log` so trigger.dev's run UI
+ *  (which only instruments console.*) picks up dual-mode prod lines. */
+const createConsoleJsonStream = () =>
+	new Writable({
+		write(chunk, _encoding, callback) {
+			console.log(chunk.toString().trimEnd());
+			callback();
 		},
 	});
 
@@ -150,8 +176,11 @@ export const initLogger = (options: InitLoggerOptions = {}) => {
 		streams.push({
 			level: isDevOrTest ? "debug" : "info",
 			stream: isDevOrTest
-				? createDevLogStream({ trailingNewline: false })
-				: process.stdout,
+				? createDevLogStream({
+						trailingNewline: false,
+						useConsoleLog: true,
+					})
+				: createConsoleJsonStream(),
 		});
 		if (process.env.AXIOM_TOKEN) {
 			streams.push({
