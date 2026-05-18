@@ -11,13 +11,6 @@ import type {
 } from "@autumn/shared";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
-import {
-	endSpan,
-	flushBeforeReload,
-	resetBuffer,
-	startSpan,
-	traceAsync,
-} from "@/utils/perfTrace";
 import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
 
 export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
@@ -55,51 +48,28 @@ export const impersonateUser = async ({
 	userId: string;
 	organizationId?: string;
 	/**
-	 * Pass true when the caller's session has `impersonatedBy` set.
-	 *
-	 * When false: skip stopImpersonating entirely (saves ~270ms — the common
-	 * case where an admin is starting their first impersonation).
-	 *
-	 * When true: stopImpersonating MUST be awaited before impersonateUser.
-	 * The currently-active session is the IMPERSONATED user's session (not an
-	 * admin), so calling impersonateUser directly would fail with FORBIDDEN.
-	 * stopImpersonating restores the admin session via the admin_session
-	 * cookie, which is required for impersonateUser's permission check.
+	 * When true, await stopImpersonating first — the active session is the
+	 * impersonated user's (non-admin) session, so impersonateUser would
+	 * otherwise fail the permission check. When false, skip the call entirely.
 	 */
 	isCurrentlyImpersonating?: boolean;
 }) => {
-	resetBuffer();
-	startSpan("impersonate.total");
-	try {
-		if (isCurrentlyImpersonating) {
-			try {
-				await traceAsync("impersonate.stopImpersonating", () =>
-					authClient.admin.stopImpersonating(),
-				);
-			} catch (error) {
-				console.error(error);
-			}
+	if (isCurrentlyImpersonating) {
+		try {
+			await authClient.admin.stopImpersonating();
+		} catch (error) {
+			console.error(error);
 		}
-		const res = await traceAsync("impersonate.impersonateUser", () =>
-			authClient.admin.impersonateUser({ userId }),
-		);
-		if (res.error) {
-			toast.error("Something went wrong");
-			endSpan("impersonate.total");
-			return;
-		}
-		if (organizationId) {
-			await traceAsync("impersonate.setActiveOrg", () =>
-				authClient.organization.setActive({ organizationId }),
-			);
-		}
-		endSpan("impersonate.total");
-		flushBeforeReload("impersonate");
-		window.location.reload();
-	} catch (err) {
-		endSpan("impersonate.total");
-		throw err;
 	}
+	const res = await authClient.admin.impersonateUser({ userId });
+	if (res.error) {
+		toast.error("Something went wrong");
+		return;
+	}
+	if (organizationId) {
+		await authClient.organization.setActive({ organizationId });
+	}
+	window.location.reload();
 };
 
 export const getCusEntHoverTexts = ({

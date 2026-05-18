@@ -36,7 +36,6 @@ import { useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
-import { startSpan, endSpan } from "@/utils/perfTrace";
 import { impersonateUser } from "@/views/admin/adminUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CommandRow } from "@/views/command-bar/command-row";
@@ -235,24 +234,6 @@ const CommandBar = () => {
 		(favouritesPage + 1) * FAVOURITES_PAGE_SIZE,
 	);
 
-	// Perf instrumentation for query loading
-	const prevOrgsLoadingRef = useRef(searchOrgsLoading);
-	const prevUsersLoadingRef = useRef(searchUsersLoading);
-	useEffect(() => {
-		const prev = prevOrgsLoadingRef.current;
-		const curr = searchOrgsLoading;
-		if (!prev && curr) startSpan("impersonate.search.orgsQuery");
-		if (prev && !curr) endSpan("impersonate.search.orgsQuery");
-		prevOrgsLoadingRef.current = curr;
-	}, [searchOrgsLoading]);
-	useEffect(() => {
-		const prev = prevUsersLoadingRef.current;
-		const curr = searchUsersLoading;
-		if (!prev && curr) startSpan("impersonate.search.usersQuery");
-		if (prev && !curr) endSpan("impersonate.search.usersQuery");
-		prevUsersLoadingRef.current = curr;
-	}, [searchUsersLoading]);
-
 	// Reset favourites page when search becomes non-empty or page changes away
 	useEffect(() => {
 		if (search !== "" || currentPage !== "impersonate") {
@@ -420,7 +401,6 @@ const CommandBar = () => {
 		}
 
 		if (currentPage === "impersonate") {
-			startSpan("impersonate.search.scoring");
 			const userResults = rawUsers.map((user) => {
 				const nameScore = calculateRelevanceScore(search, user.name || "");
 				const emailScore = calculateRelevanceScore(search, user.email || "");
@@ -436,7 +416,6 @@ const CommandBar = () => {
 				const score = Math.min(nameScore, slugScore, idScore);
 				return { type: "org" as const, data: org, score };
 			});
-			endSpan("impersonate.search.scoring");
 			return [...orgResults, ...userResults]
 				.sort((a, b) => a.score - b.score)
 				.slice(0, 15);
