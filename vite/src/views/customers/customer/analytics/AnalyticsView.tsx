@@ -4,6 +4,7 @@ import type { AgGridReact } from "ag-grid-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
+import { PageContainer } from "@/components/general/PageContainer";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { Card, CardContent } from "@/components/v2/cards/Card";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
@@ -335,7 +336,7 @@ export const AnalyticsView = () => {
 				planNames,
 			}}
 		>
-			<div className="flex flex-col gap-4 h-full relative w-full text-sm pb-8 max-w-5xl mx-auto px-4 sm:px-10 pt-4 sm:pt-8">
+			<PageContainer className="h-full text-sm">
 				<OnboardingGuide />
 				{showRevenueMetrics && <RevenueMetricsSection />}
 				<div className="max-h-[400px] min-h-[400px] pb-6 shrink-0">
@@ -414,7 +415,7 @@ export const AnalyticsView = () => {
 						</div>
 					)}
 				</div>
-			</div>
+			</PageContainer>
 		</AnalyticsContext.Provider>
 	);
 };

@@ -48,7 +48,7 @@ export function CustomerListSearchBar() {
 				setLocalQuery(raw);
 				debouncedSearch(raw.trim());
 			}}
-				className="pl-8! text-sm w-sm"
+				className="pl-8! text-sm w-full"
 				placeholder={`Search ${Intl.NumberFormat("en-US").format(totalCount)} customers`}
 			/>
 		</div>
