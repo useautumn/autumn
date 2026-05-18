@@ -13,9 +13,8 @@ import { type ClickHouseClient, createClient } from "@clickhouse/client";
  *   API:        https://api.<region>.aws.tinybird.co
  *   ClickHouse: https://clickhouse.<region>.aws.tinybird.co
  */
-const TINYBIRD_PRIMARY_CLICKHOUSE_URL =
-	process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
-const TINYBIRD_PRIMARY_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
+const primaryClickhouseUrl = process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
+const primaryToken = process.env.TINYBIRD_US_EAST_TOKEN;
 
 const safeOrigin = (url: string): string | null => {
 	try {
@@ -29,28 +28,28 @@ const legacyClickhouseUrl = process.env.TINYBIRD_CLICKHOUSE_URL;
 const legacyOrigin = legacyClickhouseUrl
 	? safeOrigin(legacyClickhouseUrl)
 	: null;
-const primaryOrigin = TINYBIRD_PRIMARY_CLICKHOUSE_URL
-	? safeOrigin(TINYBIRD_PRIMARY_CLICKHOUSE_URL)
+const primaryOrigin = primaryClickhouseUrl
+	? safeOrigin(primaryClickhouseUrl)
 	: null;
 if (legacyOrigin && primaryOrigin && legacyOrigin !== primaryOrigin) {
 	console.warn(
 		`[Tinybird ClickHouse] Ignoring legacy TINYBIRD_CLICKHOUSE_URL (${legacyClickhouseUrl}) — ` +
-			`using TINYBIRD_US_EAST_CLICKHOUSE_URL (${TINYBIRD_PRIMARY_CLICKHOUSE_URL}) instead.`,
+			`using TINYBIRD_US_EAST_CLICKHOUSE_URL (${primaryClickhouseUrl}) instead.`,
 	);
 }
 
-if (TINYBIRD_PRIMARY_CLICKHOUSE_URL && TINYBIRD_PRIMARY_TOKEN) {
+if (primaryClickhouseUrl && primaryToken) {
 	console.log(
-		`[Tinybird ClickHouse] Configured with URL: ${TINYBIRD_PRIMARY_CLICKHOUSE_URL}`,
+		`[Tinybird ClickHouse] Configured with URL: ${primaryClickhouseUrl}`,
 	);
 }
 
 /** ClickHouse client for raw SQL queries to Tinybird. Null if not configured. */
 export const clickhouseClient: ClickHouseClient | null =
-	TINYBIRD_PRIMARY_CLICKHOUSE_URL && TINYBIRD_PRIMARY_TOKEN
+	primaryClickhouseUrl && primaryToken
 		? createClient({
-				url: TINYBIRD_PRIMARY_CLICKHOUSE_URL,
-				password: TINYBIRD_PRIMARY_TOKEN,
+				url: primaryClickhouseUrl,
+				password: primaryToken,
 			})
 		: null;
 
