@@ -12,11 +12,17 @@ export type ExpireOneOffResult = {
 export const expireOneOffCustomerProducts = async ({
 	ctx,
 	nowMs,
+	internalCustomerIds,
 }: {
 	ctx: CronContext;
 	nowMs?: number;
+	internalCustomerIds?: string[];
 }): Promise<ExpireOneOffResult> => {
-	const toExpire = await getOneOffCustomerProductsToExpire({ ctx, nowMs });
+	const toExpire = await getOneOffCustomerProductsToExpire({
+		ctx,
+		nowMs,
+		internalCustomerIds,
+	});
 
 	if (toExpire.length === 0) {
 		ctx.logger.info("[One-off Expiry] No customer products to expire");

@@ -8,10 +8,16 @@ import type { OneOffCustomerProductResult } from "../oneOffCustomerProductResult
 export const getOneOffCustomerProductsToExpire = async ({
 	ctx,
 	nowMs = Date.now(),
+	internalCustomerIds,
 }: {
 	ctx: CronContext;
 	nowMs?: number;
+	internalCustomerIds?: string[];
 }): Promise<OneOffCustomerProductResult[]> => {
+	const customerFilter = internalCustomerIds?.length
+		? `AND cp.internal_customer_id IN (${internalCustomerIds.map((id) => `'${id}'`).join(",")})`
+		: "";
+
 	const result = await ctx.db.execute<OneOffCustomerProductResult>(`
 		WITH
 		active_cus_products_with_prices AS (
@@ -23,6 +29,7 @@ export const getOneOffCustomerProductsToExpire = async ({
 			  AND EXISTS (
 				SELECT 1 FROM customer_prices cpr WHERE cpr.customer_product_id = cp.id
 			  )
+			  ${customerFilter}
 		),
 		cus_products_with_non_one_off_prices AS (
 			SELECT DISTINCT cpr.customer_product_id

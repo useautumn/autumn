@@ -16,7 +16,15 @@ import type { CronContext } from "../utils/CronContext";
 import { clearCusEntsFromCache } from "./clearCusEntsFromCache";
 import { resetCustomerEntitlement } from "./resetCustomerEntitlement";
 
-export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
+export const runResetCron = async ({
+	ctx,
+	customDateUnix,
+	internalCustomerIds,
+}: {
+	ctx: CronContext;
+	customDateUnix?: number;
+	internalCustomerIds?: string[];
+}) => {
 	const { db, logger } = ctx;
 
 	const maxIterations = 10;
@@ -73,16 +81,20 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 
 			const cusEnts = await CusEntService.getActiveResetPassed({
 				db,
+				customDateUnix,
 				batchSize: 5_000,
 				limit: 5_000,
+				internalCustomerIds,
 			});
 
-			if (cusEnts.length < 5_000) {
+			if (!internalCustomerIds && cusEnts.length < 5_000) {
 				console.log(
 					`Reset cron: only ${cusEnts.length} entitlements to reset, skipping (lazy reset will handle)`,
 				);
 				break;
 			}
+
+			if (cusEnts.length === 0) break;
 
 			console.log(
 				`Reset cron iteration ${iteration}: processing ${cusEnts.length} entitlements`,

@@ -56,8 +56,12 @@ const processRevertRows = async ({
 
 export const runProductCron = async ({
 	ctx: cronContext,
+	nowMs,
+	internalCustomerIds,
 }: {
 	ctx: CronContext;
+	nowMs?: number;
+	internalCustomerIds?: string[];
 }) => {
 	console.log("Running product cron");
 
@@ -74,7 +78,12 @@ export const runProductCron = async ({
 		while (iteration < maxIterations && Date.now() - startTime < timeoutMs) {
 			iteration++;
 
-			const results = await fetchExpiredTrialProducts({ batchSize, db });
+			const results = await fetchExpiredTrialProducts({
+				batchSize,
+				db,
+				nowMs,
+				internalCustomerIds,
+			});
 
 			if (results.length === 0) break;
 
