@@ -113,7 +113,13 @@ export const handleVoidInvoiceCron = async ({
 	}
 };
 
-export const runInvoiceCron = async ({ ctx }: { ctx: CronContext }) => {
+export const runInvoiceCron = async ({
+	ctx,
+	nowMs,
+}: {
+	ctx: CronContext;
+	nowMs?: number;
+}) => {
 	try {
 		console.log("Running invoice cron");
 		const { db } = ctx;
@@ -128,7 +134,7 @@ export const runInvoiceCron = async ({ ctx }: { ctx: CronContext }) => {
 						eq(metadata.type, MetadataType.InvoiceCheckout),
 						eq(metadata.type, MetadataType.DeferredInvoice),
 					),
-					lt(metadata.expires_at, Date.now()),
+					lt(metadata.expires_at, nowMs ?? Date.now()),
 					isNotNull(metadata.stripe_invoice_id),
 				),
 			);
