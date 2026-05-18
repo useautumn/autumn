@@ -1,0 +1,21 @@
+vite/src/views/admin/ImpersonateRedirect.tsx
+  s_50f5ab7df0f2d1::t_c897e4a4351a9f 51-54,57-63
+vite/src/views/admin/adminUtils.ts
+  s_50f5ab7df0f2d1::t_ffaf4321c751e6 58-67,75-81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "328f7d802257ba98d32e54629967fc779c8beb49",
+  "prompts": {},
+  "sessions": {
+    "s_50f5ab7df0f2d1": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8d55809ffemRh5wLBS0fjFSK",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
