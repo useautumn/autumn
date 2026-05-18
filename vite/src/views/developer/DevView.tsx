@@ -2,6 +2,7 @@
 
 import "svix-react/style.css";
 import { AppPortal } from "svix-react";
+import { PageContainer } from "@/components/general/PageContainer";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
@@ -27,27 +28,22 @@ export default function DevScreen() {
 	if (isLoading) return <LoadingScreen />;
 
 	return (
-		<div className="flex flex-col gap-4 h-fit relative w-full max-w-5xl mx-auto text-sm pt-4 sm:pt-8 pb-8 px-4 sm:px-10">
+		<PageContainer className="text-sm">
 			<OnboardingGuide />
-
 			{(tab === "api_keys" || !tab) && (
 				<div className="flex flex-col gap-16">
 					<ApiKeysPage />
 					{pkey && <PublishableKeySection />}
 				</div>
 			)}
-
 			{tab === "stripe" && <ConfigureStripe />}
 			{tab === "webhooks" && webhooks && svixDashboardUrl && (
 				<ConfigureWebhookSection dashboardUrl={svixDashboardUrl} />
 			)}
-
 			{tab === "vercel" && vercel && <ConfigureVercel />}
-
 			{tab === "revenuecat" && revenuecat && <ConfigureRevenueCat />}
-
 			{tab === "redis" && isAdmin && <ConfigureRedis />}
-		</div>
+		</PageContainer>
 	);
 }
 
@@ -60,13 +56,7 @@ const ConfigureWebhookSection = ({ dashboardUrl }: any) => {
 				<AppPortal
 					url={dashboardUrl}
 					darkMode={isDark}
-					style={{
-						height: "100%",
-						borderRadius: "none",
-						// marginTop: "0.5rem",
-						// paddingLeft: "1rem",
-						// paddingRight: "1rem",
-					}}
+					style={{ height: "100%", borderRadius: "none" }}
 					fullSize
 				/>
 			) : (

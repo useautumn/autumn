@@ -13,7 +13,6 @@ import { ProductListMenuButton } from "./components/product-list/ProductListMenu
 import { ProductListTable } from "./components/product-list/ProductListTable";
 
 export const ProductsPage = () => {
-	// Clean up onboarding-related query params after a delay
 	useClearQueryParams({ queryParams: ["step", "product_id"] });
 
 	const [viewMode, setViewMode] = useState<ProductsViewMode>("list");
@@ -21,23 +20,17 @@ export const ProductsPage = () => {
 
 	const hasPlans = products && products.length > 0;
 
-	// Show empty state without the header when no plans exist
 	if (!isLoading && !hasPlans) {
-		return (
-			<div className="h-fit max-h-full px-4 sm:px-10">
-				<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
-			</div>
-		);
+		return <EmptyState type="plans" actionButton={<ProductListCreateButton />} />;
 	}
 
 	return (
-		<div className="h-fit max-h-full px-4 sm:px-10">
+		<div>
 			<ProductsPageHeader>
 				<ProductsViewToggle value={viewMode} onValueChange={setViewMode} />
 				<ProductListCreateButton />
 				<ProductListMenuButton />
 			</ProductsPageHeader>
-
 			{viewMode === "list" ? <ProductListTable /> : <ProductsAIChatView />}
 		</div>
 	);
