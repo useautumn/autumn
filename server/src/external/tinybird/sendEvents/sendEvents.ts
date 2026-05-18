@@ -11,13 +11,7 @@ const generateErrorId = (): string => {
 	return `TB_ERR_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
 };
 
-/**
- * Send EventInsert[] to Tinybird primary and (if configured) the secondary
- * dual-write safety-net client. Each path is fired independently so a missing
- * or broken primary doesn't disable the secondary. Does not throw — failures
- * are logged and captured in Sentry with `tinybird_region=primary|secondary`
- * (the tag name is legacy from when the second client was region-specific).
- */
+/** Dual-write to Tinybird primary + secondary. Failures logged, never thrown. */
 export const sendEventsToTinybird = async ({
 	events,
 	logger,
@@ -29,10 +23,7 @@ export const sendEventsToTinybird = async ({
 		return;
 	}
 
-	// During the region cutover, primary (us-east via TINYBIRD_US_EAST_*) and
-	// secondary (us-west via legacy TINYBIRD_API_URL/TOKEN) are independent.
-	// If primary is misconfigured or down, the secondary safety net must
-	// still fire — that's the whole point of dual-write.
+	// Gate on either being configured — a broken primary must not silence the secondary.
 	if (!tinybirdIngest && !tinybirdSecondaryApi) {
 		logger?.debug(
 			"Tinybird not configured (neither primary nor secondary), skipping event send",

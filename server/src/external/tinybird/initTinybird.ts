@@ -8,13 +8,7 @@ import { createListEventsPaginatedPipe } from "./pipes/listEventsPaginatedPipe.j
 import { tinybirdConfig } from "./tinybirdUtils.js";
 import { z } from "./tinybirdZod.js";
 
-/**
- * Primary Tinybird REST API client — handles reads (pipes) and primary
- * writes (ingest). Configured from `TINYBIRD_US_EAST_*` env vars during the
- * us-west → us-east cutover transition (see `tinybirdUtils.ts`). The
- * dual-write safety-net secondary lives in `initTinybirdV2.ts` and
- * reads the legacy `TINYBIRD_API_URL` / `TINYBIRD_TOKEN` vars.
- */
+/** Primary Tinybird client — reads (pipes) and primary writes (ingest). */
 const tinybirdClient: Tinybird | null = tinybirdConfig
 	? new Tinybird(tinybirdConfig)
 	: null;

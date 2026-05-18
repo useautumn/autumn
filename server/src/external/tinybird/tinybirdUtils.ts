@@ -1,14 +1,8 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 
-/**
- * Primary Tinybird config — reads from `TINYBIRD_US_EAST_API_URL` /
- * `TINYBIRD_US_EAST_TOKEN` during the us-west → us-east cutover transition.
- * The legacy `TINYBIRD_API_URL` / `TINYBIRD_TOKEN` env vars now feed the
- * dual-write *secondary* client (`initTinybirdV2.ts`) as a safety net
- * during the transition. After cutover stabilises, the secondary client and
- * legacy env vars get removed in a follow-up cleanup.
- */
+// Primary points at us-east during the cutover; legacy us-west vars feed
+// the dual-write secondary in `initTinybirdV2.ts`.
 const primaryApiUrl = process.env.TINYBIRD_US_EAST_API_URL;
 const primaryToken = process.env.TINYBIRD_US_EAST_TOKEN;
 
