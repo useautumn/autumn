@@ -136,7 +136,7 @@ export function AIChatView({ onBack }: AIChatViewProps) {
 										variant="skeleton"
 										type="button"
 										onClick={onBack}
-										className=" text-xs! text-t4"
+										className=" text-xs! text-subtle"
 									>
 										or skip to dashboard
 									</Button>

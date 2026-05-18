@@ -31,7 +31,7 @@ export const createAdminUserColumns = (): ColumnDef<AdminUser, unknown>[] => [
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<AdminUser> }) => {
 			const value = row.getValue("name") as string;
-			return <div className="font-medium text-t1">{value}</div>;
+			return <div className="font-medium text-foreground">{value}</div>;
 		},
 	},
 	{
@@ -54,7 +54,7 @@ export const createAdminUserColumns = (): ColumnDef<AdminUser, unknown>[] => [
 		cell: ({ row }: { row: Row<AdminUser> }) => {
 			const value = row.getValue("createdAt") as string;
 			return (
-				<div className="text-xs text-t4 whitespace-nowrap">
+				<div className="text-xs text-subtle whitespace-nowrap">
 					{format(new Date(value), "dd MMM HH:mm")}
 				</div>
 			);

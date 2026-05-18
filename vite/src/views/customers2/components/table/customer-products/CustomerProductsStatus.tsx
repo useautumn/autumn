@@ -166,7 +166,7 @@ export function CustomerProductsStatus({
 						<TooltipContent>
 							<span className="text-sm">{config.label} </span>
 							{subtext && (
-								<span className="text-sm text-t3">({subtext})</span>
+								<span className="text-sm text-tertiary-foreground">({subtext})</span>
 							)}
 						</TooltipContent>
 					</Tooltip>
@@ -184,7 +184,7 @@ export function CustomerProductsStatus({
 			{subtext && (
 				<>
 					<DotIcon size={16} />
-					<span className="text-sm text-t3 pl-1 truncate">{subtext}</span>
+					<span className="text-sm text-tertiary-foreground pl-1 truncate">{subtext}</span>
 				</>
 			)}
 		</div>

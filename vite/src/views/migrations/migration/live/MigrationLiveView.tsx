@@ -359,7 +359,7 @@ export function MigrationLiveView({
 
 			<StepIndicator step={step} onStepChange={onStepChange}>
 				{count !== null && (
-					<span className="text-xs text-t3">
+					<span className="text-xs text-tertiary-foreground">
 						{count} {count === 1 ? "customer" : "customers"}
 					</span>
 				)}
@@ -519,7 +519,7 @@ export function MigrationLiveView({
 				<div className="relative flex items-center flex-1 min-w-0">
 					<ListMagnifyingGlassIcon
 						size={16}
-						className="text-t3 absolute left-2.5 pointer-events-none"
+						className="text-tertiary-foreground absolute left-2.5 pointer-events-none"
 					/>
 					<Input
 						value={search}
@@ -539,7 +539,7 @@ export function MigrationLiveView({
 						disabled={!canPrev}
 						className={cn(!canPrev && "pointer-events-none opacity-50")}
 					/>
-					<span className="text-xs text-t2 font-medium">
+					<span className="text-xs text-muted-foreground font-medium">
 						{currentPage} / {pageCount}
 					</span>
 					<IconButton

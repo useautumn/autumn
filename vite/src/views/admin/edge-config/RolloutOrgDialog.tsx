@@ -106,7 +106,7 @@ export const RolloutOrgDialog = ({
 
 				<div className="flex flex-col gap-4">
 					<div className="flex flex-col gap-2">
-						<label className="text-xs font-medium text-t2" htmlFor="org-search">
+						<label className="text-xs font-medium text-muted-foreground" htmlFor="org-search">
 							Organization
 						</label>
 						<Input
@@ -117,15 +117,15 @@ export const RolloutOrgDialog = ({
 						/>
 						<div className="min-h-48 rounded-lg border bg-background">
 							{debouncedSearch.length === 0 ? (
-								<div className="flex h-48 items-center justify-center px-4 text-center text-sm text-t3">
+								<div className="flex h-48 items-center justify-center px-4 text-center text-sm text-tertiary-foreground">
 									Start typing to search organizations.
 								</div>
 							) : isLoading ? (
-								<div className="flex h-48 items-center justify-center px-4 text-sm text-t3">
+								<div className="flex h-48 items-center justify-center px-4 text-sm text-tertiary-foreground">
 									Searching organizations...
 								</div>
 							) : rows.length === 0 ? (
-								<div className="flex h-48 items-center justify-center px-4 text-sm text-t3">
+								<div className="flex h-48 items-center justify-center px-4 text-sm text-tertiary-foreground">
 									No organizations found.
 								</div>
 							) : (
@@ -144,14 +144,14 @@ export const RolloutOrgDialog = ({
 														: "border-transparent hover:border-border hover:bg-muted/40"
 												}`}
 											>
-												<span className="text-sm font-medium text-t1">
+												<span className="text-sm font-medium text-foreground">
 													{org.name || org.id}
 												</span>
-												<span className="font-mono text-[11px] text-t3">
+												<span className="font-mono text-[11px] text-tertiary-foreground">
 													{org.id}
 												</span>
 												{org.slug && (
-													<span className="text-[11px] text-t3">
+													<span className="text-[11px] text-tertiary-foreground">
 														{org.slug}
 													</span>
 												)}
@@ -165,7 +165,7 @@ export const RolloutOrgDialog = ({
 
 					<div className="flex flex-col gap-2">
 						<label
-							className="text-xs font-medium text-t2"
+							className="text-xs font-medium text-muted-foreground"
 							htmlFor="org-percent"
 						>
 							Percent
@@ -179,7 +179,7 @@ export const RolloutOrgDialog = ({
 							onChange={(event) => setPercentInput(event.target.value)}
 						/>
 						{selectedOrg && (
-							<p className="text-[11px] text-t3">
+							<p className="text-[11px] text-tertiary-foreground">
 								Override will apply to{" "}
 								<span className="font-mono">{selectedOrg.id}</span>.
 							</p>

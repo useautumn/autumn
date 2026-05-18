@@ -506,10 +506,6 @@
         "@tanstack/react-table": "^8.21.3",
         "@tanstack/react-virtual": "^3.13.18",
         "@trigger.dev/react-hooks": "4.4.5",
-        "ag-charts-community": "^12.0.2",
-        "ag-charts-react": "^12.0.2",
-        "ag-grid-community": "^34.0.2",
-        "ag-grid-react": "^34.0.2",
         "ai": "^6.0.5",
         "atmn": "workspace:*",
         "autumn-js": "workspace:*",
@@ -2631,10 +2627,6 @@
     "ag-charts-react": ["ag-charts-react@12.3.1", "", { "dependencies": { "ag-charts-community": "12.3.1" }, "peerDependencies": { "react": "^18.0.0 || ^19.0.0" } }, "sha512-lwMzn+GWJccAHb9iJR4DR4DLkgrfbF/X7dIMzVHAufGhQmvgOVj6LsIVXc8/At0NycKq/PP59+6GVRu6wAXO0w=="],
 
     "ag-charts-types": ["ag-charts-types@12.3.1", "", {}, "sha512-5216xYoawnvMXDFI6kTpPku+mH0Csiwu/FE7lsAm8Z22HEN6ciSG/V7g+IrpLWncELqksgENebCTP75PZ3CsHA=="],
-
-    "ag-grid-community": ["ag-grid-community@34.3.1", "", { "dependencies": { "ag-charts-types": "12.3.1" } }, "sha512-PwlrPudsFOzGumphi2y9ihWeaUlIwKhOra/MXu2LjeV2U8DgLLcYS8CartE5Hszhn1poJHawwI9HWrxlKliwdw=="],
-
-    "ag-grid-react": ["ag-grid-react@34.3.1", "", { "dependencies": { "ag-grid-community": "34.3.1", "prop-types": "^15.8.1" }, "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0", "react-dom": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-1UTlBT+xJkjNZAuf7RxK61mgxKGTPB+6XR99oIHq7cYC89kJmLbWqhHt/1XqRWF5cAgSKk8u+HtOQaN8tAZStw=="],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 

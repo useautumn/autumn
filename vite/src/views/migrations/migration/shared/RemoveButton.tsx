@@ -16,7 +16,7 @@ export function RemoveButton({
 			aria-label="Remove"
 			onClick={onClick}
 			className={cn(
-				"opacity-0 group-hover/row:opacity-100 text-t3 hover:text-destructive! motion-reduce:opacity-100",
+				"opacity-0 group-hover/row:opacity-100 text-tertiary-foreground hover:text-destructive! motion-reduce:opacity-100",
 				className,
 			)}
 		>

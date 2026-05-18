@@ -174,7 +174,7 @@ export const EditPlanHeader = () => {
 								{product.name}
 							</span>
 						</AdminHover>
-						<span className="text-sm text-t3">v{product.version}</span>
+						<span className="text-sm text-tertiary-foreground">v{product.version}</span>
 					</div>
 				</div>
 				<div className="flex flex-row justify-between items-center">
@@ -184,7 +184,7 @@ export const EditPlanHeader = () => {
 								side="bottom"
 								text={product?.id ? product?.id : ""}
 								size="mini"
-								className="text-t3"
+								className="text-tertiary-foreground"
 								innerClassName="max-w-30 text-tiny-id truncate"
 							/>
 						)}

@@ -58,7 +58,7 @@ function StatusDot({ action }: { action: string }) {
 		<span
 			className={cn(
 				"size-2 rounded-full shrink-0",
-				DOT_COLORS[action] ?? "bg-t3",
+				DOT_COLORS[action] ?? "bg-tertiary-foreground",
 			)}
 			title={ACTION_LABELS[action] ?? action}
 		/>
@@ -123,10 +123,10 @@ function PlanChangeRows({
 		<>
 			<ChangeRow action={action}>
 				<StatusDot action={action} />
-				<span className="text-xs text-t3 w-14 shrink-0">
+				<span className="text-xs text-tertiary-foreground w-14 shrink-0">
 					{ACTION_LABELS[action] ?? action}
 				</span>
-				<PackageIcon size={14} weight="duotone" className="text-t3 shrink-0" />
+				<PackageIcon size={14} weight="duotone" className="text-tertiary-foreground shrink-0" />
 				<span className="text-body flex-1 min-w-0 truncate">
 					{change.plan_id ?? "Unknown plan"}
 				</span>
@@ -138,7 +138,7 @@ function PlanChangeRows({
 					className="ml-4"
 				>
 					<StatusDot action={item.action ?? "unknown"} />
-					<span className="text-xs text-t3 w-14 shrink-0">
+					<span className="text-xs text-tertiary-foreground w-14 shrink-0">
 						{ACTION_LABELS[item.action ?? "unknown"] ?? item.action}
 					</span>
 					<FeatureIcon featureId={item.feature_id} features={features} />
@@ -171,7 +171,7 @@ function BalanceChangeRow({
 	return (
 		<ChangeRow action="updated">
 			<StatusDot action="updated" />
-			<span className="text-xs text-t3 w-14 shrink-0">Updated</span>
+			<span className="text-xs text-tertiary-foreground w-14 shrink-0">Updated</span>
 			<FeatureIcon featureId={change.feature_id} features={features} />
 			<span className="text-body flex-1 min-w-0 truncate">
 				{feature?.name ?? change.feature_id}
@@ -180,11 +180,11 @@ function BalanceChangeRow({
 				{change.before ? (
 					<>
 						{change.before.granted ?? 0}
-						<span className="text-t3/50 mx-1">→</span>
-						<span className="text-t1 font-semibold">{change.granted ?? 0}</span>
+						<span className="text-tertiary-foreground/50 mx-1">→</span>
+						<span className="text-foreground font-semibold">{change.granted ?? 0}</span>
 					</>
 				) : (
-					<span className="text-t1 font-semibold">{change.granted ?? 0}</span>
+					<span className="text-foreground font-semibold">{change.granted ?? 0}</span>
 				)}
 			</span>
 		</ChangeRow>
@@ -204,7 +204,7 @@ function FlagChangeRow({
 	return (
 		<ChangeRow action={action}>
 			<StatusDot action={action} />
-			<span className="text-xs text-t3 w-14 shrink-0">
+			<span className="text-xs text-tertiary-foreground w-14 shrink-0">
 				{ACTION_LABELS[action] ?? action}
 			</span>
 			<FeatureIcon featureId={change.feature_id} features={features} />
@@ -222,7 +222,7 @@ function PreviewSummary({ preview }: { preview: MigrationPreview }) {
 	const flagChanges = parseList<FlagChange>(preview.flag_changes);
 
 	if (planChanges.length + balanceChanges.length + flagChanges.length === 0)
-		return <span className="text-sm text-t3">No changes</span>;
+		return <span className="text-sm text-tertiary-foreground">No changes</span>;
 
 	return (
 		<div className="flex flex-col gap-1.5">
@@ -265,7 +265,7 @@ export function EventResultDetail({ event }: { event: MigrationItemEvent }) {
 		const skipped = response.skipped as { reason?: string } | undefined;
 		const guard = response.guard as { reason?: string } | undefined;
 		const reason = skipped?.reason ?? guard?.reason;
-		if (reason) return <span className="text-sm text-t3">{reason}</span>;
+		if (reason) return <span className="text-sm text-tertiary-foreground">{reason}</span>;
 	}
 
 	return null;

@@ -109,7 +109,7 @@ export const PasswordSignIn = () => {
 
 				{/* Footer */}
 				{/* <div className="text-center space-y-2">
-              <Link to="/sign-up" className="hover:underline text-t3 text-sm">
+              <Link to="/sign-up" className="hover:underline text-tertiary-foreground text-sm">
                 Create an account here
               </Link>
             </div> */}

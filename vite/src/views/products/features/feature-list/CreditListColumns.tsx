@@ -12,7 +12,7 @@ export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<Feature> }) => {
 			return (
-				<div className="font-medium text-t1">
+				<div className="font-medium text-foreground">
 					<AdminHover texts={getFeatureHoverTexts({ feature: row.original })}>
 						{row.original.name}
 					</AdminHover>
@@ -31,7 +31,7 @@ export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
 					{feature.id ? (
 						<MiniCopyButton text={feature.id} />
 					) : (
-						<span className="px-1 text-t3">NULL</span>
+						<span className="px-1 text-tertiary-foreground">NULL</span>
 					)}
 				</div>
 			);
@@ -51,7 +51,7 @@ export const createCreditListColumns = (): ColumnDef<Feature, unknown>[] => [
 					)
 					.join(", ") || "—";
 			return (
-				<div className="text-t2 truncate font-mono text-xs">{featureIds}</div>
+				<div className="text-muted-foreground truncate font-mono text-xs">{featureIds}</div>
 			);
 		},
 	},

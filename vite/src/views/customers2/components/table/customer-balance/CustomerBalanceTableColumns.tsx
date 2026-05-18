@@ -164,7 +164,7 @@ function ParentUsageCell({
 	});
 
 	if (ent.unlimited) {
-		return <span className="text-t4">Unlimited</span>;
+		return <span className="text-subtle">Unlimited</span>;
 	}
 
 	return (
@@ -188,7 +188,7 @@ function SubRowUsageCell({
 	entityId: string | null;
 }) {
 	if (ent.unlimited) {
-		return <span className="text-t4">Unlimited</span>;
+		return <span className="text-subtle">Unlimited</span>;
 	}
 
 	const { balance, allowance, rolloverBalance } = getIndividualEntValues({
@@ -254,13 +254,13 @@ function BarCellContent({
 	return (
 		<div className="flex gap-3 items-center">
 			{hasExpiry ? (
-				<span className="text-t3 text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-30">
+				<span className="text-tertiary-foreground text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-30">
 					Expires {formatUnixToDateTimeString(ent.expires_at)}
 				</span>
 			) : (
 				<span
 					className={cn(
-						"text-t3 text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-30",
+						"text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-30",
 						hasReset ? "opacity-100" : "opacity-0",
 					)}
 				>
@@ -384,7 +384,7 @@ function BalanceActionsCell({
 					<ToolbarButton onClick={(event) => event.stopPropagation()} />
 				</DropdownMenuTrigger>
 				<DropdownMenuContent
-					className="text-t2"
+					className="text-muted-foreground"
 					align="end"
 					onClick={(event) => event.stopPropagation()}
 				>
@@ -397,7 +397,7 @@ function BalanceActionsCell({
 						>
 							<div className="flex w-full items-center justify-between gap-2 text-sm">
 								Record usage
-								<PulseIcon size={12} className="text-t3" />
+								<PulseIcon size={12} className="text-tertiary-foreground" />
 							</div>
 						</DropdownMenuItem>
 					)}
@@ -410,7 +410,7 @@ function BalanceActionsCell({
 						>
 							<div className="flex w-full items-center justify-between gap-2 text-sm">
 								Check balance
-								<BracketsSquareIcon size={12} className="text-t3" />
+								<BracketsSquareIcon size={12} className="text-tertiary-foreground" />
 							</div>
 						</DropdownMenuItem>
 					)}
@@ -423,7 +423,7 @@ function BalanceActionsCell({
 						>
 							<div className="flex w-full items-center justify-between gap-2 text-sm">
 								Delete
-								<Trash size={12} className="text-t3" />
+								<Trash size={12} className="text-tertiary-foreground" />
 							</div>
 						</DropdownMenuItem>
 					)}
@@ -477,7 +477,7 @@ export const CustomerBalanceTableColumns = ({
 									entities,
 								})}
 							>
-								<span className="text-t3 truncate text-xs">{metaParts}</span>
+								<span className="text-tertiary-foreground truncate text-xs">{metaParts}</span>
 							</AdminHover>
 						</div>
 					);
@@ -493,12 +493,12 @@ export const CustomerBalanceTableColumns = ({
 									entities,
 								})}
 							>
-								<span className="text-t1 text-xs font-medium truncate">
+								<span className="text-foreground text-xs font-medium truncate">
 									{productName}
 								</span>
 							</AdminHover>
 						</div>
-						<span className="text-t3 text-xs truncate pl-5.5">{metaParts}</span>
+						<span className="text-tertiary-foreground text-xs truncate pl-5.5">{metaParts}</span>
 					</div>
 				);
 			}
@@ -511,7 +511,7 @@ export const CustomerBalanceTableColumns = ({
 					{canExpand && (
 						<span
 							className={cn(
-								"inline-flex text-t3 transition-transform duration-200",
+								"inline-flex text-tertiary-foreground transition-transform duration-200",
 								isExpanded && "rotate-90",
 							)}
 						>
@@ -524,7 +524,7 @@ export const CustomerBalanceTableColumns = ({
 							entities,
 						})}
 					>
-						<span className="font-medium text-t1 truncate">
+						<span className="font-medium text-foreground truncate">
 							{ent.entitlement.feature.name}
 						</span>
 					</AdminHover>

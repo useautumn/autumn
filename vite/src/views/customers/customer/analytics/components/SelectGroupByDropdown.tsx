@@ -121,14 +121,14 @@ export const SelectGroupByDropdown = ({
 			<DropdownMenuContent align="end" className="w-[200px]">
 				{propertyKeys.length > 5 && (
 					<div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
-						<MagnifyingGlassIcon className="size-4 text-t4" />
+						<MagnifyingGlassIcon className="size-4 text-subtle" />
 						<input
 							type="text"
 							placeholder="Search properties..."
 							value={searchValue}
 							onChange={(e) => setSearchValue(e.target.value)}
 							onKeyDown={(e) => e.stopPropagation()}
-							className="flex-1 bg-transparent text-sm outline-none placeholder:text-t4"
+							className="flex-1 bg-transparent text-sm outline-none placeholder:text-subtle"
 						/>
 					</div>
 				)}
@@ -140,7 +140,7 @@ export const SelectGroupByDropdown = ({
 						className="flex items-center justify-between"
 					>
 						<span className="text-xs">No grouping</span>
-						{!currentGroupBy && <Check className="ml-2 h-3 w-3 text-t3" />}
+						{!currentGroupBy && <Check className="ml-2 h-3 w-3 text-tertiary-foreground" />}
 					</DropdownMenuItem>
 
 					{/* Special column options */}
@@ -151,9 +151,9 @@ export const SelectGroupByDropdown = ({
 							onClick={() => handleSelect({ property: "customer_id" })}
 							className="flex items-center justify-between"
 						>
-							<span className="text-xs font-medium text-t2">Customer ID</span>
+							<span className="text-xs font-medium text-muted-foreground">Customer ID</span>
 							{currentGroupBy === "customer_id" && (
-								<Check className="ml-2 h-3 w-3 text-t3" />
+								<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 							)}
 						</DropdownMenuItem>
 					)}
@@ -162,25 +162,25 @@ export const SelectGroupByDropdown = ({
 						onClick={() => handleSelect({ property: "entity_id" })}
 						className="flex items-center justify-between"
 					>
-						<span className="text-xs font-medium text-t2">Entity ID</span>
+						<span className="text-xs font-medium text-muted-foreground">Entity ID</span>
 						{currentGroupBy === "entity_id" && (
-							<Check className="ml-2 h-3 w-3 text-t3" />
+							<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 						)}
 					</DropdownMenuItem>
 					<DropdownMenuItem
 						onClick={() => handleSelect({ property: "plan_id" })}
 						className="flex items-center justify-between"
 					>
-						<span className="text-xs font-medium text-t2">Plan ID</span>
+						<span className="text-xs font-medium text-muted-foreground">Plan ID</span>
 						{currentGroupBy === "plan_id" && (
-							<Check className="ml-2 h-3 w-3 text-t3" />
+							<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 						)}
 					</DropdownMenuItem>
 
 					{propertyKeys.length > 0 && <DropdownMenuSeparator />}
 
 					{filteredOptions.length === 0 && propertyKeys.length > 0 && (
-						<div className="py-4 text-center text-sm text-t4">
+						<div className="py-4 text-center text-sm text-subtle">
 							No properties found
 						</div>
 					)}
@@ -194,7 +194,7 @@ export const SelectGroupByDropdown = ({
 						>
 							<span className="text-xs font-mono">{property}</span>
 							{currentGroupBy === property && (
-								<Check className="ml-2 h-3 w-3 text-t3" />
+								<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 							)}
 						</DropdownMenuItem>
 					))}
@@ -204,7 +204,7 @@ export const SelectGroupByDropdown = ({
 						<>
 							<DropdownMenuSeparator />
 							<div className="flex items-center justify-between px-2 py-1.5">
-								<span className="text-xs text-t3">Max groups</span>
+								<span className="text-xs text-tertiary-foreground">Max groups</span>
 								{editingMaxGroups ? (
 									<input
 										ref={maxGroupsInputRef}
@@ -234,10 +234,10 @@ export const SelectGroupByDropdown = ({
 											e.stopPropagation();
 											setEditingMaxGroups(true);
 										}}
-										className="flex items-center gap-1 text-xs text-t2 hover:text-t1"
+										className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
 									>
 										{maxGroups}
-										<PencilSimpleIcon size={10} className="text-t4" />
+										<PencilSimpleIcon size={10} className="text-subtle" />
 									</button>
 								)}
 							</div>
@@ -249,7 +249,7 @@ export const SelectGroupByDropdown = ({
 						<>
 							<DropdownMenuSeparator />
 							<DropdownMenuGroup>
-								<DropdownMenuLabel className="text-xs text-t4 font-normal">
+								<DropdownMenuLabel className="text-xs text-subtle font-normal">
 									Filter by value
 								</DropdownMenuLabel>
 								<DropdownMenuItem
@@ -259,7 +259,7 @@ export const SelectGroupByDropdown = ({
 								>
 									<span className="text-xs">All values</span>
 									{groupFilter === null && (
-										<Check className="ml-2 h-3 w-3 text-t3" />
+										<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 									)}
 								</DropdownMenuItem>
 								{availableGroupValues.map((value: string) => {
@@ -286,7 +286,7 @@ export const SelectGroupByDropdown = ({
 												{displayValue}
 											</span>
 											{groupFilter === value && (
-												<Check className="ml-2 h-3 w-3 text-t3 shrink-0" />
+												<Check className="ml-2 h-3 w-3 text-tertiary-foreground shrink-0" />
 											)}
 										</DropdownMenuItem>
 									);

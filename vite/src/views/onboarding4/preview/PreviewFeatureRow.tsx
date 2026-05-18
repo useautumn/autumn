@@ -33,7 +33,7 @@ export function PreviewFeatureRow({ item }: PreviewFeatureRowProps) {
 					</span>
 				</div>
 				{item.display.secondaryText && (
-					<span className="text-xs text-t3 truncate min-w-0">
+					<span className="text-xs text-tertiary-foreground truncate min-w-0">
 						{item.display.secondaryText}
 					</span>
 				)}

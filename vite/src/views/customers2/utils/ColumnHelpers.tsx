@@ -8,7 +8,7 @@ import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 export function createDateTimeColumn<T>({
 	header,
 	accessorKey,
-	className = "text-xs text-t3",
+	className = "text-xs text-tertiary-foreground",
 	withYear = false,
 }: {
 	header: string;
@@ -57,12 +57,12 @@ function createIdCopyColumn<T>({
 					{id ? (
 						<CopyButton
 							text={id}
-							className="bg-transparent text-t3 border-none px-1 shadow-none max-w-full font-sans"
+							className="bg-transparent text-tertiary-foreground border-none px-1 shadow-none max-w-full font-sans"
 						>
 							<span className="truncate">{displayValue}</span>
 						</CopyButton>
 					) : (
-						<span className="px-1 text-t3">PENDING</span>
+						<span className="px-1 text-tertiary-foreground">PENDING</span>
 					)}
 				</div>
 			);

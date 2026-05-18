@@ -26,13 +26,13 @@ export function PlanPriceHeader({
 }) {
 	const content = priceChange ? (
 		<span className="flex items-center gap-1.5">
-			<span className="text-t3">
+			<span className="text-tertiary-foreground">
 				{priceChange.oldPrice}
 				{priceChange.oldIntervalText && ` ${priceChange.oldIntervalText}`}
 			</span>
-			<span className="text-t4">-&gt;</span>
-			<span className="font-semibold text-t1">{priceChange.newPrice}</span>
-			<span className="text-t3">{priceChange.newIntervalText}</span>
+			<span className="text-subtle">-&gt;</span>
+			<span className="font-semibold text-foreground">{priceChange.newPrice}</span>
+			<span className="text-tertiary-foreground">{priceChange.newIntervalText}</span>
 		</span>
 	) : (
 		<PriceDisplay product={product} currency={currency} />

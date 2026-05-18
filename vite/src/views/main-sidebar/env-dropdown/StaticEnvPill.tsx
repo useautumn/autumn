@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useSidebarContext } from "../SidebarContext";
 
-const sandboxStyles = "text-t8 bg-t8/10 border-t8 ";
+const sandboxStyles = "text-sandbox bg-sandbox/10 border-sandbox ";
 const liveStyles = "text-primary bg-primary/10 border-primary";
 
 export const StaticEnvPill = () => {

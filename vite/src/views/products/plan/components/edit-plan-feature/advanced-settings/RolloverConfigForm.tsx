@@ -148,7 +148,7 @@ export function RolloverConfigForm({
 									}}
 									onClick={(e) => e.stopPropagation()}
 								/>
-								<span className="text-t3 text-sm">%</span>
+								<span className="text-tertiary-foreground text-sm">%</span>
 							</div>
 						)}
 					</div>

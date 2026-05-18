@@ -29,7 +29,7 @@ export function CustomerListPagination() {
 	const canGoNext = totalPages > 0 && currentPage < totalPages;
 
 	return (
-		<div className="flex justify-center items-center gap-2 text-xs text-t3 shrink-0 select-none">
+		<div className="flex justify-center items-center gap-2 text-xs text-tertiary-foreground shrink-0 select-none">
 			{isLoading ? (
 				<div className="h-7 flex items-center justify-center">
 					<SmallSpinner />
@@ -53,7 +53,7 @@ export function CustomerListPagination() {
 								className={!canGoPrev ? "pointer-events-none opacity-50" : ""}
 							/>
 						</PaginationItem>
-						<PaginationItem className="text-t2 font-medium">
+						<PaginationItem className="text-muted-foreground font-medium">
 							{currentPage} / {Math.max(totalPages, 1)}
 						</PaginationItem>
 						<PaginationItem>

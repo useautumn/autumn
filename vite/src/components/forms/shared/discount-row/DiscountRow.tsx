@@ -66,7 +66,7 @@ export function DiscountRow({
 						<>
 							<span className="flex-1 truncate min-w-0">{option.label}</span>
 							{option.sublabel && (
-								<span className="text-t3 text-xs shrink-0">
+								<span className="text-tertiary-foreground text-xs shrink-0">
 									{option.sublabel}
 								</span>
 							)}
@@ -75,12 +75,12 @@ export function DiscountRow({
 					)}
 					renderValue={(option: DiscountOption | undefined) => {
 						if (!option)
-							return <span className="text-t3">Select discount...</span>;
+							return <span className="text-tertiary-foreground">Select discount...</span>;
 						return (
 							<span className="flex items-center gap-2">
 								<span className="truncate">{option.label}</span>
 								{option.sublabel && (
-									<span className="text-t3 text-xs shrink-0">
+									<span className="text-tertiary-foreground text-xs shrink-0">
 										{option.sublabel}
 									</span>
 								)}
@@ -95,7 +95,7 @@ export function DiscountRow({
 				size="sm"
 				onClick={onRemove}
 				icon={<XIcon size={12} />}
-				className="shrink-0 text-t3 hover:text-red-500"
+				className="shrink-0 text-tertiary-foreground hover:text-red-500"
 			/>
 		</div>
 	);

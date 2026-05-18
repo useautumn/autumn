@@ -46,7 +46,7 @@ export function TableBody() {
 				return (
 					<TableRow
 						className={cn(
-							"text-t3 transition-none h-12 py-4 relative",
+							"text-tertiary-foreground transition-none h-12 py-4 relative",
 							rowClassName,
 							isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
 							(onRowClick || rowHref) && "cursor-pointer",

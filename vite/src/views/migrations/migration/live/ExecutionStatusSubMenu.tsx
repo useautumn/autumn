@@ -43,7 +43,7 @@ export function ExecutionStatusSubMenu({
 			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
 				Execution Status
 				{hasSelections && (
-					<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+					<span className="text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
 						{selected.length}
 					</span>
 				)}
