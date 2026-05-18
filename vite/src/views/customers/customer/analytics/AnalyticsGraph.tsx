@@ -1,67 +1,23 @@
-import type { AgChartOptions, FormatterParams } from "ag-charts-community";
-import { AgCharts } from "ag-charts-react";
-import {
-	AllCommunityModule,
-	type ColDef,
-	ModuleRegistry,
-	type PaginationChangedEvent,
-	type RowDataUpdatedEvent,
-	ValidationModule,
-	type ValueFormatterParams,
-} from "ag-grid-community";
-
-// Register all Community features
-
-import { AgGridReact } from "ag-grid-react";
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
+import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { useAnalyticsContext } from "./AnalyticsContext";
+import type { Row } from "./components/analytics-types";
 import {
-	autumnTheme,
-	type IRow,
-	paginationOptions,
-	type Row,
-} from "./components/AGGrid";
-import { RowClickDialog } from "./components/RowClickDialog";
+	formatCompactNumber,
+	formatDateShort,
+	formatHourMinute,
+	parseUTCTimestamp,
+} from "./utils/parseTimestamp";
 
-const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-// Helper function to parse UTC timestamps from the backend
-const parseUTCTimestamp = (timestamp: string): Date => {
-	// If the timestamp doesn't end with 'Z' or have timezone info, assume it's UTC
-	if (
-		!timestamp.includes("Z") &&
-		!timestamp.includes("+") &&
-		!timestamp.includes("-", 10)
-	) {
-		// Add 'Z' to indicate UTC if it's missing
-		return new Date(timestamp + (timestamp.includes("T") ? "Z" : " UTC"));
-	}
-	return new Date(timestamp);
-};
-
-const dateFormatter = new Intl.DateTimeFormat(navigator.language || "en-US", {
-	month: "short",
-	day: "numeric",
-	timeZone: userTimeZone,
-});
-
-const hourFormatter = new Intl.DateTimeFormat(navigator.language || "en-US", {
-	hour: "numeric",
-	minute: "numeric",
-	timeZone: userTimeZone,
-});
-
-const timestampFormatter = new Intl.DateTimeFormat(
-	navigator.language || "en-US",
-	{
-		month: "long",
-		day: "numeric",
-		hour: "numeric",
-		minute: "numeric",
-		second: "numeric",
-		timeZone: userTimeZone,
-	},
-);
+interface ChartSeriesConfig {
+	xKey: string;
+	yKey: string;
+	type: "bar";
+	stacked: boolean;
+	yName: string;
+	fill: string;
+}
 
 export function EventsBarChart({
 	data,
@@ -72,166 +28,97 @@ export function EventsBarChart({
 		rows: number;
 		data: Row[];
 	};
-	chartConfig: any;
+	chartConfig: ChartSeriesConfig[];
 }) {
 	const { selectedInterval } = useAnalyticsContext();
 
-	const [options, setOptions] = useState<AgChartOptions>({
-		data: data.data,
-		series: chartConfig,
-		theme: {
-			params: {
-				fontFamily: {
-					googleFont: "Inter",
-				},
-			},
-			palette: {
-				fills: [
-					"#9c5aff",
-					"#a97eff",
-					"#8268ff",
-					"#7571ff",
-					"#687aff",
-					"#5b83ff",
-					"#4e8cff",
-					"#4195ff",
-					"#349eff",
-					"#27a7ff",
-				],
-			},
-		},
-		background: {
-			fill: "#00000000",
-		},
-		axes: [
-			{
-				type: "category",
-				position: "bottom",
-				label: {
-					color: "#52525b",
-				},
-				line: {
-					enabled: false,
-				},
-			},
-			{
-				type: "number",
-				position: "left",
-				label: {
-					color: "#52525b",
-				},
-				gridLine: {
-					enabled: false,
-				},
-			},
-		],
-		formatter: {
-			x: (params: FormatterParams<any, unknown>) => {
-				if (params.type !== "category") return;
-				const date = parseUTCTimestamp(params.value as string);
-				if (!isFinite(date.getTime())) {
-					return params.value as string; // Return original value if invalid
-				}
-				return selectedInterval === "24h"
-					? hourFormatter.format(date)
-					: dateFormatter.format(date);
-			},
-		},
-		legend: {
-			enabled: false,
-		},
-		tooltip: {
-			enabled: true,
-		},
-	});
+	const formatXAxis = (value: string): string => {
+		const date = parseUTCTimestamp(value);
+		if (!Number.isFinite(date.getTime())) return value;
+		return selectedInterval === "24h"
+			? formatHourMinute(date)
+			: formatDateShort(date);
+	};
 
-	useEffect(() => {
-		setOptions((prevOptions) => ({
-			...prevOptions,
-			data: data.data,
-			series: chartConfig,
-		}));
-	}, [chartConfig, data]);
-
-	return <AgCharts options={options} className="!h-full w-full" />;
-}
-
-export function EventsAGGrid({ data }: { data: any }) {
-	const [rowData, setRowData] = useState<IRow[]>([]);
-	const [isOpen, setIsOpen] = useState(false);
-	const [event, setEvent] = useState<IRow | null>(null);
-	const [colDefs] = useState<ColDef<IRow>[]>([
-		{
-			field: "timestamp",
-			flex: 1,
-			valueFormatter: (params: ValueFormatterParams<any, unknown>) => {
-				const date = parseUTCTimestamp(params.value as string);
-				if (!isFinite(date.getTime())) {
-					return params.value as string; // Return original value if invalid
-				}
-				return timestampFormatter.format(date);
-			},
-			cellStyle: {
-				paddingLeft: "2.5rem",
-				fontWeight: "normal",
-			},
-			headerStyle: {
-				paddingLeft: "2.5rem",
-			},
-		},
-		{ field: "event_name", flex: 1, cellStyle: { fontWeight: "normal" } },
-		{ field: "value", flex: 0, cellStyle: { fontWeight: "normal" } },
-		{
-			field: "properties",
-			flex: 1,
-			resizable: false,
-			cellStyle: { fontWeight: "normal" },
-		},
-	]);
-
-	ModuleRegistry.registerModules([AllCommunityModule, ValidationModule]);
-
-	const { gridRef, pageSize, setTotalRows, setTotalPages, setCurrentPage } =
-		useAnalyticsContext();
-
-	useEffect(() => {
-		setRowData(data.data);
-	}, [data]);
+	const rechartsConfig: ChartConfig = useMemo(() => {
+		const config: ChartConfig = {};
+		for (const series of chartConfig) {
+			config[series.yKey] = { label: series.yName, color: series.fill };
+		}
+		return config;
+	}, [chartConfig]);
 
 	return (
-		<div className="w-full h-full">
-			<AgGridReact
-				ref={gridRef}
-				rowData={rowData}
-				columnDefs={colDefs as any}
-				domLayout="normal"
-				pagination={true}
-				paginationPageSize={pageSize}
-				paginationPageSizeSelector={paginationOptions}
-				suppressPaginationPanel={true}
-				className="w-full h-full min-h-38 pb-0"
-				theme={autumnTheme}
-				defaultColDef={{
-					flex: 1,
-					resizable: true,
-					sortable: true,
-					filter: true,
-				}}
-				onRowClicked={(event) => {
-					setEvent(event.data as IRow);
-					setIsOpen(true);
-				}}
-				onRowDataUpdated={(event: RowDataUpdatedEvent) => {
-					setTotalRows(event.api.paginationGetRowCount());
-				}}
-				onPaginationChanged={(event: PaginationChangedEvent) => {
-					setTotalPages(event.api.paginationGetTotalPages());
-					setCurrentPage(event.api.paginationGetCurrentPage() + 1);
-				}}
-			/>
-			{event && (
-				<RowClickDialog event={event} isOpen={isOpen} setIsOpen={setIsOpen} />
-			)}
-		</div>
+		<ChartContainer config={rechartsConfig} className="h-full w-full">
+			<BarChart data={data.data} className="pt-3 pr-2" barCategoryGap={4}>
+				<CartesianGrid
+					vertical={false}
+					strokeDasharray="2 2"
+					stroke="var(--chart-grid-stroke)"
+					strokeWidth={1}
+				/>
+				<XAxis
+					dataKey="period"
+					tickLine={false}
+					tickMargin={4}
+					axisLine={false}
+					interval="equidistantPreserveStart"
+					tick={{ fontSize: 11, fill: "#666" }}
+					tickFormatter={formatXAxis}
+				/>
+				<YAxis
+					tickLine={false}
+					axisLine={false}
+					width={40}
+					tickMargin={0}
+					tickCount={5}
+					tick={{ fontSize: 11, fill: "#666", textAnchor: "middle", dx: -15, dy: -3 }}
+					tickFormatter={formatCompactNumber}
+				/>
+				<Tooltip
+					content={({ active, payload, label }) => {
+						if (!active || !payload?.length) return null;
+						const sorted = [...payload].sort(
+							(a, b) => (b.value as number) - (a.value as number),
+						);
+						return (
+							<div className="border-border/50 bg-background grid min-w-[8rem] items-start gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl">
+								<div className="font-medium">
+									{formatXAxis(label as string)}
+								</div>
+								<div className="grid gap-1">
+									{sorted.map((item) => {
+										const key = String(item.dataKey);
+										return (
+											<div key={key} className="flex items-center gap-2">
+												<span
+													className="h-2.5 w-2.5 shrink-0 rounded-sm"
+													style={{ background: item.color }}
+												/>
+												<span className="flex-1 truncate text-t3">
+													{rechartsConfig[key]?.label ?? key}
+												</span>
+												<span className="tabular-nums text-t2">
+													{Number(item.value).toLocaleString()}
+												</span>
+											</div>
+										);
+									})}
+								</div>
+							</div>
+						);
+					}}
+				/>
+				{chartConfig.map((series) => (
+					<Bar
+						key={series.yKey}
+						dataKey={series.yKey}
+						stackId="a"
+						fill={series.fill}
+						barSize={20}
+					/>
+				))}
+			</BarChart>
+		</ChartContainer>
 	);
 }
