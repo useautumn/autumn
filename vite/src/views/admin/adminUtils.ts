@@ -43,28 +43,32 @@ export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
 export const impersonateUser = async ({
 	userId,
 	organizationId,
+	isCurrentlyImpersonating = false,
 }: {
 	userId: string;
 	organizationId?: string;
+	/**
+	 * When true, await stopImpersonating first — the active session is the
+	 * impersonated user's (non-admin) session, so impersonateUser would
+	 * otherwise fail the permission check. When false, skip the call entirely.
+	 */
+	isCurrentlyImpersonating?: boolean;
 }) => {
-	try {
-		await authClient.admin.stopImpersonating();
-	} catch (error) {
-		console.error(error);
+	if (isCurrentlyImpersonating) {
+		try {
+			await authClient.admin.stopImpersonating();
+		} catch (error) {
+			console.error(error);
+		}
 	}
-	const res = await authClient.admin.impersonateUser({
-		userId,
-	});
-
+	const res = await authClient.admin.impersonateUser({ userId });
 	if (res.error) {
 		toast.error("Something went wrong");
 		return;
 	}
-
 	if (organizationId) {
 		await authClient.organization.setActive({ organizationId });
 	}
-
 	window.location.reload();
 };
 

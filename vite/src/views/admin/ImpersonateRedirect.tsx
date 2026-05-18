@@ -9,7 +9,7 @@ import { useAdmin } from "./hooks/useAdmin";
 export function ImpersonateRedirect() {
 	const [searchParams] = useSearchParams();
 	const navigate = useNavigate();
-	const { isAdmin, isPending } = useAdmin();
+	const { isAdmin, isPending, isCurrentlyImpersonating } = useAdmin();
 	const [status, setStatus] = useState("Impersonating...");
 	const [error, setError] = useState<string | null>(null);
 
@@ -31,18 +31,22 @@ export function ImpersonateRedirect() {
 				const { data } = await axiosInstance.get(
 					`/admin/org-member?org_id=${orgId}`,
 				);
-				console.log("Data:", data);
 				if (!data.userId) {
 					setError("No member found for this org");
 					return;
 				}
 
-				// Step 2: Stop any existing impersonation
-				setStatus("Stopping existing impersonation...");
-				try {
-					await authClient.admin.stopImpersonating();
-				} catch {
-					// Ignore - might not be impersonating
+				// Step 2: Stop existing impersonation only if one is active.
+				// Must be awaited — the active session is the impersonated user's
+				// (non-admin) session, so impersonateUser would otherwise fail
+				// FORBIDDEN. stopImpersonating restores the admin session.
+				if (isCurrentlyImpersonating) {
+					setStatus("Stopping existing impersonation...");
+					try {
+						await authClient.admin.stopImpersonating();
+					} catch {
+						// Server-side resets happen via the next call too
+					}
 				}
 
 				// Step 3: Impersonate the user
@@ -75,7 +79,7 @@ export function ImpersonateRedirect() {
 		if (isAdmin) {
 			doImpersonate();
 		}
-	}, [orgId, redirect, navigate, isAdmin, isPending]);
+	}, [orgId, redirect, navigate, isAdmin, isPending, isCurrentlyImpersonating, axiosInstance]);
 
 	if (!isAdmin && isPending) {
 		navigate("/");

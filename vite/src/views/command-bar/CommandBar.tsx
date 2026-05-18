@@ -4,6 +4,7 @@ import {
 	AtIcon,
 	FingerprintIcon,
 	GearIcon,
+	StarIcon,
 } from "@phosphor-icons/react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
@@ -16,6 +17,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import {
 	CommandDialog,
 	CommandEmpty,
@@ -29,6 +31,7 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCommandBarStore } from "@/hooks/stores/useCommandBarStore";
+import { useImpersonationFavouritesStore } from "@/hooks/stores/useImpersonationFavouritesStore";
 import { useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -66,6 +69,16 @@ const CommandBar = () => {
 	const [currentPage, setCurrentPage] = useState<
 		"main" | "impersonate" | "orgs"
 	>("main");
+	const [favouritesPage, setFavouritesPage] = useState(0);
+
+	// Favourites store
+	const favourites = useImpersonationFavouritesStore((s) => s.favourites);
+	const addOrg = useImpersonationFavouritesStore((s) => s.addOrg);
+	const removeOrg = useImpersonationFavouritesStore((s) => s.removeOrg);
+	const addUser = useImpersonationFavouritesStore((s) => s.addUser);
+	const removeUser = useImpersonationFavouritesStore((s) => s.removeUser);
+	const isOrgFav = useImpersonationFavouritesStore((s) => s.isOrgFav);
+	const isUserFav = useImpersonationFavouritesStore((s) => s.isUserFav);
 
 	// Refs to persist content during close animation
 	const closeTimeoutRef = useRef<NodeJS.Timeout>();
@@ -79,7 +92,7 @@ const CommandBar = () => {
 	const buildKey = useQueryKeyFactory();
 	const { data: orgs, isPending: isLoadingOrgs } = useListOrganizations();
 	const axiosInstance = useAxiosInstance();
-	const { isAdmin } = useAdmin();
+	const { isAdmin, isCurrentlyImpersonating } = useAdmin();
 	const { org } = useOrg();
 	const { theme, setTheme } = useTheme();
 
@@ -208,6 +221,26 @@ const CommandBar = () => {
 	const searchedUsersData = usersQuery.data;
 	const searchUsersLoading = usersQuery.isLoading;
 
+	const rawUsers = searchedUsersData?.rows || [];
+	const rawOrgs = searchedOrgsData?.rows || [];
+
+	const FAVOURITES_PAGE_SIZE = 10;
+	const totalFavouritesPages = Math.max(
+		1,
+		Math.ceil(favourites.length / FAVOURITES_PAGE_SIZE),
+	);
+	const paginatedFavourites = favourites.slice(
+		favouritesPage * FAVOURITES_PAGE_SIZE,
+		(favouritesPage + 1) * FAVOURITES_PAGE_SIZE,
+	);
+
+	// Reset favourites page when search becomes non-empty or page changes away
+	useEffect(() => {
+		if (search !== "" || currentPage !== "impersonate") {
+			setFavouritesPage(0);
+		}
+	}, [search, currentPage]);
+
 	// Initialize hotkeys (only active when command bar is open)
 	useCommandBarHotkeys({
 		isOpen: open,
@@ -232,6 +265,80 @@ const CommandBar = () => {
 		{ enableOnFormTags: true },
 	);
 
+	useHotkeys(
+		"ctrl+f",
+		(e) => {
+			e.preventDefault();
+			const selected = document.querySelector(
+				'[cmdk-item][data-selected="true"]',
+			) as HTMLElement | null;
+			const value = selected?.getAttribute("data-value");
+			if (!value) return;
+			// value format is "org:<org_id>" or "user:<user_id>"
+			const [kind, id] = value.split(":");
+			if (!id) return;
+			if (kind === "org") {
+				if (isOrgFav(id)) {
+					removeOrg(id);
+					return;
+				}
+				const orgFromSearch = rawOrgs.find((o) => o.id === id);
+				if (!orgFromSearch) return;
+				const firstNonAdminUser = orgFromSearch.users?.find(
+					(u) => u.role !== "admin",
+				);
+				if (!firstNonAdminUser) return;
+				addOrg({
+					kind: "org",
+					org_id: id,
+					org_slug: orgFromSearch.slug,
+					org_name: orgFromSearch.name,
+					impersonation_user_id: firstNonAdminUser.id,
+				});
+			} else if (kind === "user") {
+				if (isUserFav(id)) {
+					removeUser(id);
+					return;
+				}
+				const userFromSearch = rawUsers.find((u) => u.id === id);
+				if (!userFromSearch) return;
+				addUser({
+					kind: "user",
+					user_id: id,
+					user_email: userFromSearch.email,
+					user_name: userFromSearch.name,
+				});
+			}
+		},
+		{
+			enabled: open && currentPage === "impersonate",
+			enableOnFormTags: true,
+			preventDefault: true,
+		},
+	);
+
+	// ←/→ pagination is wired via CommandInput.onKeyDown (below) so that the
+	// browser's default caret-move on the focused input is suppressed BEFORE
+	// it fires. useHotkeys can't reliably win that race when the input is focused.
+	const handleInputKeyDown = useCallback(
+		(e: React.KeyboardEvent<HTMLInputElement>) => {
+			const paginatable =
+				open &&
+				currentPage === "impersonate" &&
+				search === "" &&
+				favourites.length > FAVOURITES_PAGE_SIZE;
+			if (!paginatable) return;
+			if (e.key === "ArrowLeft") {
+				e.preventDefault();
+				setFavouritesPage((p) => Math.max(0, p - 1));
+			} else if (e.key === "ArrowRight") {
+				e.preventDefault();
+				setFavouritesPage((p) => Math.min(totalFavouritesPages - 1, p + 1));
+			}
+		},
+		[open, currentPage, search, favourites.length, totalFavouritesPages],
+	);
+
 	// Clean up timeout on unmount
 	useEffect(() => {
 		return () => {
@@ -252,8 +359,6 @@ const CommandBar = () => {
 
 	const showResults = search.length > 0;
 	const rawCustomers = searchedCustomersData?.customers || [];
-	const rawUsers = searchedUsersData?.rows || [];
-	const rawOrgs = searchedOrgsData?.rows || [];
 
 	// Combine and sort all results by relevance
 	const sortedResults = useMemo(() => {
@@ -311,7 +416,6 @@ const CommandBar = () => {
 				const score = Math.min(nameScore, slugScore, idScore);
 				return { type: "org" as const, data: org, score };
 			});
-
 			return [...orgResults, ...userResults]
 				.sort((a, b) => a.score - b.score)
 				.slice(0, 15);
@@ -503,6 +607,66 @@ const CommandBar = () => {
 	);
 
 	const renderImpersonatePage = () => {
+		// Favourites view: search is empty and we have favourites
+		if (search === "" && favourites.length >= 1) {
+			const heading =
+				favourites.length > FAVOURITES_PAGE_SIZE
+					? `Favourites · Page ${favouritesPage + 1} of ${totalFavouritesPages}`
+					: "Favourites";
+			return (
+				<CommandGroup heading={heading} className="p-1.5">
+					{paginatedFavourites.map((fav) => {
+						if (fav.kind === "org") {
+							return (
+								<CommandRow
+									key={`fav-org-${fav.org_id}`}
+									value={`org:${fav.org_id}`}
+									icon={<StarIcon weight="fill" className="text-yellow-500" />}
+									title={fav.org_name}
+									subtext={fav.org_slug}
+									onSelect={async () => {
+										try {
+											closeDialog();
+											await impersonateUser({
+												userId: fav.impersonation_user_id,
+												organizationId: fav.org_id,
+												isCurrentlyImpersonating,
+											});
+										} catch (error) {
+											console.error("Failed to impersonate user:", error);
+											// Stale favourite — remove it
+											removeOrg(fav.org_id);
+											toast.error("Favourite is stale — removed");
+										}
+									}}
+								/>
+							);
+						}
+						return (
+							<CommandRow
+								key={`fav-user-${fav.user_id}`}
+								value={`user:${fav.user_id}`}
+								icon={<StarIcon weight="fill" className="text-yellow-500" />}
+								title={fav.user_name || fav.user_email}
+								subtext={fav.user_name ? fav.user_email : undefined}
+								onSelect={async () => {
+									try {
+										closeDialog();
+										await impersonateUser({
+											userId: fav.user_id,
+											isCurrentlyImpersonating,
+										});
+									} catch (error) {
+										console.error("Failed to impersonate user:", error);
+									}
+								}}
+							/>
+						);
+					})}
+				</CommandGroup>
+			);
+		}
+
 		const userResults = sortedResults.filter((r) => r.type === "user");
 		const orgResults = sortedResults.filter((r) => r.type === "org");
 
@@ -525,7 +689,17 @@ const CommandBar = () => {
 									return (
 										<CommandRow
 											key={`org-${org.id}`}
-											icon={<AtIcon />}
+											value={`org:${org.id}`}
+											icon={
+												isOrgFav(org.id) ? (
+													<StarIcon
+														weight="fill"
+														className="text-yellow-500"
+													/>
+												) : (
+													<AtIcon />
+												)
+											}
 											title={org.name}
 											subtext={org.slug}
 											onSelect={async () => {
@@ -533,6 +707,7 @@ const CommandBar = () => {
 													await impersonateUser({
 														userId: firstNonAdminUser.id,
 														organizationId: org.id,
+														isCurrentlyImpersonating,
 													});
 													closeDialog();
 												} catch (error) {
@@ -556,13 +731,26 @@ const CommandBar = () => {
 									return (
 										<CommandRow
 											key={`user-${user.id}`}
-											icon={<CircleUserRoundIcon />}
+											value={`user:${user.id}`}
+											icon={
+												isUserFav(user.id) ? (
+													<StarIcon
+														weight="fill"
+														className="text-yellow-500"
+													/>
+												) : (
+													<CircleUserRoundIcon />
+												)
+											}
 											title={displayName}
 											subtext={subtext}
 											onSelect={async () => {
 												try {
 													closeDialog();
-													await impersonateUser({ userId: user.id });
+													await impersonateUser({
+														userId: user.id,
+														isCurrentlyImpersonating,
+													});
 												} catch (error) {
 													console.error("Failed to impersonate user:", error);
 												}
@@ -687,6 +875,7 @@ const CommandBar = () => {
 				}
 				value={search}
 				onValueChange={setSearch}
+				onKeyDown={handleInputKeyDown}
 			/>
 			<CommandList>
 				{/* Use last rendered content during transition to prevent flash */}
