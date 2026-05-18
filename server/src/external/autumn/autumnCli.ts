@@ -422,7 +422,7 @@ export class AutumnInt {
 		listV2: async (params?: {
 			limit?: number;
 			offset?: number;
-			cursor?: string;
+			start_cursor?: string;
 			search?: string;
 			plans?: Array<{ id: string; versions?: number[] }>;
 			subscription_status?: string[];

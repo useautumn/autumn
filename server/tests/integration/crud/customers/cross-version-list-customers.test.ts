@@ -27,7 +27,7 @@ test.concurrent(`${chalk.yellowBright("cross-version-list-customers: list custom
 
 	// V2.3 cursor envelope: { list, next_cursor }, no offset/limit/total echoed.
 	const customersV2_3 = (await autumnV2_3.customers.listV2({
-		cursor: "",
+		start_cursor: "",
 		limit: 10,
 		keepInternalFields: true,
 	})) as {

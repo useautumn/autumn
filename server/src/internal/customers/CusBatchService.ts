@@ -193,7 +193,7 @@ export class CusBatchService {
 		const { limit, plans, subscription_status, search, processors } = query;
 
 		const cursor: StandardCursorFields | null = StandardCursor.decode(
-			query.cursor,
+			query.start_cursor,
 		);
 
 		const cusProductLimit = getOrgCusProductLimit({

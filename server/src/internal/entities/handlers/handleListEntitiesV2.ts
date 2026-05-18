@@ -183,7 +183,7 @@ export const handleListEntitiesV2 = createRoute({
 				});
 			}
 
-			const cursor = StandardCursor.decode(body.cursor);
+			const cursor = StandardCursor.decode(body.start_cursor);
 			const inStatuses = getListEntitiesStatuses({
 				subscriptionStatus: body.subscription_status,
 			});

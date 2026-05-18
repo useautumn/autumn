@@ -24,7 +24,7 @@ export const listByCursor = async ({
 		entity_id?: string;
 		feature_ids?: string[];
 		custom_range?: { start?: number; end?: number };
-		cursor: string;
+		start_cursor: string;
 		limit: number;
 		filter_by?: Record<string, string>;
 	};
@@ -32,7 +32,7 @@ export const listByCursor = async ({
 	const pipes = getTinybirdPipes();
 	const { org, env } = ctx;
 
-	const cursor = StandardCursor.decode(params.cursor);
+	const cursor = StandardCursor.decode(params.start_cursor);
 
 	const startDate = params.custom_range?.start
 		? epochToDateTime(params.custom_range.start)
