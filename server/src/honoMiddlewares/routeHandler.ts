@@ -15,6 +15,10 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { expandMiddleware } from "./expandMiddleware.js";
 import { validator } from "./validatorMiddleware.js";
 import { versionedValidator } from "./versionedValidator.js";
+import {
+	assertVersionedKeyParity,
+	resolveVersionedEntry,
+} from "./versionResolver.js";
 
 /**
  * Extended context type that includes validated input
@@ -49,6 +53,23 @@ type VersionedSchemas<T extends ZodType> = Partial<
 	Record<ApiVersion, ZodType>
 > & {
 	latest: T; // Latest version schema (required)
+};
+
+/**
+ * Per-version handler map paired with a `versionedBody`. Each handler receives
+ * the body validated against its own version's schema — no forward transform.
+ * Keys MUST match the `versionedBody` keys exactly (enforced at registration).
+ */
+type VersionedHandlerMap<
+	TBodies extends { latest: ZodType } & Partial<Record<ApiVersion, ZodType>>,
+	Query extends ZodType | undefined,
+	Params extends ZodType | undefined,
+> = {
+	[K in keyof TBodies]: TBodies[K] extends ZodType
+		? (
+				c: ValidatedContext<HonoEnv, TBodies[K], Query, Params>,
+			) => Response | Promise<Response>
+		: never;
 };
 
 /**
@@ -92,17 +113,28 @@ export function createRoute<
 	Body extends ZodType | undefined = undefined,
 	Query extends ZodType | undefined = undefined,
 	Params extends ZodType | undefined = undefined,
+	TBodies extends { latest: ZodType } & Partial<
+		Record<ApiVersion, ZodType>
+	> = never,
 >(opts: {
 	body?: Body;
-	versionedBody?: Body extends ZodType ? VersionedSchemas<Body> : never;
+	versionedBody?: Body extends ZodType
+		? TBodies & VersionedSchemas<Body>
+		: never;
 	query?: Query;
 	versionedQuery?: Query extends ZodType ? VersionedSchemas<Query> : never;
 	params?: Params;
 	resource?: AffectedResource;
 	withTx?: boolean;
-	handler: (
+	handler?: (
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,
 	) => Response | Promise<Response>;
+	/**
+	 * Per-version handlers paired with `versionedBody`. When set, each handler
+	 * receives the body in its own version's shape (no forward transform).
+	 * Keys must match `versionedBody` keys exactly — enforced at registration.
+	 */
+	versionedHandler?: VersionedHandlerMap<TBodies, Query, Params>;
 	assertIdempotence?: string | undefined;
 	/** Lock configuration to prevent concurrent requests */
 	lock?: {
@@ -192,6 +224,28 @@ export function createRoute<
 		middlewares.push(expandMiddleware());
 	}
 
+	if (opts.versionedHandler) {
+		if (!opts.versionedBody) {
+			throw new Error(
+				"createRoute: `versionedHandler` requires `versionedBody`. Provide both or neither.",
+			);
+		}
+		assertVersionedKeyParity({
+			a: opts.versionedBody as Record<string, unknown> & { latest: unknown },
+			b: opts.versionedHandler as Record<string, unknown> & {
+				latest: unknown;
+			},
+			aName: "versionedBody",
+			bName: "versionedHandler",
+		});
+	}
+
+	if (!opts.handler && !opts.versionedHandler) {
+		throw new Error(
+			"createRoute: must provide either `handler` or `versionedHandler`.",
+		);
+	}
+
 	// Body validation runs after expand so body-based expand does not depend on Zod parsing.
 	if (opts.versionedBody && opts.resource) {
 		middlewares.push(
@@ -199,16 +253,41 @@ export function createRoute<
 				target: "json",
 				schemas: opts.versionedBody,
 				resource: opts.resource,
+				transformToLatest: !opts.versionedHandler,
 			}),
 		);
 	} else if (opts.body) {
 		middlewares.push(validator("json", opts.body));
 	}
 
+	const pickHandler = (
+		c: ValidatedContext<HonoEnv, Body, Query, Params>,
+	): ((
+		c: ValidatedContext<HonoEnv, Body, Query, Params>,
+	) => Response | Promise<Response>) => {
+		if (opts.versionedHandler) {
+			const resolved = resolveVersionedEntry({
+				map: opts.versionedHandler as Record<string, unknown> & {
+					latest: unknown;
+				},
+				requested: c.get("ctx").apiVersion,
+			});
+			return resolved as (
+				c: ValidatedContext<HonoEnv, Body, Query, Params>,
+			) => Response | Promise<Response>;
+		}
+		if (!opts.handler) {
+			throw new Error("createRoute: no handler resolved for this route.");
+		}
+		return opts.handler;
+	};
+
 	const wrappedHandler = async (
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,
 	) => {
 		c.set("validated", true);
+
+		const handler = pickHandler(c);
 
 		// Acquire lock if lock config provided
 		let lockKey: string | null = null;
@@ -232,10 +311,10 @@ export function createRoute<
 						...c.get("ctx"),
 						db: tx as unknown as DrizzleCli,
 					});
-					return await opts.handler(c);
+					return await handler(c);
 				});
 			} else {
-				return await opts.handler(c);
+				return await handler(c);
 			}
 		} finally {
 			// Always release lock

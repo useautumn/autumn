@@ -8,6 +8,7 @@ import {
 	CaretDownIcon,
 	CaretLeftIcon,
 	CaretRightIcon,
+	CheckIcon,
 	EyeIcon,
 	ListMagnifyingGlassIcon,
 	PlayIcon,
@@ -23,6 +24,7 @@ import { Table } from "@/components/general/table";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -165,6 +167,13 @@ export function MigrationLiveView({
 	const [dismissedError, setDismissedError] = useState<string | null>(null);
 	const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
 	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+	const [sample, setSample] = useState({
+		open: false,
+		mode: "limit" as "limit" | "select",
+		limit: "10",
+		customerIds: [] as string[],
+		running: null as "dry" | "live" | null,
+	});
 	const { cancelRun, isCanceling } = useMigrationsQuery();
 
 	const debouncedSetSearch = useMemo(
@@ -384,7 +393,7 @@ export function MigrationLiveView({
 					<Button
 						variant="primary"
 						size="default"
-						className="rounded-r-none"
+						className="rounded-r-none border-r-0"
 						onClick={() => setIsRunDialogOpen(true)}
 						isLoading={isRunning}
 					>
@@ -407,10 +416,10 @@ export function MigrationLiveView({
 								Dry Run All
 							</DropdownMenuItem>
 							<DropdownMenuItem
-								onClick={() => triggerRun({ dryRun: false, limit: 10 })}
+								onClick={() => setSample((s) => ({ ...s, open: true }))}
 							>
 								<PlayIcon size={14} weight="fill" />
-								Sample (10)
+								Run Sample
 							</DropdownMenuItem>
 						</DropdownMenuContent>
 					</DropdownMenu>
@@ -499,6 +508,167 @@ export function MigrationLiveView({
 								<PlayIcon size={14} weight="fill" />
 								Run
 							</Button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+
+				<Dialog
+					open={sample.open}
+					onOpenChange={(open) => setSample((s) => ({ ...s, open }))}
+				>
+					<DialogContent showCloseButton={false}>
+						<DialogHeader>
+							<DialogTitle>Run Sample</DialogTitle>
+							<DialogDescription>
+								Run the migration on a subset of customers.
+							</DialogDescription>
+						</DialogHeader>
+						<div className="flex flex-col gap-3">
+							<div className="flex border-b border-border">
+								<button
+									type="button"
+									onClick={() =>
+										setSample((s) => ({ ...s, mode: "limit" }))
+									}
+									className={cn(
+										"flex-1 pb-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+										sample.mode === "limit"
+											? "border-primary text-foreground"
+											: "border-transparent text-tertiary-foreground hover:text-muted-foreground",
+									)}
+								>
+									By count
+								</button>
+								<button
+									type="button"
+									onClick={() =>
+										setSample((s) => ({ ...s, mode: "select" }))
+									}
+									className={cn(
+										"flex-1 pb-2 text-sm font-medium transition-colors border-b-2 -mb-px",
+										sample.mode === "select"
+											? "border-primary text-foreground"
+											: "border-transparent text-tertiary-foreground hover:text-muted-foreground",
+									)}
+								>
+									Select customers
+								</button>
+							</div>
+							<div className="min-h-[220px]">
+								{sample.mode === "limit" ? (
+									<div className="flex flex-col gap-1.5">
+										<label className="text-xs text-tertiary-foreground">
+											Number of customers
+										</label>
+										<Input
+											type="number"
+											min={1}
+											value={sample.limit}
+											onChange={(e) =>
+												setSample((s) => ({
+													...s,
+													limit: e.target.value,
+												}))
+											}
+											placeholder="10"
+										/>
+										<SampleCustomerPreview
+											customers={enrichedCustomers}
+											limit={Number(sample.limit) || 0}
+										/>
+										<span className="text-xs text-tertiary-foreground">
+											{Math.min(
+												Number(sample.limit) || 0,
+												enrichedCustomers.filter((c) => !c._event).length,
+											)}{" "}
+											customers
+										</span>
+									</div>
+								) : (
+									<div className="flex flex-col gap-1.5">
+										<label className="text-xs text-tertiary-foreground">
+											Select customers to run
+										</label>
+										<SampleCustomerPicker
+											customers={enrichedCustomers}
+											selectedIds={sample.customerIds}
+											onChange={(ids) =>
+												setSample((s) => ({ ...s, customerIds: ids }))
+											}
+										/>
+									</div>
+								)}
+							</div>
+						</div>
+						<DialogFooter className="sm:flex-col gap-2">
+							<ShortcutButton
+								className="w-full"
+								variant="secondary"
+								isLoading={sample.running === "dry"}
+								disabled={
+									sample.running !== null ||
+									(sample.mode === "limit"
+										? !sample.limit || Number(sample.limit) < 1
+										: sample.customerIds.length === 0)
+								}
+								onClick={async () => {
+									setSample((s) => ({ ...s, running: "dry" }));
+									if (sample.mode === "limit") {
+										const topIds = enrichedCustomers
+											.filter((c) => !c._event)
+											.slice(0, Number(sample.limit))
+											.map((c) => c.id ?? c.internal_id);
+										await triggerRun({
+											dryRun: true,
+											only: topIds,
+										});
+									} else {
+										await triggerRun({
+											dryRun: true,
+											only: sample.customerIds,
+										});
+									}
+									setSample((s) => ({ ...s, running: null, open: false }));
+								}}
+							>
+								<EyeIcon size={14} />
+								Dry Run{" "}
+								{sample.mode === "limit"
+									? `(${sample.limit || 0})`
+									: `(${sample.customerIds.length})`}
+							</ShortcutButton>
+							<ShortcutButton
+								className="w-full"
+								metaShortcut="enter"
+								isLoading={sample.running === "live"}
+								disabled={
+									sample.running !== null ||
+									(sample.mode === "limit"
+										? !sample.limit || Number(sample.limit) < 1
+										: sample.customerIds.length === 0)
+								}
+								onClick={async () => {
+									setSample((s) => ({ ...s, running: "live" }));
+									if (sample.mode === "limit") {
+										await triggerRun({
+											dryRun: false,
+											limit: Number(sample.limit),
+										});
+									} else {
+										await triggerRun({
+											dryRun: false,
+											only: sample.customerIds,
+										});
+									}
+									setSample((s) => ({ ...s, running: null, open: false }));
+								}}
+							>
+								<PlayIcon size={14} weight="fill" />
+								Run Live{" "}
+								{sample.mode === "limit"
+									? `(${sample.limit || 0})`
+									: `(${sample.customerIds.length})`}
+							</ShortcutButton>
 						</DialogFooter>
 					</DialogContent>
 				</Dialog>
@@ -593,6 +763,130 @@ export function MigrationLiveView({
 					</Table.Content>
 				</Table.Container>
 			</Table.Provider>
+		</div>
+	);
+}
+
+function SampleCustomerPreview({
+	customers,
+	limit,
+}: {
+	customers: CustomerRow[];
+	limit: number;
+}) {
+	const unrun = customers.filter((c) => !c._event);
+	const previewed = unrun.slice(0, limit);
+	if (limit === 0) return null;
+	return (
+		<div className="h-48 overflow-y-auto rounded-xl border border-border mt-1.5">
+			{previewed.length === 0 ? (
+				<div className="px-3 py-4 text-center text-xs text-subtle">
+					No customers to preview
+				</div>
+			) : (
+				previewed.map((c) => (
+					<div
+						key={c.internal_id}
+						className="flex items-center gap-2 w-full px-3 py-1.5 text-sm"
+					>
+						<span className="flex-1 truncate text-foreground">
+							{c.name || c.id || c.internal_id}
+						</span>
+						{c.email && (
+							<span className="text-xs text-subtle truncate max-w-32">
+								{c.email}
+							</span>
+						)}
+					</div>
+				))
+			)}
+		</div>
+	);
+}
+
+function SampleCustomerPicker({
+	customers,
+	selectedIds,
+	onChange,
+}: {
+	customers: CustomerRow[];
+	selectedIds: string[];
+	onChange: (ids: string[]) => void;
+}) {
+	const [search, setSearch] = useState("");
+	const filtered = useMemo(() => {
+		if (!search) return customers;
+		const q = search.toLowerCase();
+		return customers.filter(
+			(c) =>
+				c.name?.toLowerCase().includes(q) ||
+				c.id?.toLowerCase().includes(q) ||
+				c.email?.toLowerCase().includes(q),
+		);
+	}, [customers, search]);
+
+	const toggle = (id: string) => {
+		onChange(
+			selectedIds.includes(id)
+				? selectedIds.filter((v) => v !== id)
+				: [...selectedIds, id],
+		);
+	};
+
+	return (
+		<div className="flex flex-col gap-2">
+			<Input
+				value={search}
+				onChange={(e) => setSearch(e.target.value)}
+				placeholder="Search customers..."
+				className="text-sm"
+			/>
+			<div className="h-48 overflow-y-auto rounded-xl border border-border">
+				{filtered.length === 0 ? (
+					<div className="px-3 py-4 text-center text-xs text-subtle">
+						No customers found
+					</div>
+				) : (
+					filtered.map((c) => {
+						const isSelected = selectedIds.includes(c.id ?? c.internal_id);
+						return (
+							<button
+								key={c.internal_id}
+								type="button"
+								onClick={() => toggle(c.id ?? c.internal_id)}
+								className={cn(
+									"flex items-center gap-2 w-full px-3 py-1.5 text-left text-sm hover:bg-muted/50 cursor-pointer transition-colors",
+									isSelected && "bg-primary/5",
+								)}
+							>
+								<div
+									className={cn(
+										"size-4 rounded border flex items-center justify-center shrink-0",
+										isSelected
+											? "border-primary bg-primary"
+											: "border-border",
+									)}
+								>
+									{isSelected && (
+										<CheckIcon size={10} className="text-white" />
+									)}
+								</div>
+								<span className="flex-1 truncate text-foreground">
+									{c.name || c.id || c.internal_id}
+								</span>
+								{c.email && (
+									<span className="text-xs text-subtle truncate max-w-32">
+										{c.email}
+									</span>
+								)}
+							</button>
+						);
+					})
+				)}
+			</div>
+			<span className="text-xs text-tertiary-foreground">
+				{selectedIds.length} selected
+			</span>
 		</div>
 	);
 }

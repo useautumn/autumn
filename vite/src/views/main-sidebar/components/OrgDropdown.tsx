@@ -119,7 +119,13 @@ export const OrgDropdown = () => {
 					className="w-48"
 				>
 					<AdminDropdownItems />
-					<DropdownMenuItem className="flex justify-between w-full items-center gap-2 text-muted-foreground">
+					<DropdownMenuItem
+						className="flex justify-between w-full items-center gap-2 text-muted-foreground cursor-pointer"
+						onClick={() => {
+							navigateTo("/settings", navigate);
+							setDropdownOpen(false);
+						}}
+					>
 						<div className="flex flex-col">
 							<span>{session?.user?.name}</span>
 							<span className="text-xs text-zinc-500 break-all hyphens-auto">

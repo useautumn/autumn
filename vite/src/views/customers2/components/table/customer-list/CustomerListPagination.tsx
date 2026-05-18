@@ -1,4 +1,5 @@
 import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
+import { useHotkeys } from "react-hotkeys-hook";
 import SmallSpinner from "@/components/general/SmallSpinner";
 import {
 	Pagination,
@@ -19,14 +20,38 @@ import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 const PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 
 export function CustomerListPagination() {
-	const { isLoading, totalCount } = useCusSearchQuery();
-	const { queryStates, setQueryStates } = useCustomerFilters();
+	const { isLoading, totalCount, nextCursor } = useCusSearchQuery();
+	const {
+		queryStates,
+		currentPage,
+		pushCursor,
+		popCursor,
+	} = useCustomerFilters();
 
 	const pageSize = queryStates.pageSize || 50;
 	const totalPages = Math.ceil((totalCount || 0) / pageSize);
-	const currentPage = Number(queryStates.page) || 1;
 	const canGoPrev = currentPage > 1;
-	const canGoNext = totalPages > 0 && currentPage < totalPages;
+	const canGoNext = Boolean(nextCursor);
+
+	useHotkeys(
+		"left",
+		(e) => {
+			if (!canGoPrev) return;
+			e.preventDefault();
+			popCursor();
+		},
+		{ enabled: canGoPrev },
+	);
+
+	useHotkeys(
+		"right",
+		(e) => {
+			if (!canGoNext || !nextCursor) return;
+			e.preventDefault();
+			pushCursor(nextCursor);
+		},
+		{ enabled: canGoNext },
+	);
 
 	return (
 		<div className="flex justify-center items-center gap-2 text-xs text-tertiary-foreground shrink-0 select-none">
@@ -42,12 +67,10 @@ export function CustomerListPagination() {
 								variant="secondary"
 								size="default"
 								icon={<CaretLeftIcon size={12} weight="bold" />}
-								onClick={async (e) => {
+								onClick={(e) => {
 									e.preventDefault();
 									if (!canGoPrev) return;
-									await setQueryStates({
-										page: currentPage - 1,
-									});
+									popCursor();
 								}}
 								disabled={!canGoPrev}
 								className={!canGoPrev ? "pointer-events-none opacity-50" : ""}
@@ -61,12 +84,10 @@ export function CustomerListPagination() {
 								variant="secondary"
 								size="default"
 								icon={<CaretRightIcon size={12} weight="bold" />}
-								onClick={async (e) => {
+								onClick={(e) => {
 									e.preventDefault();
-									if (!canGoNext) return;
-									await setQueryStates({
-										page: currentPage + 1,
-									});
+									if (!canGoNext || !nextCursor) return;
+									pushCursor(nextCursor);
 								}}
 								disabled={!canGoNext}
 								className={!canGoNext ? "pointer-events-none opacity-50" : ""}
@@ -80,16 +101,15 @@ export function CustomerListPagination() {
 }
 
 export function CustomerListPageSizeSelector() {
-	const { queryStates, setQueryStates } = useCustomerFilters();
+	const { queryStates, setFilters } = useCustomerFilters();
 	const pageSize = queryStates.pageSize || 50;
 
 	return (
 		<Select
 			value={pageSize.toString()}
 			onValueChange={(value) => {
-				setQueryStates({
+				setFilters({
 					pageSize: Number(value),
-					page: 1,
 				});
 			}}
 			items={Object.fromEntries(PAGE_SIZE_OPTIONS.map((size) => [size.toString(), size.toString()]))}

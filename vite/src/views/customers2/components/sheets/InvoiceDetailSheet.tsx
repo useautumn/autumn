@@ -389,14 +389,14 @@ export function InvoiceDetailSheet({
 					</Button>
 				)}
 			</div>
-			{canRefund && (
-				<RefundInvoiceDialog
-					open={refundDialogOpen}
-					onOpenChange={setRefundDialogOpen}
-					invoice={invoice}
-				/>
-			)}
-		</div>
+		{canRefund && (
+			<RefundInvoiceDialog
+				open={refundDialogOpen}
+				onOpenChange={setRefundDialogOpen}
+				invoice={invoice}
+			/>
+		)}
+	</div>
 	);
 }
 
