@@ -1,0 +1,21 @@
+vite/src/views/customers/customer/analytics/components/SelectGroupByDropdown.tsx
+  s_33e789265e902d::t_28807723000642 283
+  s_33e789265e902d::t_488c32013c3dc5 57-63
+  s_33e789265e902d::t_98e08bf1377b2e 312
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "92f74573e8ae2437e492c37ca2d72b248b01040d",
+  "prompts": {},
+  "sessions": {
+    "s_33e789265e902d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c3af0354ffeGZmWAsgUdw7SkJ",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
