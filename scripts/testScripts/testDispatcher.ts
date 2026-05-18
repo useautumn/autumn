@@ -23,6 +23,9 @@ const TESTS_DIR = join(PROJECT_ROOT, testRunConfig.testsBaseDir);
 const LEGACY_SCRIPTS_DIR = join(PROJECT_ROOT, testRunConfig.legacyScriptsDir);
 const RUNNER_SCRIPT = join(PROJECT_ROOT, "scripts/testScripts/runTestsV2.tsx");
 
+// Worktree .env.local loading happens in scripts/preload-env.ts, which Bun
+// auto-runs via bunfig.toml `preload` for every `bun` and `bun test` invocation.
+
 /** Recursively find a file under baseDir whose relative path ends with the given suffix. */
 async function findFileByPath({
 	baseDir,

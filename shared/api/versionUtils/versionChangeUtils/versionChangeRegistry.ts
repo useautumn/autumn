@@ -45,6 +45,8 @@ import { ApiVersion } from "../ApiVersion";
 import type { VersionChangeConstructor } from "./VersionChange";
 import { VersionChangeRegistryClass } from "./VersionChangeRegistryClass";
 
+export const V2_3_CHANGES: VersionChangeConstructor[] = [];
+
 export const V2_2_CHANGES: VersionChangeConstructor[] = [
 	V2_1_PlanChanges, // Transforms Plan TO V2.1 format from V2.2 format
 ];
@@ -100,6 +102,10 @@ export const V0_2_CHANGES: VersionChangeConstructor[] = [
 export const V0_1_CHANGES: VersionChangeConstructor[] = [];
 
 export function registerAllVersionChanges() {
+	VersionChangeRegistryClass.register({
+		version: ApiVersion.V2_3,
+		changes: V2_3_CHANGES,
+	});
 	VersionChangeRegistryClass.register({
 		version: ApiVersion.V2_2,
 		changes: V2_2_CHANGES,

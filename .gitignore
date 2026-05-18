@@ -141,7 +141,6 @@ TAKEHOME.md
 .codex/
 .agents/
 .mcp.json
-.opencode/skills/
 AGENTS.md
 
 server/.turbo
@@ -150,8 +149,9 @@ server/.turbo
 .context
 .opencode/
 
-
 ./AGENTS.md
 ./CLAUDE.md
 
 notes.txt
+server/experiments/results/*
+!server/experiments/results/.gitkeep

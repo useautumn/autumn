@@ -1,3 +1,6 @@
+// NOTE: For worktree-based agent flows, bun dw writes .env.local directly via
+// writeEnvLocalFiles in scripts/dw.ts. This file is retained for the legacy
+// agent-bootstrap.sh path only.
 import { randomBytes } from "node:crypto";
 import { copyFileSync, existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -64,7 +67,7 @@ AWS_ACCESS_KEY_ID=x
 AWS_SECRET_ACCESS_KEY=x
 
 # ClickHouse (local)
-TINYBIRD_CLICKHOUSE_URL=http://localhost:8123
+TINYBIRD_US_EAST_CLICKHOUSE_URL=http://localhost:8123
 
 # App URLs
 BETTER_AUTH_URL=http://localhost:${serverPort}

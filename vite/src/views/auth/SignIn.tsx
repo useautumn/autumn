@@ -9,6 +9,8 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Input } from "@/components/v2/inputs/Input";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
+import { AuthBackground } from "./components/AuthBackground";
+import { AutumnWordmark } from "./components/AutumnWordmark";
 import { OTPSignIn } from "./components/OTPSignIn";
 
 /**
@@ -16,18 +18,16 @@ import { OTPSignIn } from "./components/OTPSignIn";
  * These params are added by better-auth when redirecting unauthenticated users
  */
 function getOAuthRedirectUrl(searchParams: URLSearchParams): string | null {
-	// Check for OAuth-specific params that indicate this is an OAuth flow
 	const clientId = searchParams.get("client_id");
 	const responseType = searchParams.get("response_type");
 	const redirectUri = searchParams.get("redirect_uri");
-
 	if (clientId && responseType && redirectUri) {
-		// Reconstruct the OAuth authorize URL with all params
 		const backendUrl = import.meta.env.VITE_BACKEND_URL;
 		return `${backendUrl}/api/auth/oauth2/authorize?${searchParams.toString()}`;
 	}
 	return null;
 }
+
 export const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
 
 export const SignIn = () => {
@@ -40,7 +40,6 @@ export const SignIn = () => {
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 
-	// Check if this is an OAuth flow - if so, redirect back to authorize endpoint after login
 	const oauthRedirectUrl = useMemo(
 		() => getOAuthRedirectUrl(searchParams),
 		[searchParams],
@@ -49,23 +48,40 @@ export const SignIn = () => {
 	const defaultNewPath = "/sandbox/products?tab=products";
 	const defaultCallbackPath = "/sandbox/products?tab=products";
 
-	// Use OAuth redirect URL if present, otherwise use default paths
 	const newPath = oauthRedirectUrl || defaultNewPath;
 	const callbackPath = oauthRedirectUrl || defaultCallbackPath;
 
 	useEffect(() => {
-		// If this is an OAuth flow and user is already logged in, continue the OAuth flow
-		if (oauthRedirectUrl) {
-			// Don't auto-redirect to dashboard - let the OAuth flow continue
-			// The user will be redirected to consent page after they click sign-in
-			return;
-		}
-
-		// Regular sign-in flow - redirect to dashboard if already authenticated
+		if (oauthRedirectUrl) return;
 		if (session) {
 			navigate("/", { replace: true });
 		}
 	}, [session, navigate, oauthRedirectUrl]);
+
+	// Passkey Conditional UI: browsers surface saved passkeys directly in the
+	// email field's autocomplete dropdown (no extra button needed). Requires
+	// the `webauthn` token in autoComplete and `autoFill: true` on signIn.
+	// Skipped during OAuth flows since the post-auth redirect would be lost.
+	useEffect(() => {
+		if (oauthRedirectUrl || session) return;
+		if (typeof window === "undefined") return;
+		// Some browsers (notably Firefox) don't support Conditional UI; signIn
+		// gracefully no-ops in that case. We still call it on supported browsers.
+		const controller = new AbortController();
+		(async () => {
+			try {
+				await authClient.signIn.passkey({
+					autoFill: true,
+					fetchOptions: { signal: controller.signal },
+				});
+			} catch {
+				// Aborts, cancels, and unsupported-browser errors are non-fatal.
+			}
+		})();
+		return () => {
+			controller.abort();
+		};
+	}, [oauthRedirectUrl, session]);
 
 	const handleEmailSignIn = async (e: React.FormEvent) => {
 		e.preventDefault();
@@ -74,15 +90,15 @@ export const SignIn = () => {
 			return;
 		}
 		setSendOtpLoading(true);
-
 		try {
 			const { error } = await authClient.emailOtp.sendVerificationOtp({
 				email: email,
 				type: "sign-in",
 			});
-
 			if (error) {
-				toast.error(error.message || "Something went wrong. Please try again.");
+				toast.error(
+					error.message || "Something went wrong. Please try again.",
+				);
 			} else {
 				setOtpSent(true);
 			}
@@ -97,14 +113,10 @@ export const SignIn = () => {
 		setGoogleLoading(true);
 		try {
 			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
-
-			// For OAuth flow, we need to redirect back to continue the flow
-			// For regular sign-in, use the default dashboard paths
 			const googleCallbackUrl =
 				oauthRedirectUrl || `${frontendUrl}${defaultCallbackPath}`;
 			const googleNewUserUrl =
 				oauthRedirectUrl || `${frontendUrl}${defaultNewPath}`;
-
 			const { error } = await signIn.social({
 				provider: "google",
 				callbackURL: googleCallbackUrl,
@@ -116,57 +128,40 @@ export const SignIn = () => {
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to sign in with Google"));
 		} finally {
-			setTimeout(() => {
-				setGoogleLoading(false);
-			}, 1000);
+			setTimeout(() => setGoogleLoading(false), 1000);
 		}
 	};
 
 	return (
-		<div className="w-screen h-screen bg-background flex items-center justify-center p-4">
+		<AuthBackground>
 			<CustomToaster />
-			<div className="w-full max-w-[350px] space-y-4">
-				{/* Logo */}
-				<div className="flex justify-center">
-					<svg width="48" height="48" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<mask id="icon-cutout">
-							<rect width="28" height="28" fill="white"/>
-							<path d="M10.7139 9.06887C9.77726 11.211 8.84052 13.3532 7.90386 15.4953C8.63795 16.4465 9.37205 17.3984 10.1061 18.3496C12.2827 15.537 14.4599 12.7244 16.637 9.91183L9.27077 22.9514C12.9161 20.7518 16.5615 18.5529 20.2069 16.3534V4.85034L10.7139 9.06887Z" fill="black"/>
-						</mask>
-						<rect width="28" height="28" fill="currentColor" mask="url(#icon-cutout)"/>
-					</svg>
+			<div className="flex flex-col items-center gap-6">
+				{/* Wordmark logo + welcome text */}
+				<div className="flex flex-col items-center gap-3">
+					<AutumnWordmark className="h-7 w-auto text-foreground" />
+					<p className="text-sm text-muted-foreground">
+						Welcome to Autumn, sign in to continue
+					</p>
 				</div>
 
-				{/* Title */}
-				<div className="text-center">
-					<h1 className="text-lg font-semibold text-foreground">
-						Welcome to Autumn
-					</h1>
-				</div>
-
-				{otpSent && (
+				{otpSent ? (
 					<OTPSignIn
 						email={email}
 						newPath={newPath}
 						callbackPath={callbackPath}
 					/>
-				)}
-
-				{!otpSent && (
-					<div className="space-y-6">
-						{/* Google Sign In Button */}
+				) : (
+					<div className="w-full space-y-5">
 						<IconButton
 							variant="primary"
 							onClick={handleGoogleSignIn}
 							isLoading={googleLoading}
 							icon={<FontAwesomeIcon icon={faGoogle} />}
-							className={"w-full gap-2"}
+							className="w-full gap-2"
 						>
-							{" "}
 							Continue with Google
 						</IconButton>
 
-						{/* Divider */}
 						<div className="relative">
 							<div className="absolute inset-0 flex items-center">
 								<span className="w-full border-t border-border" />
@@ -181,26 +176,25 @@ export const SignIn = () => {
 						<div className="flex flex-col gap-2 w-full">
 							<Input
 								type="email"
-								placeholder="Email"
+								placeholder="Email or passkey"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								onKeyDown={(e) => {
-									if (e.key === "Enter") {
-										handleEmailSignIn(e);
-									}
+									if (e.key === "Enter") handleEmailSignIn(e);
 								}}
 								required
 								className="text-base !w-full"
-								autoComplete="email"
+								// "webauthn" token activates Passkey Conditional UI on
+								// Chromium/Safari — saved passkeys appear in the input's
+								// autofill dropdown.
+								autoComplete="username webauthn"
 							/>
-
-							{/* Sign In Button */}
 							<IconButton
 								type="submit"
 								variant="secondary"
 								isLoading={sendOtpLoading}
 								onClick={handleEmailSignIn}
-								className={"gap-2 w-full"}
+								className="gap-2 w-full"
 								icon={<Mail size={14} className="text-t4" />}
 							>
 								Continue with Email
@@ -209,6 +203,6 @@ export const SignIn = () => {
 					</div>
 				)}
 			</div>
-		</div>
+		</AuthBackground>
 	);
 };

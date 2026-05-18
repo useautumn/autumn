@@ -2,8 +2,26 @@ import path from "node:path";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, type Plugin } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
+
+function printPortlessUrl(): Plugin {
+	return {
+		name: "print-portless-url",
+		apply: "serve",
+		configureServer(server) {
+			const portlessUrl = process.env.VITE_FRONTEND_URL;
+			if (!portlessUrl) return;
+			const originalPrint = server.printUrls.bind(server);
+			server.printUrls = () => {
+				originalPrint();
+				server.config.logger.info(
+					`  \x1b[32m➜\x1b[0m  \x1b[1mPortless\x1b[0m: \x1b[36m${portlessUrl}/\x1b[0m`,
+				);
+			};
+		},
+	};
+}
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -22,6 +40,7 @@ export default defineConfig({
 			project: process.env.VITE_SENTRY_PROJECT,
 			telemetry: false,
 		}),
+		printPortlessUrl(),
 	],
 
 	resolve: {
@@ -74,10 +93,15 @@ export default defineConfig({
 			? Number.parseInt(process.env.VITE_PORT, 10)
 			: 3000,
 		strictPort: false, // Allow fallback to next available port
+		// Make the printed "Local:" URL reflect portless when available.
+		...(process.env.VITE_FRONTEND_URL && {
+			origin: process.env.VITE_FRONTEND_URL,
+		}),
 		allowedHosts: [
 			"dev.useautumn.com",
 			"client.dev.useautumn.com",
 			"localhost",
+			".localhost",
 		],
 		watch: {
 			usePolling: true, // Required for file watching in Docker on Windows

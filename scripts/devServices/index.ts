@@ -1,4 +1,3 @@
-import { existsSync, readFileSync } from "node:fs";
 import { createConnection } from "node:net";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,13 +5,11 @@ import { fileURLToPath } from "node:url";
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const composeFile = join(rootDir, "docker", "dev-services.compose.yml");
 const composeProject = "autumn-dev-services";
-const serverEnvPath = join(rootDir, "server", ".env");
 
 const localConfig = {
 	postgresPort: 5432,
 	redisStackPort: 6379,
 	dragonflyPort: 6380,
-	ngrokApiUrl: "http://localhost:4040/api/tunnels",
 	databaseUrl: "postgresql://postgres:postgres@localhost:5432/autumn",
 	cacheUrl: "redis://localhost:6379",
 	dragonflyUrl: "redis://localhost:6380",
@@ -23,32 +20,7 @@ const flags = new Set(process.argv.slice(3));
 
 const log = (message: string) => console.log(`[dev:services] ${message}`);
 
-const parseEnvFile = (path: string): Record<string, string> => {
-	if (!existsSync(path)) return {};
-
-	const env: Record<string, string> = {};
-	for (const line of readFileSync(path, "utf-8").split("\n")) {
-		const trimmed = line.trim();
-		if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
-		const [key, ...valueParts] = trimmed.split("=");
-		if (!key) continue;
-		env[key.trim()] = valueParts.join("=").trim();
-	}
-	return env;
-};
-
-const serverEnv = parseEnvFile(serverEnvPath);
-const rawNgrokDomain = process.env.NGROK_DOMAIN || serverEnv.NGROK_DOMAIN || "";
-const ngrokDomain =
-	rawNgrokDomain && !/^https?:\/\//.test(rawNgrokDomain)
-		? `https://${rawNgrokDomain}`
-		: rawNgrokDomain;
-const composeEnv = {
-	...process.env,
-	NGROK_AUTHTOKEN:
-		process.env.NGROK_AUTHTOKEN || serverEnv.NGROK_AUTHTOKEN || "",
-	NGROK_DOMAIN: ngrokDomain,
-};
+const composeEnv = { ...process.env };
 
 const run = ({
 	cmd,
@@ -191,13 +163,6 @@ const doctor = async () => {
 		}),
 	]);
 
-	try {
-		const response = await fetch(localConfig.ngrokApiUrl);
-		if (response.ok) console.log("ok ngrok API :4040");
-	} catch {
-		console.log("info ngrok API :4040 not running");
-	}
-
 	if (results.some((result) => !result)) process.exit(1);
 };
 
@@ -244,7 +209,7 @@ const help = () => {
 	console.log(`Usage: bun dev:services <command>
 
 Commands:
-  up                         Start local Postgres, Redis Stack, Dragonfly, and ngrok
+  up                         Start local Postgres, Redis Stack, and Dragonfly
   down                       Stop local services and keep all data
   down --volumes             Stop services and delete Redis/Dragonfly data
   down --postgres            Stop services and delete Postgres data

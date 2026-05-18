@@ -7,16 +7,21 @@ import { useCustomerFilters } from "./useCustomerFilters";
 export const FULL_CUSTOMERS_QUERY_KEY = "full_customers";
 
 export const useFullCusSearchQuery = () => {
-	const { queryStates, isInitialized } = useCustomerFilters();
+	const {
+		queryStates,
+		isInitialized,
+		currentCursor,
+	} = useCustomerFilters();
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
 	return useQuery<{
 		fullCustomers: FullCustomer[];
+		next_cursor: string | null;
 	}>({
 		queryKey: buildKey([
 			FULL_CUSTOMERS_QUERY_KEY,
-			queryStates.page,
+			currentCursor,
 			queryStates.pageSize,
 			queryStates.status,
 			queryStates.version,
@@ -29,8 +34,8 @@ export const useFullCusSearchQuery = () => {
 				`/customers/all/full_customers`,
 				{
 					search: queryStates.q,
-					page_size: queryStates.pageSize,
-					page: queryStates.page,
+					cursor: currentCursor,
+					limit: queryStates.pageSize,
 					filters: {
 						status: queryStates.status,
 						version: queryStates.version,
@@ -40,8 +45,10 @@ export const useFullCusSearchQuery = () => {
 				},
 				{ signal },
 			);
-
-			return data;
+			return {
+				fullCustomers: data.fullCustomers,
+				next_cursor: data.next_cursor ?? null,
+			};
 		},
 		enabled: isInitialized,
 		placeholderData: keepPreviousData,

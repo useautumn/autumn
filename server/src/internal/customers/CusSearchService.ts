@@ -62,7 +62,7 @@ interface SearchFilters {
 }
 
 export class CusSearchService {
-	private static getProcessorFilterSql({
+	static getProcessorFilterSql({
 		customerTableAlias = customers,
 	}: {
 		customerTableAlias?: typeof customers;
@@ -743,7 +743,383 @@ export class CusSearchService {
 
 		return { data: finalResults, count: totalCount };
 	}
+
+	static async count({
+		db,
+		orgId,
+		env,
+		search,
+		filters,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		search: string;
+		filters?: SearchFilters;
+	}): Promise<{ totalCount: number }> {
+		const predicates = buildSearchPredicates({ orgId, env, search, filters });
+
+		if (predicates.kind === "noneMode") {
+			const rows = await db
+				.select({ count: sql<number>`count(*)`.as("count") })
+				.from(customers)
+				.where(predicates.where);
+			return { totalCount: rows[0]?.count ?? 0 };
+		}
+
+		if (predicates.kind === "productMode") {
+			const rows = await db
+				.select({
+					count: sql<number>`count(distinct ${customers.internal_id})`.as(
+						"count",
+					),
+				})
+				.from(customerProducts)
+				.leftJoin(
+					customers,
+					eq(customerProducts.internal_customer_id, customers.internal_id),
+				)
+				[predicates.useInnerJoin ? "innerJoin" : "leftJoin"](
+					products,
+					eq(customerProducts.internal_product_id, products.internal_id),
+				)
+				.where(predicates.where);
+			return { totalCount: rows[0]?.count ?? 0 };
+		}
+
+		const rows = await db
+			.select({ count: sql<number>`count(*)`.as("count") })
+			.from(customers)
+			.where(predicates.where);
+		return { totalCount: rows[0]?.count ?? 0 };
+	}
+
+	static async resolveInternalIdsByCursor({
+		db,
+		orgId,
+		env,
+		search,
+		filters,
+		cursor,
+		limit,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		search: string;
+		filters?: SearchFilters;
+		cursor?: { t: number; id: string } | null;
+		limit: number;
+	}): Promise<{
+		internalIds: string[];
+		peek: { t: number; id: string } | null;
+	}> {
+		const predicates = buildSearchPredicates({ orgId, env, search, filters });
+		const fetchLimit = limit + 1;
+		const cursorClause = cursor
+			? sql`AND (${customers.created_at}, ${customers.id}) < (${cursor.t}, ${cursor.id})`
+			: sql``;
+
+		if (predicates.kind === "productMode") {
+			const rows = (await db.execute(sql`
+				SELECT DISTINCT ${customers.internal_id} AS internal_id,
+				                ${customers.created_at} AS created_at,
+				                ${customers.id} AS id
+				FROM ${customerProducts}
+				${
+					predicates.useInnerJoin
+						? sql`INNER JOIN ${products} ON ${customerProducts.internal_product_id} = ${products.internal_id}`
+						: sql`LEFT JOIN ${products} ON ${customerProducts.internal_product_id} = ${products.internal_id}`
+				}
+				LEFT JOIN ${customers} ON ${customerProducts.internal_customer_id} = ${customers.internal_id}
+				WHERE ${predicates.whereRaw}
+				${cursorClause}
+				ORDER BY ${customers.created_at} DESC, ${customers.id} DESC
+				LIMIT ${fetchLimit}
+			`)) as unknown as Array<{
+				internal_id: string;
+				created_at: number;
+				id: string;
+			}>;
+			return splitWithPeek(rows, limit);
+		}
+
+		const rows = (await db.execute(sql`
+			SELECT ${customers.internal_id} AS internal_id,
+			       ${customers.created_at} AS created_at,
+			       ${customers.id} AS id
+			FROM ${customers}
+			WHERE ${predicates.whereRaw}
+			${cursorClause}
+			ORDER BY ${customers.created_at} DESC, ${customers.id} DESC
+			LIMIT ${fetchLimit}
+		`)) as unknown as Array<{
+			internal_id: string;
+			created_at: number;
+			id: string;
+		}>;
+		return splitWithPeek(rows, limit);
+	}
 }
+
+type Predicates =
+	| {
+			kind: "noneMode";
+			where: ReturnType<typeof and>;
+			whereRaw: ReturnType<typeof sql>;
+	  }
+	| {
+			kind: "productMode";
+			where: ReturnType<typeof and>;
+			whereRaw: ReturnType<typeof sql>;
+			useInnerJoin: boolean;
+	  }
+	| {
+			kind: "default";
+			where: ReturnType<typeof and>;
+			whereRaw: ReturnType<typeof sql>;
+	  };
+
+const buildSearchPredicates = ({
+	orgId,
+	env,
+	search,
+	filters,
+}: {
+	orgId: string;
+	env: AppEnv;
+	search: string;
+	filters?: SearchFilters;
+}): Predicates => {
+	const cusBaseClauses = [
+		eq(customers.org_id, orgId),
+		eq(customers.env, env),
+		search
+			? or(
+					ilike(customers.id, `%${search}%`),
+					ilike(customers.name, `%${search}%`),
+					ilike(customers.email, `%${search}%`),
+				)
+			: undefined,
+		filters?.processor?.length
+			? or(
+					...filters.processor
+						.map((proc) => CusSearchService.getProcessorFilterSql({})({ proc }))
+						.filter((c): c is NonNullable<typeof c> => c !== undefined),
+				)
+			: undefined,
+	];
+
+	const baseRaw = sql.join(
+		[
+			sql`${customers.org_id} = ${orgId}`,
+			sql`${customers.env} = ${env}`,
+			search
+				? sql`(${customers.id} ILIKE ${`%${search}%`} OR ${customers.name} ILIKE ${`%${search}%`} OR ${customers.email} ILIKE ${`%${search}%`})`
+				: null,
+			filters?.processor?.length
+				? sql`(${sql.join(
+						filters.processor
+							.map((proc) => {
+								if (proc === "stripe")
+									return sql`(${customers.processor}->>'id' IS NOT NULL)`;
+								if (proc === "revenuecat")
+									return sql`EXISTS (SELECT 1 FROM customer_products cp_p WHERE cp_p.internal_customer_id = ${customers.internal_id} AND cp_p.processor->>'type' = 'revenuecat')`;
+								if (proc === "vercel")
+									return sql`(${customers.processors}->>'vercel' IS NOT NULL)`;
+								return null;
+							})
+							.filter((c): c is NonNullable<typeof c> => c !== null),
+						sql` OR `,
+					)})`
+				: null,
+		].filter((c): c is NonNullable<typeof c> => c !== null),
+		sql` AND `,
+	);
+
+	if (filters?.none) {
+		const noneFilter = notExists(
+			sql`SELECT 1 FROM customer_products ncp
+				WHERE ncp.internal_customer_id = ${customers.internal_id}
+					AND ncp.status IN (${CusProductStatus.Active}, ${CusProductStatus.PastDue}, ${CusProductStatus.Scheduled})`,
+		);
+		return {
+			kind: "noneMode",
+			where: and(...cusBaseClauses, noneFilter),
+			whereRaw: sql`${baseRaw} AND NOT EXISTS (
+				SELECT 1 FROM customer_products ncp
+				WHERE ncp.internal_customer_id = ${customers.internal_id}
+					AND ncp.status IN (${CusProductStatus.Active}, ${CusProductStatus.PastDue}, ${CusProductStatus.Scheduled})
+			)`,
+		};
+	}
+
+	const statuses =
+		filters?.status && filters.status.length > 0 && !filters.status.includes("")
+			? filters.status
+			: [];
+	const versions = filters?.version?.filter(Boolean) ?? [];
+	const productVersionFilters = versions.map((selection) => {
+		const [productId, version] = selection.split(":");
+		return { productId, version: parseInt(version, 10) };
+	});
+
+	if (statuses.length === 0 && productVersionFilters.length === 0) {
+		return {
+			kind: "default",
+			where: and(...cusBaseClauses),
+			whereRaw: baseRaw,
+		};
+	}
+
+	const activeProdRaw = sql`(${customerProducts.status} = ${CusProductStatus.Active} OR ${customerProducts.status} = ${CusProductStatus.PastDue})`;
+
+	const statusRaw =
+		statuses.length > 0
+			? sql`(${sql.join(
+					statuses.map((status) => {
+						switch (status) {
+							case "active":
+								return sql`(${customerProducts.status} = ${CusProductStatus.Active} AND ${customerProducts.canceled_at} IS NULL)`;
+							case "past_due":
+								return sql`(${customerProducts.status} = ${CusProductStatus.PastDue} AND ${customerProducts.canceled_at} IS NULL)`;
+							case "canceled":
+								return sql`(${customerProducts.canceled_at} IS NOT NULL AND ${activeProdRaw})`;
+							case "free_trial":
+								return sql`(${customerProducts.trial_ends_at} > ${Date.now()} AND ${customerProducts.free_trial_id} IS NOT NULL AND ${customerProducts.canceled_at} IS NULL AND ${activeProdRaw})`;
+							case CusProductStatus.Expired:
+								return sql`(${customerProducts.status} = ${CusProductStatus.Expired} AND ${customerProducts.canceled_at} IS NULL AND NOT EXISTS (
+									SELECT 1 FROM customer_products cp_alias
+									WHERE cp_alias.internal_customer_id = ${customerProducts.internal_customer_id}
+									  AND cp_alias.product_id = ${customerProducts.product_id}
+									  AND (cp_alias.status = ${CusProductStatus.Active} OR cp_alias.status = ${CusProductStatus.PastDue})
+								))`;
+							default:
+								return sql`${customerProducts.status} = ${status}`;
+						}
+					}),
+					sql` OR `,
+				)})`
+			: null;
+
+	const versionRaw =
+		productVersionFilters.length > 0
+			? sql`(${sql.join(
+					productVersionFilters.map(
+						(pv) =>
+							sql`(${customerProducts.product_id} = ${pv.productId} AND ${products.version} = ${pv.version})`,
+					),
+					sql` OR `,
+				)})`
+			: null;
+
+	const hasNonActiveStatus = statuses.some(
+		(status) => status !== "active" && status !== "",
+	);
+	const shouldApplyActiveFilter =
+		statuses.length === 0 ||
+		(statuses.includes("active") && !hasNonActiveStatus);
+
+	const productClauses = [
+		shouldApplyActiveFilter ? activeProdRaw : null,
+		statusRaw,
+		versionRaw,
+	].filter((c): c is NonNullable<typeof c> => c !== null);
+
+	const whereRaw =
+		productClauses.length > 0
+			? sql`${baseRaw} AND ${sql.join(productClauses, sql` AND `)}`
+			: baseRaw;
+
+	const activeDrizzle = or(
+		eq(customerProducts.status, CusProductStatus.Active),
+		eq(customerProducts.status, CusProductStatus.PastDue),
+	);
+	const filtersDrizzle = and(
+		productVersionFilters.length > 0
+			? or(
+					...productVersionFilters.map((pv) =>
+						and(
+							eq(customerProducts.product_id, pv.productId),
+							eq(products.version, pv.version),
+						),
+					),
+				)
+			: undefined,
+		statuses.length > 0
+			? or(
+					...statuses.map((status) => {
+						switch (status) {
+							case "active":
+								return and(
+									eq(customerProducts.status, CusProductStatus.Active),
+									isNull(customerProducts.canceled_at),
+								);
+							case "past_due":
+								return and(
+									eq(customerProducts.status, CusProductStatus.PastDue),
+									isNull(customerProducts.canceled_at),
+								);
+							case "canceled":
+								return and(
+									isNotNull(customerProducts.canceled_at),
+									activeDrizzle,
+								);
+							case "free_trial":
+								return and(
+									gt(customerProducts.trial_ends_at, Date.now()),
+									isNotNull(customerProducts.free_trial_id),
+									isNull(customerProducts.canceled_at),
+									activeDrizzle,
+								);
+							case CusProductStatus.Expired:
+								return and(
+									eq(customerProducts.status, CusProductStatus.Expired),
+									isNull(customerProducts.canceled_at),
+									sql`NOT EXISTS (
+										SELECT 1 FROM customer_products cp_alias
+										WHERE cp_alias.internal_customer_id = ${customerProducts.internal_customer_id}
+										  AND cp_alias.product_id = ${customerProducts.product_id}
+										  AND (cp_alias.status = ${CusProductStatus.Active} OR cp_alias.status = ${CusProductStatus.PastDue})
+									)`,
+								);
+							default:
+								return eq(customerProducts.status, status);
+						}
+					}),
+				)
+			: undefined,
+	);
+
+	return {
+		kind: "productMode",
+		useInnerJoin: productVersionFilters.length > 0,
+		where: and(
+			shouldApplyActiveFilter ? activeDrizzle : undefined,
+			filtersDrizzle,
+			...cusBaseClauses,
+		),
+		whereRaw,
+	};
+};
+
+const splitWithPeek = (
+	rows: Array<{ internal_id: string; created_at: number; id: string }>,
+	limit: number,
+): { internalIds: string[]; peek: { t: number; id: string } | null } => {
+	if (rows.length > limit) {
+		const page = rows.slice(0, limit);
+		const peekRow = rows[limit]!;
+		return {
+			internalIds: page.map((r) => r.internal_id),
+			peek: { t: Number(peekRow.created_at), id: peekRow.id },
+		};
+	}
+	return {
+		internalIds: rows.map((r) => r.internal_id),
+		peek: null,
+	};
+};
 
 const sortRelevantFirst = (
 	customerProducts: Array<{
