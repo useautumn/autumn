@@ -172,8 +172,8 @@ const CommandBar = () => {
 				const { data } = await axiosInstance.post(`/customers/all/search`, {
 					search: debouncedSearch,
 					filters: {},
-					page: 1,
-					page_size: 50,
+					cursor: "",
+					limit: 50,
 				});
 				return { customers: data.customers };
 			},

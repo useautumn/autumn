@@ -322,7 +322,7 @@ export const AnalyticsView = () => {
 			<PageContainer className="text-sm">
 				<OnboardingGuide />
 				{showRevenueMetrics && <RevenueMetricsSection />}
-				<div className="max-h-[400px] min-h-[400px] pb-6 shrink-0">
+				<div className="pb-6 shrink-0">
 					<div className="flex justify-between pb-4 h-10">
 						<div className="text-tertiary-foreground text-md flex gap-2 items-center">
 							<ChartBarIcon size={16} weight="fill" className="text-subtle" />
@@ -338,9 +338,9 @@ export const AnalyticsView = () => {
 						</div>
 					)}
 
-					<div className="h-full overflow-hidden">
+					<div>
 						{chartData && chartData.data.length > 0 && (
-							<div className="h-full flex flex-col overflow-hidden bg-interactive-secondary border rounded-lg max-h-[350px]">
+							<div className="flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1]">
 								<ChartLegend
 									entries={legendEntries}
 									showLabels={!!groupBy || legendEntries.length <= 3}

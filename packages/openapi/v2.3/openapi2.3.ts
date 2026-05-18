@@ -32,12 +32,13 @@ import { ZodToJsonSchemaConverter } from "@orpc/zod/zod4";
 import yaml from "yaml";
 import { transformNode } from "../utils/mintlifyTransform/index.js";
 import {
+	applyPaginationExtensions,
 	applySpeakeasySettings,
 	injectGlobalHeaderParameters,
 	removeInternalFields,
 } from "../utils/openapiTransform/index.js";
 import { registerInternalSchemas } from "../utils/registerInternalSchemas.js";
-import { v2_1ContractRouter } from "./contracts/index.js";
+import { v2_3ContractRouter } from "./contracts/index.js";
 import { injectWebhooks } from "./webhooks/injectWebhooks.js";
 
 const generator = new OpenAPIGenerator({
@@ -48,7 +49,7 @@ const OPENAPI_DOC_VERSION = LATEST_VERSION;
 
 /**
  * Generates the OpenAPI document with all transformations applied.
- * Internal helper used by both writeOpenApi_2_1_0 and writeOpenApi_2_1_0_Stripped.
+ * Internal helper used by both writeOpenApi_2_3_0 and writeOpenApi_2_3_0_Stripped.
  */
 async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	// Register internal schemas before generation so they get x-internal: true
@@ -76,7 +77,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(CustomerDataSchema);
 	registerInternalSchemas(ApiEventsListParamsSchema);
 
-	const openApiDocument = (await generator.generate(v2_1ContractRouter, {
+	const openApiDocument = (await generator.generate(v2_3ContractRouter, {
 		info: {
 			title: "Autumn API",
 			version: OPENAPI_DOC_VERSION,
@@ -125,6 +126,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 		version: OPENAPI_DOC_VERSION,
 	});
 	removeInternalFields({ openApiDocument });
+	applyPaginationExtensions({ openApiDocument });
 	injectWebhooks({ openApiDocument });
 
 	return openApiDocument;
@@ -134,7 +136,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
  * Generates and writes the full OpenAPI spec (with TypeScript JSDoc examples).
  * Used for the TypeScript SDK generation.
  */
-export const writeOpenApi_2_1_0 = async ({
+export const writeOpenApi_2_3_0 = async ({
 	outputFilePath,
 }: {
 	outputFilePath: string;
@@ -149,7 +151,7 @@ export const writeOpenApi_2_1_0 = async ({
  * Used for non-TypeScript SDK generation (Python, etc.) where TS examples
  * in descriptions would be confusing.
  */
-export const writeOpenApi_2_1_0_Stripped = async ({
+export const writeOpenApi_2_3_0_Stripped = async ({
 	outputFilePath,
 }: {
 	outputFilePath: string;

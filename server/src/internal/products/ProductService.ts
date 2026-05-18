@@ -159,6 +159,53 @@ export class ProductService {
 		})) as FullProduct[];
 	}
 
+	static async listByPriceIds({
+		db,
+		orgId,
+		env,
+		priceIds,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+		priceIds: string[];
+	}): Promise<FullProduct[]> {
+		if (priceIds.length === 0) return [];
+
+		const priceRows = await db.query.prices.findMany({
+			where: inArray(prices.id, priceIds),
+			columns: { internal_product_id: true },
+		});
+		const internalProductIds = [
+			...new Set(
+				priceRows
+					.map((p) => p.internal_product_id)
+					.filter((id): id is string => Boolean(id)),
+			),
+		];
+
+		if (internalProductIds.length === 0) return [];
+
+		const data = (await db.query.products.findMany({
+			where: and(
+				eq(products.org_id, orgId),
+				eq(products.env, env),
+				inArray(products.internal_id, internalProductIds),
+			),
+			with: {
+				entitlements: {
+					with: { feature: true },
+					where: eq(entitlements.is_custom, false),
+				},
+				prices: { where: eq(prices.is_custom, false) },
+				free_trials: { where: eq(freeTrials.is_custom, false) },
+			},
+		})) as FullProduct[];
+
+		parseFreeTrials({ products: data });
+		return data;
+	}
+
 	static async listDefault({
 		db,
 		orgId,

@@ -1,6 +1,5 @@
 import {
 	type AffectedResource,
-	type ApiVersion,
 	ApiVersionClass,
 	applyRequestVersionChanges,
 	LATEST_VERSION,
@@ -8,6 +7,7 @@ import {
 import { zValidator } from "@hono/zod-validator";
 import type { MiddlewareHandler } from "hono";
 import type { ZodType } from "zod/v4";
+import { resolveVersionedEntry, type VersionedMap } from "./versionResolver.js";
 
 /**
  * Version-aware validator middleware
@@ -42,42 +42,26 @@ export const versionedValidator = ({
 	target,
 	schemas,
 	resource,
+	transformToLatest = true,
 }: {
 	target: "json" | "query" | "param" | "header" | "form";
-	schemas: Partial<Record<ApiVersion, ZodType>> & { latest: ZodType };
+	schemas: VersionedMap<ZodType>;
 	resource: AffectedResource;
+	/**
+	 * When true (default), older-version payloads are transformed up to latest
+	 * before reaching the handler. Set false when routes use `versionedHandler`
+	 * to receive per-version payloads in their native shape.
+	 */
+	transformToLatest?: boolean;
 }): MiddlewareHandler => {
 	return async (c, next) => {
 		const ctx = c.get("ctx");
 		const userVersion = ctx.apiVersion;
 
-		// Select schema for user's version
-		const versionKey = userVersion.value as ApiVersion;
-		let schema = schemas[versionKey];
-
-		// If version not found, find the closest matching version
-		if (!schema) {
-			// Get all defined versions (excluding 'latest'), sorted ascending (oldest first)
-			const definedVersions = Object.keys(schemas)
-				.filter((v) => v !== "latest")
-				.map((v) => new ApiVersionClass(v as ApiVersion))
-				.sort((a, b) => (a.lt(b) ? -1 : 1));
-
-			// Find the first version that is >= user's version
-			// If user is older than all versions, this returns the earliest
-			// If user is between versions, this returns the next version
-			for (const definedVersion of definedVersions) {
-				if (userVersion.lte(definedVersion)) {
-					schema = schemas[definedVersion.value as ApiVersion];
-					break;
-				}
-			}
-
-			// If no matching version found (user is newer than all), use latest
-			if (!schema) {
-				schema = schemas.latest;
-			}
-		}
+		const schema = resolveVersionedEntry({
+			map: schemas,
+			requested: userVersion,
+		});
 
 		// Debug: log which schema version is being used
 		// const schemaVersion = Object.entries(schemas).find(
@@ -135,8 +119,12 @@ export const versionedValidator = ({
 			validatedData = (c.req as any).valid(target) as Record<string, unknown>;
 		}
 
-		// If user is on older version, transform to latest
-		if (!userVersion.eq(new ApiVersionClass(LATEST_VERSION))) {
+		// If user is on older version, optionally transform to latest.
+		// Routes using `versionedHandler` opt out so handlers see per-version payloads.
+		if (
+			transformToLatest &&
+			!userVersion.eq(new ApiVersionClass(LATEST_VERSION))
+		) {
 			const transformed = applyRequestVersionChanges({
 				input: validatedData,
 				fromVersion: userVersion,
@@ -145,8 +133,6 @@ export const versionedValidator = ({
 				ctx,
 			});
 
-			// Replace validated data with transformed version
-			// This ensures handler always receives latest format
 			c.req.addValidatedData(target, transformed);
 		}
 

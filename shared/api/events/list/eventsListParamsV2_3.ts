@@ -1,0 +1,55 @@
+import { z } from "zod/v4";
+import {
+	CursorRequestFieldSchema,
+	createCursorLimitSchema,
+	PaginationDefaults,
+} from "../../common/cursorPaginationSchemas.js";
+
+export const ApiEventsListV2_3ParamsSchema = z.object({
+	start_cursor: CursorRequestFieldSchema,
+	limit: createCursorLimitSchema({
+		defaultLimit: PaginationDefaults.DefaultLimit,
+	}),
+
+	customer_id: z.string().optional().describe("Filter events by customer ID"),
+	entity_id: z
+		.string()
+		.min(1)
+		.optional()
+		.describe("Filter events by entity ID (e.g., per-seat or per-resource)"),
+	feature_id: z
+		.string()
+		.min(1)
+		.or(z.array(z.string().min(1)))
+		.optional()
+		.describe("Filter by specific feature ID(s)"),
+
+	custom_range: z
+		.object({
+			start: z.coerce
+				.number()
+				.optional()
+				.describe("Filter events after this timestamp (epoch milliseconds)"),
+			end: z.coerce
+				.number()
+				.optional()
+				.describe("Filter events before this timestamp (epoch milliseconds)"),
+		})
+		.optional()
+		.describe("Filter events by time range"),
+	filter_by: z
+		.record(z.string(), z.string())
+		.refine((val) => Object.keys(val).length <= 5, {
+			message: "filter_by supports a maximum of 5 filters",
+		})
+		.optional()
+		.meta({
+			internal: true,
+			description:
+				'Filter events by property values, e.g. {"model": "gpt-4", "region": "us"}. Maximum 5 filters.',
+		}),
+});
+
+export type ApiEventsListV2_3Params = z.infer<
+	typeof ApiEventsListV2_3ParamsSchema
+>;

@@ -122,11 +122,15 @@ export const setupAttachBillingContext = async ({
 			isTransitionFromFree &&
 			hasPaidRecurringSubscription);
 
-	const skipBillingFetching =
-		orgDisableStripeWrites({ ctx }) || params.no_billing_changes === true;
+	// no_billing_changes blocks WRITES but should still allow reading the
+	// existing Stripe sub when one is linked — needed so the new cusProduct
+	// inherits subscription_ids and the paid-product guard doesn't misfire.
+	const skipBillingFetching = orgDisableStripeWrites({ ctx });
 
 	const skipBillingChangesBase =
-		skipBillingFetching || params.processor_subscription_id !== undefined;
+		skipBillingFetching ||
+		params.no_billing_changes === true ||
+		params.processor_subscription_id !== undefined;
 
 	const {
 		stripeSubscription,
@@ -144,7 +148,8 @@ export const setupAttachBillingContext = async ({
 		params,
 		newBillingSubscription: shouldForceNewSubscription,
 		skipBillingFetching,
-		createStripeCustomerIfMissing: !preview,
+		createStripeCustomerIfMissing:
+			!preview && params.no_billing_changes !== true,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({

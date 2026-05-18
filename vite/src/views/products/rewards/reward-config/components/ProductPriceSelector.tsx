@@ -5,6 +5,7 @@ import { SelectGroup, SelectLabel } from "@/components/v2/selects/Select";
 import { TagSelect } from "@/components/v2/selects/TagSelect";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useProductsByPriceIdsQuery } from "@/hooks/queries/useProductsByPriceIdsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { isFeatureItem } from "@/utils/product/getItemType";
 import { formatProductItemText } from "@/utils/product/product-item/formatProductItem";
@@ -24,6 +25,10 @@ export function ProductPriceSelector({
 	const { features } = useFeaturesQuery();
 
 	const config = reward.discount_config!;
+
+	const linkedPriceIds = config.price_ids ?? [];
+	const { products: linkedProductVersions } =
+		useProductsByPriceIdsQuery(linkedPriceIds);
 
 	const setConfig = (key: string, value: any) => {
 		setReward({
@@ -73,17 +78,15 @@ export function ProductPriceSelector({
 	};
 
 	const formatPriceTag = (priceId: string) => {
-		const item = products
-			.find((p: any) => p.items.find((i: any) => i.price_id === priceId))
-			?.items.find((i: any) => i.price_id === priceId);
+		const product = linkedProductVersions.find((p: any) =>
+			p.items.find((i: any) => i.price_id === priceId),
+		);
+		const item = product?.items.find((i: any) => i.price_id === priceId);
 
-		return item
-			? formatProductItemText({
-					item,
-					org,
-					features,
-				})
-			: "Unknown Price";
+		if (!item || !product) return "Unknown Price";
+
+		const priceText = formatProductItemText({ item, org, features });
+		return `${product.name} v${product.version} — ${priceText}`;
 	};
 
 	// Get products with non-feature items
