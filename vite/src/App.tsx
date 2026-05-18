@@ -64,6 +64,7 @@ export default function App() {
 			}
 		}
 	}, [data]);
+
 	return (
 		<BrowserRouter>
 			<Routes>
