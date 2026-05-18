@@ -319,6 +319,12 @@ export const PlanDurationType = {
  */
 export type PlanDurationType = OpenEnum<typeof PlanDurationType>;
 
+export const OnEnd = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+export type OnEnd = OpenEnum<typeof OnEnd>;
+
 /**
  * Free trial configuration. If set, new customers can try this plan before being charged.
  */
@@ -335,6 +341,10 @@ export type FreeTrial = {
    * Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.
    */
   cardRequired: boolean;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: OnEnd | null | undefined;
 };
 
 /**
@@ -795,18 +805,24 @@ export const PlanDurationType$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(PlanDurationType);
 
 /** @internal */
+export const OnEnd$inboundSchema: z.ZodMiniType<OnEnd, unknown> = openEnums
+  .inboundSchema(OnEnd);
+
+/** @internal */
 export const FreeTrial$inboundSchema: z.ZodMiniType<FreeTrial, unknown> = z
   .pipe(
     z.object({
       duration_length: types.number(),
       duration_type: PlanDurationType$inboundSchema,
       card_required: types.boolean(),
+      on_end: z.optional(z.nullable(OnEnd$inboundSchema)),
     }),
     z.transform((v) => {
       return remap$(v, {
         "duration_length": "durationLength",
         "duration_type": "durationType",
         "card_required": "cardRequired",
+        "on_end": "onEnd",
       });
     }),
   );
