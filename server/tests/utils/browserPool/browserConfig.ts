@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { chromium } from "playwright-core";
 
 // ============================================================================
 // Browser test configuration — toggle these for local development / debugging
@@ -11,9 +12,16 @@ export const USE_KERNEL = !!process.env.USE_KERNEL_BROWSER;
 /** Run browsers in headless mode (set false to watch the browser) */
 export const HEADLESS = true;
 
-/** Path to local Chromium/Chrome executable (auto-detected if not set in env) */
-export const CHROMIUM_PATH =
-	process.env.TESTS_CHROMIUM_PATH || "/opt/homebrew/bin/chromium";
+/** Path to local Chromium/Chrome executable (env → playwright-core → fallback) */
+const resolveChromiumPath = (): string => {
+	if (process.env.TESTS_CHROMIUM_PATH) return process.env.TESTS_CHROMIUM_PATH;
+	try {
+		return chromium.executablePath();
+	} catch {
+		return "/opt/homebrew/bin/chromium";
+	}
+};
+export const CHROMIUM_PATH = resolveChromiumPath();
 
 /** Kernel browser session timeout in seconds */
 export const KERNEL_TIMEOUT_SECONDS = 30;
