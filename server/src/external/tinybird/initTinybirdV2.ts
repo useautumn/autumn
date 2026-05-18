@@ -1,14 +1,8 @@
 import { createTinybirdApi } from "@tinybirdco/sdk";
 
-/**
- * Secondary Tinybird API client for dual-write safety net during the
- * us-west → us-east region cutover. Reads from the legacy `TINYBIRD_API_URL`
- * / `TINYBIRD_TOKEN` env vars, which point at us-west during the transition.
- * Primary lives on `TINYBIRD_US_EAST_*` (see `tinybirdUtils.ts`). Once
- * us-east is stable, delete this file + the dual-write logic in
- * `sendEvents.ts`, and remove `TINYBIRD_API_URL` / `TINYBIRD_TOKEN` from
- * Infisical.
- */
+// Dual-write safety net during the us-east cutover. Reads the legacy
+// us-west env vars; delete with the dual-write logic in `sendEvents.ts`
+// once us-east is stable.
 const secondaryApiUrl = process.env.TINYBIRD_API_URL;
 const secondaryToken = process.env.TINYBIRD_TOKEN;
 
