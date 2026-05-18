@@ -299,6 +299,18 @@ export type CreatePlanDurationTypeRequest = ClosedEnum<
 >;
 
 /**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export const CreatePlanOnEndRequest = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+/**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export type CreatePlanOnEndRequest = ClosedEnum<typeof CreatePlanOnEndRequest>;
+
+/**
  * Free trial configuration. Customers can try this plan before being charged.
  */
 export type FreeTrialRequest = {
@@ -314,6 +326,10 @@ export type FreeTrialRequest = {
    * If true, payment method required to start trial. Customer is charged after trial ends.
    */
   cardRequired?: boolean | undefined;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: CreatePlanOnEndRequest | undefined;
 };
 
 /**
@@ -692,6 +708,12 @@ export type CreatePlanDurationTypeResponse = OpenEnum<
   typeof CreatePlanDurationTypeResponse
 >;
 
+export const CreatePlanOnEndResponse = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+export type CreatePlanOnEndResponse = OpenEnum<typeof CreatePlanOnEndResponse>;
+
 /**
  * Free trial configuration. If set, new customers can try this plan before being charged.
  */
@@ -708,6 +730,10 @@ export type CreatePlanFreeTrialResponse = {
    * Whether a payment method is required to start the trial. If true, customer will be charged after trial ends.
    */
   cardRequired: boolean;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: CreatePlanOnEndResponse | null | undefined;
 };
 
 /**
@@ -1153,10 +1179,16 @@ export const CreatePlanDurationTypeRequest$outboundSchema: z.ZodMiniEnum<
 > = z.enum(CreatePlanDurationTypeRequest);
 
 /** @internal */
+export const CreatePlanOnEndRequest$outboundSchema: z.ZodMiniEnum<
+  typeof CreatePlanOnEndRequest
+> = z.enum(CreatePlanOnEndRequest);
+
+/** @internal */
 export type FreeTrialRequest$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
+  on_end?: string | undefined;
 };
 
 /** @internal */
@@ -1171,12 +1203,14 @@ export const FreeTrialRequest$outboundSchema: z.ZodMiniType<
       "month",
     ),
     cardRequired: z._default(z.boolean(), true),
+    onEnd: z.optional(CreatePlanOnEndRequest$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       durationLength: "duration_length",
       durationType: "duration_type",
       cardRequired: "card_required",
+      onEnd: "on_end",
     });
   }),
 );
@@ -1608,6 +1642,12 @@ export const CreatePlanDurationTypeResponse$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(CreatePlanDurationTypeResponse);
 
 /** @internal */
+export const CreatePlanOnEndResponse$inboundSchema: z.ZodMiniType<
+  CreatePlanOnEndResponse,
+  unknown
+> = openEnums.inboundSchema(CreatePlanOnEndResponse);
+
+/** @internal */
 export const CreatePlanFreeTrialResponse$inboundSchema: z.ZodMiniType<
   CreatePlanFreeTrialResponse,
   unknown
@@ -1616,12 +1656,14 @@ export const CreatePlanFreeTrialResponse$inboundSchema: z.ZodMiniType<
     duration_length: types.number(),
     duration_type: CreatePlanDurationTypeResponse$inboundSchema,
     card_required: types.boolean(),
+    on_end: z.optional(z.nullable(CreatePlanOnEndResponse$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
       "duration_length": "durationLength",
       "duration_type": "durationType",
       "card_required": "cardRequired",
+      "on_end": "onEnd",
     });
   }),
 );
