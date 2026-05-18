@@ -23,12 +23,10 @@ export function MigrationListTable() {
 		},
 	});
 
-	const hasRows = table.getRowModel().rows.length > 0;
-
 	const getRowHref = (row: Migration) =>
 		pushPage({ path: `/migrations/${row.id}` });
 
-	if (!isLoading && !hasRows) {
+	if (!isLoading && migrations.length === 0) {
 		return (
 			<EmptyState
 				type="migrations"
