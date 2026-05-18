@@ -872,13 +872,6 @@ BillingUpdateDurationType = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
-BillingUpdateOnEnd = Literal[
-    "bill",
-    "revert",
-]
-r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
-
-
 class BillingUpdateFreeTrialParamsTypedDict(TypedDict):
     r"""Free trial configuration for a plan."""
 
@@ -888,8 +881,6 @@ class BillingUpdateFreeTrialParamsTypedDict(TypedDict):
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
-    on_end: NotRequired[BillingUpdateOnEnd]
-    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
 class BillingUpdateFreeTrialParams(BaseModel):
@@ -904,12 +895,9 @@ class BillingUpdateFreeTrialParams(BaseModel):
     card_required: Optional[bool] = True
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
-    on_end: Optional[BillingUpdateOnEnd] = None
-    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
-
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["duration_type", "card_required", "on_end"])
+        optional_fields = set(["duration_type", "card_required"])
         serialized = handler(self)
         m = {}
 

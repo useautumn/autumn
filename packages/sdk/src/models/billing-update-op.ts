@@ -606,18 +606,6 @@ export type BillingUpdateDurationType = ClosedEnum<
 >;
 
 /**
- * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
- */
-export const BillingUpdateOnEnd = {
-  Bill: "bill",
-  Revert: "revert",
-} as const;
-/**
- * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
- */
-export type BillingUpdateOnEnd = ClosedEnum<typeof BillingUpdateOnEnd>;
-
-/**
  * Free trial configuration for a plan.
  */
 export type BillingUpdateFreeTrialParams = {
@@ -633,10 +621,6 @@ export type BillingUpdateFreeTrialParams = {
    * If true, payment method required to start trial. Customer is charged after trial ends.
    */
   cardRequired?: boolean | undefined;
-  /**
-   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
-   */
-  onEnd?: BillingUpdateOnEnd | undefined;
 };
 
 /**
@@ -1570,16 +1554,10 @@ export const BillingUpdateDurationType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdateDurationType);
 
 /** @internal */
-export const BillingUpdateOnEnd$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateOnEnd
-> = z.enum(BillingUpdateOnEnd);
-
-/** @internal */
 export type BillingUpdateFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
-  on_end?: string | undefined;
 };
 
 /** @internal */
@@ -1591,14 +1569,12 @@ export const BillingUpdateFreeTrialParams$outboundSchema: z.ZodMiniType<
     durationLength: z.number(),
     durationType: z._default(BillingUpdateDurationType$outboundSchema, "month"),
     cardRequired: z._default(z.boolean(), true),
-    onEnd: z.optional(BillingUpdateOnEnd$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       durationLength: "duration_length",
       durationType: "duration_type",
       cardRequired: "card_required",
-      onEnd: "on_end",
     });
   }),
 );
